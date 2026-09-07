@@ -118,9 +118,9 @@ opened from disk is always the app.
 
 | | |
 | --- | --- |
-| Production | https://runlog.scrthq.com |
-| Dev | https://runlog.dev.scrthq.com |
+| Hosted | https://runlog.scrthq.com — the copy Secret Headquarters runs, with accounts, sync, tables with company and the catalog |
 | Anyone, no account | https://scrt-hq.github.io/runlog/ — GitHub Pages, tracks `main`, no sign-in and no sync |
+| Your own | [docs/self-hosting.md](docs/self-hosting.md): on your machine, on a static host, or on your own AWS |
 
 Static files on S3 behind CloudFront, and behind `/api` on the same origin a
 small server for the parts that outlive one device: accounts, sync, tables
@@ -132,15 +132,15 @@ deploys the hosting with the build.
 
 | Trigger | What runs |
 | --- | --- |
-| Pull request to `main` | The suite, the packs, a build; the hosting's tests; a diff against dev and production |
-| Push to `main` | Build, deploy dev (the site stack publishes the build), seed the catalog, then tag and publish the next release |
-| Release published | Build the tag, deploy production |
-| Production deploy succeeded | Publish `@scrthq/runlog` at the tag's version to npm, under `next` until the `NPM_CHANNEL` variable says `latest`; OIDC from the `npm-publish` environment, no token |
+| Pull request to `main` | The suite, the packs, a build; the hosting's tests; a diff of the stacks, staging and hosted |
+| Push to `main` | Build, deploy a staging copy (the site stack publishes the build), seed its catalog, then tag and publish the next release |
+| Release published | Build the tag, deploy the hosted copy |
+| Hosted deploy succeeded | Publish `@scrthq/runlog` at the tag's version to npm, under `next` until the `NPM_CHANNEL` variable says `latest`; OIDC from the `npm-publish` environment, no token |
 | Push to `main` | Build and deploy the no-account version to GitHub Pages |
 | Monday mornings | Dependabot opens one pull request for the week's minor and patch bumps, one per major, and one for the workflows' actions, each for versions at least a week old; a security advisory opens one whenever it lands |
 
-Production is reached only through a published release, so it always carries a
-version and has always already been to dev.
+The hosted copy is reached only through a published release, so it always
+carries a version and has always already been through staging.
 
 It also still runs from a file. `npm run build`, then open
 `apps/web/dist/index.html` — which is the zero-friction path when the app is

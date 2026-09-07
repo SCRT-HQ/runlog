@@ -488,7 +488,8 @@ confirm a code, so make a command-line key on your profile page in the app,
 one that only releases, and set it as `RUNLOG_API_KEY` there, and put your signing key file's contents
 in `RUNLOG_SIGNING_KEY` so `sign` needs no file; `login --key` pastes a key
 into a machine you sit at but cannot open a browser from. With `RUNLOG_API`
-you can point at the dev address. [Releasing from CI](#releasing-from-ci)
+you can point the command at another address, such as a copy you run
+yourself. [Releasing from CI](#releasing-from-ci)
 below has the workflows.
 
 If you sell your game, sign your releases:
