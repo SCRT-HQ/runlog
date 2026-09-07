@@ -2098,6 +2098,30 @@ select.textInput {
   background: color-mix(in oklab, var(--accent) 10%, transparent);
   outline: none;
 }
+/* Invitations in the menu: a count on the button, a line in the list, and
+   a flyout beside the panel with each one and its two answers. */
+.menuBadge {
+  display: inline-grid; place-items: center; min-width: 1.2em; height: 1.2em; padding: 0 0.35em;
+  border-radius: 999px; background: var(--accent); color: var(--bg); font-family: var(--mono); font-size: 0.7rem; font-weight: 600; line-height: 1;
+}
+.accountMenu > summary .menuBadge { margin-left: 0.1rem; }
+.accountSub { position: relative; }
+.accountSub > summary { list-style: none; width: 100%; box-sizing: border-box; }
+.accountSub > summary::-webkit-details-marker { display: none; }
+.accountSub > summary > span:first-child { display: inline-flex; align-items: center; gap: 0.4rem; }
+.accountSub[open] > summary { background: color-mix(in oklab, var(--accent) 10%, transparent); }
+.inviteList {
+  position: absolute; top: 0; right: calc(100% + 0.5rem); z-index: 21; min-width: 20rem; max-width: 24rem; margin: 0; padding: 0.35rem 0; list-style: none;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--raise);
+}
+.inviteList li { display: grid; gap: 0.35rem; padding: 0.5rem 0.9rem; border-top: 1px solid var(--line); }
+.inviteList li:first-child { border-top: 0; }
+.inviteWords { display: grid; gap: 0.1rem; }
+.inviteWords b { font-weight: 600; }
+.inviteActs { display: flex; gap: 0.4rem; }
+@media (max-width: 760px) {
+  .inviteList { position: static; min-width: 0; max-width: none; border-left: 0; border-right: 0; border-radius: 0; box-shadow: none; }
+}
 .menuDoors {
   display: flex;
   gap: 0.4rem;
