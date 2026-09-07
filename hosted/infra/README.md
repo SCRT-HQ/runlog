@@ -130,12 +130,13 @@ contents alone, which is what the tests and a bare `cdk synth` see.
 The pipeline in `.github/workflows/CI-CD.yml` builds the app before every
 diff and deploy, so a diff on a pull request names the publish it would make
 and a merge to main puts the build on dev. Production deploys a released tag
-from `Deploy Production.yml`, which builds that tag and nothing else.
+from `deploy-production.yml`, which builds that tag and nothing else, and
+publishes the package once the deploy is done.
 
 To republish or roll back by hand, dispatch that workflow with the tag:
 
 ```
-gh workflow run "Deploy Production.yml" -R SCRT-HQ/runlog -f tag=v1.4.0
+gh workflow run deploy-production.yml -R SCRT-HQ/runlog -f tag=v1.4.0
 ```
 
 ## The hosted layer
