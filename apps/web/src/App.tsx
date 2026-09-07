@@ -370,21 +370,30 @@ export default function App() {
     void continueLast(true);
   }, [account.status, sync.status, continueLast]);
 
+  // One way in for both doors: the link's banner and the menu's list.
+  const joinByToken = useCallback(
+    async (token: string) => {
+      if (!api) return;
+      const { sessionId, alreadyIn } = await api.acceptInvite(token, account.status === "signed-in" ? account.user.email : undefined);
+      awaitingJoin.current = sessionId;
+      setNotice(alreadyIn ? "You are already in this run. Opening it…" : "Joined. Fetching the run…");
+      if (!(await openRun(sessionId))) sync.syncNow();
+    },
+    [api, account, openRun, sync],
+  );
+
   const join = useCallback(async () => {
     if (!api || !invited.invite) return;
     setJoining(true);
     try {
-      const { sessionId, alreadyIn } = await api.acceptInvite(invited.invite.token, account.status === "signed-in" ? account.user.email : undefined);
-      awaitingJoin.current = sessionId;
+      await joinByToken(invited.invite.token);
       invited.clear();
-      setNotice(alreadyIn ? "You are already in this run. Opening it…" : "Joined. Fetching the run…");
-      if (!(await openRun(sessionId))) sync.syncNow();
     } catch (error) {
       setNotice(error instanceof Error && error.message ? error.message : "That invitation could not be accepted.");
     } finally {
       setJoining(false);
     }
-  }, [api, invited, openRun, sync]);
+  }, [api, invited, joinByToken]);
 
   // The joined session lands with the next pass; open it when it does.
   useEffect(
@@ -746,7 +755,17 @@ export default function App() {
           <button className="ghost guideBtn" onClick={() => (view === "guide" ? leaveGuide() : openGuide())} title="How to use Runlog">
             {view === "guide" ? "Back to the app" : "Docs"}
           </button>
-          <AccountBadge onOpenProfile={() => setView("profile")} onContinue={() => void continueLast()} />
+          <AccountBadge
+            onOpenProfile={() => setView("profile")}
+            onContinue={() => void continueLast()}
+            onJoinInvite={async (token) => {
+              try {
+                await joinByToken(token);
+              } catch (error) {
+                setNotice(error instanceof Error && error.message ? error.message : "That invitation could not be accepted.");
+              }
+            }}
+          />
         </div>
       </header>
 

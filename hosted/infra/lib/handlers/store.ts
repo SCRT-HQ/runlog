@@ -254,6 +254,8 @@ export interface Store {
   createInvite(invite: Invite): Promise<void>;
   getInvite(token: string): Promise<Invite | null>;
   listInvites(sessionId: string): Promise<Invite[]>;
+  /** The invitations sent to an address, in every state; the caller filters. */
+  invitesFor(email: string): Promise<Invite[]>;
   revokeInvite(sessionId: string, token: string): Promise<void>;
   /** Join: a member row, a pointer, and the people rows both ways. Idempotent for the same person. */
   acceptInvite(token: string, sub: string, name: string | undefined, email: string | undefined, at: string): Promise<{ sessionId: string } | null>;
@@ -706,11 +708,13 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
 
     async createInvite(invite) {
       const ttl = Math.floor(new Date(invite.expiresAt).getTime() / 1000);
-      // Twice: under its own token for the link, and under the session for
-      // the owner's list. Both expire with the invite.
+      // Three times: under its own token for the link, under the session
+      // for the owner's list, and under the address for the invitee's own
+      // list in the app. All expire with the invite.
       const item = { ...invite, expiresAtIso: invite.expiresAt, expiresAt: ttl, kind: "invite" as const };
       await ddb.send(new PutCommand({ TableName: table, Item: { ...item, pk: `INVITE#${invite.token}`, sk: "INVITE" } }));
       await ddb.send(new PutCommand({ TableName: table, Item: { ...item, pk: `SESSION#${invite.sessionId}`, sk: `INVITE#${invite.token}` } }));
+      await ddb.send(new PutCommand({ TableName: table, Item: { ...item, pk: `EMAIL#${invite.email.toLowerCase()}`, sk: `INVITE#${invite.token}` } }));
     },
 
     async getInvite(token) {
@@ -734,10 +738,27 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       });
     },
 
+    async invitesFor(email) {
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :invite)",
+          ExpressionAttributeValues: { ":pk": `EMAIL#${email.toLowerCase()}`, ":invite": "INVITE#" },
+        }),
+      );
+      return ((out.Items ?? []) as Row[]).map((r) => {
+        const { expiresAt: _ttl, expiresAtIso, ...rest } = strip(r);
+        return { ...rest, expiresAt: String(expiresAtIso ?? "") } as unknown as Invite;
+      });
+    },
+
     async revokeInvite(sessionId, token) {
+      const invite = await store.getInvite(token);
       await ddb.send(new BatchWriteCommand({ RequestItems: { [table]: [
         { DeleteRequest: { Key: { pk: `INVITE#${token}`, sk: "INVITE" } } },
         { DeleteRequest: { Key: { pk: `SESSION#${sessionId}`, sk: `INVITE#${token}` } } },
+        // An invitation from before the address row existed has none to delete; a delete of a missing key is nothing.
+        ...(invite ? [{ DeleteRequest: { Key: { pk: `EMAIL#${invite.email.toLowerCase()}`, sk: `INVITE#${token}` } } }] : []),
       ] } }));
     },
 
@@ -754,7 +775,7 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       }
       // The invite is spent, but stays readable so a second open of the
       // same link by the same person lands them in the session again.
-      for (const key of [{ pk: `INVITE#${token}`, sk: "INVITE" }, { pk: spk, sk: `INVITE#${token}` }]) {
+      for (const key of [{ pk: `INVITE#${token}`, sk: "INVITE" }, { pk: spk, sk: `INVITE#${token}` }, { pk: `EMAIL#${invite.email.toLowerCase()}`, sk: `INVITE#${token}` }]) {
         await ddb.send(new UpdateCommand({
           TableName: table, Key: key,
           UpdateExpression: "SET acceptedBy = :sub, acceptedAt = :at",
