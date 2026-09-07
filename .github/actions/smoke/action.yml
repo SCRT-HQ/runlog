@@ -1,0 +1,46 @@
+name: Prove the stage answers
+description: After a deploy, ask the stage through its own edge for the two answers a broken site gets wrong; fail the job if either is off.
+
+inputs:
+  env-config:
+    description: The stage's configuration as JSON; its domain is what is asked.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # Both outages of the site's first public day looked the same from the
+    # outside: a request for something real came back as the app's page
+    # with a 200, because the edge turns an origin's 403 or 404 into the
+    # shell. So the two questions that tell a working stage from a broken
+    # one are asked here, of the address people use, with the edge's cache
+    # given a minute to notice the deploy. The API must answer JSON; the
+    # script the shell names must answer as JavaScript.
+    - name: Ask the stage
+      shell: bash
+      env:
+        ENV_CONFIG: ${{ inputs.env-config }}
+      run: |
+        set -euo pipefail
+        domain="$(jq -r .domain <<<"$ENV_CONFIG")"
+        [ -n "$domain" ] && [ "$domain" != "null" ] || { echo "::error::the stage's configuration names no domain"; exit 1; }
+
+        api=""
+        for attempt in 1 2 3 4 5 6; do
+          api="$(curl -sS -o /dev/null -w '%{content_type}' "https://$domain/api/listings" || true)"
+          case "$api" in application/json*) break;; esac
+          sleep 10
+        done
+        case "$api" in
+          application/json*) echo "https://$domain/api answers JSON";;
+          *) echo "::error::https://$domain/api/listings answers '$api', not JSON: the API is not reachable through the edge"; exit 1;;
+        esac
+
+        asset="$(curl -sS "https://$domain/play" | grep -oE 'assets/index-[^"]+\.js' | head -1 || true)"
+        [ -n "$asset" ] || { echo "::error::https://$domain/play names no script"; exit 1; }
+        script="$(curl -sS -o /dev/null -w '%{content_type}' "https://$domain/$asset" || true)"
+        case "$script" in
+          *javascript*) echo "https://$domain/$asset answers as JavaScript";;
+          *) echo "::error::https://$domain/$asset answers '$script', not JavaScript: the shell names a script the site does not have"; exit 1;;
+        esac
+        echo "### https://$domain answers: the API as JSON, the app's script as JavaScript" >> "$GITHUB_STEP_SUMMARY"
