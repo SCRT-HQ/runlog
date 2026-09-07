@@ -107,8 +107,8 @@ jobs:
   # The app is built before a diff or a deploy, so the site stack's template
   # names the build it would publish; a diff without one would show the
   # publish being torn down.
-  DevDiff:
-    name: Diff Dev CDK Stacks
+  Diff:
+    name: Diff ${{ matrix.env }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -126,67 +126,41 @@ jobs:
     needs:
       - Test
       - InfraTest
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [dev, prd]
+    # A stage's environment holds what the stage is: its account, its zone,
+    # its sign-in client, under the same names in every stage, so this job
+    # names nothing but the stage. It is open to this repository's
+    # branches, since a diff is what a pull request asks for; the deploy
+    # environments below are not.
+    environment: ${{ matrix.env }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/build-app
         with:
-          environment: dev
-          workos-client-id: ${{ vars.WORKOS_CLIENT_ID_DEV }}
-          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_DEV }}
-      - name: Run CDK Diff Against Dev Environment
+          environment: ${{ matrix.env }}
+          workos-client-id: ${{ vars.WORKOS_CLIENT_ID }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+      - name: Diff the ${{ matrix.env }} stacks
         uses: ./.github/actions/run-cdk
         with:
           cdk-command: diff
-          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_DEV }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           target-region: ${{ env.AWS_REGION }}
           node-version: ${{ env.NODE_VERSION }}
           github-role-name: ${{ env.GITHUB_ROLE_NAME }}
-          aws-environment: dev
-          hosted-zone-id: ${{ secrets.RUNLOG_DEV_ZONE_ID }}
-          app-dist: apps/web/dist
-
-  PrdDiff:
-    name: Diff Prd CDK Stacks
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-      pull-requests: write
-    # Nothing that reaches AWS runs for a pull request from a fork: the diffs
-    # wait until a maintainer has approved it and queued it to merge, and run
-    # there. (GitHub would refuse a fork the OIDC token anyway; this keeps
-    # the refusal from showing as a failed check on a contributor's work.)
-    if: >-
-      ${{
-        github.event_name == 'merge_group'
-        || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-      }}
-    needs:
-      - Test
-      - InfraTest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/build-app
-        with:
-          environment: prd
-          workos-client-id: ${{ vars.WORKOS_CLIENT_ID_PRD }}
-          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_PRD }}
-      - name: Run CDK Diff Against Prd Environment
-        uses: ./.github/actions/run-cdk
-        with:
-          cdk-command: diff
-          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_PRD }}
-          target-region: ${{ env.AWS_REGION }}
-          node-version: ${{ env.NODE_VERSION }}
-          github-role-name: ${{ env.GITHUB_ROLE_NAME }}
-          aws-environment: prd
-          hosted-zone-id: ${{ secrets.RUNLOG_PRD_ZONE_ID }}
+          aws-environment: ${{ matrix.env }}
+          hosted-zone-id: ${{ secrets.RUNLOG_ZONE_ID }}
           app-dist: apps/web/dist
 
   DevDeploy:
     name: Deploy Dev
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # Restricted to main, so a deploy cannot be run from any other ref, and
+    # holding the same secret names as the diff's environment.
     environment: deploy-dev
     permissions:
       contents: read
@@ -205,28 +179,28 @@ jobs:
       - uses: ./.github/actions/build-app
         with:
           environment: dev
-          workos-client-id: ${{ vars.WORKOS_CLIENT_ID_DEV }}
-          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_DEV }}
+          workos-client-id: ${{ vars.WORKOS_CLIENT_ID }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
       - name: Deploy the hosting and publish the build to dev
         uses: ./.github/actions/run-cdk
         with:
           cdk-command: deploy
-          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_DEV }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           target-region: ${{ env.AWS_REGION }}
           node-version: ${{ env.NODE_VERSION }}
           github-role-name: ${{ env.GITHUB_ROLE_NAME }}
           aws-environment: dev
-          hosted-zone-id: ${{ secrets.RUNLOG_DEV_ZONE_ID }}
+          hosted-zone-id: ${{ secrets.RUNLOG_ZONE_ID }}
           app-dist: apps/web/dist
 
       # The built-ins, listed in the catalog as the platform's own, so the
       # feed carries everything. Needs a key for the platform publisher's
-      # account in RUNLOG_API_KEY_DEV; without one the step says so and the
-      # bundle stays the catalog.
+      # account in the environment's RUNLOG_API_KEY; without one the step
+      # says so and the bundle stays the catalog.
       - name: Seed the catalog with the built-in packs
         env:
           RUNLOG_API: https://runlog.dev.scrthq.com/api
-          RUNLOG_API_KEY: ${{ secrets.RUNLOG_API_KEY_DEV }}
+          RUNLOG_API_KEY: ${{ secrets.RUNLOG_API_KEY }}
         run: npm run seed:listings
 
       - run: echo "### Deployed \`${GITHUB_SHA:0:12}\` to dev" >> "$GITHUB_STEP_SUMMARY"

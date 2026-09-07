@@ -6,8 +6,8 @@ same pipeline that builds the app.
 
 | Environment | Account | URL |
 | --- | --- | --- |
-| dev | the secret `AWS_ACCOUNT_ID_DEV` | https://runlog.dev.scrthq.com |
-| prd | the secret `AWS_ACCOUNT_ID_PRD` | https://runlog.scrthq.com |
+| dev | `AWS_ACCOUNT_ID` on the `dev` environments | https://runlog.dev.scrthq.com |
+| prd | `AWS_ACCOUNT_ID` on the `prd` environments | https://runlog.scrthq.com |
 
 ## What it creates
 
@@ -45,8 +45,12 @@ Production is reached only through a published release, so it always carries a
 version and has always already been to dev. Both deploy jobs sit behind GitHub
 Environments named `deploy-dev` and `deploy-prd`, so a reviewer can be
 required on production without that rule living in a file anyone editing
-the workflow could remove. Each environment deploys from `main` only, and
-production from a `v*` tag as well.
+the workflow could remove. Each deploys from `main` only, and production
+from a `v*` tag as well. The diffs run under `dev` and `prd`, which are
+open to this repository's branches, since a diff is what a pull request
+asks for. All four hold the same names, below, so the workflow says
+nothing about a stage but its name, and a third stage is one more entry
+in `lib/config.ts`, one more in the diff matrix, and two more environments.
 
 Versions increment automatically from the newest `v*` tag — patch by default,
 or pick `minor`/`major` when running the workflow by hand.
@@ -349,32 +353,26 @@ WebSocket API's address). Connection rows expire after two hours by TTL,
 and a connection the gateway reports gone is dropped the first time a
 post to it fails. The app falls back to polling when the socket is closed.
 
-## Repository secrets and variables
+## Environments, secrets and variables
 
-The account and zone ids are held as secrets. Not because they are secret,
-an account id is in every ARN, but so they stay out of the logs, which
-anyone can read now, and out of a fork's reach; they matter only to the
-copy run at this address, never to someone building the app. The cost is
-that GitHub masks them, so an ARN in a diff prints its account as `***`.
+Each stage's account and zone ids are secrets on its environments. Not
+because they are secret, an account id is in every ARN, but so they stay
+out of the logs, which anyone can read now, and out of a fork's reach;
+they matter only to the copy run at this address, never to someone
+building the app. The cost is that GitHub masks them, so an ARN in a diff
+prints its account as `***`.
 
-| Secret | What it is |
+| In `dev`, `deploy-dev`, `prd`, `deploy-prd` | What it is |
 | --- | --- |
-| `AWS_ACCOUNT_ID_DEV` | Dev account id |
-| `AWS_ACCOUNT_ID_PRD` | Production account id |
-| `RUNLOG_DEV_ZONE_ID` | Route 53 zone for `dev.scrthq.com` |
-| `RUNLOG_PRD_ZONE_ID` | Route 53 zone for `scrthq.com` |
-| `RUNLOG_API_KEY_DEV`, `RUNLOG_API_KEY_PRD` | A command-line key for the platform publisher, for seeding the catalog |
-| `CODE_MGR_APP_PRIVATE_KEY` | The org's GitHub App, which cuts releases |
+| `AWS_ACCOUNT_ID` (secret) | The stage's account |
+| `RUNLOG_ZONE_ID` (secret) | The Route 53 zone the stage's domain lives in |
+| `WORKOS_CLIENT_ID` (variable) | The AuthKit client the stage's build signs in with; public by design, embedded in the app and in every sign-in URL |
+| `RUNLOG_API_KEY` (secret, `deploy-*` only) | A command-line key for the platform publisher, for seeding the catalog |
 
-The client ids are variables: they are public by design, embedded in the
-built app and present in every sign-in URL.
+And on the repository:
 
-| Variable | What it is |
+| Name | What it is |
 | --- | --- |
-| `WORKOS_CLIENT_ID_DEV` | AuthKit client the dev build signs in with |
-| `WORKOS_CLIENT_ID_PRD` | AuthKit client the production build signs in with |
-| `CODE_MGR_APP_ID` | The org's GitHub App, which cuts releases and reads the app repository |
+| `NPM_CHANNEL` (variable) | `latest` or `next`: which dist-tag a release publishes under |
+| `CODE_MGR_APP_ID` (variable), `CODE_MGR_APP_PRIVATE_KEY` (secret) | The org's GitHub App, which cuts releases; held by the organization |
 
-The client ids are variables rather than secrets on purpose: they appear in
-every sign-in URL. The App's private key is the one secret,
-`CODE_MGR_APP_PRIVATE_KEY`.
