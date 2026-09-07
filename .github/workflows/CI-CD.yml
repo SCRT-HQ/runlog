@@ -254,7 +254,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ vars.CODE_MGR_APP_ID }}
+          client-id: ${{ vars.CODE_MGR_APP_ID }}
           private-key: ${{ secrets.CODE_MGR_APP_PRIVATE_KEY }}
 
       - name: Tag and publish
