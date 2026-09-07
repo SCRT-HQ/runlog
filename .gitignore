@@ -161,6 +161,9 @@ hosted/infra/cdk.out
 hosted/infra/.cdk.staging
 hosted/infra/cdk.context.json
 hosted/infra/junit.xml
+# A stage's configuration is the operator's, not the repository's; the example is the template.
+hosted/infra/env/*.json
+!hosted/infra/env/example.json
 
 # Data hydration
 hydrate.ps1

@@ -19,10 +19,6 @@ import { SiteStack } from "../lib/site-stack";
  * suppression beside it with the reason written down, never by a rerun.
  */
 
-process.env["RUNLOG_TARGET_ACCOUNT"] ??= "123456789012";
-process.env["RUNLOG_DEV_ZONE_ID"] ??= "Z0123456789ABCDEFGHIJ";
-process.env["RUNLOG_PRD_ZONE_ID"] ??= "Z0123456789ABCDEFGHIJ";
-
 describe.each(["dev", "prd"] as EnvName[])("the AWS Solutions rules against %s", (name) => {
   let dist: string;
   let stacks: { api: ApiStack; site: SiteStack };

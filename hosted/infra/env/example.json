@@ -1,0 +1,37 @@
+{
+  "domain": "runlog.example.com",
+  "zone": "example.com",
+  "retain": true,
+  "workosClientId": "client_01EXAMPLEEXAMPLEEXAMPLE",
+  "workosCliClientId": "client_01EXAMPLEEXAMPLECLI00",
+  "email": {
+    "from": "Runlog <noreply@example.com>",
+    "region": "us-east-1",
+    "identity": "example.com"
+  },
+  "gates": false,
+  "stripe": {
+    "prices": {
+      "plusMonthly": "",
+      "plusYearly": "",
+      "hostedMonthly": "",
+      "hostedYearly": ""
+    },
+    "features": {
+      "plus": "plus",
+      "hostedLicensing": "hosted-licensing"
+    },
+    "applicationFeeBps": {
+      "subscribed": 0,
+      "unsubscribed": 500
+    }
+  },
+  "hosted": {
+    "operator": "Example Co, LLC",
+    "operatorShort": "Example Co",
+    "support": "help@example.com",
+    "termsVersion": "2026-01-01",
+    "termsDate": "2026-01-01",
+    "billing": false
+  }
+}

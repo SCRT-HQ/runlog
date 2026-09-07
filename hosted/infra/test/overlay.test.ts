@@ -12,26 +12,20 @@ import { headTags, injectHead, licensesPage, ogImage, overlay, substitute, words
  * the step to the files it must leave behind.
  */
 
-process.env.RUNLOG_TARGET_ACCOUNT ??= "123456789012";
-
 const build = { version: "0.2.0", sha: "abcdef123456", today: new Date("2026-09-06T12:00:00Z") };
 
 describe("the words", () => {
-  it("come from the environment's config", () => {
+  it("come from the stage's configuration", () => {
     const words = wordsFor(envConfig("prd"), build);
-    expect(words["DOMAIN"]).toBe("runlog.scrthq.com");
-    expect(words["OPERATOR"]).toBe("Secret Headquarters, LLC");
-    expect(words["OPERATOR_SHORT"]).toBe("Secret Headquarters");
+    expect(words["DOMAIN"]).toBe("runlog.example.com");
+    expect(words["OPERATOR"]).toBe("Example Co, LLC");
+    expect(words["OPERATOR_SHORT"]).toBe("Example Co");
     expect(words["SUPPORT"]).toContain("@");
     expect(words["YEAR"]).toBe("2026");
     expect(words["DATE"]).toBe("2026-09-06");
     expect(words["EXPIRES"]).toMatch(/^2027-09-06/);
-    expect(words["BILLING"]).toBe("true");
+    expect(words["BILLING"]).toBe("false");
     expect(words["SIGN_IN"]).toMatch(/^client_/);
-  });
-
-  it("differ between dev and prd where they should", () => {
-    expect(wordsFor(envConfig("dev"), build)["DOMAIN"]).toBe("runlog.dev.scrthq.com");
   });
 
   it("fill every placeholder, and refuse one they do not know", () => {
@@ -99,15 +93,15 @@ describe("laid over a build", () => {
       expect(files).toContain(f);
     }
     const hosted = JSON.parse(readFileSync(join(dist, "hosted.json"), "utf8")) as { operator: string; legalName: string; links: Record<string, string>; termsVersion: string; sha: string; features: { billing: boolean } };
-    expect(hosted.links["terms"]).toBe("https://runlog.dev.scrthq.com/legal/terms.html");
+    expect(hosted.links["terms"]).toBe("https://runlog.example.com/legal/terms.html");
     expect(hosted.termsVersion).toBe(envConfig("dev").hosted.termsVersion);
     expect(hosted.sha).toBe("0123456789ab");
-    expect(hosted.features.billing).toBe(true);
+    expect(hosted.features.billing).toBe(false);
     // The app's footer says the short name; the terms gate names the LLC.
-    expect(hosted.operator).toBe("Secret Headquarters");
-    expect(hosted.legalName).toBe("Secret Headquarters, LLC");
-    expect(readFileSync(join(dist, "legal", "terms.html"), "utf8")).toContain("between you and Secret Headquarters, LLC");
-    expect(readFileSync(join(dist, "about.html"), "utf8")).toMatch(/run by\s+Secret Headquarters, with/);
+    expect(hosted.operator).toBe("Example Co");
+    expect(hosted.legalName).toBe("Example Co, LLC");
+    expect(readFileSync(join(dist, "legal", "terms.html"), "utf8")).toContain("between you and Example Co, LLC");
+    expect(readFileSync(join(dist, "about.html"), "utf8")).toMatch(/run by\s+Example Co, with/);
 
     for (const f of files.filter((f) => f !== "og.png")) {
       expect(readFileSync(join(dist, f), "utf8"), f).not.toMatch(/\{\{[A-Z_]+\}\}/);

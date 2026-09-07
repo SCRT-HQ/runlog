@@ -143,11 +143,13 @@ jobs:
           environment: ${{ matrix.env }}
           workos-client-id: ${{ vars.WORKOS_CLIENT_ID }}
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          env-config: ${{ vars.RUNLOG_ENV_CONFIG }}
       - name: Diff the ${{ matrix.env }} stacks
         uses: ./.github/actions/run-cdk
         with:
           cdk-command: diff
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          env-config: ${{ vars.RUNLOG_ENV_CONFIG }}
           target-region: ${{ env.AWS_REGION }}
           node-version: ${{ env.NODE_VERSION }}
           github-role-name: ${{ env.GITHUB_ROLE_NAME }}
@@ -181,11 +183,13 @@ jobs:
           environment: dev
           workos-client-id: ${{ vars.WORKOS_CLIENT_ID }}
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          env-config: ${{ vars.RUNLOG_ENV_CONFIG }}
       - name: Deploy the hosting and publish the build to dev
         uses: ./.github/actions/run-cdk
         with:
           cdk-command: deploy
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          env-config: ${{ vars.RUNLOG_ENV_CONFIG }}
           target-region: ${{ env.AWS_REGION }}
           node-version: ${{ env.NODE_VERSION }}
           github-role-name: ${{ env.GITHUB_ROLE_NAME }}
@@ -254,7 +258,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ vars.CODE_MGR_APP_ID }}
+          client-id: ${{ vars.CODE_MGR_APP_ID }}
           private-key: ${{ secrets.CODE_MGR_APP_PRIVATE_KEY }}
 
       - name: Tag and publish
