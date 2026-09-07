@@ -46,7 +46,8 @@ version and has always already been to dev. Both deploy jobs sit behind GitHub
 Environments named `deploy-dev` and `deploy-prd`, so a reviewer can be
 required on production without that rule living in a file anyone editing
 the workflow could remove. Each deploys from `main` only, and production
-from a `v*` tag as well. The diffs run under `dev` and `prd`, which are
+from a `v*` tag as well. The diffs run under `cdk-diff-dev` and
+`cdk-diff-prd`, which are
 open to this repository's branches, since a diff is what a pull request
 asks for. All four hold the same names, below, so the workflow says
 nothing about a stage but its name, and a third stage is one more entry
@@ -373,7 +374,7 @@ they matter only to the copy run at this address, never to someone
 building the app. The cost is that GitHub masks them, so an ARN in a diff
 prints its account as `***`.
 
-| In `dev`, `deploy-dev`, `prd`, `deploy-prd` | What it is |
+| In `cdk-diff-dev`, `deploy-dev`, `cdk-diff-prd`, `deploy-prd` | What it is |
 | --- | --- |
 | `AWS_ACCOUNT_ID` (secret) | The stage's account |
 | `RUNLOG_ZONE_ID` (secret) | The Route 53 zone the stage's domain lives in |
