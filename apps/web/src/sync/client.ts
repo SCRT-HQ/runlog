@@ -255,6 +255,19 @@ export type InvitePeek =
       };
     };
 
+/** An invitation waiting for this account, as the menu shows it. */
+export interface PendingInvite {
+  token: string;
+  role: "player" | "viewer";
+  createdAt: string;
+  expiresAt: string;
+  packId: string;
+  packTitle: string | null;
+  session: string | null;
+  inviter: string | null;
+  alreadyIn: boolean;
+}
+
 /** An event as the server holds it: the app's event, numbered and attributed. */
 export type SessionEvent = Record<string, unknown> & { id: string; seq: number; author: string; t: string; at: string };
 
@@ -337,6 +350,10 @@ export interface Api {
   revokeInvite(sessionId: string, token: string): Promise<void>;
   /** Join by the link's token; the account's address rides along, for an account whose profile has none yet. */
   acceptInvite(token: string, email?: string): Promise<{ sessionId: string; alreadyIn?: boolean }>;
+  /** The invitations waiting for this account's address, newest first, so nobody needs the mail. */
+  myInvites(): Promise<PendingInvite[]>;
+  /** Turn one down: it leaves both lists and its link goes dead. */
+  declineInvite(token: string): Promise<void>;
   /** Open a run to anyone with its link (the owner; Plus where plans are on); the link comes back. */
   shareRun(sessionId: string): Promise<{ link: string }>;
   unshareRun(sessionId: string): Promise<void>;
@@ -744,6 +761,13 @@ export function createApi(
       const { status, body } = await request<{ sessionId?: string; alreadyIn?: boolean; error?: string }>("POST", `/invites/${encodeURIComponent(token)}/accept`, email ? { email } : {});
       if (status !== 200 || !body.sessionId) throw new SyncError("error", undefined, body.error ?? "that invitation could not be accepted");
       return { sessionId: body.sessionId, ...(body.alreadyIn ? { alreadyIn: true } : {}) };
+    },
+    myInvites: async () => {
+      const { status, body } = await request<{ invites?: PendingInvite[] }>("GET", "/me/invites");
+      return status === 200 ? (body.invites ?? []) : [];
+    },
+    declineInvite: async (token) => {
+      await request("DELETE", `/me/invites/${encodeURIComponent(token)}`);
     },
     removeMember: async (sessionId, sub) => {
       await request("DELETE", `/sessions/${sessionId}/members/${encodeURIComponent(sub)}`);

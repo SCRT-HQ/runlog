@@ -156,6 +156,8 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
     acceptInvite: async () => {
       throw new SyncError("error");
     },
+    myInvites: async () => [],
+    declineInvite: async () => {},
     removeMember: async () => {},
     people: async () => [],
     listKeys: async () => [],

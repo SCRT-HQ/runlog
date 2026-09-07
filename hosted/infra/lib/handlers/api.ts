@@ -548,6 +548,45 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const [bought, kept] = await Promise.all([deps.billing.entitlements(sub), deps.billing.flags(sub)]);
     return [...new Set([...bought, ...kept, ...(flags ?? [])])];
   };
+  // ---- the invitations waiting for this account, so nobody needs the mail ----
+  // Found by the address the profile holds, which is what an invitation is
+  // addressed to; an account whose profile has no address yet has nothing
+  // waiting that the app can show.
+  if (method === "GET" && path === "/api/me/invites") {
+    const profile = await store.touchProfile(caller.sub, now());
+    const email = (profile.email ?? "").trim().toLowerCase();
+    if (!email) return json(200, { invites: [] });
+    const at = now();
+    const waiting = (await store.invitesFor(email)).filter((i) => !i.acceptedBy && i.expiresAt >= at);
+    const invites = [];
+    for (const invite of waiting.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))) {
+      const found = await store.getSession(invite.sessionId);
+      if (!found || found.meta.deletedAt) continue;
+      invites.push({
+        token: invite.token,
+        role: invite.role,
+        createdAt: invite.createdAt,
+        expiresAt: invite.expiresAt,
+        packId: found.meta.packId,
+        packTitle: found.meta.packTitle ?? null,
+        session: found.meta.name ?? null,
+        inviter: invite.invitedByName ?? null,
+        alreadyIn: found.members.some((m) => m.sub === caller.sub),
+      });
+    }
+    return json(200, { invites });
+  }
+  const decline = path.match(/^\/api\/me\/invites\/([^/]+)$/);
+  if (decline && method === "DELETE") {
+    const token = decodeURIComponent(decline[1]!);
+    const invite = await store.getInvite(token);
+    if (!invite) return json(200, { declined: true });
+    const profile = await store.touchProfile(caller.sub, now());
+    if ((profile.email ?? "").trim().toLowerCase() !== invite.email) return json(422, { error: "that invitation is not yours to decline" });
+    await store.revokeInvite(invite.sessionId, token);
+    return json(200, { declined: true });
+  }
+
   if (method === "GET" && path === "/api/me") {
     const at = now();
     const flags = caller.flags ?? [];
