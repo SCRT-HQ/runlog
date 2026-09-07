@@ -104,8 +104,10 @@ cd hosted/infra && npm install && cd ../..
 
 ### Say what your copy is
 
-`hosted/infra/lib/config.ts` holds one entry per stage, `dev` and `prd`.
-Edit `prd` (or both) to be yours:
+A stage is described by one JSON file, which git ignores: copy
+`hosted/infra/env/example.json` to `hosted/infra/env/prd.json` and make
+it yours (`prd` is the stage name the commands below use; any short
+lowercase word works, and it names the stacks):
 
 | Field | Yours |
 | --- | --- |
@@ -118,7 +120,9 @@ Edit `prd` (or both) to be yours:
 | `retain` | `true` keeps the table and the buckets if the stack is ever deleted |
 
 The account id is not in the file. It comes from `RUNLOG_TARGET_ACCOUNT`
-at deploy time, so the file never ties the copy to one account.
+at deploy time, so the file never ties the copy to one account. The same
+document, as one line of JSON, is what a pipeline hands the stack in the
+`RUNLOG_ENV_CONFIG` variable.
 
 The pages in `hosted/pages/` are the terms, the privacy policy, the
 publisher agreement, pricing and about, written for one operator with the

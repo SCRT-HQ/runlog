@@ -10,7 +10,7 @@ import Stripe from "stripe";
  *
  * Idempotent: every feature, product and price is found by its lookup key
  * or name before it is made, so running it twice changes nothing. It ends
- * by printing the ids to put in lib/config.ts. Prices are public — they
+ * by printing the ids to put in the stage's configuration. Prices are public — they
  * appear in every Checkout — so they are committed; the key is not.
  */
 
@@ -106,7 +106,7 @@ async function main() {
     console.log(`portal configuration: ${portal.id}`);
   }
 
-  console.log("\nPut these in lib/config.ts under stripe.prices for this environment:\n");
+  console.log("\nPut these under stripe.prices in the stage's configuration (env/<stage>.json, and the RUNLOG_ENV_CONFIG variable on its environments):\n");
   console.log(JSON.stringify({ plusMonthly: priceIds["plus-monthly"], plusYearly: priceIds["plus-yearly"], hostedMonthly: priceIds["hosted-monthly"], hostedYearly: priceIds["hosted-yearly"] }, null, 2));
   console.log("\nThen register the webhook endpoint https://<domain>/api/stripe/webhook for the event entitlements.active_entitlement_summary.updated, and fill stripe/webhook-secret with its signing secret.");
 }

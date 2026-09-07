@@ -1,16 +1,17 @@
 /**
- * What differs between the two accounts.
+ * What a stage is.
  *
- * Account ids are read from the environment rather than committed. They are
- * not secret — an account id is in every ARN — but hardcoding them makes the
- * repository specific to one person's AWS, and this one is meant to be
- * readable by anyone.
- *
- * Everything else is here in plain sight, because "which domain does dev use"
- * is the kind of question that should be answerable by reading one file.
+ * The shape of one deployed copy of the hosting: its account and region,
+ * its domain, its sign-in clients, its mail identity, its plans and the
+ * words on its pages. The values are not in this file (see `envConfig`
+ * below): they are one operator's, and this repository is anyone's to
+ * read and build from.
  */
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
-export type EnvName = "dev" | "prd";
+/** A stage's name: a short lowercase word, `dev` and `prd` here. */
+export type EnvName = string;
 
 export interface EnvConfig {
   name: EnvName;
@@ -105,100 +106,124 @@ export interface EnvConfig {
   };
 }
 
-/** What Stripe calls the features, and the fee rule; the same in both environments. */
-const STRIPE = {
-  features: { plus: "plus", hostedLicensing: "hosted-licensing" },
-  applicationFeeBps: { subscribed: 0, unsubscribed: 500 },
-};
-
-/** The hosted words shared by both environments. What differs is said below. */
-const HOSTED = {
-  operator: "Secret Headquarters, LLC",
-  operatorShort: "Secret Headquarters",
-  support: "runlog@scrthq.com",
-  termsVersion: "2026-09-07",
-  termsDate: "2026-09-07",
-};
+/**
+ * Where a stage's configuration comes from.
+ *
+ * Not from this file. A stage is one operator's identity: its domain, its
+ * sign-in clients, its prices, the words on its pages. None of that is
+ * secret, but none of it belongs in a repository anyone can read and
+ * build from, so it lives as one JSON document per stage: on the GitHub
+ * environment as the `RUNLOG_ENV_CONFIG` variable, and on a machine as
+ * `hosted/infra/env/<stage>.json`, which git ignores. `env/example.json`
+ * is the template and what the tests run against.
+ */
+const NAME = /^[a-z][a-z0-9-]{0,15}$/;
 
 /**
  * The account to deploy into.
  *
  * Deliberately *not* `CDK_DEFAULT_ACCOUNT`. The CDK CLI overwrites that with
- * whatever account the resolved credentials belong to, so on a machine with an
- * SSO session open it silently becomes the management account — and this value
- * ends up in the bucket's name, so the mistake ships as a real resource rather
- * than an error. `RUNLOG_TARGET_ACCOUNT` is set explicitly by the `run-cdk`
- * action and cannot be clobbered.
+ * whatever account the resolved credentials belong to, so on a machine with
+ * an SSO session open it silently becomes the management account, and this
+ * value ends up in the bucket's name. `RUNLOG_TARGET_ACCOUNT` is set
+ * explicitly by the `run-cdk` action and cannot be clobbered.
  */
 function accountFor(name: EnvName): string {
   const target = process.env.RUNLOG_TARGET_ACCOUNT;
   if (target) return target;
-  return required(name === "prd" ? "RUNLOG_PRD_ACCOUNT" : "RUNLOG_DEV_ACCOUNT");
+  return required(`RUNLOG_${name.toUpperCase().replace(/-/g, "_")}_ACCOUNT`);
 }
 
 function required(name: string): string {
   const value = process.env[name];
   if (!value) {
-    throw new Error(
-      `${name} is not set. Both accounts are named by environment variable so ` +
-        `this repository is not tied to one person's AWS. See docs/hosting.md.`,
-    );
+    throw new Error(`${name} is not set. The account is named by environment variable so this repository is not tied to one person's AWS. See docs/self-hosting.md.`);
   }
   return value;
 }
 
-export function envConfig(name: EnvName): EnvConfig {
-  // Fixed, not inherited. The CDK CLI overwrites CDK_DEFAULT_REGION with
-  // whatever region the resolved credentials point at, so reading it would
-  // mean the stack quietly followed a developer's default profile — and
-  // CloudFront will not accept a certificate from anywhere but us-east-1.
-  const shared = { name, region: "us-east-1" };
-
-  if (name === "prd") {
-    return {
-      ...shared,
-      account: accountFor("prd"),
-      domain: "runlog.scrthq.com",
-      zone: "scrthq.com",
-      ...(process.env.RUNLOG_PRD_ZONE_ID ? { zoneId: process.env.RUNLOG_PRD_ZONE_ID } : {}),
-      retain: true,
-      workosClientId: process.env.RUNLOG_WORKOS_CLIENT_ID ?? "client_01M1THR4WFCQZVPZDJ4SPY1FMY",
-      workosCliClientId: process.env.RUNLOG_WORKOS_CLI_CLIENT_ID ?? "client_01M1W76VPGCRZ33HZAF7EBZ7NS",
-      email: { from: "Runlog <noreply@scrthq.com>", region: "us-west-2", identity: "scrthq.com" },
-      // Plans are on: Stripe is live, both webhooks are registered and their
-      // secrets filled (2026-09-07). Selling still waits on each publisher's
-      // own Connect onboarding, which is per account, not a switch here.
-      gates: true,
-      stripe: {
-        ...STRIPE,
-        prices: { plusMonthly: "price_1UCrhjCjnERWhjs4vdlHJPlZ", plusYearly: "price_1UCrhjCjnERWhjs47CzgfLYj", hostedMonthly: "price_1UCrhkCjnERWhjs4Q5gw9KbC", hostedYearly: "price_1UCrhlCjnERWhjs4eMCv5qrL" },
-      },
-      hosted: { ...HOSTED, billing: true },
-    };
+function readStage(name: EnvName): Record<string, unknown> {
+  const inline = process.env["RUNLOG_ENV_CONFIG"];
+  const file = join(__dirname, "..", "env", `${name}.json`);
+  const text = inline ?? (existsSync(file) ? readFileSync(file, "utf8") : undefined);
+  if (!text) {
+    throw new Error(
+      `No configuration for the stage "${name}". Set RUNLOG_ENV_CONFIG to its JSON, ` +
+        `or write ${file} (env/example.json is the template). See docs/self-hosting.md.`,
+    );
   }
+  const parsed: unknown = JSON.parse(text);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error(`The configuration for "${name}" is not a JSON object`);
+  return parsed as Record<string, unknown>;
+}
 
+const isRecord = (v: unknown): v is Record<string, unknown> => Boolean(v) && typeof v === "object" && !Array.isArray(v);
+const str = (v: unknown, at: string): string => {
+  if (typeof v !== "string" || !v) throw new Error(`configuration: ${at} must be a non-empty string`);
+  return v;
+};
+const bool = (v: unknown, at: string): boolean => {
+  if (typeof v !== "boolean") throw new Error(`configuration: ${at} must be true or false`);
+  return v;
+};
+const num = (v: unknown, at: string): number => {
+  if (typeof v !== "number" || !Number.isFinite(v)) throw new Error(`configuration: ${at} must be a number`);
+  return v;
+};
+const rec = (v: unknown, at: string): Record<string, unknown> => {
+  if (!isRecord(v)) throw new Error(`configuration: ${at} must be an object`);
+  return v;
+};
+
+/** The zone id, when the operator would rather CDK did not look it up. */
+function zoneIdFor(name: EnvName): string | undefined {
+  return process.env["RUNLOG_ZONE_ID"] || process.env[`RUNLOG_${name.toUpperCase().replace(/-/g, "_")}_ZONE_ID`] || undefined;
+}
+
+export function envConfig(name: EnvName): EnvConfig {
+  const c = readStage(name);
+  const email = rec(c["email"], "email");
+  const stripe = rec(c["stripe"], "stripe");
+  const prices = rec(stripe["prices"], "stripe.prices");
+  const features = rec(stripe["features"] ?? { plus: "plus", hostedLicensing: "hosted-licensing" }, "stripe.features");
+  const fee = rec(stripe["applicationFeeBps"] ?? { subscribed: 0, unsubscribed: 500 }, "stripe.applicationFeeBps");
+  const hosted = rec(c["hosted"], "hosted");
+  const price = (key: string): string => {
+    const v = prices[key] ?? "";
+    if (typeof v !== "string") throw new Error(`configuration: stripe.prices.${key} must be a string`);
+    return v;
+  };
+  const zoneId = zoneIdFor(name) ?? (typeof c["zoneId"] === "string" && c["zoneId"] ? c["zoneId"] : undefined);
   return {
-    ...shared,
-    account: accountFor("dev"),
-    domain: "runlog.dev.scrthq.com",
-    // The dev account holds its own delegated zone, so nothing here needs to
-    // reach across accounts to write a record or validate a certificate.
-    zone: "dev.scrthq.com",
-    ...(process.env.RUNLOG_DEV_ZONE_ID ? { zoneId: process.env.RUNLOG_DEV_ZONE_ID } : {}),
-    retain: false,
-    // The staging environment in WorkOS; a fork points this at its own.
-    workosClientId: process.env.RUNLOG_WORKOS_CLIENT_ID ?? "client_01M1THR4J61XTAPTK0H0GQNFXG",
-    workosCliClientId: process.env.RUNLOG_WORKOS_CLI_CLIENT_ID ?? "client_01M1W76Q2VZRFPJGH073WW7MCE",
-    // The dev account's SES is sandboxed: mail only reaches addresses
-    // verified there, which is fine for a test with one's own.
-    email: { from: "Runlog <noreply@dev.scrthq.com>", region: "us-west-2", identity: "dev.scrthq.com" },
-    gates: true,
+    name,
+    // Fixed, not inherited. The CDK CLI overwrites CDK_DEFAULT_REGION with
+    // whatever region the resolved credentials point at, so reading it
+    // would mean the stack quietly followed a developer's default profile;
+    // and CloudFront will not accept a certificate from anywhere but
+    // us-east-1.
+    region: "us-east-1",
+    account: accountFor(name),
+    domain: str(c["domain"], "domain"),
+    zone: str(c["zone"], "zone"),
+    ...(zoneId ? { zoneId } : {}),
+    retain: bool(c["retain"], "retain"),
+    workosClientId: str(c["workosClientId"], "workosClientId"),
+    workosCliClientId: str(c["workosCliClientId"], "workosCliClientId"),
+    email: { from: str(email["from"], "email.from"), region: str(email["region"], "email.region"), identity: str(email["identity"], "email.identity") },
+    gates: bool(c["gates"], "gates"),
     stripe: {
-      ...STRIPE,
-      prices: { plusMonthly: "price_1UCrgCCjnERWhjs4GIhJ9kxZ", plusYearly: "price_1UCrgCCjnERWhjs4LKstAimJ", hostedMonthly: "price_1UCrgDCjnERWhjs4MuHYWuLS", hostedYearly: "price_1UCrgECjnERWhjs4RR77WQe3" },
+      prices: { plusMonthly: price("plusMonthly"), plusYearly: price("plusYearly"), hostedMonthly: price("hostedMonthly"), hostedYearly: price("hostedYearly") },
+      features: { plus: str(features["plus"], "stripe.features.plus"), hostedLicensing: str(features["hostedLicensing"], "stripe.features.hostedLicensing") },
+      applicationFeeBps: { subscribed: num(fee["subscribed"], "stripe.applicationFeeBps.subscribed"), unsubscribed: num(fee["unsubscribed"], "stripe.applicationFeeBps.unsubscribed") },
     },
-    // Billing shows in dev now that the sandbox prices exist; production waits for the live webhooks.
-    hosted: { ...HOSTED, billing: true },
+    hosted: {
+      operator: str(hosted["operator"], "hosted.operator"),
+      operatorShort: str(hosted["operatorShort"], "hosted.operatorShort"),
+      support: str(hosted["support"], "hosted.support"),
+      termsVersion: str(hosted["termsVersion"], "hosted.termsVersion"),
+      termsDate: str(hosted["termsDate"], "hosted.termsDate"),
+      billing: bool(hosted["billing"], "hosted.billing"),
+    },
   };
 }
 
@@ -211,8 +236,8 @@ export function envConfig(name: EnvName): EnvConfig {
  */
 export function currentEnv(): EnvName {
   const raw = process.env.AWS_ENVIRONMENT ?? process.env.RUNLOG_ENV ?? "dev";
-  if (raw !== "dev" && raw !== "prd") {
-    throw new Error(`AWS_ENVIRONMENT must be "dev" or "prd", not ${JSON.stringify(raw)}`);
+  if (!NAME.test(raw)) {
+    throw new Error(`AWS_ENVIRONMENT must be a short lowercase name such as "dev" or "prd", not ${JSON.stringify(raw)}`);
   }
   return raw;
 }
