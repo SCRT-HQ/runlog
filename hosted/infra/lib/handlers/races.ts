@@ -76,9 +76,19 @@ const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export const CODE_LENGTH = 6;
 
 export function newCode(random: (n: number) => Buffer = randomBytes): string {
-  const bytes = random(CODE_LENGTH);
+  // A byte modulo the alphabet is an even draw only while the alphabet
+  // divides 256, which 32 does and the next size might not. Bytes past the
+  // last whole multiple are thrown away rather than folded, so the draw
+  // stays even for any alphabet, and says so to whoever reads it.
   let out = "";
-  for (let i = 0; i < CODE_LENGTH; i++) out += ALPHABET[bytes[i]! % ALPHABET.length];
+  while (out.length < CODE_LENGTH) {
+    for (const byte of random(CODE_LENGTH)) {
+      if (out.length === CODE_LENGTH) break;
+      const limit = 256 - (256 % ALPHABET.length);
+      if (byte >= limit) continue;
+      out += ALPHABET[byte % ALPHABET.length];
+    }
+  }
   return out;
 }
 

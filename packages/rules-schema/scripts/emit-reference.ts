@@ -76,7 +76,7 @@ function describe(node: Node): string {
     node.default !== undefined
       ? `${text} Default: \`${JSON.stringify(node.default)}\`.`
       : text;
-  return withDefault.replace(/\|/g, "\\|");
+  return withDefault.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
 }
 
 function table(node: Node): string[] {

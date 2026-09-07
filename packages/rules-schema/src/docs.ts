@@ -555,7 +555,7 @@ export function generateDoc(pack: Pack, kind: DocKind): Doc {
 
 /* ---- renderers ------------------------------------------------------------ */
 
-const mdEscape = (s: string) => s.replace(/\|/g, "\\|").replace(/\n/g, " ");
+const mdEscape = (s: string) => s.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\n/g, " ");
 
 export function toMarkdown(doc: Doc): string {
   const out: string[] = [`# ${doc.title}`];
