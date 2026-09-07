@@ -45,7 +45,7 @@ jobs:
     # The environment's reviewers, if any, are asked here; long enough for one
     # to get to it.
     timeout-minutes: 360
-    environment: deploy-prd-${{ vars.AWS_ACCOUNT_ID_PRD }}
+    environment: deploy-prd
     steps:
       - name: Work out which tag to deploy
         id: tag
@@ -72,18 +72,18 @@ jobs:
         with:
           environment: prd
           workos-client-id: ${{ vars.WORKOS_CLIENT_ID_PRD }}
-          target-account-id: ${{ vars.AWS_ACCOUNT_ID_PRD }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_PRD }}
 
       - name: Deploy the hosting and publish the build to production
         uses: ./.github/actions/run-cdk
         with:
           cdk-command: deploy
-          target-account-id: ${{ vars.AWS_ACCOUNT_ID_PRD }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_PRD }}
           target-region: ${{ env.AWS_REGION }}
           node-version: ${{ env.NODE_VERSION }}
           github-role-name: ${{ env.GITHUB_ROLE_NAME }}
           aws-environment: prd
-          hosted-zone-id: ${{ vars.RUNLOG_PRD_ZONE_ID }}
+          hosted-zone-id: ${{ secrets.RUNLOG_PRD_ZONE_ID }}
           app-dist: apps/web/dist
 
       - name: Seed the catalog with the built-in packs
