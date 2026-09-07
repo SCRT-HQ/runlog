@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>About · Runlog</title>
+    <meta name="description" content="What Runlog is, who runs the hosted copy, and how to reach them." />
+    <link rel="stylesheet" href="/hosted.css" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="canonical" href="https://{{DOMAIN}}/about.html" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/"><img src="/icon.svg" alt="" />Runlog</a>
+      <nav>
+        <a href="/">Why Runlog</a>
+        <a href="/#guide">Guide</a>
+        <a href="/pricing.html">Pricing</a>
+        <a href="/legal/terms.html">Terms</a>
+        <a href="/legal/privacy.html">Privacy</a>
+        <a href="/legal/publishers.html">Publishers</a>
+        <a href="/about.html" aria-current="page">About</a>
+      </nav>
+    </header>
+    <main>
+      <h1>About Runlog</h1>
+      <p class="lede">A referee and run log for games played around the things you already do.</p>
+
+      <p>
+        Runlog began as a way to turn a day at the wheel into a game: roll for the clay, roll for the form, roll for the
+        twist, make the thing, log it. The engine underneath turned out to be general — a table is a table whether it says
+        “porcelain” or “power-slide” — so it became a platform: any game of rounds, dice and consequences, written as a
+        pack, played in the same app.
+      </p>
+
+      <h2>Open source, hosted here</h2>
+      <p>
+        The app, the engine, the schema and the command line are open source under the MIT license at
+        <a href="https://github.com/SCRT-HQ/runlog">github.com/SCRT-HQ/runlog</a>. This address is the copy run by
+        {{OPERATOR_SHORT}}, with accounts, sync, invitations and the catalog added on. The hosting is in
+        the same repository, under <code>hosted/</code>, and is open too.
+      </p>
+
+      <h2>Reaching us</h2>
+      <dl>
+        <dt>Support</dt>
+        <dd><a href="mailto:{{SUPPORT}}">{{SUPPORT}}</a></dd>
+        <dt>Security</dt>
+        <dd>Please report vulnerabilities to the same address; see <a href="/.well-known/security.txt">security.txt</a>.</dd>
+        <dt>Bugs and ideas</dt>
+        <dd><a href="https://github.com/SCRT-HQ/runlog/issues">Issues on GitHub</a></dd>
+      </dl>
+
+      <h2>This build</h2>
+      <p class="stamp">Runlog {{VERSION}} {{SHA}}, published {{DATE}}.</p>
+    </main>
+    <footer>
+      <span>© {{YEAR}} {{OPERATOR}}</span>
+      <a href="/legal/terms.html">Terms</a>
+      <a href="/legal/privacy.html">Privacy</a>
+      <a href="/licenses.html">Open-source licenses</a>
+      <a href="https://github.com/SCRT-HQ/runlog">Source</a>
+      <span class="build">Runlog {{VERSION}} {{SHA}}</span>
+    </footer>
+  </body>
+</html>

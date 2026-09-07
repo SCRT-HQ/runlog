@@ -1,0 +1,131 @@
+name: Publish Package
+
+# The two npm packages, published from a release.
+#
+# `@scrthq/runlog` is the CLI and, through its library entry point, the
+# sealing API a seller's own backend uses. It is staged by scripts/stage.ts
+# from the release tag, carries the tag's version, and goes out only if that
+# version is not on the registry yet — so re-running a release is harmless.
+#
+# Runs after "Deploy Production" finishes, and only if it succeeded: a
+# version reaches npm once the same tag is live, never before, and never
+# for a release that failed to ship. The tag is the run's head branch,
+# which for a release-triggered deploy is the tag itself. Everything goes
+# out under the `next` dist-tag, which leaves `latest` alone, until the
+# NPM_CHANNEL repository variable is set to `latest`; a prerelease is
+# `next` regardless. `workflow_dispatch` publishes a tag by hand and says
+# which channel it wants.
+#
+# Publishes with OIDC and nothing else: the package on npmjs.com names this
+# repository, this file (publish-package.yml, no spaces, since the name is
+# matched against the token's claim) and the `npm-publish` environment as
+# a trusted publisher, and the
+# job's id-token is the credential. No token is stored anywhere, and npm
+# attaches provenance on its own. The first version was published by hand
+# from a laptop, because a trusted publisher is configured on a package's
+# settings page and a package has none until it exists.
+on:
+  workflow_run:
+    workflows:
+      - Deploy Production
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release tag to publish, e.g. v1.4.0
+        required: true
+        type: string
+      channel:
+        description: npm dist-tag. `next` publishes without moving `latest`, for trying a build out
+        required: false
+        default: next
+        type: choice
+        options:
+          - next
+          - latest
+
+permissions:
+  contents: read
+  # Provenance: npm records which workflow built the package.
+  id-token: write
+
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
+jobs:
+  Publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    # The trusted publisher on npmjs.com names this environment as well as
+    # the workflow, so a token minted outside it publishes nothing; and an
+    # environment is where a required reviewer goes, if a release should
+    # ever wait for one.
+    environment:
+      name: npm-publish
+      url: https://www.npmjs.com/package/@scrthq/runlog
+    # A deploy that did not succeed publishes nothing; a hand-run always may.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    env:
+      TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+
+      # Everything goes out under `next` — installable by asking for it,
+      # invisible to a plain `npx` — until the NPM_CHANNEL repository
+      # variable says `latest`. A prerelease is `next` regardless, and a
+      # hand-run says which it wants.
+      - name: Decide the channel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASKED: ${{ inputs.channel }}
+          DEFAULT: ${{ vars.NPM_CHANNEL || 'next' }}
+        run: |
+          case "$TAG" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "::error::'$TAG' is not a release tag"; exit 1 ;;
+          esac
+          pre="$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease 2>/dev/null || echo false)"
+          channel="${ASKED:-$DEFAULT}"
+          [ "$pre" = "true" ] && channel=next
+          echo "CHANNEL=$channel" >> "$GITHUB_ENV"
+          echo "Publishing $TAG as $channel"
+
+      - uses: ./.github/actions/npm-ci
+
+      # Trusted publishing wants npm 11.5.1 or later; the upgrade makes
+      # sure of it whatever Node 24 happens to bundle. No package-manager
+      # cache in a release build, as npm's own example says.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install -g npm@latest && npm --version
+
+      - name: Test what is being published
+        run: npx vitest run packages/container packages/cli
+
+      # The app rides in the package for `runlog serve`: the plain build,
+      # with no sign-in client, which is the copy that works offline.
+      - name: Build the app
+        run: npm run build --workspace apps/web
+
+      - name: Stage the package at the release's version
+        run: node --experimental-strip-types scripts/stage.ts "$TAG"
+
+      - name: Publish what the registry does not have yet
+        run: |
+          for dir in packages/cli/stage; do
+            name="$(node -p "require('./$dir/package.json').name")"
+            version="$(node -p "require('./$dir/package.json').version")"
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version is already on npm; leaving it."
+              continue
+            fi
+            (cd "$dir" && npm publish --access public --tag "$CHANNEL")
+            echo "### Published \`$name@$version\` as \`$CHANNEL\`" >> "$GITHUB_STEP_SUMMARY"
+          done

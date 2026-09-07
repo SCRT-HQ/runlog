@@ -1,0 +1,15 @@
+{
+  "app": "npx tsx bin/runlog-infra.ts",
+  "watch": { "include": ["bin/**", "lib/**"], "exclude": ["README.md", "cdk*.json", "**/*.d.ts", "node_modules", "test"] },
+  "context": {
+    "@aws-cdk/core:newStyleStackSynthesis": true,
+    "@aws-cdk/aws-iam:minimizePolicies": true,
+    "@aws-cdk/core:checkSecretUsage": true,
+    "@aws-cdk/core:validateSnapshotRemovalPolicy": true,
+    "@aws-cdk/aws-s3:createDefaultLoggingPolicy": true,
+    "@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy": true,
+    "@aws-cdk/aws-cloudfront:useOriginAccessControl": true,
+    "@aws-cdk/core:enablePartitionLiterals": true,
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true
+  }
+}

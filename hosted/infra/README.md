@@ -1,0 +1,365 @@
+# infra
+
+The AWS hosting behind Runlog: the API, the site, and the pages that make
+an address a service. One workspace of the repository, deployed by the
+same pipeline that builds the app.
+
+| Environment | Account | URL |
+| --- | --- | --- |
+| dev | `AWS_ACCOUNT_ID_DEV` | https://runlog.dev.scrthq.com |
+| prd | `AWS_ACCOUNT_ID_PRD` | https://runlog.scrthq.com |
+
+## What it creates
+
+A private S3 bucket, a CloudFront distribution reaching it through an Origin
+Access Control, an ACM certificate validated against the Route 53 zone already
+in that account, and A/AAAA alias records.
+
+Two cache policies, which is the part worth understanding. Built assets carry a
+content hash, so a URL can only ever mean one file and is cached for a year.
+The shell, the service worker and the manifest keep their names across every
+release, so they are never cached at the edge — caching those is how a deploy
+reaches nobody while looking perfect from the deploying end.
+
+## How the app reaches the bucket
+
+The site stack publishes it. The deploy workflow builds the app, lays the
+hosted pages over the build (`hosted/scripts/overlay.ts`), and hands the directory
+to `cdk deploy` as `RUNLOG_APP_DIST`; the stack uploads the hashed assets
+with a year's cache and the shell with none, and invalidates the edge.
+Three SSM parameters, `/runlog/site/{bucket,distribution,domain}`,
+still say where the site is for anything else that needs to know.
+
+## Deploying
+
+The workflow follows the same shape as `SCRT-HQ/shl-cdk-github-iam`, including
+the `npm-ci` and `run-cdk` composite actions.
+
+| Trigger | What runs |
+| --- | --- |
+| Pull request to `main` | Tests against both environments, then `cdk diff` against dev and prd |
+| Push to `main` | Deploy dev, then tag and publish the next release |
+| Release published | Deploy prd, from the tag |
+
+Production is reached only through a published release, so it always carries a
+version and has always already been to dev. Both deploy jobs sit behind GitHub
+Environments named `deploy-dev-<account>` and `deploy-prd-<account>`, so a
+reviewer can be required on production without that rule living in a file
+anyone editing the workflow could remove.
+
+Versions increment automatically from the newest `v*` tag — patch by default,
+or pick `minor`/`major` when running the workflow by hand.
+
+### Why the release is cut with a GitHub App token
+
+Anything `GITHUB_TOKEN` does is barred from starting another workflow run:
+GitHub blocks it so runs cannot recurse. That applies to a published release
+*and* to a pushed tag, so a release created the obvious way would sit there
+looking correct while production never deployed — a failure with no error
+anywhere.
+
+The release is therefore created with a token minted from the org's GitHub App
+(`CODE_MGR_APP_ID` / `CODE_MGR_APP_PRIVATE_KEY`). A release created by the App
+is created by the App, so `release: published` fires and *Deploy Production*
+picks it up.
+
+Tests run with no AWS credentials at all. The stacks are asserted against a
+synthesised template, so they need an account id to render into ARNs and
+nothing more — which is what keeps them runnable on a fork's pull request.
+Results are published as JUnit XML, the same as the other CDK repositories.
+
+Deployment itself uses the shared `GitHubActionRole`, which trusts this
+repository — see `SCRT-HQ/shl-cdk-github-iam`, where the list of repositories
+that may assume it lives.
+
+### First time, per account
+
+```bash
+npx cdk bootstrap aws://<account>/us-east-1
+```
+
+us-east-1 specifically: CloudFront only accepts a certificate issued there, and
+keeping the whole stack in one region avoids a cross-region reference for the
+sake of one certificate.
+
+### Locally
+
+```bash
+npm ci
+AWS_ENVIRONMENT=dev CDK_DEFAULT_ACCOUNT=... RUNLOG_DEV_ZONE_ID=... npx cdk diff
+```
+
+`AWS_ENVIRONMENT` and `CDK_DEFAULT_ACCOUNT` are the names the shared workflow
+actions already set, so nothing has to be translated between them and this
+repository. `RUNLOG_ENV` and `RUNLOG_DEV_ACCOUNT` are accepted too.
+
+Account ids come from the environment rather than the repository. They are not
+secret — an account id appears in every ARN — but hardcoding them would tie
+this repository to one person's AWS.
+
+Zone ids are optional. Without one, CDK looks the zone up, which needs
+credentials at synth time and caches the answer into `cdk.context.json` — a
+nuisance in a repository that deploys to two accounts, since the cached dev
+zone would then be used for prd.
+
+## Publishing the app
+
+The site stack publishes the app itself. `RUNLOG_APP_DIST` names a built
+`apps/web/dist` with the hosted pages laid over it, and the stack writes it
+to the site bucket in two deployments: the hashed assets first, cached for a
+year and never pruned, then the shell, the worker, the manifest and the pages
+with `no-cache, must-revalidate` and pruning, each followed by an invalidation
+of `/*`. Without the variable the stack creates the site and leaves its
+contents alone, which is what the tests and a bare `cdk synth` see.
+
+The pipeline in `.github/workflows/CI-CD.yml` builds the app before every
+diff and deploy, so a diff on a pull request names the publish it would make
+and a merge to main puts the build on dev. Production deploys a released tag
+from `Deploy Production.yml`, which builds that tag and nothing else.
+
+To republish or roll back by hand, dispatch that workflow with the tag:
+
+```
+gh workflow run "Deploy Production.yml" -R SCRT-HQ/runlog -f tag=v1.4.0
+```
+
+## The hosted layer
+
+The app is generic and knows nothing about who runs it. What makes an
+address a service — the terms, the privacy policy, the publisher agreement,
+pricing, an about page, the open-source notice, `robots.txt`, `sitemap.xml`,
+`security.txt`, the image a shared link unfurls with — lives in `hosted/`
+as templates, and `hosted/scripts/overlay.ts` lays them over the built app at
+publish time with the environment's words filled in (`lib/config.ts`,
+`hosted`). The app finds `hosted.json` at its root and, when it is there,
+shows a footer and asks people signed in to accept the terms once per
+version; a copy on disk or on GitHub Pages has no such file and shows
+nothing.
+
+To change the terms: edit the page, bump `hosted.termsVersion` and
+`termsDate` in `lib/config.ts`, publish. Every signed-in person is asked
+once. Paragraphs marked "For counsel" are notes for legal review and
+should be removed as each is settled.
+
+## Who may open it
+
+Nothing here stands in front of the site. Who may *use* the app is the app's
+own question: a hosted build carries a WorkOS AuthKit client id, and asks who
+is there before it opens. That lives in the application, and the id reaches
+the build from this repository's variables when it publishes — not in this
+stack, since an edge function cannot verify an AuthKit session,
+and a shared password in front of it would be a second door with a different
+key. The one thing this stack knows about it is the Content Security Policy,
+which lets the app reach `api.workos.com` and nothing else.
+
+This replaced a shared password baked into a CloudFront Function, and before
+that an attempt to use GitHub Pages with private visibility. Even where that is
+available it authenticates against GitHub, so every viewer would need an
+account with access to the repository — which rules out showing the build to
+anybody who is not a collaborator.
+
+## The API
+
+There is one server, and it is behind `/api` on the site's own domain. It
+exists for a signed-in player's sessions, the packs they choose, and the
+license keys they have typed to open sealed copies, on every device they use —
+and it holds nothing for anyone who has not signed in.
+
+A session is a run with people in it, and its log is append-only in the
+server's order: `POST /api/sessions` starts one with its first events,
+`POST /api/sessions/{id}/events` appends a move and answers with what was
+actually added and the log's new tail, `GET /api/sessions/{id}?after=N` reads
+everything past what a device has seen. An event carries an id from the
+device that made it, so a retry after a lost reply appends nothing twice, and
+the server stamps each with its sequence number and author. Two people
+appending at once get disjoint ranges from one atomic add on the session's
+row, and replay the same list. Undo is an event too, so it never shortens a
+log somebody else has built on.
+The app works without it: from disk, from the public GitHub Pages build, and
+here with nobody signed in.
+
+Same domain rather than a hostname of its own, on purpose. A CloudFront
+behavior forwards `/api/*` to an HTTP API, so the app fetches relative, the
+Content Security Policy stays `connect-src 'self'`, and there is no CORS, no
+second certificate and no second record.
+
+Two conventions follow from that. The distribution rewrites every 403 and 404
+into the app's index page, for every path, so the API never answers either: a
+bad or missing token is a **401**, an unknown route a **410**, and a missing
+item a 200 that says `found: false`. The token — a WorkOS access token the app
+already holds, or one the command line got from the device flow — is verified
+inside the handler against the client's published key set, not by a gateway
+authorizer whose refusal would be a 403. Two WorkOS applications are accepted
+per environment: the browser's, and one for the command line with a session
+policy fit for a terminal (a month idle, not two days). `GET /api/auth/cli`
+tells `runlog login` which client to use, so the package carries neither id.
+
+| Where | What |
+| --- | --- |
+| `runlog-<env>` | DynamoDB: one row per pack or license keyed by player, a partition per session (its row, its members, one row per event), and a pointer per member. What is *about* each item — and, for a license, the key itself, since it is a line of text. |
+| `runlog-<env>-sync-<account>` | S3: the items themselves, one object each, under the player's own prefix. |
+| `/runlog/api/url` | SSM: `https://<domain>/api`, what the app reaches. |
+| `/runlog/api/endpoint` | SSM: the API Gateway endpoint CloudFront forwards to. |
+| `runlog/stripe/secret-key` | Secrets Manager: the Stripe secret key, sandbox in dev and live in prd. |
+| `runlog/stripe/webhook-secret` | Secrets Manager: the signing secret of the webhook endpoint that points at `/api/stripe/webhook`. |
+| `runlog/stripe/connect-webhook-secret` | Secrets Manager: the signing secret of the Connect webhook endpoint (events from connected accounts) that points at `/api/stripe/connect-webhook`. |
+| `runlog/workos/api-key` | Secrets Manager: the environment's WorkOS API key, for creating publisher organisations. |
+
+The secrets are defined here and filled out of band. A deploy creates each
+with a random placeholder, and the handler treats a value that does not look
+like the real thing as "not configured", so the stack stands before any key
+exists and a feature stays off until its key arrives. The names carry no
+environment: each environment is its own account, so the account a shell is
+signed in to is the environment it fills. To fill one:
+
+```bash
+aws secretsmanager put-secret-value   --secret-id runlog/stripe/secret-key   --secret-string "$(cat)"   # paste the key, then Ctrl-D
+```
+
+The same command signed in to the production account, with the live key,
+fills production. On Windows, `hosted/scripts/Set-RunlogSecret.ps1 -Secret
+workos/api-key` does the same with a masked prompt, using whatever
+credentials and region the AWS CLI resolves (set `AWS_PROFILE` first to
+reach another account). Nothing in this repository or its workflows ever
+sees a value; rotating one is the same command again.
+
+Deleting leaves a tombstone for thirty days so other devices hear of it; the
+object goes at once.
+
+A session is shared by invitation. The owner asks `POST
+/api/sessions/{id}/invites` with an email and a role (`player` or `viewer`);
+the API mails a link through the domain identity core-infra verified in
+us-west-2 and answers with the same link. `GET /api/invites/{token}` is the
+one read that needs no account: what the link is for, so the app can say so
+before the sign-in it will ask for. `POST /api/invites/{token}/accept` joins
+the caller, records that they and every member have played together
+(`GET /api/people`), and spends the token for anyone else. Invitations last
+seven days, twenty an hour per person, and the owner can withdraw one or
+remove a member. The dev account's SES is sandboxed, so dev mail only reaches
+addresses verified there.
+
+The command line acts as a person through a key: `POST /api/keys` mints one
+(shown once, `rl_` and 32 random bytes; the table keeps only its hash), and
+the same `Authorization: Bearer` header then names the caller on every route.
+A key cannot mint keys. Signing keys are claimed by proof: `POST
+/api/claims/nonce` hands out a nonce, `POST /api/claims` takes the public key
+and the nonce signed with the private one, and from then on `GET
+/api/authors/{fingerprint}` — the other read that needs no account — answers
+who signed a pack, which is what the app's badge shows.
+
+The person themselves is one more row: `GET /api/me` answers who is asking
+and creates a profile on first sight (`createdAt`, `lastSeenAt`, and the name
+and email the app reports through `PUT /api/me/profile`, since the token does
+not carry them). `DELETE /api/me` removes every row and object under the
+person; the app keeps its local copies, this is only the server forgetting.
+
+A sealed copy's text is never sent here, by the app's own rule: the key
+travels (`/api/licenses/{packId}`), the file stays with the player, and the
+manifest lists which licenses exist without repeating the keys.
+
+## Billing
+
+Stripe, through a keyhole (`lib/handlers/stripe.ts`): a customer per
+person (made on first use, `workos_user_id` in its metadata), a Checkout
+session to start a subscription (`POST /api/billing/checkout {price}`
+with `plus-monthly`, `plus-yearly`, `hosted-monthly` or `hosted-yearly`),
+a Portal session to manage it (`POST /api/billing/portal`), a re-read of
+what Stripe says the person has (`POST /api/billing/refresh`), and the
+webhook (`POST /api/stripe/webhook`, no bearer — the signature over the
+raw body is the credential; a bad one is a 401, a replay is a no-op, an
+unknown event is a 200). `entitlements.active_entitlement_summary.updated`
+writes the person's `ENTITLEMENTS` row, which `GET /api/me` returns.
+
+It is all off until the secrets are filled: a `stripe/secret-key` that
+does not look like a key means every billing route answers
+`{available: false}`. `lib/config.ts` says whether plans gate anything
+(`gates`: dev on, prd off until Stripe is live there) and which prices are
+for sale. To set an environment up:
+
+1. `$env:STRIPE_SECRET_KEY = "sk_…"; npx tsx hosted/scripts/stripe-setup.ts` —
+   idempotent; makes the features, products, prices and the Portal
+   configuration and prints the price ids for `lib/config.ts`.
+2. Register `https://<domain>/api/stripe/webhook` in Stripe for
+   `entitlements.active_entitlement_summary.updated`; fill
+   `stripe/webhook-secret` with its signing secret and `stripe/secret-key`
+   with the key (`hosted/scripts/Set-RunlogSecret.ps1`).
+3. Subscribe an address to the `runlog-<env>-alarms` topic: the API's
+   errors, a webhook Stripe could not deliver among them, ring it.
+
+## Selling
+
+A priced listing is bought with `POST /api/listings/{packId}/checkout`:
+a one-off Checkout on the publisher's connected account, the platform's
+share taken as the application fee (`stripe.applicationFeeBps` in
+`lib/config.ts`: 5% for a publisher without the hosted-licensing
+subscription, 0% with it), and a pending sale in the ledger. When Stripe's
+Connect webhook says it was paid (`POST /api/stripe/connect-webhook`, its
+own signing secret), the master is sealed under a fresh license key for
+that buyer alone, the file goes to the bucket, a signed-in buyer's account
+gets the key so sync carries it, and the receipt mails the key with a link
+that fetches the copy without an account. `GET /api/me/purchases` lists a
+buyer's sales; `GET /api/purchases/{ref}` and `…/file` are the buyer's, by
+account or by the mail's token. The publisher's ledger is
+`GET /api/publishers/sales`, `POST …/sales/{ref}/reissue` (the same key,
+a fresh link, the mail again) and `POST …/sales/{ref}/revoke`. The server
+never holds a signing key; it seals what the publisher signed.
+
+## Listings
+
+A publisher uploads a pack (`PUT /api/publishers/packs/{packId}` with
+the signed master text, the head the app computed — title, category,
+tags, features, what it needs — and the catalog summary), lists it
+(`POST …/listing` with an amount in cents, or nothing for free; a price
+makes a product and price on the publisher's connected account, and needs
+payouts set up), and takes it down (`DELETE …/listing`) or removes it
+(`DELETE …/packs/{packId}`). The catalog reads `GET /api/listings` (public,
+a minute's cache) and `GET /api/listings/{packId}` for the summary; a free
+listing's text is `GET …/file`, a priced one is delivered sealed to its
+buyer. The server parses no pack: the head and summary are the app's word.
+
+## Races
+
+A race is several people playing the same seeded mode of the same pack at
+once, each in an ordinary run on their own device; the same seed hands
+everyone the same dice, so the runs agree without ever meeting. The server
+holds the race (`POST /api/races`: pack, mode, seed, who started it, a
+six-letter code), an entry per racer (`POST /api/races/join {code}`), and
+the progress each device reports (`PUT /api/races/{id}/entries/me`). The
+leaderboard is that progress, ranked on the device. The server never
+reduces a run and never sees a pack. The one who started it renames or
+ends it (`PATCH`) and can mail the code (`POST …/invites`). Changes ring
+the same doorbell as sessions; a socket may watch a race id.
+
+## Live push
+
+Beside the HTTP API there is a WebSocket API — a doorbell, not a channel.
+A device with a run open connects to `wss://<domain>/ws?token=<access token>`
+(the token rides in the query string because a browser's socket cannot set
+a header; it is checked exactly as a bearer is), sends `{"t":"watch","id":
+"<session id>"}` for a session it is a member of, and receives
+`{"t":"changed","id":"…","seq":n}` whenever another device appends to it,
+renames it, or takes a seat. Nothing else travels on it: the device then
+syncs over HTTP as it always did, so a socket that lies can only cause a
+fetch that finds nothing new.
+
+The stage is named `ws` so that CloudFront can forward the site's `/ws`
+path to it unchanged (the stage name is the first path segment of a
+WebSocket API's address). Connection rows expire after two hours by TTL,
+and a connection the gateway reports gone is dropped the first time a
+post to it fails. The app falls back to polling when the socket is closed.
+
+## Repository variables
+
+| Variable | What it is |
+| --- | --- |
+| `AWS_ACCOUNT_ID_DEV` | Dev account id |
+| `AWS_ACCOUNT_ID_PRD` | Production account id |
+| `RUNLOG_DEV_ZONE_ID` | Route 53 zone for `dev.scrthq.com` |
+| `RUNLOG_PRD_ZONE_ID` | Route 53 zone for `scrthq.com` |
+| `WORKOS_CLIENT_ID_DEV` | AuthKit client the dev build signs in with |
+| `WORKOS_CLIENT_ID_PRD` | AuthKit client the production build signs in with |
+| `CODE_MGR_APP_ID` | The org's GitHub App, which cuts releases and reads the app repository |
+
+The client ids are variables rather than secrets on purpose: they appear in
+every sign-in URL. The App's private key is the one secret,
+`CODE_MGR_APP_PRIVATE_KEY`.

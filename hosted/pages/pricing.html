@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pricing · Runlog</title>
+    <meta name="description" content="What Runlog costs: the app is free; hosting a table and selling packs are paid." />
+    <link rel="stylesheet" href="/hosted.css" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="canonical" href="https://{{DOMAIN}}/pricing.html" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/"><img src="/icon.svg" alt="" />Runlog</a>
+      <nav>
+        <a href="/">Why Runlog</a>
+        <a href="/#guide">Guide</a>
+        <a href="/pricing.html" aria-current="page">Pricing</a>
+        <a href="/legal/terms.html">Terms</a>
+        <a href="/legal/privacy.html">Privacy</a>
+        <a href="/legal/publishers.html">Publishers</a>
+        <a href="/about.html">About</a>
+      </nav>
+    </header>
+    <main>
+      <h1>Pricing</h1>
+      <p class="lede">The app is free and always will be. What costs money is what a server adds: a table other people can join, and a shop with a ledger.</p>
+
+      <div class="plans">
+        <section class="plan">
+          <h2>Free</h2>
+          <p class="price"><strong>$0</strong></p>
+          <ul>
+            <li>Every pack, every mode, offline included</li>
+            <li>The Designer and the command line</li>
+            <li>Sync between your own devices</li>
+            <li>Play together on one device, moderated play included</li>
+            <li>Buy packs from the catalog</li>
+          </ul>
+          <p class="now">No account needed for most of it.</p>
+        </section>
+        <section class="plan">
+          <h2>Plus</h2>
+          <p class="price"><strong>$4</strong> a month, or $36 a year</p>
+          <ul>
+            <li>Everything in Free</li>
+            <li>Invite people into your runs, as players or watchers, on their own devices</li>
+            <li>Races across devices, with a live leaderboard</li>
+            <li>Pop-out widgets for a stream: the scoreboard, the clock, the race</li>
+          </ul>
+          <p class="now">{{PLANS_NOTE}}</p>
+        </section>
+        <section class="plan">
+          <h2>Publisher</h2>
+          <p class="price"><strong>5%</strong> of each sale</p>
+          <ul>
+            <li>List packs in the catalog, free or priced</li>
+            <li>Paid through your own Stripe account</li>
+            <li>Sealed delivery, and a ledger: reissue a buyer's key, revoke one</li>
+            <li>Command-line publishing with API keys</li>
+          </ul>
+          <p class="now">Or <strong>0%</strong> with hosted licensing, $9 a month or $90 a year, for publishers who sell often.</p>
+        </section>
+      </div>
+
+      <h2>What never costs anything</h2>
+      <p>
+        Running the app yourself. Runlog is open source under the MIT license: the same build runs from a file on disk, from
+        the public GitHub Pages copy, or from your own hosting, with no account and no fee. Selling a pack you sealed
+        yourself, outside this catalog, is free too; only hosting the ledger for you is a service.
+      </p>
+
+      <h2>Cancelling</h2>
+      <p>A subscription can be cancelled from your profile at any time and runs to the end of the period paid for. There is no cancellation fee.</p>
+    </main>
+    <footer>
+      <span>© {{YEAR}} {{OPERATOR}}</span>
+      <a href="/legal/terms.html">Terms</a>
+      <a href="/legal/privacy.html">Privacy</a>
+      <a href="/licenses.html">Open-source licenses</a>
+      <a href="https://github.com/SCRT-HQ/runlog">Source</a>
+      <span class="build">Runlog {{VERSION}} {{SHA}}</span>
+    </footer>
+  </body>
+</html>

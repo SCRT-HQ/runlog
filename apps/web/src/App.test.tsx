@@ -1,0 +1,107 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import { loadPackText, type Pack } from "@runlog/rules-schema";
+import App, { PackView } from "./App.tsx";
+import { RunView, Setup } from "./run/RunView.tsx";
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+function loadPack(rel: string): Pack {
+  const r = loadPackText(readFileSync(join(repoRoot, rel), "utf8"), "yaml");
+  if (!r.ok) throw new Error(`could not load ${rel}`);
+  return r.pack;
+}
+const kiln = loadPack("packs/demo/pack.yaml");
+const ladder = loadPack("packs/sketches/ladder-work.yaml");
+
+/**
+ * Render smoke tests.
+ *
+ * Rendering to static markup walks the whole component tree against real pack
+ * data, and throws on the runtime mistakes a type-checker cannot see. Not a
+ * substitute for looking at the thing, but it means "it compiles" is not the
+ * only evidence it works.
+ */
+describe("the app shell", () => {
+  const html = renderToStaticMarkup(<App />);
+
+  it("renders without throwing", () => {
+    expect(html.length).toBeGreaterThan(500);
+  });
+
+  it("ships no pack in the bundle: the first paint is the library, and the bar says so", () => {
+    expect(html).toContain('class="packNow"');
+    expect(html).toContain("your packs");
+    expect(html).toContain("Get more packs");
+    for (const label of ["The Long Kiln", "Salt &amp; Signal", "Ladder Work"]) expect(html).not.toContain(label);
+  });
+
+  it("keeps the bar to the pack, the rules, and one menu", () => {
+    expect(html).not.toContain("Inspect");
+    expect(html).not.toContain(">Design<");
+    expect(html).toContain("Menu");
+  });
+
+  it("does not offer to start a run before storage has answered", () => {
+    // Reading storage is asynchronous. Rendering setup in the meantime would
+    // invite the player to start a run over the top of one already going.
+    expect(html).not.toContain("Begin a");
+  });
+});
+
+describe("the setup screen", () => {
+  const noop = () => {};
+
+  it("names the run in the pack's own words", () => {
+    const html = renderToStaticMarkup(<Setup pack={kiln} onStart={noop} />);
+    expect(html).toContain("Begin a Firing");
+    expect(html).toContain("Standard Firing");
+  });
+
+  it("relabels itself entirely for a different game", () => {
+    // The generality claim, held to at the last mile: no hardcoded noun
+    // survives a change of pack.
+    const html = renderToStaticMarkup(<Setup pack={ladder} onStart={noop} />);
+    expect(html).toContain("Begin a Session");
+    expect(html).not.toContain("Firing");
+  });
+
+  it("offers a seed only for the modes meant to be shared", () => {
+    const html = renderToStaticMarkup(<Setup pack={kiln} onStart={noop} />);
+    // Standard Firing is the default and is not seeded, so no seed field yet.
+    expect(html).not.toContain("long-kiln-42");
+  });
+
+  it("lists every mode the pack declares", () => {
+    const html = renderToStaticMarkup(<Setup pack={kiln} onStart={noop} />);
+    for (const mode of Object.values(kiln.modes)) expect(html).toContain(mode.label);
+  });
+});
+
+describe("the inspector", () => {
+  const html = renderToStaticMarkup(
+    <PackView pack={kiln} warnings={[]} random={() => Math.random} initial="structure" />,
+  );
+
+  it("shows the pack's own vocabulary rather than generic nouns", () => {
+    for (const word of ["Firing", "Stage", "Piece"]) expect(html).toContain(word);
+  });
+
+  it("lists the tables with their resolution kinds", () => {
+    expect(html).toContain("Kiln Check");
+    expect(html).toContain("lookup");
+    expect(html).toContain("bands");
+    expect(html).toContain("d100");
+  });
+
+  it("surfaces declared capabilities and the license", () => {
+    expect(html).toContain("backwardTargeting");
+    expect(html).toContain("MIT");
+  });
+
+  it("renders the per-unit flow from the pack's phases", () => {
+    expect(html).toContain("Fire the Stage");
+  });
+});

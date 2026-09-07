@@ -1,0 +1,326 @@
+# Practice Room — deliberate practice for any skill.
+#
+# An instrument, a language, drawing, a sport, code katas: anything you get
+# better at by doing drills on purpose. A Session is a series of Drills. You
+# name the Exercise; the Focus table says what to attend to this time
+# (tempo, accuracy, feel, the hard bar); a Curveball sometimes changes the
+# terms halfway; a Check-in at the end of the Session says how it went.
+# Focus is the resource — it runs down, and rest gives some back.
+#
+# Written to show timers as the spine of a pack, a required journal line,
+# and a run-end bands roll that says how the session landed.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.practice-room
+version: "0.1.0"
+title: Practice Room
+author: Runlog
+description: >-
+  Deliberate practice for any skill. Name an exercise, roll what to focus on,
+  drill it against the clock, and let a curveball change the terms. Works for
+  an instrument, a language, a sketchbook, or a sport.
+
+category: practice
+tags: [music, language, drawing, sport, drills]
+
+requires:
+  - { id: thing, label: "The thing you practice: an instrument, a language, a sketchbook, a ball", kind: other }
+  - { id: timer, label: A timer, kind: equipment, note: "The app has one." }
+  - { id: record, label: A way to record yourself, kind: equipment, optional: true, note: "A phone will do." }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - seededRuns
+  - counters
+  - resources
+  - backwardTargeting
+  - timers
+  - journal
+  - bandsResolution
+
+vocabulary:
+  run: { one: Session, many: Sessions }
+  unit: { one: Drill, many: Drills }
+  subject: { one: Exercise, many: Exercises }
+  finalize: Log
+
+unit:
+  createsSubject: true
+  min: 1
+  max: 8
+
+states:
+  nailed:
+    label: Nailed
+    short: OK
+    scope: subject
+    description: Clean at the target. Move on, or raise the bar next time.
+  shaky:
+    label: Shaky
+    short: SH
+    scope: subject
+    description: Not there yet. It comes back in a later Drill of this Session.
+  warm:
+    label: Warmed up
+    scope: run
+    description: The first Drill is done. Curveballs may now land.
+
+counters:
+  drills:
+    label: Drills done
+    initial: 0
+    incrementOn:
+      - { on: unitFinalized }
+  cleanRun:
+    label: Clean streak
+    initial: 0
+    min: 0
+    incrementOn:
+      - { on: unitFinalized }
+    resetOn:
+      - { on: outcomeResolved, table: curveball, cause: any }
+    triggers:
+      - when: { gte: 3 }
+        oncePerRun: true
+        label: Raise the bar
+        do:
+          - { do: note, text: "Three clean Drills. The next Exercise must be one you cannot do yet.", persistent: true }
+
+resources:
+  focus:
+    label: Focus
+    initial: 6
+    min: 0
+    max: 6
+    step: 1
+    display: bar
+    description: Each Drill spends one; a rest gives one back. At zero, log the Drill you are in and stop.
+
+moves:
+  rest:
+    label: Rest
+    description: Five minutes away from the instrument, the page, the field. Focus +1.
+    when: betweenUnits
+    do:
+      - { do: startTimer, minutes: 5, label: "Rest" }
+      - { do: modResource, resource: focus, by: 1 }
+  revisit:
+    label: Revisit a shaky one
+    description: Pick an Exercise marked Shaky and make it this Drill's Exercise.
+    when: betweenUnits
+    available:
+      - { unitIndex: { gte: 1 } }
+    do:
+      - { do: prompt, kind: chooseSubject, label: "Which shaky Exercise?", into: again }
+      - { do: note, text: "Name it again as this Drill's Exercise. Same Focus rules apply." }
+
+tables:
+  focus:
+    resolution: lookup
+    title: Focus
+    description: What to attend to in this Drill, and nothing else.
+    roll: d10
+    entries:
+      - id: f-slow
+        range: [1, 2]
+        text: "Slow. Half speed or slower, every repetition perfect. Ten minutes."
+        triggers:
+          - on: onDeclareSubject
+            do:
+              - { do: startTimer, minutes: 10, label: "Drill" }
+      - id: f-tempo
+        range: [3, 3]
+        text: "Tempo. Find the fastest speed that is still clean, then sit just under it. Ten minutes."
+        triggers:
+          - on: onDeclareSubject
+            do:
+              - { do: startTimer, minutes: 10, label: "Drill" }
+      - id: f-loop
+        range: [4, 5]
+        text: "The hard bar. Isolate the two seconds that break, loop only that. Eight minutes."
+        triggers:
+          - on: onDeclareSubject
+            do:
+              - { do: startTimer, minutes: 8, label: "Drill" }
+      - { id: f-eyes, range: [6, 6], text: "Eyes closed, or away from the page. Feel where it goes. Five minutes." }
+      - { id: f-record, range: [7, 7], text: "Record one take, listen or look back, then one more take. Compare honestly.", needs: [record] }
+      - { id: f-teach, range: [8, 8], text: "Explain it out loud as if to a beginner while you do it." }
+      - id: f-perform
+        range: [9, 9]
+        text: "Performance. One take, start to finish, no stopping. Whatever happens, happens."
+        triggers:
+          - on: afterWork
+            do:
+              - { do: prompt, kind: confirm, label: "Was it clean start to finish?", into: clean }
+      - { id: f-choice, range: [10, 10], text: "Your choice of focus. Say it before you start." }
+
+  curveball:
+    resolution: lookup
+    title: Curveball
+    description: Rolled after the first Drill, at the start of each Drill. Most of the time, nothing.
+    roll: d10
+    entries:
+      - { id: cb-none, range: [1, 6], text: "Nothing. Carry on." }
+      - id: cb-shaky
+        range: [7, 8]
+        text: "The last Exercise did not stick. Mark it Shaky; it comes back later this Session."
+        triggers:
+          - on: immediately
+            do:
+              - { do: resolveTarget, from: choice }
+              - { do: applyState, state: shaky, to: targetSubject }
+      - { id: cb-key, range: [9, 9], text: "Change the terms: a new key, a new language register, a new medium, a weaker hand. This Drill only." }
+      - id: cb-tired
+        range: [10, 10]
+        text: "It catches up with you. Focus −1."
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: focus, by: -1 }
+
+  checkIn:
+    resolution: bands
+    title: Check-in
+    description: Rolled once, when the Session ends. How it landed, dice and all.
+    roll: 2d6
+    entries:
+      - { id: ci-low, lte: 5, text: "Heavy. Write down the one Exercise to start with next time, and stop thinking about it." }
+      - { id: ci-mid, gte: 6, lte: 8, text: "Steady. Progress you cannot hear yet. Log it and go." }
+      - { id: ci-high, gte: 9, text: "Good. Something clicked. Write down exactly what, because you will forget." }
+
+targeting:
+  strategy: playerChoice
+
+phases:
+  - id: curve
+    label: Curveball
+    description: Skipped in the first Drill.
+    skipWhen:
+      - { unitIndex: { lte: 1 } }
+    steps:
+      - kind: rollTable
+        table: curveball
+        label: Roll the Curveball
+
+  - id: name
+    label: Name the Exercise
+    steps:
+      - kind: declareSubject
+        label: What are you practicing in this Drill? Be specific enough to know when it is clean.
+
+  - id: focus
+    label: Focus
+    steps:
+      - kind: rollTable
+        table: focus
+        label: Roll the Focus
+      - kind: actions
+        do:
+          - { do: modResource, resource: focus, by: -1 }
+
+  - id: work
+    label: Drill
+    steps:
+      - kind: manual
+        label: Do the Drill, with the Focus, for the time.
+        checklist:
+          - text: The Focus was kept for the whole Drill.
+            shows: { table: focus, scope: unit }
+          - Nothing else was practised in the time.
+
+  - id: log
+    label: Log
+    steps:
+      - kind: finalizeUnit
+        label: Log the Drill
+        confirm:
+          - Marked it Nailed or Shaky, honestly.
+
+journal:
+  enabled: true
+  prompt: What was clean, and what broke?
+  required: true
+
+endings:
+  - id: full
+    label: Full session
+    text: Six or more Drills. Roll the Check-in and put it away.
+    requires:
+      - { counter: drills, is: { gte: 6 } }
+  - id: enough
+    label: Enough for today
+    text: Roll the Check-in and stop. Shaky ones come back next time.
+  - id: spent
+    label: Spent
+    text: Focus is gone. Roll the Check-in and rest properly.
+
+triggers:
+  - on: onEnterUnit
+    label: Warmed up
+    when:
+      - { unitIndex: { eq: 2 } }
+    do:
+      - { do: applyState, state: warm, to: run }
+  - on: onRunEnd
+    label: Check-in
+    do:
+      - { do: rollOn, table: checkIn }
+
+modes:
+  session:
+    label: A session
+    description: Drill until Focus runs out, up to eight.
+    seeded: false
+    units: { min: 1, max: 8 }
+
+  fifteen:
+    label: Fifteen minutes
+    description: Two Drills, one Focus each, and out the door.
+    seeded: false
+    units: { fixed: 2 }
+    disable:
+      tables: [curveball]
+
+  hour:
+    label: The full hour
+    description: Six Drills with rests between. The shape of a proper practice.
+    seeded: false
+    units: { fixed: 6 }
+    notes:
+      - Rest between every second Drill; the timer is part of the practice.
+
+  showPrep:
+    label: Show prep
+    description: A pre-rolled Session for the week before a performance, exam or match. Same seed, same drills.
+    seeded: true
+    units: { roll: d4+3 }
+
+defaultMode: session
+
+hierarchy:
+  - Curveball
+  - Focus
+  - General rules
+
+fixtures:
+  - name: Two drills, one clean streak, focus spent
+    mode: session
+    events:
+      - { t: RunStarted, mode: session }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: "C major scale, two octaves" }
+      - { t: UnitFinalized }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: "Bar 12, left hand" }
+      - { t: UnitFinalized }
+    expect:
+      - { path: counters.drills, equals: 2 }
+      - { path: counters.cleanRun, equals: 2 }
+      - { path: subjects.length, equals: 2 }
+      - { path: status, equals: active }

@@ -1,0 +1,424 @@
+# Any Given Day — the pack a fresh device gets.
+#
+# The most general thing a run can be: a day, or a stretch of one, cut into
+# Blocks. Each Block names one Task, draws a Twist that says how it must be
+# done, and ends when you call it. Weather rolls in between Blocks — nothing,
+# a boon, or a setback that reaches back to something you already finished —
+# so a day has a shape even when the tasks are dull. Nothing here knows what
+# the task is. It keeps the tally a good to-do list keeps, and adds the dice.
+#
+# Written to resonate with anyone: no craft, no game, no gym. If you have
+# things to do today, this is playable as it stands.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.any-given-day
+version: "1.0.0"
+title: Any Given Day
+author: Runlog
+description: >-
+  Turn a day of things to do into a run. Name a task, draw a twist, do it,
+  call it. Weather rolls in, streaks build, and the day ends on your terms.
+homepage: https://github.com/SCRT-HQ/runlog
+
+category: everyday
+tags: [productivity, habits, focus, for anyone]
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - seededRuns
+  - decks
+  - counters
+  - resources
+  - coopRoles
+  - backwardTargeting
+  - timers
+  - journal
+  - bandsResolution
+
+vocabulary:
+  run: { one: Day, many: Days }
+  unit: { one: Block, many: Blocks }
+  subject: { one: Task, many: Tasks }
+  finalize: Call it
+
+unit:
+  createsSubject: true
+  clock: { kind: timer, minutes: 25, auto: false, label: This Block }
+  min: 1
+  max: 10
+
+states:
+  done:
+    label: Done
+    short: OK
+    scope: subject
+    description: Finished. Weather can still reach back to it; that is the game.
+  carried:
+    label: Carried
+    short: CR
+    scope: subject
+    semantics: [excludesFromResult]
+    description: Not finished today. It goes on tomorrow's list, and it does not count for this Day.
+  reopened:
+    label: Reopened
+    short: RO
+    scope: subject
+    description: Weather sent you back to it. Spend part of a later Block finishing it before that Block counts.
+  goldenHour:
+    label: Golden hour
+    scope: run
+    description: The Day has settled. No more Weather.
+
+counters:
+  streak:
+    label: Streak
+    initial: 0
+    min: 0
+    incrementOn:
+      - { on: unitFinalized }
+    resetOn:
+      - { on: outcomeResolved, table: setback, cause: any }
+    triggers:
+      - when: { gte: 4 }
+        oncePerRun: true
+        label: On a roll
+        do:
+          - { do: note, text: "Four Blocks without a setback. Take the next Twist or leave it — your choice.", persistent: true }
+          - { do: applyState, state: goldenHour, to: run }
+  tasksDone:
+    label: Tasks done
+    initial: 0
+    incrementOn:
+      - { on: unitFinalized }
+
+resources:
+  energy:
+    label: Energy
+    initial: 6
+    min: 0
+    max: 6
+    step: 1
+    display: boxes
+    description: Spent by hard Blocks, restored by breaks. At zero, finish the Block you are in and end the Day.
+
+decks:
+  favors:
+    kind: cards
+    title: Favors
+    description: One-shot advantages. Draw one at the start of a Day.
+    drawAtStart: 1
+    unique: true
+    carriesOver: false
+    cards:
+      - id: fresh-coffee
+        title: Fresh Coffee
+        text: Restore two Energy. Play it between Blocks.
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: energy, by: 2 }
+      - id: clear-skies
+        title: Clear Skies
+        text: Ignore one Weather roll. Roll it, read it, and let it pass.
+      - id: delegate
+        title: Delegate
+        text: One Task counts as Done the moment you name it, provided someone else really does it.
+      - id: second-wind
+        title: Second Wind
+        text: Ignore one Twist and do the Block however you like.
+
+moves:
+  takeABreak:
+    label: Take a break
+    description: Ten minutes away from all of it. Once a Day.
+    oncePerRun: true
+    when: betweenUnits
+    do:
+      - { do: startTimer, minutes: 10, label: "Break" }
+      - { do: modResource, resource: energy, by: 1 }
+  carryOne:
+    label: Carry a task to tomorrow
+    description: Admit one is not happening today. It leaves the Day, unfinished and unpunished.
+    when: betweenUnits
+    do:
+      - { do: prompt, kind: chooseSubject, label: "Which Task goes on tomorrow's list?", into: carried }
+      - { do: applyState, state: carried, to: { var: carried } }
+
+tables:
+  weather:
+    resolution: lookup
+    title: Weather
+    description: >-
+      Rolled at the start of every Block after the first. What the day does
+      to you between one thing and the next.
+    roll: d20
+    entries:
+      - { id: w-calm, range: [1, 10], text: "Calm. Nothing happens." }
+      - id: w-boon
+        range: [11, 14]
+        text: "A break in the clouds. Roll on Boon."
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: boon }
+      - id: w-setback
+        range: [15, 19]
+        text: "Something comes up. Choose which finished Task it lands on, then roll on Setback."
+        triggers:
+          - on: immediately
+            do:
+              - { do: resolveTarget, from: choice }
+              - { do: rollOn, table: setback }
+      - id: w-golden
+        range: [20, 20]
+        text: "Golden hour. The Day settles; no more Weather."
+        grants: [goldenHour]
+
+  boon:
+    resolution: lookup
+    title: Boon
+    description: Good weather, made specific.
+    roll: d6
+    entries:
+      - id: b-energy
+        range: [1, 2]
+        text: "You find a second wind. Energy +1."
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: energy, by: 1 }
+      - id: b-favor
+        range: [3, 4]
+        text: "Someone owes you one. Draw a Favor."
+        triggers:
+          - on: immediately
+            do:
+              - { do: grantCard, deck: favors, count: 1 }
+      - { id: b-free, range: [5, 5], text: "A free Block. Skip this Block's Twist and do the Task plainly." }
+      - { id: b-short, range: [6, 6], text: "It goes quicker than you thought. This Block may be half its usual length." }
+
+  setback:
+    resolution: lookup
+    title: Setback
+    description: Bad weather, landing on a Task you already finished.
+    roll: d8
+    entries:
+      - id: s-reopen
+        range: [1, 3]
+        text: "It was not quite done. The target is Reopened: finish it inside a later Block before that Block counts."
+        triggers:
+          - on: immediately
+            do:
+              - { do: applyState, state: reopened, to: targetSubject }
+      - id: s-drain
+        range: [4, 5]
+        text: "It drained more than you noticed. Energy −1."
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: energy, by: -1 }
+      - id: s-extra
+        range: [6, 7]
+        text: "It spawned a follow-up. Add a Block before the Day may end."
+        triggers:
+          - on: immediately
+            do:
+              - { do: forceUnit, count: 1 }
+      - id: s-undo
+        range: [8, 8]
+        text: "It came undone entirely. The target loses Done; do it again in a later Block, and it does not count until you do."
+        triggers:
+          - on: immediately
+            do:
+              - { do: removeState, state: done, to: targetSubject }
+              - { do: applyState, state: reopened, to: targetSubject }
+
+  twist:
+    resolution: lookup
+    title: Twist
+    description: How this Block must be done. Rolled after the Task is named.
+    roll: d10
+    entries:
+      - { id: t-timer, range: [1, 1], text: "Twenty-five minutes, then stop wherever you are." }
+      - { id: t-silence, range: [2, 2], text: "No music, no phone, no tabs but the one you need." }
+      - { id: t-standing, range: [3, 3], text: "Do it standing, walking, or somewhere you do not usually sit." }
+      - { id: t-smallest, range: [4, 4], text: "Do only the smallest complete version of it. Ship that." }
+      - { id: t-aloud, range: [5, 5], text: "Say what you are doing out loud as you do it, or write it down as you go." }
+      - { id: t-first, range: [6, 6], text: "Start with the part you have been avoiding." }
+      - { id: t-hard, range: [7, 7], text: "Do it properly, no shortcuts. Energy −1.", triggers: [{ on: onFinalize, do: [{ do: modResource, resource: energy, by: -1 }] }] }
+      - { id: t-half, range: [8, 8], text: "Halve the time you would have given it. Whatever is done at the buzzer is what is done." }
+      - { id: t-teach, range: [9, 9], text: "Do it as if someone were watching to learn how. Leave a note they could follow." }
+      - { id: t-none, range: [10, 10], text: "No twist. Do it your way." }
+
+  wrapUp:
+    resolution: bands
+    title: Wrap-up
+    description: Rolled once, when the Day ends. How it lands.
+    roll: 2d6
+    entries:
+      - { id: wu-rough, lte: 4, text: "Rough. Write down the one thing that would have made it better, and do that first tomorrow." }
+      - { id: wu-fair, gte: 5, lte: 9, text: "Fair. Carry what is unfinished without guilt; the streak was the point." }
+      - { id: wu-good, gte: 10, text: "Good. Start tomorrow with a Favor in hand." }
+
+targeting:
+  strategy: playerChoice
+
+phases:
+  - id: open
+    label: Open the Block
+    steps:
+      - kind: manual
+        label: Sit down. Decide how long this Block is.
+        description: A Block is one sitting. Twenty-five minutes is the clock's default; start it when you start, and let the Twist change it.
+
+  - id: weather
+    label: Weather
+    description: Skipped in the first Block, and once the Day has its golden hour.
+    skipWhen:
+      - { unitIndex: { lte: 1 } }
+      - { subjectHasState: goldenHour, of: run }
+    steps:
+      - kind: rollTable
+        table: weather
+        label: Roll the Weather
+
+  - id: name
+    label: Name the Task
+    steps:
+      - kind: declareSubject
+        label: What are you doing in this Block? One thing, in a few words.
+
+  - id: twist
+    label: Twist
+    steps:
+      - kind: rollTable
+        table: twist
+        label: Draw the Twist
+
+  - id: work
+    label: Do it
+    steps:
+      - kind: manual
+        label: Do the Task, the way the Twist says.
+        description: The app cannot see the work. Be honest with the checklist.
+        checklist:
+          - text: The Twist was kept for the whole Block.
+            shows: { table: twist, scope: unit }
+          - Anything Reopened by Weather was finished first.
+
+  - id: close
+    label: Call it
+    steps:
+      - kind: actions
+        do:
+          - { do: applyState, state: done, to: thisSubject }
+      - kind: finalizeUnit
+        label: Call the Block
+        confirm:
+          - text: The Task is done, or honestly carried.
+            shows: { table: twist, scope: unit }
+
+journal:
+  enabled: true
+  prompt: What actually got done?
+  required: false
+
+endings:
+  - id: cleanDesk
+    label: Clean desk
+    text: Nothing carried. Roll the Wrap-up, then close the list.
+    requires:
+      - { counter: tasksDone, is: { gte: 3 } }
+  - id: goodEnough
+    label: Good enough
+    text: Some carried, some done. Roll the Wrap-up and stop without apology.
+  - id: earlyNight
+    label: Early night
+    text: Energy is gone. Carry everything left and roll the Wrap-up tomorrow morning instead.
+
+triggers:
+  - on: onRunEnd
+    label: Wrap-up
+    do:
+      - { do: rollOn, table: wrapUp }
+
+modes:
+  day:
+    label: A working day
+    description: As many Blocks as the day holds, up to ten. Stop whenever you like.
+    seeded: false
+    units: { min: 1, max: 10 }
+
+  morning:
+    label: One morning
+    description: Three Blocks and out. A fixed shape for a short list.
+    seeded: false
+    units: { fixed: 3 }
+    notes:
+      - Weather still rolls; a Setback can still add a Block.
+
+  deep:
+    label: Deep work
+    description: A pre-rolled Day, so the same Weather and Twists can be attempted by anyone with the seed.
+    seeded: true
+    units: { roll: d4+2 }
+    disable:
+      decks: [favors]
+
+  together:
+    label: Together
+    description: A shared list, taking turns. Whoever holds the dice names the Task.
+    seeded: false
+    players:
+      min: 2
+      max: 4
+      rotate: clockwise
+      roles:
+        - { id: doer, label: Doer, description: Names and does this Block's Task. }
+        - { id: keeper, label: Keeper, description: Rolls the Weather and keeps the list. }
+
+defaultMode: day
+
+hierarchy:
+  - Favor
+  - Setback
+  - Twist
+  - General rules
+
+fixtures:
+  - name: A calm first block counts, and the streak starts
+    mode: day
+    events:
+      - { t: RunStarted, mode: day }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: "Answer the mail" }
+      - { t: UnitFinalized }
+    expect:
+      - { path: counters.streak, equals: 1 }
+      - { path: counters.tasksDone, equals: 1 }
+      - { path: subjects.length, equals: 1 }
+      - { path: subjects.0.type, equals: "Answer the mail" }
+      - { path: status, equals: active }
+
+  - name: One morning is three blocks
+    mode: morning
+    events:
+      - { t: RunStarted, mode: morning }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: Dishes }
+      - { t: UnitFinalized }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: Laundry }
+      - { t: UnitFinalized }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: Bills }
+      - { t: UnitFinalized }
+    expect:
+      - { path: counters.tasksDone, equals: 3 }
+      - { path: subjects.length, equals: 3 }

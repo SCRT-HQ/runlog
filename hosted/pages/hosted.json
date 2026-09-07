@@ -1,0 +1,21 @@
+{
+  "operator": "{{OPERATOR_SHORT}}",
+  "legalName": "{{OPERATOR}}",
+  "support": "{{SUPPORT}}",
+  "termsVersion": "{{TERMS_VERSION}}",
+  "version": "{{VERSION}}",
+  "sha": "{{SHA}}",
+  "links": {
+    "terms": "https://{{DOMAIN}}/legal/terms.html",
+    "privacy": "https://{{DOMAIN}}/legal/privacy.html",
+    "publishers": "https://{{DOMAIN}}/legal/publishers.html",
+    "pricing": "https://{{DOMAIN}}/pricing.html",
+    "about": "https://{{DOMAIN}}/about.html",
+    "welcome": "https://{{DOMAIN}}/welcome.html",
+    "licenses": "https://{{DOMAIN}}/licenses.html",
+    "source": "https://github.com/SCRT-HQ/runlog"
+  },
+  "features": {
+    "billing": {{BILLING}}
+  }
+}

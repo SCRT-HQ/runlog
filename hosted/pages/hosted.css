@@ -1,0 +1,256 @@
+/*
+ * The pages that sit beside the app at the hosted address: terms, privacy,
+ * pricing, about. They are plain HTML served from the same bucket, so they
+ * cannot borrow the app's hashed stylesheet; this is a small echo of it —
+ * the same ground, the same celadon, a serif that falls back gracefully —
+ * so a person stepping from the app to its terms does not feel a seam.
+ */
+:root {
+  color-scheme: dark;
+  --bg: #151311;
+  --panel: #1e1b18;
+  --line: #3a342e;
+  --ink: #ebe6dc;
+  --muted: #b3a99b;
+  --accent: #9fd3b6;
+  --note: #e3c27a;
+  --serif: Literata, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #edeae2;
+    --panel: #e4e0d6;
+    --line: #cbc4b7;
+    --ink: #1c1a17;
+    --muted: #4a453e;
+    --accent: #3d7a5b;
+    --note: #8a6a12;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  background: var(--bg);
+  color: var(--ink);
+  font: 17px/1.6 var(--serif);
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+a {
+  color: var(--accent);
+}
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+}
+.brand img {
+  width: 22px;
+  height: 22px;
+}
+.topbar nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+.topbar nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.topbar nav a:hover,
+.topbar nav a[aria-current] {
+  color: var(--ink);
+}
+
+main {
+  width: min(100% - 2.5rem, 42rem);
+  margin: 0 auto;
+  padding: 2rem 0 4rem;
+  flex: 1;
+}
+h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  margin: 0 0 0.35rem;
+  text-wrap: balance;
+}
+h2 {
+  font-size: 1.25rem;
+  margin: 2rem 0 0.5rem;
+}
+h3 {
+  font-size: 1.05rem;
+  margin: 1.4rem 0 0.35rem;
+}
+p,
+li {
+  max-width: 68ch;
+}
+.lede {
+  color: var(--muted);
+  font-size: 1.05rem;
+  margin-top: 0;
+}
+.stamp {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0 0 1.5rem;
+}
+.summary {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 1.25rem 0 1.75rem;
+}
+.summary p:first-child {
+  margin-top: 0;
+}
+.summary ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+}
+.counsel {
+  border-left: 3px solid var(--note);
+  padding: 0.2rem 0 0.2rem 0.8rem;
+  margin: 0.8rem 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.counsel::before {
+  content: "For counsel: ";
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--note);
+}
+code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+}
+dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1.25rem;
+}
+dt {
+  color: var(--muted);
+}
+dd {
+  margin: 0;
+}
+
+.plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.plan {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+}
+.plan h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.15rem;
+}
+.plan .price {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin: 0 0 0.8rem;
+}
+.plan .price strong {
+  color: var(--ink);
+  font-size: 1.3rem;
+  font-weight: 500;
+}
+.plan ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.95rem;
+}
+.plan li + li {
+  margin-top: 0.3rem;
+}
+.plan .now {
+  margin-top: auto;
+  padding-top: 0.9rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+footer {
+  border-top: 1px solid var(--line);
+  padding: 1rem 1.25rem 1.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+footer a {
+  color: var(--muted);
+}
+footer .build {
+  font-family: var(--mono);
+  margin-left: auto;
+}
+
+@media (max-width: 560px) {
+  html {
+    font-size: 16px;
+  }
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  dl {
+    grid-template-columns: 1fr;
+    gap: 0 0;
+  }
+  dt {
+    margin-top: 0.5rem;
+  }
+}
+@media print {
+  .topbar nav,
+  footer {
+    display: none;
+  }
+  html {
+    background: #fff;
+    color: #000;
+  }
+}
+

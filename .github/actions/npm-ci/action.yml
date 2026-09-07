@@ -1,0 +1,33 @@
+name: 'Setup Node and run npm ci'
+description: 'Setup Node and run npm ci'
+
+author: 'Nate Ferrell <nate@scrthq.com>'
+
+inputs:
+  node-version:
+    description: 'Node version to use'
+    required: false
+    default: 22
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Cache node modules
+      id: cache-npm
+      uses: actions/cache@v6
+      env:
+        cache-name: cache-node-modules
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}-
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
+
+    - run: npm ci --cache ~/.npm --prefer-offline
+      shell: bash

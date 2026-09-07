@@ -1,0 +1,320 @@
+# Ladder Work — a sketch pack for Runlog.
+#
+# Entirely fictional. A training-log game: the dice pick the movement and the
+# loading, you do the work, the app keeps the tally and the rest clock.
+#
+# Written to stress the OPPOSITE end of the schema from a dungeon-shaped pack.
+# The point is to prove the engine is not quietly built around one genre:
+#
+#   * no targeting at all      — nothing ever reaches back and damages earlier
+#                                work, so the whole targeting section is absent
+#   * no decks, no journal     — both optional, and their absence must be fine
+#   * timers as a core surface — rest intervals are the mechanic, not a garnish
+#   * a hidden counter         — tracked, deliberately not shown
+#   * bar-display resources    — accumulated volume rather than tick boxes
+#   * fixed and rolled lengths — one mode of each
+#
+# It also surfaces one genuine engine-level gap, noted at the bottom.
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.ladder-work
+version: "0.2.0"
+title: Ladder Work
+author: Runlog
+description: >-
+  The dice choose the movement and the loading; you supply the
+  effort.
+category: fitness
+tags: [strength, gym, training log]
+
+requires:
+  - { id: barbell, label: A barbell and plates, kind: equipment, optional: true, note: "Without one, the barbell movements are drawn again." }
+  - { id: bar, label: A pull-up bar, kind: equipment, optional: true }
+  - { id: dip, label: Dip bars or a bench to dip from, kind: equipment, optional: true }
+  - { id: space, label: Room to carry something heavy for twenty meters, kind: space, optional: true }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+capabilities:
+  - deferredTriggers
+  - seededRuns
+  - resources
+  - counters
+  - timers
+  - bandsResolution
+
+vocabulary:
+  run: { one: Session, many: Sessions }
+  unit: { one: Block, many: Blocks }
+  subject: { one: Movement, many: Movements }
+  finalize: Log
+  terms:
+    roll: Draw
+
+unit:
+  createsSubject: true
+  min: 3
+  max: 8
+
+resources:
+  volume:
+    label: Working sets
+    initial: 0
+    min: 0
+    max: 40
+    step: 1
+    display: bar
+    description: Total hard sets this Session. The number you are actually here for.
+  gas:
+    label: Gas in the tank
+    initial: 10
+    min: 0
+    max: 10
+    step: 1
+    display: bar
+    description: >-
+      Spent by hard work, never restored mid-Session. At zero, finish the Block
+      you are in and stop.
+
+states:
+  # A state with no mechanical semantics at all: purely a label the player
+  # reads. Nothing in the engine needs to understand it, which is the point.
+  taxed:
+    label: Taxed
+    short: TX
+    scope: subject
+    description: >-
+      This pattern has been worked hard. Prefer something else next Block.
+
+counters:
+  # Hidden: tracked, deliberately not shown. The player should feel the session
+  # tightening without watching a number do it.
+  fatigue:
+    label: Accumulated fatigue
+    initial: 0
+    min: 0
+    hidden: true
+    incrementOn:
+      - { on: unitFinalized }
+    triggers:
+      - when: { gte: 5 }
+        oncePerRun: true
+        label: Deload the rest of the session
+        do:
+          - do: note
+            persistent: true
+            text: >-
+              Five Blocks in. Every remaining Block drops one working set and
+              adds a minute of rest.
+
+tables:
+  movement:
+    resolution: lookup
+    title: Movement
+    description: What you are doing this Block.
+    roll: d12
+    entries:
+      - { id: mv-squat, range: [1, 1], text: "Back squat.", tags: [legs], needs: [barbell] }
+      - { id: mv-front, range: [2, 2], text: "Front squat.", tags: [legs], needs: [barbell] }
+      - { id: mv-hinge, range: [3, 3], text: "Romanian deadlift.", tags: [posterior], needs: [barbell] }
+      - { id: mv-pull, range: [4, 4], text: "Deadlift, from the floor.", tags: [posterior], needs: [barbell] }
+      - { id: mv-press, range: [5, 5], text: "Overhead press.", tags: [push], needs: [barbell] }
+      - { id: mv-bench, range: [6, 6], text: "Bench press.", tags: [push], needs: [barbell] }
+      - { id: mv-dip, range: [7, 7], text: "Weighted dip.", tags: [push], needs: [dip] }
+      - { id: mv-row, range: [8, 8], text: "Barbell row.", tags: [pull], needs: [barbell] }
+      - { id: mv-chin, range: [9, 9], text: "Weighted chin-up.", tags: [pull], needs: [bar] }
+      - { id: mv-carry, range: [10, 10], text: "Loaded carry, heavy.", tags: [carry], needs: [space] }
+      - { id: mv-single, range: [11, 11], text: "Single-leg work of your choice.", tags: [legs] }
+      - { id: mv-choice, range: [12, 12], text: "Your choice. Pick the thing you avoid." }
+
+  loading:
+    resolution: lookup
+    title: Loading
+    description: How the Block is structured. Rolled after the movement is known.
+    roll: d6
+    entries:
+      - id: ld-fives
+        range: [1, 2]
+        text: "Five sets of five. Two minutes between sets."
+        triggers:
+          - on: onDeclareSubject
+            label: Rest clock
+            do:
+              - { do: startTimer, minutes: 2, label: "Rest" }
+              - { do: modResource, resource: volume, by: 5 }
+              - { do: modResource, resource: gas, by: -2 }
+      - id: ld-triples
+        range: [3, 4]
+        text: "Six sets of three, heavier. Three minutes between sets."
+        triggers:
+          - on: onDeclareSubject
+            label: Rest clock
+            do:
+              - { do: startTimer, minutes: 3, label: "Rest" }
+              - { do: modResource, resource: volume, by: 6 }
+              - { do: modResource, resource: gas, by: -3 }
+      - id: ld-ladder
+        range: [5, 5]
+        text: >-
+          A ladder: 1, 2, 3, 4, 5 reps, then back down. Rest as needed, but
+          keep moving.
+        triggers:
+          - on: onDeclareSubject
+            do:
+              - { do: modResource, resource: volume, by: 9 }
+              - { do: modResource, resource: gas, by: -3 }
+              - { do: applyState, state: taxed, to: thisSubject }
+      - id: ld-amrap
+        range: [6, 6]
+        text: >-
+          One all-out set. Take as long as you need beforehand, then go until
+          form breaks.
+        triggers:
+          - on: afterWork
+            label: Honest count
+            do:
+              - { do: prompt, kind: text, label: "How many reps? Be honest.", into: reps }
+              - { do: modResource, resource: volume, by: 1 }
+              - { do: modResource, resource: gas, by: -2 }
+              - { do: applyState, state: taxed, to: thisSubject }
+
+  finisher:
+    resolution: bands
+    title: Finisher
+    description: >-
+      Rolled once, at the end of the Session. How much you owe before you stop.
+    roll: 2d6
+    entries:
+      - id: fin-none
+        lte: 4
+        text: "Nothing. Go home."
+      - id: fin-light
+        gte: 5
+        lte: 9
+        text: "Three minutes of hard breathing. Pick your poison."
+        triggers:
+          - on: immediately
+            do:
+              - { do: startTimer, minutes: 3, label: "Finisher" }
+      - id: fin-heavy
+        gte: 10
+        text: "Six minutes. You chose to roll for this."
+        triggers:
+          - on: immediately
+            do:
+              - { do: startTimer, minutes: 6, label: "Finisher" }
+              - { do: modResource, resource: gas, by: -2 }
+
+# No `targeting:` section at all. Nothing in this game ever reaches back and
+# damages earlier work -- and the engine must be fine with that.
+
+# No `journal:` and no `decks:` either. Both optional, both genuinely absent.
+
+phases:
+  - id: assign
+    label: Draw the Block
+    steps:
+      - kind: rollTable
+        table: movement
+        label: Draw the movement
+      - kind: declareSubject
+        label: Name the movement and the load you are using.
+        constrainedBy: movement
+      - kind: rollTable
+        table: loading
+        label: Draw the loading
+
+  - id: work
+    label: Work
+    steps:
+      - kind: manual
+        label: Do the work.
+        description: >-
+          The app cannot see your bar speed. It only knows what you tell it.
+        checklist:
+          - Every set was a working set.
+          - Form held to the last rep.
+
+  - id: log
+    label: Log the Block
+    steps:
+      - kind: finalizeUnit
+        label: Log
+        confirm:
+          - The sets are done, not rounded up.
+
+endings:
+  - id: done
+    label: Done
+    text: Log the Session. Note what felt strong and what did not.
+  - id: cut
+    label: Cut short
+    text: >-
+      Stop early and say why. A Session ended honestly beats one finished
+      badly.
+    requires:
+      - { resource: gas, is: { lte: 2 } }
+
+modes:
+  standard:
+    label: Standard Session
+    description: Four to eight Blocks, then a finisher.
+    units: { min: 3, max: 8 }
+    perUnit:
+      - unit: all
+        extra:
+          - do: when
+            all:
+              - { resource: gas, is: { lte: 0 } }
+            then:
+              - do: note
+                text: >-
+                  No gas left. Finish this Block and end the Session.
+
+  fixed:
+    label: Five Blocks
+    description: A fixed shape for days when deciding is the hard part.
+    units: { fixed: 5 }
+
+  # Seeded, so a group can run the identical session and compare notes.
+  shared:
+    label: Shared Session
+    description: A pre-drawn Session several people can run from one seed.
+    seeded: true
+    units: { roll: d4+3 }
+
+defaultMode: standard
+
+# ---------------------------------------------------------------------------
+# FINDING, recorded here rather than fixed in the schema:
+#
+# A Session like this can span days -- you might log three Blocks in the
+# morning and finish in the evening -- whereas a dungeon Run assumes one
+# sitting. Nothing above needed to change to express that, because it is not a
+# property of the RULES: it is a property of the RUN. Timestamps, pause and
+# resume belong in the engine's run state, not in the pack format.
+#
+# Recording it so the engine milestone does not quietly assume a run begins and
+# ends in one session.
+# ---------------------------------------------------------------------------
+
+# Replayed by `runlog test`.
+fixtures:
+  - name: Sessions accumulate without anything reaching backwards
+    mode: standard
+    events:
+      - { t: RunStarted, mode: standard }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: Squat }
+      - { t: UnitFinalized }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: Press }
+      - { t: UnitFinalized }
+    expect:
+      - { path: subjects.length, equals: 2 }
+      - { path: subjects.0.type, equals: Squat }
+      - { path: subjects.1.finalized, equals: true }
+      # Nothing in this game damages earlier work, so nothing is ever removed.
+      - { path: subjects.0.removed, equals: false }

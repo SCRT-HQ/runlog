@@ -1,0 +1,392 @@
+# Rocket League: Mechanics Ladder — a challenge pack shaped like the game's ranks.
+#
+# A Match is one game, played as normal. Before it, the app draws a set of
+# mechanics from the table for your rank — three, or as many as the dice
+# say — and after it you tick the ones you landed. Nothing here can see the
+# game; it keeps the tally an honest player keeps, and picks what to go for.
+#
+# The tables follow the ranks people already know, Bronze to Supersonic
+# Legend, one table each, so "play at Gold" is a mode and not a setting.
+# Placement modes climb: every five landed, the draw moves up a rank.
+#
+# Written to show three things the format does without changing:
+#
+#   * a checklist that records outcomes rather than promises: the boxes are
+#     optional, and each tick counts on a tally
+#   * a draw whose count is itself rolled (`roll d4 into count`, then
+#     `rollOn … timesFrom: count`)
+#   * one flow serving many modes, with the mode choosing the table
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.rocket-league-ladder
+version: "0.2.0"
+title: "Rocket League: Mechanics Ladder"
+author: Runlog
+description: >-
+  A challenge pack. Before each match, draw a set of mechanics for your rank;
+  after it, tick the ones you landed. Play at your rank, or place and climb
+  from Bronze to Supersonic Legend.
+
+category: games
+tags: [Rocket League, mechanics, challenge run]
+
+requires:
+  - { id: game, label: Rocket League, kind: game, note: "Any platform. Free to play." }
+  - { id: system, label: A PC or console that runs it, kind: platform }
+  - { id: training, label: A training pack or free play for warming up, kind: software, optional: true, note: "Custom training packs for most mechanics are shared in-game by code." }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - seededRuns
+  - counters
+  - journal
+
+vocabulary:
+  run: { one: Ladder, many: Ladders }
+  unit: { one: Match, many: Matches }
+  subject: { one: Set, many: Sets }
+  finalize: Log the match
+  terms:
+    roll: Draw
+
+unit:
+  createsSubject: true
+  min: 1
+  max: 20
+
+counters:
+  landed:
+    label: Mechanics landed
+    initial: 0
+    min: 0
+    triggers:
+      - when: { gte: 5 }
+        oncePerRun: true
+        label: Silver
+        do:
+          - { do: note, persistent: true, text: "Five landed. In a placement Ladder the draw is Silver from the next Match." }
+      - when: { gte: 10 }
+        oncePerRun: true
+        label: Gold
+        do:
+          - { do: note, persistent: true, text: "Ten landed. Placement draws Gold from the next Match." }
+      - when: { gte: 15 }
+        oncePerRun: true
+        label: Platinum
+        do:
+          - { do: note, persistent: true, text: "Fifteen landed. Placement draws Platinum from the next Match." }
+      - when: { gte: 20 }
+        oncePerRun: true
+        label: Diamond
+        do:
+          - { do: note, persistent: true, text: "Twenty landed. Placement draws Diamond from the next Match." }
+      - when: { gte: 25 }
+        oncePerRun: true
+        label: Champion
+        do:
+          - { do: note, persistent: true, text: "Twenty-five landed. Placement draws Champion from the next Match." }
+      - when: { gte: 30 }
+        oncePerRun: true
+        label: Grand Champion
+        do:
+          - { do: note, persistent: true, text: "Thirty landed. Placement draws Grand Champion from the next Match." }
+      - when: { gte: 35 }
+        oncePerRun: true
+        label: Supersonic Legend
+        do:
+          - { do: note, persistent: true, text: "Thirty-five landed. Placement draws Supersonic Legend from the next Match. Forty completes the Ladder." }
+  matches:
+    label: Matches played
+    initial: 0
+    hidden: true
+    incrementOn:
+      - { on: unitFinalized }
+
+tables:
+  bronze:
+    resolution: lookup
+    title: Bronze
+    description: Car control and the ball. Where everyone starts.
+    roll: d6
+    entries:
+      - { id: b-onnet, range: [1, 1], text: "Put five shots on target, on purpose." }
+      - { id: b-save, range: [2, 2], text: "Make a save by being in goal before the shot, not after." }
+      - { id: b-pads, range: [3, 3], text: "Fill your boost from small pads alone, twice." }
+      - { id: b-slide, range: [4, 4], text: "Powerslide a turn cleanly, without losing the ball." }
+      - { id: b-jump, range: [5, 5], text: "Hit a ball in the air with a single jump, three times." }
+      - { id: b-rotate, range: [6, 6], text: "Rotate back post after every attack for a whole match." }
+
+  silver:
+    resolution: lookup
+    title: Silver
+    description: The first real mechanics. Turning around and leaving the ground.
+    roll: d6
+    entries:
+      - { id: s-halfflip, range: [1, 1], text: "Half-flip to turn around after a lost challenge." }
+      - { id: s-aerial, range: [2, 2], text: "Hit a basic aerial: jump, boost, connect." }
+      - { id: s-wavedash, range: [3, 3], text: "Wave dash on landing to keep your speed." }
+      - { id: s-wallclear, range: [4, 4], text: "Clear a ball off your own wall before it drops." }
+      - { id: s-dribble, range: [5, 5], text: "Push-dribble the ball on the ground for three seconds." }
+      - { id: s-kickoff, range: [6, 6], text: "Win a kickoff with a diagonal flip." }
+
+  gold:
+    resolution: lookup
+    title: Gold
+    description: Speed, and the roof of the car.
+    roll: d6
+    entries:
+      - { id: g-fastaerial, range: [1, 1], text: "Fast aerial: jump, tilt, second jump, boost." }
+      - { id: g-speedflip, range: [2, 2], text: "Speed flip a kickoff." }
+      - { id: g-carry, range: [3, 3], text: "Carry the ball on your roof for at least three seconds." }
+      - { id: g-shadow, range: [4, 4], text: "Shadow defend a whole possession without committing." }
+      - { id: g-backboard, range: [5, 5], text: "Clear a ball off your own backboard in the air." }
+      - { id: g-wallhit, range: [6, 6], text: "Drive up the wall and take the ball off it in the air." }
+
+  platinum:
+    resolution: lookup
+    title: Platinum
+    description: Mechanics that beat a defender.
+    roll: d6
+    entries:
+      - { id: p-airroll, range: [1, 1], text: "Air roll into a shot, so the ball goes where you meant." }
+      - { id: p-flick, range: [2, 2], text: "Flick the ball off your roof past a defender." }
+      - { id: p-catch, range: [3, 3], text: "Catch a bounce dead on the roof instead of hitting it away." }
+      - { id: p-walljump, range: [4, 4], text: "Double-jump aerial off the wall, on to the ball." }
+      - { id: p-recover, range: [5, 5], text: "Land from an aerial wheels-down and driving, twice in a row." }
+      - { id: p-bump, range: [6, 6], text: "A bump or demo that leads to a goal within five seconds." }
+
+  diamond:
+    resolution: lookup
+    title: Diamond
+    description: Reading the play a second ahead.
+    roll: d6
+    entries:
+      - { id: d-save, range: [1, 1], text: "Aerial save from crossbar height or higher." }
+      - { id: d-redirect, range: [2, 2], text: "Redirect a teammate's pass in the air, on net." }
+      - { id: d-wallair, range: [3, 3], text: "Wall touch into an air dribble touch, two touches in the air." }
+      - { id: d-power, range: [4, 4], text: "Power shot from a bounce, hit at the top of the bounce." }
+      - { id: d-fake, range: [5, 5], text: "Fake a challenge and beat the player who bought it." }
+      - { id: d-halfvolley, range: [6, 6], text: "Half-volley pass to a teammate, on their first touch." }
+
+  champion:
+    resolution: lookup
+    title: Champion
+    description: Mechanics people practice for months.
+    roll: d6
+    entries:
+      - { id: c-airdribble, range: [1, 1], text: "Air dribble the ball for at least two touches, to a shot." }
+      - { id: c-doubletap, range: [2, 2], text: "Double tap off the backboard." }
+      - { id: c-ceiling, range: [3, 3], text: "Ceiling shot: off the ceiling, on to the ball, on net." }
+      - { id: c-musty, range: [4, 4], text: "Musty flick from a roof carry." }
+      - { id: c-walldash, range: [5, 5], text: "Wall dash along the side wall without a wheel touching the ground." }
+      - { id: c-flipreset, range: [6, 6], text: "Get a flip reset. Using it is a bonus." }
+
+  grandChampion:
+    resolution: lookup
+    title: Grand Champion
+    description: The hard stuff, done in a game and not in free play.
+    roll: d6
+    entries:
+      - { id: gc-resetshot, range: [1, 1], text: "Flip reset and use it for the shot." }
+      - { id: gc-dribbletap, range: [2, 2], text: "Air dribble into a double tap." }
+      - { id: gc-pinch, range: [3, 3], text: "Kuxir pinch, or any wall pinch that beats the keeper." }
+      - { id: gc-ceilingtap, range: [4, 4], text: "Ceiling shot into a double tap." }
+      - { id: gc-breezi, range: [5, 5], text: "Breezi flick, or an honest attempt at one." }
+      - { id: gc-stall, range: [6, 6], text: "Stall in the air to beat a challenge, then finish the play." }
+
+  ssl:
+    resolution: lookup
+    title: Supersonic Legend
+    description: No divisions up here. Neither in the table.
+    roll: d6
+    entries:
+      - { id: l-resettap, range: [1, 1], text: "Flip reset into a double tap." }
+      - { id: l-groundtoair, range: [2, 2], text: "Ground dribble to air dribble to flip reset, one possession." }
+      - { id: l-delayed, range: [3, 3], text: "Delayed flip reset: hold it past a defender, then use it." }
+      - { id: l-ceilingpinch, range: [4, 4], text: "Ceiling pinch, on net." }
+      - { id: l-doublereset, range: [5, 5], text: "Two flip resets in one play." }
+      - { id: l-dunk, range: [6, 6], text: "Dunk: air dribble over the keeper and down into the net." }
+
+journal:
+  enabled: true
+  prompt: What happened in that match?
+
+phases:
+  - id: draw
+    label: Draw the set
+    steps:
+      # One flow serves every mode: the mode names the table, or the tally does.
+      - kind: actions
+        do:
+          # How many: three, unless the mode rolls for it.
+          - do: when
+            all:
+              - { modeIs: [placementRolled, sharedRolled] }
+            then:
+              - { do: roll, dice: d4, into: count, label: "How many mechanics this match" }
+          # Fixed-rank modes.
+          - { do: when, all: [{ modeIs: [bronze] }], then: [{ do: rollOn, table: bronze, times: 3 }] }
+          - { do: when, all: [{ modeIs: [silver] }], then: [{ do: rollOn, table: silver, times: 3 }] }
+          - { do: when, all: [{ modeIs: [gold] }], then: [{ do: rollOn, table: gold, times: 3 }] }
+          - { do: when, all: [{ modeIs: [platinum] }], then: [{ do: rollOn, table: platinum, times: 3 }] }
+          - { do: when, all: [{ modeIs: [diamond] }], then: [{ do: rollOn, table: diamond, times: 3 }] }
+          - { do: when, all: [{ modeIs: [champion] }], then: [{ do: rollOn, table: champion, times: 3 }] }
+          - { do: when, all: [{ modeIs: [grandChampion] }], then: [{ do: rollOn, table: grandChampion, times: 3 }] }
+          - { do: when, all: [{ modeIs: [ssl] }], then: [{ do: rollOn, table: ssl, times: 3 }] }
+          # Any rank: one from every table, Bronze to SSL; tick what lands.
+          - do: when
+            all:
+              - { modeIs: [anyRank] }
+            then:
+                - { do: rollOn, table: bronze }
+                - { do: rollOn, table: silver }
+                - { do: rollOn, table: gold }
+                - { do: rollOn, table: platinum }
+                - { do: rollOn, table: diamond }
+                - { do: rollOn, table: champion }
+                - { do: rollOn, table: grandChampion }
+                - { do: rollOn, table: ssl }
+          # Placement: the tally picks the rank, three per Match.
+          - { do: when, all: [{ modeIs: [placement, shared] }, { counter: landed, is: { lte: 4 } }], then: [{ do: rollOn, table: bronze, times: 3 }] }
+          - { do: when, all: [{ modeIs: [placement, shared] }, { counter: landed, is: { gte: 5, lte: 9 } }], then: [{ do: rollOn, table: silver, times: 3 }] }
+          - { do: when, all: [{ modeIs: [placement, shared] }, { counter: landed, is: { gte: 10, lte: 14 } }], then: [{ do: rollOn, table: gold, times: 3 }] }
+          - { do: when, all: [{ modeIs: [placement, shared] }, { counter: landed, is: { gte: 15, lte: 19 } }], then: [{ do: rollOn, table: platinum, times: 3 }] }
+          - { do: when, all: [{ modeIs: [placement, shared] }, { counter: landed, is: { gte: 20, lte: 24 } }], then: [{ do: rollOn, table: diamond, times: 3 }] }
+          - { do: when, all: [{ modeIs: [placement, shared] }, { counter: landed, is: { gte: 25, lte: 29 } }], then: [{ do: rollOn, table: champion, times: 3 }] }
+          - { do: when, all: [{ modeIs: [placement, shared] }, { counter: landed, is: { gte: 30, lte: 34 } }], then: [{ do: rollOn, table: grandChampion, times: 3 }] }
+          - { do: when, all: [{ modeIs: [placement, shared] }, { counter: landed, is: { gte: 35 } }], then: [{ do: rollOn, table: ssl, times: 3 }] }
+          # Placement with the dice choosing the count.
+          - { do: when, all: [{ modeIs: [placementRolled, sharedRolled] }, { counter: landed, is: { lte: 4 } }], then: [{ do: rollOn, table: bronze, timesFrom: count }] }
+          - { do: when, all: [{ modeIs: [placementRolled, sharedRolled] }, { counter: landed, is: { gte: 5, lte: 9 } }], then: [{ do: rollOn, table: silver, timesFrom: count }] }
+          - { do: when, all: [{ modeIs: [placementRolled, sharedRolled] }, { counter: landed, is: { gte: 10, lte: 14 } }], then: [{ do: rollOn, table: gold, timesFrom: count }] }
+          - { do: when, all: [{ modeIs: [placementRolled, sharedRolled] }, { counter: landed, is: { gte: 15, lte: 19 } }], then: [{ do: rollOn, table: platinum, timesFrom: count }] }
+          - { do: when, all: [{ modeIs: [placementRolled, sharedRolled] }, { counter: landed, is: { gte: 20, lte: 24 } }], then: [{ do: rollOn, table: diamond, timesFrom: count }] }
+          - { do: when, all: [{ modeIs: [placementRolled, sharedRolled] }, { counter: landed, is: { gte: 25, lte: 29 } }], then: [{ do: rollOn, table: champion, timesFrom: count }] }
+          - { do: when, all: [{ modeIs: [placementRolled, sharedRolled] }, { counter: landed, is: { gte: 30, lte: 34 } }], then: [{ do: rollOn, table: grandChampion, timesFrom: count }] }
+          - { do: when, all: [{ modeIs: [placementRolled, sharedRolled] }, { counter: landed, is: { gte: 35 } }], then: [{ do: rollOn, table: ssl, timesFrom: count }] }
+      - kind: declareSubject
+        label: Call the match — playlist, and who you are playing with — so the log reads back.
+
+  - id: play
+    label: Play the match
+    steps:
+      - kind: manual
+        label: Play, and go for every one of them.
+        description: >-
+          The app cannot see the match. Afterwards, tick each mechanic you
+          landed at least once; leave the rest. Every tick counts on the tally.
+        checklist:
+          - { text: "Landed, at Bronze:", shows: { table: bronze, scope: unit }, optional: true, tally: landed }
+          - { text: "Landed, at Silver:", shows: { table: silver, scope: unit }, optional: true, tally: landed }
+          - { text: "Landed, at Gold:", shows: { table: gold, scope: unit }, optional: true, tally: landed }
+          - { text: "Landed, at Platinum:", shows: { table: platinum, scope: unit }, optional: true, tally: landed }
+          - { text: "Landed, at Diamond:", shows: { table: diamond, scope: unit }, optional: true, tally: landed }
+          - { text: "Landed, at Champion:", shows: { table: champion, scope: unit }, optional: true, tally: landed }
+          - { text: "Landed, at Grand Champion:", shows: { table: grandChampion, scope: unit }, optional: true, tally: landed }
+          - { text: "Landed, at Supersonic Legend:", shows: { table: ssl, scope: unit }, optional: true, tally: landed }
+          - Went for every mechanic at least three times.
+
+  - id: log
+    label: Log the match
+    steps:
+      - kind: finalizeUnit
+        label: Log the match
+
+endings:
+  - id: done
+    label: Call it
+    text: Enough for today. The tally stays in the log for next time.
+  - id: complete
+    label: Ladder complete
+    text: Forty landed, five of them at Supersonic Legend. Start a new Ladder and place again.
+    requires:
+      - { counter: landed, is: { gte: 40 } }
+
+modes:
+  placement:
+    label: Placement
+    description: "Start at Bronze and climb: every five landed, the draw moves up a rank. Three mechanics a Match."
+    units: { min: 1, max: 20 }
+
+  placementRolled:
+    label: Placement, dice count
+    description: As Placement, but each Match rolls a d4 for how many mechanics it draws.
+    units: { min: 1, max: 20 }
+
+  bronze:
+    label: Play at Bronze
+    description: Three Bronze mechanics every Match.
+    units: { min: 1, max: 20 }
+  silver:
+    label: Play at Silver
+    description: Three Silver mechanics every Match.
+    units: { min: 1, max: 20 }
+  gold:
+    label: Play at Gold
+    description: Three Gold mechanics every Match.
+    units: { min: 1, max: 20 }
+  platinum:
+    label: Play at Platinum
+    description: Three Platinum mechanics every Match.
+    units: { min: 1, max: 20 }
+  diamond:
+    label: Play at Diamond
+    description: Three Diamond mechanics every Match.
+    units: { min: 1, max: 20 }
+  champion:
+    label: Play at Champion
+    description: Three Champion mechanics every Match.
+    units: { min: 1, max: 20 }
+  grandChampion:
+    label: Play at Grand Champion
+    description: Three Grand Champion mechanics every Match.
+    units: { min: 1, max: 20 }
+  ssl:
+    label: Play at Supersonic Legend
+    description: Three SSL mechanics every Match. No divisions up here.
+    units: { min: 1, max: 20 }
+
+  anyRank:
+    label: Any rank
+    description: One mechanic from every rank each Match, Bronze to Supersonic Legend. Tick what you land; nobody lands them all.
+    units: { min: 1, max: 20 }
+
+  shared:
+    label: Shared placement
+    description: A pre-drawn placement Ladder from one seed, so any number of people go for the same sets in the same order.
+    seeded: true
+    units: { roll: d4+2 }
+
+  sharedRolled:
+    label: Shared placement, dice count
+    description: The seeded Ladder with the d4 choosing how many mechanics each Match draws.
+    seeded: true
+    units: { roll: d4+2 }
+
+defaultMode: placement
+
+fixtures:
+  - name: The tally is the ticks, and a match is a match
+    mode: bronze
+    events:
+      - { t: RunStarted, mode: bronze }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: "Ranked 2s with Sam" }
+      - { t: Checked, step: "play#0", item: "0:o0", on: true }
+      - { t: CounterChanged, counter: landed, by: 1 }
+      - { t: Checked, step: "play#0", item: "0:o1", on: true }
+      - { t: CounterChanged, counter: landed, by: 1 }
+      - { t: Checked, step: "play#0", item: "0:o1", on: false }
+      - { t: CounterChanged, counter: landed, by: -1 }
+      - { t: UnitFinalized }
+    expect:
+      - { path: counters.landed, equals: 1 }
+      - { path: counters.matches, equals: 1 }
+      - { path: subjects.length, equals: 1 }
+      - { path: subjects.0.type, equals: "Ranked 2s with Sam" }

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Publisher agreement · Runlog</title>
+    <meta name="description" content="The terms for listing and selling packs through Runlog at {{DOMAIN}}." />
+    <link rel="stylesheet" href="/hosted.css" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="canonical" href="https://{{DOMAIN}}/legal/publishers.html" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/"><img src="/icon.svg" alt="" />Runlog</a>
+      <nav>
+        <a href="/">Why Runlog</a>
+        <a href="/#guide">Guide</a>
+        <a href="/pricing.html">Pricing</a>
+        <a href="/legal/terms.html">Terms</a>
+        <a href="/legal/privacy.html">Privacy</a>
+        <a href="/legal/publishers.html" aria-current="page">Publishers</a>
+        <a href="/about.html">About</a>
+      </nav>
+    </header>
+    <main>
+      <h1>Publisher agreement</h1>
+      <p class="lede">What you agree to when you list a pack in the Runlog catalog, free or for sale.</p>
+      <p class="stamp">Version {{TERMS_VERSION}} · applies from {{TERMS_DATE}}</p>
+
+      <div class="summary">
+        <p>The short version:</p>
+        <ul>
+          <li>Your pack stays yours. Listing it gives us only what we need to show it, sell it and deliver it.</li>
+          <li>Sales are yours, taken through your own Stripe account. Our fee is 5% of each sale, or 0% while you subscribe to hosted licensing.</li>
+          <li>You are responsible for having the right to publish what you list, and for the pack's refund policy within the rules below.</li>
+          <li>Either side can end this at any time; existing buyers keep what they bought.</li>
+        </ul>
+      </div>
+
+      <h2>1. Who this is between</h2>
+      <p>
+        This agreement is between you — the person or organization that lists a pack (the “publisher”) — and {{OPERATOR}}
+        (“we”), operator of the Runlog service at <code>{{DOMAIN}}</code>. It sits on top of the
+        <a href="/legal/terms.html">terms of service</a>, which still apply. A publisher is an organization in the app; whoever
+        accepts this on its behalf confirms they may.
+      </p>
+
+      <h2>2. Listing a pack</h2>
+      <p>
+        A listing is a signed pack you upload, with the price you set (or none), and the catalog card the app makes from it.
+        The catalog shows the pack's summary — what it is, what it needs, its modes — and never the tables or rules text
+        themselves. You can change the price, replace the pack with a new version, or unlist it whenever you like.
+      </p>
+      <p>By listing, you give us a non-exclusive license to store the pack, show its summary and card, deliver it to buyers, and keep master copies for re-delivery. Nothing more: we do not remix, resell or license your pack to anyone else.</p>
+
+      <h2>3. What you promise about the pack</h2>
+      <ul>
+        <li>You own it or have the right to publish it under the license it names, including any art or text within it.</li>
+        <li>It does not infringe anyone's copyright, trademark or other rights, and is not a transcription of a rulebook you do not have the right to publish.</li>
+        <li>It is not unlawful, and does not deceive buyers about what it is.</li>
+        <li>Its license field is honest: a pack marked as open is open; a proprietary one carries its terms in full.</li>
+      </ul>
+      <p>If someone claims a listing infringes their rights, we will pass the claim to you, may unlist the pack while it is settled, and will follow the law on takedown. You indemnify us against claims arising from a pack you listed.</p>
+      <p class="counsel">Add the formal notice-and-takedown procedure (DMCA agent registration if US-based; EU DSA notice mechanism if serving the EU).</p>
+
+      <h2>4. Selling</h2>
+      <p>
+        Sales are made through Stripe Connect. You hold a Stripe account connected to ours; the buyer pays into your
+        account directly, and Stripe pays you out on its schedule. You are the seller of record: the sale is a contract
+        between you and the buyer, you are responsible for any tax that applies to it, and the receipt names you.
+      </p>
+      <p class="counsel">Confirm the seller-of-record position against the Stripe Connect charge type chosen (direct charges), and whether marketplace-facilitator tax rules in any served region shift collection to the platform.</p>
+      <h3>Our fee</h3>
+      <p>
+        We take an application fee from each sale: <strong>5%</strong> of the price, or <strong>0%</strong> while the
+        publisher has an active hosted-licensing subscription (see <a href="/pricing.html">pricing</a>). Stripe's own
+        processing fees are charged to your account by Stripe and are separate. The fee that applies is fixed when the
+        sale is made and shown in your ledger.
+      </p>
+
+      <h2>5. Delivery and the license ledger</h2>
+      <p>
+        When a buyer pays, we seal a copy of your pack with a key made for that sale, deliver the file and the key to the
+        buyer at once, and record the sale in your ledger: who bought it, when, for how much, and the key. We never hold
+        your signing key; the pack is signed by you and only sealed by us. From the ledger you can reissue a buyer's key
+        if they lose it, or revoke it if the sale is refunded or fraudulent. A revoked key stops re-delivery; it does not
+        reach into a file the buyer already has.
+      </p>
+
+      <h2>6. Refunds</h2>
+      <p>
+        A pack is delivered instantly, so a sale is final once the file has been opened, except where the buyer has a
+        legal right to withdraw regardless. Before then, or in a case of an honest mistake — a double purchase, a pack
+        that does not load — you agree to refund on request. Refunds are issued from your Stripe account; our fee on a
+        refunded sale is returned to you. Buyers contact you through the address on your publisher profile, or us at
+        <a href="mailto:{{SUPPORT}}">{{SUPPORT}}</a>, and we will pass the request to you.
+      </p>
+      <p class="counsel">Align with the consumer-withdrawal wording in the terms of service and with the pre-delivery consent Stripe Checkout collects for digital goods, if enabled.</p>
+
+      <h2>7. Payouts, chargebacks and taxes</h2>
+      <p>
+        Payouts, chargebacks and disputes are handled by Stripe under your Stripe account's terms. A chargeback on a sale
+        may be charged back to you by Stripe. You are responsible for the taxes on your sales and for any information
+        Stripe needs to pay you out.
+      </p>
+
+      <h2>8. Free packs and open licenses</h2>
+      <p>
+        A pack listed free, or under an open license, is delivered as it is, unsealed, and anyone may take it under the
+        license it names. Nothing in this agreement narrows the license you chose for it.
+      </p>
+
+      <h2>9. Ending this agreement</h2>
+      <p>
+        You can unlist every pack and close the publisher organization at any time from the app. We can end this
+        agreement with thirty days' notice, or at once for a breach of section 3. In either case buyers keep the packs
+        and keys they have, we keep the ledger for as long as tax law requires, and sales already made are settled as
+        agreed.
+      </p>
+
+      <h2>10. The rest</h2>
+      <p>
+        Liability is limited as in the <a href="/legal/terms.html">terms of service</a>. This agreement is governed by
+        the same law and courts. Questions: <a href="mailto:{{SUPPORT}}">{{SUPPORT}}</a>.
+      </p>
+    </main>
+    <footer>
+      <span>© {{YEAR}} {{OPERATOR}}</span>
+      <a href="/legal/terms.html">Terms</a>
+      <a href="/legal/privacy.html">Privacy</a>
+      <a href="/licenses.html">Open-source licenses</a>
+      <a href="https://github.com/SCRT-HQ/runlog">Source</a>
+      <span class="build">Runlog {{VERSION}} {{SHA}}</span>
+    </footer>
+  </body>
+</html>

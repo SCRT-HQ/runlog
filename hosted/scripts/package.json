@@ -1,0 +1,5 @@
+{
+  "name": "@runlog/hosted-scripts",
+  "private": true,
+  "type": "commonjs"
+}

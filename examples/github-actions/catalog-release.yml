@@ -1,0 +1,64 @@
+# A GitHub release is published: sign the pack and put it in the Runlog
+# catalog as your publisher, listed at your price. The catalog seals a copy
+# for each buyer under a fresh key; your signing key never leaves the runner.
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   RUNLOG_API_KEY      a command-line key from your profile page in the app;
+#                       the account must be a publisher with payouts set up
+#                       for a priced listing
+#   RUNLOG_SIGNING_KEY  the contents of the runlog-key.json that keygen wrote
+# Variables:
+#   RUNLOG_PRICE        dollars, like 3.00; "free"; or unset to keep the
+#                       price the listing already has
+#   RUNLOG_API          optional: https://runlog.dev.scrthq.com/api for the
+#                       dev catalog, with a key made there
+name: Release to the catalog
+
+on:
+  release:
+    types: [published]
+
+env:
+  PACK: my-game.yaml
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check
+        run: |
+          npx @scrthq/runlog validate "$PACK" --strict
+          npx @scrthq/runlog test "$PACK"
+
+      - name: The tag names the pack's version
+        run: |
+          npx @scrthq/runlog bundle "$PACK" -o dist/pack.json
+          version="$(node -p "require('./dist/pack.json').version")"
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$version" != "$tag" ]; then
+            echo "the pack says version $version but the release is $GITHUB_REF_NAME; bump one of them" >&2
+            exit 1
+          fi
+
+      - name: Sign
+        env:
+          RUNLOG_API_KEY: ${{ secrets.RUNLOG_API_KEY }}
+          RUNLOG_SIGNING_KEY: ${{ secrets.RUNLOG_SIGNING_KEY }}
+        run: npx @scrthq/runlog sign "$PACK"
+
+      - name: Release to the catalog
+        env:
+          RUNLOG_API_KEY: ${{ secrets.RUNLOG_API_KEY }}
+          RUNLOG_API: ${{ vars.RUNLOG_API }}
+          RUNLOG_PRICE: ${{ vars.RUNLOG_PRICE }}
+        run: |
+          case "$RUNLOG_PRICE" in
+            "") npx @scrthq/runlog release "$PACK" ;;
+            free) npx @scrthq/runlog release "$PACK" --free ;;
+            *) npx @scrthq/runlog release "$PACK" --price "$RUNLOG_PRICE" ;;
+          esac

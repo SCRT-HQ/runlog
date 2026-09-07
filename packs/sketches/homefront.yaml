@@ -1,0 +1,284 @@
+# Homefront — housework as a dungeon crawl.
+#
+# A Sweep is one pass through the house. Each Room is drawn, not chosen, so
+# the dice decide where you go next; a Complication makes the room harder or
+# stranger; Rewards pay out for finishing. Patience is the resource: every
+# room spends some, a few give it back, and at zero the Sweep is over
+# whether the house agrees or not.
+#
+# Written to show a pack where the *subject* is drawn from a table rather
+# than declared: the Room table constrains what you name.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.homefront
+version: "0.1.0"
+title: Homefront
+author: Runlog
+description: >-
+  Housework as a dungeon crawl. The dice pick the room, a complication makes
+  it harder, and a reward pays out when it is clean. Stop when patience runs out.
+
+category: home
+tags: [housework, chores, dungeon crawl]
+
+requires:
+  - { id: home, label: A home that needs cleaning, kind: space }
+  - { id: washer, label: A washing machine, kind: equipment, optional: true }
+  - { id: outside, label: Somewhere outside that is yours to clean, kind: space, optional: true, note: "A step, a balcony, a car." }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - seededRuns
+  - counters
+  - resources
+  - coopRoles
+  - timers
+  - journal
+
+vocabulary:
+  run: { one: Sweep, many: Sweeps }
+  unit: { one: Room, many: Rooms }
+  subject: { one: Chore, many: Chores }
+  finalize: Clear
+
+unit:
+  createsSubject: true
+  min: 1
+  max: 8
+
+states:
+  spotless:
+    label: Spotless
+    short: SP
+    scope: subject
+    description: Done properly. It stays done for the rest of the Sweep.
+  skipped:
+    label: Skipped
+    short: --
+    scope: subject
+    semantics: [excludesFromResult]
+    description: Left for another day. It stays on the map as a debt.
+  guests:
+    label: Guests coming
+    scope: run
+    description: Someone is on their way. Every remaining Room is timed.
+
+counters:
+  cleared:
+    label: Rooms cleared
+    initial: 0
+    incrementOn:
+      - { on: unitFinalized }
+    triggers:
+      - when: { gte: 5 }
+        oncePerRun: true
+        label: The house notices
+        do:
+          - { do: note, text: "Five Rooms cleared. Put the kettle on before the next one.", persistent: true }
+          - { do: modResource, resource: patience, by: 2 }
+
+resources:
+  patience:
+    label: Patience
+    initial: 8
+    min: 0
+    max: 10
+    step: 1
+    display: boxes
+    description: Every Room costs some. At zero, finish the Room you are in and end the Sweep.
+
+moves:
+  music:
+    label: Put music on
+    description: Once a Sweep. The next Room costs no Patience.
+    oncePerRun: true
+    when: betweenUnits
+    do:
+      - { do: modResource, resource: patience, by: 1 }
+      - { do: note, text: "The next Room's Patience cost is waived." }
+
+tables:
+  room:
+    resolution: lookup
+    title: Room
+    description: Where the dice send you. Name the Chore that room actually needs.
+    roll: d12
+    entries:
+      - { id: r-kitchen, range: [1, 2], text: "The kitchen. Surfaces, sink, the thing in the back of the fridge." }
+      - { id: r-bath, range: [3, 4], text: "The bathroom. All of it, including the bit behind the door." }
+      - { id: r-bed, range: [5, 5], text: "The bedroom. Sheets, floor, the chair that holds clothes." }
+      - { id: r-living, range: [6, 7], text: "The living room. Surfaces first, then whatever the floor is hiding." }
+      - { id: r-hall, range: [8, 8], text: "The hall, stairs and doorways. The places nobody cleans on purpose." }
+      - { id: r-laundry, range: [9, 9], text: "Laundry. One full cycle, start to folded.", needs: [washer] }
+      - { id: r-desk, range: [10, 10], text: "The desk or workspace. Cables, papers, the cup collection." }
+      - { id: r-outside, range: [11, 11], text: "Outside: the step, the bins, the car, or the balcony.", needs: [outside] }
+      - { id: r-choice, range: [12, 12], text: "Your choice. Pick the room you have been walking past." }
+
+  complication:
+    resolution: lookup
+    title: Complication
+    description: What makes this Room harder than it looks. Rolled after the Chore is named.
+    roll: d8
+    entries:
+      - id: c-timed
+        range: [1, 2]
+        text: "Fifteen minutes. Whatever is done at the buzzer is done."
+        triggers:
+          - on: onDeclareSubject
+            do:
+              - { do: startTimer, minutes: 15, label: "Room clock" }
+      - { id: c-onehand, range: [3, 3], text: "Carry nothing out of the room until it is finished. Pile it by the door." }
+      - { id: c-deep, range: [4, 4], text: "Go one layer deeper than usual: inside, behind, or under one thing.", triggers: [{ on: onFinalize, do: [{ do: modResource, resource: patience, by: -1 }] }] }
+      - { id: c-silent, range: [5, 5], text: "No screens, no podcast. Just the room." }
+      - { id: c-toss, range: [6, 6], text: "Three things leave the house from this room. Bin, donate, or return." }
+      - id: c-guests
+        range: [7, 7]
+        text: "Someone texts: they are coming over. Every remaining Room is timed at fifteen minutes."
+        grants: [guests]
+      - { id: c-none, range: [8, 8], text: "No complication. A plain room." }
+
+  reward:
+    resolution: lookup
+    title: Reward
+    description: Rolled when a Room is cleared.
+    roll: d6
+    entries:
+      - id: rw-rest
+        range: [1, 3]
+        text: "Sit down for five minutes. Patience +1."
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: patience, by: 1 }
+      - { id: rw-find, range: [4, 4], text: "You find something you thought was lost. Write down what." }
+      - { id: rw-free, range: [5, 5], text: "The next Room has no Complication." }
+      - id: rw-momentum
+        range: [6, 6]
+        text: "Momentum. Patience +2, and the next Room is drawn twice; choose one."
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: patience, by: 2 }
+
+phases:
+  - id: draw
+    label: Draw the Room
+    steps:
+      - kind: rollTable
+        table: room
+        label: Roll for the Room
+      - kind: actions
+        do:
+          - { do: modResource, resource: patience, by: -1 }
+
+  - id: name
+    label: Name the Chore
+    steps:
+      - kind: declareSubject
+        label: What does this room actually need? One Chore, in a few words.
+        constrainedBy: room
+
+  - id: complicate
+    label: Complication
+    steps:
+      - kind: rollTable
+        table: complication
+        label: Roll the Complication
+
+  - id: work
+    label: Clean
+    steps:
+      - kind: manual
+        label: Do the Chore, with the Complication.
+        checklist:
+          - text: The Complication was honored.
+            shows: { table: complication, scope: unit }
+          - The room would pass a visitor's glance.
+
+  - id: clear
+    label: Clear
+    steps:
+      - kind: rollTable
+        table: reward
+        label: Roll the Reward
+      - kind: actions
+        do:
+          - { do: applyState, state: spotless, to: thisSubject }
+      - kind: finalizeUnit
+        label: Clear the Room
+
+journal:
+  enabled: true
+  prompt: What did the room turn out to need?
+  required: false
+
+endings:
+  - id: guestReady
+    label: Guest-ready
+    text: Five or more Rooms cleared. Open the door to anyone.
+    requires:
+      - { counter: cleared, is: { gte: 5 } }
+  - id: goodEnough
+    label: Good enough
+    text: Stop here. Skipped rooms wait for the next Sweep.
+  - id: outOfPatience
+    label: Out of patience
+    text: Patience is gone. Whatever is in progress is finished as it stands.
+
+modes:
+  sweep:
+    label: A Sweep
+    description: Draw rooms until patience runs out or the house is done.
+    seeded: false
+    units: { min: 1, max: 8 }
+
+  quick:
+    label: Quick sweep
+    description: Three Rooms before you go out.
+    seeded: false
+    units: { fixed: 3 }
+
+  weekend:
+    label: Weekend
+    description: A pre-rolled Sweep, so the same rooms and complications fall for everyone who shares the seed.
+    seeded: true
+    units: { roll: d4+3 }
+
+  household:
+    label: Household
+    description: Two to four people, taking turns drawing rooms. Whoever draws, cleans.
+    seeded: false
+    players:
+      min: 2
+      max: 4
+      rotate: clockwise
+      roles:
+        - { id: sweeper, label: Sweeper, description: Draws the Room and cleans it. }
+        - { id: spotter, label: Spotter, description: Rolls the Complication and checks the room at the end. }
+
+defaultMode: sweep
+
+hierarchy:
+  - Reward
+  - Complication
+  - General rules
+
+fixtures:
+  - name: A cleared room counts and costs patience
+    mode: sweep
+    events:
+      - { t: RunStarted, mode: sweep }
+      - { t: UnitEntered }
+      - { t: PhaseCompleted, phase: draw }
+      - { t: SubjectDeclared, subjectType: "Kitchen surfaces" }
+      - { t: UnitFinalized }
+    expect:
+      - { path: counters.cleared, equals: 1 }
+      - { path: subjects.length, equals: 1 }
+      - { path: status, equals: active }

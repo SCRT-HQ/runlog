@@ -1,0 +1,301 @@
+name: CI/CD
+
+# The path a change takes:
+#
+#   pull request   ->  the app's checks, the hosting's checks, a diff against both environments
+#                      (a fork's pull request gets the checks only; its diffs run in the merge queue)
+#   merge to main  ->  build the app, deploy dev (the site stack publishes the build), seed the catalog, tag a release
+#   release        ->  "Deploy Production" takes it from there
+#
+# Production is reached only through a published release, so it always carries
+# a version and has always already been to dev. One repository, one pipeline:
+# the app and its hosting change together and go out together.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Which part of the version to increment
+        required: true
+        default: patch
+        type: choice
+        options: [patch, minor, major]
+  pull_request:
+    branches:
+      - main
+  # The merge queue builds a branch with the queued pull requests merged onto
+  # main and asks for the same checks on it, so a pull request that went green
+  # on a stale base is tested and diffed again as it will actually land.
+  merge_group:
+  push:
+    branches:
+      - main
+
+env:
+  NODE_VERSION: 22
+  # CloudFront will not accept a certificate issued anywhere else, and one
+  # region avoids a cross-region reference for the sake of one certificate.
+  AWS_REGION: us-east-1
+  GITHUB_ROLE_NAME: GitHubActionRole
+
+permissions:
+  contents: read
+
+jobs:
+  Test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch' }}
+    strategy:
+      matrix:
+        node-version: [22]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup Node and run npm ci
+        uses: ./.github/actions/npm-ci
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - run: npm run typecheck
+      - run: npm test
+
+      # The packs that ship are held to the same standard a contributor's is:
+      # --strict fails on warnings, and each pack's own fixtures are replayed
+      # against the engine that plays them.
+      - run: npm run check:packs
+      - run: npm run test:packs
+
+      - run: npm run build
+
+  InfraTest:
+    name: Test the hosting
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch' }}
+    strategy:
+      matrix:
+        aws-environment: [dev, prd]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup Node and run npm ci
+        uses: ./.github/actions/npm-ci
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # No credentials. The stacks are asserted against a synthesized template,
+      # so the tests need an account id to render into ARNs and nothing more,
+      # which is what keeps them runnable on a fork's pull request, where the
+      # repository's variables may not be handed over: any twelve digits do.
+      - name: Test the hosting against ${{ matrix.aws-environment }}
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_ENVIRONMENT: ${{ matrix.aws-environment }}
+          CDK_DEFAULT_ACCOUNT: ${{ (matrix.aws-environment == 'prd' && vars.AWS_ACCOUNT_ID_PRD || vars.AWS_ACCOUNT_ID_DEV) || '123456789012' }}
+          CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
+        run: npm run test:ci -w hosted/infra
+
+      - name: Publish the hosting's test results for ${{ matrix.aws-environment }}
+        uses: dorny/test-reporter@v3
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        with:
+          name: Hosting tests (${{ matrix.aws-environment }})
+          path: hosted/infra/junit.xml
+          reporter: java-junit
+          fail-on-error: true
+
+  # The app is built before a diff or a deploy, so the site stack's template
+  # names the build it would publish; a diff without one would show the
+  # publish being torn down.
+  DevDiff:
+    name: Diff Dev CDK Stacks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    # Nothing that reaches AWS runs for a pull request from a fork: the diffs
+    # wait until a maintainer has approved it and queued it to merge, and run
+    # there. (GitHub would refuse a fork the OIDC token anyway; this keeps
+    # the refusal from showing as a failed check on a contributor's work.)
+    if: >-
+      ${{
+        github.event_name == 'merge_group'
+        || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+      }}
+    needs:
+      - Test
+      - InfraTest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/build-app
+        with:
+          environment: dev
+          workos-client-id: ${{ vars.WORKOS_CLIENT_ID_DEV }}
+          target-account-id: ${{ vars.AWS_ACCOUNT_ID_DEV }}
+      - name: Run CDK Diff Against Dev Environment
+        uses: ./.github/actions/run-cdk
+        with:
+          cdk-command: diff
+          target-account-id: ${{ vars.AWS_ACCOUNT_ID_DEV }}
+          target-region: ${{ env.AWS_REGION }}
+          node-version: ${{ env.NODE_VERSION }}
+          github-role-name: ${{ env.GITHUB_ROLE_NAME }}
+          aws-environment: dev
+          hosted-zone-id: ${{ vars.RUNLOG_DEV_ZONE_ID }}
+          app-dist: apps/web/dist
+
+  PrdDiff:
+    name: Diff Prd CDK Stacks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    # Nothing that reaches AWS runs for a pull request from a fork: the diffs
+    # wait until a maintainer has approved it and queued it to merge, and run
+    # there. (GitHub would refuse a fork the OIDC token anyway; this keeps
+    # the refusal from showing as a failed check on a contributor's work.)
+    if: >-
+      ${{
+        github.event_name == 'merge_group'
+        || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+      }}
+    needs:
+      - Test
+      - InfraTest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/build-app
+        with:
+          environment: prd
+          workos-client-id: ${{ vars.WORKOS_CLIENT_ID_PRD }}
+          target-account-id: ${{ vars.AWS_ACCOUNT_ID_PRD }}
+      - name: Run CDK Diff Against Prd Environment
+        uses: ./.github/actions/run-cdk
+        with:
+          cdk-command: diff
+          target-account-id: ${{ vars.AWS_ACCOUNT_ID_PRD }}
+          target-region: ${{ env.AWS_REGION }}
+          node-version: ${{ env.NODE_VERSION }}
+          github-role-name: ${{ env.GITHUB_ROLE_NAME }}
+          aws-environment: prd
+          hosted-zone-id: ${{ vars.RUNLOG_PRD_ZONE_ID }}
+          app-dist: apps/web/dist
+
+  DevDeploy:
+    name: Deploy Dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: deploy-dev-${{ vars.AWS_ACCOUNT_ID_DEV }}
+    permissions:
+      contents: read
+      id-token: write
+    # One dev deploy at a time; a second merge queues behind the first.
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: false
+    if: >-
+      ${{
+        (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        || github.event_name == 'workflow_dispatch'
+      }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/build-app
+        with:
+          environment: dev
+          workos-client-id: ${{ vars.WORKOS_CLIENT_ID_DEV }}
+          target-account-id: ${{ vars.AWS_ACCOUNT_ID_DEV }}
+      - name: Deploy the hosting and publish the build to dev
+        uses: ./.github/actions/run-cdk
+        with:
+          cdk-command: deploy
+          target-account-id: ${{ vars.AWS_ACCOUNT_ID_DEV }}
+          target-region: ${{ env.AWS_REGION }}
+          node-version: ${{ env.NODE_VERSION }}
+          github-role-name: ${{ env.GITHUB_ROLE_NAME }}
+          aws-environment: dev
+          hosted-zone-id: ${{ vars.RUNLOG_DEV_ZONE_ID }}
+          app-dist: apps/web/dist
+
+      # The built-ins, listed in the catalog as the platform's own, so the
+      # feed carries everything. Needs a key for the platform publisher's
+      # account in RUNLOG_API_KEY_DEV; without one the step says so and the
+      # bundle stays the catalog.
+      - name: Seed the catalog with the built-in packs
+        env:
+          RUNLOG_API: https://runlog.dev.scrthq.com/api
+          RUNLOG_API_KEY: ${{ secrets.RUNLOG_API_KEY_DEV }}
+        run: npm run seed:listings
+
+      - run: echo "### Deployed \`${GITHUB_SHA:0:12}\` to dev" >> "$GITHUB_STEP_SUMMARY"
+
+  Release:
+    name: Tag and Publish Release
+    runs-on: ubuntu-latest
+    needs:
+      - DevDeploy
+    permissions:
+      # The App token creates the release; this is for the checkout only.
+      contents: read
+    if: >-
+      ${{
+        !cancelled()
+        && needs.DevDeploy.result == 'success'
+        && (
+          (github.event_name == 'push' && github.ref == 'refs/heads/main')
+          || github.event_name == 'workflow_dispatch'
+        )
+      }}
+    steps:
+      # Full history, or `git tag -l` sees nothing and every release is v0.0.1.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Work out the next version
+        id: version
+        run: |
+          set -euo pipefail
+          latest="$(git tag -l 'v[0-9]*' --sort=-v:refname | head -1)"
+          if [ -z "$latest" ]; then latest="v0.0.0"; fi
+
+          IFS='.' read -r major minor patch <<< "${latest#v}"
+          case "${{ github.event.inputs.bump || 'patch' }}" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            *)     patch=$((patch + 1)) ;;
+          esac
+
+          next="v${major}.${minor}.${patch}"
+          echo "Previous ${latest} -> next ${next}"
+          echo "next=${next}" >> "$GITHUB_OUTPUT"
+
+      # A GitHub App token, not GITHUB_TOKEN. Anything GITHUB_TOKEN does is
+      # barred from starting another run, and that applies to published
+      # releases and pushed tags alike. A release created by the App fires
+      # the `release: published` event, and production picks it up.
+      - name: Mint a token that can trigger the release event
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.CODE_MGR_APP_ID }}
+          private-key: ${{ secrets.CODE_MGR_APP_PRIVATE_KEY }}
+
+      - name: Tag and publish
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${{ steps.version.outputs.next }}" \
+            --target "${{ github.sha }}" \
+            --title "${{ steps.version.outputs.next }}" \
+            --generate-notes \
+            --latest
+
+          {
+            echo "### Released ${{ steps.version.outputs.next }}"
+            echo ""
+            echo "Production deploys from the release event."
+          } >> "$GITHUB_STEP_SUMMARY"

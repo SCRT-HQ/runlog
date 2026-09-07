@@ -1,0 +1,18 @@
+# Every push: the pack loads, its warnings are fixed, its fixtures pass.
+name: Check the pack
+
+on: [push, pull_request]
+
+env:
+  PACK: my-game.yaml
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx @scrthq/runlog validate "$PACK" --strict
+      - run: npx @scrthq/runlog test "$PACK"

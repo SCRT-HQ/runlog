@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy policy · Runlog</title>
+    <meta name="description" content="What Runlog at {{DOMAIN}} stores about you, where, and for how long." />
+    <link rel="stylesheet" href="/hosted.css" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="canonical" href="https://{{DOMAIN}}/legal/privacy.html" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/"><img src="/icon.svg" alt="" />Runlog</a>
+      <nav>
+        <a href="/">Why Runlog</a>
+        <a href="/#guide">Guide</a>
+        <a href="/pricing.html">Pricing</a>
+        <a href="/legal/terms.html">Terms</a>
+        <a href="/legal/privacy.html" aria-current="page">Privacy</a>
+        <a href="/legal/publishers.html">Publishers</a>
+        <a href="/about.html">About</a>
+      </nav>
+    </header>
+    <main>
+      <h1>Privacy policy</h1>
+      <p class="lede">What the hosted copy of Runlog stores about you, where it is, and how to have it deleted.</p>
+      <p class="stamp">Version {{TERMS_VERSION}} · applies from {{TERMS_DATE}}</p>
+
+      <div class="summary">
+        <p>The short version:</p>
+        <ul>
+          <li>Without an account, nothing about you leaves your browser. There are no analytics and no tracking cookies.</li>
+          <li>With an account, we store your runs and packs so they can reach your other devices and the people you invite.</li>
+          <li>We keep the address you sign in with, and the addresses you invite, and nothing else about anyone.</li>
+          <li>Deleting your account deletes what we hold, at once, from the app.</li>
+        </ul>
+      </div>
+
+      <h2>1. Who is responsible</h2>
+      <p>
+        {{OPERATOR}} operates the service at <code>{{DOMAIN}}</code> and is the controller of the personal data described here.
+        Contact: <a href="mailto:{{SUPPORT}}">{{SUPPORT}}</a>.
+      </p>
+      <p class="counsel">Confirm the legal entity, whether a representative in the EU or UK is required, and whether a data-protection officer must be named.</p>
+
+      <h2>2. Using the app without an account</h2>
+      <p>
+        The app runs in your browser. Your packs, runs, settings and any license keys are kept in the browser's own storage
+        on your device. They are not sent to us. The only requests your browser makes are for the app's files and, when you
+        open the catalog, for the list of packs. Nothing about those requests is kept (see section 6).
+      </p>
+      <p>The same app can be downloaded and run from a file on disk, in which case no request reaches us at all.</p>
+
+      <h2>3. What an account adds</h2>
+      <p>When you sign in, we store on our servers:</p>
+      <dl>
+        <dt>Your sign-in</dt>
+        <dd>
+          Handled by WorkOS, which holds your email address, your name if you gave one, and the passkey, password or
+          provider you sign in with. We receive an identifier, and the app reports the name and address to us so we can show
+          them and address invitations.
+        </dd>
+        <dt>Your runs</dt>
+        <dd>Every move in a synced run, with the time it was made and which account made it, so devices can share the run.</dd>
+        <dt>Your packs</dt>
+        <dd>Packs you have switched sync on for, in full, so your other devices can play them. Packs marked not redistributable are still only ever shown to you.</dd>
+        <dt>License keys</dt>
+        <dd>The keys for sealed packs you have bought or been given, so they follow you between devices.</dd>
+        <dt>Invitations</dt>
+        <dd>The email address you invite, who invited them, which run, and whether the invitation was used. We send one email to that address and nothing else, ever.</dd>
+        <dt>People you played with</dt>
+        <dd>A list of accounts you have shared a run with, so the next invitation is a name rather than an address.</dd>
+        <dt>Your profile</dt>
+        <dd>When the account was first seen and last seen, the run you touched last, which version of the terms you accepted, and — when plans are on — which plan you are on.</dd>
+        <dt>Command-line keys</dt>
+        <dd>A hashed copy of any API key you make for publishing from the command line, with its label and when it was last used.</dd>
+      </dl>
+
+      <h2>4. Payments</h2>
+      <p>
+        When plans and the marketplace are switched on, payments are taken by Stripe. Stripe holds your card details; we
+        never see them. We keep the Stripe customer identifier, which plan you are on, and for a purchase: which pack, the
+        amount, when, and the address the receipt went to. A publisher sees the sale in their ledger with the buyer's email
+        address, because a license belongs to a person and they may need to reissue it.
+      </p>
+      <p class="counsel">Confirm the basis for sharing the buyer's address with the publisher (contract performance) and whether it should be named in the checkout consent.</p>
+
+      <h2>5. Why we process this, and on what basis</h2>
+      <ul>
+        <li>To provide the service you asked for: sync, invitations, purchases (performance of a contract).</li>
+        <li>To keep the service secure and to answer support: service logs, key hashes (legitimate interest).</li>
+        <li>To send the one invitation email a player asked us to send (legitimate interest of the inviter; you can ignore it).</li>
+        <li>To meet legal duties around payments and tax (legal obligation).</li>
+      </ul>
+      <p>We do not profile you, we do not advertise, and we do not sell or rent any of this.</p>
+
+      <h2>6. Logs</h2>
+      <p>
+        The edge keeps no access logs. The API keeps a service log: when a request failed and why, with no request body
+        and no addresses, so that problems can be found. Those lines are kept for {{LOG_RETENTION}} by Amazon CloudWatch and
+        then deleted. Sign-in attempts are logged by WorkOS under its own policy.
+      </p>
+
+      <h2>7. Who else sees data</h2>
+      <p>We use these providers, each under its own terms, to run the service:</p>
+      <dl>
+        <dt>Amazon Web Services</dt>
+        <dd>Hosting, storage and email, in the United States (us-east-1 and us-west-2).</dd>
+        <dt>WorkOS</dt>
+        <dd>Sign-in and sessions.</dd>
+        <dt>Stripe</dt>
+        <dd>Payments and payouts, when plans are on.</dd>
+      </dl>
+      <p>
+        Data is stored in the United States. If you are in the EU, UK or another place with rules on transfers, those
+        transfers rest on the providers' standard contractual clauses.
+      </p>
+      <p class="counsel">Confirm data-processing agreements are in place with each provider and that the transfer mechanism is named correctly.</p>
+
+      <h2>8. How long we keep things</h2>
+      <ul>
+        <li>Account data: until you delete your account.</li>
+        <li>Invitations: seven days if unused; the record of an accepted one lives with the run.</li>
+        <li>Purchase records: for as long as tax law requires, typically seven years, even after the account is closed.</li>
+        <li>Service logs: {{LOG_RETENTION}}.</li>
+      </ul>
+      <p class="counsel">Decide whether dormant accounts should be deleted after a fixed period, and add it here once the sweep exists; nothing deletes an account today but its owner.</p>
+
+      <h2>9. Your rights</h2>
+      <p>
+        You can see everything we hold from your profile in the app, export your runs and packs at any time, and delete
+        your account with one button, which deletes what we hold immediately. Purchase records stay for the period above.
+        Depending on where you live, you also have rights to access, correct, restrict, port and object, and to complain to
+        a supervisory authority; write to <a href="mailto:{{SUPPORT}}">{{SUPPORT}}</a> and we will answer within a month.
+      </p>
+
+      <h2>10. Children</h2>
+      <p>The service is not directed at children under 16, and we do not knowingly hold an account for one. If you believe we do, tell us and we will delete it.</p>
+
+      <h2>11. Changes</h2>
+      <p>When this policy changes in a way that matters, the app asks you to read and accept it again, and the version and date at the top change.</p>
+    </main>
+    <footer>
+      <span>© {{YEAR}} {{OPERATOR}}</span>
+      <a href="/legal/terms.html">Terms</a>
+      <a href="/legal/privacy.html">Privacy</a>
+      <a href="/licenses.html">Open-source licenses</a>
+      <a href="https://github.com/SCRT-HQ/runlog">Source</a>
+      <span class="build">Runlog {{VERSION}} {{SHA}}</span>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,26 @@
+# Streaming a run <Plan tier="plus" />
+
+A run on a stream wants its own pieces on screen: the scoreboard beside the camera, the clock in a corner, the race leaderboard across the top. Each of those is a **widget**: one panel of the run on a page of its own, with nothing else on it, that follows the run as it moves.
+
+## Opening one
+
+Under **Stream** in a run's side column, each widget has **Open**, which puts it in a small window of its own, and **Copy address**, which is what a streaming app wants as a browser source. Two settings travel in the address: a clear background, so your scene shows through, and a size, since a capture is usually smaller than a screen.
+
+- **Scoreboard**: places, points, and marks in a moderated run.
+- **Race**: the leaderboard, as each racer's device reports it.
+- **Clock**: the unit's stopwatch or timer, large.
+- **Stats**: where the run stands — the unit, units done, time on the clock, who leads.
+- **Trackers**: resources and counters, as bars and boxes.
+- **Everything, stacked**: the panels above in one column, for a single browser source down the side of a scene. It leaves out what the run has nothing for: a scoreboard with nobody on it, trackers in a pack that has none, the race when the run is not in one.
+
+## How it follows the run
+
+A widget reads the run from this device, the same log the app plays from, so it needs no account of its own and works offline. With a live link shared, **For another machine** puts the link's token in the address, and the widget reads the run by its link instead: the streaming machine need not be the one playing. On the streamer's own machine it re-reads the run every couple of seconds, and at once when a move arrives from another device through sync; by link it holds a socket that rings on every move, with a poll only while the socket is down. The clocks tick from the log's timestamps, so they agree with the app to the tenth.
+
+## For a plugin of your own
+
+When the player throws dice, everyone watching sees the same dice land, thrown the same way, on the live page and for a watcher who took a seat: the tray appears in the corner, tumbles, and settles on the values as they were rolled.
+
+A shared run is readable by anything that can fetch a URL. `https://runlog.scrthq.com/api/public/runs/<runId>/metrics?t=<token>`, with the run id and token from the live link, answers with one flat JSON document: the unit, where the run stands, standings, counters, resources and clocks, as the owner's device last wrote them. A socket at `/ws?run=<runId>&t=<token>` rings when the run moves. The repository's `docs/stream-api.md` has the fields and how to tick a clock from them.
+
+<Note>Where plans are switched on, widgets are part of Plus, like hosting a table: a stream is a table with an audience. Where they are not — the preview, a copy you run yourself — they are open to everyone.</Note>

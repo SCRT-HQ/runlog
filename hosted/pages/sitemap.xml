@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://{{DOMAIN}}/</loc><lastmod>{{DATE}}</lastmod></url>
+  <url><loc>https://{{DOMAIN}}/welcome.html</loc><lastmod>{{DATE}}</lastmod></url>
+  <url><loc>https://{{DOMAIN}}/pricing.html</loc><lastmod>{{DATE}}</lastmod></url>
+  <url><loc>https://{{DOMAIN}}/about.html</loc><lastmod>{{DATE}}</lastmod></url>
+  <url><loc>https://{{DOMAIN}}/legal/terms.html</loc><lastmod>{{TERMS_DATE}}</lastmod></url>
+  <url><loc>https://{{DOMAIN}}/legal/privacy.html</loc><lastmod>{{TERMS_DATE}}</lastmod></url>
+  <url><loc>https://{{DOMAIN}}/legal/publishers.html</loc><lastmod>{{TERMS_DATE}}</lastmod></url>
+  <url><loc>https://{{DOMAIN}}/licenses.html</loc><lastmod>{{DATE}}</lastmod></url>
+</urlset>

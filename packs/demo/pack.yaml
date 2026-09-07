@@ -1,0 +1,608 @@
+# The Long Kiln — a demo rule pack for Runlog.
+#
+# Entirely fictional. It exists so the engine, the linter and the UI have
+# something to exercise that ships in this repo, and so pack authors have a
+# worked example to copy. It is a small ceramics-practice game: you throw a
+# series of pieces, the Kiln imposes constraints, and it occasionally reaches
+# back and cracks something you already fired.
+#
+# Every construct in the schema appears somewhere below at least once.
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.long-kiln
+version: "1.0.0"
+title: The Long Kiln
+author: Runlog
+description: >-
+  Throw pieces under constraints while the Kiln works against you.
+category: craft
+tags: [ceramics, pottery, dungeon crawl]
+
+requires:
+  - { id: wheel, label: "A potter's wheel, or another way to throw clay", kind: equipment }
+  - { id: clay, label: "Clay, and a place to wedge it", kind: supplies }
+  - { id: kiln, label: "A kiln, or somewhere that fires for you", kind: equipment, optional: true, note: "The game ends at the firing either way; without a kiln, the set waits." }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+capabilities:
+  - deferredTriggers
+  - seededRuns
+  - decks
+  - counters
+  - resources
+  - coopRoles
+  - backwardTargeting
+  - timers
+  - journal
+  - bandsResolution
+
+vocabulary:
+  run: { one: Firing, many: Firings }
+  unit: { one: Stage, many: Stages }
+  subject: { one: Piece, many: Pieces }
+  finalize: Fire
+
+unit:
+  createsSubject: true
+  min: 1
+  max: 12
+
+states:
+  sealed:
+    label: Sealed
+    short: SL
+    scope: subject
+    semantics: [makesUntargetable]
+    description: The Kiln has lost interest in this piece. It cannot be targeted again.
+  locked:
+    label: Locked
+    short: LK
+    scope: subject
+    semantics: [blocksEdit, locksValue]
+    description: Fixed by the Kiln. You may no longer alter it; only the Kiln may.
+  muted:
+    label: Muted
+    short: MT
+    scope: subject
+    semantics: [excludesFromResult, makesUntargetable]
+    description: Set aside. It takes no part in the finished set.
+  shattered:
+    label: Shattered
+    short: XX
+    scope: subject
+    semantics: [removesFromPlay, makesUntargetable]
+    description: Gone. The Stage remains, but the Piece does not.
+  coldKiln:
+    label: Cold Kiln
+    scope: run
+    description: The Kiln has lost track of you. No further Kiln Checks this Firing.
+
+counters:
+  # The heart of the "you have been lucky for too long" mechanic. Note that it
+  # increments on every check and resets on any setback: a check that *causes*
+  # a setback increments and is then immediately reset, which is exactly the
+  # behavior we want and costs no special-casing.
+  calm:
+    label: Calm streak
+    initial: 0
+    min: 0
+    hidden: false
+    incrementOn:
+      - { on: phaseCompleted, phase: check }
+    resetOn:
+      - { on: outcomeResolved, table: setback, cause: any }
+    triggers:
+      - when: { gte: 5 }
+        oncePerRun: true
+        label: The Kiln overheats
+        do:
+          - { do: note, text: "Five calm Stages. The Kiln overheats." }
+          - { do: rollOn, table: strain }
+  # Tallied for the end-of-Firing salvage attempt.
+  setbacksSuffered:
+    label: Setbacks suffered
+    initial: 0
+    incrementOn:
+      - { on: outcomeResolved, table: setback, cause: any }
+
+resources:
+  glaze:
+    label: Glaze
+    initial: 3
+    min: 0
+    max: 6
+    step: 1
+    display: boxes
+    description: Spend to soften a setback. Never refilled mid-Firing.
+
+decks:
+  charms:
+    kind: cards
+    title: Charms
+    description: One-shot advantages, drawn at the start of a Firing.
+    drawAtStart: 1
+    unique: true
+    carriesOver: false
+    cards:
+      - id: steady-hands
+        title: Steady Hands
+        text: Ignore one Constraint result and choose any other from the table.
+      - id: kiln-sight
+        title: Kiln Sight
+        text: Roll the next Stage's Kiln Check before deciding whether to continue.
+      - id: slipware
+        title: Slipware
+        text: Ignore one Setback. It still counts as having been suffered.
+        triggers:
+          - on: immediately
+            do:
+              - { do: modCounter, counter: setbacksSuffered, by: 1 }
+      - id: kintsugi
+        title: Kintsugi
+        text: Remove every Kiln-applied state from one Piece, then re-Fire it.
+
+# Optional moves the player elects to take, as opposed to things the Kiln does
+# to them. Availability is the pack's business; the engine only asks.
+moves:
+  salvage:
+    label: Salvage a Piece
+    description: >-
+      Once a Firing, roll a d6 against the number of Setbacks you have suffered.
+      On a roll at or under that tally, re-enter one fired Stage and repair it.
+    oncePerRun: true
+    when: beforeEnding
+    available:
+      - { unitIndex: { gte: 2 } }
+    do:
+      - { do: roll, dice: d6, into: salvageRoll, label: "Roll against your Setback tally" }
+      - do: branch
+        on: salvageRoll
+        cases:
+          - is: { lteCounter: setbacksSuffered }
+            then:
+              - { do: prompt, kind: chooseSubject, label: "Which Piece do you salvage?", eligibleOnly: true, into: saved }
+              - { do: removeState, state: locked, to: { var: saved } }
+              - { do: note, text: "Repair the Piece, then re-Fire the Stage." }
+        else:
+          - { do: note, text: "The Kiln does not relent." }
+
+  breakOne:
+    label: Break a Piece deliberately
+    description: Take one out of the Firing yourself, before it is taken from you.
+    when: betweenUnits
+    do:
+      - { do: prompt, kind: chooseSubject, label: "Which Piece do you break?", into: broken }
+      - { do: applyState, state: shattered, to: { var: broken } }
+
+tables:
+  # A d100 check that tiles 1..100 exactly. The linter enforces that.
+  check:
+    resolution: lookup
+    title: Kiln Check
+    description: Rolled on entering a Stage, to see how the Kiln responds.
+    roll: d100
+    entries:
+      - id: check-quiet
+        range: [1, 19]
+        text: The Kiln is quiet. Nothing happens.
+      - id: check-kind
+        range: [20, 69]
+        text: The Kiln dictates the form. Roll on the Form table.
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: form }
+      - id: check-recent
+        range: [70, 79]
+        text: >-
+          The Kiln reaches for recent work. Count back from the newest eligible
+          Piece and inflict a Setback.
+        tags: [setback]
+        triggers:
+          - on: immediately
+            do:
+              - { do: resolveTarget, from: currentRoll }
+              - { do: rollOn, table: setback }
+      - id: check-old
+        range: [80, 89]
+        text: >-
+          The Kiln reaches for old work. Count forward from the oldest eligible
+          Piece and inflict a Setback.
+        tags: [setback]
+        triggers:
+          - on: immediately
+            do:
+              - { do: resolveTarget, from: currentRoll }
+              - { do: rollOn, table: setback }
+      - id: check-choice
+        range: [90, 99]
+        text: The Kiln lets you choose which Piece suffers. Inflict a Setback.
+        tags: [setback]
+        triggers:
+          - on: immediately
+            do:
+              - { do: resolveTarget, from: choice }
+              - { do: rollOn, table: setback }
+      - id: check-cold
+        range: [100, 100]
+        text: The Kiln goes cold. Make no further Kiln Checks this Firing.
+        triggers:
+          - on: immediately
+            do:
+              - { do: applyState, state: coldKiln, to: run }
+              - { do: modCounter, counter: calm, set: 0 }
+
+  form:
+    resolution: lookup
+    title: Form
+    roll: d6
+    entries:
+      - id: form-bowl
+        range: [1, 1]
+        text: A bowl. Open, wide, dependent on its curve.
+      - id: form-vase
+        range: [2, 2]
+        text: A vase. Tall enough to be unstable.
+      - id: form-plate
+        range: [3, 3]
+        text: A plate. Flat work, unforgiving of warping.
+      - id: form-cup
+        range: [4, 4]
+        text: A cup. Small, and it must be usable.
+      - id: form-lidded
+        range: [5, 5]
+        text: A lidded vessel. Two parts that have to meet.
+      - id: form-free
+        range: [6, 6]
+        text: Your choice of form.
+
+  constraint:
+    resolution: lookup
+    title: Constraint
+    description: The shape of the Stage. Honor it before firing.
+    roll: d12
+    entries:
+      - id: con-one-tool
+        range: [1, 1]
+        text: Use exactly one tool for the whole Stage.
+      - id: con-no-trim
+        range: [2, 2]
+        text: No trimming. Whatever comes off the wheel is the form.
+      - id: con-eyes
+        range: [3, 3]
+        text: Center the clay with your eyes closed.
+      - id: con-thin
+        range: [4, 4]
+        text: The wall must be thin enough to admit light.
+      - id: con-match
+        range: [5, 5]
+        text: Match the height of an earlier Piece of your choice.
+      - id: con-texture
+        range: [6, 6]
+        text: The surface must carry a texture you have not used this Firing.
+      - id: con-timed
+        range: [7, 7]
+        text: Once you begin, the Stage fires in four minutes.
+        triggers:
+          - on: afterWork
+            do:
+              - { do: startTimer, minutes: 4, label: "Stage fires" }
+      - id: con-asym
+        range: [8, 8]
+        text: The Piece must be deliberately asymmetric.
+      - id: con-reuse
+        range: [9, 9]
+        text: Use only glazes already used this Firing.
+        requires:
+          - { subjectCount: { gte: 2 } }
+      - id: con-single
+        range: [10, 10]
+        text: One glaze only, applied once.
+      - id: con-risky
+        range: [11, 11]
+        text: >-
+          Push the form until it nearly collapses. When you finish, roll d6; on
+          a 5 or 6 it collapses and the Piece is lost.
+        triggers:
+          - on: afterWork
+            do:
+              - { do: roll, dice: d6, into: collapse, label: Collapse check }
+              - do: branch
+                on: collapse
+                cases:
+                  - in: [5, 6]
+                    then:
+                      - { do: note, text: "The form collapsed. The Piece is lost." }
+                      - { do: applyState, state: shattered, to: thisSubject }
+      - id: con-none
+        range: [12, 12]
+        text: No constraint. Work freely.
+
+  setback:
+    resolution: lookup
+    title: Setback
+    description: Damage the Kiln inflicts on a Piece already fired.
+    roll: d10
+    entries:
+      - id: set-crack
+        range: [1, 2]
+        text: A hairline crack. Lock the Piece; it may no longer be altered by you.
+        grants: [locked]
+      - id: set-dull
+        range: [3, 3]
+        text: The glaze dulls. Mute the Piece; it leaves the finished set.
+        grants: [muted]
+      - id: set-shatter
+        range: [4, 4]
+        text: The Piece shatters. Remove it from the Firing.
+        grants: [shattered]
+      - id: set-warp
+        range: [5, 6]
+        text: The Piece warps. Alter its silhouette visibly and irreversibly.
+        grants: [locked]
+      - id: set-spend
+        range: [7, 7]
+        text: The Kiln takes a measure of Glaze.
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: glaze, by: -1 }
+      - id: set-again
+        range: [8, 8]
+        text: The Kiln is not finished. It forces another Stage.
+        triggers:
+          - on: immediately
+            do:
+              - { do: forceUnit, count: 1 }
+      - id: set-seal
+        range: [9, 9]
+        text: The Kiln seals the Piece away. It can never be targeted again.
+        grants: [sealed]
+      - id: set-miss
+        range: [10, 10]
+        text: The Kiln misses. This still counts as a Setback suffered.
+
+  # A bands table, to exercise the second resolution kind: the total of 2d6 is
+  # compared against open-ended thresholds rather than looked up in a range.
+  strain:
+    resolution: bands
+    title: Overheat
+    description: How badly the Kiln overheats after a long calm stretch.
+    roll: 2d6
+    entries:
+      - id: strain-mild
+        lte: 5
+        text: A scorch. Lock the newest Piece.
+        triggers:
+          - on: immediately
+            do:
+              - { do: resolveTarget, from: event }
+              - { do: applyState, state: locked, to: targetSubject }
+      - id: strain-bad
+        gte: 6
+        lte: 9
+        text: Every Piece fired so far is locked.
+        triggers:
+          - on: immediately
+            do:
+              - { do: applyState, state: locked, to: allPriorSubjects }
+      - id: strain-ruin
+        gte: 10
+        text: The Kiln demands two further Stages before you may stop.
+        triggers:
+          - on: immediately
+            do:
+              - { do: forceUnit, count: 2 }
+
+targeting:
+  strategy: anchoredOffset
+  offsetFrom: onesDigit
+  wraparound: true
+  skipIneligible: true
+  bands:
+    - { range: [70, 79], anchor: newest, direction: before }
+    - { range: [80, 89], anchor: oldest, direction: after }
+    - { range: [90, 99], anchor: playerChoice }
+  eventFallback:
+    roll: d100
+    tensOddBand: 70
+    tensEvenBand: 80
+    missOn: 100
+
+phases:
+  - id: enter
+    label: Enter the Stage
+    steps:
+      - kind: manual
+        label: Wedge clay and start a new Piece.
+        description: Entering a Stage means beginning a new Piece on the wheel.
+
+  - id: check
+    label: Kiln Check
+    description: Skipped in the first Stage, and once the Kiln has gone cold.
+    skipWhen:
+      - { unitIndex: { lte: 1 } }
+      - { subjectHasState: coldKiln, of: run }
+    steps:
+      - kind: rollTable
+        table: check
+        label: Roll the Kiln Check
+        into: checkRoll
+
+  - id: declare
+    label: Declare the form
+    steps:
+      - kind: declareSubject
+        label: What is this Piece?
+        constrainedBy: form
+
+  - id: constrain
+    label: Constraint
+    skipWhen:
+      - { unitIndex: { lte: 1 } }
+    steps:
+      - kind: rollTable
+        table: constraint
+        label: Roll the Constraint
+
+  - id: work
+    label: Throw the Piece
+    steps:
+      - kind: manual
+        label: Throw it.
+        description: The only point at which new material may be made.
+        checklist:
+          - The Piece is meaningfully different from the others.
+          - text: The Constraint has been honored.
+            shows: { table: constraint, scope: unit }
+
+  - id: close
+    label: Fire
+    steps:
+      - kind: finalizeUnit
+        label: Fire the Stage
+        confirm:
+          - text: Every Constraint on this Stage has been honored.
+            shows: { table: constraint, scope: unit }
+          - text: Any Setback aimed at this Stage has been resolved.
+            shows: { table: setback, scope: subject }
+
+journal:
+  enabled: true
+  prompt: What did this Piece turn out to be?
+  required: false
+
+endings:
+  - id: kept
+    label: The Shelf
+    text: Keep the set. Photograph it, log it, leave it intact.
+  - id: broken
+    label: The Shard Pile
+    text: Break what you dislike. Keep the shards for future glaze tests.
+  - id: out
+    label: The Door
+    text: >-
+      Carry the work out of the Kiln. Every restriction is lifted; finish it
+      however you like.
+
+# ---------------------------------------------------------------------------
+# What the Kiln does of its own accord
+#
+# These hang off the game rather than off any result, which is what makes them
+# different from everything in `tables`: nothing you rolled caused them. The
+# cooling happens because the firing is over.
+# ---------------------------------------------------------------------------
+triggers:
+  - on: onRunEnd
+    label: The Cooling
+    do:
+      - { do: roll, dice: d10, into: cooling, label: "Roll the Cooling" }
+      - do: branch
+        on: cooling
+        cases:
+          - is: { lte: 3 }
+            then:
+              - do: note
+                text: >-
+                  Cool fast. Two Pieces crack — choose them yourself, and say
+                  in the log why those two.
+                persistent: true
+          - is: { gte: 9 }
+            then:
+              - do: note
+                text: >-
+                  Cool slow and even. The glaze settles. Carry one Charm into
+                  your next Firing.
+                persistent: true
+        else:
+          - do: note
+            text: The set cools without incident. Log it as it stands.
+            persistent: true
+
+  - on: onEnterUnit
+    label: Halfway heat
+    when:
+      - { unitIndex: { eq: 4 } }
+    do:
+      - do: note
+        text: >-
+          The Kiln is at its hottest. Until this Stage is Fired, you may not
+          remove a state from anything.
+
+modes:
+  standard:
+    label: Standard Firing
+    description: The full game. Stop whenever you like.
+    seeded: false
+    units: { min: 1, max: 12 }
+
+  short:
+    label: Short Firing
+    description: >-
+      Five Stages, no Charms, no overheating. A fixed shape for daily practice.
+    seeded: false
+    units: { fixed: 5 }
+    disable:
+      decks: [charms]
+      counters: [calm]
+    perUnit:
+      - unit: 3
+        skipPhases: [check]
+        extra:
+          - { do: resolveTarget, from: event }
+          - { do: rollOn, table: setback }
+      - unit: 5
+        skipPhases: [check]
+        extra:
+          - { do: resolveTarget, from: event }
+          - { do: rollOn, table: setback }
+    notes:
+      - Stages three and five always suffer a Setback.
+
+  shared:
+    label: Shared Kiln
+    description: >-
+      A pre-rolled Firing several people can attempt from the same seed.
+    seeded: true
+    units: { roll: d6+4 }
+
+  pairs:
+    label: Pairs
+    description: Two potters, alternating who throws.
+    seeded: false
+    players:
+      min: 2
+      max: 3
+      rotate: clockwise
+      roles:
+        - { id: thrower, label: Thrower, description: Makes every decision this Stage. }
+        - { id: watcher, label: Watcher, description: Handles the rolls and holds the Charms. }
+
+defaultMode: standard
+
+hierarchy:
+  - Charm
+  - Overheat
+  - Setback
+  - Constraint
+  - General rules
+
+fixtures:
+  - name: A quiet check leaves the board untouched
+    mode: standard
+    events:
+      - { t: RunStarted, mode: standard }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: Bowl }
+      - { t: UnitFinalized }
+      - { t: UnitEntered }
+      # The Kiln Check phase closing is what advances the calm streak.
+      - { t: PhaseCompleted, phase: check }
+    expect:
+      - { path: counters.calm, equals: 1 }
+      - { path: subjects.length, equals: 2 }
+      - { path: subjects.0.type, equals: Bowl }
+      - { path: status, equals: active }

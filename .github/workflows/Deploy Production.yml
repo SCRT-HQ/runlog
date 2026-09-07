@@ -1,0 +1,95 @@
+name: Deploy Production
+
+# Production deploys from a release and nothing else.
+#
+# `release: published` is the path, whether the release was cut by CI or by a
+# person. CI creates it with a GitHub App token rather than GITHUB_TOKEN
+# precisely so this event fires: anything GITHUB_TOKEN does is barred from
+# starting another run.
+#
+# `workflow_dispatch` is kept for re-deploying a tag that has already been
+# released: a rollback, or a retry after a transient failure.
+#
+# Either way this deploys the *tag*, never whatever happens to be on main, so
+# what reaches production is exactly what was released: the app built from
+# that commit, laid over with the hosted pages, and the hosting itself.
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release tag to deploy, e.g. v1.4.0
+        required: true
+        type: string
+
+env:
+  NODE_VERSION: 22
+  AWS_REGION: us-east-1
+  GITHUB_ROLE_NAME: GitHubActionRole
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  # One production deploy at a time. A queued run waits for one in flight.
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  ProdDeploy:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    # The environment's reviewers, if any, are asked here; long enough for one
+    # to get to it.
+    timeout-minutes: 360
+    environment: deploy-prd-${{ vars.AWS_ACCOUNT_ID_PRD }}
+    steps:
+      - name: Work out which tag to deploy
+        id: tag
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.release.tag_name || github.event.inputs.tag }}"
+          if [ -z "$tag" ]; then
+            echo "::error::No tag to deploy. Publish a release, or dispatch this workflow with one."
+            exit 1
+          fi
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$tag' is not a release tag. Production deploys releases only."
+            exit 1
+          fi
+          echo "Deploying ${tag}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      # The tag, explicitly, not the default ref.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+
+      - uses: ./.github/actions/build-app
+        with:
+          environment: prd
+          workos-client-id: ${{ vars.WORKOS_CLIENT_ID_PRD }}
+          target-account-id: ${{ vars.AWS_ACCOUNT_ID_PRD }}
+
+      - name: Deploy the hosting and publish the build to production
+        uses: ./.github/actions/run-cdk
+        with:
+          cdk-command: deploy
+          target-account-id: ${{ vars.AWS_ACCOUNT_ID_PRD }}
+          target-region: ${{ env.AWS_REGION }}
+          node-version: ${{ env.NODE_VERSION }}
+          github-role-name: ${{ env.GITHUB_ROLE_NAME }}
+          aws-environment: prd
+          hosted-zone-id: ${{ vars.RUNLOG_PRD_ZONE_ID }}
+          app-dist: apps/web/dist
+
+      - name: Seed the catalog with the built-in packs
+        env:
+          RUNLOG_API: https://runlog.scrthq.com/api
+          RUNLOG_API_KEY: ${{ secrets.RUNLOG_API_KEY_PRD }}
+        run: npm run seed:listings
+
+      - run: echo "### Deployed ${{ steps.tag.outputs.tag }} to production" >> "$GITHUB_STEP_SUMMARY"

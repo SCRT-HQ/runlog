@@ -1,0 +1,70 @@
+# Publish the app to GitHub Pages.
+#
+# This is the address for anyone, with no account: the build is made without
+# a WorkOS client id on purpose, so there is no sign-in here and no request to
+# WorkOS — the Pages origin is not a registered callback, and does not need to
+# be. Everything the app does happens on the player's machine.
+#
+# The bundle is built with a relative base, so the same output also works
+# opened from disk — which is the studio path, and the one that matters when
+# a DAW bridge is talking to localhost and a page served over https cannot.
+# That relative base is also what lets it live under /runlog/ here.
+#
+# Pages was dropped once, when the only offer was a private site that would
+# have asked every player for a GitHub account. A public page carrying the
+# no-account build is a different proposition: it is the "runs anywhere"
+# address, and it tracks main like dev does. Production is still the hosted
+# release on CloudFront.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a queued run supersedes a waiting one rather than
+# canceling a deploy already in flight.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build for Pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup Node and run npm ci
+        uses: ./.github/actions/npm-ci
+        with:
+          node-version: 22
+
+      # No VITE_WORKOS_CLIENT_ID: that is the whole difference between this
+      # build and the hosted one. The pull request ran the gates; the build
+      # is the check here.
+      - run: npm run build
+        env:
+          RUNLOG_SHA: ${{ github.sha }}
+      # The app lives under /play; Pages answers an unknown path with 404.html,
+      # so the page itself stands there and reads the address as it does anywhere.
+      - run: cp apps/web/dist/index.html apps/web/dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

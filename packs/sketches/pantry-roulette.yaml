@@ -1,0 +1,380 @@
+# Pantry Roulette — cooking under constraint.
+#
+# A Service is one meal, cooked as a series of Courses. Each Course rolls a
+# Base (what it is built on), a Constraint (a rule about how it must be
+# made), and, after the first, a Kitchen roll — most of the time nothing,
+# sometimes a mishap that reaches back to a course already plated. Pantry is
+# the resource: every Course uses some of what you have, and at zero the
+# Service is over whatever was planned.
+#
+# Written to show a draw that rolls twice on different tables per unit, and
+# a small co-op mode where one person cooks and one eats and judges.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.pantry-roulette
+version: "0.1.0"
+title: Pantry Roulette
+author: Runlog
+description: >-
+  Cook a meal the dice design. Each course rolls a base and a constraint, the
+  kitchen throws a mishap now and then, and the pantry runs down. One pot or
+  three courses; alone, or with someone to feed.
+
+category: cooking
+tags: [kitchen, constraints, dinner party]
+
+requires:
+  - { id: kitchen, label: A kitchen with a hob, kind: space }
+  - { id: pantry, label: A pantry with something in it, kind: supplies, note: "Whatever is there is the point." }
+  - { id: oven, label: An oven, kind: equipment, optional: true }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - seededRuns
+  - counters
+  - resources
+  - coopRoles
+  - backwardTargeting
+  - timers
+  - journal
+  - bandsResolution
+
+vocabulary:
+  run: { one: Service, many: Services }
+  unit: { one: Course, many: Courses }
+  subject: { one: Dish, many: Dishes }
+  finalize: Plate
+
+unit:
+  createsSubject: true
+  min: 1
+  max: 5
+
+states:
+  plated:
+    label: Plated
+    short: PL
+    scope: subject
+    description: Served. It is what it is now.
+  burnt:
+    label: Burnt
+    short: XX
+    scope: subject
+    semantics: [excludesFromResult]
+    description: Lost to the kitchen. It does not count for the Service.
+  rescued:
+    label: Rescued
+    short: RS
+    scope: subject
+    description: Something went wrong and you saved it. Say how, in the log.
+  ovenOff:
+    label: Oven off
+    scope: run
+    description: No more Kitchen rolls. The rest of the Service is calm.
+
+counters:
+  courses:
+    label: Courses plated
+    initial: 0
+    incrementOn:
+      - { on: unitFinalized }
+  mishaps:
+    label: Mishaps
+    initial: 0
+    incrementOn:
+      - { on: outcomeResolved, table: mishap, cause: any }
+    triggers:
+      - when: { gte: 2 }
+        oncePerRun: true
+        label: The kitchen relents
+        do:
+          - { do: note, text: "Two mishaps. The kitchen has had its fun: no more Kitchen rolls this Service.", persistent: true }
+          - { do: applyState, state: ovenOff, to: run }
+
+resources:
+  pantry:
+    label: Pantry
+    initial: 6
+    min: 0
+    max: 8
+    step: 1
+    display: boxes
+    description: What you have to cook with. Every Course uses one; some constraints use more. At zero, plate what is on the stove and stop.
+
+moves:
+  shop:
+    label: Run to the shop
+    description: Once a Service. Pantry +2, and the next Course has no Constraint.
+    oncePerRun: true
+    when: betweenUnits
+    do:
+      - { do: modResource, resource: pantry, by: 2 }
+      - { do: note, text: "The next Course rolls no Constraint." }
+
+tables:
+  base:
+    resolution: lookup
+    title: Base
+    description: What this Course is built on. Name the Dish within it.
+    roll: d10
+    entries:
+      - { id: b-grain, range: [1, 2], text: "A grain or a noodle: rice, pasta, bread, polenta, whatever is in the cupboard." }
+      - { id: b-egg, range: [3, 3], text: "Eggs. Any number, any way." }
+      - { id: b-veg, range: [4, 5], text: "A vegetable that is about to turn. Find it. That one." }
+      - { id: b-bean, range: [6, 6], text: "Beans, lentils or a tin of something." }
+      - { id: b-protein, range: [7, 7], text: "Whatever protein is in the fridge or freezer." }
+      - { id: b-soup, range: [8, 8], text: "Something in a bowl with a spoon: soup, stew, congee, porridge." }
+      - { id: b-sweet, range: [9, 9], text: "Something sweet, from what is already in the house." }
+      - { id: b-choice, range: [10, 10], text: "Your choice of base. Pick the thing you never cook." }
+
+  constraint:
+    resolution: lookup
+    title: Constraint
+    description: How this Course must be made. Rolled after the Dish is named.
+    roll: d12
+    entries:
+      - { id: c-onepan, range: [1, 2], text: "One pan, one pot, or one tray. Nothing else touches heat." }
+      - id: c-clock
+        range: [3, 4]
+        text: "Twenty minutes from now to plated."
+        triggers:
+          - on: onDeclareSubject
+            do:
+              - { do: startTimer, minutes: 20, label: "Service clock" }
+      - { id: c-five, range: [5, 5], text: "Five ingredients, salt and fat not counted." }
+      - id: c-nowaste
+        range: [6, 6]
+        text: "Use every part of the main ingredient, or keep the scraps for stock. Pantry +1 if you do."
+        triggers:
+          - on: afterWork
+            do:
+              - { do: prompt, kind: confirm, label: "Was nothing thrown away?", into: kept }
+      - { id: c-noRecipe, range: [7, 7], text: "No recipe, no phone. Taste your way there." }
+      - { id: c-herb, range: [8, 8], text: "Something green and fresh must go on at the end, even if you have to grow it faster." }
+      - id: c-double
+        range: [9, 9]
+        text: "Make enough for tomorrow too. Pantry −1."
+        triggers:
+          - on: onFinalize
+            do:
+              - { do: modResource, resource: pantry, by: -1 }
+      - { id: c-acid, range: [10, 10], text: "It needs acid. Lemon, vinegar, pickle, tomato: find it, and taste before and after." }
+      - { id: c-new, range: [11, 11], text: "One technique you have never used. Look it up once, then do it without looking." }
+      - { id: c-none, range: [12, 12], text: "No constraint. Cook it the way you like it." }
+
+  kitchen:
+    resolution: lookup
+    title: Kitchen
+    description: Rolled at the start of every Course after the first. Mostly nothing; sometimes a mishap that reaches back.
+    roll: d10
+    entries:
+      - { id: k-calm, range: [1, 6], text: "The kitchen hums. Nothing happens." }
+      - id: k-mishap
+        range: [7, 9]
+        text: "Something is wrong with a Course already plated. Choose which, then roll on Mishap."
+        triggers:
+          - on: immediately
+            do:
+              - { do: resolveTarget, from: choice }
+              - { do: rollOn, table: mishap }
+      - id: k-off
+        range: [10, 10]
+        text: "The oven is off and the kitchen is calm. No more Kitchen rolls."
+        grants: [ovenOff]
+
+  mishap:
+    resolution: lookup
+    title: Mishap
+    description: What went wrong with the target Dish.
+    roll: d6
+    entries:
+      - id: m-burnt
+        range: [1, 1]
+        text: "Burnt beyond saving. The target is out of the Service."
+        triggers:
+          - on: immediately
+            do:
+              - { do: applyState, state: burnt, to: targetSubject }
+      - id: m-cold
+        range: [2, 3]
+        text: "It has gone cold or soggy. Rescue it: a reheat, a crisp, a sauce. Mark it Rescued and say how."
+        triggers:
+          - on: immediately
+            do:
+              - { do: applyState, state: rescued, to: targetSubject }
+      - id: m-short
+        range: [4, 5]
+        text: "You used more than you thought. Pantry −1."
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: pantry, by: -1 }
+      - id: m-extra
+        range: [6, 6]
+        text: "Someone else is hungry. Add a Course before the Service may end."
+        triggers:
+          - on: immediately
+            do:
+              - { do: forceUnit, count: 1 }
+
+  verdict:
+    resolution: bands
+    title: Verdict
+    description: Rolled once, when the Service ends. How the meal is remembered.
+    roll: 2d6
+    entries:
+      - { id: v-low, lte: 4, text: "Edible. Write down the one thing you would change, and the one thing you learned." }
+      - { id: v-mid, gte: 5, lte: 9, text: "Good. Someone would eat it twice. Log the Dish you were proudest of." }
+      - { id: v-high, gte: 10, text: "Remarkable. Write the recipe down properly before you forget what you did." }
+
+targeting:
+  strategy: playerChoice
+
+phases:
+  - id: kitchen
+    label: Kitchen
+    description: Skipped in the first Course, and once the oven is off.
+    skipWhen:
+      - { unitIndex: { lte: 1 } }
+      - { subjectHasState: ovenOff, of: run }
+    steps:
+      - kind: rollTable
+        table: kitchen
+        label: Roll the Kitchen
+
+  - id: base
+    label: Base
+    steps:
+      - kind: rollTable
+        table: base
+        label: Roll the Base
+      - kind: actions
+        do:
+          - { do: modResource, resource: pantry, by: -1 }
+
+  - id: name
+    label: Name the Dish
+    steps:
+      - kind: declareSubject
+        label: What are you making from that base? Name it as you would on a menu.
+        constrainedBy: base
+
+  - id: constrain
+    label: Constraint
+    steps:
+      - kind: rollTable
+        table: constraint
+        label: Roll the Constraint
+
+  - id: cook
+    label: Cook
+    steps:
+      - kind: manual
+        label: Cook the Dish, under the Constraint.
+        checklist:
+          - text: The Constraint was honored, start to finish.
+            shows: { table: constraint, scope: unit }
+          - Tasted before plating.
+
+  - id: plate
+    label: Plate
+    steps:
+      - kind: actions
+        do:
+          - { do: applyState, state: plated, to: thisSubject }
+      - kind: finalizeUnit
+        label: Plate the Course
+
+journal:
+  enabled: true
+  prompt: What did it turn out to be, and would you make it again?
+  required: false
+
+endings:
+  - id: feast
+    label: A feast
+    text: Three or more Courses plated. Roll the Verdict, then eat.
+    requires:
+      - { counter: courses, is: { gte: 3 } }
+  - id: supper
+    label: Supper
+    text: Enough. Roll the Verdict and sit down.
+  - id: bare
+    label: Bare cupboard
+    text: The Pantry is empty. Plate what is on the stove, roll the Verdict, and write a shopping list.
+
+triggers:
+  - on: onRunEnd
+    label: Verdict
+    do:
+      - { do: rollOn, table: verdict }
+
+modes:
+  service:
+    label: A service
+    description: Cook until the Pantry runs out, up to five Courses.
+    seeded: false
+    units: { min: 1, max: 5 }
+
+  onePot:
+    label: One pot
+    description: A single Course. The whole game in one dish.
+    seeded: false
+    units: { fixed: 1 }
+    disable:
+      tables: [kitchen]
+
+  three:
+    label: Three courses
+    description: Starter, main, sweet. The Base for the third is always something sweet.
+    seeded: false
+    units: { fixed: 3 }
+    notes:
+      - In the third Course, skip the Base roll and treat it as sweet.
+    perUnit:
+      - unit: 3
+        skipPhases: [base]
+
+  dinnerParty:
+    label: Dinner party
+    description: A pre-rolled Service to cook against a friend with the same seed, then compare plates.
+    seeded: true
+    units: { roll: d3+1 }
+
+  cookAndCritic:
+    label: Cook and critic
+    description: One cooks, one eats and judges. Swap every Course.
+    seeded: false
+    players:
+      min: 2
+      max: 2
+      rotate: clockwise
+      roles:
+        - { id: cook, label: Cook, description: Names and makes every Dish. }
+        - { id: critic, label: Critic, description: "Rolls the Kitchen and the Verdict, and keeps the log." }
+
+defaultMode: service
+
+hierarchy:
+  - Mishap
+  - Constraint
+  - General rules
+
+fixtures:
+  - name: A plated course counts and spends pantry
+    mode: service
+    events:
+      - { t: RunStarted, mode: service }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: "Fried rice with the last of the peas" }
+      - { t: UnitFinalized }
+    expect:
+      - { path: counters.courses, equals: 1 }
+      - { path: subjects.length, equals: 1 }
+      - { path: status, equals: active }

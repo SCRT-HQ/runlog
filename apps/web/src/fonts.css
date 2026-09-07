@@ -1,0 +1,54 @@
+/*
+ * Two voices, shipped with the app.
+ *
+ * The hosting's Content Security Policy says `font-src 'self'`, which is the
+ * right thing for it to say, so the faces are bundled rather than fetched from
+ * a font host — and precached by the worker like everything else, so they are
+ * there offline and on the second visit cost nothing.
+ *
+ * Only the latin subsets. Fontsource's own stylesheets declare every script
+ * with unicode-range, which a browser handles lazily but a service worker's
+ * precache does not: it would fetch Cyrillic and Vietnamese for everyone.
+ * Hand-written declarations keep it to about 270 KB, once.
+ *
+ * Literata carries weight and optical size on one file, so a 15px rule and a
+ * 40px heading come from the same face and look like it. Plex Mono's light
+ * weight is what makes a big number look like a scoreboard, not a terminal.
+ */
+
+@font-face {
+  font-family: "Literata Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 900;
+  src: url("@font-literata/literata-latin-standard-normal.woff2") format("woff2-variations");
+}
+@font-face {
+  font-family: "Literata Variable";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 200 900;
+  src: url("@font-literata/literata-latin-standard-italic.woff2") format("woff2-variations");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300;
+  src: url("@font-plex/ibm-plex-mono-latin-300-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("@font-plex/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url("@font-plex/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+}

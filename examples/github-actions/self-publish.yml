@@ -1,0 +1,66 @@
+# A GitHub release is published: sign the pack, write its paper, and attach
+# the signed pack, the bundle and the documents to the release. What you
+# then sell or give away from your own hands.
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   RUNLOG_API_KEY      a command-line key from your profile page in the app
+#   RUNLOG_SIGNING_KEY  the contents of the runlog-key.json that keygen wrote
+name: Release the pack
+
+on:
+  release:
+    types: [published]
+
+env:
+  PACK: my-game.yaml
+
+permissions:
+  contents: write # to attach files to the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check
+        run: |
+          npx @scrthq/runlog validate "$PACK" --strict
+          npx @scrthq/runlog test "$PACK"
+
+      - name: The tag names the pack's version
+        run: |
+          npx @scrthq/runlog bundle "$PACK" -o dist/pack.json
+          version="$(node -p "require('./dist/pack.json').version")"
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$version" != "$tag" ]; then
+            echo "the pack says version $version but the release is $GITHUB_REF_NAME; bump one of them" >&2
+            exit 1
+          fi
+
+      - name: Sign
+        env:
+          RUNLOG_API_KEY: ${{ secrets.RUNLOG_API_KEY }}
+          RUNLOG_SIGNING_KEY: ${{ secrets.RUNLOG_SIGNING_KEY }}
+        run: npx @scrthq/runlog sign "$PACK"
+
+      - name: Write the paper and the bundle
+        run: |
+          mkdir -p dist/docs
+          npx @scrthq/runlog docs "$PACK" -o dist/docs
+          npx @scrthq/runlog bundle "$PACK" -o dist/pack.json
+          cp "$PACK" "dist/$(basename "$PACK")"
+          (cd dist && zip -r "../pack-${GITHUB_REF_NAME}.zip" .)
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" \
+            "dist/$(basename "$PACK")" \
+            dist/pack.json \
+            "pack-${GITHUB_REF_NAME}.zip" \
+            --clobber

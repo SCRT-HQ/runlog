@@ -1,0 +1,434 @@
+# Salt & Signal — a sketch pack for Runlog.
+#
+# Entirely fictional. A solo journaling game: you keep a lighthouse after the
+# mainland stops answering. Written to STRESS the schema, not to be a polished
+# game — it deliberately reaches for everything a dungeon-shaped pack never
+# needs, so that gaps surface here rather than in somebody else's pack.
+#
+# What it exercises that The Long Kiln does not:
+#   * opposed resolution  — an action die against two challenge dice, which a
+#                           single total compared to thresholds cannot express
+#   * keyed resolution    — a table addressed by a card's suit
+#   * standard52 deck     — draws that resolve on that table
+#   * resources           — a progress track, plus a stat that can go negative
+#                           and is added into an opposed roll
+#   * required journal    — the whole point of the genre
+#   * playerChoice targeting rather than an anchored offset
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.salt-and-signal
+version: "0.2.0"
+title: Salt & Signal
+author: Runlog
+description: >-
+  Keep the light burning and the log honest while the mainland
+  goes quiet.
+category: writing
+tags: [journaling, lighthouse, solo]
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+capabilities:
+  - deferredTriggers
+  - decks
+  - standardDeck
+  - resources
+  - counters
+  - backwardTargeting
+  - journal
+  - bandsResolution
+  - opposedResolution
+  - keyedResolution
+
+vocabulary:
+  run: { one: Vigil, many: Vigils }
+  unit: { one: Watch, many: Watches }
+  subject: { one: Entry, many: Entries }
+  finalize: Seal
+  terms:
+    roll: Consult
+
+unit:
+  createsSubject: true
+  min: 3
+  max: 20
+
+resources:
+  # A stat that can sit below zero. The default floor is 0, so this is the case
+  # that proves a pack can move it.
+  nerve:
+    label: Nerve
+    initial: 1
+    min: -3
+    max: 4
+    step: 1
+    display: number
+    description: >-
+      Added to every Signal roll. Falls as the Vigil wears on you.
+  supplies:
+    label: Supplies
+    initial: 6
+    min: 0
+    max: 6
+    step: 1
+    display: boxes
+    description: Lamp oil, food, patience. Spent, never replenished.
+  # A progress track: ten boxes filled toward an ending, rather than a counter
+  # the engine increments on its own.
+  contact:
+    label: Contact
+    initial: 0
+    min: 0
+    max: 10
+    step: 1
+    display: boxes
+    description: >-
+      How close you are to reaching anyone. Fill all ten and the Vigil can end
+      well.
+
+states:
+  buried:
+    label: Buried
+    short: BR
+    scope: subject
+    semantics: [makesUntargetable]
+    description: Torn out and weighted. Nothing can reach this Entry again.
+  struck:
+    label: Struck Through
+    short: ST
+    scope: subject
+    semantics: [blocksEdit]
+    description: Crossed out but still legible. It stands as written.
+  doubted:
+    label: Doubted
+    short: DT
+    scope: subject
+    description: >-
+      You are no longer sure this happened. It stays in the log, unreliable.
+  blackout:
+    label: Blackout
+    scope: run
+    description: The lamp is out. Every Signal roll loses a die of Nerve.
+
+counters:
+  # Nothing increments this on its own: the player marks it when a Watch ends
+  # badly. Declared here so the linter's "inert counter" warning is exercised
+  # by its absence -- it has a trigger, so it is not inert.
+  dread:
+    label: Dread
+    initial: 0
+    min: 0
+    max: 6
+    incrementOn:
+      - { on: outcomeResolved, table: signal, cause: any }
+    triggers:
+      - when: { gte: 6 }
+        oncePerRun: true
+        label: The dark answers
+        do:
+          - { do: note, text: "Six Signals sent, none answered. Something answers now." }
+          - { do: applyState, state: blackout, to: run }
+
+decks:
+  # A standard deck, resolved by suit against a keyed table. Before `keyed`
+  # existed this could only have been faked as a d4 roll, which would have been
+  # a lie about what the player is holding.
+  tide:
+    kind: standard52
+    title: The Tide
+    description: Drawn when the sea decides something instead of you.
+    includeJokers: false
+    drawAtStart: 0
+    resolveOn: tideSuits
+    resolveBy: suit
+
+tables:
+  # ---- opposed: the reason this pack exists -------------------------------
+  # Roll d6, add Nerve, against two d10s. Beat both, one, or neither. There is
+  # no single number this can be compressed into: the two challenge dice are
+  # compared separately and never summed.
+  signal:
+    resolution: opposed
+    title: Send a Signal
+    description: >-
+      Work the lamp, the radio, the flags. Consulted whenever you reach outward.
+    action: d6
+    addResource: nerve
+    challenge:
+      dice: d10
+      count: 2
+    entries:
+      - id: signal-strong
+        beats: 2
+        title: Answered
+        text: Something out there hears you. Mark two Contact.
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: contact, by: 2 }
+      - id: signal-weak
+        beats: 1
+        title: Half-heard
+        text: >-
+          A response, or the sound of one. Mark one Contact and spend one
+          Supply.
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: contact, by: 1 }
+              - { do: modResource, resource: supplies, by: -1 }
+      - id: signal-miss
+        beats: 0
+        title: Nothing
+        text: >-
+          The sea takes it. Lose one Nerve, and the sea takes something of
+          yours besides.
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: nerve, by: -1 }
+              - { do: resolveTarget, from: choice }
+              - { do: rollOn, table: erosion }
+
+  # ---- keyed: addressed by suit, not by a number ---------------------------
+  tideSuits:
+    resolution: keyed
+    title: What the Tide Brings
+    description: Consulted on each card drawn from The Tide.
+    entries:
+      - id: tide-hearts
+        key: hearts
+        title: Something living
+        text: A gull, a dog, a voice. Write what it wants.
+      - id: tide-diamonds
+        key: diamonds
+        title: Something useful
+        text: Wreckage worth having. Gain one Supply.
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: supplies, by: 1 }
+      - id: tide-clubs
+        key: clubs
+        title: Something broken
+        text: Damage to the light. Spend one Supply repairing it.
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: supplies, by: -1 }
+      - id: tide-spades
+        key: spades
+        title: Something wrong
+        text: >-
+          It should not be here. Lose one Nerve and describe it in full.
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: nerve, by: -1 }
+
+  # ---- bands: an oracle read off a single total ---------------------------
+  oracle:
+    resolution: bands
+    title: The Oracle
+    description: >-
+      Ask a yes/no question of the Vigil. Consulted whenever you do not know.
+    roll: 2d10
+    entries:
+      - id: oracle-no-and
+        lte: 4
+        text: "No, and it is worse than you feared."
+      - id: oracle-no
+        gte: 5
+        lte: 9
+        text: "No."
+      - id: oracle-no-but
+        gte: 10
+        lte: 11
+        text: "No, but there is something in it for you."
+      - id: oracle-yes-but
+        gte: 12
+        lte: 13
+        text: "Yes, but it costs you."
+      - id: oracle-yes
+        gte: 14
+        lte: 17
+        text: "Yes."
+      - id: oracle-yes-and
+        gte: 18
+        text: "Yes, and more than you asked for."
+
+  # ---- lookup: consequences that reach back into the log -------------------
+  erosion:
+    resolution: lookup
+    title: Erosion
+    description: What the Vigil does to an Entry you already sealed.
+    roll: d8
+    entries:
+      - id: ero-strike
+        range: [1, 2]
+        text: Strike a line through it. It stands, but you may not revise it.
+        grants: [struck]
+      - id: ero-doubt
+        range: [3, 4]
+        text: You are no longer certain it happened. Mark it Doubted.
+        grants: [doubted]
+      - id: ero-bury
+        range: [5, 5]
+        text: Tear it out. Nothing reaches it again.
+        grants: [buried]
+      - id: ero-cost
+        range: [6, 6]
+        text: Rereading it costs you. Lose one Nerve.
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: nerve, by: -1 }
+      - id: ero-later
+        range: [7, 7]
+        text: >-
+          Nothing yet. When you seal this Watch, roll d6; on a 5 or 6 the Entry
+          is struck through after all.
+        triggers:
+          - on: onFinalize
+            label: Delayed erosion
+            do:
+              - { do: roll, dice: d6, into: late, label: Delayed erosion }
+              - do: branch
+                on: late
+                cases:
+                  - in: [5, 6]
+                    then:
+                      - { do: applyState, state: struck, to: targetSubject }
+      - id: ero-spare
+        range: [8, 8]
+        text: The sea spares it. Nothing happens, but the Signal still failed.
+
+# Targeting is by choice rather than an anchored offset: this pack proves the
+# strategy is genuinely pluggable, not a dressed-up version of one scheme.
+targeting:
+  strategy: playerChoice
+
+# Required, because a journaling game with no journal is just dice.
+journal:
+  enabled: true
+  prompt: Write the log entry for this Watch. Date it.
+  required: true
+
+phases:
+  - id: open
+    label: Take the Watch
+    steps:
+      - kind: manual
+        label: Note the hour and the weather.
+
+  - id: tide
+    label: The Tide
+    description: Skipped on the first Watch, while the sea is still ordinary.
+    skipWhen:
+      - { unitIndex: { lte: 1 } }
+    steps:
+      - kind: actions
+        do:
+          - { do: grantCard, deck: tide, count: 1 }
+
+  - id: reach
+    label: Reach Out
+    steps:
+      - kind: rollTable
+        table: signal
+        label: Send a Signal
+        into: signalRoll
+
+  - id: write
+    label: Write
+    steps:
+      - kind: manual
+        label: Write the entry.
+        checklist:
+          - It says what you did, not only what happened to you.
+          - It is dated.
+
+  - id: seal
+    label: Seal the Watch
+    steps:
+      - kind: finalizeUnit
+        label: Seal
+        confirm:
+          - The entry is written and dated.
+          - Every Signal result has been resolved.
+
+endings:
+  - id: rescued
+    label: The Boat
+    text: Someone comes. Write the last entry as a letter to them.
+    requires:
+      - { resource: contact, is: { gte: 10 } }
+  - id: keeper
+    label: The Keeper
+    text: >-
+      Nobody comes, and you keep the light anyway. Write the last entry as an
+      instruction to whoever finds it.
+  - id: dark
+    label: The Dark
+    text: The light goes out. Write nothing further.
+    requires:
+      - { resource: supplies, is: { lte: 0 } }
+
+modes:
+  standard:
+    label: Standard Vigil
+    description: Keep watch until the Contact track fills, or the supplies run out.
+    units: { min: 3, max: 20 }
+
+  short:
+    label: One Night
+    description: Five Watches, no Tide, a single sitting.
+    units: { fixed: 5 }
+    disable:
+      decks: [tide]
+      phases: [tide]
+    notes:
+      - The sea stays out of it. Everything that goes wrong is your Signal.
+
+defaultMode: standard
+
+hierarchy:
+  - Ending
+  - Erosion
+  - Signal
+  - Tide
+  - General rules
+
+# Replayed by `runlog test`. Fixtures are logs of events, so they assert what
+# a real Vigil would have recorded — a roll on its own changes nothing, which
+# is why the earlier version of this passed only while nothing ran it.
+fixtures:
+  - name: Nerve falls when a Signal goes badly
+    mode: standard
+    events:
+      - { t: RunStarted, mode: standard }
+      - { t: UnitEntered }
+      - { t: ResourceChanged, resource: nerve, by: -1 }
+    expect:
+      - { path: resources.nerve, equals: 0 }
+      - { path: subjects.length, equals: 1 }
+
+  - name: Nerve stops at its floor rather than running past it
+    mode: standard
+    events:
+      - { t: RunStarted, mode: standard }
+      - { t: ResourceChanged, resource: nerve, by: -99 }
+    expect:
+      - { path: resources.nerve, equals: -3 }
+
+  - name: A Vigil that has not been declared over is still going
+    mode: standard
+    events:
+      - { t: RunStarted, mode: standard }
+      - { t: UnitEntered }
+      - { t: UnitFinalized }
+    expect:
+      - { path: status, equals: active }
+      - { path: ending, equals: null }

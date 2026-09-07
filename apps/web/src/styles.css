@@ -1,0 +1,3221 @@
+/*
+ * Workbench-first: high contrast, legible at arm's length. The app gets used
+ * beside the work rather than instead of it — often with the lights down — so
+ * the default is dark, and that is less a stylistic preference than a working
+ * condition.
+ *
+ * Two voices. The pack's author speaks in a book serif, because the rules are
+ * a rulebook. The player speaks in the same serif, in italic, because a name
+ * is a note in the margin. The referee — the app — speaks in a monospace,
+ * because it keeps a ledger and its figures have to line up.
+ *
+ * Two accents, one job each. `--accent` is celadon: the referee's "fine" — a
+ * settled die, a filled box, the current step. `--warn` is kiln: consequence.
+ * Nothing else on the screen is colored.
+ *
+ * Four looks share every one of those decisions and differ only in the ground.
+ * The default is the studio with the lights down; `[data-theme]` picks another,
+ * and with no attribute at all the operating system's preference chooses
+ * between the first two. Tints are mixed from the tokens rather than named, so
+ * a theme is fourteen values and nothing else has to know.
+ */
+:root {
+  --radius: 8px;
+  --serif: "Literata Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: dark;
+  --bg: #151311;
+  --panel: #1e1b18;
+  --panel-2: #26221e;
+  --line: #3a342e;
+  --line-2: #5a524a;
+  --text: #ece5d8;
+  --muted: #b3a99b;
+  --accent: #9fd3b6;
+  --accent-dim: #3b5f4c;
+  --on-accent: #151311;
+  --warn: #e0a94f;
+  --err: #e4736b;
+  --raise: 0 1px 0 rgba(0, 0, 0, 0.4), 0 14px 32px -14px rgba(0, 0, 0, 0.75);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --bg: #edeae2;
+    --panel: #e4e0d6;
+    --panel-2: #dbd6ca;
+    --line: #cbc4b7;
+    --line-2: #a89f91;
+    --text: #1c1a17;
+    --muted: #4a453e;
+    --accent: #3d7a5b;
+    --accent-dim: #b9d6c5;
+    --on-accent: #f4f2ec;
+    --warn: #9c6a15;
+    --err: #b4433a;
+    --raise: 0 1px 0 rgba(28, 26, 23, 0.06), 0 10px 24px -12px rgba(28, 26, 23, 0.35);
+  }
+}
+
+:root[data-theme="lights-down"] {
+  color-scheme: dark;
+  --bg: #151311;
+  --panel: #1e1b18;
+  --panel-2: #26221e;
+  --line: #3a342e;
+  --line-2: #5a524a;
+  --text: #ece5d8;
+  --muted: #b3a99b;
+  --accent: #9fd3b6;
+  --accent-dim: #3b5f4c;
+  --on-accent: #151311;
+  --warn: #e0a94f;
+  --err: #e4736b;
+  --raise: 0 1px 0 rgba(0, 0, 0, 0.4), 0 14px 32px -14px rgba(0, 0, 0, 0.75);
+}
+:root[data-theme="daylight"] {
+  color-scheme: light;
+  --bg: #edeae2;
+  --panel: #e4e0d6;
+  --panel-2: #dbd6ca;
+  --line: #cbc4b7;
+  --line-2: #a89f91;
+  --text: #1c1a17;
+  --muted: #4a453e;
+  --accent: #3d7a5b;
+  --accent-dim: #b9d6c5;
+  --on-accent: #f4f2ec;
+  --warn: #9c6a15;
+  --err: #b4433a;
+  --raise: 0 1px 0 rgba(28, 26, 23, 0.06), 0 10px 24px -12px rgba(28, 26, 23, 0.35);
+}
+:root[data-theme="ember"] {
+  color-scheme: dark;
+  --bg: #1a1210;
+  --panel: #241915;
+  --panel-2: #2e211c;
+  --line: #45312a;
+  --line-2: #6a4d42;
+  --text: #f1e4d3;
+  --muted: #bfa48f;
+  --accent: #a9cbb0;
+  --accent-dim: #4a5f4f;
+  --on-accent: #1a1210;
+  --warn: #f2b45a;
+  --err: #f08070;
+  --raise: 0 1px 0 rgba(0, 0, 0, 0.4), 0 14px 32px -14px rgba(0, 0, 0, 0.8);
+}
+:root[data-theme="glaze"] {
+  color-scheme: dark;
+  --bg: #101a17;
+  --panel: #17231f;
+  --panel-2: #1e2d28;
+  --line: #2b3a34;
+  --line-2: #4a5f57;
+  --text: #e4ece6;
+  --muted: #9db3a8;
+  --accent: #a8dcc0;
+  --accent-dim: #33584a;
+  --on-accent: #101a17;
+  --warn: #e6b15c;
+  --err: #e78a80;
+  --raise: 0 1px 0 rgba(0, 0, 0, 0.4), 0 14px 32px -14px rgba(0, 0, 0, 0.75);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.55 var(--serif);
+  font-optical-sizing: auto;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  line-height: 1.2;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+/*
+ * The referee's voice. Controls, figures, identifiers and the log are set in
+ * the monospace: they are the machine speaking, and they should look like it.
+ */
+button,
+input,
+select,
+textarea {
+  font-family: var(--mono);
+}
+
+/*
+ * A select's drop-down list is drawn by the browser from the select's own
+ * colors. Left transparent, Chrome paints the list white and the options in
+ * the page's text color — unreadable in every theme but daylight. So the
+ * select and its options say exactly what they are on.
+ */
+select {
+  background: var(--panel);
+  color: var(--text);
+}
+option {
+  background: var(--panel);
+  color: var(--text);
+}
+
+p {
+  margin: 0.25rem 0 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 0.86rem;
+}
+
+/* ---- top bar ---------------------------------------------------------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  /* Three columns with the outer two equal, so the pack button sits on the page's center line, not between the mark and the buttons. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+  padding: 0.85rem 1.25rem;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: inherit;
+  text-decoration: none;
+}
+.brand:hover h1 { color: var(--accent); }
+.brand h1 {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.brand p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+/*
+ * The icon itself, not a lookalike glyph. The block-element character this
+ * used to be has its empty quadrant top-left; the mark's is bottom-right —
+ * the same shape turned upside down, which reads as a "j" where an "r" was
+ * meant. Relative path, because the same build is opened from disk.
+ */
+.logo {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 6px;
+  display: block;
+}
+
+.packs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.packBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.45rem 0.8rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.packBtn:hover {
+  border-color: var(--accent-dim);
+}
+.packBtn.on {
+  border-color: var(--accent);
+  background: var(--panel-2);
+}
+.packBtn strong {
+  font-size: 0.9rem;
+}
+.packBtn span {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.packBtn.upload {
+  border-style: dashed;
+}
+.packBtn.upload input {
+  display: none;
+}
+
+/* ---- layout ----------------------------------------------------------- */
+.main {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.1rem 1.25rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.hero h2 {
+  font-size: 1.35rem;
+}
+
+.vocab {
+  display: flex;
+  gap: 1.5rem;
+  margin: 0;
+}
+.vocab dt {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.vocab dd {
+  margin: 0.15rem 0 0;
+  font-size: 1.05rem;
+  color: var(--accent);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+}
+
+.chip {
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-family: var(--mono);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.chip.v {
+  color: var(--text);
+}
+.chip.ok {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+.chip.warn {
+  border-color: color-mix(in oklab, var(--warn) 40%, var(--line));
+  color: var(--warn);
+}
+.chip.cap {
+  color: var(--muted);
+}
+.chip.kind {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+.chip.state {
+  color: var(--warn);
+  border-color: color-mix(in oklab, var(--warn) 35%, var(--line));
+}
+.chip.trig,
+.chip.req,
+.chip.skip,
+.chip.kindSm {
+  font-size: 0.68rem;
+}
+
+.notice {
+  margin-top: 0.65rem;
+  padding: 0.5rem 0.7rem;
+  border-left: 2px solid var(--warn);
+  background: color-mix(in oklab, var(--warn) 12%, var(--panel));
+  color: color-mix(in oklab, var(--warn) 55%, var(--text));
+  font-size: 0.85rem;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+@media (max-width: 1000px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+.col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/*
+ * A section label is a ruled line with a small monospace word on it. The rule
+ * does the separating, so the word does not have to shout to be found —
+ * twelve tracked capitals on one screen carry no hierarchy at all.
+ */
+.sectionTitle {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted);
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.6rem;
+}
+.sectionTitle .muted {
+  font-weight: 400;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+}
+
+/* ---- tables ----------------------------------------------------------- */
+.table {
+  padding: 0;
+  overflow: hidden;
+}
+.table > header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+}
+.table > header:hover {
+  background: var(--panel-2);
+}
+.table h4 {
+  font-size: 1rem;
+}
+.table .id {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-left: 0.4rem;
+}
+.tableMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.dice {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.roll {
+  padding: 0.3rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent-dim);
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.roll:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.rollResult {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: color-mix(in oklab, var(--accent) 10%, var(--panel));
+  border-top: 1px solid var(--accent-dim);
+  border-bottom: 1px solid var(--accent-dim);
+}
+.rollResult .headline {
+  font-family: var(--mono);
+  font-size: 1.15rem;
+  color: var(--accent);
+}
+.rollResult .working {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.entries li {
+  display: flex;
+  gap: 0.9rem;
+  padding: 0.55rem 1rem;
+  border-top: 1px solid var(--line);
+}
+.entries li.hit {
+  background: color-mix(in oklab, var(--accent) 12%, var(--panel));
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.entries .key {
+  flex: 0 0 5.5rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding-top: 0.1rem;
+}
+.entries li.hit .key {
+  color: var(--accent);
+}
+.entries p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.entryTags {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.3rem;
+}
+
+/* ---- flow, rows ------------------------------------------------------- */
+.flow {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.flow > li {
+  margin-bottom: 0.5rem;
+}
+.flow ul {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+}
+.step {
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+  padding: 0.3rem 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.88rem;
+}
+
+/*
+ * A label with a value belongs in two columns, so a stack of them reads as a
+ * column of numbers rather than a ragged left edge with the values wherever the
+ * label happened to end.
+ */
+.row.spread {
+  justify-content: space-between;
+}
+.row .num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A title with prose under it, rather than a label with a value beside it. */
+.row.stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.1rem;
+}
+.row:first-of-type,
+.sectionTitle + .row,
+.sectionTitle + .tracker {
+  border-top: none;
+}
+
+.warnings {
+  margin-top: 1rem;
+  border-color: color-mix(in oklab, var(--warn) 40%, var(--line));
+}
+.warnings ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.86rem;
+  color: color-mix(in oklab, var(--warn) 55%, var(--text));
+}
+
+/* ---- diagnostics ------------------------------------------------------ */
+.diagnostics {
+  max-width: 850px;
+  margin: 2.5rem auto;
+  padding: 1.5rem;
+  background: var(--panel);
+  border: 1px solid color-mix(in oklab, var(--err) 35%, var(--panel));
+  border-radius: var(--radius);
+}
+.diagnostics ul {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+.diagnostics li {
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--line);
+}
+.diagnostics li.error .code {
+  color: var(--err);
+}
+.diagnostics li.warning .code {
+  color: var(--warn);
+}
+.code,
+.path {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  margin-right: 0.6rem;
+}
+.path {
+  color: var(--muted);
+}
+
+/* ---- seed bar ---------------------------------------------------------- */
+.seedbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 0.6rem 1.25rem 0;
+}
+.seedbar label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.seedbar label span {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.seedbar input {
+  min-width: 18rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-family: var(--mono);
+}
+.seedbar input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.ghost {
+  padding: 0.25rem 0.7rem;
+  font-family: var(--mono);
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.ghost:hover {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* ---- dice tray --------------------------------------------------------- */
+/* The three-dimensional tray: the canvas is the tray, the same edge and ground as the flat one. */
+.tray.tray3d { display: block; padding: 0; overflow: hidden; flex: 1 1 16rem; min-width: min(100%, 16rem); width: 100%; }
+.tray.tray3d.waiting { min-height: 180px; }
+.throw:has(.tray3d) { flex-wrap: wrap; }
+.throw:has(.tray3d) .rollTotal { flex: 1 0 auto; }
+.dice3d canvas { width: 100% !important; height: auto; display: block; }
+.dice3dSwitch { margin-top: 0.6rem; }
+.tray {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.9rem 1rem 0.7rem;
+  background: color-mix(in oklab, var(--bg) 75%, black);
+  border-top: 1px solid var(--line);
+}
+
+/*
+ * The roll is the most characteristic moment in the app, so the dice are the
+ * size of dice, not of an icon. The same component at the same size wherever
+ * a die is thrown: it is the same throw.
+ */
+.die {
+  margin: 0;
+  width: 76px;
+  text-align: center;
+  transform-origin: 50% 55%;
+}
+.die svg {
+  display: block;
+  width: 76px;
+  height: 76px;
+  overflow: visible;
+}
+.die figcaption {
+  margin-top: 0.25rem;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.die .body {
+  fill: var(--panel-2);
+  stroke: var(--line-2);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.die .facet {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.die .value {
+  fill: var(--text);
+  font-family: var(--mono);
+  font-weight: 500;
+}
+.die .pip {
+  fill: var(--text);
+}
+
+/* The opposition in an opposed roll reads as hostile at a glance. */
+.die.challenge .body {
+  fill: color-mix(in oklab, var(--err) 18%, var(--panel));
+  stroke: color-mix(in oklab, var(--err) 45%, var(--line-2));
+}
+.die.challenge .value {
+  fill: color-mix(in oklab, var(--err) 60%, var(--text));
+}
+
+/* Settled dice get a green edge; the one being read should be obvious. */
+.die.settled .body {
+  stroke: var(--accent-dim);
+}
+.die.settled.challenge .body {
+  stroke: color-mix(in oklab, var(--err) 50%, var(--line-2));
+}
+
+/*
+ * Tumbling is presentation only. The value was decided before this ran, so the
+ * animation can be interrupted, skipped or slowed without affecting the result.
+ */
+.die.tumbling {
+  animation: tumble 0.42s linear infinite;
+}
+.die.settled {
+  animation: land 0.34s cubic-bezier(0.18, 1.5, 0.4, 1) both;
+}
+
+@keyframes tumble {
+  0% {
+    transform: rotate(0deg) translateY(0) scale(1);
+  }
+  25% {
+    transform: rotate(90deg) translateY(-7px) scale(1.05);
+  }
+  50% {
+    transform: rotate(180deg) translateY(0) scale(0.97);
+  }
+  75% {
+    transform: rotate(270deg) translateY(-4px) scale(1.03);
+  }
+  100% {
+    transform: rotate(360deg) translateY(0) scale(1);
+  }
+}
+
+@keyframes land {
+  0% {
+    transform: scale(1.22) rotate(-9deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .die.tumbling,
+  .die.settled {
+    animation: none;
+  }
+}
+
+/* ---- play / inspect switch --------------------------------------------- */
+.viewSwitch {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.viewSwitch button {
+  padding: 0.45rem 1rem;
+  font-family: var(--mono);
+  background: var(--panel);
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.viewSwitch button.on {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* ---- run view ----------------------------------------------------------- */
+.runHero h2 {
+  font-size: 1.5rem;
+}
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* ---- the pack in play, as the way into the library --------------------- */
+.packNow {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.packNow:hover {
+  border-color: var(--line-2);
+}
+.packNow.resume {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+.packNow.resume .shelfLabel,
+.packNow.resume .caret {
+  color: var(--accent);
+}
+.packNow .shelfLabel {
+  color: var(--muted);
+}
+.packNow strong {
+  font-family: var(--serif);
+  font-size: 1rem;
+}
+.packNow .caret {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+/* ---- the library -------------------------------------------------------- */
+.library {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 52rem);
+  margin: 0 auto;
+}
+.libraryHead {
+  display: grid;
+  gap: 0.3rem;
+}
+.libraryHead h2 {
+  margin: 0;
+}
+.libraryHead p {
+  margin: 0;
+}
+/* One row of small controls, all the same height: the mono voice at the ghost button's size. */
+.libraryActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 0.4rem;
+}
+.libraryActions .primary,
+.libraryActions .fileButton,
+.libraryActions .ghost {
+  padding: 0.3rem 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.raceJoin {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.raceJoin .code {
+  flex: 0 0 auto;
+  width: 7rem;
+  padding: 0.3rem 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.raceJoin .code::placeholder {
+  letter-spacing: 0.05em;
+  text-transform: none;
+}
+/* The strip above the shelf: one press to where you were, your race, what is new. */
+.homeStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.6rem;
+}
+.homeCard {
+  display: grid;
+  gap: 0.25rem;
+  align-content: start;
+}
+.homeCard strong {
+  font-size: 1.15rem;
+}
+.homeLabel {
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+.homeList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+.linkButton {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+.linkButton:hover {
+  text-decoration-color: currentColor;
+}
+.libraryTitle.static {
+  cursor: default;
+}
+.libraryTitle.static:hover strong {
+  color: inherit;
+}
+.publisherHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+.publisherHead h3 {
+  margin: 0.1rem 0;
+}
+.publisherHead p {
+  margin: 0;
+}
+.publisherLink {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+.publisherLink:hover {
+  text-decoration-color: currentColor;
+}
+.catalogBlurb {
+  margin: 0;
+  max-width: 62ch;
+}
+.fileButton {
+  position: relative;
+  display: inline-block;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.fileButton input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.libraryPack.inPlay {
+  border-color: var(--accent-dim);
+}
+.libraryPackHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.libraryTitle {
+  display: grid;
+  gap: 0.1rem;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.libraryTitle strong {
+  font-size: 1.15rem;
+}
+.libraryTitle:hover strong {
+  color: var(--accent);
+}
+.libraryPackActions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.library .packSync {
+  padding: 0.5rem 0 0;
+}
+
+/* ---- the runs of a pack: the rows on setup and in the library ---------- */
+.runPicker {
+  position: relative;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+.runPicker > summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.runPicker > summary::-webkit-details-marker {
+  display: none;
+}
+.runPicker > summary .chip {
+  padding: 0 0.4rem;
+}
+.runPicker .caret {
+  font-size: 0.7rem;
+}
+.runPickerPanel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 20;
+  width: min(24rem, calc(100vw - 2rem));
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem 0.7rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--raise);
+  font-family: var(--serif);
+  font-size: 0.9rem;
+}
+.runPickerPanel p {
+  margin: 0;
+}
+.runList {
+  display: grid;
+  gap: 0.25rem;
+}
+.runRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.3rem 0.3rem 0.3rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.runRow.open {
+  border-color: var(--accent-dim);
+}
+.runRowMain {
+  display: grid;
+  gap: 0.05rem;
+  min-width: 0;
+  flex: 1;
+  padding: 0.15rem 0;
+  background: none;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.runRowMain:disabled {
+  cursor: default;
+}
+.runRowMain:hover:not(:disabled) strong {
+  color: var(--accent);
+}
+.runRowActions {
+  display: flex;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+.setup .runList {
+  margin-bottom: 0.5rem;
+}
+
+/* A command-line key, the one time it is shown. */
+.freshKey {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--accent-dim);
+  border-radius: var(--radius);
+  background: color-mix(in oklab, var(--accent) 6%, transparent);
+}
+.freshKey p {
+  margin: 0;
+}
+
+/* Who is at the table, and the form to ask someone. */
+.memberRow {
+  align-items: center;
+}
+.inviteForm {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.inviteForm .textInput {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.inviteForm select {
+  padding: 0.4rem 0.5rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+}
+.members .stepLabel {
+  margin-top: 0.8rem;
+}
+
+/* A watcher's column: everything shown, nothing pressable. */
+.col.wide.watching .panel:not(.log) button,
+.col.wide.watching .panel:not(.log) input,
+.col.wide.watching .panel:not(.log) select,
+.col.wide.watching .panel:not(.log) textarea {
+  pointer-events: none;
+  opacity: 0.6;
+}
+.col.wide.watching > .notice {
+  margin-bottom: 0.75rem;
+}
+
+/* A line under the bar for something asked for that could not be done.
+   Not `.bar`: that is the tracker's progress bar, seven pixels tall. */
+.notice.underBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.6rem 1.25rem 0;
+}
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.setup {
+  max-width: 720px;
+  margin: 1rem auto;
+}
+.setup h2 {
+  font-size: 1.6rem;
+}
+
+.panel .stepLabel {
+  font-size: 1.25rem;
+  margin: 0.15rem 0 0.5rem;
+}
+.runStep.finalize {
+  border-color: var(--accent-dim);
+}
+
+.primary {
+  padding: 0.35rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.primary:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 85%, var(--text));
+}
+.primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.primary.big {
+  padding: 0.45rem 1.2rem;
+  font-size: 0.95rem;
+  margin-top: 0.6rem;
+}
+.ghost.small,
+.ghost.tiny {
+  font-size: 0.75rem;
+}
+.ghost.tiny {
+  padding: 0.12rem 0.45rem;
+}
+/* A small primary, for where it sits beside tiny ghosts: the same height, still the accent. */
+.primary.tiny {
+  font-size: 0.75rem;
+  padding: 0.12rem 0.6rem;
+  border-radius: 4px;
+}
+
+/*
+ * Cards with prose in them go in a grid, not a wrapping flexbox.
+ *
+ * Flex-wrap sizes each card to its own content, so one long description makes
+ * that card wide, pushes its neighbor narrow, and leaves the next row starting
+ * at a different width again. A grid gives every card the same column and every
+ * row the same height, which is what makes a set of options read as a set.
+ */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.6rem;
+  margin: 0.5rem 0 0.9rem;
+  align-items: stretch;
+}
+.choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  height: 100%;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.choice span {
+  line-height: 1.4;
+}
+
+/* Short answers are chips, not cards, so they keep the flow layout. */
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0.8rem;
+}
+.options .choice {
+  height: auto;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.choice:hover {
+  border-color: var(--accent-dim);
+}
+.choice.on {
+  border-color: var(--accent);
+}
+
+.padRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+.padRow.spread {
+  justify-content: space-between;
+}
+.textInput,
+.rollInput {
+  font-family: var(--serif);
+  padding: 0.35rem 0.6rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--text);
+  font: inherit;
+}
+.textInput {
+  flex: 1 1 16rem;
+}
+.rollInput {
+  width: 7rem;
+  font-family: var(--mono);
+  font-weight: 300;
+  font-size: 1.5rem;
+  text-align: center;
+}
+.rollInput:focus,
+.textInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.askLabel {
+  font-size: 1.05rem;
+  margin: 0.3rem 0;
+}
+.warnText {
+  color: var(--warn);
+  font-size: 0.85rem;
+}
+
+.pad {
+  display: grid;
+  grid-template-columns: repeat(5, 3rem);
+  gap: 0.4rem;
+  margin-top: 0.8rem;
+}
+.key {
+  height: 2.6rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+.key:hover {
+  border-color: var(--accent);
+}
+.key.wide {
+  grid-column: span 2;
+}
+
+.request {
+  border-color: var(--accent);
+}
+
+.checklist {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+.checklist li {
+  padding: 0.2rem 0;
+}
+.checklist label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  cursor: pointer;
+}
+
+.owed {
+  border-color: var(--warn);
+}
+.owedRow {
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.subjectRow {
+  align-items: flex-start;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+.subjectRow.gone {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+.subjectMain {
+  flex: 1;
+  min-width: 0;
+}
+.subjectNote {
+  margin: 0.1rem 0 0.15rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.idx {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  flex: 0 0 2rem;
+}
+
+.tracker {
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--line);
+}
+.tracker:first-of-type {
+  border-top: none;
+}
+.trackerHead {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+}
+.boxes {
+  display: flex;
+  gap: 3px;
+  margin-top: 0.3rem;
+  flex-wrap: wrap;
+}
+.box {
+  width: 13px;
+  height: 13px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+.box.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.bar {
+  height: 7px;
+  margin-top: 0.35rem;
+  background: var(--panel-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.flow li.done strong {
+  color: var(--muted);
+}
+.flow li.current strong {
+  color: var(--accent);
+}
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.timeline li {
+  display: flex;
+  gap: 0.7rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--line);
+}
+.timeline li:first-child {
+  border-top: none;
+}
+.timeline p {
+  margin: 0.1rem 0 0.2rem;
+  font-size: 0.9rem;
+}
+
+.seedbar[hidden] {
+  display: none;
+}
+
+/*
+ * The run's step panel. Named distinctly from the inspector's `.step`, which is
+ * a flex row in a flow list -- sharing the name laid the heading, the prose and
+ * the button out on a single line.
+ */
+.runStep > * {
+  display: block;
+}
+.runStep .checklist {
+  margin: 0.6rem 0;
+}
+.runStep .primary.big {
+  display: inline-block;
+}
+
+/*
+ * The log gets long. Tighten its rhythm so a run's history stays scannable
+ * rather than turning into a column of widely spaced paragraphs.
+ */
+.timeline li {
+  padding: 0.35rem 0;
+  gap: 0.6rem;
+}
+.timeline .idx {
+  flex: 0 0 1.6rem;
+  text-align: right;
+  opacity: 0.7;
+}
+.timeline p {
+  margin: 0;
+}
+
+/* Trackers: give the boxes and bars room without letting rows drift apart. */
+.tracker {
+  padding: 0.4rem 0;
+}
+.trackerHead {
+  align-items: baseline;
+}
+
+/* Keep the two columns from drifting apart on very wide screens. */
+.main {
+  max-width: 1280px;
+}
+
+.noteList {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.noteList li + li {
+  margin-top: 0.25rem;
+}
+
+/* Give the setup screen room for a four-mode grid without going full width. */
+.setup {
+  max-width: 860px;
+}
+
+/* An imported pack carries its own remove control. */
+.packBtn.imported {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+}
+.packBtnMain {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.45rem 0.6rem 0.45rem 0.8rem;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.packBtnMain strong {
+  font-size: 0.9rem;
+}
+.packBtnMain span {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.forget {
+  padding: 0 0.55rem;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.forget:hover {
+  color: var(--err);
+  background: color-mix(in oklab, var(--err) 12%, var(--panel));
+}
+
+/* A threshold is the game acting on you, so it reads louder than a choice. */
+.threshold {
+  border-color: var(--err);
+  background: color-mix(in oklab, var(--err) 8%, var(--panel));
+}
+.threshold .sectionTitle {
+  color: var(--err);
+}
+
+/*
+ * Spacing around a primary action.
+ *
+ * A section heading immediately below a button crowds it — the two read as one
+ * block when they are alternatives to each other. The onward move keeps its
+ * hint beside it, and the alternative is set off below a rule.
+ */
+.primaryAction {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin: 1rem 0 0.2rem;
+}
+.primaryAction .primary.big {
+  margin-top: 0;
+}
+
+.orEnd {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.orEnd .sectionTitle {
+  margin-top: 0;
+}
+
+/* Any heading that follows content needs room, not just this one. */
+.panel > .sectionTitle:not(:first-child) {
+  margin-top: 1.2rem;
+}
+
+/* A seed is typed and re-typed, so the field and its generator sit together. */
+.seedRow {
+  gap: 0.5rem;
+  align-items: stretch;
+  margin-top: 0.5rem;
+}
+.seedRow .textInput {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Player-count chips: a chip that is also a button. */
+.chip.pick {
+  cursor: pointer;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.chip.pick:hover {
+  border-color: var(--accent-dim);
+}
+.chip.pick.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Whoever has just been handed the device has to find their role at a glance. */
+.roleList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+.roleRow {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  gap: 0.6rem;
+  /* The seat stays pinned to the right; it is what the panel is read for. */
+  flex-wrap: nowrap;
+  align-items: start;
+}
+.roleRow > div {
+  flex: 1;
+  min-width: 0;
+}
+.roleRow .chip {
+  flex: none;
+}
+
+/* Taking the run out: an action and the sentence explaining it, side by side. */
+.exportRow {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+.exportRow .ghost {
+  flex: none;
+}
+.exportToggle {
+  margin-top: 0.9rem;
+}
+.hiddenInput {
+  display: none;
+}
+
+/* The write-up, shown as it will be written. Scrolls in place rather than
+   stretching the column, which a long run would otherwise do. */
+.logPreview {
+  margin-top: 0.8rem;
+  padding: 0.8rem;
+  max-height: 22rem;
+  overflow: auto;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--muted);
+}
+
+/* A section that stays folded away until it is wanted: the link to the world
+   outside is not part of the hot path, and most runs never open it. */
+.disclose {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.disclose:hover {
+  color: var(--accent);
+}
+.agreeing {
+  margin-top: 0.7rem;
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+/* Sub-headings inside a folded section need air above them; they follow lists
+   and notices rather than sitting at the top of a panel. */
+.panel h4.stepLabel {
+  margin-top: 1.1rem;
+}
+
+/* A name you can click to correct. It has to read as the name it replaces
+   until you hover it, or the board turns into a row of buttons. */
+.renameTrigger {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--text);
+  text-align: left;
+  cursor: text;
+  border-bottom: 1px dashed transparent;
+}
+.renameTrigger:hover {
+  border-bottom-color: var(--accent-dim);
+}
+.renameInput {
+  width: 100%;
+  padding: 0.15rem 0.35rem;
+  font: inherit;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--accent-dim);
+  border-radius: 5px;
+}
+.renameInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ---- the pack editor ---------------------------------------------------- */
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.7rem 0.9rem;
+  margin-top: 0.7rem;
+}
+.fieldGrid.tight {
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.4rem 0.6rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+/* The base rule gives inputs `flex: 1 1 16rem` for the flex rows they were
+   written for. In a column that makes them grow to the height of the tallest
+   cell in the grid row — a text box the size of a paragraph. */
+.field .textInput {
+  flex: none;
+  width: 100%;
+}
+.fieldLabel {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.fieldHelp {
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.fieldHelp.inline {
+  display: block;
+}
+/* A problem is reported at the field that caused it, not only in a list. */
+.fieldNote {
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+.fieldNote.error {
+  color: var(--err);
+}
+.fieldNote.warning {
+  color: var(--warn);
+}
+.field.error .textInput {
+  border-color: var(--err);
+}
+.field.warn .textInput {
+  border-color: var(--warn);
+}
+
+.textInput.area {
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+.textInput.mono {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+.textInput.short {
+  max-width: 7rem;
+}
+select.textInput {
+  appearance: none;
+  cursor: pointer;
+}
+
+.subEditor {
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+.subEditor.error {
+  border-color: color-mix(in oklab, var(--err) 45%, var(--line));
+}
+.subEditorHead {
+  gap: 0.6rem;
+}
+.entryEditor {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--line);
+}
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+  align-items: center;
+}
+.designToggle {
+  margin-top: 0.8rem;
+  align-items: start;
+}
+
+/* Ranges drawn to scale. The gap you cannot see is the one that ships. */
+.coverage {
+  display: flex;
+  height: 0.7rem;
+  margin: 0.8rem 0 0.2rem;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.coverageSeg.ok {
+  background: var(--accent-dim);
+}
+.coverageSeg.gap {
+  background: repeating-linear-gradient(45deg, color-mix(in oklab, var(--err) 25%, var(--panel)), color-mix(in oklab, var(--err) 25%, var(--panel)) 3px, var(--panel) 3px, var(--panel) 6px);
+}
+.coverageSeg.over {
+  background: var(--warn);
+}
+
+.problemList {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.problemList li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-left: 0.55rem;
+  border-left: 2px solid var(--line);
+  font-size: 0.82rem;
+}
+.problemList li.error {
+  border-left-color: var(--err);
+}
+.problemList li.warning {
+  border-left-color: var(--warn);
+}
+.problemList code {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+/* What a signature amounts to. Stated, never boasted: the point is what the
+   reader can check, not a badge that says "trust this". */
+.signature {
+  margin: 0 auto;
+  padding: 0.55rem 1.1rem;
+  max-width: 1100px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.82rem;
+}
+.signature.bad {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  background: color-mix(in oklab, var(--err) 10%, var(--panel));
+  border-bottom-color: color-mix(in oklab, var(--err) 45%, var(--line));
+  color: var(--err);
+}
+.signatureDetail {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 46rem;
+}
+.signatureDetail p {
+  margin: 0;
+}
+.fingerprint {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+
+/* A pack that arrived in a link. Announced, not opened: it replaces what you
+   were looking at, and it can come from anyone. */
+.incoming {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin: 0 auto;
+  padding: 0.7rem 1.1rem;
+  max-width: 1100px;
+  border-bottom: 1px solid var(--accent-dim);
+  background: color-mix(in oklab, var(--accent) 8%, var(--panel));
+}
+.incoming.bad {
+  border-bottom-color: color-mix(in oklab, var(--err) 45%, var(--line));
+  background: color-mix(in oklab, var(--err) 10%, var(--panel));
+}
+.incomingWhat {
+  min-width: 0;
+}
+.incomingActions {
+  display: flex;
+  gap: 0.5rem;
+  flex: none;
+}
+.shareNotice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.shareNotice .textInput {
+  font-size: 0.72rem;
+}
+/* The base input rule grows to fill a flex column; a link box is one line. */
+.shareNotice .textInput {
+  flex: none;
+  width: 100%;
+}
+
+/* ---- the account --------------------------------------------------------- */
+.account {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* The name as a menu. Same disclosure as the sync chip, so the two read as
+   one family at the end of the bar. */
+.accountMenu {
+  position: relative;
+  display: block;
+}
+.accountMenu > summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.accountMenu > summary::-webkit-details-marker {
+  display: none;
+}
+.accountMenu > summary:hover,
+.accountMenu[open] > summary {
+  border-color: var(--line);
+}
+.accountMenu .caret {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.accountPanel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 20;
+  min-width: 16rem;
+  display: grid;
+  padding: 0.5rem 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--raise);
+}
+.accountEmail {
+  padding: 0.25rem 0.9rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.25rem;
+  font-family: var(--mono);
+}
+.accountItem {
+  display: grid;
+  gap: 0.1rem;
+  text-align: left;
+  padding: 0.45rem 0.9rem;
+  background: none;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.accountItem:hover,
+.accountItem:focus-visible {
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  outline: none;
+}
+.menuDoors {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.35rem 0.9rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.25rem;
+}
+.menuDoors .primary,
+.menuDoors .ghost {
+  white-space: nowrap;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.8rem;
+}
+.menuTheme {
+  padding: 0.45rem 0.9rem;
+  border-top: 1px solid var(--line);
+  margin-top: 0.25rem;
+}
+.menuTheme .themeMenu {
+  justify-content: space-between;
+}
+.rulesBtn {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  padding: 0.25rem 0.7rem;
+}
+
+/* ---- the profile ---------------------------------------------------------- */
+.profile {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 44rem);
+  margin: 0 auto;
+}
+.profile .row {
+  gap: 0.75rem;
+}
+.syncSwitch {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  cursor: pointer;
+}
+.profileCounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 0.75rem 0;
+}
+.profileCount {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.profileCount .big {
+  font-family: var(--mono);
+  font-size: 1.4rem;
+}
+.licenseRow {
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.licenseMain {
+  min-width: 0;
+}
+.licenseKey {
+  margin-top: 0.2rem;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+.licenseActions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.ghost.danger {
+  color: var(--warn);
+  border-color: color-mix(in oklab, var(--warn) 40%, var(--line));
+}
+.ghost.danger:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--warn) 10%, transparent);
+}
+
+/* ---- the shelf, the lights, and the end of the bar ---------------------- */
+/*
+ * One control names the pack in play and opens the rest. A native disclosure:
+ * it works without a script, and the list is in the markup whether or not it
+ * is open, so a search or a screen reader finds every pack.
+ */
+.shelf {
+  position: relative;
+}
+.shelf > summary {
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+  user-select: none;
+}
+.shelf > summary::-webkit-details-marker {
+  display: none;
+}
+.shelf > summary:hover,
+.shelf[open] > summary {
+  border-color: var(--line-2);
+}
+.shelf .shelfLabel {
+  color: var(--muted);
+}
+.shelf summary strong {
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.shelf .caret {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.shelf .packs {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 20;
+  min-width: 18rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.3rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--raise);
+}
+.shelf .packBtn {
+  width: 100%;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+}
+.shelf .packBtn.on {
+  background: var(--panel-2);
+}
+.shelf .packBtn:hover {
+  background: var(--panel-2);
+}
+.shelf .packBtn.imported {
+  border-radius: 6px;
+}
+.shelf .packBtn.upload {
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  margin-top: 0.3rem;
+  padding-top: 0.7rem;
+}
+.shelf .packBtn strong,
+.shelf .packBtnMain strong {
+  font-family: var(--serif);
+}
+.shelf .packBtn span,
+.shelf .packBtnMain span {
+  font-family: var(--mono);
+}
+
+.topbarEnd {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-self: end;
+}
+.topbar .brand {
+  justify-self: start;
+}
+.topbar .packNow {
+  justify-self: center;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.themeMenu {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.themeMenu select {
+  padding: 0.2rem 0.4rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.themeMenu select:focus-visible {
+  outline: 2px solid var(--warn);
+  outline-offset: 1px;
+}
+
+/* ---- the run, redrawn --------------------------------------------------- */
+/*
+ * No rule under the bar. With a line across the top, the two column rules
+ * and a line under the log, the run read as a table with a border — a box
+ * around the page, which is the look the columns were meant to replace.
+ * The margin and the side rail carry their own rules; that is structure
+ * enough.
+ */
+.runBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.4rem;
+}
+.runMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+.runMeta strong {
+  font-size: 1.05rem;
+}
+
+.columns.run {
+  grid-template-columns: 11rem minmax(0, 1fr) 17rem;
+  gap: 0 2rem;
+  margin-top: 0;
+}
+.columns.run > .margin {
+  padding-top: 1.25rem;
+  border-right: 1px solid var(--line);
+  padding-right: 1.25rem;
+}
+.columns.run > .col.wide {
+  padding-top: 1.25rem;
+}
+.columns.run > .col.side {
+  padding-top: 1.25rem;
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--line);
+  gap: 1.4rem;
+}
+@media (max-width: 1100px) {
+  .columns.run {
+    grid-template-columns: 11rem minmax(0, 1fr);
+  }
+  .columns.run > .col.side {
+    grid-column: 1 / -1;
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}
+/*
+ * The bar on a phone. Flex-wrap left the three groups landing wherever they
+ * fell, which read as a mess; a grid gives each its row. The brand and the
+ * account share the first, the shelf takes the second whole, and the view
+ * switch the third, its buttons sharing the width. The theme select keeps
+ * its control and loses its label, which the control already says.
+ */
+@media (max-width: 720px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.55rem 0.75rem;
+    padding: 0.6rem 0.9rem;
+  }
+  .topbar .brand {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .topbar .topbarEnd {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 0.5rem;
+  }
+  .topbar .packNow {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  /* Four buttons and a name do not share a phone's width: the mark stands for the name. */
+  .topbar .topbarEnd .ghost { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+  .topbar .topbarEnd .accountMenu > summary { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+}
+@media (max-width: 520px) {
+  .topbar .brand h1 { display: none; }
+  .topbar .packNow strong {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .menuTheme .themeMenu > span {
+    font-size: 0.75rem;
+  }
+  .accountPanel {
+    max-width: calc(100vw - 1.8rem);
+  }
+  .main {
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+  }
+
+  .columns.run {
+    grid-template-columns: 1fr;
+  }
+  .columns.run > .margin {
+    border-right: none;
+    padding-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 1rem;
+  }
+}
+
+/* The number in the margin: the referee, at scoreboard weight. */
+.stageNo {
+  font-family: var(--mono);
+  font-size: 2.2rem;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.stageNo small {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+.stageFlow {
+  margin-top: 1.5rem;
+}
+.margin .flow {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.margin .flow > li {
+  display: grid;
+  grid-template-columns: 1.4rem 1fr;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+.margin .flow > li:first-child {
+  border-top: none;
+}
+.margin .flow > li.done {
+  text-decoration: line-through;
+  text-decoration-color: var(--line-2);
+}
+.margin .flow > li.current {
+  color: var(--text);
+}
+.margin .flow > li.current .idx {
+  color: var(--accent);
+}
+.margin .flow .idx {
+  flex: none;
+  font-size: 0.8rem;
+  padding-top: 0.15rem;
+}
+
+/*
+ * The one thing to do is the only raised object on the screen. Everything
+ * else sits on rules.
+ */
+.run .runStep {
+  border: none;
+  box-shadow: var(--raise);
+  padding: 1.3rem 1.5rem 1.4rem;
+}
+.run .runStep .sectionTitle {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0.2rem;
+}
+.run .runStep .stepLabel {
+  font-size: 1.7rem;
+  font-weight: 500;
+  line-height: 1.2;
+  margin: 0.1rem 0 0.6rem;
+}
+.run .runStep > p {
+  font-size: 1.05rem;
+}
+.run .runStep .primary.big {
+  margin-top: 1rem;
+}
+
+/* The side rail: ruled rows, no boxes. */
+.col.side .panel {
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+.col.side .panel > .sectionTitle:not(:first-child) {
+  margin-top: 1.4rem;
+}
+
+/*
+ * In the middle column only the step is raised. A move you may make, a
+ * threshold the game is holding over you, and what you owe are still boxes
+ * of their own kind — a bordered box, a warning, a debt — but the plain
+ * panel around anything else goes, so the step is the one thing that stands
+ * off the page.
+ */
+.run .col.wide > .panel:not(.runStep):not(.threshold):not(.owed):not(.request) {
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0.6rem 0 0;
+}
+
+/* The log is a ledger. */
+.log {
+  margin-top: 1.5rem;
+}
+.log .timeline li {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--line);
+}
+.log .timeline li:first-child {
+  border-top: none;
+}
+.log .timeline .idx {
+  flex: none;
+  text-align: right;
+  opacity: 1;
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding-top: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+.log .timeline .where {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.log .timeline li.heat .where {
+  color: var(--warn);
+}
+.log .timeline p {
+  margin: 0.1rem 0 0;
+  font-size: 1rem;
+}
+
+/* Folded until wanted: exports and the world outside. */
+.more {
+  margin-top: 1.5rem;
+}
+.more > summary {
+  list-style: none;
+  padding: 0.7rem 0;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.more > summary::-webkit-details-marker {
+  display: none;
+}
+.more > summary::before {
+  content: "▸ ";
+}
+.more[open] > summary::before {
+  content: "▾ ";
+}
+.more > summary:hover {
+  color: var(--text);
+}
+.more > .panel {
+  margin-bottom: 0.75rem;
+}
+
+/* A throw and its total, side by side; the total at scoreboard weight. */
+.throw {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
+}
+.throw .tray {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.rollTotal {
+  display: grid;
+  gap: 0.1rem;
+  font-family: var(--mono);
+}
+.rollTotal .big {
+  font-size: 3.2rem;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.rollTotal .how {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* The inspector's roll reads the same way. */
+.rollResult .headline {
+  font-size: 1.6rem;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+/* The inspector's pack header keeps its box; it is a title page. */
+.hero h2 {
+  font-size: 1.7rem;
+  font-weight: 500;
+}
+.setup h2 {
+  font-size: 1.8rem;
+  font-weight: 500;
+}
+
+/* ---- the receipt --------------------------------------------------------- */
+/* What the dice did, held until read. Raised like a step, because for the
+   moment it is the step. */
+.receipt .throw {
+  margin-top: 0.4rem;
+}
+.receipt .result {
+  margin-top: 1rem;
+  padding: 0.5rem 0 0.5rem 1rem;
+  border-left: 3px solid var(--line-2);
+  display: grid;
+  gap: 0.25rem;
+}
+.receipt .result.heat {
+  border-left-color: var(--warn);
+}
+.receipt .result .band {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.receipt .result.heat .band {
+  color: var(--warn);
+}
+.receipt .result .text {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.4;
+}
+.receipt .result .muted {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.receipt .padRow {
+  margin-top: 1.1rem;
+}
+
+/* ---- sync ---------------------------------------------------------------- */
+/* Where sync stands, in the header: a chip that opens the one decision that
+   is the player's. Celadon when fine, kiln when it needs them. */
+/* The light on the name, and the sync section of the menu. */
+.led {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--line);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--text) 12%, transparent) inset;
+  vertical-align: middle;
+}
+.led.fine {
+  background: var(--accent);
+  box-shadow: 0 0 6px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.led.busy {
+  background: var(--accent);
+  animation: ledPulse 1.2s ease-in-out infinite;
+}
+.led.warn {
+  background: var(--warn);
+  box-shadow: 0 0 6px color-mix(in oklab, var(--warn) 60%, transparent);
+}
+@keyframes ledPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .led.busy {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+.syncSection {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.35rem 0.9rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.25rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+.syncSection label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  cursor: pointer;
+  color: var(--text);
+}
+.syncSection input {
+  margin: 0;
+}
+.syncSection p {
+  margin: 0;
+}
+.syncSection .syncRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+.syncSection .syncRow span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A pack's own switch, on the shelf. */
+.packSync {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.8rem 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.packSync input {
+  margin: 0;
+}
+
+/* A point with its evidence under it: the results it is about, each with a
+   box of its own. Ticking them all ticks the point. */
+.checklist .evidence {
+  list-style: none;
+  margin: 0.25rem 0 0.35rem 1.6rem;
+  padding: 0;
+  border-left: 2px solid var(--line);
+}
+.checklist .evidence li {
+  padding: 0.15rem 0 0.15rem 0.7rem;
+}
+.checklist .evidence label {
+  font-size: 0.95rem;
+}
+.checklist .evidence .where {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  margin-right: 0.4rem;
+}
+.checklist .evidence .none {
+  font-size: 0.85rem;
+  color: var(--muted);
+  padding-left: 0.7rem;
+}
+
+/* The run's own name, in the bar: a name you can click to change, or an
+   invitation to give it one. */
+.runName {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  font-style: italic;
+  font-weight: 500;
+}
+.runName.unnamed {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted);
+}
+.runNameInput {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.05rem;
+  padding: 0.1rem 0.4rem;
+  background: var(--bg);
+  border: 1px solid var(--accent-dim);
+  border-radius: 5px;
+  color: var(--text);
+  min-width: 14rem;
+}
+.runNameInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.setup .textInput.runNameField {
+  max-width: 24rem;
+}
+/* A phase out of play this unit: grayed, and the reason on hover. */
+.margin .flow > li.skipped {
+  opacity: 0.45;
+  cursor: help;
+}
+.margin .flow > li.skipped .idx {
+  color: var(--muted);
+}
+
+/* ---- generated documents (the catalog's About, the Designer's preview) ---- */
+.doc { max-width: 60ch; }
+.doc .docHead h3 { margin: 0; }
+.doc .docH { margin: 1.1rem 0 0.35rem; font-size: 1rem; }
+.doc h4.docH { font-size: 0.95rem; color: var(--muted); }
+.doc p { margin: 0 0 0.6rem; }
+.doc .docNote { border-left: 3px solid var(--line); padding-left: 0.7rem; color: var(--muted); }
+.docList { margin: 0 0 0.7rem; padding-left: 1.3rem; }
+.docList li { margin: 0.15rem 0; white-space: pre-line; }
+.docTableWrap { overflow-x: auto; margin: 0 0 0.8rem; }
+.docTable { border-collapse: collapse; width: 100%; font-size: 0.92em; }
+.docTable th { text-align: left; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--line); }
+.docTable td { vertical-align: top; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--line-2); }
+.docTable td:first-child { white-space: nowrap; font-family: var(--mono); font-size: 0.85em; }
+.docTable.compact td { padding: 0.12rem 0.4rem; font-size: 0.85em; }
+.docTerms { margin: 0 0 0.8rem; }
+.docTerms dt { font-weight: 600; margin-top: 0.45rem; }
+.docTerms dd { margin: 0; }
+.docForm { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin: 0.4rem 0 0.8rem; font-size: 0.85em; }
+.docField { display: inline-flex; align-items: flex-end; gap: 0.35rem; }
+.docField.full { flex: 1 1 100%; }
+.docLine { display: inline-block; border-bottom: 1px solid var(--text); height: 1.2em; width: 7em; }
+.docField.long .docLine { width: 14em; }
+.docField.full .docLine { flex: 1; }
+.docBox { display: inline-block; width: 2.4em; height: 1.5em; border: 1px solid var(--text); }
+.docKinds { list-style: none; margin: 0 0 0.8rem; padding: 0; display: grid; gap: 0.6rem; }
+.docKinds li { display: flex; justify-content: space-between; gap: 0.8rem; align-items: flex-start; }
+.docKinds li p { margin: 0; }
+.docPreview { border-top: 1px solid var(--line); padding-top: 0.8rem; margin-top: 0.4rem; max-height: 60vh; overflow: auto; }
+
+/* ---- corrections from the board and the trackers ---- */
+.chip.state { display: inline-flex; align-items: center; gap: 0.3rem; }
+.chipX { border: 0; background: transparent; color: inherit; opacity: 0.6; cursor: pointer; padding: 0 0.1rem; line-height: 1; font-size: 0.9em; }
+.chipX:hover, .chipX:focus-visible { opacity: 1; }
+.chipAdd { font: inherit; font-size: 0.75rem; background: transparent; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 0.05rem 0.5rem; cursor: pointer; }
+.nudge { display: inline-flex; align-items: center; gap: 0.35rem; }
+.nudge .num { min-width: 1.5em; text-align: center; }
+
+/* ---- moderated play: the roster, the winners, the scoreboard ---- */
+.roster { list-style: none; margin: 0 0 0.5rem; padding: 0; display: grid; gap: 0.3rem; }
+.roster li { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--line-2); padding: 0.2rem 0; }
+.challenge { padding: 0.55rem 0; border-bottom: 1px solid var(--line-2); display: grid; gap: 0.4rem; }
+.challenge:last-child { border-bottom: 0; }
+.challengeHead { display: flex; justify-content: space-between; gap: 0.75rem; align-items: baseline; }
+.challengeHead .muted { white-space: nowrap; }
+
+.contestant { display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; flex: 1 1 0; min-width: 0; }
+.row.spread:has(.contestant) { flex-wrap: nowrap; align-items: flex-start; }
+.row.spread > .nudge { flex: 0 0 auto; }
+
+/* ---- the winners grid ---- */
+.matrix { border-collapse: collapse; width: 100%; }
+.matrix th, .matrix td { padding: 0.3rem 0.35rem; border-bottom: 1px solid var(--line-2); text-align: center; vertical-align: middle; }
+.matrix thead th { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.matrix .rowHead { text-align: left; font-weight: 400; display: table-cell; }
+.matrix tbody .rowHead { display: grid; gap: 0.1rem; }
+.matrix .cell { width: 2.6rem; height: 1.9rem; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
+.matrix .cell:hover:not(:disabled), .matrix .cell:focus-visible { border-color: var(--accent); color: var(--text); }
+.matrix .cell.won { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+.matrix .cell:disabled { cursor: default; opacity: 0.55; }
+.matrix .cell.won:disabled { opacity: 1; }
+
+/* ---- the catalog as a market: a sidebar to narrow, cards to browse ---- */
+.market { display: grid; gap: 1rem; width: min(100%, 76rem); margin: 0 auto; }
+.marketHead { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.marketBody { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.marketSide { display: grid; gap: 1rem; position: sticky; top: 0.75rem; }
+.marketSearch { display: block; }
+.marketSearch .textInput { width: 100%; box-sizing: border-box; }
+.facet { display: grid; gap: 0.4rem; }
+.facetTitle { margin: 0; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.facetList { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.2rem; }
+.facetList label { display: flex; align-items: center; gap: 0.45rem; cursor: pointer; }
+.facetList label .num { margin-left: auto; font-family: var(--mono); font-size: 0.75rem; }
+.marketMain { display: grid; gap: 0.6rem; min-width: 0; }
+.marketCount { margin: 0; }
+.marketGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 1rem; }
+.marketCard { display: grid; gap: 0.5rem; align-content: start; }
+.marketCard.about { grid-column: 1 / -1; }
+.marketCardHead { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.marketTitle { margin: 0; font-size: 1.15rem; line-height: 1.2; text-wrap: balance; }
+.marketCard > .muted.small { margin: 0; }
+.marketBlurb { margin: 0; }
+.marketCardFoot { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; margin-top: 0.25rem; }
+.pill { padding: 0.1rem 0.55rem; border-radius: 999px; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase; background: var(--accent-dim); color: var(--text); }
+.visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 760px) {
+  .marketBody { grid-template-columns: 1fr; }
+  .marketSide { position: static; }
+}
+
+/* ---- what a pack needs in the world ---- */
+.needs { list-style: none; margin: 0 0 0.5rem; padding: 0; display: grid; gap: 0.35rem; }
+.needs li { display: grid; gap: 0.15rem; padding: 0.25rem 0; border-bottom: 1px solid var(--line-2); }
+.needs li.lacking > label > span:first-of-type { text-decoration: line-through; color: var(--muted); }
+.needs label, .needRow { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; cursor: pointer; }
+.needRow { cursor: default; }
+.needNote { margin-left: 1.6rem; }
+.marketNeeds { margin: 0; }
+
+/* ---- clocks: readable across a room, steady as they tick ---- */
+.clocks { display: grid; gap: 0.75rem; }
+.clock { display: grid; gap: 0.35rem; }
+.clockHead { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+.clockLabel { font-weight: 600; }
+.clockDigits { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: clamp(2.4rem, 9vw, 4.5rem); line-height: 1; letter-spacing: 0.02em; min-width: 5ch; }
+.clock.warn .clockDigits { color: var(--warn); }
+.clock.paused .clockDigits { color: var(--muted); }
+.clock.done .clockDigits { color: var(--muted); font-size: clamp(1.6rem, 6vw, 2.4rem); }
+.clock.done.expired .clockDigits { color: var(--warn); }
+.clockBar { height: 4px; background: var(--line-2); border-radius: 2px; overflow: hidden; }
+.clockBar span { display: block; height: 100%; background: var(--accent); transition: width 0.25s linear; }
+.clock.warn .clockBar span { background: var(--warn); }
+.clockButtons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.clockButtons .big { min-height: 44px; min-width: 6rem; }
+.chip.time { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .clockBar span { transition: none; } }
+
+/* ---- alerts ---- */
+.alertsMore summary { cursor: pointer; }
+.alerts { display: grid; gap: 0.6rem; padding-top: 0.5rem; }
+.alertVolume { display: grid; gap: 0.2rem; }
+.alertVolume input { width: 100%; }
+.alertList { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
+.alertList li { display: flex; justify-content: space-between; gap: 0.6rem; align-items: center; padding-bottom: 0.4rem; border-bottom: 1px solid var(--line-2); }
+.alertList li.off .alertWhat { opacity: 0.7; }
+.alertWhat { display: grid; gap: 0.05rem; min-width: 0; }
+.alertWhat .small { line-height: 1.25; }
+.alertPick { display: flex; gap: 0.3rem; align-items: center; flex: 0 0 auto; }
+.alertPick select { font: inherit; font-size: 0.85rem; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.15rem 0.35rem; }
+
+/* ---- documents menu ---- */
+.docMenu { position: relative; display: inline-block; }
+.docMenu > summary { list-style: none; display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; }
+.docMenu > summary::-webkit-details-marker { display: none; }
+.summaryButton { padding: 0.4rem 0.9rem; border: 1px solid var(--line); border-radius: var(--radius); color: var(--text); background: transparent; font: inherit; }
+.summaryButton.tiny { font-size: 0.75rem; padding: 0.12rem 0.45rem; }
+.docMenuPanel { position: absolute; z-index: 5; right: 0; top: calc(100% + 0.3rem); min-width: 18rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.6rem 0.75rem; box-shadow: var(--raise); display: grid; gap: 0.4rem; }
+.docMenuPanel p { margin: 0; }
+.docMenuList { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.3rem; }
+.docMenuList li { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; }
+.docMenuActions { display: flex; gap: 0.25rem; }
+/* A phone has no room beside the button: the menu becomes a sheet at the foot of the screen. */
+@media (max-width: 760px) {
+  .docMenuPanel {
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    top: auto;
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    min-width: 0;
+    max-height: 60vh;
+    overflow: auto;
+    z-index: 30;
+  }
+}
+.heroDocs { margin-top: 0.6rem; }
+
+/* ---- the guide ---- */
+.guide { display: grid; grid-template-columns: 16rem minmax(0, 1fr); gap: 2rem; width: min(100%, 72rem); margin: 0 auto; align-items: start; }
+.guideSide { position: sticky; top: 0.75rem; display: grid; gap: 0.6rem; }
+.guideSideHead { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+.guideSideHead h2 { margin: 0; }
+.guideToc { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; counter-reset: guide; }
+.guideToc li { display: grid; gap: 0.05rem; padding: 0.4rem 0.6rem; border-left: 2px solid transparent; }
+.guideToc li.on { border-left-color: var(--accent); background: var(--panel-2); border-radius: 0 var(--radius) var(--radius) 0; }
+.guideToc a { color: var(--text); text-decoration: none; font-weight: 600; }
+.guideToc a:hover { color: var(--accent); }
+.guidePage { max-width: 68ch; min-width: 0; }
+.guidePage h1 { margin: 0 0 1rem; font-size: 2rem; line-height: 1.1; text-wrap: balance; }
+.guidePage h2 { margin: 2rem 0 0.6rem; font-size: 1.3rem; border-bottom: 1px solid var(--line); padding-bottom: 0.25rem; }
+.guidePage h3 { margin: 1.4rem 0 0.4rem; font-size: 1.05rem; }
+.guidePage p, .guidePage li { line-height: 1.55; }
+.guidePage ul, .guidePage ol { padding-left: 1.4rem; }
+.guidePage pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.75rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.85em; }
+.guidePage code { font-family: var(--mono); font-size: 0.9em; }
+.guideSteps { counter-reset: step; list-style: none; padding: 0; display: grid; gap: 0.6rem; margin: 0.8rem 0 1.2rem; }
+.guideSteps li { counter-increment: step; position: relative; padding-left: 2.4rem; }
+.guideSteps li::before { content: counter(step); position: absolute; left: 0; top: 0.05rem; width: 1.7rem; height: 1.7rem; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.guideShot { margin: 1rem 0 1.4rem; display: grid; gap: 0.4rem; }
+.guideShot img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.guideShot figcaption { margin: 0; }
+.guideDemo { margin: 1rem 0 1.4rem; padding: 1rem; border: 1px dashed var(--line); border-radius: var(--radius); }
+.guideNav { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.kbd { font-family: var(--mono); font-size: 0.85em; padding: 0.05rem 0.4rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--panel-2); }
+.plan { display: inline-block; vertical-align: middle; margin-left: 0.4rem; padding: 0.08rem 0.5rem; border-radius: 999px; font-family: var(--mono); font-size: 0.65em; letter-spacing: 0.05em; text-transform: uppercase; border: 1px solid var(--line); color: var(--muted); }
+.plan-plus { border-color: var(--accent); color: var(--accent); }
+.plan-publisher { border-color: var(--warn); color: var(--warn); }
+@media (max-width: 760px) {
+  .guide { grid-template-columns: 1fr; }
+  .guideSide { position: static; }
+}
+
+/* ---- what a mode changes ---- */
+.modeDetails { display: grid; gap: 0.4rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--line-2); }
+.modeDetails .stepLabel { margin: 0.4rem 0 0; }
+.leaveOut { display: grid; gap: 0.25rem; margin: 0.2rem 0; }
+
+/* ---- when the page breaks ---- */
+.broke { max-width: 40rem; margin: 2rem auto; display: grid; gap: 0.75rem; }
+.brokeError { font-family: var(--mono); font-size: 0.85rem; white-space: pre-wrap; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.6rem 0.8rem; margin: 0; }
+.buttonLink { display: inline-block; text-decoration: none; }
+
+.licenseText { white-space: pre-wrap; font: inherit; font-size: 0.9em; color: var(--muted); max-width: 62ch; margin: 0.6rem 0 0; padding: 0.6rem 0.8rem; border-left: 3px solid var(--line); }
+
+/* ---- the hosted layer: a footer under the pages, a gate over them ---- */
+.siteFooter { max-width: 1500px; margin: 2rem auto 0; padding: 1rem 1.25rem 1.5rem; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: baseline; font-size: 0.85rem; color: var(--muted); }
+.siteFooter nav { display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; }
+.siteFooter a { color: var(--muted); text-decoration: none; }
+.siteFooter a:hover { color: var(--text); text-decoration: underline; }
+.siteFooter .build { margin-left: auto; font-family: var(--mono); font-size: 0.75rem; }
+a.plan { text-decoration: none; }
+a.plan:hover { text-decoration: underline; }
+.veil { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 1rem; background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(6px); }
+.termsGate { max-width: 34rem; display: grid; gap: 0.75rem; }
+.termsGate h2 { margin: 0; }
+.termsGate p { margin: 0; }
+
+/* ---- drawing again ---- */
+.drawAgain { display: grid; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--line); }
+.drawAgain label { display: grid; gap: 0.3rem; }
+.drawAgain input { max-width: 28rem; }
+
+/* ---- Designer: chips that toggle, and the roles under a mode ---- */
+.chipRow { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.toggleChip { cursor: pointer; background: transparent; }
+.toggleChip.on { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+.rolesEditor { margin: 0.5rem 0 1rem; }
+
+/* ---- races across devices ---- */
+.raceRow { flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.raceRow .code { width: 8rem; font-family: var(--mono); letter-spacing: 0.15em; text-transform: uppercase; }
+.raceBoard { list-style: none; margin: 0 0 0.75rem; padding: 0; display: grid; gap: 0.35rem; }
+.raceBoard li { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; grid-template-areas: "place who time" "place where time"; column-gap: 0.5rem; align-items: baseline; padding: 0.3rem 0; border-bottom: 1px solid var(--line-2); }
+.raceBoard li.me .who { color: var(--accent); }
+.raceBoard .place { grid-area: place; font-family: var(--mono); color: var(--muted); }
+.raceBoard .who { grid-area: who; font-weight: 600; }
+.raceBoard .where { grid-area: where; }
+.raceBoard .time { grid-area: time; font-family: var(--mono); font-size: 0.85rem; }
+.raceCode { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.25rem 0 0.6rem; }
+.raceCode code { font-size: 1.1rem; letter-spacing: 0.2em; padding: 0.15rem 0.5rem; border: 1px dashed var(--line); border-radius: var(--radius); }
+
+/* ---- the catalog's prices and a publisher's packs ---- */
+.priceTag { color: var(--accent); font-family: var(--mono); }
+.publisherPacks { margin-top: 0.75rem; display: grid; gap: 0.25rem; }
+/* One line per pack: the name takes what the controls leave, and wraps rather than pushing them down. */
+.publisherPacks .publisherPack { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.4rem 1rem; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid var(--line); }
+.publisherPacks .publisherPack:last-of-type { border-bottom: 0; }
+.publisherPack .row { gap: 0.35rem; align-items: center; flex-wrap: nowrap; padding: 0; justify-self: end; }
+.publisherPack .textInput.short { width: 5.5rem; flex: 0 0 auto; font-size: 0.8rem; padding: 0.12rem 0.5rem; border-radius: 4px; line-height: 1.5; }
+.publisherPacks > .row:last-of-type { align-items: center; flex-wrap: nowrap; }
+.publisherPacks > .row select.textInput { flex: 1 1 auto; min-width: 0; font-size: 0.85rem; padding: 0.25rem 0.5rem; }
+@media (max-width: 560px) {
+  .publisherPacks .publisherPack { grid-template-columns: 1fr; }
+  .publisherPack .row { justify-self: start; flex-wrap: wrap; }
+}
+
+/* ---- a pack's paper, read in a drawer ---- */
+.drawerVeil { position: fixed; inset: 0; z-index: 40; background: color-mix(in srgb, var(--bg) 55%, transparent); display: flex; justify-content: flex-end; }
+.docDrawer { width: min(46rem, 100%); height: 100%; background: var(--panel); border-left: 1px solid var(--line); box-shadow: var(--raise); display: flex; flex-direction: column; animation: drawerIn 160ms ease-out; }
+@keyframes drawerIn { from { transform: translateX(2rem); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .docDrawer { animation: none; } }
+.docDrawerHead { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: 0.9rem 1.25rem; border-bottom: 1px solid var(--line); }
+.docDrawerKinds { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.4rem; }
+.docDrawerBody { overflow: auto; padding: 1rem 1.25rem 2rem; }
+.docMenuItem { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; width: 100%; padding: 0.3rem 0.4rem; background: transparent; border: 0; border-radius: 4px; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.docMenuItem:hover, .docMenuItem:focus-visible { background: var(--panel-2); }
+
+/* ---- widgets: one panel of a run, alone, for a stream ---- */
+:root[data-widget="clear"], :root[data-widget="clear"] body { background: transparent; }
+:root[data-widget="solid"] body { background: var(--bg); }
+.widget { min-height: 100vh; display: flex; align-items: flex-start; justify-content: flex-start; padding: 0.75rem; box-sizing: border-box; }
+.widget.column { flex-direction: column; align-items: stretch; gap: 0.6rem; width: min(100%, 26rem); }
+.widget.column .widgetBody { min-width: 0; }
+.widget.column .widgetDigits { font-size: clamp(2.4rem, 12vw, 5rem); }
+.widgetBody { display: grid; gap: 0.5rem; min-width: min(100%, 22rem); max-width: 100%; padding: 0.9rem 1.1rem; border-radius: var(--radius); background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); box-shadow: var(--raise); }
+:root[data-widget="clear"] .widgetBody { background: color-mix(in srgb, var(--panel) 82%, transparent); }
+.widgetTitle { font-family: var(--mono); letter-spacing: 0.04em; }
+.widgetNote { margin: 0; color: var(--muted); }
+.widgetBoard { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; font-size: 1.15rem; }
+.widgetBoard li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 0.6rem; }
+.widgetBoard .place { font-family: var(--mono); color: var(--muted); }
+.widgetBoard .who { display: inline-flex; align-items: baseline; gap: 0.35rem; flex-wrap: wrap; min-width: 0; font-weight: 600; }
+.widgetBoard .where { grid-column: 2; font-weight: 400; }
+.widgetBoard .num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.3rem; }
+.widgetBoard li.me .who { color: var(--accent); }
+.widgetDigits { font-size: clamp(3rem, 22vw, 9rem); }
+.widgetStats { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: 0.6rem 1rem; margin: 0; }
+.widgetStats div { display: grid; gap: 0.15rem; }
+.widgetStats dt { font-family: var(--mono); }
+.widgetStats dd { margin: 0; font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.widgetList { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.6rem; }
+.widgetList li { display: flex; justify-content: space-between; gap: 0.8rem; align-items: flex-start; }
+.widgetList li p { margin: 0; }
+
+/* ---- a run watched by its link ---- */
+.live { width: min(100%, 72rem); margin: 0 auto; padding: 1rem 1.25rem 3rem; box-sizing: border-box; }
+.liveNote { padding-top: 3rem; text-align: center; }
+.liveTools { display: grid; gap: 0.5rem; justify-items: end; }
+.liveBar { position: static; }
+.liveBar .liveBarPack { justify-self: center; font-family: var(--mono); font-size: 0.85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.liveBar .liveBarPack strong { font-family: var(--serif); font-size: 1rem; }
+.liveBar .topbarEnd a.ghost { text-decoration: none; }
+@media (max-width: 720px) { .liveBar .liveBarPack { grid-column: 1 / -1; grid-row: 2; justify-self: start; } }
+/* A throw from elsewhere, played here: the tray in a panel that comes and goes. */
+.diceCurtain { position: fixed; right: 1rem; bottom: 1rem; z-index: 20; width: min(92vw, 26rem); border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); box-shadow: var(--raise); overflow: hidden; animation: curtainIn 0.25s ease-out both; }
+.diceCurtain .diceCurtainHead { padding: 0.5rem 0.8rem 0; font-family: var(--mono); }
+.diceCurtain .tray { border-top: 0; }
+.diceCurtain .rollTotal { padding: 0.2rem 0.8rem 0.7rem; }
+.diceCurtain .rollTotal.pending .big { color: var(--muted); }
+@keyframes curtainIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .diceCurtain { animation: none; } }
+.reactRow { display: flex; gap: 0.25rem; }
+.reactButton { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 0.2rem 0.5rem; font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.reactButton:hover { border-color: var(--line-2); transform: translateY(-1px); }
+.reactRecent { display: flex; gap: 0.3rem; flex-wrap: wrap; justify-content: flex-end; }
+.reactChip { font-size: 0.85rem; }
+.tableReact { margin: 0.25rem 0 0.5rem; }
+.members .reactRecent { justify-content: flex-start; margin-bottom: 0.5rem; }
+.shownAs { margin: 0.6rem 0 0.2rem; }
+.shownAs .inviteForm .textInput { flex: 1 1 10rem; }
+.shownAs p { margin: 0.3rem 0 0; }
+.liveHead { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.liveTitle { margin: 0; font-size: 1.6rem; }
+.liveWhere { margin: 0 0 1rem; font-size: 1.05rem; }
+.liveFlow { margin-bottom: 1.25rem; }
+.liveFlow .flow li { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr); gap: 0.4rem; align-items: baseline; padding: 0.25rem 0; }
+.liveFlow .flow li.done { color: var(--muted); }
+.liveFlow .flow li.skipped { color: var(--muted); opacity: 0.7; }
+.liveFlow .flow li.current { font-weight: 600; }
+.liveFlow .flow .idx { font-family: var(--mono); color: var(--muted); }
+.liveFlow .flow li.current .idx { color: var(--accent); }
+.liveWhere .muted { margin-right: 0.5rem; font-family: var(--mono); }
+.liveGrid { display: grid; grid-template-columns: minmax(0, 1fr) 20rem; gap: 1.5rem; align-items: start; }
+.liveSide { display: grid; gap: 0.75rem; }
+@media (max-width: 760px) { .liveGrid { grid-template-columns: 1fr; } }
+
+/* ---- the Rules page: the paper, with the structure as one more tab ---- */
+.rulesTabs { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0 0 1rem; }
+.docPage { max-width: 46rem; margin: 0 auto; padding: 1.5rem 2rem; }
+@media (max-width: 760px) { .docPage { padding: 1rem 1.1rem; } }
+
+
+/* ---- the welcome page: what Runlog is, at the bare address ---- */
+.welcome { min-height: 100vh; display: flex; flex-direction: column; }
+.welcomeBar .topbarEnd { gap: 0.5rem; }
+.welcomeBar .topbarEnd a.ghost, .welcomeBar .topbarEnd a.primary, .welcomeCtas a { text-decoration: none; display: inline-block; }
+.welcomeMain { width: min(100% - 2.5rem, 64rem); margin: 0 auto; padding: 1.5rem 0 3rem; flex: 1; }
+.welcomeHero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 2.5rem; align-items: center; padding: 1.5rem 0 2rem; }
+.welcomeHero h2 { font-size: clamp(1.9rem, 3.4vw, 2.7rem); line-height: 1.15; margin: 0 0 0.6rem; text-wrap: balance; }
+.welcomeLede { font-size: 1.1rem; line-height: 1.55; max-width: 34rem; margin: 0; }
+.welcomeCtas { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1.25rem 0 0.75rem; }
+.specimen { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.9rem 1rem 0.8rem; font-family: var(--mono); font-size: 0.86rem; }
+.specimen figcaption { margin-bottom: 0.6rem; }
+.specimenLog { list-style: none; margin: 0; padding: 0; }
+.specimenLog li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 0.8rem; padding: 0.5rem 0; border-top: 1px solid var(--line); }
+.specimenLog li:first-child { border-top: 0; }
+.specimenLog .where { color: var(--muted); font-size: 0.78rem; }
+.specimenLog .roll { color: var(--accent); font-size: 0.78rem; text-align: right; background: none; border: 0; padding: 0; border-radius: 0; }
+.specimenLog p { grid-column: 1 / -1; margin: 0.15rem 0 0; font-family: var(--serif); font-size: 1rem; }
+.specimenLog li.heat .roll, .specimenLog li.heat p { color: var(--warn); }
+.specimenState { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; margin-top: 0.7rem; padding-top: 0.6rem; border-top: 1px solid var(--line); font-size: 0.8rem; color: var(--muted); }
+.specimenState b { color: var(--text); font-weight: 500; }
+.specimenState .clock { margin-left: auto; color: var(--text); }
+.welcomeMain .sectionTitle { margin-top: 2.5rem; font-size: 1.3rem; }
+.welcomeSteps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
+.welcomeSteps li { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr); gap: 0.5rem; }
+.welcomeSteps .idx { font-family: var(--mono); color: var(--accent); padding-top: 0.25rem; }
+.welcomeSteps h4 { margin: 0 0 0.3rem; font-size: 1.05rem; }
+.welcomeSteps p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.welcomeReasons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 2.5rem; margin: 0; }
+.welcomeReasons > div { padding: 0.9rem 0; border-bottom: 1px solid var(--line); }
+.welcomeReasons dt { font-weight: 600; font-size: 1.05rem; }
+.welcomeReasons dd { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.95rem; }
+.welcomeReasons code { font-family: var(--mono); font-size: 0.85em; color: var(--text); }
+.welcomePlans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin-bottom: 0.8rem; }
+.welcomePlans h4 { margin: 0 0 0.3rem; font-size: 1.05rem; }
+.welcomePlans p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.welcomeClosing { margin: 3.5rem 0 1rem; text-align: center; }
+.welcomeClosing h3 { font-size: 1.8rem; margin: 0 0 0.5rem; }
+.welcomeClosing .welcomeCtas { justify-content: center; }
+.welcomeSkip { justify-content: center; margin-top: 1rem; color: var(--muted); }
+@media (max-width: 760px) {
+  .welcomeHero, .welcomeSteps, .welcomeReasons, .welcomePlans { grid-template-columns: 1fr; }
+  .welcomeHero { gap: 1.5rem; }
+}

@@ -1,0 +1,5 @@
+Contact: mailto:{{SUPPORT}}
+Expires: {{EXPIRES}}
+Preferred-Languages: en
+Canonical: https://{{DOMAIN}}/.well-known/security.txt
+Policy: https://{{DOMAIN}}/about.html

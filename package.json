@@ -1,0 +1,42 @@
+{
+  "name": "runlog-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "An extensible engine for dice-driven creative-practice games.",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "hosted/infra"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "tsc --noEmit -p packages/container/tsconfig.json && tsc --noEmit -p packages/rules-schema/tsconfig.json && tsc --noEmit -p packages/engine/tsconfig.json && tsc --noEmit -p packages/cli/tsconfig.json && tsc --noEmit -p apps/web/tsconfig.json && tsc --noEmit -p hosted/infra/tsconfig.json",
+    "schema:emit": "node --experimental-strip-types packages/rules-schema/scripts/emit-schema.ts",
+    "test": "vitest run",
+    "stage": "node --experimental-strip-types scripts/stage.ts",
+    "check:stage": "node --experimental-strip-types scripts/stage.ts 0.0.0-check && node packages/cli/stage/dist/runlog.js validate packs/demo/pack.yaml --strict && node -e \"import('./packages/cli/stage/dist/index.js').then(m => { if (typeof m.seal !== 'function') throw new Error('no seal export') })\"",
+    "test:watch": "vitest",
+    "runlog": "node --experimental-strip-types packages/cli/src/bin.ts",
+    "check:demo": "npm run runlog -- validate packs/demo/pack.yaml --strict",
+    "check:packs": "npm run runlog -- validate packs/demo/pack.yaml packs/demo/any-given-day.yaml packs/sketches/salt-and-signal.yaml packs/sketches/ladder-work.yaml packs/sketches/rocket-league-ladder.yaml packs/sketches/elden-ring-expedition.yaml packs/sketches/homefront.yaml packs/sketches/practice-room.yaml packs/sketches/pantry-roulette.yaml packs/sketches/elden-ring-trial.yaml packs/sketches/rocket-league-showdown.yaml --strict",
+    "docs:emit": "node --experimental-strip-types packages/rules-schema/scripts/emit-reference.ts",
+    "seed:listings": "node --experimental-strip-types scripts/seed-listings.ts",
+    "test:packs": "npm run runlog -- test packs/demo/pack.yaml && npm run runlog -- test packs/demo/any-given-day.yaml && npm run runlog -- test packs/sketches/salt-and-signal.yaml && npm run runlog -- test packs/sketches/ladder-work.yaml && npm run runlog -- test packs/sketches/rocket-league-ladder.yaml && npm run runlog -- test packs/sketches/elden-ring-expedition.yaml && npm run runlog -- test packs/sketches/homefront.yaml && npm run runlog -- test packs/sketches/practice-room.yaml && npm run runlog -- test packs/sketches/pantry-roulette.yaml && npm run runlog -- test packs/sketches/elden-ring-trial.yaml && npm run runlog -- test packs/sketches/rocket-league-showdown.yaml",
+    "test:infra": "npm test -w hosted/infra",
+    "cdk": "npm run cdk -w hosted/infra --",
+    "overlay": "tsx hosted/scripts/overlay.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}

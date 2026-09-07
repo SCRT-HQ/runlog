@@ -1,0 +1,446 @@
+# Elden Ring: Trial — a moderated race across the Lands Between.
+#
+# One person runs this from the device; everyone else plays the game and
+# races. Each Region draws a curse that lands on every runner — a status
+# effect the game already has, turned into something a player does without
+# any mod: Scarlet Rot takes your armor off, Frostbite takes your sprint —
+# with a cure drawn alongside it, an item that, if you already have it, spares
+# you. Then the region draws a target, a boss, a key item, a hunt of three
+# names, or a collection, worth points, and the first runner to settle it is
+# awarded it by the moderator. The scoreboard is the race.
+#
+# The moderator's word is the only record. Nothing here knows the game's
+# state; it keeps the tally a stream overlay keeps, and adds the dice.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.elden-ring-trial
+version: "0.1.0"
+title: "Elden Ring: Trial"
+author: Runlog
+description: >-
+  A moderated race across the Lands Between. Every region curses all the
+  runners with a status effect they act out in the game, draws a target
+  worth points, and the first to settle it takes them. One person moderates;
+  the scoreboard decides.
+
+category: games
+tags: [Elden Ring, souls, race, moderated, curses]
+
+requires:
+  - { id: game, label: Elden Ring, kind: game, note: "One copy per runner." }
+  - { id: system, label: A PC or console per runner, kind: platform }
+  - { id: voice, label: A voice channel or a room everyone is in, kind: other, note: "Curses and cures are on the runners' word to the moderator." }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - seededRuns
+  - counters
+  - timers
+  - journal
+  - moderated
+
+vocabulary:
+  run: { one: Trial, many: Trials }
+  unit: { one: Region, many: Regions }
+  subject: { one: Target, many: Targets }
+  finalize: Leave the region
+  terms:
+    roll: Draw
+
+unit:
+  createsSubject: true
+  clock: { kind: stopwatch }
+  min: 3
+  max: 12
+
+# Curses are run-wide: they land on every runner at once, and lift by
+# themselves when the region is left. The board shows which one is on; the
+# scoreboard shows who the moderator has marked Spared by the cure, or Out.
+states:
+  rot:
+    label: Scarlet Rot
+    short: ROT
+    scope: run
+    group: curse
+    until: unitEnd
+    description: No armor. Every runner unequips all four armor slots until the region is left.
+  poison:
+    label: Poison
+    short: PSN
+    scope: run
+    group: curse
+    until: unitEnd
+    description: No healing flasks. Crimson Tears stay in the pouch until the region is left.
+  bleed:
+    label: Blood Loss
+    short: BLD
+    scope: run
+    group: curse
+    until: unitEnd
+    description: No shield. Nothing in the left hand but a weapon, a catalyst, or air.
+  frost:
+    label: Frostbite
+    short: FRS
+    scope: run
+    group: curse
+    until: unitEnd
+    description: No sprinting and no Torrent. Walk the region.
+  sleep:
+    label: Sleep
+    short: SLP
+    scope: run
+    group: curse
+    until: unitEnd
+    description: No summons and no Spirit Ashes. Alone.
+  madness:
+    label: Madness
+    short: MAD
+    scope: run
+    group: curse
+    until: unitEnd
+    description: No lock-on. Aim by hand until the region is left.
+  blight:
+    label: Death Blight
+    short: DTH
+    scope: run
+    group: curse
+    until: unitEnd
+    description: One death ends your region. Die, and you are out of this target's race.
+  spared:
+    label: Spared
+    short: CURE
+    scope: contestant
+    until: unitEnd
+    description: Has this region's cure. The curse passes them by, on their word and the moderator's.
+  out:
+    label: Out
+    short: OUT
+    scope: contestant
+    until: unitEnd
+    description: Out of this region's race — Death Blight took them, or they conceded it.
+
+counters:
+  targetsDone:
+    label: Targets settled
+    initial: 0
+    min: 0
+    incrementOn:
+      - { on: unitFinalized }
+    triggers:
+      - when: { gte: 5 }
+        oncePerRun: true
+        label: Five targets
+        do:
+          - do: note
+            text: Five targets settled. The Trial may end whenever the moderator likes; the scoreboard stands.
+
+tables:
+  curse:
+    resolution: lookup
+    title: Curse
+    description: >-
+      Drawn at the start of every region after the first, and it lands on every
+      runner. Each is a status effect the game has, acted out in the game. A
+      cure is drawn with it: a runner who already has that item is spared.
+    roll: d8
+    entries:
+      - id: cu-rot
+        range: [1, 1]
+        text: "Scarlet Rot. Every runner unequips all armor until the region is left — unless the cure drawn below is already in their inventory."
+        grants: [rot]
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: cure }
+      - id: cu-poison
+        range: [2, 2]
+        text: "Poison. No Crimson Tears until the region is left — unless the cure drawn below is already in their inventory."
+        grants: [poison]
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: cure }
+      - id: cu-bleed
+        range: [3, 3]
+        text: "Blood Loss. No shield in the left hand until the region is left — unless the cure drawn below is already in their inventory."
+        grants: [bleed]
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: cure }
+      - id: cu-frost
+        range: [4, 4]
+        text: "Frostbite. No sprinting and no Torrent until the region is left — unless the cure drawn below is already in their inventory."
+        grants: [frost]
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: cure }
+      - id: cu-sleep
+        range: [5, 5]
+        text: "Sleep. No summons and no Spirit Ashes until the region is left — unless the cure drawn below is already in their inventory."
+        grants: [sleep]
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: cure }
+      - id: cu-madness
+        range: [6, 6]
+        text: "Madness. No lock-on until the region is left — unless the cure drawn below is already in their inventory."
+        grants: [madness]
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: cure }
+      - id: cu-blight
+        range: [7, 7]
+        text: "Death Blight. One death and you are out of this region's race — unless the cure drawn below is already in their inventory."
+        grants: [blight]
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: cure }
+      - { id: cu-none, range: [8, 8], text: "Clear skies. No curse this region." }
+
+  cure:
+    resolution: lookup
+    title: Cure
+    description: The item that spares a runner from this region's curse, if they already have it. No buying it now.
+    roll: d10
+    entries:
+      - { id: cr-immunizing, range: [1, 1], text: "An Immunizing Horn Charm, equipped." }
+      - { id: cr-preserving, range: [2, 2], text: "Preserving Boluses in the pouch." }
+      - { id: cr-neutralizing, range: [3, 3], text: "Neutralizing Boluses in the pouch." }
+      - { id: cr-stanching, range: [4, 4], text: "Stanching Boluses in the pouch." }
+      - { id: cr-thawfrost, range: [5, 5], text: "Thawfrost Boluses in the pouch." }
+      - { id: cr-clarifying, range: [6, 6], text: "Clarifying Boluses in the pouch, or a Clarifying Horn Charm equipped." }
+      - { id: cr-mottled, range: [7, 7], text: "A Mottled Necklace, equipped." }
+      - { id: cr-pustule, range: [8, 8], text: "The Prince of Death's Pustule, equipped." }
+      - { id: cr-flame, range: [9, 9], text: "Flame, Cleanse Me, memorized." }
+      - { id: cr-none, range: [10, 10], text: "No cure. Everyone suffers it." }
+
+  target:
+    resolution: lookup
+    title: Target
+    description: What this region is about, and what it is worth. Some kinds draw again to say exactly what.
+    roll: d10
+    entries:
+      - { id: t-boss, range: [1, 4], text: "A boss. The moderator names the one guarding the region; first to fell it takes the points.", points: 3 }
+      - id: t-item
+        range: [5, 6]
+        text: "A key item. First to have it in their inventory takes the points."
+        points: 2
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: keyitem }
+      - id: t-hunt
+        range: [7, 8]
+        text: "A hunt. Three names are drawn; first to fell all three takes the points."
+        points: 3
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: npc }
+              - { do: rollOn, table: npc }
+              - { do: rollOn, table: npc }
+      - id: t-collect
+        range: [9, 10]
+        text: "A collection. First to gather the lot takes the points."
+        points: 2
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: collect }
+
+  keyitem:
+    resolution: lookup
+    title: Key item
+    description: Something the run cannot proceed without, or can only proceed better with.
+    roll: d12
+    entries:
+      - { id: k-dectus-l, range: [1, 1], text: "The left half of the Dectus Medallion." }
+      - { id: k-dectus-r, range: [2, 2], text: "The right half of the Dectus Medallion." }
+      - { id: k-rold, range: [3, 3], text: "The Rold Medallion." }
+      - { id: k-glintstone, range: [4, 4], text: "The Academy Glintstone Key." }
+      - { id: k-drawing, range: [5, 5], text: "The Drawing-Room Key." }
+      - { id: k-haligtree, range: [6, 6], text: "Either half of the Haligtree Secret Medallion." }
+      - { id: k-pureblood, range: [7, 7], text: "The Pureblood Knight's Medal." }
+      - { id: k-imbued, range: [8, 8], text: "An Imbued Sword Key, and use it." }
+      - { id: k-rusty, range: [9, 9], text: "The Rusty Key." }
+      - { id: k-stonesword, range: [10, 10], text: "Three Stonesword Keys, unspent." }
+      - { id: k-rune, range: [11, 11], text: "A Great Rune, and the tower to restore it." }
+      - { id: k-palace, range: [12, 12], text: "The Discarded Palace Key." }
+
+  npc:
+    resolution: lookup
+    title: A name to hunt
+    description: Drawn three at a time for a hunt. The same name twice is one name, and one fewer to find.
+    roll: d12
+    entries:
+      - { id: n-patches, range: [1, 1], text: "Patches." }
+      - { id: n-kale, range: [2, 2], text: "Merchant Kalé." }
+      - { id: n-boc, range: [3, 3], text: "Boc the Seamster." }
+      - { id: n-blaidd, range: [4, 4], text: "Blaidd." }
+      - { id: n-rya, range: [5, 5], text: "Rya." }
+      - { id: n-alexander, range: [6, 6], text: "Iron Fist Alexander." }
+      - { id: n-gostoc, range: [7, 7], text: "Gatekeeper Gostoc." }
+      - { id: n-sellen, range: [8, 8], text: "Sorceress Sellen." }
+      - { id: n-bernahl, range: [9, 9], text: "Knight Bernahl." }
+      - { id: n-yura, range: [10, 10], text: "Bloody Finger Hunter Yura." }
+      - { id: n-nepheli, range: [11, 11], text: "Nepheli Loux." }
+      - { id: n-any, range: [12, 12], text: "Any named character the moderator chooses. Say who before anyone draws steel." }
+
+  collect:
+    resolution: lookup
+    title: A collection
+    description: A count of things. The region is done for a runner when their count is.
+    roll: d8
+    entries:
+      - { id: c-seeds, range: [1, 1], text: "Three Golden Seeds." }
+      - { id: c-tears, range: [2, 2], text: "Two Sacred Tears." }
+      - { id: c-stones, range: [3, 3], text: "Six Smithing Stones of one grade." }
+      - { id: c-somber, range: [4, 4], text: "Two Somber Smithing Stones." }
+      - { id: c-graces, range: [5, 5], text: "Eight sites of grace." }
+      - { id: c-crystal, range: [6, 6], text: "Ten Crystal Tears' worth of any consumable you never use." }
+      - { id: c-maps, range: [7, 7], text: "Two map fragments." }
+      - { id: c-talismans, range: [8, 8], text: "Three talismans you did not have." }
+
+journal:
+  enabled: true
+  prompt: How did the region go, and who did what?
+
+phases:
+  - id: curse
+    label: Curse
+    description: Skipped in the first region. Everyone suffers it.
+    skipWhen:
+      - { unitIndex: { lte: 1 } }
+    steps:
+      - kind: rollTable
+        table: curse
+        label: Draw the curse
+
+  - id: target
+    label: Target
+    steps:
+      - kind: rollTable
+        table: target
+        label: Draw the target
+      - kind: declareSubject
+        label: Name the target in your own words — the boss, the item, the three names, the count.
+
+  - id: race
+    label: Race
+    steps:
+      - kind: manual
+        label: Let them run.
+        description: >-
+          The app cannot see the game. When a runner settles the target, award
+          them under Winners. A runner who shows the cure is marked Spared on
+          the scoreboard; one Death Blight takes is marked Out. Both lift when
+          the region is left.
+        checklist:
+          - text: Every runner is under the curse, or has shown the cure.
+            shows: { table: curse, scope: unit }
+          - text: The target was named and awarded.
+            shows: { table: target, scope: unit }
+          - text: The item, found.
+            shows: { table: keyitem, scope: unit }
+          - text: Every name drawn has fallen.
+            shows: { table: npc, scope: unit }
+          - text: The count, gathered.
+            shows: { table: collect, scope: unit }
+
+  - id: leave
+    label: Leave the region
+    steps:
+      - kind: finalizeUnit
+        label: Leave the region
+
+endings:
+  - id: retreat
+    label: Call it here
+    text: The Trial ends. The scoreboard stands as it is.
+  - id: lord
+    label: Elden Lord
+    text: Five targets settled. Whoever leads the scoreboard sits on the throne.
+    requires:
+      - { counter: targetsDone, is: { gte: 5 } }
+
+modes:
+  trial:
+    label: Trial
+    description: Three to twelve regions. The first runner to settle each target takes its points.
+    units: { min: 3, max: 12 }
+    moderated:
+      contestants: { min: 2, max: 10 }
+      award: first
+
+  everyone:
+    label: Everyone finishes
+    description: Every runner who settles the target scores it; the first gets one more. Better for a longer night.
+    units: { min: 3, max: 12 }
+    moderated:
+      contestants: { min: 2, max: 10 }
+      award: everyone
+      firstBonus: 1
+
+  sprint:
+    label: Sprint
+    description: Three regions, then the throne.
+    units: { fixed: 3 }
+    moderated:
+      contestants: { min: 2, max: 10 }
+      award: first
+
+  seeded:
+    label: Seeded trial
+    description: A pre-drawn Trial from one seed, so two moderators can run the same curses and targets for two rooms.
+    seeded: true
+    units: { fixed: 5 }
+    moderated:
+      contestants: { min: 2, max: 10 }
+      award: first
+
+defaultMode: trial
+
+hierarchy:
+  - Cure
+  - Curse
+  - General rules
+
+fixtures:
+  - name: The first to settle the target takes its points, and the curse lifts on leaving
+    mode: trial
+    events:
+      - { t: RunStarted, mode: trial }
+      - { t: ContestantAdded, contestant: c1, name: Ada }
+      - { t: ContestantAdded, contestant: c2, name: Ben }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: target, entryId: t-boss, cause: phase }
+      - { t: SubjectDeclared, subjectType: Margit }
+      - { t: Awarded, contestant: c2, outcome: 0, table: target, entryId: t-boss, points: 3 }
+      - { t: UnitFinalized }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: curse, entryId: cu-rot, cause: phase }
+      - { t: StateApplied, state: rot }
+      - { t: OutcomeResolved, table: target, entryId: t-item, cause: phase }
+      - { t: SubjectDeclared, subjectType: "The Rold Medallion" }
+      - { t: ContestantStateApplied, contestant: c2, state: spared }
+      - { t: Awarded, contestant: c1, outcome: 2, table: target, entryId: t-item, points: 2 }
+      - { t: UnitFinalized }
+    expect:
+      - { path: awards.length, equals: 2 }
+      - { path: awards.0.contestant, equals: c2 }
+      - { path: awards.1.points, equals: 2 }
+      - { path: contestants.length, equals: 2 }
+      - { path: counters.targetsDone, equals: 2 }
+      - { path: runStates.length, equals: 0 }
+      - { path: contestants.1.states.length, equals: 0 }

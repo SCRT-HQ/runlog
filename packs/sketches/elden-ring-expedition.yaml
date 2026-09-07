@@ -1,0 +1,425 @@
+# Expedition — a challenge pack for Elden Ring, for Runlog.
+#
+# A challenge pack that is its own adventure, region by region. Each Region
+# draws a handicap for the run, a target — a boss, a key item, a hunt of
+# three names, or a collection — and a vow to keep while you are there. The
+# player names the target in their own words, and moves take their word on
+# deaths, targets done and vows kept. Nothing here knows the game's state.
+# It keeps the tally that a stream overlay keeps, and adds the dice.
+#
+# Written to show three more things the format does without changing:
+#
+#   * a death counter as a move, since dying is the one thing every run logs
+#   * a draw that draws again: the target table picks a kind, and the kind
+#     rolls on its own table, three times for a hunt
+#   * several draws per unit from different tables, each with its own trackers
+#
+# Elden Ring is a trademark of Bandai Namco Entertainment Inc. and FromSoftware
+# Inc. This pack is an unofficial fan practice aid; it names regions, bosses
+# and objectives the community talks about, and contains nothing from the game.
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.elden-ring-expedition
+version: "0.2.0"
+title: "Elden Ring: Expedition"
+author: Runlog
+description: >-
+  An expedition of your own across the Lands Between. Each region draws a
+  handicap, a target (a boss, a key item, a hunt, a collection) and a vow to
+  keep; you log the deaths, the targets done, and the vows kept.
+category: games
+tags: [Elden Ring, souls, challenge run]
+
+requires:
+  - { id: game, label: Elden Ring, kind: game, note: "Base game; Shadow of the Erdtree is not needed." }
+  - { id: system, label: A PC or console that runs it, kind: platform }
+  - { id: save, label: A character past Limgrave, kind: other, optional: true, note: "Any character works; the targets assume the map is open." }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+capabilities:
+  - deferredTriggers
+  - seededRuns
+  - counters
+  - timers
+  - journal
+
+vocabulary:
+  run: { one: Expedition, many: Expeditions }
+  unit: { one: Region, many: Regions }
+  subject: { one: Target, many: Targets }
+  finalize: Leave the region
+  terms:
+    roll: Draw
+
+unit:
+  createsSubject: true
+  clock: { kind: stopwatch }
+  min: 3
+  max: 12
+
+states:
+  done:
+    label: Done
+    short: OK
+    scope: subject
+    group: outcome
+    description: The target is settled — felled, found, hunted, or gathered.
+  skipped:
+    label: Skipped
+    short: --
+    scope: subject
+    group: outcome
+    description: Left for another day. It stays in the log as a debt.
+  handicapped:
+    label: Under handicap
+    short: HC
+    scope: run
+    description: This Expedition carries a standing handicap. It is written on the draw that set it.
+
+counters:
+  deaths:
+    label: Deaths
+    initial: 0
+    min: 0
+    triggers:
+      - when: { gte: 10 }
+        oncePerRun: true
+        label: Ten deaths
+        do:
+          - do: note
+            text: Ten. Every one of them a lesson, allegedly.
+      - when: { gte: 25 }
+        oncePerRun: true
+        label: Twenty-five deaths
+        do:
+          - do: note
+            text: Twenty-five. The chat has stopped counting; the app has not.
+  targets:
+    label: Targets done
+    initial: 0
+    min: 0
+    triggers:
+      - when: { gte: 5 }
+        oncePerRun: true
+        label: Five targets
+        do:
+          - do: note
+            text: Five targets done. The Expedition may end as an Elden Lord's whenever you like.
+  vows:
+    label: Vows kept
+    initial: 0
+    min: 0
+    triggers:
+      - when: { gte: 5 }
+        oncePerRun: true
+        label: Sworn
+        do:
+          - do: note
+            persistent: true
+            text: Five vows kept. The Lands Between have noticed.
+      - when: { gte: 12 }
+        oncePerRun: true
+        label: Oathbound
+        do:
+          - do: note
+            persistent: true
+            text: Twelve vows kept. Whatever you are, you are not a Tarnished any more.
+
+tables:
+  handicap:
+    resolution: lookup
+    title: Handicap
+    description: A rule for this region. It ends when you leave the region, unless the draw says it stands.
+    roll: d12
+    entries:
+      - { id: h-none, range: [1, 2], text: "No handicap. The region is hard enough." }
+      - { id: h-nosummon, range: [3, 3], text: "No summons of any kind this region: no spirit ashes, no players." }
+      - { id: h-firstweapon, range: [4, 4], text: "The first weapon you find in this region is the only one you may use here." }
+      - { id: h-twohand, range: [5, 5], text: "Two-handed only. Shields stay on your back." }
+      - { id: h-noroll, range: [6, 6], text: "For the boss of this region, no rolling. Block, jump, walk." }
+      - { id: h-nohorse, range: [7, 7], text: "On foot. Torrent stays whistled away until you leave." }
+      - { id: h-nomap, range: [8, 8], text: "No map, no markers. Find the boss by landmarks and rumour." }
+      - { id: h-noflask, range: [9, 9], text: "Two flasks for the boss fight. The rest stay on your belt." }
+      - { id: h-noupgrade, range: [10, 10], text: "No upgrading anything while you are in this region." }
+      - id: h-standing
+        range: [11, 11]
+        text: >-
+          A standing rule: pick one of the handicaps above and keep it for the
+          rest of the Expedition.
+        triggers:
+          - on: immediately
+            do:
+              - { do: applyState, state: handicapped, to: run }
+      - { id: h-choice, range: [12, 12], text: "Chat's choice, or your own. Say it out loud before you start." }
+
+  target:
+    resolution: lookup
+    title: Target
+    description: What this region is about. Some kinds draw again to say exactly what.
+    roll: d10
+    entries:
+      - { id: t-boss, range: [1, 4], text: "A boss. Name the one you are going for; in a randomizer, whatever is guarding the region." }
+      - id: t-item
+        range: [5, 6]
+        text: "A key item. Find it and bring it out of the region."
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: keyitem }
+      - id: t-hunt
+        range: [7, 8]
+        text: "A hunt. Three names are drawn; all three must fall before you leave."
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: npc }
+              - { do: rollOn, table: npc }
+              - { do: rollOn, table: npc }
+      - id: t-collect
+        range: [9, 10]
+        text: "A collection. Gather the lot before you leave."
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: collect }
+
+  keyitem:
+    resolution: lookup
+    title: Key item
+    description: Something the run cannot proceed without, or can only proceed better with.
+    roll: d12
+    entries:
+      - { id: k-dectus-l, range: [1, 1], text: "The left half of the Dectus Medallion." }
+      - { id: k-dectus-r, range: [2, 2], text: "The right half of the Dectus Medallion." }
+      - { id: k-rold, range: [3, 3], text: "The Rold Medallion." }
+      - { id: k-glintstone, range: [4, 4], text: "The Academy Glintstone Key." }
+      - { id: k-drawing, range: [5, 5], text: "The Drawing-Room Key." }
+      - { id: k-haligtree, range: [6, 6], text: "Either half of the Haligtree Secret Medallion." }
+      - { id: k-pureblood, range: [7, 7], text: "The Pureblood Knight's Medal." }
+      - { id: k-imbued, range: [8, 8], text: "An Imbued Sword Key, and use it." }
+      - { id: k-rusty, range: [9, 9], text: "The Rusty Key." }
+      - { id: k-stonesword, range: [10, 10], text: "Three Stonesword Keys, unspent." }
+      - { id: k-rune, range: [11, 11], text: "A Great Rune, and the tower to restore it." }
+      - { id: k-palace, range: [12, 12], text: "The Discarded Palace Key." }
+
+  npc:
+    resolution: lookup
+    title: A name to hunt
+    description: Drawn three at a time for a hunt. The same name twice is one name, and one fewer to find.
+    roll: d12
+    entries:
+      - { id: n-patches, range: [1, 1], text: "Patches." }
+      - { id: n-kale, range: [2, 2], text: "Merchant Kalé." }
+      - { id: n-boc, range: [3, 3], text: "Boc the Seamster." }
+      - { id: n-blaidd, range: [4, 4], text: "Blaidd." }
+      - { id: n-rya, range: [5, 5], text: "Rya." }
+      - { id: n-alexander, range: [6, 6], text: "Iron Fist Alexander." }
+      - { id: n-gostoc, range: [7, 7], text: "Gatekeeper Gostoc." }
+      - { id: n-sellen, range: [8, 8], text: "Sorceress Sellen." }
+      - { id: n-bernahl, range: [9, 9], text: "Knight Bernahl." }
+      - { id: n-yura, range: [10, 10], text: "Bloody Finger Hunter Yura." }
+      - { id: n-nepheli, range: [11, 11], text: "Nepheli Loux." }
+      - { id: n-any, range: [12, 12], text: "Any named character of your choosing. Say who before you draw steel." }
+
+  collect:
+    resolution: lookup
+    title: A collection
+    description: A count of things. The region is done when the count is.
+    roll: d8
+    entries:
+      - { id: c-seeds, range: [1, 1], text: "Three Golden Seeds." }
+      - { id: c-tears, range: [2, 2], text: "Two Sacred Tears." }
+      - { id: c-stones, range: [3, 3], text: "Six Smithing Stones of one grade." }
+      - { id: c-somber, range: [4, 4], text: "Two Somber Smithing Stones." }
+      - { id: c-graces, range: [5, 5], text: "Eight sites of grace." }
+      - { id: c-crystal, range: [6, 6], text: "Ten Crystal Tears' worth of any consumable you never use." }
+      - { id: c-maps, range: [7, 7], text: "Two map fragments." }
+      - { id: c-talismans, range: [8, 8], text: "Three talismans you did not have." }
+
+  vow:
+    resolution: lookup
+    title: Vow
+    description: Something you swear to do while you are here. Keep it wherever it happens to be kept.
+    roll: d20
+    entries:
+      - { id: b-seed, range: [1, 1], text: "Find a Golden Seed." }
+      - { id: b-tear, range: [2, 2], text: "Find a Sacred Tear." }
+      - { id: b-dragon, range: [3, 3], text: "Fell a dragon." }
+      - { id: b-avatar, range: [4, 4], text: "Fell an Erdtree Avatar." }
+      - { id: b-talisman, range: [5, 5], text: "Equip a talisman you have never worn." }
+      - { id: b-spell, range: [6, 6], text: "Cast a spell or incantation you have never cast." }
+      - { id: b-crab, range: [7, 7], text: "Die to a crab, a dog, or a bird. Honesty counts." }
+      - { id: b-catacomb, range: [8, 8], text: "Clear a catacomb, boss and all." }
+      - { id: b-evergaol, range: [9, 9], text: "Clear an evergaol." }
+      - { id: b-npc, range: [10, 10], text: "Advance any character's questline one step." }
+      - { id: b-ash, range: [11, 11], text: "Find a new Ash of War and apply it." }
+      - { id: b-somber, range: [12, 12], text: "Find a Somber Smithing Stone." }
+      - { id: b-invader, range: [13, 13], text: "Fell an invader, scripted or real." }
+      - { id: b-noflask, range: [14, 14], text: "Fell a field boss without healing." }
+      - { id: b-parry, range: [15, 15], text: "Parry something and make it pay." }
+      - { id: b-jump, range: [16, 16], text: "Jump attack a boss into a stagger." }
+      - { id: b-map, range: [17, 17], text: "Find the region's map fragment." }
+      - { id: b-grace, range: [18, 18], text: "Rest at five new sites of grace." }
+      - { id: b-vendor, range: [19, 19], text: "Buy something you will actually use from a merchant." }
+      - { id: b-free, range: [20, 20], text: "A vow you have already kept. Count it, and draw again if you want a real one." }
+
+# The tally, on the player's word. Streams keep a death counter; so does this.
+moves:
+  died:
+    label: Died
+    description: One more. The counter is public.
+    when: anytime
+    available:
+      - { unitIndex: { gte: 1 } }
+    do:
+      - { do: modCounter, counter: deaths, by: 1 }
+  done:
+    label: Target done
+    description: The region's target is settled — felled, found, hunted, or gathered. Leaves the region.
+    when: anytime
+    finalizes: true
+    available:
+      - { phaseDone: play }
+    do:
+      - { do: applyState, state: done, to: thisSubject }
+      - { do: modCounter, counter: targets, by: 1 }
+  skipped:
+    label: Leave it
+    description: Not today. Leave the region with the target unsettled.
+    when: anytime
+    finalizes: true
+    available:
+      - { phaseDone: play }
+    do:
+      - { do: applyState, state: skipped, to: thisSubject }
+  vowKept:
+    label: Vow kept
+    description: One more vow kept, whichever one it was.
+    when: anytime
+    available:
+      - { unitIndex: { gte: 1 } }
+    do:
+      - { do: modCounter, counter: vows, by: 1 }
+
+journal:
+  enabled: true
+  prompt: What happened in that region?
+
+phases:
+  - id: draw
+    label: Draw the region
+    steps:
+      - kind: rollTable
+        table: handicap
+        label: Draw the handicap
+      - kind: rollTable
+        table: target
+        label: Draw the target
+      - kind: rollTable
+        table: vow
+        label: Draw the vow
+      - kind: declareSubject
+        label: Name the target in your own words — the boss, the item, the three names, the count.
+
+  - id: play
+    label: Play the region
+    steps:
+      - kind: manual
+        label: Play it out.
+        description: >-
+          The app cannot see the run. Press "Died" when you die and "Vow kept"
+          for every vow you keep. When the target is settled, "Target done" or
+          "Leave it" closes the region.
+        checklist:
+          - text: Kept the handicap for the whole region.
+            shows: { table: handicap, scope: unit }
+          - text: Went after the target.
+            shows: { table: target, scope: unit }
+          - text: Found the item.
+            shows: { table: keyitem, scope: unit }
+          - text: Every name drawn has fallen.
+            shows: { table: npc, scope: unit }
+          - text: Gathered the count.
+            shows: { table: collect, scope: unit }
+          - text: Went after the vow, whether or not it was kept.
+            shows: { table: vow, scope: unit }
+          - Settled the target one way or the other.
+
+  - id: leave
+    label: Leave the region
+    steps:
+      - kind: finalizeUnit
+        label: Leave the region
+
+endings:
+  - id: retreat
+    label: Call it here
+    text: The Expedition ends. Deaths, targets and vows stay in the log.
+  - id: lord
+    label: Elden Lord
+    text: Five targets done. Sit on the throne, or start another Expedition and do it with a worse handicap.
+    requires:
+      - { counter: targets, is: { gte: 5 } }
+
+# Lengths for the ways people run: a short session, a vigil, a long night,
+# no end at all, and a seeded race where two streamers draw the same
+# regions in the same order from one seed.
+modes:
+  expedition:
+    label: Expedition
+    description: Three to twelve regions, ended when you say. The usual shape.
+    units: { min: 3, max: 12 }
+  short:
+    label: Short session
+    description: Three regions, then out.
+    units: { fixed: 3 }
+  vigil:
+    label: Vigil
+    description: Five regions, five vows. Keep them all and say so.
+    units: { fixed: 5 }
+  long:
+    label: Long night
+    description: Nine regions. Bring flasks.
+    units: { fixed: 9 }
+  endless:
+    label: Endless
+    description: No end but the one you choose. The draws are random every time.
+    units: { min: 1, max: 999 }
+  race:
+    label: Seeded race
+    description: >-
+      Any number of runners, one seed: the same handicaps, targets and vows
+      in the same order for everyone who enters it. Start a race here and
+      share its code, and a leaderboard follows everyone along.
+    seeded: true
+    units: { fixed: 5 }
+
+defaultMode: expedition
+
+# Replayed by `runlog test`.
+fixtures:
+  - name: The tally is the player's word
+    mode: expedition
+    events:
+      - { t: RunStarted, mode: expedition }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: Margit }
+      - { t: CounterChanged, counter: deaths, by: 1 }
+      - { t: CounterChanged, counter: deaths, by: 1 }
+      - { t: StateApplied, state: done, subject: 1 }
+      - { t: CounterChanged, counter: targets, by: 1 }
+      - { t: CounterChanged, counter: vows, by: 1 }
+      - { t: UnitFinalized }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: "Three names" }
+      - { t: StateApplied, state: skipped, subject: 2 }
+      - { t: UnitFinalized }
+    expect:
+      - { path: counters.deaths, equals: 2 }
+      - { path: counters.targets, equals: 1 }
+      - { path: counters.vows, equals: 1 }
+      - { path: subjects.0.states.0, equals: done }
+      - { path: subjects.1.states.0, equals: skipped }

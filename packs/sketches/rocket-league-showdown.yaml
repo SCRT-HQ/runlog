@@ -1,0 +1,318 @@
+# Rocket League: Showdown — a moderated race for mechanics.
+#
+# Nobody can run an app while they are in a match, so somebody else does.
+# The moderator holds the device; the players are a roster. Each Match the
+# app draws three mechanics for the room's rank, everybody goes for them in
+# their own games, and the first to land each one is awarded it. The
+# scoreboard is the Showdown.
+#
+# The tables follow the game's ranks, Bronze to Supersonic Legend, one per
+# mode; points climb with the rank, so a Diamond mechanic is worth three
+# Bronze ones. The moderator's word is the only record.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.rocket-league-showdown
+version: "0.1.0"
+title: "Rocket League: Showdown"
+author: Runlog
+description: >-
+  A moderated race for mechanics. Each match draws a set for the room's rank,
+  as many as the moderator says; everyone goes for them, and the first to land
+  each one takes its points.
+  One person moderates so nobody has to run an app mid-match.
+
+category: games
+tags: [Rocket League, mechanics, race, moderated]
+
+requires:
+  - { id: game, label: Rocket League, kind: game, note: "One copy per runner, any platform. Free to play." }
+  - { id: system, label: A PC or console per runner, kind: platform }
+  - { id: voice, label: A voice channel or a room everyone is in, kind: other, note: "The moderator has to hear who landed what." }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - seededRuns
+  - counters
+  - timers
+  - journal
+  - moderated
+
+vocabulary:
+  run: { one: Showdown, many: Showdowns }
+  unit: { one: Match, many: Matches }
+  subject: { one: Set, many: Sets }
+  finalize: Log the match
+  terms:
+    roll: Draw
+
+unit:
+  createsSubject: true
+  clock: { kind: stopwatch }
+  min: 1
+  max: 20
+
+counters:
+  perMatch:
+    label: Mechanics per match
+    initial: 0
+    min: 0
+    max: 6
+  matches:
+    label: Matches played
+    initial: 0
+    hidden: true
+    incrementOn:
+      - { on: unitFinalized }
+
+tables:
+  bronze:
+    resolution: lookup
+    title: Bronze
+    description: Car control and the ball. One point each.
+    roll: d6
+    entries:
+      - { id: b-onnet, range: [1, 1], text: "Put five shots on target, on purpose.", points: 1 }
+      - { id: b-save, range: [2, 2], text: "Make a save by being in goal before the shot, not after.", points: 1 }
+      - { id: b-pads, range: [3, 3], text: "Fill your boost from small pads alone, twice.", points: 1 }
+      - { id: b-slide, range: [4, 4], text: "Powerslide a turn cleanly, without losing the ball.", points: 1 }
+      - { id: b-jump, range: [5, 5], text: "Hit a ball in the air with a single jump, three times.", points: 1 }
+      - { id: b-rotate, range: [6, 6], text: "Rotate back post after every attack for a whole match.", points: 1 }
+
+  silver:
+    resolution: lookup
+    title: Silver
+    description: The first real mechanics. One point each.
+    roll: d6
+    entries:
+      - { id: s-halfflip, range: [1, 1], text: "Half-flip to turn around after a lost challenge.", points: 1 }
+      - { id: s-aerial, range: [2, 2], text: "Hit a basic aerial: jump, boost, connect.", points: 1 }
+      - { id: s-wavedash, range: [3, 3], text: "Wave dash on landing to keep your speed.", points: 1 }
+      - { id: s-wallclear, range: [4, 4], text: "Clear a ball off your own wall before it drops.", points: 1 }
+      - { id: s-dribble, range: [5, 5], text: "Push-dribble the ball on the ground for three seconds.", points: 1 }
+      - { id: s-kickoff, range: [6, 6], text: "Win a kickoff with a diagonal flip.", points: 1 }
+
+  gold:
+    resolution: lookup
+    title: Gold
+    description: Speed, and the roof of the car. Two points each.
+    roll: d6
+    entries:
+      - { id: g-fastaerial, range: [1, 1], text: "Fast aerial: jump, tilt, second jump, boost.", points: 2 }
+      - { id: g-speedflip, range: [2, 2], text: "Speed flip a kickoff.", points: 2 }
+      - { id: g-carry, range: [3, 3], text: "Carry the ball on your roof for at least three seconds.", points: 2 }
+      - { id: g-shadow, range: [4, 4], text: "Shadow defend a whole possession without committing.", points: 2 }
+      - { id: g-backboard, range: [5, 5], text: "Clear a ball off your own backboard in the air.", points: 2 }
+      - { id: g-wallhit, range: [6, 6], text: "Drive up the wall and take the ball off it in the air.", points: 2 }
+
+  platinum:
+    resolution: lookup
+    title: Platinum
+    description: Mechanics that beat a defender. Two points each.
+    roll: d6
+    entries:
+      - { id: p-airroll, range: [1, 1], text: "Air roll into a shot, so the ball goes where you meant.", points: 2 }
+      - { id: p-flick, range: [2, 2], text: "Flick the ball off your roof past a defender.", points: 2 }
+      - { id: p-catch, range: [3, 3], text: "Catch a bounce dead on the roof instead of hitting it away.", points: 2 }
+      - { id: p-walljump, range: [4, 4], text: "Double-jump aerial off the wall, on to the ball.", points: 2 }
+      - { id: p-recover, range: [5, 5], text: "Land from an aerial wheels-down and driving, twice in a row.", points: 2 }
+      - { id: p-bump, range: [6, 6], text: "A bump or demo that leads to a goal within five seconds.", points: 2 }
+
+  diamond:
+    resolution: lookup
+    title: Diamond
+    description: Reading the play a second ahead. Three points each.
+    roll: d6
+    entries:
+      - { id: d-save, range: [1, 1], text: "Aerial save from crossbar height or higher.", points: 3 }
+      - { id: d-redirect, range: [2, 2], text: "Redirect a teammate's pass in the air, on net.", points: 3 }
+      - { id: d-wallair, range: [3, 3], text: "Wall touch into an air dribble touch, two touches in the air.", points: 3 }
+      - { id: d-power, range: [4, 4], text: "Power shot from a bounce, hit at the top of the bounce.", points: 3 }
+      - { id: d-fake, range: [5, 5], text: "Fake a challenge and beat the player who bought it.", points: 3 }
+      - { id: d-halfvolley, range: [6, 6], text: "Half-volley pass to a teammate, on their first touch.", points: 3 }
+
+  champion:
+    resolution: lookup
+    title: Champion
+    description: Mechanics people practice for months. Three points each.
+    roll: d6
+    entries:
+      - { id: c-airdribble, range: [1, 1], text: "Air dribble the ball for at least two touches, to a shot.", points: 3 }
+      - { id: c-doubletap, range: [2, 2], text: "Double tap off the backboard.", points: 3 }
+      - { id: c-ceiling, range: [3, 3], text: "Ceiling shot: off the ceiling, on to the ball, on net.", points: 3 }
+      - { id: c-musty, range: [4, 4], text: "Musty flick from a roof carry.", points: 3 }
+      - { id: c-walldash, range: [5, 5], text: "Wall dash along the side wall without a wheel touching the ground.", points: 3 }
+      - { id: c-flipreset, range: [6, 6], text: "Get a flip reset. Using it is a bonus.", points: 3 }
+
+  grandChampion:
+    resolution: lookup
+    title: Grand Champion
+    description: The hard stuff, done in a game and not in free play. Four points each.
+    roll: d6
+    entries:
+      - { id: gc-resetshot, range: [1, 1], text: "Flip reset and use it for the shot.", points: 4 }
+      - { id: gc-dribbletap, range: [2, 2], text: "Air dribble into a double tap.", points: 4 }
+      - { id: gc-pinch, range: [3, 3], text: "Kuxir pinch, or any wall pinch that beats the keeper.", points: 4 }
+      - { id: gc-ceilingtap, range: [4, 4], text: "Ceiling shot into a double tap.", points: 4 }
+      - { id: gc-breezi, range: [5, 5], text: "Breezi flick, or an honest attempt at one.", points: 4 }
+      - { id: gc-stall, range: [6, 6], text: "Stall in the air to beat a challenge, then finish the play.", points: 4 }
+
+  ssl:
+    resolution: lookup
+    title: Supersonic Legend
+    description: No divisions up here. Five points each.
+    roll: d6
+    entries:
+      - { id: l-resettap, range: [1, 1], text: "Flip reset into a double tap.", points: 5 }
+      - { id: l-groundtoair, range: [2, 2], text: "Ground dribble to air dribble to flip reset, one possession.", points: 5 }
+      - { id: l-delayed, range: [3, 3], text: "Delayed flip reset: hold it past a defender, then use it.", points: 5 }
+      - { id: l-ceilingpinch, range: [4, 4], text: "Ceiling pinch, on net.", points: 5 }
+      - { id: l-doublereset, range: [5, 5], text: "Two flip resets in one play.", points: 5 }
+      - { id: l-dunk, range: [6, 6], text: "Dunk: air dribble over the keeper and down into the net.", points: 5 }
+
+journal:
+  enabled: true
+  prompt: What happened in that match, and who landed what?
+
+phases:
+  - id: draw
+    label: Draw the set
+    steps:
+      # One flow serves every rank: the mode names the table. How many it
+      # draws is asked once, kept as a tally the moderator can nudge between
+      # matches, and read back every draw.
+      - kind: actions
+        do:
+          - do: when
+            all:
+              - { counter: perMatch, is: { eq: 0 } }
+              - { not: { modeIs: [anyRank] } }
+            then:
+              - { do: prompt, kind: chooseValue, label: "How many mechanics per match?", options: ["1", "2", "3", "4", "5", "6"], into: n }
+              - { do: modCounter, counter: perMatch, setFrom: n }
+          - { do: when, all: [{ modeIs: [bronze] }], then: [{ do: rollOn, table: bronze, timesFrom: perMatch }] }
+          - { do: when, all: [{ modeIs: [silver] }], then: [{ do: rollOn, table: silver, timesFrom: perMatch }] }
+          - { do: when, all: [{ modeIs: [gold] }], then: [{ do: rollOn, table: gold, timesFrom: perMatch }] }
+          - { do: when, all: [{ modeIs: [platinum] }], then: [{ do: rollOn, table: platinum, timesFrom: perMatch }] }
+          - { do: when, all: [{ modeIs: [diamond] }], then: [{ do: rollOn, table: diamond, timesFrom: perMatch }] }
+          - { do: when, all: [{ modeIs: [champion] }], then: [{ do: rollOn, table: champion, timesFrom: perMatch }] }
+          - { do: when, all: [{ modeIs: [grandChampion] }], then: [{ do: rollOn, table: grandChampion, timesFrom: perMatch }] }
+          - { do: when, all: [{ modeIs: [ssl] }], then: [{ do: rollOn, table: ssl, timesFrom: perMatch }] }
+          # Any rank: one from every table, Bronze to SSL, worth its rank's points.
+          - do: when
+            all:
+              - { modeIs: [anyRank] }
+            then:
+                - { do: rollOn, table: bronze }
+                - { do: rollOn, table: silver }
+                - { do: rollOn, table: gold }
+                - { do: rollOn, table: platinum }
+                - { do: rollOn, table: diamond }
+                - { do: rollOn, table: champion }
+                - { do: rollOn, table: grandChampion }
+                - { do: rollOn, table: ssl }
+      - kind: declareSubject
+        label: Call the match — playlist, and what everyone is queueing — so the log reads back.
+
+  - id: race
+    label: Race
+    steps:
+      - kind: manual
+        label: Let them play.
+        description: >-
+          The app cannot see the games. As each mechanic is landed, award it
+          under Winners to whoever landed it first. Their word, your call.
+        checklist:
+          - { text: "Every mechanic was either awarded or called unlanded.", optional: true }
+
+  - id: log
+    label: Log the match
+    steps:
+      - kind: finalizeUnit
+        label: Log the match
+
+endings:
+  - id: done
+    label: Call it
+    text: Enough for today. The scoreboard stands as it is.
+
+modes:
+  bronze:
+    label: Bronze
+    description: Bronze mechanics every Match, one point each. First to land one takes it.
+    units: { min: 1, max: 20 }
+    moderated: { contestants: { min: 2, max: 10 }, award: first }
+  silver:
+    label: Silver
+    description: Silver mechanics every Match, one point each.
+    units: { min: 1, max: 20 }
+    moderated: { contestants: { min: 2, max: 10 }, award: first }
+  gold:
+    label: Gold
+    description: Gold mechanics every Match, two points each.
+    units: { min: 1, max: 20 }
+    moderated: { contestants: { min: 2, max: 10 }, award: first }
+  platinum:
+    label: Platinum
+    description: Platinum mechanics every Match, two points each.
+    units: { min: 1, max: 20 }
+    moderated: { contestants: { min: 2, max: 10 }, award: first }
+  diamond:
+    label: Diamond
+    description: Diamond mechanics every Match, three points each.
+    units: { min: 1, max: 20 }
+    moderated: { contestants: { min: 2, max: 10 }, award: first }
+  champion:
+    label: Champion
+    description: Champion mechanics every Match, three points each.
+    units: { min: 1, max: 20 }
+    moderated: { contestants: { min: 2, max: 10 }, award: first }
+  grandChampion:
+    label: Grand Champion
+    description: Grand Champion mechanics every Match, four points each.
+    units: { min: 1, max: 20 }
+    moderated: { contestants: { min: 2, max: 10 }, award: first }
+  ssl:
+    label: Supersonic Legend
+    description: SSL mechanics every Match, five points each. No divisions up here.
+    units: { min: 1, max: 20 }
+    moderated: { contestants: { min: 2, max: 10 }, award: first }
+
+  anyRank:
+    label: Any rank, everyone scores
+    description: >-
+      One mechanic from every rank each Match, Bronze to Supersonic Legend.
+      Everyone who lands one scores it at its rank's points, and the first to
+      land it gets one more. Nobody has to land them all.
+    units: { min: 1, max: 20 }
+    moderated: { contestants: { min: 2, max: 10 }, award: everyone, firstBonus: 1 }
+
+defaultMode: gold
+
+fixtures:
+  - name: The first to land a mechanic takes its points
+    mode: gold
+    events:
+      - { t: RunStarted, mode: gold }
+      - { t: ContestantAdded, contestant: c1, name: Ada }
+      - { t: ContestantAdded, contestant: c2, name: Ben }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: gold, entryId: g-carry, cause: phase }
+      - { t: OutcomeResolved, table: gold, entryId: g-shadow, cause: phase }
+      - { t: OutcomeResolved, table: gold, entryId: g-wallhit, cause: phase }
+      - { t: CounterChanged, counter: perMatch, set: 3 }
+      - { t: SubjectDeclared, subjectType: "Ranked 2s" }
+      - { t: Awarded, contestant: c2, outcome: 0, table: gold, entryId: g-carry, points: 2 }
+      - { t: Awarded, contestant: c1, outcome: 2, table: gold, entryId: g-wallhit, points: 2 }
+      - { t: UnitFinalized }
+    expect:
+      - { path: awards.length, equals: 2 }
+      - { path: awards.0.contestant, equals: c2 }
+      - { path: counters.matches, equals: 1 }
+      - { path: contestants.length, equals: 2 }
+      - { path: counters.perMatch, equals: 3 }

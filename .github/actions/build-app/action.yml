@@ -1,0 +1,42 @@
+name: Build the app for an environment
+description: Install, build the web app with the environment's sign-in client, and lay the hosted pages over the build.
+
+inputs:
+  environment:
+    description: dev or prd
+    required: true
+  workos-client-id:
+    description: The WorkOS client id that puts sign-in on the hosted app. Public; it appears in every sign-in URL.
+    required: true
+  target-account-id:
+    description: The AWS account the hosted pages are written for.
+    required: true
+  node-version:
+    description: Node version to use
+    required: false
+    default: '22'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node and run npm ci
+      uses: ./.github/actions/npm-ci
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Build the app
+      shell: bash
+      env:
+        VITE_WORKOS_CLIENT_ID: ${{ inputs.workos-client-id }}
+        # Shown in the app's footer and its error panel, so a report says
+        # which build it came from.
+        RUNLOG_SHA: ${{ github.sha }}
+      run: npm run build -w apps/web
+
+    # The pages that make this address a service someone runs: terms,
+    # privacy, pricing, the operator's name. See hosted/scripts/overlay.ts.
+    - name: Lay the hosted pages over the build
+      shell: bash
+      env:
+        RUNLOG_TARGET_ACCOUNT: ${{ inputs.target-account-id }}
+      run: npx tsx hosted/scripts/overlay.ts --dist apps/web/dist --app . --env "${{ inputs.environment }}" --sha "${{ github.sha }}"

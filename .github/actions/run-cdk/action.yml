@@ -1,0 +1,118 @@
+name: 'Run AWS CDK'
+description: 'Run AWS CDK command'
+
+author: 'Nate Ferrell <nate@scrthq.com>'
+
+inputs:
+  cdk-command:
+    description: 'CDK command to run. Supported options include: diff, deploy, destroy, synth'
+    required: true
+  target-account-id:
+    description: 'Target AWS account ID'
+    required: true
+  target-region:
+    description: 'Target AWS region'
+    required: false
+    # CloudFront will not accept a certificate issued anywhere else, and the
+    # site stack refuses to synthesise outside it rather than failing later
+    # inside ACM with a message that does not say why.
+    default: us-east-1
+  node-version:
+    description: 'Node version to use'
+    required: false
+    default: 22
+  github-role-name:
+    description: 'Name of the role to assume in the target AWS account for GitHub Actions'
+    required: false
+    default: GitHubActionRole
+  aws-environment:
+    description: 'AWS environment to deploy to. Supported options include: prd, dev'
+    required: true
+  hosted-zone-id:
+    description: 'Route 53 zone the site records go in. Omit to let CDK look it up.'
+    required: false
+    default: ''
+  app-dist:
+    description: 'The built app, laid over with the hosted pages, for the site stack to publish. Relative to the repository root; empty publishes nothing.'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Evaluate Inputs
+      run: |
+        if [[ "diff deploy destroy synth" =~ (^|[[:space:]])${{ inputs.cdk-command }}($|[[:space:]]) ]]; then
+          echo "CDK command is '${{ inputs.cdk-command }}'."
+        else
+          echo "CDK command '${{ inputs.cdk-command }}' is not supported!"
+          exit 1
+        fi
+
+        if [[ "prd dev" =~ (^|[[:space:]])${{ inputs.aws-environment }}($|[[:space:]]) ]]; then
+          echo "AWS environment is '${{ inputs.aws-environment }}'."
+        else
+          echo "AWS environment '${{ inputs.aws-environment }}' is not supported!"
+          exit 1
+        fi
+      shell: bash
+
+    # Install AWS CDK CLI
+    - run: npm install -g aws-cdk
+      shell: bash
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v6
+      with:
+        role-to-assume: arn:aws:iam::${{ inputs.target-account-id }}:role/${{ inputs.github-role-name }}
+        aws-region: ${{ inputs.target-region }}
+
+    - name: Setup Node and run npm ci
+      uses: ./.github/actions/npm-ci
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - run: |
+        cdk synth
+      shell: bash
+      working-directory: hosted/infra
+      if: ${{ inputs.cdk-command == 'synth' }}
+      env:
+        CDK_DEFAULT_ACCOUNT: ${{ inputs.target-account-id }}
+        RUNLOG_TARGET_ACCOUNT: ${{ inputs.target-account-id }}
+        CDK_DEFAULT_REGION: ${{ inputs.target-region }}
+        AWS_REGION: ${{ inputs.target-region }}
+        AWS_ENVIRONMENT: ${{ inputs.aws-environment }}
+        RUNLOG_APP_DIST: ${{ inputs.app-dist && format('{0}/{1}', github.workspace, inputs.app-dist) || '' }}
+        RUNLOG_DEV_ZONE_ID: ${{ inputs.hosted-zone-id }}
+        RUNLOG_PRD_ZONE_ID: ${{ inputs.hosted-zone-id }}
+
+    - run: |
+        cdk diff
+      shell: bash
+      working-directory: hosted/infra
+      if: ${{ inputs.cdk-command == 'diff' }}
+      env:
+        CDK_DEFAULT_ACCOUNT: ${{ inputs.target-account-id }}
+        RUNLOG_TARGET_ACCOUNT: ${{ inputs.target-account-id }}
+        CDK_DEFAULT_REGION: ${{ inputs.target-region }}
+        AWS_REGION: ${{ inputs.target-region }}
+        AWS_ENVIRONMENT: ${{ inputs.aws-environment }}
+        RUNLOG_APP_DIST: ${{ inputs.app-dist && format('{0}/{1}', github.workspace, inputs.app-dist) || '' }}
+        RUNLOG_DEV_ZONE_ID: ${{ inputs.hosted-zone-id }}
+        RUNLOG_PRD_ZONE_ID: ${{ inputs.hosted-zone-id }}
+
+    - run: |
+        cdk deploy --all --require-approval never
+      shell: bash
+      working-directory: hosted/infra
+      if: ${{ inputs.cdk-command == 'deploy' }}
+      env:
+        CDK_DEFAULT_ACCOUNT: ${{ inputs.target-account-id }}
+        RUNLOG_TARGET_ACCOUNT: ${{ inputs.target-account-id }}
+        CDK_DEFAULT_REGION: ${{ inputs.target-region }}
+        AWS_REGION: ${{ inputs.target-region }}
+        AWS_ENVIRONMENT: ${{ inputs.aws-environment }}
+        RUNLOG_APP_DIST: ${{ inputs.app-dist && format('{0}/{1}', github.workspace, inputs.app-dist) || '' }}
+        RUNLOG_DEV_ZONE_ID: ${{ inputs.hosted-zone-id }}
+        RUNLOG_PRD_ZONE_ID: ${{ inputs.hosted-zone-id }}

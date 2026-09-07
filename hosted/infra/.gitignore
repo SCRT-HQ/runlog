@@ -1,0 +1,13 @@
+*.js
+*.d.ts
+node_modules
+junit.xml
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+cdk.context.json
+
+.env
+.env.*
+.envrc

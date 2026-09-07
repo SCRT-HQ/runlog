@@ -1,0 +1,37 @@
+# Selling your packs
+
+There are two ways to sell a pack, and the line between them is who keeps the receipts.
+
+## From your own hands <Plan tier="free" />
+
+The Designer and the command line make everything a sale needs, and the app never has to know it happened:
+
+<Steps>
+  <li>Sign the pack, so an altered copy cannot claim to be yours: <Kbd>runlog keygen</Kbd> once, then <Kbd>runlog sign</Kbd>, or **Sign** in the Designer. Claim the key on your profile and the app names you beside it.</li>
+  <li>For each buyer, **Seal a copy for a buyer** in the Designer, or <Kbd>runlog issue my-pack.yaml --to "Their name" --seal</Kbd>. You get a sealed `.rlpack` file and a license key.</li>
+  <li>Send both however you sell: your own shop, a membership page, a mailing list. The buyer loads the file with **Load a pack from a file** and types the key once. Signed in, the key is kept in their account, so the same file opens on their other devices.</li>
+</Steps>
+
+A build server can do the signing and the sealing too: `RUNLOG_SIGNING_KEY` holds the key file's contents, `RUNLOG_API_KEY` a command-line key from your profile (one that only releases, so the build server's secret reaches nothing else), and the repository's `examples/github-actions` has a workflow that signs a tagged release and attaches the pack and its paper to it.
+
+Nothing here costs anything, needs no account, and takes no share. It also gives you nothing back: a lost key is yours to send again, a refund is yours to make, and there is no card in the catalog.
+
+## Through the catalog <Plan tier="publisher" />
+
+Become a publisher on your profile, set up payouts with Stripe, upload the signed pack, and list it at a price. Then the catalog does the rest:
+
+- The card, with your name, the pack's summary, and **Buy**.
+- The sale, on your own Stripe account: the buyer pays you directly and you are on the receipt.
+- A copy sealed for that buyer alone, under a fresh key, delivered at once and kept in their account.
+- The ledger on your profile: what sold, to whom, for how much; send a lost key again; revoke one.
+- People: under **People in** your publisher, an admin invites others by email; a member uploads, lists, and sees the ledger, an admin also invites and removes people, and payouts stay with the founder.
+
+From version control, `npx @scrthq/runlog release my-pack.yaml --price 3.00` does the upload and the listing in one command, with `RUNLOG_API_KEY` set; a later release without a price keeps the one it has. The `catalog-release` workflow in the repository's `examples/github-actions` runs it when a release is published.
+
+The catalog takes 5% of each sale, or nothing with the hosted-licensing subscription. Stripe's own fees are separate and yours, as they would be selling anywhere.
+
+## Mixing the two
+
+A publisher can list one pack free for reach and sell another outside the catalog; a pack sealed from your own hands is not in the ledger, and a pack sold through the catalog needs no sealing by you. Whatever the route, the pack is signed by you and only you: the catalog seals what you signed and never holds your signing key.
+
+<Note>The publisher agreement, linked from the foot of the hosted copy, says the rest in the words an agreement needs: you are the seller, Stripe holds the money, and a sale is final once the copy has been opened, except where the law says otherwise.</Note>
