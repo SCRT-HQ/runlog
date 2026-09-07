@@ -282,7 +282,7 @@ export function WelcomeView() {
               Write a pack
             </a>
           </p>
-          <label className="toggle welcomeSkip" title="On this device, the address goes straight to the app. The footer's What Runlog is brings this page back.">
+          <label className="toggle welcomeSkip" title="On this device, the address goes straight to the app. The Runlog mark in the app's bar brings this page back.">
             <input
               type="checkbox"
               checked={skip}
