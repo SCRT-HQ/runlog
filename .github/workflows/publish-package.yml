@@ -70,10 +70,6 @@ jobs:
     env:
       TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
     steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ env.TAG }}
-
       # Everything goes out under `next` — installable by asking for it,
       # invisible to a plain `npx` — until the NPM_CHANNEL repository
       # variable says `latest`. A prerelease is `next` regardless, and a
@@ -88,11 +84,32 @@ jobs:
             v[0-9]*.[0-9]*.[0-9]*) ;;
             *) echo "::error::'$TAG' is not a release tag"; exit 1 ;;
           esac
-          pre="$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease 2>/dev/null || echo false)"
+          # A published release by that name, or nothing is checked out at
+          # all: the tag reaches this job from another run's head, and the
+          # release is what makes it a release rather than a name.
+          pre="$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)" || { echo "::error::'$TAG' is not a published release"; exit 1; }
           channel="${ASKED:-$DEFAULT}"
           [ "$pre" = "true" ] && channel=next
           echo "CHANNEL=$channel" >> "$GITHUB_ENV"
           echo "Publishing $TAG as $channel"
+
+      # The tag, and only after it has been shown to be a release. For a run
+      # that follows a deploy, the tag must also be the commit that deploy
+      # ran, so what reaches npm is what reached production.
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ env.TAG }}
+      - name: The tag is the commit that was deployed
+        if: github.event_name == 'workflow_run'
+        env:
+          DEPLOYED: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          here="$(git rev-parse HEAD)"
+          if [ "$here" != "$DEPLOYED" ]; then
+            echo "::error::$TAG is at $here but the deploy ran $DEPLOYED"
+            exit 1
+          fi
 
       - uses: ./.github/actions/npm-ci
 
