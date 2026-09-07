@@ -40,5 +40,5 @@ stack publishes the result.
 The pipeline in `.github/workflows/CI-CD.yml` builds the app, lays the
 pages over it, and runs `cdk deploy` from `hosted/infra` with the build
 handed to the site stack, which publishes it and invalidates the edge.
-Dev on every merge; production from a published release. `infra/README.md`
-has the accounts, the roles and what the stacks create.
+A staging copy on every merge; the hosted copy from a published release.
+`infra/README.md` has the accounts, the roles and what the stacks create.

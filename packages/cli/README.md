@@ -139,7 +139,7 @@ in the environment instead:
 | --- | --- |
 | `RUNLOG_API_KEY` | a command-line key from your profile page in the app; stands in for `login`. Make it a key that *only releases*: it can check, sign, publish and release packs and nothing else, so a leaked build secret cannot reach your runs, sales or people |
 | `RUNLOG_SIGNING_KEY` | the whole contents of the `my-key.json` that `keygen` wrote; stands in for `--key` |
-| `RUNLOG_API` | optional: the dev address, `https://runlog.dev.scrthq.com/api`, with a key made there |
+| `RUNLOG_API` | optional: another address, such as a copy you run yourself (`https://<your domain>/api`), with a key made there |
 
 ```yaml
 # .github/workflows/release.yml — a GitHub release is published: check, sign, release
@@ -188,7 +188,7 @@ build of the app; `RUNLOG_APP_DIR` does the same from the environment.
 
 ```bash
 npx @scrthq/runlog login              # a short code, confirmed in the browser it opens
-npx @scrthq/runlog login --api https://runlog.dev.scrthq.com/api
+npx @scrthq/runlog login --api https://<your domain>/api   # a copy you run yourself
 npx @scrthq/runlog login --key        # paste a key from your profile page: a machine with no browser
 npx @scrthq/runlog whoami
 npx @scrthq/runlog logout
