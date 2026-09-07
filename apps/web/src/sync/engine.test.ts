@@ -84,6 +84,7 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
     me: async () => ({ sub: me, sid: "", env: "test", profile: { createdAt: "", lastSeenAt: "" }, entitlements: [] }),
     putProfile: async () => ({ createdAt: "", lastSeenAt: "" }),
     deleteMe: async () => {},
+    exportMe: async () => ({ url: "", bytes: 0, expiresAt: "" }),
     manifest: async (): Promise<Manifest> => {
       calls.push("manifest");
       if (opts.offline) throw new SyncError("offline");

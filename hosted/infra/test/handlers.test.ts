@@ -334,13 +334,14 @@ import { webcrypto } from "node:crypto";
  * the app's index page with a 200 on the front.
  */
 
-function memoryStore(): Store & { rows: Map<string, unknown> } {
+function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<string, string> } {
   const packs = new Map<string, { meta: PackMeta; source: string }>();
   const sessions = new Map<string, { meta: SessionMeta; members: SessionMember[]; events: StoredEvent[]; seen: Set<string> }>();
   const snapshots = new Map<string, { at: string; snapshot: unknown }>();
   const licenses = new Map<string, { meta: LicenseMeta; key: string }>();
   const profiles = new Map<string, Profile>();
   const invites = new Map<string, Invite>();
+  const exports = new Map<string, string>();
   const reactions = new Map<string, Reaction[]>();
   const people = new Map<string, Map<string, Person>>();
   const counters = new Map<string, number>();
@@ -351,6 +352,7 @@ function memoryStore(): Store & { rows: Map<string, unknown> } {
   const mine = (sub: string) => (key: string) => key.startsWith(`${sub}/`);
   return {
     rows: packs,
+    exports,
     async touchProfile(sub, at, snapshot = {}) {
       const profile: Profile = {
         ...(profiles.get(sub) ?? { createdAt: at }),
@@ -363,6 +365,10 @@ function memoryStore(): Store & { rows: Map<string, unknown> } {
     },
     async entitlements() {
       return [];
+    },
+    async saveExport(sub, body, at) {
+      exports.set(sub, body);
+      return { url: `https://export.test/${sub}`, expiresAt: at };
     },
     async deleteUser(sub) {
       let n = 0;
@@ -1321,6 +1327,27 @@ describe("sessions", () => {
     expect(list.body["invites"]).toMatchObject([{ email: "friend@example.com", accepted: true }]);
     expect((await call(request("GET", "/api/people"), d)).body["people"]).toMatchObject([{ sub: "user_2" }]);
     expect((await call(request("GET", "/api/people", { token: "guest" }), d)).body["people"]).toMatchObject([{ sub: "user_1", name: "Nate" }]);
+  });
+
+  it("hands the account everything it holds as one file", async () => {
+    const d = deps(memoryStore(), { mailer: fakeMail().mailer });
+    await call(request("PUT", "/api/me/profile", { body: { name: "Nate", email: "nate@example.com" } }), d);
+    await call(request("POST", "/api/sessions", { body: { ...sessionBody, name: "Tuesday" } }), d);
+    await call(request("POST", "/api/sessions/01RUN/invites", { body: { email: "friend@example.com", role: "player" } }), d);
+    await call(request("PUT", "/api/packs/p", { body: packBody }), d);
+
+    const made = await call(request("POST", "/api/me/export"), d);
+    expect(made.status).toBe(200);
+    expect(made.body).toMatchObject({ url: "https://export.test/user_1" });
+    expect(made.body["bytes"]).toBeGreaterThan(100);
+    const file = JSON.parse((d.store as unknown as { exports: Map<string, string> }).exports.get("user_1") ?? "{}") as Record<string, unknown>;
+    expect(file["account"]).toMatchObject({ id: "user_1", profile: { name: "Nate", email: "nate@example.com" } });
+    expect(file["sessions"]).toMatchObject([{ id: "01RUN", role: "owner", name: "Tuesday", invites: [{ email: "friend@example.com" }] }]);
+    expect((file["sessions"] as Array<{ events: unknown[] }>)[0]!.events.length).toBeGreaterThan(0);
+    expect(file["packs"]).toMatchObject([{ id: "p", source: packBody.source }]);
+
+    // A command-line key does not get to walk off with the lot.
+    expect((await call(request("POST", "/api/me/export"), { ...d, verify: async () => ({ sub: "user_1", sid: "key:k1" }) })).status).toBe(422);
   });
 
   it("lists the invitations waiting for an address in the app, and lets one be declined", async () => {
