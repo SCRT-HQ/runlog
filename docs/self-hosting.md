@@ -178,7 +178,7 @@ app shows the bundled packs from the build, which is the same list.
 
 ### A pipeline, if you want one
 
-`.github/workflows/CI-CD.yml` and `Deploy Production.yml` are the pipeline
+`.github/workflows/CI-CD.yml` and `deploy-production.yml` are the pipeline
 this repository runs: tests and diffs on a pull request, a staging copy on
 a merge, the hosted copy from a release. They build the app from the repository rather
 than taking the package, and they expect the environments and secrets that

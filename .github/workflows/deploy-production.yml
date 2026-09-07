@@ -1,0 +1,214 @@
+name: Deploy Production
+
+# Production deploys from a release and nothing else, and the package
+# publishes once production has it.
+#
+# `release: published` is the path, whether the release was cut by CI or by a
+# person. CI creates it with a GitHub App token rather than GITHUB_TOKEN
+# precisely so this event fires: anything GITHUB_TOKEN does is barred from
+# starting another run.
+#
+# `workflow_dispatch` is kept for re-deploying a tag that has already been
+# released: a rollback, or a retry after a transient failure. It publishes
+# the tag's package too, if the registry lacks it.
+#
+# Either way this deploys the *tag*, never whatever happens to be on main, so
+# what reaches production is exactly what was released: the app built from
+# that commit, laid over with the hosted pages, and the hosting itself.
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release tag to deploy, e.g. v1.4.0
+        required: true
+        type: string
+      channel:
+        description: npm dist-tag for the package. `next` publishes without moving `latest`.
+        required: false
+        default: latest
+        type: choice
+        options:
+          - latest
+          - next
+
+env:
+  NODE_VERSION: 22
+  AWS_REGION: us-east-1
+  GITHUB_ROLE_NAME: GitHubActionRole
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  # One production deploy at a time. A queued run waits for one in flight.
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  ProdDeploy:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    # The environment's reviewers, if any, are asked here; long enough for one
+    # to get to it.
+    timeout-minutes: 360
+    environment: deploy-prd
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Work out which tag to deploy
+        id: tag
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.release.tag_name || github.event.inputs.tag }}"
+          if [ -z "$tag" ]; then
+            echo "::error::No tag to deploy. Publish a release, or dispatch this workflow with one."
+            exit 1
+          fi
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$tag' is not a release tag. Production deploys releases only."
+            exit 1
+          fi
+          echo "Deploying ${tag}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      # The tag, explicitly, not the default ref.
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ steps.tag.outputs.tag }}
+
+      - uses: ./.github/actions/build-app
+        with:
+          environment: prd
+          workos-client-id: ${{ vars.WORKOS_CLIENT_ID }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+
+      - name: Deploy the hosting and publish the build to production
+        uses: ./.github/actions/run-cdk
+        with:
+          cdk-command: deploy
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          target-region: ${{ env.AWS_REGION }}
+          node-version: ${{ env.NODE_VERSION }}
+          github-role-name: ${{ env.GITHUB_ROLE_NAME }}
+          aws-environment: prd
+          hosted-zone-id: ${{ secrets.RUNLOG_ZONE_ID }}
+          app-dist: apps/web/dist
+
+      - name: Seed the catalog with the built-in packs
+        env:
+          RUNLOG_API: https://runlog.scrthq.com/api
+          RUNLOG_API_KEY: ${{ secrets.RUNLOG_API_KEY }}
+        run: npm run seed:listings
+
+      - run: echo "### Deployed ${{ steps.tag.outputs.tag }} to production" >> "$GITHUB_STEP_SUMMARY"
+
+  # `@scrthq/runlog` is the CLI and, through its library entry point, the
+  # sealing API a seller's own backend uses. It is staged by scripts/stage.ts
+  # from the release tag, carries the tag's version, and goes out only if
+  # that version is not on the registry yet, so a re-run of a release is
+  # harmless. It follows the deploy, so a version reaches npm once the same
+  # tag is live and never for a release that failed to ship.
+  #
+  # Publishes with OIDC and nothing else: the package on npmjs.com names this
+  # repository, this file (deploy-production.yml, no spaces, since the name is
+  # matched against the token's claim) and the `npm-publish` environment as a
+  # trusted publisher, and the job's id-token is the credential. No token is
+  # stored anywhere, and npm attaches provenance on its own.
+  Publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    needs: ProdDeploy
+    # The trusted publisher on npmjs.com names this environment as well as
+    # the workflow, so a token minted outside it publishes nothing; and an
+    # environment is where a required reviewer goes, if a release should
+    # ever wait for one.
+    environment:
+      name: npm-publish
+      url: https://www.npmjs.com/package/@scrthq/runlog
+    env:
+      TAG: ${{ needs.ProdDeploy.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ needs.ProdDeploy.outputs.tag }}
+
+      # Everything goes out under `latest` once the NPM_CHANNEL repository
+      # variable says so, `next` before that; a prerelease is `next`
+      # regardless, and a hand-run says which it wants.
+      - name: Decide the channel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ASKED: ${{ inputs.channel }}
+          DEFAULT: ${{ vars.NPM_CHANNEL || 'next' }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          set -euo pipefail
+          pre="${PRERELEASE:-}"
+          if [ -z "$pre" ]; then pre="$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)"; fi
+          channel="${ASKED:-$DEFAULT}"
+          [ "$pre" = "true" ] && channel=next
+          echo "CHANNEL=$channel" >> "$GITHUB_ENV"
+          echo "Publishing $TAG as $channel"
+
+      - uses: ./.github/actions/npm-ci
+
+      # Trusted publishing wants npm 11.5.1 or later; the upgrade makes
+      # sure of it whatever Node 24 happens to bundle. Pinned to 11: the
+      # first 12.0 answered the OIDC exchange with nothing and the publish
+      # with a 404, so the major is taken deliberately, not by default. No
+      # package-manager cache in a release build, as npm's own example says.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install -g npm@11 && npm --version
+
+      # The exchange npm does quietly, done aloud: the job's OIDC token
+      # for the registry's publish token. npm hides the registry's answer
+      # and reports a 404 on the publish instead, so a trusted publisher
+      # that is misconfigured, or bound to a repository that no longer
+      # exists, looks like a missing package. This prints the status and
+      # the registry's words, and never a token.
+      - name: Ask the registry whether it trusts this workflow
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          id="$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=npm:registry.npmjs.org" | jq -r .value)"
+          status="$(curl -sS -o /tmp/exchange.json -w '%{http_code}' -X POST -H "Authorization: Bearer $id" -H 'Content-Type: application/json' "https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/@scrthq%2frunlog")"
+          echo "registry answered $status"
+          jq -r 'del(.token) | tostring' /tmp/exchange.json 2>/dev/null || true
+          {
+            echo "### Trusted publishing: registry answered $status"
+            jq -r 'del(.token) | .message // .error // "no message"' /tmp/exchange.json 2>/dev/null || true
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm -f /tmp/exchange.json
+
+      - name: Test what is being published
+        run: npx vitest run packages/container packages/cli
+
+      # The app rides in the package for `runlog serve`: the plain build,
+      # with no sign-in client, which is the copy that works offline.
+      - name: Build the app
+        run: npm run build --workspace apps/web
+
+      - name: Stage the package at the release's version
+        run: node --experimental-strip-types scripts/stage.ts "$TAG"
+
+      - name: Publish what the registry does not have yet
+        run: |
+          for dir in packages/cli/stage; do
+            name="$(node -p "require('./$dir/package.json').name")"
+            version="$(node -p "require('./$dir/package.json').version")"
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version is already on npm; leaving it."
+              continue
+            fi
+            (cd "$dir" && npm publish --access public --tag "$CHANNEL")
+            echo "### Published \`$name@$version\` as \`$CHANNEL\`" >> "$GITHUB_STEP_SUMMARY"
+          done
