@@ -13,7 +13,6 @@
   --ink: #ebe6dc;
   --muted: #b3a99b;
   --accent: #9fd3b6;
-  --note: #e3c27a;
   --serif: Literata, Georgia, "Iowan Old Style", "Times New Roman", serif;
   --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
@@ -26,7 +25,6 @@
     --ink: #1c1a17;
     --muted: #4a453e;
     --accent: #3d7a5b;
-    --note: #8a6a12;
   }
 }
 
@@ -136,19 +134,6 @@ li {
 .summary ul {
   margin: 0.4rem 0 0;
   padding-left: 1.2rem;
-}
-.counsel {
-  border-left: 3px solid var(--note);
-  padding: 0.2rem 0 0.2rem 0.8rem;
-  margin: 0.8rem 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-.counsel::before {
-  content: "For counsel: ";
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--note);
 }
 code {
   font-family: var(--mono);
