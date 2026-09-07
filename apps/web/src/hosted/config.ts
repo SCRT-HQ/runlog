@@ -33,6 +33,8 @@ export interface Hosted {
     about?: string;
     licenses?: string;
     source?: string;
+    /** Where people who play talk to each other; the operator's to name. */
+    community?: string;
   };
   features: {
     /** Whether plans, checkout and the billing portal are on. */
@@ -76,6 +78,7 @@ export function parseHosted(raw: unknown): Hosted | null {
       ...optional("about"),
       ...optional("licenses"),
       ...optional("source"),
+      ...optional("community"),
     },
     features: { billing: f["billing"] === true },
   };
