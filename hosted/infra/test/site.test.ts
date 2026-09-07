@@ -202,16 +202,11 @@ describe("the site", () => {
       expect(api.CachePolicyId).toBe("4135ea2d-6df8-44a3-9df3-4b5a84be39ad");
       // The managed AllViewerExceptHostHeader policy: Authorization reaches
       // the API, and API Gateway keeps routing on its own hostname.
-      // Every viewer header but Host, and the one CloudFront header the
-      // beacon's count wants: the viewer's country.
-      expect(api.OriginRequestPolicyId.Ref).toMatch(/^ApiOriginRequest/);
-      withApi.hasResourceProperties("AWS::CloudFront::OriginRequestPolicy", {
-        OriginRequestPolicyConfig: Match.objectLike({
-          HeadersConfig: { HeaderBehavior: "allViewerAndWhitelistCloudFront", Headers: ["CloudFront-Viewer-Country"] },
-          CookiesConfig: { CookieBehavior: "all" },
-          QueryStringsConfig: { QueryStringBehavior: "all" },
-        }),
-      });
+      // The managed AllViewerExceptHostHeader policy: Authorization reaches
+      // the API, and API Gateway keeps routing on its own hostname. Never a
+      // policy that forwards Host, however it is spelled: that is a 404 from
+      // the gateway and the app page from the edge, for every API call.
+      expect(api.OriginRequestPolicyId).toBe("b689b0a8-53d0-40ab-baf2-68738e2966ac");
       expect(api.AllowedMethods).toEqual(expect.arrayContaining(["PUT", "DELETE"]));
     });
 
@@ -228,7 +223,7 @@ describe("the site", () => {
       const ws = config.CacheBehaviors.find((b: { PathPattern: string }) => b.PathPattern === "/ws");
       expect(ws).toBeDefined();
       expect(ws.CachePolicyId).toBe("4135ea2d-6df8-44a3-9df3-4b5a84be39ad");
-      expect(ws.OriginRequestPolicyId.Ref).toMatch(/^ApiOriginRequest/);
+      expect(ws.OriginRequestPolicyId).toBe("b689b0a8-53d0-40ab-baf2-68738e2966ac");
       // Safari does not count 'self' for wss:, so the policy names it.
       const policies = live.findResources("AWS::CloudFront::ResponseHeadersPolicy");
       expect(JSON.stringify(Object.values(policies))).toContain("connect-src 'self' https://api.workos.com wss://runlog.scrthq.com;");
