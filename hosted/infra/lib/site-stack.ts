@@ -326,17 +326,6 @@ export class SiteStack extends Stack {
    * leaves Host out, which is what API Gateway needs — it routes on its own
    * hostname. The same security headers ride along; HSTS on JSON is harmless.
    */
-  private originRequest?: cloudfront.OriginRequestPolicy;
-  private apiOriginRequest(): cloudfront.OriginRequestPolicy {
-    this.originRequest ??= new cloudfront.OriginRequestPolicy(this, "ApiOriginRequest", {
-      comment: "Every viewer header but Host, every cookie and query string, and the viewer's country",
-      headerBehavior: cloudfront.OriginRequestHeaderBehavior.all("CloudFront-Viewer-Country"),
-      cookieBehavior: cloudfront.OriginRequestCookieBehavior.all(),
-      queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all(),
-    });
-    return this.originRequest;
-  }
-
   private apiBehavior(host: string, config: EnvConfig): cloudfront.BehaviorOptions {
     return {
       origin: new origins.HttpOrigin(host, {
@@ -345,10 +334,12 @@ export class SiteStack extends Stack {
       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
       allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
       cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-      // Every viewer header but Host, which API Gateway routes on, plus the
-      // one header only the edge knows: the country a request came from,
-      // which is all the beacon's count wants of where.
-      originRequestPolicy: this.apiOriginRequest(),
+      // Every viewer header but Host: API Gateway routes on its own
+      // hostname, and a policy that forwards the viewer's Host makes it
+      // answer 404, which the edge then turns into the app page. (A policy
+      // that adds the viewer's country adds Host with it, which is how the
+      // API went dark once; the country comes another way, or not at all.)
+      originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
       responseHeadersPolicy: this.headers(config),
       compress: false,
     };
