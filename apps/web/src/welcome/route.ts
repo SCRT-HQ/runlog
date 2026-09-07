@@ -6,13 +6,18 @@
  * `play`. Anyone who arrived with somewhere to go — a live link, a guide
  * page, a catalog link, an invitation, a purchase, a race code, a sign-in
  * on its way back — is in the app already, whatever the path says, and
- * the address is then made to read `play` so it is honest. A copy opened
- * from disk has no paths to speak of and is always the app.
+ * the address is then made to read `play` so it is honest. One query is
+ * the exception: `?welcome` asks for the welcome page by name, which is
+ * how the mark in the app's bar and the footer's "What Runlog is" reach
+ * it for somebody who chose to skip it. A copy opened from disk has no
+ * paths to speak of and is always the app.
  *
  * Every rule here is pure, so the tests pin it without a browser.
  */
 export const APP_SEGMENT = "play";
 const SKIP_KEY = "runlog:welcome";
+/** The query that asks for the welcome page by name. */
+export const WELCOME_QUERY = "?welcome";
 
 export interface Where {
   protocol: string;
@@ -34,6 +39,7 @@ export function isAppPath(pathname: string, base: string): boolean {
 
 export function whereTo(w: Where): "welcome" | "app" {
   if (!w.protocol.startsWith("http")) return "app";
+  if (w.search === WELCOME_QUERY && w.hash === "") return "welcome";
   if (isAppPath(w.pathname, w.base)) return "app";
   if (w.hash !== "" || w.search !== "") return "app";
   if (w.skip) return "app";
@@ -43,6 +49,16 @@ export function whereTo(w: Where): "welcome" | "app" {
 /** The app's address under this base: `/play`, or `/runlog/play`. */
 export function appPath(base: string): string {
   return `${base}${APP_SEGMENT}`;
+}
+
+/**
+ * The welcome page's address under this base, asked for by name so it
+ * opens even where the person chose to skip it; the page then tidies the
+ * query away. Null from a file, where there is no welcome page to reach.
+ */
+export function welcomePath(protocol: string, base: string): string | null {
+  if (!protocol.startsWith("http")) return null;
+  return `${base}${WELCOME_QUERY}`;
 }
 
 /**

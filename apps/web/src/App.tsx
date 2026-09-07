@@ -40,6 +40,7 @@ import { useApi } from "./sync/useApi.ts";
 import { SealedPackPrompt } from "./share/SealedPackPrompt.tsx";
 import { AccountBadge } from "./auth/AccountBadge.tsx";
 import { Footer } from "./hosted/Footer.tsx";
+import { baseOf, welcomePath } from "./welcome/route.ts";
 import { TermsGate } from "./hosted/TermsGate.tsx";
 import { useAccount } from "./auth/Account.tsx";
 import { createApi } from "./sync/client.ts";
@@ -703,14 +704,22 @@ export default function App() {
     );
   }
 
+  // Where the mark goes: the welcome page, where there is one. Read once,
+  // and only where there is a location to read (the tests render without).
+  const home = typeof location !== "undefined" ? welcomePath(location.protocol, baseOf(location.href)) : null;
+
   return (
     <div className="app">
       <header className="topbar">
+        {/* The mark goes home: the page that says what Runlog is, even for
+            somebody who chose to skip it. From a file there is no such page,
+            and the mark is the way to the shelf instead. */}
         <a
           className="brand"
-          href="./play"
-          title="Your packs"
+          href={home ?? "./"}
+          title="What Runlog is"
           onClick={(e) => {
+            if (home) return;
             e.preventDefault();
             setView("library");
             if (location.hash) history.replaceState(null, "", location.pathname + location.search);
@@ -964,7 +973,7 @@ export default function App() {
       ) : (
         <PackView pack={result.pack} warnings={result.diagnostics} random={nextRandom} />
       )}
-      {(view !== "play" || source === null) && <Footer onGuide={() => openGuide()} />}
+      <Footer onGuide={() => openGuide()} />
       <TermsGate />
     </div>
   );

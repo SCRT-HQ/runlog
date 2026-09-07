@@ -22,7 +22,7 @@ export function Footer({ onGuide }: { onGuide: () => void }) {
         >
           Docs
         </a>
-        <a href="./">What Runlog is</a>
+        <a href="./?welcome">What Runlog is</a>
         {links.pricing && <a href={links.pricing}>Pricing</a>}
         <a href={links.terms}>Terms</a>
         <a href={links.privacy}>Privacy</a>

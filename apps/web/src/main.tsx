@@ -8,7 +8,7 @@ import { DocDrawerProvider } from "./docs/DocDrawer.tsx";
 import { SyncProvider } from "./sync/SyncProvider.tsx";
 import { applyTheme, savedTheme } from "./theme/theme.ts";
 import { WelcomeView } from "./welcome/WelcomeView.tsx";
-import { baseOf, honestAddress, skipWelcome, whereTo } from "./welcome/route.ts";
+import { WELCOME_QUERY, baseOf, honestAddress, skipWelcome, whereTo } from "./welcome/route.ts";
 import "./fonts.css";
 import "./styles.css";
 
@@ -28,6 +28,10 @@ const page = whereTo({ ...here, skip: skipWelcome(storage) });
 if (page === "app") {
   const honest = honestAddress(here);
   if (honest) history.replaceState(null, "", honest);
+} else if (here.search === WELCOME_QUERY) {
+  // Asked for by name: the bare address is what the page is, so that is
+  // what the bar reads.
+  history.replaceState(null, "", here.base);
 }
 
 // Before anything is painted. The policy at the edge forbids inline scripts,

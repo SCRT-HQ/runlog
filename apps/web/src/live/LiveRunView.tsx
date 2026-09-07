@@ -25,7 +25,7 @@ import type { LiveRoute } from "./route.ts";
 function LiveBar({ title, packId, listed }: { title: string | null; packId: string | null; listed: boolean }) {
   return (
     <header className="topbar liveBar">
-      <a className="brand" href="./" title="Runlog: your packs">
+      <a className="brand" href="./?welcome" title="What Runlog is">
         <img className="logo" src="./icon.svg" alt="" />
         <h1>Runlog</h1>
       </a>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appPath, baseOf, honestAddress, isAppPath, whereTo } from "./route.ts";
+import { appPath, baseOf, honestAddress, isAppPath, welcomePath, whereTo } from "./route.ts";
 
 const at = (over: Partial<Parameters<typeof whereTo>[0]> = {}) => ({ protocol: "https:", pathname: "/", base: "/", hash: "", search: "", skip: false, ...over });
 
@@ -19,6 +19,14 @@ describe("which page an address opens", () => {
     expect(whereTo(at({ search: "?invite=tok" }))).toBe("app");
     expect(whereTo(at({ search: "?code=abc&state=x" }))).toBe("app");
     expect(whereTo(at({ search: "?open" }))).toBe("app");
+  });
+
+  it("is the welcome page when asked for by name, skipped or not, and never from a file", () => {
+    expect(whereTo(at({ search: "?welcome", skip: true }))).toBe("welcome");
+    expect(whereTo(at({ pathname: "/play", search: "?welcome" }))).toBe("welcome");
+    expect(whereTo(at({ search: "?welcome", hash: "#guide/start" }))).toBe("app");
+    expect(welcomePath("https:", "/runlog/")).toBe("/runlog/?welcome");
+    expect(welcomePath("file:", "/C:/runlog/")).toBeNull();
   });
 
   it("is the app when the person chose to skip, and always from a file", () => {
