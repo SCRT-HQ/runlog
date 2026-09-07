@@ -82,6 +82,9 @@ jobs:
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
+          # Nothing is checked out yet, so gh cannot read the repository off
+          # the working directory; it is told.
+          GH_REPO: ${{ github.repository }}
           ASKED: ${{ inputs.channel }}
           DEFAULT: ${{ vars.NPM_CHANNEL || 'next' }}
         run: |
