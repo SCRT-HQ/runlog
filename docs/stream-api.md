@@ -5,10 +5,10 @@ a streaming plugin, a stream deck button, a chat bot, a second screen of
 your own. The live link's token is the key; there is no account, no
 sign-in and no rate of your own to manage beyond politeness.
 
-Everything here is on the hosted address, `https://runlog.scrthq.com`
-(the dev address, `https://runlog.dev.scrthq.com`, answers the same way).
-A copy of Runlog you run yourself has no server, so nothing here applies
-to it.
+Everything here is on the hosted address, `https://runlog.scrthq.com`. A
+copy of Runlog you run yourself as a static site has no server, so nothing
+here applies to it; a copy run with its own hosting answers the same way
+at its own address.
 
 ## Getting a link
 

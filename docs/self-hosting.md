@@ -82,9 +82,9 @@ build, so you deploy a release of the app, not a fork of it.
   Its client id is public and goes in the configuration. The command line
   signs in through a second client of the same project; use the same id
   for both if you do not need that.
-- An identity verified in SES, for invitation mail. The dev account's SES
-  is sandboxed by default, which means mail reaches verified addresses
-  only; production access is a request to AWS.
+- An identity verified in SES, for invitation mail. A new account's SES is
+  sandboxed, which means mail reaches verified addresses only; sending to
+  anyone is a request to AWS.
 - Node 22, and the AWS CLI signed in to the account.
 
 Stripe is optional. Without it, plans are off, nothing is charged, and
@@ -179,8 +179,8 @@ app shows the bundled packs from the build, which is the same list.
 ### A pipeline, if you want one
 
 `.github/workflows/CI-CD.yml` and `Deploy Production.yml` are the pipeline
-this repository runs: tests and diffs on a pull request, dev on a merge,
-production from a release. They build the app from the repository rather
+this repository runs: tests and diffs on a pull request, a staging copy on
+a merge, the hosted copy from a release. They build the app from the repository rather
 than taking the package, and they expect the environments and secrets that
 `hosted/infra/README.md` lists, and a `GitHubActionRole` in each account
 that trusts the repository through OIDC. Copy them if that is the shape
