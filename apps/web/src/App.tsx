@@ -704,6 +704,10 @@ export default function App() {
     );
   }
 
+  // Where the mark goes: the welcome page, where there is one. Read once,
+  // and only where there is a location to read (the tests render without).
+  const home = typeof location !== "undefined" ? welcomePath(location.protocol, baseOf(location.href)) : null;
+
   return (
     <div className="app">
       <header className="topbar">
@@ -712,10 +716,10 @@ export default function App() {
             and the mark is the way to the shelf instead. */}
         <a
           className="brand"
-          href={welcomePath(location.protocol, baseOf(location.href)) ?? "./"}
+          href={home ?? "./"}
           title="What Runlog is"
           onClick={(e) => {
-            if (welcomePath(location.protocol, baseOf(location.href))) return;
+            if (home) return;
             e.preventDefault();
             setView("library");
             if (location.hash) history.replaceState(null, "", location.pathname + location.search);
