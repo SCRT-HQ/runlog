@@ -7,14 +7,22 @@
  * that outlives one machine will need.
  *
  * Sign-in is WorkOS AuthKit, and the only thing a build needs to know is
- * which client it is. The deploy sets that; nothing else does. Absent means
- * there is nothing to offer, which is what local development, the test-suite,
- * a file on disk and a public page all want — and it is read on demand rather
- * than at import so a test can configure one without rebuilding the world.
+ * which client it is. A deploy that builds the app sets that at build time.
+ * A deploy that takes a published build, which was built with none, says it
+ * in the shell instead: a `runlog:sign-in` meta tag the hosted overlay
+ * writes beside the other tags (see hosted/scripts/overlay.ts), so anyone
+ * can run the app from the npm package at their own address with their own
+ * sign-in and never build it. Absent means there is nothing to offer, which
+ * is what local development, the test-suite, a file on disk and a public
+ * page all want — and it is read on demand rather than at import so a test
+ * can configure one without rebuilding the world.
  */
 export function configuredClientId(): string | undefined {
   const id = import.meta.env.VITE_WORKOS_CLIENT_ID;
-  return id ? id : undefined;
+  if (id) return id;
+  if (typeof document === "undefined") return undefined;
+  const content = document.querySelector('meta[name="runlog:sign-in"]')?.getAttribute("content");
+  return content && /^client_[A-Za-z0-9]+$/.test(content) ? content : undefined;
 }
 
 /**

@@ -27,6 +27,7 @@ describe("the words", () => {
     expect(words["DATE"]).toBe("2026-09-06");
     expect(words["EXPIRES"]).toMatch(/^2027-09-06/);
     expect(words["BILLING"]).toBe("true");
+    expect(words["SIGN_IN"]).toMatch(/^client_/);
   });
 
   it("differ between dev and prd where they should", () => {
@@ -47,6 +48,13 @@ describe("the shell", () => {
     expect(html).toContain('<link rel="canonical" href="https://runlog.example/" />');
     expect(html).not.toContain("hosted:head");
   });
+  it("names the sign-in client for a build that has none, and only a client id", () => {
+    expect(headTags({ DOMAIN: "runlog.example", VERSION: "1.0.0", SHA: "abc", SIGN_IN: "client_01ABC" })).toContain(
+      '<meta name="runlog:sign-in" content="client_01ABC" />',
+    );
+    expect(tags).not.toContain("runlog:sign-in");
+  });
+
   it("gets them before </head> when the app has no marker", () => {
     const html = injectHead("<html><head><title>x</title></head></html>", tags);
     expect(html.indexOf("og:title")).toBeLessThan(html.indexOf("</head>"));
@@ -109,6 +117,25 @@ describe("laid over a build", () => {
     expect(licenses).toContain("react");
     expect(licenses).toContain("Copyright (c) Meta");
     expect(licenses).not.toContain("vitest");
+  });
+
+  it("lays over a published build as well: the package's version, the notice it ships, and the sign-in client in the shell", () => {
+    const root = mkdtempSync(join(tmpdir(), "runlog-overlay-pkg-"));
+    const pkg = join(root, "package");
+    const dist = join(pkg, "app");
+    mkdirSync(dist, { recursive: true });
+    writeFileSync(join(dist, "index.html"), "<html><head><title>Runlog</title>\n<!-- hosted:head -->\n</head><body></body></html>");
+    writeFileSync(join(pkg, "package.json"), JSON.stringify({ name: "@scrthq/runlog", version: "0.4.0" }));
+    writeFileSync(join(pkg, "licenses.json"), JSON.stringify([{ name: "react", version: "19.0.0", license: "MIT" }]));
+
+    const files = overlay({ dist, appRoot: pkg, env: "prd", sha: "0.4.0", today: build.today });
+
+    expect(files).toContain("index.html");
+    const shell = readFileSync(join(dist, "index.html"), "utf8");
+    expect(shell).toContain(`<meta name="runlog:sign-in" content="${envConfig("prd").workosClientId}" />`);
+    expect(shell).toContain('<meta name="runlog:build" content="0.4.0 0.4.0" />');
+    expect(readFileSync(join(dist, "licenses.html"), "utf8")).toContain("<strong>react</strong>");
+    expect((JSON.parse(readFileSync(join(dist, "hosted.json"), "utf8")) as { version: string }).version).toBe("0.4.0");
   });
 
   it("writes the licenses page from what it is given", () => {

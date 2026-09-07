@@ -3,6 +3,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } fr
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { dependenciesOf } from "./licenses.ts";
 
 /**
  * Stage the packages this repository publishes to npm.
@@ -113,6 +114,9 @@ async function cli(): Promise<void> {
     shell: process.platform === "win32",
   });
   cpSync(join(root, "packages", "cli", "README.md"), join(dir, "README.md"));
+  // The third-party notice, so a copy laid over this package at someone's
+  // own address can say what the app is made of (hosted/scripts/overlay.ts).
+  writeFileSync(join(dir, "licenses.json"), JSON.stringify(dependenciesOf(root)));
   const app = join(root, "apps", "web", "dist");
   if (existsSync(join(app, "index.html"))) {
     cpSync(app, join(dir, "app"), { recursive: true });
@@ -133,7 +137,7 @@ async function cli(): Promise<void> {
         exports: { ".": { types: "./dist/types/index.d.ts", default: "./dist/index.js" } },
         main: "./dist/index.js",
         types: "./dist/types/index.d.ts",
-        files: ["dist", "app", "README.md"],
+        files: ["dist", "app", "README.md", "licenses.json"],
         dependencies,
         keywords: ["runlog", "tabletop", "rule-pack", "cli", "rlpack", "seal", "license"],
       },

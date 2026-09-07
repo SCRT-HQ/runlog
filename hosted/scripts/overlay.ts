@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { dirname, join, relative } from "node:path";
 import { deflateSync } from "node:zlib";
 import { envConfig, type EnvConfig, type EnvName } from "../infra/lib/config";
+import { dependenciesOf, type Dependency } from "../../scripts/licenses";
 
 /**
  * The hosted layer, laid over a build of the app.
@@ -46,6 +47,9 @@ export function wordsFor(config: EnvConfig, build: { version: string; sha: strin
     EXPIRES: expires.toISOString(),
     LOG_RETENTION: "one month",
     BILLING: hosted.billing ? "true" : "false",
+    // The sign-in client, for a build that was built without one: the
+    // published package's, which the shell then names (see headTags).
+    SIGN_IN: config.workosClientId,
     PLANS_NOTE: hosted.billing
       ? "Subscribe from your profile in the app."
       : "Not switched on yet: everything in Plus is free for everyone while Runlog is in preview.",
@@ -77,6 +81,9 @@ export function headTags(words: Words): string {
     `<meta property="og:image:height" content="630" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="runlog:build" content="${words["VERSION"]} ${words["SHA"]}" />`,
+    // How a published build, built with no client, signs in here: the app
+    // reads this tag when its build has none (apps/web/src/auth/config.ts).
+    ...(words["SIGN_IN"] ? [`<meta name="runlog:sign-in" content="${words["SIGN_IN"]}" />`] : []),
   ].join("\n    ");
 }
 
@@ -92,82 +99,6 @@ export function injectHead(html: string, tags: string): string {
 }
 
 // ---- licenses ---------------------------------------------------------
-
-export interface Dependency {
-  name: string;
-  version: string;
-  license: string;
-  /** The package's own LICENSE file, where it ships one. */
-  text?: string;
-}
-
-/**
- * What the built app carries, from the lockfile: every package that is not
- * development-only, with the license its own package.json declares. The
- * app's bundler tree-shakes most of these to nothing, but a notice that
- * names more than was shipped is honest; one that names less is not.
- */
-export function dependenciesOf(appRoot: string): Dependency[] {
-  const lock = JSON.parse(readFileSync(join(appRoot, "package-lock.json"), "utf8")) as {
-    packages: Record<string, { version?: string; dev?: boolean; license?: string; link?: boolean; dependencies?: Record<string, string> }>;
-  };
-  // The workspace holds the hosting's own packages too, which never reach
-  // a browser. What the app ships is what its packages depend on, walked
-  // from the app and the libraries beneath it through the lockfile.
-  const roots = ["apps/web", "packages/rules-schema", "packages/engine", "packages/container"].filter((r) => lock.packages[r]);
-  const wanted = new Set<string>();
-  const queue: Array<[string, string]> = [];
-  for (const r of roots) {
-    const deps = lock.packages[r]?.dependencies ?? {};
-    for (const name of Object.keys(deps)) queue.push([r, name]);
-  }
-  // A lockfile with no workspace roots (a plain app, or a test's) lists what
-  // it ships at the top; one with no top either is taken whole.
-  if (roots.length === 0) {
-    const top = lock.packages[""]?.dependencies;
-    if (top) for (const name of Object.keys(top)) queue.push(["", name]);
-    else for (const path of Object.keys(lock.packages)) if (path.startsWith("node_modules/")) wanted.add(path);
-  }
-  const resolve = (from: string, name: string): string | undefined => {
-    // npm's resolution: the nearest node_modules up from the dependent.
-    let dir = from;
-    for (;;) {
-      const candidate = dir ? `${dir}/node_modules/${name}` : `node_modules/${name}`;
-      if (lock.packages[candidate]) return candidate;
-      if (!dir) return undefined;
-      const i = dir.lastIndexOf("/node_modules/");
-      dir = i >= 0 ? dir.slice(0, i) : "";
-    }
-  };
-  while (queue.length > 0) {
-    const [from, name] = queue.shift()!;
-    if (name.startsWith("@runlog/") || name.startsWith("@scrthq/")) continue;
-    const path = resolve(from, name);
-    if (!path || wanted.has(path)) continue;
-    wanted.add(path);
-    for (const dep of Object.keys(lock.packages[path]?.dependencies ?? {})) queue.push([path, dep]);
-  }
-  const out: Dependency[] = [];
-  for (const [path, entry] of Object.entries(lock.packages)) {
-    if (!wanted.has(path) || entry.dev || entry.link) continue;
-    // Nested copies of a package appear as node_modules/a/node_modules/b;
-    // the name is the last node_modules segment.
-    const name = path.slice(path.lastIndexOf("node_modules/") + "node_modules/".length);
-    const dir = join(appRoot, path);
-    let license = entry.license ?? "";
-    let text: string | undefined;
-    try {
-      const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { license?: string | { type?: string } };
-      license ||= typeof pkg.license === "string" ? pkg.license : (pkg.license?.type ?? "");
-      const file = readdirSync(dir).find((f) => /^licen[cs]e(\.(md|txt))?$/i.test(f));
-      if (file) text = readFileSync(join(dir, file), "utf8");
-    } catch {
-      // Not installed here; the lockfile's word will do.
-    }
-    out.push({ name, version: entry.version ?? "", license: license || "see package", ...(text ? { text } : {}) });
-  }
-  return out.sort((a, b) => a.name.localeCompare(b.name));
-}
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
@@ -360,19 +291,42 @@ function crc32(buf: Buffer): number {
 
 export interface Overlay {
   dist: string;
+  /**
+   * Where the app came from: this repository's root, with its lockfile, or
+   * the published package's directory, which carries `licenses.json` and
+   * its own version instead. Either says what went out and what it is
+   * made of.
+   */
   appRoot: string;
   env: EnvName;
   sha: string;
+  /** The app's version, when the root does not say (a build laid over by hand). */
+  version?: string;
   today?: Date;
   /** Where the templates are; the repository's `hosted/` unless a test says otherwise. */
   templates?: string;
 }
 
+/** The app's version: the repository's web app, or the published package's. */
+function versionAt(appRoot: string): string {
+  for (const file of [join(appRoot, "apps", "web", "package.json"), join(appRoot, "package.json")]) {
+    if (existsSync(file)) return (JSON.parse(readFileSync(file, "utf8")) as { version: string }).version;
+  }
+  throw new Error(`${appRoot} is neither the repository nor a published package; pass --version`);
+}
+
+/** What the app is made of: from the lockfile where there is one, else from the notice the package ships. */
+function dependenciesAt(appRoot: string): Dependency[] {
+  if (existsSync(join(appRoot, "package-lock.json"))) return dependenciesOf(appRoot);
+  const shipped = join(appRoot, "licenses.json");
+  if (existsSync(shipped)) return JSON.parse(readFileSync(shipped, "utf8")) as Dependency[];
+  return [];
+}
+
 /** Copy the hosted files into the build, filled in, and stamp the shell. Returns what was written, relative to `dist`. */
 export function overlay(opts: Overlay): string[] {
   const config = envConfig(opts.env);
-  const version = (JSON.parse(readFileSync(join(opts.appRoot, "apps", "web", "package.json"), "utf8")) as { version: string }).version;
-  const words = wordsFor(config, { version, sha: opts.sha.slice(0, 12), today: opts.today ?? new Date() });
+  const words = wordsFor(config, { version: opts.version ?? versionAt(opts.appRoot), sha: opts.sha.slice(0, 12), today: opts.today ?? new Date() });
   const templates = opts.templates ?? HOSTED_DIR;
   const written: string[] = [];
   const write = (rel: string, body: string | Buffer) => {
@@ -391,7 +345,7 @@ export function overlay(opts: Overlay): string[] {
   };
   walk(templates);
 
-  write("licenses.html", licensesPage(dependenciesOf(opts.appRoot), words));
+  write("licenses.html", licensesPage(dependenciesAt(opts.appRoot), words));
   write("og.png", ogImage());
 
   const shell = join(opts.dist, "index.html");
@@ -421,6 +375,7 @@ if (require.main === module) {
   const env = arg("env");
   if (env !== "dev" && env !== "prd") throw new Error(`--env must be dev or prd, not ${env}`);
   const dist = arg("dist");
-  const files = overlay({ dist, appRoot: arg("app"), env, sha: arg("sha", "") });
+  const version = arg("version", "");
+  const files = overlay({ dist, appRoot: arg("app"), env, sha: arg("sha", ""), ...(version ? { version } : {}) });
   console.log(`hosted layer over ${dist}: ${files.length} files, ${fingerprint(dist, files)}`);
 }

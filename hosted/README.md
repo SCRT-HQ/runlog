@@ -27,6 +27,14 @@ So: a change under `hosted/` is a change to the service. A change under
 `apps/`, `packages/` or `packs/` is a change to Runlog, which everyone
 gets.
 
+## Running it yourself
+
+[`docs/self-hosting.md`](../docs/self-hosting.md) takes this directory to
+your own AWS account over the published package, so you deploy a release
+of the app rather than a fork of it: the overlay lays the pages over the
+package's `app/`, stamps the shell with your sign-in client, and the site
+stack publishes the result.
+
 ## Deploying
 
 The pipeline in `.github/workflows/CI-CD.yml` builds the app, lays the

@@ -143,7 +143,10 @@ version and has always already been to dev.
 
 It also still runs from a file. `npm run build`, then open
 `apps/web/dist/index.html` — which is the zero-friction path when the app is
-sitting next to whatever you are working in.
+sitting next to whatever you are working in. To run a copy of your own, on
+your machine, on a static host, or on your own AWS with accounts and sync,
+see [docs/self-hosting.md](docs/self-hosting.md); none of the three needs a
+fork.
 
 ### How it looks
 
