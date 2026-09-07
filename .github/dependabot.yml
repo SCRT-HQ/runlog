@@ -15,6 +15,12 @@ updates:
       time: "06:00"
       timezone: America/New_York
     open-pull-requests-limit: 5
+    # The same week .npmrc asks of npm: a version is proposed only once it
+    # has been out seven days, a major once it has been out fourteen. A
+    # security update is not held back by this.
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
     groups:
       # The lot, together, when nothing is a major: one PR, one run of the
       # suite, one deploy.
@@ -32,6 +38,8 @@ updates:
       day: monday
       time: "06:00"
       timezone: America/New_York
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns: ["*"]
