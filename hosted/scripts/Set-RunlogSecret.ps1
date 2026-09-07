@@ -19,7 +19,7 @@
   .\hosted\scripts\Set-RunlogSecret.ps1 -Secret stripe/secret-key
 #>
 param(
-  [Parameter(Mandatory)] [ValidateSet("workos/api-key", "stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret")] [string] $Secret,
+  [Parameter(Mandatory)] [ValidateSet("workos/api-key", "stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret", "newrelic/license-key")] [string] $Secret,
   [string] $Value = $null
 )
 
@@ -37,7 +37,11 @@ if ($null -eq $Value) {
 
 # As a JSON file the CLI reads, never as an argument: arguments show in
 # process listings and transcripts. The file lives for one call.
-$payload = @{ SecretId = $id; SecretString = $plain.Trim() } | ConvertTo-Json -Compress
+# New Relic's extension reads its key out of a JSON object, so that one is
+# wrapped; every other value goes in as it was pasted.
+$value = $plain.Trim()
+if ($Secret -eq "newrelic/license-key") { $value = @{ LicenseKey = $value } | ConvertTo-Json -Compress }
+$payload = @{ SecretId = $id; SecretString = $value } | ConvertTo-Json -Compress
 $tmp = New-TemporaryFile
 try {
   Set-Content -Path $tmp -Value $payload -NoNewline -Encoding utf8

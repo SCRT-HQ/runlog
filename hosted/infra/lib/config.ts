@@ -87,6 +87,22 @@ export interface EnvConfig {
     /** The platform's share of a sale, in basis points, by whether the publisher subscribes to hosted licensing. */
     applicationFeeBps: { subscribed: number; unsubscribed: number };
   };
+  /**
+   * Monitoring of the handlers, when the operator has somewhere to send it.
+   * New Relic's Lambda layer wraps both functions: traces, errors and the
+   * function logs, with request bodies, the authorization header and
+   * addresses kept out. Absent, the functions run bare, which is what a
+   * copy without an account there wants.
+   */
+  apm?: {
+    newRelic: {
+      /** The New Relic account the telemetry goes to; its parent's, as the trusted key, where there is one. */
+      accountId: string;
+      trustedAccountKey?: string;
+      /** The layer's version for this region and runtime; NewRelicNodeJS24XARM64 as published by New Relic. */
+      layerVersion: number;
+    };
+  };
   hosted: {
     /** The full legal name, on the terms, the policies, the publisher agreement and every copyright line. */
     operator: string;
@@ -216,6 +232,17 @@ export function envConfig(name: EnvName): EnvConfig {
       features: { plus: str(features["plus"], "stripe.features.plus"), hostedLicensing: str(features["hostedLicensing"], "stripe.features.hostedLicensing") },
       applicationFeeBps: { subscribed: num(fee["subscribed"], "stripe.applicationFeeBps.subscribed"), unsubscribed: num(fee["unsubscribed"], "stripe.applicationFeeBps.unsubscribed") },
     },
+    ...(isRecord(c["apm"]) && isRecord(c["apm"]["newRelic"])
+      ? {
+          apm: {
+            newRelic: {
+              accountId: str(c["apm"]["newRelic"]["accountId"], "apm.newRelic.accountId"),
+              ...(typeof c["apm"]["newRelic"]["trustedAccountKey"] === "string" ? { trustedAccountKey: c["apm"]["newRelic"]["trustedAccountKey"] } : {}),
+              layerVersion: num(c["apm"]["newRelic"]["layerVersion"] ?? 52, "apm.newRelic.layerVersion"),
+            },
+          },
+        }
+      : {}),
     hosted: {
       operator: str(hosted["operator"], "hosted.operator"),
       operatorShort: str(hosted["operatorShort"], "hosted.operatorShort"),

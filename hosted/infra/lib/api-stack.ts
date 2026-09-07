@@ -324,6 +324,51 @@ export class ApiStack extends Stack {
     });
     this.table.grantReadWriteData(wsHandler);
     this.bucket.grantRead(wsHandler);
+
+    /**
+     * Monitoring, where the stage's configuration names a New Relic account.
+     *
+     * New Relic's layer puts its extension and Node agent beside each
+     * function: the function's handler becomes the layer's wrapper, which
+     * imports the real one (ESM, as the bundles are) and reports traces,
+     * errors and the function's own logs. The license key is one more
+     * secret, read by the extension straight from Secrets Manager, in the
+     * shape the extension asks for: {"LicenseKey": "…"}. What the agent
+     * records of a request is trimmed to what a service's monitoring needs:
+     * no bodies, no authorization header, no cookies, no addresses.
+     */
+    if (config.apm?.newRelic) {
+      const nr = config.apm.newRelic;
+      const licenseKey = secret("NewRelicLicenseKey", "newrelic/license-key", 'New Relic license key, as the extension reads it: {"LicenseKey": "…"}');
+      const layer = lambda.LayerVersion.fromLayerVersionArn(
+        this,
+        "NewRelicLayer",
+        `arn:aws:lambda:${this.region}:451483290750:layer:NewRelicNodeJS24XARM64:${nr.layerVersion}`,
+      );
+      for (const [fn, app] of [
+        [handler, `runlog-${config.name}-api`],
+        [wsHandler, `runlog-${config.name}-live`],
+      ] as const) {
+        fn.addLayers(layer);
+        licenseKey.grantRead(fn);
+        (fn.node.defaultChild as lambda.CfnFunction).handler = "newrelic-lambda-wrapper.handler";
+        for (const [name, value] of Object.entries({
+          NEW_RELIC_LAMBDA_HANDLER: "index.handler",
+          NEW_RELIC_USE_ESM: "true",
+          NEW_RELIC_APM_LAMBDA_MODE: "true",
+          NEW_RELIC_APP_NAME: app,
+          NEW_RELIC_ACCOUNT_ID: nr.accountId,
+          NEW_RELIC_TRUSTED_ACCOUNT_KEY: nr.trustedAccountKey ?? nr.accountId,
+          NEW_RELIC_LICENSE_KEY_SECRET: secretName("newrelic/license-key"),
+          NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS: "true",
+          NEW_RELIC_ATTRIBUTES_EXCLUDE: "request.headers.authorization,request.headers.cookie,request.headers.x-forwarded-for,request.headers.cloudfront-viewer-address,request.parameters.*",
+          NEW_RELIC_ALLOW_ALL_HEADERS: "false",
+        })) {
+          fn.addEnvironment(name, value);
+        }
+      }
+    }
+
     const liveIntegration = (id: string) => new WebSocketLambdaIntegration(id, wsHandler);
     const wsApi = new apigwv2.WebSocketApi(this, "WebSocketApi", {
       apiName: `runlog-${config.name}-live`,
