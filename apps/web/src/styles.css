@@ -3198,6 +3198,10 @@ a.plan:hover { text-decoration: underline; }
 .specimenState b { color: var(--text); font-weight: 500; }
 .specimenState .clock { margin-left: auto; color: var(--text); }
 .welcomeMain .sectionTitle { margin-top: 2.5rem; font-size: 1.3rem; }
+/* The title names the section; the words after it say what the section
+   answers. At this size they need more than a lighter weight to read as
+   two things: a breath of space and a step down. */
+.welcomeMain .sectionTitle .muted { display: inline-block; margin-left: 0.8ch; font-size: 0.9rem; opacity: 0.8; }
 .welcomeSteps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
 .welcomeSteps li { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr); gap: 0.5rem; }
 .welcomeSteps .idx { font-family: var(--mono); color: var(--accent); padding-top: 0.25rem; }
