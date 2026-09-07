@@ -135,7 +135,7 @@ deploys the hosting with the build.
 | Pull request to `main` | The suite, the packs, a build; the hosting's tests; a diff of the stacks, staging and hosted |
 | Push to `main` | Build, deploy a staging copy (the site stack publishes the build), seed its catalog, then tag and publish the next release |
 | Release published | Build the tag, deploy the hosted copy |
-| Hosted deploy succeeded | Publish `@scrthq/runlog` at the tag's version to npm, under `next` until the `NPM_CHANNEL` variable says `latest`; OIDC from the `npm-publish` environment, no token |
+| Hosted deploy succeeded | The same run publishes `@scrthq/runlog` at the tag's version to npm, under `next` until the `NPM_CHANNEL` variable says `latest`; OIDC from the `npm-publish` environment, no token |
 | Push to `main` | Build and deploy the no-account version to GitHub Pages |
 | Monday mornings | Dependabot opens one pull request for the week's minor and patch bumps, one per major, and one for the workflows' actions, each for versions at least a week old; a security advisory opens one whenever it lands |
 
