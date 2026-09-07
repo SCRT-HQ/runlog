@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 import { Footer } from "../hosted/Footer.tsx";
+import { PersonaSwitcher } from "./PersonaSwitcher.tsx";
+import { otherScenes, otherVocabularies, savePersona, savedPersona, type Persona } from "./personas.ts";
 import { appPath, baseOf, setSkipWelcome, skipWelcome } from "./route.ts";
 
 /**
@@ -12,6 +14,10 @@ import { appPath, baseOf, setSkipWelcome, skipWelcome } from "./route.ts";
  * What differs by copy is only the pricing, which a hosted copy names
  * and the rest leave out, and the footer, which only a hosted copy has.
  * A person who has read it once can choose to skip it from then on.
+ *
+ * The examples on it are one person's: the heading says who, and the run
+ * in the specimen, the lede's first scene, the vocabulary the reasons cite
+ * and the last line all follow (see personas.ts). The reader picks who.
  */
 export function WelcomeView() {
   const hosted = useHosted();
@@ -25,6 +31,16 @@ export function WelcomeView() {
     }
   })();
   const [skip, setSkip] = useState(() => skipWelcome(storage));
+  const [persona, setPersona] = useState<Persona>(() => savedPersona(storage));
+  const choose = useCallback(
+    (next: Persona) => {
+      setPersona(next);
+      savePersona(storage, next);
+    },
+    [storage],
+  );
+  const [sceneTwo, sceneThree, sceneFour] = otherScenes(persona, 3) as [string, string, string];
+  const [wordsTwo, wordsThree] = otherVocabularies(persona, 2) as [string, string];
 
   // A hash typed or pasted onto this page (a live link, a guide page) is a
   // same-document change the browser does not reload for: go to the app.
@@ -65,11 +81,12 @@ export function WelcomeView() {
       <main className="welcomeMain">
         <section className="welcomeHero">
           <div className="welcomeWords">
-            <h2>A referee and a run log for games played around the things you already do.</h2>
+            <h2>
+              A referee and a run log for gamifying the things you already do as <PersonaSwitcher persona={persona} onChange={choose} />.
+            </h2>
             <p className="welcomeLede">
-              A day at the wheel, a kitchen under constraint, an hour of practice, a house cleaned like a dungeon. Runlog reads a{" "}
-              <em>pack</em>, a small file of tables, states and steps, and becomes that game: it rolls, remembers, reaches back, and
-              writes the log, so your hands stay on the work.
+              {persona.scene}, {sceneTwo}, {sceneThree}, {sceneFour}. Runlog reads a <em>pack</em>, a small file of tables, states and
+              steps, and becomes that game: it rolls, remembers, reaches back, and writes the log, so your hands stay on the work.
             </p>
             <p className="welcomeCtas">
               <a className="primary" href={play}>
@@ -85,41 +102,26 @@ export function WelcomeView() {
             <p className="muted small">Free, no account needed, works offline. Open source under MIT.</p>
           </div>
 
-          <figure className="specimen" aria-label="A run log, as Runlog writes it">
-            <figcaption className="muted small">The Long Kiln · Standard Firing · Stage 4</figcaption>
+          <figure className="specimen" aria-label="A run log, as Runlog writes it" key={persona.id}>
+            <figcaption className="muted small">
+              <a href={`${play}#catalog/${persona.packId}`}>{persona.packTitle}</a> · {persona.mode} · {persona.at}
+            </figcaption>
             <ol className="specimenLog">
-              <li>
-                <span className="where">Stage 2, Kiln Check</span>
-                <span className="roll">d100 → 26</span>
-                <p>The Kiln dictates the form. Roll on the Form table.</p>
-              </li>
-              <li>
-                <span className="where">Stage 2, Form</span>
-                <span className="roll">d6 → 4</span>
-                <p>A cup. Small, and it must be usable.</p>
-              </li>
-              <li>
-                <span className="where">Stage 2, Constraint</span>
-                <span className="roll">d12 → 10</span>
-                <p>One glaze only, applied once.</p>
-              </li>
-              <li className="heat">
-                <span className="where">Stage 4, Kiln Check</span>
-                <span className="roll">d100 → 88 · hit #2</span>
-                <p>Thermal shock reaches back. The cup from Stage 2 cracks; mark it.</p>
-              </li>
+              {persona.log.map((line, i) => (
+                <li key={i} className={line.heat ? "heat" : undefined}>
+                  <span className="where">{line.where}</span>
+                  <span className="roll">{line.roll}</span>
+                  <p>{line.text}</p>
+                </li>
+              ))}
             </ol>
             <div className="specimenState">
-              <span>
-                <b>Glaze</b> 3 / 6
-              </span>
-              <span>
-                <b>Calm streak</b> 1
-              </span>
-              <span>
-                <b>Setbacks</b> 1
-              </span>
-              <span className="clock">Stage 4 · 12:41</span>
+              {persona.state.map((entry) => (
+                <span key={entry.label}>
+                  <b>{entry.label}</b> {entry.value}
+                </span>
+              ))}
+              <span className="clock">{persona.clock}</span>
             </div>
           </figure>
         </section>
@@ -145,7 +147,7 @@ export function WelcomeView() {
               <div>
                 <h4>Play the run</h4>
                 <p>
-                  Each unit of the game, a stage, a day, a room, walks its steps: roll on a table, take what comes, declare what you are
+                  Each unit of the game, a {persona.unit} here, walks its steps: roll on a table, take what comes, declare what you are
                   making, make it. Runlog keeps the states, counters, timers and deferred results, and applies the consequences that land
                   on earlier work. It never judges the work itself; it cannot see it.
                 </p>
@@ -172,8 +174,8 @@ export function WelcomeView() {
             <div>
               <dt>It does not know your game. That is the point.</dt>
               <dd>
-                Every noun on screen comes from the pack's own vocabulary: a Firing of Stages, a Crawl of Rooms, a Session of Sets. One
-                app, any game of rounds, dice and consequences.
+                Every noun on screen comes from the pack's own vocabulary: {persona.vocabulary}, {wordsTwo}, {wordsThree}. One app, any
+                game of rounds, dice and consequences.
               </dd>
             </div>
             <div>
@@ -269,7 +271,9 @@ export function WelcomeView() {
         )}
 
         <section className="welcomeClosing">
-          <h3>Roll for the clay.</h3>
+          <h3 key={persona.id} className="welcomeClosingLine">
+            {persona.closing}
+          </h3>
           <p className="welcomeCtas">
             <a className="primary" href={play}>
               Open Runlog
