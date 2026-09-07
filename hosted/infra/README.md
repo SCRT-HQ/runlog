@@ -51,7 +51,8 @@ from a `v*` tag as well. The diffs run under `cdk-diff-dev` and
 open to this repository's branches, since a diff is what a pull request
 asks for. All four hold the same names, below, so the workflow says
 nothing about a stage but its name, and a third stage is one more entry
-in `lib/config.ts`, one more in the diff matrix, and two more environments.
+in the stage's configuration, one more in the diff matrix, and two more
+environments.
 
 Versions increment automatically from the newest `v*` tag — patch by default,
 or pick `minor`/`major` when running the workflow by hand.
@@ -147,14 +148,14 @@ address a service — the terms, the privacy policy, the publisher agreement,
 pricing, an about page, the open-source notice, `robots.txt`, `sitemap.xml`,
 `security.txt`, the image a shared link unfurls with — lives in `hosted/`
 as templates, and `hosted/scripts/overlay.ts` lays them over the built app at
-publish time with the environment's words filled in (`lib/config.ts`,
+publish time with the environment's words filled in (the stage's configuration,
 `hosted`). The app finds `hosted.json` at its root and, when it is there,
 shows a footer and asks people signed in to accept the terms once per
 version; a copy on disk or on GitHub Pages has no such file and shows
 nothing.
 
 To change the terms: edit the page, bump `hosted.termsVersion` and
-`termsDate` in `lib/config.ts`, publish. Every signed-in person is asked
+`termsDate` in the stage's configuration, publish. Every signed-in person is asked
 once. Paragraphs marked "For counsel" are notes for legal review and
 should be removed as each is settled.
 
@@ -289,13 +290,13 @@ writes the person's `ENTITLEMENTS` row, which `GET /api/me` returns.
 
 It is all off until the secrets are filled: a `stripe/secret-key` that
 does not look like a key means every billing route answers
-`{available: false}`. `lib/config.ts` says whether plans gate anything
+`{available: false}`. The stage's configuration says whether plans gate anything
 (`gates`: dev on, prd off until Stripe is live there) and which prices are
 for sale. To set an environment up:
 
 1. `$env:STRIPE_SECRET_KEY = "sk_…"; npx tsx hosted/scripts/stripe-setup.ts` —
    idempotent; makes the features, products, prices and the Portal
-   configuration and prints the price ids for `lib/config.ts`.
+   configuration and prints the price ids for the stage's configuration.
 2. Register `https://<domain>/api/stripe/webhook` in Stripe for
    `entitlements.active_entitlement_summary.updated`; fill
    `stripe/webhook-secret` with its signing secret and `stripe/secret-key`
@@ -308,7 +309,7 @@ for sale. To set an environment up:
 A priced listing is bought with `POST /api/listings/{packId}/checkout`:
 a one-off Checkout on the publisher's connected account, the platform's
 share taken as the application fee (`stripe.applicationFeeBps` in
-`lib/config.ts`: 5% for a publisher without the hosted-licensing
+the stage's configuration: 5% for a publisher without the hosted-licensing
 subscription, 0% with it), and a pending sale in the ledger. When Stripe's
 Connect webhook says it was paid (`POST /api/stripe/connect-webhook`, its
 own signing secret), the master is sealed under a fresh license key for
@@ -379,6 +380,7 @@ prints its account as `***`.
 | `AWS_ACCOUNT_ID` (secret) | The stage's account |
 | `RUNLOG_ZONE_ID` (secret) | The Route 53 zone the stage's domain lives in |
 | `WORKOS_CLIENT_ID` (variable) | The AuthKit client the stage's build signs in with; public by design, embedded in the app and in every sign-in URL |
+| `RUNLOG_ENV_CONFIG` (variable) | The stage's configuration as one line of JSON: its domain and zone, sign-in clients, mail identity, plans and the words on its pages. `env/example.json` is the shape; on a machine the same document is `env/<stage>.json`, which git ignores |
 | `RUNLOG_API_KEY` (secret, `deploy-*` only) | A command-line key for the platform publisher, for seeding the catalog |
 
 And on the repository:

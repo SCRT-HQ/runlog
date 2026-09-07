@@ -32,6 +32,10 @@ inputs:
     description: 'Route 53 zone the site records go in. Omit to let CDK look it up.'
     required: false
     default: ''
+  env-config:
+    description: The stage's configuration as JSON (the RUNLOG_ENV_CONFIG variable on its environment).
+    required: false
+    default: ''
   app-dist:
     description: 'The built app, laid over with the hosted pages, for the site stack to publish. Relative to the repository root; empty publishes nothing.'
     required: false
@@ -84,8 +88,8 @@ runs:
         AWS_REGION: ${{ inputs.target-region }}
         AWS_ENVIRONMENT: ${{ inputs.aws-environment }}
         RUNLOG_APP_DIST: ${{ inputs.app-dist && format('{0}/{1}', github.workspace, inputs.app-dist) || '' }}
-        RUNLOG_DEV_ZONE_ID: ${{ inputs.hosted-zone-id }}
-        RUNLOG_PRD_ZONE_ID: ${{ inputs.hosted-zone-id }}
+        RUNLOG_ZONE_ID: ${{ inputs.hosted-zone-id }}
+        RUNLOG_ENV_CONFIG: ${{ inputs.env-config }}
 
     - run: |
         cdk diff
@@ -99,8 +103,8 @@ runs:
         AWS_REGION: ${{ inputs.target-region }}
         AWS_ENVIRONMENT: ${{ inputs.aws-environment }}
         RUNLOG_APP_DIST: ${{ inputs.app-dist && format('{0}/{1}', github.workspace, inputs.app-dist) || '' }}
-        RUNLOG_DEV_ZONE_ID: ${{ inputs.hosted-zone-id }}
-        RUNLOG_PRD_ZONE_ID: ${{ inputs.hosted-zone-id }}
+        RUNLOG_ZONE_ID: ${{ inputs.hosted-zone-id }}
+        RUNLOG_ENV_CONFIG: ${{ inputs.env-config }}
 
     - run: |
         cdk deploy --all --require-approval never
@@ -114,5 +118,5 @@ runs:
         AWS_REGION: ${{ inputs.target-region }}
         AWS_ENVIRONMENT: ${{ inputs.aws-environment }}
         RUNLOG_APP_DIST: ${{ inputs.app-dist && format('{0}/{1}', github.workspace, inputs.app-dist) || '' }}
-        RUNLOG_DEV_ZONE_ID: ${{ inputs.hosted-zone-id }}
-        RUNLOG_PRD_ZONE_ID: ${{ inputs.hosted-zone-id }}
+        RUNLOG_ZONE_ID: ${{ inputs.hosted-zone-id }}
+        RUNLOG_ENV_CONFIG: ${{ inputs.env-config }}

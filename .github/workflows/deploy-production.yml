@@ -85,12 +85,14 @@ jobs:
           environment: prd
           workos-client-id: ${{ vars.WORKOS_CLIENT_ID }}
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          env-config: ${{ vars.RUNLOG_ENV_CONFIG }}
 
       - name: Deploy the hosting and publish the build to production
         uses: ./.github/actions/run-cdk
         with:
           cdk-command: deploy
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          env-config: ${{ vars.RUNLOG_ENV_CONFIG }}
           target-region: ${{ env.AWS_REGION }}
           node-version: ${{ env.NODE_VERSION }}
           github-role-name: ${{ env.GITHUB_ROLE_NAME }}
