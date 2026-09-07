@@ -484,6 +484,9 @@ function memoryStore(): Store & { rows: Map<string, unknown> } {
     async listInvites(sessionId) {
       return [...invites.values()].filter((i) => i.sessionId === sessionId);
     },
+    async invitesFor(email) {
+      return [...invites.values()].filter((i) => i.email === email.toLowerCase());
+    },
     async revokeInvite(_sessionId, token) {
       invites.delete(token);
     },
@@ -1318,6 +1321,38 @@ describe("sessions", () => {
     expect(list.body["invites"]).toMatchObject([{ email: "friend@example.com", accepted: true }]);
     expect((await call(request("GET", "/api/people"), d)).body["people"]).toMatchObject([{ sub: "user_2" }]);
     expect((await call(request("GET", "/api/people", { token: "guest" }), d)).body["people"]).toMatchObject([{ sub: "user_1", name: "Nate" }]);
+  });
+
+  it("lists the invitations waiting for an address in the app, and lets one be declined", async () => {
+    const d = deps(memoryStore(), { mailer: fakeMail().mailer });
+    await call(request("PUT", "/api/me/profile", { body: { name: "Nate" } }), d);
+    await call(request("POST", "/api/sessions", { body: { ...sessionBody, name: "Tuesday" } }), d);
+    await call(request("POST", "/api/sessions/01RUN/invites", { body: { email: "Friend@Example.com", role: "viewer" } }), d);
+
+    // Nothing until the account says what its address is.
+    const friend: Deps = { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) };
+    expect((await call(request("GET", "/api/me/invites"), friend)).body).toEqual({ invites: [] });
+    await call(request("PUT", "/api/me/profile", { body: { email: "friend@example.com" } }), friend);
+    const mine = await call(request("GET", "/api/me/invites"), friend);
+    expect(mine.body["invites"]).toMatchObject([{ token: "tok1", role: "viewer", packId: "p", packTitle: "The Pack", session: "Tuesday", inviter: "Nate", alreadyIn: false }]);
+
+    // Somebody else's address sees nothing of it, and cannot decline it.
+    const stranger: Deps = { ...d, verify: async () => ({ sub: "user_3", sid: "s3" }) };
+    await call(request("PUT", "/api/me/profile", { body: { email: "other@example.com" } }), stranger);
+    expect((await call(request("GET", "/api/me/invites"), stranger)).body).toEqual({ invites: [] });
+    expect((await call(request("DELETE", "/api/me/invites/tok1"), stranger)).status).toBe(422);
+
+    // Declined: gone from the invitee's list and the owner's, and the link is dead.
+    expect((await call(request("DELETE", "/api/me/invites/tok1"), friend)).body).toEqual({ declined: true });
+    expect((await call(request("GET", "/api/me/invites"), friend)).body).toEqual({ invites: [] });
+    expect((await call(request("GET", "/api/sessions/01RUN/invites"), d)).body).toEqual({ invites: [] });
+    expect((await call(request("GET", "/api/invites/tok1", { token: null }), d)).body).toEqual({ found: false });
+
+    // Accepted, it leaves the list as well.
+    await call(request("POST", "/api/sessions/01RUN/invites", { body: { email: "friend@example.com", role: "player" } }), d);
+    expect((await call(request("GET", "/api/me/invites"), friend)).body["invites"]).toHaveLength(1);
+    expect((await call(request("POST", "/api/invites/tok2/accept"), friend)).body).toEqual({ sessionId: "01RUN" });
+    expect((await call(request("GET", "/api/me/invites"), friend)).body).toEqual({ invites: [] });
   });
 
   it("refuses a bad address, a non-owner, and the twenty-first invitation in an hour", async () => {

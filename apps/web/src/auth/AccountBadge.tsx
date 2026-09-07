@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useAccount, type Account } from "./Account.tsx";
 import { useSync, type Sync } from "../sync/SyncProvider.tsx";
 import { ThemeMenu } from "../theme/ThemeMenu.tsx";
+import { useApi } from "../sync/useApi.ts";
+import { useInvites } from "../share/useInvites.ts";
 
 /**
  * The one menu at the end of the bar, for everyone.
@@ -22,6 +24,8 @@ import { ThemeMenu } from "../theme/ThemeMenu.tsx";
 export interface MenuActions {
   onOpenProfile?: () => void;
   onContinue?: () => void;
+  /** Accept an invitation from the menu and open the run it is for. */
+  onJoinInvite?: (token: string) => Promise<void>;
 }
 
 export function AccountBadge(actions: MenuActions = {}) {
@@ -109,10 +113,15 @@ export function syncLabel(sync: Pick<Sync, "enabled" | "status" | "last">): stri
   }
 }
 
-function AccountMenu({ account, onOpenProfile, onContinue }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
+function AccountMenu({ account, onOpenProfile, onContinue, onJoinInvite }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
   const { user, signOut } = account;
   const sync = useSync();
   const [open, setOpen] = useState(false);
+  const api = useApi();
+  const invitations = useInvites(api, open);
+  const [invitesOpen, setInvitesOpen] = useState(false);
+  const [busyToken, setBusyToken] = useState<string | null>(null);
+  const waiting = invitations.invites.length;
   const label = user.firstName ?? user.email;
   const tone = syncTone(sync);
 
@@ -131,9 +140,14 @@ function AccountMenu({ account, onOpenProfile, onContinue }: MenuActions & { acc
 
   return (
     <details className="account accountMenu" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary title={user.email} aria-label={`Account menu for ${label}`}>
+      <summary title={user.email} aria-label={`Account menu for ${label}${waiting ? `, ${waiting} invitation${waiting === 1 ? "" : "s"} waiting` : ""}`}>
         {tone && <span className={`led ${tone}`} title={syncLabel(sync)} aria-hidden="true" />}
         {label}
+        {waiting > 0 && (
+          <span className="menuBadge" title={`${waiting} invitation${waiting === 1 ? "" : "s"} waiting`}>
+            {waiting}
+          </span>
+        )}
         <span className="caret" aria-hidden="true">
           ▾
         </span>
@@ -157,6 +171,52 @@ function AccountMenu({ account, onOpenProfile, onContinue }: MenuActions & { acc
               </div>
             )}
           </div>
+        )}
+        {waiting > 0 && (
+          <details className="accountSub" open={invitesOpen} onToggle={(e) => setInvitesOpen(e.currentTarget.open)}>
+            <summary className="accountItem" role="menuitem" aria-haspopup="true">
+              <span>
+                Invitations <span className="menuBadge">{waiting}</span>
+              </span>
+              <span className="muted small">people asking you to their table</span>
+            </summary>
+            <ul className="inviteList" aria-label="Invitations waiting for you">
+              {invitations.invites.map((invite) => {
+                const busy = busyToken === invite.token;
+                const act = async (what: "join" | "decline") => {
+                  setBusyToken(invite.token);
+                  try {
+                    if (what === "join") {
+                      await onJoinInvite?.(invite.token);
+                      setOpen(false);
+                    } else await api?.declineInvite(invite.token);
+                    invitations.forget(invite.token);
+                  } finally {
+                    setBusyToken(null);
+                  }
+                };
+                return (
+                  <li key={invite.token}>
+                    <div className="inviteWords">
+                      <b>{invite.session ?? invite.packTitle ?? "A run"}</b>
+                      <span className="muted small">
+                        {invite.inviter ?? "Someone"} asks you in as {invite.role === "viewer" ? "a watcher" : "a player"}
+                        {invite.session && invite.packTitle ? ` · ${invite.packTitle}` : ""}
+                      </span>
+                    </div>
+                    <div className="inviteActs">
+                      <button className="primary tiny" disabled={busy || !onJoinInvite} aria-busy={busy || undefined} onClick={() => void act("join")}>
+                        {invite.alreadyIn ? "Open" : "Join"}
+                      </button>
+                      <button className="ghost tiny" disabled={busy} onClick={() => void act("decline")}>
+                        Decline
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
         )}
         {entries.map((e) => (
           <button
