@@ -231,7 +231,7 @@ export function WelcomeView() {
         {hosted?.links.pricing ? (
           <section>
             <h3 className="sectionTitle">
-              What it costs <span className="muted">the app is free; a server is what costs</span>
+              What it costs <span className="muted">the app is free; what needs a server is what you pay for</span>
             </h3>
             <div className="welcomePlans">
               <div>
