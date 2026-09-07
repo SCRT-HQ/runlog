@@ -116,8 +116,8 @@ const HOSTED = {
   operator: "Secret Headquarters, LLC",
   operatorShort: "Secret Headquarters",
   support: "runlog@scrthq.com",
-  termsVersion: "2026-09-06",
-  termsDate: "2026-09-06",
+  termsVersion: "2026-09-07",
+  termsDate: "2026-09-07",
 };
 
 /**

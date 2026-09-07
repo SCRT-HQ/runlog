@@ -208,12 +208,14 @@ export function ProfileView({ onBack }: { onBack: () => void }) {
 
         <section className="panel">
           <h3 className="sectionTitle">
-            Your data on the server <span className="muted">the one destructive thing</span>
+            Your data on the server <span className="muted">a copy of it, or the end of it</span>
           </h3>
           <p className="muted small">
-            Everything your account holds — runs, the packs you switched on, license keys, and this profile —
-            can be removed from the server at once. What is on this device stays on this device.
+            Everything your account holds — runs, the packs you switched on, license keys, purchases, races, the people you
+            have played with, and this profile — can be downloaded as one file, or removed from the server at once. What is on
+            this device stays on this device either way.
           </p>
+          <Export disabled={!api} onExport={async () => (api ? api.exportMe() : Promise.reject(new Error("no API")))} />
           <Forget
             disabled={!api}
             onConfirm={async () => {
@@ -487,6 +489,34 @@ function LicenseRow({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+/** The copy: one button, then the file, then a word on how big it was. */
+function Export({ disabled, onExport }: { disabled: boolean; onExport: () => Promise<{ url: string; bytes: number }> }) {
+  const [state, setState] = useState<{ kind: "idle" } | { kind: "busy" } | { kind: "done"; bytes: number } | { kind: "failed"; why: string }>({ kind: "idle" });
+  return (
+    <div className="padRow">
+      <button
+        className="ghost"
+        disabled={disabled || state.kind === "busy"}
+        aria-busy={state.kind === "busy" || undefined}
+        onClick={() => {
+          setState({ kind: "busy" });
+          onExport().then(
+            ({ url, bytes }) => {
+              setState({ kind: "done", bytes });
+              location.assign(url);
+            },
+            (error: unknown) => setState({ kind: "failed", why: error instanceof Error && error.message ? error.message : "the export could not be made" }),
+          );
+        }}
+      >
+        {state.kind === "busy" ? "Gathering…" : "Download everything"}
+      </button>
+      {state.kind === "done" && <span className="muted small">{Math.max(1, Math.round(state.bytes / 1024))} KB, as JSON. The link works for fifteen minutes.</span>}
+      {state.kind === "failed" && <span className="muted small">{state.why}</span>}
     </div>
   );
 }

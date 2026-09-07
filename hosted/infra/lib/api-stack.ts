@@ -36,6 +36,16 @@ import type { EnvConfig } from "./config";
  * than in a gateway authorizer is deliberate: the gateway's refusal is a 403,
  * and the site's distribution rewrites every 403 into the app's index page.
  */
+/** The AWS SDK packages the Node runtime carries, which the bundles leave out. */
+const RUNTIME_SDK = [
+  "@aws-sdk/client-apigatewaymanagementapi",
+  "@aws-sdk/client-dynamodb",
+  "@aws-sdk/client-s3",
+  "@aws-sdk/client-secrets-manager",
+  "@aws-sdk/client-sesv2",
+  "@aws-sdk/lib-dynamodb",
+];
+
 export interface ApiStackProps extends StackProps {
   config: EnvConfig;
 }
@@ -83,7 +93,12 @@ export class ApiStack extends Stack {
       versioned: config.retain,
       removalPolicy: config.retain ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
       autoDeleteObjects: !config.retain,
-      lifecycleRules: config.retain ? [{ noncurrentVersionExpiration: Duration.days(90) }] : [],
+      lifecycleRules: [
+        // An export of an account is a file made for one download; the
+        // bucket throws it away the next day whatever became of the link.
+        { tagFilters: { runlog: "export" }, expiration: Duration.days(1) },
+        ...(config.retain ? [{ noncurrentVersionExpiration: Duration.days(90) }] : []),
+      ],
     });
 
     // An explicit group, so retention is a property of this stack and not a
@@ -157,9 +172,11 @@ export class ApiStack extends Stack {
         sourceMap: true,
         format: lambdaNodejs.OutputFormat.ESM,
         target: "node24",
-        // The AWS SDK is in the runtime already; bundling a copy would only
-        // make the function slower to start.
-        externalModules: ["@aws-sdk/*"],
+        // The AWS SDK's clients are in the runtime already; bundling a copy
+        // would only make the function slower to start. Named one by one
+        // rather than as a glob, so a helper the runtime does not carry
+        // (the request presigner) is bundled rather than missed.
+        externalModules: RUNTIME_SDK,
         // A CommonJS dependency inside an ES module bundle needs `require`
         // to exist; esbuild does not create it on its own.
         banner: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
@@ -301,7 +318,7 @@ export class ApiStack extends Stack {
         sourceMap: true,
         format: lambdaNodejs.OutputFormat.ESM,
         target: "node24",
-        externalModules: ["@aws-sdk/*"],
+        externalModules: RUNTIME_SDK,
         banner: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
       },
     });
