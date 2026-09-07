@@ -71,25 +71,25 @@ jobs:
       - uses: ./.github/actions/build-app
         with:
           environment: prd
-          workos-client-id: ${{ vars.WORKOS_CLIENT_ID_PRD }}
-          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_PRD }}
+          workos-client-id: ${{ vars.WORKOS_CLIENT_ID }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
 
       - name: Deploy the hosting and publish the build to production
         uses: ./.github/actions/run-cdk
         with:
           cdk-command: deploy
-          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_PRD }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           target-region: ${{ env.AWS_REGION }}
           node-version: ${{ env.NODE_VERSION }}
           github-role-name: ${{ env.GITHUB_ROLE_NAME }}
           aws-environment: prd
-          hosted-zone-id: ${{ secrets.RUNLOG_PRD_ZONE_ID }}
+          hosted-zone-id: ${{ secrets.RUNLOG_ZONE_ID }}
           app-dist: apps/web/dist
 
       - name: Seed the catalog with the built-in packs
         env:
           RUNLOG_API: https://runlog.scrthq.com/api
-          RUNLOG_API_KEY: ${{ secrets.RUNLOG_API_KEY_PRD }}
+          RUNLOG_API_KEY: ${{ secrets.RUNLOG_API_KEY }}
         run: npm run seed:listings
 
       - run: echo "### Deployed ${{ steps.tag.outputs.tag }} to production" >> "$GITHUB_STEP_SUMMARY"

@@ -224,7 +224,7 @@ The build knows whether there is anything to sign into from one variable:
 
 | | |
 | --- | --- |
-| `VITE_WORKOS_CLIENT_ID` set | "Sign in" in the header. Set by the deploy from the `WORKOS_CLIENT_ID_DEV` / `WORKOS_CLIENT_ID_PRD` repository variables. |
+| `VITE_WORKOS_CLIENT_ID` set | "Sign in" in the header. Set by the deploy from the stage environment's `WORKOS_CLIENT_ID` variable. |
 | unset | No sign-in at all, and no request to WorkOS. Local development, the test-suite, a file on disk and the public GitHub Pages build all run this way. |
 
 To work on sign-in locally, put the staging client id in `apps/web/.env.local`
