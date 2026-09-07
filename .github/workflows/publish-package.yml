@@ -74,31 +74,37 @@ jobs:
       # invisible to a plain `npx` — until the NPM_CHANNEL repository
       # variable says `latest`. A prerelease is `next` regardless, and a
       # hand-run says which it wants.
-      - name: Decide the channel
+      # The name reaches this job from another run's head. It is used to
+      # pick a release out of the list the API returns, and what is checked
+      # out is that release's tag as the API spelled it: a published release
+      # or nothing, and never the event's own words.
+      - name: Decide the channel, and which release this is
+        id: release
         env:
           GH_TOKEN: ${{ github.token }}
           ASKED: ${{ inputs.channel }}
           DEFAULT: ${{ vars.NPM_CHANNEL || 'next' }}
         run: |
+          set -euo pipefail
           case "$TAG" in
             v[0-9]*.[0-9]*.[0-9]*) ;;
             *) echo "::error::'$TAG' is not a release tag"; exit 1 ;;
           esac
-          # A published release by that name, or nothing is checked out at
-          # all: the tag reaches this job from another run's head, and the
-          # release is what makes it a release rather than a name.
-          pre="$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)" || { echo "::error::'$TAG' is not a published release"; exit 1; }
+          found="$(gh release list --limit 200 --json tagName,isPrerelease,isDraft | jq -c --arg want "$TAG" '.[] | select(.tagName == $want and .isDraft == false)')"
+          if [ -z "$found" ]; then echo "::error::'$TAG' is not a published release"; exit 1; fi
+          release="$(jq -r .tagName <<<"$found")"
+          pre="$(jq -r .isPrerelease <<<"$found")"
           channel="${ASKED:-$DEFAULT}"
           [ "$pre" = "true" ] && channel=next
+          echo "tag=$release" >> "$GITHUB_OUTPUT"
           echo "CHANNEL=$channel" >> "$GITHUB_ENV"
-          echo "Publishing $TAG as $channel"
+          echo "Publishing $release as $channel"
 
-      # The tag, and only after it has been shown to be a release. For a run
-      # that follows a deploy, the tag must also be the commit that deploy
-      # ran, so what reaches npm is what reached production.
+      # For a run that follows a deploy, the release must also be the commit
+      # that deploy ran, so what reaches npm is what reached production.
       - uses: actions/checkout@v7
         with:
-          ref: refs/tags/${{ env.TAG }}
+          ref: refs/tags/${{ steps.release.outputs.tag }}
       - name: The tag is the commit that was deployed
         if: github.event_name == 'workflow_run'
         env:
