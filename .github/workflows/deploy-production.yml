@@ -100,6 +100,14 @@ jobs:
           hosted-zone-id: ${{ secrets.RUNLOG_ZONE_ID }}
           app-dist: apps/web/dist
 
+      # The stage, asked through its own edge: the API as JSON, the app's
+      # script as JavaScript. A deploy that leaves either wrong fails here,
+      # and a failed dev deploy cuts no release, so production never sees it.
+      - name: Prove the stage answers
+        uses: ./.github/actions/smoke
+        with:
+          env-config: ${{ vars.RUNLOG_ENV_CONFIG }}
+
       - name: Seed the catalog with the built-in packs
         env:
           RUNLOG_API: https://runlog.scrthq.com/api
