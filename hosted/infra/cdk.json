@@ -10,6 +10,7 @@
     "@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy": true,
     "@aws-cdk/aws-cloudfront:useOriginAccessControl": true,
     "@aws-cdk/core:enablePartitionLiterals": true,
-    "@aws-cdk/aws-lambda:recognizeLayerVersion": true
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "@aws-cdk/core:defaultCrossStackReferences": "strong"
   }
 }

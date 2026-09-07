@@ -1,0 +1,40 @@
+# Dependabot: version updates as pull requests, on a schedule, grouped.
+#
+# Every merge to main deploys dev and cuts a release, so updates arrive
+# once a week and bundled: one pull request for the npm workspace's minor
+# and patch bumps, one per major, one for the actions the workflows use.
+# Security updates (Dependabot alerts turned into pull requests) are a
+# repository setting and come whenever an advisory does.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/New_York
+    open-pull-requests-limit: 5
+    groups:
+      # The lot, together, when nothing is a major: one PR, one run of the
+      # suite, one deploy.
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+    # CDK moves weekly and its library and CLI must move together.
+    ignore: []
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "deps"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/New_York
+    groups:
+      actions:
+        patterns: ["*"]
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "ci"

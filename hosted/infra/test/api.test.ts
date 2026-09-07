@@ -96,7 +96,7 @@ describe("the API", () => {
 
   it("knows which WorkOS client it is checking tokens for", () => {
     template.hasResourceProperties("AWS::Lambda::Function", {
-      Runtime: "nodejs22.x",
+      Runtime: "nodejs24.x",
       Architectures: ["arm64"],
       Environment: { Variables: Match.objectLike({ WORKOS_CLIENT_ID: "client_test", WORKOS_CLI_CLIENT_ID: "client_cli_test" }) },
     });
