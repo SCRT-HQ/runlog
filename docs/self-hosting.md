@@ -128,7 +128,9 @@ The pages in `hosted/pages/` are the terms, the privacy policy, the
 publisher agreement, pricing and about, written for one operator with the
 name and the dates left as placeholders. They are a starting point, not
 counsel: read them as yours before they go out, and change what does not
-describe your copy.
+describe your copy. The terms name Texas law and Texas courts, and the
+privacy policy says data lives in the United States; both are ours to
+say, not yours.
 
 ### Deploy
 

@@ -156,8 +156,8 @@ nothing.
 
 To change the terms: edit the page, bump `hosted.termsVersion` and
 `termsDate` in the stage's configuration, publish. Every signed-in person is asked
-once. Paragraphs marked "For counsel" are notes for legal review and
-should be removed as each is settled.
+once. The pages say only what is certain about the hosted copy; the open
+questions for legal review are kept outside the repository.
 
 ## Who may open it
 
