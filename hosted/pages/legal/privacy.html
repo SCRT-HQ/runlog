@@ -95,11 +95,18 @@
       </ul>
       <p>We do not profile you, we do not advertise, and we do not sell or rent any of this.</p>
 
-      <h2>6. Logs</h2>
+      <h2>6. Logs and counts</h2>
       <p>
-        The edge keeps no access logs. The API keeps a service log: when a request failed and why, with no request body
-        and no addresses, so that problems can be found. Those lines are kept for {{LOG_RETENTION}} by Amazon CloudWatch and
-        then deleted. Sign-in attempts are logged by WorkOS under its own policy.
+        The edge keeps no access logs. The API keeps two kinds of line, both without addresses and without request
+        bodies: a service log of when a request failed and why, and an access log of which route was asked for, when, with
+        what result and how long it took. Both are kept for {{LOG_RETENTION}} by Amazon CloudWatch and then deleted.
+        Sign-in attempts are logged by WorkOS under its own policy.
+      </p>
+      <p>
+        We also count. The app tells us which of its screens were opened, which version of the app it is, and which
+        country the request came from, and we keep those as totals per day. No identifier, no address and no cookie is
+        involved, so the totals cannot be tied to a person, and the app sends none of this when your browser sends a Do
+        Not Track or Global Privacy Control signal.
       </p>
 
       <h2>7. Who else sees data</h2>
@@ -111,12 +118,16 @@
         <dd>Sign-in and sessions.</dd>
         <dt>Stripe</dt>
         <dd>Payments and payouts, when plans are on.</dd>
+        <dt>New Relic</dt>
+        <dd>Monitoring of our servers: how long requests take and what went wrong, with no request bodies, no addresses and no tokens.</dd>
       </dl>
       <p>
-        Data is stored in the United States. If you are in the EU, UK or another place with rules on transfers, those
-        transfers rest on the providers' standard contractual clauses.
+        Data is stored and processed in the United States. If you are in the EU, the UK or another place with rules on
+        transfers: Amazon Web Services, Stripe and New Relic are certified under the EU-US Data Privacy Framework and its
+        UK extension, and every provider's transfers also rest on the standard contractual clauses in its data-processing
+        agreement with us.
       </p>
-      <p class="counsel">Confirm data-processing agreements are in place with each provider and that the transfer mechanism is named correctly.</p>
+      <p class="counsel">Confirm data-processing agreements are in place with each provider, and check WorkOS's Data Privacy Framework status before naming it as certified.</p>
 
       <h2>8. How long we keep things</h2>
       <ul>
@@ -129,8 +140,8 @@
 
       <h2>9. Your rights</h2>
       <p>
-        You can see everything we hold from your profile in the app, export your runs and packs at any time, and delete
-        your account with one button, which deletes what we hold immediately. Purchase records stay for the period above.
+        From your profile in the app you can download everything we hold about you as one file, and delete your account
+        with one button, which deletes what we hold immediately. Purchase records stay for the period above.
         Depending on where you live, you also have rights to access, correct, restrict, port and object, and to complain to
         a supervisory authority; write to <a href="mailto:{{SUPPORT}}">{{SUPPORT}}</a> and we will answer within a month.
       </p>

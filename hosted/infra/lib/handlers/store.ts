@@ -9,6 +9,7 @@ import {
   TransactWriteCommand,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
@@ -282,6 +283,13 @@ export interface Store {
   entitlements(sub: string): Promise<string[]>;
   /** Everything under the person: rows and objects. Returns how many rows went. */
   deleteUser(sub: string): Promise<number>;
+  /**
+   * A file of everything the account holds, written under the person and
+   * handed back as a link that works for a quarter of an hour. Tagged so
+   * the bucket throws it away the next day; deleting the account sweeps it
+   * with the rest.
+   */
+  saveExport(sub: string, body: string, at: string): Promise<{ url: string; expiresAt: string }>;
   /** Null means never seen; a tombstone comes back with `deletedAt` and no body. */
   getPack(sub: string, id: string): Promise<{ meta: PackMeta; source: string } | null>;
   putPack(sub: string, meta: PackMeta, source: string): Promise<void>;
@@ -423,6 +431,20 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
         token = listed.IsTruncated ? listed.NextContinuationToken : undefined;
       } while (token);
       return keys.length;
+    },
+
+    async saveExport(sub, body, at) {
+      const key = `users/${sub}/exports/${at.replace(/[:.]/g, "-")}.json`;
+      await s3.send(
+        new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: "application/json; charset=utf-8", Tagging: "runlog=export" }),
+      );
+      const seconds = 15 * 60;
+      const url = await getSignedUrl(
+        s3,
+        new GetObjectCommand({ Bucket: bucket, Key: key, ResponseContentDisposition: `attachment; filename="runlog-export-${at.slice(0, 10)}.json"` }),
+        { expiresIn: seconds },
+      );
+      return { url, expiresAt: new Date(Date.parse(at) + seconds * 1000).toISOString() };
     },
 
     async manifest(sub) {

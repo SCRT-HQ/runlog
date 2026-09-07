@@ -676,6 +676,52 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
 
   // Everything of yours on this side, gone. The app keeps its local copies;
   // this is the server forgetting, not the player losing anything.
+  // ---- everything the account holds, as one file ----
+  // The right to a copy, made real: every row and body the account has,
+  // written where deleting the account sweeps it, handed back as a link.
+  if (method === "POST" && path === "/api/me/export") {
+    if (caller.sid.startsWith("key:")) return json(422, { error: "an export is asked for from the app, signed in" });
+    const at = now();
+    const profile = await store.touchProfile(caller.sub, at);
+    const manifest = await store.manifest(caller.sub);
+    const packs = [];
+    for (const meta of manifest.packs) {
+      if (meta.deletedAt) continue;
+      const found = await store.getPack(caller.sub, meta.id);
+      if (found) packs.push({ ...found.meta, source: found.source });
+    }
+    const licenses = [];
+    for (const meta of manifest.licenses) {
+      if (meta.deletedAt) continue;
+      const found = await store.getLicense(caller.sub, meta.id);
+      if (found) licenses.push({ ...found.meta, key: found.key });
+    }
+    const sessions = [];
+    for (const pointer of manifest.sessions) {
+      if (pointer.deletedAt) continue;
+      const found = await store.getSession(pointer.id);
+      if (!found || found.meta.deletedAt) continue;
+      const invites = pointer.role === "owner" ? await store.listInvites(pointer.id) : [];
+      const events = await store.eventsAfter(pointer.id, 0);
+      sessions.push({ role: pointer.role, ...found.meta, members: found.members, events, invites });
+    }
+    const doc = {
+      exportedAt: at,
+      account: { id: caller.sub, profile },
+      sessions,
+      packs,
+      licenses,
+      purchases: await deps.sales.listPurchases(caller.sub),
+      races: await deps.races.listRaces(caller.sub),
+      people: await store.listPeople(caller.sub),
+      keys: await store.listApiKeys(caller.sub),
+      claims: await store.listClaims(caller.sub),
+    };
+    const body = JSON.stringify(doc, null, 2);
+    const saved = await store.saveExport(caller.sub, body, at);
+    return json(200, { url: saved.url, bytes: Buffer.byteLength(body), expiresAt: saved.expiresAt });
+  }
+
   if (method === "DELETE" && path === "/api/me") {
     const rows = await store.deleteUser(caller.sub);
     return json(200, { deleted: rows });

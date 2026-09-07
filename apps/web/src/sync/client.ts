@@ -335,6 +335,8 @@ export interface Api {
   putProfile(snapshot: { name?: string; handle?: string; email?: string; termsVersion?: string }): Promise<Profile>;
   /** Everything of the caller's on the server, gone. */
   deleteMe(): Promise<void>;
+  /** Everything the account holds as one file: a link that works for a quarter of an hour, and how big it is. */
+  exportMe(): Promise<{ url: string; bytes: number; expiresAt: string }>;
   manifest(): Promise<Manifest>;
   /** Start a session with its first events. Null when the id is already taken. */
   createSession(session: { id: string; packId: string; packVersion: string; packTitle?: string; name?: string; events: unknown[] }): Promise<{ session: SessionMeta; events: SessionEvent[] } | null>;
@@ -557,6 +559,11 @@ export function createApi(
     putProfile: async (snapshot) => (await request<{ profile: Profile }>("PUT", "/me/profile", snapshot)).body.profile,
     deleteMe: async () => {
       await request("DELETE", "/me");
+    },
+    exportMe: async () => {
+      const { status, body } = await request<{ url?: string; bytes?: number; expiresAt?: string; error?: string }>("POST", "/me/export");
+      if (status !== 200 || !body.url) throw new SyncError("error", undefined, body.error ?? "the export could not be made");
+      return { url: body.url, bytes: body.bytes ?? 0, expiresAt: body.expiresAt ?? "" };
     },
     manifest: async () => (await request<Manifest>("GET", "/sync/manifest")).body,
 
