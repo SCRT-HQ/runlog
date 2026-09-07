@@ -137,6 +137,7 @@ deploys the hosting with the build.
 | Release published | Build the tag, deploy production |
 | Production deploy succeeded | Publish `@scrthq/runlog` at the tag's version to npm, under `next` until the `NPM_CHANNEL` variable says `latest`; OIDC from the `npm-publish` environment, no token |
 | Push to `main` | Build and deploy the no-account version to GitHub Pages |
+| Monday mornings | Dependabot opens one pull request for the week's minor and patch bumps, one per major, and one for the workflows' actions; a security advisory opens one whenever it lands |
 
 Production is reached only through a published release, so it always carries a
 version and has always already been to dev.

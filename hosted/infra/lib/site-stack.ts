@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { CfnOutput } from "aws-cdk-lib";
 import type { Construct } from "constructs";
 import * as ssm from "aws-cdk-lib/aws-ssm";
+import { NagSuppressions } from "cdk-nag";
 import type { EnvConfig } from "./config";
 
 /**
@@ -263,6 +264,52 @@ export class SiteStack extends Stack {
         memoryLimit: 512,
       });
       shell.node.addDependency(assets);
+    }
+
+    // What the scanner would have said, and why it is fine here.
+    NagSuppressions.addResourceSuppressions(this.bucket, [
+      {
+        id: "AwsSolutions-S1",
+        reason: "The bucket holds the built app and is read only by CloudFront through its origin access control; a request record of who read a public page is one the privacy policy promises not to keep.",
+      },
+    ]);
+    NagSuppressions.addResourceSuppressions(this.distribution, [
+      { id: "AwsSolutions-CFR1", reason: "The app is for anyone anywhere; no geography is kept out." },
+      { id: "AwsSolutions-CFR2", reason: "Static files and an API that checks a token on every call; a WAF would add cost for rules the handler already applies. Revisit if abuse appears." },
+      { id: "AwsSolutions-CFR3", reason: "Access logs of who read the app are records the privacy policy promises not to keep; the API logs its own requests, without addresses, for a month." },
+    ]);
+    // The deployment's Lambda is CDK's, a singleton under the stack: its
+    // runtime, its managed policy and its grants (the assets bucket, the
+    // site bucket, an invalidation on any distribution) are the construct's
+    // own, not choices made here.
+    for (const child of this.node.children) {
+      if (!child.node.id.startsWith("Custom::CDKBucketDeployment")) continue;
+      NagSuppressions.addResourceSuppressions(
+        child,
+        [
+          { id: "AwsSolutions-L1", reason: "The BucketDeployment construct's own function; its runtime follows the construct's release." },
+          {
+            id: "AwsSolutions-IAM4",
+            reason: "AWSLambdaBasicExecutionRole on the construct's own function.",
+            appliesTo: ["Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"],
+          },
+          {
+            id: "AwsSolutions-IAM5",
+            reason: "The construct's grants: reading the CDK assets bucket, writing and pruning the site bucket, and an invalidation, which CloudFront scopes to no resource.",
+            appliesTo: [
+              "Action::s3:GetObject*",
+              "Action::s3:GetBucket*",
+              "Action::s3:List*",
+              "Action::s3:Abort*",
+              "Action::s3:DeleteObject*",
+              "Resource::*",
+              { regex: "/^Resource::<Bucket[A-Za-z0-9]+\\.Arn>/\\*$/g" },
+              { regex: "/^Resource::arn:(aws|<AWS::Partition>):s3:::cdk-[a-z0-9]+-assets-[^/]+/\\*$/g" },
+            ],
+          },
+        ],
+        true,
+      );
     }
 
     new CfnOutput(this, "BucketName", { value: this.bucket.bucketName });
