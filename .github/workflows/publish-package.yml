@@ -97,14 +97,16 @@ jobs:
       - uses: ./.github/actions/npm-ci
 
       # Trusted publishing wants npm 11.5.1 or later; the upgrade makes
-      # sure of it whatever Node 24 happens to bundle. No package-manager
-      # cache in a release build, as npm's own example says.
+      # sure of it whatever Node 24 happens to bundle. Pinned to 11: the
+      # first 12.0 answered the OIDC exchange with nothing and the publish
+      # with a 404, so the major is taken deliberately, not by default. No
+      # package-manager cache in a release build, as npm's own example says.
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
-      - run: npm install -g npm@latest && npm --version
+      - run: npm install -g npm@11 && npm --version
 
       - name: Test what is being published
         run: npx vitest run packages/container packages/cli
