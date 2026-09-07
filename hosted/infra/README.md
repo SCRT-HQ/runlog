@@ -77,6 +77,16 @@ Deployment itself uses the shared `GitHubActionRole`, which trusts this
 repository — see `SCRT-HQ/shl-cdk-github-iam`, where the list of repositories
 that may assume it lives.
 
+### The rules
+
+The [AWS Solutions rules](https://github.com/cdklabs/cdk-nag) run on every
+synth, diff and deploy, from `bin/runlog-infra.ts`, and an error fails the
+synth. `npm run test:infra` runs them first, against both environments and
+with a build attached, and prints every finding with its path. A finding
+is answered one of two ways: the construct is changed, or a suppression
+sits beside it with the reason written down. Never by a rerun, and never
+at the stack level.
+
 ### First time, per account
 
 ```bash

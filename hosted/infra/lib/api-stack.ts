@@ -12,6 +12,7 @@ import * as logs from "aws-cdk-lib/aws-logs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as ssm from "aws-cdk-lib/aws-ssm";
+import { NagSuppressions } from "cdk-nag";
 import type { Construct } from "constructs";
 import * as path from "node:path";
 import type { EnvConfig } from "./config";
@@ -105,12 +106,21 @@ export class ApiStack extends Stack {
     // No environment in the name: each environment is its own account, so
     // the account someone is signed in to is the environment they fill.
     const secretName = (name: string) => `runlog/${name}`;
-    const secret = (id: string, name: string, description: string) =>
-      new secretsmanager.Secret(this, id, {
+    const secret = (id: string, name: string, description: string) => {
+      const made = new secretsmanager.Secret(this, id, {
         secretName: secretName(name),
         description,
         removalPolicy: config.retain ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
       });
+      NagSuppressions.addResourceSuppressions(made, [
+        {
+          id: "AwsSolutions-SMG4",
+          reason:
+            "These are another service's API keys and webhook signing secrets (Stripe, WorkOS). Neither vendor offers a rotation API a Lambda could drive; a key is rotated in the vendor's dashboard and put here by hand with hosted/scripts/Set-RunlogSecret.ps1, and the handler picks the new value up on its next cold start.",
+        },
+      ]);
+      return made;
+    };
     const stripeSecretKey = secret("StripeSecretKey", "stripe/secret-key", "Stripe secret key: sandbox in dev, live in prd");
     const stripeWebhookSecret = secret("StripeWebhookSecret", "stripe/webhook-secret", "Signing secret of the Stripe webhook endpoint that points at /api/stripe/webhook");
     const stripeConnectWebhookSecret = secret("StripeConnectWebhookSecret", "stripe/connect-webhook-secret", "Signing secret of the Stripe Connect webhook endpoint that points at /api/stripe/connect-webhook");
@@ -119,7 +129,7 @@ export class ApiStack extends Stack {
     const handler = new lambdaNodejs.NodejsFunction(this, "Handler", {
       entry: path.join(__dirname, "handlers", "api.ts"),
       handler: "handler",
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       architecture: lambda.Architecture.ARM_64,
       memorySize: 512,
       timeout: Duration.seconds(15),
@@ -146,7 +156,7 @@ export class ApiStack extends Stack {
         minify: true,
         sourceMap: true,
         format: lambdaNodejs.OutputFormat.ESM,
-        target: "node22",
+        target: "node24",
         // The AWS SDK is in the runtime already; bundling a copy would only
         // make the function slower to start.
         externalModules: ["@aws-sdk/*"],
@@ -184,16 +194,48 @@ export class ApiStack extends Stack {
     // The full viewer path arrives here, /api and all, so the routes carry
     // the prefix and nothing has to rewrite anything on the way.
     this.api.addRoutes({ path: "/api/{proxy+}", methods: [apigwv2.HttpMethod.ANY], integration });
-    new apigwv2.HttpRoute(this, "Default", {
+    const fallthrough = new apigwv2.HttpRoute(this, "Default", {
       httpApi: this.api,
       routeKey: apigwv2.HttpRouteKey.DEFAULT,
       integration,
     });
+    NagSuppressions.addResourceSuppressions(fallthrough, [{ id: "AwsSolutions-APIG4", reason: "The handler answers unknown paths with 410 after its own token check; see the API's suppression." }]);
 
     // A ceiling, not a target: on-demand everything means a loop somewhere
     // would otherwise run up a bill before anyone noticed.
     const stage = this.api.defaultStage!.node.defaultChild as apigwv2.CfnStage;
     stage.defaultRouteSettings = { throttlingRateLimit: 50, throttlingBurstLimit: 100 };
+    // One line per request at the edge of the API: enough to see what was
+    // asked and how it went, kept the month the privacy policy names. No
+    // address: who asked is not something these logs need to know.
+    const accessLogs = new logs.LogGroup(this, "ApiAccessLogs", {
+      logGroupName: `/runlog/${config.name}/api-access`,
+      retention: logs.RetentionDays.ONE_MONTH,
+      removalPolicy: config.retain ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+    });
+    stage.accessLogSettings = {
+      destinationArn: accessLogs.logGroupArn,
+      format: JSON.stringify({
+        requestId: "$context.requestId",
+        at: "$context.requestTime",
+        route: "$context.routeKey",
+        method: "$context.httpMethod",
+        path: "$context.path",
+        status: "$context.status",
+        ms: "$context.responseLatency",
+        error: "$context.error.message",
+      }),
+    };
+    // Authorization is the handler's, on purpose (see the top of this file):
+    // a gateway authorizer answers 403, and the site turns every 403 into
+    // the app's page. Every route verifies the bearer token itself, and the
+    // few that need none (a link's peek, a run open by its link) are open
+    // by design.
+    NagSuppressions.addResourceSuppressions(
+      this.api,
+      [{ id: "AwsSolutions-APIG4", reason: "Every route verifies the WorkOS token in the handler; a gateway authorizer's 403 would be rewritten into the app page by CloudFront. The routes that need no token are public by design." }],
+      true,
+    );
 
     this.origin = `${this.api.apiId}.execute-api.${this.region}.amazonaws.com`;
 
@@ -204,6 +246,16 @@ export class ApiStack extends Stack {
      * an entitlement that never lands is a person who paid for nothing.
      */
     const alarms = new sns.Topic(this, "Alarms", { topicName: `runlog-${config.name}-alarms` });
+    alarms.addToResourcePolicy(
+      new iam.PolicyStatement({
+        sid: "TlsOnly",
+        effect: iam.Effect.DENY,
+        principals: [new iam.AnyPrincipal()],
+        actions: ["sns:Publish"],
+        resources: [alarms.topicArn],
+        conditions: { Bool: { "aws:SecureTransport": "false" } },
+      }),
+    );
     handler
       .metricErrors({ period: Duration.minutes(5), statistic: "sum" })
       .createAlarm(this, "HandlerErrors", {
@@ -233,7 +285,7 @@ export class ApiStack extends Stack {
     const wsHandler = new lambdaNodejs.NodejsFunction(this, "LiveHandler", {
       entry: path.join(__dirname, "handlers", "ws.ts"),
       handler: "handler",
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       architecture: lambda.Architecture.ARM_64,
       memorySize: 256,
       timeout: Duration.seconds(10),
@@ -248,7 +300,7 @@ export class ApiStack extends Stack {
         minify: true,
         sourceMap: true,
         format: lambdaNodejs.OutputFormat.ESM,
-        target: "node22",
+        target: "node24",
         externalModules: ["@aws-sdk/*"],
         banner: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
       },
@@ -268,6 +320,17 @@ export class ApiStack extends Stack {
       autoDeploy: true,
       throttle: { rateLimit: 50, burstLimit: 100 },
     });
+    NagSuppressions.addResourceSuppressions(
+      wsApi,
+      [{ id: "AwsSolutions-APIG4", reason: "$connect verifies the WorkOS token or the live link's token in the handler and writes a connection row only then; $default and $disconnect act only on rows $connect wrote. The socket carries a doorbell and gestures, never a run." }],
+      true,
+    );
+    NagSuppressions.addResourceSuppressions(wsStage, [
+      {
+        id: "AwsSolutions-APIG1",
+        reason: "Access logs for a WebSocket API need the account-wide CloudWatch role for API Gateway, which this stack does not own. The socket's handler logs every connect, message and disconnect to the API's log group, which is the record.",
+      },
+    ]);
     // The HTTP handler rings the doorbell: it needs the management
     // endpoint of this stage and permission to post to its connections.
     handler.addEnvironment("WS_ENDPOINT", wsStage.callbackUrl);
@@ -294,6 +357,44 @@ export class ApiStack extends Stack {
       stringValue: wsStage.url,
       description: "The WebSocket API CloudFront forwards /ws to.",
     });
+
+    // What the scanner would have said, and why it is fine here. The grants
+    // come from CDK: read and write on one bucket is spelled with the
+    // wildcards CDK uses for it, and posting to a socket's connections has
+    // to name every connection of the stage, since ids are made as people
+    // connect. The managed policy is the one that writes function logs.
+    for (const fn of [handler, wsHandler]) {
+      NagSuppressions.addResourceSuppressions(
+        fn,
+        [
+          {
+            id: "AwsSolutions-IAM4",
+            reason: "AWSLambdaBasicExecutionRole grants writing the function's own CloudWatch logs and nothing else; a customer policy would restate it.",
+            appliesTo: ["Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"],
+          },
+          {
+            id: "AwsSolutions-IAM5",
+            reason: "CDK's grantRead/grantReadWrite on the one sync bucket, and the stage's @connections, whose ids exist only once someone connects.",
+            appliesTo: [
+              "Action::s3:GetObject*",
+              "Action::s3:GetBucket*",
+              "Action::s3:List*",
+              "Action::s3:Abort*",
+              "Action::s3:DeleteObject*",
+              { regex: "/^Resource::<Bucket[A-Za-z0-9]+\\.Arn>/\\*$/g" },
+              { regex: "/^Resource::arn:(aws|<AWS::Partition>):execute-api:[^:]+:[^:]+:<WebSocketApi[A-Za-z0-9]+>/ws/\\*/@connections/\\*$/g" },
+            ],
+          },
+        ],
+        true,
+      );
+    }
+    NagSuppressions.addResourceSuppressions(this.bucket, [
+      {
+        id: "AwsSolutions-S1",
+        reason: "Every object is one person's own run or pack, read and written only by the handler under its role; the API's own logs and CloudTrail are the record. Server access logs would be a second copy of who did what, kept for nobody.",
+      },
+    ]);
 
     new CfnOutput(this, "ApiEndpoint", { value: this.api.apiEndpoint });
     new CfnOutput(this, "LiveEndpoint", { value: wsStage.url });

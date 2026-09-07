@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import "source-map-support/register";
-import { App, Tags } from "aws-cdk-lib";
+import { App, Aspects, Tags } from "aws-cdk-lib";
+import { AwsSolutionsChecks } from "cdk-nag";
 import { currentEnv, envConfig } from "../lib/config";
 import { ApiStack } from "../lib/api-stack";
 import { SiteStack } from "../lib/site-stack";
@@ -30,6 +31,11 @@ new SiteStack(app, `Runlog-${name}-Site`, {
   apiOrigin: api.origin,
   wsOrigin: api.wsOrigin,
 });
+
+// The AWS Solutions rules, on every synth, diff and deploy: an error fails
+// the synth, so a finding is either fixed or suppressed where it stands with
+// the reason written next to it. The test suite runs the same checks.
+Aspects.of(app).add(new AwsSolutionsChecks({ verbose: true }));
 
 Tags.of(app).add("runlog:env", name);
 Tags.of(app).add("project", "runlog");
