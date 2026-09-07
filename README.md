@@ -137,7 +137,7 @@ deploys the hosting with the build.
 | Release published | Build the tag, deploy production |
 | Production deploy succeeded | Publish `@scrthq/runlog` at the tag's version to npm, under `next` until the `NPM_CHANNEL` variable says `latest`; OIDC from the `npm-publish` environment, no token |
 | Push to `main` | Build and deploy the no-account version to GitHub Pages |
-| Monday mornings | Dependabot opens one pull request for the week's minor and patch bumps, one per major, and one for the workflows' actions; a security advisory opens one whenever it lands |
+| Monday mornings | Dependabot opens one pull request for the week's minor and patch bumps, one per major, and one for the workflows' actions, each for versions at least a week old; a security advisory opens one whenever it lands |
 
 Production is reached only through a published release, so it always carries a
 version and has always already been to dev.
@@ -300,5 +300,9 @@ they say. A copy you keep for yourself quotes them in full, because personal
 use is what such a license allows.
 
 ## Contributing
+
+`.npmrc` asks npm not to install a package version younger than a week, so
+a compromised release has time to be noticed before it reaches anyone
+here. npm 11.10 and later enforce it; an older npm ignores the line.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
