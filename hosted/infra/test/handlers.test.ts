@@ -1329,6 +1329,22 @@ describe("sessions", () => {
     expect((await call(request("GET", "/api/people", { token: "guest" }), d)).body["people"]).toMatchObject([{ sub: "user_1", name: "Nate" }]);
   });
 
+  it("counts a screen, by version and country, and never anyone who asked not to be", async () => {
+    const counted: Array<{ screen: string; version: string; country: string }> = [];
+    const d = deps(memoryStore(), { count: (v) => counted.push(v) });
+    const view = { t: "view", screen: "play", v: "0.1.0" };
+    expect((await call(request("POST", "/api/beacon", { body: view, token: null, headers: { "cloudfront-viewer-country": "de" } }), d)).body).toEqual({ counted: true });
+    expect((await call(request("POST", "/api/beacon", { body: { ...view, v: "not a version" }, token: null }), d)).body).toEqual({ counted: true });
+    expect(counted).toEqual([
+      { screen: "play", version: "0.1.0", country: "DE" },
+      { screen: "play", version: "unknown", country: "ZZ" },
+    ]);
+    // The browser's wish, and a screen that is not one of the app's.
+    expect((await call(request("POST", "/api/beacon", { body: view, token: null, headers: { "sec-gpc": "1" } }), d)).body).toEqual({ counted: false });
+    expect((await call(request("POST", "/api/beacon", { body: { ...view, screen: "run/01ABC" }, token: null }), d)).status).toBe(422);
+    expect(counted).toHaveLength(2);
+  });
+
   it("hands the account everything it holds as one file", async () => {
     const d = deps(memoryStore(), { mailer: fakeMail().mailer });
     await call(request("PUT", "/api/me/profile", { body: { name: "Nate", email: "nate@example.com" } }), d);

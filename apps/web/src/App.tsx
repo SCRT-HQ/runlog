@@ -40,6 +40,8 @@ import { useApi } from "./sync/useApi.ts";
 import { SealedPackPrompt } from "./share/SealedPackPrompt.tsx";
 import { AccountBadge } from "./auth/AccountBadge.tsx";
 import { Footer } from "./hosted/Footer.tsx";
+import { useHosted } from "./hosted/HostedProvider.tsx";
+import { countView } from "./hosted/beacon.ts";
 import { baseOf, welcomePath } from "./welcome/route.ts";
 import { TermsGate } from "./hosted/TermsGate.tsx";
 import { useAccount } from "./auth/Account.tsx";
@@ -679,6 +681,13 @@ export default function App() {
       return "";
     });
   }, []);
+
+  // A hosted copy counts the screen, once per change; see hosted/beacon.ts
+  // for what is and is not sent. Every hook above has run by here.
+  const hosted = useHosted();
+  useEffect(() => {
+    countView(widget ? "widget" : liveRoute ? "live" : view, { hosted: hosted !== null, version: __RUNLOG_VERSION__ });
+  }, [hosted, widget, liveRoute, view]);
 
   if (widget) return <WidgetView route={widget} />;
   if (liveRoute) {

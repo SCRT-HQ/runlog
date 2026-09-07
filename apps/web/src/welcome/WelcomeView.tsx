@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { countView } from "../hosted/beacon.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 import { Footer } from "../hosted/Footer.tsx";
 import { PersonaSwitcher } from "./PersonaSwitcher.tsx";
@@ -51,6 +52,11 @@ export function WelcomeView() {
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, [play]);
+
+  // A hosted copy counts the visit; see hosted/beacon.ts for what is sent.
+  useEffect(() => {
+    countView("welcome", { hosted: hosted !== null, version: __RUNLOG_VERSION__ });
+  }, [hosted]);
 
   return (
     <div className="welcome">

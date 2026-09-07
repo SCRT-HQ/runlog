@@ -134,8 +134,20 @@ function livePage(input: { appUrl: string; id: string; token: string; title: str
   };
 }
 
+/** What the app's beacon says: a screen's family, the app's version, and the country the edge saw. */
+export interface View {
+  screen: string;
+  version: string;
+  country: string;
+}
+
+/** The screens the beacon may name: families, never an id. Mirrors apps/web/src/hosted/beacon.ts. */
+const SCREENS = ["welcome", "library", "play", "rules", "catalog", "guide", "design", "profile", "live", "widget"] as const;
+
 export interface Deps {
   store: Store;
+  /** Where a counted view goes: a metric in production, a list in a test. Absent, nothing is counted. */
+  count?: (view: View) => void;
   races: RaceStore;
   billing: BillingStore;
   publishers: PublisherStore;
@@ -359,6 +371,24 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         alreadyIn,
       },
     });
+  }
+
+  // ---- a count, and nothing else ----
+  // The app's beacon: which screen, which version, and the country the
+  // edge saw. No identifier arrives and none is made; the request's
+  // address is dropped with the request. A browser that asked not to be
+  // tracked, by Global Privacy Control or Do Not Track, is not counted.
+  if (method === "POST" && path === "/api/beacon") {
+    if (header(event, "sec-gpc") === "1" || header(event, "dnt") === "1") return json(200, { counted: false });
+    const body = parse(event);
+    if (!isRecord(body) || body["t"] !== "view") return json(422, { error: "a view, as JSON" });
+    const screen = (SCREENS as readonly string[]).includes(String(body["screen"])) ? String(body["screen"]) : null;
+    if (!screen) return json(422, { error: `screen: one of ${SCREENS.join(", ")}` });
+    const version = str(body["v"]) && /^\d+\.\d+\.\d+$/.test(body["v"]) ? body["v"] : "unknown";
+    const seen = (header(event, "cloudfront-viewer-country") ?? "").toUpperCase();
+    const country = /^[A-Z]{2}$/.test(seen) ? seen : "ZZ";
+    deps.count?.({ screen, version, country });
+    return json(200, { counted: true });
   }
 
   // Who signed a pack: the other read that needs no account. The badge
@@ -1644,6 +1674,34 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
       // Tokens from the browser's client and the command line's are both ours.
       verify: (authorization) => verifyToken(authorization, [clientId, cliClientId]),
       env: process.env["RUNLOG_ENV"] ?? "",
+      // A view becomes a CloudWatch metric by way of the embedded metric
+      // format: one log line that CloudWatch reads as a count, under the
+      // Runlog namespace, by screen, by country and by version. No table,
+      // no row, nothing to delete.
+      count: (view) =>
+        console.log(
+          JSON.stringify({
+            _aws: {
+              Timestamp: Date.now(),
+              CloudWatchMetrics: [
+                {
+                  Namespace: "Runlog",
+                  Dimensions: [
+                    ["env", "screen"],
+                    ["env", "country"],
+                    ["env", "version"],
+                  ],
+                  Metrics: [{ Name: "views", Unit: "Count" }],
+                },
+              ],
+            },
+            env: process.env["RUNLOG_ENV"] ?? "",
+            screen: view.screen,
+            country: view.country,
+            version: view.version,
+            views: 1,
+          }),
+        ),
       ...(cliClientId ? { cliClientId } : {}),
       mailer: sesMailer({ from: process.env["EMAIL_FROM"] ?? "", region: process.env["EMAIL_REGION"] ?? "us-west-2" }),
       appUrl: process.env["APP_URL"] ?? "/",
