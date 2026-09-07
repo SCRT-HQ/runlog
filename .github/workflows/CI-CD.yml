@@ -135,7 +135,7 @@ jobs:
     # names nothing but the stage. It is open to this repository's
     # branches, since a diff is what a pull request asks for; the deploy
     # environments below are not.
-    environment: ${{ matrix.env }}
+    environment: cdk-diff-${{ matrix.env }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/build-app
