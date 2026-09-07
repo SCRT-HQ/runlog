@@ -13,7 +13,8 @@
     "about": "https://{{DOMAIN}}/about.html",
     "welcome": "https://{{DOMAIN}}/welcome.html",
     "licenses": "https://{{DOMAIN}}/licenses.html",
-    "source": "https://github.com/SCRT-HQ/runlog"
+    "source": "https://github.com/SCRT-HQ/runlog",
+    "community": "https://www.reddit.com/r/runlog_scrthq/"
   },
   "features": {
     "billing": {{BILLING}}

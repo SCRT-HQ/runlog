@@ -29,6 +29,7 @@ export function Footer({ onGuide }: { onGuide: () => void }) {
         {links.publishers && <a href={links.publishers}>Publishers</a>}
         {links.about && <a href={links.about}>About</a>}
         <a href={`mailto:${hosted.support}`}>Support</a>
+        {links.community && <a href={links.community}>Community</a>}
         {links.licenses && <a href={links.licenses}>Licenses</a>}
         {links.source && <a href={links.source}>Source</a>}
       </nav>

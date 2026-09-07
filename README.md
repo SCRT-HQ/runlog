@@ -1,5 +1,7 @@
 # Runlog
 
+[![r/runlog_scrthq](https://img.shields.io/reddit/subreddit-subscribers/runlog_scrthq?style=flat-square&logo=reddit&label=r%2Frunlog_scrthq)](https://www.reddit.com/r/runlog_scrthq/)
+
 An engine for dice-driven creative-practice games — the kind where you roll on
 a table, take whatever constraint comes up, make something under it, and
 occasionally suffer a result that reaches backwards and damages what you made
@@ -305,4 +307,5 @@ use is what such a license allows.
 a compromised release has time to be noticed before it reaches anyone
 here. npm 11.10 and later enforce it; an older npm ignores the line.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Runs, packs and questions that
+are not bugs go to [r/runlog_scrthq](https://www.reddit.com/r/runlog_scrthq/).
