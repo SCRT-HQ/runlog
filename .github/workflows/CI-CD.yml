@@ -82,15 +82,15 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      # No credentials. The stacks are asserted against a synthesized template,
-      # so the tests need an account id to render into ARNs and nothing more,
-      # which is what keeps them runnable on a fork's pull request, where the
-      # repository's variables may not be handed over: any twelve digits do.
+      # No credentials, and no real account: the stacks are asserted against
+      # a synthesized template, so the tests need an account id to render
+      # into ARNs and nothing more. A stand-in does that on a fork's pull
+      # request as well as here, and keeps the real ids out of the picture.
       - name: Test the hosting against ${{ matrix.aws-environment }}
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
           AWS_ENVIRONMENT: ${{ matrix.aws-environment }}
-          CDK_DEFAULT_ACCOUNT: ${{ (matrix.aws-environment == 'prd' && vars.AWS_ACCOUNT_ID_PRD || vars.AWS_ACCOUNT_ID_DEV) || '123456789012' }}
+          CDK_DEFAULT_ACCOUNT: "123456789012"
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
         run: npm run test:ci -w hosted/infra
 
@@ -132,17 +132,17 @@ jobs:
         with:
           environment: dev
           workos-client-id: ${{ vars.WORKOS_CLIENT_ID_DEV }}
-          target-account-id: ${{ vars.AWS_ACCOUNT_ID_DEV }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_DEV }}
       - name: Run CDK Diff Against Dev Environment
         uses: ./.github/actions/run-cdk
         with:
           cdk-command: diff
-          target-account-id: ${{ vars.AWS_ACCOUNT_ID_DEV }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_DEV }}
           target-region: ${{ env.AWS_REGION }}
           node-version: ${{ env.NODE_VERSION }}
           github-role-name: ${{ env.GITHUB_ROLE_NAME }}
           aws-environment: dev
-          hosted-zone-id: ${{ vars.RUNLOG_DEV_ZONE_ID }}
+          hosted-zone-id: ${{ secrets.RUNLOG_DEV_ZONE_ID }}
           app-dist: apps/web/dist
 
   PrdDiff:
@@ -170,24 +170,24 @@ jobs:
         with:
           environment: prd
           workos-client-id: ${{ vars.WORKOS_CLIENT_ID_PRD }}
-          target-account-id: ${{ vars.AWS_ACCOUNT_ID_PRD }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_PRD }}
       - name: Run CDK Diff Against Prd Environment
         uses: ./.github/actions/run-cdk
         with:
           cdk-command: diff
-          target-account-id: ${{ vars.AWS_ACCOUNT_ID_PRD }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_PRD }}
           target-region: ${{ env.AWS_REGION }}
           node-version: ${{ env.NODE_VERSION }}
           github-role-name: ${{ env.GITHUB_ROLE_NAME }}
           aws-environment: prd
-          hosted-zone-id: ${{ vars.RUNLOG_PRD_ZONE_ID }}
+          hosted-zone-id: ${{ secrets.RUNLOG_PRD_ZONE_ID }}
           app-dist: apps/web/dist
 
   DevDeploy:
     name: Deploy Dev
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    environment: deploy-dev-${{ vars.AWS_ACCOUNT_ID_DEV }}
+    environment: deploy-dev
     permissions:
       contents: read
       id-token: write
@@ -206,17 +206,17 @@ jobs:
         with:
           environment: dev
           workos-client-id: ${{ vars.WORKOS_CLIENT_ID_DEV }}
-          target-account-id: ${{ vars.AWS_ACCOUNT_ID_DEV }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_DEV }}
       - name: Deploy the hosting and publish the build to dev
         uses: ./.github/actions/run-cdk
         with:
           cdk-command: deploy
-          target-account-id: ${{ vars.AWS_ACCOUNT_ID_DEV }}
+          target-account-id: ${{ secrets.AWS_ACCOUNT_ID_DEV }}
           target-region: ${{ env.AWS_REGION }}
           node-version: ${{ env.NODE_VERSION }}
           github-role-name: ${{ env.GITHUB_ROLE_NAME }}
           aws-environment: dev
-          hosted-zone-id: ${{ vars.RUNLOG_DEV_ZONE_ID }}
+          hosted-zone-id: ${{ secrets.RUNLOG_DEV_ZONE_ID }}
           app-dist: apps/web/dist
 
       # The built-ins, listed in the catalog as the platform's own, so the
