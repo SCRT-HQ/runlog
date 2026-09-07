@@ -326,6 +326,17 @@ export class SiteStack extends Stack {
    * leaves Host out, which is what API Gateway needs — it routes on its own
    * hostname. The same security headers ride along; HSTS on JSON is harmless.
    */
+  private originRequest?: cloudfront.OriginRequestPolicy;
+  private apiOriginRequest(): cloudfront.OriginRequestPolicy {
+    this.originRequest ??= new cloudfront.OriginRequestPolicy(this, "ApiOriginRequest", {
+      comment: "Every viewer header but Host, every cookie and query string, and the viewer's country",
+      headerBehavior: cloudfront.OriginRequestHeaderBehavior.all("CloudFront-Viewer-Country"),
+      cookieBehavior: cloudfront.OriginRequestCookieBehavior.all(),
+      queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all(),
+    });
+    return this.originRequest;
+  }
+
   private apiBehavior(host: string, config: EnvConfig): cloudfront.BehaviorOptions {
     return {
       origin: new origins.HttpOrigin(host, {
@@ -334,7 +345,10 @@ export class SiteStack extends Stack {
       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
       allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
       cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-      originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+      // Every viewer header but Host, which API Gateway routes on, plus the
+      // one header only the edge knows: the country a request came from,
+      // which is all the beacon's count wants of where.
+      originRequestPolicy: this.apiOriginRequest(),
       responseHeadersPolicy: this.headers(config),
       compress: false,
     };

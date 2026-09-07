@@ -54,7 +54,7 @@ jobs:
       # so the page itself stands there and reads the address as it does anywhere.
       - run: cp apps/web/dist/index.html apps/web/dist/404.html
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: apps/web/dist
 
@@ -67,4 +67,4 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
