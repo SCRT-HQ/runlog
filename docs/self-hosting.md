@@ -157,6 +157,15 @@ year's cache, the shell and the pages with none, and an invalidation.
 
 A new release is the same three commands with the new package.
 
+### Monitoring, if you want it
+
+Add `"apm": { "newRelic": { "accountId": "<your account>", "layerVersion": 52 } }`
+to the stage's file, deploy, and fill `newrelic/license-key` with the
+script (it wraps the key the way New Relic's extension reads it). Both
+functions then report traces, errors and their logs to that account, with
+bodies, tokens and addresses kept out. Leave the block out and nothing
+is sent anywhere.
+
 ### After the first deploy
 
 The API's secrets are created as placeholders, and a feature whose secret

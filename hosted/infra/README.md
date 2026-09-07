@@ -366,6 +366,26 @@ WebSocket API's address). Connection rows expire after two hours by TTL,
 and a connection the gateway reports gone is dropped the first time a
 post to it fails. The app falls back to polling when the socket is closed.
 
+## Monitoring
+
+Optional, and off until the stage's configuration says otherwise. With an
+`apm.newRelic` block naming a New Relic account (and the layer's version
+for `NewRelicNodeJS24XARM64` in the region, 52 as of writing), both
+functions get New Relic's Lambda layer: the handler becomes the layer's
+wrapper, which imports the real one and reports traces, errors and the
+function's own logs. The license key is a fifth secret,
+`runlog/newrelic/license-key`, which the fill script writes in the shape
+the extension reads, `{"LicenseKey": "..."}`. The agent is told to keep
+request bodies, the authorization header, cookies and addresses out of
+what it records, so what reaches New Relic is about the service, not the
+people using it. Browser monitoring is deliberately not part of this: it
+is a third-party script with a session identifier, and it would bring a
+consent banner with it.
+
+```json
+"apm": { "newRelic": { "accountId": "1234567", "layerVersion": 52 } }
+```
+
 ## Environments, secrets and variables
 
 Each stage's account and zone ids are secrets on its environments. Not
