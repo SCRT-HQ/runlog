@@ -108,6 +108,26 @@ jobs:
           package-manager-cache: false
       - run: npm install -g npm@11 && npm --version
 
+      # The exchange npm does quietly, done aloud: the job's OIDC token
+      # for the registry's publish token. npm hides the registry's answer
+      # and reports a 404 on the publish instead, so a trusted publisher
+      # that is misconfigured, or bound to a repository that no longer
+      # exists, looks like a missing package. This prints the status and
+      # the registry's words, and never a token.
+      - name: Ask the registry whether it trusts this workflow
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          id="$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=npm:registry.npmjs.org" | jq -r .value)"
+          status="$(curl -sS -o /tmp/exchange.json -w '%{http_code}' -X POST -H "Authorization: Bearer $id" -H 'Content-Type: application/json'             "https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/@scrthq%2frunlog")"
+          echo "registry answered $status"
+          jq -r 'del(.token) | tostring' /tmp/exchange.json 2>/dev/null || true
+          rm -f /tmp/exchange.json
+          {
+            echo "### Trusted publishing: registry answered $status"
+            jq -r 'del(.token) | .message // .error // "no message"' /tmp/exchange.json 2>/dev/null || true
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Test what is being published
         run: npx vitest run packages/container packages/cli
 
