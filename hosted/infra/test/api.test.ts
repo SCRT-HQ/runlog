@@ -104,6 +104,8 @@ describe("the API", () => {
 
   it("defines the secrets it will need, and lets only the handler read them", () => {
     template.resourceCountIs("AWS::SecretsManager::Secret", 4);
+    // Bare, without an account to report to: no layer and no wrapper.
+    template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike({ Handler: "index.handler", Layers: Match.absent() }));
     for (const name of ["stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret", "workos/api-key"]) {
       template.hasResourceProperties("AWS::SecretsManager::Secret", { Name: `runlog/${name}` });
     }
@@ -123,6 +125,27 @@ describe("the API", () => {
         ]),
       },
     });
+  });
+
+  it("wraps both functions in New Relic's layer where the stage names an account, and reads the key from a fifth secret", () => {
+    const monitored = templateFor({ apm: { newRelic: { accountId: "1234567", layerVersion: 52 } } });
+    monitored.resourceCountIs("AWS::SecretsManager::Secret", 5);
+    monitored.hasResourceProperties("AWS::SecretsManager::Secret", { Name: "runlog/newrelic/license-key" });
+    const wrapped = Object.values(monitored.findResources("AWS::Lambda::Function", { Properties: { Handler: "newrelic-lambda-wrapper.handler" } }));
+    expect(wrapped).toHaveLength(2);
+    for (const fn of wrapped) {
+      const props = fn["Properties"] as { Layers: unknown; Environment: { Variables: Record<string, string> } };
+      expect(JSON.stringify(props.Layers)).toContain("layer:NewRelicNodeJS24XARM64:52");
+      expect(props.Environment.Variables).toMatchObject({
+        NEW_RELIC_LAMBDA_HANDLER: "index.handler",
+        NEW_RELIC_USE_ESM: "true",
+        NEW_RELIC_ACCOUNT_ID: "1234567",
+        NEW_RELIC_TRUSTED_ACCOUNT_KEY: "1234567",
+        NEW_RELIC_LICENSE_KEY_SECRET: "runlog/newrelic/license-key",
+        NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS: "true",
+      });
+      expect(props.Environment.Variables["NEW_RELIC_ATTRIBUTES_EXCLUDE"]).toContain("request.headers.authorization");
+    }
   });
 
   it("may send mail only as the verified identity", () => {
