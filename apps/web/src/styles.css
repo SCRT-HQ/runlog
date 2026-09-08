@@ -1227,6 +1227,17 @@ p {
 
 /* A line under the bar for something asked for that could not be done.
    Not `.bar`: that is the tracker's progress bar, seven pixels tall. */
+/* The rules drawn this unit, on the step that must honor them: one line each. */
+.notice.constraints ul {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0;
+}
+.notice.constraints li {
+  padding: 0.15rem 0;
+  font-size: 1rem;
+  color: var(--text);
+}
 .notice.underBar {
   display: flex;
   align-items: center;

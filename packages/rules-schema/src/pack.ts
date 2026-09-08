@@ -361,6 +361,9 @@ export const Step = z
         kind: z.literal("manual").describe("A step the engine cannot perform or verify: the actual creative work."),
         label: z.string().min(1).describe("What the player is being asked to do."),
         description: z.string().optional().describe("Further guidance."),
+        constrainedBy: Id.optional().describe(
+          "Table whose results this unit, if any, the work must honor; they are shown on the step, so a rule drawn earlier in the unit is in front of the player while they do it.",
+        ),
         checklist: z
           .array(ChecklistItem)
           .optional()

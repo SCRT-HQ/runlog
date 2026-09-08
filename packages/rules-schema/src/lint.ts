@@ -464,7 +464,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
       if (step.kind === "rollTable" && !tableIds.has(step.table)) {
         d.push(err("ref/unknown-table", path, `step rolls on unknown table ${step.table}`));
       }
-      if (step.kind === "declareSubject" && step.constrainedBy && !tableIds.has(step.constrainedBy)) {
+      if ((step.kind === "declareSubject" || step.kind === "manual") && step.constrainedBy && !tableIds.has(step.constrainedBy)) {
         d.push(err("ref/unknown-table", path, `constrainedBy references unknown table ${step.constrainedBy}`));
       }
       // A point that shows a table's results has to name a table that exists,
