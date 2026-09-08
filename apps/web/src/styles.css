@@ -3599,8 +3599,11 @@ a.plan:hover { text-decoration: underline; }
 .docMenuItem:hover, .docMenuItem:focus-visible { background: var(--panel-2); }
 
 /* ---- widgets: one panel of a run, alone, for a stream ---- */
-:root[data-widget="clear"], :root[data-widget="clear"] body { background: transparent; }
+:root[data-widget="clear"], :root[data-widget="clear"] body, :root[data-widget="none"], :root[data-widget="none"] body { background: transparent; }
 :root[data-widget="solid"] body { background: var(--bg); }
+/* None: no ground and no panel either. The words and numbers sit at the capture's edge, for a scene that frames them itself. */
+:root[data-widget="none"] .widget { padding: 0; }
+:root[data-widget="none"] .widgetBody { background: transparent; border-color: transparent; box-shadow: none; padding: 0; }
 .widget { min-height: 100vh; display: flex; align-items: flex-start; justify-content: flex-start; padding: 0.75rem; box-sizing: border-box; }
 .widget.column { flex-direction: column; align-items: stretch; gap: 0.6rem; width: min(100%, 26rem); }
 .widget.column .widgetBody { min-width: 0; }

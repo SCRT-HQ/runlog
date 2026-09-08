@@ -34,7 +34,9 @@ So, once, for each run you stream:
 1. In the run, under **People at the table**, choose **Share a live link**
    (part of Plus where plans are on).
 2. Open the run's **Settings**, then **Stream**.
-3. Tick **Clear background** so your scene shows through, and tick
+3. Set **Background** to *Clear* so your scene shows through (or *None*
+   for the words and numbers alone, with no panel), pin a **Theme** if the
+   capture should not follow the streaming machine's own choice, and tick
    **For another machine** so the address carries the token.
 4. Pick a size (1.25× suits most captures), then **Copy address** on the
    widget you want.
@@ -42,7 +44,7 @@ So, once, for each run you stream:
 The address looks like this:
 
 ```
-https://runlog.scrthq.com/play#widget/clock/01J…?bg=clear&scale=1.25&t=…
+https://runlog.scrthq.com/play#widget/clock/01J…?bg=clear&scale=1.25&theme=ember&t=…
 ```
 
 The `t=` part is the live link's token. Whoever has it can watch the run,
@@ -224,6 +226,9 @@ Client** → **Message** for that client. The message arrives as one JSON
 string, `{"t":"gesture","kind":"rolled",…}` when dice land and
 `{"t":"changed",…}` on every move; parse it (a *Set argument from JSON*
 sub-action, or two lines of C#) and act only when `kind` is `rolled`.
+The other kinds, `outcome`, `award`, `clock`, `unit-closed` and
+`run-ended`, arrive the same way with the words in `data`, so a result's
+`text` can go straight to chat and `run-ended` can switch the scene.
 From there the usual sub-actions apply: **OBS** → **Set Source
 Visibility** to flash a dice overlay, a sound, a chat line such as
 `Rolled {total} on {label}`. The gesture's `data` carries the dice as
