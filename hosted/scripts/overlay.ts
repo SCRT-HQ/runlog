@@ -55,6 +55,7 @@ export function wordsFor(config: EnvConfig, build: { version: string; sha: strin
     EXPIRES: expires.toISOString(),
     LOG_RETENTION: "one month",
     BILLING: hosted.billing ? "true" : "false",
+    TESTING: hosted.testing ? "true" : "false",
     // The sign-in client, for a build that was built without one: the
     // published package's, which the shell then names (see headTags).
     SIGN_IN: config.workosClientId,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadPackText } from "@runlog/rules-schema";
-import { catalogEntry, filterCatalog, LEGACY_IDS, loadCatalog, publishersOf, STARTER_PACK, type CatalogEntry } from "./catalog.ts";
+import { catalogEntry, filterCatalog, LEGACY_IDS, loadCatalog, publishersOf, STARTER_PACK, withTesting, type CatalogEntry } from "./catalog.ts";
 
 /**
  * The catalog is the packs directory, read at build. What has to hold: every
@@ -68,5 +68,44 @@ describe("publishers in the catalog", () => {
   it("narrows to one publisher's packs", () => {
     expect(filterCatalog(all, { publisher: "org1" }).map((e) => e.id)).toEqual(["a", "b", "c"]);
     expect(filterCatalog(all, { publisher: "org2", q: "d" }).map((e) => e.id)).toEqual(["d"]);
+  });
+});
+
+describe("the test bench", () => {
+  /**
+   * `packs/testing/engine-testing.yaml` is a separate pull request's pack
+   * and may not exist on this branch, so its entry is built by hand rather
+   * than read off disk — the rule under test is what `loadCatalog` does
+   * with a `bench: true` entry, not the pack file itself.
+   */
+  const bench: CatalogEntry = {
+    id: "com.scrthq.runlog.engine-testing",
+    version: "1.0.0",
+    title: "Engine Testing",
+    category: "other",
+    tags: [],
+    features: [],
+    requires: [],
+    players: 1,
+    kind: "",
+    price: "free",
+    source: "bundled",
+    load: async () => "",
+    bench: true,
+  };
+  const ordinary: CatalogEntry = { ...bench, id: "com.scrthq.runlog.any-given-day", title: "Any Given Day", bench: undefined };
+
+  it("is dropped from a copy whose catalog should not carry it", () => {
+    expect(withTesting([ordinary, bench], false).map((e) => e.id)).toEqual([ordinary.id]);
+  });
+
+  it("stays when the copy carries it, or when nothing was asked either way", () => {
+    expect(withTesting([ordinary, bench], true).map((e) => e.id)).toEqual([ordinary.id, bench.id]);
+    expect(withTesting([ordinary, bench]).map((e) => e.id)).toEqual([ordinary.id, bench.id]);
+  });
+
+  it("is never counted as a publisher's listing, even if one somehow named it", () => {
+    const listed = { ...bench, publisher: { id: "org1", name: "Kiln Works" } };
+    expect(publishersOf([listed, { ...ordinary, publisher: { id: "org1", name: "Kiln Works" } }])).toEqual([{ id: "org1", name: "Kiln Works", count: 1, free: 1, from: null }]);
   });
 });
