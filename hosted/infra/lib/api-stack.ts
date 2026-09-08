@@ -61,6 +61,18 @@ export class ApiStack extends Stack {
   readonly origin: string;
   /** The hostname CloudFront forwards /ws to: the WebSocket API, whose stage is named `ws` so the path maps to it. */
   readonly wsOrigin: string;
+  /** The function behind every /api route. Public so a dashboard elsewhere can chart it without redeclaring it. */
+  readonly handler: lambdaNodejs.NodejsFunction;
+  /** The function behind the socket. */
+  readonly wsHandler: lambdaNodejs.NodejsFunction;
+  /** Both functions log here; a dashboard reads it for a look at recent errors. */
+  readonly handlerLogGroup: logs.LogGroup;
+  /** The socket itself, for its connect/message/error metrics. */
+  readonly wsApi: apigwv2.WebSocketApi;
+  /** Where an alarm speaks. Public so more alarms — here or in an observability stack — can join the one already wired up. */
+  readonly alarmTopic: sns.Topic;
+  /** The one alarm this stack already owns, so a dashboard elsewhere can list it beside the ones it adds. */
+  readonly handlerErrorsAlarm: cloudwatch.Alarm;
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
@@ -110,6 +122,7 @@ export class ApiStack extends Stack {
       retention: logs.RetentionDays.ONE_MONTH,
       removalPolicy: config.retain ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
     });
+    this.handlerLogGroup = logGroup;
 
     /**
      * What the API holds for the services it talks to, defined here and
@@ -196,6 +209,7 @@ export class ApiStack extends Stack {
         banner: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
       },
     });
+    this.handler = handler;
     this.table.grantReadWriteData(handler);
     this.bucket.grantReadWrite(handler);
     for (const s of [stripeSecretKey, stripeWebhookSecret, stripeConnectWebhookSecret, workosApiKey]) s.grantRead(handler);
@@ -277,6 +291,7 @@ export class ApiStack extends Stack {
      * an entitlement that never lands is a person who paid for nothing.
      */
     const alarms = new sns.Topic(this, "Alarms", { topicName: `runlog-${config.name}-alarms` });
+    this.alarmTopic = alarms;
     alarms.addToResourcePolicy(
       new iam.PolicyStatement({
         sid: "TlsOnly",
@@ -287,7 +302,7 @@ export class ApiStack extends Stack {
         conditions: { Bool: { "aws:SecureTransport": "false" } },
       }),
     );
-    handler
+    this.handlerErrorsAlarm = handler
       .metricErrors({ period: Duration.minutes(5), statistic: "sum" })
       .createAlarm(this, "HandlerErrors", {
         alarmName: `runlog-${config.name}-api-errors`,
@@ -295,8 +310,8 @@ export class ApiStack extends Stack {
         evaluationPeriods: 1,
         treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
         alarmDescription: "The API handler failed five times in five minutes.",
-      })
-      .addAlarmAction(new cloudwatchActions.SnsAction(alarms));
+      });
+    this.handlerErrorsAlarm.addAlarmAction(new cloudwatchActions.SnsAction(alarms));
     new CfnOutput(this, "AlarmTopic", { value: alarms.topicArn });
 
     /**
@@ -339,6 +354,7 @@ export class ApiStack extends Stack {
         banner: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
       },
     });
+    this.wsHandler = wsHandler;
     this.table.grantReadWriteData(wsHandler);
     this.bucket.grantRead(wsHandler);
 
@@ -393,6 +409,7 @@ export class ApiStack extends Stack {
       disconnectRouteOptions: { integration: liveIntegration("LiveDisconnect") },
       defaultRouteOptions: { integration: liveIntegration("LiveDefault") },
     });
+    this.wsApi = wsApi;
     const wsStage = new apigwv2.WebSocketStage(this, "WebSocketStage", {
       webSocketApi: wsApi,
       stageName: "ws",

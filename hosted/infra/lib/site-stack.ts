@@ -144,6 +144,9 @@ export class SiteStack extends Stack {
       certificate,
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
       minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
+      // Cache hit rate and origin latency are additional metrics CloudFront
+      // does not publish by default; the observability dashboard wants both.
+      publishAdditionalMetrics: true,
       // The app is offline-first; a viewer in Australia should not be paying
       // for a round trip to Virginia on first load either.
       priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL,

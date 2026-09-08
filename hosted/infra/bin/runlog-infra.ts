@@ -5,6 +5,7 @@ import { AwsSolutionsChecks } from "cdk-nag";
 import { currentEnv, envConfig } from "../lib/config";
 import { ApiStack } from "../lib/api-stack";
 import { SiteStack } from "../lib/site-stack";
+import { ObservabilityStack } from "../lib/observability-stack";
 
 /**
  * The Runlog infrastructure app.
@@ -25,11 +26,20 @@ const api = new ApiStack(app, `Runlog-${name}-Api`, {
   config,
 });
 
-new SiteStack(app, `Runlog-${name}-Site`, {
+const site = new SiteStack(app, `Runlog-${name}-Site`, {
   env: { account: config.account, region: config.region },
   config,
   apiOrigin: api.origin,
   wsOrigin: api.wsOrigin,
+});
+
+// Last, because it reads from both: the API's table, functions and alarm
+// topic, and the site's own distribution.
+new ObservabilityStack(app, `Runlog-${name}-Observability`, {
+  env: { account: config.account, region: config.region },
+  config,
+  api,
+  site,
 });
 
 // The AWS Solutions rules, on every synth, diff and deploy: an error fails
