@@ -46,7 +46,7 @@ export function RunRow({
           </button>
         )}
         {onForget && (
-          <button className="ghost tiny" title={`Forget this ${vocabulary.run.one.toLowerCase()}`} onClick={onForget}>
+          <button className="ghost tiny danger" title={`Forget this ${vocabulary.run.one.toLowerCase()}`} onClick={onForget}>
             Forget
           </button>
         )}
