@@ -22,7 +22,7 @@ export interface Diagnostic {
   /** Stable machine-readable code, e.g. `table/range-gap`. */
   code: string;
   message: string;
-  /** Dotted path into the pack, e.g. `tables.mutation.entries[3]`. */
+  /** Dotted path into the pack, e.g. `tables.setback.entries[3]`. */
   path: string;
 }
 
