@@ -409,10 +409,11 @@ sent there.
 Every stage gets its own CloudWatch dashboard, `runlog-<env>` — People (views
 by country, screen and version, from the beacon's embedded metric format),
 the API (HTTP and WebSocket, requests, errors, latency), the handler
-(invocations, errors, throttles, duration, a look at recent errors in its
-log group), the store (DynamoDB, and the sync bucket's daily size and
-object count), the edge (CloudFront requests, error rate, cache hit rate),
-and an alarm status widget listing every alarm the stage owns. It lives in
+(invocations, errors, throttles, duration, its Lambda Insights memory
+utilization and cold start duration, a look at recent errors in its log
+group), the store (DynamoDB, and the sync bucket's daily size and object
+count), the edge (CloudFront requests, error rate, cache hit rate), and an
+alarm status widget listing every alarm the stage owns. It lives in
 `lib/observability-stack.ts`, a stack of its own built after the API and
 site stacks so it can read from both without either reaching forward for
 the other's resources.

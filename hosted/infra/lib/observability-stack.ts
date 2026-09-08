@@ -133,7 +133,7 @@ export class ObservabilityStack extends Stack {
         api.handler.metricErrors({ period: Duration.minutes(5), label: "errors" }),
         api.handler.metricThrottles({ period: Duration.minutes(5), label: "throttles" }),
       ],
-      width: 8,
+      width: 6,
       height: 6,
     });
     const handlerDuration = new cloudwatch.GraphWidget({
@@ -143,13 +143,27 @@ export class ObservabilityStack extends Stack {
         api.handler.metricDuration({ period: Duration.minutes(5), statistic: "p95", label: "p95" }),
         api.handler.metricDuration({ period: Duration.minutes(5), statistic: "p99", label: "p99" }),
       ],
-      width: 8,
+      width: 6,
       height: 6,
     });
     const handlerConcurrency = new cloudwatch.GraphWidget({
       title: "Concurrent executions",
       left: [api.handler.metric("ConcurrentExecutions", { period: Duration.minutes(5), statistic: "max" })],
-      width: 8,
+      width: 6,
+      height: 6,
+    });
+    // The Insights layer (see the tracing on both functions, above) reports
+    // these itself, under its own namespace, keyed by function name rather
+    // than the ApiId/FunctionName dimensions the rest of this stack reads.
+    const handlerInsights = new cloudwatch.GraphWidget({
+      title: "Lambda Insights: memory / cold start",
+      left: [
+        new cloudwatch.Metric({ namespace: "LambdaInsights", metricName: "memory_utilization", dimensionsMap: { function_name: api.handler.functionName }, statistic: "Average", period: Duration.minutes(5), label: "memory utilization (%)" }),
+      ],
+      right: [
+        new cloudwatch.Metric({ namespace: "LambdaInsights", metricName: "init_duration", dimensionsMap: { function_name: api.handler.functionName }, statistic: "Average", period: Duration.minutes(5), label: "init duration (ms)" }),
+      ],
+      width: 6,
       height: 6,
     });
     // A rough filter: console.error logs an Error, which stringifies with
@@ -317,7 +331,7 @@ export class ObservabilityStack extends Stack {
     this.dashboard.addWidgets(httpRequests, httpErrors, httpLatency);
     this.dashboard.addWidgets(wsConnections, wsErrors);
     this.dashboard.addWidgets(handlerHeading);
-    this.dashboard.addWidgets(handlerThroughput, handlerDuration, handlerConcurrency);
+    this.dashboard.addWidgets(handlerThroughput, handlerDuration, handlerConcurrency, handlerInsights);
     this.dashboard.addWidgets(handlerRecentErrors);
     this.dashboard.addWidgets(storeHeading);
     this.dashboard.addWidgets(tableCapacity, tableThrottles, tableErrors, bucketSize);
