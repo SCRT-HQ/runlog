@@ -181,7 +181,7 @@ export function WelcomeView() {
 
         <section>
           <h3 className="sectionTitle">
-            Why Runlog <span className="muted">what it does that paper and spreadsheets do not</span>
+            Why Runlog <span className="muted">what it carries, if you would rather not</span>
           </h3>
           <dl className="welcomeReasons">
             <div>
@@ -192,10 +192,11 @@ export function WelcomeView() {
               </dd>
             </div>
             <div>
-              <dt>The bookkeeping nobody wants.</dt>
+              <dt>The bookkeeping, carried for you.</dt>
               <dd>
                 Results that reach back and damage something you made an hour ago. States that pile up. Counters running in the
-                background. "After you finish, roll a d6." All of it remembered, applied and written down.
+                background. "After you finish, roll a d6." Runlog remembers, applies and writes down all of it. Your own dice still
+                count: roll them and type what they said.
               </dd>
             </div>
             <div>
