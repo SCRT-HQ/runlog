@@ -3324,28 +3324,30 @@ select.textInput {
 
 /* ---- clocks: readable across a room, steady as they tick ---- */
 /* ---- the clocks, in the margin under the unit's number ------------------ */
-.clocks { display: grid; gap: 0.6rem; margin: 0.6rem 0 0.2rem; }
-.clock { display: grid; gap: 0.25rem; }
-.clockHead { display: flex; justify-content: space-between; align-items: baseline; gap: 0.4rem; font-size: var(--t-1); }
+/* Centered in the column, digits and buttons on one axis, the way a clock face is read. */
+.clocks { display: grid; gap: 0.6rem; margin: 0.7rem 0 0.3rem; justify-items: center; text-align: center; }
+.clock { display: grid; gap: 0.3rem; justify-items: center; width: 100%; }
+.clockHead { display: flex; justify-content: center; align-items: baseline; gap: 0.4rem; font-size: var(--t-1); }
 .clockLabel { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clockLabel:empty { display: none; }
 /* The same face as the unit's number, one size down. */
 .clockDigits { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.6rem; font-weight: 300; line-height: 1; letter-spacing: -0.01em; }
 .clock.warn .clockDigits { color: var(--warn); }
 .clock.paused .clockDigits { color: var(--muted); }
 .clock.done .clockDigits { color: var(--muted); font-size: 1.2rem; }
 .clock.done.expired .clockDigits { color: var(--warn); }
-.clockBar { height: 3px; background: var(--line-2); border-radius: 2px; overflow: hidden; }
+.clockBar { height: 3px; width: 100%; background: var(--line-2); border-radius: 2px; overflow: hidden; }
 .clockBar span { display: block; height: 100%; background: var(--accent); transition: width 0.25s linear; }
 .clock.warn .clockBar span { background: var(--warn); }
-.clockButtons { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.1rem; }
+.clockButtons { display: flex; gap: 0.3rem; flex-wrap: wrap; justify-content: center; margin-top: 0.1rem; }
 .chip.time { font-variant-numeric: tabular-nums; }
 /* Folded under the header on a phone: the clock takes one row, digits and buttons side by side. */
 @media (max-width: 640px) {
-  .clocks { margin: 0.4rem 0 0; }
-  .clock { grid-template-columns: auto 1fr; align-items: center; column-gap: 0.6rem; }
-  .clockHead { grid-column: 1 / -1; }
+  .clocks { margin: 0.4rem 0 0; justify-items: start; text-align: left; }
+  .clock { grid-template-columns: auto 1fr; align-items: center; column-gap: 0.6rem; justify-items: start; }
+  .clockHead { grid-column: 1 / -1; justify-content: flex-start; }
   .clockBar { grid-column: 1 / -1; }
-  .clockButtons { margin-top: 0; }
+  .clockButtons { margin-top: 0; justify-content: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) { .clockBar span { transition: none; } }
 
