@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parsePack } from "@runlog/rules-schema";
-import { blankPack, coverage, coverageSummary, packFilename } from "./draft.ts";
+import { blankPack, coverage, coverageSummary, isBlank, packFilename } from "./draft.ts";
 
 describe("the pack a new author starts from", () => {
   /**
@@ -18,6 +18,32 @@ describe("the pack a new author starts from", () => {
   it("has a phase that closes a unit, so a run can actually progress", () => {
     const phases = blankPack().phases as Array<{ steps: Array<{ kind: string }> }>;
     expect(phases.some((p) => p.steps.some((s) => s.kind === "finalizeUnit"))).toBe(true);
+  });
+});
+
+/**
+ * The check that decides whether opening the Designer should ask "which
+ * pack?" at all. Missing this either way is its own kind of bad surprise:
+ * asking about a pack nobody has touched yet, or silently discarding one
+ * that has real work in it.
+ */
+describe("recognizing the untouched scaffold", () => {
+  it("calls the pack a fresh draft starts as blank", () => {
+    expect(isBlank(blankPack())).toBe(true);
+  });
+
+  it("stops calling it blank the moment a single field changes", () => {
+    expect(isBlank({ ...blankPack(), title: "Two-Line Days" })).toBe(false);
+    expect(isBlank({ ...blankPack(), author: "Someone" })).toBe(false);
+  });
+
+  it("calls a pack with its own tables and phases not blank", () => {
+    const started = {
+      ...blankPack(),
+      title: "Two-Line Days",
+      tables: { ...(blankPack().tables as object), extra: { resolution: "keyed", title: "Extra", entries: [] } },
+    };
+    expect(isBlank(started)).toBe(false);
   });
 });
 

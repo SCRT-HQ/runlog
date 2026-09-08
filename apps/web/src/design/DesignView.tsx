@@ -8,6 +8,7 @@ import {
   coverage,
   coverageSummary,
   DRAFT_ID,
+  isBlank,
   packFilename,
   type Draft,
 } from "./draft.ts";
@@ -68,11 +69,16 @@ export function DesignView() {
   const [droppedSignature, setDroppedSignature] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  // Whether to ask "which pack?" before showing the editor at all. Set once,
+  // from what loaded, and never persisted — the choice is for this visit.
+  const [atDoor, setAtDoor] = useState(false);
   const file = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void loadDraft(DRAFT_ID).then((stored) => {
-      setDraft((stored?.pack as Draft | undefined) ?? blankPack());
+      const loaded = (stored?.pack as Draft | undefined) ?? blankPack();
+      setDraft(loaded);
+      setAtDoor(!isBlank(loaded));
     });
   }, []);
 
@@ -165,6 +171,37 @@ export function DesignView() {
     );
   }
 
+  if (atDoor) {
+    return (
+      <main className="main design">
+        <section className="hero runHero">
+          <div>
+            <h2>Which pack?</h2>
+            <p className="muted">The Designer opens on whatever you were last writing.</p>
+          </div>
+        </section>
+        <section className="panel">
+          <div className="headerActions">
+            <button className="primary" onClick={() => setAtDoor(false)}>
+              Continue editing {str(draft.title) || "Untitled"}
+            </button>
+            <button
+              className="ghost"
+              onClick={() => {
+                if (confirm("Start a new pack? The current draft is replaced.")) {
+                  replace(blankPack());
+                  setAtDoor(false);
+                }
+              }}
+            >
+              New pack
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   const props = { draft, diagnostics, edit };
 
   return (
@@ -186,25 +223,15 @@ export function DesignView() {
           </p>
         </div>
         <div className="headerActions">
-          <button className="ghost" onClick={download}>
-            {saved ? "saved" : `Download ${packFilename(draft)}`}
-          </button>
           <button
             className="ghost"
             onClick={() => {
-              void (async () => {
-                const made = await encodePackLink(draft);
-                setLink(made);
-                try {
-                  await navigator.clipboard?.writeText(made);
-                } catch {
-                  // No clipboard permission: the link is shown below to copy
-                  // by hand, so this is not worth interrupting anyone about.
-                }
-              })();
+              if (confirm("Start again from a blank pack? Your draft is replaced.")) {
+                replace(blankPack());
+              }
             }}
           >
-            Copy a link
+            New pack
           </button>
           <button className="ghost" onClick={() => file.current?.click()}>
             Open a file…
@@ -224,15 +251,25 @@ export function DesignView() {
               e.target.value = "";
             }}
           />
+          <button className="ghost" onClick={download}>
+            {saved ? "saved" : `Download ${packFilename(draft)}`}
+          </button>
           <button
             className="ghost"
             onClick={() => {
-              if (confirm("Start again from a blank pack? Your draft is replaced.")) {
-                replace(blankPack());
-              }
+              void (async () => {
+                const made = await encodePackLink(draft);
+                setLink(made);
+                try {
+                  await navigator.clipboard?.writeText(made);
+                } catch {
+                  // No clipboard permission: the link is shown below to copy
+                  // by hand, so this is not worth interrupting anyone about.
+                }
+              })();
             }}
           >
-            Start over
+            Copy a link
           </button>
         </div>
       </section>
