@@ -479,8 +479,16 @@ export function playThrough(pack: Pack, script: readonly PlayStep[], options: Pl
   return { state: state!, events, requests };
 }
 
-/** Obligations due right now, by the same lifecycle points the app checks. */
-function currentlyDue(pack: Pack, state: RunState): Obligation[] {
+/**
+ * Obligations due right now, by the same lifecycle points the app checks.
+ *
+ * Exported so a test can drive an arbitrary event log at this gate directly —
+ * a clock expiring is not something a `playThrough` script can cause (it is
+ * the app that notices a timer hit zero, not any action a pack can run), so
+ * the only way to prove this gate reacts to one is to reduce the events by
+ * hand and ask it.
+ */
+export function currentlyDue(pack: Pack, state: RunState): Obligation[] {
   const reached: string[] = ["immediately", "onEnterUnit"];
   if (state.subjects.some((s) => s.unit === state.unit && s.type)) reached.push("onDeclareSubject");
   const manualDone = activePhases(pack, state).every((p) =>

@@ -446,6 +446,39 @@ clock still running, a second device sees the same time, and the finished
 time stays in the record. When a timer runs out the app sounds an alert;
 the player chooses the sound, or none, under Alerts.
 
+A pack can rule on the clock rather than only watch it. `onTimerExpired`
+fires when a timer runs out — as a global trigger, or on a table entry's or
+card's own `triggers`, the same as any other point. Two predicates read a
+clock live, both while it runs and after it stops: `clockRan` is how many
+minutes the named clock — `unit` for the unit's own, or a clock's label —
+has run; `clockRanOver` is how many minutes a timer has run past its
+length, always false for a stopwatch. A pack using either declares the
+`clockRules` capability:
+
+```yaml
+capabilities: [timers, clockRules]
+unit:
+  clock: { kind: timer, minutes: 25 }
+triggers:
+  - on: onTimerExpired
+    do:
+      - { do: note, text: "The bell." }
+tables:
+  loading:
+    resolution: lookup
+    title: Loading
+    roll: d6
+    entries:
+      - id: standard
+        range: [1, 6]
+        text: "A standard load."
+        triggers:
+          - on: onFinalize
+            when: [{ clockRanOver: unit, is: { gte: 2 } }]
+            do:
+              - { do: rollOn, table: overrun }
+```
+
 ### Scoring a run
 
 Most solo games are really asking "can you beat what you did last time?",
