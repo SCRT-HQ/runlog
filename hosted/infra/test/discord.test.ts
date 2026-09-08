@@ -1,6 +1,6 @@
 import { generateKeyPairSync, sign } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { handleInteraction, LINK_MINUTES } from "../lib/handlers/discord/interactions";
+import { canManage, handleInteraction, LINK_MINUTES } from "../lib/handlers/discord/interactions";
 import { COMMANDS, isCommandName } from "../lib/handlers/discord/commands";
 import { EPHEMERAL, InteractionType, ResponseType, type Interaction } from "../lib/handlers/discord/types";
 import { verifyInteraction } from "../lib/handlers/discord/verify";
@@ -87,5 +87,69 @@ describe("the bot", () => {
     const deps = { guilds: memoryGuilds(), appUrl: "https://runlog.test/", now: () => NOW };
     expect((await handleInteraction(press({ member: { user: mira }, data: { name: "ban" } }), deps)).data?.content).toContain("not a command");
     expect((await handleInteraction(press({ type: InteractionType.MessageComponent, data: { custom_id: "x" } }), deps)).data?.flags).toBe(EPHEMERAL);
+  });
+});
+
+const manager: Interaction = { ...press({}), guild_id: "g1", member: { user: mira, permissions: String(1 << 5) } };
+const setup = (name: string, options: Array<{ name: string; type: number; value: string }> = [], over: Partial<Interaction> = {}): Interaction => ({ ...manager, ...over, data: { name: "setup", options: [{ name, type: 1, options }] } });
+
+describe("setting up a server", () => {
+  it("takes someone who can manage the server, by the permissions Discord computed for them", async () => {
+    const guilds = memoryGuilds();
+    const deps = { guilds, appUrl: "https://runlog.test/", now: () => NOW, code: () => "CLAIM1" };
+    const member = setup("claim", [], { member: { user: mira, permissions: "0" } });
+    expect((await handleInteraction(member, deps)).data?.content).toContain("takes someone who can manage");
+    // An administrator may do anything, whatever else the field says.
+    const admin = setup("claim", [], { member: { user: mira, permissions: String(1 << 3) } });
+    expect((await handleInteraction(admin, deps)).data?.content).toContain("#link/guild?c=CLAIM1");
+    expect(canManage({ ...manager, member: { user: mira, permissions: "not a number" } })).toBe(false);
+    const { member: _m, ...nobody } = manager;
+    expect(canManage(nobody)).toBe(false);
+  });
+
+  it("mints a claim code bound to the server, and says when the server is claimed already", async () => {
+    const guilds = memoryGuilds();
+    const deps = { guilds, appUrl: "https://runlog.test", now: () => NOW, code: () => "CLAIM1" };
+    const out = await handleInteraction(setup("claim"), deps);
+    expect(out.data?.flags).toBe(EPHEMERAL);
+    expect(out.data?.content).toContain("https://runlog.test/#link/guild?c=CLAIM1");
+    expect(guilds.claims.get("CLAIM1")).toEqual({ code: "CLAIM1", guildId: "g1", discordUserId: "1001", createdAt: NOW, expiresAt: "2026-09-08T12:10:00.000Z" });
+    await guilds.claimGuild({ guildId: "g1", ownerSub: "user_9", claimedAt: NOW });
+    expect((await handleInteraction(setup("claim"), deps)).data?.content).toContain("claimed already");
+  });
+
+  it("sets who hosts and where runs open only once the server is claimed, and clears either when the option is left out", async () => {
+    const guilds = memoryGuilds();
+    const deps = { guilds, appUrl: "https://runlog.test/", now: () => NOW };
+    expect((await handleInteraction(setup("role", [{ name: "role", type: 8, value: "r1" }]), deps)).data?.content).toContain("not claimed yet");
+    await guilds.claimGuild({ guildId: "g1", ownerSub: "user_1", claimedAt: NOW });
+    expect((await handleInteraction(setup("role", [{ name: "role", type: 8, value: "r1" }]), deps)).data?.content).toContain("<@&r1>");
+    expect(guilds.guilds.get("g1")?.hostRoleId).toBe("r1");
+    expect((await handleInteraction(setup("channel", [{ name: "channel", type: 7, value: "c1" }]), deps)).data?.content).toContain("<#c1>");
+    expect((await handleInteraction(setup("role"), deps)).data?.content).toContain("Anyone who can manage");
+    expect(guilds.guilds.get("g1")).not.toHaveProperty("hostRoleId");
+    expect(guilds.guilds.get("g1")?.channelId).toBe("c1");
+  });
+
+  it("reports the claim, the plan, the hosts and the packs, in words a member can act on", async () => {
+    const guilds = memoryGuilds();
+    await guilds.claimGuild({ guildId: "g1", name: "The Kiln Room", ownerSub: "user_1", claimedAt: NOW, hostRoleId: "r1" });
+    await guilds.connect("user_1", { discordUserId: "1001", name: "Mira", linkedAt: NOW });
+    await guilds.putGuildPack("g1", { id: "com.scrthq.runlog.long-kiln", title: "The Long Kiln", version: "1.0.0", format: "yaml", hash: "h", bytes: 10, modes: [{ id: "standard", label: "Standard" }, { id: "short", label: "Short" }], updatedAt: NOW, delegatedBy: "user_1" }, "id: x");
+    const open = await handleInteraction(setup("status"), { guilds, appUrl: "https://runlog.test/", now: () => NOW, gates: false });
+    expect(open.data?.content).toContain("Runlog on The Kiln Room");
+    expect(open.data?.content).toContain("Claimed by Mira");
+    expect(open.data?.content).toContain("plans are open");
+    expect(open.data?.content).toContain("<@&r1>");
+    expect(open.data?.content).toContain("The Long Kiln (Standard, Short)");
+    const gated = await handleInteraction(setup("status"), { guilds, appUrl: "https://runlog.test/", now: () => NOW, gates: true, serverFeature: "server", grants: async () => [] });
+    expect(gated.data?.content).toContain("no server plan yet");
+    const paid = await handleInteraction(setup("status"), { guilds, appUrl: "https://runlog.test/", now: () => NOW, gates: true, serverFeature: "server", grants: async () => ["server"] });
+    expect(paid.data?.content).toContain("Runlog for servers, active");
+    // /packs, for anyone: the same list, without the rest.
+    const packs = await handleInteraction(press({ guild_id: "g1", member: { user: mira }, data: { name: "packs" } }), { guilds, appUrl: "https://runlog.test/", now: () => NOW });
+    expect(packs.data?.content).toContain("**The Long Kiln** — Standard, Short");
+    const none = await handleInteraction(press({ guild_id: "g2", member: { user: mira }, data: { name: "packs" } }), { guilds, appUrl: "https://runlog.test/", now: () => NOW });
+    expect(none.data?.content).toContain("not set up");
   });
 });

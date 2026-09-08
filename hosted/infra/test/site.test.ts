@@ -31,7 +31,7 @@ const config = (over: Partial<EnvConfig> = {}): EnvConfig => ({
   workosCliClientId: "client_cli_test",
   email: { from: "Runlog <noreply@example.com>", region: "us-west-2", identity: "example.com" },
   gates: false,
-  stripe: { prices: { plusMonthly: "", plusYearly: "", hostedMonthly: "", hostedYearly: "" }, features: { plus: "plus", hostedLicensing: "hosted-licensing" }, applicationFeeBps: { subscribed: 0, unsubscribed: 500 } },
+  stripe: { prices: { plusMonthly: "", plusYearly: "", hostedMonthly: "", hostedYearly: "", serverMonthly: "", serverYearly: "" }, features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" }, applicationFeeBps: { subscribed: 0, unsubscribed: 500 } },
   hosted: { operator: "Example Co, LLC", operatorShort: "Example Co", support: "help@example.com", termsVersion: "2026-01-01", termsDate: "2026-01-01", billing: false, testing: false },
   ...over,
 });

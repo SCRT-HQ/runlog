@@ -7,8 +7,9 @@ import { apiGatewayPoster, dynamoLive, notifier, type Notify } from "./live.js";
 import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, type RaceStore } from "./races.js";
 import { dynamoBilling, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
-import { dynamoGuilds, type GuildStore } from "./guilds.js";
+import { dynamoGuilds, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
 import { handleInteraction } from "./discord/interactions.js";
+import { guildNameFrom } from "./discord/rest.js";
 import { isInteraction } from "./discord/types.js";
 import { verifyInteraction } from "./discord/verify.js";
 import { featuresOfSummary, realStripe, type StripeLike } from "./stripe.js";
@@ -171,7 +172,7 @@ export interface Deps {
   /** The prices for sale, by plan key; an absent key is a plan that cannot be bought here. */
   prices?: Record<string, string>;
   /** What Stripe calls the features the gates read. */
-  features?: { plus: string; hostedLicensing: string };
+  features?: { plus: string; hostedLicensing: string; server?: string };
   /** Stripe, when the environment's key is filled; null means billing is off. */
   stripe?: () => Promise<StripeLike | null>;
   /** The webhook endpoint's signing secret, when filled. */
@@ -190,8 +191,12 @@ export interface Deps {
   notify?: Notify;
   /** Discord's rows: link codes and which account a Discord account is. Absent, nothing about Discord is offered. */
   guilds?: GuildStore;
-  /** The Discord application the bot is, when the stage names one; the token is read when first needed. */
-  discord?: { applicationId: string; publicKey: string; token: () => Promise<string | null> };
+  /**
+   * The Discord application the bot is, when the stage names one; the token
+   * is read when first needed. `guildName` asks Discord what a server is
+   * called, for the profile; absent, or answering null, the id stands in.
+   */
+  discord?: { applicationId: string; publicKey: string; token: () => Promise<string | null>; guildName?: (guildId: string) => Promise<string | null> };
   /** Link codes are random by default; a test hands in its own. */
   code?: () => string;
 }
@@ -345,7 +350,22 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       return json(400, { error: "not an interaction" });
     }
     if (!isInteraction(interaction)) return json(400, { error: "not an interaction" });
-    return json(200, await handleInteraction(interaction, { guilds: deps.guilds, appUrl: deps.appUrl ?? "/", now, ...(deps.code ? { code: deps.code } : {}) }));
+    return json(
+      200,
+      await handleInteraction(interaction, {
+        guilds: deps.guilds,
+        appUrl: deps.appUrl ?? "/",
+        now,
+        gates: deps.gates,
+        serverFeature: deps.features?.server ?? "server",
+        // What the server's owner has: bought, or flagged on their session and remembered.
+        grants: async (sub) => {
+          const [bought, kept] = await Promise.all([deps.billing.entitlements(sub), deps.billing.flags(sub)]);
+          return [...new Set([...bought, ...kept])];
+        },
+        ...(deps.code ? { code: deps.code } : {}),
+      }),
+    );
   }
 
   // Stripe calling back. No bearer: the signature over the raw body is
@@ -839,6 +859,63 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       return json(200, { linked: true, discord: connection });
     }
     if (method === "DELETE") return json(200, { unlinked: await deps.guilds.disconnect(caller.sub) });
+  }
+
+  // ---- servers: a Discord server claimed for this account, and its vault ----
+  // The claim is made from Discord's side (`/setup claim`, by someone who
+  // can manage the server) and handed in here; the account that hands it
+  // in owns the server: pays for its plan, and puts packs of its own in
+  // its vault for the bot to play. A pack in the vault is never served
+  // back, to its owner or anyone: the profile lists what is there, and
+  // only the bot reads the text.
+  if (deps.guilds && path.startsWith("/api/guilds")) {
+    const guilds = deps.guilds;
+    const serverFeature = deps.features?.server ?? "server";
+    const hasServerPlan = async () => !deps.gates || (await grantsOf(caller.sub, caller.flags)).includes(serverFeature);
+    if (path === "/api/guilds/claim" && method === "POST") {
+      const body = parse(event);
+      const code = isRecord(body) && str(body["code"]) ? normalizeCode(body["code"]) : "";
+      if (!code) return json(422, { error: "code: the one /setup claim gave you" });
+      const claim = await guilds.takeClaimCode(code, now());
+      if (!claim) return json(422, { error: "that code is not known here, or its ten minutes are up; run /setup claim in Discord again" });
+      const mine = await guilds.guildsOf(caller.sub);
+      if (!mine.some((g) => g.guildId === claim.guildId) && mine.length >= MAX_GUILDS_PER_SUB) return json(422, { error: `that is enough servers for one account (${MAX_GUILDS_PER_SUB}); release one from your profile first` });
+      const name = deps.discord?.guildName ? await deps.discord.guildName(claim.guildId) : null;
+      const guild = await guilds.claimGuild({ guildId: claim.guildId, ownerSub: caller.sub, claimedAt: now(), ...(name ? { name } : {}) });
+      const upgrade = !(await hasServerPlan());
+      return json(200, { claimed: true, guild, plan: serverFeature, upgrade });
+    }
+    if (path === "/api/guilds" && method === "GET") {
+      return json(200, { guilds: await guilds.guildsOf(caller.sub), server: await hasServerPlan(), plan: serverFeature });
+    }
+    const one = path.match(/^\/api\/guilds\/([^/]+)$/);
+    if (one && method === "DELETE") {
+      const guild = await guilds.guild(decodeURIComponent(one[1]!));
+      if (!guild || guild.ownerSub !== caller.sub) return json(200, { found: false });
+      return json(200, { released: await guilds.releaseGuild(guild.guildId) });
+    }
+    const packs = path.match(/^\/api\/guilds\/([^/]+)\/packs(?:\/([^/]+))?$/);
+    if (packs) {
+      const guild = await guilds.guild(decodeURIComponent(packs[1]!));
+      if (!guild || guild.ownerSub !== caller.sub) return json(200, { found: false });
+      const packId = packs[2] ? decodeURIComponent(packs[2]) : null;
+      if (!packId && method === "GET") return json(200, { guild, packs: await guilds.listGuildPacks(guild.guildId) });
+      if (packId && method === "PUT") {
+        const body = parse(event);
+        if (!isRecord(body)) return json(422, { error: "a pack, as JSON" });
+        const { title, version, format, hash, source, modes } = body;
+        if (!str(title) || !title.trim() || title.length > MAX_NAME || !str(version) || !str(hash) || (format !== "yaml" && format !== "json") || !str(source)) {
+          return json(422, { error: "title, version, hash, format (yaml or json) and source are strings" });
+        }
+        if (Buffer.byteLength(source) > MAX_BYTES) return json(413, { error: "this pack is too large for a vault" });
+        const modeList = Array.isArray(modes) ? modes.filter((m): m is { id: string; label: string } => isRecord(m) && str(m["id"]) && str(m["label"])).map((m) => ({ id: m.id, label: m.label })).slice(0, 50) : [];
+        const meta = { id: packId, title: title.trim(), version, format: format === "json" ? ("json" as const) : ("yaml" as const), hash, bytes: Buffer.byteLength(source), modes: modeList, updatedAt: now(), delegatedBy: caller.sub };
+        await guilds.putGuildPack(guild.guildId, meta, source);
+        return json(200, { kept: true, pack: meta });
+      }
+      if (packId && method === "DELETE") return json(200, { removed: await guilds.deleteGuildPack(guild.guildId, packId) });
+    }
+    return json(410, { error: ROUTE_GONE });
   }
 
   if (method === "GET" && path === "/api/sync/manifest") {
@@ -1694,7 +1771,7 @@ export function pricesFromEnv(raw: string | undefined): Record<string, string> {
   try {
     const parsed = JSON.parse(raw ?? "{}") as Record<string, unknown>;
     const out: Record<string, string> = {};
-    const keys: Record<string, string> = { plusMonthly: "plus-monthly", plusYearly: "plus-yearly", hostedMonthly: "hosted-monthly", hostedYearly: "hosted-yearly" };
+    const keys: Record<string, string> = { plusMonthly: "plus-monthly", plusYearly: "plus-yearly", hostedMonthly: "hosted-monthly", hostedYearly: "hosted-yearly", serverMonthly: "server-monthly", serverYearly: "server-yearly" };
     for (const [field, key] of Object.entries(keys)) {
       const id = parsed[field];
       if (typeof id === "string" && id) out[key] = id;
@@ -1715,12 +1792,13 @@ export function feesFromEnv(raw: string | undefined): { subscribed: number; unsu
   }
 }
 
-export function featuresFromEnv(raw: string | undefined): { plus: string; hostedLicensing: string } {
+export function featuresFromEnv(raw: string | undefined): { plus: string; hostedLicensing: string; server: string } {
   try {
     const parsed = JSON.parse(raw ?? "{}") as Record<string, unknown>;
-    return { plus: typeof parsed["plus"] === "string" ? parsed["plus"] : "plus", hostedLicensing: typeof parsed["hostedLicensing"] === "string" ? parsed["hostedLicensing"] : "hosted-licensing" };
+    const s = (key: string, fallback: string) => (typeof parsed[key] === "string" && parsed[key] ? (parsed[key] as string) : fallback);
+    return { plus: s("plus", "plus"), hostedLicensing: s("hostedLicensing", "hosted-licensing"), server: s("server", "server") };
   } catch {
-    return { plus: "plus", hostedLicensing: "hosted-licensing" };
+    return { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" };
   }
 }
 
@@ -1745,18 +1823,25 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
         return looksLike("workos-key", key) ? (workosClient ??= realWorkOS(key)) : null;
       },
       gates: process.env["RUNLOG_GATES"] === "on",
-      guilds: dynamoGuilds({ table: process.env["TABLE_NAME"] ?? "" }),
+      guilds: dynamoGuilds({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
       ...(process.env["DISCORD_APPLICATION_ID"] && process.env["DISCORD_PUBLIC_KEY"]
-        ? {
-            discord: {
-              applicationId: process.env["DISCORD_APPLICATION_ID"],
-              publicKey: process.env["DISCORD_PUBLIC_KEY"],
-              token: async () => {
-                const value = await secrets(process.env["DISCORD_BOT_TOKEN_SECRET"] ?? "");
-                return looksLike("discord-token", value) ? value : null;
+        ? (() => {
+            const token = async () => {
+              const value = await secrets(process.env["DISCORD_BOT_TOKEN_SECRET"] ?? "");
+              return looksLike("discord-token", value) ? value : null;
+            };
+            return {
+              discord: {
+                applicationId: process.env["DISCORD_APPLICATION_ID"],
+                publicKey: process.env["DISCORD_PUBLIC_KEY"],
+                token,
+                guildName: async (guildId: string) => {
+                  const t = await token();
+                  return t ? guildNameFrom(t, guildId) : null;
+                },
               },
-            },
-          }
+            };
+          })()
         : {}),
       prices: pricesFromEnv(process.env["STRIPE_PRICES"]),
       features: featuresFromEnv(process.env["STRIPE_FEATURES"]),
