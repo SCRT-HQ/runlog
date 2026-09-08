@@ -24,6 +24,7 @@ const base: LiveSnapshot = {
   resources: [{ id: "glaze", label: "Glaze", value: 3, max: 6 }],
   clocks: [],
   progress: { unitsDone: 1, elapsedMs: 0 },
+  score: { label: "Stages closed", text: "1 stages", value: 1, better: "higher" },
   forcedUnits: 0,
   log: [{ n: 1, unit: 1, where: "Stage 1, Form", hit: null, text: "A cup" }],
 };
