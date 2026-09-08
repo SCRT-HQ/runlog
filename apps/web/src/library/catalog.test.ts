@@ -16,11 +16,11 @@ describe("the catalog", () => {
       "com.scrthq.runlog.elden-ring-trial",
       "com.scrthq.runlog.homefront",
       "com.scrthq.runlog.ladder-work",
+      "com.scrthq.runlog.engine-testing",
       "com.scrthq.runlog.pantry-roulette",
       "com.scrthq.runlog.practice-room",
       "com.scrthq.runlog.rocket-league-ladder",
       "com.scrthq.runlog.rocket-league-showdown",
-      "com.scrthq.runlog.engine-testing",
       "com.scrthq.runlog.salt-and-signal",
       "com.scrthq.runlog.long-kiln",
     ]);
