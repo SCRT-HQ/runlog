@@ -108,6 +108,8 @@ export interface EnvConfig {
     operator: string;
     /** The short name, for a footer, an about page, and anywhere nothing is agreed to. */
     operatorShort: string;
+    /** The operator's own site, where the name in a footer goes; absent, the name goes to the about page. */
+    operatorUrl?: string;
     /** Where support, privacy requests and security reports go. */
     support: string;
     /**
@@ -246,6 +248,7 @@ export function envConfig(name: EnvName): EnvConfig {
     hosted: {
       operator: str(hosted["operator"], "hosted.operator"),
       operatorShort: str(hosted["operatorShort"], "hosted.operatorShort"),
+      ...(typeof hosted["operatorUrl"] === "string" && hosted["operatorUrl"] ? { operatorUrl: hosted["operatorUrl"] } : {}),
       support: str(hosted["support"], "hosted.support"),
       termsVersion: str(hosted["termsVersion"], "hosted.termsVersion"),
       termsDate: str(hosted["termsDate"], "hosted.termsDate"),

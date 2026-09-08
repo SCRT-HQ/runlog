@@ -14,7 +14,11 @@
     "welcome": "https://{{DOMAIN}}/welcome.html",
     "licenses": "https://{{DOMAIN}}/licenses.html",
     "source": "https://github.com/SCRT-HQ/runlog",
-    "community": "https://www.reddit.com/r/runlog_scrthq/"
+    "operator": "{{OPERATOR_URL}}",
+    "release": "{{RELEASE_URL}}",
+    "commit": "{{COMMIT_URL}}",
+    "reddit": "https://www.reddit.com/r/runlog_scrthq/",
+    "discord": "https://discord.gg/ZwWeRCaV5J"
   },
   "features": {
     "billing": {{BILLING}}

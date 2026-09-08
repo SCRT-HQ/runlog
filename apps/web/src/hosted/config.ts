@@ -34,7 +34,13 @@ export interface Hosted {
     licenses?: string;
     source?: string;
     /** Where people who play talk to each other; the operator's to name. */
-    community?: string;
+    reddit?: string;
+    discord?: string;
+    /** The operator's own site, for the name in the footer. */
+    operator?: string;
+    /** The release this build is, and the commit it was made from. */
+    release?: string;
+    commit?: string;
   };
   features: {
     /** Whether plans, checkout and the billing portal are on. */
@@ -78,7 +84,11 @@ export function parseHosted(raw: unknown): Hosted | null {
       ...optional("about"),
       ...optional("licenses"),
       ...optional("source"),
-      ...optional("community"),
+      ...optional("reddit"),
+      ...optional("discord"),
+      ...optional("operator"),
+      ...optional("release"),
+      ...optional("commit"),
     },
     features: { billing: f["billing"] === true },
   };
