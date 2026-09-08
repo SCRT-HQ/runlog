@@ -404,6 +404,27 @@ sent there.
 "apm": { "newRelic": { "accountId": "1234567", "layerVersion": 52 } }
 ```
 
+### Dashboards and alarms
+
+Every stage gets its own CloudWatch dashboard, `runlog-<env>` — People (views
+by country, screen and version, from the beacon's embedded metric format),
+the API (HTTP and WebSocket, requests, errors, latency), the handler
+(invocations, errors, throttles, duration, a look at recent errors in its
+log group), the store (DynamoDB, and the sync bucket's daily size and
+object count), the edge (CloudFront requests, error rate, cache hit rate),
+and an alarm status widget listing every alarm the stage owns. It lives in
+`lib/observability-stack.ts`, a stack of its own built after the API and
+site stacks so it can read from both without either reaching forward for
+the other's resources.
+
+Alongside the API handler's own error alarm, each stage's `Alarms` topic
+carries a handful more: the API's 5xx rate, the handler's p95 duration
+against its own timeout, the handler being throttled at all, DynamoDB being
+throttled at all, and CloudFront's 5xx rate. All of them, old and new, ring
+the same `runlog-<env>-alarms` topic — **subscribing an address to it is a
+step this repository cannot take for you**; do it by hand, once per stage,
+the same as the step already named under Billing.
+
 ## Environments, secrets and variables
 
 Each stage's account and zone ids are secrets on its environments. Not
