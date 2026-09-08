@@ -21,6 +21,13 @@ interface Base {
    */
   id?: string;
   /**
+   * The move this event was made in. A step's roll, its outcome and the
+   * record of the step finishing land together, and an undo must void all
+   * of them or none; this names the batch so it can. Absent on logs from
+   * before it existed, which undo by the older rule of thumb instead.
+   */
+  move?: string;
+  /**
    * Set by the server when the event is appended to a shared log: its place
    * in the order everyone replays, and who made it. Absent until then.
    */

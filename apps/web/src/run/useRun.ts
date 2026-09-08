@@ -265,8 +265,10 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
   const commit = useCallback(
     (next: RunEvent[]): RunEvent[] => {
       // Named here, once, where they are made: the id is what a shared log
-      // keeps each event once by, and what an undo names.
-      const named = next.map((e) => (e.id ? e : { ...e, id: ulid() }));
+      // keeps each event once by, and what an undo names. The move is the
+      // batch: what lands together is undone together.
+      const move = ulid();
+      const named = next.map((e) => ({ ...e, id: e.id ?? ulid(), move: e.move ?? move }));
       setEvents((prev) => {
         const merged = [...prev, ...named];
         persist(merged);
