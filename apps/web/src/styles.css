@@ -23,6 +23,14 @@
   --radius: 8px;
   --serif: "Literata Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* The type scale. Six steps, from a chip's label to a unit's number; a
+     size in the sheet below is one of these or has a reason of its own. */
+  --t-1: 0.8rem;
+  --t-2: 0.9rem;
+  --t-3: 1rem;
+  --t-4: 1.15rem;
+  --t-5: 1.4rem;
+  --t-6: 1.9rem;
   color-scheme: dark;
   --bg: #151311;
   --panel: #1e1b18;
@@ -213,7 +221,7 @@ p {
 }
 .brand:hover h1 { color: var(--accent); }
 .brand h1 {
-  font-size: 1.15rem;
+  font-size: var(--t-4);
   font-weight: 600;
 }
 .brand p {
@@ -262,7 +270,7 @@ p {
   background: var(--panel-2);
 }
 .packBtn strong {
-  font-size: 0.9rem;
+  font-size: var(--t-2);
 }
 .packBtn span {
   font-size: 0.72rem;
@@ -429,7 +437,7 @@ p {
   background: var(--panel-2);
 }
 .table h4 {
-  font-size: 1rem;
+  font-size: var(--t-3);
 }
 .table .id {
   font-family: var(--mono);
@@ -475,7 +483,7 @@ p {
 }
 .rollResult .headline {
   font-family: var(--mono);
-  font-size: 1.15rem;
+  font-size: var(--t-4);
   color: var(--accent);
 }
 .rollResult .working {
@@ -501,7 +509,7 @@ p {
 .entries .key {
   flex: 0 0 5.5rem;
   font-family: var(--mono);
-  font-size: 0.8rem;
+  font-size: var(--t-1);
   color: var(--muted);
   padding-top: 0.1rem;
 }
@@ -510,7 +518,7 @@ p {
 }
 .entries p {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--t-2);
 }
 .entryTags {
   display: flex;
@@ -630,7 +638,7 @@ p {
   background: transparent;
   color: var(--muted);
   font: inherit;
-  font-size: 0.8rem;
+  font-size: var(--t-1);
   cursor: pointer;
 }
 .ghost:hover:not(:disabled) {
@@ -824,7 +832,7 @@ p {
 }
 .packNow .packTitle {
   font-family: var(--serif);
-  font-size: 1rem;
+  font-size: var(--t-3);
 }
 
 /* ---- the library -------------------------------------------------------- */
@@ -907,7 +915,7 @@ p {
   align-content: start;
 }
 .homeCard strong {
-  font-size: 1.15rem;
+  font-size: var(--t-4);
 }
 .homeLabel {
   font-family: var(--mono);
@@ -1020,7 +1028,7 @@ p {
   cursor: pointer;
 }
 .libraryTitle strong {
-  font-size: 1.15rem;
+  font-size: var(--t-4);
 }
 .libraryTitle:hover strong {
   color: var(--accent);
@@ -1038,7 +1046,7 @@ p {
 .runPicker {
   position: relative;
   font-family: var(--mono);
-  font-size: 0.8rem;
+  font-size: var(--t-1);
 }
 .runPicker > summary {
   list-style: none;
@@ -1076,7 +1084,7 @@ p {
   border-radius: var(--radius);
   box-shadow: var(--raise);
   font-family: var(--serif);
-  font-size: 0.9rem;
+  font-size: var(--t-2);
 }
 .runPickerPanel p {
   margin: 0;
@@ -1202,7 +1210,7 @@ p {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.8rem;
+  font-size: var(--t-1);
   color: var(--muted);
   cursor: pointer;
 }
@@ -1231,7 +1239,7 @@ p {
   color: var(--on-accent);
   font: inherit;
   font-family: var(--mono);
-  font-size: 0.9rem;
+  font-size: var(--t-2);
   cursor: pointer;
 }
 .primary:hover:not(:disabled) {
@@ -1511,7 +1519,7 @@ button:disabled,
 }
 .timeline p {
   margin: 0.1rem 0 0.2rem;
-  font-size: 0.9rem;
+  font-size: var(--t-2);
 }
 
 
@@ -1595,7 +1603,7 @@ button:disabled,
   text-align: left;
 }
 .packBtnMain strong {
-  font-size: 0.9rem;
+  font-size: var(--t-2);
 }
 .packBtnMain span {
   font-size: 0.72rem;
@@ -1607,7 +1615,7 @@ button:disabled,
   border: none;
   border-left: 1px solid var(--line);
   color: var(--muted);
-  font-size: 1rem;
+  font-size: var(--t-3);
   line-height: 1;
   cursor: pointer;
 }
@@ -2147,7 +2155,7 @@ select.textInput {
 .menuDoors .primary,
 .menuDoors .ghost {
   white-space: nowrap;
-  font-size: 0.8rem;
+  font-size: var(--t-1);
   padding: 0.3rem 0.8rem;
 }
 .menuTheme {
@@ -2160,7 +2168,7 @@ select.textInput {
 }
 .rulesBtn {
   font-family: var(--mono);
-  font-size: 0.8rem;
+  font-size: var(--t-1);
   padding: 0.25rem 0.7rem;
 }
 
@@ -2193,7 +2201,7 @@ select.textInput {
 }
 .profileCount .big {
   font-family: var(--mono);
-  font-size: 1.4rem;
+  font-size: var(--t-5);
 }
 .licenseRow {
   align-items: flex-start;
@@ -2406,7 +2414,7 @@ select.textInput {
 }
 .shelf summary strong {
   font-family: var(--serif);
-  font-size: 1rem;
+  font-size: var(--t-3);
   font-weight: 600;
 }
 .shelf .caret {
@@ -2477,7 +2485,7 @@ select.textInput {
   align-items: center;
   gap: 0.4rem;
   font-family: var(--mono);
-  font-size: 0.8rem;
+  font-size: var(--t-1);
   color: var(--muted);
 }
 .themeMenu select {
@@ -2595,8 +2603,8 @@ select.textInput {
     box-sizing: border-box;
   }
   /* Four buttons and a name do not share a phone's width: the mark stands for the name. */
-  .topbar .topbarEnd .ghost { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
-  .topbar .topbarEnd .accountMenu > summary { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+  .topbar .topbarEnd .ghost { padding: 0.25rem 0.5rem; font-size: var(--t-1); }
+  .topbar .topbarEnd .accountMenu > summary { padding: 0.25rem 0.5rem; font-size: var(--t-1); }
 }
 @media (max-width: 520px) {
   .topbar .brand h1 { display: none; }
@@ -2664,11 +2672,11 @@ select.textInput {
   }
   .flowNow .idx {
     font-family: var(--mono);
-    font-size: 0.8rem;
+    font-size: var(--t-1);
     color: var(--accent);
   }
   .flowNow .muted {
-    font-size: 0.9rem;
+    font-size: var(--t-2);
   }
   .stageFlow:not(.open) .sectionTitle,
   .stageFlow:not(.open) .flow {
@@ -2725,7 +2733,7 @@ select.textInput {
 }
 .margin .flow .idx {
   flex: none;
-  font-size: 0.8rem;
+  font-size: var(--t-1);
   padding-top: 0.15rem;
 }
 /* Why a phase is out of play this unit, under its name. */
@@ -2808,7 +2816,7 @@ select.textInput {
   text-align: right;
   opacity: 1;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: var(--t-1);
   padding-top: 0.2rem;
   font-variant-numeric: tabular-nums;
 }
@@ -2823,7 +2831,7 @@ select.textInput {
 }
 .log .timeline p {
   margin: 0.1rem 0 0;
-  font-size: 1rem;
+  font-size: var(--t-3);
 }
 .log .empty {
   margin: 0.5rem 0 0;
@@ -2913,7 +2921,7 @@ select.textInput {
   font-variant-numeric: tabular-nums;
 }
 .rollTotal .how {
-  font-size: 0.8rem;
+  font-size: var(--t-1);
   color: var(--muted);
 }
 
@@ -2968,7 +2976,7 @@ select.textInput {
 }
 .receipt .result .band {
   font-family: var(--mono);
-  font-size: 0.8rem;
+  font-size: var(--t-1);
   color: var(--muted);
 }
 .receipt .result.heat .band {
@@ -2976,7 +2984,7 @@ select.textInput {
 }
 .receipt .result .text {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--t-4);
   line-height: 1.4;
 }
 .receipt .result .muted {
@@ -3034,7 +3042,7 @@ select.textInput {
   border-bottom: 1px solid var(--line);
   margin-bottom: 0.25rem;
   font-family: var(--mono);
-  font-size: 0.8rem;
+  font-size: var(--t-1);
 }
 .syncSection label {
   display: flex;
@@ -3145,7 +3153,7 @@ select.textInput {
 /* ---- generated documents (the catalog's About, the Designer's preview) ---- */
 .doc { max-width: 60ch; }
 .doc .docHead h3 { margin: 0; }
-.doc .docH { margin: 1.1rem 0 0.35rem; font-size: 1rem; }
+.doc .docH { margin: 1.1rem 0 0.35rem; font-size: var(--t-3); }
 .doc h4.docH { font-size: 0.95rem; color: var(--muted); }
 .doc p { margin: 0 0 0.6rem; }
 .doc .docNote { border-left: 3px solid var(--line); padding-left: 0.7rem; color: var(--muted); }
@@ -3222,7 +3230,7 @@ select.textInput {
 .marketCard { display: flex; flex-direction: column; gap: 0.5rem; }
 .marketCard.about { grid-column: 1 / -1; }
 .marketCardHead { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
-.marketTitle { margin: 0; font-size: 1.15rem; line-height: 1.2; text-wrap: balance; }
+.marketTitle { margin: 0; font-size: var(--t-4); line-height: 1.2; text-wrap: balance; }
 .marketCard > .muted.small { margin: 0; }
 .marketBlurb { margin: 0; }
 .marketBlurb.clamp { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
@@ -3321,7 +3329,7 @@ select.textInput {
 .guidePage code { font-family: var(--mono); font-size: 0.9em; }
 .guideSteps { counter-reset: step; list-style: none; padding: 0; display: grid; gap: 0.6rem; margin: 0.8rem 0 1.2rem; }
 .guideSteps li { counter-increment: step; position: relative; padding-left: 2.4rem; }
-.guideSteps li::before { content: counter(step); position: absolute; left: 0; top: 0.05rem; width: 1.7rem; height: 1.7rem; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.guideSteps li::before { content: counter(step); position: absolute; left: 0; top: 0.05rem; width: 1.7rem; height: 1.7rem; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font-family: var(--mono); font-size: var(--t-1); color: var(--muted); }
 .guideShot { margin: 1rem 0 1.4rem; display: grid; gap: 0.4rem; }
 .guideShot img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius); }
 .guideShot figcaption { margin: 0; }
@@ -3411,7 +3419,7 @@ a.plan:hover { text-decoration: underline; }
 .publisherPacks .publisherPack { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.4rem 1rem; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid var(--line); }
 .publisherPacks .publisherPack:last-of-type { border-bottom: 0; }
 .publisherPack .row { gap: 0.35rem; align-items: center; flex-wrap: nowrap; padding: 0; justify-self: end; }
-.publisherPack .textInput.short { width: 5.5rem; flex: 0 0 auto; font-size: 0.8rem; padding: 0.12rem 0.5rem; border-radius: 4px; line-height: 1.5; }
+.publisherPack .textInput.short { width: 5.5rem; flex: 0 0 auto; font-size: var(--t-1); padding: 0.12rem 0.5rem; border-radius: 4px; line-height: 1.5; }
 .publisherPacks > .row:last-of-type { align-items: center; flex-wrap: nowrap; }
 .publisherPacks > .row select.textInput { flex: 1 1 auto; min-width: 0; font-size: 0.85rem; padding: 0.25rem 0.5rem; }
 @media (max-width: 560px) {
@@ -3441,7 +3449,7 @@ a.plan:hover { text-decoration: underline; }
 :root[data-widget="clear"] .widgetBody { background: color-mix(in srgb, var(--panel) 82%, transparent); }
 .widgetTitle { font-family: var(--mono); letter-spacing: 0.04em; }
 .widgetNote { margin: 0; color: var(--muted); }
-.widgetBoard { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; font-size: 1.15rem; }
+.widgetBoard { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; font-size: var(--t-4); }
 .widgetBoard li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 0.6rem; }
 .widgetBoard .place { font-family: var(--mono); color: var(--muted); }
 .widgetBoard .who { display: inline-flex; align-items: baseline; gap: 0.35rem; flex-wrap: wrap; min-width: 0; font-weight: 600; }
@@ -3463,7 +3471,7 @@ a.plan:hover { text-decoration: underline; }
 .liveTools { display: grid; gap: 0.5rem; justify-items: end; }
 .liveBar { position: static; }
 .liveBar .liveBarPack { justify-self: center; font-family: var(--mono); font-size: 0.85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.liveBar .liveBarPack strong { font-family: var(--serif); font-size: 1rem; }
+.liveBar .liveBarPack strong { font-family: var(--serif); font-size: var(--t-3); }
 .liveBar .topbarEnd a.ghost { text-decoration: none; }
 @media (max-width: 720px) { .liveBar .liveBarPack { grid-column: 1 / -1; grid-row: 2; justify-self: start; } }
 /* A throw from elsewhere, played here: the tray in a panel that comes and goes. */
@@ -3527,7 +3535,7 @@ html[data-pip="controls"] body { margin: 0; min-height: 100vh; background: var(-
 .pipTools { display: flex; gap: 0.8rem; align-items: center; }
 .pipReceipt { display: grid; gap: 0.4rem; padding: 0.5rem 0.6rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .pipOutcomes, .pipLog { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
-.pipOutcomes li, .pipLog li { display: grid; gap: 0.05rem; font-size: 0.9rem; }
+.pipOutcomes li, .pipLog li { display: grid; gap: 0.05rem; font-size: var(--t-2); }
 .pipOutcomes .where, .pipLog .where { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); }
 .pipOutcomes li.heat .where, .pipLog li.heat .where { color: var(--warn); }
 .pipLog { border-top: 1px solid var(--line); padding-top: 0.5rem; }
@@ -3545,11 +3553,11 @@ html[data-pip="controls"] body { margin: 0; min-height: 100vh; background: var(-
 .welcomeBar .topbarEnd { gap: 0.5rem; }
 .welcomeBar .topbarEnd a.ghost, .welcomeBar .topbarEnd a.primary, .welcomeCtas a { text-decoration: none; display: inline-block; }
 /* The accent link is a button among buttons: the ghosts' size, the accent's color. */
-.welcomeBar .topbarEnd a.primary, .welcomeCtas a.primary { padding: 0.25rem 0.7rem; font-size: 0.8rem; }
+.welcomeBar .topbarEnd a.primary, .welcomeCtas a.primary { padding: 0.25rem 0.7rem; font-size: var(--t-1); }
 .welcomeMain { width: min(100% - 2.5rem, 64rem); margin: 0 auto; padding: 1.5rem 0 3rem; flex: 1; }
-.welcomeHero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 2.5rem; align-items: center; padding: 1.5rem 0 2rem; }
+.welcomeHero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 2.5rem; align-items: center; padding: 1.5rem 0 2rem; }
 .welcomeHero h2 { font-size: clamp(1.9rem, 3.4vw, 2.7rem); line-height: 1.15; margin: 0 0 0.6rem; text-wrap: balance; }
-.welcomeLede { font-size: 1.1rem; line-height: 1.55; max-width: 34rem; margin: 0; }
+.welcomeLede { font-size: var(--t-4); line-height: 1.55; max-width: 38rem; margin: 0; }
 .welcomeCtas { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1.25rem 0 0.75rem; }
 .specimen { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.9rem 1rem 0.8rem; font-family: var(--mono); font-size: 0.86rem; }
 .specimen figcaption { margin-bottom: 0.6rem; }
@@ -3558,29 +3566,29 @@ html[data-pip="controls"] body { margin: 0; min-height: 100vh; background: var(-
 .specimenLog li:first-child { border-top: 0; }
 .specimenLog .where { color: var(--muted); font-size: 0.78rem; }
 .specimenLog .roll { color: var(--accent); font-size: 0.78rem; text-align: right; background: none; border: 0; padding: 0; border-radius: 0; }
-.specimenLog p { grid-column: 1 / -1; margin: 0.15rem 0 0; font-family: var(--serif); font-size: 1rem; }
+.specimenLog p { grid-column: 1 / -1; margin: 0.15rem 0 0; font-family: var(--serif); font-size: var(--t-3); }
 .specimenLog li.heat .roll, .specimenLog li.heat p { color: var(--warn); }
-.specimenState { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; margin-top: 0.7rem; padding-top: 0.6rem; border-top: 1px solid var(--line); font-size: 0.8rem; color: var(--muted); }
+.specimenState { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; margin-top: 0.7rem; padding-top: 0.6rem; border-top: 1px solid var(--line); font-size: var(--t-1); color: var(--muted); }
 .specimenState b { color: var(--text); font-weight: 500; }
 .specimenState .clock { margin-left: auto; color: var(--text); }
 .welcomeMain .sectionTitle { margin-top: 2.5rem; font-size: 1.3rem; }
 /* The title names the section; the words after it say what the section
    answers. At this size they need more than a lighter weight to read as
    two things: a breath of space and a step down. */
-.welcomeMain .sectionTitle .muted { display: inline-block; margin-left: 0.8ch; font-size: 0.9rem; opacity: 0.8; }
+.welcomeMain .sectionTitle .muted { display: inline-block; margin-left: 0.8ch; font-size: var(--t-2); opacity: 0.8; }
 .welcomeSteps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
 .welcomeSteps li { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr); gap: 0.5rem; }
 .welcomeSteps .idx { font-family: var(--mono); color: var(--accent); padding-top: 0.25rem; }
 .welcomeSteps h4 { margin: 0 0 0.3rem; font-size: 1.05rem; }
-.welcomeSteps p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.welcomeSteps p { margin: 0; color: var(--muted); font-size: var(--t-3); }
 .welcomeReasons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 2.5rem; margin: 0; }
 .welcomeReasons > div { padding: 0.9rem 0; border-bottom: 1px solid var(--line); }
 .welcomeReasons dt { font-weight: 600; font-size: 1.05rem; }
-.welcomeReasons dd { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.95rem; }
+.welcomeReasons dd { margin: 0.25rem 0 0; color: var(--muted); font-size: var(--t-3); }
 .welcomeReasons code { font-family: var(--mono); font-size: 0.85em; color: var(--text); }
 .welcomePlans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin-bottom: 0.8rem; }
 .welcomePlans h4 { margin: 0 0 0.3rem; font-size: 1.05rem; }
-.welcomePlans p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.welcomePlans p { margin: 0; color: var(--muted); font-size: var(--t-3); }
 /* The persona: the word in the heading that says who the page is for. A
    click turns it; the arrow beside it opens the list. The word turns over
    in place, the old one sliding up and out, the new one in beneath. */
@@ -3602,7 +3610,7 @@ html[data-pip="controls"] body { margin: 0; min-height: 100vh; background: var(-
 .personaList {
   position: absolute; left: 0; top: calc(100% + 0.4rem); z-index: 5; min-width: 24rem; margin: 0; padding: 0.3rem; list-style: none;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-  font-family: var(--serif); font-size: 1rem; font-weight: 400; line-height: 1.3; letter-spacing: 0; white-space: normal;
+  font-family: var(--serif); font-size: var(--t-3); font-weight: 400; line-height: 1.3; letter-spacing: 0; white-space: normal;
 }
 .personaList li button {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 1rem; align-items: baseline; width: 100%; text-align: left;
