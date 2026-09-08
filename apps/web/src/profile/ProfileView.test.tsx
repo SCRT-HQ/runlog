@@ -5,12 +5,42 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import { AccountBadge, syncLabel, syncTone } from "../auth/AccountBadge.tsx";
+import type { PendingInvite } from "../sync/client.ts";
+import { useInvites } from "../share/useInvites.ts";
+import { profileHash, profilePageFromHash, type ProfilePage } from "./route.ts";
 import { ProfileView } from "./ProfileView.tsx";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+/**
+ * The invitations a device sees are read by a hook shared with the account
+ * menu; mocked here so a test can say how many are waiting without a real
+ * server, and both the menu's badge and the Social page agree with it.
+ */
+vi.mock("../share/useInvites.ts", () => ({ useInvites: vi.fn() }));
+
+function stubInvites(invites: PendingInvite[]) {
+  vi.mocked(useInvites).mockReturnValue({ invites, refresh: () => {}, forget: () => {} });
+}
+
+// Nothing here waits on a server by default; a test opts into a busier
+// account by calling stubInvites again with something in it.
+beforeEach(() => stubInvites([]));
+
+const invite = (token: string): PendingInvite => ({
+  token,
+  role: "player",
+  createdAt: "2026-01-01T00:00:00Z",
+  expiresAt: "2026-02-01T00:00:00Z",
+  packId: "pack_1",
+  packTitle: "Ember Trail",
+  session: null,
+  inviter: "Someone",
+  alreadyIn: false,
+});
 
 /**
  * The profile at first paint, with a stand-in account.
@@ -39,27 +69,36 @@ const signedIn: Account = {
   getAccessToken: async () => "token",
 };
 
-const page = (account: Account) =>
+const page = (account: Account, options: { page?: ProfilePage } = {}) =>
   renderToStaticMarkup(
     <AccountContext.Provider value={account}>
-      <ProfileView onBack={() => {}} />
+      <ProfileView onBack={() => {}} {...options} />
     </AccountContext.Provider>,
   );
 
 describe("the profile", () => {
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    stubInvites([]);
+  });
 
-  it("says who it is for, and offers sign-out and the destructive thing behind a second press", () => {
+  it("says who it is for, with an id worth copying rather than reading", () => {
     const html = page(signedIn);
     expect(html).toContain("Nate");
     expect(html).toContain("n@example.com");
-    expect(html).toContain("user_01TEST");
-    expect(html).toContain("Sign out");
-    expect(html).toContain("Delete everything of mine on the server");
-    expect(html).not.toContain("Yes, delete");
-    // Nothing to sign into in the test process: the server button cannot go anywhere.
-    expect(html).toMatch(/Delete everything of mine on the server<\/button>/);
-    expect(html).toContain("None yet. Open a sealed copy");
+    expect(html).toContain('data-account-id="user_01TEST"');
+    expect(html).toContain("Copy account id");
+    // The raw id is not left sitting in the page for a shoulder-surfer to read.
+    expect(html).not.toMatch(/>user_01TEST</);
+  });
+
+  it("shows the sync table with a column for this device and one for the account", () => {
+    const html = page(signedIn, { page: "profile" });
+    expect(html).toContain("On this device");
+    expect(html).toContain("In your account");
+    expect(html).toContain(">Runs<");
+    expect(html).toContain(">Packs<");
+    expect(html).toContain("License keys");
   });
 
   it("asks an anonymous visitor to sign in, and offers the way back", () => {
@@ -76,8 +115,73 @@ describe("the profile", () => {
   });
 });
 
+describe("the profile's four pages", () => {
+  afterEach(() => stubInvites([]));
+
+  it("reads a page from the hash, and a bare #profile as the first one", () => {
+    expect(profilePageFromHash("#profile")).toBe("profile");
+    expect(profilePageFromHash("#profile/publishing")).toBe("publishing");
+    expect(profilePageFromHash("#profile/account")).toBe("account");
+    expect(profilePageFromHash("#profile/social")).toBe("social");
+    expect(profilePageFromHash("#profile/nonsense")).toBe("profile");
+    expect(profilePageFromHash("#guide")).toBeNull();
+    expect(profileHash("profile")).toBe("#profile");
+    expect(profileHash("social")).toBe("#profile/social");
+  });
+
+  it("renders Profile: the account's identity and what sync has carried", () => {
+    const html = page(signedIn, { page: "profile" });
+    expect(html).toContain("<h2>Profile</h2>");
+    expect(html).toContain("Copy account id");
+    expect(html).not.toContain("Sign out");
+  });
+
+  it("renders Publishing as one paragraph and a link to the Designer, with no publisher, no listings and no keys", () => {
+    const html = page(signedIn, { page: "publishing" });
+    expect(html).toContain("<h2>Publishing</h2>");
+    expect(html).toContain('href="#create"');
+    expect(html).not.toContain("Nothing uploaded yet");
+    expect(html).not.toContain("Reading…");
+  });
+
+  it("renders Account: the plan, purchases, license keys, your data, and sign-out", () => {
+    const html = page(signedIn, { page: "account" });
+    expect(html).toContain("<h2>Account</h2>");
+    expect(html).toContain("Sign out");
+    expect(html).toContain("Delete everything of mine on the server");
+    expect(html).not.toContain("Yes, delete");
+    expect(html).toContain("None yet. Open a sealed copy");
+  });
+
+  it("renders Social: open tables and people played with (inviting a friend needs an API this process has none of)", () => {
+    const html = page(signedIn, { page: "social" });
+    expect(html).toContain("<h2>Social</h2>");
+    expect(html).toContain("Open tables");
+    expect(html).toContain("People you have played with");
+  });
+
+  it("the Social page lists exactly the invitations waiting, and the nav's count matches", () => {
+    stubInvites([invite("t1"), invite("t2")]);
+    const html = page(signedIn, { page: "social" });
+    expect(html).toContain("Invitations");
+    // One badge in the nav, one li per invitation: both agree with the stub.
+    expect((html.match(/>2<\/span>/g) ?? []).length).toBeGreaterThanOrEqual(1);
+    expect((html.match(/<li>/g) ?? []).length).toBe(2);
+  });
+
+  it("carries no badge on Social when nothing is waiting", () => {
+    stubInvites([]);
+    const html = page(signedIn, { page: "profile" });
+    const socialChip = /<a href="#profile\/social"[^>]*>([\s\S]*?)<\/a>/.exec(html)?.[1] ?? "";
+    expect(socialChip).not.toContain("menuBadge");
+  });
+});
+
 describe("the account menu", () => {
+  afterEach(() => stubInvites([]));
+
   it("is the name, with the profile and sign-out behind it", () => {
+    stubInvites([]);
     const html = renderToStaticMarkup(
       <AccountContext.Provider value={signedIn}>
         <AccountBadge onOpenProfile={() => {}} />
@@ -91,6 +195,7 @@ describe("the account menu", () => {
   });
 
   it("shows no light and no switch where sync is not available, as in this process", () => {
+    stubInvites([]);
     const html = renderToStaticMarkup(
       <AccountContext.Provider value={signedIn}>
         <AccountBadge onOpenProfile={() => {}} />
@@ -111,6 +216,7 @@ describe("the account menu", () => {
   });
 
   it("leaves the profile out where nobody wired one", () => {
+    stubInvites([]);
     const html = renderToStaticMarkup(
       <AccountContext.Provider value={signedIn}>
         <AccountBadge />
@@ -118,6 +224,52 @@ describe("the account menu", () => {
     );
     expect(html).not.toContain("Profile");
     expect(html).toContain("Sign out");
+  });
+
+  /**
+   * The menu used to expand the waiting invitations right there, with their
+   * own Join and Decline buttons — the same list this suite now finds on
+   * the profile's Social page. The menu's job is only to say how many are
+   * waiting and open the door to them.
+   */
+  describe("invitations", () => {
+    it("says nothing when none are waiting", () => {
+      stubInvites([]);
+      const html = renderToStaticMarkup(
+        <AccountContext.Provider value={signedIn}>
+          <AccountBadge onOpenProfile={() => {}} />
+        </AccountContext.Provider>,
+      );
+      expect(html).not.toContain("Invitations");
+    });
+
+    it("names the count and opens Social, rather than listing them inline", () => {
+      stubInvites([invite("t1"), invite("t2")]);
+      const onOpenProfile = vi.fn();
+      const container = document.createElement("div");
+      document.body.appendChild(container);
+      const root = createRoot(container);
+      act(() => {
+        root.render(
+          <AccountContext.Provider value={signedIn}>
+            <AccountBadge onOpenProfile={onOpenProfile} />
+          </AccountContext.Provider>,
+        );
+      });
+      const details = container.querySelector("details") as HTMLDetailsElement;
+      act(() => {
+        details.open = true;
+        details.dispatchEvent(new Event("toggle"));
+      });
+      const entry = Array.from(container.querySelectorAll("button.accountItem")).find((b) => b.textContent?.includes("Invitations"));
+      expect(entry?.textContent).toContain("Invitations (2)");
+      // No Join/Decline here any more: that list moved to Social.
+      expect(container.querySelector(".inviteList")).toBeNull();
+      act(() => (entry as HTMLButtonElement).click());
+      expect(onOpenProfile).toHaveBeenCalledWith("social");
+      act(() => root.unmount());
+      container.remove();
+    });
   });
 
   /**
@@ -132,12 +284,14 @@ describe("the account menu", () => {
     afterEach(() => {
       act(() => root.unmount());
       container.remove();
+      stubInvites([]);
     });
 
     // Renders the menu already open, sidestepping the native <details>
     // click-to-toggle path: jsdom fires that "toggle" event as a queued
     // task, which lands outside this render's own act() call.
     function openMenu(closeKey?: unknown) {
+      stubInvites([]);
       container = document.createElement("div");
       document.body.appendChild(container);
       root = createRoot(container);

@@ -6,6 +6,7 @@ import { useApi } from "../sync/useApi.ts";
 import { useInvites } from "../share/useInvites.ts";
 import { useProfile } from "../sync/useProfile.ts";
 import { shownAs } from "../profile/shownAs.ts";
+import type { ProfilePage } from "../profile/route.ts";
 import { useDismiss } from "../ui/useDismiss.ts";
 
 /**
@@ -27,9 +28,8 @@ import { useDismiss } from "../ui/useDismiss.ts";
  * inside Account.tsx would have made the two files import each other.
  */
 export interface MenuActions {
-  onOpenProfile?: () => void;
-  /** Accept an invitation from the menu and open the run it is for. */
-  onJoinInvite?: (token: string) => Promise<void>;
+  /** Opens the profile, on the page named — the default page absent one. */
+  onOpenProfile?: (page?: ProfilePage) => void;
   /**
    * Closes the menu again whenever this changes — the current view, say.
    * Without it the menu stayed open across a page change, with no way to
@@ -126,7 +126,7 @@ export function syncLabel(sync: Pick<Sync, "enabled" | "status" | "last">): stri
   }
 }
 
-function AccountMenu({ account, onOpenProfile, onJoinInvite, closeKey }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
+function AccountMenu({ account, onOpenProfile, closeKey }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
   const { user, signOut } = account;
   const sync = useSync();
   const { profile } = useProfile();
@@ -136,8 +136,6 @@ function AccountMenu({ account, onOpenProfile, onJoinInvite, closeKey }: MenuAct
   useEffect(() => setOpen(false), [closeKey]);
   const api = useApi();
   const invitations = useInvites(api, open);
-  const [invitesOpen, setInvitesOpen] = useState(false);
-  const [busyToken, setBusyToken] = useState<string | null>(null);
   const waiting = invitations.invites.length;
   // The button: the name they chose, else their first name, else the address.
   const label = profile?.handle?.trim() || user.firstName || user.email;
@@ -154,7 +152,13 @@ function AccountMenu({ account, onOpenProfile, onJoinInvite, closeKey }: MenuAct
   }, [open]);
 
   const entries: Array<{ label: string; hint?: string; act: () => void }> = [
-    ...(onOpenProfile ? [{ label: "Profile", hint: "your keys, your data, your devices", act: onOpenProfile }] : []),
+    ...(onOpenProfile ? [{ label: "Profile", hint: "your keys, your data, your devices", act: () => onOpenProfile() }] : []),
+    // The invitations themselves live on the profile's Social page now; the
+    // menu is only ever the door to them, and only where there is a reason
+    // to open it.
+    ...(onOpenProfile && waiting > 0
+      ? [{ label: `Invitations (${waiting})`, hint: "people asking you to their table", act: () => onOpenProfile("social") }]
+      : []),
   ];
 
   return (
@@ -193,52 +197,6 @@ function AccountMenu({ account, onOpenProfile, onJoinInvite, closeKey }: MenuAct
               </div>
             )}
           </div>
-        )}
-        {waiting > 0 && (
-          <details className="accountSub" open={invitesOpen} onToggle={(e) => setInvitesOpen(e.currentTarget.open)}>
-            <summary className="accountItem" role="menuitem" aria-haspopup="true">
-              <span>
-                Invitations <span className="menuBadge">{waiting}</span>
-              </span>
-              <span className="muted small">people asking you to their table</span>
-            </summary>
-            <ul className="inviteList" aria-label="Invitations waiting for you">
-              {invitations.invites.map((invite) => {
-                const busy = busyToken === invite.token;
-                const act = async (what: "join" | "decline") => {
-                  setBusyToken(invite.token);
-                  try {
-                    if (what === "join") {
-                      await onJoinInvite?.(invite.token);
-                      setOpen(false);
-                    } else await api?.declineInvite(invite.token);
-                    invitations.forget(invite.token);
-                  } finally {
-                    setBusyToken(null);
-                  }
-                };
-                return (
-                  <li key={invite.token}>
-                    <div className="inviteWords">
-                      <b>{invite.session ?? invite.packTitle ?? "A run"}</b>
-                      <span className="muted small">
-                        {invite.inviter ?? "Someone"} asks you in as {invite.role === "viewer" ? "a watcher" : "a player"}
-                        {invite.session && invite.packTitle ? ` · ${invite.packTitle}` : ""}
-                      </span>
-                    </div>
-                    <div className="inviteActs">
-                      <button className="primary tiny" disabled={busy || !onJoinInvite} aria-busy={busy || undefined} onClick={() => void act("join")}>
-                        {invite.alreadyIn ? "Open" : "Join"}
-                      </button>
-                      <button className="ghost tiny" disabled={busy} onClick={() => void act("decline")}>
-                        Decline
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </details>
         )}
         {entries.map((e) => (
           <button
