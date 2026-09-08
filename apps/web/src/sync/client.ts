@@ -329,8 +329,9 @@ export interface Me {
   entitlements: string[];
   /** Whether plans gate anything on this address. */
   gates?: boolean;
-  /** Whether this account may see the server tier: open to all, or in beta with this account on the list. */
+  /** Whether this copy offers the server tier at all (there is a bot), and whether the plan is on sale yet. */
   servers?: boolean;
+  serversOpen?: boolean;
 }
 
 /** Another account of the person's, linked to this one: Discord's user id and the name it showed when the link was made. */
@@ -380,8 +381,8 @@ export interface Api {
   unlinkDiscord(): Promise<void>;
   /** Hand in the code `/setup claim` minted; the server is then this account's. `upgrade` says the server plan is wanted and not held. */
   claimGuild(code: string): Promise<{ guild: Guild; plan: string; upgrade: boolean }>;
-  /** The servers this account claimed, whether it holds the server plan (always true where plans are open), and whether it may use the tier at all. */
-  myGuilds(): Promise<{ guilds: Guild[]; server: boolean; allowed: boolean }>;
+  /** The servers this account claimed, whether it holds the server plan (always true where plans are open), and whether the plan is on sale. */
+  myGuilds(): Promise<{ guilds: Guild[]; server: boolean; open: boolean }>;
   /** Give the server up: its rows and its vault go. */
   releaseGuild(guildId: string): Promise<void>;
   guildPacks(guildId: string): Promise<GuildPackMeta[]>;
@@ -806,8 +807,8 @@ export function createApi(
       return { guild: body.guild, plan: body.plan ?? "server", upgrade: body.upgrade === true };
     },
     myGuilds: async () => {
-      const { body } = await request<{ guilds?: Guild[]; server?: boolean; allowed?: boolean }>("GET", "/guilds");
-      return { guilds: body.guilds ?? [], server: body.server !== false, allowed: body.allowed === true };
+      const { body } = await request<{ guilds?: Guild[]; server?: boolean; open?: boolean }>("GET", "/guilds");
+      return { guilds: body.guilds ?? [], server: body.server !== false, open: body.open === true };
     },
     releaseGuild: async (guildId) => {
       await request("DELETE", `/guilds/${encodeURIComponent(guildId)}`);

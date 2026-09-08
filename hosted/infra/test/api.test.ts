@@ -148,7 +148,7 @@ describe("the API", () => {
     withBot.hasResourceProperties("AWS::Lambda::Function", {
       Environment: { Variables: Match.objectLike({ DISCORD_APPLICATION_ID: "123456789012345678", DISCORD_PUBLIC_KEY: "ab".repeat(32), DISCORD_BOT_TOKEN_SECRET: "runlog/discord/bot-token", DISCORD_OPEN: "off" }) },
     });
-    // The private beta ends in the configuration, not in code.
+    // The plan goes on sale in the configuration, not in code.
     templateFor({ discord: { applicationId: "123456789012345678", publicKey: "ab".repeat(32), open: true } }).hasResourceProperties("AWS::Lambda::Function", {
       Environment: { Variables: Match.objectLike({ DISCORD_OPEN: "on" }) },
     });
