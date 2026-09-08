@@ -15,6 +15,7 @@ import {
 import { apiBase } from "../sync/config.ts";
 import { syncBus } from "../sync/bus.ts";
 import { rememberProfile } from "../sync/useProfile.ts";
+import { usePlan } from "../sync/usePlan.ts";
 import { useInvites } from "../share/useInvites.ts";
 import { liveLinkOf } from "../live/route.ts";
 import { PROFILE_PAGES, profileHash, type ProfilePage } from "./route.ts";
@@ -110,6 +111,8 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
   // Read once here so the nav's badge and the Social page agree, rather
   // than each polling the server on its own.
   const invitations = useInvites(api, true);
+  // Whether the server tier is this account's to see, for the nav.
+  const plan = usePlan();
 
   if (account.status !== "signed-in") {
     return (
@@ -155,7 +158,7 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
   return (
     <main className="main">
       <div className="profileLayout">
-        <ProfileNav page={page} onNavigate={onNavigate} waiting={invitations.invites.length} />
+        <ProfileNav page={page} onNavigate={onNavigate} waiting={invitations.invites.length} servers={plan.servers} />
         <div className="profileBody">
           {page === "profile" && (
             <ProfilePage
@@ -197,11 +200,15 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
   );
 }
 
-/** The four names, a sticky rail past 860px and a row of chips under it. */
-function ProfileNav({ page, onNavigate, waiting }: { page: ProfilePage; onNavigate?: (page: ProfilePage) => void; waiting: number }) {
+/**
+ * The names, a sticky rail past 860px and a row of chips under it. Servers
+ * is named only for an account the tier is open to, or when it is the
+ * page being shown (a claim code lands there whoever follows it).
+ */
+function ProfileNav({ page, onNavigate, waiting, servers }: { page: ProfilePage; onNavigate?: (page: ProfilePage) => void; waiting: number; servers: boolean }) {
   return (
     <nav className="profileNav" aria-label="Profile pages">
-      {PROFILE_PAGES.map((p) => (
+      {PROFILE_PAGES.filter((p) => p.id !== "servers" || servers || page === "servers").map((p) => (
         <a
           key={p.id}
           href={profileHash(p.id)}

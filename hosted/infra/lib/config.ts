@@ -102,7 +102,17 @@ export interface EnvConfig {
    * lives in Secrets Manager. Absent, the interactions endpoint answers
    * that it is not configured and nothing about Discord is offered.
    */
-  discord?: { applicationId: string; publicKey: string };
+  discord?: {
+    applicationId: string;
+    publicKey: string;
+    /**
+     * Whether Runlog for servers is open to every account. Off, only an
+     * account carrying the `servers-beta` feature flag on its WorkOS
+     * session (or a `server` grant) sees the tier and may claim a server:
+     * the private beta. On, anyone may. Absent is off.
+     */
+    open: boolean;
+  };
   apm?: {
     newRelic: {
       /** The New Relic account the telemetry goes to; its parent's, as the trusted key, where there is one. */
@@ -253,7 +263,7 @@ export function envConfig(name: EnvName): EnvConfig {
       applicationFeeBps: { subscribed: num(fee["subscribed"], "stripe.applicationFeeBps.subscribed"), unsubscribed: num(fee["unsubscribed"], "stripe.applicationFeeBps.unsubscribed") },
     },
     ...(isRecord(c["discord"])
-      ? { discord: { applicationId: str(c["discord"]["applicationId"], "discord.applicationId"), publicKey: str(c["discord"]["publicKey"], "discord.publicKey") } }
+      ? { discord: { applicationId: str(c["discord"]["applicationId"], "discord.applicationId"), publicKey: str(c["discord"]["publicKey"], "discord.publicKey"), open: boolOr(c["discord"]["open"], "discord.open", false) } }
       : {}),
     ...(isRecord(c["apm"]) && isRecord(c["apm"]["newRelic"])
       ? {
