@@ -1153,6 +1153,26 @@ p {
 .runRowMain:hover:not(:disabled) strong {
   color: var(--accent);
 }
+/*
+ * The score rides on the same line as the date, at the right, rather than a
+ * column of its own — a column is one more thing to collapse on a phone.
+ */
+.runRowMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.runRowMeta > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.runRowMeta .num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
 .runRowActions {
   display: flex;
   gap: 0.3rem;
@@ -2974,6 +2994,14 @@ select.textInput {
 }
 .people > .peopleBody {
   padding-top: 0.75rem;
+}
+
+/* What this run made, once it has ended, against what came before. */
+.scores > summary {
+  list-style: none;
+}
+.scores > summary::-webkit-details-marker {
+  display: none;
 }
 .headerActions > .danger {
   margin-left: 0.75rem;
