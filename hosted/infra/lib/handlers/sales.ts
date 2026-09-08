@@ -1,6 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { traced } from "./xray.js";
 
 /**
  * The ledger: every sale of a listed pack, and what was delivered.
@@ -53,8 +54,8 @@ export interface SaleStore {
 }
 
 export function dynamoSales({ table, bucket }: { table: string; bucket: string }): SaleStore {
-  const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
-  const s3 = new S3Client({});
+  const ddb = DynamoDBDocumentClient.from(traced(new DynamoDBClient({})), { marshallOptions: { removeUndefinedValues: true } });
+  const s3 = traced(new S3Client({}));
   const strip = (row: Record<string, unknown>): Sale => {
     const { pk: _pk, sk: _sk, kind: _kind, ...rest } = row;
     return rest as unknown as Sale;

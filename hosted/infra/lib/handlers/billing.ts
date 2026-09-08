@@ -1,5 +1,6 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { traced } from "./xray.js";
 
 /**
  * What the API keeps for billing: which Stripe customer a person is, the
@@ -31,7 +32,7 @@ const WEBHOOK_DAYS = 7;
 const expiresAfter = (at: string, days: number) => Math.floor(new Date(at).getTime() / 1000) + days * 86400;
 
 export function dynamoBilling({ table }: { table: string }): BillingStore {
-  const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
+  const ddb = DynamoDBDocumentClient.from(traced(new DynamoDBClient({})), { marshallOptions: { removeUndefinedValues: true } });
   const upk = (sub: string) => `USER#${sub}`;
   return {
     async customerOf(sub) {
