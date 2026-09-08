@@ -1,0 +1,379 @@
+# The Backlog — clearing the pile, ten items at a time.
+#
+# A Clearing is a series of Rooms. Each Room is one Batch of ten items from
+# whatever pile you are fighting, on a fifteen-minute clock. A Triage roll
+# says how the Batch is handled: delete, delegate, do it now, or defer one
+# to the next Room. A Room that runs the clock over by two minutes rolls the
+# Overrun, and Overruns pile up as Debt; Debt buys a long break at three and
+# ends the Clearing at five. Somewhere in the pile is the Monster, the item
+# you have carried longest; name it, and the Curse lands on it and nowhere
+# else. A Batch that clears, all ten, draws Loot.
+#
+# Written to show a bands table on a d20, a deferred obligation that comes
+# due when the next unit opens, a prompt that aims a table at one subject,
+# and the Overrun and Debt rules shared with Twenty-five.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.the-backlog
+version: "0.1.0"
+title: The Backlog
+author: Runlog
+description: >-
+  Work a pile down ten items at a time on a fifteen-minute clock. The dice
+  say how each batch is handled, running over builds Debt, the item you have
+  carried longest is the Monster, and a batch that clears draws Loot.
+
+category: everyday
+tags: [productivity, inbox, backlog, dungeon crawl]
+
+requires:
+  - { id: pile, label: "A pile: an inbox, a list, a folder, a drawer", kind: other }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - decks
+  - counters
+  - coopRoles
+  - timers
+  - bandsResolution
+  - clockRules
+
+vocabulary:
+  run: { one: Clearing, many: Clearings }
+  unit: { one: Room, many: Rooms }
+  subject: { one: Batch, many: Batches }
+  finalize: Clear it
+
+unit:
+  createsSubject: true
+  clock: { kind: timer, minutes: 15, auto: true, label: Room clock }
+  min: 1
+  max: 12
+
+states:
+  cleared:
+    label: Cleared
+    short: CL
+    scope: subject
+    description: All ten gone. Nothing from this Batch is left in the pile.
+  looming:
+    label: Looming
+    short: LM
+    scope: subject
+    description: The Monster. The item you have carried longest is in this Batch, and the Curse lands here and nowhere else.
+
+counters:
+  debt:
+    label: Debt
+    initial: 0
+    min: 0
+    triggers:
+      - when: { gte: 3 }
+        oncePerRun: true
+        label: A long break
+        do:
+          - { do: note, text: "A long break: fifteen minutes, away from the pile, before the next Room.", persistent: true }
+          - { do: startTimer, minutes: 15, label: "Long break" }
+  batchesCleared:
+    label: Batches cleared
+    initial: 0
+    incrementOn:
+      - { on: stateApplied, state: cleared }
+
+decks:
+  loot:
+    kind: cards
+    title: Loot
+    description: Drawn when a Batch clears, all ten. One-shot advantages for the Rooms ahead.
+    drawAtStart: 0
+    unique: false
+    carriesOver: false
+    cards:
+      - id: wipe
+        title: Wipe a Debt
+        text: Debt −1. Play it between Rooms.
+        triggers:
+          - on: immediately
+            do:
+              - { do: modCounter, counter: debt, by: -1 }
+      - id: skip-triage
+        title: Skip the Triage
+        text: The next Room has no Triage roll. Handle the Batch however you like.
+      - id: short-room
+        title: A short Room
+        text: The next Room is ten minutes, and it counts as fifteen.
+      - id: bigger-batch
+        title: A bigger Batch
+        text: Fifteen items in the next Room instead of ten, and the Room counts double if it clears.
+
+moves:
+  nameMonster:
+    label: Name the Monster
+    description: Once a Clearing. Say which Batch holds the item you have carried longest. It is Looming from now on, and the Curse lands on it.
+    oncePerRun: true
+    when: betweenUnits
+    available:
+      - { subjectCount: { gte: 1 } }
+    do:
+      - { do: prompt, kind: chooseSubject, label: "Which Batch holds the item you have carried longest?", into: monster }
+      - { do: applyState, state: looming, to: { var: monster } }
+      - { do: note, text: "The Monster's items come first in every Room until they are gone.", persistent: true }
+      - { do: rollOn, table: curse }
+
+tables:
+  triage:
+    resolution: bands
+    title: Triage
+    description: Rolled when a Room opens. How this Batch is handled.
+    roll: d20
+    entries:
+      - { id: tr-delete, lte: 5, text: "Delete. Anything in this Batch that would not be missed goes, unread." }
+      - id: tr-delegate
+        gte: 6
+        lte: 10
+        text: "Delegate. Name who takes one of these, and send it to them before the Room closes."
+        triggers:
+          - on: immediately
+            do:
+              - { do: prompt, kind: text, label: "Who takes it?", into: who }
+              - { do: note, text: "Send it to the person you named, before the Room closes." }
+      - id: tr-now
+        gte: 11
+        lte: 15
+        text: "Do it now. Two minutes on the one you have been staring at, before anything else."
+        triggers:
+          - on: immediately
+            do:
+              - { do: startTimer, minutes: 2, label: "Two minutes" }
+      - id: tr-defer
+        gte: 16
+        text: "Defer. One item from this Batch goes to the next Room, and it goes first."
+        triggers:
+          - on: onEnterUnit
+            label: Deferred to the next Room
+            do:
+              - { do: note, text: "The deferred item goes first. Do it before the Room clock has run a minute." }
+
+  overrun:
+    resolution: lookup
+    title: Overrun
+    description: Rolled when a Room runs its clock over by two minutes or more.
+    roll: d6
+    entries:
+      - id: ov-break
+        range: [1, 1]
+        text: "The next break is skipped. Straight into the next Room."
+        triggers:
+          - on: immediately
+            do:
+              - { do: note, text: "No break before the next Room." }
+      - id: ov-debt
+        range: [2, 2]
+        text: "Debt +1."
+        triggers:
+          - on: immediately
+            do:
+              - { do: modCounter, counter: debt, by: 1 }
+      - id: ov-avoided
+        range: [3, 4]
+        text: "The next Room is the pile you have been avoiding. Say which."
+        triggers:
+          - on: immediately
+            do:
+              - { do: prompt, kind: text, label: "Which pile have you been avoiding?", into: avoided }
+              - { do: note, text: "The next Room opens on that pile. Ten items from it, no others." }
+      - { id: ov-forgiven, range: [5, 6], text: "Forgiven. It happens." }
+
+  curse:
+    resolution: lookup
+    title: Curse
+    description: Rolled when the Monster is named. It lands on the Monster's Batch and nowhere else.
+    roll: d6
+    entries:
+      - { id: cu-grows, range: [1, 2], text: "It grows. Three more items belong to this Batch than you thought. Find them." }
+      - id: cu-bites
+        range: [3, 4]
+        text: "It bites. Debt +1."
+        triggers:
+          - on: immediately
+            do:
+              - { do: modCounter, counter: debt, by: 1 }
+      - id: cu-follows
+        range: [5, 6]
+        text: "It follows you. The Clearing cannot end until this Batch is cleared: one more Room, at least."
+        triggers:
+          - on: immediately
+            do:
+              - { do: forceUnit, count: 1 }
+
+phases:
+  - id: open
+    label: Open the Room
+    steps:
+      - kind: declareSubject
+        label: Which pile is this Room? Ten items from it, in a few words.
+
+  - id: triage
+    label: Triage
+    steps:
+      - kind: rollTable
+        table: triage
+        label: Roll the Triage
+
+  - id: work
+    label: Work the Batch
+    steps:
+      - kind: manual
+        label: Work the ten, the way the Triage says, until the clock stops you.
+        description: The app cannot see the pile. It only knows what you tell it.
+        checklist:
+          - text: The Triage was followed.
+            shows: { table: triage, scope: unit }
+          - Ten items were touched, not four.
+
+  - id: close
+    label: Clear it
+    description: A Batch that clears draws Loot. A Room two minutes over its clock rolls the Overrun.
+    steps:
+      - kind: actions
+        do:
+          - do: when
+            all:
+              - { ask: "Did all ten clear?" }
+            then:
+              - { do: applyState, state: cleared, to: thisSubject }
+              - { do: grantCard, deck: loot, count: 1 }
+      - kind: actions
+        do:
+          - do: when
+            all:
+              - { clockRanOver: unit, is: { gte: 2 } }
+            then:
+              - { do: rollOn, table: overrun }
+      - kind: finalizeUnit
+        label: Clear the Room
+        confirm:
+          - Whatever is not done is written down, not remembered.
+
+endings:
+  - id: empty
+    label: Empty
+    text: Three Batches cleared. The pile is a list again. Close it.
+    requires:
+      - { counter: batchesCleared, is: { gte: 3 } }
+  - id: enough
+    label: Enough
+    text: Stop here. What is left is smaller than it was, and it knows it.
+  - id: buried
+    label: Buried
+    text: Debt at five. The pile has won today, and it will not have tomorrow. Stop.
+    requires:
+      - { counter: debt, is: { gte: 5 } }
+
+modes:
+  clearing:
+    label: A Clearing
+    description: Rooms until the pile or you gives out, up to twelve.
+    units: { min: 1, max: 12 }
+
+  hour:
+    label: An hour
+    description: Four Rooms, fixed. An hour with the breaks.
+    units: { fixed: 4 }
+
+  together:
+    label: Together
+    description: Two to four people on one pile, taking turns. Whoever opens the Room works the Batch; the other runs the clock.
+    units: { min: 1, max: 12 }
+    players:
+      min: 2
+      max: 4
+      rotate: clockwise
+      roles:
+        - { id: clearer, label: Clearer, description: Names the Batch and works it. }
+        - { id: keeper, label: Keeper, description: "Rolls the Triage, runs the clock and calls the Overrun." }
+
+defaultMode: clearing
+
+hierarchy:
+  - Loot
+  - Curse
+  - Overrun
+  - Triage
+  - General rules
+
+fixtures:
+  # A Triage of 18 defers an item to the next Room. The Room closes with it
+  # still owed; entering the next Room is when it is settled, and settling
+  # it leaves the note that says the item goes first.
+  - name: A deferred item is owed next Room
+    mode: clearing
+    play:
+      - { enter: 1 }
+      - { declare: The inbox }
+      - { step: triage, answers: { d20: 18 } }
+      - { step: work }
+      - { step: close#0, answers: { ask: false } }
+      - { step: close#1 }
+      - { finalize: {} }
+      - { enter: 2 }
+      - { settle: Deferred to the next Room }
+    expect:
+      - { path: unit, equals: 2 }
+      - { path: outcomes.0.entryId, equals: tr-defer }
+      - { path: obligations.0.on, equals: onEnterUnit }
+      - { path: obligations.0.unit, equals: 1 }
+      - { path: obligations.0.resolved, equals: true }
+      - { path: obligations.1.kind, equals: note }
+      - { path: obligations.1.unit, equals: 2 }
+      - { path: counters.debt, equals: 0 }
+      - { requests: answered }
+
+  # The Monster is whichever Batch the player names; the Curse rolled with
+  # it lands there and nowhere else, and a Batch that cleared drew Loot.
+  - name: The Curse lands on the Monster
+    mode: clearing
+    play:
+      - { enter: 1 }
+      - { declare: The inbox }
+      - { step: triage, answers: { d20: 3 } }
+      - { step: work }
+      - { step: close#0, answers: { ask: true, chooseValue: wipe } }
+      - { step: close#1 }
+      - { finalize: {} }
+      - { move: nameMonster, answers: { chooseSubject: 1, d6: 3 } }
+    expect:
+      - { path: subjects.0.states, equals: [cleared, looming] }
+      - { path: hand.0.cardId, equals: wipe }
+      - { path: counters.batchesCleared, equals: 1 }
+      - { path: outcomes.1.table, equals: curse }
+      - { path: outcomes.1.entryId, equals: cu-bites }
+      - { path: outcomes.1.targetSubject, equals: 1 }
+      - { path: counters.debt, equals: 1 }
+      - { requests: answered }
+
+  # A Room two minutes over its clock rolls the Overrun. A scripted play
+  # cannot let a clock run that long, so this is the log such a Room leaves:
+  # the clock expired eighteen minutes in, and the Overrun landed on Debt.
+  - name: A Room that runs over rolls the Overrun
+    mode: clearing
+    events:
+      - { t: RunStarted, mode: clearing }
+      - { t: UnitEntered }
+      - { t: ClockStarted, clock: "u1:unit", kind: timer, label: Room clock, seconds: 900 }
+      - { t: SubjectDeclared, subjectType: The inbox }
+      - { t: ClockStopped, clock: "u1:unit", elapsedMs: 1080000, expired: true }
+      - { t: Rolled, purpose: overrun, dice: d6, total: 2, values: [2], source: physical }
+      - { t: OutcomeResolved, table: overrun, entryId: ov-debt, cause: action }
+      - { t: CounterChanged, counter: debt, by: 1 }
+      - { t: UnitFinalized }
+    expect:
+      - { path: clocks.0.expired, equals: true }
+      - { path: outcomes.0.table, equals: overrun }
+      - { path: counters.debt, equals: 1 }

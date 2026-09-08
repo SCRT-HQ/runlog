@@ -1,0 +1,313 @@
+# Two Doors — sorting what you could do into what you will.
+#
+# Each Option is a thing you could do. Four questions put it through a Door:
+# does it have to happen this week, will it matter in a year, could it be
+# undone, does it belong to someone else as much as you. The answers land it
+# in a quadrant with a verdict: do it now, schedule it, hand it off, drop it.
+# Two Options with the same answers tie, and a tie is broken with dice; the
+# loser waits.
+#
+# Written to show a subject taking its states from questions rather than
+# rolls, a verdict built from those states, and an opposed roll between two
+# named subjects with no clock and no tally anywhere.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.two-doors
+version: "0.1.0"
+title: Two Doors
+author: Runlog
+description: >-
+  Put each thing you could do through four questions and let the answers
+  say what to do with it: now, later, someone else, or never. When two tie,
+  the dice decide which waits.
+
+category: everyday
+tags: [productivity, decisions, priorities, for anyone]
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - opposedResolution
+
+vocabulary:
+  run: { one: Sorting, many: Sortings }
+  unit: { one: Door, many: Doors }
+  subject: { one: Option, many: Options }
+  finalize: Sort it
+
+unit:
+  createsSubject: true
+  min: 1
+  max: 10
+
+states:
+  urgent:
+    label: Urgent
+    short: UR
+    scope: subject
+    description: It has to happen this week, or it stops being possible.
+  important:
+    label: Important
+    short: IM
+    scope: subject
+    description: It will still matter in a year.
+  reversible:
+    label: Reversible
+    short: RV
+    scope: subject
+    description: If it goes wrong, it can be undone.
+  shared:
+    label: Shared
+    short: SH
+    scope: subject
+    description: It belongs to someone else as much as to you.
+  now:
+    label: Do it now
+    short: NOW
+    scope: subject
+    group: verdict
+    description: Urgent and important. Before the next Door.
+  later:
+    label: Schedule it
+    short: SCH
+    scope: subject
+    group: verdict
+    description: Important, not urgent. It gets a day, and the day is kept.
+  handOff:
+    label: Hand it off
+    short: OFF
+    scope: subject
+    group: verdict
+    description: Urgent, not important. Someone else's, or nobody's.
+  drop:
+    label: Drop it
+    short: DRP
+    scope: subject
+    group: verdict
+    description: Neither. Said out loud, and gone.
+  deferred:
+    label: Deferred
+    short: DF
+    scope: subject
+    semantics: [excludesFromResult]
+    description: Lost a tie. It waits until the winner is done, and it does not count for this Sorting.
+
+tables:
+  tie:
+    resolution: opposed
+    title: Tie
+    description: >-
+      Two Options with the same answers. The first rolls a die against one
+      for the second; a tie goes to the second.
+    action: d6
+    challenge:
+      dice: d6
+      count: 1
+    entries:
+      - id: tie-second
+        beats: 0
+        text: "The second Option wins. The first is Deferred: it waits until the second is done."
+        triggers:
+          - on: immediately
+            do:
+              - { do: applyState, state: deferred, to: { var: first } }
+              - { do: note, text: "Write the first Option under the second on the list. It comes back when the second is done." }
+      - id: tie-first
+        beats: 1
+        text: "The first Option wins. The second is Deferred: it waits until the first is done."
+        triggers:
+          - on: immediately
+            do:
+              - { do: applyState, state: deferred, to: { var: second } }
+              - { do: note, text: "Write the second Option under the first on the list. It comes back when the first is done." }
+
+moves:
+  breakTie:
+    label: Break a tie
+    description: Two Options with the same answers. Name them both and roll; the loser waits.
+    when: betweenUnits
+    available:
+      - { subjectCount: { gte: 2 } }
+    do:
+      - { do: prompt, kind: chooseSubject, label: "The first of the two Options", into: first }
+      - { do: prompt, kind: chooseSubject, label: "The second", into: second }
+      - { do: rollOn, table: tie }
+
+phases:
+  - id: name
+    label: Name the Option
+    steps:
+      - kind: declareSubject
+        label: What is the Option? One thing you could do, in a few words.
+
+  - id: questions
+    label: Four questions
+    description: Answer each one honestly. The verdict comes from the answers, not from how you feel about it.
+    steps:
+      - kind: actions
+        do:
+          - do: when
+            all:
+              - { ask: "Does it have to happen this week?" }
+            then:
+              - { do: applyState, state: urgent, to: thisSubject }
+          - do: when
+            all:
+              - { ask: "Will it still matter in a year?" }
+            then:
+              - { do: applyState, state: important, to: thisSubject }
+          - do: when
+            all:
+              - { ask: "If it went wrong, could it be undone?" }
+            then:
+              - { do: applyState, state: reversible, to: thisSubject }
+          - do: when
+            all:
+              - { ask: "Does it belong to someone else as much as to you?" }
+            then:
+              - { do: applyState, state: shared, to: thisSubject }
+
+  - id: verdict
+    label: The Door
+    description: Which quadrant the answers put it in, and what that asks of you.
+    steps:
+      - kind: actions
+        do:
+          - do: when
+            all:
+              - { subjectHasState: urgent }
+            then:
+              - do: when
+                all:
+                  - { subjectHasState: important }
+                then:
+                  - { do: applyState, state: now, to: thisSubject }
+                  - { do: note, text: "Do it now. Before the next Door, not after." }
+                  - do: when
+                    all:
+                      - { not: { subjectHasState: reversible } }
+                    then:
+                      - { do: note, text: "It cannot be undone. Sleep on it once, then do it first thing." }
+                else:
+                  - { do: applyState, state: handOff, to: thisSubject }
+                  - { do: note, text: "Hand it off. Name who takes it; if nobody can, it was never urgent." }
+            else:
+              - do: when
+                all:
+                  - { subjectHasState: important }
+                then:
+                  - { do: applyState, state: later, to: thisSubject }
+                  - { do: note, text: "Schedule it. Name the day before you leave this Door, and keep the day." }
+                else:
+                  - { do: applyState, state: drop, to: thisSubject }
+                  - { do: note, text: "Drop it. Say out loud that you are dropping it, then do not pick it back up." }
+          - do: when
+            all:
+              - { subjectHasState: shared }
+            then:
+              - { do: note, text: "Someone else holds half of this. Tell them the verdict before it stands." }
+
+  - id: close
+    label: Sort it
+    steps:
+      - kind: finalizeUnit
+        label: Sort the Option
+        confirm:
+          - The verdict is written where you will see it tomorrow.
+
+endings:
+  - id: sorted
+    label: Sorted
+    text: Every Option has a Door. Close the list and start with whatever says now.
+  - id: enough
+    label: Enough
+    text: The rest can wait for another Sorting. What is sorted stays sorted.
+
+modes:
+  sorting:
+    label: A Sorting
+    description: As many Options as are on the table, up to ten. Stop when the table is clear.
+    units: { min: 1, max: 10 }
+
+  pair:
+    label: Two Doors
+    description: Exactly two Options, then the tie-break if they match. For a choice that is really a choice.
+    units: { fixed: 2 }
+    notes:
+      - Two Options with the same four answers are a tie. Break it before you stop.
+
+defaultMode: sorting
+
+hierarchy:
+  - Tie
+  - The Door
+  - General rules
+
+fixtures:
+  # The verdict is built from the states the four questions apply, and only
+  # from them: yes, yes, yes, no lands in the now quadrant with the extra
+  # notes it earns.
+  - name: Urgent and important lands on do it now
+    mode: sorting
+    play:
+      - { enter: 1 }
+      - { declare: Fix the leaking tap }
+      - { step: questions, answers: { ask: [true, true, true, false] } }
+      - { step: verdict }
+    expect:
+      - { path: subjects.0.states, equals: [urgent, important, reversible, now] }
+      - { path: obligations.length, equals: 1 }
+      - { path: obligations.0.text, equals: "Do it now. Before the next Door, not after." }
+      - { requests: answered }
+
+  - name: Urgent, important and not reversible is slept on once
+    mode: sorting
+    play:
+      - { enter: 1 }
+      - { declare: Sign the lease }
+      - { step: questions, answers: { ask: [true, true, false, false] } }
+      - { step: verdict }
+    expect:
+      - { path: subjects.0.states, equals: [urgent, important, now] }
+      - { path: obligations.length, equals: 2 }
+      - { path: obligations.1.text, equals: "It cannot be undone. Sleep on it once, then do it first thing." }
+
+  - name: Important but not urgent is scheduled, and a shared one is told
+    mode: sorting
+    play:
+      - { enter: 1 }
+      - { declare: Renew the passport }
+      - { step: questions, answers: { ask: [false, true, false, true] } }
+      - { step: verdict }
+    expect:
+      - { path: subjects.0.states, equals: [important, shared, later] }
+      - { path: obligations.length, equals: 2 }
+      - { path: obligations.0.text, equals: "Schedule it. Name the day before you leave this Door, and keep the day." }
+      - { path: obligations.1.text, equals: "Someone else holds half of this. Tell them the verdict before it stands." }
+
+  # Two Options with the same answers tie; the first rolls a 4 against a 2
+  # for the second, so the second is Deferred and owes its place on the list.
+  - name: A tie is broken by the dice, and the loser waits
+    mode: pair
+    play:
+      - { enter: 1 }
+      - { declare: Call the landlord }
+      - { step: questions, answers: { ask: [true, true, false, false] } }
+      - { step: verdict }
+      - { finalize: {} }
+      - { enter: 2 }
+      - { declare: Book the dentist }
+      - { step: questions, answers: { ask: [true, true, false, false] } }
+      - { step: verdict }
+      - { finalize: {} }
+      - { move: breakTie, answers: { chooseSubject: [1, 2], d6: [4, 2] } }
+    expect:
+      - { path: outcomes.0.entryId, equals: tie-first }
+      - { path: outcomes.0.targetSubject, equals: 2 }
+      - { path: subjects.0.states, equals: [urgent, important, now] }
+      - { path: subjects.1.states, equals: [urgent, important, now, deferred] }
+      - { requests: answered }

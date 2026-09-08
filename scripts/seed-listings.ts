@@ -30,6 +30,13 @@ const PACKS = [
   "packs/sketches/pantry-roulette.yaml",
   "packs/sketches/elden-ring-trial.yaml",
   "packs/sketches/rocket-league-showdown.yaml",
+  "packs/sketches/twenty-five.yaml",
+  "packs/sketches/frog-first.yaml",
+  "packs/sketches/two-doors.yaml",
+  "packs/sketches/word-count.yaml",
+  "packs/sketches/the-backlog.yaml",
+  "packs/sketches/sunday-desk.yaml",
+  "packs/sketches/run-of-show.yaml",
   // packs/testing/engine-testing.yaml is deliberately absent from this list:
   // a test bench belongs in the bundle a dev copy ships, never in a
   // publisher's listing.

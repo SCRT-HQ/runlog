@@ -1,0 +1,322 @@
+# Frog First — eat the frog, then whatever else the day holds.
+#
+# A Day of Blocks. Every Task is a Frog (the one you have been avoiding), a
+# Tadpole (a proper sitting) or a Fly (five minutes, and gone). The Frog is
+# declared in Block 1 and cannot be swapped for something easier; a Block 1
+# without a Frog is taken again. After the work the Swamp has its say, and
+# sometimes it reaches back for a Task you thought was finished. Energy is
+# what the Swamp spends and the Frog restores; at zero the only move is Stop.
+#
+# Written to show a subject taking a state from a question rather than a
+# roll, a run that refuses to move on without one, and a reach-back on a
+# d10 that counts from the newest Task.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.frog-first
+version: "0.1.0"
+title: Frog First
+author: Runlog
+description: >-
+  Name the Task you have been avoiding and do it first. Every Block after
+  that is a Tadpole or a Fly, the Swamp rolls after the work, and the Day
+  ends when Energy does.
+
+category: everyday
+tags: [productivity, focus, habits, for anyone]
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - resources
+  - backwardTargeting
+  - timers
+  - journal
+
+vocabulary:
+  run: { one: Day, many: Days }
+  unit: { one: Block, many: Blocks }
+  subject: { one: Task, many: Tasks }
+  finalize: Call it
+
+unit:
+  createsSubject: true
+  min: 1
+  max: 8
+
+states:
+  frog:
+    label: Frog
+    short: FR
+    scope: subject
+    group: kind
+    description: The one you would rather not do. It goes first, and finishing it gives Energy back.
+  tadpole:
+    label: Tadpole
+    short: TD
+    scope: subject
+    group: kind
+    description: A real sitting, but no dread in it.
+  fly:
+    label: Fly
+    short: FL
+    scope: subject
+    group: kind
+    description: Five minutes, and gone.
+  first:
+    label: First
+    short: "1st"
+    scope: subject
+    semantics: [locksValue]
+    description: Declared as the Frog. It cannot be swapped for something easier once it is named.
+  done:
+    label: Done
+    short: OK
+    scope: subject
+    description: Finished. The Swamp can still reach back to it; that is the game.
+  reopened:
+    label: Reopened
+    short: RO
+    scope: subject
+    description: The Swamp sent you back to it. It comes before anything else in the next Block.
+  frogNamed:
+    label: Frog declared
+    scope: run
+    description: The Day has its Frog. Block 2 is open.
+
+resources:
+  energy:
+    label: Energy
+    initial: 5
+    min: 0
+    max: 6
+    step: 1
+    display: boxes
+    description: The Swamp spends it; finishing the Frog gives two back. At zero, call the Block you are in and stop.
+
+tables:
+  swamp:
+    resolution: lookup
+    title: Swamp
+    description: Rolled after the work, before you call the Block. The pond has opinions.
+    roll: d10
+    entries:
+      - { id: sw-still, range: [1, 2], text: "Still water. Nothing." }
+      - id: sw-bigger
+        range: [3, 4]
+        text: "The Frog was bigger than it looked. Split it: whatever is left of this Task is a second Task, and it is a Frog too. Energy −1."
+        triggers:
+          - on: immediately
+            do:
+              - { do: note, text: "Name the rest of this Task as the next Block's Task. It counts as a Frog." }
+              - { do: modResource, resource: energy, by: -1 }
+      - id: sw-fly
+        range: [5, 6]
+        text: "A fly lands. Five minutes on something small, right now, before you call this Block. Energy −1."
+        triggers:
+          - on: immediately
+            do:
+              - { do: startTimer, minutes: 5, label: "A fly" }
+              - { do: modResource, resource: energy, by: -1 }
+      - id: sw-drain
+        range: [7, 8]
+        text: "The pond drains. Energy −2."
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: energy, by: -2 }
+      - id: sw-skipped
+        range: [9, 10]
+        text: "The Task you skipped. Count back from the newest finished Task by the last digit of the roll; the one you land on is Reopened, and it comes before anything else."
+        triggers:
+          - on: immediately
+            do:
+              - { do: resolveTarget, from: currentRoll }
+              - { do: applyState, state: reopened, to: targetSubject }
+
+targeting:
+  strategy: anchoredOffset
+  offsetFrom: onesDigit
+  wraparound: true
+  skipIneligible: true
+  bands:
+    - { range: [9, 10], anchor: newest, direction: before }
+
+phases:
+  - id: name
+    label: Name the Task
+    steps:
+      - kind: declareSubject
+        label: What is this Block's Task? One thing, in a few words.
+
+  - id: kind
+    label: What kind is it
+    description: Frog, Tadpole or Fly. The Frog goes first, and Block 1 is not Block 1 without one.
+    steps:
+      - kind: actions
+        do:
+          - do: when
+            all:
+              - { ask: "Is this the Frog, the Task you have been avoiding?" }
+            then:
+              - { do: applyState, state: frog, to: thisSubject }
+              - { do: applyState, state: first, to: thisSubject }
+              - { do: applyState, state: frogNamed, to: run }
+            else:
+              - do: when
+                all:
+                  - { ask: "Does it take a proper sitting?" }
+                then:
+                  - { do: applyState, state: tadpole, to: thisSubject }
+                else:
+                  - { do: applyState, state: fly, to: thisSubject }
+
+  - id: work
+    label: Do it
+    steps:
+      - kind: manual
+        label: Do the Task. The one you named, not a nicer one.
+        description: The app cannot see the work. Be honest with the checklist.
+        checklist:
+          - It was the Task named, start to finish.
+          - Anything Reopened by the Swamp was finished first.
+
+  - id: swamp
+    label: Swamp
+    steps:
+      - kind: rollTable
+        table: swamp
+        label: Roll the Swamp
+
+  - id: close
+    label: Call it
+    steps:
+      - kind: actions
+        do:
+          - do: when
+            all:
+              - { ask: "Is it done?" }
+            then:
+              - { do: applyState, state: done, to: thisSubject }
+              - do: when
+                all:
+                  - { subjectHasState: frog }
+                then:
+                  - { do: modResource, resource: energy, by: 2 }
+                  - { do: note, text: "The Frog is eaten. Energy +2, and the rest of the Day is yours." }
+      - kind: actions
+        do:
+          - do: when
+            all:
+              - { unitIndex: { eq: 1 } }
+              - { not: { subjectHasState: frogNamed, of: run } }
+            then:
+              - { do: note, text: "No Frog, no Block 2. Name the Frog, and take Block 1 again." }
+              - { do: rewind, count: 1 }
+      - kind: finalizeUnit
+        label: Call the Block
+        confirm:
+          - The Task is done, or honestly not.
+
+journal:
+  enabled: true
+  prompt: What did the Frog turn out to be?
+  required: false
+
+endings:
+  - id: eaten
+    label: Frog eaten
+    text: The Frog is done. Whatever else is, is. Close the list.
+    requires:
+      - { subjectHasState: frogNamed, of: run }
+      - { resource: energy, is: { gte: 1 } }
+  - id: enough
+    label: Enough for today
+    text: Stop here. Tomorrow's Frog is already on the list.
+    requires:
+      - { resource: energy, is: { gte: 1 } }
+  - id: stop
+    label: Stop
+    text: Energy is gone. This is the only door left; take it without apology.
+    requires:
+      - { resource: energy, is: { lte: 0 } }
+
+triggers:
+  - on: onEnterUnit
+    label: Declare the Frog
+    when:
+      - { unitIndex: { eq: 1 } }
+    do:
+      - { do: note, text: "Declare the Frog: the Task you have been avoiding. It goes first, and it cannot be swapped once it is named." }
+
+modes:
+  day:
+    label: A Day
+    description: Frog first, then as many Blocks as Energy allows, up to eight.
+    units: { min: 1, max: 8 }
+
+  morning:
+    label: A morning
+    description: Three Blocks, fixed. The Frog, and two more.
+    units: { fixed: 3 }
+
+defaultMode: day
+
+hierarchy:
+  - Swamp
+  - General rules
+
+fixtures:
+  # The run refuses to move on without a Frog: Block 1 closed with a Tadpole
+  # is taken again, so the next Block entered is Block 1 and not Block 2.
+  - name: Block 1 without a Frog is taken again
+    mode: day
+    play:
+      - { enter: 1 }
+      - { declare: Answer the mail }
+      - { step: kind, answers: { ask: [false, true] } }
+      - { step: work }
+      - { step: swamp, answers: { d10: 2 } }
+      - { step: close#0, answers: { ask: true } }
+      - { step: close#1 }
+      - { finalize: {} }
+      - { enter: 1 }
+    expect:
+      - { path: unit, equals: 1 }
+      - { path: rewinds, equals: 1 }
+      - { path: subjects.0.states, equals: [tadpole, done] }
+      - { path: runStates, absent: frogNamed }
+      - { requests: answered }
+
+  # With the Frog declared, Block 2 opens; the Frog is First and locked, and
+  # eating it gives Energy back. In Block 2 the Swamp reaches back on a 9,
+  # counting from the newest finished Task, and reopens the Frog.
+  - name: A Frog declared first opens Block 2, and the Swamp can reach back to it
+    mode: day
+    play:
+      - { enter: 1 }
+      - { declare: The tax letter }
+      - { step: kind, answers: { ask: true } }
+      - { step: work }
+      - { step: swamp, answers: { d10: 7 } }
+      - { step: close#0, answers: { ask: true } }
+      - { step: close#1 }
+      - { finalize: {} }
+      - { enter: 2 }
+      - { declare: Expense report }
+      - { step: kind, answers: { ask: [false, false] } }
+      - { step: work }
+      - { step: swamp, answers: { d10: 9 } }
+    expect:
+      - { path: unit, equals: 2 }
+      - { path: rewinds, equals: 0 }
+      - { path: runStates, contains: frogNamed }
+      - { path: subjects.0.states, equals: [frog, first, done, reopened] }
+      - { path: subjects.1.states, equals: [fly] }
+      - { path: outcomes.1.entryId, equals: sw-skipped }
+      - { path: resources.energy, equals: 5 }
+      - { requests: answered }

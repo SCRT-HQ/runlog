@@ -1,0 +1,263 @@
+# Word Count — writing sprints against a clock that keeps score.
+#
+# A Session is a series of twelve-minute Sprints. Each Sprint names a
+# Passage, draws a Constraint that says how it must be written, and runs
+# until the timer says stop. At the end you report the draft's count and
+# the app keeps it. A Sprint that ran its full twelve minutes adds to the
+# streak; stopping early loses it. After the work a d6 can land the Wall:
+# stop mid-sentence, and the next Sprint starts from the break. Together
+# it is a word war, with someone else on the clock awarding each Sprint.
+#
+# Written to show a unit timer read as a rule, a resource set from what
+# the player reports, and a moderated mode over the same tables.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.word-count
+version: "0.1.0"
+title: Word Count
+author: Runlog
+description: >-
+  Twelve-minute writing sprints. Each one draws a constraint, runs against
+  the clock and asks for the count; full sprints build a streak, stopping
+  early breaks it, and a roll can land the Wall.
+
+category: writing
+tags: [writing, sprints, drafting, word war]
+
+requires:
+  - { id: draft, label: "Something to write on, and a draft to add to", kind: other }
+  - { id: counter, label: A way to count words, kind: software, note: "Most editors have one. A guess is allowed if you say it is a guess." }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - counters
+  - resources
+  - timers
+  - journal
+  - moderated
+  - clockRules
+
+vocabulary:
+  run: { one: Session, many: Sessions }
+  unit: { one: Sprint, many: Sprints }
+  subject: { one: Passage, many: Passages }
+  finalize: Pens down
+
+unit:
+  createsSubject: true
+  clock: { kind: timer, minutes: 12, auto: true, label: This Sprint }
+  min: 1
+  max: 10
+
+states:
+  broken:
+    label: At the Wall
+    short: WL
+    scope: subject
+    description: Stopped mid-sentence. The next Sprint starts from exactly here.
+
+counters:
+  streak:
+    label: Full Sprints in a row
+    initial: 0
+    min: 0
+    triggers:
+      - when: { eq: 3 }
+        label: Three full Sprints
+        do:
+          - { do: note, text: "Three full Sprints in a row. The next Constraint is yours to choose: roll it, then keep it or swap it for any other.", persistent: true }
+
+resources:
+  words:
+    label: Words
+    initial: 0
+    min: 0
+    max: 50000
+    step: 50
+    display: number
+    description: The draft's count, as you report it when each Sprint ends. It only ever goes where you say it goes.
+
+tables:
+  constraint:
+    resolution: lookup
+    title: Constraint
+    description: Drawn at the start of every Sprint. How the Passage must be written. In a word war, the Sprint goes to the biggest honest count.
+    roll: d10
+    entries:
+      - { id: c-adjectives, range: [1, 2], text: "No adjectives. Not one.", points: 1 }
+      - { id: c-sentence, range: [3, 4], text: "One long sentence. The whole Sprint is a single sentence, however it has to bend.", points: 1 }
+      - { id: c-middle, range: [5, 6], text: "Start in the middle. No setup, no arrival; the scene is already going when the reader gets there.", points: 1 }
+      - { id: c-dialogue, range: [7, 8], text: "Dialogue only. If nobody is speaking, nothing is happening.", points: 1 }
+      - { id: c-lastline, range: [9, 10], text: "The last line first. Write the line the Passage ends on, then earn it.", points: 1 }
+
+phases:
+  - id: name
+    label: Name the Passage
+    steps:
+      - kind: declareSubject
+        label: What are you writing in this Sprint? A scene, a section, a stretch of it, in a few words.
+
+  - id: constrain
+    label: Constraint
+    steps:
+      - kind: rollTable
+        table: constraint
+        label: Draw the Constraint
+
+  - id: work
+    label: Write
+    steps:
+      - kind: manual
+        label: Write until the clock says stop.
+        description: The app cannot read the page. Twelve minutes, no reading back, no fixing.
+        checklist:
+          - text: The Constraint was kept for the whole Sprint.
+            shows: { table: constraint, scope: unit }
+          - Nothing was read back or fixed.
+
+  - id: wall
+    label: The Wall
+    description: Rolled after the work. On a 1, stop where you are.
+    steps:
+      - kind: actions
+        do:
+          - { do: roll, dice: d6, into: wall, label: "Roll for the Wall" }
+          - do: branch
+            on: wall
+            cases:
+              - in: [1]
+                then:
+                  - { do: applyState, state: broken, to: thisSubject }
+                  - { do: note, text: "The Wall. Stop mid-sentence, wherever you are. The next Sprint starts from that broken sentence, and nowhere else.", persistent: true }
+
+  - id: count
+    label: The count
+    steps:
+      - kind: actions
+        do:
+          - { do: prompt, kind: text, label: "How many words is the draft now?", into: reported }
+          - { do: modResource, resource: words, setFrom: reported }
+
+  - id: close
+    label: Pens down
+    description: A Sprint that ran its full twelve minutes adds to the streak. One stopped early ends it.
+    steps:
+      - kind: actions
+        do:
+          - do: when
+            all:
+              - { clockRan: unit, is: { gte: 12 } }
+            then:
+              - { do: modCounter, counter: streak, by: 1 }
+            else:
+              - { do: modCounter, counter: streak, set: 0 }
+      - kind: finalizeUnit
+        label: Pens down
+        confirm:
+          - The count is honest.
+
+journal:
+  enabled: true
+  prompt: Where did the Sprint leave the draft?
+  required: false
+
+endings:
+  - id: draft
+    label: Pens down for good
+    text: Close the draft without reading it. Tomorrow's first Sprint starts where this one stopped.
+  - id: wall
+    label: Left at the Wall
+    text: Leave the sentence broken. That is where tomorrow starts, and it will be the easiest start you have had.
+  - id: war
+    label: The war is over
+    text: Total the scoreboard. The biggest count buys the coffee; the best sentence gets read aloud.
+
+modes:
+  session:
+    label: A Session
+    description: Sprint until the draft says stop, up to ten.
+    units: { min: 1, max: 10 }
+
+  three:
+    label: Three Sprints
+    description: Thirty-six minutes of writing, fixed. A shape for a lunch hour.
+    units: { fixed: 3 }
+
+  wordWar:
+    label: Word war
+    description: >-
+      Everyone writes the same Sprint under the same Constraint, and someone
+      not writing runs the clock. Each Sprint goes to the biggest honest count.
+    units: { min: 1, max: 10 }
+    moderated:
+      contestants: { min: 2, max: 8 }
+      award: first
+    notes:
+      - The moderator asks every writer for a count at pens down and awards the Sprint under Winners.
+
+defaultMode: session
+
+hierarchy:
+  - The Wall
+  - Constraint
+  - General rules
+
+fixtures:
+  # The count is whatever the writer reports, and a Sprint closed inside its
+  # twelve minutes does not add to the streak: a scripted play moves the
+  # clock a second at a time, so this one stopped early.
+  - name: The count is set from what you report, and a short Sprint resets the streak
+    mode: session
+    play:
+      - { enter: 1 }
+      - { declare: The kitchen scene }
+      - { step: constrain, answers: { d10: 3 } }
+      - { step: work }
+      - { step: wall, answers: { d6: 4 } }
+      - { step: count, answers: { text: "412" } }
+      - { step: close#0 }
+      - { finalize: {} }
+    expect:
+      - { path: resources.words, equals: 412 }
+      - { path: counters.streak, equals: 0 }
+      - { path: outcomes.0.entryId, equals: c-sentence }
+      - { path: subjects.0.states, equals: [] }
+      - { path: clocks.0.kind, equals: timer }
+      - { path: clocks.0.status, equals: done }
+      - { requests: answered }
+
+  - name: A 1 after the work lands the Wall
+    mode: session
+    play:
+      - { enter: 1 }
+      - { declare: The kitchen scene }
+      - { step: constrain, answers: { d10: 8 } }
+      - { step: work }
+      - { step: wall, answers: { d6: 1 } }
+    expect:
+      - { path: subjects.0.states, equals: [broken] }
+      - { path: obligations.0.persistent, equals: true }
+
+  # A Sprint that ran its full twelve minutes adds to the streak. A scripted
+  # play cannot let a clock run that long, so this is the log such a Sprint
+  # leaves: the timer expired at twelve minutes and the streak moved.
+  - name: A full Sprint counts toward the streak
+    mode: session
+    events:
+      - { t: RunStarted, mode: session }
+      - { t: UnitEntered }
+      - { t: ClockStarted, clock: "u1:unit", kind: timer, label: This Sprint, seconds: 720 }
+      - { t: SubjectDeclared, subjectType: The kitchen scene }
+      - { t: ClockStopped, clock: "u1:unit", elapsedMs: 720000, expired: true }
+      - { t: ResourceChanged, resource: words, set: 412 }
+      - { t: CounterChanged, counter: streak, by: 1 }
+      - { t: UnitFinalized }
+    expect:
+      - { path: clocks.0.expired, equals: true }
+      - { path: counters.streak, equals: 1 }
+      - { path: resources.words, equals: 412 }

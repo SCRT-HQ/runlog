@@ -14,6 +14,7 @@ describe("the catalog", () => {
       "com.scrthq.runlog.any-given-day",
       "com.scrthq.runlog.elden-ring-expedition",
       "com.scrthq.runlog.elden-ring-trial",
+      "com.scrthq.runlog.frog-first",
       "com.scrthq.runlog.homefront",
       "com.scrthq.runlog.ladder-work",
       "com.scrthq.runlog.engine-testing",
@@ -21,8 +22,14 @@ describe("the catalog", () => {
       "com.scrthq.runlog.practice-room",
       "com.scrthq.runlog.rocket-league-ladder",
       "com.scrthq.runlog.rocket-league-showdown",
+      "com.scrthq.runlog.run-of-show",
       "com.scrthq.runlog.salt-and-signal",
+      "com.scrthq.runlog.sunday-desk",
+      "com.scrthq.runlog.the-backlog",
       "com.scrthq.runlog.long-kiln",
+      "com.scrthq.runlog.twenty-five",
+      "com.scrthq.runlog.two-doors",
+      "com.scrthq.runlog.word-count",
     ]);
     for (const e of entries) {
       const parsed = loadPackText(await e.load(), "yaml");
