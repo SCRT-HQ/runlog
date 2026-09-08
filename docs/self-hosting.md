@@ -115,6 +115,7 @@ lowercase word works, and it names the stacks):
 | `workosClientId`, `workosCliClientId` | The AuthKit client ids |
 | `email.from`, `email.identity`, `email.region` | The SES identity mail goes out as, and where it is verified |
 | `hosted.operator`, `hosted.operatorShort`, `hosted.support` | Your name as it appears on the pages, and your support address |
+| `hosted.operatorUrl` | Your own site, where your name in every footer links; leave it out and the name goes to the about page |
 | `hosted.termsVersion`, `hosted.termsDate` | The day your terms take effect |
 | `gates`, `hosted.billing`, `stripe.prices` | `false`, `false`, and empty strings, until you set Stripe up |
 | `retain` | `true` keeps the table and the buckets if the stack is ever deleted |
