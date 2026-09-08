@@ -30,6 +30,8 @@ import { useDismiss } from "../ui/useDismiss.ts";
 export interface MenuActions {
   /** Opens the profile, on the page named — the default page absent one. */
   onOpenProfile?: (page?: ProfilePage) => void;
+  /** Opens this device's settings: theme, sounds, dice, who rolls. Absent, the menu holds the theme switch itself. */
+  onOpenSettings?: () => void;
   /**
    * Closes the menu again whenever this changes — the current view, say.
    * Without it the menu stayed open across a page change, with no way to
@@ -45,7 +47,7 @@ export function AccountBadge(actions: MenuActions = {}) {
 }
 
 /** The menu for somebody not signed in, or somewhere with nothing to sign into. */
-function GuestMenu({ account, closeKey }: MenuActions & { account: Exclude<Account, { status: "signed-in" }> }) {
+function GuestMenu({ account, onOpenSettings, closeKey }: MenuActions & { account: Exclude<Account, { status: "signed-in" }> }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const rootRef = useRef<HTMLDetailsElement>(null);
@@ -87,9 +89,23 @@ function GuestMenu({ account, closeKey }: MenuActions & { account: Exclude<Accou
             )}
           </div>
         )}
-        <div className="menuTheme">
-          <ThemeMenu />
-        </div>
+        {onOpenSettings ? (
+          <button
+            role="menuitem"
+            className="accountItem"
+            onClick={() => {
+              setOpen(false);
+              onOpenSettings();
+            }}
+          >
+            <span>Settings</span>
+            <span className="muted small">theme, sounds, dice, rolls</span>
+          </button>
+        ) : (
+          <div className="menuTheme">
+            <ThemeMenu />
+          </div>
+        )}
       </div>
     </details>
   );
@@ -126,7 +142,7 @@ export function syncLabel(sync: Pick<Sync, "enabled" | "status" | "last">): stri
   }
 }
 
-function AccountMenu({ account, onOpenProfile, closeKey }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
+function AccountMenu({ account, onOpenProfile, onOpenSettings, closeKey }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
   const { user, signOut } = account;
   const sync = useSync();
   const { profile } = useProfile();
@@ -159,6 +175,8 @@ function AccountMenu({ account, onOpenProfile, closeKey }: MenuActions & { accou
     ...(onOpenProfile && waiting > 0
       ? [{ label: `Invitations (${waiting})`, hint: "people asking you to their table", act: () => onOpenProfile("social") }]
       : []),
+    // This device's choices, the theme among them, live on one sheet now.
+    ...(onOpenSettings ? [{ label: "Settings", hint: "theme, sounds, dice, rolls", act: onOpenSettings }] : []),
   ];
 
   return (
@@ -212,9 +230,11 @@ function AccountMenu({ account, onOpenProfile, closeKey }: MenuActions & { accou
             {e.hint && <span className="muted small">{e.hint}</span>}
           </button>
         ))}
-        <div className="menuTheme">
-          <ThemeMenu />
-        </div>
+        {!onOpenSettings && (
+          <div className="menuTheme">
+            <ThemeMenu />
+          </div>
+        )}
         <button
           role="menuitem"
           className="accountItem"

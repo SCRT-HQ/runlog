@@ -39,6 +39,8 @@ import { keepPurchase, openPurchase } from "./sync/purchases.ts";
 import { useApi } from "./sync/useApi.ts";
 import { SealedPackPrompt } from "./share/SealedPackPrompt.tsx";
 import { AccountBadge } from "./auth/AccountBadge.tsx";
+import { SettingsDialog } from "./run/SettingsDialog.tsx";
+import { useAlertSettings } from "./alerts/useAlerts.ts";
 import { Footer } from "./hosted/Footer.tsx";
 import { useHosted } from "./hosted/HostedProvider.tsx";
 import { countView } from "./hosted/beacon.ts";
@@ -130,6 +132,11 @@ export default function App() {
     });
   }, []);
   const [view, setView] = useState<"play" | "rules" | "design" | "profile" | "library" | "catalog" | "guide">("play");
+  // This device's settings, opened from the account menu on any page. In a
+  // run the same sheet is behind the run's own Settings button, with the
+  // streaming tab; here it has only the device tab, which needs no run.
+  const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(false);
+  const [alerts, setAlerts] = useAlertSettings();
   /**
    * Places that live in the address bar: the docs' page (`#guide/playing`
    * opens it and can be linked to), the Designer (`#create`), and the
@@ -775,9 +782,13 @@ export default function App() {
           <button className="ghost guideBtn" onClick={() => (view === "guide" ? leaveGuide() : openGuide())} title="How to use Runlog">
             {view === "guide" ? "Back to the app" : "Guide"}
           </button>
-          <AccountBadge closeKey={view} onOpenProfile={(page) => openProfile(page)} />
+          <AccountBadge closeKey={view} onOpenProfile={(page) => openProfile(page)} onOpenSettings={() => setDeviceSettingsOpen(true)} />
         </div>
       </header>
+
+      {deviceSettingsOpen && (
+        <SettingsDialog runId={null} race={false} alerts={alerts} onAlerts={setAlerts} onClose={() => setDeviceSettingsOpen(false)} />
+      )}
 
       {notice && (
         <div className="notice underBar" role="status">

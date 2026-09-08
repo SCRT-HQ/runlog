@@ -27,3 +27,27 @@ export function setCarriesOnByItself(on: boolean): void {
     /* the switch lasts the tab */
   }
 }
+
+/**
+ * Whether a new run starts with the app rolling for the player. Off by
+ * default: the dice are theirs. Set from the receipt's "Keep rolling for
+ * me" or from Settings, and read when a run opens.
+ */
+const ROLL_KEY = "runlog:rollForMe";
+
+export function rollsForMeByDefault(): boolean {
+  try {
+    return localStorage.getItem(ROLL_KEY) === "on";
+  } catch {
+    return false;
+  }
+}
+
+export function setRollsForMeByDefault(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(ROLL_KEY, "on");
+    else localStorage.removeItem(ROLL_KEY);
+  } catch {
+    /* the switch lasts the tab */
+  }
+}
