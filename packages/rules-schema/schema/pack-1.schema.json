@@ -190,7 +190,8 @@
           "bandsResolution",
           "opposedResolution",
           "keyedResolution",
-          "moderated"
+          "moderated",
+          "clockRules"
         ],
         "description": "An engine feature this pack needs in order to play correctly."
       }
@@ -422,7 +423,8 @@
                               "afterWork",
                               "onFinalize",
                               "onDeclareRunOver",
-                              "onRunEnd"
+                              "onRunEnd",
+                              "onTimerExpired"
                             ],
                             "description": "The lifecycle point at which this fires."
                           },
@@ -597,7 +599,8 @@
                               "afterWork",
                               "onFinalize",
                               "onDeclareRunOver",
-                              "onRunEnd"
+                              "onRunEnd",
+                              "onTimerExpired"
                             ],
                             "description": "The lifecycle point at which this fires."
                           },
@@ -791,7 +794,8 @@
                               "afterWork",
                               "onFinalize",
                               "onDeclareRunOver",
-                              "onRunEnd"
+                              "onRunEnd",
+                              "onTimerExpired"
                             ],
                             "description": "The lifecycle point at which this fires."
                           },
@@ -947,7 +951,8 @@
                               "afterWork",
                               "onFinalize",
                               "onDeclareRunOver",
-                              "onRunEnd"
+                              "onRunEnd",
+                              "onTimerExpired"
                             ],
                             "description": "The lifecycle point at which this fires."
                           },
@@ -1117,7 +1122,8 @@
                               "afterWork",
                               "onFinalize",
                               "onDeclareRunOver",
-                              "onRunEnd"
+                              "onRunEnd",
+                              "onTimerExpired"
                             ],
                             "description": "The lifecycle point at which this fires."
                           },
@@ -2706,7 +2712,8 @@
               "afterWork",
               "onFinalize",
               "onDeclareRunOver",
-              "onRunEnd"
+              "onRunEnd",
+              "onTimerExpired"
             ],
             "description": "The lifecycle point at which this fires."
           },
@@ -5011,6 +5018,116 @@
           ],
           "additionalProperties": false,
           "description": "Tests a resource's current value."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "clockRan": {
+              "type": "string",
+              "minLength": 1,
+              "description": "`unit` for the current unit's own clock, or a clock's label."
+            },
+            "is": {
+              "type": "object",
+              "properties": {
+                "eq": {
+                  "description": "Matches only this exact value.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gte": {
+                  "description": "Matches values greater than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "lte": {
+                  "description": "Matches values less than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gteCounter": {
+                  "description": "Matches values greater than or equal to this counter's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteCounter": {
+                  "description": "Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                }
+              },
+              "additionalProperties": false,
+              "description": "The comparison, in minutes, the clock's live elapsed time must satisfy."
+            }
+          },
+          "required": [
+            "clockRan",
+            "is"
+          ],
+          "additionalProperties": false,
+          "description": "Tests how long a clock has run, live: while it is still going and after it has stopped. Works for a stopwatch or a timer. False if no such clock exists in the current unit."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "clockRanOver": {
+              "type": "string",
+              "minLength": 1,
+              "description": "`unit` for the current unit's own clock, or a clock's label."
+            },
+            "is": {
+              "type": "object",
+              "properties": {
+                "eq": {
+                  "description": "Matches only this exact value.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gte": {
+                  "description": "Matches values greater than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "lte": {
+                  "description": "Matches values less than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gteCounter": {
+                  "description": "Matches values greater than or equal to this counter's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteCounter": {
+                  "description": "Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                }
+              },
+              "additionalProperties": false,
+              "description": "The comparison, in minutes, the timer's overrun must satisfy."
+            }
+          },
+          "required": [
+            "clockRanOver",
+            "is"
+          ],
+          "additionalProperties": false,
+          "description": "Tests how far a timer has run past its length, in minutes. False for a stopwatch, and false if no such clock exists in the current unit."
         },
         {
           "type": "object",

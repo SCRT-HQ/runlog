@@ -47,6 +47,16 @@ export function describePredicate(pack: Pack, p: Predicate): string {
   }
   if ("counter" in p) return `${counterName(pack, p.counter)} ${bound(pack, p.is)}`;
   if ("resource" in p) return `${pack.resources?.[p.resource]?.label ?? p.resource} ${bound(pack, p.is)}`;
+  if ("clockRan" in p) {
+    const unit = pack.vocabulary.unit.one.toLowerCase();
+    const who = p.clockRan === "unit" ? `the ${unit}'s clock` : `the "${p.clockRan}" clock`;
+    return `${who} ${bound(pack, p.is)} minutes`;
+  }
+  if ("clockRanOver" in p) {
+    const unit = pack.vocabulary.unit.one.toLowerCase();
+    const who = p.clockRanOver === "unit" ? `the ${unit}` : `the "${p.clockRanOver}" timer`;
+    return `${who} ${bound(pack, p.is)} minutes over its timer`;
+  }
   if ("flag" in p) return p.is === false ? `${p.flag} is off` : `${p.flag} is on`;
   if ("subjectHasState" in p) {
     const state = pack.states?.[p.subjectHasState]?.label ?? p.subjectHasState;

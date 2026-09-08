@@ -140,6 +140,16 @@ export function predicateInWords(pack: Pack, p: Predicate): string {
   if ("eligibleTargets" in p) return `there are ${boundInWords(pack, p.eligibleTargets)} ${n.subjects} that can be targeted`;
   if ("counter" in p) return `${label(pack, "counters", p.counter)} is ${boundInWords(pack, p.is)}`;
   if ("resource" in p) return `${label(pack, "resources", p.resource)} is ${boundInWords(pack, p.is)}`;
+  if ("clockRan" in p) {
+    return p.clockRan === "unit"
+      ? `the ${n.unit}'s clock has run ${boundInWords(pack, p.is)} minutes`
+      : `the “${p.clockRan}” clock has run ${boundInWords(pack, p.is)} minutes`;
+  }
+  if ("clockRanOver" in p) {
+    return p.clockRanOver === "unit"
+      ? `the ${n.unit} ran over its timer by ${boundInWords(pack, p.is)} minutes`
+      : `the “${p.clockRanOver}” timer ran over by ${boundInWords(pack, p.is)} minutes`;
+  }
   if ("flag" in p) return `${p.flag} is ${p.is === false ? "not " : ""}set`;
   if ("subjectHasState" in p) return `${targetInWords(pack, p.of)} is ${label(pack, "states", p.subjectHasState)}`;
   if ("priorSubjectTagged" in p) return `an earlier ${n.subject} was tagged “${p.priorSubjectTagged}”`;
@@ -264,6 +274,8 @@ export function triggerPointInWords(pack: Pack, on: TriggerPoint): string {
       return `When you declare the ${n.run} over`;
     case "onRunEnd":
       return `When the ${n.run} ends`;
+    case "onTimerExpired":
+      return "When the timer runs out";
   }
 }
 

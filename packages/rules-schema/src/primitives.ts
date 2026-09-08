@@ -133,6 +133,8 @@ export type Predicate =
   | { eligibleTargets: NumericBound }
   | { counter: Id; is: NumericBound }
   | { resource: Id; is: NumericBound }
+  | { clockRan: string; is: NumericBound }
+  | { clockRanOver: string; is: NumericBound }
   | { flag: Id; is?: boolean }
   | { subjectHasState: Id; of?: TargetRef }
   | { priorSubjectTagged: string }
@@ -184,6 +186,34 @@ export const Predicate: z.ZodType<Predicate> = z.lazy(() =>
         })
         .strict()
         .describe("Tests a resource's current value."),
+      z
+        .object({
+          clockRan: z
+            .string()
+            .min(1)
+            .describe("`unit` for the current unit's own clock, or a clock's label."),
+          is: NumericBound.describe(
+            "The comparison, in minutes, the clock's live elapsed time must satisfy.",
+          ),
+        })
+        .strict()
+        .describe(
+          "Tests how long a clock has run, live: while it is still going and after it has stopped. Works for a stopwatch or a timer. False if no such clock exists in the current unit.",
+        ),
+      z
+        .object({
+          clockRanOver: z
+            .string()
+            .min(1)
+            .describe("`unit` for the current unit's own clock, or a clock's label."),
+          is: NumericBound.describe(
+            "The comparison, in minutes, the timer's overrun must satisfy.",
+          ),
+        })
+        .strict()
+        .describe(
+          "Tests how far a timer has run past its length, in minutes. False for a stopwatch, and false if no such clock exists in the current unit.",
+        ),
       z
         .object({
           flag: Id.describe("Which flag to read."),
@@ -305,8 +335,9 @@ export const TriggerPoint = z
     "onFinalize",
     "onDeclareRunOver",
     "onRunEnd",
+    "onTimerExpired",
   ])
   .describe(
-    "When a trigger fires. `immediately` lands on resolution; the rest reach forward in time, which is precisely where a player forgets a rule an hour into a session. `afterWork` fires once the player has done the unit's actual work — the part the engine cannot see or verify — but before the unit closes.",
+    "When a trigger fires. `immediately` lands on resolution; the rest reach forward in time, which is precisely where a player forgets a rule an hour into a session. `afterWork` fires once the player has done the unit's actual work — the part the engine cannot see or verify — but before the unit closes. `onTimerExpired` fires when the timer runs out.",
   );
 export type TriggerPoint = z.infer<typeof TriggerPoint>;

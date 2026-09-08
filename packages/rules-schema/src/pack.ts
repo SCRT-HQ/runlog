@@ -27,6 +27,7 @@ export const Capability = z
     "opposedResolution",
     "keyedResolution",
     "moderated",
+    "clockRules",
   ])
   .describe("An engine feature this pack needs in order to play correctly.");
 export type Capability = z.infer<typeof Capability>;

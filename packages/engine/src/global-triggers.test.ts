@@ -110,3 +110,124 @@ describe("pack-level triggers", () => {
     expect(result.events).toEqual([]);
   });
 });
+
+/**
+ * A timer running out is an engine-recorded fact (`ClockStopped` with
+ * `expired: true`), but nothing read it before this -- a pack could not so
+ * much as note that the bell rang.
+ */
+describe("onTimerExpired", () => {
+  const bellPack: Pack = (() => {
+    const r = loadPackText(
+      `
+schemaVersion: 1
+id: dev.runlog.test-timer-expired
+version: "0.0.1"
+title: Timer Expired
+license: { id: CC0-1.0, redistributable: true }
+capabilities: [deferredTriggers, timers, clockRules]
+vocabulary:
+  run: { one: Session, many: Sessions }
+  unit: { one: Block, many: Blocks }
+  subject: { one: Try, many: Tries }
+  finalize: Close
+unit:
+  createsSubject: true
+  min: 1
+  max: 5
+  clock: { kind: timer, minutes: 1 }
+tables: {}
+phases:
+  - id: go
+    label: Go
+    steps:
+      - kind: finalizeUnit
+endings:
+  - { id: done, label: Done }
+modes:
+  standard: { label: Standard }
+defaultMode: standard
+triggers:
+  - on: onTimerExpired
+    label: The bell
+    do:
+      - { do: note, text: "Note it." }
+`,
+      "yaml",
+    );
+    if (!r.ok) throw new Error(`the test pack does not load: ${JSON.stringify(r.diagnostics)}`);
+    return r.pack;
+  })();
+
+  const bellStart = ev("RunStarted", {
+    packId: bellPack.id,
+    packVersion: bellPack.version,
+    mode: "standard",
+  });
+
+  it("does not fire while the clock is still running", () => {
+    const state = reduce(bellPack, [
+      bellStart,
+      ev("UnitEntered"),
+      ev("ClockStarted", { clock: "u1:unit", kind: "timer", label: "Block 1", seconds: 60 }),
+    ]);
+    expect(pendingGlobalTriggers(bellPack, state)).toEqual([]);
+  });
+
+  it("comes due once the clock stops expired", () => {
+    const state = reduce(bellPack, [
+      bellStart,
+      ev("UnitEntered"),
+      ev("ClockStarted", { clock: "u1:unit", kind: "timer", label: "Block 1", seconds: 60 }),
+      ev("ClockStopped", { clock: "u1:unit", elapsedMs: 60_000, expired: true }),
+    ]);
+    const due = pendingGlobalTriggers(bellPack, state);
+    expect(due).toHaveLength(1);
+    expect(due[0]).toMatchObject({ label: "The bell", on: "onTimerExpired" });
+  });
+
+  it("does not fire for a clock stopped by hand", () => {
+    // Nothing rang, so nothing should be there to note.
+    const state = reduce(bellPack, [
+      bellStart,
+      ev("UnitEntered"),
+      ev("ClockStarted", { clock: "u1:unit", kind: "timer", label: "Block 1", seconds: 60 }),
+      ev("ClockStopped", { clock: "u1:unit", elapsedMs: 40_000 }),
+    ]);
+    expect(pendingGlobalTriggers(bellPack, state)).toEqual([]);
+  });
+
+  it("fires once, keyed to the clock rather than the unit", () => {
+    const expired = [
+      bellStart,
+      ev("UnitEntered"),
+      ev("ClockStarted", { clock: "u1:unit", kind: "timer", label: "Block 1", seconds: 60 }),
+      ev("ClockStopped", { clock: "u1:unit", elapsedMs: 60_000, expired: true }),
+    ];
+    const first = pendingGlobalTriggers(bellPack, reduce(bellPack, expired))[0]!;
+    expect(first.key).toBe(globalTriggerKey(0, "onTimerExpired", 1, "u1:unit"));
+
+    const firedState = reduce(bellPack, [...expired, ev("TriggerFired", { key: first.key })]);
+    expect(pendingGlobalTriggers(bellPack, firedState)).toEqual([]);
+  });
+
+  it("fires again for a second clock that also runs out in the same unit", () => {
+    const firstExpired = [
+      bellStart,
+      ev("UnitEntered"),
+      ev("ClockStarted", { clock: "u1:unit", kind: "timer", label: "Block 1", seconds: 60 }),
+      ev("ClockStopped", { clock: "u1:unit", elapsedMs: 60_000, expired: true }),
+    ];
+    const first = pendingGlobalTriggers(bellPack, reduce(bellPack, firstExpired))[0]!;
+
+    const bothExpired = [
+      ...firstExpired,
+      ev("TriggerFired", { key: first.key }),
+      ev("ClockStarted", { clock: "extra", kind: "timer", label: "Rest", seconds: 30 }),
+      ev("ClockStopped", { clock: "extra", elapsedMs: 30_000, expired: true }),
+    ];
+    const due = pendingGlobalTriggers(bellPack, reduce(bellPack, bothExpired));
+    expect(due).toHaveLength(1);
+    expect(due[0]!.key).toBe(globalTriggerKey(0, "onTimerExpired", 1, "extra"));
+  });
+});
