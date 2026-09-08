@@ -115,14 +115,21 @@ jobs:
       contents: read
       id-token: write
       pull-requests: write
-    # On the pull request only, where a person reads it. The merge queue
-    # runs the tests again on the combined branch but not the diffs: a diff
-    # is for reading, and a change that no longer synthesizes fails the
-    # deploy before any release is cut. The job still exists in the queue's
-    # run and reports itself skipped there, which is what the ruleset needs
-    # to hear from a required check. Nothing that reaches AWS runs for a
-    # pull request from a fork (GitHub would refuse it the OIDC token anyway).
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+    # The diff itself runs on the pull request only, where a person reads
+    # it. The merge queue runs the tests again on the combined branch but
+    # not the diffs: a diff is for reading, and a change that no longer
+    # synthesizes fails the deploy before any release is cut. The job still
+    # runs in the queue with its steps skipped, so that each matrix entry
+    # reports under its own name: a job skipped whole never expands its
+    # matrix and reports as "Diff ${{ matrix.env }}", which the ruleset
+    # does not recognize as "Diff dev", and the queue waits for a check
+    # that never comes. Nothing that reaches AWS runs for a pull request
+    # from a fork (GitHub would refuse it the OIDC token anyway).
+    if: >-
+      ${{
+        github.event_name == 'merge_group'
+        || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+      }}
     # Alongside the tests, not after them: a diff needs the built app and
     # nothing the tests decide, and waiting for them doubled the time a
     # pull request took to go green. The ruleset requires every check, so
@@ -138,14 +145,19 @@ jobs:
     # environments below are not.
     environment: cdk-diff-${{ matrix.env }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/build-app
+      - if: ${{ github.event_name == 'merge_group' }}
+        run: echo "No diff in the merge queue; the pull request carried it. This job only reports."
+      - if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v7
+      - if: ${{ github.event_name == 'pull_request' }}
+        uses: ./.github/actions/build-app
         with:
           environment: ${{ matrix.env }}
           workos-client-id: ${{ vars.WORKOS_CLIENT_ID }}
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           env-config: ${{ vars.RUNLOG_ENV_CONFIG }}
-      - name: Diff the ${{ matrix.env }} stacks
+      - if: ${{ github.event_name == 'pull_request' }}
+        name: Diff the ${{ matrix.env }} stacks
         uses: ./.github/actions/run-cdk
         with:
           cdk-command: diff
