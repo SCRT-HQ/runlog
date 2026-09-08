@@ -19,6 +19,7 @@ import { syncBus } from "../sync/bus.ts";
 import { DiceCurtain, rolledOf, type RolledGesture } from "../dice/DiceCurtain.tsx";
 import { preloadDice3d } from "../dice/settings.ts";
 import { CARRY_ON_HOLD_MS, carriesOnByItself } from "./pace.ts";
+import { flowStrip } from "./flowStrip.ts";
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
@@ -1602,8 +1603,20 @@ function Flow({
   run: ReturnType<typeof useRun>;
   state: RunState;
 }) {
+  // On a phone the list folds to one line, opened by a tap; see flowStrip.
+  const [open, setOpen] = useState(false);
+  const strip = flowStrip(run.activePhases, run.activeStep, (p) => phaseSkipped(pack, state, p));
   return (
-    <section className="stageFlow">
+    <section className={`stageFlow${open ? " open" : ""}`}>
+      {strip && (
+        <button type="button" className="flowNow" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          <span className="idx">
+            {strip.index} of {strip.total}
+          </span>
+          <strong>{strip.label}</strong>
+          {strip.next && <span className="muted">then {strip.next}</span>}
+        </button>
+      )}
       <h3 className="sectionTitle">
         This {pack.vocabulary.unit.one.toLowerCase()}
       </h3>

@@ -2467,14 +2467,61 @@ select.textInput {
     padding-right: 0.9rem;
   }
 
+}
+
+/*
+ * On a phone the margin gives up its column: the step card needs the width
+ * for its keypad. The unit's number shrinks to a line, and the list of
+ * phases folds to "2 of 6, Kiln Check, then Declare the form" until tapped.
+ */
+.flowNow {
+  display: none;
+}
+@media (max-width: 640px) {
   .columns.run {
     grid-template-columns: 1fr;
   }
   .columns.run > .margin {
     border-right: none;
     padding-right: 0;
+    padding-top: 0.75rem;
     border-bottom: 1px solid var(--line);
-    padding-bottom: 1rem;
+    padding-bottom: 0.25rem;
+  }
+  .margin .stageNo {
+    font-size: 1.3rem;
+  }
+  .margin .stageNo small {
+    display: inline;
+    margin: 0 0.5rem 0 0;
+  }
+  .flowNow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0;
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--line);
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .flowNow .idx {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--accent);
+  }
+  .flowNow .muted {
+    font-size: 0.9rem;
+  }
+  .stageFlow:not(.open) .sectionTitle,
+  .stageFlow:not(.open) .flow {
+    display: none;
   }
 }
 
