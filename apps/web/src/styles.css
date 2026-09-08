@@ -3364,8 +3364,16 @@ a.plan:hover { text-decoration: underline; }
 .nameGate .inviteForm input { flex: 1; min-width: 12rem; }
 /* The run's settings: one dialog, its sections ruled like the side column's. */
 .settingsDialog { width: min(100%, 38rem); max-height: calc(100vh - 2rem); overflow: auto; display: grid; gap: 1.1rem; }
-.settingsDialog .dialogBar { display: flex; justify-content: space-between; align-items: baseline; }
+/* The bar stays while the sheet scrolls, so Close is never out of reach. */
+.settingsDialog .dialogBar { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin: -0.25rem 0 0; padding: 0.25rem 0 0.6rem; background: var(--panel); border-bottom: 1px solid var(--line); }
 .settingsDialog .dialogBar h2 { margin: 0; }
+.settingsDialog .dialogHead { display: grid; gap: 0.5rem; }
+.settingsDialog .dialogTabs { display: flex; gap: 0.3rem; }
+.settingsDialog .dialogClose { display: flex; align-items: center; gap: 0.5rem; }
+.settingsDialog .themeMenu { display: flex; align-items: center; gap: 0.6rem; }
+/* The widget rows: a fixed column for the two buttons, so the last row lines up with the rest. */
+.widgetList li { align-items: center; }
+.widgetList li > .padRow { flex: none; justify-content: flex-end; min-width: 11.5rem; }
 .settingsDialog > section { display: grid; gap: 0.5rem; }
 .settingsDialog .sectionTitle { margin: 0; }
 .settingsDialog .alerts { padding-top: 0; }
