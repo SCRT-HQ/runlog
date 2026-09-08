@@ -132,23 +132,42 @@ Every merge to main deploys to dev and is tagged and released from there;
 production deploys from the release. The version is the tag, and nothing in
 the repository carries it.
 
-How big the step is comes from labels on the pull requests that landed since
-the last tag:
+A pull request's title becomes the title of its squash commit on main, and
+that title is written in [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+form; a check on every pull request holds it to that:
 
-- `semver:major` on any of them: a new major version. For a change after
-  which a pack or a log from before no longer loads, or plays differently.
-- `semver:minor`: a new minor version. For anything a player or an author can
+```
+feat(run): move the clock under the unit name
+fix(engine): stop a paused timer from expiring
+docs: say how a run is scored
+feat(schema)!: drop the old targeting shape
+```
+
+A type, an optional scope in parentheses, a colon, and a short description
+in lowercase that reads as an instruction, with no period. The types are
+`feat`, `fix`, `perf`, `refactor`, `docs`, `style`, `test`, `build`, `ci`,
+`chore` and `revert`; the scopes are `run`, `designer`, `library`, `catalog`,
+`profile`, `live`, `engine`, `schema`, `cli`, `packs`, `hosted`, `ci`,
+`docs`, `deps` and `release`. Commits inside a branch can say what they like;
+only the title lands on main.
+
+How big the step is comes from the titles since the last tag:
+
+- a `!` after the type, or a `BREAKING CHANGE:` footer in the pull request's
+  description: a new major version. For a change after which a pack or a
+  log from before no longer loads, or plays differently.
+- any `feat`: a new minor version. For anything a player or an author can
   see or do that they could not before.
-- neither: a patch.
+- otherwise: a patch.
 
-The release notes are the pull request titles, grouped by label as
-`.github/release.yml` says: breaking changes, new, fixed, documentation,
-dependencies, everything else. So a title reads as a line in a changelog,
-which is how they are written anyway. A pull request that should not appear
-takes `skip-changelog`.
+The release notes are those titles grouped by type, as `cliff.toml` says:
+breaking changes, new, fixed, faster, documentation, dependencies,
+housekeeping. The whole changelog, back to the first release, is attached to
+every release as `CHANGELOG.md`; it is not kept in the tree, because nothing
+but the deploy may write to main.
 
 A manual run of the CI workflow can still name the bump outright; its
-default, auto, reads the labels.
+default, auto, reads the titles.
 
 ## Changing the format
 

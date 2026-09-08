@@ -1,0 +1,68 @@
+name: PR title
+
+# The pull request's title becomes the squash commit's title on main, and
+# that title decides the version and writes the changelog (see
+# CONTRIBUTING.md, "Releases"). So the title is checked here, in
+# Conventional Commits form: a type, an optional scope, a short lowercase
+# description in the imperative, no period.
+#
+# pull_request_target rather than pull_request, so the check runs with the
+# base repository's token on a fork's pull request too; nothing from the
+# pull request is checked out or run, only its title is read.
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
+  # The merge queue asks every required check for a verdict on its merge
+  # group. There is no title to check there; the group is made of pull
+  # requests that already passed.
+  merge_group:
+
+permissions:
+  pull-requests: read
+
+jobs:
+  title:
+    name: Conventional title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - if: ${{ github.event_name == 'pull_request_target' }}
+        uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            docs
+            style
+            test
+            build
+            ci
+            chore
+            revert
+          scopes: |
+            run
+            designer
+            library
+            catalog
+            profile
+            live
+            engine
+            schema
+            cli
+            packs
+            hosted
+            ci
+            docs
+            deps
+            release
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+(?<!\.)$
+          subjectPatternError: |
+            The description after the type ("{subject}") should start lowercase, read as an
+            instruction ("move the clock under the unit name"), and end without a period.
+      - if: ${{ github.event_name == 'merge_group' }}
+        run: echo "A merge group has no title to check; its pull requests were checked when they were opened."
