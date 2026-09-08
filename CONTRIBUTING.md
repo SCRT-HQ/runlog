@@ -134,6 +134,12 @@ queued pull requests merged onto it, which is what will actually land; it
 does not repeat the diffs, which are for reading. A fork's pull request gets
 the checks and no diffs, since nothing that reaches AWS runs for it.
 
+The ruleset requires two checks: the pull request's title, and `Checks`, a
+job that waits for every other check and passes only when they all did (a
+diff skipped where it is meant to be skipped counts as passed). So a new
+job, a renamed one or a bigger matrix is a change to the workflow alone;
+add it to the `needs` of `Checks` and the ruleset follows.
+
 ## Releases
 
 Every merge to main deploys to dev and is tagged and released from there;
