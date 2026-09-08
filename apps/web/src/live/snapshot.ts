@@ -1,5 +1,5 @@
 import { modeDoc, summaryDoc, type Doc, type Pack } from "@runlog/rules-schema";
-import { activePhases, clockOfUnit, describeSkipReason, elapsedMs, liveClocks, mayQuote, nextStep, phaseSkipped, progressOf, standings, type RunEvent, type RunState } from "@runlog/engine";
+import { activePhases, clockOfUnit, describeSkipReason, elapsedMs, formatScore, liveClocks, mayQuote, nextStep, phaseSkipped, progressOf, scoreOf, standings, type RunEvent, type RunState } from "@runlog/engine";
 
 /**
  * A run as anyone may see it: the state and the log, worded, with the
@@ -42,6 +42,8 @@ export interface LiveSnapshot {
   resources: Array<{ id: string; label: string; value: number; max?: number; display?: "boxes" | "bar" | "number" }>;
   clocks: Array<{ id: string; label: string; kind: "stopwatch" | "timer"; seconds: number | null; status: "running" | "paused" | "done"; elapsedMs: number; expired: boolean }>;
   progress: { unitsDone: number; elapsedMs: number };
+  /** What the pack (or its mode) says this run scores, worded and ready to show. */
+  score: { label: string; text: string; value: number; better: "higher" | "lower" };
   forcedUnits: number;
   /** Newest first, numbered from the start. */
   log: Array<{ n: number; unit: number; where: string; hit: number | null; text: string }>;
@@ -164,6 +166,7 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
     expired: c.expired,
   }));
   const progress = progressOf(state, events, now);
+  const score = scoreOf(pack, state, events, now);
   return {
     v: 1,
     at,
@@ -189,6 +192,7 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
     resources: Object.entries(pack.resources ?? {}).map(([id, r]) => ({ id, label: r.label, value: state.resources[id] ?? r.initial, ...(r.max !== undefined ? { max: r.max } : {}), ...(r.display ? { display: r.display } : {}) })),
     clocks,
     progress: { unitsDone: progress.unitsDone, elapsedMs: progress.elapsedMs },
+    score: { label: score.label, text: formatScore(score, pack), value: score.value, better: score.better },
     forcedUnits: state.forcedUnits,
     log,
     ...(extra.race ? { race: extra.race } : {}),
