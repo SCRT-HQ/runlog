@@ -11,17 +11,23 @@ import { loadCatalog, type CatalogEntry } from "./catalog.ts";
 import { pickUp, runLine } from "./home.ts";
 
 /**
- * The strip above the shelf: where to pick up, how a race stands, and
- * what is new in the catalog. Three small panels, each shown only when
- * it has something to say, so a fresh device sees one card (start the
- * pack it came with) and a busy one sees three. Nothing here is a
- * second copy of the shelf; each card is one press to somewhere.
+ * The strip above the shelf: where you left off, where to pick up, how
+ * a race stands, and what is new in the catalog. Small panels, each shown
+ * only when it has something to say, so a fresh device sees one card
+ * (start the pack it came with) and a busy one sees four. Nothing here is
+ * a second copy of the shelf; each card is one press to somewhere.
+ *
+ * The first card, for an account, is the run it touched last on any
+ * device; Pick up beside it is what this device had open. On one device
+ * they are the same run, and the first card is still the way back from
+ * a device that has nothing open yet.
  */
 export function HomeStrip<P extends { id: string; title: string }>({
   packs,
   runs,
   vocabularies,
   onContinue,
+  onContinueLast,
   onOpen,
   onCatalog,
 }: {
@@ -29,6 +35,8 @@ export function HomeStrip<P extends { id: string; title: string }>({
   runs: readonly StoredRun[];
   vocabularies: ReadonlyMap<string, Pack["vocabulary"]>;
   onContinue: (pack: P, run: StoredRun) => void;
+  /** The account's last run, wherever it was touched; absent where nobody is signed in. */
+  onContinueLast?: () => void;
   onOpen: (pack: P) => void;
   onCatalog: () => void;
 }) {
@@ -37,6 +45,7 @@ export function HomeStrip<P extends { id: string; title: string }>({
   // Nothing played yet: the page that says what this is.
   const welcome = runs.length === 0 ? "./" : null;
   const me = account.status === "signed-in" ? account.user.id : null;
+  const last = me && onContinueLast ? onContinueLast : null;
   const [races, setRaces] = useState<Race[]>([]);
   const [fresh, setFresh] = useState<CatalogEntry[]>([]);
 
@@ -82,10 +91,22 @@ export function HomeStrip<P extends { id: string; title: string }>({
     .filter((s): s is NonNullable<typeof s> => s !== null)
     .slice(0, 2);
 
-  if (!up && standings.length === 0 && fresh.length === 0 && !welcome) return null;
+  if (!up && standings.length === 0 && fresh.length === 0 && !welcome && !last) return null;
 
   return (
     <section className="homeStrip" aria-label="Where you are">
+      {last && (
+        <div className="panel homeCard">
+          <span className="homeLabel muted small">Continue where you left off</span>
+          <strong>Your last run</strong>
+          <span className="muted small">The one your account touched last, on this device or another.</span>
+          <div className="padRow">
+            <button className="primary" onClick={last}>
+              Open it
+            </button>
+          </div>
+        </div>
+      )}
       {welcome && (
         <div className="panel homeCard">
           <span className="homeLabel muted small">New here?</span>

@@ -4,16 +4,20 @@ import { useSync, type Sync } from "../sync/SyncProvider.tsx";
 import { ThemeMenu } from "../theme/ThemeMenu.tsx";
 import { useApi } from "../sync/useApi.ts";
 import { useInvites } from "../share/useInvites.ts";
+import { useProfile } from "../sync/useProfile.ts";
+import { shownAs } from "../profile/shownAs.ts";
 
 /**
  * The one menu at the end of the bar, for everyone.
  *
- * Signed in, it is the name: a light on it says whether this device is
- * syncing, and the switch behind it is the one decision that is the
- * player's. Continue, Profile, Design and the theme sit under it as a list,
- * so billing and publishing are each a line when they arrive. Signed out,
- * it is "Menu" with the two doors in, Design and the theme. On disk or the
- * public page, where there is nothing to sign into, it is the same menu
+ * Signed in, it is the name — the one they chose to be shown as, else
+ * their first name: a light on it says whether this device is syncing,
+ * and the switch behind it is the one decision that is the player's.
+ * Profile and the theme sit under it as a list, so billing and publishing
+ * are each a line when they arrive. Continuing a run is the shelf's
+ * business, not the menu's. Signed out, it is "Menu" with the two doors in,
+ * Design and the theme. On disk or the public page, where there is nothing
+ * to sign into, it is the same menu
  * without the doors — so the header is the same shape everywhere, and the
  * theme and the designer are never lost for want of an account.
  *
@@ -23,7 +27,6 @@ import { useInvites } from "../share/useInvites.ts";
  */
 export interface MenuActions {
   onOpenProfile?: () => void;
-  onContinue?: () => void;
   /** Accept an invitation from the menu and open the run it is for. */
   onJoinInvite?: (token: string) => Promise<void>;
 }
@@ -113,16 +116,20 @@ export function syncLabel(sync: Pick<Sync, "enabled" | "status" | "last">): stri
   }
 }
 
-function AccountMenu({ account, onOpenProfile, onContinue, onJoinInvite }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
+function AccountMenu({ account, onOpenProfile, onJoinInvite }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
   const { user, signOut } = account;
   const sync = useSync();
+  const { profile } = useProfile();
   const [open, setOpen] = useState(false);
   const api = useApi();
   const invitations = useInvites(api, open);
   const [invitesOpen, setInvitesOpen] = useState(false);
   const [busyToken, setBusyToken] = useState<string | null>(null);
   const waiting = invitations.invites.length;
-  const label = user.firstName ?? user.email;
+  // The button: the name they chose, else their first name, else the address.
+  const label = profile?.handle?.trim() || user.firstName || user.email;
+  // The panel's head: the name others see, when the button is not already showing it.
+  const shown = shownAs(profile);
   const tone = syncTone(sync);
 
   // "Synced 40 s ago" keeps counting while the menu is open.
@@ -134,7 +141,6 @@ function AccountMenu({ account, onOpenProfile, onContinue, onJoinInvite }: MenuA
   }, [open]);
 
   const entries: Array<{ label: string; hint?: string; act: () => void }> = [
-    ...(onContinue ? [{ label: "Continue where you left off", hint: "open your last run", act: onContinue }] : []),
     ...(onOpenProfile ? [{ label: "Profile", hint: "your keys, your data, your devices", act: onOpenProfile }] : []),
   ];
 
@@ -153,7 +159,10 @@ function AccountMenu({ account, onOpenProfile, onContinue, onJoinInvite }: MenuA
         </span>
       </summary>
       <div className="accountPanel" role="menu">
-        {user.email && <div className="muted small accountEmail">{user.email}</div>}
+        <div className="accountWho">
+          {shown && shown !== label && <div className="accountName">{shown}</div>}
+          {user.email && <div className="muted small accountEmail">{user.email}</div>}
+        </div>
         {sync.available && (
           <div className="syncSection">
             {/* The words are in the tooltip: a menu is a list, not a page. */}

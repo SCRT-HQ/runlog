@@ -44,6 +44,7 @@ import { useHosted } from "./hosted/HostedProvider.tsx";
 import { countView } from "./hosted/beacon.ts";
 import { baseOf, welcomePath } from "./welcome/route.ts";
 import { TermsGate } from "./hosted/TermsGate.tsx";
+import { NameGate } from "./auth/NameGate.tsx";
 import { useAccount } from "./auth/Account.tsx";
 import { createApi } from "./sync/client.ts";
 import { apiBase } from "./sync/config.ts";
@@ -692,6 +693,7 @@ export default function App() {
   if (widget) return <WidgetView route={widget} />;
   if (liveRoute) {
     return (
+      <>
       <LiveRunView
         route={liveRoute}
         onWatch={async (runId) => {
@@ -710,6 +712,8 @@ export default function App() {
           }
         }}
       />
+      <Footer onGuide={() => location.assign("./#guide/streaming")} />
+      </>
     );
   }
 
@@ -775,7 +779,6 @@ export default function App() {
           </button>
           <AccountBadge
             onOpenProfile={() => setView("profile")}
-            onContinue={() => void continueLast()}
             onJoinInvite={async (token) => {
               try {
                 await joinByToken(token);
@@ -928,6 +931,7 @@ export default function App() {
             choose(p.id, p.source);
             setView("play");
           }}
+          onContinueLast={() => void continueLast()}
           onStartAnother={(p) => {
             setActiveRunFor(p.id, NEW_RUN);
             choose(p.id, p.source);
@@ -984,6 +988,7 @@ export default function App() {
       )}
       <Footer onGuide={() => openGuide()} />
       <TermsGate />
+      <NameGate />
     </div>
   );
 }

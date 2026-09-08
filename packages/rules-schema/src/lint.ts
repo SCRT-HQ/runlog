@@ -455,8 +455,9 @@ export function lintPack(pack: Pack): Diagnostic[] {
           d.push(err("ref/unknown-counter", `${path}.${field}[${ii}]`, `tallies unknown counter ${item.tally}`));
         }
         if (typeof item !== "string" && item.tally) movedCounters.add(item.tally);
-        if (typeof item !== "string" && item.shows && !tableIds.has(item.shows.table)) {
-          d.push(err("ref/unknown-table", `${path}.${field}[${ii}]`, `shows unknown table ${item.shows.table}`));
+        const shown = typeof item !== "string" && item.shows ? (Array.isArray(item.shows.table) ? item.shows.table : [item.shows.table]) : [];
+        for (const t of shown.filter((t) => !tableIds.has(t))) {
+          d.push(err("ref/unknown-table", `${path}.${field}[${ii}]`, `shows unknown table ${t}`));
         }
       });
     });

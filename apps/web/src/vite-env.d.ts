@@ -14,6 +14,15 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
+/** Document picture-in-picture: a window the browser keeps above the others, drawn from this page. Chrome and Edge. */
+interface DocumentPictureInPicture {
+  requestWindow(options?: { width?: number; height?: number; disallowReturnToOpener?: boolean }): Promise<Window>;
+  readonly window: Window | null;
+}
+interface Window {
+  documentPictureInPicture?: DocumentPictureInPicture;
+}
+
 /** The app's version from package.json, and the git sha the publish workflow built; empty locally. */
 declare const __RUNLOG_VERSION__: string;
 declare const __RUNLOG_SHA__: string;
