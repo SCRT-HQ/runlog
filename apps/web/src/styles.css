@@ -3615,6 +3615,12 @@ a.plan:hover { text-decoration: underline; }
 .widgetStats div { display: grid; gap: 0.15rem; }
 .widgetStats dt { font-family: var(--mono); }
 .widgetStats dd { margin: 0; font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* The constraint and latest-result lines: worded, not numbers, so they take the row and read at a smaller size. */
+.widgetStats .wide { grid-column: 1 / -1; }
+.widgetStats dd.wideText { font-size: 1rem; font-weight: 500; font-variant-numeric: normal; line-height: 1.35; }
+.widgetStats dd.wideText div + div { margin-top: 0.2rem; }
+/* The step widget's label: prominent, but a sentence rather than a clock's digits. */
+.widgetStep { font-size: clamp(1.3rem, 5vw, 2.2rem); font-weight: 600; line-height: 1.25; margin: 0.1rem 0 0.3rem; }
 .widgetList { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.6rem; }
 .widgetList li { display: flex; justify-content: space-between; gap: 0.8rem; align-items: flex-start; }
 .widgetList li p { margin: 0; }

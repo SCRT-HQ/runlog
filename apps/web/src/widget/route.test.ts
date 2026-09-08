@@ -9,6 +9,7 @@ describe("a widget's address", () => {
   it("names the kind, the run, and the look", () => {
     expect(widgetFromHash("#widget/clock/01ARZ3NDEKTSV4RRFFQ69G5FAV")).toEqual({ kind: "clock", runId: "01ARZ3NDEKTSV4RRFFQ69G5FAV", bg: "solid", scale: 1 });
     expect(widgetFromHash("#widget/scoreboard/run1?bg=clear&scale=1.5")).toEqual({ kind: "scoreboard", runId: "run1", bg: "clear", scale: 1.5 });
+    expect(widgetFromHash("#widget/step/run1")?.kind).toBe("step");
   });
   it("refuses what it does not know and clamps the size", () => {
     expect(widgetFromHash("#widget/dice/run1")).toBeNull();
