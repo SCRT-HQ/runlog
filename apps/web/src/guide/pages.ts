@@ -26,7 +26,7 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   { slug: "library", title: "Your packs and the catalog", blurb: "Finding, adding and keeping packs.", Page: Library as GuidePage["Page"] },
   { slug: "clocks", title: "Clocks and alerts", blurb: "Stopwatches, timers, and what rings.", Page: Clocks as GuidePage["Page"] },
   { slug: "together", title: "Playing together", blurb: "Sync, invitations, watchers, moderated races.", Page: Together as GuidePage["Page"] },
-  { slug: "streaming", title: "Streaming a run", blurb: "Pop-out widgets: the scoreboard, the clock, the race, on pages of their own.", Page: Streaming as GuidePage["Page"] },
+  { slug: "streaming", title: "Streaming a run", blurb: "Widgets as browser sources and docks in OBS and Streamlabs, and the numbers for a chat bot.", Page: Streaming as GuidePage["Page"] },
   { slug: "design", title: "Designing a pack", blurb: "Your own game for the engine.", Page: Design as GuidePage["Page"] },
   { slug: "documents", title: "Documents and the command line", blurb: "Rulebooks, cards, sheets; npx @scrthq/runlog.", Page: Documents as GuidePage["Page"] },
   { slug: "plans", title: "Plans and pricing", blurb: "What is free, what a server adds, what running it yourself costs.", Page: Plans as GuidePage["Page"] },

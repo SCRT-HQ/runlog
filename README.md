@@ -76,6 +76,8 @@ npx @scrthq/runlog test my-game.yaml          # replays the fixtures your pack s
   schema, so it cannot be wrong about what loads.
 - **[The stream API](docs/stream-api.md)** — a shared run as one JSON
   document and a socket that rings, for a plugin of your own.
+- **[Streaming setup](docs/streaming-setup.md)** — the widgets in OBS,
+  Streamlabs, StreamElements and Streamer.bot, field by field.
 
 Point your pack at the published schema and your editor does most of the work:
 
