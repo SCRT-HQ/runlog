@@ -83,6 +83,20 @@ export function blankPack(): Draft {
 }
 
 /**
+ * Whether a draft is still the untouched starting scaffold, rather than the
+ * beginning of someone's own game.
+ *
+ * Compared against `blankPack()` rather than against some looser "is it
+ * empty" rule, so that any change at all — even one field — counts as a
+ * draft worth asking about before it is silently replaced. Structural
+ * comparison rather than reference equality, because a draft that has been
+ * through storage and back is a new object with the same shape.
+ */
+export function isBlank(draft: Draft): boolean {
+  return JSON.stringify(draft) === JSON.stringify(blankPack());
+}
+
+/**
  * The filename a pack should be saved as.
  *
  * Last segment of the reverse-DNS id, so `com.example.two-line-days` becomes
