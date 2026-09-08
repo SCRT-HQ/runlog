@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { usePlan } from "../sync/usePlan.ts";
-import { WIDGET_KINDS, widgetHref, type WidgetKind } from "../widget/route.ts";
+import { THEMES, type ThemeId } from "../theme/theme.ts";
+import { WIDGET_BACKGROUNDS, WIDGET_KINDS, widgetHref, type WidgetBackground, type WidgetKind, type WidgetRoute } from "../widget/route.ts";
 import { liveLinkOf } from "../live/route.ts";
 import { canFloat } from "./ControlPanel.tsx";
+
+/** The themes an address may pin: every look but "system", which is the choice not to pin one. */
+const PINNABLE = THEMES.filter((t): t is (typeof THEMES)[number] & { id: Exclude<ThemeId, "system"> } => t.id !== "system");
 
 /**
  * Pop-outs for a stream: one panel of this run on a page of its own, to
@@ -13,8 +17,10 @@ import { canFloat } from "./ControlPanel.tsx";
  */
 export function StreamSettings({ runId, race, onControls }: { runId: string; race: boolean; onControls?: () => void }) {
   const plan = usePlan();
-  const [clear, setClear] = useState(true);
+  const [bg, setBg] = useState<WidgetBackground>("clear");
   const [scale, setScale] = useState(1.25);
+  // "" is no pin: the widget follows the machine it opens on, like any page.
+  const [theme, setTheme] = useState<WidgetRoute["theme"] | "">("");
   const [copied, setCopied] = useState<WidgetKind | null>(null);
   const [elsewhere, setElsewhere] = useState(false);
   const allowed = !plan.gates || plan.can("plus");
@@ -29,7 +35,7 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
     }
   })();
 
-  const route = (kind: WidgetKind) => ({ kind, runId, bg: clear ? ("clear" as const) : ("solid" as const), scale, ...(elsewhere && token ? { token } : {}) });
+  const route = (kind: WidgetKind): WidgetRoute => ({ kind, runId, bg, scale, ...(theme ? { theme } : {}), ...(elsewhere && token ? { token } : {}) });
   const open = (kind: WidgetKind) => {
     window.open(widgetHref(route(kind)), `runlog-widget-${kind}`, "popup=yes,width=520,height=340");
   };
@@ -51,9 +57,26 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
         <>
           <p className="muted small">Each opens on a page of its own, following this run as it moves. Add the address as a browser source in your streaming app, or keep the window on a second screen.{token ? " With a live link shared, an address can carry its token and work on a machine that is not this one." : " Share a live link under People at the table and the addresses can work on another machine too."}</p>
           <div className="padRow">
-            <label className="toggle">
-              <input type="checkbox" checked={clear} onChange={(e) => setClear(e.target.checked)} />
-              <span>Clear background</span>
+            <label className="toggle" title={WIDGET_BACKGROUNDS.find((b) => b.bg === bg)?.what}>
+              <span>Background</span>
+              <select className="chipAdd" value={bg} onChange={(e) => setBg(e.target.value as WidgetBackground)} aria-label="Widget background">
+                {WIDGET_BACKGROUNDS.map((b) => (
+                  <option key={b.bg} value={b.bg}>
+                    {b.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="toggle" title="Pinned in the address, so the capture looks the same whatever the streaming machine has chosen">
+              <span>Theme</span>
+              <select className="chipAdd" value={theme} onChange={(e) => setTheme(e.target.value as WidgetRoute["theme"] | "")} aria-label="Widget theme">
+                <option value="">Follow the device</option>
+                {PINNABLE.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
             </label>
             {token && (
               <label className="toggle" title="The address carries the live link's token, so it works on a machine that is not this one">
