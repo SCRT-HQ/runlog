@@ -11,7 +11,6 @@ import {
   type Pack,
   type Table,
 } from "@runlog/rules-schema";
-import { createRandom } from "@runlog/engine";
 import { describeRoll, entryKeys, resolveRoll, type RollResult } from "./rolling.ts";
 import { DiceTray } from "./dice/DiceTray.tsx";
 import { RunView } from "./run/RunView.tsx";
@@ -93,7 +92,6 @@ export default function App() {
    */
   const [source, setSource] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string>("");
-  const [seed, setSeed] = useState("");
   /**
    * Packs the player imported from their own files.
    *
@@ -240,21 +238,11 @@ export default function App() {
   }, [source]);
 
   /**
-   * One random stream per seed, held across rolls.
-   *
-   * A seeded run is a *sequence*, not a single repeated result: two people
-   * entering the same seed should meet the same dice in the same order. Re-
-   * entering the seed restarts the stream, which is how you demonstrate that.
+   * The rules page rolls its tables to show what they do. Those rolls are
+   * unseeded and go nowhere: a seed belongs to a run, and is set where one
+   * starts.
    */
-  const stream = useRef<{ seed: string; next: () => number } | null>(null);
-  function nextRandom(): () => number {
-    if (!seed) return Math.random;
-    if (stream.current?.seed !== seed) stream.current = { seed, next: createRandom(seed) };
-    return stream.current.next;
-  }
-  function resetStream() {
-    stream.current = seed ? { seed, next: createRandom(seed) } : null;
-  }
+  const unseeded = () => Math.random;
 
   const choose = useCallback((id: string, src: string) => {
     setActiveId(id);
@@ -788,28 +776,6 @@ export default function App() {
         </div>
       )}
 
-      <div className="seedbar" hidden={view !== "rules"}>
-        <label>
-          <span>Seed</span>
-          <input
-            value={seed}
-            placeholder="unseeded — dice are unrepeatable"
-            onChange={(e) => setSeed(e.target.value)}
-          />
-        </label>
-        {seed && (
-          <>
-            <span className="chip ok">seeded</span>
-            <button className="ghost" onClick={resetStream}>
-              Restart stream
-            </button>
-            <span className="muted small">
-              Same seed, same order of dice — restart to walk it again.
-            </span>
-          </>
-        )}
-      </div>
-
       {invited.invite && (
         <InviteBanner
           invite={invited.invite}
@@ -973,7 +939,7 @@ export default function App() {
       ) : view === "play" ? (
         <RunView key={result.pack.id} pack={result.pack} />
       ) : (
-        <PackView pack={result.pack} warnings={result.diagnostics} random={nextRandom} />
+        <PackView pack={result.pack} warnings={result.diagnostics} random={unseeded} />
       )}
       <Footer onGuide={() => openGuide()} />
       <TermsGate />
@@ -1045,7 +1011,10 @@ export function PackView({
           <DocView doc={doc} heading />
         </section>
       ) : (
-        <PackStructure pack={pack} warnings={warnings} random={random} />
+        <>
+          <p className="muted small rulesNote">Rolls on this page are unseeded and not logged. A seed is set where a run starts.</p>
+          <PackStructure pack={pack} warnings={warnings} random={random} />
+        </>
       )}
     </main>
   );
