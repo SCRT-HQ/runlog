@@ -169,7 +169,10 @@ jobs:
       id-token: write
       # To read the labels on the pull requests since the last tag.
       pull-requests: read
-    # One dev deploy at a time; a second merge queues behind the first.
+    # One dev deploy at a time; a second merge waits behind the first. The
+    # release is cut at the end of this same job rather than in one of its
+    # own: a lane holds one waiting job, and a second job in it cancelled the
+    # deploy waiting for the next merge.
     concurrency:
       group: deploy-dev
       cancel-in-progress: false
@@ -178,8 +181,6 @@ jobs:
         (github.event_name == 'push' && github.ref == 'refs/heads/main')
         || github.event_name == 'workflow_dispatch'
       }}
-    outputs:
-      tag: ${{ steps.version.outputs.tag }}
     steps:
       # Full history, or `git tag -l` sees nothing and every build is 0.0.1.
       - uses: actions/checkout@v7
@@ -269,39 +270,16 @@ jobs:
 
       - run: echo "### Deployed \`${GITHUB_SHA:0:12}\` to dev" >> "$GITHUB_STEP_SUMMARY"
 
-  Release:
-    name: Tag and Publish Release
-    runs-on: ubuntu-latest
-    needs:
-      - DevDeploy
-    permissions:
-      # The App token creates the release; this is for the checkout only.
-      contents: read
-    # The same lane as the dev deploy, so the next deploy's version is
-    # worked out only after this one is tagged.
-    concurrency:
-      group: deploy-dev
-      cancel-in-progress: false
-    if: >-
-      ${{
-        !cancelled()
-        && needs.DevDeploy.result == 'success'
-        && (
-          (github.event_name == 'push' && github.ref == 'refs/heads/main')
-          || github.event_name == 'workflow_dispatch'
-        )
-      }}
-    steps:
-      - uses: actions/checkout@v7
+      # ---- the release, in the same job, so the lane holds one job per merge ----
 
       # The number the dev build was made with, and no other: a footer on
       # dev that says 0.0.140 is followed by a release called v0.0.140.
-      - name: Take the version the dev build was made with
-        id: version
+      - name: Take the version this build was made with
+        id: release
         run: |
           set -euo pipefail
-          next="${{ needs.DevDeploy.outputs.tag }}"
-          if [ -z "$next" ]; then echo "::error::the dev deploy named no version"; exit 1; fi
+          next="${{ steps.version.outputs.tag }}"
+          if [ -z "$next" ]; then echo "::error::the deploy named no version"; exit 1; fi
           if git ls-remote --exit-code --tags origin "refs/tags/${next}" >/dev/null 2>&1; then
             echo "::error::${next} is already tagged; the dev deploy and this release fell out of step"
             exit 1
@@ -324,14 +302,14 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
-          gh release create "${{ steps.version.outputs.next }}" \
+          gh release create "${{ steps.release.outputs.next }}" \
             --target "${{ github.sha }}" \
-            --title "${{ steps.version.outputs.next }}" \
+            --title "${{ steps.release.outputs.next }}" \
             --generate-notes \
             --latest
 
           {
-            echo "### Released ${{ steps.version.outputs.next }}"
+            echo "### Released ${{ steps.release.outputs.next }}"
             echo ""
             echo "Production deploys from the release event."
           } >> "$GITHUB_STEP_SUMMARY"
