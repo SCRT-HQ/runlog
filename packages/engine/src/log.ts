@@ -32,13 +32,26 @@ export function effectiveEvents(events: readonly RunEvent[]): RunEvent[] {
 }
 
 /**
- * The ids the next undo would void: the most recent player-visible move,
+ * The ids the next undo would void: the most recent player-visible move.
+ *
+ * Where the log names its moves, the move is the batch the last event
+ * belongs to: everything committed together, however many events that is
+ * and whatever kinds they are. Older logs name no moves, and for them the
+ * move is read
  * from its boundary event to the end of what still counts. Empty when there
  * is nothing left to undo, or when the last move has no ids to name.
  */
 export function undoableIds(events: readonly RunEvent[], isBoundary: (e: RunEvent) => boolean): string[] {
   const live = effectiveEvents(events);
   if (live.length <= 1) return [];
+  const last = live[live.length - 1]!;
+  if (last.move) {
+    let cut = live.length - 1;
+    while (cut > 1 && live[cut - 1]!.move === last.move) cut -= 1;
+    const move = live.slice(cut);
+    const ids = move.map((e) => e.id).filter((id): id is string => typeof id === "string");
+    return ids.length === move.length ? ids : [];
+  }
   let cut = live.length - 1;
   while (cut > 1 && !isBoundary(live[cut]!)) cut -= 1;
   const move = live.slice(cut);

@@ -546,6 +546,7 @@ A step the engine cannot perform or verify — the actual creative work. It only
 | `kind` | `manual` | yes | A step the engine cannot perform or verify: the actual creative work. |
 | `label` | `string` | yes | What the player is being asked to do. |
 | `description` | `string` | — | Further guidance. |
+| `constrainedBy` | `string` | — | Table whose results this unit, if any, the work must honor; they are shown on the step, so a rule drawn earlier in the unit is in front of the player while they do it. |
 | `checklist` | `string` \| `object`[] | — | Points the player ticks off before moving on, each optionally showing the results it is about. |
 
 ## `pack.phases[].steps[] (kind: manual).checklist[] (1)`
