@@ -1,5 +1,5 @@
 import { modeDoc, summaryDoc, type Doc, type Pack } from "@runlog/rules-schema";
-import { activePhases, clockOfUnit, describeSkipReason, elapsedMs, formatScore, liveClocks, mayQuote, nextStep, phaseSkipped, progressOf, scoreOf, standings, type RunEvent, type RunState } from "@runlog/engine";
+import { activePhases, clockOfUnit, describeSkipReason, elapsedMs, formatScore, liveClocks, mayQuote, nextStep, phaseSkipped, progressOf, scoreOf, standings, subjectName, type RunEvent, type RunState } from "@runlog/engine";
 
 /**
  * A run as anyone may see it: the state and the log, worded, with the
@@ -37,7 +37,7 @@ export interface LiveSnapshot {
   quoted: boolean;
   standings: Array<{ name: string; points: number; place: number; states: string[] }>;
   contestants: number;
-  subjects: Array<{ id: number; type: string | null; states: string[]; finalized: boolean }>;
+  subjects: Array<{ id: number; name: string; type: string | null; states: string[]; finalized: boolean }>;
   counters: Array<{ id: string; label: string; value: number }>;
   resources: Array<{ id: string; label: string; value: number; max?: number; display?: "boxes" | "bar" | "number" }>;
   clocks: Array<{ id: string; label: string; kind: "stopwatch" | "timer"; seconds: number | null; status: "running" | "paused" | "done"; elapsedMs: number; expired: boolean }>;
@@ -185,7 +185,7 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
     quoted,
     standings: standings(state).map((s) => ({ name: s.contestant.name, points: s.points, place: s.place, states: s.contestant.states.map(stateLabel) })),
     contestants: state.contestants.length,
-    subjects: state.subjects.filter((s) => !s.removed).map((s) => ({ id: s.id, type: s.type, states: s.states.map(stateLabel), finalized: s.finalized })),
+    subjects: state.subjects.filter((s) => !s.removed).map((s) => ({ id: s.id, name: subjectName(pack, s), type: s.type, states: s.states.map(stateLabel), finalized: s.finalized })),
     counters: Object.entries(pack.counters ?? {})
       .filter(([, c]) => !c.hidden)
       .map(([id, c]) => ({ id, label: c.label, value: state.counters[id] ?? 0 })),

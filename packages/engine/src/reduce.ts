@@ -188,6 +188,7 @@ export function reduce(pack: Pack, log: readonly RunEvent[]): RunState {
             unit: state.unit,
             type: null,
             states: [],
+            name: null,
             finalized: false,
             removed: false,
             createdAt: event.at,
@@ -203,8 +204,10 @@ export function reduce(pack: Pack, log: readonly RunEvent[]): RunState {
       }
 
       case "SubjectRenamed": {
+        // The name, not the type: what it was declared to be stays true
+        // when the player calls it something of their own.
         const subject = state.subjects.find((s) => s.id === event.subject);
-        if (subject) subject.type = event.name;
+        if (subject) subject.name = event.name;
         break;
       }
 
