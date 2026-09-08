@@ -33,11 +33,11 @@ npm install
 npm run dev
 ```
 
-Eleven packs ship with it, free, in the catalog. Four are for anyone with a
-day, a house, a skill or a kitchen — the app is usable out of the box, not
-only by people who write packs — and the rest are structurally different on
-purpose: if they did not need different features, the format would not be
-proving anything.
+The packs that ship with it are free, in the catalog. Some are for anyone
+with a day, a house, a skill or a kitchen — the app is usable out of the
+box, not only by people who write packs — and the rest are structurally
+different on purpose: if they did not need different features, the format
+would not be proving anything. A few of them:
 
 | Pack | Shape | What it exercises |
 | --- | --- | --- |

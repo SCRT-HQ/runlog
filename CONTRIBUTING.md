@@ -169,6 +169,13 @@ but the deploy may write to main.
 A manual run of the CI workflow can still name the bump outright; its
 default, auto, reads the titles.
 
+## Adding a pack
+
+The bundled packs are read from `packs/` by the app's catalog, so a new one
+is a file there plus its lines in the `check:packs` and `test:packs`
+scripts. Do not state how many packs there are in the README, the docs or
+the guide: nothing keeps such a number true, so name a few instead.
+
 ## Changing the format
 
 The pack format is a published contract other people's files depend on.

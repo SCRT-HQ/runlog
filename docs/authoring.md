@@ -546,10 +546,10 @@ unit closes. A setting the moderator chooses once is a counter set from a
 prompt (`modCounter … setFrom`) and read by a draw (`rollOn … timesFrom`),
 which they can nudge between units like any tally.
 
-Two packs are built this way: **Rocket League: Showdown**, which asks how
-many mechanics a match draws, and **Elden Ring: Trial**, with curses that
-are the game's own status effects acted out in the game, each drawn with
-the item that cures it, and Spared for whoever has it.
+Among the packs built this way: **Rocket League: Showdown**, which asks
+how many mechanics a match draws, and **Elden Ring: Trial**, with curses
+that are the game's own status effects acted out in the game, each drawn
+with the item that cures it, and Spared for whoever has it.
 
 ## Leaving things out
 
