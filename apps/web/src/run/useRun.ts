@@ -6,6 +6,7 @@ import { reconcile, stampIds } from "../sync/log.ts";
 import { activeRunFor, forgetActive, NEW_RUN, setActiveRunFor, setLastActive } from "./active.ts";
 import { drawAgainEvents, drawIsLast, type LastDraw } from "./redraw.ts";
 import { clearHalfStep, loadHalfStep, outcomesAhead, saveHalfStep, toPending } from "./halfStep.ts";
+import { rollsForMeByDefault } from "./pace.ts";
 import {
   canEndRun,
   createRandom,
@@ -111,8 +112,8 @@ export function useRun(pack: Pack) {
   const [hydrated, setHydrated] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const [seed, setSeed] = useState("");
-  /** Off by default: the dice belong to the player unless they say otherwise. */
-  const [autoRoll, setAutoRoll] = useState(false);
+  /** Off by default: the dice belong to the player unless they say otherwise, on this device or in this run. */
+  const [autoRoll, setAutoRoll] = useState(() => rollsForMeByDefault());
 
   /**
    * What this run is called in storage. Held in a ref as well as state: the
