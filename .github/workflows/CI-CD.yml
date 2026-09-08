@@ -10,8 +10,10 @@ name: CI/CD
 # Nothing runs on the pull request itself but its title check. The merge
 # queue asks for every check again on the branch it will actually merge,
 # and that is the run the ruleset enforces, so a run on the pull request
-# was the same work twice a few minutes apart. A pull request goes into
-# the queue with auto-merge and hears from the checks there.
+# was the same work twice a few minutes apart. The workflow still fires on
+# the pull request, because GitHub will not queue one until every required
+# check has reported on it; each job skips there in a second, which counts
+# as reported, and does its work in the queue.
 #
 # Production is reached only through a published release, so it always carries
 # a version and has always already been to dev. One repository, one pipeline:
@@ -25,6 +27,11 @@ on:
         default: auto
         type: choice
         options: [auto, patch, minor, major]
+  # Fired on the pull request only so the jobs can report themselves skipped;
+  # see above. The work is done in the merge group.
+  pull_request:
+    branches:
+      - main
   # The merge queue builds a branch with the queued pull requests merged onto
   # main and asks for the checks on it: a pull request is tested and diffed
   # as it will actually land, not on the base it was opened against.
