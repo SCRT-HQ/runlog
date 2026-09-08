@@ -126,6 +126,30 @@ Three tests exist to stop whole classes of drift, and they will fail loudly:
 
 ---
 
+## Releases
+
+Every merge to main deploys to dev and is tagged and released from there;
+production deploys from the release. The version is the tag, and nothing in
+the repository carries it.
+
+How big the step is comes from labels on the pull requests that landed since
+the last tag:
+
+- `semver:major` on any of them: a new major version. For a change after
+  which a pack or a log from before no longer loads, or plays differently.
+- `semver:minor`: a new minor version. For anything a player or an author can
+  see or do that they could not before.
+- neither: a patch.
+
+The release notes are the pull request titles, grouped by label as
+`.github/release.yml` says: breaking changes, new, fixed, documentation,
+dependencies, everything else. So a title reads as a line in a changelog,
+which is how they are written anyway. A pull request that should not appear
+takes `skip-changelog`.
+
+A manual run of the CI workflow can still name the bump outright; its
+default, auto, reads the labels.
+
 ## Changing the format
 
 The pack format is a published contract other people's files depend on.

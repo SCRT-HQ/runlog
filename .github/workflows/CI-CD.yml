@@ -14,11 +14,11 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: Which part of the version to increment
+        description: Which part of the version to increment; auto reads the semver labels on the pull requests since the last tag
         required: true
-        default: patch
+        default: auto
         type: choice
-        options: [patch, minor, major]
+        options: [auto, patch, minor, major]
   pull_request:
     branches:
       - main
@@ -167,6 +167,8 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      # To read the labels on the pull requests since the last tag.
+      pull-requests: read
     # One dev deploy at a time; a second merge queues behind the first.
     concurrency:
       group: deploy-dev
@@ -189,14 +191,35 @@ jobs:
       # release will carry, and the Release job below tags that number and
       # no other. One dev deploy runs at a time, and the release follows in
       # the same lane, so the number cannot be taken in between.
+      #
+      # How big the step is comes from the pull requests that landed since
+      # the last tag: `semver:major` on any of them makes a major, else
+      # `semver:minor` a minor, else a patch. A manual run may say outright;
+      # its default, auto, reads the labels the same way. A squash-merged
+      # pull request signs its commit title with "(#N)", which is how the
+      # commits since the tag are traced back to their labels.
       - name: Work out the version this build becomes
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           latest="$(git tag -l 'v[0-9]*' --sort=-v:refname | head -1)"
           if [ -z "$latest" ]; then latest="v0.0.0"; fi
+          bump="${{ github.event.inputs.bump || 'auto' }}"
+          if [ "$bump" = "auto" ]; then
+            bump=patch
+            range="HEAD"
+            if git rev-parse -q --verify "refs/tags/${latest}" >/dev/null 2>&1; then range="${latest}..HEAD"; fi
+            for n in $(git log "$range" --format=%s | grep -oE '\(#[0-9]+\)$' | tr -d '(#)' | sort -u); do
+              labels="$(gh pr view "$n" --json labels --jq '.labels[].name' 2>/dev/null || true)"
+              if grep -qx 'semver:major' <<<"$labels"; then bump=major; fi
+              if [ "$bump" != "major" ] && grep -qx 'semver:minor' <<<"$labels"; then bump=minor; fi
+            done
+            echo "The labels since ${latest} call for a ${bump} bump"
+          fi
           IFS='.' read -r major minor patch <<< "${latest#v}"
-          case "${{ github.event.inputs.bump || 'patch' }}" in
+          case "$bump" in
             major) major=$((major + 1)); minor=0; patch=0 ;;
             minor) minor=$((minor + 1)); patch=0 ;;
             *)     patch=$((patch + 1)) ;;
