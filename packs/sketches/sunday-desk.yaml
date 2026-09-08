@@ -1,0 +1,290 @@
+# Sunday Desk — the weekly review, one pass at a time.
+#
+# A Review is seven Passes in a fixed order: Collect, Process, Calendar
+# back, Calendar forward, Projects, Someday, Next actions. Each Pass has its
+# own work and its own stopwatch, so you learn what the review actually
+# costs. The Projects pass draws a card, and the card's rank picks which
+# project gets the deep look; the Someday pass can throw one Curveball. A
+# short Review is three Passes: Collect, Process, Next actions.
+#
+# Written to show a run whose units are all different — each phase belongs
+# to one Pass by its number — a keyed table read from a card's rank, a
+# stopwatch on every unit, and a run that makes nothing, so no subject.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.sunday-desk
+version: "0.1.0"
+title: Sunday Desk
+author: Runlog
+description: >-
+  The weekly review as seven timed passes: collect, process, look back,
+  look forward, projects, someday, next actions. A card picks the project
+  that gets the deep look, and a short review is three passes and out.
+
+category: everyday
+tags: [productivity, weekly review, planning, for anyone]
+
+requires:
+  - { id: lists, label: "Your lists: projects, next actions, someday, wherever they live", kind: other }
+  - { id: calendar, label: A calendar with the last week and the next two on it, kind: other }
+  - { id: cards, label: "A deck of playing cards, or one card drawn any way you like", kind: supplies, note: "Only the rank matters." }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - counters
+  - timers
+  - journal
+  - keyedResolution
+
+vocabulary:
+  run: { one: Review, many: Reviews }
+  unit: { one: Pass, many: Passes }
+  subject: { one: Finding, many: Findings }
+  finalize: Done
+
+unit:
+  createsSubject: false
+  clock: { kind: stopwatch, label: This pass }
+  min: 3
+  max: 7
+
+counters:
+  passes:
+    label: Passes done
+    initial: 0
+    incrementOn:
+      - { on: unitFinalized }
+
+tables:
+  projectPick:
+    resolution: keyed
+    title: The deep look
+    description: Draw a card. Its rank says which project gets a proper look this week.
+    entries:
+      - { id: pp-a, key: a, text: "The oldest project on the list." }
+      - { id: pp-2, key: "2", text: "The one you added most recently." }
+      - { id: pp-3, key: "3", text: "The one with the most items under it." }
+      - { id: pp-4, key: "4", text: "The one with no next action at all." }
+      - { id: pp-5, key: "5", text: "The one someone else is waiting on." }
+      - { id: pp-6, key: "6", text: "The one you are waiting on someone else for." }
+      - { id: pp-7, key: "7", text: "The one that would be done in an hour if you sat down to it." }
+      - { id: pp-8, key: "8", text: "The one that has been on the list longest without moving." }
+      - { id: pp-9, key: "9", text: "The one you would drop if you could." }
+      - { id: pp-10, key: "10", text: "The one due soonest." }
+      - { id: pp-j, key: j, text: "The one that pays." }
+      - { id: pp-q, key: q, text: "The one that is not really a project but a wish. Decide today which it is." }
+      - { id: pp-k, key: k, text: "Your choice." }
+
+  curveball:
+    resolution: lookup
+    title: Curveball
+    description: Rolled on the Someday pass. Most weeks, nothing.
+    roll: d4
+    entries:
+      - { id: cb-none, range: [1, 3], text: "Nothing extra. Read the list, add what belongs, cross out what died." }
+      - { id: cb-one, range: [4, 4], text: "Curveball. Pick a Someday item and either schedule it or delete it. No third option." }
+
+phases:
+  - id: collect
+    label: Collect
+    description: The first Pass.
+    skipWhen:
+      - { not: { unitIndex: { eq: 1 } } }
+    steps:
+      - kind: manual
+        label: Gather everything loose into one pile.
+        description: Inbox, desk, pockets, bag, the notes app, the back of your mind. Nothing is sorted yet.
+        checklist:
+          - Every place things collect has been emptied into the pile.
+          - Nothing has been sorted or done; it is only in one place.
+
+  - id: process
+    label: Process
+    description: The second Pass.
+    skipWhen:
+      - { not: { unitIndex: { eq: 2 } } }
+    steps:
+      - kind: manual
+        label: Go through the pile, top to bottom, one item at a time.
+        description: Each item is done in two minutes, filed, written as a next action, or thrown away. Nothing goes back on the pile.
+        checklist:
+          - Every item was handled the first time it was picked up.
+          - The pile is empty.
+
+  - id: calendarBack
+    label: Calendar back
+    description: The third Pass, in the full Review.
+    skipWhen:
+      - { not: { unitIndex: { eq: 3 } } }
+      - { modeIs: [short] }
+    steps:
+      - kind: manual
+        label: Look back over last week's calendar.
+        checklist:
+          - Anything left undone from a past appointment is written down as a next action.
+
+  - id: calendarForward
+    label: Calendar forward
+    description: The fourth Pass, in the full Review.
+    skipWhen:
+      - { not: { unitIndex: { eq: 4 } } }
+      - { modeIs: [short] }
+    steps:
+      - kind: manual
+        label: Look at the next two weeks.
+        checklist:
+          - Anything that needs preparing has a next action with a day on it.
+
+  - id: projects
+    label: Projects
+    description: The fifth Pass, in the full Review. One project gets the deep look; the card says which.
+    skipWhen:
+      - { not: { unitIndex: { eq: 5 } } }
+      - { modeIs: [short] }
+    steps:
+      - kind: rollTable
+        table: projectPick
+        label: Draw a card for the deep look
+      - kind: manual
+        label: Read every project, then take the deep look at the one the card named.
+        checklist:
+          - Every project has at least one next action.
+          - text: "For the deep look, the next physical action is written as this Pass's journal line: what exactly you would do first."
+            shows: { table: projectPick, scope: unit }
+
+  - id: someday
+    label: Someday
+    description: The sixth Pass, in the full Review.
+    skipWhen:
+      - { not: { unitIndex: { eq: 6 } } }
+      - { modeIs: [short] }
+    steps:
+      - kind: rollTable
+        table: curveball
+        label: Roll the Curveball
+      - kind: manual
+        label: Read the Someday list.
+        checklist:
+          - Anything that stopped being a wish is a project now, or gone.
+          - text: The Curveball was answered.
+            shows: { table: curveball, scope: unit }
+
+  - id: nextActions
+    label: Next actions
+    description: The last Pass, whichever Review this is.
+    skipWhen:
+      - allOf:
+          - { not: { modeIs: [short] } }
+          - { not: { unitIndex: { eq: 7 } } }
+      - allOf:
+          - { modeIs: [short] }
+          - { not: { unitIndex: { eq: 3 } } }
+    steps:
+      - kind: manual
+        label: Read every next action.
+        checklist:
+          - Each one is a physical action, not a project in disguise.
+          - The first thing for Monday morning is chosen and written where you will see it.
+
+  - id: close
+    label: Done
+    steps:
+      - kind: finalizeUnit
+        label: Done with this Pass
+        confirm:
+          - The Pass is finished, not abandoned.
+
+journal:
+  enabled: true
+  prompt: What did this Pass turn up? On the Projects pass, the next physical action.
+  required: false
+
+endings:
+  - id: clean
+    label: Clean review
+    text: Every Pass done. Close the desk; Monday is set.
+    requires:
+      - anyOf:
+          - { counter: passes, is: { gte: 7 } }
+          - allOf:
+              - { modeIs: [short] }
+              - { counter: passes, is: { gte: 3 } }
+  - id: called
+    label: Called it
+    text: Stop here. The Passes you skipped wait for next Sunday, and Monday still needs one next action.
+
+modes:
+  full:
+    label: The full review
+    description: Seven Passes in order, each on its own stopwatch. An hour, most weeks.
+    units: { fixed: 7 }
+
+  short:
+    label: The short review
+    description: Three Passes, Collect, Process and Next actions. For a Sunday that has no hour in it.
+    units: { fixed: 3 }
+    disable:
+      phases: [calendarBack, calendarForward, projects, someday]
+
+defaultMode: full
+
+hierarchy:
+  - Curveball
+  - General rules
+
+fixtures:
+  # The short review is three Passes, and each Pass runs only its own work:
+  # Collect, then Process, then Next actions, each on a stopwatch that stops
+  # when the Pass closes.
+  - name: The short review is three Passes, and the third is Next actions
+    mode: short
+    play:
+      - { enter: 1 }
+      - { step: collect }
+      - { finalize: {} }
+      - { enter: 2 }
+      - { step: process }
+      - { finalize: {} }
+      - { enter: 3 }
+      - { step: nextActions }
+      - { finalize: {} }
+    expect:
+      - { path: counters.passes, equals: 3 }
+      - { path: phasesDone, equals: [nextActions, close] }
+      - { path: clocks.length, equals: 3 }
+      - { path: clocks.0.kind, equals: stopwatch }
+      - { path: clocks.2.status, equals: done }
+      - { path: subjects.length, equals: 0 }
+      - { requests: answered }
+
+  # In the full review the fifth Pass is Projects: a seven drawn for the
+  # deep look picks the project that would be done in an hour.
+  - name: The fifth Pass of the full review draws the deep look
+    mode: full
+    play:
+      - { enter: 1 }
+      - { step: collect }
+      - { finalize: {} }
+      - { enter: 2 }
+      - { step: process }
+      - { finalize: {} }
+      - { enter: 3 }
+      - { step: calendarBack }
+      - { finalize: {} }
+      - { enter: 4 }
+      - { step: calendarForward }
+      - { finalize: {} }
+      - { enter: 5 }
+      - { step: projects#0, answers: { chooseValue: "7" } }
+      - { step: projects#1 }
+    expect:
+      - { path: unit, equals: 5 }
+      - { path: outcomes.length, equals: 1 }
+      - { path: outcomes.0.entryId, equals: pp-7 }
+      - { path: phasesDone, equals: [projects] }
+      - { requests: answered }

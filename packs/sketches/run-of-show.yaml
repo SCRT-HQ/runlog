@@ -1,0 +1,268 @@
+# Run of Show — rehearsing a talk, a set, a show, one segment at a time.
+#
+# A Show is a series of Segments. Each Segment names its Bit, says how long
+# it gets, and runs against that clock; a card drawn from a deck says what
+# the room does to you while you run it. A Segment that runs its clock over
+# owes the next one a cut. The main way to play is with someone else on the
+# clock and the cards, the performers on a roster, and each Segment awarded
+# to whoever landed it; alone, it is a rehearsal.
+#
+# Written to show a timer whose length the player chooses, an overrun that
+# reaches forward into the next unit, a keyed table drawn by card rank, and
+# a moderated mode as the default.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.run-of-show
+version: "0.1.0"
+title: Run of Show
+author: Runlog
+description: >-
+  Rehearse a show segment by segment. Each one gets the time you give it,
+  a card says what the room throws at you, and running over owes the next
+  segment a cut. Someone runs the clock; the performers are the roster.
+
+category: practice
+tags: [rehearsal, public speaking, comedy, stagecraft]
+
+requires:
+  - { id: material, label: "Something to rehearse: a talk, a set, a show", kind: other }
+  - { id: cards, label: "A deck of playing cards, or one card drawn any way you like", kind: supplies, note: "Only the rank matters." }
+  - { id: room, label: A room you can be loud in, kind: space, optional: true }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - counters
+  - timers
+  - journal
+  - keyedResolution
+  - moderated
+  - clockRules
+
+vocabulary:
+  run: { one: Show, many: Shows }
+  unit: { one: Segment, many: Segments }
+  subject: { one: Bit, many: Bits }
+  finalize: Next
+
+unit:
+  createsSubject: true
+  min: 1
+  max: 12
+
+counters:
+  segments:
+    label: Segments run
+    initial: 0
+    incrementOn:
+      - { on: unitFinalized }
+  overruns:
+    label: Overruns
+    initial: 0
+    incrementOn:
+      - { on: outcomeResolved, table: overrun, cause: any }
+    triggers:
+      - when: { gte: 3 }
+        oncePerRun: true
+        label: Three overruns
+        do:
+          - { do: note, text: "Three Segments over. Cut a whole Segment from the Show before the next run, and say which.", persistent: true }
+
+tables:
+  heckler:
+    resolution: keyed
+    title: The Heckler
+    description: >-
+      Draw a card when the Segment opens. Its rank is what the room does to
+      you while you run. A Segment landed on time is worth one; one landed
+      through a heckle is worth two.
+    entries:
+      - { id: hk-a, key: a, text: "A quiet room. Land it on time.", points: 1 }
+      - { id: hk-2, key: "2", text: "A quiet room. Land it on time.", points: 1 }
+      - { id: hk-3, key: "3", text: "A quiet room. Land it on time.", points: 1 }
+      - { id: hk-4, key: "4", text: "A quiet room. Land it on time.", points: 1 }
+      - { id: hk-5, key: "5", text: "A quiet room. Land it on time.", points: 1 }
+      - { id: hk-6, key: "6", text: "A quiet room. Land it on time.", points: 1 }
+      - { id: hk-7, key: "7", text: "A question from the back, halfway through. Answer it in one breath and get back on.", points: 2 }
+      - { id: hk-8, key: "8", text: "A question from the back, and it is a good one. Answer it properly, and still land on time.", points: 2 }
+      - { id: hk-9, key: "9", text: "The projector dies. Whatever was on the screen, you are now describing.", points: 2 }
+      - { id: hk-10, key: "10", text: "The projector dies and the lights go with it. Finish from memory.", points: 2 }
+      - { id: hk-j, key: j, text: "You lose your place. Skip a beat forward and do not go back for it.", points: 2 }
+      - { id: hk-q, key: q, text: "You lose your place, badly. Say so to the room, find it, and carry on.", points: 2 }
+      - { id: hk-k, key: k, text: "The room is yours. Nothing goes wrong; make the most of it.", points: 1 }
+
+  overrun:
+    resolution: lookup
+    title: Overrun
+    description: Rolled when a Segment runs its clock over by a minute. What it costs the next one.
+    roll: d6
+    entries:
+      - id: ov-cut
+        range: [1, 4]
+        text: "Cut two minutes from the next Segment. Decide what goes before it starts."
+        triggers:
+          - on: onEnterUnit
+            label: Cut two minutes
+            do:
+              - { do: note, text: "Cut two minutes from this Segment before the clock starts. Say what went." }
+      - id: ov-lastline
+        range: [5, 6]
+        text: "The next Segment opens with its last line. Say the ending first, then get there."
+        triggers:
+          - on: onEnterUnit
+            label: The last line first
+            do:
+              - { do: note, text: "Open this Segment with its last line, then get there." }
+
+phases:
+  - id: open
+    label: Open the Segment
+    steps:
+      - kind: declareSubject
+        label: What is this Segment? The bit, in a few words.
+
+  - id: length
+    label: The clock
+    description: How long this Segment gets. The clock starts the moment you answer.
+    steps:
+      - kind: actions
+        do:
+          - { do: prompt, kind: chooseValue, label: "How long is this Segment, in minutes?", options: ["3", "5", "10"], into: length }
+          - do: branch
+            on: length
+            cases:
+              - in: [3]
+                then:
+                  - { do: startTimer, minutes: 3, label: "Segment" }
+              - in: [5]
+                then:
+                  - { do: startTimer, minutes: 5, label: "Segment" }
+              - in: [10]
+                then:
+                  - { do: startTimer, minutes: 10, label: "Segment" }
+
+  - id: heckle
+    label: The Heckler
+    steps:
+      - kind: rollTable
+        table: heckler
+        label: Draw a card for the Heckler
+
+  - id: work
+    label: Run it
+    steps:
+      - kind: manual
+        label: Run the Segment against the clock.
+        description: The app cannot hear the room. It only knows what the clock says and what you tell it.
+        checklist:
+          - text: The Heckler was handled without stopping.
+            shows: { table: heckler, scope: unit }
+          - The Segment ended when the clock did, or before.
+
+  - id: close
+    label: Next
+    description: A Segment a minute over its clock rolls the Overrun, and the next Segment pays for it.
+    steps:
+      - kind: actions
+        do:
+          - do: when
+            all:
+              - { clockRanOver: Segment, is: { gte: 1 } }
+            then:
+              - { do: rollOn, table: overrun }
+      - kind: finalizeUnit
+        label: Next Segment
+        confirm:
+          - The time it actually took is written on the run sheet.
+
+journal:
+  enabled: true
+  prompt: How did the Segment land, and where did the time go?
+  required: false
+
+endings:
+  - id: curtain
+    label: Curtain
+    text: The Show ran. Add up the run sheet and write the total time at the top.
+  - id: cutShort
+    label: Cut short
+    text: Stop here. Whatever did not get run is first tomorrow.
+
+modes:
+  rehearsalRoom:
+    label: The rehearsal room
+    description: >-
+      Someone else runs the clock and draws the cards. The performers are the
+      roster, and each Segment is awarded to whoever landed it.
+    units: { min: 1, max: 12 }
+    moderated:
+      contestants: { min: 1, max: 6 }
+      award: first
+    notes:
+      - The moderator starts the clock when the performer starts, not before.
+
+  alone:
+    label: Alone in the room
+    description: A rehearsal by yourself. Draw your own cards and be honest about the clock.
+    units: { min: 1, max: 12 }
+
+defaultMode: rehearsalRoom
+
+hierarchy:
+  - Overrun
+  - The Heckler
+  - General rules
+
+fixtures:
+  # A Segment on time owes nothing: the clock ran three minutes at most, the
+  # Overrun was never rolled, and the next Segment opens clean.
+  - name: A Segment on time owes the next one nothing
+    mode: alone
+    play:
+      - { enter: 1 }
+      - { declare: Cold open }
+      - { step: length, answers: { chooseValue: "3" } }
+      - { step: heckle, answers: { chooseValue: "7" } }
+      - { step: work }
+      - { step: close#0 }
+      - { finalize: {} }
+      - { enter: 2 }
+    expect:
+      - { path: clocks.0.label, equals: Segment }
+      - { path: clocks.0.seconds, equals: 180 }
+      - { path: clocks.0.status, equals: done }
+      - { path: outcomes.length, equals: 1 }
+      - { path: outcomes.0.entryId, equals: hk-7 }
+      - { path: obligations.length, equals: 0 }
+      - { path: counters.segments, equals: 1 }
+      - { requests: answered }
+
+  # A Segment that ran over rolls the Overrun, and the Overrun owes the next
+  # Segment a cut. A scripted play cannot let a clock run that long, so the
+  # first Segment here is the log such a Segment leaves; the second is
+  # played, and settling the debt on entering it leaves the note to cut.
+  - name: An overrun owes a cut next Segment
+    mode: alone
+    events:
+      - { t: RunStarted, mode: alone }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: Cold open }
+      - { t: ClockStarted, clock: "seg:timer", kind: timer, label: Segment, seconds: 180 }
+      - { t: ClockStopped, clock: "seg:timer", elapsedMs: 270000, expired: true }
+      - { t: Rolled, purpose: overrun, dice: d6, total: 2, values: [2], source: physical }
+      - { t: OutcomeResolved, table: overrun, entryId: ov-cut, cause: action }
+      - { t: ObligationAdded, obligation: { id: "u1:onEnterUnit:overrun.ov-cut.0", kind: trigger, text: Cut two minutes, on: onEnterUnit, ref: { kind: tableEntry, table: overrun, entryId: ov-cut, index: 0 } } }
+      - { t: UnitFinalized }
+      - { t: UnitEntered }
+    expect:
+      - { path: unit, equals: 2 }
+      - { path: clocks.0.expired, equals: true }
+      - { path: counters.overruns, equals: 1 }
+      - { path: obligations.0.on, equals: onEnterUnit }
+      - { path: obligations.0.resolved, equals: false }
+      - { path: obligations.0.text, equals: Cut two minutes }
