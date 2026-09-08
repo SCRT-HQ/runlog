@@ -3620,6 +3620,16 @@ a.plan:hover { text-decoration: underline; }
 .widgetBoard .num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.3rem; }
 .widgetBoard li.me .who { color: var(--accent); }
 .widgetDigits { font-size: clamp(3rem, 22vw, 9rem); }
+/* The ticker: the newest line slides in at the top; the kind is said in front in the referee's voice, the accents doing their two jobs. */
+.widgetTicker { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+.widgetTicker li { display: grid; grid-template-columns: 4.5em minmax(0, 1fr); gap: 0.6rem; align-items: baseline; animation: tickIn 360ms ease-out; }
+.widgetTicker li:first-child .tickText { font-weight: 600; }
+.widgetTicker .tickMark { font-family: var(--mono); color: var(--muted); letter-spacing: 0.04em; }
+.widgetTicker li.rolled .tickMark, .widgetTicker li.award .tickMark { color: var(--accent); }
+.widgetTicker li.run-ended .tickMark { color: var(--warn); }
+.widgetTicker .tickText { min-width: 0; overflow-wrap: anywhere; }
+@keyframes tickIn { from { opacity: 0; transform: translateY(-0.4rem); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .widgetTicker li { animation: none; } }
 .widgetStats { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: 0.6rem 1rem; margin: 0; }
 .widgetStats div { display: grid; gap: 0.15rem; }
 .widgetStats dt { font-family: var(--mono); }

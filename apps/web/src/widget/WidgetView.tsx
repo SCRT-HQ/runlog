@@ -10,7 +10,9 @@ import { clockNow, raceOf, snapshotOf, type LiveSnapshot, type RaceSnapshot } fr
 import { RaceBoard, raceHeading } from "../live/RaceBoard.tsx";
 import { usePublicRun } from "../live/usePublic.ts";
 import { applyTheme, savedTheme } from "../theme/theme.ts";
+import type { Gesture } from "../sync/socket.ts";
 import { WIDGET_KINDS, type WidgetRoute } from "./route.ts";
+import { useTicker, type TickerLine } from "./ticker.ts";
 
 /**
  * One panel of a run, on a page of its own, for a stream to capture.
@@ -51,13 +53,14 @@ export function WidgetView({ route }: { route: WidgetRoute }) {
 const label = (route: WidgetRoute) => WIDGET_KINDS.find((k) => k.kind === route.kind)?.label ?? route.kind;
 
 function ByLink({ route, token }: { route: WidgetRoute; token: string }) {
-  const { got, snapshot, offline } = usePublicRun(route.runId, token);
+  const { got, snapshot, offline, gesture } = usePublicRun(route.runId, token);
+  const lines = useTicker(snapshot, gesture);
   if (offline) return <Frame title={label(route)}><p className="widgetNote">A widget by link needs the hosted copy of Runlog.</p></Frame>;
   if (got === undefined) return <Frame title={label(route)} />;
   if (got === null) return <Frame title={label(route)}><p className="widgetNote">This link is not open any more.</p></Frame>;
   if (!snapshot) return <Frame title={label(route)}><p className="widgetNote">Nothing written to the run yet.</p></Frame>;
   if (route.kind === "race" && !snapshot.race) return <Frame title={label(route)}><p className="widgetNote">This run is not in a race.</p></Frame>;
-  return <Page kind={route.kind} snapshot={snapshot} />;
+  return <Page kind={route.kind} snapshot={snapshot} lines={lines} />;
 }
 
 function FromHere({ route }: { route: WidgetRoute }) {
@@ -101,6 +104,16 @@ function FromHere({ route }: { route: WidgetRoute }) {
   const events = useMemo(() => (record?.events ?? []) as RunEvent[], [record]);
   const state = useMemo(() => (pack && events.length > 0 ? reduce(pack, events) : null), [pack, events]);
   const snapshot = useMemo(() => (pack && state ? snapshotOf(pack, state, events) : null), [pack, state, events]);
+  // Gestures at this table reach this window over the app's own socket, by way of the bus.
+  const [gesture, setGesture] = useState<Gesture | null>(null);
+  useEffect(
+    () =>
+      syncBus.subscribe((news) => {
+        if (news.t === "gesture" && news.id === route.runId) setGesture(news);
+      }),
+    [route.runId],
+  );
+  const lines = useTicker(snapshot, gesture);
 
   if (plan.gates && plan.loaded && !plan.can("plus")) {
     return (
@@ -119,7 +132,7 @@ function FromHere({ route }: { route: WidgetRoute }) {
   }
   if (!state || !snapshot) return <Frame title={label(route)}><p className="widgetNote">Not started yet.</p></Frame>;
   if (route.kind === "race") return <div className="widget"><RaceWidget pack={pack} record={record} state={state} events={events} /></div>;
-  return <Page kind={route.kind} snapshot={snapshot} race={<RaceWidget pack={pack} record={record} state={state} events={events} inColumn />} />;
+  return <Page kind={route.kind} snapshot={snapshot} lines={lines} race={<RaceWidget pack={pack} record={record} state={state} events={events} inColumn />} />;
 }
 
 function Frame({ title, children }: { title: string; children?: React.ReactNode }) {
@@ -141,12 +154,13 @@ function Frame({ title, children }: { title: string; children?: React.ReactNode 
  * it, trackers in a pack that has none — and takes the race leaderboard
  * where the page can draw one, which is the streamer's own machine.
  */
-function Page({ kind, snapshot, race }: { kind: WidgetRoute["kind"]; snapshot: LiveSnapshot; race?: React.ReactNode }) {
+function Page({ kind, snapshot, lines, race }: { kind: WidgetRoute["kind"]; snapshot: LiveSnapshot; lines: TickerLine[]; race?: React.ReactNode }) {
   if (kind === "column") {
     return (
       <div className="widget column">
         <ClockWidget s={snapshot} />
         <StepWidget s={snapshot} />
+        {lines.length > 0 && <TickerWidget lines={lines} />}
         <StatsWidget s={snapshot} />
         {(snapshot.contestants > 0 || snapshot.standings.length > 0) && <ScoreboardWidget s={snapshot} />}
         {race ?? (snapshot.race ? <RaceSnapshotWidget race={snapshot.race} /> : null)}
@@ -154,13 +168,15 @@ function Page({ kind, snapshot, race }: { kind: WidgetRoute["kind"]; snapshot: L
       </div>
     );
   }
-  return <div className="widget"><Widget kind={kind} snapshot={snapshot} /></div>;
+  return <div className="widget"><Widget kind={kind} snapshot={snapshot} lines={lines} /></div>;
 }
 
-function Widget({ kind, snapshot }: { kind: WidgetRoute["kind"]; snapshot: LiveSnapshot }) {
+function Widget({ kind, snapshot, lines }: { kind: WidgetRoute["kind"]; snapshot: LiveSnapshot; lines: TickerLine[] }) {
   switch (kind) {
     case "scoreboard":
       return <ScoreboardWidget s={snapshot} />;
+    case "ticker":
+      return <TickerWidget lines={lines} />;
     case "clock":
       return <ClockWidget s={snapshot} />;
     case "step":
@@ -174,6 +190,24 @@ function Widget({ kind, snapshot }: { kind: WidgetRoute["kind"]; snapshot: LiveS
     case "column":
       return null;
   }
+}
+
+/** The last few things that happened, newest on top; the line's kind is said in front of it, in the referee's voice. */
+export function TickerWidget({ lines }: { lines: TickerLine[] }) {
+  return (
+    <div className="widgetBody">
+      <div className="widgetTitle muted small">Just now</div>
+      {lines.length === 0 && <p className="widgetNote">Nothing yet. The next move shows here.</p>}
+      <ol className="widgetTicker">
+        {lines.map((l) => (
+          <li key={l.id} className={`tick ${l.kind}`}>
+            <span className="tickMark small">{l.mark}</span>
+            <span className="tickText">{l.text}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
 }
 
 function RaceSnapshotWidget({ race }: { race: RaceSnapshot }) {

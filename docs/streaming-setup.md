@@ -59,7 +59,7 @@ and set:
 | Field | Value |
 | --- | --- |
 | **URL** | The copied widget address, token and all. |
-| **Width** and **Height** | From the table below, at size 1.25×. Scale the source in the scene after; the page adapts to the box you give it. |
+| **Width** and **Height** | From the table below, at size 1.25×; the Stream panel shows the same numbers for the size you chose. Scale the source in the scene after; the page adapts to the box you give it. |
 | **FPS** | 30. The only motion is a clock's tenths and the ticker's slide; 60 buys nothing. |
 | **Custom CSS** | Leave OBS's default. `body { background-color: rgba(0, 0, 0, 0); … }` is exactly what `bg=clear` expects. |
 | **Shutdown source when not visible** | Tick it. A widget that is off scene costs nothing, and it re-reads the run the moment it is shown again. |
@@ -74,6 +74,7 @@ Suggested sizes, at 1.25×:
 | Stats | 520 × 560 | Unit, units done, time, step, constraints, score. |
 | Scoreboard | 480 × 440 | Standings in a moderated run. Grows with the roster. |
 | Trackers | 480 × 420 | Resources and counters as bars and boxes. Grows with the pack. |
+| Ticker | 520 × 300 | The last few things that happened, one line each, newest on top. |
 | Race | 560 × 440 | The race leaderboard. |
 | Everything, stacked | 460 × 1080 | The panels above in one column, for one source down the side of a scene. |
 
