@@ -104,6 +104,16 @@ export default function App() {
    */
   const [imported, setImported] = useState<StoredPack[]>([]);
 
+  /**
+   * Whether this copy's bundled catalog includes the test bench: a static,
+   * local or self-hosted copy has no `hosted.json` at all and always does;
+   * a hosted one answers with its own `features.testing`, on in dev and off
+   * in production. Declared early so every `loadCatalog` call below can
+   * read it, not just the hosted-words effect further down.
+   */
+  const hosted = useHosted();
+  const catalogTesting = hosted === null || hosted.features.testing;
+
   useEffect(() => {
     let first = true;
     const reload = () =>
@@ -434,14 +444,23 @@ export default function App() {
    * from a file is never offered anything.
    */
   const [updates, setUpdates] = useState<Map<string, CatalogEntry>>(() => new Map());
+  /**
+   * Ids of the test bench packs, so a copy of one already on the shelf can
+   * be marked in the library even where this copy's catalog does not offer
+   * it (production, or a device that added it while testing was on).
+   * Unfiltered on purpose: whether a pack you already have is a bench pack
+   * does not depend on whether this copy is still handing them out.
+   */
+  const [benchIds, setBenchIds] = useState<ReadonlySet<string>>(() => new Set());
   useEffect(() => {
     if (view !== "library") return;
     let live = true;
-    void loadCatalog().then((entries) => live && setUpdates(updatesFor(imported, entries)));
+    void loadCatalog({ testing: catalogTesting }).then((entries) => live && setUpdates(updatesFor(imported, entries)));
+    void loadCatalog().then((all) => live && setBenchIds(new Set(all.filter((e) => e.bench).map((e) => e.id))));
     return () => {
       live = false;
     };
-  }, [view, imported]);
+  }, [view, imported, catalogTesting]);
 
   /**
    * Take the catalog's newer version: the text and the version change, the
@@ -507,8 +526,9 @@ export default function App() {
         source: p.source,
         record: p,
         ...(updates.has(p.id) ? { update: updates.get(p.id)!.version } : {}),
+        ...(benchIds.has(p.id) ? { bench: true } : {}),
       })),
-    [imported, updates],
+    [imported, updates, benchIds],
   );
 
   /** The pack in play, its own title wherever it has one; absent with nothing loaded. */
@@ -702,8 +722,8 @@ export default function App() {
   }, []);
 
   // A hosted copy counts the screen, once per change; see hosted/beacon.ts
-  // for what is and is not sent. Every hook above has run by here.
-  const hosted = useHosted();
+  // for what is and is not sent. `hosted` itself is read further up, so
+  // every `loadCatalog` call can see it too.
   useEffect(() => {
     countView(widget ? "widget" : liveRoute ? "live" : view, { hosted: hosted !== null, version: __RUNLOG_VERSION__ });
   }, [hosted, widget, liveRoute, view]);

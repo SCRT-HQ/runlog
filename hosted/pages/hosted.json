@@ -21,6 +21,7 @@
     "discord": "https://discord.gg/ZwWeRCaV5J"
   },
   "features": {
-    "billing": {{BILLING}}
+    "billing": {{BILLING}},
+    "testing": {{TESTING}}
   }
 }

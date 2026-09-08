@@ -25,6 +25,7 @@ describe("the words", () => {
     expect(words["DATE"]).toBe("2026-09-06");
     expect(words["EXPIRES"]).toMatch(/^2027-09-06/);
     expect(words["BILLING"]).toBe("false");
+    expect(words["TESTING"]).toBe("true");
     expect(words["SIGN_IN"]).toMatch(/^client_/);
   });
 
@@ -92,11 +93,12 @@ describe("laid over a build", () => {
     for (const f of ["hosted.json", "hosted.css", "legal/terms.html", "legal/privacy.html", "legal/publishers.html", "pricing.html", "about.html", "licenses.html", "og.png", "robots.txt", "sitemap.xml", ".well-known/security.txt", "index.html"]) {
       expect(files).toContain(f);
     }
-    const hosted = JSON.parse(readFileSync(join(dist, "hosted.json"), "utf8")) as { operator: string; legalName: string; links: Record<string, string>; termsVersion: string; sha: string; features: { billing: boolean } };
+    const hosted = JSON.parse(readFileSync(join(dist, "hosted.json"), "utf8")) as { operator: string; legalName: string; links: Record<string, string>; termsVersion: string; sha: string; features: { billing: boolean; testing: boolean } };
     expect(hosted.links["terms"]).toBe("https://runlog.example.com/legal/terms.html");
     expect(hosted.termsVersion).toBe(envConfig("dev").hosted.termsVersion);
     expect(hosted.sha).toBe("0123456789ab");
     expect(hosted.features.billing).toBe(false);
+    expect(hosted.features.testing).toBe(true);
     // The footer's links: the operator's own site, the release this build is, the commit it came from.
     expect(hosted.links["operator"]).toBe("https://example.com/");
     expect(hosted.links["release"]).toMatch(/^https:\/\/github\.com\/SCRT-HQ\/runlog\/releases\/tag\/v\d/);

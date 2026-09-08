@@ -33,6 +33,7 @@
     "support": "help@example.com",
     "termsVersion": "2026-01-01",
     "termsDate": "2026-01-01",
-    "billing": false
+    "billing": false,
+    "testing": true
   }
 }

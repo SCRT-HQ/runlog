@@ -30,6 +30,9 @@ const PACKS = [
   "packs/sketches/pantry-roulette.yaml",
   "packs/sketches/elden-ring-trial.yaml",
   "packs/sketches/rocket-league-showdown.yaml",
+  // packs/testing/engine-testing.yaml is deliberately absent from this list:
+  // a test bench belongs in the bundle a dev copy ships, never in a
+  // publisher's listing.
 ];
 
 const api = (process.env["RUNLOG_API"] ?? "").replace(/\/$/, "");

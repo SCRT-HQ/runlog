@@ -3,6 +3,7 @@ import YAML from "yaml";
 import { listPacks, type StoredPack } from "../storage/db.ts";
 import { loadCatalog, type CatalogEntry } from "../library/catalog.ts";
 import { remixable, remixOf } from "./remix.ts";
+import { useHosted } from "../hosted/HostedProvider.tsx";
 
 /**
  * Start a pack from one that exists.
@@ -24,12 +25,14 @@ interface Candidate {
 export function StartFrom({ onPick, onClose }: { onPick: (draft: Record<string, unknown>) => void; onClose: () => void }) {
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const hosted = useHosted();
+  const testing = hosted === null || hosted.features.testing;
 
   useEffect(() => {
     let live = true;
     void (async () => {
       const mine = (await listPacks()).filter((p) => !p.sealed);
-      const catalog = await loadCatalog();
+      const catalog = await loadCatalog({ testing });
       const seen = new Set<string>();
       const out: Candidate[] = [];
       const push = (id: string, title: string, from: string, text: () => Promise<string>) => {
@@ -60,7 +63,7 @@ export function StartFrom({ onPick, onClose }: { onPick: (draft: Record<string, 
     return () => {
       live = false;
     };
-  }, []);
+  }, [testing]);
 
   return (
     <section className="panel startFrom">

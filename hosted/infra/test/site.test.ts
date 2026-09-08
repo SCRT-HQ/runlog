@@ -32,7 +32,7 @@ const config = (over: Partial<EnvConfig> = {}): EnvConfig => ({
   email: { from: "Runlog <noreply@example.com>", region: "us-west-2", identity: "example.com" },
   gates: false,
   stripe: { prices: { plusMonthly: "", plusYearly: "", hostedMonthly: "", hostedYearly: "" }, features: { plus: "plus", hostedLicensing: "hosted-licensing" }, applicationFeeBps: { subscribed: 0, unsubscribed: 500 } },
-  hosted: { operator: "Example Co, LLC", operatorShort: "Example Co", support: "help@example.com", termsVersion: "2026-01-01", termsDate: "2026-01-01", billing: false },
+  hosted: { operator: "Example Co, LLC", operatorShort: "Example Co", support: "help@example.com", termsVersion: "2026-01-01", termsDate: "2026-01-01", billing: false, testing: false },
   ...over,
 });
 

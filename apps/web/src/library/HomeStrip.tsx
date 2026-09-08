@@ -86,7 +86,10 @@ export function HomeStrip<P extends { id: string; title: string }>({
     const here = new Set(packs.map((p) => p.id));
     void loadCatalog().then((all) => {
       if (!live) return;
-      const out = all.filter((e) => !here.has(e.id));
+      // The test bench is never "new" here, whether or not this copy shows
+      // it in the catalog at all — it is not a pack anyone is meant to
+      // stumble into.
+      const out = all.filter((e) => !here.has(e.id) && !e.bench);
       out.sort((a, b) => (a.source === b.source ? 0 : a.source === "listing" ? -1 : 1));
       setFresh(out.slice(0, 3));
     });
