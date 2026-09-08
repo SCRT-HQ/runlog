@@ -29,6 +29,7 @@
   "hosted": {
     "operator": "Example Co, LLC",
     "operatorShort": "Example Co",
+    "operatorUrl": "https://example.com/",
     "support": "help@example.com",
     "termsVersion": "2026-01-01",
     "termsDate": "2026-01-01",

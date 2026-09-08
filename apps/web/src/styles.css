@@ -3087,6 +3087,8 @@ select.textInput {
 .siteFooter { max-width: 1500px; margin: 2rem auto 0; padding: 1rem 1.25rem 1.5rem; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: baseline; font-size: 0.85rem; color: var(--muted); }
 .siteFooter nav { display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; }
 .siteFooter a { color: var(--muted); text-decoration: none; }
+.siteFooter .build a { color: inherit; text-decoration: underline dotted; text-underline-offset: 0.2em; }
+.siteFooter .build a:hover { color: var(--text); }
 .siteFooter a:hover { color: var(--text); text-decoration: underline; }
 .siteFooter .build { margin-left: auto; font-family: var(--mono); font-size: 0.75rem; }
 a.plan { text-decoration: none; }

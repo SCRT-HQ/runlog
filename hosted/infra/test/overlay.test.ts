@@ -97,6 +97,11 @@ describe("laid over a build", () => {
     expect(hosted.termsVersion).toBe(envConfig("dev").hosted.termsVersion);
     expect(hosted.sha).toBe("0123456789ab");
     expect(hosted.features.billing).toBe(false);
+    // The footer's links: the operator's own site, the release this build is, the commit it came from.
+    expect(hosted.links["operator"]).toBe("https://example.com/");
+    expect(hosted.links["release"]).toMatch(/^https:\/\/github\.com\/SCRT-HQ\/runlog\/releases\/tag\/v\d/);
+    expect(hosted.links["commit"]).toBe("https://github.com/SCRT-HQ/runlog/commit/0123456789ab");
+    expect(readFileSync(join(dist, "about.html"), "utf8")).toContain('<a href="https://example.com/">');
     // The app's footer says the short name; the terms gate names the LLC.
     expect(hosted.operator).toBe("Example Co");
     expect(hosted.legalName).toBe("Example Co, LLC");
@@ -133,7 +138,7 @@ describe("laid over a build", () => {
   });
 
   it("writes the licenses page from what it is given", () => {
-    const page = licensesPage([{ name: "left-pad", version: "1.0.0", license: "WTFPL" }], { DOMAIN: "d", YEAR: "2026", VERSION: "1", SHA: "s", OPERATOR: "o" });
+    const page = licensesPage([{ name: "left-pad", version: "1.0.0", license: "WTFPL" }], { DOMAIN: "d", YEAR: "2026", VERSION: "1", SHA: "s", OPERATOR: "o", OPERATOR_URL: "https://o.example/", RELEASE_URL: "https://r.example/", COMMIT_URL: "https://c.example/" });
     expect(page).toContain("left-pad");
     expect(page).toContain("WTFPL");
   });

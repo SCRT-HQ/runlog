@@ -29,14 +29,25 @@ export function Footer({ onGuide }: { onGuide: () => void }) {
         {links.publishers && <a href={links.publishers}>Publishers</a>}
         {links.about && <a href={links.about}>About</a>}
         <a href={`mailto:${hosted.support}`}>Support</a>
-        {links.community && <a href={links.community}>Community</a>}
+        {links.reddit && <a href={links.reddit}>Reddit</a>}
+        {links.discord && <a href={links.discord}>Discord</a>}
         {links.licenses && <a href={links.licenses}>Licenses</a>}
         {links.source && <a href={links.source}>Source</a>}
       </nav>
       <span className="build">
-        {hosted.operator}
-        {hosted.version && ` · Runlog ${hosted.version}`}
-        {hosted.sha && ` ${hosted.sha.slice(0, 7)}`}
+        {links.operator ? <a href={links.operator}>{hosted.operator}</a> : hosted.operator}
+        {hosted.version && (
+          <>
+            {" · Runlog "}
+            {links.release ? <a href={links.release}>{hosted.version}</a> : hosted.version}
+          </>
+        )}
+        {hosted.sha && (
+          <>
+            {" "}
+            {links.commit ? <a href={links.commit}>{hosted.sha.slice(0, 7)}</a> : hosted.sha.slice(0, 7)}
+          </>
+        )}
       </span>
     </footer>
   );
