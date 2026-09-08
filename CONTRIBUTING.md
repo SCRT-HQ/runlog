@@ -126,6 +126,17 @@ Three tests exist to stop whole classes of drift, and they will fail loudly:
 
 ---
 
+## Checks
+
+The checks run in the merge queue, not on the pull request: the queue builds
+main with the queued pull requests merged onto it and tests, checks and diffs
+that, which is what will actually land. Open the pull request, arm auto-merge
+(`gh pr merge --auto`), and the queue reports back; a failing check drops the
+pull request out of the queue with the run to read. The only check on the
+pull request itself is its title. To see the checks before queueing, run
+them locally: `npm run typecheck`, `npm test`, `npm run check:packs`,
+`npm run test:packs`, `npm run test:infra`.
+
 ## Releases
 
 Every merge to main deploys to dev and is tagged and released from there;

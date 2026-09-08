@@ -2,10 +2,16 @@ name: CI/CD
 
 # The path a change takes:
 #
-#   pull request   ->  the app's checks, the hosting's checks, a diff against both environments
-#                      (a fork's pull request gets the checks only; its diffs run in the merge queue)
+#   merge queue    ->  the app's checks, the hosting's checks, a diff against both environments,
+#                      on main with the queued pull requests merged onto it
 #   merge to main  ->  build the app, deploy dev (the site stack publishes the build), seed the catalog, tag a release
 #   release        ->  "Deploy Production" takes it from there
+#
+# Nothing runs on the pull request itself but its title check. The merge
+# queue asks for every check again on the branch it will actually merge,
+# and that is the run the ruleset enforces, so a run on the pull request
+# was the same work twice a few minutes apart. A pull request goes into
+# the queue with auto-merge and hears from the checks there.
 #
 # Production is reached only through a published release, so it always carries
 # a version and has always already been to dev. One repository, one pipeline:
@@ -19,12 +25,9 @@ on:
         default: auto
         type: choice
         options: [auto, patch, minor, major]
-  pull_request:
-    branches:
-      - main
   # The merge queue builds a branch with the queued pull requests merged onto
-  # main and asks for the same checks on it, so a pull request that went green
-  # on a stale base is tested and diffed again as it will actually land.
+  # main and asks for the checks on it: a pull request is tested and diffed
+  # as it will actually land, not on the base it was opened against.
   merge_group:
   push:
     branches:
@@ -45,7 +48,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         node-version: [22]
@@ -71,7 +74,7 @@ jobs:
     name: Test the hosting
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         aws-environment: [dev, prd]
@@ -114,19 +117,14 @@ jobs:
       contents: read
       id-token: write
       pull-requests: write
-    # Nothing that reaches AWS runs for a pull request from a fork: the diffs
-    # wait until a maintainer has approved it and queued it to merge, and run
-    # there. (GitHub would refuse a fork the OIDC token anyway; this keeps
-    # the refusal from showing as a failed check on a contributor's work.)
-    if: >-
-      ${{
-        github.event_name == 'merge_group'
-        || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-      }}
+    # In the queue only, like the rest, which also means nothing that reaches
+    # AWS runs for a fork's pull request until a maintainer has queued it.
+    # (GitHub would refuse a fork the OIDC token anyway.)
+    if: ${{ github.event_name == 'merge_group' }}
     # Alongside the tests, not after them: a diff needs the built app and
-    # nothing the tests decide, and waiting for them doubled the time a
-    # pull request took to go green. The ruleset requires every check, so
-    # a failing test still holds the merge.
+    # nothing the tests decide, and waiting for them doubled the time the
+    # checks took. The ruleset requires every check, so a failing test still
+    # holds the merge.
     strategy:
       fail-fast: false
       matrix:
