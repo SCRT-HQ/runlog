@@ -119,19 +119,21 @@ export function RunView({ pack }: { pack: Pack }) {
   useAlerts(run.events, run.runId, me, alerts);
 
   /**
-   * The receipt: what the last throw did, held until it has been read.
+   * The receipts: what each throw of the step did, kept until the step has
+   * been read.
    *
    * The engine moves on the instant a roll is answered, so the dice and the
    * result would otherwise vanish together. The answer is still committed
-   * immediately — the receipt is a record, not a hold on the game — but it
-   * stays on screen in the step's place until "Carry on".
+   * as the engine sees fit — a receipt is a record, not a hold on the game —
+   * but the step's rolls stay on screen, in order, with the next roll's
+   * keypad beneath them, until "Carry on" closes the step.
    *
    * Outcomes are the signal: whatever the run had not resolved before an
    * answer, and has now, is what that answer did. Measured from the count
    * rather than the request, so a machine roll with auto-roll on, or a move
    * that resolves a table, gets a receipt too — just one without dice.
    */
-  const [receipt, setReceipt] = useState<RollReceipt | null>(null);
+  const [receipts, setReceipts] = useState<RollReceipt[]>([]);
   const sync = useSync();
   // The roller is fetched while the run opens, not when the first die is thrown.
   useEffect(() => preloadDice3d(), []);
@@ -149,8 +151,8 @@ export function RunView({ pack }: { pack: Pack }) {
   const seen = useRef<number | null>(null);
   const awaiting = useRef<Omit<RollReceipt, "outcomes"> | null>(null);
   // How many answers this view has given, and how many it had given when
-  // the last receipt was issued: a receipt is for something that was just
-  // answered or just landed, never for a step that came back with the run.
+  // the last receipt was issued: what a step that came back with the run
+  // had already resolved is shown as such, not as a throw just made.
   const committedSeen = useRef(0);
   const answered = useRef(0);
   const receipted = useRef(0);
@@ -171,10 +173,10 @@ export function RunView({ pack }: { pack: Pack }) {
       return;
     }
     if (count < seen.current) {
-      // Undo. Whatever the receipt was about has been unmade.
+      // Undo, or the step cancelled. Whatever the receipts were about has been unmade.
       seen.current = count;
       awaiting.current = null;
-      setReceipt(null);
+      setReceipts([]);
       return;
     }
     const fresh = outcomes.slice(seen.current);
@@ -182,19 +184,22 @@ export function RunView({ pack }: { pack: Pack }) {
     const throwing = awaiting.current;
     if (fresh.length === 0 && !throwing) return;
     // A step that came back with the run brings the lines it had resolved
-    // with it. Nothing was answered just now, so there is nothing to read.
-    if (!throwing && !landed && answered.current === receipted.current) return;
+    // with it: shown as what stands so far, not as a throw just made.
+    const restored = !throwing && !landed && answered.current === receipted.current;
     awaiting.current = null;
     receipted.current = answered.current;
-    setReceipt({
-      dice: throwing?.dice ?? null,
-      total: throwing?.total ?? null,
-      label: throwing?.label ?? null,
-      notation: throwing?.notation ?? null,
-      machineRolled: throwing?.machineRolled ?? true,
-      ...(throwing?.seed !== undefined ? { seed: throwing.seed } : {}),
-      outcomes: fresh,
-    });
+    setReceipts((prev) => [
+      ...prev,
+      {
+        dice: throwing?.dice ?? null,
+        total: throwing?.total ?? null,
+        label: throwing?.label ?? (restored ? "So far this step" : null),
+        notation: throwing?.notation ?? null,
+        machineRolled: throwing?.machineRolled ?? !restored,
+        ...(throwing?.seed !== undefined ? { seed: throwing.seed } : {}),
+        outcomes: fresh,
+      },
+    ]);
     // Everyone watching sees the same dice land: the value is already
     // decided, so what travels is the throw as it is shown here.
     if (throwing?.dice && throwing.dice.length > 0 && run.record && !run.readOnly) {
@@ -208,12 +213,15 @@ export function RunView({ pack }: { pack: Pack }) {
     }
   }, [committed, ahead, run.events.length]);
 
-  // A receipt waits to be read, unless this device asked it not to.
+  // The step is done once nothing more is asked; its receipts wait to be
+  // read, unless this device asked them not to.
+  const settled = receipts.length > 0 && !run.pending?.request;
   useEffect(() => {
-    if (!receipt || !carriesOnByItself()) return;
-    const timer = setTimeout(() => setReceipt(null), CARRY_ON_HOLD_MS);
+    if (!settled || !carriesOnByItself()) return;
+    const timer = setTimeout(() => setReceipts([]), CARRY_ON_HOLD_MS);
     return () => clearTimeout(timer);
-  }, [receipt]);
+  }, [settled]);
+  const lastReceipt = receipts[receipts.length - 1] ?? null;
 
   const answer = useCallback(
     (key: string, value: string | number | boolean, machineRolled?: boolean, dice?: RolledDie[], seed?: number) => {
@@ -286,21 +294,21 @@ export function RunView({ pack }: { pack: Pack }) {
           )}
           {state.unit > 0 && <ClockPanel pack={pack} run={run} state={state} />}
           <DiceCurtain roll={othersRoll} />
-          {receipt && (
+          {receipts.length > 0 && (
             <Receipt
-              receipt={receipt}
+              receipts={receipts}
               pack={pack}
-              onDismiss={() => setReceipt(null)}
-              {...(run.canDrawAgain && !run.readOnly ? { onDrawAgain: (why?: string) => run.drawAgain(why) } : {})}
-              {...(receipt.machineRolled && !run.autoRoll && !run.seededRun && !run.readOnly
+              settled={settled}
+              onDismiss={() => setReceipts([])}
+              {...(settled && run.canDrawAgain && !run.readOnly ? { onDrawAgain: (why?: string) => run.drawAgain(why) } : {})}
+              {...(settled && lastReceipt?.machineRolled && !run.autoRoll && !run.seededRun && !run.readOnly
                 ? { onKeepRolling: () => run.setAutoRoll(true) }
                 : {})}
             />
           )}
-          {receipt ? null : run.pending?.request ? (
-            // A follow-up the game is waiting on comes after the receipt
-            // that caused it, not beneath it: the number has to be read
-            // before the next question replaces it.
+          {run.pending?.request ? (
+            // The next thing the game is waiting on comes beneath the
+            // receipts of the rolls before it, which stay where they are.
             <RequestPanel
               request={run.pending.request}
               pack={pack}
@@ -308,7 +316,7 @@ export function RunView({ pack }: { pack: Pack }) {
               onAnswer={answer}
               onCancel={run.abandonPending}
             />
-          ) : state.status === "ended" ? (
+          ) : receipts.length > 0 ? null : state.status === "ended" ? (
             <Ended pack={pack} state={state} />
           ) : state.unit === 0 ? (
             <StartFirstUnit pack={pack} onEnter={run.enterUnit} />
@@ -375,8 +383,8 @@ export function RunView({ pack }: { pack: Pack }) {
           pack={pack}
           run={run}
           state={state}
-          receipt={receipt}
-          onCarryOn={() => setReceipt(null)}
+          receipt={settled ? lastReceipt : null}
+          onCarryOn={() => setReceipts([])}
           onRoll={(key, total, dice, seed) => answer(key, total, true, dice, seed)}
           onClose={closeControls}
         />

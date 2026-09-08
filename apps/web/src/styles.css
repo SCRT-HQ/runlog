@@ -2690,6 +2690,22 @@ select.textInput {
 /* ---- the receipt --------------------------------------------------------- */
 /* What the dice did, held until read. Raised like a step, because for the
    moment it is the step. */
+/* A step's rolls, in order, each with its line; a rule between them. */
+.receipt .entry + .entry {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+.receipt .entryLabel {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+.receipt .stays {
+  margin: 0.8rem 0 0;
+}
 .receipt .throw {
   margin-top: 0.4rem;
 }
