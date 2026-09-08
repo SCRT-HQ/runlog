@@ -10,6 +10,8 @@ import type { WorkOSLike } from "../lib/handlers/workos";
 import type { ListingCard, ListingStore, Product } from "../lib/handlers/listings";
 import type { Sale, SaleStore } from "../lib/handlers/sales";
 import { open, readHeader } from "../lib/handlers/container";
+import { memoryGuilds } from "./memory-guilds";
+import { generateKeyPairSync, sign } from "node:crypto";
 
 function memorySales(): SaleStore & { sealed: Map<string, Uint8Array> } {
   const sales = new Map<string, Sale>();
@@ -1610,5 +1612,71 @@ describe("sessions", () => {
       const { status } = await call(e, d);
       expect([403, 404], `${e.requestContext.http.method} ${e.rawPath} -> ${status}`).not.toContain(status);
     }
+  });
+});
+
+describe("discord", () => {
+  /** A keypair of the kind Discord holds; the public half as Discord shows it. */
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const publicHex = publicKey.export({ type: "spki", format: "der" }).subarray(-32).toString("hex");
+  const signedRequest = (body: unknown, timestamp = "1700000000", tamper = false) => {
+    const raw = JSON.stringify(body);
+    const signature = sign(null, Buffer.concat([Buffer.from(timestamp), Buffer.from(raw)]), privateKey).toString("hex");
+    const event = request("POST", "/api/discord/interactions", { token: null, headers: { "x-signature-ed25519": tamper ? signature.replace(/^./, (c) => (c === "0" ? "1" : "0")) : signature, "x-signature-timestamp": timestamp } });
+    return { ...event, body: raw } as APIGatewayProxyEventV2;
+  };
+  const withBot = (guilds = memoryGuilds()) => deps(memoryStore(), { guilds, discord: { applicationId: "app", publicKey: publicHex, token: async () => null }, code: () => "ABCDEF" });
+  const ping = { id: "p1", application_id: "app", type: 1, token: "t" };
+  const press = { id: "i1", application_id: "app", type: 2, token: "t", guild_id: "g1", member: { user: { id: "1001", username: "mira", global_name: "Mira" } }, data: { name: "link" } };
+
+  it("answers only what Discord signed, and says so when there is no bot to answer for", async () => {
+    // Not configured: nothing to verify against, so nothing is believed.
+    expect((await call(signedRequest(ping), deps())).status).toBe(401);
+    const d = withBot();
+    expect((await call(signedRequest(ping), d)).body).toEqual({ type: 1 });
+    expect((await call(signedRequest(ping, "1700000000", true), d)).status).toBe(401);
+    // A bearer is neither asked for nor enough: the signature is the credential.
+    const bare = { ...request("POST", "/api/discord/interactions", { body: ping }) };
+    expect((await call(bare, d)).status).toBe(401);
+    expect((await call({ ...signedRequest(ping), body: "{" } as APIGatewayProxyEventV2, d)).status).toBe(401);
+  });
+
+  it("links a Discord account to the account that hands in its code, once, and unlinks on request or with the account", async () => {
+    const guilds = memoryGuilds();
+    const d = withBot(guilds);
+    const pressed = await call(signedRequest(press), d);
+    expect(pressed.body["data"]).toMatchObject({ flags: 64 });
+    expect(String((pressed.body["data"] as Record<string, unknown>)["content"])).toContain("https://runlog.test/#link/discord?c=ABCDEF");
+    // Nothing linked yet, and the code is a code: typed loosely, it still matches.
+    expect((await call(request("GET", "/api/connections"), d)).body).toEqual({ available: true, discord: null });
+    expect((await call(request("POST", "/api/connections/discord", { body: { code: "" } }), d)).status).toBe(422);
+    const linked = await call(request("POST", "/api/connections/discord", { body: { code: " abcdef " } }), d);
+    expect(linked.body).toEqual({ linked: true, discord: { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" } });
+    expect((await call(request("GET", "/api/connections"), d)).body).toMatchObject({ discord: { discordUserId: "1001", name: "Mira" } });
+    // Spent: the same code a second time, even from the same person, is refused.
+    expect((await call(request("POST", "/api/connections/discord", { body: { code: "ABCDEF" } }), d)).status).toBe(422);
+    // Discord's side now knows, and says so rather than minting again.
+    const again = await call(signedRequest(press), d);
+    expect(String((again.body["data"] as Record<string, unknown>)["content"])).toContain("already linked");
+    // Another account handing in a fresh code for the same Discord account takes it over.
+    await guilds.putLinkCode({ code: "GHJKLM", discordUserId: "1001", name: "Mira", createdAt: "2026-09-06T12:00:00.000Z", expiresAt: "2026-09-06T12:10:00.000Z" });
+    expect((await call(request("POST", "/api/connections/discord", { body: { code: "GHJKLM" }, token: "guest" }), d)).body).toMatchObject({ linked: true });
+    expect((await call(request("GET", "/api/connections"), d)).body).toMatchObject({ discord: null });
+    expect((await call(request("GET", "/api/connections", { token: "guest" }), d)).body).toMatchObject({ discord: { discordUserId: "1001" } });
+    // Unlinking, and deleting the account, both leave nothing behind.
+    expect((await call(request("DELETE", "/api/connections/discord", { token: "guest" }), d)).body).toEqual({ unlinked: true });
+    expect((await call(request("DELETE", "/api/connections/discord", { token: "guest" }), d)).body).toEqual({ unlinked: false });
+    await guilds.connect("user_1", { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" });
+    await call(request("DELETE", "/api/me"), d);
+    expect(guilds.links.size).toBe(0);
+    expect(await guilds.userForDiscord("1001")).toBeNull();
+  });
+
+  it("refuses a code past its ten minutes", async () => {
+    const guilds = memoryGuilds();
+    const d = withBot(guilds);
+    await guilds.putLinkCode({ code: "OLDONE", discordUserId: "1001", name: "Mira", createdAt: "2026-09-06T11:00:00.000Z", expiresAt: "2026-09-06T11:10:00.000Z" });
+    expect((await call(request("POST", "/api/connections/discord", { body: { code: "OLDONE" } }), d)).status).toBe(422);
+    expect(guilds.codes.size).toBe(0);
   });
 });

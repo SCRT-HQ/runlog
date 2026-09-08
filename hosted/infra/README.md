@@ -222,6 +222,7 @@ tells `runlog login` which client to use, so the package carries neither id.
 | `runlog/stripe/webhook-secret` | Secrets Manager: the signing secret of the webhook endpoint that points at `/api/stripe/webhook`. |
 | `runlog/stripe/connect-webhook-secret` | Secrets Manager: the signing secret of the Connect webhook endpoint (events from connected accounts) that points at `/api/stripe/connect-webhook`. |
 | `runlog/workos/api-key` | Secrets Manager: the environment's WorkOS API key, for creating publisher organisations. |
+| `runlog/discord/bot-token` | Secrets Manager: the Runlog Discord application's bot token, for posting into servers that installed it. See [Discord](#discord). |
 
 The secrets are defined here and filled out of band. A deploy creates each
 with a random placeholder, and the handler treats a value that does not look
@@ -365,6 +366,40 @@ path to it unchanged (the stage name is the first path segment of a
 WebSocket API's address). Connection rows expire after two hours by TTL,
 and a connection the gateway reports gone is dropped the first time a
 post to it fails. The app falls back to polling when the socket is closed.
+
+## Discord
+
+The bot is the API. Discord sends each slash command and button press
+as an HTTP request to `POST /api/discord/interactions`, signed with the
+application's Ed25519 key over the timestamp and the raw body, and waits
+three seconds for the answer; there is no gateway connection, no process
+that stays up, and nothing to scale but the one handler. A bad signature
+is a 401, and with no application configured the route answers 401 to
+everything, ping included, so Discord will not accept an endpoint that
+cannot answer for a bot.
+
+The application is made once, in Discord's developer portal, and named in
+the stage's configuration as `discord.applicationId` and
+`discord.publicKey`, both public. Its bot token goes into
+`runlog/discord/bot-token`. Its commands are registered with
+`hosted/scripts/discord-setup.ts`, which reads the same list the handler
+answers (`lib/handlers/discord/commands.ts`), so the two cannot drift;
+`DISCORD_GUILD_ID` registers them for one server at once, for
+development, and without it for every server, which Discord takes up to
+an hour to show. The install link is
+`https://discord.com/oauth2/authorize?client_id=<applicationId>&scope=bot+applications.commands&permissions=0`.
+
+Linking is Discord's word for who pressed. `/link` mints a six-letter
+code bound to the Discord account in the signed request (row
+`DISCORD#LINK#<code>`, ten minutes, gone when read) and shows it, to that
+person alone, as an address in the app. Opened signed in, the app hands
+the code to `POST /api/connections/discord`, which writes
+`USER#<sub>/CONNECTION#discord` and the reverse `DISCORD#<id>/USER`.
+Nothing of Discord's is kept but the user id and the name it showed; a
+link replaces on both sides, `DELETE /api/connections/discord` removes it,
+and deleting the account sweeps it. Hosting runs from a server, and the
+plan that pays for it, come next and will live in `lib/handlers/guilds.ts`
+and `lib/handlers/discord/`.
 
 ## Monitoring
 
