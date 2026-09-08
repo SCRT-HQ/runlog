@@ -828,40 +828,36 @@ p {
   gap: 0.6rem;
 }
 
-/* ---- the pack in play, as the way into the library --------------------- */
+/* ---- one door to the library, from anywhere ----------------------------- */
 .packNow {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.5rem;
-  padding: 0.4rem 0.8rem;
+  gap: 0.6rem;
+  padding: 0.4rem 0.2rem;
   background: none;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border: none;
   color: var(--text);
   font-family: var(--mono);
   font-size: 0.85rem;
   cursor: pointer;
 }
-.packNow:hover {
-  border-color: var(--line-2);
-}
-.packNow.resume {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
-}
-.packNow.resume .shelfLabel,
-.packNow.resume .caret {
-  color: var(--accent);
-}
 .packNow .shelfLabel {
-  color: var(--muted);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 0.15em;
 }
-.packNow strong {
+.packNow:hover .shelfLabel {
+  text-decoration-color: currentColor;
+}
+/* The current page: still a real link (one press from the run back to it
+   would be odd to disable), but read as landed-on rather than reachable. */
+.packNow[aria-current="page"] .shelfLabel {
+  color: var(--muted);
+  text-decoration: none;
+}
+.packNow .packTitle {
   font-family: var(--serif);
   font-size: 1rem;
-}
-.packNow .caret {
-  font-size: 0.7rem;
-  color: var(--muted);
 }
 
 /* ---- the library -------------------------------------------------------- */
@@ -881,13 +877,27 @@ p {
 .libraryHead p {
   margin: 0;
 }
-/* One row of small controls, all the same height: the mono voice at the ghost button's size. */
+/* Two labeled groups, each its own eyebrow over a row of small controls,
+   all the same height: the mono voice at the ghost button's size. */
 .libraryActions {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin-top: 0.4rem;
+}
+.libraryActionGroup {
+  display: flex;
+  flex-direction: column;
+}
+.libraryActionGroup .sectionTitle {
+  margin-bottom: 0.4rem;
+}
+.libraryActionGroupRow {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
   align-items: center;
-  margin-top: 0.4rem;
 }
 .libraryActions .primary,
 .libraryActions .fileButton,
@@ -935,6 +945,16 @@ p {
 .homeLabel {
   font-family: var(--mono);
   letter-spacing: 0.04em;
+}
+/* The account's run on another device, tucked quietly under the primary one. */
+.homeElsewhere {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--line);
 }
 .homeList {
   list-style: none;
@@ -2465,7 +2485,7 @@ select.textInput {
 }
 @media (max-width: 520px) {
   .topbar .brand h1 { display: none; }
-  .topbar .packNow strong {
+  .topbar .packNow .packTitle {
     flex: 1;
     min-width: 0;
     overflow: hidden;

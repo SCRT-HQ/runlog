@@ -33,7 +33,8 @@ describe("the app shell", () => {
 
   it("ships no pack in the bundle: the first paint is the library, and the bar says so", () => {
     expect(html).toContain('class="packNow"');
-    expect(html).toContain("your packs");
+    expect(html).toContain("Your packs");
+    expect(html).toContain('aria-current="page"');
     expect(html).toContain("Get more packs");
     for (const label of ["The Long Kiln", "Salt &amp; Signal", "Ladder Work"]) expect(html).not.toContain(label);
   });

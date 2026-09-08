@@ -1,4 +1,5 @@
 import type { StoredRun } from "../storage/db.ts";
+import { onDay } from "../run/RunRow.tsx";
 
 /**
  * What the strip above the shelf points at, worked out from what the
@@ -36,4 +37,33 @@ export function runLine(run: StoredRun, unitWord: string): string {
   if (named) return named;
   const entered = events.filter((e) => e.t === "UnitEntered").length;
   return entered > 0 ? `${unitWord} ${entered}` : "not started";
+}
+
+/** A run's title: its name, or the pack's word for a run and when it began. */
+export function runTitle(run: StoredRun, runNoun: string): string {
+  const events = run.events as Array<{ at?: unknown; t?: unknown; name?: unknown }>;
+  const named = events.reduce<string | null>((n, e) => (e.t === "RunRenamed" && typeof e.name === "string" ? e.name.trim() || null : n), null);
+  if (named) return named;
+  const first = events[0] as { at?: unknown } | undefined;
+  const began = typeof first?.at === "string" ? onDay(first.at) : "";
+  return `${runNoun} from ${began}`;
+}
+
+/**
+ * The run the account touched last, when it is a different run than this
+ * device would offer and this device already holds it (sync brings every
+ * device's runs down, so a run this device has never heard of has nothing
+ * to show a line for). Null when there is nothing else to point at.
+ */
+export function elsewhere<P extends { id: string }>(
+  packs: readonly P[],
+  runs: readonly StoredRun[],
+  device: PickUp<P> | null,
+  accountRunId: string | null,
+): PickUp<P> | null {
+  if (!accountRunId || accountRunId === device?.run?.runId) return null;
+  const byId = new Map(packs.map((p) => [p.id, p]));
+  const run = runs.find((r) => r.runId === accountRunId && !r.deletedAt);
+  const pack = run ? byId.get(run.packId) : undefined;
+  return run && pack ? { pack, run } : null;
 }

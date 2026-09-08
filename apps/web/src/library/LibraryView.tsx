@@ -106,36 +106,44 @@ export function LibraryView({
           Newest played first. A pack's runs are beneath it; the one open on this device is marked.
         </p>
         <div className="libraryActions">
-          <button className="primary" onClick={onCatalog}>
-            Get more packs
-          </button>
-          <label className="ghost fileButton">
-            Load a pack from a file
-            <input type="file" accept=".yaml,.yml,.json,.rlpack" onChange={(e) => onFile(e.target.files?.[0])} />
-          </label>
-          {onJoinRace && (
-            <form
-              className="raceJoin"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (raceCode.trim().length >= 6) {
-                  onJoinRace(raceCode.trim());
-                  setRaceCode("");
-                }
-              }}
-            >
-              <input
-                className="textInput code"
-                value={raceCode}
-                placeholder="race code"
-                maxLength={8}
-                aria-label="A race code, six letters"
-                onChange={(e) => setRaceCode(e.target.value.toUpperCase())}
-              />
-              <button className="ghost" type="submit" disabled={raceCode.trim().length < 6}>
-                Join a race
+          <div className="libraryActionGroup">
+            <h3 className="sectionTitle">Add a pack</h3>
+            <div className="libraryActionGroupRow">
+              <button className="primary" onClick={onCatalog}>
+                Get more packs
               </button>
-            </form>
+              <label className="ghost fileButton">
+                Load a pack from a file
+                <input type="file" accept=".yaml,.yml,.json,.rlpack" onChange={(e) => onFile(e.target.files?.[0])} />
+              </label>
+            </div>
+          </div>
+          {onJoinRace && (
+            <div className="libraryActionGroup">
+              <h3 className="sectionTitle">Join a race</h3>
+              <form
+                className="raceJoin"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (raceCode.trim().length >= 6) {
+                    onJoinRace(raceCode.trim());
+                    setRaceCode("");
+                  }
+                }}
+              >
+                <input
+                  className="textInput code"
+                  value={raceCode}
+                  placeholder="race code"
+                  maxLength={8}
+                  aria-label="A race code, six letters"
+                  onChange={(e) => setRaceCode(e.target.value.toUpperCase())}
+                />
+                <button className="ghost" type="submit" disabled={raceCode.trim().length < 6}>
+                  Join a race
+                </button>
+              </form>
+            </div>
           )}
         </div>
       </header>
@@ -176,7 +184,7 @@ export function LibraryView({
                   {mine.length > 0 ? `Start another ${v.run.one.toLowerCase()}` : `Start ${an(v.run.one.toLowerCase())}`}
                 </button>
                 {record && (
-                  <button className="ghost tiny" title={`Forget ${p.title} and its ${v.run.many.toLowerCase()}`} onClick={() => onForgetPack(record)}>
+                  <button className="ghost tiny danger" title={`Forget ${p.title} and its ${v.run.many.toLowerCase()}`} onClick={() => onForgetPack(record)}>
                     Forget pack
                   </button>
                 )}
