@@ -1176,15 +1176,18 @@ describe("who is asking", () => {
     expect(before.body).toMatchObject({ found: true, access: "snapshot", run: { id: "01RUN", packId: sessionBody.packId }, snapshot: null });
     expect(JSON.stringify(before.body)).not.toContain("source");
     // The owner's device writes the snapshot after a move; watchers are rung.
-    expect((await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: { unit: 2, log: ["a move"] } } }), d)).body).toEqual({ kept: true });
+    const snapshot = { unit: 2, score: { label: "Days", text: "2 days", value: 2, better: "higher" }, latest: { where: "Day 2", text: "A dry wind." }, log: ["a move"] };
+    expect((await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot } }), d)).body).toEqual({ kept: true });
     expect(rung).toContain("01RUN");
     const after = await call(request("GET", "/api/public/runs/01RUN?t=livetok", { token: null }), d);
     expect(after.body["snapshot"]).toMatchObject({ snapshot: { unit: 2 } });
-    // A stream plugin reads the same as numbers, from anywhere, without the log.
+    // A stream plugin reads the same as numbers, from anywhere, without the log. Everything else the
+    // snapshot carries passes through untouched: docs/stream-api.md promises a chat bot `score.text`
+    // and `latest.text` without reducing anything, so the route must not pick fields.
     const metrics = await route(request("GET", "/api/public/runs/01RUN/metrics?t=livetok", { token: null }), d);
     expect(typeof metrics !== "string" && metrics.headers).toMatchObject({ "access-control-allow-origin": "*", "cache-control": "no-store" });
     const numbers = JSON.parse(typeof metrics === "string" ? "{}" : (metrics.body ?? "{}")) as Record<string, unknown>;
-    expect(numbers).toMatchObject({ found: true, ready: true, unit: 2, run: { id: "01RUN", packId: sessionBody.packId } });
+    expect(numbers).toMatchObject({ found: true, ready: true, unit: 2, score: snapshot.score, latest: snapshot.latest, run: { id: "01RUN", packId: sessionBody.packId } });
     expect(numbers).not.toHaveProperty("log");
     expect((await call(request("GET", "/api/public/runs/01RUN/metrics?t=nope", { token: null }), d)).body).toEqual({ found: false });
     // A pack whose license lets its text travel is handed over whole, with the log.

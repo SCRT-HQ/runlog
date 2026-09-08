@@ -10,6 +10,10 @@ copy of Runlog you run yourself as a static site has no server, so nothing
 here applies to it; a copy run with its own hosting answers the same way
 at its own address.
 
+For the widgets that draw these numbers, and how to put them in OBS,
+Streamlabs, StreamElements and Streamer.bot, see
+[streaming-setup.md](streaming-setup.md).
+
 ## Getting a link
 
 In the run, under **People at the table**, **Share a live link** (part of
@@ -36,20 +40,28 @@ below and fetch it when the socket rings.
   "packTitle": "The Long Kiln",
   "runName": null,
   "mode": "Standard",
+  "modeId": "standard",
   "words": { "run": "Firing", "unit": "Day", "units": "Days" },
   "status": "active",
   "ending": null,
   "unit": 4,
   "where": "Morning · Draw the weather",
+  "step": "Draw the weather",
+  "stepKind": "rollTable",
+  "phases": [{ "id": "morning", "label": "Morning", "state": "current" }, { "id": "work", "label": "Work", "state": "todo" }],
+  "constraints": ["No stacking today."],
   "quoted": true,
   "standings": [{ "name": "Mira", "points": 12, "place": 1, "states": ["Tired"] }],
   "contestants": 3,
-  "subjects": [{ "id": 1, "type": "bowl", "states": ["glazed"], "finalized": false }],
+  "subjects": [{ "id": 1, "name": "Bowl 1", "type": "bowl", "states": ["glazed"], "finalized": false, "hits": ["Crawl"] }],
   "counters": [{ "id": "cracks", "label": "Cracks", "value": 2 }],
   "resources": [{ "id": "wood", "label": "Wood", "value": 6, "max": 10, "display": "boxes" }],
-  "clocks": [{ "id": "day", "label": "Day 4", "kind": "timer", "seconds": 600, "status": "running", "elapsedMs": 83210, "expired": false }],
+  "clocks": [{ "id": "u4:unit", "label": "Day 4", "kind": "timer", "seconds": 600, "status": "running", "elapsedMs": 83210, "expired": false }],
   "progress": { "unitsDone": 3, "elapsedMs": 1490233 },
-  "forcedUnits": 0
+  "score": { "label": "Days", "text": "3 days", "value": 3, "better": "higher" },
+  "forcedUnits": 0,
+  "unitResults": [{ "table": "Weather", "text": "A dry wind from the east.", "hit": null }],
+  "latest": { "where": "Day 4 · Morning", "text": "A dry wind from the east." }
 }
 ```
 
@@ -61,18 +73,39 @@ What the fields mean:
 | `run` | The run as the server knows it: id, pack, name, and when it ended if it has. |
 | `at` | When the snapshot was taken, on the owner's device. Clocks are as of this moment. |
 | `serverAt` | The server's clock when it answered; the difference from `at` is how old the numbers are. |
+| `v` | The snapshot's shape, `1`. A field marked *newer* below is absent from snapshots written by an older app. |
+| `mode`, `modeId` | The mode being played, as a label and as the pack's id for it. *newer* |
 | `words` | The pack's own words for a run and its unit, so a caption can say "Day 4" for one game and "Room 4" for another. |
 | `status`, `ending` | `active` or `ended`, and the ending's name once there is one. |
-| `unit`, `where` | The unit the run is in, and the phase and step it is waiting on. |
+| `unit`, `where` | The unit the run is in, and the phase and step it is waiting on, in one line. |
+| `step`, `stepKind` | The step on its own, and its kind: `manual`, `rollTable`, `declareSubject`, `finalizeUnit` and so on. Null between units. *newer* |
+| `phases` | The unit's phases and where each stands: `done`, `current`, `skipped` (with `why`) or `todo`. |
+| `constraints` | Rules drawn earlier this unit that the current step must honor, in the pack's words. Empty when there are none. *newer* |
+| `quoted` | Whether the pack's license lets its text be quoted. Where it does not, `constraints`, `unitResults` and `latest` still carry the drawn lines: that much is the run, not the pack. |
 | `standings` | Contestants in a moderated run, by place. Empty when nobody is on the roster. |
-| `subjects` | What the run tracks (tracks, bowls, rooms: the pack's word), with their states. |
+| `subjects` | What the run tracks (tracks, bowls, rooms: the pack's word), with their states and the results that hit them. |
 | `counters`, `resources` | The pack's counters, and its resources with their maximum and how the pack draws them. |
 | `clocks` | The clocks that are running, paused or just done. See below. |
 | `progress` | Units closed, and time elapsed on the run. |
-| `quoted` | Whether the pack's license lets its text be quoted; the metrics carry no text either way. |
+| `score` | What the pack says this run scores, worded and ready to show: a label, the text, the number, and which way is better. With no score declared, units closed. |
+| `unitResults` | Every result rolled this unit, in the order the dice landed. *newer* |
+| `latest` | The most recent result: where it landed and its words. Null with nothing rolled yet. *newer* |
+| `race` | The race this run is in, if any: name, whether it has ended, how many are racing, and standings with a line each. Absent outside a race. |
+| `paper` | The pack's summary and the mode's page as document trees, where the pack may be quoted. Large, and only a page that renders it wants it; a plugin ignores it. |
+
+Everything the widgets draw is here. The one thing left out is `log`, the
+run's last sixty lines, which the whole-run route below carries.
 
 A wrong or missing token answers `{ "found": false }` with status 200; a
 run its owner deleted answers 410.
+
+### Chat commands from the numbers
+
+A `!score` command wants one line; the document already has it. `score.text`
+is the run's score in the pack's words ("3 days", "14 points"), `words.unit`
+and `unit` say where the run is ("Day 4"), `latest.text` is the last result
+rolled, and `standings[0].name` leads a moderated run. Fetch, pick, post;
+no reducing needed.
 
 ### Ticking a clock
 
@@ -109,10 +142,18 @@ are not moves, passed straight through and stored nowhere:
   "data": { "dice": [{ "faces": 20, "display": "14", "label": "d20" }], "total": 14, "label": "Kiln Check", "notation": "1d20" } }
 ```
 
-`rolled` is the first kind: the dice as they were thrown, with the value
-already decided, so a plugin can play the same throw. Other kinds follow
-the same shape. Ignore kinds you do not know. It closes when the
-link is revoked, and after a while idle; reconnect with a small backoff.
+The kinds:
+
+| `kind` | When | `data` |
+| --- | --- | --- |
+| `rolled` | The player threw dice, and they have landed. | `dice`: each die's `faces`, what it shows (`display`) and its `label`; `total`; the roll's `label`; its `notation`, such as `2d6`. |
+
+`rolled` is the one kind today, sent so a plugin can play the same throw.
+Others will follow the same shape; ignore kinds you do not know. A gesture
+is not a move, so a `changed` message does not follow it; the move it
+belongs to rings on its own once the result is written. The socket closes
+when the link is revoked, and after a while idle; reconnect with a small
+backoff. Nothing may be sent on it; a message from a plugin is dropped.
 
 ## The whole run: `GET /api/public/runs/<runId>?t=<token>`
 
@@ -135,13 +176,17 @@ An ended run answers 410.
 
 ## Politeness
 
-Poll no faster than every few seconds; the socket exists so you need
-not. Keep the token out of anything you publish: whoever has it can
-watch. Nothing here writes to the run.
+Poll no faster than every five seconds; the socket exists so you need
+not, and a widget is one reader on one machine, never one per viewer.
+Keep the token out of anything you publish: whoever has it can watch,
+and a widget pasted into a shared overlay carries it. If it gets out,
+**Stop sharing** and share again; the old token is dead the moment you
+do. Nothing here writes to the run.
 
 ## From the app
 
 The widgets under **Stream** in the run's side column draw the same
 snapshot, on pages of their own, and **Everything, stacked** puts them in
 one column for a single browser source. See the guide's
-[Streaming a run](https://runlog.scrthq.com/#guide/streaming) for those.
+[Streaming a run](https://runlog.scrthq.com/#guide/streaming) for those,
+and [streaming-setup.md](streaming-setup.md) for the apps.
