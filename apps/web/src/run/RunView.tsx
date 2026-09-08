@@ -5,7 +5,7 @@ import { SettingsDialog } from "./SettingsDialog.tsx";
 import { ControlPanel, openControlsWindow } from "./ControlPanel.tsx";
 import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
-import { clockOfUnit, formatClock, liveClocks, nextUnit } from "@runlog/engine";
+import { clockOfUnit, compareScores, formatClock, formatScore, liveClocks, nextUnit, scoreOf } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import { describeSkip, describeSkipReason, phaseSkipped, subjectLabel, type RunEvent, type RunState } from "@runlog/engine";
 import { useRun, type ActiveStep } from "./useRun.ts";
@@ -25,7 +25,8 @@ import { LOG_LIMITS, logLimit, logLines, logOrder, setLogLimit, setLogOrder, typ
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
-import { RunRow } from "./RunRow.tsx";
+import { RunRow, onDay } from "./RunRow.tsx";
+import { bestOf, placeOf, scoresOf, type ScoredRun } from "./scores.ts";
 import { RacePanel } from "./RacePanel.tsx";
 import { useApi } from "../sync/useApi.ts";
 import { ulid } from "../storage/ids.ts";
@@ -383,6 +384,7 @@ export function RunView({
         </div>
 
         <div className="col side">
+          {state.status === "ended" && <Scores pack={pack} run={run} state={state} />}
           {run.moderated && <Scoreboard run={run} state={state} pack={pack} />}
           {run.roles.length > 0 && <Roles pack={pack} run={run} state={state} />}
           <Board pack={pack} state={state} onRename={run.renameSubject} onCorrect={run.readOnly ? undefined : run.correctState} />
@@ -496,12 +498,25 @@ export function Setup({
    * mode allows instead of leaving nothing selected.
    */
   const seated = Math.min(Math.max(players, minPlayers), maxPlayers);
+  /**
+   * The best of what is already here, so far. A first run is not told it
+   * has no best — the line only appears once there is one to beat.
+   */
+  const scored = useMemo(() => scoresOf(pack, others, Date.now()), [pack, others]);
+  const best = bestOf(scored);
+  const bestLabel = best && (best.score.key === "counter" ? `${best.text} ${best.score.label}` : best.text);
 
   return (
     <main className="main">
       <section className="panel setup">
         <h2>{others.length > 0 ? `Another ${v.run.one.toLowerCase()}` : `Begin ${an(v.run.one)}`}</h2>
         <p className="muted">{pack.title}</p>
+        {best && (
+          <p className="muted small">
+            Your best: {bestLabel}, on {onDay(best.endedAt)}
+            {best.name && ` · ${best.name}`}
+          </p>
+        )}
 
         {others.length > 0 && onContinue && (
           <>
@@ -510,7 +525,13 @@ export function Setup({
             </h3>
             <div className="runList">
               {others.map((r) => (
-                <RunRow key={r.runId} run={r} vocabulary={pack.vocabulary} onPick={() => onContinue(r.runId)} />
+                <RunRow
+                  key={r.runId}
+                  run={r}
+                  vocabulary={pack.vocabulary}
+                  score={scored.find((s) => s.runId === r.runId)?.text}
+                  onPick={() => onContinue(r.runId)}
+                />
               ))}
             </div>
             {onBack && (
@@ -1309,6 +1330,73 @@ function Winners({ run, state }: { run: ReturnType<typeof useRun>; state: RunSta
       </div>
       {everyone && rule?.firstBonus ? <p className="muted small">★ first to finish, +{rule.firstBonus}.</p> : null}
     </section>
+  );
+}
+
+/** "2nd" from 2, "11th" from 11 — the teens are the exception the mod-10 rule misses. */
+function ordinal(n: number): string {
+  const teens = n % 100;
+  if (teens >= 11 && teens <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
+}
+
+/**
+ * Where this run landed against the ones before it, once it has one.
+ *
+ * The open run's own score is folded in here rather than read from
+ * `run.runList`: storage catches up with an ending asynchronously, and the
+ * player should not wait on that write to be told where they stand.
+ */
+export function Scores({ pack, run, state }: { pack: Pack; run: ReturnType<typeof useRun>; state: RunState }) {
+  const rows = useMemo((): ScoredRun[] => {
+    if (!run.runId) return [];
+    const nowMs = Date.now();
+    const past = scoresOf(pack, run.runList.filter((r) => r.runId !== run.runId), nowMs);
+    const score = scoreOf(pack, state, run.events, nowMs);
+    const mine: ScoredRun = { runId: run.runId, name: state.name, endedAt: state.updatedAt, score, text: formatScore(score, pack) };
+    return [...past, mine].sort((a, b) => compareScores(a.score, b.score));
+  }, [pack, run.runList, run.runId, run.events, state]);
+
+  const mine = rows.find((r) => r.runId === run.runId);
+  if (!mine) return null;
+  const place = placeOf(rows, mine.runId) ?? rows.length;
+  const isBest = bestOf(rows)?.runId === mine.runId;
+  const past = rows.filter((r) => r.runId !== mine.runId).slice(0, 5);
+
+  return (
+    <details className="panel scores" open>
+      <summary>
+        <h3 className="sectionTitle">Scores</h3>
+      </summary>
+      <div className="row spread">
+        <span>
+          <strong>{mine.text}</strong> <span className="muted small">this run</span>
+        </span>
+        <span className="nudge">
+          {isBest && <span className="chip ok">a new best</span>}
+          <span className="muted small num">
+            {ordinal(place)} of {rows.length}
+          </span>
+        </span>
+      </div>
+      {past.map((r) => (
+        <div key={r.runId} className="row spread">
+          <span className="muted small">
+            #{placeOf(rows, r.runId)} {r.name ?? onDay(r.endedAt)}
+          </span>
+          <span className="muted num">{r.text}</span>
+        </div>
+      ))}
+    </details>
   );
 }
 
