@@ -1051,6 +1051,10 @@ p {
   text-transform: lowercase;
   letter-spacing: 0.04em;
 }
+/* Over the setup card, which is a main of its own: the strip alone, no room under it. */
+.main.benchOnly {
+  padding-bottom: 0;
+}
 .benchBar .benchActions {
   display: flex;
   gap: 0.4rem;
