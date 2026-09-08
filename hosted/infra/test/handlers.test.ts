@@ -1695,7 +1695,7 @@ describe("a claimed server", () => {
   it("is claimed by handing in the code, lists for its owner alone, takes packs into a vault it never hands back, and is released whole", async () => {
     const guilds = memoryGuilds();
     let codes = 0;
-    const d = deps(memoryStore(), { guilds, discord: { applicationId: "app", publicKey: publicHex, token: async () => null, guildName: async (id) => (id === "g1" ? "The Kiln Room" : null) }, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
+    const d = deps(memoryStore(), { guilds, discord: { applicationId: "app", publicKey: publicHex, token: async () => null, open: true, guildName: async (id) => (id === "g1" ? "The Kiln Room" : null) }, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
     await call(signed(claimPress("g1")), d);
     // With plans off, nothing to upgrade to; the server is simply claimed, and named by Discord where the bot could ask.
     const claimed = await call(request("POST", "/api/guilds/claim", { body: { code: "claima" } }), d);
@@ -1724,7 +1724,7 @@ describe("a claimed server", () => {
     const guilds = memoryGuilds();
     const billing = memoryBilling();
     let codes = 0;
-    const d = deps(memoryStore(), { guilds, billing, gates: true, features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" }, discord: { applicationId: "app", publicKey: publicHex, token: async () => null }, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
+    const d = deps(memoryStore(), { guilds, billing, gates: true, features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" }, discord: { applicationId: "app", publicKey: publicHex, token: async () => null, open: true }, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
     for (const g of ["g1", "g2", "g3", "g4"]) await call(signed(claimPress(g)), d);
     expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMA" } }), d)).body).toMatchObject({ claimed: true, upgrade: true });
     await billing.putEntitlements("user_1", ["server"], "now");
@@ -1740,5 +1740,37 @@ describe("a claimed server", () => {
     await call(request("DELETE", "/api/me"), d);
     expect(guilds.guilds.has("g2")).toBe(false);
     expect(guilds.guilds.has("g1")).toBe(true);
+  });
+
+  it("is a private beta until the stage opens it: the flag on a session, or the plan itself, is the door", async () => {
+    const guilds = memoryGuilds();
+    const billing = memoryBilling();
+    let codes = 0;
+    const bot = { applicationId: "app", publicKey: publicHex, token: async () => null };
+    const flagged = async (authorization: string | undefined) => {
+      if (authorization === "Bearer good") return { sub: "user_1", sid: "session_1", flags: ["servers-beta"] };
+      if (authorization === "Bearer guest") return { sub: "user_2", sid: "session_2" };
+      throw new Error("bad token");
+    };
+    const d = deps(memoryStore(), { guilds, billing, discord: bot, verify: flagged, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
+    // Without a bot there is no tier to see at all.
+    expect((await call(request("GET", "/api/me"), deps())).body["servers"]).toBe(false);
+    // With one, the flag is what opens the door; the code is minted for anyone who can manage the server.
+    expect((await call(request("GET", "/api/me"), d)).body["servers"]).toBe(true);
+    expect((await call(request("GET", "/api/me", { token: "guest" }), d)).body["servers"]).toBe(false);
+    await call(signed(claimPress("g1")), d);
+    const refused = await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMA" }, token: "guest" }), d);
+    expect(refused.status).toBe(422);
+    expect(refused.body).toMatchObject({ beta: true });
+    expect((await call(request("GET", "/api/guilds", { token: "guest" }), d)).body).toMatchObject({ allowed: false });
+    // Refused before the code was spent: the flagged account hands the same code in.
+    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMA" } }), d)).body).toMatchObject({ claimed: true });
+    expect((await call(request("GET", "/api/guilds"), d)).body).toMatchObject({ allowed: true });
+    // The plan itself is a door too: someone who bought it is not asked for a flag.
+    await billing.putEntitlements("user_2", ["server"], "now");
+    expect((await call(request("GET", "/api/me", { token: "guest" }), d)).body["servers"]).toBe(true);
+    // And the stage opening the tier makes everyone welcome.
+    const open = deps(memoryStore(), { guilds, discord: { ...bot, open: true } });
+    expect((await call(request("GET", "/api/me", { token: "guest" }), open)).body["servers"]).toBe(true);
   });
 });

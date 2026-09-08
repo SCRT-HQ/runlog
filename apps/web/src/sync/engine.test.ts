@@ -252,7 +252,7 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
     claimGuild: async () => {
       throw new Error("not used here");
     },
-    myGuilds: async () => ({ guilds: [], server: true }),
+    myGuilds: async () => ({ guilds: [], server: true, allowed: true }),
     releaseGuild: async () => {},
     guildPacks: async () => [],
     delegatePack: async () => {

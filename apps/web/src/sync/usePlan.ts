@@ -16,11 +16,17 @@ export interface Plan {
   entitlements: string[];
   /** Whether the account may use a feature: yes where nothing is gated, else by entitlement. */
   can: (feature: string) => boolean;
+  /**
+   * Whether the server tier is this account's to see: open to everyone, or
+   * in private beta with this account flagged. Not a gate, a door, so it
+   * is false where nothing is known rather than true the way `can` is.
+   */
+  servers: boolean;
   loaded: boolean;
   refresh: () => Promise<void>;
 }
 
-let cached: { gates: boolean; entitlements: string[] } | null = null;
+let cached: { gates: boolean; entitlements: string[]; servers: boolean } | null = null;
 
 export function usePlan(): Plan {
   const api = useApi();
@@ -30,7 +36,7 @@ export function usePlan(): Plan {
     if (!api) return;
     try {
       const me = await api.me();
-      cached = { gates: me.gates === true, entitlements: me.entitlements ?? [] };
+      cached = { gates: me.gates === true, entitlements: me.entitlements ?? [], servers: me.servers === true };
       setState(cached);
     } catch {
       // Offline, or signed out between renders: what was known stands.
@@ -47,6 +53,7 @@ export function usePlan(): Plan {
     gates,
     entitlements,
     can: (feature) => !gates || entitlements.includes(feature),
+    servers: state?.servers ?? false,
     loaded: state !== null,
     refresh,
   };

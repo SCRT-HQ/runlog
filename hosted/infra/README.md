@@ -410,6 +410,17 @@ through the same Stripe plumbing as Plus — and `/setup status` says
 whether it is active where plans gate. `/setup role` and `/setup channel`
 set who may host and where runs open.
 
+The tier is in **private beta** until the stage says otherwise. With
+`discord.open` absent or `false` in the configuration, only an account
+whose WorkOS session carries the `servers-beta` feature flag (or a
+`server` grant) sees the Servers page, may subscribe, and may claim a
+server; `GET /api/me` says so as `servers`, and `POST /api/guilds/claim`
+refuses everyone else before spending the code. The flag is made in
+WorkOS, per environment, and set on the people trying it; a flag named
+`server` instead would comp the plan itself, the way a `plus` flag comps
+Plus. Setting `discord.open: true` and deploying opens the tier to every
+account; the flag then grants nothing extra.
+
 The owner puts packs in the server's **vault** from their profile:
 `PUT /api/guilds/{id}/packs/{packId}` takes the pack's text and a summary
 the app computed (title, version, the modes by label), and keeps the
