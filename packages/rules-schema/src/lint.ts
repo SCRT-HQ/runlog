@@ -1,6 +1,6 @@
 import { tryParseDice } from "./dice.ts";
 import type { Action } from "./actions.ts";
-import type { Pack } from "./pack.ts";
+import type { Pack, Score } from "./pack.ts";
 import type { Predicate } from "./primitives.ts";
 
 /**
@@ -580,6 +580,38 @@ export function lintPack(pack: Pack): Diagnostic[] {
     if (!counter.incrementOn?.length && !counter.triggers?.length && !movedCounters.has(counterId)) {
       d.push(warn("counter/inert", path, "counter has no incrementOn, no triggers, and nothing moves it; it will never change"));
     }
+  }
+
+  // ── Score ───────────────────────────────────────────────────────────────
+  //
+  // A dangling reference here does not stop a run — scoreOf is total and
+  // falls back to 0 or to wall time — so these are warnings, not the errors a
+  // dangling reference is everywhere else: the worst case is a scoreboard
+  // that quietly reads zero, not a crash mid-session.
+  const checkScore = (score: Score | undefined, path: string, modeId?: string) => {
+    if (!score) return;
+    if ("counter" in score && !counterIds.has(score.counter)) {
+      d.push(warn("score/unknown-counter", path, `score references unknown counter ${score.counter}`));
+    }
+    if ("resource" in score && !resourceIds.has(score.resource)) {
+      d.push(warn("score/unknown-resource", path, `score references unknown resource ${score.resource}`));
+    }
+    if ("time" in score) {
+      const mode = modeId ? pack.modes[modeId] : undefined;
+      if (!(mode?.clock ?? pack.unit.clock)) {
+        d.push(
+          warn(
+            "score/no-clock",
+            path,
+            `score is by time, but ${modeId ? `mode ${modeId}` : "the pack"} runs no clock; it will fall back to wall time`,
+          ),
+        );
+      }
+    }
+  };
+  checkScore(pack.score, "score");
+  for (const [modeId, mode] of Object.entries(pack.modes)) {
+    checkScore(mode.score, `modes.${modeId}.score`, modeId);
   }
 
   // ── Targeting ───────────────────────────────────────────────────────────

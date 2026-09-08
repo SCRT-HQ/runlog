@@ -2500,6 +2500,159 @@
       "additionalProperties": false,
       "description": "Free-text notes attached to units. Essential for journaling games, and useful anywhere, since a log of rolls alone does not tell you what you actually made."
     },
+    "score": {
+      "description": "This run's score, so a solo run has a number to beat next time. A mode can set its own with `score`.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "counter": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "The declared counter whose value is the score."
+            },
+            "better": {
+              "description": "Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower.",
+              "type": "string",
+              "enum": [
+                "higher",
+                "lower"
+              ]
+            },
+            "label": {
+              "description": "Name shown beside the score. Defaults to the counter's or resource's own label, \"Units closed\" in the pack's own word for a unit, or \"Time\".",
+              "type": "string",
+              "minLength": 1
+            },
+            "tiebreak": {
+              "description": "A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins).",
+              "type": "string",
+              "enum": [
+                "time",
+                "units"
+              ]
+            }
+          },
+          "required": [
+            "counter"
+          ],
+          "additionalProperties": false,
+          "description": "Score by a counter's value."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "resource": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "The declared resource whose value is the score."
+            },
+            "better": {
+              "description": "Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower.",
+              "type": "string",
+              "enum": [
+                "higher",
+                "lower"
+              ]
+            },
+            "label": {
+              "description": "Name shown beside the score. Defaults to the counter's or resource's own label, \"Units closed\" in the pack's own word for a unit, or \"Time\".",
+              "type": "string",
+              "minLength": 1
+            },
+            "tiebreak": {
+              "description": "A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins).",
+              "type": "string",
+              "enum": [
+                "time",
+                "units"
+              ]
+            }
+          },
+          "required": [
+            "resource"
+          ],
+          "additionalProperties": false,
+          "description": "Score by a resource's value."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "units": {
+              "type": "boolean",
+              "const": true,
+              "description": "Marks this as scoring by how many units the run closed."
+            },
+            "better": {
+              "description": "Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower.",
+              "type": "string",
+              "enum": [
+                "higher",
+                "lower"
+              ]
+            },
+            "label": {
+              "description": "Name shown beside the score. Defaults to the counter's or resource's own label, \"Units closed\" in the pack's own word for a unit, or \"Time\".",
+              "type": "string",
+              "minLength": 1
+            },
+            "tiebreak": {
+              "description": "A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins).",
+              "type": "string",
+              "enum": [
+                "time",
+                "units"
+              ]
+            }
+          },
+          "required": [
+            "units"
+          ],
+          "additionalProperties": false,
+          "description": "Score by how many units the run closed."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "time": {
+              "type": "boolean",
+              "const": true,
+              "description": "Marks this as scoring by time taken."
+            },
+            "better": {
+              "description": "Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower.",
+              "type": "string",
+              "enum": [
+                "higher",
+                "lower"
+              ]
+            },
+            "label": {
+              "description": "Name shown beside the score. Defaults to the counter's or resource's own label, \"Units closed\" in the pack's own word for a unit, or \"Time\".",
+              "type": "string",
+              "minLength": 1
+            },
+            "tiebreak": {
+              "description": "A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins).",
+              "type": "string",
+              "enum": [
+                "time",
+                "units"
+              ]
+            }
+          },
+          "required": [
+            "time"
+          ],
+          "additionalProperties": false,
+          "description": "Score by time taken: the unit clock where the pack runs one, wall time otherwise."
+        }
+      ]
+    },
     "endings": {
       "description": "The ways a run can finish.",
       "type": "array",
@@ -2832,6 +2985,159 @@
               "kind"
             ],
             "additionalProperties": false
+          },
+          "score": {
+            "description": "This mode's own score, instead of the pack's `score`.",
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "counter": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                    "description": "The declared counter whose value is the score."
+                  },
+                  "better": {
+                    "description": "Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower.",
+                    "type": "string",
+                    "enum": [
+                      "higher",
+                      "lower"
+                    ]
+                  },
+                  "label": {
+                    "description": "Name shown beside the score. Defaults to the counter's or resource's own label, \"Units closed\" in the pack's own word for a unit, or \"Time\".",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "tiebreak": {
+                    "description": "A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins).",
+                    "type": "string",
+                    "enum": [
+                      "time",
+                      "units"
+                    ]
+                  }
+                },
+                "required": [
+                  "counter"
+                ],
+                "additionalProperties": false,
+                "description": "Score by a counter's value."
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "resource": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                    "description": "The declared resource whose value is the score."
+                  },
+                  "better": {
+                    "description": "Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower.",
+                    "type": "string",
+                    "enum": [
+                      "higher",
+                      "lower"
+                    ]
+                  },
+                  "label": {
+                    "description": "Name shown beside the score. Defaults to the counter's or resource's own label, \"Units closed\" in the pack's own word for a unit, or \"Time\".",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "tiebreak": {
+                    "description": "A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins).",
+                    "type": "string",
+                    "enum": [
+                      "time",
+                      "units"
+                    ]
+                  }
+                },
+                "required": [
+                  "resource"
+                ],
+                "additionalProperties": false,
+                "description": "Score by a resource's value."
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "units": {
+                    "type": "boolean",
+                    "const": true,
+                    "description": "Marks this as scoring by how many units the run closed."
+                  },
+                  "better": {
+                    "description": "Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower.",
+                    "type": "string",
+                    "enum": [
+                      "higher",
+                      "lower"
+                    ]
+                  },
+                  "label": {
+                    "description": "Name shown beside the score. Defaults to the counter's or resource's own label, \"Units closed\" in the pack's own word for a unit, or \"Time\".",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "tiebreak": {
+                    "description": "A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins).",
+                    "type": "string",
+                    "enum": [
+                      "time",
+                      "units"
+                    ]
+                  }
+                },
+                "required": [
+                  "units"
+                ],
+                "additionalProperties": false,
+                "description": "Score by how many units the run closed."
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "time": {
+                    "type": "boolean",
+                    "const": true,
+                    "description": "Marks this as scoring by time taken."
+                  },
+                  "better": {
+                    "description": "Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower.",
+                    "type": "string",
+                    "enum": [
+                      "higher",
+                      "lower"
+                    ]
+                  },
+                  "label": {
+                    "description": "Name shown beside the score. Defaults to the counter's or resource's own label, \"Units closed\" in the pack's own word for a unit, or \"Time\".",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "tiebreak": {
+                    "description": "A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins).",
+                    "type": "string",
+                    "enum": [
+                      "time",
+                      "units"
+                    ]
+                  }
+                },
+                "required": [
+                  "time"
+                ],
+                "additionalProperties": false,
+                "description": "Score by time taken: the unit clock where the pack runs one, wall time otherwise."
+              }
+            ]
           },
           "moderated": {
             "description": "Moderated play: one person runs the game on the device, a roster of named contestants races every drawn result, and the moderator awards points. Results with `points` are the challenges; everything else lands on everyone.",

@@ -209,6 +209,66 @@ export const Clock = z
   .describe("A clock the unit runs: `stopwatch` to time it, `timer` with `minutes` to limit it. The time lands in the log when the unit closes.");
 export type Clock = z.infer<typeof Clock>;
 
+/**
+ * Fields every scoring key shares, so a run always has something to beat next
+ * time whichever one a pack picks.
+ */
+const ScoreCommon = {
+  better: z
+    .enum(["higher", "lower"])
+    .optional()
+    .describe(
+      "Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower.",
+    ),
+  label: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "Name shown beside the score. Defaults to the counter's or resource's own label, \"Units closed\" in the pack's own word for a unit, or \"Time\".",
+    ),
+  tiebreak: z
+    .enum(["time", "units"])
+    .optional()
+    .describe(
+      "A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins).",
+    ),
+};
+
+/**
+ * How a run is scored, so a solo run has a number to beat next time.
+ *
+ * One of four keys, because a pack's own idea of doing well is always one of
+ * a small number of shapes: a tally it already declared, a track it already
+ * declared, how far the run got, or how fast. A mode's own `score` replaces
+ * the pack's outright, the way a mode's own `clock` does — never merged with
+ * it, so a variant that scores differently is never left un-declaring the
+ * pack's key first.
+ */
+export const Score = z
+  .union([
+    z
+      .object({ counter: Id.describe("The declared counter whose value is the score."), ...ScoreCommon })
+      .strict()
+      .describe("Score by a counter's value."),
+    z
+      .object({ resource: Id.describe("The declared resource whose value is the score."), ...ScoreCommon })
+      .strict()
+      .describe("Score by a resource's value."),
+    z
+      .object({ units: z.literal(true).describe("Marks this as scoring by how many units the run closed."), ...ScoreCommon })
+      .strict()
+      .describe("Score by how many units the run closed."),
+    z
+      .object({ time: z.literal(true).describe("Marks this as scoring by time taken."), ...ScoreCommon })
+      .strict()
+      .describe("Score by time taken: the unit clock where the pack runs one, wall time otherwise."),
+  ])
+  .describe(
+    "How to score a run. With neither a mode's own `score` nor the pack's, a run still scores by units closed, tiebreak time — what a race already ranks by, so nothing that plays today loses a number to beat tomorrow.",
+  );
+export type Score = z.infer<typeof Score>;
+
 /** Something a person needs before they can play: the game, a wheel, a kitchen. */
 export const Requirement = z
   .object({
@@ -553,6 +613,7 @@ export const Mode = z
         "Per-unit overrides, for modes with a fixed shape — 'unit three always suffers a consequence', and the like.",
       ),
     clock: Clock.optional().describe("This mode's clock on every unit, instead of the pack's `unit.clock`."),
+    score: Score.optional().describe("This mode's own score, instead of the pack's `score`."),
     moderated: z
       .object({
         contestants: z
@@ -1015,6 +1076,9 @@ export const Pack = z
       "How consequences pick an earlier subject. Omit for games where nothing reaches backwards.",
     ),
     journal: JournalDef.optional(),
+    score: Score.optional().describe(
+      "This run's score, so a solo run has a number to beat next time. A mode can set its own with `score`.",
+    ),
     endings: z.array(EndingDef).optional().describe("The ways a run can finish."),
     triggers: z
       .array(Trigger)

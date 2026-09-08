@@ -1,5 +1,5 @@
 import type { Action } from "./actions.ts";
-import type { Mode, Pack } from "./pack.ts";
+import type { Mode, Pack, Score } from "./pack.ts";
 import type { DiceExpr, NumericBound, Predicate, TargetRef, TriggerPoint } from "./primitives.ts";
 import type { Table, Trigger } from "./tables.ts";
 
@@ -298,6 +298,29 @@ export function modePlayers(mode: Mode): string {
   const p = mode.players;
   if (!p || (p.min <= 1 && p.max <= 1)) return "solo";
   return p.min === p.max ? `${p.min} players` : `${p.min}–${p.max} players`;
+}
+
+/**
+ * A score, said as a rulebook would: "Scored by Clean Blocks; higher is
+ * better, ties by time."
+ *
+ * Reads only the declaration, never a run — the same split as `modeLength`,
+ * which is why this lives here rather than beside `scoreOf` in the engine.
+ */
+export function scoreInWords(pack: Pack, score: Score): string {
+  const n = nouns(pack);
+  const better = score.better ?? ("time" in score ? "lower" : "higher");
+  const defaultName =
+    "counter" in score
+      ? label(pack, "counters", score.counter)
+      : "resource" in score
+        ? label(pack, "resources", score.resource)
+        : "units" in score
+          ? `${n.units} closed`
+          : "Time";
+  const name = score.label ?? defaultName;
+  const tie = score.tiebreak ? `, ties by ${score.tiebreak === "time" ? "time" : `${n.units} closed`}` : "";
+  return `Scored by ${name}; ${better} is better${tie}.`;
 }
 
 /* ---- what you need ------------------------------------------------------- */

@@ -2,6 +2,7 @@ import type { Pack } from "@runlog/rules-schema";
 import type { RunEvent } from "./events.ts";
 import { effectiveEvents } from "./log.ts";
 import { reduce } from "./reduce.ts";
+import { scoreOf, type RunScore } from "./score.ts";
 import type { RunState } from "./types.ts";
 
 /**
@@ -44,6 +45,8 @@ export interface RunArchive {
   startedAt: string;
   endedAt: string | null;
   exportedAt: string;
+  /** What the run scored, by whatever the pack (or its mode) said counts, as of `exportedAt`. */
+  score: RunScore;
   events: RunEvent[];
 }
 
@@ -77,6 +80,7 @@ export function exportRun(pack: Pack, events: RunEvent[], now = new Date().toISO
     startedAt: state.startedAt,
     endedAt: state.status === "ended" ? state.updatedAt : null,
     exportedAt: now,
+    score: scoreOf(pack, state, events, Date.parse(now)),
     events,
   };
 }

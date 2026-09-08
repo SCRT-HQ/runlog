@@ -446,6 +446,24 @@ clock still running, a second device sees the same time, and the finished
 time stays in the record. When a timer runs out the app sounds an alert;
 the player chooses the sound, or none, under Alerts.
 
+### Scoring a run
+
+Most solo games are really asking "can you beat what you did last time?",
+and that only works if the app agrees with you about what counts:
+
+```yaml
+score:
+  counter: cleanBlocks      # exactly one of: counter, resource, units, time
+  better: higher            # or lower; default higher, except time which defaults lower
+  label: Clean Blocks       # optional; defaults to the counter's or resource's label, "Units closed" (in the pack's unit words), or "Time"
+  tiebreak: time            # optional second key: time | units; the same "better" rule as the key (time lower, units higher)
+```
+
+A mode can set its own `score`, the same way it sets its own `clock` — in
+place of the pack's, not merged with it. A pack that says nothing here still
+scores: units closed, tiebreak time, which is what a race already ranks
+runs by, so a game gets a number to beat from the day it ships.
+
 ### What it needs in the world
 
 A pack can say what a person needs before they play — the game and a system

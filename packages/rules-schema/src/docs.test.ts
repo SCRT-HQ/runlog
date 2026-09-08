@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { actionInWords, diceNeeded, predicateInWords, triggerInWords } from "./describe.ts";
+import { actionInWords, diceNeeded, predicateInWords, scoreInWords, triggerInWords } from "./describe.ts";
 import { DOC_KINDS, generateDoc, generateDocs, toHtml, toMarkdown, type Block } from "./docs.ts";
 import { loadPackText } from "./load.ts";
 import type { Pack } from "./pack.ts";
@@ -131,5 +131,19 @@ describe("a pack in words", () => {
     expect(dice).toContain("d100");
     expect(dice).toContain("d10");
     expect(dice).toContain("d6");
+  });
+
+  it("says how a run is scored, defaulting the name, the direction and the tiebreak", () => {
+    expect(scoreInWords(pack, { counter: "calm", label: "Clean Blocks", tiebreak: "time" })).toBe(
+      "Scored by Clean Blocks; higher is better, ties by time.",
+    );
+    // No label: falls back to the counter's own.
+    expect(scoreInWords(pack, { counter: "calm" })).toBe("Scored by Calm streak; higher is better.");
+    // A resource can flip which way wins.
+    expect(scoreInWords(pack, { resource: "glaze", better: "lower" })).toBe("Scored by Glaze; lower is better.");
+    // Units falls back to "<the pack's plural> closed".
+    expect(scoreInWords(pack, { units: true })).toBe(`Scored by ${pack.vocabulary.unit.many} closed; higher is better.`);
+    // Time defaults to lower being better, unlike everything else.
+    expect(scoreInWords(pack, { time: true })).toBe("Scored by Time; lower is better.");
   });
 });

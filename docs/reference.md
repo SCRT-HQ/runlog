@@ -41,6 +41,7 @@ A complete, self-contained description of a dice-driven creative-practice game. 
 | `moves` | map of `object` | — | Optional moves the player may choose to make, keyed by id. Everything the player initiates rather than has done to them lives here. |
 | `targeting` | `object` | — | How consequences pick an earlier subject. Omit for games where nothing reaches backwards. |
 | `journal` | `object` | — | Free-text notes attached to units. Essential for journaling games, and useful anywhere, since a log of rolls alone does not tell you what you actually made. |
+| `score` | `object` | — | This run's score, so a solo run has a number to beat next time. A mode can set its own with `score`. |
 | `endings` | `object`[] | — | The ways a run can finish. |
 | `triggers` | `object`[] | — | Global triggers not owned by any table entry, e.g. something that fires every unit. |
 | `modes` | map of `object` | yes | Ways to play, keyed by id. At least one is required. |
@@ -647,6 +648,50 @@ Free-text notes attached to units. Essential for journaling games, and useful an
 | `prompt` | `string` | — | The question shown above the note field. |
 | `required` | `boolean` | — | Require a note before a unit can be closed. Default: `false`. |
 
+## `pack.score (0)`
+
+Score by a counter's value.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `counter` | `string` | yes | The declared counter whose value is the score. |
+| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+
+## `pack.score (1)`
+
+Score by a resource's value.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `resource` | `string` | yes | The declared resource whose value is the score. |
+| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+
+## `pack.score (2)`
+
+Score by how many units the run closed.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `units` | `boolean` | yes | Marks this as scoring by how many units the run closed. |
+| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+
+## `pack.score (3)`
+
+Score by time taken: the unit clock where the pack runs one, wall time otherwise.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `time` | `boolean` | yes | Marks this as scoring by time taken. |
+| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+
 ## `pack.endings[]`
 
 One way a run can finish.
@@ -683,6 +728,7 @@ A set of deltas over the base ruleset. Keeping modes as deltas rather than separ
 | `players` | `object` | — | Multi-player configuration. Omit for solo play. |
 | `perUnit` | `object`[] | — | Per-unit overrides, for modes with a fixed shape — 'unit three always suffers a consequence', and the like. |
 | `clock` | `object` | — | This mode's clock on every unit, instead of the pack's `unit.clock`. |
+| `score` | `object` | — | This mode's own score, instead of the pack's `score`. |
 | `moderated` | `object` | — | Moderated play: one person runs the game on the device, a roster of named contestants races every drawn result, and the moderator awards points. Results with `points` are the challenges; everything else lands on everyone. |
 | `notes` | `string`[] | — | Reminders shown to the player in this mode. |
 
@@ -749,6 +795,50 @@ This mode's clock on every unit, instead of the pack's `unit.clock`.
 | `minutes` | `number` | — | How long a timer runs. Required for a timer; ignored by a stopwatch. |
 | `label` | `string` | — | What the clock is called on screen. Defaults to the unit's name and number. |
 | `auto` | `boolean` | — | Start it when the unit is entered and stop it when the unit closes. Off, the player starts it by hand; it still stops with the unit. Default: `true`. |
+
+## `pack.modes.*.score (0)`
+
+Score by a counter's value.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `counter` | `string` | yes | The declared counter whose value is the score. |
+| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+
+## `pack.modes.*.score (1)`
+
+Score by a resource's value.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `resource` | `string` | yes | The declared resource whose value is the score. |
+| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+
+## `pack.modes.*.score (2)`
+
+Score by how many units the run closed.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `units` | `boolean` | yes | Marks this as scoring by how many units the run closed. |
+| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+
+## `pack.modes.*.score (3)`
+
+Score by time taken: the unit clock where the pack runs one, wall time otherwise.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `time` | `boolean` | yes | Marks this as scoring by time taken. |
+| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
 
 ## `pack.modes.*.moderated`
 

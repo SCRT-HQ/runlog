@@ -15,5 +15,6 @@ export * from "./global-triggers.ts";
 export * from "./roles.ts";
 export * from "./moderated.ts";
 export * from "./clock.ts";
+export * from "./score.ts";
 export * from "./export.ts";
 export * from "./environment.ts";
