@@ -271,7 +271,11 @@ export function RunView({
   if (!run.started || !run.state) {
     return (
       <>
-        {bench && <BenchBar pack={pack} bench={bench} />}
+        {bench && (
+          <div className="main benchOnly">
+            <BenchBar pack={pack} bench={bench} />
+          </div>
+        )}
         <Setup
           pack={pack}
           onStart={run.startRun}
