@@ -48,6 +48,7 @@ export function LibraryView({
   onOpen,
   onContinue,
   onStartAnother,
+  onTest,
   onForgetRun,
   onForgetPack,
   onFile,
@@ -62,6 +63,8 @@ export function LibraryView({
   onOpen: (pack: LibraryPack) => void;
   onContinue: (pack: LibraryPack, run: StoredRun) => void;
   onStartAnother: (pack: LibraryPack) => void;
+  /** Play it without keeping anything: to see how it goes, or to test it. */
+  onTest?: (pack: LibraryPack) => void;
   onForgetRun: (run: StoredRun) => void;
   onForgetPack: (record: StoredPack) => void;
   onFile: (file: File | undefined) => void;
@@ -186,6 +189,11 @@ export function LibraryView({
                 <button className="ghost tiny" onClick={() => onStartAnother(p)}>
                   {mine.length > 0 ? `Start another ${v.run.one.toLowerCase()}` : `Start ${an(v.run.one.toLowerCase())}`}
                 </button>
+                {onTest && (
+                  <button className="ghost tiny" onClick={() => onTest(p)} title={`Play ${p.title} in ${an(v.run.one.toLowerCase())} that is not saved`}>
+                    Test
+                  </button>
+                )}
                 {record && (
                   <button className="ghost tiny danger" title={`Forget ${p.title} and its ${v.run.many.toLowerCase()}`} onClick={() => onForgetPack(record)}>
                     Forget pack

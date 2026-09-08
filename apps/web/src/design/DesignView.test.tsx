@@ -129,3 +129,52 @@ describe("which pack the Designer opens on", () => {
     expect(labels[4]).toBe("Copy a link");
   });
 });
+
+/**
+ * Trying a draft: a valid one can be played from the Designer without being
+ * saved anywhere, and one with errors cannot be played at all. The button
+ * is the caller's to offer, since it is the app that holds the bench.
+ */
+describe("trying a draft from the Designer", () => {
+  let root: Root;
+  let container: HTMLDivElement;
+
+  beforeEach(() => {
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    vi.mocked(saveDraft).mockResolvedValue(undefined);
+    vi.mocked(loadDraft).mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+    vi.mocked(loadDraft).mockReset();
+    vi.mocked(saveDraft).mockReset();
+  });
+
+  const buttonLabeled = (text: string) =>
+    Array.from(container.querySelectorAll("button")).find((b) => b.textContent === text);
+
+  it("hands the parsed pack over when Try it is pressed", async () => {
+    const tried: string[] = [];
+    await act(async () => {
+      root.render(<DesignView onTest={(pack) => tried.push(pack.title)} />);
+    });
+    const button = buttonLabeled("Try it");
+    expect(button).toBeDefined();
+    expect(button!.disabled).toBe(false);
+    await act(async () => {
+      button!.click();
+    });
+    expect(tried).toEqual([blankPack().title]);
+  });
+
+  it("offers nothing to try when the app has no bench", async () => {
+    await act(async () => {
+      root.render(<DesignView />);
+    });
+    expect(buttonLabeled("Try it")).toBeUndefined();
+  });
+});
