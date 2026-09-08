@@ -152,9 +152,17 @@ export interface Person {
   lastPlayedAt: string;
 }
 
-/** How a person is shown to others: the name they chose, else the one WorkOS holds, else nothing. */
+/**
+ * How a person is shown to others: the name they chose, else their first
+ * name as WorkOS holds it, else nothing. Never the full name: a table and
+ * a live page are seen by strangers, and the app's own badge shows the
+ * first name where no handle is set, so the two agree.
+ */
 export function shownName(profile: Pick<Profile, "name" | "handle">): string | undefined {
-  return profile.handle?.trim() || profile.name?.trim() || undefined;
+  const handle = profile.handle?.trim();
+  if (handle) return handle;
+  const first = profile.name?.trim().split(/\s+/)[0];
+  return first || undefined;
 }
 
 /** A reaction from a watcher: one of a few emoji, a name if they gave one, and when. */
@@ -287,6 +295,8 @@ export interface Store {
   unclaim(sub: string, fingerprint: string): Promise<boolean>;
   /** Read the profile, creating it on first sight; `lastSeenAt` is stamped either way. */
   touchProfile(sub: string, at: string, snapshot?: { name?: string; handle?: string; email?: string; termsVersion?: string }): Promise<Profile>;
+  /** Read a profile without touching it: somebody else's, for the name they are shown as. */
+  getProfile(sub: string): Promise<Profile | null>;
   /** The features Stripe says this person has; none until billing exists. */
   entitlements(sub: string): Promise<string[]>;
   /** Everything under the person: rows and objects. Returns how many rows went. */
@@ -378,6 +388,11 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
   }
 
   const store: Store & { getSessionRows(id: string): Promise<{ meta: SessionMeta; members: SessionMember[] } | null>; touchPointers(id: string, author: string, at: string, seq: number): Promise<void> } = {
+    async getProfile(sub) {
+      const row = await get(sub, "PROFILE");
+      return row ? (strip(row) as unknown as Profile) : null;
+    },
+
     async touchProfile(sub, at, snapshot = {}) {
       const existing = await get(sub, "PROFILE");
       const row: Row = {
