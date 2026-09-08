@@ -1,8 +1,10 @@
 import { useState } from "react";
 import type { Pack } from "@runlog/rules-schema";
 import type { ResolvedOutcome } from "@runlog/engine";
+import { parseDice } from "@runlog/rules-schema";
 import { Die } from "../dice/Die.tsx";
 import type { RolledDie } from "../rolling.ts";
+import { lineFor, tableLines } from "./tableLook.ts";
 
 /**
  * What the dice did, held on screen until the player has read it.
@@ -30,8 +32,32 @@ export interface RollReceipt {
   machineRolled: boolean;
   /** How the dice flew, for anyone watching to see the same throw. */
   seed?: number;
+  /**
+   * The table the roll was for, when it was a table's own roll. A step
+   * that rolls several times resolves them together at its end, so the
+   * early throws have no outcome yet; the table says where each lands.
+   */
+  table?: string | null;
   /** Everything the answer resolved, in order. */
   outcomes: ResolvedOutcome[];
+}
+
+/** Where a throw lands on its table, read from the table itself, before the step has resolved it. */
+function landing(pack: Pack, receipt: RollReceipt): { table: string; title: string; text?: string } | null {
+  if (!receipt.table || receipt.total === null) return null;
+  const table = pack.tables[receipt.table];
+  if (!table) return null;
+  let dice: { min: number; max: number } | null = null;
+  try {
+    dice = receipt.notation ? parseDice(receipt.notation) : null;
+  } catch {
+    dice = null;
+  }
+  const lines = tableLines(table, dice);
+  const id = lineFor(lines, table, receipt.total);
+  const entry = id ? table.entries.find((e) => e.id === id) : undefined;
+  if (!entry) return null;
+  return { table: table.title, title: entry.title ?? entry.text, ...(entry.title && entry.text ? { text: entry.text } : {}) };
 }
 
 export function Receipt({
@@ -90,7 +116,20 @@ export function Receipt({
             )}
 
             {receipt.outcomes.length === 0
-              ? hasThrow && <p className="muted">Nothing on the table for that. It is recorded.</p>
+              ? hasThrow &&
+                (() => {
+                  const lands = landing(pack, receipt);
+                  return lands ? (
+                    <div className="result provisional">
+                      <span className="band">{lands.table}</span>
+                      <p className="text">{lands.title}</p>
+                      {lands.text && <p className="muted">{lands.text}</p>}
+                      {!settled && <p className="muted small">Where it lands. The step settles what stays once every roll is in.</p>}
+                    </div>
+                  ) : (
+                    <p className="muted">Nothing on the table for that. It is recorded.</p>
+                  );
+                })()
               : receipt.outcomes.map((o, i) => {
                   const table = pack.tables[o.table];
                   const entry = table?.entries.find((e) => e.id === o.entryId);

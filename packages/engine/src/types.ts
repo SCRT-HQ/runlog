@@ -18,6 +18,12 @@ export interface Subject {
   unit: number;
   /** What the player declared it to be, once they have. */
   type: string | null;
+  /**
+   * What the player calls it, if they gave it a name. Without one it is
+   * known by its noun and number ("Track 3"), which never changes: the
+   * number is the id, so naming Track 1 does not make the next one Track 1.
+   */
+  name: string | null;
   /** Ids of states currently attached. */
   states: string[];
   /** True once its unit has been closed. */

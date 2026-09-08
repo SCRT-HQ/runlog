@@ -38,6 +38,7 @@ function stateWith(count: number, o: Options = {}): RunState {
       id,
       unit: id,
       type: `Subject ${id}`,
+      name: null,
       states: o.untargetable?.includes(id) ? ["sealed"] : [],
       finalized: !o.unfinalized?.includes(id),
       removed: o.removed?.includes(id) ?? false,

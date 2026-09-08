@@ -150,7 +150,9 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
               {s.subjects.map((sub) => (
                 <div key={sub.id} className={`row spread${moved.struck.has(sub.id) ? " struck" : ""}`}>
                   <span>
-                    <span className="idx">#{sub.id}</span> {sub.type ?? "undeclared"}
+                    <span className="idx">#{sub.id}</span> {sub.name ?? `${s.words.unit} ${sub.id}`}
+                    {sub.type && sub.type !== sub.name && <span className="muted"> · {sub.type}</span>}
+                    {!sub.type && <span className="muted"> · undeclared</span>}
                     {sub.states.map((st) => (
                       <span key={st} className={`chip state${moved.states.has(`${sub.id}:${st}`) ? " fresh" : ""}`}>
                         {st}

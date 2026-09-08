@@ -7,7 +7,7 @@ import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
 import { clockOfUnit, compareScores, formatClock, formatScore, liveClocks, nextUnit, scoreOf } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
-import { describeSkip, describeSkipReason, phaseSkipped, subjectLabel, type RunEvent, type RunState } from "@runlog/engine";
+import { describeSkip, describeSkipReason, phaseSkipped, subjectLabel, subjectName, type RunEvent, type RunState } from "@runlog/engine";
 import { useRun, type ActiveStep } from "./useRun.ts";
 import type { RunStore } from "./store.ts";
 import type { StoredRun } from "../storage/db.ts";
@@ -213,6 +213,7 @@ export function RunView({
         total: throwing?.total ?? null,
         label: throwing?.label ?? (restored ? "So far this step" : null),
         notation: throwing?.notation ?? null,
+        table: throwing?.table ?? null,
         machineRolled: throwing?.machineRolled ?? !restored,
         ...(throwing?.seed !== undefined ? { seed: throwing.seed } : {}),
         outcomes: fresh,
@@ -251,6 +252,7 @@ export function RunView({
           total: value,
           label: request.label ?? null,
           notation: request.dice,
+          table: pack.tables[request.purpose] ? request.purpose : null,
           machineRolled: machineRolled === true,
           ...(seed !== undefined ? { seed } : {}),
         };
@@ -1560,7 +1562,7 @@ function Board({
     const subject = state.subjects.find((s) => s.id === editing.id);
     // An empty box or an unchanged name is not a rename; treat both as backing
     // out, so nothing lands in the log that a reader would have to explain.
-    if (name && name !== subject?.type) onRename(editing.id, name);
+    if (name && subject && name !== subjectName(pack, subject)) onRename(editing.id, name);
     stopEditing();
   };
 
@@ -1594,17 +1596,19 @@ function Board({
                   }
                 }}
               />
-            ) : s.type && !s.removed ? (
+            ) : !s.removed ? (
               <button
                 className="renameTrigger"
                 title="Click to rename"
-                onClick={() => setEditing({ id: s.id, draft: s.type ?? "" })}
+                onClick={() => setEditing({ id: s.id, draft: s.name ?? "" })}
               >
-                {s.type}
+                {subjectName(pack, s)}
               </button>
             ) : (
-              <strong>{s.type ?? "undeclared"}</strong>
+              <strong>{subjectName(pack, s)}</strong>
             )}
+            {/* The declared type beside the name, unless the name already says it. */}
+            {s.type && s.type !== s.name ? <span className="muted subjectType"> · {s.type}</span> : !s.type && <span className="muted subjectType"> · undeclared</span>}
             {/*
               What the player wrote when this subject's unit closed. The
               journal is kept by unit and a subject is made in one, so the

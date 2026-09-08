@@ -18,8 +18,8 @@ const setback = kiln.tables["setback"]!;
 const state = {
   unit: 2,
   subjects: [
-    { id: 1, unit: 1, type: "a vase", states: [], finalized: true, removed: false, createdAt: "" },
-    { id: 2, unit: 2, type: "a plate", states: [], finalized: false, removed: false, createdAt: "" },
+    { id: 1, unit: 1, type: "a vase", name: null, states: [], finalized: true, removed: false, createdAt: "" },
+    { id: 2, unit: 2, type: "a plate", name: null, states: [], finalized: false, removed: false, createdAt: "" },
   ],
   outcomes: [
     { unit: 1, table: "constraint", entryId: constraint.entries[0]!.id, targetSubject: null, at: "" },

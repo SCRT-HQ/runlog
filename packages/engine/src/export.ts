@@ -1,5 +1,6 @@
 import type { Pack } from "@runlog/rules-schema";
 import type { RunEvent } from "./events.ts";
+import { subjectName, subjectTitle } from "./eligibility.ts";
 import { effectiveEvents } from "./log.ts";
 import { reduce } from "./reduce.ts";
 import { scoreOf, type RunScore } from "./score.ts";
@@ -150,8 +151,7 @@ function stateLabel(pack: Pack, id: string): string {
  */
 function ref(pack: Pack, state: RunState, id: number): string {
   const subject = state.subjects.find((s) => s.id === id);
-  const base = `${pack.vocabulary.subject.one} ${id}`;
-  return subject?.type ? `${base} (${subject.type})` : base;
+  return subject ? subjectTitle(pack, subject) : `${pack.vocabulary.subject.one} ${id}`;
 }
 
 /**
@@ -236,9 +236,12 @@ export function renderLog(
 
   const heading = (n: number) => {
     const subject = state.subjects.findLast((s) => s.unit === n);
-    const named = subject?.type ? ` — ${subject.type}` : "";
+    // What was made: its name, else what it was declared to be. The
+    // noun-and-number default would only repeat the heading.
+    const named = subject?.name ?? subject?.type;
+    const label = named ? ` — ${named}` : "";
     gap();
-    out.push(`## ${v.unit.one} ${n}${named}`);
+    out.push(`## ${v.unit.one} ${n}${label}`);
     out.push("");
   };
 
@@ -351,7 +354,7 @@ export function renderLog(
     for (const s of surviving) {
       const states = s.states.map((id) => stateLabel(pack, id)).join(", ");
       out.push(
-        `- ${pack.vocabulary.subject.one} ${s.id}: ${s.type ?? "undeclared"}${states ? ` — ${states}` : ""}`,
+        `- ${subjectName(pack, s)}: ${s.type ?? "undeclared"}${states ? ` — ${states}` : ""}`,
       );
     }
   }
