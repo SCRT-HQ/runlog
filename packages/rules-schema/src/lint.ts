@@ -2,6 +2,7 @@ import { tryParseDice } from "./dice.ts";
 import type { Action } from "./actions.ts";
 import type { Pack, Score } from "./pack.ts";
 import type { Predicate } from "./primitives.ts";
+import type { Trigger } from "./tables.ts";
 
 /**
  * Semantic validation, run after the Zod schema has confirmed the shape.
@@ -110,6 +111,25 @@ function collectActionSites(pack: Pack): Array<{ path: string; actions: Action[]
   pack.triggers?.forEach((t, ti) => sites.push({ path: `triggers[${ti}]`, actions: t.do }));
 
   return sites;
+}
+
+/**
+ * Every `Trigger` in the pack: entries, cards, and the pack itself. A
+ * counter's own `triggers` are a different shape entirely -- fired by a
+ * threshold rather than a lifecycle point -- so they carry no `on` and never
+ * hook `onTimerExpired`.
+ */
+function collectTriggers(pack: Pack): Trigger[] {
+  const triggers: Trigger[] = [];
+  for (const table of Object.values(pack.tables)) {
+    for (const entry of table.entries) triggers.push(...(entry.triggers ?? []));
+  }
+  for (const deck of Object.values(pack.decks ?? {})) {
+    if (deck.kind !== "cards") continue;
+    for (const card of deck.cards) triggers.push(...(card.triggers ?? []));
+  }
+  triggers.push(...(pack.triggers ?? []));
+  return triggers;
 }
 
 export function lintPack(pack: Pack): Diagnostic[] {
@@ -639,7 +659,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
   // so only the points the run itself passes through can reach it. Anything
   // else is silently dead — the end-of-run roll that never happens is exactly
   // the bug a linter should catch before a player notices it missing.
-  const globalPoints = new Set(["onEnterUnit", "onRunEnd"]);
+  const globalPoints = new Set(["onEnterUnit", "onRunEnd", "onTimerExpired"]);
   pack.triggers?.forEach((t, i) => {
     if (!globalPoints.has(t.on)) {
       d.push(
@@ -683,6 +703,40 @@ export function lintPack(pack: Pack): Diagnostic[] {
         ),
       );
     }
+  }
+
+  // ── Clock rules: does the pack read a timer running out or how long a
+  // clock has run? Both are meaningless without a clock actually running,
+  // but that is what `timers` already guards -- this capability is about the
+  // extra vocabulary, not the clock itself.
+  const allTriggers = collectTriggers(pack);
+  const usesTimerExpired = allTriggers.some((t) => t.on === "onTimerExpired");
+  let usesClockPredicate = false;
+  const seeForClockPredicate = (p: Predicate) => {
+    if ("clockRan" in p || "clockRanOver" in p) usesClockPredicate = true;
+  };
+  for (const t of allTriggers) walkPredicates(t.when, seeForClockPredicate);
+  for (const table of Object.values(pack.tables)) {
+    for (const entry of table.entries) walkPredicates(entry.requires, seeForClockPredicate);
+  }
+  for (const deck of Object.values(pack.decks ?? {})) {
+    if (deck.kind !== "cards") continue;
+    for (const card of deck.cards) walkPredicates(card.requires, seeForClockPredicate);
+  }
+  for (const move of Object.values(pack.moves ?? {})) {
+    walkPredicates(move.available, seeForClockPredicate);
+  }
+  for (const phase of pack.phases) {
+    walkPredicates(phase.skipWhen, seeForClockPredicate);
+    for (const step of phase.steps) {
+      if ("skipWhen" in step) walkPredicates(step.skipWhen, seeForClockPredicate);
+    }
+  }
+  for (const ending of pack.endings ?? []) walkPredicates(ending.requires, seeForClockPredicate);
+  for (const site of collectActionSites(pack)) {
+    walkActions(site.actions, (a) => {
+      if (a.do === "when") walkPredicates(a.all, seeForClockPredicate);
+    });
   }
 
   // ── Capabilities: claimed vs. used ──────────────────────────────────────
@@ -748,6 +802,11 @@ export function lintPack(pack: Pack): Diagnostic[] {
       t.entries.some((e) => e.triggers?.some((tr) => tr.on !== "immediately")),
     ) || (pack.triggers?.length ?? 0) > 0,
     "uses deferred triggers",
+  );
+  requireCap(
+    "clockRules",
+    usesTimerExpired || usesClockPredicate,
+    "reacts to a timer running out or reads how long a clock has run",
   );
 
   // ── Play fixtures ────────────────────────────────────────────────────────

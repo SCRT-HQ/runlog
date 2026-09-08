@@ -321,6 +321,59 @@ describe("lintPack", () => {
       };
       expect(codesOf(p)).not.toContain("capability/undeclared");
     });
+
+    /** Whether any `capability/undeclared` diagnostic names clockRules specifically. */
+    const clockRulesWarning = (diags: ReturnType<typeof lintPack>) =>
+      diags.find((d) => d.code === "capability/undeclared" && d.message.includes("clockRules"));
+
+    it("warns when a global trigger reacts to a timer running out without declaring clockRules", () => {
+      const p = basePack();
+      p.capabilities = ["deferredTriggers"];
+      (p as any).triggers = [{ on: "onTimerExpired", do: [{ do: "note", text: "Ring it." }] }];
+      expect(clockRulesWarning(lintPack(Pack.parse(p)))).toBeDefined();
+    });
+
+    it("warns when a predicate reads how long a clock has run without declaring clockRules", () => {
+      const p = basePack();
+      (p as any).moves = {
+        ring: {
+          label: "Ring",
+          available: [{ clockRan: "unit", is: { gte: 1 } }],
+          do: [{ do: "note", text: "Ring it." }],
+        },
+      };
+      expect(clockRulesWarning(lintPack(Pack.parse(p)))).toBeDefined();
+    });
+
+    it("warns when clockRanOver is buried inside a nested predicate", () => {
+      // allOf/anyOf/not wrap the predicates that actually reference a clock,
+      // so the walk that finds them has to recurse, not just look one level in.
+      const p = basePack();
+      (p as any).moves = {
+        ring: {
+          label: "Ring",
+          available: [{ allOf: [{ not: { clockRanOver: "unit", is: { gte: 2 } } }] }],
+          do: [{ do: "note", text: "Ring it." }],
+        },
+      };
+      expect(clockRulesWarning(lintPack(Pack.parse(p)))).toBeDefined();
+    });
+
+    it("stays quiet about clockRules once it is declared", () => {
+      const p = basePack();
+      p.capabilities = ["deferredTriggers", "clockRules"];
+      (p as any).triggers = [{ on: "onTimerExpired", do: [{ do: "note", text: "Ring it." }] }];
+      expect(clockRulesWarning(lintPack(Pack.parse(p)))).toBeUndefined();
+    });
+
+    it("does not ask for clockRules from an ordinary clock, only from the extra vocabulary", () => {
+      // Running a clock at all is `timers`; onTimerExpired and clockRan/clockRanOver
+      // are the separate, additive capability this feature introduces.
+      const p = basePack();
+      p.capabilities = ["timers"];
+      (p as any).unit = { clock: { kind: "timer", minutes: 5 } };
+      expect(clockRulesWarning(lintPack(Pack.parse(p)))).toBeUndefined();
+    });
   });
 });
 

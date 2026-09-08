@@ -894,6 +894,12 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
       p.steps.every((s, i) => s.kind !== "manual" || state.stepsDone.includes(`${p.id}#${i}`)),
     );
     if (manualDone) reached.push("afterWork");
+    // A clock that already expired this unit makes an onTimerExpired
+    // obligation due immediately, even one queued afterward -- the bell
+    // already rang.
+    if (state.clocks.some((c) => c.unit === state.unit && c.status === "done" && c.expired)) {
+      reached.push("onTimerExpired");
+    }
     return reached.flatMap((point) => dueObligations(state, point));
   }, [state, activePhases]);
 
