@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
-import { activePhases, nextStep, stepCompletionEvents } from "./flow.ts";
+import { activePhases, constrainedByOf, constraintsFor, nextStep, stepCompletionEvents } from "./flow.ts";
 import type { RunEvent } from "./events.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -124,6 +124,58 @@ describe("moving through a unit", () => {
     const events = stepCompletionEvents(phase, 0, state, NOW);
     // `close` has a single step, so finishing it closes the phase too.
     expect(events.map((e) => e.t)).toEqual(["StepCompleted", "PhaseCompleted"]);
+  });
+});
+
+/**
+ * `RunView` and the live snapshot both need to know what a step must
+ * honor — a rule drawn earlier in the unit, shown on the step so the
+ * player is not asked to remember it. One function, so the run screen
+ * and a watcher's page cannot drift on what "the game has already had
+ * its say" means.
+ */
+describe("what a step must honor", () => {
+  it("names the table only a declareSubject or manual step is constrained by", () => {
+    const declareStep = kiln.phases.find((p) => p.id === "declare")!.steps[0]!;
+    expect(constrainedByOf(declareStep)).toBe("form");
+    const rollStep = kiln.phases.find((p) => p.id === "check")!.steps[0]!;
+    expect(constrainedByOf(rollStep)).toBeUndefined();
+  });
+
+  it("lists every result on that table drawn this unit, in order, in the pack's own words", () => {
+    // The demo pack's own manual step ("Throw it.") only *shows* the
+    // Constraint table from its checklist; it does not declare
+    // `constrainedBy` there. A small pack fragment stands in for a pack
+    // that does, rather than editing the shipped one.
+    const pack: Pack = {
+      ...kiln,
+      phases: [
+        { id: "work", label: "Throw the Piece", steps: [{ kind: "manual", label: "Throw it.", constrainedBy: "constraint" }] },
+      ],
+    };
+    const state = reduce(pack, [...start, ev("UnitEntered")]);
+    const withOutcomes = {
+      ...state,
+      outcomes: [
+        { unit: state.unit, table: "constraint", entryId: "con-thin", targetSubject: null, at: NOW },
+        { unit: state.unit, table: "constraint", entryId: "con-timed", targetSubject: null, at: NOW },
+        // A different unit's roll on the same table must not show.
+        { unit: state.unit + 1, table: "constraint", entryId: "con-none", targetSubject: null, at: NOW },
+      ],
+    };
+    const step = nextStep(pack, withOutcomes as typeof state)!;
+    const tableId = constrainedByOf(step.step);
+    expect(tableId).toBe("constraint");
+    expect(constraintsFor(pack, withOutcomes as typeof state, tableId)).toEqual([
+      kiln.tables.constraint!.entries.find((e) => e.id === "con-thin")!.text,
+      kiln.tables.constraint!.entries.find((e) => e.id === "con-timed")!.text,
+    ]);
+  });
+
+  it("is empty off a step with no constrainedBy table, and off no step at all", () => {
+    const state = reduce(kiln, [...start, ev("UnitEntered")]);
+    expect(constraintsFor(kiln, state, constrainedByOf(nextStep(kiln, state)!.step))).toEqual([]);
+    expect(constraintsFor(kiln, state, undefined)).toEqual([]);
   });
 });
 

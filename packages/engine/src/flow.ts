@@ -72,6 +72,26 @@ export function nextStep(pack: Pack, state: RunState | null): ActiveStep | null 
   return null;
 }
 
+/** The table a step names as constraining it, when its kind carries one. */
+export function constrainedByOf(step: Step): string | undefined {
+  return step.kind === "declareSubject" || step.kind === "manual" ? step.constrainedBy : undefined;
+}
+
+/**
+ * What a table has said this unit, for a step that must honor it: every
+ * result on that table since the unit began, in order, so a unit that
+ * rolled twice (an extra roll owed) shows both.
+ */
+export function constraintsFor(pack: Pack, state: RunState, tableId?: string): string[] {
+  if (!tableId) return [];
+  const table = pack.tables[tableId];
+  return state.outcomes
+    .filter((o) => o.unit === state.unit && o.table === tableId)
+    .map((o) => table?.entries.find((e) => e.id === o.entryId))
+    .map((entry) => entry?.title ?? entry?.text ?? null)
+    .filter((line): line is string => line !== null);
+}
+
 /**
  * The events that close the current unit from wherever the flow is: every
  * remaining step and phase recorded as done, then the unit finalized.
