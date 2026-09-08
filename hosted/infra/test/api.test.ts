@@ -122,11 +122,11 @@ describe("the API", () => {
   });
 
   it("defines the secrets it will need, and lets only the handler read them", () => {
-    template.resourceCountIs("AWS::SecretsManager::Secret", 4);
+    template.resourceCountIs("AWS::SecretsManager::Secret", 5);
     // Bare, without an account to report to: New Relic's wrapper is absent,
     // but Lambda Insights' layer is there regardless — it needs no account.
     template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike({ Handler: "index.handler" }));
-    for (const name of ["stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret", "workos/api-key"]) {
+    for (const name of ["stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret", "workos/api-key", "discord/bot-token"]) {
       template.hasResourceProperties("AWS::SecretsManager::Secret", { Name: `runlog/${name}` });
     }
     template.hasResourceProperties("AWS::Lambda::Function", {
@@ -135,9 +135,21 @@ describe("the API", () => {
           STRIPE_SECRET_KEY_SECRET: "runlog/stripe/secret-key",
           STRIPE_WEBHOOK_SECRET_SECRET: "runlog/stripe/webhook-secret",
           WORKOS_API_KEY_SECRET: "runlog/workos/api-key",
+          DISCORD_BOT_TOKEN_SECRET: "runlog/discord/bot-token",
         }),
       },
     });
+  });
+
+  it("names the Discord application to the handler only where the stage has one; the key is public, the token is not", () => {
+    const bare = JSON.stringify(Object.values(template.findResources("AWS::Lambda::Function")).map((f) => f.Properties.Environment));
+    expect(bare).not.toContain("DISCORD_APPLICATION_ID");
+    const withBot = templateFor({ discord: { applicationId: "123456789012345678", publicKey: "ab".repeat(32) } });
+    withBot.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: { Variables: Match.objectLike({ DISCORD_APPLICATION_ID: "123456789012345678", DISCORD_PUBLIC_KEY: "ab".repeat(32), DISCORD_BOT_TOKEN_SECRET: "runlog/discord/bot-token" }) },
+    });
+    // The same five secrets either way: the token's secret exists before anyone has a bot to fill it with.
+    withBot.resourceCountIs("AWS::SecretsManager::Secret", 5);
     template.hasResourceProperties("AWS::IAM::Policy", {
       PolicyDocument: {
         Statement: Match.arrayWith([
@@ -147,9 +159,9 @@ describe("the API", () => {
     });
   });
 
-  it("wraps both functions in New Relic's layer where the stage names an account, and reads the key from a fifth secret", () => {
+  it("wraps both functions in New Relic's layer where the stage names an account, and reads the key from a sixth secret", () => {
     const monitored = templateFor({ apm: { newRelic: { accountId: "1234567", layerVersion: 52 } } });
-    monitored.resourceCountIs("AWS::SecretsManager::Secret", 5);
+    monitored.resourceCountIs("AWS::SecretsManager::Secret", 6);
     monitored.hasResourceProperties("AWS::SecretsManager::Secret", { Name: "runlog/newrelic/license-key" });
     const wrapped = Object.values(monitored.findResources("AWS::Lambda::Function", { Properties: { Handler: "newrelic-lambda-wrapper.handler" } }));
     expect(wrapped).toHaveLength(2);

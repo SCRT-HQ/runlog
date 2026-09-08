@@ -94,6 +94,15 @@ export interface EnvConfig {
    * addresses kept out. Absent, the functions run bare, which is what a
    * copy without an account there wants.
    */
+  /**
+   * The Discord application the bot is, when the operator has made one.
+   * Both values are public: the id is in every install link, and the key
+   * is what Discord signs interactions with, shown on the application's
+   * page for anyone to check against. The bot's token is a secret and
+   * lives in Secrets Manager. Absent, the interactions endpoint answers
+   * that it is not configured and nothing about Discord is offered.
+   */
+  discord?: { applicationId: string; publicKey: string };
   apm?: {
     newRelic: {
       /** The New Relic account the telemetry goes to; its parent's, as the trusted key, where there is one. */
@@ -243,6 +252,9 @@ export function envConfig(name: EnvName): EnvConfig {
       features: { plus: str(features["plus"], "stripe.features.plus"), hostedLicensing: str(features["hostedLicensing"], "stripe.features.hostedLicensing") },
       applicationFeeBps: { subscribed: num(fee["subscribed"], "stripe.applicationFeeBps.subscribed"), unsubscribed: num(fee["unsubscribed"], "stripe.applicationFeeBps.unsubscribed") },
     },
+    ...(isRecord(c["discord"])
+      ? { discord: { applicationId: str(c["discord"]["applicationId"], "discord.applicationId"), publicKey: str(c["discord"]["publicKey"], "discord.publicKey") } }
+      : {}),
     ...(isRecord(c["apm"]) && isRecord(c["apm"]["newRelic"])
       ? {
           apm: {

@@ -147,7 +147,7 @@ export class ApiStack extends Stack {
         {
           id: "AwsSolutions-SMG4",
           reason:
-            "These are another service's API keys and webhook signing secrets (Stripe, WorkOS). Neither vendor offers a rotation API a Lambda could drive; a key is rotated in the vendor's dashboard and put here by hand with hosted/scripts/Set-RunlogSecret.ps1, and the handler picks the new value up on its next cold start.",
+            "These are another service's API keys and webhook signing secrets (Stripe, WorkOS, Discord). None of the vendors offers a rotation API a Lambda could drive; a key is rotated in the vendor's dashboard and put here by hand with hosted/scripts/Set-RunlogSecret.ps1, and the handler picks the new value up on its next cold start.",
         },
       ]);
       return made;
@@ -156,6 +156,7 @@ export class ApiStack extends Stack {
     const stripeWebhookSecret = secret("StripeWebhookSecret", "stripe/webhook-secret", "Signing secret of the Stripe webhook endpoint that points at /api/stripe/webhook");
     const stripeConnectWebhookSecret = secret("StripeConnectWebhookSecret", "stripe/connect-webhook-secret", "Signing secret of the Stripe Connect webhook endpoint that points at /api/stripe/connect-webhook");
     const workosApiKey = secret("WorkosApiKey", "workos/api-key", "WorkOS API key for the environment, used to create publisher organisations");
+    const discordBotToken = secret("DiscordBotToken", "discord/bot-token", "The Runlog Discord application's bot token, for posting into servers that installed it");
 
     const handler = new lambdaNodejs.NodejsFunction(this, "Handler", {
       entry: path.join(__dirname, "handlers", "api.ts"),
@@ -189,6 +190,8 @@ export class ApiStack extends Stack {
         RUNLOG_GATES: config.gates ? "on" : "off",
         STRIPE_PRICES: JSON.stringify(config.stripe.prices),
         STRIPE_FEATURES: JSON.stringify(config.stripe.features),
+        DISCORD_BOT_TOKEN_SECRET: secretName("discord/bot-token"),
+        ...(config.discord ? { DISCORD_APPLICATION_ID: config.discord.applicationId, DISCORD_PUBLIC_KEY: config.discord.publicKey } : {}),
         // A client the X-Ray SDK captured should fail into "not traced"
         // rather than throw, if it is ever called before the runtime has
         // set up this invocation's segment.
@@ -212,7 +215,7 @@ export class ApiStack extends Stack {
     this.handler = handler;
     this.table.grantReadWriteData(handler);
     this.bucket.grantReadWrite(handler);
-    for (const s of [stripeSecretKey, stripeWebhookSecret, stripeConnectWebhookSecret, workosApiKey]) s.grantRead(handler);
+    for (const s of [stripeSecretKey, stripeWebhookSecret, stripeConnectWebhookSecret, workosApiKey, discordBotToken]) s.grantRead(handler);
     // Invitations go out through the domain identity core-infra verified,
     // and through nothing else: the grant names the identity, not the
     // account's SES.
