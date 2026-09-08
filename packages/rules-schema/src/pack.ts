@@ -243,7 +243,9 @@ export const ChecklistItem = z.union([
       ),
       shows: z
         .object({
-          table: z.string().describe("Results from this table are listed under the item."),
+          table: z
+            .union([z.string(), z.array(z.string()).min(1)])
+            .describe("Results from this table, or from any of these tables, are listed under the item."),
           scope: z
             .enum(["unit", "subject", "run"])
             .default("unit")

@@ -359,9 +359,16 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
         lastSeenAt: at,
         ...snapshot,
         ...(snapshot.termsVersion !== undefined ? { termsAcceptedAt: at } : {}),
+        ...(snapshot.handle !== undefined ? { handleSetAt: at } : {}),
       };
       profiles.set(sub, profile);
       return profile;
+    },
+    async setMemberName(sessionId, sub, name) {
+      const seat = sessions.get(sessionId)?.members.find((m) => m.sub === sub);
+      if (!seat) return;
+      if (name) seat.name = name;
+      else delete seat.name;
     },
     async entitlements() {
       return [];
@@ -1180,7 +1187,10 @@ describe("who is asking", () => {
     expect((await call(request("GET", "/api/public/runs/01RUN?t=livetok", { token: null }), d)).body["reactions"]).toHaveLength(1);
     expect((await call(request("GET", "/api/sessions/01RUN/reactions"), d)).body["reactions"]).toHaveLength(1);
     // The table reacts too, under the name it is shown as.
-    await call(request("PUT", "/api/me/profile", { body: { name: "Nate Ferrell", handle: "kilnkeeper" } }), d);
+    const named = await call(request("PUT", "/api/me/profile", { body: { name: "Nate Ferrell", handle: "kilnkeeper" } }), d);
+    // Choosing a name is remembered as a choice, and the seats this person holds show it from now on.
+    expect((named.body["profile"] as Profile).handleSetAt).toEqual(expect.any(String));
+    expect((await call(request("GET", "/api/sessions/01RUN"), d)).body["members"]).toEqual(expect.arrayContaining([expect.objectContaining({ role: "owner", name: "kilnkeeper" })]));
     expect((await call(request("PUT", "/api/me/profile", { body: { handle: "no@address.example" } }), d)).status).toBe(422);
     const fromTable = await call(request("POST", "/api/sessions/01RUN/reactions", { body: { emoji: "👏" } }), d);
     expect((fromTable.body["reactions"] as Array<{ name?: string }>).at(-1)).toMatchObject({ name: "kilnkeeper" });

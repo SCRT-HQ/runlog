@@ -128,10 +128,11 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
       )}
       {members.length === 0 && <p className="muted small">Just you, until this run has reached your account through sync.</p>}
       {members.map((m) => (
-        <div key={m.sub} className="row spread memberRow">
+        <div key={m.sub} className={`row spread memberRow${m.sub === me ? " me" : ""}`} aria-current={m.sub === me ? "true" : undefined}>
           <span>
-            <strong>{m.sub === me ? "You" : (m.name ?? "Somebody")}</strong>
+            <strong>{m.name ?? (m.sub === me ? "You" : "Somebody")}</strong>
             <span className="muted small"> · {m.role}</span>
+            {m.sub === me && <span className="chip you">you</span>}
           </span>
           {owner && m.role !== "owner" && (
             <button

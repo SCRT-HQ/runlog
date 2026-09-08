@@ -219,6 +219,12 @@ export interface Profile {
    * `name`; an address is never shown to anyone but its owner.
    */
   handle?: string;
+  /**
+   * When this person last set `handle` themselves, blank or not. Absent,
+   * nobody has asked them yet, and the app asks once before showing a
+   * name of its own choosing to anyone.
+   */
+  handleSetAt?: string;
   email?: string;
   /** The version of the hosted terms this person accepted, and when; the app asks again when the version changes. */
   termsVersion?: string;
@@ -247,6 +253,8 @@ export interface Store {
    * already keeps the role they have. Null when the session is gone.
    */
   joinAsViewer(id: string, sub: string, name: string | undefined, at: string): Promise<{ role: Role } | null>;
+  /** The name a seat shows, brought up to date when its holder changes theirs; a seat that is not there is left alone. */
+  setMemberName(sessionId: string, sub: string, name: string | undefined): Promise<void>;
   /** A reaction from whoever is watching; the last few are kept, newest last. */
   addReaction(id: string, reaction: Reaction): Promise<Reaction[]>;
   listReactions(id: string): Promise<Reaction[]>;
@@ -379,7 +387,7 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
         kind: "profile",
         lastSeenAt: at,
         ...(snapshot.name !== undefined ? { name: snapshot.name } : {}),
-        ...(snapshot.handle !== undefined ? { handle: snapshot.handle } : {}),
+        ...(snapshot.handle !== undefined ? { handle: snapshot.handle, handleSetAt: at } : {}),
         ...(snapshot.email !== undefined ? { email: snapshot.email } : {}),
         ...(snapshot.termsVersion !== undefined ? { termsVersion: snapshot.termsVersion, termsAcceptedAt: at } : {}),
       };
@@ -684,6 +692,23 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       } }));
       await store.touchPointers(id, sub, at, found.meta.seq);
       return { role: "viewer" };
+    },
+
+    async setMemberName(sessionId, sub, name) {
+      try {
+        await ddb.send(
+          new UpdateCommand({
+            TableName: table,
+            Key: { pk: `SESSION#${sessionId}`, sk: `MEMBER#${sub}` },
+            ConditionExpression: "attribute_exists(pk)",
+            ...(name
+              ? { UpdateExpression: "SET #n = :n", ExpressionAttributeNames: { "#n": "name" }, ExpressionAttributeValues: { ":n": name } }
+              : { UpdateExpression: "REMOVE #n", ExpressionAttributeNames: { "#n": "name" } }),
+          }),
+        );
+      } catch (error) {
+        if ((error as { name?: string }).name !== "ConditionalCheckFailedException") throw error;
+      }
     },
 
     async addReaction(id, reaction) {

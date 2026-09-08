@@ -267,6 +267,33 @@ export function summaryDoc(pack: Pack): Doc {
   return { kind: "summary", layout: "book", title: pack.title, subtitle: byline(pack), blocks: b.blocks };
 }
 
+/**
+ * One mode, as the summary would tell it: what is different about it,
+ * how long it runs, how many play, its reminders, and the phases in
+ * order. Nothing of the rules, so it may be read by anyone the summary
+ * may be read by — a watcher of a live link, say.
+ */
+export function modeDoc(pack: Pack, modeId: string): Doc {
+  const m = pack.modes[modeId];
+  const b = new Builder();
+  if (!m) {
+    b.p(`This pack has no mode called ${modeId}.`, "muted");
+    return { kind: "summary", layout: "book", title: modeId, subtitle: pack.title, blocks: b.blocks };
+  }
+  const n = nouns(pack);
+  b.p(m.description ?? `One way to play ${pack.title}.`);
+  b.p(`${cap(modeLength(pack, m))}, ${modePlayers(m)}${m.seeded ? ", seeded so every copy rolls the same" : ""}.${modeId === pack.defaultMode ? " The default." : ""}`, "muted");
+  const extras = modeExtras(pack, m);
+  if (extras.length) {
+    b.h(2, "In this mode");
+    b.list(extras);
+  }
+  const off = new Set(m.disable?.phases ?? []);
+  b.h(2, `${cap(an(n.unit))}, in order`);
+  b.list(pack.phases.filter((p) => !off.has(p.id)).map((p) => p.label), true);
+  return { kind: "summary", layout: "book", title: m.label, subtitle: pack.title, blocks: b.blocks };
+}
+
 export function rulebookDoc(pack: Pack): Doc {
   const n = nouns(pack);
   const b = new Builder();
