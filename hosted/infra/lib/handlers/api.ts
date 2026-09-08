@@ -7,6 +7,10 @@ import { apiGatewayPoster, dynamoLive, notifier, type Notify } from "./live.js";
 import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, type RaceStore } from "./races.js";
 import { dynamoBilling, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
+import { dynamoGuilds, type GuildStore } from "./guilds.js";
+import { handleInteraction } from "./discord/interactions.js";
+import { isInteraction } from "./discord/types.js";
+import { verifyInteraction } from "./discord/verify.js";
 import { featuresOfSummary, realStripe, type StripeLike } from "./stripe.js";
 import { dynamoPublishers, type PublisherStore } from "./publishers.js";
 import { realWorkOS, type WorkOSLike } from "./workos.js";
@@ -184,6 +188,12 @@ export interface Deps {
   token?: () => string;
   /** Tell the sockets watching a session that it changed. Absent where there is no live push. */
   notify?: Notify;
+  /** Discord's rows: link codes and which account a Discord account is. Absent, nothing about Discord is offered. */
+  guilds?: GuildStore;
+  /** The Discord application the bot is, when the stage names one; the token is read when first needed. */
+  discord?: { applicationId: string; publicKey: string; token: () => Promise<string | null> };
+  /** Link codes are random by default; a test hands in its own. */
+  code?: () => string;
 }
 
 type Result = APIGatewayProxyResultV2;
@@ -317,6 +327,25 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // package serves dev and production alike.
   if (method === "GET" && path === "/api/auth/cli") {
     return json(200, { clientId: deps.cliClientId ?? null, issuer: "https://api.workos.com" });
+  }
+
+  // Discord pressing. No bearer: Discord signs the timestamp and the raw
+  // body with the application's key, and a bad signature is a 401 (never
+  // 403: the edge would rewrite that into the app). The body is verified
+  // as the bytes that arrived, before anything parses it. Discord waits
+  // three seconds for the answer, so the handler answers in one turn.
+  if (method === "POST" && path === "/api/discord/interactions") {
+    if (!deps.discord || !deps.guilds) return json(401, { error: "discord is not configured here" });
+    const raw = event.body ? (event.isBase64Encoded ? Buffer.from(event.body, "base64") : Buffer.from(event.body, "utf8")) : Buffer.alloc(0);
+    if (!verifyInteraction(deps.discord.publicKey, header(event, "x-signature-ed25519"), header(event, "x-signature-timestamp"), raw)) return json(401, { error: "bad signature" });
+    let interaction: unknown;
+    try {
+      interaction = JSON.parse(raw.toString("utf8"));
+    } catch {
+      return json(400, { error: "not an interaction" });
+    }
+    if (!isInteraction(interaction)) return json(400, { error: "not an interaction" });
+    return json(200, await handleInteraction(interaction, { guilds: deps.guilds, appUrl: deps.appUrl ?? "/", now, ...(deps.code ? { code: deps.code } : {}) }));
   }
 
   // Stripe calling back. No bearer: the signature over the raw body is
@@ -784,7 +813,32 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
 
   if (method === "DELETE" && path === "/api/me") {
     const rows = await store.deleteUser(caller.sub);
-    return json(200, { deleted: rows });
+    const linked = deps.guilds ? await deps.guilds.forgetUser(caller.sub) : 0;
+    return json(200, { deleted: rows + linked });
+  }
+
+  // ---- other accounts this one is linked to ----
+  // Discord first. The link is made from Discord's side: `/link` there
+  // mints a code bound to the Discord account that pressed, and handing
+  // the code in here, signed in, binds it to this account. Nothing of
+  // Discord's is kept but its user id and the name it showed.
+  if (path === "/api/connections" && method === "GET") {
+    const discord = deps.guilds ? await deps.guilds.connection(caller.sub) : null;
+    return json(200, { available: Boolean(deps.discord && deps.guilds), discord });
+  }
+  if (path === "/api/connections/discord") {
+    if (!deps.guilds) return json(200, { available: false });
+    if (method === "POST") {
+      const body = parse(event);
+      const code = isRecord(body) && str(body["code"]) ? normalizeCode(body["code"]) : "";
+      if (!code) return json(422, { error: "code: the one /link gave you" });
+      const link = await deps.guilds.takeLinkCode(code, now());
+      if (!link) return json(422, { error: "that code is not known here, or its ten minutes are up; run /link in Discord again" });
+      const connection = { discordUserId: link.discordUserId, name: link.name, linkedAt: now() };
+      await deps.guilds.connect(caller.sub, connection);
+      return json(200, { linked: true, discord: connection });
+    }
+    if (method === "DELETE") return json(200, { unlinked: await deps.guilds.disconnect(caller.sub) });
   }
 
   if (method === "GET" && path === "/api/sync/manifest") {
@@ -1691,6 +1745,19 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
         return looksLike("workos-key", key) ? (workosClient ??= realWorkOS(key)) : null;
       },
       gates: process.env["RUNLOG_GATES"] === "on",
+      guilds: dynamoGuilds({ table: process.env["TABLE_NAME"] ?? "" }),
+      ...(process.env["DISCORD_APPLICATION_ID"] && process.env["DISCORD_PUBLIC_KEY"]
+        ? {
+            discord: {
+              applicationId: process.env["DISCORD_APPLICATION_ID"],
+              publicKey: process.env["DISCORD_PUBLIC_KEY"],
+              token: async () => {
+                const value = await secrets(process.env["DISCORD_BOT_TOKEN_SECRET"] ?? "");
+                return looksLike("discord-token", value) ? value : null;
+              },
+            },
+          }
+        : {}),
       prices: pricesFromEnv(process.env["STRIPE_PRICES"]),
       features: featuresFromEnv(process.env["STRIPE_FEATURES"]),
       stripe: async () => {
