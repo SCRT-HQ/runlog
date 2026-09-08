@@ -7,14 +7,22 @@ import { isThemeId, type ThemeId } from "../theme/theme.ts";
  * address as a browser source; a person opens it as a pop-out from the run.
  */
 export const WIDGET_KINDS = [
-  { kind: "scoreboard", label: "Scoreboard", what: "Standings in a moderated run: places, points, marks." },
-  { kind: "race", label: "Race", what: "The race leaderboard, as the racers' devices report it." },
-  { kind: "clock", label: "Clock", what: "The unit's stopwatch or timer, large." },
-  { kind: "step", label: "Step", what: "The current step, the constraints in play, and the latest result." },
-  { kind: "stats", label: "Stats", what: "Where the run stands: unit, units done, time, step, constraints, score." },
-  { kind: "trackers", label: "Trackers", what: "Resources and counters, as bars and boxes." },
-  { kind: "column", label: "Everything, stacked", what: "Clock, stats, scoreboard, race and trackers in one column, leaving out what the run has nothing for." },
+  { kind: "scoreboard", label: "Scoreboard", what: "Standings in a moderated run: places, points, marks.", size: { w: 480, h: 440 } },
+  { kind: "race", label: "Race", what: "The race leaderboard, as the racers' devices report it.", size: { w: 560, h: 440 } },
+  { kind: "clock", label: "Clock", what: "The unit's stopwatch or timer, large.", size: { w: 480, h: 200 } },
+  { kind: "step", label: "Step", what: "The current step, the constraints in play, and the latest result.", size: { w: 520, h: 380 } },
+  { kind: "stats", label: "Stats", what: "Where the run stands: unit, units done, time, step, constraints, score.", size: { w: 520, h: 560 } },
+  { kind: "trackers", label: "Trackers", what: "Resources and counters, as bars and boxes.", size: { w: 480, h: 420 } },
+  { kind: "ticker", label: "Ticker", what: "The last few things that happened, one line each, newest on top: dice, results, points, clocks, the unit closing.", size: { w: 520, h: 300 } },
+  { kind: "column", label: "Everything, stacked", what: "Clock, step, ticker, stats, scoreboard, race and trackers in one column, leaving out what the run has nothing for.", size: { w: 460, h: 1080 } },
 ] as const;
+
+/** The size a browser source wants for a kind, in pixels, as the address scales it: the numbers in the docs are at 1.25×. */
+export function widgetSize(kind: WidgetKind, scale: number): { w: number; h: number } {
+  const spec = WIDGET_KINDS.find((k) => k.kind === kind)!.size;
+  const by = scale / 1.25;
+  return { w: Math.round(spec.w * by), h: Math.round(spec.h * by) };
+}
 
 export type WidgetKind = (typeof WIDGET_KINDS)[number]["kind"];
 

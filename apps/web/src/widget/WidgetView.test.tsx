@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { StatsWidget, StepWidget } from "./WidgetView.tsx";
+import { StatsWidget, StepWidget, TickerWidget } from "./WidgetView.tsx";
 import type { LiveSnapshot } from "../live/snapshot.ts";
+import type { TickerLine } from "./ticker.ts";
 
 const base: LiveSnapshot = {
   v: 1,
@@ -107,4 +108,26 @@ describe("the Stats widget", () => {
     expect(() => renderToStaticMarkup(<StatsWidget s={legacy as LiveSnapshot} />)).not.toThrow();
     expect(() => renderToStaticMarkup(<StepWidget s={legacy as LiveSnapshot} />)).not.toThrow();
   });
+});
+
+describe("the Ticker widget", () => {
+  const lines: TickerLine[] = [
+    { id: "o5", kind: "outcome", mark: "Result", text: "Celadon" },
+    { id: "gT", kind: "rolled", mark: "Rolled", text: "Mira rolled 14 on Kiln Check" },
+  ];
+
+  it("lists the lines it is given in the order given, each with its kind said in front", () => {
+    const html = renderToStaticMarkup(<TickerWidget lines={lines} />);
+    expect(html).toContain("Just now");
+    expect(html.indexOf("Celadon")).toBeLessThan(html.indexOf("Mira rolled 14"));
+    expect(html).toContain("Result");
+    expect(html).toContain("Rolled");
+    expect(html).not.toContain("Nothing yet");
+  });
+
+  it("says so rather than showing an empty box before anything has happened", () => {
+    const html = renderToStaticMarkup(<TickerWidget lines={[]} />);
+    expect(html).toContain("Nothing yet");
+  });
+
 });

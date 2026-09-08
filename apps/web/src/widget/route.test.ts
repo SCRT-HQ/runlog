@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { widgetFromHash, widgetHash, widgetHref } from "./route.ts";
+import { WIDGET_KINDS, widgetFromHash, widgetHash, widgetHref, widgetSize } from "./route.ts";
 
 describe("a widget's address", () => {
   it("names the stacked column like any other kind", () => {
@@ -33,6 +33,12 @@ describe("a widget's address", () => {
     expect(widgetFromHash("#widget/clock/r?theme=system")).not.toHaveProperty("theme");
     expect(widgetFromHash("#widget/clock/r?theme=neon")).not.toHaveProperty("theme");
     expect(widgetHash({ kind: "clock", runId: "r", bg: "clear", scale: 1, theme: "glaze" })).toBe("#widget/clock/r?bg=clear&theme=glaze");
+  });
+
+  it("suggests a size for every kind, scaled from the documented 1.25× numbers", () => {
+    for (const k of WIDGET_KINDS) expect(widgetSize(k.kind, 1.25)).toEqual(k.size);
+    expect(widgetSize("clock", 2.5)).toEqual({ w: 960, h: 400 });
+    expect(widgetFromHash("#widget/ticker/r")?.kind).toBe("ticker");
   });
 
   it("round-trips", () => {
