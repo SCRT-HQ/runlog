@@ -4459,7 +4459,7 @@
               "maximum": 10
             },
             "unit": {
-              "description": "Which unit owes them: `next` (the default) for \"the next Room rolls two Mutations\", `current` when the step has not happened yet this unit.",
+              "description": "Which unit owes them: `next` (the default) for \"the next Stage rolls two Setbacks\", `current` when the step has not happened yet this unit.",
               "type": "string",
               "enum": [
                 "current",

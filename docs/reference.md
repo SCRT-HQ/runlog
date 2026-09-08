@@ -1252,7 +1252,7 @@ Owe extra rolls on a table's step, this unit or the next; the flow keeps the ste
 | `do` | `extraRoll` | yes | Owe extra rolls on a table's step: the step is rolled again until they are paid. |
 | `table` | `string` | yes | Id of the table whose step rolls again. |
 | `count` | `integer` | — | How many extra rolls. Defaults to 1. |
-| `unit` | `current` \| `next` | — | Which unit owes them: `next` (the default) for "the next Room rolls two Mutations", `current` when the step has not happened yet this unit. |
+| `unit` | `current` \| `next` | — | Which unit owes them: `next` (the default) for "the next Stage rolls two Setbacks", `current` when the step has not happened yet this unit. |
 
 ##### `Action (do: branch).cases[].then[] (do: modCounter)`
 
@@ -1445,7 +1445,7 @@ Owe extra rolls on a table's step, this unit or the next; the flow keeps the ste
 | `do` | `extraRoll` | yes | Owe extra rolls on a table's step: the step is rolled again until they are paid. |
 | `table` | `string` | yes | Id of the table whose step rolls again. |
 | `count` | `integer` | — | How many extra rolls. Defaults to 1. |
-| `unit` | `current` \| `next` | — | Which unit owes them: `next` (the default) for "the next Room rolls two Mutations", `current` when the step has not happened yet this unit. |
+| `unit` | `current` \| `next` | — | Which unit owes them: `next` (the default) for "the next Stage rolls two Setbacks", `current` when the step has not happened yet this unit. |
 
 #### `do: modCounter`
 
