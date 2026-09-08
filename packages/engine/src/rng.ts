@@ -6,8 +6,11 @@
  * point of a "same dungeon" mode. And deterministic tests let the reducer be
  * checked by replay rather than by inspection.
  *
- * `Math.random` is never used inside the engine: a random source is always
- * passed in, so nothing can accidentally become unreproducible.
+ * `Math.random` is never used to resolve a rule: a random source is always
+ * passed in, so nothing a pack decides can accidentally become
+ * unreproducible. `createRandom`'s own no-seed default is the one narrow
+ * exception, for a caller that explicitly asked to roll on a player's behalf
+ * with no seed to roll from — there is nothing to reproduce, on purpose.
  */
 
 /** Hash an arbitrary string seed into four 32-bit values (cyrb128). */
@@ -35,8 +38,15 @@ function hashSeed(seed: string): [number, number, number, number] {
   ];
 }
 
-/** sfc32: small, fast, and good enough for dice. */
-export function createRandom(seed: string): () => number {
+/**
+ * sfc32: small, fast, and good enough for dice.
+ *
+ * A seed is normally given explicitly, so a run can be reproduced. Called
+ * with none — a driver rolling on a player's behalf with nothing to seed
+ * from — it makes one up from the moment, which is not reproducible and not
+ * meant to be: nobody replays a roll nobody asked to be able to.
+ */
+export function createRandom(seed: string = `unseeded:${Date.now()}:${Math.random()}`): () => number {
   let [a, b, c, d] = hashSeed(seed);
   return function next(): number {
     a >>>= 0;

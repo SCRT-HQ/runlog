@@ -1,7 +1,7 @@
-import type { Pack, Phase, Step } from "@runlog/rules-schema";
-import { testPredicates } from "./execute.ts";
+import type { ChecklistItem, Pack, Phase, Step } from "@runlog/rules-schema";
+import { dueObligations, testPredicates } from "./execute.ts";
 import type { RunEvent } from "./events.ts";
-import type { RunState } from "./types.ts";
+import type { Obligation, RunState } from "./types.ts";
 
 /**
  * Where the player is in a unit.
@@ -77,6 +77,23 @@ export function constrainedByOf(step: Step): string | undefined {
   return step.kind === "declareSubject" || step.kind === "manual" ? step.constrainedBy : undefined;
 }
 
+/** A checklist point's own text, whether it is a bare string or an object with more on it. */
+export function itemText(item: ChecklistItem): string {
+  return typeof item === "string" ? item : item.text;
+}
+
+/** A point marked optional does not have to be ticked for the step it is on to count as done. */
+export function itemOptional(item: ChecklistItem): boolean {
+  return typeof item !== "string" && Boolean(item.optional);
+}
+
+/** The checklist or confirm points that gate a step, for whichever kind carries them. */
+export function checklistOf(step: Step): ChecklistItem[] {
+  if (step.kind === "manual") return step.checklist ?? [];
+  if (step.kind === "finalizeUnit") return step.confirm ?? [];
+  return [];
+}
+
 /**
  * What a table has said this unit, for a step that must honor it: every
  * result on that table since the unit began, in order, so a unit that
@@ -147,4 +164,28 @@ export function stepCompletionEvents(
     events.push({ t: "PhaseCompleted", at, phase: phase.id });
   }
   return events;
+}
+
+/**
+ * Obligations due right now, by the same lifecycle points the app checks.
+ *
+ * Lives here rather than beside `dueObligations` because it needs `nextStep`
+ * and `activePhases` too — it is the gate that turns "what point are we at"
+ * into "what does that make due", which both `drive`'s agenda and a
+ * headless `playThrough` need to answer identically.
+ */
+export function currentlyDue(pack: Pack, state: RunState): Obligation[] {
+  const reached: string[] = ["immediately", "onEnterUnit"];
+  if (state.subjects.some((s) => s.unit === state.unit && s.type)) reached.push("onDeclareSubject");
+  const manualDone = activePhases(pack, state).every((p) =>
+    p.steps.every((s, i) => s.kind !== "manual" || state.stepsDone.includes(`${p.id}#${i}`)),
+  );
+  if (manualDone) reached.push("afterWork");
+  if (nextStep(pack, state)?.step.kind === "finalizeUnit") reached.push("onFinalize");
+  // A clock that already expired this unit makes an onTimerExpired obligation
+  // due immediately, even one queued afterward -- the bell already rang.
+  if (state.clocks.some((c) => c.unit === state.unit && c.status === "done" && c.expired)) {
+    reached.push("onTimerExpired");
+  }
+  return reached.flatMap((point) => dueObligations(state, point));
 }
