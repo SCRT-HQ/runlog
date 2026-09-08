@@ -140,6 +140,13 @@ describe("the profile's pages", () => {
     expect(html).not.toContain("Sign out");
   });
 
+  it("names Servers in the nav only for an account the tier is open to, or on the page itself", () => {
+    // Nothing is known about the plan at first paint, so the tier is not offered.
+    expect(page(signedIn, { page: "profile" })).not.toContain(">Servers<");
+    // But whoever followed a claim code is on the page, and the page names itself.
+    expect(page(signedIn, { page: "servers" })).toContain(">Servers<");
+  });
+
   it("renders Servers, saying what a server needs where this process has no API, and asks before claiming one a code arrived for", () => {
     const html = page(signedIn, { page: "servers" });
     expect(html).toContain("<h2>Servers</h2>");

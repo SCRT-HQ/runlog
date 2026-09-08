@@ -144,9 +144,13 @@ describe("the API", () => {
   it("names the Discord application to the handler only where the stage has one; the key is public, the token is not", () => {
     const bare = JSON.stringify(Object.values(template.findResources("AWS::Lambda::Function")).map((f) => f.Properties.Environment));
     expect(bare).not.toContain("DISCORD_APPLICATION_ID");
-    const withBot = templateFor({ discord: { applicationId: "123456789012345678", publicKey: "ab".repeat(32) } });
+    const withBot = templateFor({ discord: { applicationId: "123456789012345678", publicKey: "ab".repeat(32), open: false } });
     withBot.hasResourceProperties("AWS::Lambda::Function", {
-      Environment: { Variables: Match.objectLike({ DISCORD_APPLICATION_ID: "123456789012345678", DISCORD_PUBLIC_KEY: "ab".repeat(32), DISCORD_BOT_TOKEN_SECRET: "runlog/discord/bot-token" }) },
+      Environment: { Variables: Match.objectLike({ DISCORD_APPLICATION_ID: "123456789012345678", DISCORD_PUBLIC_KEY: "ab".repeat(32), DISCORD_BOT_TOKEN_SECRET: "runlog/discord/bot-token", DISCORD_OPEN: "off" }) },
+    });
+    // The private beta ends in the configuration, not in code.
+    templateFor({ discord: { applicationId: "123456789012345678", publicKey: "ab".repeat(32), open: true } }).hasResourceProperties("AWS::Lambda::Function", {
+      Environment: { Variables: Match.objectLike({ DISCORD_OPEN: "on" }) },
     });
     // The same five secrets either way: the token's secret exists before anyone has a bot to fill it with.
     withBot.resourceCountIs("AWS::SecretsManager::Secret", 5);

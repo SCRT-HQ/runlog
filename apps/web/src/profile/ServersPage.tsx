@@ -23,7 +23,7 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
   const hosted = useHosted();
   const plan = usePlan();
   const [pending, setPending] = useState<LinkRoute | null>(() => pendingProp ?? pendingLink("guild"));
-  const [known, setKnown] = useState<{ guilds: Guild[]; server: boolean } | null>(null);
+  const [known, setKnown] = useState<{ guilds: Guild[]; server: boolean; allowed: boolean } | null>(null);
   const [vaults, setVaults] = useState<Record<string, GuildPackMeta[]>>({});
   const [shelf, setShelf] = useState<StoredPack[]>([]);
   const [picked, setPicked] = useState<Record<string, string>>({});
@@ -41,7 +41,7 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
         for (const g of k.guilds) all[g.guildId] = await api.guildPacks(g.guildId).catch(() => []);
         if (live) setVaults(all);
       },
-      () => live && setKnown({ guilds: [], server: true }),
+      () => live && setKnown({ guilds: [], server: true, allowed: false }),
     );
     return () => {
       live = false;
@@ -67,7 +67,7 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
     run("claim", async () => {
       if (!api || !pending) return null;
       const { guild, upgrade } = await api.claimGuild(pending.code);
-      setKnown((k) => ({ guilds: [...(k?.guilds ?? []).filter((g) => g.guildId !== guild.guildId), guild], server: k?.server ?? !upgrade }));
+      setKnown((k) => ({ guilds: [...(k?.guilds ?? []).filter((g) => g.guildId !== guild.guildId), guild], server: k?.server ?? !upgrade, allowed: true }));
       clearPendingLink();
       setPending(null);
       return upgrade ? `${guild.name ?? "The server"} is yours. To host runs there, subscribe to Runlog for servers below; claiming and choosing packs work meanwhile.` : `${guild.name ?? "The server"} is yours. Add packs below, and set who may host with /setup role in Discord.`;
@@ -158,6 +158,11 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
       ) : known === null ? (
         <section className="panel">
           <p className="muted small">Looking…</p>
+        </section>
+      ) : !known.allowed && known.guilds.length === 0 ? (
+        <section className="panel">
+          <h3 className="sectionTitle">In private beta</h3>
+          <p className="muted small">Runlog for servers is open to a few accounts while it is built. Ask in the Runlog Discord to try it, and this page opens up for you.</p>
         </section>
       ) : (
         <>
