@@ -139,6 +139,7 @@ function Page({ kind, snapshot, race }: { kind: WidgetRoute["kind"]; snapshot: L
     return (
       <div className="widget column">
         <ClockWidget s={snapshot} />
+        <StepWidget s={snapshot} />
         <StatsWidget s={snapshot} />
         {(snapshot.contestants > 0 || snapshot.standings.length > 0) && <ScoreboardWidget s={snapshot} />}
         {race ?? (snapshot.race ? <RaceSnapshotWidget race={snapshot.race} /> : null)}
@@ -155,6 +156,8 @@ function Widget({ kind, snapshot }: { kind: WidgetRoute["kind"]; snapshot: LiveS
       return <ScoreboardWidget s={snapshot} />;
     case "clock":
       return <ClockWidget s={snapshot} />;
+    case "step":
+      return <StepWidget s={snapshot} />;
     case "stats":
       return <StatsWidget s={snapshot} />;
     case "trackers":
@@ -247,25 +250,89 @@ function ClockWidget({ s }: { s: LiveSnapshot }) {
   );
 }
 
-function StatsWidget({ s }: { s: LiveSnapshot }) {
+/** The current step, the constraints in play, and the latest result: a small panel to follow along by. */
+export function StepWidget({ s }: { s: LiveSnapshot }) {
+  const constraints = s.constraints ?? [];
+  return (
+    <div className="widgetBody">
+      <div className="widgetTitle muted small">{s.words.unit} {s.unit || "—"}</div>
+      <div className="widgetStep">{s.step ?? (s.status === "ended" ? `Ended${s.ending ? ` · ${s.ending}` : ""}` : "Waiting")}</div>
+      {constraints.length > 0 && (
+        <div className="notice constraints">
+          <span className="muted small">The game has already had its say</span>
+          <ul>
+            {constraints.map((line, i) => (
+              <li key={i}>
+                <strong>{line}</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {s.latest && <p className="widgetNote">{s.latest.text}</p>}
+    </div>
+  );
+}
+
+export function StatsWidget({ s }: { s: LiveSnapshot }) {
   const top = s.standings[0];
-  const cells: Array<[string, string]> = [
-    [s.words.unit, s.unit ? String(s.unit) : "—"],
-    [`${s.words.units} done`, String(s.progress.unitsDone)],
-    ["Time", formatClock(s.progress.elapsedMs)],
-    ...(top ? [["Leading", `${top.name} · ${top.points}`] as [string, string]] : []),
-    ...(s.status === "ended" ? [["Ended", s.ending ?? "finished"] as [string, string]] : []),
-  ];
+  const constraints = s.constraints ?? [];
   return (
     <div className="widgetBody">
       <div className="widgetTitle muted small">{s.packTitle}</div>
       <dl className="widgetStats">
-        {cells.map(([k, val]) => (
-          <div key={k}>
-            <dt className="muted small">{k}</dt>
-            <dd>{val}</dd>
+        <div>
+          <dt className="muted small">{s.words.unit}</dt>
+          <dd>{s.unit ? String(s.unit) : "—"}</dd>
+        </div>
+        <div>
+          <dt className="muted small">{s.words.units} done</dt>
+          <dd>{s.progress.unitsDone}</dd>
+        </div>
+        <div>
+          <dt className="muted small">Time</dt>
+          <dd>{formatClock(s.progress.elapsedMs)}</dd>
+        </div>
+        <div>
+          <dt className="muted small">Step</dt>
+          <dd>{s.step ?? "—"}</dd>
+        </div>
+        {constraints.length > 0 && (
+          <div className="wide">
+            <dt className="muted small">Constraints</dt>
+            <dd className="wideText">
+              {constraints.map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
+            </dd>
           </div>
-        ))}
+        )}
+        {s.latest && (
+          <div className="wide">
+            <dt className="muted small">Latest</dt>
+            <dd className="wideText">{s.latest.text}</dd>
+          </div>
+        )}
+        <div>
+          <dt className="muted small">{s.score.label}</dt>
+          <dd>{s.score.text}</dd>
+        </div>
+        <div>
+          <dt className="muted small">Subjects declared</dt>
+          <dd>{s.subjects.length}</dd>
+        </div>
+        {top && (
+          <div>
+            <dt className="muted small">Leading</dt>
+            <dd>{top.name} · {top.points}</dd>
+          </div>
+        )}
+        {s.status === "ended" && (
+          <div>
+            <dt className="muted small">Ended</dt>
+            <dd>{s.ending ?? "finished"}</dd>
+          </div>
+        )}
       </dl>
     </div>
   );

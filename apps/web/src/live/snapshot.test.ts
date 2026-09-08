@@ -41,6 +41,53 @@ describe("a live snapshot", () => {
     expect(isSnapshot({ v: 2 })).toBe(false);
   });
 
+  it("carries a step's constraints, this unit's results in order, and the latest line, the way RunView reads them", () => {
+    // Advance past "Enter the Stage" so the active step is "declareSubject",
+    // whose `constrainedBy: form` the demo pack sets — the same table
+    // `RunView`'s `Constraints` panel reads on that step.
+    const past: RunEvent[] = [
+      ...events,
+      { t: "StepCompleted", at: "2026-01-01T00:00:02Z", phase: "enter", step: 0 } as unknown as RunEvent,
+      { t: "PhaseCompleted", at: "2026-01-01T00:00:02Z", phase: "enter" } as unknown as RunEvent,
+    ];
+    const state = reduce(kiln, past);
+    const withOutcome = {
+      ...state,
+      outcomes: [{ unit: 1, table: "form", entryId: "form-vase", targetSubject: null, at: "2026-01-01T00:00:02Z" }],
+    };
+    const snap = snapshotOf(kiln, withOutcome as typeof state, past, "2026-01-01T00:00:05Z");
+    const line = kiln.tables.form!.entries.find((e) => e.id === "form-vase")!.text;
+    expect(snap.stepKind).toBe("declareSubject");
+    expect(snap.constraints).toEqual([line]);
+    expect(snap.unitResults).toEqual([{ table: "Form", text: line, hit: null }]);
+    expect(snap.latest).toEqual({ where: `${kiln.vocabulary.unit.one} 1, Form`, text: line });
+    // No result on the current step's table yet: nothing to honor.
+    expect(snapshotOf(kiln, state, past, "2026-01-01T00:00:05Z").constraints).toEqual([]);
+    expect(snapshotOf(kiln, state, past, "2026-01-01T00:00:05Z").unitResults).toEqual([]);
+    expect(snapshotOf(kiln, state, past, "2026-01-01T00:00:05Z").latest).toBeNull();
+  });
+
+  it("keeps a manual step's own results out of a later unit's constraints", () => {
+    // Two units' worth of the same table: only this unit's rolls count.
+    const past: RunEvent[] = [
+      ...events,
+      { t: "StepCompleted", at: "2026-01-01T00:00:02Z", phase: "enter", step: 0 } as unknown as RunEvent,
+      { t: "PhaseCompleted", at: "2026-01-01T00:00:02Z", phase: "enter" } as unknown as RunEvent,
+    ];
+    const state = reduce(kiln, past);
+    const withOutcomes = {
+      ...state,
+      outcomes: [
+        { unit: 2, table: "form", entryId: "form-vase", targetSubject: null, at: "2026-01-01T00:00:02Z" },
+        { unit: 1, table: "form", entryId: "form-cup", targetSubject: null, at: "2026-01-01T00:00:03Z" },
+      ],
+    };
+    const snap = snapshotOf(kiln, withOutcomes as typeof state, past, "2026-01-01T00:00:05Z");
+    expect(snap.constraints).toEqual([kiln.tables.form!.entries.find((e) => e.id === "form-cup")!.text]);
+    expect(snap.unitResults).toHaveLength(1);
+    expect(snap.unitResults![0]!.text).toBe(kiln.tables.form!.entries.find((e) => e.id === "form-cup")!.text);
+  });
+
   it("still says what the dice drew for a pack marked not for redistribution, and only that", () => {
     // A watcher who saw "#x1" was watching numbers. The one line a roll
     // landed on is the run's; the pack's paper stays withheld (`quoted`).
@@ -60,6 +107,14 @@ describe("a live snapshot", () => {
     expect(snap.log[1]!.text).toBe(entry.title ?? entry.text);
     // An entry the pack no longer has falls back to its reference.
     expect(snap.log[0]!.text).toContain("#x-gone");
+    // `unitResults` reads the drawn line the same way, oldest first, and is
+    // no more gated by the license than the log is: only the pack's own
+    // paper and tables stay behind `quoted`.
+    expect(snap.unitResults).toEqual([
+      { table: closed.tables[tableId]!.title, text: entry.title ?? entry.text, hit: null },
+      { table: closed.tables[tableId]!.title, text: snap.log[0]!.text, hit: null },
+    ]);
+    expect(snap.latest).toEqual({ where: snap.log[0]!.where, text: snap.log[0]!.text });
   });
 
   it("carries the race leaderboard in words, when the run is in one", () => {
