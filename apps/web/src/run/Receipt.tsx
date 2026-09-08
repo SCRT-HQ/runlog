@@ -13,6 +13,11 @@ import type { RolledDie } from "../rolling.ts";
  * moment between: the dice as they landed, the total, and what the table said
  * about it, raised like a step and staying put until "Carry on".
  *
+ * A step can roll more than once: a d100 that sends the player to a d6. The
+ * rolls stay together as they land, each with its line, and the next roll's
+ * keypad comes underneath. One "Carry on" closes the whole step, so nothing
+ * is replaced before it has been read.
+ *
  * A receipt can also carry no dice at all. Typed-in physical dice, and rolls
  * the machine made on its own, still produced an outcome worth reading.
  */
@@ -30,14 +35,18 @@ export interface RollReceipt {
 }
 
 export function Receipt({
-  receipt,
+  receipts,
   pack,
+  settled,
   onDismiss,
   onDrawAgain,
   onKeepRolling,
 }: {
-  receipt: RollReceipt;
+  /** The step's rolls so far, oldest first. */
+  receipts: RollReceipt[];
   pack: Pack;
+  /** The step is done: nothing more is asked, and Carry on closes it. */
+  settled: boolean;
   onDismiss: () => void;
   /** When the draw can be unmade and taken again: a result that cannot be done today. */
   onDrawAgain?: (reason?: string) => void;
@@ -48,93 +57,101 @@ export function Receipt({
   onKeepRolling?: () => void;
 }) {
   const v = pack.vocabulary;
-  const hasThrow = receipt.total !== null;
   const [why, setWhy] = useState<string | null>(null);
+  const first = receipts[0];
+  const title =
+    receipts.length === 1 ? (first?.label ?? "What the dice did") : settled ? "What the dice did" : "What the dice did, so far";
   return (
-    <section className="panel runStep receipt" aria-live="polite">
-      <h3 className="sectionTitle">{receipt.label ?? "What the dice did"}</h3>
+    <section className={`panel runStep receipt${settled ? "" : " open"}`} aria-live="polite">
+      <h3 className="sectionTitle">{title}</h3>
 
-      {hasThrow && (
-        <div className="throw">
-          {receipt.dice && receipt.dice.length > 0 && (
-            <div className="tray">
-              {receipt.dice.map((die, i) => (
-                <Die
-                  key={i}
-                  faces={die.faces}
-                  display={die.display}
-                  label={die.label}
-                  variant={die.variant}
-                />
-              ))}
-            </div>
-          )}
-          <div className="rollTotal">
-            <span className="big">{receipt.total}</span>
-            <span className="how">
-              {receipt.notation}
-              {receipt.machineRolled ? ", rolled for you" : ", your dice"}
-            </span>
+      {receipts.map((receipt, n) => {
+        const hasThrow = receipt.total !== null;
+        return (
+          <div key={n} className="entry">
+            {receipts.length > 1 && receipt.label && <span className="entryLabel">{receipt.label}</span>}
+            {hasThrow && (
+              <div className="throw">
+                {receipt.dice && receipt.dice.length > 0 && (
+                  <div className="tray">
+                    {receipt.dice.map((die, i) => (
+                      <Die key={i} faces={die.faces} display={die.display} label={die.label} variant={die.variant} />
+                    ))}
+                  </div>
+                )}
+                <div className="rollTotal">
+                  <span className="big">{receipt.total}</span>
+                  <span className="how">
+                    {receipt.notation}
+                    {receipt.machineRolled ? ", rolled for you" : ", your dice"}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {receipt.outcomes.length === 0
+              ? hasThrow && <p className="muted">Nothing on the table for that. It is recorded.</p>
+              : receipt.outcomes.map((o, i) => {
+                  const table = pack.tables[o.table];
+                  const entry = table?.entries.find((e) => e.id === o.entryId);
+                  const hit = o.targetSubject !== null;
+                  return (
+                    <div key={i} className={`result ${hit ? "heat" : ""}`}>
+                      <span className="band">
+                        {table?.title ?? o.table}
+                        {hit && ` — hit ${v.subject.one.toLowerCase()} #${o.targetSubject}`}
+                      </span>
+                      <p className="text">{entry?.title ?? entry?.text ?? o.entryId}</p>
+                      {entry?.title && entry.text && <p className="muted">{entry.text}</p>}
+                    </div>
+                  );
+                })}
           </div>
-        </div>
-      )}
+        );
+      })}
 
-      {receipt.outcomes.length === 0 ? (
-        <p className="muted">Nothing on the table for that. It is recorded.</p>
-      ) : (
-        receipt.outcomes.map((o, i) => {
-          const table = pack.tables[o.table];
-          const entry = table?.entries.find((e) => e.id === o.entryId);
-          const hit = o.targetSubject !== null;
-          return (
-            <div key={i} className={`result ${hit ? "heat" : ""}`}>
-              <span className="band">
-                {table?.title ?? o.table}
-                {hit && ` — hit ${v.subject.one.toLowerCase()} #${o.targetSubject}`}
-              </span>
-              <p className="text">{entry?.title ?? entry?.text ?? o.entryId}</p>
-              {entry?.title && entry.text && <p className="muted">{entry.text}</p>}
-            </div>
-          );
-        })
-      )}
-
-      <div className="padRow">
-        <button className="primary" onClick={onDismiss} autoFocus>
-          Carry on
-        </button>
-        {onKeepRolling && (
-          <button className="ghost" onClick={onKeepRolling} title="Roll for you from here on; the log still says which rolls were the machine's">
-            Keep rolling for me
-          </button>
-        )}
-        {onDrawAgain && why === null && (
-          <button className="ghost" onClick={() => setWhy("")} title="Unmake this draw and roll again; the log says you did">
-            Can't do this one
-          </button>
-        )}
-      </div>
-      {onDrawAgain && why !== null && (
-        <form
-          className="drawAgain"
-          onSubmit={(e) => {
-            e.preventDefault();
-            onDrawAgain(why);
-          }}
-        >
-          <label>
-            <span className="muted small">Why, in a few words (optional). The log keeps it.</span>
-            <input value={why} onChange={(e) => setWhy(e.target.value)} placeholder="no partner today" autoFocus maxLength={120} />
-          </label>
+      {settled ? (
+        <>
           <div className="padRow">
-            <button type="submit" className="primary">
-              Draw again
+            <button className="primary" onClick={onDismiss} autoFocus>
+              Carry on
             </button>
-            <button type="button" className="ghost" onClick={() => setWhy(null)}>
-              Keep it
-            </button>
+            {onKeepRolling && (
+              <button className="ghost" onClick={onKeepRolling} title="Roll for you from here on; the log still says which rolls were the machine's">
+                Keep rolling for me
+              </button>
+            )}
+            {onDrawAgain && why === null && (
+              <button className="ghost" onClick={() => setWhy("")} title="Unmake this draw and roll again; the log says you did">
+                Can't do this one
+              </button>
+            )}
           </div>
-        </form>
+          {onDrawAgain && why !== null && (
+            <form
+              className="drawAgain"
+              onSubmit={(e) => {
+                e.preventDefault();
+                onDrawAgain(why);
+              }}
+            >
+              <label>
+                <span className="muted small">Why, in a few words (optional). The log keeps it.</span>
+                <input value={why} onChange={(e) => setWhy(e.target.value)} placeholder="no partner today" autoFocus maxLength={120} />
+              </label>
+              <div className="padRow">
+                <button type="submit" className="primary">
+                  Draw again
+                </button>
+                <button type="button" className="ghost" onClick={() => setWhy(null)}>
+                  Keep it
+                </button>
+              </div>
+            </form>
+          )}
+        </>
+      ) : (
+        <p className="muted small stays">These stay until the step is done. The next roll is below.</p>
       )}
     </section>
   );
