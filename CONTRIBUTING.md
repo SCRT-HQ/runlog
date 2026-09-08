@@ -126,6 +126,14 @@ Three tests exist to stop whole classes of drift, and they will fail loudly:
 
 ---
 
+## Checks
+
+A pull request runs the app's checks, the hosting's checks and a diff of
+both stages. The merge queue then runs the checks again on main with the
+queued pull requests merged onto it, which is what will actually land; it
+does not repeat the diffs, which are for reading. A fork's pull request gets
+the checks and no diffs, since nothing that reaches AWS runs for it.
+
 ## Releases
 
 Every merge to main deploys to dev and is tagged and released from there;

@@ -3,7 +3,8 @@ name: CI/CD
 # The path a change takes:
 #
 #   pull request   ->  the app's checks, the hosting's checks, a diff against both environments
-#                      (a fork's pull request gets the checks only; its diffs run in the merge queue)
+#                      (a fork's pull request gets the checks only)
+#   merge queue    ->  the checks again, on main with the queued pull requests merged onto it; no diffs
 #   merge to main  ->  build the app, deploy dev (the site stack publishes the build), seed the catalog, tag a release
 #   release        ->  "Deploy Production" takes it from there
 #
@@ -114,15 +115,14 @@ jobs:
       contents: read
       id-token: write
       pull-requests: write
-    # Nothing that reaches AWS runs for a pull request from a fork: the diffs
-    # wait until a maintainer has approved it and queued it to merge, and run
-    # there. (GitHub would refuse a fork the OIDC token anyway; this keeps
-    # the refusal from showing as a failed check on a contributor's work.)
-    if: >-
-      ${{
-        github.event_name == 'merge_group'
-        || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-      }}
+    # On the pull request only, where a person reads it. The merge queue
+    # runs the tests again on the combined branch but not the diffs: a diff
+    # is for reading, and a change that no longer synthesizes fails the
+    # deploy before any release is cut. The job still exists in the queue's
+    # run and reports itself skipped there, which is what the ruleset needs
+    # to hear from a required check. Nothing that reaches AWS runs for a
+    # pull request from a fork (GitHub would refuse it the OIDC token anyway).
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
     # Alongside the tests, not after them: a diff needs the built app and
     # nothing the tests decide, and waiting for them doubled the time a
     # pull request took to go green. The ruleset requires every check, so
