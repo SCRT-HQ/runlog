@@ -1,5 +1,5 @@
 import { modeDoc, summaryDoc, type Doc, type Pack } from "@runlog/rules-schema";
-import { activePhases, clockOfUnit, elapsedMs, liveClocks, mayQuote, nextStep, phaseSkipped, progressOf, standings, type RunEvent, type RunState } from "@runlog/engine";
+import { activePhases, clockOfUnit, describeSkipReason, elapsedMs, liveClocks, mayQuote, nextStep, phaseSkipped, progressOf, standings, type RunEvent, type RunState } from "@runlog/engine";
 
 /**
  * A run as anyone may see it: the state and the log, worded, with the
@@ -31,7 +31,7 @@ export interface LiveSnapshot {
   where: string | null;
   /** The step in hand, on its own, and the unit's phases with where each stands: what the player's own screen lists. */
   step: string | null;
-  phases: Array<{ id: string; label: string; state: "done" | "current" | "skipped" | "todo" }>;
+  phases: Array<{ id: string; label: string; state: "done" | "current" | "skipped" | "todo"; why?: string }>;
   /** The pack's text may be quoted here: the log carries entries' words. */
   quoted: boolean;
   standings: Array<{ name: string; points: number; place: number; states: string[] }>;
@@ -122,7 +122,14 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
     ? activePhases(pack, state).map((phase) => {
         const done = state.phasesDone.includes(phase.id);
         const current = step?.phase.id === phase.id;
-        return { id: phase.id, label: phase.label, state: done ? ("done" as const) : current ? ("current" as const) : phaseSkipped(pack, state, phase) ? ("skipped" as const) : ("todo" as const) };
+        const skipped = !done && !current && phaseSkipped(pack, state, phase);
+        const why = skipped ? describeSkipReason(pack, phase) : null;
+        return {
+          id: phase.id,
+          label: phase.label,
+          state: done ? ("done" as const) : current ? ("current" as const) : skipped ? ("skipped" as const) : ("todo" as const),
+          ...(why ? { why } : {}),
+        };
       })
     : [];
   const stateLabel = (id: string) => pack.states?.[id]?.short ?? pack.states?.[id]?.label ?? id;

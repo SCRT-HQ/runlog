@@ -7,7 +7,7 @@ import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
 import { clockOfUnit, formatClock, liveClocks, nextUnit } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
-import { describeSkip, phaseSkipped, subjectLabel, type RunEvent, type RunState } from "@runlog/engine";
+import { describeSkip, describeSkipReason, phaseSkipped, subjectLabel, type RunEvent, type RunState } from "@runlog/engine";
 import { useRun, type ActiveStep } from "./useRun.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { RequestPanel } from "./RequestPanel.tsx";
@@ -18,6 +18,7 @@ import { useSync } from "../sync/SyncProvider.tsx";
 import { syncBus } from "../sync/bus.ts";
 import { DiceCurtain, rolledOf, type RolledGesture } from "../dice/DiceCurtain.tsx";
 import { preloadDice3d } from "../dice/settings.ts";
+import { CARRY_ON_HOLD_MS, carriesOnByItself } from "./pace.ts";
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
@@ -147,10 +148,23 @@ export function RunView({ pack }: { pack: Pack }) {
   }, [run.record?.runId]);
   const seen = useRef<number | null>(null);
   const awaiting = useRef<Omit<RollReceipt, "outcomes"> | null>(null);
-  const outcomes = run.state?.outcomes;
+  // How many answers this view has given, and how many it had given when
+  // the last receipt was issued: a receipt is for something that was just
+  // answered or just landed, never for a step that came back with the run.
+  const committedSeen = useRef(0);
+  const answered = useRef(0);
+  const receipted = useRef(0);
+  // What the run has resolved, counting what the block in flight has
+  // resolved ahead of the log: a d100 lands on its line before the d6 it
+  // leads to is asked for, and that line is the receipt for the d100.
+  const committed = run.state?.outcomes;
+  const ahead = run.pendingOutcomes;
   useEffect(() => {
-    if (!outcomes) return;
+    if (!committed) return;
+    const outcomes = ahead.length > 0 ? [...committed, ...ahead] : committed;
     const count = outcomes.length;
+    const landed = committed.length !== committedSeen.current;
+    committedSeen.current = committed.length;
     if (seen.current === null) {
       // First sight of a saved run: everything in it is old news.
       seen.current = count;
@@ -167,7 +181,11 @@ export function RunView({ pack }: { pack: Pack }) {
     seen.current = count;
     const throwing = awaiting.current;
     if (fresh.length === 0 && !throwing) return;
+    // A step that came back with the run brings the lines it had resolved
+    // with it. Nothing was answered just now, so there is nothing to read.
+    if (!throwing && !landed && answered.current === receipted.current) return;
     awaiting.current = null;
+    receipted.current = answered.current;
     setReceipt({
       dice: throwing?.dice ?? null,
       total: throwing?.total ?? null,
@@ -188,11 +206,19 @@ export function RunView({ pack }: { pack: Pack }) {
         ...(throwing.notation ? { notation: throwing.notation } : {}),
       });
     }
-  }, [outcomes, run.events.length]);
+  }, [committed, ahead, run.events.length]);
+
+  // A receipt waits to be read, unless this device asked it not to.
+  useEffect(() => {
+    if (!receipt || !carriesOnByItself()) return;
+    const timer = setTimeout(() => setReceipt(null), CARRY_ON_HOLD_MS);
+    return () => clearTimeout(timer);
+  }, [receipt]);
 
   const answer = useCallback(
     (key: string, value: string | number | boolean, machineRolled?: boolean, dice?: RolledDie[], seed?: number) => {
       const request = run.pending?.request;
+      answered.current += 1;
       if (request?.kind === "roll" && typeof value === "number") {
         awaiting.current = {
           dice: dice ?? null,
@@ -266,11 +292,15 @@ export function RunView({ pack }: { pack: Pack }) {
               pack={pack}
               onDismiss={() => setReceipt(null)}
               {...(run.canDrawAgain && !run.readOnly ? { onDrawAgain: (why?: string) => run.drawAgain(why) } : {})}
+              {...(receipt.machineRolled && !run.autoRoll && !run.seededRun && !run.readOnly
+                ? { onKeepRolling: () => run.setAutoRoll(true) }
+                : {})}
             />
           )}
-          {run.pending?.request ? (
-            // A follow-up the game is waiting on shows beneath the receipt
-            // that caused it; the receipt is its context.
+          {receipt ? null : run.pending?.request ? (
+            // A follow-up the game is waiting on comes after the receipt
+            // that caused it, not beneath it: the number has to be read
+            // before the next question replaces it.
             <RequestPanel
               request={run.pending.request}
               pack={pack}
@@ -278,7 +308,7 @@ export function RunView({ pack }: { pack: Pack }) {
               onAnswer={answer}
               onCancel={run.abandonPending}
             />
-          ) : receipt ? null : state.status === "ended" ? (
+          ) : state.status === "ended" ? (
             <Ended pack={pack} state={state} />
           ) : state.unit === 0 ? (
             <StartFirstUnit pack={pack} onEnter={run.enterUnit} />
@@ -302,10 +332,11 @@ export function RunView({ pack }: { pack: Pack }) {
           {/*
             Taking the run out, and the link to the world outside. Neither is
             the point of the screen, and both were sitting at the same weight
-            as the step. Folded away until wanted.
+            as the step. Folded away until wanted, under a label that says
+            what is inside.
           */}
           <details className="more">
-            <summary>Take it with you, and the world outside</summary>
+            <summary>Export and share</summary>
             <ExportPanel
               pack={pack}
               state={state}
@@ -331,6 +362,7 @@ export function RunView({ pack }: { pack: Pack }) {
           race={Boolean(run.record?.raceId)}
           alerts={alerts}
           onAlerts={setAlerts}
+          rolling={{ auto: run.autoRoll, seeded: run.seededRun, onAuto: run.setAutoRoll }}
           onControls={() => {
             setSettingsOpen(false);
             void openControlsWindow().then(setControlsWindow, () => {});
@@ -659,35 +691,29 @@ function RunHeader({
         )}
       </div>
       <div className="headerActions">
-        {run.seededRun ? (
+        {run.seededRun && (
           // Handing this run a physical die would break the one promise a
           // shared seed makes, so the choice is not offered.
           <span className="chip" title="A shared run rolls its own dice, or it would not be shared">
             rolling from the seed
           </span>
-        ) : (
-          <label className="toggle" title="Off by default: the dice are yours">
-            <input
-              type="checkbox"
-              checked={run.autoRoll}
-              onChange={(e) => run.setAutoRoll(e.target.checked)}
-            />
-            <span>Auto-roll</span>
-          </label>
         )}
         <button className="ghost" onClick={run.undo} disabled={!run.canUndo || run.readOnly}>
           Undo
         </button>
+        <button className="ghost" onClick={onSettings} title="Sounds, dice, rolls, and pop-outs for a stream">
+          Settings
+        </button>
+        {/* Apart from Undo, and in the tone the profile uses for deletion: it ends the run. */}
         <button
-          className="ghost"
+          className="ghost danger"
+          title={`End this ${v.run.one.toLowerCase()} and delete its log`}
           onClick={() => {
-            if (confirm(`Discard this ${v.run.one.toLowerCase()} and its log?`)) run.discard();
+            const named = state.name ? `${state.name}` : `this ${v.run.one.toLowerCase()}`;
+            if (confirm(`Discard ${named}? Its log is deleted.`)) run.discard();
           }}
         >
           Discard
-        </button>
-        <button className="ghost" onClick={onSettings} title="Sounds, dice, and pop-outs for a stream">
-          Settings
         </button>
       </div>
     </section>
@@ -815,8 +841,15 @@ function StepPanel({
               : "This is the part the app cannot see. It only records that you did it."}
           </p>
           {list.length > 0 && <Checklist items={list} pack={pack} state={state} ticked={ticked} onToggle={tick} />}
-          <button className="primary big" disabled={!allTicked} onClick={() => run.completeStep(phase, index)}>
-            Done
+          {/*
+            Never dim. A dimmed Done beside an unticked list read as broken;
+            the button says what it is waiting for and points at the box.
+          */}
+          <button
+            className="primary big"
+            onClick={(e) => (allTicked ? run.completeStep(phase, index) : nudgeFirstUnticked(e.currentTarget))}
+          >
+            {allTicked ? "Done" : "Tick what you honored"}
           </button>
         </section>
       );
@@ -865,13 +898,25 @@ function StepPanel({
               <Checklist items={confirmations} pack={pack} state={state} ticked={ticked} onToggle={tick} />
             </>
           )}
-          <button className="primary big" disabled={!allTicked || blocked.length > 0} onClick={() => run.finalizeUnit(phase, index)}>
-            {v.finalize}
+          <button
+            className="primary big"
+            disabled={blocked.length > 0}
+            onClick={(e) => (allTicked ? run.finalizeUnit(phase, index) : nudgeFirstUnticked(e.currentTarget))}
+          >
+            {blocked.length > 0 ? "Settle what is owed first" : allTicked ? v.finalize : "Tick what you honored"}
           </button>
         </section>
       );
     }
   }
+}
+
+/** The first box in this step still unticked, brought into view and given focus. */
+function nudgeFirstUnticked(from: HTMLElement): void {
+  const box = from.closest(".runStep")?.querySelector<HTMLInputElement>('input[type="checkbox"]:not(:checked)');
+  if (!box) return;
+  box.scrollIntoView({ block: "nearest" });
+  box.focus();
 }
 
 /**
@@ -1532,20 +1577,24 @@ function Flow({
         {run.activePhases.map((phase, i) => {
           const done = state.phasesDone.includes(phase.id);
           const current = run.activeStep?.phase.id === phase.id;
-          // Out of play this unit: grayed, with the reason on hover, so a
-          // phase that only happens in the first room reads as skipped
-          // rather than as something the player has yet to reach.
+          // Out of play this unit: grayed, with the reason under the name,
+          // so a phase that only happens in the first room reads as skipped
+          // for a reason rather than as broken. A dash on its own was read
+          // as broken.
           const skipped = !done && !current && phaseSkipped(pack, state, phase);
-          const why = skipped ? describeSkip(pack, phase) : null;
+          const why = skipped ? describeSkipReason(pack, phase) : null;
           return (
             <li
               key={phase.id}
               className={done ? "done" : current ? "current" : skipped ? "skipped" : ""}
               aria-current={current ? "step" : undefined}
-              title={why ?? undefined}
+              title={skipped ? (describeSkip(pack, phase) ?? undefined) : undefined}
             >
               <span className="idx">{current ? "▸" : skipped ? "–" : i + 1}</span>
-              <span>{phase.label}</span>
+              <span>
+                {phase.label}
+                {why && <span className="why">{why}</span>}
+              </span>
             </li>
           );
         })}
@@ -1555,8 +1604,17 @@ function Flow({
 }
 
 function Timeline({ pack, state }: { pack: Pack; state: RunState }) {
-  if (state.outcomes.length === 0) return null;
   const total = state.outcomes.length;
+  // Always on the page, empty or not: the column under the step used to end
+  // at the card until the first roll, and the screen read as unfinished.
+  if (total === 0) {
+    return (
+      <section className="log">
+        <h3 className="sectionTitle">The log</h3>
+        <p className="empty">Nothing yet. What the dice do lands here.</p>
+      </section>
+    );
+  }
   return (
     <section className="log">
       <h3 className="sectionTitle">The log</h3>

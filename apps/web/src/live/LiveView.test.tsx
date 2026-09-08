@@ -48,6 +48,14 @@ describe("the live page", () => {
     expect(html.match(/mono">Stage 1<\/span>/g)?.length).toBe(1);
   });
 
+  it("says why a phase is out of play this unit, not just that it is", () => {
+    const html = renderToStaticMarkup(
+      <LiveView snapshot={{ ...base, phases: [...base.phases, { id: "wedge", label: "Wedging", state: "skipped", why: "after the first stage" }] }} />,
+    );
+    expect(html).toContain('class="skipped"');
+    expect(html).toContain('<span class="why">after the first stage</span>');
+  });
+
   it("says where a run is before its first unit, and after a unit closes", () => {
     const fresh = renderToStaticMarkup(<LiveView snapshot={{ ...base, unit: 0, where: null, step: null, phases: [], log: [] }} />);
     expect(fresh).toContain("Waiting to enter the first stage");

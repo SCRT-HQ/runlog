@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertsPanel } from "../alerts/AlertsPanel.tsx";
 import type { AlertSettings } from "../alerts/settings.ts";
 import { Dice3dSwitch } from "../dice/Dice3dSwitch.tsx";
+import { carriesOnByItself, setCarriesOnByItself } from "./pace.ts";
 import { StreamSettings } from "./StreamPanel.tsx";
 
 /**
@@ -15,6 +16,7 @@ export function SettingsDialog({
   race,
   alerts,
   onAlerts,
+  rolling,
   onControls,
   onClose,
 }: {
@@ -22,11 +24,14 @@ export function SettingsDialog({
   race: boolean;
   alerts: AlertSettings;
   onAlerts: (next: AlertSettings) => void;
+  /** Who throws the dice in this run, and whether the run leaves any choice. */
+  rolling?: { auto: boolean; seeded: boolean; onAuto: (on: boolean) => void };
   /** Float the run's controls in a window of their own. */
   onControls?: () => void;
   onClose: () => void;
 }) {
   const close = useRef<HTMLButtonElement>(null);
+  const [carryOn, setCarryOn] = useState(carriesOnByItself);
   useEffect(() => {
     close.current?.focus();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -50,6 +55,32 @@ export function SettingsDialog({
           </h3>
           <AlertsPanel settings={alerts} onChange={onAlerts} />
           <Dice3dSwitch />
+        </section>
+
+        <section>
+          <h3 className="sectionTitle">
+            Rolls <span className="muted">whose dice, and how fast</span>
+          </h3>
+          {rolling &&
+            (rolling.seeded ? (
+              <p className="muted small">This run rolls from its seed, so everyone at it meets the same dice.</p>
+            ) : (
+              <label className="toggle" title="Off by default: the dice are yours">
+                <input type="checkbox" checked={rolling.auto} onChange={(e) => rolling.onAuto(e.target.checked)} />
+                <span>Roll for me, without asking</span>
+              </label>
+            ))}
+          <label className="toggle" title="A receipt shows what a roll did; by default it waits for Carry on">
+            <input
+              type="checkbox"
+              checked={carryOn}
+              onChange={(e) => {
+                setCarriesOnByItself(e.target.checked);
+                setCarryOn(e.target.checked);
+              }}
+            />
+            <span>After a roll, carry on by itself</span>
+          </label>
         </section>
 
         {runId && (

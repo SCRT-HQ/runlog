@@ -59,6 +59,14 @@ describe("the receipt", () => {
     expect(html).toContain('class="result heat"');
   });
 
+  it("offers to keep rolling only where it is asked to, after a roll the machine made", () => {
+    const rolled = { dice: null, total: 4, label: null, notation: "d6", machineRolled: true, outcomes: [] };
+    const offered = renderToStaticMarkup(<Receipt pack={kiln} onDismiss={() => {}} onKeepRolling={() => {}} receipt={rolled} />);
+    expect(offered).toContain("Keep rolling for me");
+    const plain = renderToStaticMarkup(<Receipt pack={kiln} onDismiss={() => {}} receipt={rolled} />);
+    expect(plain).not.toContain("Keep rolling for me");
+  });
+
   it("still says something when a roll resolved nothing", () => {
     const html = renderToStaticMarkup(
       <Receipt

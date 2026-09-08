@@ -50,7 +50,7 @@ const off: Sync = {
   gesture: () => {},
 };
 
-const SyncContext = createContext<Sync>(off);
+export const SyncContext = createContext<Sync>(off);
 
 export function useSync(): Sync {
   return useContext(SyncContext);

@@ -34,12 +34,18 @@ export function Receipt({
   pack,
   onDismiss,
   onDrawAgain,
+  onKeepRolling,
 }: {
   receipt: RollReceipt;
   pack: Pack;
   onDismiss: () => void;
   /** When the draw can be unmade and taken again: a result that cannot be done today. */
   onDrawAgain?: (reason?: string) => void;
+  /**
+   * After a roll the machine made on request: keep making them. The choice
+   * is offered where the roll happened, not in a toolbar before the run.
+   */
+  onKeepRolling?: () => void;
 }) {
   const v = pack.vocabulary;
   const hasThrow = receipt.total !== null;
@@ -97,6 +103,11 @@ export function Receipt({
         <button className="primary" onClick={onDismiss} autoFocus>
           Carry on
         </button>
+        {onKeepRolling && (
+          <button className="ghost" onClick={onKeepRolling} title="Roll for you from here on; the log still says which rolls were the machine's">
+            Keep rolling for me
+          </button>
+        )}
         {onDrawAgain && why === null && (
           <button className="ghost" onClick={() => setWhy("")} title="Unmake this draw and roll again; the log says you did">
             Can't do this one

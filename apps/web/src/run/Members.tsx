@@ -6,6 +6,7 @@ import { PlanError, REACTIONS, type Invite, type Person, type Reaction, type Ses
 import { syncBus } from "../sync/bus.ts";
 import { liveLinkOf, rememberLiveLink } from "../live/route.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
+import { useSync } from "../sync/SyncProvider.tsx";
 import type { StoredRun } from "../storage/db.ts";
 
 /**
@@ -22,7 +23,9 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
   const account = useAccount();
   const api = useApi();
   const hosted = useHosted();
+  const sync = useSync();
   const me = account.status === "signed-in" ? account.user.id : null;
+  const noun = pack.vocabulary.run.one.toLowerCase();
   const [upgrade, setUpgrade] = useState<string | null>(null);
   const members: SessionMember[] = run.members ?? [];
   const owner = run.role === "owner";
@@ -66,14 +69,22 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
   };
   useEffect(refresh, [api, owner, run.runId]);
 
+  const heading = (
+    <summary>
+      <h3 className="sectionTitle">
+        People <span className="muted">at the table</span>
+      </h3>
+    </summary>
+  );
+
   if (!api) {
     return (
-      <section className="panel">
-        <h3 className="sectionTitle">
-          People <span className="muted">at the table</span>
-        </h3>
-        <p className="muted small">Sign in to share this {pack.vocabulary.run.one.toLowerCase()} with someone.</p>
-      </section>
+      <details className="panel people">
+        {heading}
+        <div className="peopleBody">
+          <p className="muted small">Sign in to share this {noun} with someone.</p>
+        </div>
+      </details>
     );
   }
 
@@ -102,11 +113,29 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
     void api.react(run.runId, emoji).then(setReactions, () => {});
   };
 
+  /**
+   * Where the run stands with the account, said plainly. A run the server
+   * has never seen has no role yet; whether it is on its way depends on
+   * this device's sync switch, which is the thing to offer.
+   */
+  const reached = run.role !== undefined;
+  const company = members.some((m) => m.sub !== me) || pending.length > 0;
+
   return (
-    <section className="panel members">
-      <h3 className="sectionTitle">
-        People <span className="muted">at the table</span>
-      </h3>
+    <details className="panel people members" open={company}>
+      {heading}
+      <div className="peopleBody">
+      {!reached && sync.available && !sync.enabled && (
+        <p className="muted small">
+          Sync is off on this device, so this {noun} stays here.{" "}
+          <button className="linkButton" onClick={() => sync.setEnabled(true)}>
+            Turn sync on
+          </button>
+        </p>
+      )}
+      {!reached && (!sync.available || sync.enabled) && (
+        <p className="muted small">Reaching your account. Inviting opens once it has.</p>
+      )}
       {members.length > 0 && (
         <div className="reactRow tableReact" aria-label="React">
           {REACTIONS.map((emoji) => (
@@ -126,7 +155,6 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
           ))}
         </div>
       )}
-      {members.length === 0 && <p className="muted small">Just you, until this run has reached your account through sync.</p>}
       {members.map((m) => (
         <div key={m.sub} className={`row spread memberRow${m.sub === me ? " me" : ""}`} aria-current={m.sub === me ? "true" : undefined}>
           <span>
@@ -271,9 +299,9 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
             </>
           )}
           {liveNote && <p className="muted small">{liveNote}</p>}
-
         </>
       )}
-    </section>
+      </div>
+    </details>
   );
 }
