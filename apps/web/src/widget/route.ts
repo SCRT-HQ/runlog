@@ -8,7 +8,8 @@ export const WIDGET_KINDS = [
   { kind: "scoreboard", label: "Scoreboard", what: "Standings in a moderated run: places, points, marks." },
   { kind: "race", label: "Race", what: "The race leaderboard, as the racers' devices report it." },
   { kind: "clock", label: "Clock", what: "The unit's stopwatch or timer, large." },
-  { kind: "stats", label: "Stats", what: "Where the run stands: unit, units done, time, points." },
+  { kind: "step", label: "Step", what: "The current step, the constraints in play, and the latest result." },
+  { kind: "stats", label: "Stats", what: "Where the run stands: unit, units done, time, step, constraints, score." },
   { kind: "trackers", label: "Trackers", what: "Resources and counters, as bars and boxes." },
   { kind: "column", label: "Everything, stacked", what: "Clock, stats, scoreboard, race and trackers in one column, leaving out what the run has nothing for." },
 ] as const;

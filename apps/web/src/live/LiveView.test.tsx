@@ -64,4 +64,28 @@ describe("the live page", () => {
     const between = renderToStaticMarkup(<LiveView snapshot={{ ...base, where: null, step: null, phases: [] }} />);
     expect(between).toContain("Stage 2 is closed; the next has not begun");
   });
+
+  it("shows a step's constraints the way the run screen does, and this stage's results so far", () => {
+    const html = renderToStaticMarkup(
+      <LiveView
+        snapshot={{
+          ...base,
+          constraints: ["The wall must be thin enough to admit light."],
+          unitResults: [{ table: "Constraint", text: "The wall must be thin enough to admit light.", hit: null }],
+        }}
+      />,
+    );
+    expect(html).toContain("The game has already had its say");
+    expect(html).toContain("The wall must be thin enough to admit light.");
+    expect(html).toContain("This stage so far");
+    // Nothing to honor and nothing rolled yet: neither block appears.
+    const empty = renderToStaticMarkup(<LiveView snapshot={{ ...base, constraints: [], unitResults: [] }} />);
+    expect(empty).not.toContain("The game has already had its say");
+    expect(empty).not.toContain("This stage so far");
+    // A snapshot written before these fields existed carries neither key at all.
+    const { constraints: _c, unitResults: _u, ...withoutFields } = base;
+    const legacy = renderToStaticMarkup(<LiveView snapshot={withoutFields as LiveSnapshot} />);
+    expect(legacy).not.toContain("The game has already had its say");
+    expect(legacy).not.toContain("This stage so far");
+  });
 });

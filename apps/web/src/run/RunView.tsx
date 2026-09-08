@@ -7,7 +7,7 @@ import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
 import { clockOfUnit, compareScores, formatClock, formatScore, liveClocks, nextUnit, scoreOf } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
-import { describeSkip, describeSkipReason, phaseSkipped, subjectLabel, subjectName, type RunEvent, type RunState } from "@runlog/engine";
+import { constraintsFor, describeSkip, describeSkipReason, phaseSkipped, subjectLabel, subjectName, type RunEvent, type RunState } from "@runlog/engine";
 import { useRun, type ActiveStep } from "./useRun.ts";
 import type { RunStore } from "./store.ts";
 import type { StoredRun } from "../storage/db.ts";
@@ -1046,22 +1046,6 @@ function StepHead({ phase, label }: { phase: { label: string }; label: string })
       <h4 className="stepLabel">{label}</h4>
     </>
   );
-}
-
-/** The most recent class-style result, shown when declaring. */
-/**
- * What a table has said this unit, for a step that must honor it: every
- * result on that table since the unit began, in order, so a unit that
- * rolled twice (an extra roll owed) shows both.
- */
-function constraintsFor(pack: Pack, state: RunState, tableId?: string): string[] {
-  if (!tableId) return [];
-  const table = pack.tables[tableId];
-  return state.outcomes
-    .filter((o) => o.unit === state.unit && o.table === tableId)
-    .map((o) => table?.entries.find((e) => e.id === o.entryId))
-    .map((entry) => entry?.title ?? entry?.text ?? null)
-    .filter((line): line is string => line !== null);
 }
 
 /** The rules already drawn this unit, in front of the player while they work. */

@@ -42,8 +42,40 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
         </p>
       )}
 
+      {(s.constraints ?? []).length > 0 && (
+        <div className="notice constraints">
+          <span className="muted small">The game has already had its say</span>
+          <ul>
+            {(s.constraints ?? []).map((line, i) => (
+              <li key={i}>
+                <strong>{line}</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="liveGrid">
         <div className="liveMain">
+          {(s.unitResults ?? []).length > 0 && (
+            <section className="log">
+              <h3 className="sectionTitle">This {s.words.unit.toLowerCase()} so far</h3>
+              <ol className="timeline">
+                {(s.unitResults ?? []).map((r, i) => (
+                  <li key={i}>
+                    <span className="idx">{i + 1}</span>
+                    <div>
+                      <span className="where">
+                        {r.table}
+                        {r.hit !== null && ` — hit #${r.hit}`}
+                      </span>
+                      <p>{r.text}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
           {(s.phases ?? []).length > 0 && (
             <section className={`stageFlow liveFlow${moved.turned ? " turned" : ""}`}>
               <h3 className="sectionTitle">

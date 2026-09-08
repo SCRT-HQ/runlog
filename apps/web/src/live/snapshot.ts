@@ -1,5 +1,5 @@
 import { modeDoc, summaryDoc, type Doc, type Pack } from "@runlog/rules-schema";
-import { activePhases, clockOfUnit, describeSkipReason, elapsedMs, formatScore, liveClocks, mayQuote, nextStep, phaseSkipped, progressOf, scoreOf, standings, subjectName, type RunEvent, type RunState } from "@runlog/engine";
+import { activePhases, clockOfUnit, constrainedByOf, constraintsFor, describeSkipReason, elapsedMs, formatScore, liveClocks, mayQuote, nextStep, phaseSkipped, progressOf, scoreOf, standings, subjectName, type RunEvent, type RunState } from "@runlog/engine";
 
 /**
  * A run as anyone may see it: the state and the log, worded, with the
@@ -32,7 +32,17 @@ export interface LiveSnapshot {
   where: string | null;
   /** The step in hand, on its own, and the unit's phases with where each stands: what the player's own screen lists. */
   step: string | null;
+  /** The current step's `kind` — `"manual"`, `"declareSubject"`, and so on; null with no step. Absent from snapshots written before it was carried. */
+  stepKind?: string | null;
   phases: Array<{ id: string; label: string; state: "done" | "current" | "skipped" | "todo"; why?: string }>;
+  /**
+   * A rule drawn earlier this unit that the current step must honor, in the
+   * pack's own words — the same lines the player's own screen shows in
+   * front of them while they work. Empty off a step with nothing to honor,
+   * or one with no `constrainedBy` table. Absent from snapshots written
+   * before it was carried.
+   */
+  constraints?: string[];
   /** The pack's text may be handed over whole here: its paper, its tables. The log carries the drawn entries' words either way. */
   quoted: boolean;
   standings: Array<{ name: string; points: number; place: number; states: string[] }>;
@@ -47,6 +57,15 @@ export interface LiveSnapshot {
   forcedUnits: number;
   /** Newest first, numbered from the start. */
   log: Array<{ n: number; unit: number; where: string; hit: number | null; text: string }>;
+  /**
+   * Every result rolled this unit, in the order the dice landed on them —
+   * "this unit so far" for a watcher, and a table a manual step draws its
+   * constraints from may be rolled more than once. Absent from snapshots
+   * written before it was carried.
+   */
+  unitResults?: Array<{ table: string; text: string; hit: number | null }>;
+  /** The most recent log line, for a widget that shows one thing rather than the whole log. Null with nothing rolled yet; absent from snapshots written before it was carried. */
+  latest?: { where: string; text: string } | null;
   /** The race this run is in, as its owner's device last saw the leaderboard; absent outside a race. */
   race?: RaceSnapshot;
   /**
@@ -115,6 +134,18 @@ export function raceOf(
 
 const LOG_LINES = 60;
 
+/**
+ * The line the dice landed on, in the pack's words, whatever the license
+ * says about the pack: a watcher who sees "#mut-071" is watching numbers.
+ * What the dice drew is one line of one table; the tables themselves and
+ * the pack's paper stay behind `quoted`.
+ */
+function entryTextOf(pack: Pack, o: RunState["outcomes"][number]): string {
+  const table = pack.tables[o.table];
+  const entry = table?.entries.find((e) => e.id === o.entryId);
+  return entry?.title ?? entry?.text ?? `${table?.title ?? o.table} · #${o.entryId}`;
+}
+
 export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEvent[], at: string = new Date().toISOString(), extra: { race?: RaceSnapshot | undefined } = {}): LiveSnapshot {
   const v = pack.vocabulary;
   const quoted = mayQuote(pack, "share");
@@ -140,21 +171,21 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
   const log = [...state.outcomes]
     .reverse()
     .slice(0, LOG_LINES)
-    .map((o, i) => {
-      const table = pack.tables[o.table];
-      const entry = table?.entries.find((e) => e.id === o.entryId);
-      return {
-        n: total - i,
-        unit: o.unit,
-        where: `${v.unit.one} ${o.unit}, ${table?.title ?? o.table}`,
-        hit: o.targetSubject,
-        // The line the dice landed on, in the pack's words, whatever the
-        // license says about the pack: a watcher who sees "#mut-071" is
-        // watching numbers. What the dice drew is one line of one table;
-        // the tables themselves and the pack's paper stay behind `quoted`.
-        text: entry?.title ?? entry?.text ?? `${table?.title ?? o.table} · #${o.entryId}`,
-      };
-    });
+    .map((o, i) => ({
+      n: total - i,
+      unit: o.unit,
+      where: `${v.unit.one} ${o.unit}, ${pack.tables[o.table]?.title ?? o.table}`,
+      hit: o.targetSubject,
+      text: entryTextOf(pack, o),
+    }));
+  const latest = log[0] ? { where: log[0].where, text: log[0].text } : null;
+  // Every result this unit, in the order the dice landed on them — a
+  // table rolled twice (an extra roll owed) shows both, oldest first,
+  // for "this unit so far" rather than the whole run's log.
+  const unitResults = state.outcomes
+    .filter((o) => o.unit === state.unit)
+    .map((o) => ({ table: pack.tables[o.table]?.title ?? o.table, text: entryTextOf(pack, o), hit: o.targetSubject }));
+  const constraints = step ? constraintsFor(pack, state, constrainedByOf(step.step)) : [];
   const unitClock = clockOfUnit(state, state.unit);
   const clocks = [...liveClocks(state), ...(unitClock?.status === "done" ? [unitClock] : [])].map((c) => ({
     id: c.id,
@@ -181,7 +212,9 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
     unit: state.unit,
     where: step && stepLabel ? `${step.phase.label} · ${stepLabel}` : null,
     step: stepLabel,
+    stepKind: step?.step.kind ?? null,
     phases,
+    constraints,
     quoted,
     standings: standings(state).map((s) => ({ name: s.contestant.name, points: s.points, place: s.place, states: s.contestant.states.map(stateLabel) })),
     contestants: state.contestants.length,
@@ -195,6 +228,8 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
     score: { label: score.label, text: formatScore(score, pack), value: score.value, better: score.better },
     forcedUnits: state.forcedUnits,
     log,
+    unitResults,
+    latest,
     ...(extra.race ? { race: extra.race } : {}),
   };
 }
