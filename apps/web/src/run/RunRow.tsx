@@ -12,12 +12,15 @@ export function RunRow({
   run: r,
   vocabulary,
   open = false,
+  score,
   onPick,
   onForget,
 }: {
   run: StoredRun;
   vocabulary: Pack["vocabulary"];
   open?: boolean;
+  /** The run's score, already formatted, where it has one — an ended run only. */
+  score?: string;
   onPick: () => void;
   /** Where forgetting belongs on the row; absent where it does not. */
   onForget?: () => void;
@@ -32,11 +35,14 @@ export function RunRow({
     <div className={`runRow ${open ? "open" : ""}`}>
       <button className="runRowMain" onClick={onPick} disabled={open}>
         <strong>{named ?? `${vocabulary.run.one} from ${began}`}</strong>
-        <span className="muted small">
-          {open ? "open here" : `last played ${onDay(r.updatedAt)}`}
-          {ended && " · ended"}
-          {people > 1 && ` · ${people} at the table`}
-          {r.role && r.role !== "owner" && ` · you ${r.role === "viewer" ? "watch" : "play"}`}
+        <span className="muted small runRowMeta">
+          <span>
+            {open ? "open here" : `last played ${onDay(r.updatedAt)}`}
+            {ended && " · ended"}
+            {people > 1 && ` · ${people} at the table`}
+            {r.role && r.role !== "owner" && ` · you ${r.role === "viewer" ? "watch" : "play"}`}
+          </span>
+          {score && <span className="num">{score}</span>}
         </span>
       </button>
       <span className="runRowActions">

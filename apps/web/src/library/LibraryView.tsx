@@ -5,6 +5,7 @@ import { syncBus } from "../sync/bus.ts";
 import { useSync } from "../sync/SyncProvider.tsx";
 import { activeRunFor } from "../run/active.ts";
 import { RunRow, onDay } from "../run/RunRow.tsx";
+import { scoresOf } from "../run/scores.ts";
 import { byLastOpened, openedAt } from "./opened.ts";
 import { DocMenu } from "../docs/DocMenu.tsx";
 import { HomeStrip } from "./HomeStrip.tsx";
@@ -90,18 +91,33 @@ export function LibraryView({
 
   const ordered = useMemo(() => byLastOpened(packs), [packs]);
 
-  /** Each pack's own words, for its rows; parsed once per source. */
-  const vocabularies = useMemo(() => {
-    const out = new Map<string, Pack["vocabulary"]>();
+  /** Each pack, fully parsed, once per source — its words for the rows, and enough to score them. */
+  const parsedPacks = useMemo(() => {
+    const out = new Map<string, Pack>();
     for (const p of packs) {
       const parsed = loadPackText(p.source, p.record?.format ?? "yaml");
-      out.set(p.id, parsed.ok ? parsed.pack.vocabulary : FALLBACK_VOCABULARY);
+      if (parsed.ok) out.set(p.id, parsed.pack);
     }
     return out;
   }, [packs]);
 
+  const vocabularies = useMemo(() => {
+    const out = new Map<string, Pack["vocabulary"]>();
+    for (const p of packs) out.set(p.id, parsedPacks.get(p.id)?.vocabulary ?? FALLBACK_VOCABULARY);
+    return out;
+  }, [packs, parsedPacks]);
+
   const runsOf = (packId: string) =>
     runs.filter((r) => r.packId === packId).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+
+  /** Score text for an ended run, by pack — a pack that failed to parse scores nothing. */
+  const scoresByPack = useMemo(() => {
+    const out = new Map<string, Map<string, string>>();
+    for (const [id, pack] of parsedPacks) {
+      out.set(id, new Map(scoresOf(pack, runsOf(id), Date.now()).map((s) => [s.runId, s.text])));
+    }
+    return out;
+  }, [parsedPacks, runs]);
 
   return (
     <main className="main library">
@@ -210,6 +226,7 @@ export function LibraryView({
                     run={r}
                     vocabulary={v}
                     open={r.runId === open && p.id === activeId}
+                    score={scoresByPack.get(p.id)?.get(r.runId)}
                     onPick={() => onContinue(p, r)}
                     onForget={() => onForgetRun(r)}
                   />
