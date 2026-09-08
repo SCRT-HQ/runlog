@@ -2,14 +2,16 @@ import { useState } from "react";
 import { usePlan } from "../sync/usePlan.ts";
 import { WIDGET_KINDS, widgetHref, type WidgetKind } from "../widget/route.ts";
 import { liveLinkOf } from "../live/route.ts";
+import { canFloat } from "./ControlPanel.tsx";
 
 /**
  * Pop-outs for a stream: one panel of this run on a page of its own, to
  * capture as a browser source or to keep on a second screen. Each opens
  * in a small window; the address is what a capture wants, so it can be
  * copied too. Part of Plus where plans are on, like hosting a table.
+ * Lives in the run's Settings dialog.
  */
-export function StreamPanel({ runId, race }: { runId: string; race: boolean }) {
+export function StreamSettings({ runId, race, onControls }: { runId: string; race: boolean; onControls?: () => void }) {
   const plan = usePlan();
   const [clear, setClear] = useState(true);
   const [scale, setScale] = useState(1.25);
@@ -42,10 +44,7 @@ export function StreamPanel({ runId, race }: { runId: string; race: boolean }) {
   };
 
   return (
-    <details className="panel more streamMore">
-      <summary>
-        Stream <span className="muted">pop-out widgets</span>
-      </summary>
+    <div className="streamSettings">
       {!allowed ? (
         <p className="muted small">Pop-out widgets for a stream — the scoreboard, the clock, the race — are part of Plus, like hosting a table. Subscribe from your profile, under Plan.</p>
       ) : (
@@ -72,6 +71,16 @@ export function StreamPanel({ runId, race }: { runId: string; race: boolean }) {
               </select>
             </label>
           </div>
+          <div className="padRow floatRow">
+            <button className="ghost tiny" disabled={!canFloat() || !onControls} onClick={onControls} title="The run's next move, its last result and undo, in a small window that stays in front">
+              Float the controls
+            </button>
+            <span className="muted small">
+              {canFloat()
+                ? "A small window the browser keeps above everything else: the next move, the last result, undo."
+                : "Floating a window above the others needs Chrome or Edge; this browser cannot keep one in front."}
+            </span>
+          </div>
           <ul className="widgetList">
             {WIDGET_KINDS.filter((k) => k.kind !== "race" || race).map((k) => (
               <li key={k.kind}>
@@ -92,6 +101,6 @@ export function StreamPanel({ runId, race }: { runId: string; race: boolean }) {
           </ul>
         </>
       )}
-    </details>
+    </div>
   );
 }

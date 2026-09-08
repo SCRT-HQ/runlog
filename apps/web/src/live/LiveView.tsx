@@ -1,16 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatClock } from "@runlog/engine";
 import { clockNow, type LiveSnapshot } from "./snapshot.ts";
+import { motionBetween } from "./motion.ts";
 import { RaceBoard } from "./RaceBoard.tsx";
 
 /**
  * A run, watched: the snapshot laid out for someone who is not at the
  * table. Nothing here is pressed; the clocks tick from the moment the
- * snapshot was taken, and everything else waits for the next one.
+ * snapshot was taken, and everything else waits for the next one. When
+ * the next one comes, what changed moves: the unit turning, a line
+ * landing, a piece struck, a state put on, a number changing. The
+ * classes for that are computed against the snapshot before, and worn
+ * for one render.
  */
 export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot; stale?: boolean; children?: React.ReactNode }) {
   const now = useNow(snapshot.clocks.some((c) => c.status === "running"));
   const s = snapshot;
+  const before = useRef<LiveSnapshot | null>(null);
+  const moved = useMemo(() => motionBetween(before.current, s), [s]);
+  useEffect(() => {
+    before.current = s;
+  }, [s]);
   return (
     <div className="live">
       <header className="liveHead">
@@ -26,7 +36,7 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
       </header>
 
       {s.status === "active" && (
-        <p className="liveWhere">
+        <p key={s.unit} className={`liveWhere${moved.turned ? " turned" : ""}`}>
           <span className="muted small">Now</span>{" "}
           {s.where ?? (s.unit === 0 ? `Waiting to enter the first ${s.words.unit.toLowerCase()}` : `${s.words.unit} ${s.unit} is closed; the next has not begun`)}
         </p>
@@ -35,7 +45,7 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
       <div className="liveGrid">
         <div className="liveMain">
           {(s.phases ?? []).length > 0 && (
-            <section className="stageFlow liveFlow">
+            <section className={`stageFlow liveFlow${moved.turned ? " turned" : ""}`}>
               <h3 className="sectionTitle">
                 This {s.words.unit.toLowerCase()} <span className="muted">{s.words.unit} {s.unit}</span>
               </h3>
@@ -57,7 +67,7 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
               <h3 className="sectionTitle">The log</h3>
               <ol className="timeline">
                 {s.log.map((line, i) => (
-                  <li key={line.n} className={line.hit !== null ? "heat" : ""}>
+                  <li key={line.n} className={[line.hit !== null ? "heat" : "", line.n > moved.freshFrom ? "fresh" : ""].join(" ").trim()}>
                     <span className="idx">{line.n}</span>
                     <div>
                       {(i === 0 || s.log[i - 1]!.unit !== line.unit) && (
@@ -137,11 +147,11 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
             <section className="panel">
               <h3 className="sectionTitle">The board</h3>
               {s.subjects.map((sub) => (
-                <div key={sub.id} className="row spread">
+                <div key={sub.id} className={`row spread${moved.struck.has(sub.id) ? " struck" : ""}`}>
                   <span>
                     <span className="idx">#{sub.id}</span> {sub.type ?? "undeclared"}
                     {sub.states.map((st) => (
-                      <span key={st} className="chip state">
+                      <span key={st} className={`chip state${moved.states.has(`${sub.id}:${st}`) ? " fresh" : ""}`}>
                         {st}
                       </span>
                     ))}
@@ -161,7 +171,7 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
                   <div key={r.id} className="tracker">
                     <div className="trackerHead">
                       <strong>{r.label}</strong>
-                      <span className="muted">
+                      <span className={`muted${moved.resources.has(r.id) ? " bump" : ""}`}>
                         {r.value}
                         {r.max !== undefined && ` / ${r.max}`}
                       </span>
@@ -184,7 +194,7 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
                 <div key={c.id} className="tracker">
                   <div className="trackerHead">
                     <strong>{c.label}</strong>
-                    <span className="num">{c.value}</span>
+                    <span className={`num${moved.counters.has(c.id) ? " bump" : ""}`}>{c.value}</span>
                   </div>
                 </div>
               ))}

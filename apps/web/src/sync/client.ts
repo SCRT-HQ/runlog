@@ -310,6 +310,8 @@ export interface Profile {
   name?: string;
   /** The name this person chose to be shown as to everyone else; wins over `name`. */
   handle?: string;
+  /** When they last chose it, blank or not. Absent, they have not been asked, and the app asks before showing anything. */
+  handleSetAt?: string;
   email?: string;
   /** The session this account touched last, from whichever device; what a device with nothing open starts from. */
   currentSessionId?: string;

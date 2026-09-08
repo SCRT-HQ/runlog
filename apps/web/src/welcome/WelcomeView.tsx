@@ -3,7 +3,7 @@ import { countView } from "../hosted/beacon.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 import { Footer } from "../hosted/Footer.tsx";
 import { PersonaSwitcher } from "./PersonaSwitcher.tsx";
-import { otherScenes, otherVocabularies, savePersona, savedPersona, type Persona } from "./personas.ts";
+import { otherVocabularies, savePersona, savedPersona, type Persona } from "./personas.ts";
 import { appPath, baseOf, setSkipWelcome, skipWelcome } from "./route.ts";
 
 /**
@@ -40,7 +40,6 @@ export function WelcomeView() {
     },
     [storage],
   );
-  const [sceneTwo, sceneThree, sceneFour] = otherScenes(persona, 3) as [string, string, string];
   const [wordsTwo, wordsThree] = otherVocabularies(persona, 2) as [string, string];
 
   // A hash typed or pasted onto this page (a live link, a guide page) is a
@@ -87,12 +86,20 @@ export function WelcomeView() {
       <main className="welcomeMain">
         <section className="welcomeHero">
           <div className="welcomeWords">
+            {/*
+              The headline's first lines never change; only the last word
+              does, so the eye has one place to look while the persona
+              rolls. The break keeps the wrapping the same for every word.
+            */}
             <h2>
-              A referee and a run log for gamifying the things you already do as <PersonaSwitcher persona={persona} onChange={choose} />.
+              A referee and a run log for gamifying the things you already do as
+              <br />
+              <PersonaSwitcher persona={persona} onChange={choose} />.
             </h2>
             <p className="welcomeLede">
-              {persona.scene}, {sceneTwo}, {sceneThree}, {sceneFour}. Runlog reads a <em>pack</em>, a small file of tables, states and
-              steps, and becomes that game: it rolls, remembers, reaches back, and writes the log, so your hands stay on the work.
+              A day at the wheel, a house cleaned like a dungeon, an hour of practice, a kitchen under constraint. Runlog reads a{" "}
+              <em>pack</em>, a small file of tables, states and steps, and becomes that game: it rolls, remembers, reaches back, and
+              writes the log, so your hands stay on the work.
             </p>
             <p className="welcomeCtas">
               <a className="primary" href={play}>

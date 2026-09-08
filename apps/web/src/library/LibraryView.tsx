@@ -53,6 +53,7 @@ export function LibraryView({
   onCatalog,
   onUpdate,
   onJoinRace,
+  onContinueLast,
 }: {
   packs: LibraryPack[];
   activeId: string;
@@ -68,6 +69,8 @@ export function LibraryView({
   onUpdate?: (record: StoredPack) => void;
   /** Join a race by its six-letter code; absent where nobody is signed in. */
   onJoinRace?: (code: string) => void;
+  /** Open the run this account touched last, on this device or another. */
+  onContinueLast?: () => void;
 }) {
   const [raceCode, setRaceCode] = useState("");
   const sync = useSync();
@@ -137,7 +140,7 @@ export function LibraryView({
         </div>
       </header>
 
-      <HomeStrip packs={ordered} runs={runs} vocabularies={vocabularies} onContinue={onContinue} onOpen={onOpen} onCatalog={onCatalog} />
+      <HomeStrip packs={ordered} runs={runs} vocabularies={vocabularies} onContinue={onContinue} onContinueLast={onContinueLast} onOpen={onOpen} onCatalog={onCatalog} />
 
       {ordered.length === 0 && (
         <section className="panel">

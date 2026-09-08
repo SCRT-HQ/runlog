@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { an } from "@runlog/rules-schema";
 import { ClockPanel } from "./ClockPanel.tsx";
-import { StreamPanel } from "./StreamPanel.tsx";
-import { AlertsPanel } from "../alerts/AlertsPanel.tsx";
+import { SettingsDialog } from "./SettingsDialog.tsx";
+import { ControlPanel, openControlsWindow } from "./ControlPanel.tsx";
 import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
 import { clockOfUnit, formatClock, liveClocks, nextUnit } from "@runlog/engine";
@@ -17,7 +17,6 @@ import type { RolledDie } from "../rolling.ts";
 import { useSync } from "../sync/SyncProvider.tsx";
 import { syncBus } from "../sync/bus.ts";
 import { DiceCurtain, rolledOf, type RolledGesture } from "../dice/DiceCurtain.tsx";
-import { Dice3dSwitch } from "../dice/Dice3dSwitch.tsx";
 import { preloadDice3d } from "../dice/settings.ts";
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
@@ -29,7 +28,7 @@ import { ulid } from "../storage/ids.ts";
 import { clearPendingRaceCode, pendingRaceCode } from "../share/IncomingRace.tsx";
 import { PlanError } from "../sync/client.ts";
 import { liveLinkOf } from "../live/route.ts";
-import { raceOf, snapshotOf } from "../live/snapshot.ts";
+import { paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
 import { useRace } from "./useRace.ts";
 
 /**
@@ -47,6 +46,13 @@ export function RunView({ pack }: { pack: Pack }) {
   const account = useAccount();
   const me = account.status === "signed-in" ? account.user.id : null;
   const [alerts, setAlerts] = useAlertSettings();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  // The controls in a window of their own, for a streamer; see ControlPanel.
+  // The window is asked for in the press, and closed with this screen.
+  const [controlsWindow, setControlsWindow] = useState<Window | null>(null);
+  const closeControls = useCallback(() => setControlsWindow(null), []);
+  useEffect(() => () => controlsWindow?.close(), [controlsWindow]);
   const api = useApi();
   const [raceNote, setRaceNote] = useState<string | null>(null);
 
@@ -65,7 +71,7 @@ export function RunView({ pack }: { pack: Pack }) {
     const events = run.events;
     const race = raceOf(raceView.race, raceView.standings, pack.vocabulary.unit);
     const timer = window.setTimeout(() => {
-      void api.putSnapshot(record.runId, snapshotOf(pack, state, events, undefined, { race })).catch(() => {});
+      void api.putSnapshot(record.runId, { ...snapshotOf(pack, state, events, undefined, { race }), paper: paperOf(pack, state.mode) }).catch(() => {});
     }, 800);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -229,7 +235,7 @@ export function RunView({ pack }: { pack: Pack }) {
 
   return (
     <main className="main run">
-      <RunHeader pack={pack} run={run} state={state} />
+      <RunHeader pack={pack} run={run} state={state} onSettings={() => setSettingsOpen(true)} />
 
       {/*
         Three columns that are not three cards. The margin holds where the
@@ -315,18 +321,35 @@ export function RunView({ pack }: { pack: Pack }) {
           {run.roles.length > 0 && <Roles pack={pack} run={run} state={state} />}
           <Board pack={pack} state={state} onRename={run.renameSubject} onCorrect={run.readOnly ? undefined : run.correctState} />
           <Trackers pack={pack} state={state} onNudge={run.readOnly ? undefined : run.nudgeCounter} />
-          {run.record && <StreamPanel runId={run.record.runId} race={Boolean(run.record.raceId)} />}
-          <details className="panel more alertsMore">
-            <summary>
-              Alerts <span className="muted">and sounds</span>
-            </summary>
-            <AlertsPanel settings={alerts} onChange={setAlerts} />
-            <Dice3dSwitch />
-          </details>
           {run.record && api && <RacePanel pack={pack} race={raceView} />}
           {run.record && <Members pack={pack} run={run.record} />}
         </div>
       </div>
+      {settingsOpen && (
+        <SettingsDialog
+          runId={run.record?.runId ?? null}
+          race={Boolean(run.record?.raceId)}
+          alerts={alerts}
+          onAlerts={setAlerts}
+          onControls={() => {
+            setSettingsOpen(false);
+            void openControlsWindow().then(setControlsWindow, () => {});
+          }}
+          onClose={closeSettings}
+        />
+      )}
+      {controlsWindow && (
+        <ControlPanel
+          win={controlsWindow}
+          pack={pack}
+          run={run}
+          state={state}
+          receipt={receipt}
+          onCarryOn={() => setReceipt(null)}
+          onRoll={(key, total, dice, seed) => answer(key, total, true, dice, seed)}
+          onClose={closeControls}
+        />
+      )}
     </main>
   );
 }
@@ -611,10 +634,12 @@ function RunHeader({
   pack,
   run,
   state,
+  onSettings,
 }: {
   pack: Pack;
   run: ReturnType<typeof useRun>;
   state: RunState;
+  onSettings: () => void;
 }) {
   const v = pack.vocabulary;
   const mode = pack.modes[state.mode];
@@ -660,6 +685,9 @@ function RunHeader({
           }}
         >
           Discard
+        </button>
+        <button className="ghost" onClick={onSettings} title="Sounds, dice, and pop-outs for a stream">
+          Settings
         </button>
       </div>
     </section>

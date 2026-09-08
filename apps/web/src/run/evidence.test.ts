@@ -49,6 +49,12 @@ describe("what a point shows", () => {
   it("lists everything in the run when asked", () => {
     expect(evidenceFor(kiln, state, { table: "constraint", scope: "run" })).toHaveLength(2);
   });
+
+  it("gathers from several tables when the point names them, in the order they were rolled", () => {
+    const both = evidenceFor(kiln, state, { table: ["constraint", "setback"], scope: "run" });
+    expect(both).toHaveLength(4);
+    expect(both.map((s) => s.where)).toEqual(expect.arrayContaining([expect.stringContaining("Setback"), expect.stringContaining("Constraint")]));
+  });
 });
 
 describe("when a checklist is done", () => {

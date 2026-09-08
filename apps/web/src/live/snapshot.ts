@@ -1,4 +1,4 @@
-import type { Pack } from "@runlog/rules-schema";
+import { modeDoc, summaryDoc, type Doc, type Pack } from "@runlog/rules-schema";
 import { activePhases, clockOfUnit, elapsedMs, liveClocks, mayQuote, nextStep, phaseSkipped, progressOf, standings, type RunEvent, type RunState } from "@runlog/engine";
 
 /**
@@ -21,6 +21,8 @@ export interface LiveSnapshot {
   packTitle: string;
   runName: string | null;
   mode: string;
+  /** The mode's id, for the paper about it; absent from snapshots written before it was carried. */
+  modeId?: string;
   words: { run: string; unit: string; units: string };
   status: "active" | "ended";
   ending: string | null;
@@ -44,6 +46,35 @@ export interface LiveSnapshot {
   log: Array<{ n: number; unit: number; where: string; hit: number | null; text: string }>;
   /** The race this run is in, as its owner's device last saw the leaderboard; absent outside a race. */
   race?: RaceSnapshot;
+  /**
+   * The paper a watcher may read: the pack's summary and the mode's, as
+   * the summary tells them — the shape of the game, never a rule — so a
+   * link to a pack that may not travel still says what is being played.
+   * Written by the owner's device with the snapshot; the server reads no pack.
+   */
+  paper?: Paper;
+}
+
+export interface Paper {
+  summary: Doc;
+  mode: Doc | null;
+}
+
+const papers = new WeakMap<Pack, Map<string, Paper>>();
+
+/** The summary and the mode's page, made once per pack and mode; the same object comes back after. */
+export function paperOf(pack: Pack, modeId: string): Paper {
+  let byMode = papers.get(pack);
+  if (!byMode) {
+    byMode = new Map();
+    papers.set(pack, byMode);
+  }
+  let paper = byMode.get(modeId);
+  if (!paper) {
+    paper = { summary: summaryDoc(pack), mode: pack.modes[modeId] ? modeDoc(pack, modeId) : null };
+    byMode.set(modeId, paper);
+  }
+  return paper;
 }
 
 export interface RaceSnapshot {
@@ -128,6 +159,7 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
     packTitle: pack.title,
     runName: state.name,
     mode: pack.modes[state.mode]?.label ?? state.mode,
+    modeId: state.mode,
     words: { run: v.run.one, unit: v.unit.one, units: v.unit.many },
     status: state.status === "ended" ? "ended" : "active",
     ending: state.ending,

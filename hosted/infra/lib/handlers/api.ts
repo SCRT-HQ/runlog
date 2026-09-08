@@ -701,6 +701,13 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       ...(email !== undefined ? { email: email.trim() } : {}),
       ...(termsVersion !== undefined ? { termsVersion: termsVersion.trim() } : {}),
     });
+    // A name is shown on every seat this person holds, and a seat keeps
+    // the name it was taken with; a new name goes round the tables.
+    if (handle !== undefined || name !== undefined) {
+      const shown = shownName(profile);
+      const { sessions } = await store.manifest(caller.sub);
+      await Promise.all(sessions.filter((s) => !s.deletedAt).map((s) => store.setMemberName(s.id, caller.sub, shown)));
+    }
     return json(200, { profile });
   }
 

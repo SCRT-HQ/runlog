@@ -4,6 +4,7 @@ import { useSync } from "../sync/SyncProvider.tsx";
 import { createApi, type ApiKey, type Claim, type KeyScope, type Profile, type PublisherInvitation } from "../sync/client.ts";
 import { apiBase } from "../sync/config.ts";
 import { syncBus } from "../sync/bus.ts";
+import { rememberProfile } from "../sync/useProfile.ts";
 import { PlanSection } from "./PlanSection.tsx";
 import { PublisherSection } from "./PublisherSection.tsx";
 import { PurchasesSection } from "./PurchasesSection.tsx";
@@ -71,7 +72,11 @@ export function ProfileView({ onBack }: { onBack: () => void }) {
     const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
     void api
       .putProfile({ ...(name ? { name } : {}), ...(user.email ? { email: user.email } : {}) })
-      .then((p) => live && setProfile(p))
+      .then((p) => {
+        if (!live) return;
+        setProfile(p);
+        rememberProfile(p);
+      })
       .catch(() => {});
     return () => {
       live = false;
@@ -125,7 +130,14 @@ export function ProfileView({ onBack }: { onBack: () => void }) {
               Sign out
             </button>
           </div>
-          <ShownAs api={api} profile={profile} onSaved={setProfile} />
+          <ShownAs
+            api={api}
+            profile={profile}
+            onSaved={(p) => {
+              setProfile(p);
+              rememberProfile(p);
+            }}
+          />
           <p className="muted small">
             Signed in through WorkOS. The app never sees a password.
             {profile && (
