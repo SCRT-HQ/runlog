@@ -82,8 +82,16 @@ export function describePredicate(pack: Pack, p: Predicate): string {
  * `skipWhen` is enough, so they are joined with "or".
  */
 export function describeSkip(pack: Pack, phase: Phase): string | null {
+  const why = describeSkipReason(pack, phase);
+  return why === null ? null : `${phase.label} is skipped ${why}.`;
+}
+
+/**
+ * The reason alone, for a line under the phase's name: "after the first
+ * stage". The sentence above is for a tooltip; a list has no room for it.
+ */
+export function describeSkipReason(pack: Pack, phase: Phase): string | null {
   const reasons = phase.skipWhen ?? [];
   if (reasons.length === 0) return null;
-  const why = reasons.map((p) => describePredicate(pack, p)).join(", or ");
-  return `${phase.label} is skipped ${why}.`;
+  return reasons.map((p) => describePredicate(pack, p)).join(", or ");
 }

@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText, type Phase } from "@runlog/rules-schema";
-import { describePredicate, describeSkip } from "./describe.ts";
+import { describePredicate, describeSkip, describeSkipReason } from "./describe.ts";
 import { phaseSkipped } from "./flow.ts";
 import { reduce } from "./reduce.ts";
 import type { RunEvent } from "./events.ts";
@@ -51,6 +51,11 @@ describe("why a phase is out of play", () => {
 
   it("is nothing for a phase that always plays", () => {
     expect(describeSkip(kiln, { ...phase, skipWhen: undefined })).toBeNull();
+  });
+
+  it("gives the reason on its own for a line under the phase's name", () => {
+    expect(describeSkipReason(kiln, phase)).toBe("after the first stage");
+    expect(describeSkipReason(kiln, { ...phase, skipWhen: undefined })).toBeNull();
   });
 
   it("agrees with the flow about when the skip applies", () => {
