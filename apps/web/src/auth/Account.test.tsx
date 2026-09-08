@@ -47,6 +47,18 @@ describe("the account", () => {
     expect(html).toContain("Theme");
   });
 
+  it("hands the theme to the settings sheet where the app has one", () => {
+    vi.stubEnv("VITE_WORKOS_CLIENT_ID", "");
+    const html = renderToStaticMarkup(
+      <AccountProvider>
+        <AccountBadge onOpenSettings={() => {}} />
+      </AccountProvider>,
+    );
+    expect(html).toContain("Settings");
+    expect(html).toContain("theme, sounds, dice, rolls");
+    expect(html).not.toContain("<select");
+  });
+
   it("offers sign-in from the first paint where there is", () => {
     vi.stubEnv("VITE_WORKOS_CLIENT_ID", "client_test");
     const html = renderToStaticMarkup(
