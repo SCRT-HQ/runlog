@@ -1,4 +1,5 @@
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
+import { traced } from "./xray.js";
 
 /**
  * The API's secrets, read when first needed and kept for the container.
@@ -28,7 +29,7 @@ export function looksLike(kind: "stripe-key" | "webhook-secret" | "workos-key", 
 }
 
 export function secretsReader(): SecretReader {
-  const client = new SecretsManagerClient({});
+  const client = traced(new SecretsManagerClient({}));
   const cache = new Map<string, Promise<string | null>>();
   return (name) => {
     let pending = cache.get(name);

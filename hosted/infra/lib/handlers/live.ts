@@ -1,6 +1,7 @@
 import { ApiGatewayManagementApiClient, PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DeleteCommand, DynamoDBDocumentClient, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { traced } from "./xray.js";
 
 /**
  * Who is listening, and telling them something changed.
@@ -39,7 +40,7 @@ export interface LiveStore {
 }
 
 export function dynamoLive({ table }: { table: string }): LiveStore {
-  const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
+  const ddb = DynamoDBDocumentClient.from(traced(new DynamoDBClient({})), { marshallOptions: { removeUndefinedValues: true } });
   const cpk = (id: string) => `CONN#${id}`;
   const spk = (id: string) => `SESSION#${id}`;
 

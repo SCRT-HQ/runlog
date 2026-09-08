@@ -46,6 +46,9 @@ const RUNTIME_SDK = [
   "@aws-sdk/lib-dynamodb",
 ];
 
+/** The newest Lambda Insights build this CDK version knows the layer ARN for, on either architecture. */
+const INSIGHTS_VERSION = lambda.LambdaInsightsVersion.VERSION_1_0_498_0;
+
 export interface ApiStackProps extends StackProps {
   config: EnvConfig;
 }
@@ -149,6 +152,13 @@ export class ApiStack extends Stack {
       memorySize: 512,
       timeout: Duration.seconds(15),
       logGroup,
+      // Active tracing samples a share of requests and follows one through
+      // DynamoDB, S3, Secrets Manager, Stripe and WorkOS, so a slow request
+      // shows where the time went rather than only that it was slow. The
+      // Insights layer sits beside it: memory, CPU and cold starts, per
+      // invocation, without a trace to open.
+      tracing: lambda.Tracing.ACTIVE,
+      insightsVersion: INSIGHTS_VERSION,
       environment: {
         TABLE_NAME: this.table.tableName,
         BUCKET_NAME: this.bucket.bucketName,
@@ -166,6 +176,10 @@ export class ApiStack extends Stack {
         RUNLOG_GATES: config.gates ? "on" : "off",
         STRIPE_PRICES: JSON.stringify(config.stripe.prices),
         STRIPE_FEATURES: JSON.stringify(config.stripe.features),
+        // A client the X-Ray SDK captured should fail into "not traced"
+        // rather than throw, if it is ever called before the runtime has
+        // set up this invocation's segment.
+        AWS_XRAY_CONTEXT_MISSING: "IGNORE_ERROR",
       },
       bundling: {
         minify: true,
@@ -307,11 +321,14 @@ export class ApiStack extends Stack {
       memorySize: 256,
       timeout: Duration.seconds(10),
       logGroup,
+      tracing: lambda.Tracing.ACTIVE,
+      insightsVersion: INSIGHTS_VERSION,
       environment: {
         TABLE_NAME: this.table.tableName,
         BUCKET_NAME: this.bucket.bucketName,
         WORKOS_CLIENT_ID: config.workosClientId,
         WORKOS_CLI_CLIENT_ID: config.workosCliClientId,
+        AWS_XRAY_CONTEXT_MISSING: "IGNORE_ERROR",
       },
       bundling: {
         minify: true,
@@ -424,25 +441,31 @@ export class ApiStack extends Stack {
     // come from CDK: read and write on one bucket is spelled with the
     // wildcards CDK uses for it, and posting to a socket's connections has
     // to name every connection of the stage, since ids are made as people
-    // connect. The managed policy is the one that writes function logs.
+    // connect. The managed policies write function logs and the Insights
+    // metrics; both are AWS's own and a customer policy would restate them.
     for (const fn of [handler, wsHandler]) {
       NagSuppressions.addResourceSuppressions(
         fn,
         [
           {
             id: "AwsSolutions-IAM4",
-            reason: "AWSLambdaBasicExecutionRole grants writing the function's own CloudWatch logs and nothing else; a customer policy would restate it.",
-            appliesTo: ["Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"],
+            reason: "AWSLambdaBasicExecutionRole grants writing the function's own CloudWatch logs and nothing else; CloudWatchLambdaInsightsExecutionRolePolicy grants publishing the Insights metrics the layer collects. A customer policy would restate either.",
+            appliesTo: [
+              "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+              "Policy::arn:<AWS::Partition>:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy",
+            ],
           },
           {
             id: "AwsSolutions-IAM5",
-            reason: "CDK's grantRead/grantReadWrite on the one sync bucket, and the stage's @connections, whose ids exist only once someone connects.",
+            reason:
+              "CDK's grantRead/grantReadWrite on the one sync bucket, and the stage's @connections, whose ids exist only once someone connects. Active tracing's xray:PutTraceSegments/PutTelemetryRecords have no resource of their own to name; CDK writes them as Resource: '*' for that reason.",
             appliesTo: [
               "Action::s3:GetObject*",
               "Action::s3:GetBucket*",
               "Action::s3:List*",
               "Action::s3:Abort*",
               "Action::s3:DeleteObject*",
+              "Resource::*",
               { regex: "/^Resource::<Bucket[A-Za-z0-9]+\\.Arn>/\\*$/g" },
               { regex: "/^Resource::arn:(aws|<AWS::Partition>):execute-api:[^:]+:[^:]+:<WebSocketApi[A-Za-z0-9]+>/ws/\\*/@connections/\\*$/g" },
             ],

@@ -160,14 +160,27 @@ year's cache, the shell and the pages with none, and an invalidation.
 
 A new release is the same three commands with the new package.
 
-### Monitoring, if you want it
+### Monitoring
 
-Add `"apm": { "newRelic": { "accountId": "<your account>", "layerVersion": 52 } }`
+On by default, and entirely inside your AWS account. Both functions run
+with active X-Ray tracing, so a slow or failing request can be opened as a
+trace and read as time spent in DynamoDB, S3, Secrets Manager, Stripe or
+WorkOS, and the Lambda Insights layer reports memory, CPU and cold starts
+for every invocation. An alarm on the stage's own SNS topic fires when the
+handler errors repeatedly; subscribe an address to it by hand, since the
+address is not this repository's to commit. None of it is a service to
+sign up for or a secret to fill — it costs only what CloudWatch and X-Ray
+charge for what you actually run.
+
+### New Relic, optionally
+
+If you would rather have a cross-service trace and an error inbox outside
+AWS, add `"apm": { "newRelic": { "accountId": "<your account>", "layerVersion": 52 } }`
 to the stage's file, deploy, and fill `newrelic/license-key` with the
 script (it wraps the key the way New Relic's extension reads it). Both
-functions then report traces, errors and their logs to that account, with
-bodies, tokens and addresses kept out. Leave the block out and nothing
-is sent anywhere.
+functions then report traces, errors and their logs to that account as
+well, with bodies, tokens and addresses kept out. Leave the block out and
+nothing is sent there.
 
 ### After the first deploy
 

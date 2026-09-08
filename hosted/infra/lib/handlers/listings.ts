@@ -1,6 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DeleteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { traced } from "./xray.js";
 
 /**
  * What publishers list, and what the catalog shows.
@@ -73,8 +74,8 @@ export interface ListingStore {
 }
 
 export function dynamoListings({ table, bucket }: { table: string; bucket: string }): ListingStore {
-  const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
-  const s3 = new S3Client({});
+  const ddb = DynamoDBDocumentClient.from(traced(new DynamoDBClient({})), { marshallOptions: { removeUndefinedValues: true } });
+  const s3 = traced(new S3Client({}));
   const opk = (orgId: string) => `ORG#${orgId}`;
   const CARDS = "LISTINGS";
   const strip = <T>(row: Record<string, unknown>): T => {

@@ -13,6 +13,7 @@ import { realWorkOS, type WorkOSLike } from "./workos.js";
 import { dynamoListings, headOf, priceOf, type ListingCard, type ListingStore, type Product } from "./listings.js";
 import { dynamoSales, type Sale, type SaleStore } from "./sales.js";
 import { generateLicenseKey, seal } from "./container.js";
+import { annotate } from "./xray.js";
 import YAML from "yaml";
 import { randomUUID } from "node:crypto";
 import { createHash, randomBytes } from "node:crypto";
@@ -238,6 +239,9 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
 
   const method = event.requestContext.http.method.toUpperCase();
   const path = event.rawPath.replace(/\/+$/, "");
+  // What a trace can be filtered by: the shape of the request, never its
+  // contents — no body, no token, no email belongs in an annotation.
+  annotate({ method, route: path });
   const { store } = deps;
   const newRef = deps.ref ?? (() => randomBytes(10).toString("base64url").replace(/[-_]/g, "x").toUpperCase());
 

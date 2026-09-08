@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { tracedCalls } from "./xray.js";
 
 /**
  * Stripe, through a keyhole.
@@ -43,7 +44,7 @@ export interface StripeLike {
 
 export function realStripe(secretKey: string): StripeLike {
   const stripe = new Stripe(secretKey);
-  return {
+  const impl: StripeLike = {
     async createCustomer(input) {
       const c = await stripe.customers.create({ ...(input.email ? { email: input.email } : {}), ...(input.name ? { name: input.name } : {}), metadata: input.metadata });
       return { id: c.id };
@@ -137,6 +138,7 @@ export function realStripe(secretKey: string): StripeLike {
       return { url: s.url, sessionId: s.id };
     },
   };
+  return tracedCalls("stripe", impl);
 }
 
 /** The features named in an active-entitlement summary, by lookup key. */

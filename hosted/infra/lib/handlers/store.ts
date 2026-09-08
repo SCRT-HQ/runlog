@@ -18,6 +18,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { traced } from "./xray.js";
 
 /**
  * Where a player's things are kept.
@@ -342,10 +343,10 @@ type Row = Record<string, unknown> & {
 };
 
 export function dynamoStore({ table, bucket }: { table: string; bucket: string }): Store {
-  const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
+  const ddb = DynamoDBDocumentClient.from(traced(new DynamoDBClient({})), {
     marshallOptions: { removeUndefinedValues: true },
   });
-  const s3 = new S3Client({});
+  const s3 = traced(new S3Client({}));
 
   const pk = (sub: string) => `USER#${sub}`;
 

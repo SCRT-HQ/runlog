@@ -3,6 +3,7 @@ import { apiGatewayPoster, type Poster } from "./live.js";
 import { dynamoLive, type LiveStore } from "./live.js";
 import { dynamoStore, type Store } from "./store.js";
 import { dynamoRaces, type RaceStore } from "./races.js";
+import { annotate } from "./xray.js";
 
 /**
  * The socket's three moments.
@@ -46,6 +47,8 @@ interface WsResult {
 export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
   const { routeKey, connectionId } = event.requestContext;
   const now = deps.now ?? (() => new Date().toISOString());
+  // The socket has no method, only which of its three moments this is.
+  annotate({ method: "WS", route: routeKey });
 
   if (routeKey === "$connect") {
     const t = event.queryStringParameters?.["t"];
