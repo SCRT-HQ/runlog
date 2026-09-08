@@ -3639,7 +3639,8 @@ a.plan:hover { text-decoration: underline; }
 .diceCurtain .diceCurtainHead { padding: 0.5rem 0.8rem 0; font-family: var(--mono); }
 .diceCurtain .tray { border-top: 0; }
 .diceCurtain .rollTotal { padding: 0.2rem 0.8rem 0.7rem; }
-.diceCurtain .rollTotal.pending .big { color: var(--muted); }
+/* Dice still in the air: the number waits, muted, until they land. */
+.rollTotal.pending .big { color: var(--muted); }
 @keyframes curtainIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .diceCurtain { animation: none; } }
 .reactRow { display: flex; gap: 0.25rem; }
