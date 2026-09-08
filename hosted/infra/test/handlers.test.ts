@@ -353,6 +353,9 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
   return {
     rows: packs,
     exports,
+    async getProfile(sub) {
+      return profiles.get(sub) ?? null;
+    },
     async touchProfile(sub, at, snapshot = {}) {
       const profile: Profile = {
         ...(profiles.get(sub) ?? { createdAt: at }),
@@ -744,6 +747,22 @@ describe("who is asking", () => {
     // Without them, nothing is invented.
     await call(request("PUT", "/api/packs/plain", { body: packBody }), d);
     expect((await call(request("GET", "/api/packs/plain"), d)).body["pack"]).not.toHaveProperty("origin");
+  });
+
+  it("shows a table's people by the name they are shown as today, never the full name", async () => {
+    // A seat taken before a handle was chosen kept the full name, and a
+    // table read from those seats showed it to strangers. The profiles
+    // are read instead, at the moment the table is asked for.
+    const store = memoryStore();
+    const d = deps(store);
+    await call(request("PUT", "/api/me/profile", { body: { name: "Ada Lovelace" } }), d);
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    const first = await call(request("GET", "/api/sessions/01RUN"), d);
+    expect((first.body["members"] as SessionMember[]).map((m) => m.name)).toEqual(["Ada"]);
+    // A handle set without going round the tables (the seat still says "Ada").
+    await store.touchProfile("user_1", "2026-09-06T13:00:00.000Z", { handle: "ada-l" });
+    const later = await call(request("GET", "/api/sessions/01RUN"), d);
+    expect((later.body["members"] as SessionMember[]).map((m) => m.name)).toEqual(["ada-l"]);
   });
 
   it("runs a race: started with a code, joined by it, progress reported, ranked on the device", async () => {
