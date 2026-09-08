@@ -249,6 +249,16 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
       throw new Error("not used here");
     },
     unlinkDiscord: async () => {},
+    claimGuild: async () => {
+      throw new Error("not used here");
+    },
+    myGuilds: async () => ({ guilds: [], server: true }),
+    releaseGuild: async () => {},
+    guildPacks: async () => [],
+    delegatePack: async () => {
+      throw new Error("not used here");
+    },
+    undelegatePack: async () => {},
     deleteLicense: async (id) => {
       calls.push(`deleteLicense ${id}`);
       licenses.delete(id);

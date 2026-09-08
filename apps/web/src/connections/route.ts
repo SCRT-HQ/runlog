@@ -1,20 +1,22 @@
 /**
- * A link from another account of the person's: `#link/discord?c=<code>`,
- * the address the Runlog bot shows after `/link` in Discord. The code is
- * the whole message; it names nobody until it is handed in signed in,
- * which is how the two accounts meet. Other services would take the same
- * shape under their own name.
+ * A link from somewhere else of the person's: `#link/discord?c=<code>`,
+ * the address the Runlog bot shows after `/link` in Discord, and
+ * `#link/guild?c=<code>`, the one it shows after `/setup claim`. The code
+ * is the whole message; it names nobody until it is handed in signed in,
+ * which is how the two accounts, or the server and the account, meet.
  */
+export type LinkKind = "discord" | "guild";
+
 export interface LinkRoute {
-  kind: "discord";
+  kind: LinkKind;
   code: string;
 }
 
 export function linkFromHash(hash: string): LinkRoute | null {
-  const m = /^#link\/(discord)\?(.*)$/.exec(hash);
+  const m = /^#link\/(discord|guild)\?(.*)$/.exec(hash);
   if (!m) return null;
   const code = (new URLSearchParams(m[2]).get("c") ?? "").trim();
-  return code ? { kind: "discord", code } : null;
+  return code ? { kind: m[1] as LinkKind, code } : null;
 }
 
 const KEY = "runlog:link";
@@ -32,12 +34,15 @@ export function stashLink(route: LinkRoute): void {
   }
 }
 
-export function pendingLink(): LinkRoute | null {
+/** The link waiting, of the kind asked for; any kind when none is named. */
+export function pendingLink(kind?: LinkKind): LinkRoute | null {
   try {
     const raw = sessionStorage.getItem(KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { kind?: unknown; code?: unknown };
-    return parsed.kind === "discord" && typeof parsed.code === "string" && parsed.code ? { kind: "discord", code: parsed.code } : null;
+    if ((parsed.kind !== "discord" && parsed.kind !== "guild") || typeof parsed.code !== "string" || !parsed.code) return null;
+    if (kind && parsed.kind !== kind) return null;
+    return { kind: parsed.kind, code: parsed.code };
   } catch {
     return null;
   }

@@ -87,15 +87,17 @@ export function ClockDemo({ kind = "timer" }: { kind?: "timer" | "stopwatch" }) 
  * badge is a promise about the future rather than a gate in the present;
  * the tooltip says so.
  */
-export function Plan({ tier }: { tier: "free" | "plus" | "publisher" }) {
+export function Plan({ tier }: { tier: "free" | "plus" | "publisher" | "server" }) {
   const hosted = useHosted();
-  const label = tier === "free" ? "Free" : tier === "plus" ? "Plus" : "Publisher";
+  const label = tier === "free" ? "Free" : tier === "plus" ? "Plus" : tier === "server" ? "Servers" : "Publisher";
   const what =
     tier === "free"
       ? "Free for everyone, always."
       : tier === "plus"
         ? "Part of the Plus plan when plans arrive: hosting a table for other people. Free while Runlog is in preview."
-        : "Publisher tools: listing and selling packs with a hosted license ledger. Being built.";
+        : tier === "server"
+          ? "Runlog for servers: the bot hosts runs in a Discord server you claimed, on the packs you choose. Being built."
+          : "Publisher tools: listing and selling packs with a hosted license ledger. Being built.";
   if (hosted?.links.pricing) {
     return (
       <a className={`plan plan-${tier}`} title={what} href={hosted.links.pricing}>

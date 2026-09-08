@@ -115,14 +115,18 @@ describe("the profile", () => {
   });
 });
 
-describe("the profile's four pages", () => {
-  afterEach(() => stubInvites([]));
+describe("the profile's pages", () => {
+  afterEach(() => {
+    stubInvites([]);
+    sessionStorage.clear();
+  });
 
   it("reads a page from the hash, and a bare #profile as the first one", () => {
     expect(profilePageFromHash("#profile")).toBe("profile");
     expect(profilePageFromHash("#profile/publishing")).toBe("publishing");
     expect(profilePageFromHash("#profile/account")).toBe("account");
     expect(profilePageFromHash("#profile/social")).toBe("social");
+    expect(profilePageFromHash("#profile/servers")).toBe("servers");
     expect(profilePageFromHash("#profile/nonsense")).toBe("profile");
     expect(profilePageFromHash("#guide")).toBeNull();
     expect(profileHash("profile")).toBe("#profile");
@@ -134,6 +138,23 @@ describe("the profile's four pages", () => {
     expect(html).toContain("<h2>Profile</h2>");
     expect(html).toContain("Copy account id");
     expect(html).not.toContain("Sign out");
+  });
+
+  it("renders Servers, saying what a server needs where this process has no API, and asks before claiming one a code arrived for", () => {
+    const html = page(signedIn, { page: "servers" });
+    expect(html).toContain("<h2>Servers</h2>");
+    expect(html).toContain("hosted copy of Runlog");
+    expect(html).not.toContain("Claim it for this account");
+    // A code from /setup claim, kept across the sign-in round trip, is offered rather than acted on.
+    sessionStorage.setItem("runlog:link", JSON.stringify({ kind: "guild", code: "CLAIMA" }));
+    const asked = page(signedIn, { page: "servers" });
+    expect(asked).toContain("Discord asked to claim a server for this account");
+    expect(asked).toContain("n@example.com");
+    expect(asked).toContain("Claim it for this account");
+    expect(asked).toContain("Not now");
+    // A link code for a Discord account is Social's business, not this page's.
+    sessionStorage.setItem("runlog:link", JSON.stringify({ kind: "discord", code: "ABCDEF" }));
+    expect(page(signedIn, { page: "servers" })).not.toContain("Discord asked to claim");
   });
 
   it("renders Publishing as one paragraph and a link to the Designer, with no publisher, no listings and no keys", () => {

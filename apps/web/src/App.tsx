@@ -193,12 +193,15 @@ export default function App() {
         setProfilePage(profilePageFromHash(location.hash) ?? "profile");
         setView("profile");
       } else if (linkFromHash(location.hash)) {
-        // A code from another account (the bot's `/link`): kept for the
-        // Social page, which asks before binding it, and off the address
-        // bar so a reload does not offer it twice.
-        stashLink(linkFromHash(location.hash)!);
-        history.replaceState(null, "", `${location.pathname}${location.search}${profileHash("social")}`);
-        setProfilePage("social");
+        // A code from somewhere else of the person's (the bot's `/link`, or
+        // `/setup claim` for a server): kept for the profile page that asks
+        // before binding it, and off the address bar so a reload does not
+        // offer it twice.
+        const link = linkFromHash(location.hash)!;
+        stashLink(link);
+        const where = link.kind === "guild" ? "servers" : "social";
+        history.replaceState(null, "", `${location.pathname}${location.search}${profileHash(where)}`);
+        setProfilePage(where);
         setView("profile");
       } else if (/^#catalog(\/|$)/.test(location.hash)) {
         const id = location.hash.slice("#catalog/".length);

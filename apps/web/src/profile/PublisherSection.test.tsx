@@ -91,6 +91,12 @@ function fakeApi(overrides: Partial<Api>): Api {
     connections: notUsed,
     linkDiscord: notUsed,
     unlinkDiscord: notUsed,
+    claimGuild: notUsed,
+    myGuilds: notUsed,
+    releaseGuild: notUsed,
+    guildPacks: notUsed,
+    delegatePack: notUsed,
+    undelegatePack: notUsed,
   } satisfies Api;
   return { ...base, ...overrides };
 }

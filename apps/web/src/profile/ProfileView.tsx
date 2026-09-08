@@ -22,6 +22,7 @@ import { ConnectionsSection } from "../connections/ConnectionsSection.tsx";
 import { PlanSection } from "./PlanSection.tsx";
 import { PublisherSection } from "./PublisherSection.tsx";
 import { PurchasesSection } from "./PurchasesSection.tsx";
+import { ServersPage } from "./ServersPage.tsx";
 import {
   forgetLicense,
   forgetSyncState,
@@ -189,6 +190,7 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
             />
           )}
           {page === "social" && <SocialPage api={api} onOpenRun={onOpenRun} onJoinInvite={onJoinInvite} invitations={invitations} />}
+          {page === "servers" && <ServersPage api={api} />}
         </div>
       </div>
     </main>
