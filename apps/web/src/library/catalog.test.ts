@@ -20,6 +20,7 @@ describe("the catalog", () => {
       "com.scrthq.runlog.practice-room",
       "com.scrthq.runlog.rocket-league-ladder",
       "com.scrthq.runlog.rocket-league-showdown",
+      "com.scrthq.runlog.engine-testing",
       "com.scrthq.runlog.salt-and-signal",
       "com.scrthq.runlog.long-kiln",
     ]);

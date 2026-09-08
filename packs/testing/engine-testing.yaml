@@ -1,0 +1,998 @@
+# Runlog Engine Testing — a bench, not a game.
+#
+# Every construct the pack format accepts appears here at least once, each
+# under a scenario named in its own text or description so it can be found
+# by a reader of the rulebook. It is written so a person at the keypad can
+# force any table entry by typing the number its own text names — "Type 25
+# for this line" — rather than needing physical dice at all.
+#
+# This is not meant to be fun. It is meant to be exhaustive.
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.engine-testing
+version: "0.1.0"
+title: Runlog Engine Testing
+author: Runlog
+description: >-
+  A bench, not a game: every corner of the pack format, exercised once and
+  labeled, so the engine has something to prove itself against.
+category: testing
+tags: [testing, bench]
+
+requires:
+  - id: kit
+    label: "A die you can also just name a number on, for forcing an entry"
+    kind: equipment
+    optional: true
+    note: "Entries that need it are drawn again for a Bench that lacks it."
+  - id: keypad
+    label: "A keyboard or keypad, to force entries by number instead of rolling"
+    kind: other
+  - id: scorecard
+    label: "Somewhere to write down which scenario each entry tests"
+    kind: supplies
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - seededRuns
+  - decks
+  - standardDeck
+  - resources
+  - counters
+  - coopRoles
+  - backwardTargeting
+  - timers
+  - journal
+  - bandsResolution
+  - opposedResolution
+  - keyedResolution
+  - moderated
+
+vocabulary:
+  run: { one: Bench, many: Benches }
+  unit: { one: Trial, many: Trials }
+  subject: { one: Probe, many: Probes }
+  finalize: Log it
+
+unit:
+  clock: { kind: stopwatch }
+  createsSubject: true
+  min: 1
+  max: 99
+
+states:
+  blocks-edit:
+    label: Blocks Edit
+    short: BE
+    scope: subject
+    semantics: [blocksEdit]
+    description: "Scenario: blocksEdit. This Probe may no longer be altered."
+  untargetable:
+    label: Untargetable
+    short: UT
+    scope: subject
+    semantics: [makesUntargetable]
+    description: "Scenario: makesUntargetable. This Probe can no longer be reached back to."
+  excluded:
+    label: Excluded
+    short: EX
+    scope: subject
+    semantics: [excludesFromResult]
+    description: "Scenario: excludesFromResult. Stays in the Bench, but out of the finished result."
+  locks-value:
+    label: Locks Value
+    short: LV
+    scope: subject
+    semantics: [locksValue]
+    description: "Scenario: locksValue. Only the Bench itself may change this Probe now."
+  removed-play:
+    label: Removed From Play
+    short: RM
+    scope: subject
+    semantics: [removesFromPlay]
+    description: "Scenario: removesFromPlay. Gone; its Trial still happened."
+  posture-a:
+    label: Posture A
+    short: P-A
+    scope: subject
+    group: posture
+    description: "Scenario: one of three states sharing a group, which displace each other on one Probe."
+  posture-b:
+    label: Posture B
+    short: P-B
+    scope: subject
+    group: posture
+    description: "Scenario: displaces Posture A or Posture C on the same Probe."
+  posture-c:
+    label: Posture C
+    short: P-C
+    scope: subject
+    group: posture
+    description: "Scenario: displaces Posture A or Posture B on the same Probe."
+  temporary:
+    label: Temporary
+    short: TMP
+    scope: subject
+    until: unitEnd
+    description: "Scenario: until unitEnd. Lifts by itself once the Trial it was applied in closes."
+  coldbench:
+    label: Cold Bench
+    scope: run
+    description: "Scenario: a run-scoped state, on the Bench itself rather than any one Probe."
+  flagged:
+    label: Flagged
+    scope: contestant
+    description: "Scenario: a contestant-scoped state, marked by the moderator in a moderated Bench."
+  marked:
+    label: Marked
+    short: MK
+    scope: subject
+    description: "Scenario: applied by the grants shorthand rather than an explicit applyState action."
+
+counters:
+  streak:
+    label: Quiet streak
+    initial: 0
+    min: 0
+    incrementOn:
+      - { on: phaseCompleted, phase: enter }
+    resetOn:
+      - { on: outcomeResolved, table: bench, cause: any }
+    triggers:
+      - when: { gte: 3 }
+        oncePerRun: true
+        label: "Scenario: a counter's oncePerRun threshold trigger"
+        do:
+          - { do: note, text: "Scenario: the streak counter reached its threshold." }
+  hiddenCount:
+    label: Hidden tally
+    initial: 0
+    hidden: true
+    incrementOn:
+      - { on: unitFinalized }
+
+resources:
+  pressure:
+    label: Pressure
+    initial: 0
+    min: 0
+    max: 10
+    step: 1
+    display: number
+    description: "Scenario: a number resource, added into the Duel roll."
+  fuel:
+    label: Fuel
+    initial: 2
+    min: 0
+    max: 5
+    step: 1
+    display: boxes
+    description: "Scenario: a boxes resource, clamped to its max."
+  momentum:
+    label: Momentum
+    initial: 0
+    min: -3
+    max: 5
+    step: 1
+    display: bar
+    description: "Scenario: a bar resource whose floor sits below zero."
+
+decks:
+  hand:
+    kind: cards
+    title: Hand
+    description: "Scenario: a bespoke deck, exercising drawAtStart, unique, carriesOver, grantCard and discardCard."
+    drawAtStart: 1
+    unique: true
+    carriesOver: true
+    cards:
+      - id: card-steady
+        title: Steady
+        text: Nothing happens. It exists to be drawn and discarded.
+      - id: card-double
+        title: Double
+        text: Draw one more card from this deck immediately.
+        triggers:
+          - on: immediately
+            do:
+              - { do: grantCard, deck: hand, count: 1 }
+  cards52:
+    kind: standard52
+    title: The Deck
+    description: "Scenario: a standard deck, including jokers, resolved by rank on What the Deck Brings."
+    includeJokers: true
+    drawAtStart: 0
+    resolveOn: rankcall
+    resolveBy: rank
+
+moves:
+  chooseAndMark:
+    label: "Scenario: chooseSubject (eligibleOnly) and applyState to a {var}"
+    description: Picks an eligible Probe and applies Posture B to it — the middle member of the posture group.
+    do:
+      - { do: prompt, kind: chooseSubject, label: "Which Probe?", eligibleOnly: true, into: markedProbe }
+      - { do: applyState, state: posture-b, to: { var: markedProbe } }
+
+  pickValue:
+    label: "Scenario: chooseValue with options"
+    description: Offers a fixed list of options and remembers the answer.
+    do:
+      - { do: prompt, kind: chooseValue, label: "Pick one", options: [Alpha, Beta, Gamma], into: chosenValue }
+      - { do: note, text: "Scenario: a value was chosen from a fixed list." }
+
+  pickState:
+    label: "Scenario: chooseState"
+    description: Offers every declared state and remembers which one was picked.
+    do:
+      - { do: prompt, kind: chooseState, label: "Pick a state", into: chosenState }
+      - { do: note, text: "Scenario: a state was chosen." }
+
+  confirmChoice:
+    label: "Scenario: confirm"
+    description: A plain yes-or-no prompt.
+    do:
+      - { do: prompt, kind: confirm, label: "Sure?", into: confirmed }
+      - { do: note, text: "Scenario: a confirm prompt was answered." }
+
+  captureNote:
+    label: "Scenario: a text prompt into a var, used by a note"
+    description: Whatever is typed stands as the persistent note for this Trial.
+    do:
+      - { do: prompt, kind: text, label: "Write anything", into: freeText }
+      - { do: note, text: "Scenario: whatever you just typed stands as this Trial's note.", persistent: true }
+
+  liftLock:
+    label: "Scenario: removeState"
+    description: Clears Locks Value from this Probe.
+    do:
+      - { do: removeState, state: locks-value, to: thisSubject }
+
+  chooseThree:
+    label: "Scenario: rollOn with times 3, choose one"
+    description: Rolls the Chained Result table three times and keeps one.
+    do:
+      - { do: rollOn, table: chained, times: 3, choose: one, into: chosenChain }
+
+  rollFromCount:
+    label: "Scenario: rollOn with timesFrom"
+    description: Rolls a die to decide how many times to consult Chained Result.
+    do:
+      - { do: roll, dice: d4, into: chargeCount, label: "How many times?" }
+      - { do: rollOn, table: chained, timesFrom: chargeCount }
+
+  branchDemo:
+    label: "Scenario: branch with in and is cases"
+    description: Rolls a die and branches on exact values and on a range.
+    do:
+      - { do: roll, dice: d6, into: benchRollVar, label: "Roll for the branch" }
+      - do: branch
+        on: benchRollVar
+        cases:
+          - in: [1, 2]
+            then:
+              - { do: note, text: "Scenario: matched the in case." }
+          - is: { gte: 5 }
+            then:
+              - { do: note, text: "Scenario: matched the is case." }
+        else:
+          - { do: note, text: "Scenario: matched neither case." }
+
+  branchAgainstStreak:
+    label: "Scenario: branch against a NumericBound gteCounter"
+    description: Rolls a die and compares it against the streak counter's current value.
+    do:
+      - { do: roll, dice: d6, into: pressureRollVar, label: "Roll against the streak" }
+      - do: branch
+        on: pressureRollVar
+        cases:
+          - is: { gteCounter: streak }
+            then:
+              - { do: note, text: "Scenario: the roll beat the streak counter." }
+        else:
+          - { do: note, text: "Scenario: the roll did not beat the streak counter." }
+
+  startTimerDemo:
+    label: "Scenario: startTimer"
+    description: Starts a five-minute countdown from a move rather than a clock declaration.
+    do:
+      - { do: startTimer, minutes: 5, label: "Started from a move" }
+
+  setMomentumFromRoll:
+    label: "Scenario: modResource setFrom"
+    description: Rolls a die and sets Momentum to whatever it shows.
+    do:
+      - { do: roll, dice: d6, into: momentumRoll, label: "Roll for Momentum" }
+      - { do: modResource, resource: momentum, setFrom: momentumRoll }
+
+  fillFuel:
+    label: "Scenario: modResource set"
+    description: Sets Fuel to its maximum outright.
+    do:
+      - { do: modResource, resource: fuel, set: 5 }
+
+  setCounterFromRoll:
+    label: "Scenario: modCounter setFrom"
+    description: Rolls a die and sets the hidden counter to whatever it shows.
+    do:
+      - { do: roll, dice: d6, into: counterRoll, label: "Roll for the hidden counter" }
+      - { do: modCounter, counter: hiddenCount, setFrom: counterRoll }
+
+  rewindDemo:
+    label: "Scenario: rewind"
+    description: Sends the Bench back one Trial, to be played again from its start.
+    oncePerRun: true
+    do:
+      - { do: rewind, count: 1 }
+
+  askGated:
+    label: "Scenario: an ask predicate gates a move"
+    description: Only offered once the player says something worth logging happened.
+    available:
+      - { ask: "Did something worth logging just happen?" }
+    do:
+      - { do: note, text: "Scenario: an ask-gated move was taken." }
+
+tables:
+  # A d100 lookup with ten wide, exactly-tiled bands. Every entry's text
+  # names a number inside its own range, so any of them can be forced by
+  # typing that number instead of rolling.
+  bench:
+    resolution: lookup
+    title: Bench Check
+    description: >-
+      Rolled on entering a Trial. Ten scenarios, each ten numbers wide, each
+      naming a number you can type to force it.
+    roll: d100
+    entries:
+      - id: bc-quiet
+        range: [1, 10]
+        title: "Scenario: a quiet result"
+        text: "Type 5 for this line: quiet. Nothing else happens, beyond marking the Bench primed for the next Trial."
+        triggers:
+          - on: immediately
+            do:
+              - { do: setFlag, flag: primed, value: true }
+      - id: bc-chain
+        range: [11, 20]
+        title: "Scenario: chains into a second table"
+        text: "Type 15 for this line: immediately rolls on the Chained Result table."
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: chained }
+      - id: bc-reach
+        range: [21, 30]
+        title: "Scenario: reaches back, from the current roll"
+        text: "Type 25 for this line: reaches back to an earlier Probe and marks it Untargetable."
+        tags: [reach]
+        triggers:
+          - on: immediately
+            do:
+              - { do: resolveTarget, from: currentRoll }
+              - { do: applyState, state: untargetable, to: targetSubject }
+      - id: bc-afterwork
+        range: [31, 40]
+        title: "Scenario: an obligation owed after the work"
+        text: "Type 35 for this line: owes a persistent note once the work for this Trial is done."
+        triggers:
+          - on: afterWork
+            label: "Scenario: afterWork obligation"
+            do:
+              - { do: note, text: "afterWork obligation paid: the work for this Trial is done.", persistent: true }
+      - id: bc-onfinalize
+        range: [41, 50]
+        title: "Scenario: an obligation owed at finalize"
+        text: "Type 45 for this line: owes a note the moment this Trial is logged."
+        triggers:
+          - on: onFinalize
+            label: "Scenario: onFinalize obligation"
+            do:
+              - { do: note, text: "onFinalize obligation paid: this Trial has been logged." }
+      - id: bc-end
+        range: [51, 60]
+        title: "Scenario: endRunAttempt"
+        text: "Type 55 for this line: ends the Bench outright, unless something forces another Trial first."
+        triggers:
+          - on: immediately
+            do:
+              - { do: modCounter, counter: streak, set: 0 }
+              - { do: endRunAttempt }
+      - id: bc-requires
+        range: [61, 70]
+        title: "Scenario: requires a predicate, and the when action"
+        text: "Type 65 for this line: only makes sense once at least two Probes exist."
+        requires:
+          - { subjectCount: { gte: 2 } }
+        triggers:
+          - on: immediately
+            do:
+              - do: when
+                all: [{ subjectCount: { gte: 2 } }]
+                then:
+                  - { do: note, text: "Scenario: the when action ran its then branch." }
+                else:
+                  - { do: note, text: "Scenario: the when action ran its else branch." }
+      - id: bc-needs
+        range: [71, 80]
+        title: "Scenario: needs a requirement, and grantCard"
+        text: "Type 75 for this line: needs the kit. A Bench that lacks it draws again instead of landing here."
+        needs: [kit]
+        triggers:
+          - on: immediately
+            do:
+              - { do: grantCard, deck: hand, count: 1 }
+      - id: bc-grants
+        range: [81, 90]
+        title: "Scenario: the grants shorthand"
+        text: "Type 85 for this line: grants Marked to this Probe outright."
+        grants: [marked]
+      - id: bc-scored
+        range: [91, 100]
+        title: "Scenario: tags and points, and the next Trial rolls twice"
+        text: >-
+          Type 95 for this line: worth points toward a moderated Bench,
+          tagged scored, and the next Trial rolls twice — its Bench Check
+          step owes a second roll.
+        tags: [scored]
+        points: 2
+        triggers:
+          - on: immediately
+            do:
+              - { do: extraRoll, table: bench, count: 1, unit: next }
+
+  chained:
+    resolution: lookup
+    title: Chained Result
+    description: >-
+      Rolled whenever Bench Check chains into it. Six short scenarios, one
+      per face, each naming the face that forces it.
+    roll: d6
+    entries:
+      - id: cn-1
+        range: [1, 1]
+        title: "Scenario: discardCard"
+        text: "Type 1 for this line: discards a card from the Hand deck."
+        triggers:
+          - on: immediately
+            do:
+              - { do: discardCard, deck: hand, count: 1 }
+      - id: cn-2
+        range: [2, 2]
+        title: "Scenario: reaches back from the event fallback"
+        text: "Type 2 for this line: reaches back using the event fallback, not this roll, and locks the target's value."
+        triggers:
+          - on: immediately
+            do:
+              - { do: resolveTarget, from: event }
+              - { do: applyState, state: locks-value, to: targetSubject }
+      - id: cn-3
+        range: [3, 3]
+        title: "Scenario: reaches back by player choice"
+        text: "Type 3 for this line: the player picks which Probe this excludes from the result."
+        triggers:
+          - on: immediately
+            do:
+              - { do: resolveTarget, from: choice }
+              - { do: applyState, state: excluded, to: targetSubject }
+      - id: cn-4
+        range: [4, 4]
+        title: "Scenario: applyState to thisSubject"
+        text: "Type 4 for this line: applies Posture A to this Probe, by an explicit applyState action."
+        triggers:
+          - on: immediately
+            do:
+              - { do: applyState, state: posture-a, to: thisSubject }
+      - id: cn-5
+        range: [5, 5]
+        title: "Scenario: grants shorthand, in the posture group"
+        text: "Type 5 for this line: grants Posture C, which displaces Posture A or B on the same Probe."
+        grants: [posture-c]
+      - id: cn-6
+        range: [6, 6]
+        title: "Scenario: extraRoll, unit current"
+        text: "Type 6 for this line: owes an extra roll on this very Trial's Chained Result step."
+        triggers:
+          - on: immediately
+            do:
+              - { do: extraRoll, table: chained, count: 1, unit: current }
+
+  # A bands table with genuinely open ends: the lowest and highest tiers
+  # have no ceiling or floor at all.
+  ladder:
+    resolution: bands
+    title: Ladder
+    description: >-
+      Rolled to exercise obligations deferred to onEnterUnit and
+      onDeclareSubject. Its lowest and highest bands are open-ended.
+    roll: 2d6
+    entries:
+      - id: ld-low
+        lte: 5
+        title: "Scenario: obligation deferred to onEnterUnit, with a when predicate"
+        text: "5 or under (open-ended low band): owes a note paid when the next Trial begins, if the Bench was primed."
+        triggers:
+          - on: onEnterUnit
+            when:
+              - { flag: primed }
+            do:
+              - { do: note, text: "onEnterUnit obligation paid: the next Trial has begun, and the Bench was primed." }
+      - id: ld-mid
+        gte: 6
+        lte: 9
+        title: "Scenario: obligation deferred to onDeclareSubject"
+        text: "6 through 9 (the closed middle band): owes a note paid once this Trial's Probe is named."
+        triggers:
+          - on: onDeclareSubject
+            do:
+              - { do: note, text: "onDeclareSubject obligation paid: this Trial's Probe has been named." }
+      - id: ld-high
+        gte: 10
+        title: "Scenario: applyState to allPriorSubjects"
+        text: "10 or over (open-ended high band): removes every earlier Probe from play."
+        triggers:
+          - on: immediately
+            do:
+              - { do: applyState, state: removed-play, to: allPriorSubjects }
+
+  # An opposed roll: an action die plus a resource against three challenge
+  # dice, counting how many it beat.
+  duel:
+    resolution: opposed
+    title: Duel
+    description: >-
+      An action die plus Pressure against three challenge dice, counting
+      how many it beat. Ties go to the challenge.
+    action: d6
+    addResource: pressure
+    challenge:
+      dice: d8
+      count: 3
+    entries:
+      - id: du-0
+        beats: 0
+        title: "Scenario: applyState to run, and forceUnit"
+        text: "Beats none of the three: the Bench goes Cold and forces two further Trials."
+        triggers:
+          - on: immediately
+            do:
+              - { do: applyState, state: coldbench, to: run }
+              - { do: forceUnit, count: 2 }
+      - id: du-1
+        beats: 1
+        title: "Scenario: modResource by, and modCounter by"
+        text: "Beats one of the three: Pressure and the hidden counter both rise by one."
+        triggers:
+          - on: immediately
+            do:
+              - { do: modResource, resource: pressure, by: 1 }
+              - { do: modCounter, counter: hiddenCount, by: 1 }
+      - id: du-2
+        beats: 2
+        title: "Scenario: obligation deferred to onDeclareRunOver"
+        text: "Beats two of the three: owes a note paid the moment someone first tries to end the Bench."
+        triggers:
+          - on: onDeclareRunOver
+            when:
+              - { unitIndex: { gte: 1 } }
+            do:
+              - { do: note, text: "onDeclareRunOver obligation paid: someone has tried to end the Bench." }
+      - id: du-3
+        beats: 3
+        title: "Scenario: applyState to allSubjects"
+        text: "Beats all three: blocks editing on every Probe made so far, including this one."
+        triggers:
+          - on: immediately
+            do:
+              - { do: applyState, state: blocks-edit, to: allSubjects }
+
+  # A keyed table, addressed by a standard deck's rank rather than a number.
+  rankcall:
+    resolution: keyed
+    title: What the Deck Brings
+    description: Consulted on every card drawn from the standard deck, by rank.
+    entries:
+      - { id: rk-a, key: a, text: "Draw or type the Ace for this line." }
+      - { id: rk-2, key: "2", text: "Draw or type the 2 for this line." }
+      - { id: rk-3, key: "3", text: "Draw or type the 3 for this line." }
+      - { id: rk-4, key: "4", text: "Draw or type the 4 for this line." }
+      - { id: rk-5, key: "5", text: "Draw or type the 5 for this line." }
+      - { id: rk-6, key: "6", text: "Draw or type the 6 for this line." }
+      - { id: rk-7, key: "7", text: "Draw or type the 7 for this line." }
+      - { id: rk-8, key: "8", text: "Draw or type the 8 for this line." }
+      - { id: rk-9, key: "9", text: "Draw or type the 9 for this line." }
+      - { id: rk-10, key: "10", text: "Draw or type the 10 for this line." }
+      - { id: rk-j, key: j, text: "Draw or type the Jack for this line." }
+      - { id: rk-q, key: q, text: "Draw or type the Queen for this line." }
+      - { id: rk-k, key: k, text: "Draw or type the King for this line." }
+
+# anchoredOffset targeting: every anchor, both directions, wraparound,
+# skipIneligible, and an eventFallback with missOn.
+targeting:
+  strategy: anchoredOffset
+  offsetFrom: onesDigit
+  wraparound: true
+  skipIneligible: true
+  bands:
+    - { range: [21, 30], anchor: newest, direction: before }
+    - { range: [31, 40], anchor: oldest, direction: after }
+    - { range: [41, 50], anchor: playerChoice }
+  eventFallback:
+    roll: d100
+    tensOddBand: 21
+    tensEvenBand: 31
+    missOn: 100
+
+phases:
+  - id: enter
+    label: Enter the Trial
+    steps:
+      - kind: rollTable
+        table: bench
+        label: "Scenario: rollTable, optional, with skipWhen"
+        into: benchRoll
+        optional: true
+        skipWhen:
+          - { flag: skipBenchRoll }
+
+  - id: declare
+    label: Declare the Probe
+    steps:
+      - kind: declareSubject
+        label: "Scenario: declareSubject constrained by a table"
+        constrainedBy: chained
+        skipWhen:
+          - { unitIndex: { lte: 0 } }
+
+  - id: secondary
+    label: Secondary rolls
+    description: "Scenario: a phase skipped from the second Trial onward (unitIndex gte 2)."
+    skipWhen:
+      - { unitIndex: { gte: 2 } }
+    steps:
+      - kind: rollTable
+        table: duel
+        label: Roll the Duel
+      - kind: rollTable
+        table: ladder
+        label: Roll the Ladder
+
+  - id: work
+    label: Do the work
+    steps:
+      - kind: manual
+        label: "Scenario: a manual checklist with every kind of item"
+        description: The engine cannot see the work; it only tracks that you did it.
+        checklist:
+          - "A plain checklist item."
+          - { text: "An optional checklist item.", optional: true }
+          - { text: "A tally checklist item.", tally: hiddenCount }
+          - { text: "A shows checklist item.", shows: { table: bench, scope: unit } }
+
+  - id: actionsPhase
+    label: Run an action list
+    steps:
+      - kind: actions
+        do:
+          - { do: note, text: "Scenario: a plain actions step, outside any table." }
+        skipWhen:
+          - { flag: skipActionsPhase }
+
+  - id: close
+    label: Log it
+    steps:
+      - kind: finalizeUnit
+        label: "Scenario: finalizeUnit with confirm"
+        confirm:
+          - "A plain confirm item."
+          - { text: "A shows confirm item.", shows: { table: bench, scope: subject } }
+
+journal:
+  enabled: true
+  prompt: What did this Trial prove, or fail to prove?
+  required: true
+
+endings:
+  - id: logged
+    label: Logged
+    text: The Bench stands as run. Log it and stop.
+  - id: exhausted
+    label: Exhausted
+    text: Every scenario has been forced at least once. Log it and stop.
+    requires:
+      - { counter: streak, is: { gte: 0 } }
+  - id: cut-short
+    label: Cut Short
+    text: Stopped early, on purpose, to prove a run can end without finishing every scenario.
+
+# Global triggers, restricted by the format to onEnterUnit and onRunEnd.
+triggers:
+  - on: onRunEnd
+    label: "Scenario: a pack-level global trigger"
+    when:
+      - { not: { flag: skippedCooldown } }
+    do:
+      - { do: note, text: "Scenario: onRunEnd — the pack-level trigger fired once the Bench ended.", persistent: true }
+
+modes:
+  solo:
+    label: Solo
+    description: "Scenario: the plain solo mode this bench defaults to, with a perUnit override on its second Trial."
+    perUnit:
+      - unit: 2
+        skipPhases: [actionsPhase]
+        extra:
+          - { do: note, text: "Scenario: a perUnit extra action, added to Trial 2." }
+
+  seeded:
+    label: Seeded
+    description: "Scenario: seeded — pre-rolls the whole Bench from a shared seed, so two runs can be compared exactly."
+    seeded: true
+
+  together:
+    label: Together
+    description: "Scenario: together — two to four people at one table, rotating three roles clockwise, with the mode's own timer clock."
+    players:
+      min: 2
+      max: 4
+      rotate: clockwise
+      roles:
+        - { id: roller, label: Roller, description: Makes every roll. }
+        - { id: namer, label: Namer, description: Declares every Probe. }
+        - { id: judge, label: Judge, description: Answers every ask predicate. }
+    clock: { kind: timer, minutes: 10, auto: true }
+
+  moderated:
+    label: Moderated
+    description: "Scenario: moderated — a roster of two to four contestants, every scored entry awarded to everyone, with a bonus for being first."
+    moderated:
+      contestants: { min: 2, max: 4 }
+      award: everyone
+      firstBonus: 1
+
+  endless:
+    label: Endless
+    description: "Scenario: endless — no end but the one you choose, up to ninety-nine Trials."
+    units: { max: 99 }
+
+  minimal:
+    label: Minimal
+    description: "Scenario: disable — strips out the Duel table, the actions-list phase, and the hidden counter, to prove disable actually disables."
+    disable:
+      tables: [duel]
+      phases: [actionsPhase]
+      counters: [hiddenCount]
+
+defaultMode: solo
+
+hierarchy:
+  - Ending
+  - Duel
+  - Bench Check
+  - General rules
+
+# Reducer fixtures. Replayed by `runlog test`; each names the scenario it
+# proves and asserts the exact state the events leave behind.
+fixtures:
+  - name: "Tables: a quiet Bench Check sets the primed flag"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: bench, entryId: bc-quiet, cause: phase }
+      - { t: FlagSet, flag: primed, value: true }
+    expect:
+      - { path: flags.primed, equals: true }
+      - { path: outcomes.length, equals: 1 }
+      - { path: outcomes.0.entryId, equals: bc-quiet }
+
+  - name: "Tables: Bench Check chains into Chained Result"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: bench, entryId: bc-chain, cause: phase }
+      - { t: Rolled, purpose: chained, dice: d6, total: 4, values: [4], source: rng }
+      - { t: OutcomeResolved, table: chained, entryId: cn-4, cause: action }
+    expect:
+      - { path: outcomes.length, equals: 2 }
+      - { path: outcomes.1.table, equals: chained }
+      - { path: outcomes.1.entryId, equals: cn-4 }
+
+  - name: "Reaching back: the current roll marks an earlier Probe Untargetable"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: SubjectDeclared, subjectType: "First Probe" }
+      - { t: UnitFinalized }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: bench, entryId: bc-reach, cause: phase, targetSubject: 1 }
+      - { t: StateApplied, state: untargetable, subject: 1 }
+    expect:
+      - { path: subjects.0.states, equals: [untargetable] }
+      - { path: outcomes.0.targetSubject, equals: 1 }
+
+  - name: "Deferred: an afterWork obligation is owed and unresolved"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: ObligationAdded, obligation: { id: ob-1, kind: trigger, text: "afterWork obligation paid: the work for this Trial is done.", on: afterWork, persistent: true } }
+    expect:
+      - { path: obligations.length, equals: 1 }
+      - { path: obligations.0.resolved, equals: false }
+      - { path: obligations.0.on, equals: afterWork }
+
+  - name: "Deferred: an onFinalize obligation is paid off"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: ObligationAdded, obligation: { id: ob-2, kind: trigger, text: "onFinalize obligation paid: this Trial has been logged.", on: onFinalize } }
+      - { t: ObligationResolved, id: ob-2 }
+    expect:
+      - { path: obligations.0.resolved, equals: true }
+
+  - name: "Units: endRunAttempt ends the Bench"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: bench, entryId: bc-end, cause: phase }
+      - { t: CounterChanged, counter: streak, set: 0 }
+      - { t: RunEnded, ending: logged }
+    expect:
+      - { path: status, equals: ended }
+      - { path: ending, equals: logged }
+      - { path: counters.streak, equals: 0 }
+
+  - name: "Rolls: the next Trial rolls twice"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: bench, entryId: bc-scored, cause: phase }
+      - { t: ExtraRollQueued, table: bench, count: 1, unit: next }
+      - { t: UnitEntered }
+    expect:
+      - { path: extraRolls.bench, equals: 1 }
+      - { path: unit, equals: 2 }
+
+  - name: "Rolls: an extra roll owed the current Trial is paid down"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: ExtraRollQueued, table: chained, count: 2, unit: current }
+      - { t: ExtraRollTaken, table: chained }
+    expect:
+      - { path: extraRolls.chained, equals: 1 }
+
+  - name: "Units: rewind sends the Bench back a Trial"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: UnitEntered }
+      - { t: RewindQueued, count: 1 }
+      - { t: UnitEntered }
+    expect:
+      - { path: unit, equals: 1 }
+      - { path: rewinds, equals: 1 }
+      - { path: rewindNext, equals: 0 }
+
+  - name: "States: a state with until unitEnd lifts when the Trial closes"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: StateApplied, state: temporary, subject: 1 }
+      - { t: UnitFinalized }
+    expect:
+      - { path: subjects.0.states, equals: [] }
+
+  - name: "States: a group of three postures displace each other"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: StateApplied, state: posture-a, subject: 1 }
+      - { t: StateApplied, state: posture-b, subject: 1 }
+    expect:
+      - { path: subjects.0.states, equals: [posture-b] }
+
+  - name: "Moderated: a contestant state and an award to everyone"
+    mode: moderated
+    events:
+      - { t: RunStarted, mode: moderated }
+      - { t: ContestantAdded, contestant: c1, name: "Contestant One" }
+      - { t: ContestantAdded, contestant: c2, name: "Contestant Two" }
+      - { t: ContestantStateApplied, contestant: c1, state: flagged }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: bench, entryId: bc-scored, cause: phase }
+      - { t: Awarded, contestant: c1, outcome: 0, table: bench, entryId: bc-scored, points: 2 }
+      - { t: Awarded, contestant: c2, outcome: 0, table: bench, entryId: bc-scored, points: 2 }
+    expect:
+      - { path: contestants.length, equals: 2 }
+      - { path: contestants.0.states, equals: [flagged] }
+      - { path: awards.length, equals: 2 }
+      - { path: awards.1.points, equals: 2 }
+
+  - name: "Counters: increment on phase completion, and a reset dominates the unit"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: PhaseCompleted, phase: enter }
+      - { t: UnitEntered }
+      - { t: PhaseCompleted, phase: enter }
+      - { t: UnitFinalized }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: bench, entryId: bc-quiet, cause: phase }
+      - { t: PhaseCompleted, phase: enter }
+    expect:
+      - { path: counters.streak, equals: 0 }
+      - { path: counters.hiddenCount, equals: 1 }
+
+  - name: "Counters and resources: modCounter and modResource clamp to their bounds"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: CounterChanged, counter: hiddenCount, by: 2 }
+      - { t: CounterChanged, counter: hiddenCount, set: 9 }
+      - { t: ResourceChanged, resource: momentum, by: -99 }
+      - { t: ResourceChanged, resource: fuel, set: 99 }
+    expect:
+      - { path: counters.hiddenCount, equals: 9 }
+      - { path: resources.momentum, equals: -3 }
+      - { path: resources.fuel, equals: 5 }
+
+  - name: "Clocks: a stopwatch and a timer each start and stop"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: ClockStarted, clock: watch1, kind: stopwatch, label: "Trial Stopwatch" }
+      - { t: ClockStarted, clock: timer1, kind: timer, label: "Ten Minutes", seconds: 600 }
+      - { t: ClockStopped, clock: watch1, elapsedMs: 5000 }
+      - { t: ClockStopped, clock: timer1, elapsedMs: 600000, expired: true }
+    expect:
+      - { path: clocks.length, equals: 2 }
+      - { path: clocks.0.status, equals: done }
+      - { path: clocks.1.expired, equals: true }
+
+  - name: "Decks: a bespoke deck draws and discards; a standard-deck draw resolves by rank"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: CardDrawn, deck: hand, cardId: card-steady }
+      - { t: CardDrawn, deck: hand, cardId: card-double }
+      - { t: CardDiscarded, deck: hand, cardId: card-steady }
+      - { t: CardDrawn, deck: cards52, cardId: "7-hearts" }
+      - { t: OutcomeResolved, table: rankcall, entryId: rk-7, cause: action }
+    expect:
+      - { path: hand.length, equals: 2 }
+      - { path: hand.0.cardId, equals: card-double }
+      - { path: hand.1.cardId, equals: "7-hearts" }
+      - { path: outcomes.0.table, equals: rankcall }
+      - { path: outcomes.0.entryId, equals: rk-7 }
+
+  - name: "Journal and checklist: a required note is recorded, and a tally tick raises its counter"
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: JournalWritten, unit: 1, text: "The bench proved what it set out to." }
+      - { t: Checked, step: "work#0", item: tally-item, on: true }
+      - { t: CounterChanged, counter: hiddenCount, by: 1 }
+    expect:
+      - { path: journal.1, equals: "The bench proved what it set out to." }
+      - { path: checks, equals: ["work#0|tally-item"] }
+      - { path: counters.hiddenCount, equals: 1 }
