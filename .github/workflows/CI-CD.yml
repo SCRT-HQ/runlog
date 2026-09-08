@@ -170,6 +170,39 @@ jobs:
           hosted-zone-id: ${{ secrets.RUNLOG_ZONE_ID }}
           app-dist: apps/web/dist
 
+  # The one check the ruleset requires. It waits for every check above and
+  # says whether they all passed, so the ruleset need not know their names:
+  # a matrix can grow, a job can be renamed, a job can be skipped where that
+  # is right, and none of it is a ruleset edit. A check that failed or was
+  # cancelled fails this one; a test that did not run at all fails it too,
+  # since a run with no tests proves nothing; a diff skipped in the merge
+  # queue, or on a fork's pull request, is expected and passes.
+  Checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [Test, InfraTest, Diff]
+    if: ${{ always() && (github.event_name == 'pull_request' || github.event_name == 'merge_group') }}
+    steps:
+      - env:
+          TEST: ${{ needs.Test.result }}
+          INFRA: ${{ needs.InfraTest.result }}
+          DIFF: ${{ needs.Diff.result }}
+          EVENT: ${{ github.event_name }}
+          SAME_REPO: ${{ github.event_name == 'merge_group' || github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          set -euo pipefail
+          echo "Test: $TEST; hosting tests: $INFRA; diffs: $DIFF ($EVENT)"
+          ok=true
+          [ "$TEST" = "success" ] || { echo "::error::the app's checks did not pass ($TEST)"; ok=false; }
+          [ "$INFRA" = "success" ] || { echo "::error::the hosting's checks did not pass ($INFRA)"; ok=false; }
+          case "$DIFF" in
+            success) ;;
+            skipped) if [ "$EVENT" = "merge_group" ] || [ "$SAME_REPO" != "true" ]; then echo "The diffs were skipped here, as expected."; else echo "::error::the diffs did not run"; ok=false; fi ;;
+            *) echo "::error::the diffs did not pass ($DIFF)"; ok=false ;;
+          esac
+          $ok
+
   DevDeploy:
     name: Deploy Dev
     runs-on: ubuntu-latest
