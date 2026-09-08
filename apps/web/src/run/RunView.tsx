@@ -22,6 +22,10 @@ import { preloadDice3d } from "../dice/settings.ts";
 import { CARRY_ON_HOLD_MS, carriesOnByItself } from "./pace.ts";
 import { flowStrip } from "./flowStrip.ts";
 import { LOG_LIMITS, logLimit, logLines, logOrder, setLogLimit, setLogOrder, type LogOrder } from "./logView.ts";
+import { ticksFor } from "./stepChecks.ts";
+import { nudgeFirstUnticked } from "./nudge.ts";
+import { Constraints } from "./Constraints.tsx";
+import { receiptFollowUps } from "./receiptFollowUps.ts";
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
@@ -328,10 +332,7 @@ export function RunView({
               pack={pack}
               settled={settled}
               onDismiss={() => setReceipts([])}
-              {...(settled && run.canDrawAgain && !run.readOnly ? { onDrawAgain: (why?: string) => run.drawAgain(why) } : {})}
-              {...(settled && lastReceipt?.machineRolled && !run.autoRoll && !run.seededRun && !run.readOnly
-                ? { onKeepRolling: () => run.setAutoRoll(true) }
-                : {})}
+              {...receiptFollowUps(run, settled, lastReceipt)}
             />
           )}
           {run.pending?.request ? (
@@ -417,7 +418,8 @@ export function RunView({
           state={state}
           receipt={settled ? lastReceipt : null}
           onCarryOn={() => setReceipts([])}
-          onRoll={(key, total, dice, seed) => answer(key, total, true, dice, seed)}
+          onAnswer={answer}
+          {...receiptFollowUps(run, settled, lastReceipt)}
           onClose={closeControls}
         />
       )}
@@ -863,10 +865,7 @@ function StepPanel({
   const key = `${phase.id}#${index}`;
   // What is ticked on this step, read back from the log rather than held
   // here: a reload lands on the same boxes, and a box can count.
-  const ticked = useMemo(
-    () => new Set(state.checks.filter((k) => k.startsWith(`${key}|`)).map((k) => k.slice(key.length + 1))),
-    [state.checks, key],
-  );
+  const ticked = useMemo(() => ticksFor(state, key), [state, key]);
   const tick = (keys: string[], on: boolean, tally?: string) => run.check(key, keys, on, tally);
 
   switch (step.kind) {
@@ -1019,14 +1018,6 @@ function StepPanel({
   }
 }
 
-/** The first box in this step still unticked, brought into view and given focus. */
-function nudgeFirstUnticked(from: HTMLElement): void {
-  const box = from.closest(".runStep")?.querySelector<HTMLInputElement>('input[type="checkbox"]:not(:checked)');
-  if (!box) return;
-  box.scrollIntoView({ block: "nearest" });
-  box.focus();
-}
-
 /**
  * "1 Piece" rather than "1 Pieces".
  *
@@ -1045,23 +1036,6 @@ function StepHead({ phase, label }: { phase: { label: string }; label: string })
       <h3 className="sectionTitle">{phase.label}</h3>
       <h4 className="stepLabel">{label}</h4>
     </>
-  );
-}
-
-/** The rules already drawn this unit, in front of the player while they work. */
-function Constraints({ lines }: { lines: string[] }) {
-  if (lines.length === 0) return null;
-  return (
-    <div className="notice constraints">
-      <span className="muted small">The game has already had its say</span>
-      <ul>
-        {lines.map((line, i) => (
-          <li key={i}>
-            <strong>{line}</strong>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
 

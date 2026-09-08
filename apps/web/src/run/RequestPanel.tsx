@@ -5,6 +5,8 @@ import { Die } from "../dice/Die.tsx";
 import { DiceTray } from "../dice/DiceTray.tsx";
 import { toDisplayDice, type RolledDie } from "../rolling.ts";
 import { lineFor, tableLines } from "./tableLook.ts";
+import { NumberPad } from "./NumberPad.tsx";
+import { TableLookList } from "./TableLookList.tsx";
 
 /**
  * Answering whatever the engine is waiting on.
@@ -152,16 +154,7 @@ function RollRequest({
       </div>
 
       {tableOpen && table && (
-        <ol className="tableLook" aria-label={`${table.title}: what the roll can land on`}>
-          {lines.map((line) => (
-            <li key={line.id} className={landing === line.id ? "on" : ""}>
-              <button type="button" className="tableLine" disabled={!!thrown} onClick={() => setTyped(String(line.value))} title={`Put ${line.value} on the pad`}>
-                <span className="range">{line.range}</span>
-                <span className="text">{line.title}</span>
-              </button>
-            </li>
-          ))}
-        </ol>
+        <TableLookList table={table} lines={lines} landing={landing} disabled={!!thrown} onPick={(v) => setTyped(String(v))} />
       )}
 
       {thrown && (
@@ -185,16 +178,7 @@ function RollRequest({
         </p>
       )}
 
-      <div className="pad">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => (
-          <button key={n} className="key" onClick={() => setTyped((t) => `${t}${n}`)}>
-            {n}
-          </button>
-        ))}
-        <button className="key wide" onClick={() => setTyped((t) => t.slice(0, -1))}>
-          ←
-        </button>
-      </div>
+      <NumberPad onDigit={(n) => setTyped((t) => `${t}${n}`)} onBackspace={() => setTyped((t) => t.slice(0, -1))} />
     </div>
   );
 }

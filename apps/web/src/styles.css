@@ -3684,22 +3684,38 @@ a.plan:hover { text-decoration: underline; }
   .liveWhere.turned, .liveFlow.turned, .timeline li.fresh, .timeline li.heat.fresh, .row.struck, .chip.state.fresh, .bump { animation: none; }
 }
 
-/* ---- the floating controls: this page's tree, drawn in a window the browser keeps in front ---- */
-html[data-pip="controls"] body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+/*
+ * The floating controls: this page's tree, drawn in a window the browser
+ * keeps in front, and made to scroll internally rather than grow past the
+ * screen — the window itself is fixed by openControlsWindow, so the body is
+ * where the scrolling has to happen.
+ */
+html[data-pip="controls"] body { margin: 0; height: 100vh; overflow-y: auto; background: var(--bg); color: var(--text); }
 .pipPanel { display: grid; gap: 0.7rem; padding: 0.8rem 0.9rem 1rem; font-family: var(--serif); }
 .pipHead { display: grid; gap: 0.1rem; }
-.pipWhere { margin: 0; font-family: var(--mono); }
-.pipMove { display: grid; gap: 0.3rem; }
-.pipMove .primary.big { margin-top: 0; width: 100%; }
-.pipMove p { margin: 0; }
-.pipTools { display: flex; gap: 0.8rem; align-items: center; }
 .pipReceipt { display: grid; gap: 0.4rem; padding: 0.5rem 0.6rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
-.pipOutcomes, .pipLog { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
-.pipOutcomes li, .pipLog li { display: grid; gap: 0.05rem; font-size: var(--t-2); }
-.pipOutcomes .where, .pipLog .where { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); }
-.pipOutcomes li.heat .where, .pipLog li.heat .where { color: var(--warn); }
-.pipLog { border-top: 1px solid var(--line); padding-top: 0.5rem; }
+.pipOutcomes { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.pipOutcomes li { display: grid; gap: 0.05rem; font-size: var(--t-2); }
+.pipOutcomes .where { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); }
+.pipOutcomes li.heat .where { color: var(--warn); }
 .floatRow { align-items: baseline; }
+
+/* Every section of the remote is the same shape: a small heading, then its
+   controls, stacked by the panel's own gap rather than a border of its own —
+   a narrow window of bordered boxes reads as heavier than the same window of
+   plain sections. `RequestPanel` keeps its own panel look on the page, so it
+   is flattened here to match. */
+.pipPanel .pipSection,
+.pipPanel .request {
+  display: grid;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+}
+.pipPanel .runStep .sectionTitle { margin-bottom: 0.3rem; }
+.pipChoices { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 
 /* ---- the Rules page: the paper, with the structure as one more tab ---- */
 .rulesTabs { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0 0 1rem; }
