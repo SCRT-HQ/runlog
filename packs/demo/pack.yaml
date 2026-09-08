@@ -606,3 +606,24 @@ fixtures:
       - { path: subjects.length, equals: 2 }
       - { path: subjects.0.type, equals: Bowl }
       - { path: status, equals: active }
+
+  # A play fixture: this one actually rolls the Kiln Check, rather than
+  # hand-writing the OutcomeResolved it produces. A 30 falls in check-kind,
+  # whose trigger rolls on Form -- so this is also the fixture that proves the
+  # trigger still fires, not only that the state it would leave behind looks
+  # right.
+  - name: A 30 on the Kiln Check dictates the Form
+    mode: standard
+    play:
+      - { enter: 1 }
+      - { step: enter }
+      - { declare: Bowl }
+      - { step: work }
+      - { finalize: {} }
+      - { enter: 2 }
+      - { step: enter }
+      - { step: check, answers: { d100: 30, d6: 4 } }
+    expect:
+      - { path: outcomes.length, equals: 2 }
+      - { path: outcomes.1.entryId, equals: form-cup }
+      - { requests: answered }

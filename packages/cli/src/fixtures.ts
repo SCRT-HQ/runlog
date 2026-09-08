@@ -1,5 +1,5 @@
-import type { Pack } from "@runlog/rules-schema";
-import { reduce, type RunEvent } from "@runlog/engine";
+import type { Expectation, Fixture, Pack } from "@runlog/rules-schema";
+import { playThrough, reduce, type PlayStep, type RunEvent } from "@runlog/engine";
 
 /**
  * Replaying the self-tests a pack ships with.
@@ -86,30 +86,67 @@ function same(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-export function runFixture(pack: Pack, fixture: Pack["fixtures"] extends (infer F)[] | undefined ? F : never): FixtureResult {
+/**
+ * Check one assertion against derived state.
+ *
+ * `requests: "answered"` is here for readability rather than because it can
+ * fail: a play fixture that reaches this point already answered everything
+ * the engine asked, or it would have raised a `PlayError` first.
+ */
+function checkExpectation(state: unknown, expectation: Expectation): Assertion {
+  if ("equals" in expectation) {
+    const actual = readPath(state, expectation.path);
+    return { path: expectation.path, expected: expectation.equals, actual, ok: same(actual, expectation.equals) };
+  }
+  if ("contains" in expectation) {
+    const actual = readPath(state, expectation.path);
+    const list = Array.isArray(actual) ? actual : [];
+    return { path: expectation.path, expected: expectation.contains, actual, ok: list.some((x) => same(x, expectation.contains)) };
+  }
+  if ("absent" in expectation) {
+    const actual = readPath(state, expectation.path);
+    const list = Array.isArray(actual) ? actual : [];
+    return { path: expectation.path, expected: expectation.absent, actual, ok: !list.some((x) => same(x, expectation.absent)) };
+  }
+  return { path: "requests", expected: "answered", actual: "answered", ok: true };
+}
+
+function runReplayFixture(pack: Pack, fixture: Extract<Fixture, { events: unknown }>): FixtureResult {
+  const events = normalize(pack, fixture.events);
+  // A fixture may name a mode; the reducer takes it from the RunStarted
+  // event, which `normalize` has already defaulted.
+  if (fixture.mode) {
+    const first = events[0] as unknown as Record<string, unknown> | undefined;
+    if (first && first.t === "RunStarted") first.mode = fixture.mode;
+  }
+  if (fixture.seed) {
+    const first = events[0] as unknown as Record<string, unknown> | undefined;
+    if (first && first.t === "RunStarted") first.seed ??= fixture.seed;
+  }
+
+  const state = reduce(pack, events);
+  const assertions = fixture.expect.map((e) => checkExpectation(state, e));
+  return { name: fixture.name, ok: assertions.every((a) => a.ok), assertions };
+}
+
+function runPlayFixture(pack: Pack, fixture: Extract<Fixture, { play: unknown }>): FixtureResult {
+  const { state } = playThrough(pack, fixture.play as PlayStep[], {
+    mode: fixture.mode,
+    seed: fixture.seed,
+    players: fixture.players,
+  });
+  const assertions = fixture.expect.map((e) => checkExpectation(state, e));
+  return { name: fixture.name, ok: assertions.every((a) => a.ok), assertions };
+}
+
+export function runFixture(pack: Pack, fixture: Fixture): FixtureResult {
   try {
-    const events = normalize(pack, fixture.events);
-    // A fixture may name a mode; the reducer takes it from the RunStarted
-    // event, which `normalize` has already defaulted.
-    if (fixture.mode) {
-      const first = events[0] as unknown as Record<string, unknown> | undefined;
-      if (first && first.t === "RunStarted") first.mode = fixture.mode;
-    }
-    if (fixture.seed) {
-      const first = events[0] as unknown as Record<string, unknown> | undefined;
-      if (first && first.t === "RunStarted") first.seed ??= fixture.seed;
-    }
-
-    const state = reduce(pack, events);
-    const assertions = fixture.expect.map(({ path, equals }) => {
-      const actual = readPath(state, path);
-      return { path, expected: equals, actual, ok: same(actual, equals) };
-    });
-
-    return { name: fixture.name, ok: assertions.every((a) => a.ok), assertions };
+    return "play" in fixture ? runPlayFixture(pack, fixture) : runReplayFixture(pack, fixture);
   } catch (e) {
-    // A fixture whose log the reducer refuses is a failing fixture, not a
-    // crashed CLI: an author needs to see which one and why.
+    // A fixture whose log the reducer refuses, or whose script the engine
+    // interrupts and never gets an answer for, is a failing fixture rather
+    // than a crashed CLI. A `PlayError`'s own message already names the
+    // request, its label and the script step, so it needs no translation.
     return {
       name: fixture.name,
       ok: false,

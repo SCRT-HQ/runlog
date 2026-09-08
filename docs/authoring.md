@@ -316,6 +316,80 @@ If your game has worked examples written out somewhere, this is where they
 belong — as data you ship, so the behavior is proven against your rules
 rather than against somebody's reading of them.
 
+A fixture like that one **replays** a log you write by hand — it never rolls a
+table, runs a trigger, or takes a move. That is fine for asserting on state you
+can construct directly, but it cannot catch a broken trigger or a step that
+forgot to record itself as done, because nothing ever drove them.
+
+A **play fixture** does: it scripts the same actions the app takes — entering
+a unit, declaring a subject, rolling a table, taking a move — and answers
+whatever the engine asks along the way.
+
+```yaml
+fixtures:
+  - name: A 30 on the Kiln Check dictates the Form
+    mode: standard
+    play:
+      - { enter: 1 }
+      - { step: enter }
+      - { declare: Bowl }
+      - { step: work }
+      - { finalize: {} }
+      - { enter: 2 }
+      - { step: enter }
+      - { step: check, answers: { d100: 30, d6: 4 } }
+    expect:
+      - { path: outcomes.length, equals: 2 }
+      - { path: outcomes.1.entryId, equals: form-cup }
+      - { requests: answered }
+```
+
+Each step of `play` is one of:
+
+- `{ enter: n }` — enter the next unit; fails the fixture if it is not
+  actually unit `n`.
+- `{ declare: "Bowl" }` — declare the current unit's subject. The active step
+  must be a `declareSubject` step.
+- `{ step: "<phaseId>" }` or `{ step: "<phaseId>#<index>" }` — run whatever the
+  active step is, the way the app would: a `rollTable` step rolls (and rolls
+  again for any extra roll still owed this unit), an `actions` step runs its
+  actions, a `manual` step is ticked and completed, and a `finalizeUnit` step
+  finalizes the unit. The step named must actually be the one the engine is
+  waiting on — a fixture drifting out of step with the pack's own flow is
+  exactly what this is for catching.
+- `{ finalize: {} }` — finalize the current unit: any confirmations are ticked
+  and the unit closes. The active step must be `finalizeUnit`.
+- `{ move: "<moveId>" }` — take a move.
+- `{ settle: "<obligation label or id>" }` — settle a due obligation.
+- `{ tick: "<checklist item text>" }` — tick one checklist item on the active
+  step by hand, without completing it. Only needed if a checklist gates
+  something you care about asserting on.
+
+Any step can carry `answers`, a map used to answer whatever the engine asks
+while it runs. A key is matched in this order:
+
+1. **The request's own key**, exactly — the deterministic key the engine
+   names in its error when a request goes unanswered, useful for a roll
+   nested inside a table entry's own trigger.
+2. **A die notation**, like `d100` or `d6` — matched to requests of that
+   shape in the order they are asked. `{ d100: 21, d6: 3 }` answers the
+   first `d100` and the first `d6` the engine asks for; `{ d6: [3, 5] }`
+   answers two successive `d6` asks in order.
+3. **A prompt kind** — `chooseSubject`, `chooseValue`, `chooseState`,
+   `confirm`, `text`, `ask`, `chooseTarget` — matched the same way as a die
+   notation.
+
+If a mode's seed is set on the fixture and a request still has no answer, it
+is rolled from that seed instead of failing — which is what lets a play
+fixture assert a whole run plays to completion without scripting every die.
+Failing that, the fixture fails with a message naming the request's key, its
+label, and which script step asked for it.
+
+`expect` accepts `equals` as above, plus `contains` and `absent` for asserting
+on an array without spelling out its whole contents, and
+`{ requests: "answered" }` — always true once a play fixture completes, and
+there mostly for a reader working out what the fixture is claiming.
+
 ---
 
 ### Outcomes, and fixing them

@@ -633,38 +633,163 @@ export const MoveDef = z
 export type MoveDef = z.infer<typeof MoveDef>;
 
 /**
- * A conformance fixture: replay `events` and assert on derived state.
+ * One assertion a fixture checks once it has run: a dotted path into derived
+ * run state and what is expected there, or a check on the fixture's own
+ * bookkeeping.
+ */
+export const Expectation = z.union([
+  z
+    .object({
+      path: z.string().min(1).describe("Dotted path into derived run state, e.g. counters.calm."),
+      equals: z.unknown().describe("The value expected at that path."),
+    })
+    .strict()
+    .describe("The value at this path must equal exactly this."),
+  z
+    .object({
+      path: z.string().min(1).describe("Dotted path into derived run state, naming an array."),
+      contains: z.unknown().describe("The array at this path must contain this value."),
+    })
+    .strict()
+    .describe("The array at this path must contain this value, among others."),
+  z
+    .object({
+      path: z.string().min(1).describe("Dotted path into derived run state, naming an array."),
+      absent: z.unknown().describe("The array at this path must not contain this value."),
+    })
+    .strict()
+    .describe("The array at this path must not contain this value."),
+  z
+    .object({
+      requests: z
+        .literal("answered")
+        .describe(
+          "Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all — spelled out here so a fixture can say so on purpose.",
+        ),
+    })
+    .strict()
+    .describe("Every request the engine made while playing was answered."),
+]).describe("One assertion, checked after the fixture runs.");
+export type Expectation = z.infer<typeof Expectation>;
+
+/**
+ * What a play fixture's `answers` map may hand back for one of the engine's
+ * requests.
+ */
+const PlayAnswerValue = z.union([z.string(), z.number(), z.boolean()]);
+
+/**
+ * Answers for whatever the engine asks while a play step runs.
  *
- * Shipping these inside the pack is how an author proves their own tables
+ * A key is matched against a request in this order: the request's own
+ * deterministic key first (for a nested roll or prompt copied out of a
+ * failure message); failing that, a die notation such as "d100" or "d6",
+ * matched to requests of that shape in the order they are asked; failing
+ * that, a prompt kind such as "chooseSubject" or "confirm", matched the same
+ * way. A list under one of the latter two answers successive asks of that
+ * shape in order; a bare value answers only the first.
+ */
+const PlayAnswers = z
+  .record(z.string(), z.union([PlayAnswerValue, z.array(PlayAnswerValue)]))
+  .describe("Answers for the engine's requests while this step runs. See `play` for how a key is matched.");
+
+/** One step of a play fixture's script. */
+export const PlayStep = z.union([
+  z
+    .object({
+      enter: z.number().int().min(1).describe("Enter the next unit; asserts it is this one."),
+      answers: PlayAnswers.optional(),
+    })
+    .strict()
+    .describe("Enter the next unit."),
+  z
+    .object({
+      declare: z.string().min(1).describe("What to declare the current unit's subject as."),
+      answers: PlayAnswers.optional(),
+    })
+    .strict()
+    .describe("Declare the current unit's subject. The active step must be a declareSubject step."),
+  z
+    .object({
+      step: z
+        .string()
+        .min(1)
+        .describe('The active step: a phase id, or "phaseId#index" for a phase with more than one step. Must be the step the engine is actually waiting on.'),
+      answers: PlayAnswers.optional(),
+    })
+    .strict()
+    .describe(
+      "Run the active step the way the app would: a rollTable step rolls (and rolls again for any extra roll still owed), an actions step runs its actions, a manual step is ticked and completed, and a finalizeUnit step finalizes the unit.",
+    ),
+  z
+    .object({
+      finalize: z.object({}).strict().describe("No fields; just marks this as the finalize step."),
+      answers: PlayAnswers.optional(),
+    })
+    .strict()
+    .describe("Finalize the current unit: any confirmations are ticked and the unit closes. The active step must be finalizeUnit."),
+  z
+    .object({
+      move: z.string().min(1).describe("Id of the move to take."),
+      answers: PlayAnswers.optional(),
+    })
+    .strict()
+    .describe("Take a move."),
+  z
+    .object({
+      settle: z.string().min(1).describe("The id or label of a due obligation."),
+      answers: PlayAnswers.optional(),
+    })
+    .strict()
+    .describe("Settle a due obligation."),
+  z
+    .object({
+      tick: z.string().min(1).describe("The text of a checklist item on the active step."),
+      answers: PlayAnswers.optional(),
+    })
+    .strict()
+    .describe("Tick one checklist item on the active step, without completing it."),
+]).describe("One step of a play fixture's script.");
+export type PlayStep = z.infer<typeof PlayStep>;
+
+/**
+ * A conformance fixture, in one of two shapes.
+ *
+ * A **replay** fixture hands the reducer a hand-written event log and checks
+ * the state that comes out. A **play** fixture instead drives the engine the
+ * way the app does — entering units, rolling tables, taking moves — from a
+ * short script, so the flow itself is exercised and not only the state a log
+ * happens to produce.
+ *
+ * Shipping either inside the pack is how an author proves their own tables
  * behave — including the worked examples printed in their rulebook — without
  * those assertions having to live in this repo.
  */
-export const Fixture = z
-  .object({
-    name: z.string().min(1).describe("What this fixture demonstrates."),
-    mode: Id.optional().describe("Mode to replay in. Defaults to the pack's default mode."),
-    seed: z.string().optional().describe("Seed, for fixtures that depend on generated rolls."),
-    events: z.array(z.unknown()).describe("The run events to replay, in order."),
-    expect: z
-      .array(
-        z
-          .object({
-            path: z
-              .string()
-              .min(1)
-              .describe("Dotted path into derived run state, e.g. counters.calm."),
-            equals: z.unknown().describe("The value expected at that path."),
-          })
-          .strict()
-          .describe("One assertion."),
-      )
-      .min(1)
-      .describe("Assertions checked after the replay."),
-  })
-  .strict()
-  .describe(
-    "A self-test shipped with the pack. This is how an author proves their tables behave — including the worked examples printed in their own rulebook — without those assertions living in the engine's repo.",
-  );
+export const Fixture = z.union([
+  z
+    .object({
+      name: z.string().min(1).describe("What this fixture demonstrates."),
+      mode: Id.optional().describe("Mode to replay in. Defaults to the pack's default mode."),
+      seed: z.string().optional().describe("Seed, for fixtures that depend on generated rolls."),
+      events: z.array(z.unknown()).describe("The run events to replay, in order."),
+      expect: z.array(Expectation).min(1).describe("Assertions checked after the replay."),
+    })
+    .strict()
+    .describe("Replay a hand-written event log and assert on the state it folds into."),
+  z
+    .object({
+      name: z.string().min(1).describe("What this fixture demonstrates."),
+      mode: Id.optional().describe("Mode to play in. Defaults to the pack's default mode."),
+      seed: z.string().optional().describe("Seed. Unanswered rolls in the script are drawn from it."),
+      players: z.number().int().min(1).optional().describe("How many people are playing."),
+      play: z.array(PlayStep).min(1).describe("The script to play through: entering units, declaring subjects, rolling tables, taking moves."),
+      expect: z.array(Expectation).min(1).describe("Assertions checked after the play-through."),
+    })
+    .strict()
+    .describe("Play the pack through a script — entering units, rolling tables, taking moves — and assert on the state that comes out."),
+]).describe(
+  "A self-test shipped with the pack. This is how an author proves their tables behave — including the worked examples printed in their own rulebook — without those assertions living in the engine's repo.",
+);
 export type Fixture = z.infer<typeof Fixture>;
 
 /**

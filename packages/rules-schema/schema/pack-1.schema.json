@@ -2915,60 +2915,552 @@
       "description": "Self-tests shipped with the pack.",
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "What this fixture demonstrates."
-          },
-          "mode": {
-            "description": "Mode to replay in. Defaults to the pack's default mode.",
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
-          },
-          "seed": {
-            "description": "Seed, for fixtures that depend on generated rolls.",
-            "type": "string"
-          },
-          "events": {
-            "type": "array",
-            "items": {},
-            "description": "The run events to replay, in order."
-          },
-          "expect": {
-            "minItems": 1,
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "path": {
-                  "type": "string",
-                  "minLength": 1,
-                  "description": "Dotted path into derived run state, e.g. counters.calm."
-                },
-                "equals": {
-                  "description": "The value expected at that path."
-                }
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "What this fixture demonstrates."
               },
-              "required": [
-                "path",
-                "equals"
-              ],
-              "additionalProperties": false,
-              "description": "One assertion."
+              "mode": {
+                "description": "Mode to replay in. Defaults to the pack's default mode.",
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+              },
+              "seed": {
+                "description": "Seed, for fixtures that depend on generated rolls.",
+                "type": "string"
+              },
+              "events": {
+                "type": "array",
+                "items": {},
+                "description": "The run events to replay, in order."
+              },
+              "expect": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Dotted path into derived run state, e.g. counters.calm."
+                        },
+                        "equals": {
+                          "description": "The value expected at that path."
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "equals"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The value at this path must equal exactly this."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Dotted path into derived run state, naming an array."
+                        },
+                        "contains": {
+                          "description": "The array at this path must contain this value."
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "contains"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The array at this path must contain this value, among others."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Dotted path into derived run state, naming an array."
+                        },
+                        "absent": {
+                          "description": "The array at this path must not contain this value."
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "absent"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The array at this path must not contain this value."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "requests": {
+                          "type": "string",
+                          "const": "answered",
+                          "description": "Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all — spelled out here so a fixture can say so on purpose."
+                        }
+                      },
+                      "required": [
+                        "requests"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Every request the engine made while playing was answered."
+                    }
+                  ],
+                  "description": "One assertion, checked after the fixture runs."
+                },
+                "description": "Assertions checked after the replay."
+              }
             },
-            "description": "Assertions checked after the replay."
+            "required": [
+              "name",
+              "events",
+              "expect"
+            ],
+            "additionalProperties": false,
+            "description": "Replay a hand-written event log and assert on the state it folds into."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "What this fixture demonstrates."
+              },
+              "mode": {
+                "description": "Mode to play in. Defaults to the pack's default mode.",
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+              },
+              "seed": {
+                "description": "Seed. Unanswered rolls in the script are drawn from it.",
+                "type": "string"
+              },
+              "players": {
+                "description": "How many people are playing.",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "play": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "enter": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991,
+                          "description": "Enter the next unit; asserts it is this one."
+                        },
+                        "answers": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": [
+                                  "string",
+                                  "number",
+                                  "boolean"
+                                ]
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": [
+                                    "string",
+                                    "number",
+                                    "boolean"
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          "description": "Answers for the engine's requests while this step runs. See `play` for how a key is matched."
+                        }
+                      },
+                      "required": [
+                        "enter"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Enter the next unit."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "declare": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "What to declare the current unit's subject as."
+                        },
+                        "answers": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": [
+                                  "string",
+                                  "number",
+                                  "boolean"
+                                ]
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": [
+                                    "string",
+                                    "number",
+                                    "boolean"
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          "description": "Answers for the engine's requests while this step runs. See `play` for how a key is matched."
+                        }
+                      },
+                      "required": [
+                        "declare"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Declare the current unit's subject. The active step must be a declareSubject step."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "step": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "The active step: a phase id, or \"phaseId#index\" for a phase with more than one step. Must be the step the engine is actually waiting on."
+                        },
+                        "answers": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": [
+                                  "string",
+                                  "number",
+                                  "boolean"
+                                ]
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": [
+                                    "string",
+                                    "number",
+                                    "boolean"
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          "description": "Answers for the engine's requests while this step runs. See `play` for how a key is matched."
+                        }
+                      },
+                      "required": [
+                        "step"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Run the active step the way the app would: a rollTable step rolls (and rolls again for any extra roll still owed), an actions step runs its actions, a manual step is ticked and completed, and a finalizeUnit step finalizes the unit."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "finalize": {
+                          "type": "object",
+                          "properties": {},
+                          "additionalProperties": false,
+                          "description": "No fields; just marks this as the finalize step."
+                        },
+                        "answers": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": [
+                                  "string",
+                                  "number",
+                                  "boolean"
+                                ]
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": [
+                                    "string",
+                                    "number",
+                                    "boolean"
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          "description": "Answers for the engine's requests while this step runs. See `play` for how a key is matched."
+                        }
+                      },
+                      "required": [
+                        "finalize"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Finalize the current unit: any confirmations are ticked and the unit closes. The active step must be finalizeUnit."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "move": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Id of the move to take."
+                        },
+                        "answers": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": [
+                                  "string",
+                                  "number",
+                                  "boolean"
+                                ]
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": [
+                                    "string",
+                                    "number",
+                                    "boolean"
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          "description": "Answers for the engine's requests while this step runs. See `play` for how a key is matched."
+                        }
+                      },
+                      "required": [
+                        "move"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Take a move."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "settle": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "The id or label of a due obligation."
+                        },
+                        "answers": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": [
+                                  "string",
+                                  "number",
+                                  "boolean"
+                                ]
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": [
+                                    "string",
+                                    "number",
+                                    "boolean"
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          "description": "Answers for the engine's requests while this step runs. See `play` for how a key is matched."
+                        }
+                      },
+                      "required": [
+                        "settle"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Settle a due obligation."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "tick": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "The text of a checklist item on the active step."
+                        },
+                        "answers": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": [
+                                  "string",
+                                  "number",
+                                  "boolean"
+                                ]
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": [
+                                    "string",
+                                    "number",
+                                    "boolean"
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          "description": "Answers for the engine's requests while this step runs. See `play` for how a key is matched."
+                        }
+                      },
+                      "required": [
+                        "tick"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Tick one checklist item on the active step, without completing it."
+                    }
+                  ],
+                  "description": "One step of a play fixture's script."
+                },
+                "description": "The script to play through: entering units, declaring subjects, rolling tables, taking moves."
+              },
+              "expect": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Dotted path into derived run state, e.g. counters.calm."
+                        },
+                        "equals": {
+                          "description": "The value expected at that path."
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "equals"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The value at this path must equal exactly this."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Dotted path into derived run state, naming an array."
+                        },
+                        "contains": {
+                          "description": "The array at this path must contain this value."
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "contains"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The array at this path must contain this value, among others."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Dotted path into derived run state, naming an array."
+                        },
+                        "absent": {
+                          "description": "The array at this path must not contain this value."
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "absent"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The array at this path must not contain this value."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "requests": {
+                          "type": "string",
+                          "const": "answered",
+                          "description": "Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all — spelled out here so a fixture can say so on purpose."
+                        }
+                      },
+                      "required": [
+                        "requests"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Every request the engine made while playing was answered."
+                    }
+                  ],
+                  "description": "One assertion, checked after the fixture runs."
+                },
+                "description": "Assertions checked after the play-through."
+              }
+            },
+            "required": [
+              "name",
+              "play",
+              "expect"
+            ],
+            "additionalProperties": false,
+            "description": "Play the pack through a script — entering units, rolling tables, taking moves — and assert on the state that comes out."
           }
-        },
-        "required": [
-          "name",
-          "events",
-          "expect"
         ],
-        "additionalProperties": false,
         "description": "A self-test shipped with the pack. This is how an author proves their tables behave — including the worked examples printed in their own rulebook — without those assertions living in the engine's repo."
       }
     },

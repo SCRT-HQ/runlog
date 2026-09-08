@@ -121,6 +121,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
   const counterIds = new Set(Object.keys(pack.counters ?? {}));
   const resourceIds = new Set(Object.keys(pack.resources ?? {}));
   const phaseIds = new Set(pack.phases.map((p) => p.id));
+  const moveIds = new Set(Object.keys(pack.moves ?? {}));
 
   // ---- Tables ------------------------------------------------------------
   let usesOpposed = false;
@@ -716,6 +717,28 @@ export function lintPack(pack: Pack): Diagnostic[] {
     ) || (pack.triggers?.length ?? 0) > 0,
     "uses deferred triggers",
   );
+
+  // ── Play fixtures ────────────────────────────────────────────────────────
+  // Only what the schema cannot already rule out: that a step names a phase
+  // (or phase#index) which actually exists, and that a move names one that
+  // does. A typo here would otherwise surface only when the fixture ran, with
+  // a message about "the active step" that says nothing about the pack.
+  pack.fixtures?.forEach((fixture, fi) => {
+    if (!("play" in fixture)) return;
+    const path = `fixtures[${fi}].play`;
+    fixture.play.forEach((step, si) => {
+      if ("step" in step) {
+        const [phaseId] = step.step.split("#");
+        if (!phaseIds.has(phaseId ?? "")) {
+          d.push(err("fixture/unknown-phase", `${path}[${si}]`, `step references unknown phase ${phaseId}`));
+        }
+      } else if ("move" in step) {
+        if (!moveIds.has(step.move)) {
+          d.push(err("fixture/unknown-move", `${path}[${si}]`, `references unknown move ${step.move}`));
+        }
+      }
+    });
+  });
 
   return d;
 }

@@ -105,6 +105,80 @@ describe("replaying a pack's own fixtures", () => {
   });
 });
 
+describe("a play fixture", () => {
+  const firstStage = [
+    { enter: 1 },
+    { step: "enter" },
+    { declare: "Bowl" },
+    { step: "work" },
+    { finalize: {} },
+  ];
+
+  it("plays the script and asserts on the state it produces", () => {
+    const [result] = runFixtures(
+      withFixtures([
+        {
+          name: "a Bowl gets fired",
+          play: [
+            ...firstStage,
+            { enter: 2 },
+            { step: "enter" },
+            { step: "check", answers: { d100: 30, d6: 4 } },
+          ],
+          expect: [
+            { path: "outcomes.length", equals: 2 },
+            { path: "outcomes.1.entryId", equals: "form-cup" },
+          ],
+        },
+      ]),
+    );
+    expect(result).toMatchObject({ ok: true });
+    expect(result!.error).toBeUndefined();
+  });
+
+  it("supports contains, absent and requests: answered", () => {
+    const [result] = runFixtures(
+      withFixtures([
+        {
+          name: "checking the other expectation shapes",
+          play: firstStage,
+          expect: [
+            { path: "phasesDone", contains: "declare" },
+            { path: "phasesDone", absent: "check" },
+            { requests: "answered" },
+          ],
+        },
+      ]),
+    );
+    expect(result).toMatchObject({ ok: true });
+  });
+
+  it("fails a play fixture whose assertion is wrong, same as a replay fixture", () => {
+    const [result] = runFixtures(
+      withFixtures([
+        { name: "wrong on purpose", play: firstStage, expect: [{ path: "unit", equals: 99 }] },
+      ]),
+    );
+    expect(result).toMatchObject({ ok: false });
+    expect(result!.assertions[0]).toMatchObject({ expected: 99, actual: 1, ok: false });
+  });
+
+  it("turns an unanswered request into a failing fixture naming the request", () => {
+    const [result] = runFixtures(
+      withFixtures([
+        {
+          name: "the Kiln Check goes unanswered",
+          play: [...firstStage, { enter: 2 }, { step: "enter" }, { step: "check" }],
+          expect: [{ path: "unit", equals: 2 }],
+        },
+      ]),
+    );
+    expect(result).toMatchObject({ ok: false });
+    expect(result!.error).toContain('"check"');
+    expect(result!.error).toContain("Kiln Check");
+  });
+});
+
 describe("reading a dotted path out of run state", () => {
   const state = {
     unit: 2,

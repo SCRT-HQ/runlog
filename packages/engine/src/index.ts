@@ -7,6 +7,7 @@ export * from "./log.ts";
 export * from "./reduce.ts";
 export * from "./execute.ts";
 export * from "./flow.ts";
+export * from "./play.ts";
 export * from "./describe.ts";
 export * from "./race.ts";
 export * from "./counters.ts";
