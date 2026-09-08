@@ -123,9 +123,10 @@ jobs:
         github.event_name == 'merge_group'
         || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
       }}
-    needs:
-      - Test
-      - InfraTest
+    # Alongside the tests, not after them: a diff needs the built app and
+    # nothing the tests decide, and waiting for them doubled the time a
+    # pull request took to go green. The ruleset requires every check, so
+    # a failing test still holds the merge.
     strategy:
       fail-fast: false
       matrix:
