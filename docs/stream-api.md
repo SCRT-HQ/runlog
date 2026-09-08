@@ -147,13 +147,23 @@ The kinds:
 | `kind` | When | `data` |
 | --- | --- | --- |
 | `rolled` | The player threw dice, and they have landed. | `dice`: each die's `faces`, what it shows (`display`) and its `label`; `total`; the roll's `label`; its `notation`, such as `2d6`. |
+| `outcome` | A result landed: the dice, or a choice, drew a line of a table. | `n`, the result's number from the start of the run (the snapshot's log uses the same); `unit`; `table`, its title; `text`, the line drawn, in the pack's words; `subject`, by name, when the result reached one. |
+| `award` | The moderator gave a result's points to a contestant. | `n`, the result awarded; `contestant`, by name; `points`; `table`; `text`. |
+| `clock` | A clock started, paused, resumed or stopped. | `clock`, its id; `label`; `kind`, `stopwatch` or `timer`; `status`: `started`, `paused`, `resumed` or `stopped`; on `stopped`, `expired`. |
+| `unit-closed` | A unit was finalized. | `unit`, the one closed; `unitsDone`, how many so far. |
+| `run-ended` | The run ended. | `ending`, its name; `unitsDone`. |
 
-`rolled` is the one kind today, sent so a plugin can play the same throw.
-Others will follow the same shape; ignore kinds you do not know. A gesture
-is not a move, so a `changed` message does not follow it; the move it
-belongs to rings on its own once the result is written. The socket closes
-when the link is revoked, and after a while idle; reconnect with a small
-backoff. Nothing may be sent on it; a message from a plugin is dropped.
+`rolled` is sent by whichever device threw, so a plugin can play the same
+throw. The rest are sent by the run's owner's device after each move,
+whichever device made it, so a table speaks with one voice; they say what
+happened in words a listener without the pack can use, and a result's `n`
+lets a listener drop one it has already shown. An undo says nothing: what
+it unmade is simply not there when the state is next read. Others may
+follow the same shape; ignore kinds you do not know. A gesture is not a
+move, so a `changed` message does not follow it; the move it belongs to
+rings on its own once the result is written. The socket closes when the
+link is revoked, and after a while idle; reconnect with a small backoff.
+Nothing may be sent on it; a message from a plugin is dropped.
 
 ## The whole run: `GET /api/public/runs/<runId>?t=<token>`
 

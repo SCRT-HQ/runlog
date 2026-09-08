@@ -15,15 +15,31 @@ describe("a widget's address", () => {
     expect(widgetFromHash("#widget/dice/run1")).toBeNull();
     expect(widgetFromHash("#guide/start")).toBeNull();
     expect(widgetFromHash("#widget/stats/run1?scale=40")?.scale).toBe(1);
+    expect(widgetFromHash("#widget/stats/run1?bg=plaid")?.bg).toBe("solid");
   });
   it("carries a live link's token, for a machine that is not the streamer's", () => {
     expect(widgetFromHash("#widget/stats/run1?t=tok&bg=clear")).toEqual({ kind: "stats", runId: "run1", bg: "clear", scale: 1, token: "tok" });
     expect(widgetHash({ kind: "clock", runId: "r", bg: "solid", scale: 1, token: "tok" })).toBe("#widget/clock/r?t=tok");
   });
 
+  it("paints nothing at all when asked, for a scene that frames the numbers itself", () => {
+    expect(widgetFromHash("#widget/clock/r?bg=none")?.bg).toBe("none");
+    expect(widgetHash({ kind: "clock", runId: "r", bg: "none", scale: 1 })).toBe("#widget/clock/r?bg=none");
+  });
+
+  it("pins a theme in the address, so the capture ignores what the streaming machine chose", () => {
+    expect(widgetFromHash("#widget/clock/r?theme=ember")?.theme).toBe("ember");
+    // "system" is the absence of a choice, and a theme nobody has is no theme: neither is carried.
+    expect(widgetFromHash("#widget/clock/r?theme=system")).not.toHaveProperty("theme");
+    expect(widgetFromHash("#widget/clock/r?theme=neon")).not.toHaveProperty("theme");
+    expect(widgetHash({ kind: "clock", runId: "r", bg: "clear", scale: 1, theme: "glaze" })).toBe("#widget/clock/r?bg=clear&theme=glaze");
+  });
+
   it("round-trips", () => {
     const route = { kind: "race" as const, runId: "r", bg: "clear" as const, scale: 2 };
     expect(widgetFromHash(widgetHash(route))).toEqual(route);
+    const pinned = { kind: "stats" as const, runId: "r", bg: "none" as const, scale: 1.25, token: "tok", theme: "daylight" as const };
+    expect(widgetFromHash(widgetHash(pinned))).toEqual(pinned);
     expect(widgetHref(route, "https://runlog.example/app/?purchase=x#play")).toBe("https://runlog.example/app/#widget/race/r?bg=clear&scale=2");
   });
 });

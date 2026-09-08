@@ -9,6 +9,7 @@ import { useRace } from "../run/useRace.ts";
 import { clockNow, raceOf, snapshotOf, type LiveSnapshot, type RaceSnapshot } from "../live/snapshot.ts";
 import { RaceBoard, raceHeading } from "../live/RaceBoard.tsx";
 import { usePublicRun } from "../live/usePublic.ts";
+import { applyTheme, savedTheme } from "../theme/theme.ts";
 import { WIDGET_KINDS, type WidgetRoute } from "./route.ts";
 
 /**
@@ -27,16 +28,22 @@ import { WIDGET_KINDS, type WidgetRoute } from "./route.ts";
  * table with an audience. By token the sharing was the gated act.
  */
 export function WidgetView({ route }: { route: WidgetRoute }) {
-  // The page's look: the theme's ground, or none.
+  // The page's look: the theme's ground, or none; and the theme the
+  // address pins, if it pins one, over whatever this machine chose. The
+  // boot in main.tsx applies the pinned theme before the first paint;
+  // this keeps it applied should the address change under a running page,
+  // and hands the machine its own choice back on the way out.
   useEffect(() => {
     const root = document.documentElement;
     root.dataset["widget"] = route.bg;
     root.style.fontSize = `${16 * route.scale}px`;
+    if (route.theme) applyTheme(route.theme);
     return () => {
       delete root.dataset["widget"];
       root.style.fontSize = "";
+      if (route.theme) applyTheme(savedTheme());
     };
-  }, [route.bg, route.scale]);
+  }, [route.bg, route.scale, route.theme]);
 
   return route.token ? <ByLink route={route} token={route.token} /> : <FromHere route={route} />;
 }

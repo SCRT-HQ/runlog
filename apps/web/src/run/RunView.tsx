@@ -39,6 +39,7 @@ import { clearPendingRaceCode, pendingRaceCode } from "../share/IncomingRace.tsx
 import { PlanError } from "../sync/client.ts";
 import { liveLinkOf } from "../live/route.ts";
 import { paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
+import { lifecycleGestures, marksOf, type LifecycleMarks } from "./gestures.ts";
 import { useRace } from "./useRace.ts";
 
 /**
@@ -236,6 +237,24 @@ export function RunView({
       });
     }
   }, [committed, ahead, run.events.length]);
+
+  // What each move did, told to whoever is watching: a result landed, a
+  // unit closed, the run ended. The owner's device tells it, whichever
+  // device made the move, so a table has one voice; a viewer's copy, a
+  // player's copy and the bench say nothing. See gestures.ts.
+  const told = useRef<LifecycleMarks | null>(null);
+  useEffect(() => {
+    const record = run.record;
+    const state = run.state;
+    if (!record || !state) return;
+    const before = told.current;
+    told.current = marksOf(state, run.events);
+    // First sight of a saved run: everything in it is old news.
+    if (!before) return;
+    if (record.role === "viewer" || record.role === "player" || run.readOnly || bench) return;
+    for (const g of lifecycleGestures(pack, state, run.events, before)) sync.gesture(record.runId, g.kind, g.data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [run.events.length, run.state]);
 
   // The step is done once nothing more is asked; its receipts wait to be
   // read, unless this device asked them not to.

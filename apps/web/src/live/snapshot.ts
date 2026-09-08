@@ -141,7 +141,7 @@ const LOG_LINES = 60;
  * What the dice drew is one line of one table; the tables themselves and
  * the pack's paper stay behind `quoted`.
  */
-function entryTextOf(pack: Pack, o: RunState["outcomes"][number]): string {
+export function entryTextOf(pack: Pack, o: Pick<RunState["outcomes"][number], "table" | "entryId">): string {
   const table = pack.tables[o.table];
   const entry = table?.entries.find((e) => e.id === o.entryId);
   return entry?.title ?? entry?.text ?? `${table?.title ?? o.table} · #${o.entryId}`;

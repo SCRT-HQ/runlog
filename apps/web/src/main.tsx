@@ -9,6 +9,7 @@ import { SyncProvider } from "./sync/SyncProvider.tsx";
 import { applyTheme, savedTheme } from "./theme/theme.ts";
 import { WelcomeView } from "./welcome/WelcomeView.tsx";
 import { WELCOME_QUERY, baseOf, honestAddress, skipWelcome, whereTo } from "./welcome/route.ts";
+import { widgetFromHash } from "./widget/route.ts";
 import "./fonts.css";
 import "./styles.css";
 
@@ -36,8 +37,10 @@ if (page === "app") {
 
 // Before anything is painted. The policy at the edge forbids inline scripts,
 // so this is the earliest the saved choice can reach the document; the root
-// is still empty, so nothing has been drawn in the wrong light yet.
-applyTheme(savedTheme());
+// is still empty, so nothing has been drawn in the wrong light yet. A widget
+// address may pin a theme of its own, and a capture must never show a frame
+// in the machine's light first.
+applyTheme(widgetFromHash(here.hash)?.theme ?? savedTheme());
 
 if (page === "welcome") {
   createRoot(document.getElementById("root")!).render(
