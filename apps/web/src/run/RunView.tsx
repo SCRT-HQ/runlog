@@ -878,15 +878,11 @@ function StepPanel({
     }
 
     case "declareSubject": {
-      const constraint = constraintFor(pack, state, step.constrainedBy);
+      const constraints = constraintsFor(pack, state, step.constrainedBy);
       return (
         <section className="panel runStep" key={key}>
           <StepHead phase={phase} label={step.label ?? `Declare the ${v.subject.one}`} />
-          {constraint && (
-            <p className="notice">
-              The game has already had its say: <strong>{constraint}</strong>
-            </p>
-          )}
+          <Constraints lines={constraints} />
           {state.bannedTypes.length > 0 && (
             <p className="muted small">
               No longer allowed: {state.bannedTypes.join(", ")}
@@ -918,10 +914,12 @@ function StepPanel({
     case "manual": {
       const list = step.checklist ?? [];
       const allTicked = checklistDone(list, pack, state, ticked);
+      const constraints = constraintsFor(pack, state, step.constrainedBy);
       return (
         <section className="panel runStep" key={key}>
           <StepHead phase={phase} label={step.label} />
           {step.description && <p className="muted">{step.description}</p>}
+          <Constraints lines={constraints} />
           <p className="muted small">
             {liveClocks(state).length > 0
               ? "The app keeps the clock. The work itself it cannot see; it only records that you did it."
@@ -1028,12 +1026,36 @@ function StepHead({ phase, label }: { phase: { label: string }; label: string })
 }
 
 /** The most recent class-style result, shown when declaring. */
-function constraintFor(pack: Pack, state: RunState, tableId?: string): string | null {
-  if (!tableId) return null;
-  const hit = [...state.outcomes].reverse().find((o) => o.unit === state.unit && o.table === tableId);
-  if (!hit) return null;
-  const entry = pack.tables[tableId]?.entries.find((e) => e.id === hit.entryId);
-  return entry?.title ?? entry?.text ?? null;
+/**
+ * What a table has said this unit, for a step that must honor it: every
+ * result on that table since the unit began, in order, so a unit that
+ * rolled twice (an extra roll owed) shows both.
+ */
+function constraintsFor(pack: Pack, state: RunState, tableId?: string): string[] {
+  if (!tableId) return [];
+  const table = pack.tables[tableId];
+  return state.outcomes
+    .filter((o) => o.unit === state.unit && o.table === tableId)
+    .map((o) => table?.entries.find((e) => e.id === o.entryId))
+    .map((entry) => entry?.title ?? entry?.text ?? null)
+    .filter((line): line is string => line !== null);
+}
+
+/** The rules already drawn this unit, in front of the player while they work. */
+function Constraints({ lines }: { lines: string[] }) {
+  if (lines.length === 0) return null;
+  return (
+    <div className="notice constraints">
+      <span className="muted small">The game has already had its say</span>
+      <ul>
+        {lines.map((line, i) => (
+          <li key={i}>
+            <strong>{line}</strong>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function BetweenUnits({
