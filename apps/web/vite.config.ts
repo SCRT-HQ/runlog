@@ -5,7 +5,10 @@ import { offline } from "./offline.ts";
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 
-const version = (JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string }).version;
+// The version a deploy says it is — the release it becomes, or was cut
+// from — else the package's own, which is what a local build is.
+const version =
+  process.env["RUNLOG_VERSION"] || (JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string }).version;
 
 // Relative base so a built bundle works from a static host *and* from disk,
 // which matters because one supported workflow is simply "open the file".
