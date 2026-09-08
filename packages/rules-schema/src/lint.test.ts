@@ -188,6 +188,60 @@ describe("lintPack", () => {
   });
 
   /**
+   * Unlike most `ref/unknown-*` checks, a dangling score reference cannot
+   * break a run — `scoreOf` is total, so the worst case is a scoreboard that
+   * quietly reads zero. That is why these are warnings rather than errors.
+   */
+  describe("score", () => {
+    it("accepts a valid block naming a counter that exists", () => {
+      const p = basePack();
+      (p as any).counters = { blocks: { label: "Blocks", incrementOn: [{ on: "unitFinalized" }] } };
+      (p as any).score = { counter: "blocks", tiebreak: "time" };
+      const codes = codesOf(p);
+      expect(codes).not.toContain("score/unknown-counter");
+      expect(codes).not.toContain("score/unknown-resource");
+    });
+
+    it("warns when a score names a counter that does not exist", () => {
+      const p = basePack();
+      (p as any).score = { counter: "ghost" };
+      const diag = lintPack(Pack.parse(p)).find((d) => d.code === "score/unknown-counter");
+      expect(diag?.level).toBe("warning");
+    });
+
+    it("warns when a score names a resource that does not exist", () => {
+      const p = basePack();
+      (p as any).score = { resource: "ghost" };
+      const diag = lintPack(Pack.parse(p)).find((d) => d.code === "score/unknown-resource");
+      expect(diag?.level).toBe("warning");
+    });
+
+    it("warns when a score is by time but nothing in the pack runs a clock", () => {
+      const p = basePack();
+      (p as any).score = { time: true };
+      const diag = lintPack(Pack.parse(p)).find((d) => d.code === "score/no-clock");
+      expect(diag?.level).toBe("warning");
+    });
+
+    it("stays quiet about time once the pack runs a unit clock", () => {
+      const p = basePack();
+      (p as any).unit = { createsSubject: true, min: 1, max: 20, clock: { kind: "stopwatch" } };
+      (p as any).score = { time: true };
+      expect(codesOf(p)).not.toContain("score/no-clock");
+    });
+
+    it("checks a mode's own time score against that mode's own clock, not the pack's", () => {
+      const p = basePack();
+      p.modes = { standard: { label: "Standard", score: { time: true } } };
+      expect(codesOf(p)).toContain("score/no-clock");
+
+      const timed = basePack();
+      timed.modes = { standard: { label: "Standard", score: { time: true }, clock: { kind: "stopwatch" } } };
+      expect(codesOf(timed)).not.toContain("score/no-clock");
+    });
+  });
+
+  /**
    * A trigger the pack owns outright has no result to hang from, so only the
    * points the run itself passes through can reach it. A pack that writes its
    * reckoning for `onFinalize` would otherwise validate clean and then never
