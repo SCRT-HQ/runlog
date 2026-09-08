@@ -344,6 +344,31 @@ export interface Connections {
   discord: DiscordConnection | null;
 }
 
+/** A Discord server this account claimed: the bot plays there on the packs in its vault. */
+export interface Guild {
+  guildId: string;
+  /** What Discord calls it, where the bot could ask. */
+  name?: string;
+  ownerSub: string;
+  claimedAt: string;
+  updatedAt: string;
+  hostRoleId?: string;
+  channelId?: string;
+}
+
+/** A pack in a server's vault, as the profile lists it: never its text. */
+export interface GuildPackMeta {
+  id: string;
+  title: string;
+  version: string;
+  format: "yaml" | "json";
+  hash: string;
+  bytes: number;
+  modes: Array<{ id: string; label: string }>;
+  updatedAt: string;
+  delegatedBy: string;
+}
+
 export interface Api {
   me(): Promise<Me>;
   /** The other accounts linked to this one. */
@@ -351,6 +376,16 @@ export interface Api {
   /** Hand in the code `/link` minted in Discord; the Discord account it was minted for is then this one's. */
   linkDiscord(code: string): Promise<DiscordConnection>;
   unlinkDiscord(): Promise<void>;
+  /** Hand in the code `/setup claim` minted; the server is then this account's. `upgrade` says the server plan is wanted and not held. */
+  claimGuild(code: string): Promise<{ guild: Guild; plan: string; upgrade: boolean }>;
+  /** The servers this account claimed, and whether it holds the server plan (always true where plans are open). */
+  myGuilds(): Promise<{ guilds: Guild[]; server: boolean }>;
+  /** Give the server up: its rows and its vault go. */
+  releaseGuild(guildId: string): Promise<void>;
+  guildPacks(guildId: string): Promise<GuildPackMeta[]>;
+  /** Put a pack in the server's vault, with the summary the bot lists it by; the text never comes back. */
+  delegatePack(guildId: string, pack: { packId: string; title: string; version: string; format: "yaml" | "json"; hash: string; modes: Array<{ id: string; label: string }>; source: string }): Promise<GuildPackMeta>;
+  undelegatePack(guildId: string, packId: string): Promise<void>;
   /** The name and email the SDK reported, so the server's row is never older than the last visit. */
   putProfile(snapshot: { name?: string; handle?: string; email?: string; termsVersion?: string }): Promise<Profile>;
   /** Everything of the caller's on the server, gone. */
@@ -390,7 +425,7 @@ export interface Api {
   removeMember(sessionId: string, sub: string): Promise<void>;
   people(): Promise<Person[]>;
   /** A Stripe Checkout for a plan, by key; `available: false` where billing is off. */
-  checkout(price: "plus-monthly" | "plus-yearly" | "hosted-monthly" | "hosted-yearly"): Promise<{ url: string } | { available: false }>;
+  checkout(price: "plus-monthly" | "plus-yearly" | "hosted-monthly" | "hosted-yearly" | "server-monthly" | "server-yearly"): Promise<{ url: string } | { available: false }>;
   portal(): Promise<{ url: string } | { available: false }>;
   /** Ask Stripe again what this account has, and keep the answer. */
   refreshEntitlements(): Promise<string[]>;
@@ -762,6 +797,28 @@ export function createApi(
     },
     unlinkDiscord: async () => {
       await request("DELETE", "/connections/discord");
+    },
+    claimGuild: async (code) => {
+      const { status, body } = await request<{ claimed?: boolean; guild?: Guild; plan?: string; upgrade?: boolean; error?: string }>("POST", "/guilds/claim", { code });
+      if (status !== 200 || !body.guild) throw new SyncError("error", undefined, body.error ?? "that server could not be claimed");
+      return { guild: body.guild, plan: body.plan ?? "server", upgrade: body.upgrade === true };
+    },
+    myGuilds: async () => {
+      const { body } = await request<{ guilds?: Guild[]; server?: boolean }>("GET", "/guilds");
+      return { guilds: body.guilds ?? [], server: body.server !== false };
+    },
+    releaseGuild: async (guildId) => {
+      await request("DELETE", `/guilds/${encodeURIComponent(guildId)}`);
+    },
+    guildPacks: async (guildId) => (await request<{ packs?: GuildPackMeta[] }>("GET", `/guilds/${encodeURIComponent(guildId)}/packs`)).body.packs ?? [],
+    delegatePack: async (guildId, pack) => {
+      const { packId, ...rest } = pack;
+      const { status, body } = await request<{ kept?: boolean; pack?: GuildPackMeta; error?: string }>("PUT", `/guilds/${encodeURIComponent(guildId)}/packs/${encodeURIComponent(packId)}`, rest);
+      if (status !== 200 || !body.pack) throw new SyncError(status === 413 ? "too-large" : "error", undefined, body.error ?? "that pack could not be added");
+      return body.pack;
+    },
+    undelegatePack: async (guildId, packId) => {
+      await request("DELETE", `/guilds/${encodeURIComponent(guildId)}/packs/${encodeURIComponent(packId)}`);
     },
     createInvite: async (sessionId, email, role) => {
       const { status, body } = await request<{ invite?: Invite; link?: string; error?: string; plan?: string }>("POST", `/sessions/${sessionId}/invites`, { email, role });

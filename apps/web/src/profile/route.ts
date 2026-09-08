@@ -1,15 +1,17 @@
 /**
- * The profile's four pages, addressed in the hash: `#profile`,
- * `#profile/publishing`, `#profile/account`, `#profile/social`. Bare
- * `#profile` is the first page, the same way a bare `#guide` is its first
- * page. Kept apart from ProfileView.tsx so App.tsx can read a page out of
- * the address bar without importing the whole view.
+ * The profile's pages, addressed in the hash: `#profile`,
+ * `#profile/publishing`, `#profile/account`, `#profile/social`,
+ * `#profile/servers`. Bare `#profile` is the first page, the same way a
+ * bare `#guide` is its first page. Kept apart from ProfileView.tsx so
+ * App.tsx can read a page out of the address bar without importing the
+ * whole view.
  */
 export const PROFILE_PAGES = [
   { id: "profile", label: "Profile" },
   { id: "publishing", label: "Publishing" },
   { id: "account", label: "Account" },
   { id: "social", label: "Social" },
+  { id: "servers", label: "Servers" },
 ] as const;
 
 export type ProfilePage = (typeof PROFILE_PAGES)[number]["id"];
