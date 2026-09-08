@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { loadPackText } from "@runlog/rules-schema";
-import { Receipt } from "./Receipt.tsx";
+import { Receipt, type RollReceipt } from "./Receipt.tsx";
 import { toDisplayDice } from "../rolling.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -16,22 +16,18 @@ const kiln = loaded.pack;
 const check = kiln.tables["check"]!;
 const first = check.entries[0]!;
 
+const kilnCheck: RollReceipt = {
+  dice: toDisplayDice("d100", [70, 3], 73),
+  total: 73,
+  label: "Kiln Check",
+  notation: "d100",
+  machineRolled: true,
+  outcomes: [{ unit: 2, table: "check", entryId: first.id, targetSubject: null, at: "" }],
+};
+
 describe("the receipt", () => {
   it("shows the dice as they landed, the total, and what the table said", () => {
-    const html = renderToStaticMarkup(
-      <Receipt
-        pack={kiln}
-        onDismiss={() => {}}
-        receipt={{
-          dice: toDisplayDice("d100", [70, 3], 73),
-          total: 73,
-          label: "Kiln Check",
-          notation: "d100",
-          machineRolled: true,
-          outcomes: [{ unit: 2, table: "check", entryId: first.id, targetSubject: null, at: "" }],
-        }}
-      />,
-    );
+    const html = renderToStaticMarkup(<Receipt pack={kiln} settled onDismiss={() => {}} receipts={[kilnCheck]} />);
     expect(html).toContain("73");
     expect(html).toContain("rolled for you");
     expect(html).toContain(check.title);
@@ -43,15 +39,18 @@ describe("the receipt", () => {
     const html = renderToStaticMarkup(
       <Receipt
         pack={kiln}
+        settled
         onDismiss={() => {}}
-        receipt={{
-          dice: null,
-          total: 8,
-          label: "Setback",
-          notation: "d10",
-          machineRolled: false,
-          outcomes: [{ unit: 2, table: "setback", entryId: kiln.tables["setback"]!.entries[0]!.id, targetSubject: 1, at: "" }],
-        }}
+        receipts={[
+          {
+            dice: null,
+            total: 8,
+            label: "Setback",
+            notation: "d10",
+            machineRolled: false,
+            outcomes: [{ unit: 2, table: "setback", entryId: kiln.tables["setback"]!.entries[0]!.id, targetSubject: 1, at: "" }],
+          },
+        ]}
       />,
     );
     expect(html).toContain("your dice");
@@ -59,21 +58,40 @@ describe("the receipt", () => {
     expect(html).toContain('class="result heat"');
   });
 
+  it("keeps every roll of a step on screen, and closes only once the step is done", () => {
+    const form: RollReceipt = {
+      dice: null,
+      total: 4,
+      label: "Form",
+      notation: "d6",
+      machineRolled: false,
+      outcomes: [{ unit: 2, table: "form", entryId: kiln.tables["form"]!.entries[0]!.id, targetSubject: null, at: "" }],
+    };
+    const open = renderToStaticMarkup(<Receipt pack={kiln} settled={false} onDismiss={() => {}} receipts={[kilnCheck]} />);
+    expect(open).toContain("73");
+    expect(open).toContain("The next roll is below");
+    expect(open).not.toContain("Carry on");
+
+    const done = renderToStaticMarkup(<Receipt pack={kiln} settled onDismiss={() => {}} receipts={[kilnCheck, form]} />);
+    expect(done).toContain("73");
+    expect(done).toContain("Kiln Check");
+    expect(done).toContain(">4<");
+    expect(done).toContain("Form");
+    expect(done.match(/class="entry"/g)?.length).toBe(2);
+    expect(done.match(/Carry on/g)?.length).toBe(1);
+  });
+
   it("offers to keep rolling only where it is asked to, after a roll the machine made", () => {
-    const rolled = { dice: null, total: 4, label: null, notation: "d6", machineRolled: true, outcomes: [] };
-    const offered = renderToStaticMarkup(<Receipt pack={kiln} onDismiss={() => {}} onKeepRolling={() => {}} receipt={rolled} />);
+    const rolled: RollReceipt = { dice: null, total: 4, label: null, notation: "d6", machineRolled: true, outcomes: [] };
+    const offered = renderToStaticMarkup(<Receipt pack={kiln} settled onDismiss={() => {}} onKeepRolling={() => {}} receipts={[rolled]} />);
     expect(offered).toContain("Keep rolling for me");
-    const plain = renderToStaticMarkup(<Receipt pack={kiln} onDismiss={() => {}} receipt={rolled} />);
+    const plain = renderToStaticMarkup(<Receipt pack={kiln} settled onDismiss={() => {}} receipts={[rolled]} />);
     expect(plain).not.toContain("Keep rolling for me");
   });
 
   it("still says something when a roll resolved nothing", () => {
     const html = renderToStaticMarkup(
-      <Receipt
-        pack={kiln}
-        onDismiss={() => {}}
-        receipt={{ dice: null, total: 4, label: null, notation: "d6", machineRolled: false, outcomes: [] }}
-      />,
+      <Receipt pack={kiln} settled onDismiss={() => {}} receipts={[{ dice: null, total: 4, label: null, notation: "d6", machineRolled: false, outcomes: [] }]} />,
     );
     expect(html).toContain("It is recorded");
   });
