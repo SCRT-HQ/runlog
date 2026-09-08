@@ -18,6 +18,7 @@ import { useSync } from "../sync/SyncProvider.tsx";
 import { syncBus } from "../sync/bus.ts";
 import { DiceCurtain, rolledOf, type RolledGesture } from "../dice/DiceCurtain.tsx";
 import { preloadDice3d } from "../dice/settings.ts";
+import { CARRY_ON_HOLD_MS, carriesOnByItself } from "./pace.ts";
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
@@ -147,10 +148,23 @@ export function RunView({ pack }: { pack: Pack }) {
   }, [run.record?.runId]);
   const seen = useRef<number | null>(null);
   const awaiting = useRef<Omit<RollReceipt, "outcomes"> | null>(null);
-  const outcomes = run.state?.outcomes;
+  // How many answers this view has given, and how many it had given when
+  // the last receipt was issued: a receipt is for something that was just
+  // answered or just landed, never for a step that came back with the run.
+  const committedSeen = useRef(0);
+  const answered = useRef(0);
+  const receipted = useRef(0);
+  // What the run has resolved, counting what the block in flight has
+  // resolved ahead of the log: a d100 lands on its line before the d6 it
+  // leads to is asked for, and that line is the receipt for the d100.
+  const committed = run.state?.outcomes;
+  const ahead = run.pendingOutcomes;
   useEffect(() => {
-    if (!outcomes) return;
+    if (!committed) return;
+    const outcomes = ahead.length > 0 ? [...committed, ...ahead] : committed;
     const count = outcomes.length;
+    const landed = committed.length !== committedSeen.current;
+    committedSeen.current = committed.length;
     if (seen.current === null) {
       // First sight of a saved run: everything in it is old news.
       seen.current = count;
@@ -167,7 +181,11 @@ export function RunView({ pack }: { pack: Pack }) {
     seen.current = count;
     const throwing = awaiting.current;
     if (fresh.length === 0 && !throwing) return;
+    // A step that came back with the run brings the lines it had resolved
+    // with it. Nothing was answered just now, so there is nothing to read.
+    if (!throwing && !landed && answered.current === receipted.current) return;
     awaiting.current = null;
+    receipted.current = answered.current;
     setReceipt({
       dice: throwing?.dice ?? null,
       total: throwing?.total ?? null,
@@ -188,11 +206,19 @@ export function RunView({ pack }: { pack: Pack }) {
         ...(throwing.notation ? { notation: throwing.notation } : {}),
       });
     }
-  }, [outcomes, run.events.length]);
+  }, [committed, ahead, run.events.length]);
+
+  // A receipt waits to be read, unless this device asked it not to.
+  useEffect(() => {
+    if (!receipt || !carriesOnByItself()) return;
+    const timer = setTimeout(() => setReceipt(null), CARRY_ON_HOLD_MS);
+    return () => clearTimeout(timer);
+  }, [receipt]);
 
   const answer = useCallback(
     (key: string, value: string | number | boolean, machineRolled?: boolean, dice?: RolledDie[], seed?: number) => {
       const request = run.pending?.request;
+      answered.current += 1;
       if (request?.kind === "roll" && typeof value === "number") {
         awaiting.current = {
           dice: dice ?? null,
@@ -266,11 +292,15 @@ export function RunView({ pack }: { pack: Pack }) {
               pack={pack}
               onDismiss={() => setReceipt(null)}
               {...(run.canDrawAgain && !run.readOnly ? { onDrawAgain: (why?: string) => run.drawAgain(why) } : {})}
+              {...(receipt.machineRolled && !run.autoRoll && !run.seededRun && !run.readOnly
+                ? { onKeepRolling: () => run.setAutoRoll(true) }
+                : {})}
             />
           )}
-          {run.pending?.request ? (
-            // A follow-up the game is waiting on shows beneath the receipt
-            // that caused it; the receipt is its context.
+          {receipt ? null : run.pending?.request ? (
+            // A follow-up the game is waiting on comes after the receipt
+            // that caused it, not beneath it: the number has to be read
+            // before the next question replaces it.
             <RequestPanel
               request={run.pending.request}
               pack={pack}
@@ -278,7 +308,7 @@ export function RunView({ pack }: { pack: Pack }) {
               onAnswer={answer}
               onCancel={run.abandonPending}
             />
-          ) : receipt ? null : state.status === "ended" ? (
+          ) : state.status === "ended" ? (
             <Ended pack={pack} state={state} />
           ) : state.unit === 0 ? (
             <StartFirstUnit pack={pack} onEnter={run.enterUnit} />
@@ -331,6 +361,7 @@ export function RunView({ pack }: { pack: Pack }) {
           race={Boolean(run.record?.raceId)}
           alerts={alerts}
           onAlerts={setAlerts}
+          rolling={{ auto: run.autoRoll, seeded: run.seededRun, onAuto: run.setAutoRoll }}
           onControls={() => {
             setSettingsOpen(false);
             void openControlsWindow().then(setControlsWindow, () => {});
@@ -659,21 +690,12 @@ function RunHeader({
         )}
       </div>
       <div className="headerActions">
-        {run.seededRun ? (
+        {run.seededRun && (
           // Handing this run a physical die would break the one promise a
           // shared seed makes, so the choice is not offered.
           <span className="chip" title="A shared run rolls its own dice, or it would not be shared">
             rolling from the seed
           </span>
-        ) : (
-          <label className="toggle" title="Off by default: the dice are yours">
-            <input
-              type="checkbox"
-              checked={run.autoRoll}
-              onChange={(e) => run.setAutoRoll(e.target.checked)}
-            />
-            <span>Auto-roll</span>
-          </label>
         )}
         <button className="ghost" onClick={run.undo} disabled={!run.canUndo || run.readOnly}>
           Undo
@@ -686,7 +708,7 @@ function RunHeader({
         >
           Discard
         </button>
-        <button className="ghost" onClick={onSettings} title="Sounds, dice, and pop-outs for a stream">
+        <button className="ghost" onClick={onSettings} title="Sounds, dice, rolls, and pop-outs for a stream">
           Settings
         </button>
       </div>

@@ -5,6 +5,7 @@ import { syncBus } from "../sync/bus.ts";
 import { reconcile, stampIds } from "../sync/log.ts";
 import { activeRunFor, forgetActive, NEW_RUN, setActiveRunFor, setLastActive } from "./active.ts";
 import { drawAgainEvents, drawIsLast, type LastDraw } from "./redraw.ts";
+import { clearHalfStep, loadHalfStep, outcomesAhead, saveHalfStep, toPending } from "./halfStep.ts";
 import {
   canEndRun,
   createRandom,
@@ -84,6 +85,11 @@ export interface Pending {
   /** Keys the app rolled on the player's behalf, kept out of the physical count. */
   generated: string[];
   request?: InputRequest;
+  /**
+   * The events the block has produced so far, uncommitted. What the answers
+   * given already did, for the receipt that shows between two questions.
+   */
+  partial?: RunEvent[];
   /**
    * The step this work belongs to, recorded as done when it completes.
    *
@@ -347,6 +353,7 @@ export function useRun(pack: Pack) {
           ...p,
           answers,
           generated,
+          partial: result.events,
           ...(result.request ? { request: result.request } : {}),
         });
         return;
@@ -769,6 +776,35 @@ export function useRun(pack: Pack) {
   const readOnly = record?.role === "viewer";
 
   /**
+   * A step half answered comes back with the run.
+   *
+   * Declared before the writer below on purpose: effects run in order, and
+   * the stored step must be read before an empty `pending` clears it.
+   */
+  const restoredFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!hydrated || !state || !runId || pending || readOnly || restoredFor.current === runId) return;
+    restoredFor.current = runId;
+    const stored = loadHalfStep(runId);
+    if (!stored) return;
+    const p = stored.eventCount === events.length ? toPending(pack, stored) : null;
+    if (!p) {
+      clearHalfStep(runId);
+      return;
+    }
+    runPending(p, p.answers, p.generated);
+  }, [hydrated, state, runId, pending, readOnly, events.length, pack, runPending]);
+
+  useEffect(() => {
+    if (!hydrated || !runId) return;
+    if (pending) saveHalfStep(runId, events.length, pending);
+    else clearHalfStep(runId);
+  }, [hydrated, pending, runId, events.length]);
+
+  /** What the block in flight has resolved so far, ahead of the log. */
+  const pendingOutcomes = useMemo(() => outcomesAhead(pack, events, pending?.partial), [pack, events, pending?.partial]);
+
+  /**
    * Replace the run with one read back from a saved archive.
    *
    * A whole-log replacement rather than a merge: the log is the run, so half
@@ -883,6 +919,7 @@ export function useRun(pack: Pack) {
     hydrated,
     runId,
     pending,
+    pendingOutcomes,
     activeStep,
     activePhases,
     due,
