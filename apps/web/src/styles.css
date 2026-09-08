@@ -1376,6 +1376,56 @@ button:disabled,
   font-size: 0.85rem;
 }
 
+/*
+ * The table beside the pad: every line the roll can land on, with its
+ * numbers, and the one the typed number would land on lit. A line is a
+ * button that puts its lowest number on the pad.
+ */
+.tableLook {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  max-height: 18rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.tableLook li {
+  border-bottom: 1px solid var(--line);
+}
+.tableLook .tableLine {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.45rem 0.3rem;
+  background: none;
+  border: 0;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tableLook .tableLine:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+.tableLook .range {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding-top: 0.15rem;
+}
+.tableLook li.on .tableLine {
+  background: var(--accent-dim);
+}
+.tableLook li.on .range {
+  color: var(--accent);
+}
+.ghost.on {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
 .pad {
   display: grid;
   grid-template-columns: repeat(5, 3rem);
