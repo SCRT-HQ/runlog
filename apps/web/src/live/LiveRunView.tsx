@@ -157,7 +157,7 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
           {pack ? (
             <DocMenu compact pack={pack} />
           ) : (
-            <span className="muted small">{got.listing ? "The pack is in the catalog; the run shows its state, not its text." : "The pack's text is not for redistribution; the run shows its state, not its text."}</span>
+            <span className="muted small">{got.listing ? "The pack is in the catalog; the run shows what the dice drew, not the rules." : "The pack's text is not for redistribution; the run shows what the dice drew, not the rules."}</span>
           )}
           {canSit && (
             <button
