@@ -307,6 +307,7 @@ export function RunView({
             <small>{pack.modes[state.mode]?.label ?? state.mode}</small>
             {pack.vocabulary.unit.one} {state.unit || "—"}
           </div>
+          {state.unit > 0 && <ClockPanel pack={pack} run={run} state={state} />}
           <Flow pack={pack} run={run} state={state} />
         </aside>
 
@@ -316,7 +317,6 @@ export function RunView({
               You are watching this {pack.vocabulary.run.one.toLowerCase()}. Every move shows here as it is made; none can be made from here.
             </p>
           )}
-          {state.unit > 0 && <ClockPanel pack={pack} run={run} state={state} />}
           <DiceCurtain roll={othersRoll} />
           {receipts.length > 0 && (
             <Receipt
