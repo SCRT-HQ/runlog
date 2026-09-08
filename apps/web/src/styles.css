@@ -1550,6 +1550,9 @@ button:disabled,
   flex: 1;
   min-width: 0;
 }
+.subjectType {
+  font-size: 0.85rem;
+}
 .subjectNote {
   margin: 0.1rem 0 0.15rem;
   font-size: 0.85rem;
@@ -3785,3 +3788,6 @@ html[data-pip="controls"] body { margin: 0; min-height: 100vh; background: var(-
   .welcomeHero, .welcomeSteps, .welcomeReasons, .welcomePlans { grid-template-columns: 1fr; }
   .welcomeHero { gap: 1.5rem; }
 }
+
+/* A line read off the table before the step has resolved it: the throw is real, the outcome is not yet. */
+.receipt .result.provisional { opacity: 0.85; }

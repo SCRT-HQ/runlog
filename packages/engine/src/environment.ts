@@ -1,5 +1,5 @@
 import type { Pack } from "@runlog/rules-schema";
-import { subjectLabel } from "./eligibility.ts";
+import { stateMarks, subjectLabel, subjectName } from "./eligibility.ts";
 import type { RunState, Subject } from "./types.ts";
 
 /**
@@ -73,10 +73,16 @@ export interface EnvironmentLink {
  *
  * Matching is by name because it is the only identifier the two sides share:
  * the engine numbers its subjects and the environment has ids of its own, and
- * nothing links them but what the player typed.
+ * nothing links them but what the player typed. That is the name they gave
+ * it if they gave one, else what they declared it to be, with the state
+ * marks after it; the noun-and-number default is only for a thing that
+ * has neither, which is not yet a thing out there.
  */
-export const externalName = (pack: Pack, subject: Subject): string =>
-  subjectLabel(pack, subject);
+export const externalName = (pack: Pack, subject: Subject): string => {
+  const shown = subject.name ?? subject.type ?? subjectName(pack, subject);
+  const marks = stateMarks(pack, subject);
+  return marks.length > 0 ? `${shown} [${marks.join(" ")}]` : shown;
+};
 
 /** The part of a name that identifies it, with any state marks stripped off. */
 export function baseName(name: string): string {
@@ -143,7 +149,9 @@ export function reconcile(
     // An undeclared subject has no name yet, so there is nothing to match on.
     if (!subject.type) continue;
 
-    const bucket = outside.get(baseName(subject.type)) ?? [];
+    // By the name it was given, or failing that by what it was declared to
+    // be: a track named for the declaration is the same track.
+    const bucket = (subject.name ? outside.get(baseName(subject.name)) : undefined) ?? outside.get(baseName(subject.type)) ?? [];
     const hit = bucket.find((e) => !claimed.has(e.id));
     if (!hit) {
       differences.push({ kind: "missingOutside", subject: subject.id, expected });

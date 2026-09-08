@@ -19,7 +19,7 @@ const base: LiveSnapshot = {
   quoted: true,
   standings: [],
   contestants: 0,
-  subjects: [{ id: 1, type: "a cup", states: [], finalized: true }],
+  subjects: [{ id: 1, name: "Piece 1", type: "a cup", states: [], finalized: true }],
   counters: [{ id: "streak", label: "Streak", value: 1 }],
   resources: [{ id: "glaze", label: "Glaze", value: 3, max: 6 }],
   clocks: [],
@@ -40,7 +40,7 @@ describe("what moved between two snapshots", () => {
     const next: LiveSnapshot = {
       ...base,
       unit: 3,
-      subjects: [{ id: 1, type: "a cup", states: ["cracked"], finalized: true }, { id: 2, type: null, states: [], finalized: false }],
+      subjects: [{ id: 1, name: "Piece 1", type: "a cup", states: ["cracked"], finalized: true }, { id: 2, name: "Piece 2", type: null, states: [], finalized: false }],
       counters: [{ id: "streak", label: "Streak", value: 0 }],
       resources: [{ id: "glaze", label: "Glaze", value: 3, max: 6 }],
       log: [{ n: 2, unit: 3, where: "Stage 3, Kiln Check", hit: 1, text: "Thermal shock" }, ...base.log],

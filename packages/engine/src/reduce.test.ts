@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { canEndRun, nextUnit, reduce } from "./reduce.ts";
 import { stepCompletionEvents } from "./flow.ts";
-import { eligibleTargets, subjectLabel } from "./eligibility.ts";
+import { eligibleTargets, subjectLabel, subjectName, subjectTitle } from "./eligibility.ts";
 import type { RunEvent } from "./events.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -132,7 +132,7 @@ describe("reduce", () => {
         ev("StateApplied", { state: "locked", subject: 1 }),
         ev("StateApplied", { state: "sealed", subject: 1 }),
       ]);
-      expect(subjectLabel(kiln, state.subjects[0]!)).toBe("Tall vase [LK SL]");
+      expect(subjectLabel(kiln, state.subjects[0]!)).toBe("Piece 1 (Tall vase) [LK SL]");
     });
   });
 
@@ -360,9 +360,24 @@ describe("renaming a subject", () => {
     ev("SubjectDeclared", { subjectType: "Tall vase" }),
   ];
 
-  it("changes what it is called", () => {
+  it("changes what it is called, and keeps what it was declared to be", () => {
     const state = reduce(kiln, [...started, ev("SubjectRenamed", { subject: 1, name: "Bottle" })]);
-    expect(state.subjects[0]!.type).toBe("Bottle");
+    expect(state.subjects[0]!.name).toBe("Bottle");
+    expect(state.subjects[0]!.type).toBe("Tall vase");
+  });
+
+  it("is known by its noun and number until it is named, and the number never moves", () => {
+    // Naming the first one does not make the second one "Piece 1": the
+    // number is the id, so the default names count on regardless.
+    const state = reduce(kiln, [
+      ...started,
+      ev("SubjectRenamed", { subject: 1, name: "Bottle" }),
+      ev("UnitFinalized"),
+      ev("UnitEntered"),
+      ev("SubjectDeclared", { subjectType: "Lidded jar" }),
+    ]);
+    expect(state.subjects.map((s) => subjectName(kiln, s))).toEqual(["Bottle", "Piece 2"]);
+    expect(subjectTitle(kiln, state.subjects[1]!)).toBe("Piece 2 (Lidded jar)");
   });
 
   it("keeps its id, its unit and its states", () => {
@@ -379,7 +394,7 @@ describe("renaming a subject", () => {
       unit: 1,
       states: ["sealed"],
       finalized: true,
-      type: "Bottle",
+      name: "Bottle",
     });
   });
 
@@ -391,11 +406,11 @@ describe("renaming a subject", () => {
       ev("SubjectDeclared", { subjectType: "Lidded jar" }),
       ev("SubjectRenamed", { subject: 1, name: "Bottle" }),
     ]);
-    expect(state.subjects.map((s) => s.type)).toEqual(["Bottle", "Lidded jar"]);
+    expect(state.subjects.map((s) => s.name)).toEqual(["Bottle", null]);
   });
 
   it("ignores a subject that does not exist", () => {
     const state = reduce(kiln, [...started, ev("SubjectRenamed", { subject: 99, name: "Ghost" })]);
-    expect(state.subjects.map((s) => s.type)).toEqual(["Tall vase"]);
+    expect(state.subjects.map((s) => s.name)).toEqual([null]);
   });
 });
