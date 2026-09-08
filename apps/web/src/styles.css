@@ -1615,6 +1615,12 @@ button:disabled,
 .runStep .primary.big {
   display: inline-block;
 }
+/* The journal's Save once it has nothing left to do: a quiet word, not a disabled button. */
+.ghost.saved:disabled {
+  opacity: 1;
+  color: var(--accent);
+  border-color: transparent;
+}
 
 /*
  * The log gets long. Tighten its rhythm so a run's history stays scannable

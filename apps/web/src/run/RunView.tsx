@@ -1047,6 +1047,10 @@ function BetweenUnits({
   const v = pack.vocabulary;
   const [note, setNote] = useState(state.journal[state.unit] ?? "");
   const [ending, setEnding] = useState<string | null>(null);
+  // The note is in the log once the state says so: the button then says
+  // Saved and has nothing to do, and typing again makes it Save again.
+  const kept = note.trim() !== "" && state.journal[state.unit] === note;
+  const keep = () => note.trim() && !kept && run.writeJournal(state.unit, note);
 
   return (
     <section className="panel runStep">
@@ -1062,23 +1066,22 @@ function BetweenUnits({
               className="textInput"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              onBlur={() => note && run.writeJournal(state.unit, note)}
+              onKeyDown={(e) => e.key === "Enter" && keep()}
+              onBlur={keep}
             />
-            <button
-              className="ghost"
-              disabled={!note}
-              onClick={() => run.writeJournal(state.unit, note)}
-            >
-              Save
+            <button className={kept ? "ghost saved" : "ghost"} disabled={!note.trim() || kept} onClick={keep} aria-live="polite">
+              {kept ? "Saved" : "Save"}
             </button>
           </div>
         </>
       )}
 
       {/* The onward move and its alternative sit together, so the hint reads
-          as a caption to the choice rather than a stray note at the margin. */}
+          as a caption to the choice rather than a stray note at the margin.
+          Not the big button the step cards use: this card is a pause, not
+          a step, and the choice below it is as much the point as going on. */}
       <div className="primaryAction">
-        <button className="primary big" onClick={run.enterUnit}>
+        <button className="primary" onClick={run.enterUnit}>
           Enter {v.unit.one} {state.unit + 1}
         </button>
         <span className="muted small">
