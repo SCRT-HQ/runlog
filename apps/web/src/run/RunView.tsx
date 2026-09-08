@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { an } from "@runlog/rules-schema";
 import { ClockPanel } from "./ClockPanel.tsx";
 import { SettingsDialog } from "./SettingsDialog.tsx";
-import { ControlPanel, openControlsWindow } from "./ControlPanel.tsx";
+import { ControlPanel, openControlsWindow, RemoteControls } from "./ControlPanel.tsx";
 import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
 import { clockOfUnit, compareScores, formatClock, formatScore, liveClocks, nextUnit, scoreOf } from "@runlog/engine";
@@ -53,6 +53,7 @@ export function RunView({
   pack,
   store,
   bench,
+  remote,
 }: {
   pack: Pack;
   /** Where the log lives; the device unless a bench says otherwise. */
@@ -63,8 +64,24 @@ export function RunView({
    * hold, and the screen says so with a way back to where the trial began.
    */
   bench?: { from: string; onLeave: () => void };
+  /**
+   * The remote alone — the next move, the last result, undo — as a page
+   * of its own, for a streaming app's dock. The same controls the floating
+   * window draws, on a page rather than in a window the browser floats;
+   * it plays the run like any device, but announces nothing, since the
+   * page it stands beside does that.
+   */
+  remote?: boolean;
 }) {
   const run = useRun(pack, store);
+  // The dock borrows the floating window's look, which is keyed on the document.
+  useEffect(() => {
+    if (!remote) return;
+    document.documentElement.dataset["pip"] = "controls";
+    return () => {
+      delete document.documentElement.dataset["pip"];
+    };
+  }, [remote]);
 
   // Sounds for what happens while nobody is looking at the screen. Hooked
   // here, before any early return, as hooks must be.
@@ -86,7 +103,7 @@ export function RunView({
    * device may not hold the pack: written from here after each move,
    * redacted here, where the pack and its license are.
    */
-  const shared = Boolean(run.record && run.record.role !== "viewer" && (run.record.shared || liveLinkOf(run.record.runId)));
+  const shared = Boolean(!remote && run.record && run.record.role !== "viewer" && (run.record.shared || liveLinkOf(run.record.runId)));
   // The race this run is in, if any: the side column's panel and the snapshot both read it.
   const raceView = useRace(run.record, run.state, run.events);
   useEffect(() => {
@@ -251,7 +268,7 @@ export function RunView({
     told.current = marksOf(state, run.events);
     // First sight of a saved run: everything in it is old news.
     if (!before) return;
-    if (record.role === "viewer" || record.role === "player" || run.readOnly || bench) return;
+    if (record.role === "viewer" || record.role === "player" || run.readOnly || bench || remote) return;
     for (const g of lifecycleGestures(pack, state, run.events, before)) sync.gesture(record.runId, g.kind, g.data);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run.events.length, run.state]);
@@ -297,6 +314,15 @@ export function RunView({
   }
 
   if (!run.started || !run.state) {
+    if (remote) {
+      return (
+        <main className="main remote">
+          <div className="pipPanel">
+            <p className="muted">This run has not started. Start it in the app, and the dock follows.</p>
+          </div>
+        </main>
+      );
+    }
     return (
       <>
         {bench && (
@@ -317,6 +343,14 @@ export function RunView({
   }
 
   const { state } = run;
+
+  if (remote) {
+    return (
+      <main className="main remote">
+        <RemoteControls pack={pack} run={run} state={state} receipt={settled ? lastReceipt : null} onCarryOn={() => setReceipts([])} onAnswer={answer} {...receiptFollowUps(run, settled, lastReceipt)} />
+      </main>
+    );
+  }
 
   return (
     <main className="main run">
