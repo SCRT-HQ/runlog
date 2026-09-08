@@ -11,7 +11,8 @@ import type { RunEvent } from "./events.ts";
 import { resolveTargeting } from "./targeting.ts";
 import { eligibleTargets } from "./eligibility.ts";
 import { currentSubject } from "./reduce.ts";
-import type { InputRequest, RunState, TriggerRef } from "./types.ts";
+import { clockOfUnit, elapsedMs } from "./clock.ts";
+import type { Clock, InputRequest, RunState, TriggerRef } from "./types.ts";
 
 /**
  * Running a pack's actions against run state.
@@ -137,6 +138,17 @@ function compare(value: number, bound: Bound, state?: RunState): boolean {
   return true;
 }
 
+/**
+ * The clock a `clockRan`/`clockRanOver` predicate names: the current unit's
+ * own clock for `"unit"`, or the first clock in the current unit carrying
+ * that label. Neither is a declared id -- a clock is just whatever a `clock`
+ * config or a `startTimer`/`startStopwatch` action happened to call it.
+ */
+function namedClock(state: RunState, name: string): Clock | undefined {
+  if (name === "unit") return clockOfUnit(state, state.unit);
+  return state.clocks.find((c) => c.unit === state.unit && c.label === name);
+}
+
 function resolveSubjectRef(f: Frame, ref: TargetRef | undefined): number[] {
   const current = currentSubject(f.state);
   switch (ref) {
@@ -189,6 +201,20 @@ export function evaluatePredicate(f: Frame, p: Predicate, key: string): boolean 
   }
   if ("counter" in p) return compare(f.state.counters[p.counter] ?? 0, p.is, f.state);
   if ("resource" in p) return compare(f.state.resources[p.resource] ?? 0, p.is, f.state);
+  if ("clockRan" in p) {
+    const clock = namedClock(f.state, p.clockRan);
+    if (!clock) return false;
+    // Read live off the timestamps rather than a stored total, so this holds
+    // while the clock is still running and not only after it stops.
+    const minutes = elapsedMs(clock, Date.parse(f.ctx.now)) / 60_000;
+    return compare(minutes, p.is, f.state);
+  }
+  if ("clockRanOver" in p) {
+    const clock = namedClock(f.state, p.clockRanOver);
+    if (!clock || clock.kind !== "timer" || clock.seconds === null) return false;
+    const overMs = Math.max(0, elapsedMs(clock, Date.parse(f.ctx.now)) - clock.seconds * 1000);
+    return compare(overMs / 60_000, p.is, f.state);
+  }
   if ("flag" in p) return (f.state.flags[p.flag] ?? false) === (p.is ?? true);
   if ("subjectHasState" in p) {
     if (f.pack.states?.[p.subjectHasState]?.scope === "run" || p.of === "run") {

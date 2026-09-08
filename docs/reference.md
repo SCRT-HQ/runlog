@@ -28,7 +28,7 @@ A complete, self-contained description of a dice-driven creative-practice game. 
 | `tags` | `string`[] | — | Free tags for a catalog to filter by: the game it is for, the hobby, the shape of play. Short, and in the words a person would search for. |
 | `requires` | `object`[] | — | What a person needs before playing, shown in the catalog and the rulebook: the game and a system that runs it, mods or training packs, a wheel, a kitchen, supplies. Mark the ones that are nice to have `optional`; results can `need` those and be drawn again for a player who lacks them. |
 | `license` | `object` | yes | Licensing, and whether the app may share this pack's text. |
-| `capabilities` | `deferredTriggers` \| `seededRuns` \| `decks` \| `standardDeck` \| `resources` \| `counters` \| `coopRoles` \| `backwardTargeting` \| `timers` \| `journal` \| `bandsResolution` \| `opposedResolution` \| `keyedResolution` \| `moderated`[] | — | Engine features this pack needs. Declaring them lets an older app refuse the pack with a clear message instead of misplaying it. Default: `[]`. |
+| `capabilities` | `deferredTriggers` \| `seededRuns` \| `decks` \| `standardDeck` \| `resources` \| `counters` \| `coopRoles` \| `backwardTargeting` \| `timers` \| `journal` \| `bandsResolution` \| `opposedResolution` \| `keyedResolution` \| `moderated` \| `clockRules`[] | — | Engine features this pack needs. Declaring them lets an older app refuse the pack with a clear message instead of misplaying it. Default: `[]`. |
 | `extends` | `string` | — | Base pack this one layers on, for house rules and variants. |
 | `vocabulary` | `object` | yes | The words this game uses. The interface speaks these rather than any built-in noun, which is what lets one engine host wholly different games. |
 | `unit` | `object` | — | How units behave in this game. Default: `{"createsSubject":true,"min":1,"max":20}`. |
@@ -173,7 +173,7 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` | yes | The lifecycle point at which this fires. |
+| `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` \| `onTimerExpired` | yes | The lifecycle point at which this fires. |
 | `do` | [Action](#action)[] | yes | Actions to run, in order, when it fires. |
 | `when` | [Predicate](#predicate)[] | — | Only fire if every one of these still holds at trigger time. |
 | `label` | `string` | — | How the pending obligation is described to the player. |
@@ -214,7 +214,7 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` | yes | The lifecycle point at which this fires. |
+| `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` \| `onTimerExpired` | yes | The lifecycle point at which this fires. |
 | `do` | [Action](#action)[] | yes | Actions to run, in order, when it fires. |
 | `when` | [Predicate](#predicate)[] | — | Only fire if every one of these still holds at trigger time. |
 | `label` | `string` | — | How the pending obligation is described to the player. |
@@ -265,7 +265,7 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` | yes | The lifecycle point at which this fires. |
+| `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` \| `onTimerExpired` | yes | The lifecycle point at which this fires. |
 | `do` | [Action](#action)[] | yes | Actions to run, in order, when it fires. |
 | `when` | [Predicate](#predicate)[] | — | Only fire if every one of these still holds at trigger time. |
 | `label` | `string` | — | How the pending obligation is described to the player. |
@@ -304,7 +304,7 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` | yes | The lifecycle point at which this fires. |
+| `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` \| `onTimerExpired` | yes | The lifecycle point at which this fires. |
 | `do` | [Action](#action)[] | yes | Actions to run, in order, when it fires. |
 | `when` | [Predicate](#predicate)[] | — | Only fire if every one of these still holds at trigger time. |
 | `label` | `string` | — | How the pending obligation is described to the player. |
@@ -342,7 +342,7 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` | yes | The lifecycle point at which this fires. |
+| `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` \| `onTimerExpired` | yes | The lifecycle point at which this fires. |
 | `do` | [Action](#action)[] | yes | Actions to run, in order, when it fires. |
 | `when` | [Predicate](#predicate)[] | — | Only fire if every one of these still holds at trigger time. |
 | `label` | `string` | — | How the pending obligation is described to the player. |
@@ -709,7 +709,7 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` | yes | The lifecycle point at which this fires. |
+| `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` \| `onTimerExpired` | yes | The lifecycle point at which this fires. |
 | `do` | [Action](#action)[] | yes | Actions to run, in order, when it fires. |
 | `when` | [Predicate](#predicate)[] | — | Only fire if every one of these still holds at trigger time. |
 | `label` | `string` | — | How the pending obligation is described to the player. |
@@ -1627,6 +1627,48 @@ The comparison the resource's value must satisfy.
 
 ##### `Action (do: when).all[]`
 
+Tests how long a clock has run, live: while it is still going and after it has stopped. Works for a stopwatch or a timer. False if no such clock exists in the current unit.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `clockRan` | `string` | yes | `unit` for the current unit's own clock, or a clock's label. |
+| `is` | `object` | yes | The comparison, in minutes, the clock's live elapsed time must satisfy. |
+
+##### `Action (do: when).all[].is`
+
+The comparison, in minutes, the clock's live elapsed time must satisfy.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `eq` | `integer` | — | Matches only this exact value. |
+| `gte` | `integer` | — | Matches values greater than or equal to this. |
+| `lte` | `integer` | — | Matches values less than or equal to this. |
+| `gteCounter` | `string` | — | Matches values greater than or equal to this counter's current value. |
+| `lteCounter` | `string` | — | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+
+##### `Action (do: when).all[]`
+
+Tests how far a timer has run past its length, in minutes. False for a stopwatch, and false if no such clock exists in the current unit.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `clockRanOver` | `string` | yes | `unit` for the current unit's own clock, or a clock's label. |
+| `is` | `object` | yes | The comparison, in minutes, the timer's overrun must satisfy. |
+
+##### `Action (do: when).all[].is`
+
+The comparison, in minutes, the timer's overrun must satisfy.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `eq` | `integer` | — | Matches only this exact value. |
+| `gte` | `integer` | — | Matches values greater than or equal to this. |
+| `lte` | `integer` | — | Matches values less than or equal to this. |
+| `gteCounter` | `string` | — | Matches values greater than or equal to this counter's current value. |
+| `lteCounter` | `string` | — | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+
+##### `Action (do: when).all[]`
+
 Tests a boolean flag set by a setFlag action.
 
 | Field | Type | Required | What it does |
@@ -1701,6 +1743,8 @@ A condition evaluated against run state, or a question put to the player.
 - `object` — Tests how many subjects are currently targetable: completed, still in play, and not made untargetable by a state.
 - `object` — Tests a counter's current value.
 - `object` — Tests a resource's current value.
+- `object` — Tests how long a clock has run, live: while it is still going and after it has stopped. Works for a stopwatch or a timer. False if no such clock exists in the current unit.
+- `object` — Tests how far a timer has run past its length, in minutes. False for a stopwatch, and false if no such clock exists in the current unit.
 - `object` — Tests a boolean flag set by a setFlag action.
 - `object` — Tests whether a subject, or the run, currently carries a state.
 - `object` — Tests whether any earlier subject was created from an entry carrying this tag — for results that only make sense once something of a given kind exists.
@@ -1759,6 +1803,24 @@ Tests a resource's current value.
 | --- | --- | --- | --- |
 | `resource` | `string` | yes | Which declared resource to read. |
 | `is` | `object` | yes | The comparison the resource's value must satisfy. |
+
+#### `object`
+
+Tests how long a clock has run, live: while it is still going and after it has stopped. Works for a stopwatch or a timer. False if no such clock exists in the current unit.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `clockRan` | `string` | yes | `unit` for the current unit's own clock, or a clock's label. |
+| `is` | `object` | yes | The comparison, in minutes, the clock's live elapsed time must satisfy. |
+
+#### `object`
+
+Tests how far a timer has run past its length, in minutes. False for a stopwatch, and false if no such clock exists in the current unit.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `clockRanOver` | `string` | yes | `unit` for the current unit's own clock, or a clock's label. |
+| `is` | `object` | yes | The comparison, in minutes, the timer's overrun must satisfy. |
 
 #### `object`
 

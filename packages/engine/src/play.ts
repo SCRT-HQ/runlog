@@ -488,5 +488,10 @@ function currentlyDue(pack: Pack, state: RunState): Obligation[] {
   );
   if (manualDone) reached.push("afterWork");
   if (nextStep(pack, state)?.step.kind === "finalizeUnit") reached.push("onFinalize");
+  // A clock that already expired this unit makes an onTimerExpired obligation
+  // due immediately, even one queued afterward -- the bell already rang.
+  if (state.clocks.some((c) => c.unit === state.unit && c.status === "done" && c.expired)) {
+    reached.push("onTimerExpired");
+  }
   return reached.flatMap((point) => dueObligations(state, point));
 }
