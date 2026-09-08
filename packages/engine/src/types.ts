@@ -188,7 +188,7 @@ export interface RunState {
 
   /** Mandatory extra units queued; the run cannot end while any remain. */
   forcedUnits: number;
-  /** Extra rolls owed on a table's step this unit, by table id: "this Room rolls two Mutations". */
+  /** Extra rolls owed on a table's step this unit, by table id: "this Stage rolls two Setbacks". */
   extraRolls: Record<string, number>;
   /** Extra rolls owed in the next unit, moved into `extraRolls` when it is entered. */
   extraRollsNext: Record<string, number>;

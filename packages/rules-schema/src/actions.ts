@@ -255,7 +255,7 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
           unit: z
             .enum(["current", "next"])
             .optional()
-            .describe("Which unit owes them: `next` (the default) for \"the next Room rolls two Mutations\", `current` when the step has not happened yet this unit."),
+            .describe("Which unit owes them: `next` (the default) for \"the next Stage rolls two Setbacks\", `current` when the step has not happened yet this unit."),
         })
         .strict()
         .describe("Owe extra rolls on a table's step, this unit or the next; the flow keeps the step open until they are made."),
