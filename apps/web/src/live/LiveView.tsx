@@ -56,6 +56,7 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
                     <span>
                       {phase.label}
                       {phase.state === "current" && s.step && s.step !== phase.label && <span className="muted"> · {s.step}</span>}
+                      {phase.state === "skipped" && phase.why && <span className="why">{phase.why}</span>}
                     </span>
                   </li>
                 ))}
