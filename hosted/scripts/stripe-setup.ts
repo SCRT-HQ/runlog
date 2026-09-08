@@ -25,6 +25,7 @@ const stripe = new Stripe(KEY);
 const FEATURES = [
   { lookup_key: "plus", name: "Runlog Plus" },
   { lookup_key: "hosted-licensing", name: "Hosted licensing" },
+  { lookup_key: "server", name: "Runlog for servers" },
 ] as const;
 
 const PRODUCTS = [
@@ -46,6 +47,16 @@ const PRODUCTS = [
     prices: [
       { lookup_key: "hosted-monthly", unit_amount: 900, interval: "month" as const },
       { lookup_key: "hosted-yearly", unit_amount: 9000, interval: "year" as const },
+    ],
+  },
+  {
+    key: "server",
+    name: "Runlog for servers",
+    description: "For a Discord server: the Runlog bot hosts runs there, on the packs you choose, for everyone in it.",
+    feature: "server",
+    prices: [
+      { lookup_key: "server-monthly", unit_amount: 900, interval: "month" as const },
+      { lookup_key: "server-yearly", unit_amount: 9000, interval: "year" as const },
     ],
   },
 ];
@@ -107,7 +118,13 @@ async function main() {
   }
 
   console.log("\nPut these under stripe.prices in the stage's configuration (env/<stage>.json, and the RUNLOG_ENV_CONFIG variable on its environments):\n");
-  console.log(JSON.stringify({ plusMonthly: priceIds["plus-monthly"], plusYearly: priceIds["plus-yearly"], hostedMonthly: priceIds["hosted-monthly"], hostedYearly: priceIds["hosted-yearly"] }, null, 2));
+  console.log(
+    JSON.stringify(
+      { plusMonthly: priceIds["plus-monthly"], plusYearly: priceIds["plus-yearly"], hostedMonthly: priceIds["hosted-monthly"], hostedYearly: priceIds["hosted-yearly"], serverMonthly: priceIds["server-monthly"], serverYearly: priceIds["server-yearly"] },
+      null,
+      2,
+    ),
+  );
   console.log("\nThen register the webhook endpoint https://<domain>/api/stripe/webhook for the event entitlements.active_entitlement_summary.updated, and fill stripe/webhook-secret with its signing secret.");
 }
 
