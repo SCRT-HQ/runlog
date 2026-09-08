@@ -271,7 +271,7 @@ export function CatalogView({
                       </>
                     )}
                   </p>
-                  {e.description && <p className="marketBlurb">{e.description}</p>}
+                  {e.description && <p className={`marketBlurb ${open ? "" : "clamp"}`}>{e.description}</p>}
                   {e.requires.length > 0 && (
                     <p className="muted small marketNeeds">
                       {e.requires.some((r) => !r.optional) && (
@@ -303,12 +303,15 @@ export function CatalogView({
                     </div>
                   )}
                   <footer className="marketCardFoot">
-                    <button className="ghost tiny" onClick={() => void showAbout(e)}>
-                      {open ? "Less" : "About"}
-                    </button>
+                    <div className="marketCardFootLeft">
+                      <button className="ghost tiny" onClick={() => void showAbout(e)}>
+                        {open ? "Less" : "About"}
+                      </button>
+                      {have && <span className="chip cap">In your packs</span>}
+                    </div>
                     {have ? (
                       <button className="ghost tiny" onClick={() => onOpen(e.id)}>
-                        In your packs · open
+                        Open
                       </button>
                     ) : bought.has(e.id) && onFetch ? (
                       <button
