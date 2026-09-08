@@ -4,14 +4,21 @@ import { elapsedMs, formatClock, liveClocks, remainingMs, unitClockFor, type Clo
 import type { useRun } from "./useRun.ts";
 
 /**
- * The clocks, ticking.
+ * The clocks, ticking, in the margin under the unit's name.
  *
- * Big enough to read from across a room, steady enough not to jitter: the
- * digits are tabular and the panel's width does not change as they do. The
- * view ticks four times a second from the log's timestamps and the present;
- * nothing here is the source of truth. A timer that reaches zero is stopped
- * in the log once — with `expired`, which is what rings the alert — and
- * stays on screen saying so until the unit closes.
+ * A clock belongs to the unit the way its number does, so it sits with it:
+ * the same face and weight as the number, one size down, with its controls
+ * as small as the board's. It used to be the biggest thing on the screen,
+ * above the step, which made a stopwatch nobody was watching look more
+ * important than the roll the game was waiting on. The face that can be
+ * read from across a room is the stream widget's.
+ *
+ * Steady enough not to jitter: the digits are tabular and the column's
+ * width does not change as they do. The view ticks four times a second
+ * from the log's timestamps and the present; nothing here is the source of
+ * truth. A timer that reaches zero is stopped in the log once — with
+ * `expired`, which is what rings the alert — and stays on screen saying so
+ * until the unit closes.
  *
  * Pause, resume and stop are moves like any other, undoable, and visible to
  * everyone in a shared run. A watcher sees the clocks and presses nothing.
@@ -39,17 +46,21 @@ export function ClockPanel({ pack, run, state }: { pack: Pack; run: ReturnType<t
   }, [live, now, run]);
 
   const doneThisUnit = state.clocks.filter((c) => c.status === "done" && c.unit === state.unit);
+  // The unit's own clock is labeled with the unit's name, which is the
+  // heading right above it; saying it twice is noise, so that label is
+  // left off and only a clock with a name of its own shows one.
+  const unitName = `${pack.vocabulary.unit.one} ${state.unit}`;
   if (live.length === 0 && doneThisUnit.length === 0 && !canStartUnit) return null;
 
   return (
-    <section className="panel clocks" aria-live="off">
+    <div className="clocks" aria-live="off">
       {live.map((c) => (
-        <ClockFace key={c.id} clock={c} now={now} run={run} />
+        <ClockFace key={c.id} clock={c} now={now} run={run} label={c.label === unitName ? null : c.label} />
       ))}
       {doneThisUnit.map((c) => (
         <div key={c.id} className={`clock done ${c.expired ? "expired" : ""}`}>
           <div className="clockHead">
-            <span className="clockLabel">{c.label}</span>
+            <span className="clockLabel">{c.label === unitName ? "" : c.label}</span>
             <span className="chip state">{c.expired ? "time" : "stopped"}</span>
           </div>
           <div className="clockDigits">{formatClock(c.elapsedMs ?? 0)}</div>
@@ -63,17 +74,17 @@ export function ClockPanel({ pack, run, state }: { pack: Pack; run: ReturnType<t
           </div>
           <div className="clockDigits muted">{config.kind === "timer" ? formatClock((config.minutes ?? 0) * 60_000) : "0:00"}</div>
           <div className="clockButtons">
-            <button className="primary big" onClick={() => run.startUnitClock()}>
+            <button className="primary tiny" onClick={() => run.startUnitClock()}>
               Start
             </button>
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
-function ClockFace({ clock, now, run }: { clock: Clock; now: number; run: ReturnType<typeof useRun> }) {
+function ClockFace({ clock, now, run, label }: { clock: Clock; now: number; run: ReturnType<typeof useRun>; label: string | null }) {
   const elapsed = elapsedMs(clock, now);
   const left = remainingMs(clock, now);
   const timer = clock.seconds !== null;
@@ -84,7 +95,7 @@ function ClockFace({ clock, now, run }: { clock: Clock; now: number; run: Return
   return (
     <div className={`clock ${clock.status} ${tone}`}>
       <div className="clockHead">
-        <span className="clockLabel">{clock.label}</span>
+        <span className="clockLabel">{label ?? ""}</span>
         <span className="chip state">{clock.status === "paused" ? "paused" : timer ? "left" : "elapsed"}</span>
       </div>
       <div className="clockDigits" aria-label={`${clock.label}: ${formatClock(shown)}`}>
@@ -98,15 +109,15 @@ function ClockFace({ clock, now, run }: { clock: Clock; now: number; run: Return
       {!run.readOnly && (
         <div className="clockButtons">
           {clock.status === "running" ? (
-            <button className="ghost big" onClick={() => run.pauseClock(clock.id)}>
+            <button className="ghost tiny" onClick={() => run.pauseClock(clock.id)}>
               Pause
             </button>
           ) : (
-            <button className="primary big" onClick={() => run.resumeClock(clock.id)}>
+            <button className="primary tiny" onClick={() => run.resumeClock(clock.id)}>
               Resume
             </button>
           )}
-          <button className="ghost big" onClick={() => run.stopClock(clock.id)}>
+          <button className="ghost tiny" onClick={() => run.stopClock(clock.id)}>
             Stop
           </button>
         </div>
