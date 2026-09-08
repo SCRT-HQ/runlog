@@ -24,6 +24,7 @@ import { GuideView } from "./guide/GuideView.tsx";
 import { guideSlugFromHash } from "./guide/pages.ts";
 import { widgetFromHash, type WidgetRoute } from "./widget/route.ts";
 import { dockFromHash, type DockRoute } from "./dock/route.ts";
+import { linkFromHash, stashLink } from "./connections/route.ts";
 import { WidgetView } from "./widget/WidgetView.tsx";
 import { liveFromHash, type LiveRoute } from "./live/route.ts";
 import { LiveRunView } from "./live/LiveRunView.tsx";
@@ -190,6 +191,14 @@ export default function App() {
         setView("design");
       } else if (/^#profile(\/|$)/.test(location.hash)) {
         setProfilePage(profilePageFromHash(location.hash) ?? "profile");
+        setView("profile");
+      } else if (linkFromHash(location.hash)) {
+        // A code from another account (the bot's `/link`): kept for the
+        // Social page, which asks before binding it, and off the address
+        // bar so a reload does not offer it twice.
+        stashLink(linkFromHash(location.hash)!);
+        history.replaceState(null, "", `${location.pathname}${location.search}${profileHash("social")}`);
+        setProfilePage("social");
         setView("profile");
       } else if (/^#catalog(\/|$)/.test(location.hash)) {
         const id = location.hash.slice("#catalog/".length);

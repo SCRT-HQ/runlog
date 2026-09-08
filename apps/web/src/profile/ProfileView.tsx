@@ -18,6 +18,7 @@ import { rememberProfile } from "../sync/useProfile.ts";
 import { useInvites } from "../share/useInvites.ts";
 import { liveLinkOf } from "../live/route.ts";
 import { PROFILE_PAGES, profileHash, type ProfilePage } from "./route.ts";
+import { ConnectionsSection } from "../connections/ConnectionsSection.tsx";
 import { PlanSection } from "./PlanSection.tsx";
 import { PublisherSection } from "./PublisherSection.tsx";
 import { PurchasesSection } from "./PurchasesSection.tsx";
@@ -553,6 +554,7 @@ function SocialPage({
   return (
     <div className="profile">
       <h2>Social</h2>
+      <ConnectionsSection api={api} />
       <InviteFriend api={api} />
 
       {invitations.invites.length > 0 && (

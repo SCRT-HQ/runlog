@@ -88,6 +88,9 @@ function fakeApi(overrides: Partial<Api>): Api {
     getLicense: notUsed,
     putLicense: notUsed,
     deleteLicense: notUsed,
+    connections: notUsed,
+    linkDiscord: notUsed,
+    unlinkDiscord: notUsed,
   } satisfies Api;
   return { ...base, ...overrides };
 }
