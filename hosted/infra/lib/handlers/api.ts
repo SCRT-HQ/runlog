@@ -87,14 +87,6 @@ function releaseMayReach(method: string, path: string): boolean {
   return false;
 }
 const MAX_KEYS = 20;
-/**
- * The WorkOS feature flag that opens the server tier to an account while
- * the tier is in private beta: the Servers page, its subscription, and
- * the right to claim a server. A flag, not a plan: it grants nothing
- * Stripe sells, only the door. (A flag named like the `server` feature
- * would grant the plan itself, the way a `plus` flag comps Plus.)
- */
-const SERVERS_BETA = "servers-beta";
 const hashKey = (value: string) => createHash("sha256").update(value).digest("hex");
 
 /** Invitations one person may send in an hour. Generous for a table, mean for a spammer. */
@@ -209,7 +201,7 @@ export interface Deps {
     publicKey: string;
     token: () => Promise<string | null>;
     guildName?: (guildId: string) => Promise<string | null>;
-    /** Whether the server tier is open to every account; off, only the flagged (see SERVERS_BETA). */
+    /** Whether the server plan is on sale; off, the app shows it as coming and only a `server` flag or grant holds it. */
     open?: boolean;
   };
   /** Link codes are random by default; a test hands in its own. */
@@ -705,16 +697,14 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   }
 
   /**
-   * Whether this account may see and use the server tier: there is a bot
-   * to use it with, and either the tier is open to everyone or this
-   * account carries the beta flag or the plan itself.
+   * The server tier, as this copy offers it: at all, where there is a bot
+   * to use it with; and for sale, where the stage has opened it. Until
+   * then the app shows the plan as coming, and the `server` feature flag
+   * on a session is the one way onto it — a flag named like the feature
+   * is the feature, the way a `plus` flag comps Plus.
    */
-  const serversAllowed = async (have?: string[]): Promise<boolean> => {
-    if (!deps.discord || !deps.guilds) return false;
-    if (deps.discord.open) return true;
-    const grants = have ?? (await grantsOf(caller.sub, caller.flags));
-    return grants.includes(SERVERS_BETA) || grants.includes(deps.features?.server ?? "server");
-  };
+  const servers = Boolean(deps.discord && deps.guilds);
+  const serversOpen = servers && deps.discord?.open === true;
 
   if (method === "GET" && path === "/api/me") {
     const at = now();
@@ -722,7 +712,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const [profile, kept] = await Promise.all([store.touchProfile(caller.sub, at), deps.billing.flags(caller.sub)]);
     if (!caller.sid.startsWith("key:") && (flags.length !== kept.length || flags.some((f) => !kept.includes(f)))) await deps.billing.putFlags(caller.sub, flags, at);
     const entitlements = await grantsOf(caller.sub, flags);
-    return json(200, { sub: caller.sub, sid: caller.sid, ...(caller.scope ? { scope: caller.scope } : {}), env: deps.env, profile, entitlements, gates: deps.gates, servers: await serversAllowed(entitlements) });
+    return json(200, { sub: caller.sub, sid: caller.sid, ...(caller.scope ? { scope: caller.scope } : {}), env: deps.env, profile, entitlements, gates: deps.gates, servers, serversOpen });
   }
 
   /**
@@ -900,9 +890,6 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const serverFeature = deps.features?.server ?? "server";
     const hasServerPlan = async () => !deps.gates || (await grantsOf(caller.sub, caller.flags)).includes(serverFeature);
     if (path === "/api/guilds/claim" && method === "POST") {
-      // Refused before the code is spent, so a flagged account can hand
-      // the same code in a moment later.
-      if (!(await serversAllowed())) return json(422, { error: "Runlog for servers is in private beta; ask in the Runlog Discord to try it", beta: true });
       const body = parse(event);
       const code = isRecord(body) && str(body["code"]) ? normalizeCode(body["code"]) : "";
       if (!code) return json(422, { error: "code: the one /setup claim gave you" });
@@ -916,7 +903,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       return json(200, { claimed: true, guild, plan: serverFeature, upgrade });
     }
     if (path === "/api/guilds" && method === "GET") {
-      return json(200, { guilds: await guilds.guildsOf(caller.sub), server: await hasServerPlan(), plan: serverFeature, allowed: await serversAllowed() });
+      return json(200, { guilds: await guilds.guildsOf(caller.sub), server: await hasServerPlan(), plan: serverFeature, open: serversOpen });
     }
     const one = path.match(/^\/api\/guilds\/([^/]+)$/);
     if (one && method === "DELETE") {

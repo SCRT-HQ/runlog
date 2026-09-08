@@ -410,16 +410,16 @@ through the same Stripe plumbing as Plus — and `/setup status` says
 whether it is active where plans gate. `/setup role` and `/setup channel`
 set who may host and where runs open.
 
-The tier is in **private beta** until the stage says otherwise. With
-`discord.open` absent or `false` in the configuration, only an account
-whose WorkOS session carries the `servers-beta` feature flag (or a
-`server` grant) sees the Servers page, may subscribe, and may claim a
-server; `GET /api/me` says so as `servers`, and `POST /api/guilds/claim`
-refuses everyone else before spending the code. The flag is made in
-WorkOS, per environment, and set on the people trying it; a flag named
-`server` instead would comp the plan itself, the way a `plus` flag comps
-Plus. Setting `discord.open: true` and deploying opens the tier to every
-account; the flag then grants nothing extra.
+The plan is **not on sale** until the stage says so. With `discord.open`
+absent or `false` in the configuration, everyone sees the Servers page,
+may claim a server and fill its vault, and sees the plan as coming;
+`GET /api/me` says `servers` (there is a bot) and `serversOpen` (it is on
+sale). Meanwhile the one way onto the plan is the WorkOS feature flag
+named `server`, made in WorkOS per environment and set on the people
+trying it: a flag named like a Stripe feature is that feature, the way a
+`plus` flag comps Plus, so a flagged account is subscribed as far as the
+API and the bot can tell. Setting `discord.open: true` and deploying
+offers Checkout to everyone; the flag keeps meaning "comped".
 
 The owner puts packs in the server's **vault** from their profile:
 `PUT /api/guilds/{id}/packs/{packId}` takes the pack's text and a summary

@@ -23,7 +23,7 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
   const hosted = useHosted();
   const plan = usePlan();
   const [pending, setPending] = useState<LinkRoute | null>(() => pendingProp ?? pendingLink("guild"));
-  const [known, setKnown] = useState<{ guilds: Guild[]; server: boolean; allowed: boolean } | null>(null);
+  const [known, setKnown] = useState<{ guilds: Guild[]; server: boolean; open: boolean } | null>(null);
   const [vaults, setVaults] = useState<Record<string, GuildPackMeta[]>>({});
   const [shelf, setShelf] = useState<StoredPack[]>([]);
   const [picked, setPicked] = useState<Record<string, string>>({});
@@ -41,7 +41,7 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
         for (const g of k.guilds) all[g.guildId] = await api.guildPacks(g.guildId).catch(() => []);
         if (live) setVaults(all);
       },
-      () => live && setKnown({ guilds: [], server: true, allowed: false }),
+      () => live && setKnown({ guilds: [], server: true, open: false }),
     );
     return () => {
       live = false;
@@ -67,7 +67,7 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
     run("claim", async () => {
       if (!api || !pending) return null;
       const { guild, upgrade } = await api.claimGuild(pending.code);
-      setKnown((k) => ({ guilds: [...(k?.guilds ?? []).filter((g) => g.guildId !== guild.guildId), guild], server: k?.server ?? !upgrade, allowed: true }));
+      setKnown((k) => ({ guilds: [...(k?.guilds ?? []).filter((g) => g.guildId !== guild.guildId), guild], server: k?.server ?? !upgrade, open: k?.open ?? false }));
       clearPendingLink();
       setPending(null);
       return upgrade ? `${guild.name ?? "The server"} is yours. To host runs there, subscribe to Runlog for servers below; claiming and choosing packs work meanwhile.` : `${guild.name ?? "The server"} is yours. Add packs below, and set who may host with /setup role in Discord.`;
@@ -159,31 +159,36 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
         <section className="panel">
           <p className="muted small">Looking…</p>
         </section>
-      ) : !known.allowed && known.guilds.length === 0 ? (
-        <section className="panel">
-          <h3 className="sectionTitle">In private beta</h3>
-          <p className="muted small">Runlog for servers is open to a few accounts while it is built. Ask in the Runlog Discord to try it, and this page opens up for you.</p>
-        </section>
       ) : (
         <>
           {billing && (
             <section className="panel">
               <h3 className="sectionTitle">
-                Plan: <span className="muted">{known.server ? "Runlog for servers" : "none yet"}</span>
+                Plan: <span className="muted">{known.server ? "Runlog for servers, active" : known.open ? "none yet" : "coming soon"}</span>
               </h3>
               <p className="muted small">
                 {known.server
-                  ? "The bot hosts runs in your servers. Manage the subscription, cards and invoices with Stripe, under Plan on your profile."
-                  : "Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to three servers."}
+                  ? "The bot hosts runs in your servers. A subscription is managed with Stripe, under Plan on your profile."
+                  : known.open
+                    ? "Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to three servers."
+                    : "Runlog for servers will let the bot host runs in the servers you claim, one subscription for up to three. Claiming a server and filling its vault work now; the plan is not on sale yet."}
               </p>
               {!known.server && (
                 <div className="padRow">
-                  <button className="primary tiny" disabled={busy !== null} onClick={() => void checkout("server-monthly")}>
-                    Servers, $9 a month
-                  </button>
-                  <button className="ghost" disabled={busy !== null} onClick={() => void checkout("server-yearly")}>
-                    $90 a year
-                  </button>
+                  {known.open ? (
+                    <>
+                      <button className="primary tiny" disabled={busy !== null} onClick={() => void checkout("server-monthly")}>
+                        Servers, $9 a month
+                      </button>
+                      <button className="ghost" disabled={busy !== null} onClick={() => void checkout("server-yearly")}>
+                        $90 a year
+                      </button>
+                    </>
+                  ) : (
+                    <button className="primary tiny" disabled title="Not on sale yet">
+                      Coming soon
+                    </button>
+                  )}
                 </div>
               )}
             </section>

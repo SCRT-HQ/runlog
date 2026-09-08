@@ -17,9 +17,9 @@ export interface Plan {
   /** Whether the account may use a feature: yes where nothing is gated, else by entitlement. */
   can: (feature: string) => boolean;
   /**
-   * Whether the server tier is this account's to see: open to everyone, or
-   * in private beta with this account flagged. Not a gate, a door, so it
-   * is false where nothing is known rather than true the way `can` is.
+   * Whether this copy offers the server tier at all: there is a bot to use
+   * it with. Not a gate, an offer, so it is false where nothing is known
+   * rather than true the way `can` is.
    */
   servers: boolean;
   loaded: boolean;

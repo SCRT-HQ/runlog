@@ -106,10 +106,11 @@ export interface EnvConfig {
     applicationId: string;
     publicKey: string;
     /**
-     * Whether Runlog for servers is open to every account. Off, only an
-     * account carrying the `servers-beta` feature flag on its WorkOS
-     * session (or a `server` grant) sees the tier and may claim a server:
-     * the private beta. On, anyone may. Absent is off.
+     * Whether Runlog for servers is on sale. Off, everyone sees the tier
+     * and may claim a server and fill its vault, but the plan itself is
+     * shown as coming, and only a `server` feature flag on a WorkOS
+     * session (or a grant Stripe already gave) holds it: the way to let a
+     * few people try it. On, Checkout is offered. Absent is off.
      */
     open: boolean;
   };
