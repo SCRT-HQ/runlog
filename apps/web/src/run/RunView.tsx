@@ -19,6 +19,7 @@ import { syncBus } from "../sync/bus.ts";
 import { DiceCurtain, rolledOf, type RolledGesture } from "../dice/DiceCurtain.tsx";
 import { preloadDice3d } from "../dice/settings.ts";
 import { CARRY_ON_HOLD_MS, carriesOnByItself } from "./pace.ts";
+import { flowStrip } from "./flowStrip.ts";
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
@@ -482,7 +483,13 @@ export function Setup({
           ))}
         </div>
 
-        {chosen?.seeded && (
+        {/*
+          The seed lives where a run starts. A shared mode needs one; any
+          other mode may take one, and the rolls the app makes for it then
+          repeat. It used to sit above the rules page, feeding rolls nobody
+          logged.
+        */}
+        {chosen?.seeded ? (
           <>
             <h3 className="sectionTitle">Seed</h3>
             <p className="muted small">
@@ -504,6 +511,26 @@ export function Setup({
             <p className="muted small">
               A seeded {v.run.one.toLowerCase()} rolls its own dice, so everyone meets the same
               results in the same order. Keep your own dice for the modes that ask for them.
+            </p>
+          </>
+        ) : (
+          <>
+            <h3 className="sectionTitle">
+              Seed <span className="muted">optional</span>
+            </h3>
+            <div className="row seedRow">
+              <input
+                className="textInput"
+                value={seed}
+                placeholder="unseeded, dice are unrepeatable"
+                onChange={(e) => setSeed(e.target.value)}
+              />
+              <button className="ghost" onClick={() => setSeed(coinSeed())}>
+                Make one
+              </button>
+            </div>
+            <p className="muted small">
+              With a seed, the rolls the app makes for you come out the same every time it is entered. Your own dice are yours regardless.
             </p>
           </>
         )}
@@ -1576,8 +1603,20 @@ function Flow({
   run: ReturnType<typeof useRun>;
   state: RunState;
 }) {
+  // On a phone the list folds to one line, opened by a tap; see flowStrip.
+  const [open, setOpen] = useState(false);
+  const strip = flowStrip(run.activePhases, run.activeStep, (p) => phaseSkipped(pack, state, p));
   return (
-    <section className="stageFlow">
+    <section className={`stageFlow${open ? " open" : ""}`}>
+      {strip && (
+        <button type="button" className="flowNow" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          <span className="idx">
+            {strip.index} of {strip.total}
+          </span>
+          <strong>{strip.label}</strong>
+          {strip.next && <span className="muted">then {strip.next}</span>}
+        </button>
+      )}
       <h3 className="sectionTitle">
         This {pack.vocabulary.unit.one.toLowerCase()}
       </h3>

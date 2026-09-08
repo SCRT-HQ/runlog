@@ -622,39 +622,6 @@ p {
 }
 
 /* ---- seed bar ---------------------------------------------------------- */
-.seedbar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  max-width: 1500px;
-  margin: 0 auto;
-  padding: 0.6rem 1.25rem 0;
-}
-.seedbar label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.seedbar label span {
-  font-size: 0.7rem;
-  color: var(--muted);
-}
-.seedbar input {
-  min-width: 18rem;
-  padding: 0.35rem 0.6rem;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.85rem;
-  font-family: var(--mono);
-}
-.seedbar input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
 .ghost {
   padding: 0.25rem 0.7rem;
   font-family: var(--mono);
@@ -1547,9 +1514,6 @@ button:disabled,
   font-size: 0.9rem;
 }
 
-.seedbar[hidden] {
-  display: none;
-}
 
 /*
  * The run's step panel. Named distinctly from the inspector's `.step`, which is
@@ -2503,14 +2467,61 @@ select.textInput {
     padding-right: 0.9rem;
   }
 
+}
+
+/*
+ * On a phone the margin gives up its column: the step card needs the width
+ * for its keypad. The unit's number shrinks to a line, and the list of
+ * phases folds to "2 of 6, Kiln Check, then Declare the form" until tapped.
+ */
+.flowNow {
+  display: none;
+}
+@media (max-width: 640px) {
   .columns.run {
     grid-template-columns: 1fr;
   }
   .columns.run > .margin {
     border-right: none;
     padding-right: 0;
+    padding-top: 0.75rem;
     border-bottom: 1px solid var(--line);
-    padding-bottom: 1rem;
+    padding-bottom: 0.25rem;
+  }
+  .margin .stageNo {
+    font-size: 1.3rem;
+  }
+  .margin .stageNo small {
+    display: inline;
+    margin: 0 0.5rem 0 0;
+  }
+  .flowNow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0;
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--line);
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .flowNow .idx {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--accent);
+  }
+  .flowNow .muted {
+    font-size: 0.9rem;
+  }
+  .stageFlow:not(.open) .sectionTitle,
+  .stageFlow:not(.open) .flow {
+    display: none;
   }
 }
 
@@ -3365,6 +3376,7 @@ html[data-pip="controls"] body { margin: 0; min-height: 100vh; background: var(-
 
 /* ---- the Rules page: the paper, with the structure as one more tab ---- */
 .rulesTabs { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0 0 1rem; }
+.rulesNote { margin: -0.4rem 0 1rem; font-family: var(--mono); }
 .docPage { max-width: 46rem; margin: 0 auto; padding: 1.5rem 2rem; }
 @media (max-width: 760px) { .docPage { padding: 1rem 1.1rem; } }
 

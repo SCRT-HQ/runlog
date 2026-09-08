@@ -78,9 +78,12 @@ describe("the setup screen", () => {
     expect(html).not.toContain("Firing");
   });
 
-  it("offers a seed only for the modes meant to be shared", () => {
+  it("offers a seed for every mode, and says a shared mode needs one", () => {
     const html = renderToStaticMarkup(<Setup pack={kiln} onStart={noop} />);
-    // Standard Firing is the default and is not seeded, so no seed field yet.
+    // Standard Firing is the default and is not seeded: the seed is optional,
+    // and the copy about sharing stays with the modes meant to be shared.
+    expect(html).toContain("unseeded, dice are unrepeatable");
+    expect(html).not.toContain("meant to be shared");
     expect(html).not.toContain("long-kiln-42");
   });
 
