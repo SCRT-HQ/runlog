@@ -1,6 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { randomBytes } from "node:crypto";
+import { traced } from "./xray.js";
 
 /**
  * Races across devices.
@@ -104,7 +105,7 @@ const expiresAfter = (at: string) => Math.floor(new Date(at).getTime() / 1000) +
 type Row = Record<string, unknown> & { pk: string; sk: string; kind: "race" | "entry" | "code" | "racepointer" };
 
 export function dynamoRaces({ table }: { table: string }): RaceStore {
-  const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
+  const ddb = DynamoDBDocumentClient.from(traced(new DynamoDBClient({})), { marshallOptions: { removeUndefinedValues: true } });
   const rpk = (id: string) => `RACE#${id}`;
   const upk = (sub: string) => `USER#${sub}`;
   const strip = (row: Row): Record<string, unknown> => {

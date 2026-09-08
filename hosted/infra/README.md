@@ -368,19 +368,37 @@ post to it fails. The app falls back to polling when the socket is closed.
 
 ## Monitoring
 
-Optional, and off until the stage's configuration says otherwise. With an
-`apm.newRelic` block naming a New Relic account (and the layer's version
-for `NewRelicNodeJS24XARM64` in the region, 52 as of writing), both
-functions get New Relic's Lambda layer: the handler becomes the layer's
-wrapper, which imports the real one and reports traces, errors and the
-function's own logs. The license key is a fifth secret,
-`runlog/newrelic/license-key`, which the fill script writes in the shape
-the extension reads, `{"LicenseKey": "..."}`. The agent is told to keep
-request bodies, the authorization header, cookies and addresses out of
-what it records, so what reaches New Relic is about the service, not the
-people using it. Browser monitoring is deliberately not part of this: it
-is a third-party script with a session identifier, and it would bring a
-consent banner with it.
+AWS-native by default, and always on. Both functions run with
+`tracing: lambda.Tracing.ACTIVE`, so a request can be opened as an X-Ray
+trace and read as time spent in DynamoDB, S3, Secrets Manager, Stripe and
+WorkOS; the AWS SDK v3 clients each handler constructs are wrapped with
+`captureAWSv3Client`, and the Stripe and WorkOS calls each run inside
+their own subsegment (`hosted/infra/lib/handlers/xray.ts`), since both
+SDKs speak through `fetch` rather than the `http`/`https` modules X-Ray
+patches. A trace never carries a request body, a token or an email —
+only the route and the method are annotated. The Lambda Insights layer
+(`insightsVersion` on both functions) reports memory, CPU and cold starts
+per invocation, no trace required to see them. Wrapping is a no-op
+outside Lambda: `AWS_XRAY_DAEMON_ADDRESS` and `_X_AMZN_TRACE_ID` are both
+things only the Lambda runtime sets, so `npm test` and the CLI never need
+a daemon. An alarm on the `runlog-<env>-alarms` topic (see "Billing"
+above) fires when the handler errors repeatedly.
+
+### New Relic, optionally
+
+With an `apm.newRelic` block naming a New Relic account (and the layer's
+version for `NewRelicNodeJS24XARM64` in the region, 52 as of writing),
+both functions also get New Relic's Lambda layer: the handler becomes the
+layer's wrapper, which imports the real one and reports traces, errors
+and the function's own logs to that account as well. The license key is a
+fifth secret, `runlog/newrelic/license-key`, which the fill script writes
+in the shape the extension reads, `{"LicenseKey": "..."}`. The agent is
+told to keep request bodies, the authorization header, cookies and
+addresses out of what it records, so what reaches New Relic is about the
+service, not the people using it. Browser monitoring is deliberately not
+part of this: it is a third-party script with a session identifier, and
+it would bring a consent banner with it. Absent the block, nothing is
+sent there.
 
 ```json
 "apm": { "newRelic": { "accountId": "1234567", "layerVersion": 52 } }
