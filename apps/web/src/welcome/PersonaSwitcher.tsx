@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { PERSONAS, article, type Persona } from "./personas.ts";
+import { useDismiss } from "../ui/useDismiss.ts";
 
 /**
  * The word in the heading that says who the page is for.
@@ -43,21 +44,7 @@ export function PersonaSwitcher({ persona, onChange }: { persona: Persona; onCha
   }, [persona, touched, held, open, stillness, onChange]);
 
   // The list closes on a click elsewhere or on Escape.
-  useEffect(() => {
-    if (!open) return;
-    const away = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", away);
-    document.addEventListener("keydown", key);
-    return () => {
-      document.removeEventListener("mousedown", away);
-      document.removeEventListener("keydown", key);
-    };
-  }, [open]);
+  useDismiss(rootRef, open, () => setOpen(false));
 
   const pick = (next: Persona) => {
     setTouched(true);

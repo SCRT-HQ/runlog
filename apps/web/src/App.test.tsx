@@ -44,6 +44,15 @@ describe("the app shell", () => {
     expect(html).toContain("Menu");
   });
 
+  it("names the header buttons for what the pages call themselves", () => {
+    // "Create" and "Docs" read as verbs for pages that call themselves
+    // Designer and Guide; the header says the same names those pages do.
+    expect(html).toContain(">Designer<");
+    expect(html).toContain(">Guide<");
+    expect(html).not.toContain(">Create<");
+    expect(html).not.toContain(">Docs<");
+  });
+
   it("does not offer to start a run before storage has answered", () => {
     // Reading storage is asynchronous. Rendering setup in the meantime would
     // invite the player to start a run over the top of one already going.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAccount, type Account } from "./Account.tsx";
 import { useSync, type Sync } from "../sync/SyncProvider.tsx";
 import { ThemeMenu } from "../theme/ThemeMenu.tsx";
@@ -6,6 +6,7 @@ import { useApi } from "../sync/useApi.ts";
 import { useInvites } from "../share/useInvites.ts";
 import { useProfile } from "../sync/useProfile.ts";
 import { shownAs } from "../profile/shownAs.ts";
+import { useDismiss } from "../ui/useDismiss.ts";
 
 /**
  * The one menu at the end of the bar, for everyone.
@@ -29,6 +30,12 @@ export interface MenuActions {
   onOpenProfile?: () => void;
   /** Accept an invitation from the menu and open the run it is for. */
   onJoinInvite?: (token: string) => Promise<void>;
+  /**
+   * Closes the menu again whenever this changes — the current view, say.
+   * Without it the menu stayed open across a page change, with no way to
+   * close it but its own toggle.
+   */
+  closeKey?: unknown;
 }
 
 export function AccountBadge(actions: MenuActions = {}) {
@@ -38,11 +45,14 @@ export function AccountBadge(actions: MenuActions = {}) {
 }
 
 /** The menu for somebody not signed in, or somewhere with nothing to sign into. */
-function GuestMenu({ account }: MenuActions & { account: Exclude<Account, { status: "signed-in" }> }) {
+function GuestMenu({ account, closeKey }: MenuActions & { account: Exclude<Account, { status: "signed-in" }> }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
+  const rootRef = useRef<HTMLDetailsElement>(null);
+  useDismiss(rootRef, open, close);
+  useEffect(close, [closeKey]);
   return (
-    <details className="account accountMenu" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+    <details ref={rootRef} className="account accountMenu" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary aria-label="Menu">
         Menu
         <span className="caret" aria-hidden="true">
@@ -116,11 +126,14 @@ export function syncLabel(sync: Pick<Sync, "enabled" | "status" | "last">): stri
   }
 }
 
-function AccountMenu({ account, onOpenProfile, onJoinInvite }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
+function AccountMenu({ account, onOpenProfile, onJoinInvite, closeKey }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
   const { user, signOut } = account;
   const sync = useSync();
   const { profile } = useProfile();
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDetailsElement>(null);
+  useDismiss(rootRef, open, () => setOpen(false));
+  useEffect(() => setOpen(false), [closeKey]);
   const api = useApi();
   const invitations = useInvites(api, open);
   const [invitesOpen, setInvitesOpen] = useState(false);
@@ -145,7 +158,7 @@ function AccountMenu({ account, onOpenProfile, onJoinInvite }: MenuActions & { a
   ];
 
   return (
-    <details className="account accountMenu" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+    <details ref={rootRef} className="account accountMenu" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary title={user.email} aria-label={`Account menu for ${label}${waiting ? `, ${waiting} invitation${waiting === 1 ? "" : "s"} waiting` : ""}`}>
         {tone && <span className={`led ${tone}`} title={syncLabel(sync)} aria-hidden="true" />}
         {label}

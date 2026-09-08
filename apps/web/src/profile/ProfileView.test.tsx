@@ -1,8 +1,16 @@
+// The account-menu dismiss tests below need real effects and real DOM
+// events (a keydown, a pointerdown outside it) — renderToStaticMarkup runs
+// no effects at all, so this file renders those few cases into jsdom.
+// @vitest-environment jsdom
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import { AccountBadge, syncLabel, syncTone } from "../auth/AccountBadge.tsx";
 import { ProfileView } from "./ProfileView.tsx";
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
  * The profile at first paint, with a stand-in account.
@@ -110,5 +118,68 @@ describe("the account menu", () => {
     );
     expect(html).not.toContain("Profile");
     expect(html).toContain("Sign out");
+  });
+
+  /**
+   * It used to have none of this: no Escape, no click outside, no reaction
+   * to leaving the page. A reviewer found it stuck open across two page
+   * changes with nothing but its own toggle to close it.
+   */
+  describe("dismisses itself", () => {
+    let root: Root;
+    let container: HTMLElement;
+
+    afterEach(() => {
+      act(() => root.unmount());
+      container.remove();
+    });
+
+    // Renders the menu already open, sidestepping the native <details>
+    // click-to-toggle path: jsdom fires that "toggle" event as a queued
+    // task, which lands outside this render's own act() call.
+    function openMenu(closeKey?: unknown) {
+      container = document.createElement("div");
+      document.body.appendChild(container);
+      root = createRoot(container);
+      const renderWith = (key: unknown) =>
+        act(() => {
+          root.render(
+            <AccountContext.Provider value={signedIn}>
+              <AccountBadge closeKey={key} onOpenProfile={() => {}} />
+            </AccountContext.Provider>,
+          );
+        });
+      renderWith(closeKey);
+      const details = container.querySelector("details") as HTMLDetailsElement;
+      act(() => {
+        details.open = true;
+        details.dispatchEvent(new Event("toggle"));
+      });
+      return { details, renderWith };
+    }
+
+    it("closes on Escape", () => {
+      const { details } = openMenu();
+      expect(details.hasAttribute("open")).toBe(true);
+      act(() => {
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      });
+      expect(details.hasAttribute("open")).toBe(false);
+    });
+
+    it("closes on a click outside it", () => {
+      const { details } = openMenu();
+      act(() => {
+        document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      });
+      expect(details.hasAttribute("open")).toBe(false);
+    });
+
+    it("closes when the view changes underneath it", () => {
+      const { details, renderWith } = openMenu("play");
+      expect(details.hasAttribute("open")).toBe(true);
+      renderWith("profile");
+      expect(details.hasAttribute("open")).toBe(false);
+    });
   });
 });

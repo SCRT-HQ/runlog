@@ -666,7 +666,7 @@ p {
   font-size: 0.8rem;
   cursor: pointer;
 }
-.ghost:hover {
+.ghost:hover:not(:disabled) {
   border-color: var(--accent-dim);
   color: var(--accent);
 }
@@ -1250,8 +1250,17 @@ p {
 .primary:hover:not(:disabled) {
   background: color-mix(in oklab, var(--accent) 85%, var(--text));
 }
-.primary:disabled {
-  opacity: 0.4;
+/*
+ * Disabled reads as disabled everywhere, not as a dimmer, still-pressable
+ * version of the button: no fill, the same rule the rest of the chrome
+ * draws its lines in, muted text, and a cursor that says so.
+ */
+button:disabled,
+.primary:disabled,
+.ghost:disabled {
+  background: none;
+  border-color: var(--line);
+  color: var(--muted);
   cursor: not-allowed;
 }
 .primary.big {
