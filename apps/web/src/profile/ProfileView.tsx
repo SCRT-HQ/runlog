@@ -1,10 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAccount } from "../auth/Account.tsx";
-import { useSync } from "../sync/SyncProvider.tsx";
-import { createApi, type ApiKey, type Claim, type KeyScope, type Profile, type PublisherInvitation } from "../sync/client.ts";
+import { useAccount, type Account } from "../auth/Account.tsx";
+import { useSync, type Sync } from "../sync/SyncProvider.tsx";
+import {
+  createApi,
+  type Api,
+  type ApiKey,
+  type Claim,
+  type KeyScope,
+  type Person,
+  type Profile,
+  type PublisherInvitation,
+  type PublisherView,
+} from "../sync/client.ts";
 import { apiBase } from "../sync/config.ts";
 import { syncBus } from "../sync/bus.ts";
 import { rememberProfile } from "../sync/useProfile.ts";
+import { useInvites } from "../share/useInvites.ts";
+import { liveLinkOf } from "../live/route.ts";
+import { PROFILE_PAGES, profileHash, type ProfilePage } from "./route.ts";
 import { PlanSection } from "./PlanSection.tsx";
 import { PublisherSection } from "./PublisherSection.tsx";
 import { PurchasesSection } from "./PurchasesSection.tsx";
@@ -17,24 +30,33 @@ import {
   listSyncState,
   type StoredLicense,
   type StoredPack,
+  type StoredRun,
 } from "../storage/db.ts";
 
 /**
- * The person's page.
- *
- * Four things, in the order a player would look for them: who the account
- * is, whether this device syncs and what has gone, the license keys this
- * account holds, and the one destructive thing — telling the server to
- * forget everything. Nothing here is a setting the app needs; it is a
- * receipt for what the account is doing, with the few controls that belong
- * next to it.
+ * The person's page, in four: who the account is, what it sells, what it
+ * pays for and holds, and who it plays with. It used to be one seven-screen
+ * scroll of all of that at once; splitting it is the whole point of this
+ * file, so each page below stays narrow on purpose.
  *
  * Everything shown comes from this machine first. The server is asked
  * once, to stamp the visit and hand back the profile row, and if that
  * fails the page is still whole: local runs, local packs, local keys.
  */
 
-export function ProfileView({ onBack }: { onBack: () => void }) {
+export interface ProfileViewProps {
+  onBack: () => void;
+  /** Which of the four pages; the first one absent. */
+  page?: ProfilePage;
+  /** Moves between pages — wired to the address bar by the caller. */
+  onNavigate?: (page: ProfilePage) => void;
+  /** Opens a run from Social's "Open tables": the library's own way in. */
+  onOpenRun?: (runId: string) => void;
+  /** Accepts an invitation from Social's list and opens the run it is for. */
+  onJoinInvite?: (token: string) => Promise<void>;
+}
+
+export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, onJoinInvite }: ProfileViewProps) {
   const account = useAccount();
   const sync = useSync();
   const base = apiBase();
@@ -42,12 +64,12 @@ export function ProfileView({ onBack }: { onBack: () => void }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [licenses, setLicenses] = useState<StoredLicense[]>([]);
   const [packs, setPacks] = useState<StoredPack[]>([]);
-  const [runCount, setRunCount] = useState(0);
+  const [runs, setRuns] = useState<StoredRun[]>([]);
 
   const reload = () => {
     void listLicenses().then((all) => setLicenses(all.filter((l) => !l.deletedAt && l.key)));
     void listPacks().then(setPacks);
-    void listRuns().then((runs) => setRunCount(runs.filter((r) => !r.deletedAt).length));
+    void listRuns().then((all) => setRuns(all.filter((r) => !r.deletedAt)));
   };
 
   useEffect(() => {
@@ -83,6 +105,10 @@ export function ProfileView({ onBack }: { onBack: () => void }) {
     };
   }, [api, account]);
 
+  // Read once here so the nav's badge and the Social page agree, rather
+  // than each polling the server on its own.
+  const invitations = useInvites(api, true);
+
   if (account.status !== "signed-in") {
     return (
       <main className="main">
@@ -109,141 +135,494 @@ export function ProfileView({ onBack }: { onBack: () => void }) {
   }
 
   const { user } = account;
-  const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   const syncedPacks = packs.filter((p) => p.sync && !p.sealed).length;
+  const runsInAccount = runs.filter((r) => typeof r.seq === "number").length;
   const titleOf = (l: StoredLicense) => packs.find((p) => p.id === l.packId)?.title ?? l.title ?? l.packId;
+
+  const deleteEverything = async () => {
+    if (!api) return;
+    await api.deleteMe();
+    // The server has nothing now, so nothing is "already sent": the next
+    // pass would push everything again, which is not what somebody who
+    // just did this wants. Sync goes off with it.
+    for (const s of await listSyncState()) await forgetSyncState(s.id);
+    sync.setEnabled(false);
+    setProfile(null);
+  };
 
   return (
     <main className="main">
-      <div className="profile">
-        <section className="panel">
-          <h3 className="sectionTitle">
-            You <span className="muted">the account</span>
-          </h3>
-          <div className="row spread">
-            <div>
-              <strong>{name}</strong>
-              {user.email && name !== user.email && <div className="muted small">{user.email}</div>}
-              <div className="muted small mono">{user.id}</div>
-            </div>
-            <button className="ghost tiny" onClick={account.signOut}>
-              Sign out
-            </button>
-          </div>
-          <ShownAs
-            api={api}
-            profile={profile}
-            onSaved={(p) => {
-              setProfile(p);
-              rememberProfile(p);
-            }}
-          />
-          <p className="muted small">
-            Signed in through WorkOS. The app never sees a password.
-            {profile && (
-              <>
-                {" "}
-                First seen here {onDay(profile.createdAt)}
-                {profile.lastSeenAt !== profile.createdAt && `, last ${onDay(profile.lastSeenAt)}`}.
-              </>
-            )}
-          </p>
-        </section>
-
-        <section className="panel">
-          <h3 className="sectionTitle">
-            Sync <span className="muted">this device</span>
-          </h3>
-          {sync.available ? (
-            <>
-              <label className="syncSwitch">
-                <input type="checkbox" checked={sync.enabled} onChange={(e) => sync.setEnabled(e.target.checked)} />
-                <span>Sync runs on this device</span>
-              </label>
-              <p className="muted small">
-                {sync.enabled
-                  ? sync.last
-                    ? `Last synced ${onDay(sync.last.at)}: ${sync.last.pushed} sent, ${sync.last.pulled} received.`
-                    : "Waiting for the first pass."
-                  : "Off. Nothing on this device goes to your account until you switch it on."}
-              </p>
-            </>
-          ) : (
-            <p className="muted small">Sync is not available on this address.</p>
+      <div className="profileLayout">
+        <ProfileNav page={page} onNavigate={onNavigate} waiting={invitations.invites.length} />
+        <div className="profileBody">
+          {page === "profile" && (
+            <ProfilePage
+              user={user}
+              api={api}
+              profile={profile}
+              sync={sync}
+              runsHere={runs.length}
+              runsThere={runsInAccount}
+              packsHere={packs.length}
+              packsThere={syncedPacks}
+              licensesHere={licenses.length}
+              onSaved={(p) => {
+                setProfile(p);
+                rememberProfile(p);
+              }}
+            />
           )}
-          <div className="profileCounts">
-            <Count n={runCount} one="run" many="runs" note="kept here" />
-            <Count n={packs.length} one="pack" many="packs" note={`${syncedPacks} in your account`} />
-            <Count n={licenses.length} one="license key" many="license keys" note="in your account" />
-          </div>
-          {sync.available && sync.enabled && (
-            <button className="ghost tiny" onClick={sync.syncNow} disabled={sync.status === "syncing"}>
-              Sync now
-            </button>
+          {page === "publishing" && <PublishingPage api={api} />}
+          {page === "account" && (
+            <AccountPage
+              api={api}
+              licenses={licenses}
+              titleOf={titleOf}
+              onForgetLicense={async (packId) => {
+                await forgetLicense(packId);
+                syncBus.localChange("license", packId);
+                reload();
+              }}
+              onDeleteEverything={deleteEverything}
+              onSignOut={account.signOut}
+            />
           )}
-        </section>
-
-        <PlanSection api={api} />
-
-        <PurchasesSection api={api} />
-
-        <PublisherSection api={api} />
-
-        <InviteFriend api={api} />
-
-        <CommandLine api={api} />
-
-        <section className="panel">
-          <h3 className="sectionTitle">
-            License keys <span className="muted">sealed copies you have opened</span>
-          </h3>
-          {licenses.length === 0 ? (
-            <p className="muted small">
-              None yet. Open a sealed copy and the key you type is kept here, so the same file opens on your
-              other devices without the receipt.
-            </p>
-          ) : (
-            licenses.map((l) => (
-              <LicenseRow
-                key={l.packId}
-                license={l}
-                title={titleOf(l)}
-                onForget={async () => {
-                  await forgetLicense(l.packId);
-                  syncBus.localChange("license", l.packId);
-                  reload();
-                }}
-              />
-            ))
-          )}
-        </section>
-
-        <section className="panel">
-          <h3 className="sectionTitle">
-            Your data on the server <span className="muted">a copy of it, or the end of it</span>
-          </h3>
-          <p className="muted small">
-            Everything your account holds — runs, the packs you switched on, license keys, purchases, races, the people you
-            have played with, and this profile — can be downloaded as one file, or removed from the server at once. What is on
-            this device stays on this device either way.
-          </p>
-          <Export disabled={!api} onExport={async () => (api ? api.exportMe() : Promise.reject(new Error("no API")))} />
-          <Forget
-            disabled={!api}
-            onConfirm={async () => {
-              if (!api) return;
-              await api.deleteMe();
-              // The server has nothing now, so nothing is "already sent":
-              // the next pass would push everything again, which is not what
-              // somebody who just did this wants. Sync goes off with it.
-              for (const s of await listSyncState()) await forgetSyncState(s.id);
-              sync.setEnabled(false);
-              setProfile(null);
-            }}
-          />
-        </section>
+          {page === "social" && <SocialPage api={api} onOpenRun={onOpenRun} onJoinInvite={onJoinInvite} invitations={invitations} />}
+        </div>
       </div>
     </main>
+  );
+}
+
+/** The four names, a sticky rail past 860px and a row of chips under it. */
+function ProfileNav({ page, onNavigate, waiting }: { page: ProfilePage; onNavigate?: (page: ProfilePage) => void; waiting: number }) {
+  return (
+    <nav className="profileNav" aria-label="Profile pages">
+      {PROFILE_PAGES.map((p) => (
+        <a
+          key={p.id}
+          href={profileHash(p.id)}
+          className={`chip pick${p.id === page ? " on" : ""}`}
+          aria-current={p.id === page ? "page" : undefined}
+          onClick={(e) => {
+            if (!onNavigate) return;
+            e.preventDefault();
+            onNavigate(p.id);
+          }}
+        >
+          {p.label}
+          {p.id === "social" && waiting > 0 && (
+            <span className="menuBadge" title={`${waiting} invitation${waiting === 1 ? "" : "s"} waiting`}>
+              {waiting}
+            </span>
+          )}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+/**
+ * Who the account is: the name, the linked email, when it was first and
+ * last seen here, an id worth copying rather than reading, and how this
+ * device's counts of runs, packs and license keys compare with the
+ * account's. A picture has no control yet, only the room it will sit in.
+ */
+function ProfilePage({
+  user,
+  api,
+  profile,
+  sync,
+  runsHere,
+  runsThere,
+  packsHere,
+  packsThere,
+  licensesHere,
+  onSaved,
+}: {
+  user: Extract<Account, { status: "signed-in" }>["user"];
+  api: Api | null;
+  profile: Profile | null;
+  sync: Sync;
+  runsHere: number;
+  runsThere: number;
+  packsHere: number;
+  packsThere: number;
+  licensesHere: number;
+  onSaved: (p: Profile) => void;
+}) {
+  const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
+  return (
+    <div className="profile">
+      <h2>Profile</h2>
+      <section className="panel">
+        <div className="row profileIdentity">
+          <div className="avatarSlot" aria-hidden="true" />
+          <div className="profileIdentityMain">
+            <strong>{name}</strong>
+            {user.email && name !== user.email && <div className="muted small">{user.email}</div>}
+            <ShownAs api={api} profile={profile} onSaved={onSaved} />
+            <p className="muted small">
+              Signed in through WorkOS. The app never sees a password.
+              {profile && (
+                <>
+                  {" "}
+                  First seen here {onDay(profile.createdAt)}
+                  {profile.lastSeenAt !== profile.createdAt && `, last ${onDay(profile.lastSeenAt)}`}.
+                </>
+              )}
+            </p>
+            <CopyId id={user.id} />
+          </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <h3 className="sectionTitle">
+          Sync <span className="muted">this device</span>
+        </h3>
+        {sync.available ? (
+          <>
+            <label className="syncSwitch">
+              <input type="checkbox" checked={sync.enabled} onChange={(e) => sync.setEnabled(e.target.checked)} />
+              <span>Sync runs on this device</span>
+            </label>
+            <p className="muted small">
+              {sync.enabled
+                ? sync.last
+                  ? `Last synced ${onDay(sync.last.at)}: ${sync.last.pushed} sent, ${sync.last.pulled} received.`
+                  : "Waiting for the first pass."
+                : "Off. Nothing on this device goes to your account until you switch it on."}
+            </p>
+          </>
+        ) : (
+          <p className="muted small">Sync is not available on this address.</p>
+        )}
+        <SyncTable runsHere={runsHere} runsThere={runsThere} packsHere={packsHere} packsThere={packsThere} licensesHere={licensesHere} />
+        {sync.available && sync.enabled && (
+          <button className="ghost tiny" onClick={sync.syncNow} disabled={sync.status === "syncing"}>
+            Sync now
+          </button>
+        )}
+      </section>
+    </div>
+  );
+}
+
+/**
+ * On this device, in the account, for each of the three things sync
+ * carries. A license is small enough that it is always pushed right away,
+ * so the same figure stands in both columns for it; a run only earns its
+ * "in your account" figure once the server has numbered an event for it,
+ * which is what a bare `seq` on the stored record means. When this device
+ * holds more runs than that, the row is tinted: something here has not
+ * reached the account yet.
+ */
+function SyncTable({
+  runsHere,
+  runsThere,
+  packsHere,
+  packsThere,
+  licensesHere,
+}: {
+  runsHere: number;
+  runsThere: number;
+  packsHere: number;
+  packsThere: number;
+  licensesHere: number;
+}) {
+  const runsBehind = runsHere > runsThere;
+  return (
+    <table className="syncTable">
+      <thead>
+        <tr>
+          <th scope="col"></th>
+          <th scope="col">On this device</th>
+          <th scope="col">In your account</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr className={runsBehind ? "behind" : undefined}>
+          <th scope="row">Runs</th>
+          <td>{runsHere}</td>
+          <td>{runsThere}</td>
+        </tr>
+        <tr>
+          <th scope="row">Packs</th>
+          <td>{packsHere}</td>
+          <td>{packsThere}</td>
+        </tr>
+        <tr>
+          <th scope="row">License keys</th>
+          <td>{licensesHere}</td>
+          <td>{licensesHere}</td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+/** Copies the account id on request, rather than leaving it sitting on screen for anyone to read over a shoulder. */
+function CopyId({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      className="ghost tiny mono"
+      data-account-id={id}
+      onClick={() => {
+        void navigator.clipboard?.writeText(id);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+    >
+      {copied ? "Copied" : "Copy account id"}
+    </button>
+  );
+}
+
+/**
+ * What the account sells, and the keys that stand for it: publishing, CLI
+ * keys and signing keys claimed. Someone who is not a publisher and has
+ * made neither kind of key sees one paragraph and a way to start, rather
+ * than three empty tables.
+ */
+function PublishingPage({ api }: { api: Api | null }) {
+  const [publisher, setPublisher] = useState<PublisherView | null | undefined>(undefined);
+  const [keys, setKeys] = useState<ApiKey[] | undefined>(undefined);
+  const [claims, setClaims] = useState<Claim[] | undefined>(undefined);
+
+  useEffect(() => {
+    if (!api) return;
+    let live = true;
+    void api.myPublisher().then(
+      (p) => live && setPublisher(p),
+      () => live && setPublisher(null),
+    );
+    void api.listKeys().then(
+      (k) => live && setKeys(k),
+      () => live && setKeys([]),
+    );
+    void api.listClaims().then(
+      (c) => live && setClaims(c),
+      () => live && setClaims([]),
+    );
+    return () => {
+      live = false;
+    };
+  }, [api]);
+
+  // Without an API there is nothing to read and nothing to do: that is the
+  // same "nothing here yet" state as a signed-in account that simply
+  // hasn't started, not a spinner stuck forever.
+  const noApi = !api;
+  const loading = !noApi && (publisher === undefined || keys === undefined || claims === undefined);
+  const empty = noApi || (!loading && !publisher && (keys?.length ?? 0) === 0 && (claims?.length ?? 0) === 0);
+
+  return (
+    <div className="profile">
+      <h2>Publishing</h2>
+      {loading ? null : empty ? (
+        <section className="panel">
+          <p className="muted small">
+            This is where a publisher lives: who else is in it, what you have listed for sale and what it has
+            earned, hosted licensing, and the command-line keys and signing keys tied to your account. Write a pack
+            first, in the <a href="#create">Designer</a>.
+          </p>
+        </section>
+      ) : (
+        <>
+          <PublisherSection api={api} />
+          <CommandLine api={api} />
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * What the account pays for and holds: the plan, what it bought, the keys
+ * that opened a sealed copy, and the two ways out — a copy of everything,
+ * or the end of it.
+ */
+function AccountPage({
+  api,
+  licenses,
+  titleOf,
+  onForgetLicense,
+  onDeleteEverything,
+  onSignOut,
+}: {
+  api: Api | null;
+  licenses: StoredLicense[];
+  titleOf: (l: StoredLicense) => string;
+  onForgetLicense: (packId: string) => Promise<void>;
+  onDeleteEverything: () => Promise<void>;
+  onSignOut: () => void;
+}) {
+  return (
+    <div className="profile">
+      <h2>Account</h2>
+      <PlanSection api={api} />
+      <PurchasesSection api={api} />
+
+      <section className="panel">
+        <h3 className="sectionTitle">
+          License keys <span className="muted">sealed copies you have opened</span>
+        </h3>
+        {licenses.length === 0 ? (
+          <p className="muted small">
+            None yet. Open a sealed copy and the key you type is kept here, so the same file opens on your other
+            devices without the receipt.
+          </p>
+        ) : (
+          licenses.map((l) => (
+            <LicenseRow key={l.packId} license={l} title={titleOf(l)} onForget={() => onForgetLicense(l.packId)} />
+          ))
+        )}
+      </section>
+
+      <section className="panel">
+        <h3 className="sectionTitle">
+          Your data on the server <span className="muted">a copy of it, or the end of it</span>
+        </h3>
+        <p className="muted small">
+          Everything your account holds — runs, the packs you switched on, license keys, purchases, races, the people you
+          have played with, and this profile — can be downloaded as one file, or removed from the server at once. What is on
+          this device stays on this device either way.
+        </p>
+        <Export disabled={!api} onExport={async () => (api ? api.exportMe() : Promise.reject(new Error("no API")))} />
+        <Forget disabled={!api} onConfirm={onDeleteEverything} />
+      </section>
+
+      <section className="panel">
+        <h3 className="sectionTitle">Sign out</h3>
+        <p className="muted small">Ends this device's session. Nothing here or in your account is touched.</p>
+        <button className="ghost" onClick={onSignOut}>
+          Sign out
+        </button>
+      </section>
+    </div>
+  );
+}
+
+/**
+ * Who plays with this account: a friend invited to Runlog itself, the run
+ * invitations waiting for an answer, the runs that are not solitary any
+ * more, and everyone this account has shared a session with.
+ */
+function SocialPage({
+  api,
+  onOpenRun,
+  onJoinInvite,
+  invitations,
+}: {
+  api: Api | null;
+  onOpenRun?: (runId: string) => void;
+  onJoinInvite?: (token: string) => Promise<void>;
+  invitations: ReturnType<typeof useInvites>;
+}) {
+  const [busyToken, setBusyToken] = useState<string | null>(null);
+  const [openRuns, setOpenRuns] = useState<StoredRun[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
+
+  useEffect(() => {
+    void listRuns().then((all) =>
+      setOpenRuns(
+        all
+          .filter((r) => !r.deletedAt && ((r.members?.length ?? 0) > 1 || Boolean(liveLinkOf(r.runId))))
+          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+      ),
+    );
+  }, []);
+
+  useEffect(() => {
+    if (api) void api.people().then(setPeople, () => {});
+  }, [api]);
+
+  const act = async (token: string, what: "join" | "decline") => {
+    setBusyToken(token);
+    try {
+      if (what === "join") await onJoinInvite?.(token);
+      else await api?.declineInvite(token);
+      invitations.forget(token);
+    } finally {
+      setBusyToken(null);
+    }
+  };
+
+  return (
+    <div className="profile">
+      <h2>Social</h2>
+      <InviteFriend api={api} />
+
+      {invitations.invites.length > 0 && (
+        <section className="panel">
+          <h3 className="sectionTitle">
+            Invitations <span className="muted">people asking you to their table</span>
+          </h3>
+          <ul className="inviteList" aria-label="Invitations waiting for you">
+            {invitations.invites.map((invite) => {
+              const busy = busyToken === invite.token;
+              return (
+                <li key={invite.token}>
+                  <div className="inviteWords">
+                    <b>{invite.session ?? invite.packTitle ?? "A run"}</b>
+                    <span className="muted small">
+                      {invite.inviter ?? "Someone"} asks you in as {invite.role === "viewer" ? "a watcher" : "a player"}
+                      {invite.session && invite.packTitle ? ` · ${invite.packTitle}` : ""}
+                    </span>
+                  </div>
+                  <div className="inviteActs">
+                    <button className="primary tiny" disabled={busy || !onJoinInvite} aria-busy={busy || undefined} onClick={() => void act(invite.token, "join")}>
+                      {invite.alreadyIn ? "Open" : "Join"}
+                    </button>
+                    <button className="ghost tiny" disabled={busy} onClick={() => void act(invite.token, "decline")}>
+                      Decline
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      <section className="panel">
+        <h3 className="sectionTitle">
+          Open tables <span className="muted">runs with other people, or a live link</span>
+        </h3>
+        {openRuns.length === 0 ? (
+          <p className="muted small">None yet. A run opens up the moment somebody else joins it, or you share a live link.</p>
+        ) : (
+          openRuns.map((r) => (
+            <button key={r.runId} className="row spread memberRow openTableRow" onClick={() => onOpenRun?.(r.runId)}>
+              <span>
+                <strong>{r.packTitle ?? r.packId}</strong>
+                <span className="muted small"> · {(r.members?.length ?? 0) > 1 ? `${r.members!.length} at the table` : "shared by a live link"}</span>
+              </span>
+              <span className="muted small">{onDay(r.updatedAt)}</span>
+            </button>
+          ))
+        )}
+      </section>
+
+      <section className="panel">
+        <h3 className="sectionTitle">People you have played with</h3>
+        {people.length === 0 ? (
+          <p className="muted small">Nobody yet. Invite someone to a run, or accept an invitation, and they show up here.</p>
+        ) : (
+          people.map((p) => (
+            <div key={p.sub} className="row spread memberRow">
+              <span>
+                <strong>{p.name ?? p.email ?? "Somebody"}</strong>
+                {p.email && p.name && <span className="muted small"> · {p.email}</span>}
+              </span>
+              <span className="muted small">last played {onDay(p.lastPlayedAt)}</span>
+            </div>
+          ))
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -306,7 +685,7 @@ function ShownAs({ api, profile, onSaved }: { api: ReturnType<typeof createApi> 
  * Below them, the signing keys the account has claimed, which is what puts
  * your name beside a signature in the app.
  */
-function CommandLine({ api }: { api: ReturnType<typeof createApi> | null }) {
+function CommandLine({ api }: { api: Api | null }) {
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [name, setName] = useState("");
@@ -432,18 +811,6 @@ function CommandLine({ api }: { api: ReturnType<typeof createApi> | null }) {
         </>
       )}
     </section>
-  );
-}
-
-function Count({ n, one, many, note }: { n: number; one: string; many: string; note: string }) {
-  return (
-    <div className="profileCount">
-      <span className="big">{n}</span>
-      <span>
-        {n === 1 ? one : many}
-        <span className="muted small"> · {note}</span>
-      </span>
-    </div>
   );
 }
 
@@ -577,7 +944,7 @@ function onDay(iso: string): string {
  * One address, one mail: an invitation to Runlog itself, sent by WorkOS,
  * which lands them at the door signed up. Nothing else is sent to it.
  */
-function InviteFriend({ api }: { api: ReturnType<typeof createApi> | null }) {
+function InviteFriend({ api }: { api: Api | null }) {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);

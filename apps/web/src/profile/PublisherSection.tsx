@@ -378,11 +378,15 @@ function HostedLicensing({ api }: { api: Api }) {
  * catalog shows are computed here, the way the catalog would — and the
  * listing is free, or a price in whole dollars once payouts are set up.
  */
-function PublisherPacks({ api, publisher }: { api: Api; publisher: PublisherView }) {
+export function PublisherPacks({ api, publisher }: { api: Api; publisher: PublisherView }) {
   const [packs, setPacks] = useState<PublisherPack[] | null>(null);
   const [library, setLibrary] = useState<StoredPack[]>([]);
   const [chosen, setChosen] = useState("");
   const [prices, setPrices] = useState<Record<string, string>>({});
+  /** Which rows have their price field open; hidden otherwise so a row reads as its price, not a form. */
+  const [editing, setEditing] = useState<Record<string, boolean>>({});
+  /** The one row, if any, asking "are you sure" with the pack's own name. */
+  const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
@@ -438,48 +442,106 @@ function PublisherPacks({ api, publisher }: { api: Api; publisher: PublisherView
     if ("available" in out) setNote("Selling is not switched on here yet; a free listing works.");
   };
 
+  /** A row's price draft differs from what it is listed at now. */
+  const changed = (p: PublisherPack) => {
+    const draft = prices[p.packId];
+    if (draft === undefined) return false;
+    return draft.trim() !== (p.price ? String(p.price.amount / 100) : "");
+  };
+  const changedPacks = (packs ?? []).filter(changed);
+
+  const updateAll = () =>
+    act("update-all", async () => {
+      for (const p of changedPacks) await list(p);
+    });
+
   return (
     <div className="publisherPacks">
       <h4 className="stepLabel">Your packs in the catalog</h4>
+      {packs && packs.length > 0 && (
+        <div className="padRow">
+          <button className="ghost tiny" disabled={changedPacks.length === 0 || busy !== null} onClick={() => void updateAll()}>
+            {busy === "update-all" ? "Updating…" : "Update all listings"}
+          </button>
+        </div>
+      )}
       {packs === null ? (
         <p className="muted small">Reading…</p>
       ) : packs.length === 0 ? (
         <p className="muted small">Nothing uploaded yet. Pick a pack from this device's library below; sign it first if you want the badge.</p>
       ) : (
-        packs.map((p) => (
-          <div key={p.packId} className="row spread memberRow publisherPack">
-            <span>
-              <strong>{p.head.title}</strong>
-              <span className="muted small">
-                {" "}
-                v{p.head.version} · {p.status === "listed" ? (p.price ? `listed at ${priceDisplay(p.price)}` : "listed free") : "not listed"}
+        packs.map((p) => {
+          const priceText = p.status === "listed" ? (p.price ? priceDisplay(p.price) : "free") : "not listed";
+          const isBusy = busy === p.packId || busy === "update-all";
+          return (
+            <div key={p.packId} className="row spread memberRow publisherPack">
+              <span>
+                <strong>{p.head.title}</strong>
+                <span className="muted small">
+                  {" "}
+                  v{p.head.version} · {priceText}
+                </span>
               </span>
-            </span>
-            <span className="row">
-              {publisher.connectReady && (
-                <input
-                  className="textInput short"
-                  inputMode="decimal"
-                  placeholder="$ or blank"
-                  value={prices[p.packId] ?? (p.price ? String(p.price.amount / 100) : "")}
-                  onChange={(e) => setPrices({ ...prices, [p.packId]: e.target.value })}
-                  aria-label={`Price for ${p.head.title}, in dollars`}
-                />
+              {confirmingRemove === p.packId ? (
+                <span className="row">
+                  <span className="warnText small">Remove {p.head.title} from the catalog?</span>
+                  <button
+                    className="ghost tiny danger"
+                    disabled={isBusy}
+                    onClick={() =>
+                      void act(p.packId, async () => {
+                        await api.deletePublisherPack(p.packId);
+                        setConfirmingRemove(null);
+                      })
+                    }
+                  >
+                    Yes, remove it
+                  </button>
+                  <button className="ghost tiny" onClick={() => setConfirmingRemove(null)}>
+                    Keep it
+                  </button>
+                </span>
+              ) : (
+                <span className="row">
+                  {publisher.connectReady &&
+                    (editing[p.packId] ? (
+                      <input
+                        className="textInput short"
+                        inputMode="decimal"
+                        placeholder="$ or blank"
+                        autoFocus
+                        value={prices[p.packId] ?? (p.price ? String(p.price.amount / 100) : "")}
+                        onChange={(e) => setPrices({ ...prices, [p.packId]: e.target.value })}
+                        aria-label={`Price for ${p.head.title}, in dollars`}
+                      />
+                    ) : (
+                      <button className="ghost tiny" onClick={() => setEditing({ ...editing, [p.packId]: true })}>
+                        edit
+                      </button>
+                    ))}
+                  <button className="ghost tiny" disabled={isBusy} onClick={() => void act(p.packId, () => list(p))}>
+                    {p.status === "listed" ? "Update listing" : "List"}
+                  </button>
+                  <details className="rowMenu">
+                    <summary className="rowMenuBtn" aria-label={`More for ${p.head.title}`}>
+                      …
+                    </summary>
+                    <div className="rowMenuPanel" role="menu">
+                      {p.status === "listed" && (
+                        <button role="menuitem" disabled={isBusy} onClick={() => void act(p.packId, async () => void (await api.unlistPublisherPack(p.packId)))}>
+                          Unlist
+                        </button>
+                      )}
+                      <button role="menuitem" onClick={() => setConfirmingRemove(p.packId)}>
+                        Remove
+                      </button>
+                    </div>
+                  </details>
+                </span>
               )}
-              <button className="ghost tiny" disabled={busy === p.packId} onClick={() => void act(p.packId, () => list(p))}>
-                {p.status === "listed" ? "Update listing" : "List"}
-              </button>
-              {p.status === "listed" && (
-                <button className="ghost tiny" disabled={busy === p.packId} onClick={() => void act(p.packId, async () => void (await api.unlistPublisherPack(p.packId)))}>
-                  Unlist
-                </button>
-              )}
-              <button className="ghost tiny" disabled={busy === p.packId} title="Remove it from the catalog and the server" onClick={() => void act(p.packId, () => api.deletePublisherPack(p.packId))}>
-                Remove
-              </button>
-            </span>
-          </div>
-        ))
+            </div>
+          );
+        })
       )}
       <div className="row">
         <select className="textInput" value={chosen} onChange={(e) => setChosen(e.target.value)} aria-label="A pack from this device to upload">
