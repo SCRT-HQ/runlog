@@ -86,6 +86,10 @@ function RollRequest({
    * before the throw has finished asking it.
    */
   const [thrown, setThrown] = useState<{ total: number; dice: RolledDie[]; seed: number } | null>(null);
+  // The dice have stopped. The number is decided the moment the button is
+  // pressed, but it is not shown until they land: a total beside dice
+  // still tumbling takes the roll's one moment of suspense away.
+  const [settled, setSettled] = useState(false);
   const [rollId, setRollId] = useState(0);
 
   const dice = useMemo(() => {
@@ -100,7 +104,17 @@ function RollRequest({
   useEffect(() => {
     setTyped("");
     setThrown(null);
+    setSettled(false);
   }, [request.key]);
+
+  // Once the dice have landed, the number shows and is read for a beat
+  // before the answer goes in and the receipt takes the panel's place.
+  useEffect(() => {
+    if (!settled || !thrown) return;
+    const timer = window.setTimeout(() => onAnswer(request.key, thrown.total, true, thrown.dice, thrown.seed), 700);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled]);
 
   const value = Number(typed);
   const inRange = dice ? value >= dice.min && value <= dice.max : typed.length > 0;
@@ -140,6 +154,7 @@ function RollRequest({
             if (!dice) return;
             const { total, dice: values } = rollDice(request.dice, Math.random);
             // The value is decided here; the seed is only how the dice fly.
+            setSettled(false);
             setThrown({ total, dice: toDisplayDice(request.dice, values, total), seed: Math.floor(Math.random() * 4294967296) });
             setRollId((n) => n + 1);
           }}
@@ -163,10 +178,10 @@ function RollRequest({
             dice={thrown.dice}
             rollId={rollId}
             seed={thrown.seed}
-            onSettled={() => onAnswer(request.key, thrown.total, true, thrown.dice, thrown.seed)}
+            onSettled={() => setSettled(true)}
           />
-          <div className="rollTotal" aria-live="polite">
-            <span className="big">{thrown.total}</span>
+          <div className={`rollTotal ${settled ? "" : "pending"}`} aria-live="polite">
+            <span className="big">{settled ? thrown.total : "…"}</span>
             <span className="how">{request.dice}</span>
           </div>
         </div>
