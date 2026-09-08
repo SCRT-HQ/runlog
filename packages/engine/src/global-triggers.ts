@@ -25,33 +25,53 @@ export interface PendingGlobalTrigger {
 /** The lifecycle points a run has currently reached. */
 function reached(state: RunState): TriggerPoint[] {
   if (state.status === "ended") return ["onRunEnd"];
-  return state.unit > 0 ? ["onEnterUnit"] : [];
+  if (state.unit <= 0) return [];
+  const points: TriggerPoint[] = ["onEnterUnit"];
+  if (state.clocks.some((c) => c.unit === state.unit && c.status === "done" && c.expired)) {
+    points.push("onTimerExpired");
+  }
+  return points;
 }
 
 /**
  * A run-level trigger is keyed by the run, so it fires once. A per-unit one is
  * keyed by the unit, or it would fire again on every read for as long as the
- * unit lasted.
+ * unit lasted. `onTimerExpired` is keyed by the clock itself: a unit can run
+ * more than one clock, and each one running out is its own moment, not a
+ * single per-unit event.
  */
-export function globalTriggerKey(index: number, on: TriggerPoint, unit: number): string {
-  return on === "onRunEnd" ? `global:${index}` : `global:${index}:u${unit}`;
+export function globalTriggerKey(index: number, on: TriggerPoint, unit: number, clockId?: string): string {
+  if (on === "onRunEnd") return `global:${index}`;
+  if (on === "onTimerExpired") return `global:${index}:c${clockId}`;
+  return `global:${index}:u${unit}`;
 }
 
 export function pendingGlobalTriggers(pack: Pack, state: RunState): PendingGlobalTrigger[] {
   const points = new Set<string>(reached(state));
+  const expiredClocks = state.clocks.filter(
+    (c) => c.unit === state.unit && c.status === "done" && c.expired,
+  );
   const due: PendingGlobalTrigger[] = [];
 
   pack.triggers?.forEach((trigger, index) => {
     if (!points.has(trigger.on)) return;
-    const key = globalTriggerKey(index, trigger.on, state.unit);
-    if (state.firedOnce.includes(key)) return;
 
-    // A condition the player must judge is offered rather than hidden: the
-    // question gets asked when they take it, exactly as a move does.
-    const held = testPredicates(pack, state, trigger.when, { answers: {}, now: "" }, "all");
-    if (held.status === "done" && !held.value) return;
+    // Every other point happens once; onTimerExpired can happen several
+    // times in one unit, once per clock that rings, so it fans out here
+    // instead of sharing a single key.
+    const clockIds = trigger.on === "onTimerExpired" ? expiredClocks.map((c) => c.id) : [undefined];
 
-    due.push({ index, key, label: trigger.label ?? "The game acts", on: trigger.on });
+    for (const clockId of clockIds) {
+      const key = globalTriggerKey(index, trigger.on, state.unit, clockId);
+      if (state.firedOnce.includes(key)) continue;
+
+      // A condition the player must judge is offered rather than hidden: the
+      // question gets asked when they take it, exactly as a move does.
+      const held = testPredicates(pack, state, trigger.when, { answers: {}, now: "" }, "all");
+      if (held.status === "done" && !held.value) continue;
+
+      due.push({ index, key, label: trigger.label ?? "The game acts", on: trigger.on });
+    }
   });
   return due;
 }

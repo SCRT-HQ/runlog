@@ -16,6 +16,7 @@ import {
   type AnswerValue,
   type ExecResult,
 } from "./execute.ts";
+import { currentlyDue } from "./play.ts";
 import type { RunEvent } from "./events.ts";
 import type { RunState } from "./types.ts";
 
@@ -265,6 +266,113 @@ describe("executing actions", () => {
         ...twice.events,
       ]);
       expect(folded.obligations).toHaveLength(1);
+    });
+  });
+
+  describe("an onTimerExpired obligation", () => {
+    const BELL_YAML = `
+schemaVersion: 1
+id: dev.runlog.test-timer-obligation
+version: "0.0.1"
+title: Timer Obligation
+license: { id: CC0-1.0, redistributable: true }
+capabilities: [deferredTriggers, timers, clockRules]
+vocabulary:
+  run: { one: Session, many: Sessions }
+  unit: { one: Block, many: Blocks }
+  subject: { one: Try, many: Tries }
+  finalize: Close
+unit:
+  createsSubject: true
+  min: 1
+  max: 5
+tables:
+  bench:
+    resolution: lookup
+    title: Bench
+    roll: d6
+    entries:
+      - id: ring
+        range: [1, 6]
+        text: "Ring the bell."
+        triggers:
+          - on: onTimerExpired
+            label: The bell rings
+            do:
+              - { do: note, text: "Note it." }
+phases:
+  - id: go
+    label: Go
+    steps:
+      - kind: finalizeUnit
+endings:
+  - { id: done, label: Done }
+modes:
+  standard: { label: Standard }
+defaultMode: standard
+`;
+
+    function bellPack(): Pack {
+      const r = loadPackText(BELL_YAML, "yaml");
+      if (!r.ok) throw new Error(`the test pack does not load: ${JSON.stringify(r.diagnostics)}`);
+      return r.pack;
+    }
+
+    it("is not due while no clock in the unit has expired", () => {
+      const p = bellPack();
+      const base = reduce(p, [
+        ev("RunStarted", { packId: p.id, packVersion: p.version, mode: "standard" }),
+        ev("UnitEntered"),
+      ]);
+      const queued = executeTableRoll(p, base, "bench", { answers: {}, now: NOW, random: () => 0 });
+      const state = reduce(p, [
+        ev("RunStarted", { packId: p.id, packVersion: p.version, mode: "standard" }),
+        ev("UnitEntered"),
+        ...queued.events,
+      ]);
+      // dueObligations is the raw filter by point; currentlyDue is the gate the
+      // app actually checks, and it should not offer this yet.
+      expect(dueObligations(state, "onTimerExpired")).toHaveLength(1);
+      expect(currentlyDue(p, state).filter((o) => o.on === "onTimerExpired")).toHaveLength(0);
+    });
+
+    it("comes due once a clock in the unit expires", () => {
+      const p = bellPack();
+      const base = reduce(p, [
+        ev("RunStarted", { packId: p.id, packVersion: p.version, mode: "standard" }),
+        ev("UnitEntered"),
+      ]);
+      const queued = executeTableRoll(p, base, "bench", { answers: {}, now: NOW, random: () => 0 });
+      const state = reduce(p, [
+        ev("RunStarted", { packId: p.id, packVersion: p.version, mode: "standard" }),
+        ev("UnitEntered"),
+        ...queued.events,
+        ev("ClockStarted", { clock: "u1:unit", kind: "timer", label: "Block 1", seconds: 60 }),
+        ev("ClockStopped", { clock: "u1:unit", elapsedMs: 60_000, expired: true }),
+      ]);
+      expect(currentlyDue(p, state).filter((o) => o.on === "onTimerExpired")).toHaveLength(1);
+    });
+
+    it("is offered right away when queued after the clock already rang", () => {
+      // The pack rolled Bench a second time after the bell already went off
+      // this unit; a player would expect it owed immediately, not once some
+      // later timer expires too.
+      const p = bellPack();
+      const rung = reduce(p, [
+        ev("RunStarted", { packId: p.id, packVersion: p.version, mode: "standard" }),
+        ev("UnitEntered"),
+        ev("ClockStarted", { clock: "u1:unit", kind: "timer", label: "Block 1", seconds: 60 }),
+        ev("ClockStopped", { clock: "u1:unit", elapsedMs: 60_000, expired: true }),
+      ]);
+      const queued = executeTableRoll(p, rung, "bench", { answers: {}, now: NOW, random: () => 0 });
+      const state = reduce(p, [
+        ev("RunStarted", { packId: p.id, packVersion: p.version, mode: "standard" }),
+        ev("UnitEntered"),
+        ev("ClockStarted", { clock: "u1:unit", kind: "timer", label: "Block 1", seconds: 60 }),
+        ev("ClockStopped", { clock: "u1:unit", elapsedMs: 60_000, expired: true }),
+        ...queued.events,
+      ]);
+      expect(currentlyDue(p, state).filter((o) => o.on === "onTimerExpired")).toHaveLength(1);
     });
   });
 

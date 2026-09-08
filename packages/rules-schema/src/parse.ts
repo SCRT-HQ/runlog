@@ -20,6 +20,7 @@ export const IMPLEMENTED_CAPABILITIES = [
   "opposedResolution",
   "keyedResolution",
   "moderated",
+  "clockRules",
 ] as const;
 
 export type ParseResult =
