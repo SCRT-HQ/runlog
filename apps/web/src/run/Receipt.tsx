@@ -63,6 +63,7 @@ function landing(pack: Pack, receipt: RollReceipt): { table: string; title: stri
 export function Receipt({
   receipts,
   pack,
+  nameOf,
   settled,
   onDismiss,
   onDrawAgain,
@@ -71,6 +72,8 @@ export function Receipt({
   /** The step's rolls so far, oldest first. */
   receipts: RollReceipt[];
   pack: Pack;
+  /** "hit Track 2 (bass)" for a result that reached a subject; without it, the number alone. */
+  nameOf?: (subjectId: number) => string;
   /** The step is done: nothing more is asked, and Carry on closes it. */
   settled: boolean;
   onDismiss: () => void;
@@ -138,7 +141,7 @@ export function Receipt({
                     <div key={i} className={`result ${hit ? "heat" : ""}`}>
                       <span className="band">
                         {table?.title ?? o.table}
-                        {hit && ` — hit ${v.subject.one.toLowerCase()} #${o.targetSubject}`}
+                        {hit && ` — ${nameOf ? nameOf(o.targetSubject!) : `hit ${v.subject.one.toLowerCase()} #${o.targetSubject}`}`}
                       </span>
                       <p className="text">{entry?.title ?? entry?.text ?? o.entryId}</p>
                       {entry?.title && entry.text && <p className="muted">{entry.text}</p>}
