@@ -21,6 +21,7 @@ import { DiceCurtain, rolledOf, type RolledGesture } from "../dice/DiceCurtain.t
 import { preloadDice3d } from "../dice/settings.ts";
 import { CARRY_ON_HOLD_MS, carriesOnByItself } from "./pace.ts";
 import { flowStrip } from "./flowStrip.ts";
+import { LOG_LIMITS, logLimit, logLines, logOrder, setLogLimit, setLogOrder, type LogOrder } from "./logView.ts";
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
@@ -1703,6 +1704,18 @@ function Flow({
 
 function Timeline({ pack, state }: { pack: Pack; state: RunState }) {
   const total = state.outcomes.length;
+  // Which end first, and how much: kept on this device, read once here.
+  const [order, setOrder] = useState<LogOrder>(() => logOrder());
+  const [limit, setLimit] = useState(() => logLimit());
+  const flip = () => {
+    const next: LogOrder = order === "newest" ? "oldest" : "newest";
+    setOrder(next);
+    setLogOrder(next);
+  };
+  const cap = (n: number) => {
+    setLimit(n);
+    setLogLimit(n);
+  };
   // Always on the page, empty or not: the column under the step used to end
   // at the card until the first roll, and the screen read as unfinished.
   if (total === 0) {
@@ -1713,19 +1726,37 @@ function Timeline({ pack, state }: { pack: Pack; state: RunState }) {
       </section>
     );
   }
+  const lines = logLines(state.outcomes, order, limit);
   return (
     <section className="log">
-      <h3 className="sectionTitle">The log</h3>
+      <div className="logHead">
+        <h3 className="sectionTitle">
+          The log
+          {lines.length < total && <span className="muted"> · the last {lines.length} of {total}</span>}
+        </h3>
+        <div className="logTools">
+          <button className="ghost tiny" onClick={flip} title="Read the log from the other end">
+            {order === "newest" ? "Newest first" : "Oldest first"}
+          </button>
+          <select className="tiny" value={limit} onChange={(e) => cap(Number(e.target.value))} aria-label="How much of the log to show">
+            {LOG_LIMITS.map((n) => (
+              <option key={n} value={n}>
+                {n === 0 ? "All" : "Last " + n}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
       <ol className="timeline">
-        {/* Newest first, numbered from the start: a long run is read from the
-            top, but the numbers still say how far in each line was. */}
-        {[...state.outcomes].reverse().map((o, i) => {
+        {/* Numbered from the start whichever way it reads, so a line's number
+            still says how far in it was. */}
+        {lines.map(({ index, outcome: o }) => {
           const table = pack.tables[o.table];
           const entry = table?.entries.find((e) => e.id === o.entryId);
           const hit = o.targetSubject !== null;
           return (
-            <li key={i} className={hit ? "heat" : ""}>
-              <span className="idx">{total - i}</span>
+            <li key={index} className={hit ? "heat" : ""}>
+              <span className="idx">{index}</span>
               <div>
                 <span className="where">
                   {pack.vocabulary.unit.one} {o.unit}, {table?.title ?? o.table}
