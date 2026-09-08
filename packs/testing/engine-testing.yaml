@@ -1,35 +1,39 @@
-# Runlog Engine Testing — a bench, not a game.
+# Night Watch — the engine's test bench, written as a game.
 #
-# Every construct the pack format accepts appears here at least once, each
-# under a scenario named in its own text or description so it can be found
-# by a reader of the rulebook. It is written so a person at the keypad can
-# force any table entry by typing the number its own text names — "Type 25
-# for this line" — rather than needing physical dice at all.
+# This is the pack formerly titled Runlog Engine Testing. Every construct the
+# pack format accepts appears here at least once, but what the player reads
+# is a season of nights at a small observatory, not a list of scenarios.
+# Which entry exercises which feature is written up in docs/testing-pack.md;
+# the ids here are the ones that table names, and fixtures and app tests
+# depend on them, so rename prose freely and ids never.
 #
-# This is not meant to be fun. It is meant to be exhaustive.
+# Any table line can be forced from the keypad by typing a number in its
+# range, or picked from the Table button beside the pad.
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.engine-testing
 version: "0.1.0"
-title: Runlog Engine Testing
+title: Night Watch
 author: Runlog
 description: >-
-  A bench, not a game: every corner of the pack format, exercised once and
-  labeled, so the engine has something to prove itself against.
+  A season of nights at a small observatory on a hill. Each Night you open
+  the dome, read the Sky, expose a plate and record it, while the weather
+  reaches back for the plates you have already made. It is also the engine's
+  test bench: every kind of rule the format has appears in it once.
 category: testing
 tags: [testing, bench]
 
 requires:
   - id: kit
-    label: "A die you can also just name a number on, for forcing an entry"
+    label: "A spare eyepiece"
     kind: equipment
     optional: true
-    note: "Entries that need it are drawn again for a Bench that lacks it."
+    note: "A Watch without one draws again when the Sky asks for it."
   - id: keypad
-    label: "A keyboard or keypad, to force entries by number instead of rolling"
+    label: "A set of dice, or the keypad to stand in for them"
     kind: other
   - id: scorecard
-    label: "Somewhere to write down which scenario each entry tests"
+    label: "A log book and a pencil"
     kind: supplies
 
 license:
@@ -54,89 +58,89 @@ capabilities:
   - moderated
 
 vocabulary:
-  run: { one: Bench, many: Benches }
-  unit: { one: Trial, many: Trials }
-  subject: { one: Probe, many: Probes }
-  finalize: Log it
+  run: { one: Watch, many: Watches }
+  unit: { one: Night, many: Nights }
+  subject: { one: Plate, many: Plates }
+  finalize: Record it
 
 unit:
-  clock: { kind: stopwatch }
+  clock: { kind: stopwatch, label: Exposure clock }
   createsSubject: true
   min: 1
   max: 99
 
 states:
   blocks-edit:
-    label: Blocks Edit
-    short: BE
+    label: Fixed
+    short: FX
     scope: subject
     semantics: [blocksEdit]
-    description: "Scenario: blocksEdit. This Probe may no longer be altered."
+    description: The plate has been through the fixing bath. You may no longer alter it.
   untargetable:
-    label: Untargetable
-    short: UT
+    label: Clouded
+    short: CL
     scope: subject
     semantics: [makesUntargetable]
-    description: "Scenario: makesUntargetable. This Probe can no longer be reached back to."
+    description: Cloud has closed over this plate. Nothing later in the Watch can reach back to it.
   excluded:
-    label: Excluded
-    short: EX
+    label: Struck
+    short: ST
     scope: subject
     semantics: [excludesFromResult]
-    description: "Scenario: excludesFromResult. Stays in the Bench, but out of the finished result."
+    description: Struck from the log. It stays in the Watch, but takes no part in the finished record.
   locks-value:
-    label: Locks Value
-    short: LV
+    label: Vaulted
+    short: VT
     scope: subject
     semantics: [locksValue]
-    description: "Scenario: locksValue. Only the Bench itself may change this Probe now."
+    description: Taken into the vault. Only the sky may change this plate now; you may not.
   removed-play:
-    label: Removed From Play
-    short: RM
+    label: Broken
+    short: BR
     scope: subject
     semantics: [removesFromPlay]
-    description: "Scenario: removesFromPlay. Gone; its Trial still happened."
+    description: The glass is broken. The Night still happened; the plate did not survive it.
   posture-a:
-    label: Posture A
-    short: P-A
+    label: Blue Filter
+    short: BF
     scope: subject
     group: posture
-    description: "Scenario: one of three states sharing a group, which displace each other on one Probe."
+    description: A blue filter is mounted over this plate. A plate carries one filter at a time; mounting another takes this one off.
   posture-b:
-    label: Posture B
-    short: P-B
+    label: Yellow Filter
+    short: YF
     scope: subject
     group: posture
-    description: "Scenario: displaces Posture A or Posture C on the same Probe."
+    description: A yellow filter is mounted over this plate, in place of any other.
   posture-c:
-    label: Posture C
-    short: P-C
+    label: Red Filter
+    short: RF
     scope: subject
     group: posture
-    description: "Scenario: displaces Posture A or Posture B on the same Probe."
+    description: A red filter is mounted over this plate, in place of any other.
   temporary:
-    label: Temporary
-    short: TMP
+    label: Dewed
+    short: DW
     scope: subject
     until: unitEnd
-    description: "Scenario: until unitEnd. Lifts by itself once the Trial it was applied in closes."
+    description: Dew on the glass. It clears by itself when the Night ends.
   coldbench:
-    label: Cold Bench
+    label: The Long Freeze
     scope: run
-    description: "Scenario: a run-scoped state, on the Bench itself rather than any one Probe."
+    description: The cold has settled over the whole Watch, not any one plate.
   flagged:
-    label: Flagged
+    label: Commended
     scope: contestant
-    description: "Scenario: a contestant-scoped state, marked by the moderator in a moderated Bench."
+    description: A mark the director puts beside one observer's name during a Contest.
   marked:
-    label: Marked
-    short: MK
+    label: Circled
+    short: CI
     scope: subject
-    description: "Scenario: applied by the grants shorthand rather than an explicit applyState action."
+    description: Circled in pencil on the sleeve. Something on this plate is worth a second look.
 
 counters:
   streak:
-    label: Quiet streak
+    label: Quiet nights
     initial: 0
     min: 0
     incrementOn:
@@ -146,11 +150,11 @@ counters:
     triggers:
       - when: { gte: 3 }
         oncePerRun: true
-        label: "Scenario: a counter's oncePerRun threshold trigger"
+        label: Three quiet nights
         do:
-          - { do: note, text: "Scenario: the streak counter reached its threshold." }
+          - { do: note, text: "Three quiet nights in a row. The sky has been kind for too long; expect it to turn." }
   hiddenCount:
-    label: Hidden tally
+    label: Smudges
     initial: 0
     hidden: true
     incrementOn:
@@ -158,53 +162,54 @@ counters:
 
 resources:
   pressure:
-    label: Pressure
+    label: Nerve
     initial: 0
     min: 0
     max: 10
     step: 1
     display: number
-    description: "Scenario: a number resource, added into the Duel roll."
+    description: How steady your hands are when the weather turns. Added to your roll against the Storm.
   fuel:
-    label: Fuel
+    label: Lamp oil
     initial: 2
     min: 0
     max: 5
     step: 1
     display: boxes
-    description: "Scenario: a boxes resource, clamped to its max."
+    description: Oil for the lamp, in flasks. The store holds five at most.
   momentum:
-    label: Momentum
+    label: Seeing
     initial: 0
     min: -3
     max: 5
     step: 1
     display: bar
-    description: "Scenario: a bar resource whose floor sits below zero."
+    description: How steady the air is tonight. On a bad night it sinks below nothing.
 
 decks:
   hand:
     kind: cards
-    title: Hand
-    description: "Scenario: a bespoke deck, exercising drawAtStart, unique, carriesOver, grantCard and discardCard."
+    title: Notebook
+    description: Slips tucked into the notebook. One is drawn when a Watch begins, and they carry over from Night to Night.
     drawAtStart: 1
     unique: true
     carriesOver: true
     cards:
       - id: card-steady
-        title: Steady
-        text: Nothing happens. It exists to be drawn and discarded.
+        title: Blank Slip
+        text: Nothing written on it. Keep it, or throw it out.
+        # no trigger: it exists to be drawn and discarded
       - id: card-double
-        title: Double
-        text: Draw one more card from this deck immediately.
+        title: Folded Slip
+        text: Two slips folded together. Draw another from the notebook at once.
         triggers:
           - on: immediately
             do:
               - { do: grantCard, deck: hand, count: 1 }
   cards52:
     kind: standard52
-    title: The Deck
-    description: "Scenario: a standard deck, including jokers, resolved by rank on What the Deck Brings."
+    title: The Cards
+    description: An ordinary deck, jokers in. Each card drawn is read in the Almanac by its rank.
     includeJokers: true
     drawAtStart: 0
     resolveOn: rankcall
@@ -212,163 +217,161 @@ decks:
 
 moves:
   chooseAndMark:
-    label: "Scenario: chooseSubject (eligibleOnly) and applyState to a {var}"
-    description: Picks an eligible Probe and applies Posture B to it — the middle member of the posture group.
+    label: Mount the yellow filter
+    description: Choose a plate still in reach and mount the yellow filter on it. A plate carries one filter at a time.
     do:
-      - { do: prompt, kind: chooseSubject, label: "Which Probe?", eligibleOnly: true, into: markedProbe }
+      - { do: prompt, kind: chooseSubject, label: "Which plate?", eligibleOnly: true, into: markedProbe }
       - { do: applyState, state: posture-b, to: { var: markedProbe } }
 
   pickValue:
-    label: "Scenario: chooseValue with options"
-    description: Offers a fixed list of options and remembers the answer.
+    label: Set the exposure
+    description: Decide how long tonight's plate is exposed. The choice is written into the log.
     do:
-      - { do: prompt, kind: chooseValue, label: "Pick one", options: [Alpha, Beta, Gamma], into: chosenValue }
-      - { do: note, text: "Scenario: a value was chosen from a fixed list." }
+      - { do: prompt, kind: chooseValue, label: "How long?", options: [Short, Long, All night], into: chosenValue }
+      - { do: note, text: "The exposure is set and written in the log." }
 
   pickState:
-    label: "Scenario: chooseState"
-    description: Offers every declared state and remembers which one was picked.
+    label: Note a condition
+    description: Choose any condition the Watch knows and write down which one you saw.
     do:
-      - { do: prompt, kind: chooseState, label: "Pick a state", into: chosenState }
-      - { do: note, text: "Scenario: a state was chosen." }
+      - { do: prompt, kind: chooseState, label: "Which condition?", into: chosenState }
+      - { do: note, text: "The condition is written in the log." }
 
   confirmChoice:
-    label: "Scenario: confirm"
-    description: A plain yes-or-no prompt.
+    label: Check the clock
+    description: A plain yes or no. Is the exposure clock running?
     do:
-      - { do: prompt, kind: confirm, label: "Sure?", into: confirmed }
-      - { do: note, text: "Scenario: a confirm prompt was answered." }
+      - { do: prompt, kind: confirm, label: "Is the clock running?", into: confirmed }
+      - { do: note, text: "You checked the clock." }
 
   captureNote:
-    label: "Scenario: a text prompt into a var, used by a note"
-    description: Whatever is typed stands as the persistent note for this Trial.
+    label: Write in the margin
+    description: Whatever you write stands as this Night's note in the log.
     do:
       - { do: prompt, kind: text, label: "Write anything", into: freeText }
-      - { do: note, text: "Scenario: whatever you just typed stands as this Trial's note.", persistent: true }
+      - { do: note, text: "Your margin note stands as this Night's note.", persistent: true }
 
   liftLock:
-    label: "Scenario: removeState"
-    description: Clears Locks Value from this Probe.
+    label: Sign the plate out of the vault
+    description: Take this Night's plate back out of the vault, so you may change it again.
     do:
       - { do: removeState, state: locks-value, to: thisSubject }
 
   chooseThree:
-    label: "Scenario: rollOn with times 3, choose one"
-    description: Rolls the Chained Result table three times and keeps one.
+    label: Sweep the field
+    description: Look through the eyepiece three times and keep the one thing worth keeping.
     do:
       - { do: rollOn, table: chained, times: 3, choose: one, into: chosenChain }
 
   rollFromCount:
-    label: "Scenario: rollOn with timesFrom"
-    description: Rolls a die to decide how many times to consult Chained Result.
+    label: Count the flashes
+    description: Roll to see how many things cross the field, then look through the eyepiece once for each.
     do:
-      - { do: roll, dice: d4, into: chargeCount, label: "How many times?" }
+      - { do: roll, dice: d4, into: chargeCount, label: "How many?" }
       - { do: rollOn, table: chained, timesFrom: chargeCount }
 
   branchDemo:
-    label: "Scenario: branch with in and is cases"
-    description: Rolls a die and branches on exact values and on a range.
+    label: Test the seeing
+    description: Roll a die. Low, and the air is poor; high, and it is fine; in between, ordinary.
     do:
-      - { do: roll, dice: d6, into: benchRollVar, label: "Roll for the branch" }
+      - { do: roll, dice: d6, into: benchRollVar, label: "Roll for the seeing" }
       - do: branch
         on: benchRollVar
         cases:
           - in: [1, 2]
             then:
-              - { do: note, text: "Scenario: matched the in case." }
+              - { do: note, text: "Poor seeing. The stars swim." }
           - is: { gte: 5 }
             then:
-              - { do: note, text: "Scenario: matched the is case." }
+              - { do: note, text: "Fine seeing. The stars are pinpoints." }
         else:
-          - { do: note, text: "Scenario: matched neither case." }
+          - { do: note, text: "Ordinary seeing." }
 
   branchAgainstStreak:
-    label: "Scenario: branch against a NumericBound gteCounter"
-    description: Rolls a die and compares it against the streak counter's current value.
+    label: Trust the quiet
+    description: Roll a die against the count of quiet nights. Beat it and the calm holds.
     do:
-      - { do: roll, dice: d6, into: pressureRollVar, label: "Roll against the streak" }
+      - { do: roll, dice: d6, into: pressureRollVar, label: "Roll against the quiet nights" }
       - do: branch
         on: pressureRollVar
         cases:
           - is: { gteCounter: streak }
             then:
-              - { do: note, text: "Scenario: the roll beat the streak counter." }
+              - { do: note, text: "The calm holds." }
         else:
-          - { do: note, text: "Scenario: the roll did not beat the streak counter." }
+          - { do: note, text: "The quiet was borrowed. Expect weather." }
 
   startTimerDemo:
-    label: "Scenario: startTimer"
-    description: Starts a five-minute countdown from a move rather than a clock declaration.
+    label: Open the shutter for five minutes
+    description: A five-minute exposure. The timer sounds when it is time to close the shutter.
     do:
-      - { do: startTimer, minutes: 5, label: "Started from a move" }
+      - { do: startTimer, minutes: 5, label: "Exposure" }
 
   setMomentumFromRoll:
-    label: "Scenario: modResource setFrom"
-    description: Rolls a die and sets Momentum to whatever it shows.
+    label: Rate the seeing
+    description: Roll a die and set Seeing to whatever it shows.
     do:
-      - { do: roll, dice: d6, into: momentumRoll, label: "Roll for Momentum" }
+      - { do: roll, dice: d6, into: momentumRoll, label: "Roll for Seeing" }
       - { do: modResource, resource: momentum, setFrom: momentumRoll }
 
   fillFuel:
-    label: "Scenario: modResource set"
-    description: Sets Fuel to its maximum outright.
+    label: Refill the lamp
+    description: Fill the store from the shed. Lamp oil goes to five flasks.
     do:
       - { do: modResource, resource: fuel, set: 5 }
 
   setCounterFromRoll:
-    label: "Scenario: modCounter setFrom"
-    description: Rolls a die and sets the hidden counter to whatever it shows.
+    label: Count the smudges
+    description: Roll a die and set the count of smudges to whatever it shows.
     do:
-      - { do: roll, dice: d6, into: counterRoll, label: "Roll for the hidden counter" }
+      - { do: roll, dice: d6, into: counterRoll, label: "Roll for smudges" }
       - { do: modCounter, counter: hiddenCount, setFrom: counterRoll }
 
   rewindDemo:
-    label: "Scenario: rewind"
-    description: Sends the Bench back one Trial, to be played again from its start.
+    label: Go back a Night
+    description: Once a Watch, go back one Night and take it again from the start.
     oncePerRun: true
     do:
       - { do: rewind, count: 1 }
 
   askGated:
-    label: "Scenario: an ask predicate gates a move"
-    description: Only offered once the player says something worth logging happened.
+    label: Log a sighting
+    description: Only offered once you say you saw something worth writing down.
     available:
-      - { ask: "Did something worth logging just happen?" }
+      - { ask: "Did you see something worth writing down?" }
     do:
-      - { do: note, text: "Scenario: an ask-gated move was taken." }
+      - { do: note, text: "The sighting is written in the log." }
 
 tables:
-  # A d100 lookup with ten wide, exactly-tiled bands. Every entry's text
-  # names a number inside its own range, so any of them can be forced by
-  # typing that number instead of rolling.
+  # A d100 lookup with ten wide, exactly-tiled bands. Any line can be forced
+  # from the keypad by typing a number in its range.
   bench:
     resolution: lookup
-    title: Bench Check
+    title: The Sky
     description: >-
-      Rolled on entering a Trial. Ten scenarios, each ten numbers wide, each
-      naming a number you can type to force it.
+      Read when a Night begins: what the weather and the sky have for you.
     roll: d100
     entries:
       - id: bc-quiet
         range: [1, 10]
-        title: "Scenario: a quiet result"
-        text: "Type 5 for this line: quiet. Nothing else happens, beyond marking the Bench primed for the next Trial."
+        title: A still sky
+        text: Clear and still. Nothing to do but set up. The air is settled, and the next Night starts easier for it.
         triggers:
           - on: immediately
             do:
               - { do: setFlag, flag: primed, value: true }
       - id: bc-chain
         range: [11, 20]
-        title: "Scenario: chains into a second table"
-        text: "Type 15 for this line: immediately rolls on the Chained Result table."
+        title: Something in the field
+        text: Something moves in the field of view. Look through the Eyepiece and see what it is.
         triggers:
           - on: immediately
             do:
               - { do: rollOn, table: chained }
       - id: bc-reach
         range: [21, 30]
-        title: "Scenario: reaches back, from the current roll"
-        text: "Type 25 for this line: reaches back to an earlier Probe and marks it Untargetable."
+        title: Cloud drifts back
+        text: Cloud drifts back over earlier work. Count back from the newest plate; the one it settles on is Clouded, and nothing can reach it again.
         tags: [reach]
         triggers:
           - on: immediately
@@ -377,26 +380,26 @@ tables:
               - { do: applyState, state: untargetable, to: targetSubject }
       - id: bc-afterwork
         range: [31, 40]
-        title: "Scenario: an obligation owed after the work"
-        text: "Type 35 for this line: owes a persistent note once the work for this Trial is done."
+        title: Dew forming
+        text: The glass is fogging. Once tonight's exposure is done, wipe the lens and write it down.
         triggers:
           - on: afterWork
-            label: "Scenario: afterWork obligation"
+            label: Wipe the lens
             do:
-              - { do: note, text: "afterWork obligation paid: the work for this Trial is done.", persistent: true }
+              - { do: note, text: "The lens is wiped and the fog written down. It stays in the record.", persistent: true }
       - id: bc-onfinalize
         range: [41, 50]
-        title: "Scenario: an obligation owed at finalize"
-        text: "Type 45 for this line: owes a note the moment this Trial is logged."
+        title: A late visitor
+        text: Someone from the village climbs the hill to look. When you record the Night, show them the plate.
         triggers:
           - on: onFinalize
-            label: "Scenario: onFinalize obligation"
+            label: Show the visitor the plate
             do:
-              - { do: note, text: "onFinalize obligation paid: this Trial has been logged." }
+              - { do: note, text: "The visitor has seen the plate and gone back down the hill." }
       - id: bc-end
         range: [51, 60]
-        title: "Scenario: endRunAttempt"
-        text: "Type 55 for this line: ends the Bench outright, unless something forces another Trial first."
+        title: The lamp goes out
+        text: The lamp gutters and goes out. The count of quiet nights is lost, and the Watch ends here, unless something already owes you another Night.
         triggers:
           - on: immediately
             do:
@@ -404,8 +407,8 @@ tables:
               - { do: endRunAttempt }
       - id: bc-requires
         range: [61, 70]
-        title: "Scenario: requires a predicate, and the when action"
-        text: "Type 65 for this line: only makes sense once at least two Probes exist."
+        title: Two plates side by side
+        text: Two plates held up to the lamp show a difference. It only comes up once there are two plates to compare.
         requires:
           - { subjectCount: { gte: 2 } }
         triggers:
@@ -414,13 +417,13 @@ tables:
               - do: when
                 all: [{ subjectCount: { gte: 2 } }]
                 then:
-                  - { do: note, text: "Scenario: the when action ran its then branch." }
+                  - { do: note, text: "The plates disagree. Note where." }
                 else:
-                  - { do: note, text: "Scenario: the when action ran its else branch." }
+                  - { do: note, text: "Nothing to compare yet." }
       - id: bc-needs
         range: [71, 80]
-        title: "Scenario: needs a requirement, and grantCard"
-        text: "Type 75 for this line: needs the kit. A Bench that lacks it draws again instead of landing here."
+        title: The spare eyepiece
+        text: You reach for the spare eyepiece and find a slip tucked in its case. Draw one from the notebook. A Watch without a spare draws again instead of landing here.
         needs: [kit]
         triggers:
           - on: immediately
@@ -428,16 +431,15 @@ tables:
               - { do: grantCard, deck: hand, count: 1 }
       - id: bc-grants
         range: [81, 90]
-        title: "Scenario: the grants shorthand"
-        text: "Type 85 for this line: grants Marked to this Probe outright."
+        title: Worth a second look
+        text: There is something on this plate worth coming back to. Circle it on the sleeve.
         grants: [marked]
       - id: bc-scored
         range: [91, 100]
-        title: "Scenario: tags and points, and the next Trial rolls twice"
+        title: The clearest night of the season
         text: >-
-          Type 95 for this line: worth points toward a moderated Bench,
-          tagged scored, and the next Trial rolls twice — its Bench Check
-          step owes a second roll.
+          The clearest sky of the season. Worth two points in a Contest,
+          and the next Night you read the Sky twice.
         tags: [scored]
         points: 2
         triggers:
@@ -447,24 +449,23 @@ tables:
 
   chained:
     resolution: lookup
-    title: Chained Result
+    title: The Eyepiece
     description: >-
-      Rolled whenever Bench Check chains into it. Six short scenarios, one
-      per face, each naming the face that forces it.
+      Looked through whenever the Sky sends you to it. Six things it can find.
     roll: d6
     entries:
       - id: cn-1
         range: [1, 1]
-        title: "Scenario: discardCard"
-        text: "Type 1 for this line: discards a card from the Hand deck."
+        title: Nothing there
+        text: Nothing. Throw out one slip from the notebook.
         triggers:
           - on: immediately
             do:
               - { do: discardCard, deck: hand, count: 1 }
       - id: cn-2
         range: [2, 2]
-        title: "Scenario: reaches back from the event fallback"
-        text: "Type 2 for this line: reaches back using the event fallback, not this roll, and locks the target's value."
+        title: The director's note
+        text: A note from the director takes an earlier plate into the vault. Roll to see which one.
         triggers:
           - on: immediately
             do:
@@ -472,8 +473,8 @@ tables:
               - { do: applyState, state: locks-value, to: targetSubject }
       - id: cn-3
         range: [3, 3]
-        title: "Scenario: reaches back by player choice"
-        text: "Type 3 for this line: the player picks which Probe this excludes from the result."
+        title: A flaw in the glass
+        text: One earlier plate turns out to be flawed. Choose which, and strike it from the log.
         triggers:
           - on: immediately
             do:
@@ -481,21 +482,21 @@ tables:
               - { do: applyState, state: excluded, to: targetSubject }
       - id: cn-4
         range: [4, 4]
-        title: "Scenario: applyState to thisSubject"
-        text: "Type 4 for this line: applies Posture A to this Probe, by an explicit applyState action."
+        title: Blue haze
+        text: The field is washed blue. Mount the blue filter on tonight's plate.
         triggers:
           - on: immediately
             do:
               - { do: applyState, state: posture-a, to: thisSubject }
       - id: cn-5
         range: [5, 5]
-        title: "Scenario: grants shorthand, in the posture group"
-        text: "Type 5 for this line: grants Posture C, which displaces Posture A or B on the same Probe."
+        title: Red haze
+        text: The field glows red. Mount the red filter on tonight's plate; it takes any other filter off.
         grants: [posture-c]
       - id: cn-6
         range: [6, 6]
-        title: "Scenario: extraRoll, unit current"
-        text: "Type 6 for this line: owes an extra roll on this very Trial's Chained Result step."
+        title: Look again
+        text: Something crosses the field before you can fix it. Look through the Eyepiece once more this Night.
         triggers:
           - on: immediately
             do:
@@ -505,35 +506,34 @@ tables:
   # have no ceiling or floor at all.
   ladder:
     resolution: bands
-    title: Ladder
+    title: The Weather
     description: >-
-      Rolled to exercise obligations deferred to onEnterUnit and
-      onDeclareSubject. Its lowest and highest bands are open-ended.
+      How the weather will turn. Read on the first Night of a Watch.
     roll: 2d6
     entries:
       - id: ld-low
         lte: 5
-        title: "Scenario: obligation deferred to onEnterUnit, with a when predicate"
-        text: "5 or under (open-ended low band): owes a note paid when the next Trial begins, if the Bench was primed."
+        title: Fog by morning
+        text: Fog is coming. When the next Night begins, if the air had settled, write down how far you could see.
         triggers:
           - on: onEnterUnit
             when:
               - { flag: primed }
             do:
-              - { do: note, text: "onEnterUnit obligation paid: the next Trial has begun, and the Bench was primed." }
+              - { do: note, text: "The next Night has begun in settled air, and how far you could see is written down." }
       - id: ld-mid
         gte: 6
         lte: 9
-        title: "Scenario: obligation deferred to onDeclareSubject"
-        text: "6 through 9 (the closed middle band): owes a note paid once this Trial's Probe is named."
+        title: Holding
+        text: The weather holds. Once you have named this Night's plate, note the time you started.
         triggers:
           - on: onDeclareSubject
             do:
-              - { do: note, text: "onDeclareSubject obligation paid: this Trial's Probe has been named." }
+              - { do: note, text: "This Night's plate is named, and the time is written beside it." }
       - id: ld-high
         gte: 10
-        title: "Scenario: applyState to allPriorSubjects"
-        text: "10 or over (open-ended high band): removes every earlier Probe from play."
+        title: Hail
+        text: Hail on the dome. Every plate from an earlier Night is broken.
         triggers:
           - on: immediately
             do:
@@ -543,10 +543,10 @@ tables:
   # dice, counting how many it beat.
   duel:
     resolution: opposed
-    title: Duel
+    title: The Storm
     description: >-
-      An action die plus Pressure against three challenge dice, counting
-      how many it beat. Ties go to the challenge.
+      Your steadiness plus Nerve against three gusts, counting how many you
+      hold against. Ties go to the storm.
     action: d6
     addResource: pressure
     challenge:
@@ -555,8 +555,8 @@ tables:
     entries:
       - id: du-0
         beats: 0
-        title: "Scenario: applyState to run, and forceUnit"
-        text: "Beats none of the three: the Bench goes Cold and forces two further Trials."
+        title: The long freeze
+        text: The storm wins outright. The long freeze settles over the whole Watch, and you owe it two more Nights before you may stop.
         triggers:
           - on: immediately
             do:
@@ -564,8 +564,8 @@ tables:
               - { do: forceUnit, count: 2 }
       - id: du-1
         beats: 1
-        title: "Scenario: modResource by, and modCounter by"
-        text: "Beats one of the three: Pressure and the hidden counter both rise by one."
+        title: One gust turned
+        text: You hold against one gust. Nerve rises by one, and there is one more smudge on the plate.
         triggers:
           - on: immediately
             do:
@@ -573,18 +573,18 @@ tables:
               - { do: modCounter, counter: hiddenCount, by: 1 }
       - id: du-2
         beats: 2
-        title: "Scenario: obligation deferred to onDeclareRunOver"
-        text: "Beats two of the three: owes a note paid the moment someone first tries to end the Bench."
+        title: Two gusts turned
+        text: The storm passes, but it leaves a debt. The first time you try to end the Watch, write down what the storm cost.
         triggers:
           - on: onDeclareRunOver
             when:
               - { unitIndex: { gte: 1 } }
             do:
-              - { do: note, text: "onDeclareRunOver obligation paid: someone has tried to end the Bench." }
+              - { do: note, text: "What the storm cost is written down, at the first attempt to end the Watch." }
       - id: du-3
         beats: 3
-        title: "Scenario: applyState to allSubjects"
-        text: "Beats all three: blocks editing on every Probe made so far, including this one."
+        title: The storm breaks
+        text: You hold against all three. Every plate made so far, tonight's included, goes through the fixing bath and is Fixed.
         triggers:
           - on: immediately
             do:
@@ -593,22 +593,22 @@ tables:
   # A keyed table, addressed by a standard deck's rank rather than a number.
   rankcall:
     resolution: keyed
-    title: What the Deck Brings
-    description: Consulted on every card drawn from the standard deck, by rank.
+    title: The Almanac
+    description: Read for every card drawn from the deck, by its rank.
     entries:
-      - { id: rk-a, key: a, text: "Draw or type the Ace for this line." }
-      - { id: rk-2, key: "2", text: "Draw or type the 2 for this line." }
-      - { id: rk-3, key: "3", text: "Draw or type the 3 for this line." }
-      - { id: rk-4, key: "4", text: "Draw or type the 4 for this line." }
-      - { id: rk-5, key: "5", text: "Draw or type the 5 for this line." }
-      - { id: rk-6, key: "6", text: "Draw or type the 6 for this line." }
-      - { id: rk-7, key: "7", text: "Draw or type the 7 for this line." }
-      - { id: rk-8, key: "8", text: "Draw or type the 8 for this line." }
-      - { id: rk-9, key: "9", text: "Draw or type the 9 for this line." }
-      - { id: rk-10, key: "10", text: "Draw or type the 10 for this line." }
-      - { id: rk-j, key: j, text: "Draw or type the Jack for this line." }
-      - { id: rk-q, key: q, text: "Draw or type the Queen for this line." }
-      - { id: rk-k, key: k, text: "Draw or type the King for this line." }
+      - { id: rk-a, key: a, text: "The new moon. The darkest sky of the month." }
+      - { id: rk-2, key: "2", text: "Mercury, low in the west just after sunset." }
+      - { id: rk-3, key: "3", text: "Venus, bright enough to cast a shadow." }
+      - { id: rk-4, key: "4", text: "The Moon at first quarter, half lit." }
+      - { id: rk-5, key: "5", text: "Mars, small and red, high after midnight." }
+      - { id: rk-6, key: "6", text: "Jupiter, with its four moons in a line." }
+      - { id: rk-7, key: "7", text: "Saturn, rings wide open." }
+      - { id: rk-8, key: "8", text: "A meteor shower, peaking tonight." }
+      - { id: rk-9, key: "9", text: "The Milky Way straight overhead." }
+      - { id: rk-10, key: "10", text: "The full moon, washing out everything faint." }
+      - { id: rk-j, key: j, text: "A comet, low and faint, not on any chart." }
+      - { id: rk-q, key: q, text: "An occultation. The Moon passes in front of a star." }
+      - { id: rk-k, key: k, text: "An eclipse, partial from this hill." }
 
 # anchoredOffset targeting: every anchor, both directions, wraparound,
 # skipIneligible, and an eventFallback with missOn.
@@ -629,139 +629,139 @@ targeting:
 
 phases:
   - id: enter
-    label: Enter the Trial
+    label: Open the dome
     steps:
       - kind: rollTable
         table: bench
-        label: "Scenario: rollTable, optional, with skipWhen"
+        label: Read the Sky
         into: benchRoll
         optional: true
         skipWhen:
           - { flag: skipBenchRoll }
 
   - id: declare
-    label: Declare the Probe
+    label: Name the plate
     steps:
       - kind: declareSubject
-        label: "Scenario: declareSubject constrained by a table"
+        label: What is tonight's plate?
         constrainedBy: chained
         skipWhen:
           - { unitIndex: { lte: 0 } }
 
   - id: secondary
-    label: Secondary rolls
-    description: "Scenario: a phase skipped from the second Trial onward (unitIndex gte 2)."
+    label: The first Night's weather
+    description: Only on the first Night of a Watch. The Storm, then the Weather.
     skipWhen:
       - { unitIndex: { gte: 2 } }
     steps:
       - kind: rollTable
         table: duel
-        label: Roll the Duel
+        label: Roll the Storm
       - kind: rollTable
         table: ladder
-        label: Roll the Ladder
+        label: Read the Weather
 
   - id: work
-    label: Do the work
+    label: The exposure
     steps:
       - kind: manual
-        label: "Scenario: a manual checklist with every kind of item"
-        description: The engine cannot see the work; it only tracks that you did it.
+        label: Expose the plate.
+        description: The app cannot see the sky. It only records that you did the work.
         checklist:
-          - "A plain checklist item."
-          - { text: "An optional checklist item.", optional: true }
-          - { text: "A tally checklist item.", tally: hiddenCount }
-          - { text: "A shows checklist item.", shows: { table: bench, scope: unit } }
+          - "The plate is exposed and in its sleeve."
+          - { text: "The time is written on the sleeve.", optional: true }
+          - { text: "A smudge on the plate.", tally: hiddenCount }
+          - { text: "Whatever the Sky sent tonight has been dealt with.", shows: { table: bench, scope: unit } }
 
   - id: actionsPhase
-    label: Run an action list
+    label: Close the dome
     steps:
       - kind: actions
         do:
-          - { do: note, text: "Scenario: a plain actions step, outside any table." }
+          - { do: note, text: "The dome is closed and the eyepiece capped." }
         skipWhen:
           - { flag: skipActionsPhase }
 
   - id: close
-    label: Log it
+    label: Record it
     steps:
       - kind: finalizeUnit
-        label: "Scenario: finalizeUnit with confirm"
+        label: Record the Night
         confirm:
-          - "A plain confirm item."
-          - { text: "A shows confirm item.", shows: { table: bench, scope: subject } }
+          - "The plate is labeled and put away."
+          - { text: "Anything the Sky did to this plate is written on its sleeve.", shows: { table: bench, scope: subject } }
 
 journal:
   enabled: true
-  prompt: What did this Trial prove, or fail to prove?
+  prompt: What did tonight's plate show, or fail to show?
   required: true
 
 endings:
   - id: logged
-    label: Logged
-    text: The Bench stands as run. Log it and stop.
+    label: The Log Closed
+    text: The Watch stands as kept. Close the log and go down the hill.
   - id: exhausted
-    label: Exhausted
-    text: Every scenario has been forced at least once. Log it and stop.
+    label: The Season's End
+    text: Nothing left in the sky to look for this season. Close the log.
     requires:
       - { counter: streak, is: { gte: 0 } }
   - id: cut-short
-    label: Cut Short
-    text: Stopped early, on purpose, to prove a run can end without finishing every scenario.
+    label: Called Down
+    text: Called down the hill early. The log ends where it ends.
 
 # Global triggers, restricted by the format to onEnterUnit and onRunEnd.
 triggers:
   - on: onRunEnd
-    label: "Scenario: a pack-level global trigger"
+    label: Dawn
     when:
       - { not: { flag: skippedCooldown } }
     do:
-      - { do: note, text: "Scenario: onRunEnd — the pack-level trigger fired once the Bench ended.", persistent: true }
+      - { do: note, text: "Dawn. The dome is closed for the last time this Watch, and the plates go to the vault.", persistent: true }
 
 modes:
   solo:
-    label: Solo
-    description: "Scenario: the plain solo mode this bench defaults to, with a perUnit override on its second Trial."
+    label: Alone on the Hill
+    description: One keeper, one telescope. On the second Night the dome is left open, and you note the temperature instead.
     perUnit:
       - unit: 2
         skipPhases: [actionsPhase]
         extra:
-          - { do: note, text: "Scenario: a perUnit extra action, added to Trial 2." }
+          - { do: note, text: "The second Night. The dome stays open; write down the temperature." }
 
   seeded:
-    label: Seeded
-    description: "Scenario: seeded — pre-rolls the whole Bench from a shared seed, so two runs can be compared exactly."
+    label: The Same Sky
+    description: Two keepers can take the same Watch from a shared seed and meet the same sky, Night for Night.
     seeded: true
 
   together:
-    label: Together
-    description: "Scenario: together — two to four people at one table, rotating three roles clockwise, with the mode's own timer clock."
+    label: The Crew
+    description: Two to four keepers at one telescope, passing three jobs clockwise, with ten minutes on the exposure timer each Night.
     players:
       min: 2
       max: 4
       rotate: clockwise
       roles:
-        - { id: roller, label: Roller, description: Makes every roll. }
-        - { id: namer, label: Namer, description: Declares every Probe. }
-        - { id: judge, label: Judge, description: Answers every ask predicate. }
-    clock: { kind: timer, minutes: 10, auto: true }
+        - { id: roller, label: Hands, description: Makes every roll. }
+        - { id: namer, label: Recorder, description: Names every plate. }
+        - { id: judge, label: Director, description: Answers every question the Watch asks. }
+    clock: { kind: timer, minutes: 10, auto: true, label: Exposure timer }
 
   moderated:
-    label: Moderated
-    description: "Scenario: moderated — a roster of two to four contestants, every scored entry awarded to everyone, with a bonus for being first."
+    label: The Contest
+    description: A director keeps the Watch for two to four observers on a roster. Every scored sky goes to everyone, with a point extra for whoever was first.
     moderated:
       contestants: { min: 2, max: 4 }
       award: everyone
       firstBonus: 1
 
   endless:
-    label: Endless
-    description: "Scenario: endless — no end but the one you choose, up to ninety-nine Trials."
+    label: The Long Season
+    description: No end but the one you choose, up to ninety-nine Nights.
     units: { max: 99 }
 
   minimal:
-    label: Minimal
-    description: "Scenario: disable — strips out the Duel table, the actions-list phase, and the hidden counter, to prove disable actually disables."
+    label: A Calm Season
+    description: No Storm, no closing the dome, and no count of smudges. The quietest way to keep a Watch.
     disable:
       tables: [duel]
       phases: [actionsPhase]
@@ -771,14 +771,14 @@ defaultMode: solo
 
 hierarchy:
   - Ending
-  - Duel
-  - Bench Check
+  - The Storm
+  - The Sky
   - General rules
 
-# Reducer fixtures. Replayed by `runlog test`; each names the scenario it
-# proves and asserts the exact state the events leave behind.
+# Reducer fixtures. Replayed by `runlog test`; each names what it proves
+# and asserts the exact state the events leave behind.
 fixtures:
-  - name: "Tables: a quiet Bench Check sets the primed flag"
+  - name: "Tables: a still Sky settles the air"
     mode: solo
     events:
       - { t: RunStarted, mode: solo }
@@ -790,7 +790,7 @@ fixtures:
       - { path: outcomes.length, equals: 1 }
       - { path: outcomes.0.entryId, equals: bc-quiet }
 
-  - name: "Tables: Bench Check chains into Chained Result"
+  - name: "Tables: the Sky sends you to the Eyepiece"
     mode: solo
     events:
       - { t: RunStarted, mode: solo }
@@ -803,12 +803,12 @@ fixtures:
       - { path: outcomes.1.table, equals: chained }
       - { path: outcomes.1.entryId, equals: cn-4 }
 
-  - name: "Reaching back: the current roll marks an earlier Probe Untargetable"
+  - name: "Reaching back: the current roll clouds an earlier Plate"
     mode: solo
     events:
       - { t: RunStarted, mode: solo }
       - { t: UnitEntered }
-      - { t: SubjectDeclared, subjectType: "First Probe" }
+      - { t: SubjectDeclared, subjectType: "First Plate" }
       - { t: UnitFinalized }
       - { t: UnitEntered }
       - { t: OutcomeResolved, table: bench, entryId: bc-reach, cause: phase, targetSubject: 1 }
@@ -822,7 +822,7 @@ fixtures:
     events:
       - { t: RunStarted, mode: solo }
       - { t: UnitEntered }
-      - { t: ObligationAdded, obligation: { id: ob-1, kind: trigger, text: "afterWork obligation paid: the work for this Trial is done.", on: afterWork, persistent: true } }
+      - { t: ObligationAdded, obligation: { id: ob-1, kind: trigger, text: "The lens is wiped and the fog written down. It stays in the record.", on: afterWork, persistent: true } }
     expect:
       - { path: obligations.length, equals: 1 }
       - { path: obligations.0.resolved, equals: false }
@@ -833,12 +833,12 @@ fixtures:
     events:
       - { t: RunStarted, mode: solo }
       - { t: UnitEntered }
-      - { t: ObligationAdded, obligation: { id: ob-2, kind: trigger, text: "onFinalize obligation paid: this Trial has been logged.", on: onFinalize } }
+      - { t: ObligationAdded, obligation: { id: ob-2, kind: trigger, text: "The visitor has seen the plate and gone back down the hill.", on: onFinalize } }
       - { t: ObligationResolved, id: ob-2 }
     expect:
       - { path: obligations.0.resolved, equals: true }
 
-  - name: "Units: endRunAttempt ends the Bench"
+  - name: "Units: the lamp going out ends the Watch"
     mode: solo
     events:
       - { t: RunStarted, mode: solo }
@@ -851,7 +851,7 @@ fixtures:
       - { path: ending, equals: logged }
       - { path: counters.streak, equals: 0 }
 
-  - name: "Rolls: the next Trial rolls twice"
+  - name: "Rolls: the next Night reads the Sky twice"
     mode: solo
     events:
       - { t: RunStarted, mode: solo }
@@ -863,7 +863,7 @@ fixtures:
       - { path: extraRolls.bench, equals: 1 }
       - { path: unit, equals: 2 }
 
-  - name: "Rolls: an extra roll owed the current Trial is paid down"
+  - name: "Rolls: an extra look owed this Night is paid down"
     mode: solo
     events:
       - { t: RunStarted, mode: solo }
@@ -873,7 +873,7 @@ fixtures:
     expect:
       - { path: extraRolls.chained, equals: 1 }
 
-  - name: "Units: rewind sends the Bench back a Trial"
+  - name: "Units: going back sends the Watch back a Night"
     mode: solo
     events:
       - { t: RunStarted, mode: solo }
@@ -886,7 +886,7 @@ fixtures:
       - { path: rewinds, equals: 1 }
       - { path: rewindNext, equals: 0 }
 
-  - name: "States: a state with until unitEnd lifts when the Trial closes"
+  - name: "States: dew clears when the Night ends"
     mode: solo
     events:
       - { t: RunStarted, mode: solo }
@@ -896,7 +896,7 @@ fixtures:
     expect:
       - { path: subjects.0.states, equals: [] }
 
-  - name: "States: a group of three postures displace each other"
+  - name: "States: a group of three filters displace each other"
     mode: solo
     events:
       - { t: RunStarted, mode: solo }
@@ -910,8 +910,8 @@ fixtures:
     mode: moderated
     events:
       - { t: RunStarted, mode: moderated }
-      - { t: ContestantAdded, contestant: c1, name: "Contestant One" }
-      - { t: ContestantAdded, contestant: c2, name: "Contestant Two" }
+      - { t: ContestantAdded, contestant: c1, name: "Observer One" }
+      - { t: ContestantAdded, contestant: c2, name: "Observer Two" }
       - { t: ContestantStateApplied, contestant: c1, state: flagged }
       - { t: UnitEntered }
       - { t: OutcomeResolved, table: bench, entryId: bc-scored, cause: phase }
@@ -958,7 +958,7 @@ fixtures:
     events:
       - { t: RunStarted, mode: solo }
       - { t: UnitEntered }
-      - { t: ClockStarted, clock: watch1, kind: stopwatch, label: "Trial Stopwatch" }
+      - { t: ClockStarted, clock: watch1, kind: stopwatch, label: "Exposure clock" }
       - { t: ClockStarted, clock: timer1, kind: timer, label: "Ten Minutes", seconds: 600 }
       - { t: ClockStopped, clock: watch1, elapsedMs: 5000 }
       - { t: ClockStopped, clock: timer1, elapsedMs: 600000, expired: true }
@@ -967,7 +967,7 @@ fixtures:
       - { path: clocks.0.status, equals: done }
       - { path: clocks.1.expired, equals: true }
 
-  - name: "Decks: a bespoke deck draws and discards; a standard-deck draw resolves by rank"
+  - name: "Decks: the notebook draws and discards; a card draw is read in the Almanac by rank"
     mode: solo
     events:
       - { t: RunStarted, mode: solo }
