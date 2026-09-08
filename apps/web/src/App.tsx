@@ -17,6 +17,7 @@ import { DiceTray } from "./dice/DiceTray.tsx";
 import { RunView } from "./run/RunView.tsx";
 import { DesignView } from "./design/DesignView.tsx";
 import { ProfileView } from "./profile/ProfileView.tsx";
+import { profileHash, profilePageFromHash, type ProfilePage } from "./profile/route.ts";
 import { LibraryView, type LibraryPack } from "./library/LibraryView.tsx";
 import { CatalogView } from "./library/CatalogView.tsx";
 import { GuideView } from "./guide/GuideView.tsx";
@@ -132,9 +133,10 @@ export default function App() {
   }, []);
   const [view, setView] = useState<"play" | "rules" | "design" | "profile" | "library" | "catalog" | "guide">("play");
   /**
-   * Two places live in the address bar: the docs' page (`#guide/playing`
-   * opens it and can be linked to) and the Designer (`#create`). Leaving
-   * either clears the hash; nothing else in the app lives there.
+   * Places that live in the address bar: the docs' page (`#guide/playing`
+   * opens it and can be linked to), the Designer (`#create`), and the
+   * profile's four pages (`#profile`, `#profile/publishing`, and so on).
+   * Leaving any of them clears the hash; nothing else in the app lives there.
    */
   const [guideSlug, setGuideSlug] = useState<string>(() => guideSlugFromHash(typeof location !== "undefined" ? location.hash : "") ?? "start");
   /** A widget page: one panel of a run, alone, for a stream to capture. */
@@ -143,6 +145,8 @@ export default function App() {
   const [liveRoute, setLiveRoute] = useState<LiveRoute | null>(() => liveFromHash(typeof location !== "undefined" ? location.hash : ""));
   /** A pack the catalog opens on, from `#catalog/<packId>`: a live page's "in the catalog" link lands here. */
   const [catalogFocus, setCatalogFocus] = useState<string | null>(null);
+  /** Which of the profile's four pages, from `#profile` or `#profile/<page>`. */
+  const [profilePage, setProfilePage] = useState<ProfilePage>(() => profilePageFromHash(typeof location !== "undefined" ? location.hash : "") ?? "profile");
   useEffect(() => {
     const fromHash = () => {
       setWidget(widgetFromHash(location.hash));
@@ -153,6 +157,9 @@ export default function App() {
         setView("guide");
       } else if (location.hash === "#create") {
         setView("design");
+      } else if (/^#profile(\/|$)/.test(location.hash)) {
+        setProfilePage(profilePageFromHash(location.hash) ?? "profile");
+        setView("profile");
       } else if (/^#catalog(\/|$)/.test(location.hash)) {
         const id = location.hash.slice("#catalog/".length);
         setCatalogFocus(id ? decodeURIComponent(id) : null);
@@ -180,6 +187,21 @@ export default function App() {
   const leaveDesigner = () => {
     setView("play");
     if (location.hash === "#create") history.replaceState(null, "", location.pathname + location.search);
+  };
+  /**
+   * Opening the profile, or moving between its pages, pushes a history
+   * entry rather than replacing one: unlike the guide and the Designer, the
+   * profile's four pages are meant to be steppable with Back.
+   */
+  const openProfile = (page: ProfilePage = "profile") => {
+    setProfilePage(page);
+    setView("profile");
+    const hash = profileHash(page);
+    if (location.hash !== hash) history.pushState(null, "", hash);
+  };
+  const leaveProfile = () => {
+    setView("play");
+    if (location.hash.startsWith("#profile")) history.replaceState(null, "", location.pathname + location.search);
   };
 
   /**
@@ -765,17 +787,7 @@ export default function App() {
           <button className="ghost guideBtn" onClick={() => (view === "guide" ? leaveGuide() : openGuide())} title="How to use Runlog">
             {view === "guide" ? "Back to the app" : "Guide"}
           </button>
-          <AccountBadge
-            closeKey={view}
-            onOpenProfile={() => setView("profile")}
-            onJoinInvite={async (token) => {
-              try {
-                await joinByToken(token);
-              } catch (error) {
-                setNotice(error instanceof Error && error.message ? error.message : "That invitation could not be accepted.");
-              }
-            }}
-          />
+          <AccountBadge closeKey={view} onOpenProfile={(page) => openProfile(page)} />
         </div>
       </header>
 
@@ -965,7 +977,19 @@ export default function App() {
       ) : view === "guide" ? (
         <GuideView slug={guideSlug} onNavigate={(slug) => openGuide(slug)} onBack={leaveGuide} />
       ) : view === "profile" ? (
-        <ProfileView onBack={() => setView("play")} />
+        <ProfileView
+          onBack={leaveProfile}
+          page={profilePage}
+          onNavigate={openProfile}
+          onOpenRun={(runId) => void openRun(runId)}
+          onJoinInvite={async (token) => {
+            try {
+              await joinByToken(token);
+            } catch (error) {
+              setNotice(error instanceof Error && error.message ? error.message : "That invitation could not be accepted.");
+            }
+          }}
+        />
       ) : view === "design" ? (
         <DesignView />
       ) : !result.ok ? (

@@ -66,7 +66,7 @@ export function PlanSection({ api }: { api: Api | null }) {
   return (
     <section className="panel">
       <h3 className="sectionTitle">
-        Plan <span className="muted">{plus ? "Plus" : "Free"}</span>
+        Plan: <span className="muted">{plus ? "Plus" : "Free"}</span>
       </h3>
       <p className="muted small">
         {plus
