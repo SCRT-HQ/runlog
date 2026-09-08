@@ -9,7 +9,7 @@ const good = {
   version: "0.2.0",
   sha: "abc123",
   links: { terms: "https://runlog.example/legal/terms.html", privacy: "https://runlog.example/legal/privacy.html", pricing: "https://runlog.example/pricing.html" },
-  features: { billing: false },
+  features: { billing: false, testing: true },
 };
 
 describe("the hosted file", () => {
@@ -18,6 +18,13 @@ describe("the hosted file", () => {
     expect(h).toMatchObject({ operator: "Example Co", legalName: "Example Co, LLC", termsVersion: "2026-09-06", version: "0.2.0" });
     expect(h?.links.pricing).toBe("https://runlog.example/pricing.html");
     expect(h?.features.billing).toBe(false);
+    expect(h?.features.testing).toBe(true);
+  });
+
+  it("treats a missing testing feature as off", () => {
+    const { testing: _testing, ...featuresWithoutTesting } = good.features;
+    const h = parseHosted({ ...good, features: featuresWithoutTesting });
+    expect(h?.features.testing).toBe(false);
   });
 
   it("is nothing at all when a required part is missing or a link is not one", () => {

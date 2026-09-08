@@ -3,6 +3,7 @@ import { generateDoc, loadPackText, type Doc, type Pack } from "@runlog/rules-sc
 import { DocView } from "../docs/DocView.tsx";
 import { DocMenu } from "../docs/DocMenu.tsx";
 import { facets, FEATURES, filterCatalog, loadCatalog, publishersOf, type CatalogEntry, type Feature } from "./catalog.ts";
+import { useHosted } from "../hosted/HostedProvider.tsx";
 
 /**
  * The catalog, laid out as a market: cards in a grid, a sidebar to narrow
@@ -51,14 +52,16 @@ export function CatalogView({
   const [tags, setTags] = useState<Set<string>>(new Set());
   const [owned, setOwned] = useState<"all" | "mine" | "new">("all");
   const [publisher, setPublisher] = useState<string | null>(null);
+  const hosted = useHosted();
+  const testing = hosted === null || hosted.features.testing;
 
   useEffect(() => {
     let live = true;
-    void loadCatalog().then((all) => live && setEntries(all));
+    void loadCatalog({ testing }).then((all) => live && setEntries(all));
     return () => {
       live = false;
     };
-  }, []);
+  }, [testing]);
 
   // Arriving on a pack: its About opens once the feed is here, and the search finds it.
   useEffect(() => {
@@ -258,7 +261,10 @@ export function CatalogView({
                     <span className="pill">{e.category}</span>
                     <span className={`muted small ${e.price !== "free" ? "priceTag" : ""}`}>{e.price === "free" ? "free" : e.price.display}</span>
                   </header>
-                  <h3 className="marketTitle">{e.title}</h3>
+                  <h3 className="marketTitle">
+                    {e.title}
+                    {e.bench && <span className="chip cap">test bench</span>}
+                  </h3>
                   <p className="muted small">
                     {e.author && `by ${e.author} · `}v{e.version}
                     {e.players > 1 && ` · up to ${e.players} people`}

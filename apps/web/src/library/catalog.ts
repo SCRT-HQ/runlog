@@ -41,6 +41,13 @@ export interface CatalogEntry {
   players: number;
   /** A short line under the title, made from the above. */
   kind: string;
+  /**
+   * Set on a pack from `packs/testing/`: a test bench, never seeded to the
+   * platform as a listing and never counted as "new in the catalog". A
+   * hosted copy leaves it out of the bundle entirely where its `hosted.json`
+   * says `features.testing` is off; see `loadCatalog`.
+   */
+  bench?: boolean;
   /** Free, or a price in the smallest unit of its currency, with how to show it. */
   price: "free" | { amount: number; currency: string; display: string };
   /** Who listed it: a publisher, or the bundle that ships with the app. */
@@ -66,6 +73,18 @@ const files = import.meta.glob("../../../../packs/{demo,sketches}/*.yaml", { que
   () => Promise<string>
 >;
 
+/**
+ * The test bench, kept apart from `files` rather than folded into one brace
+ * group so every entry it produces can be marked `bench: true` below. It is
+ * a separate PR's pack (`packs/testing/engine-testing.yaml`) and may not
+ * exist on a given checkout; an empty glob here is fine, the same as an
+ * empty `packs/testing/` would be.
+ */
+const benchFiles = import.meta.glob("../../../../packs/testing/*.yaml", { query: "?raw", import: "default" }) as Record<
+  string,
+  () => Promise<string>
+>;
+
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** What a pack's declaration says about how it plays. Tolerant: this reads a file, not a validated pack. */
@@ -74,59 +93,92 @@ function kindOf(category: string, features: Feature[]): string {
   return `${category} · ${how}`;
 }
 
+/** Read one bundled pack's header into a catalog entry. `bench` marks a `packs/testing/` pack. */
+async function bundledEntry(load: () => Promise<string>, bench: boolean): Promise<CatalogEntry | null> {
+  const text = await load();
+  const head = YAML.parse(text) as Record<string, unknown>;
+  const id = String(head["id"] ?? "");
+  if (!id) return null;
+  const category = typeof head["category"] === "string" && head["category"].trim() ? head["category"].trim().toLowerCase() : "other";
+  const tags = Array.isArray(head["tags"]) ? head["tags"].map((t) => String(t).trim()).filter(Boolean) : [];
+  const { features, players } = featuresOf(head);
+  const requires = Array.isArray(head["requires"])
+    ? head["requires"]
+        .filter(isRecord)
+        .map((r) => ({ label: String(r["label"] ?? ""), kind: String(r["kind"] ?? "other"), optional: r["optional"] === true }))
+        .filter((r) => r.label)
+    : [];
+  return {
+    id,
+    version: String(head["version"] ?? ""),
+    title: String(head["title"] ?? id),
+    ...(typeof head["author"] === "string" ? { author: head["author"] } : {}),
+    ...(typeof head["description"] === "string" ? { description: head["description"].trim() } : {}),
+    category,
+    tags,
+    features,
+    players,
+    requires,
+    kind: kindOf(category, features),
+    price: "free",
+    source: "bundled",
+    load: async () => text,
+    ...(bench ? { bench: true } : {}),
+  };
+}
+
 let cached: Promise<CatalogEntry[]> | null = null;
 
-/** Every catalog entry, with its header read; the text itself stays lazy. */
-export function loadCatalog(): Promise<CatalogEntry[]> {
-  if (cached) return cached;
-  cached = (async () => {
-    const entries: CatalogEntry[] = [];
-    for (const load of Object.values(files)) {
-      const text = await load();
-      const head = YAML.parse(text) as Record<string, unknown>;
-      const id = String(head["id"] ?? "");
-      if (!id) continue;
-      const category = typeof head["category"] === "string" && head["category"].trim() ? head["category"].trim().toLowerCase() : "other";
-      const tags = Array.isArray(head["tags"]) ? head["tags"].map((t) => String(t).trim()).filter(Boolean) : [];
-      const { features, players } = featuresOf(head);
-      const requires = Array.isArray(head["requires"])
-        ? head["requires"]
-            .filter(isRecord)
-            .map((r) => ({ label: String(r["label"] ?? ""), kind: String(r["kind"] ?? "other"), optional: r["optional"] === true }))
-            .filter((r) => r.label)
-        : [];
-      entries.push({
-        id,
-        version: String(head["version"] ?? ""),
-        title: String(head["title"] ?? id),
-        ...(typeof head["author"] === "string" ? { author: head["author"] } : {}),
-        ...(typeof head["description"] === "string" ? { description: head["description"].trim() } : {}),
-        category,
-        tags,
-        features,
-        players,
-        requires,
-        kind: kindOf(category, features),
-        price: "free",
-        source: "bundled",
-        load: async () => text,
+/**
+ * Every catalog entry, with its header read; the text itself stays lazy.
+ *
+ * `testing` says whether a `bench: true` entry (the pack under
+ * `packs/testing/`) should be in what comes back. Left unset, nothing is
+ * filtered — a caller that needs every pack it already knows about, such as
+ * resolving a pack a run points at, should never lose it because a flag
+ * changed after the fact. A view that lists the catalog for someone to
+ * browse should pass the copy's own answer instead: `hosted === null` (no
+ * `hosted.json` at all — static, local, self-hosted) or
+ * `hosted.features.testing`.
+ */
+export function loadCatalog(opts: { testing?: boolean } = {}): Promise<CatalogEntry[]> {
+  if (!cached) {
+    cached = (async () => {
+      const entries: CatalogEntry[] = [];
+      for (const load of Object.values(files)) {
+        const entry = await bundledEntry(load, false);
+        if (entry) entries.push(entry);
+      }
+      for (const load of Object.values(benchFiles)) {
+        const entry = await bundledEntry(load, true);
+        if (entry) entries.push(entry);
+      }
+      // The feed, where there is one: what publishers listed, the built-ins
+      // seeded among them. A listing wins over the bundle's copy of the same
+      // id, so a newer version published beats the one that shipped.
+      const byId = new Map(entries.map((e) => [e.id, e]));
+      for (const e of await loadFeed()) byId.set(e.id, e);
+      const merged = [...byId.values()];
+      merged.sort((a, b) => {
+        const x = ORDER.indexOf(a.id);
+        const y = ORDER.indexOf(b.id);
+        if (x !== y) return (x === -1 ? 99 : x) - (y === -1 ? 99 : y);
+        return a.title.localeCompare(b.title);
       });
-    }
-    // The feed, where there is one: what publishers listed, the built-ins
-    // seeded among them. A listing wins over the bundle's copy of the same
-    // id, so a newer version published beats the one that shipped.
-    const byId = new Map(entries.map((e) => [e.id, e]));
-    for (const e of await loadFeed()) byId.set(e.id, e);
-    const merged = [...byId.values()];
-    merged.sort((a, b) => {
-      const x = ORDER.indexOf(a.id);
-      const y = ORDER.indexOf(b.id);
-      if (x !== y) return (x === -1 ? 99 : x) - (y === -1 ? 99 : y);
-      return a.title.localeCompare(b.title);
-    });
-    return merged;
-  })();
-  return cached;
+      return merged;
+    })();
+  }
+  return cached.then((entries) => withTesting(entries, opts.testing));
+}
+
+/**
+ * Drop the bench entries where a copy is not meant to carry them. `testing`
+ * left unset keeps everything, the same as `loadCatalog()` with no options —
+ * see its doc comment for why. Exported so the rule is checked directly,
+ * without needing a real `packs/testing/` pack on disk to exercise it.
+ */
+export function withTesting(entries: readonly CatalogEntry[], testing?: boolean): CatalogEntry[] {
+  return testing === false ? entries.filter((e) => !e.bench) : [...entries];
 }
 
 /** A card as the feed carries it. */
@@ -304,7 +356,10 @@ export interface PublisherFacet {
 export function publishersOf(entries: readonly CatalogEntry[]): PublisherFacet[] {
   const m = new Map<string, PublisherFacet & { low: number }>();
   for (const e of entries) {
-    if (!e.publisher) continue;
+    // A test bench is never a publisher's listing (seed-listings.ts leaves
+    // it out on purpose), but the check is explicit rather than relying on
+    // that: a bench pack should never show up as something to publish by.
+    if (!e.publisher || e.bench) continue;
     const p = m.get(e.publisher.id) ?? { id: e.publisher.id, name: e.publisher.name, count: 0, free: 0, from: null, low: Number.POSITIVE_INFINITY };
     p.count += 1;
     if (e.price === "free") p.free += 1;

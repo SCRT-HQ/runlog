@@ -32,6 +32,8 @@ export interface LibraryPack {
   record?: StoredPack;
   /** The catalog's newer version of this pack, when it has one. */
   update?: string;
+  /** Whether this is the test bench pack. */
+  bench?: boolean;
 }
 
 const FALLBACK_VOCABULARY: Pack["vocabulary"] = {
@@ -167,6 +169,7 @@ export function LibraryView({
             <div className="libraryPackHead">
               <button className="libraryTitle" onClick={() => onOpen(p)} title={`Open ${p.title}`}>
                 <strong>{p.title}</strong>
+                {p.bench && <span className="chip cap">test bench</span>}
                 <span className="muted small">
                   {p.sub}
                   {last && ` · played ${onDay(last)}`}

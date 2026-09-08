@@ -45,6 +45,8 @@ export interface Hosted {
   features: {
     /** Whether plans, checkout and the billing portal are on. */
     billing: boolean;
+    /** Whether the bundled catalog includes the engine-testing pack. */
+    testing: boolean;
   };
 }
 
@@ -90,7 +92,7 @@ export function parseHosted(raw: unknown): Hosted | null {
       ...optional("release"),
       ...optional("commit"),
     },
-    features: { billing: f["billing"] === true },
+    features: { billing: f["billing"] === true, testing: f["testing"] === true },
   };
 }
 
