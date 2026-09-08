@@ -1,17 +1,26 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DeleteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { DeleteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { traced } from "./xray.js";
 
 /**
- * What the API keeps for Discord: the codes `/link` mints, and which
- * Runlog account a Discord account is linked to, both ways round.
+ * What the API keeps for Discord: which Runlog account a Discord account
+ * is (both ways round), which Runlog account a server belongs to, and the
+ * packs that account has put in a server's vault for the bot to play.
  *
  * A Discord account links to one Runlog account and a Runlog account to
  * one Discord account; linking again replaces, on both sides, so a row
- * never points at a person who has moved on. Discord's user id is the
- * only thing kept of Discord's — no token, no email, no avatar — and it
- * goes when the account does. Servers and the runs hosted in them come
- * later and will live here too; the name says so.
+ * never points at a person who has moved on. A server belongs to one
+ * account too, the one that claims it, and claiming again replaces the
+ * owner. Discord's ids are the only things kept of Discord's — no token,
+ * no email — and a person's rows go when the account does.
+ *
+ * The vault is the one place the hosting holds a pack's text for a
+ * purpose other than handing it back to the person who sent it: the bot
+ * reads it to play, and nobody, the owner included, is ever served it
+ * from here. That is the rule the rest of the hosting keeps and this
+ * module bends, in one direction, on purpose; hosted/infra/README.md says
+ * why.
  */
 
 export interface LinkCode {
@@ -31,6 +40,42 @@ export interface Connection {
   linkedAt: string;
 }
 
+export interface ClaimCode {
+  code: string;
+  guildId: string;
+  /** Who asked, in Discord: someone who could manage the server at the time. */
+  discordUserId: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface Guild {
+  guildId: string;
+  /** What Discord calls it, when the bot could ask; the id stands in otherwise. */
+  name?: string;
+  ownerSub: string;
+  claimedAt: string;
+  updatedAt: string;
+  /** The role that may host runs; absent, anyone who can manage the server. */
+  hostRoleId?: string;
+  /** Where runs open by default; absent, wherever the command was used. */
+  channelId?: string;
+}
+
+/** A pack in a server's vault, as the profile lists it: never its text. */
+export interface GuildPackMeta {
+  id: string;
+  title: string;
+  version: string;
+  format: "yaml" | "json";
+  hash: string;
+  bytes: number;
+  /** The modes the pack offers, by id and label, computed by the app that sent it; the bot lists them without opening the pack. */
+  modes: Array<{ id: string; label: string }>;
+  updatedAt: string;
+  delegatedBy: string;
+}
+
 export interface GuildStore {
   putLinkCode(link: LinkCode): Promise<void>;
   /** The code's row, and the row is gone: a code is spent by being read. Null when missing or past its time. */
@@ -41,28 +86,104 @@ export interface GuildStore {
   userForDiscord(discordUserId: string): Promise<string | null>;
   /** True when there was a link to remove. */
   disconnect(sub: string): Promise<boolean>;
-  /** Everything about this person, for the account's deletion; how many rows went. */
+
+  putClaimCode(claim: ClaimCode): Promise<void>;
+  takeClaimCode(code: string, at: string): Promise<ClaimCode | null>;
+  /** Claim, replacing a previous owner's claim if there was one. */
+  claimGuild(guild: Omit<Guild, "updatedAt">): Promise<Guild>;
+  guild(guildId: string): Promise<Guild | null>;
+  guildsOf(sub: string): Promise<Guild[]>;
+  updateGuild(guildId: string, at: string, patch: { name?: string; hostRoleId?: string | null; channelId?: string | null }): Promise<Guild | null>;
+  /** The server's row, its pointer, and every pack in its vault; how many rows went. */
+  releaseGuild(guildId: string): Promise<number>;
+
+  putGuildPack(guildId: string, meta: GuildPackMeta, source: string): Promise<void>;
+  getGuildPack(guildId: string, packId: string): Promise<{ meta: GuildPackMeta; source: string } | null>;
+  listGuildPacks(guildId: string): Promise<GuildPackMeta[]>;
+  deleteGuildPack(guildId: string, packId: string): Promise<boolean>;
+
+  /** Everything about this person — links and the servers they own — for the account's deletion; how many rows went. */
   forgetUser(sub: string): Promise<number>;
 }
 
-const toEpoch = (at: string) => Math.floor(new Date(at).getTime() / 1000);
+/** Servers one account may claim. Enough for a person with a community or two; not a way to resell. */
+export const MAX_GUILDS_PER_SUB = 3;
 
-export function dynamoGuilds({ table }: { table: string }): GuildStore {
+const toEpoch = (at: string) => Math.floor(new Date(at).getTime() / 1000);
+const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
+
+export function dynamoGuilds({ table, bucket }: { table: string; bucket: string }): GuildStore {
   const ddb = DynamoDBDocumentClient.from(traced(new DynamoDBClient({})), { marshallOptions: { removeUndefinedValues: true } });
+  const s3 = traced(new S3Client({}));
   const linkKey = (code: string) => ({ pk: `DISCORD#LINK#${code}`, sk: "LINK" });
+  const claimKey = (code: string) => ({ pk: `DISCORD#CLAIM#${code}`, sk: "CLAIM" });
   const userKey = (sub: string) => ({ pk: `USER#${sub}`, sk: "CONNECTION#discord" });
   const discordKey = (id: string) => ({ pk: `DISCORD#${id}`, sk: "USER" });
+  const guildKey = (guildId: string) => ({ pk: `GUILD#${guildId}`, sk: "META" });
+  const guildPointer = (sub: string, guildId: string) => ({ pk: `USER#${sub}`, sk: `GUILD#${guildId}` });
+  const packKey = (guildId: string, packId: string) => ({ pk: `GUILD#${guildId}`, sk: `PACK#${packId}` });
+  const objectKey = (guildId: string, packId: string, format: string) => `guilds/${guildId}/packs/${packId}.${format}`;
+
+  const guildOf = (item: Record<string, unknown> | undefined): Guild | null => {
+    if (!item || typeof item["guildId"] !== "string" || typeof item["ownerSub"] !== "string") return null;
+    return {
+      guildId: item["guildId"],
+      ownerSub: item["ownerSub"],
+      claimedAt: str(item["claimedAt"]) ?? "",
+      updatedAt: str(item["updatedAt"]) ?? "",
+      ...(str(item["name"]) ? { name: item["name"] as string } : {}),
+      ...(str(item["hostRoleId"]) ? { hostRoleId: item["hostRoleId"] as string } : {}),
+      ...(str(item["channelId"]) ? { channelId: item["channelId"] as string } : {}),
+    };
+  };
+  const packOf = (item: Record<string, unknown> | undefined): GuildPackMeta | null => {
+    if (!item || typeof item["id"] !== "string") return null;
+    const modes = Array.isArray(item["modes"]) ? (item["modes"] as unknown[]).filter((m): m is { id: string; label: string } => typeof m === "object" && m !== null && typeof (m as { id?: unknown }).id === "string" && typeof (m as { label?: unknown }).label === "string") : [];
+    return {
+      id: item["id"],
+      title: str(item["title"]) ?? item["id"],
+      version: str(item["version"]) ?? "",
+      format: item["format"] === "json" ? "json" : "yaml",
+      hash: str(item["hash"]) ?? "",
+      bytes: typeof item["bytes"] === "number" ? item["bytes"] : 0,
+      modes,
+      updatedAt: str(item["updatedAt"]) ?? "",
+      delegatedBy: str(item["delegatedBy"]) ?? "",
+    };
+  };
 
   const connectionOf = async (sub: string): Promise<Connection | null> => {
     const out = await ddb.send(new GetCommand({ TableName: table, Key: userKey(sub) }));
     const item = out.Item;
     if (!item || typeof item["discordUserId"] !== "string") return null;
-    return { discordUserId: item["discordUserId"], name: typeof item["name"] === "string" ? item["name"] : "", linkedAt: typeof item["linkedAt"] === "string" ? item["linkedAt"] : "" };
+    return { discordUserId: item["discordUserId"], name: str(item["name"]) ?? "", linkedAt: str(item["linkedAt"]) ?? "" };
   };
   const userFor = async (discordUserId: string): Promise<string | null> => {
     const out = await ddb.send(new GetCommand({ TableName: table, Key: discordKey(discordUserId) }));
-    const sub = out.Item?.["sub"];
-    return typeof sub === "string" ? sub : null;
+    return str(out.Item?.["sub"]) ?? null;
+  };
+  const getGuild = async (guildId: string): Promise<Guild | null> => guildOf((await ddb.send(new GetCommand({ TableName: table, Key: guildKey(guildId) }))).Item);
+  const listPacks = async (guildId: string): Promise<GuildPackMeta[]> => {
+    const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `GUILD#${guildId}`, ":sk": "PACK#" } }));
+    return (out.Items ?? []).map(packOf).filter((p): p is GuildPackMeta => p !== null);
+  };
+  const disconnectRows = async (sub: string): Promise<number> => {
+    const had = await connectionOf(sub);
+    if (!had) return 0;
+    await ddb.send(new TransactWriteCommand({ TransactItems: [{ Delete: { TableName: table, Key: userKey(sub) } }, { Delete: { TableName: table, Key: discordKey(had.discordUserId) } }] }));
+    return 2;
+  };
+  const release = async (guildId: string): Promise<number> => {
+    const guild = await getGuild(guildId);
+    if (!guild) return 0;
+    let rows = 0;
+    for (const pack of await listPacks(guildId)) {
+      await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey(guildId, pack.id, pack.format) }));
+      await ddb.send(new DeleteCommand({ TableName: table, Key: packKey(guildId, pack.id) }));
+      rows += 1;
+    }
+    await ddb.send(new TransactWriteCommand({ TransactItems: [{ Delete: { TableName: table, Key: guildKey(guildId) } }, { Delete: { TableName: table, Key: guildPointer(guild.ownerSub, guildId) } }] }));
+    return rows + 2;
   };
 
   return {
@@ -73,16 +194,9 @@ export function dynamoGuilds({ table }: { table: string }): GuildStore {
       const out = await ddb.send(new DeleteCommand({ TableName: table, Key: linkKey(code), ReturnValues: "ALL_OLD" }));
       const item = out.Attributes;
       if (!item || typeof item["discordUserId"] !== "string") return null;
-      const expiresAt = typeof item["expiresAtIso"] === "string" ? item["expiresAtIso"] : "";
+      const expiresAt = str(item["expiresAtIso"]) ?? "";
       if (!expiresAt || expiresAt < at) return null;
-      return {
-        code,
-        discordUserId: item["discordUserId"],
-        name: typeof item["name"] === "string" ? item["name"] : "",
-        ...(typeof item["guildId"] === "string" ? { guildId: item["guildId"] } : {}),
-        createdAt: typeof item["createdAt"] === "string" ? item["createdAt"] : at,
-        expiresAt,
-      };
+      return { code, discordUserId: item["discordUserId"], name: str(item["name"]) ?? "", ...(str(item["guildId"]) ? { guildId: item["guildId"] as string } : {}), createdAt: str(item["createdAt"]) ?? at, expiresAt };
     },
     async connect(sub, c) {
       // Whatever either side pointed at before goes, so no row is left
@@ -99,30 +213,113 @@ export function dynamoGuilds({ table }: { table: string }): GuildStore {
     connection: connectionOf,
     userForDiscord: userFor,
     async disconnect(sub) {
-      const had = await connectionOf(sub);
-      if (!had) return false;
-      await ddb.send(
-        new TransactWriteCommand({
-          TransactItems: [
-            { Delete: { TableName: table, Key: userKey(sub) } },
-            { Delete: { TableName: table, Key: discordKey(had.discordUserId) } },
-          ],
-        }),
-      );
+      return (await disconnectRows(sub)) > 0;
+    },
+
+    async putClaimCode(claim) {
+      await ddb.send(new PutCommand({ TableName: table, Item: { ...claimKey(claim.code), kind: "discord-claim", ...claim, expiresAt: toEpoch(claim.expiresAt), expiresAtIso: claim.expiresAt } }));
+    },
+    async takeClaimCode(code, at) {
+      const out = await ddb.send(new DeleteCommand({ TableName: table, Key: claimKey(code), ReturnValues: "ALL_OLD" }));
+      const item = out.Attributes;
+      if (!item || typeof item["guildId"] !== "string" || typeof item["discordUserId"] !== "string") return null;
+      const expiresAt = str(item["expiresAtIso"]) ?? "";
+      if (!expiresAt || expiresAt < at) return null;
+      return { code, guildId: item["guildId"], discordUserId: item["discordUserId"], createdAt: str(item["createdAt"]) ?? at, expiresAt };
+    },
+    async claimGuild(g) {
+      const previous = await getGuild(g.guildId);
+      const made: Guild = { ...g, updatedAt: g.claimedAt };
+      const items: Array<{ Delete: { TableName: string; Key: Record<string, string> } } | { Put: { TableName: string; Item: Record<string, unknown> } }> = [];
+      if (previous && previous.ownerSub !== g.ownerSub) items.push({ Delete: { TableName: table, Key: guildPointer(previous.ownerSub, g.guildId) } });
+      items.push({ Put: { TableName: table, Item: { ...guildKey(g.guildId), kind: "guild", ...made } } });
+      items.push({ Put: { TableName: table, Item: { ...guildPointer(g.ownerSub, g.guildId), kind: "guildpointer", guildId: g.guildId, claimedAt: g.claimedAt } } });
+      await ddb.send(new TransactWriteCommand({ TransactItems: items }));
+      return made;
+    },
+    guild: getGuild,
+    async guildsOf(sub) {
+      const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `USER#${sub}`, ":sk": "GUILD#" } }));
+      const guilds: Guild[] = [];
+      for (const pointer of out.Items ?? []) {
+        const id = str(pointer["guildId"]);
+        const g = id ? await getGuild(id) : null;
+        // A pointer whose server was claimed by someone else since is stale; it is not this person's.
+        if (g && g.ownerSub === sub) guilds.push(g);
+      }
+      return guilds.sort((a, b) => a.claimedAt.localeCompare(b.claimedAt));
+    },
+    async updateGuild(guildId, at, patch) {
+      const sets = ["updatedAt = :at"];
+      const removes: string[] = [];
+      const values: Record<string, unknown> = { ":at": at };
+      if (patch.name !== undefined) {
+        sets.push("#name = :name");
+        values[":name"] = patch.name;
+      }
+      for (const field of ["hostRoleId", "channelId"] as const) {
+        const v = patch[field];
+        if (v === undefined) continue;
+        if (v === null) removes.push(field);
+        else {
+          sets.push(`${field} = :${field}`);
+          values[`:${field}`] = v;
+        }
+      }
+      try {
+        const out = await ddb.send(
+          new UpdateCommand({
+            TableName: table,
+            Key: guildKey(guildId),
+            UpdateExpression: `SET ${sets.join(", ")}${removes.length > 0 ? ` REMOVE ${removes.join(", ")}` : ""}`,
+            ConditionExpression: "attribute_exists(pk)",
+            ExpressionAttributeValues: values,
+            ...(patch.name !== undefined ? { ExpressionAttributeNames: { "#name": "name" } } : {}),
+            ReturnValues: "ALL_NEW",
+          }),
+        );
+        return guildOf(out.Attributes);
+      } catch (error) {
+        if ((error as { name?: string }).name === "ConditionalCheckFailedException") return null;
+        throw error;
+      }
+    },
+    releaseGuild: release,
+
+    async putGuildPack(guildId, meta, source) {
+      await s3.send(new PutObjectCommand({ Bucket: bucket, Key: objectKey(guildId, meta.id, meta.format), Body: source, ContentType: "text/plain; charset=utf-8" }));
+      await ddb.send(new PutCommand({ TableName: table, Item: { ...packKey(guildId, meta.id), kind: "guildpack", ...meta } }));
+    },
+    async getGuildPack(guildId, packId) {
+      const meta = packOf((await ddb.send(new GetCommand({ TableName: table, Key: packKey(guildId, packId) }))).Item);
+      if (!meta) return null;
+      const out = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: objectKey(guildId, packId, meta.format) }));
+      const source = (await out.Body?.transformToString("utf8")) ?? "";
+      return { meta, source };
+    },
+    listGuildPacks: listPacks,
+    async deleteGuildPack(guildId, packId) {
+      const meta = packOf((await ddb.send(new GetCommand({ TableName: table, Key: packKey(guildId, packId) }))).Item);
+      if (!meta) return false;
+      await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey(guildId, packId, meta.format) }));
+      await ddb.send(new DeleteCommand({ TableName: table, Key: packKey(guildId, packId) }));
       return true;
     },
+
     async forgetUser(sub) {
-      const had = await connectionOf(sub);
-      if (!had) return 0;
-      await ddb.send(
-        new TransactWriteCommand({
-          TransactItems: [
-            { Delete: { TableName: table, Key: userKey(sub) } },
-            { Delete: { TableName: table, Key: discordKey(had.discordUserId) } },
-          ],
-        }),
-      );
-      return 2;
+      let rows = await disconnectRows(sub);
+      const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `USER#${sub}`, ":sk": "GUILD#" } }));
+      for (const pointer of out.Items ?? []) {
+        const id = str(pointer["guildId"]);
+        if (!id) continue;
+        const g = await getGuild(id);
+        if (g && g.ownerSub === sub) rows += await release(id);
+        else {
+          await ddb.send(new DeleteCommand({ TableName: table, Key: guildPointer(sub, id) }));
+          rows += 1;
+        }
+      }
+      return rows;
     },
   };
 }

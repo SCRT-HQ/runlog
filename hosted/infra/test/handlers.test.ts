@@ -1680,3 +1680,65 @@ describe("discord", () => {
     expect(guilds.codes.size).toBe(0);
   });
 });
+
+describe("a claimed server", () => {
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const publicHex = publicKey.export({ type: "spki", format: "der" }).subarray(-32).toString("hex");
+  const signed = (body: unknown) => {
+    const raw = JSON.stringify(body);
+    const signature = sign(null, Buffer.concat([Buffer.from("1700000000"), Buffer.from(raw)]), privateKey).toString("hex");
+    return { ...request("POST", "/api/discord/interactions", { token: null, headers: { "x-signature-ed25519": signature, "x-signature-timestamp": "1700000000" } }), body: raw } as APIGatewayProxyEventV2;
+  };
+  const claimPress = (guildId: string) => ({ id: "i1", application_id: "app", type: 2, token: "t", guild_id: guildId, member: { user: { id: "1001", username: "mira" }, permissions: "32" }, data: { name: "setup", options: [{ name: "claim", type: 1 }] } });
+  const pack = { title: "The Long Kiln", version: "1.0.0", format: "yaml", hash: "h1", modes: [{ id: "standard", label: "Standard" }, { id: "short", label: "Short" }], source: "id: com.scrthq.runlog.long-kiln\n" };
+
+  it("is claimed by handing in the code, lists for its owner alone, takes packs into a vault it never hands back, and is released whole", async () => {
+    const guilds = memoryGuilds();
+    let codes = 0;
+    const d = deps(memoryStore(), { guilds, discord: { applicationId: "app", publicKey: publicHex, token: async () => null, guildName: async (id) => (id === "g1" ? "The Kiln Room" : null) }, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
+    await call(signed(claimPress("g1")), d);
+    // With plans off, nothing to upgrade to; the server is simply claimed, and named by Discord where the bot could ask.
+    const claimed = await call(request("POST", "/api/guilds/claim", { body: { code: "claima" } }), d);
+    expect(claimed.body).toEqual({ claimed: true, plan: "server", upgrade: false, guild: { guildId: "g1", name: "The Kiln Room", ownerSub: "user_1", claimedAt: "2026-09-06T12:00:00.000Z", updatedAt: "2026-09-06T12:00:00.000Z" } });
+    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "claima" } }), d)).status).toBe(422);
+    expect((await call(request("GET", "/api/guilds"), d)).body).toMatchObject({ server: true, guilds: [{ guildId: "g1" }] });
+    expect((await call(request("GET", "/api/guilds", { token: "guest" }), d)).body).toMatchObject({ guilds: [] });
+    // The vault: the owner puts a pack in, sees it listed without its text, and nobody else sees the server at all.
+    const kept = await call(request("PUT", "/api/guilds/g1/packs/com.scrthq.runlog.long-kiln", { body: pack }), d);
+    expect(kept.body).toMatchObject({ kept: true, pack: { id: "com.scrthq.runlog.long-kiln", title: "The Long Kiln", modes: pack.modes, bytes: Buffer.byteLength(pack.source), delegatedBy: "user_1" } });
+    const listed = await call(request("GET", "/api/guilds/g1/packs"), d);
+    expect(listed.body["packs"]).toHaveLength(1);
+    expect(JSON.stringify(listed.body)).not.toContain("source");
+    expect((await call(request("GET", "/api/guilds/g1/packs", { token: "guest" }), d)).body).toEqual({ found: false });
+    expect((await call(request("PUT", "/api/guilds/g1/packs/x", { body: { ...pack, format: "toml" } }), d)).status).toBe(422);
+    expect((await call(request("DELETE", "/api/guilds/g1/packs/com.scrthq.runlog.long-kiln"), d)).body).toEqual({ removed: true });
+    await call(request("PUT", "/api/guilds/g1/packs/com.scrthq.runlog.long-kiln", { body: pack }), d);
+    // Releasing takes the server's rows and its vault with it.
+    expect((await call(request("DELETE", "/api/guilds/g1", { token: "guest" }), d)).body).toEqual({ found: false });
+    expect((await call(request("DELETE", "/api/guilds/g1"), d)).body).toEqual({ released: 3 });
+    expect(guilds.vault.size).toBe(0);
+    expect((await call(request("GET", "/api/guilds"), d)).body).toMatchObject({ guilds: [] });
+  });
+
+  it("says when the owner has no server plan where plans gate, allows three servers, and moves with a new claim", async () => {
+    const guilds = memoryGuilds();
+    const billing = memoryBilling();
+    let codes = 0;
+    const d = deps(memoryStore(), { guilds, billing, gates: true, features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" }, discord: { applicationId: "app", publicKey: publicHex, token: async () => null }, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
+    for (const g of ["g1", "g2", "g3", "g4"]) await call(signed(claimPress(g)), d);
+    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMA" } }), d)).body).toMatchObject({ claimed: true, upgrade: true });
+    await billing.putEntitlements("user_1", ["server"], "now");
+    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMB" } }), d)).body).toMatchObject({ claimed: true, upgrade: false });
+    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMC" } }), d)).body).toMatchObject({ claimed: true });
+    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMD" } }), d)).status).toBe(422);
+    expect((await call(request("GET", "/api/guilds"), d)).body).toMatchObject({ server: true });
+    // Another account claiming one of them takes it over; the first account's list shrinks.
+    await call(signed(claimPress("g1")), d);
+    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIME" }, token: "guest" }), d)).body).toMatchObject({ claimed: true, guild: { guildId: "g1", ownerSub: "user_2" } });
+    expect(((await call(request("GET", "/api/guilds"), d)).body["guilds"] as unknown[]).length).toBe(2);
+    // Deleting the account releases what it owned.
+    await call(request("DELETE", "/api/me"), d);
+    expect(guilds.guilds.has("g2")).toBe(false);
+    expect(guilds.guilds.has("g1")).toBe(true);
+  });
+});

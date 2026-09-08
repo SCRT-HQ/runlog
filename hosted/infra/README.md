@@ -397,9 +397,32 @@ the code to `POST /api/connections/discord`, which writes
 `USER#<sub>/CONNECTION#discord` and the reverse `DISCORD#<id>/USER`.
 Nothing of Discord's is kept but the user id and the name it showed; a
 link replaces on both sides, `DELETE /api/connections/discord` removes it,
-and deleting the account sweeps it. Hosting runs from a server, and the
-plan that pays for it, come next and will live in `lib/handlers/guilds.ts`
-and `lib/handlers/discord/`.
+and deleting the account sweeps it.
+
+A server is claimed the same way. `/setup claim`, by someone who can
+manage the server (Discord's own permission bits, checked again here),
+mints a code bound to the server (`DISCORD#CLAIM#<code>`); handed to
+`POST /api/guilds/claim`, it makes the signed-in account the server's
+owner (`GUILD#<id>/META`, pointer `USER#<sub>/GUILD#<id>`), replacing a
+previous owner, three servers to an account. The owner pays for the
+server's plan — the `server` feature, sold as "Runlog for servers"
+through the same Stripe plumbing as Plus — and `/setup status` says
+whether it is active where plans gate. `/setup role` and `/setup channel`
+set who may host and where runs open.
+
+The owner puts packs in the server's **vault** from their profile:
+`PUT /api/guilds/{id}/packs/{packId}` takes the pack's text and a summary
+the app computed (title, version, the modes by label), and keeps the
+text at `guilds/<id>/packs/<packId>.<format>` in the bucket. This is the
+one place the hosting holds a pack's text for something other than
+handing it back to whoever sent it: the bot reads it to play, and
+nobody, the owner included, is ever served it from here — the profile
+and `/packs` list what is there, never the text, so a sealed pack's
+words go no further than the drawn lines the bot will post. That is a
+deliberate bend in the rule the rest of the API keeps, and it is confined
+to the vault. Releasing a server, or deleting the account, empties the
+vault. Hosting runs from a server on those packs comes next, in
+`lib/handlers/discord/`.
 
 ## Monitoring
 

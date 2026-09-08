@@ -81,9 +81,9 @@ export interface EnvConfig {
    * and an empty price is a plan that cannot be bought yet.
    */
   stripe: {
-    prices: { plusMonthly: string; plusYearly: string; hostedMonthly: string; hostedYearly: string };
+    prices: { plusMonthly: string; plusYearly: string; hostedMonthly: string; hostedYearly: string; serverMonthly: string; serverYearly: string };
     /** The feature lookup keys Stripe entitles; what `entitlements` in `GET /api/me` carries. */
-    features: { plus: string; hostedLicensing: string };
+    features: { plus: string; hostedLicensing: string; server: string };
     /** The platform's share of a sale, in basis points, by whether the publisher subscribes to hosted licensing. */
     applicationFeeBps: { subscribed: number; unsubscribed: number };
   };
@@ -221,7 +221,7 @@ export function envConfig(name: EnvName): EnvConfig {
   const email = rec(c["email"], "email");
   const stripe = rec(c["stripe"], "stripe");
   const prices = rec(stripe["prices"], "stripe.prices");
-  const features = rec(stripe["features"] ?? { plus: "plus", hostedLicensing: "hosted-licensing" }, "stripe.features");
+  const features = rec({ plus: "plus", hostedLicensing: "hosted-licensing", server: "server", ...(isRecord(stripe["features"]) ? stripe["features"] : {}) }, "stripe.features");
   const fee = rec(stripe["applicationFeeBps"] ?? { subscribed: 0, unsubscribed: 500 }, "stripe.applicationFeeBps");
   const hosted = rec(c["hosted"], "hosted");
   const price = (key: string): string => {
@@ -248,8 +248,8 @@ export function envConfig(name: EnvName): EnvConfig {
     email: { from: str(email["from"], "email.from"), region: str(email["region"], "email.region"), identity: str(email["identity"], "email.identity") },
     gates: bool(c["gates"], "gates"),
     stripe: {
-      prices: { plusMonthly: price("plusMonthly"), plusYearly: price("plusYearly"), hostedMonthly: price("hostedMonthly"), hostedYearly: price("hostedYearly") },
-      features: { plus: str(features["plus"], "stripe.features.plus"), hostedLicensing: str(features["hostedLicensing"], "stripe.features.hostedLicensing") },
+      prices: { plusMonthly: price("plusMonthly"), plusYearly: price("plusYearly"), hostedMonthly: price("hostedMonthly"), hostedYearly: price("hostedYearly"), serverMonthly: price("serverMonthly"), serverYearly: price("serverYearly") },
+      features: { plus: str(features["plus"], "stripe.features.plus"), hostedLicensing: str(features["hostedLicensing"], "stripe.features.hostedLicensing"), server: str(features["server"], "stripe.features.server") },
       applicationFeeBps: { subscribed: num(fee["subscribed"], "stripe.applicationFeeBps.subscribed"), unsubscribed: num(fee["unsubscribed"], "stripe.applicationFeeBps.unsubscribed") },
     },
     ...(isRecord(c["discord"])
