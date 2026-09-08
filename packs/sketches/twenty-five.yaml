@@ -1,0 +1,371 @@
+# Twenty-five — a day in twenty-five minute Blocks, with a bell that means it.
+#
+# A Day of Blocks. Each Block is one Task on a twenty-five minute clock that
+# starts when the Block does. When the bell goes you finish the sentence,
+# not the paragraph; a Block that runs two minutes over rolls the Overrun,
+# and Overruns pile up as Debt. Debt buys a long break at three and ends the
+# Day at five. Every Block closes by drawing the next Break, and four Blocks
+# in a row on the clock earn a Boon. The Wrap-up says how the Day landed.
+#
+# Written to show a timer read as a rule: a bell that fires when it rings,
+# an overrun measured in minutes, and a streak that only the clock can keep.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.twenty-five
+version: "0.1.0"
+title: Twenty-five
+author: Runlog
+description: >-
+  One task per twenty-five minute Block, a bell that means stop, and a
+  Break card between. Running over builds Debt; four clean Blocks earn a
+  Boon; the Wrap-up says how the Day went.
+
+category: everyday
+tags: [productivity, focus, pomodoro, for anyone]
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - decks
+  - counters
+  - coopRoles
+  - timers
+  - journal
+  - bandsResolution
+  - clockRules
+
+vocabulary:
+  run: { one: Day, many: Days }
+  unit: { one: Block, many: Blocks }
+  subject: { one: Task, many: Tasks }
+  finalize: Call it
+
+unit:
+  createsSubject: true
+  clock: { kind: timer, minutes: 25, auto: true, label: This Block }
+  min: 1
+  max: 12
+
+states:
+  split:
+    label: Split
+    short: SP
+    scope: subject
+    description: Two Tasks in one Block. Honest, and not what a Block is for.
+
+counters:
+  debt:
+    label: Debt
+    initial: 0
+    min: 0
+    triggers:
+      - when: { gte: 3 }
+        oncePerRun: true
+        label: A long break
+        do:
+          - { do: note, text: "A long break: fifteen minutes, before the next Block. Away from the desk.", persistent: true }
+          - { do: startTimer, minutes: 15, label: "Long break" }
+  clean:
+    label: Clean Blocks in a row
+    initial: 0
+    min: 0
+    incrementOn:
+      - { on: unitFinalized }
+    resetOn:
+      - { on: outcomeResolved, table: overrun, cause: any }
+    triggers:
+      - when: { eq: 4 }
+        label: Four clean Blocks
+        do:
+          - { do: note, text: "Four Blocks in a row on the clock. Draw a Boon." }
+          - { do: grantCard, deck: boons, count: 1 }
+
+decks:
+  breaks:
+    kind: cards
+    title: Breaks
+    description: One is dealt when the Day starts, and one is drawn when a Block closes. Play it between Blocks.
+    drawAtStart: 1
+    unique: false
+    carriesOver: false
+    cards:
+      - id: five
+        title: Five minutes
+        text: Five minutes, sitting down, doing nothing in particular.
+        triggers:
+          - on: immediately
+            do:
+              - { do: startTimer, minutes: 5, label: "Break" }
+      - id: feet
+        title: Five on your feet
+        text: Five minutes standing, walking, or outside. Not at the desk.
+        triggers:
+          - on: immediately
+            do:
+              - { do: startTimer, minutes: 5, label: "Break" }
+      - id: stretch
+        title: Stretch
+        text: Three minutes of whatever is stiff. Neck, back, hands.
+        triggers:
+          - on: immediately
+            do:
+              - { do: startTimer, minutes: 3, label: "Break" }
+      - id: water
+        title: Water
+        text: A glass of water, drunk standing up. Then back.
+      - id: nothing
+        title: Nothing this time
+        text: Straight into the next Block. It happens.
+
+  boons:
+    kind: cards
+    title: Boons
+    description: Earned by four clean Blocks in a row. One-shot advantages.
+    drawAtStart: 0
+    unique: true
+    carriesOver: false
+    cards:
+      - id: long-lunch
+        title: Long lunch
+        text: The next break is fifteen minutes, and it costs nothing.
+      - id: clean-slate
+        title: Clean slate
+        text: Debt −1. Play it between Blocks.
+        triggers:
+          - on: immediately
+            do:
+              - { do: modCounter, counter: debt, by: -1 }
+      - id: free-block
+        title: Free Block
+        text: The next Block has no Task named. Do whatever you like with it, and it still counts.
+      - id: early-finish
+        title: Early finish
+        text: The Day may end now, and the Wrap-up is read one band kinder.
+
+tables:
+  overrun:
+    resolution: lookup
+    title: Overrun
+    description: Rolled when a Block runs its clock over by two minutes or more.
+    roll: d6
+    entries:
+      - id: ov-break
+        range: [1, 1]
+        text: "The next break is skipped. Put the Break card back unread, and straight into the next Block."
+        triggers:
+          - on: immediately
+            do:
+              - { do: discardCard, deck: breaks, count: 1 }
+              - { do: note, text: "No break before the next Block." }
+      - id: ov-debt
+        range: [2, 2]
+        text: "Debt +1."
+        triggers:
+          - on: immediately
+            do:
+              - { do: modCounter, counter: debt, by: 1 }
+      - id: ov-avoided
+        range: [3, 4]
+        text: "The next Task is the one you have been avoiding. Say which."
+        triggers:
+          - on: immediately
+            do:
+              - { do: prompt, kind: chooseSubject, label: "Which Task have you been avoiding?", into: avoided }
+              - { do: note, text: "That is the next Block's Task. Name it again, and finish it." }
+      - { id: ov-forgiven, range: [5, 6], text: "Forgiven. It happens." }
+
+  wrapUp:
+    resolution: bands
+    title: Wrap-up
+    description: Rolled once, when the Day ends. How it landed.
+    roll: 2d6
+    entries:
+      - { id: wu-rough, lte: 4, text: "Rough. Write down the one thing that broke the most Blocks, and do that first tomorrow." }
+      - { id: wu-fair, gte: 5, lte: 9, text: "Fair. The clock was kept more than it was not. Carry what is unfinished without guilt." }
+      - { id: wu-good, gte: 10, text: "Good. Start tomorrow with a Boon in hand." }
+
+phases:
+  - id: name
+    label: Name the Task
+    description: The clock is already running. Name it and go.
+    steps:
+      - kind: declareSubject
+        label: What is this Block's Task? One thing, in a few words.
+
+  - id: work
+    label: Work
+    steps:
+      - kind: manual
+        label: Work until the bell.
+        description: The app cannot see the work. When the bell goes, finish the sentence, not the paragraph.
+        checklist:
+          - Nothing else was opened.
+          - The bell was obeyed.
+
+  - id: after
+    label: After the bell
+    steps:
+      - kind: actions
+        do:
+          - do: when
+            all:
+              - { ask: "Did you switch tasks during the Block?" }
+            then:
+              - { do: applyState, state: split, to: thisSubject }
+
+  - id: close
+    label: Call it
+    description: A Block two minutes over its clock rolls the Overrun. Then draw the next Break.
+    steps:
+      - kind: actions
+        do:
+          - do: when
+            all:
+              - { clockRanOver: unit, is: { gte: 2 } }
+            then:
+              - { do: rollOn, table: overrun }
+      - kind: actions
+        do:
+          - { do: grantCard, deck: breaks, count: 1 }
+      - kind: finalizeUnit
+        label: Call the Block
+        confirm:
+          - The Task is done, or honestly carried to a later Block.
+
+journal:
+  enabled: true
+  prompt: What actually got done?
+  required: false
+
+endings:
+  - id: fourClean
+    label: Four clean Blocks
+    text: Four Blocks in a row on the clock. Roll the Wrap-up and go.
+    requires:
+      - { counter: clean, is: { gte: 4 } }
+  - id: goodEnough
+    label: Good enough
+    text: Some over, some on time. Roll the Wrap-up and stop without apology.
+  - id: buried
+    label: Debt at five
+    text: The Day ends here, whatever is left. Roll the Wrap-up and take the evening.
+    requires:
+      - { counter: debt, is: { gte: 5 } }
+
+triggers:
+  - on: onTimerExpired
+    label: The bell
+    do:
+      - { do: note, text: "The bell. Finish the sentence, not the paragraph." }
+  - on: onRunEnd
+    label: Wrap-up
+    do:
+      - { do: rollOn, table: wrapUp }
+
+modes:
+  standard:
+    label: Standard
+    description: Twenty-five minute Blocks, as many as the day holds, up to twelve.
+    units: { min: 1, max: 12 }
+
+  sprint:
+    label: Sprint
+    description: Four Blocks, fixed, no Boons. Two hours and out.
+    units: { fixed: 4 }
+    disable:
+      decks: [boons]
+      counters: [clean]
+
+  longForm:
+    label: Long form
+    description: Fifty-minute Blocks with ten-minute breaks, for work that takes a while to get into.
+    units: { min: 1, max: 8 }
+    clock: { kind: timer, minutes: 50, auto: true, label: This Block }
+    notes:
+      - Breaks are ten minutes. Double whatever the Break card says.
+
+  together:
+    label: Together
+    description: Two to four people on one clock, taking turns to name the Task. Everyone works the same Block.
+    units: { min: 1, max: 12 }
+    players:
+      min: 2
+      max: 4
+      rotate: clockwise
+      roles:
+        - { id: namer, label: Namer, description: Names this Block's Task for the table. }
+        - { id: keeper, label: Keeper, description: Runs the clock and draws the Break. }
+
+defaultMode: standard
+
+hierarchy:
+  - Boon
+  - Overrun
+  - Break
+  - General rules
+
+fixtures:
+  # A Block called inside its clock rolls nothing: the Overrun is only rolled
+  # when the clock has run two minutes over, and a scripted play moves it a
+  # second at a time. The Break is still drawn.
+  - name: A Block on time rolls nothing
+    mode: standard
+    seed: on-time
+    play:
+      - { enter: 1 }
+      - { declare: Answer the mail }
+      - { step: work }
+      - { step: after, answers: { ask: false } }
+      - { step: close#0 }
+      - { step: close#1, answers: { chooseValue: water } }
+      - { finalize: {} }
+    expect:
+      - { path: outcomes.length, equals: 0 }
+      - { path: counters.debt, equals: 0 }
+      - { path: counters.clean, equals: 1 }
+      - { path: subjects.0.states, equals: [] }
+      - { path: clocks.0.kind, equals: timer }
+      - { path: clocks.0.status, equals: done }
+      - { path: clocks.0.expired, equals: false }
+      - { path: hand.length, equals: 2 }
+      - { path: hand.1.cardId, equals: water }
+      - { requests: answered }
+
+  - name: Switching tasks marks the Task Split
+    mode: standard
+    seed: split
+    play:
+      - { enter: 1 }
+      - { declare: The report }
+      - { step: work }
+      - { step: after, answers: { ask: true } }
+    expect:
+      - { path: subjects.0.states, equals: [split] }
+
+  # A Block that runs two minutes over rolls the Overrun. A scripted play
+  # cannot let a clock run that long, so this is the log such a Block leaves:
+  # the clock expired twenty-eight minutes in, and the Overrun landed on
+  # Debt, which also broke the clean streak.
+  - name: A Block that runs over rolls the Overrun
+    mode: standard
+    events:
+      - { t: RunStarted, mode: standard }
+      - { t: CardDrawn, deck: breaks, cardId: five }
+      - { t: UnitEntered }
+      - { t: ClockStarted, clock: "u1:unit", kind: timer, label: This Block, seconds: 1500 }
+      - { t: SubjectDeclared, subjectType: Answer the mail }
+      - { t: ClockStopped, clock: "u1:unit", elapsedMs: 1680000, expired: true }
+      - { t: Rolled, purpose: overrun, dice: d6, total: 2, values: [2], source: physical }
+      - { t: OutcomeResolved, table: overrun, entryId: ov-debt, cause: action }
+      - { t: CounterChanged, counter: debt, by: 1 }
+      - { t: UnitFinalized }
+    expect:
+      - { path: clocks.0.expired, equals: true }
+      - { path: outcomes.0.table, equals: overrun }
+      - { path: counters.debt, equals: 1 }
+      - { path: counters.clean, equals: 0 }
