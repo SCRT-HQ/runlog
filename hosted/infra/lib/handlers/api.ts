@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { hashToken, verify as verifyToken, type Caller } from "./auth.js";
-import { dynamoStore, PACK_ORIGINS, shownName, type ApiKey, type LicenseMeta, type Reaction, type PackMeta, type PackOrigin, type Role, type SessionMeta, type Store } from "./store.js";
+import { dynamoStore, PACK_ORIGINS, shownName, type ApiKey, type LicenseMeta, type Reaction, type PackMeta, type PackOrigin, type Role, type SessionMember, type SessionMeta, type Store } from "./store.js";
 import { sesMailer, type Mailer } from "./email.js";
 import { fingerprintOf, verifyProof } from "./proof.js";
 import { apiGatewayPoster, dynamoLive, notifier, type Notify } from "./live.js";
@@ -193,6 +193,25 @@ function json(status: number, body: unknown): Result {
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
     body: JSON.stringify(body),
   };
+}
+
+/**
+ * A table's members as they are shown now.
+ *
+ * A seat keeps the name it was taken with, and a new name goes round the
+ * tables when it is chosen; but a seat taken before there was a name to
+ * choose kept the full one, and stayed that way. The profiles are the
+ * truth, so a table is read against them: what it shows is what each
+ * person is shown as today, first name and all.
+ */
+async function asShownNow(store: Store, members: SessionMember[]): Promise<SessionMember[]> {
+  return Promise.all(
+    members.map(async (m) => {
+      const profile = await store.getProfile(m.sub).catch(() => null);
+      const name = profile ? shownName(profile) : undefined;
+      return name ? { ...m, name } : m;
+    }),
+  );
 }
 
 function header(event: APIGatewayProxyEventV2, name: string): string | undefined {
@@ -740,7 +759,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (!found || found.meta.deletedAt) continue;
       const invites = pointer.role === "owner" ? await store.listInvites(pointer.id) : [];
       const events = await store.eventsAfter(pointer.id, 0);
-      sessions.push({ role: pointer.role, ...found.meta, members: found.members, events, invites });
+      sessions.push({ role: pointer.role, ...found.meta, members: await asShownNow(store, found.members), events, invites });
     }
     const doc = {
       exportedAt: at,
@@ -1536,7 +1555,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (method === "GET") {
       const after = Number(event.queryStringParameters?.["after"] ?? 0);
       const events = await store.eventsAfter(id, Number.isFinite(after) && after > 0 ? after : 0);
-      return json(200, { found: true, session: metaView(found.meta), members: found.members, events });
+      return json(200, { found: true, session: metaView(found.meta), members: await asShownNow(store, found.members), events });
     }
     if (method === "PATCH") {
       if (me.role === "viewer") return json(422, { error: "a viewer cannot change the session" });
