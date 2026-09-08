@@ -2395,6 +2395,21 @@ select.textInput {
   border-left: 1px solid var(--line);
   gap: 1.4rem;
 }
+/*
+ * The board stays beside the step. A roll reads against the trackers, and
+ * the side used to have scrolled away by the time the dice settled. Only
+ * where it has a column of its own; folded under the step it is in flow.
+ */
+@media (min-width: 1101px) {
+  .columns.run > .col.side {
+    position: sticky;
+    top: 4rem;
+    align-self: start;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
 @media (max-width: 1100px) {
   .columns.run {
     grid-template-columns: 11rem minmax(0, 1fr);
@@ -2610,6 +2625,39 @@ select.textInput {
 .log .timeline p {
   margin: 0.1rem 0 0;
   font-size: 1rem;
+}
+.log .empty {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+/* Who is at the table, folded when it is only you. */
+.people {
+  padding: 0;
+}
+.people > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.people > summary::-webkit-details-marker {
+  display: none;
+}
+.people > summary .sectionTitle {
+  margin-bottom: 0;
+}
+.people > summary .sectionTitle::after {
+  content: " ▸";
+  color: var(--muted);
+}
+.people[open] > summary .sectionTitle::after {
+  content: " ▾";
+}
+.people > .peopleBody {
+  padding-top: 0.75rem;
+}
+.headerActions > .danger {
+  margin-left: 0.75rem;
 }
 
 /* Folded until wanted: exports and the world outside. */
