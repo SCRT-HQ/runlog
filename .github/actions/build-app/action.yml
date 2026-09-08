@@ -18,6 +18,10 @@ inputs:
     description: Node version to use
     required: false
     default: '22'
+  version:
+    description: The version this build is, or becomes on release, without the v; the footer and the shell say it. Absent, the web app's package version.
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -34,6 +38,7 @@ runs:
         # Shown in the app's footer and its error panel, so a report says
         # which build it came from.
         RUNLOG_SHA: ${{ github.sha }}
+        RUNLOG_VERSION: ${{ inputs.version }}
       run: npm run build -w apps/web
 
     # The pages that make this address a service someone runs: terms,
@@ -43,4 +48,5 @@ runs:
       env:
         RUNLOG_TARGET_ACCOUNT: ${{ inputs.target-account-id }}
         RUNLOG_ENV_CONFIG: ${{ inputs.env-config }}
-      run: npx tsx hosted/scripts/overlay.ts --dist apps/web/dist --app . --env "${{ inputs.environment }}" --sha "${{ github.sha }}"
+        RUNLOG_VERSION: ${{ inputs.version }}
+      run: npx tsx hosted/scripts/overlay.ts --dist apps/web/dist --app . --env "${{ inputs.environment }}" --sha "${{ github.sha }}" ${RUNLOG_VERSION:+--version "$RUNLOG_VERSION"}

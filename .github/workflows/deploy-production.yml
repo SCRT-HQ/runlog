@@ -74,6 +74,7 @@ jobs:
           fi
           echo "Deploying ${tag}"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
 
       # The tag, explicitly, not the default ref.
       - uses: actions/checkout@v7
@@ -86,6 +87,7 @@ jobs:
           workos-client-id: ${{ vars.WORKOS_CLIENT_ID }}
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           env-config: ${{ vars.RUNLOG_ENV_CONFIG }}
+          version: ${{ steps.tag.outputs.version }}
 
       - name: Deploy the hosting and publish the build to production
         uses: ./.github/actions/run-cdk

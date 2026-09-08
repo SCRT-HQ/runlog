@@ -25,6 +25,9 @@ import { dependenciesOf, type Dependency } from "../../scripts/licenses";
 
 const HOSTED_DIR = join(__dirname, "..", "pages");
 
+/** Where the app comes from: what a footer's version and commit link to. */
+export const SOURCE_URL = "https://github.com/SCRT-HQ/runlog";
+
 /** Every `{{NAME}}` in the templates, with what goes there. */
 export type Words = Record<string, string>;
 
@@ -37,11 +40,16 @@ export function wordsFor(config: EnvConfig, build: { version: string; sha: strin
     DOMAIN: config.domain,
     OPERATOR: hosted.operator,
     OPERATOR_SHORT: hosted.operatorShort,
+    // The name in a footer goes to the operator's own site, else to the about page.
+    OPERATOR_URL: hosted.operatorUrl ?? `https://${config.domain}/about.html`,
     SUPPORT: hosted.support,
     TERMS_VERSION: hosted.termsVersion,
     TERMS_DATE: hosted.termsDate,
     VERSION: build.version,
     SHA: build.sha,
+    // The build, as links: the release it is, and the commit it was made from.
+    RELEASE_URL: `${SOURCE_URL}/releases/tag/v${build.version}`,
+    COMMIT_URL: build.sha ? `${SOURCE_URL}/commit/${build.sha}` : SOURCE_URL,
     DATE: day,
     YEAR: String(build.today.getUTCFullYear()),
     EXPIRES: expires.toISOString(),
@@ -157,12 +165,12 @@ ${rows}
       </ul>
     </main>
     <footer>
-      <span>© {{YEAR}} {{OPERATOR}}</span>
+      <span>© {{YEAR}} <a href="{{OPERATOR_URL}}">{{OPERATOR}}</a></span>
       <a href="/legal/terms.html">Terms</a>
       <a href="/legal/privacy.html">Privacy</a>
       <a href="/licenses.html">Open-source licenses</a>
       <a href="https://github.com/SCRT-HQ/runlog">Source</a>
-      <span class="build">Runlog {{VERSION}} {{SHA}}</span>
+      <span class="build">Runlog <a href="{{RELEASE_URL}}">{{VERSION}}</a> <a href="{{COMMIT_URL}}">{{SHA}}</a></span>
     </footer>
   </body>
 </html>
