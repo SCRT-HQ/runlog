@@ -102,18 +102,23 @@ lives alongside them.
 ## A dock for the run's controls
 
 OBS can keep a signed-in web page docked beside the preview: **View** →
-**Docks** → **Custom Browser Docks**. Give it a name ("Runlog") and the
-URL `https://runlog.scrthq.com/play`, then **Apply**. The dock opens the
-app; sign in inside it, once. OBS keeps that sign-in between sessions,
-the way a browser would.
+**Docks** → **Custom Browser Docks**. Give it a name ("Runlog") and, from
+the run's Stream panel, **Copy dock address**: it is
+`https://runlog.scrthq.com/play#dock/controls/<runId>`, the run's remote
+alone on a page, the next move, the last result, undo. **Apply**, and sign
+in inside the dock, once; OBS keeps that sign-in between sessions, the
+way a browser would, and the address survives the trip through the
+sign-in service and back.
 
-Open the run in the dock and it is a second device at your table: a
-move you make there is on your other screens through sync in a moment,
-the dice you throw there are the dice your watchers see land, and the
-run's Settings and Stream panels are right there for copying addresses.
-One thing to know: signing in sends the page through the sign-in service
-and back, and the dock lands on your library rather than the run, so open
-the run once more after the first sign-in.
+The dock is a second device at your table, so the run must be on it: on
+the machine you play on it already is, and on another it arrives through
+sync once you are signed in there. A move you make in the dock is on your
+other screens in a moment. The dock announces nothing of its own to the
+stream — no dice, no ticker lines — the page it stands beside does that,
+so the two never say the same thing twice.
+
+For the whole app in a dock rather than the remote, use the plain address
+`https://runlog.scrthq.com/play` instead and open the run there.
 
 ## StreamElements: a custom widget
 

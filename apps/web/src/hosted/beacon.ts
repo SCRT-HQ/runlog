@@ -16,9 +16,9 @@ import { apiBase } from "../sync/config.ts";
  * on the public page), and only the screens named here: a family, never
  * an id, so a beacon never says which run or which pack.
  */
-export type Screen = "welcome" | "library" | "play" | "rules" | "catalog" | "guide" | "design" | "profile" | "live" | "widget";
+export type Screen = "welcome" | "library" | "play" | "rules" | "catalog" | "guide" | "design" | "profile" | "live" | "widget" | "dock";
 
-export const SCREENS: readonly Screen[] = ["welcome", "library", "play", "rules", "catalog", "guide", "design", "profile", "live", "widget"];
+export const SCREENS: readonly Screen[] = ["welcome", "library", "play", "rules", "catalog", "guide", "design", "profile", "live", "widget", "dock"];
 
 /** Whether the browser asked not to be counted. */
 export function askedNotTo(nav: Partial<Navigator> & { globalPrivacyControl?: boolean } = navigator): boolean {
