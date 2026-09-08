@@ -772,12 +772,13 @@ export default function App() {
             </button>
           )}
           <button className="ghost createBtn" onClick={() => (view === "design" ? leaveDesigner() : openDesigner())} title="Write a pack of your own in the Designer">
-            {view === "design" ? "Back to the app" : "Create"}
+            {view === "design" ? "Back to the app" : "Designer"}
           </button>
           <button className="ghost guideBtn" onClick={() => (view === "guide" ? leaveGuide() : openGuide())} title="How to use Runlog">
-            {view === "guide" ? "Back to the app" : "Docs"}
+            {view === "guide" ? "Back to the app" : "Guide"}
           </button>
           <AccountBadge
+            closeKey={view}
             onOpenProfile={() => setView("profile")}
             onJoinInvite={async (token) => {
               try {
