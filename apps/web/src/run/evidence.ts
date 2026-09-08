@@ -14,7 +14,7 @@ import type { RunState } from "@runlog/engine";
 
 export interface Point {
   text: string;
-  shows?: { table: string; scope: "unit" | "subject" | "run" };
+  shows?: { table: string | string[]; scope: "unit" | "subject" | "run" };
   /** The step does not wait for this one. */
   optional?: boolean;
   /** Each ticked box adds one to this counter. */
@@ -41,11 +41,12 @@ export interface Shown {
 }
 
 export function evidenceFor(pack: Pack, state: RunState, shows: NonNullable<Point["shows"]>): Shown[] {
-  const table = pack.tables[shows.table];
+  const tables = new Set(Array.isArray(shows.table) ? shows.table : [shows.table]);
   const subject = state.subjects.find((s) => s.unit === state.unit && !s.removed);
   const out: Shown[] = [];
   state.outcomes.forEach((o, i) => {
-    if (o.table !== shows.table) return;
+    if (!tables.has(o.table)) return;
+    const table = pack.tables[o.table];
     if (shows.scope === "unit" && o.unit !== state.unit) return;
     if (shows.scope === "subject" && (!subject || o.targetSubject !== subject.id)) return;
     const entry = table?.entries.find((e) => e.id === o.entryId);

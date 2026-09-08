@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { DiceCurtain, rolledOf } from "../dice/DiceCurtain.tsx";
+import { modeDoc, summaryDoc, type Doc } from "@runlog/rules-schema";
 import { DocMenu } from "../docs/DocMenu.tsx";
+import { useDocDrawer, type DocTab } from "../docs/DocDrawer.tsx";
 import { useAccount } from "../auth/Account.tsx";
 import { useApi } from "../sync/useApi.ts";
 import { apiBase } from "../sync/config.ts";
@@ -56,6 +58,7 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
   const [seat, setSeat] = useState<"idle" | "taking" | "taken">("idle");
   const [note, setNote] = useState<string | null>(null);
   const [shown, setShown] = useState<string | undefined>(undefined);
+  const drawer = useDocDrawer();
 
   useEffect(() => {
     if (got?.reactions) setReactions(got.reactions);
@@ -114,6 +117,22 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
 
   const base = apiBase();
   const name = shown ?? "";
+  // The paper a watcher may read: the summary and the mode's, from the
+  // pack here when it travelled, else as the owner's device wrote them
+  // beside the snapshot.
+  const modeId = snapshot.modeId;
+  const paper: { summary: Doc; mode: Doc | null } | null = pack
+    ? { summary: summaryDoc(pack), mode: modeId && pack.modes[modeId] ? modeDoc(pack, modeId) : null }
+    : (snapshot.paper ?? null);
+  const openPaper = () => {
+    if (!paper) return;
+    const tabs: DocTab[] = [{ label: "Summary", what: "The shape of the game without its rules.", make: () => paper.summary }];
+    if (paper.mode) {
+      const about = paper.mode;
+      tabs.push({ label: about.title, what: "How this mode plays.", make: () => about });
+    }
+    drawer.show(snapshot.packTitle, tabs);
+  };
   const react = (emoji: string) => {
     if (!base || sent > Date.now()) return;
     // One a second: a reaction is a wave, not a keyboard.
@@ -130,6 +149,11 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
     <LiveView snapshot={snapshot} stale={stale}>
       <div className="liveTools">
         <div className="padRow">
+          {paper && (
+            <button className="ghost tiny" onClick={openPaper} title="What this pack is, and how the mode being played goes">
+              About this pack
+            </button>
+          )}
           {pack ? (
             <DocMenu compact pack={pack} />
           ) : (

@@ -1156,6 +1156,18 @@ p {
 .memberRow {
   align-items: center;
 }
+/* Your own seat, marked: the accent's wash behind it and a chip that says so. */
+.memberRow.me {
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  margin: 0 -0.5rem;
+}
+.chip.you {
+  margin-left: 0.4rem;
+  background: color-mix(in oklab, var(--accent) 30%, transparent);
+  color: var(--text);
+}
 .inviteForm {
   display: flex;
   gap: 0.4rem;
@@ -2076,10 +2088,20 @@ select.textInput {
   border-radius: var(--radius);
   box-shadow: var(--raise);
 }
-.accountEmail {
+.accountWho {
   padding: 0.25rem 0.9rem 0.5rem;
   border-bottom: 1px solid var(--line);
   margin-bottom: 0.25rem;
+  display: grid;
+  gap: 0.1rem;
+}
+.accountName {
+  font-weight: 600;
+}
+.accountEmail {
+  padding: 0;
+  border-bottom: none;
+  margin-bottom: 0;
   font-family: var(--mono);
 }
 .accountItem {
@@ -2976,7 +2998,6 @@ select.textInput {
 @media (prefers-reduced-motion: reduce) { .clockBar span { transition: none; } }
 
 /* ---- alerts ---- */
-.alertsMore summary { cursor: pointer; }
 .alerts { display: grid; gap: 0.6rem; padding-top: 0.5rem; }
 .alertVolume { display: grid; gap: 0.2rem; }
 .alertVolume input { width: 100%; }
@@ -3072,6 +3093,15 @@ a.plan { text-decoration: none; }
 a.plan:hover { text-decoration: underline; }
 .veil { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 1rem; background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(6px); }
 .termsGate { max-width: 34rem; display: grid; gap: 0.75rem; }
+.nameGate .inviteForm { align-items: center; }
+.nameGate .inviteForm input { flex: 1; min-width: 12rem; }
+/* The run's settings: one dialog, its sections ruled like the side column's. */
+.settingsDialog { width: min(100%, 38rem); max-height: calc(100vh - 2rem); overflow: auto; display: grid; gap: 1.1rem; }
+.settingsDialog .dialogBar { display: flex; justify-content: space-between; align-items: baseline; }
+.settingsDialog .dialogBar h2 { margin: 0; }
+.settingsDialog > section { display: grid; gap: 0.5rem; }
+.settingsDialog .sectionTitle { margin: 0; }
+.settingsDialog .alerts { padding-top: 0; }
 .termsGate h2 { margin: 0; }
 .termsGate p { margin: 0; }
 
@@ -3194,6 +3224,40 @@ a.plan:hover { text-decoration: underline; }
 .liveSide { display: grid; gap: 0.75rem; }
 @media (max-width: 760px) { .liveGrid { grid-template-columns: 1fr; } }
 
+/* ---- the live page moves when the run does; see live/motion.ts ---- */
+.liveWhere.turned, .liveFlow.turned { animation: liveTurn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes liveTurn { from { opacity: 0; transform: translateX(-0.6rem); } 40% { opacity: 1; } to { transform: none; } }
+.timeline li.fresh { animation: liveLineIn 0.5s ease-out both; }
+@keyframes liveLineIn { from { opacity: 0; transform: translateY(-0.4rem); } to { opacity: 1; transform: none; } }
+.timeline li.heat.fresh { animation: liveLineIn 0.5s ease-out both, liveHeat 1.8s ease-out both; }
+@keyframes liveHeat { 0% { background: color-mix(in oklab, var(--warn) 35%, transparent); } 100% { background: transparent; } }
+.row.struck { animation: liveStruck 0.6s ease-in-out both; }
+@keyframes liveStruck { 0%, 100% { transform: none; } 20% { transform: translateX(-3px); } 40% { transform: translateX(3px); } 60% { transform: translateX(-2px); } 80% { transform: translateX(2px); } }
+.chip.state.fresh { animation: livePop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+@keyframes livePop { from { transform: scale(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
+.bump { display: inline-block; animation: liveBump 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+@keyframes liveBump { 0% { transform: scale(1); } 40% { transform: scale(1.35); color: var(--accent); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .liveWhere.turned, .liveFlow.turned, .timeline li.fresh, .timeline li.heat.fresh, .row.struck, .chip.state.fresh, .bump { animation: none; }
+}
+
+/* ---- the floating controls: this page's tree, drawn in a window the browser keeps in front ---- */
+html[data-pip="controls"] body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+.pipPanel { display: grid; gap: 0.7rem; padding: 0.8rem 0.9rem 1rem; font-family: var(--serif); }
+.pipHead { display: grid; gap: 0.1rem; }
+.pipWhere { margin: 0; font-family: var(--mono); }
+.pipMove { display: grid; gap: 0.3rem; }
+.pipMove .primary.big { margin-top: 0; width: 100%; }
+.pipMove p { margin: 0; }
+.pipTools { display: flex; gap: 0.8rem; align-items: center; }
+.pipReceipt { display: grid; gap: 0.4rem; padding: 0.5rem 0.6rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.pipOutcomes, .pipLog { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.pipOutcomes li, .pipLog li { display: grid; gap: 0.05rem; font-size: 0.9rem; }
+.pipOutcomes .where, .pipLog .where { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); }
+.pipOutcomes li.heat .where, .pipLog li.heat .where { color: var(--warn); }
+.pipLog { border-top: 1px solid var(--line); padding-top: 0.5rem; }
+.floatRow { align-items: baseline; }
+
 /* ---- the Rules page: the paper, with the structure as one more tab ---- */
 .rulesTabs { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0 0 1rem; }
 .docPage { max-width: 46rem; margin: 0 auto; padding: 1.5rem 2rem; }
@@ -3204,6 +3268,8 @@ a.plan:hover { text-decoration: underline; }
 .welcome { min-height: 100vh; display: flex; flex-direction: column; }
 .welcomeBar .topbarEnd { gap: 0.5rem; }
 .welcomeBar .topbarEnd a.ghost, .welcomeBar .topbarEnd a.primary, .welcomeCtas a { text-decoration: none; display: inline-block; }
+/* The accent link is a button among buttons: the ghosts' size, the accent's color. */
+.welcomeBar .topbarEnd a.primary, .welcomeCtas a.primary { padding: 0.25rem 0.7rem; font-size: 0.8rem; }
 .welcomeMain { width: min(100% - 2.5rem, 64rem); margin: 0 auto; padding: 1.5rem 0 3rem; flex: 1; }
 .welcomeHero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 2.5rem; align-items: center; padding: 1.5rem 0 2rem; }
 .welcomeHero h2 { font-size: clamp(1.9rem, 3.4vw, 2.7rem); line-height: 1.15; margin: 0 0 0.6rem; text-wrap: balance; }

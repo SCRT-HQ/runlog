@@ -212,8 +212,8 @@ export const PERSONAS: Persona[] = [
     closing: "Roll for the kickoff.",
   },
   {
-    id: "homebody",
-    noun: "homebody",
+    id: "homemaker",
+    noun: "homemaker",
     packId: "com.scrthq.runlog.homefront",
     packTitle: "Homefront",
     mode: "A Sweep",
