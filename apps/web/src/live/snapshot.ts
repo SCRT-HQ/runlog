@@ -11,8 +11,9 @@ import { activePhases, clockOfUnit, describeSkipReason, elapsedMs, liveClocks, m
  * not shipped as such: it names table entries and states by id, which
  * are meaningless without the pack, and a pack marked not for
  * redistribution must not follow. So the snapshot carries labels and
- * numbers, and for the log the entry's words where they may be quoted
- * and its reference where they may not — the same line the export draws.
+ * numbers, and for the log the words of the one entry each roll landed
+ * on: that much is the run, not the pack. The pack's paper and its tables
+ * whole travel only where they may be quoted.
  */
 export interface LiveSnapshot {
   v: 1;
@@ -32,7 +33,7 @@ export interface LiveSnapshot {
   /** The step in hand, on its own, and the unit's phases with where each stands: what the player's own screen lists. */
   step: string | null;
   phases: Array<{ id: string; label: string; state: "done" | "current" | "skipped" | "todo"; why?: string }>;
-  /** The pack's text may be quoted here: the log carries entries' words. */
+  /** The pack's text may be handed over whole here: its paper, its tables. The log carries the drawn entries' words either way. */
   quoted: boolean;
   standings: Array<{ name: string; points: number; place: number; states: string[] }>;
   contestants: number;
@@ -145,7 +146,11 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
         unit: o.unit,
         where: `${v.unit.one} ${o.unit}, ${table?.title ?? o.table}`,
         hit: o.targetSubject,
-        text: quoted ? (entry?.title ?? entry?.text ?? o.entryId) : `${table?.title ?? o.table} · #${o.entryId}`,
+        // The line the dice landed on, in the pack's words, whatever the
+        // license says about the pack: a watcher who sees "#mut-071" is
+        // watching numbers. What the dice drew is one line of one table;
+        // the tables themselves and the pack's paper stay behind `quoted`.
+        text: entry?.title ?? entry?.text ?? `${table?.title ?? o.table} · #${o.entryId}`,
       };
     });
   const unitClock = clockOfUnit(state, state.unit);

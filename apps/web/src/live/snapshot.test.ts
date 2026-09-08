@@ -41,13 +41,25 @@ describe("a live snapshot", () => {
     expect(isSnapshot({ v: 2 })).toBe(false);
   });
 
-  it("names entries by reference, not words, for a pack marked not for redistribution", () => {
+  it("still says what the dice drew for a pack marked not for redistribution, and only that", () => {
+    // A watcher who saw "#x1" was watching numbers. The one line a roll
+    // landed on is the run's; the pack's paper stays withheld (`quoted`).
     const closed = { ...kiln, license: { ...kiln.license, redistributable: false } };
     const state = reduce(closed, events);
-    const withOutcome = { ...state, outcomes: [{ unit: 1, table: Object.keys(closed.tables)[0]!, entryId: "x1", targetSubject: null, at: "2026-01-01T00:00:02Z" }] };
+    const tableId = Object.keys(closed.tables)[0]!;
+    const entry = closed.tables[tableId]!.entries[0]!;
+    const withOutcome = {
+      ...state,
+      outcomes: [
+        { unit: 1, table: tableId, entryId: entry.id, targetSubject: null, at: "2026-01-01T00:00:02Z" },
+        { unit: 1, table: tableId, entryId: "x-gone", targetSubject: null, at: "2026-01-01T00:00:03Z" },
+      ],
+    };
     const snap = snapshotOf(closed, withOutcome as typeof state, events, "2026-01-01T00:00:05Z");
     expect(snap.quoted).toBe(false);
-    expect(snap.log[0]!.text).toContain("#x1");
+    expect(snap.log[1]!.text).toBe(entry.title ?? entry.text);
+    // An entry the pack no longer has falls back to its reference.
+    expect(snap.log[0]!.text).toContain("#x-gone");
   });
 
   it("carries the race leaderboard in words, when the run is in one", () => {

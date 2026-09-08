@@ -85,7 +85,7 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
                   </li>
                 ))}
               </ol>
-              {!s.quoted && <p className="muted small">The pack's words are not for redistribution; the log names its entries by number.</p>}
+              {!s.quoted && <p className="muted small">The pack's text is not for redistribution; the log shows what the dice drew, not the tables.</p>}
             </section>
           ) : (
             <p className="muted">Nothing rolled yet; the log fills in with the first roll.</p>
