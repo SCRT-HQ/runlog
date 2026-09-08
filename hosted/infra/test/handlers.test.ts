@@ -1742,35 +1742,27 @@ describe("a claimed server", () => {
     expect(guilds.guilds.has("g1")).toBe(true);
   });
 
-  it("is a private beta until the stage opens it: the flag on a session, or the plan itself, is the door", async () => {
+  it("is offered wherever there is a bot, on sale only where the stage says so, and held by the flag named like the feature meanwhile", async () => {
     const guilds = memoryGuilds();
-    const billing = memoryBilling();
     let codes = 0;
     const bot = { applicationId: "app", publicKey: publicHex, token: async () => null };
     const flagged = async (authorization: string | undefined) => {
-      if (authorization === "Bearer good") return { sub: "user_1", sid: "session_1", flags: ["servers-beta"] };
+      if (authorization === "Bearer good") return { sub: "user_1", sid: "session_1", flags: ["server"] };
       if (authorization === "Bearer guest") return { sub: "user_2", sid: "session_2" };
       throw new Error("bad token");
     };
-    const d = deps(memoryStore(), { guilds, billing, discord: bot, verify: flagged, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
-    // Without a bot there is no tier to see at all.
-    expect((await call(request("GET", "/api/me"), deps())).body["servers"]).toBe(false);
-    // With one, the flag is what opens the door; the code is minted for anyone who can manage the server.
-    expect((await call(request("GET", "/api/me"), d)).body["servers"]).toBe(true);
-    expect((await call(request("GET", "/api/me", { token: "guest" }), d)).body["servers"]).toBe(false);
+    const d = deps(memoryStore(), { guilds, gates: true, discord: bot, verify: flagged, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
+    // Without a bot there is no tier at all; with one it is offered to everyone, and not yet for sale.
+    expect((await call(request("GET", "/api/me"), deps())).body).toMatchObject({ servers: false, serversOpen: false });
+    expect((await call(request("GET", "/api/me", { token: "guest" }), d)).body).toMatchObject({ servers: true, serversOpen: false });
+    // Anyone may claim a server and see the plan as coming; the flag on a session is the plan, the way a plus flag is Plus.
     await call(signed(claimPress("g1")), d);
-    const refused = await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMA" }, token: "guest" }), d);
-    expect(refused.status).toBe(422);
-    expect(refused.body).toMatchObject({ beta: true });
-    expect((await call(request("GET", "/api/guilds", { token: "guest" }), d)).body).toMatchObject({ allowed: false });
-    // Refused before the code was spent: the flagged account hands the same code in.
-    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMA" } }), d)).body).toMatchObject({ claimed: true });
-    expect((await call(request("GET", "/api/guilds"), d)).body).toMatchObject({ allowed: true });
-    // The plan itself is a door too: someone who bought it is not asked for a flag.
-    await billing.putEntitlements("user_2", ["server"], "now");
-    expect((await call(request("GET", "/api/me", { token: "guest" }), d)).body["servers"]).toBe(true);
-    // And the stage opening the tier makes everyone welcome.
+    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMA" }, token: "guest" }), d)).body).toMatchObject({ claimed: true, upgrade: true });
+    expect((await call(request("GET", "/api/guilds", { token: "guest" }), d)).body).toMatchObject({ server: false, open: false });
+    expect((await call(request("GET", "/api/me"), d)).body["entitlements"]).toContain("server");
+    expect((await call(request("GET", "/api/guilds"), d)).body).toMatchObject({ server: true, open: false });
+    // The stage putting it on sale is a configuration, not a code change.
     const open = deps(memoryStore(), { guilds, discord: { ...bot, open: true } });
-    expect((await call(request("GET", "/api/me", { token: "guest" }), open)).body["servers"]).toBe(true);
+    expect((await call(request("GET", "/api/me", { token: "guest" }), open)).body).toMatchObject({ servers: true, serversOpen: true });
   });
 });
