@@ -482,7 +482,13 @@ export function Setup({
           ))}
         </div>
 
-        {chosen?.seeded && (
+        {/*
+          The seed lives where a run starts. A shared mode needs one; any
+          other mode may take one, and the rolls the app makes for it then
+          repeat. It used to sit above the rules page, feeding rolls nobody
+          logged.
+        */}
+        {chosen?.seeded ? (
           <>
             <h3 className="sectionTitle">Seed</h3>
             <p className="muted small">
@@ -504,6 +510,26 @@ export function Setup({
             <p className="muted small">
               A seeded {v.run.one.toLowerCase()} rolls its own dice, so everyone meets the same
               results in the same order. Keep your own dice for the modes that ask for them.
+            </p>
+          </>
+        ) : (
+          <>
+            <h3 className="sectionTitle">
+              Seed <span className="muted">optional</span>
+            </h3>
+            <div className="row seedRow">
+              <input
+                className="textInput"
+                value={seed}
+                placeholder="unseeded, dice are unrepeatable"
+                onChange={(e) => setSeed(e.target.value)}
+              />
+              <button className="ghost" onClick={() => setSeed(coinSeed())}>
+                Make one
+              </button>
+            </div>
+            <p className="muted small">
+              With a seed, the rolls the app makes for you come out the same every time it is entered. Your own dice are yours regardless.
             </p>
           </>
         )}

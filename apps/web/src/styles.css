@@ -622,39 +622,6 @@ p {
 }
 
 /* ---- seed bar ---------------------------------------------------------- */
-.seedbar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  max-width: 1500px;
-  margin: 0 auto;
-  padding: 0.6rem 1.25rem 0;
-}
-.seedbar label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.seedbar label span {
-  font-size: 0.7rem;
-  color: var(--muted);
-}
-.seedbar input {
-  min-width: 18rem;
-  padding: 0.35rem 0.6rem;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.85rem;
-  font-family: var(--mono);
-}
-.seedbar input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
 .ghost {
   padding: 0.25rem 0.7rem;
   font-family: var(--mono);
@@ -1547,9 +1514,6 @@ button:disabled,
   font-size: 0.9rem;
 }
 
-.seedbar[hidden] {
-  display: none;
-}
 
 /*
  * The run's step panel. Named distinctly from the inspector's `.step`, which is
@@ -3365,6 +3329,7 @@ html[data-pip="controls"] body { margin: 0; min-height: 100vh; background: var(-
 
 /* ---- the Rules page: the paper, with the structure as one more tab ---- */
 .rulesTabs { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0 0 1rem; }
+.rulesNote { margin: -0.4rem 0 1rem; font-family: var(--mono); }
 .docPage { max-width: 46rem; margin: 0 auto; padding: 1.5rem 2rem; }
 @media (max-width: 760px) { .docPage { padding: 1rem 1.1rem; } }
 
