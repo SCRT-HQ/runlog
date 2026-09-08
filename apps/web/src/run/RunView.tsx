@@ -340,10 +340,11 @@ export function RunView({ pack }: { pack: Pack }) {
           {/*
             Taking the run out, and the link to the world outside. Neither is
             the point of the screen, and both were sitting at the same weight
-            as the step. Folded away until wanted.
+            as the step. Folded away until wanted, under a label that says
+            what is inside.
           */}
           <details className="more">
-            <summary>Take it with you, and the world outside</summary>
+            <summary>Export and share</summary>
             <ExportPanel
               pack={pack}
               state={state}
@@ -708,16 +709,19 @@ function RunHeader({
         <button className="ghost" onClick={run.undo} disabled={!run.canUndo || run.readOnly}>
           Undo
         </button>
+        <button className="ghost" onClick={onSettings} title="Sounds, dice, rolls, and pop-outs for a stream">
+          Settings
+        </button>
+        {/* Apart from Undo, and in the tone the profile uses for deletion: it ends the run. */}
         <button
-          className="ghost"
+          className="ghost danger"
+          title={`End this ${v.run.one.toLowerCase()} and delete its log`}
           onClick={() => {
-            if (confirm(`Discard this ${v.run.one.toLowerCase()} and its log?`)) run.discard();
+            const named = state.name ? `${state.name}` : `this ${v.run.one.toLowerCase()}`;
+            if (confirm(`Discard ${named}? Its log is deleted.`)) run.discard();
           }}
         >
           Discard
-        </button>
-        <button className="ghost" onClick={onSettings} title="Sounds, dice, rolls, and pop-outs for a stream">
-          Settings
         </button>
       </div>
     </section>
@@ -1585,8 +1589,17 @@ function Flow({
 }
 
 function Timeline({ pack, state }: { pack: Pack; state: RunState }) {
-  if (state.outcomes.length === 0) return null;
   const total = state.outcomes.length;
+  // Always on the page, empty or not: the column under the step used to end
+  // at the card until the first roll, and the screen read as unfinished.
+  if (total === 0) {
+    return (
+      <section className="log">
+        <h3 className="sectionTitle">The log</h3>
+        <p className="empty">Nothing yet. What the dice do lands here.</p>
+      </section>
+    );
+  }
   return (
     <section className="log">
       <h3 className="sectionTitle">The log</h3>
