@@ -7,7 +7,7 @@ import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
 import { clockOfUnit, formatClock, liveClocks, nextUnit } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
-import { describeSkip, phaseSkipped, subjectLabel, type RunEvent, type RunState } from "@runlog/engine";
+import { describeSkip, describeSkipReason, phaseSkipped, subjectLabel, type RunEvent, type RunState } from "@runlog/engine";
 import { useRun, type ActiveStep } from "./useRun.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { RequestPanel } from "./RequestPanel.tsx";
@@ -841,8 +841,15 @@ function StepPanel({
               : "This is the part the app cannot see. It only records that you did it."}
           </p>
           {list.length > 0 && <Checklist items={list} pack={pack} state={state} ticked={ticked} onToggle={tick} />}
-          <button className="primary big" disabled={!allTicked} onClick={() => run.completeStep(phase, index)}>
-            Done
+          {/*
+            Never dim. A dimmed Done beside an unticked list read as broken;
+            the button says what it is waiting for and points at the box.
+          */}
+          <button
+            className="primary big"
+            onClick={(e) => (allTicked ? run.completeStep(phase, index) : nudgeFirstUnticked(e.currentTarget))}
+          >
+            {allTicked ? "Done" : "Tick what you honored"}
           </button>
         </section>
       );
@@ -891,13 +898,25 @@ function StepPanel({
               <Checklist items={confirmations} pack={pack} state={state} ticked={ticked} onToggle={tick} />
             </>
           )}
-          <button className="primary big" disabled={!allTicked || blocked.length > 0} onClick={() => run.finalizeUnit(phase, index)}>
-            {v.finalize}
+          <button
+            className="primary big"
+            disabled={blocked.length > 0}
+            onClick={(e) => (allTicked ? run.finalizeUnit(phase, index) : nudgeFirstUnticked(e.currentTarget))}
+          >
+            {blocked.length > 0 ? "Settle what is owed first" : allTicked ? v.finalize : "Tick what you honored"}
           </button>
         </section>
       );
     }
   }
+}
+
+/** The first box in this step still unticked, brought into view and given focus. */
+function nudgeFirstUnticked(from: HTMLElement): void {
+  const box = from.closest(".runStep")?.querySelector<HTMLInputElement>('input[type="checkbox"]:not(:checked)');
+  if (!box) return;
+  box.scrollIntoView({ block: "nearest" });
+  box.focus();
 }
 
 /**
@@ -1558,20 +1577,24 @@ function Flow({
         {run.activePhases.map((phase, i) => {
           const done = state.phasesDone.includes(phase.id);
           const current = run.activeStep?.phase.id === phase.id;
-          // Out of play this unit: grayed, with the reason on hover, so a
-          // phase that only happens in the first room reads as skipped
-          // rather than as something the player has yet to reach.
+          // Out of play this unit: grayed, with the reason under the name,
+          // so a phase that only happens in the first room reads as skipped
+          // for a reason rather than as broken. A dash on its own was read
+          // as broken.
           const skipped = !done && !current && phaseSkipped(pack, state, phase);
-          const why = skipped ? describeSkip(pack, phase) : null;
+          const why = skipped ? describeSkipReason(pack, phase) : null;
           return (
             <li
               key={phase.id}
               className={done ? "done" : current ? "current" : skipped ? "skipped" : ""}
               aria-current={current ? "step" : undefined}
-              title={why ?? undefined}
+              title={skipped ? (describeSkip(pack, phase) ?? undefined) : undefined}
             >
               <span className="idx">{current ? "▸" : skipped ? "–" : i + 1}</span>
-              <span>{phase.label}</span>
+              <span>
+                {phase.label}
+                {why && <span className="why">{why}</span>}
+              </span>
             </li>
           );
         })}

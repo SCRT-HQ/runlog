@@ -2537,6 +2537,14 @@ select.textInput {
   font-size: 0.8rem;
   padding-top: 0.15rem;
 }
+/* Why a phase is out of play this unit, under its name. */
+.flow .why {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 0.1rem;
+}
 
 /*
  * The one thing to do is the only raised object on the screen. Everything
