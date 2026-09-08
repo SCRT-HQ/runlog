@@ -390,6 +390,10 @@ on an array without spelling out its whole contents, and
 `{ requests: "answered" }` — always true once a play fixture completes, and
 there mostly for a reader working out what the fixture is claiming.
 
+The repository's own test bench, `packs/testing/engine-testing.yaml`, plays
+as a game called Night Watch, and [testing-pack.md](testing-pack.md) maps each
+of its entries to the feature it exercises.
+
 ---
 
 ### Outcomes, and fixing them
