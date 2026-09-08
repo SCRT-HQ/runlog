@@ -769,9 +769,9 @@ How many people race. The moderator is not one of them.
 | `min` | `integer` | — | Fewest contestants. Default: `2`. |
 | `max` | `integer` | — | Most contestants. Default: `10`. |
 
-## `pack.fixtures[]`
+## `pack.fixtures[] (0)`
 
-A self-test shipped with the pack. This is how an author proves their tables behave — including the worked examples printed in their own rulebook — without those assertions living in the engine's repo.
+Replay a hand-written event log and assert on the state it folds into.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -781,14 +781,151 @@ A self-test shipped with the pack. This is how an author proves their tables beh
 | `events` | —[] | yes | The run events to replay, in order. |
 | `expect` | `object`[] | yes | Assertions checked after the replay. |
 
-## `pack.fixtures[].expect[]`
+## `pack.fixtures[] (0).expect[] (0)`
 
-One assertion.
+The value at this path must equal exactly this.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `path` | `string` | yes | Dotted path into derived run state, e.g. counters.calm. |
 | `equals` | — | yes | The value expected at that path. |
+
+## `pack.fixtures[] (0).expect[] (1)`
+
+The array at this path must contain this value, among others.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `path` | `string` | yes | Dotted path into derived run state, naming an array. |
+| `contains` | — | yes | The array at this path must contain this value. |
+
+## `pack.fixtures[] (0).expect[] (2)`
+
+The array at this path must not contain this value.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `path` | `string` | yes | Dotted path into derived run state, naming an array. |
+| `absent` | — | yes | The array at this path must not contain this value. |
+
+## `pack.fixtures[] (0).expect[] (3)`
+
+Every request the engine made while playing was answered.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `requests` | `answered` | yes | Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all — spelled out here so a fixture can say so on purpose. |
+
+## `pack.fixtures[] (1)`
+
+Play the pack through a script — entering units, rolling tables, taking moves — and assert on the state that comes out.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `name` | `string` | yes | What this fixture demonstrates. |
+| `mode` | `string` | — | Mode to play in. Defaults to the pack's default mode. |
+| `seed` | `string` | — | Seed. Unanswered rolls in the script are drawn from it. |
+| `players` | `integer` | — | How many people are playing. |
+| `play` | `object`[] | yes | The script to play through: entering units, declaring subjects, rolling tables, taking moves. |
+| `expect` | `object`[] | yes | Assertions checked after the play-through. |
+
+## `pack.fixtures[] (1).play[] (0)`
+
+Enter the next unit.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `enter` | `integer` | yes | Enter the next unit; asserts it is this one. |
+| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+
+## `pack.fixtures[] (1).play[] (1)`
+
+Declare the current unit's subject. The active step must be a declareSubject step.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `declare` | `string` | yes | What to declare the current unit's subject as. |
+| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+
+## `pack.fixtures[] (1).play[] (2)`
+
+Run the active step the way the app would: a rollTable step rolls (and rolls again for any extra roll still owed), an actions step runs its actions, a manual step is ticked and completed, and a finalizeUnit step finalizes the unit.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `step` | `string` | yes | The active step: a phase id, or "phaseId#index" for a phase with more than one step. Must be the step the engine is actually waiting on. |
+| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+
+## `pack.fixtures[] (1).play[] (3)`
+
+Finalize the current unit: any confirmations are ticked and the unit closes. The active step must be finalizeUnit.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `finalize` | `object` | yes | No fields; just marks this as the finalize step. |
+| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+
+## `pack.fixtures[] (1).play[] (4)`
+
+Take a move.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `move` | `string` | yes | Id of the move to take. |
+| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+
+## `pack.fixtures[] (1).play[] (5)`
+
+Settle a due obligation.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `settle` | `string` | yes | The id or label of a due obligation. |
+| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+
+## `pack.fixtures[] (1).play[] (6)`
+
+Tick one checklist item on the active step, without completing it.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `tick` | `string` | yes | The text of a checklist item on the active step. |
+| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+
+## `pack.fixtures[] (1).expect[] (0)`
+
+The value at this path must equal exactly this.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `path` | `string` | yes | Dotted path into derived run state, e.g. counters.calm. |
+| `equals` | — | yes | The value expected at that path. |
+
+## `pack.fixtures[] (1).expect[] (1)`
+
+The array at this path must contain this value, among others.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `path` | `string` | yes | Dotted path into derived run state, naming an array. |
+| `contains` | — | yes | The array at this path must contain this value. |
+
+## `pack.fixtures[] (1).expect[] (2)`
+
+The array at this path must not contain this value.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `path` | `string` | yes | Dotted path into derived run state, naming an array. |
+| `absent` | — | yes | The array at this path must not contain this value. |
+
+## `pack.fixtures[] (1).expect[] (3)`
+
+Every request the engine made while playing was answered.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `requests` | `answered` | yes | Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all — spelled out here so a fixture can say so on purpose. |
 
 ## `pack.issue`
 
