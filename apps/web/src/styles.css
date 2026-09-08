@@ -2598,20 +2598,12 @@ select.textInput {
   gap: 1.4rem;
 }
 /*
- * The board stays beside the step. A roll reads against the trackers, and
- * the side used to have scrolled away by the time the dice settled. Only
- * where it has a column of its own; folded under the step it is in flow.
+ * The side column scrolls with the page, like the rest of it. It was
+ * pinned for a while so the trackers stayed beside the dice, but with the
+ * people at the table and a live link under them it outgrows the window,
+ * and a column with a scrollbar of its own inside a page that scrolls is
+ * two things moving at once.
  */
-@media (min-width: 1101px) {
-  .columns.run > .col.side {
-    position: sticky;
-    top: 4rem;
-    align-self: start;
-    max-height: calc(100vh - 4rem);
-    overflow-y: auto;
-    scrollbar-width: thin;
-  }
-}
 @media (max-width: 1100px) {
   .columns.run {
     grid-template-columns: 11rem minmax(0, 1fr);
