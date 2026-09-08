@@ -14,6 +14,7 @@ import {
 import { describeRoll, entryKeys, resolveRoll, type RollResult } from "./rolling.ts";
 import { DiceTray } from "./dice/DiceTray.tsx";
 import { RunView } from "./run/RunView.tsx";
+import { memoryRunStore, type RunStore } from "./run/store.ts";
 import { DesignView } from "./design/DesignView.tsx";
 import { ProfileView } from "./profile/ProfileView.tsx";
 import { profileHash, profilePageFromHash, type ProfilePage } from "./profile/route.ts";
@@ -136,6 +137,17 @@ export default function App() {
   // run the same sheet is behind the run's own Settings button, with the
   // streaming tab; here it has only the device tab, which needs no run.
   const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(false);
+  /**
+   * A pack on the bench: played in a store that forgets, from the Designer
+   * (a draft, valid but unsaved) or the library (a pack, to see how it
+   * plays). Nothing is written, and a draft that shares an id with a real
+   * pack never touches that pack's runs.
+   */
+  const [bench, setBench] = useState<{ pack: Pack; from: "the Designer" | "the library"; store: RunStore } | null>(null);
+  const openBench = (pack: Pack, from: "the Designer" | "the library") => setBench({ pack, from, store: memoryRunStore() });
+  // Leaving the screen the bench was opened from puts the pack down too:
+  // a trial does not wait behind another page to be found later.
+  useEffect(() => setBench(null), [view]);
   const [alerts, setAlerts] = useAlertSettings();
   /**
    * Places that live in the address bar: the docs' page (`#guide/playing`
@@ -895,6 +907,8 @@ export default function App() {
           }}
           onBack={() => setView("library")}
         />
+      ) : bench && (view === "design" || onLibrary) ? (
+        <RunView key={`bench:${bench.pack.id}`} pack={bench.pack} store={bench.store} bench={{ from: bench.from, onLeave: () => setBench(null) }} />
       ) : onLibrary ? (
         <LibraryView
           packs={libraryPacks}
@@ -920,6 +934,11 @@ export default function App() {
             void forgetRun(r.runId).then(() => syncBus.localChange("run", r.runId));
           }}
           onForgetPack={(record) => void forget(record)}
+          onTest={(p) => {
+            const parsed = loadPackText(p.source, p.record?.format ?? "yaml");
+            if (parsed.ok) openBench(parsed.pack, "the library");
+            else setNotice(`${p.title} does not load, so it cannot be tested.`);
+          }}
           onFile={(file) => {
             setView("play");
             void onFile(file);
@@ -968,7 +987,7 @@ export default function App() {
           }}
         />
       ) : view === "design" ? (
-        <DesignView />
+        <DesignView onTest={(pack) => openBench(pack, "the Designer")} />
       ) : !result.ok ? (
         <Diagnostics diagnostics={result.diagnostics} />
       ) : view === "play" ? (
