@@ -494,10 +494,11 @@ export default function App() {
     [imported, updates],
   );
 
-  /** What the shelf says is in play: the pack's own title wherever it has one. */
-  const activeTitle =
-    imported.find((p) => p.id === activeId)?.title ??
-    (source === null ? "your packs" : result.ok ? result.pack.title : "A pack that did not load");
+  /** The pack in play, its own title wherever it has one; absent with nothing loaded. */
+  const activeTitle = source === null ? null : (imported.find((p) => p.id === activeId)?.title ?? (result.ok ? result.pack.title : "A pack that did not load"));
+
+  /** Whether the library is what is on screen right now, whichever way it got there. */
+  const onLibrary = view === "library" || (source === null && view !== "design" && view !== "profile" && view !== "guide");
 
   /**
    * A sealed copy, opened: keep it, and keep the key that opened it.
@@ -741,24 +742,11 @@ export default function App() {
           <img className="logo" src="./icon.svg" alt="" />
           <h1>Runlog</h1>
         </a>
-        {/* While playing, the way to the shelf; anywhere else with a pack open, the way back to it. */}
-        {view !== "play" && source !== null ? (
-          <button className="packNow resume" onClick={() => setView("play")} title={`Back to ${activeTitle}`}>
-            <span className="shelfLabel">continue playing</span>
-            <strong>{activeTitle}</strong>
-            <span className="caret" aria-hidden="true">
-              ▸
-            </span>
-          </button>
-        ) : (
-          <button className="packNow" onClick={() => setView("library")} title="Your packs and runs">
-            <span className="shelfLabel">pack</span>
-            <strong>{activeTitle}</strong>
-            <span className="caret" aria-hidden="true">
-              ▾
-            </span>
-          </button>
-        )}
+        {/* One door to the library, always; a pack in play still says which one, in muted text beside it. */}
+        <button className="packNow" onClick={() => setView("library")} title="Your packs and runs" aria-current={onLibrary ? "page" : undefined}>
+          <span className="shelfLabel">Your packs</span>
+          {!onLibrary && activeTitle !== null && <span className="muted packTitle">{activeTitle}</span>}
+        </button>
         <div className="topbarEnd">
           {/*
             The pack's rules, as one button that says which way it goes.
@@ -918,7 +906,7 @@ export default function App() {
           }}
           onBack={() => setView("library")}
         />
-      ) : view === "library" || (source === null && view !== "design" && view !== "profile" && view !== "guide") ? (
+      ) : onLibrary ? (
         <LibraryView
           packs={libraryPacks}
           activeId={activeId}

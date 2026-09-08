@@ -8,19 +8,20 @@ import type { Race } from "../sync/client.ts";
 import { lastActive } from "../run/active.ts";
 import { onDay } from "../run/RunRow.tsx";
 import { loadCatalog, type CatalogEntry } from "./catalog.ts";
-import { pickUp, runLine } from "./home.ts";
+import { elsewhere, pickUp, runLine, runTitle } from "./home.ts";
 
 /**
- * The strip above the shelf: where you left off, where to pick up, how
- * a race stands, and what is new in the catalog. Small panels, each shown
- * only when it has something to say, so a fresh device sees one card
- * (start the pack it came with) and a busy one sees four. Nothing here is
- * a second copy of the shelf; each card is one press to somewhere.
+ * The strip above the shelf: where you left off, how a race stands, and
+ * what is new in the catalog. Small panels, each shown only when it has
+ * something to say, so a fresh device sees one card (start the pack it
+ * came with) and a busy one sees several. Nothing here is a second copy of
+ * the shelf; each card is one press to somewhere.
  *
- * The first card, for an account, is the run it touched last on any
- * device; Pick up beside it is what this device had open. On one device
- * they are the same run, and the first card is still the way back from
- * a device that has nothing open yet.
+ * The continue card is this device's own run — Pick up, in review, kept
+ * coming back as the same run the account card opened, so the two were
+ * merged into one. Where the account's last-touched run is a different
+ * run than this device's (played from somewhere else since), a quiet
+ * second line inside the same card offers it too.
  */
 export function HomeStrip<P extends { id: string; title: string }>({
   packs,
@@ -45,11 +46,26 @@ export function HomeStrip<P extends { id: string; title: string }>({
   // Nothing played yet: the page that says what this is.
   const welcome = runs.length === 0 ? "./" : null;
   const me = account.status === "signed-in" ? account.user.id : null;
-  const last = me && onContinueLast ? onContinueLast : null;
   const [races, setRaces] = useState<Race[]>([]);
   const [fresh, setFresh] = useState<CatalogEntry[]>([]);
+  const [accountRunId, setAccountRunId] = useState<string | null>(null);
 
   const up = useMemo(() => pickUp(packs, runs, lastActive()), [packs, runs]);
+  const other = useMemo(() => elsewhere(packs, runs, up, accountRunId), [packs, runs, up, accountRunId]);
+
+  // The account's own last-touched run, whichever device left it there; only
+  // fetched to compare against what this device already offers.
+  useEffect(() => {
+    if (!api || !me) {
+      setAccountRunId(null);
+      return;
+    }
+    let live = true;
+    void api.me().then((it) => live && setAccountRunId(it.profile.currentSessionId ?? null), () => {});
+    return () => {
+      live = false;
+    };
+  }, [api, me]);
 
   // The account's races, once per visit; only the ones still running.
   useEffect(() => {
@@ -91,22 +107,10 @@ export function HomeStrip<P extends { id: string; title: string }>({
     .filter((s): s is NonNullable<typeof s> => s !== null)
     .slice(0, 2);
 
-  if (!up && standings.length === 0 && fresh.length === 0 && !welcome && !last) return null;
+  if (!up && standings.length === 0 && fresh.length === 0 && !welcome) return null;
 
   return (
     <section className="homeStrip" aria-label="Where you are">
-      {last && (
-        <div className="panel homeCard">
-          <span className="homeLabel muted small">Continue where you left off</span>
-          <strong>Your last run</strong>
-          <span className="muted small">The one your account touched last, on this device or another.</span>
-          <div className="padRow">
-            <button className="primary" onClick={last}>
-              Open it
-            </button>
-          </div>
-        </div>
-      )}
       {welcome && (
         <div className="panel homeCard">
           <span className="homeLabel muted small">New here?</span>
@@ -121,8 +125,8 @@ export function HomeStrip<P extends { id: string; title: string }>({
       )}
       {up && (
         <div className="panel homeCard">
-          <span className="homeLabel muted small">{up.run ? "Pick up" : "Start"}</span>
-          <strong>{up.pack.title}</strong>
+          <span className="homeLabel muted small">{up.run ? "Continue where you left off" : "Start"}</span>
+          <strong>{up.run ? runTitle(up.run, vocabularies.get(up.pack.id)?.run.one ?? "Run") : up.pack.title}</strong>
           <span className="muted small">
             {up.run ? `${runLine(up.run, vocabularies.get(up.pack.id)?.unit.one ?? "Unit")} · ${onDay(up.run.updatedAt)}` : "Nothing played yet; a first run is one press away."}
           </span>
@@ -137,6 +141,14 @@ export function HomeStrip<P extends { id: string; title: string }>({
               </button>
             )}
           </div>
+          {other && onContinueLast && (
+            <div className="homeElsewhere muted small">
+              <span>On another device: {runLine(other.run!, vocabularies.get(other.pack.id)?.unit.one ?? "Unit")}</span>
+              <button className="ghost tiny" onClick={onContinueLast}>
+                Open
+              </button>
+            </div>
+          )}
         </div>
       )}
       {standings.map((s) => (
