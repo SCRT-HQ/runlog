@@ -3,10 +3,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText } from "@runlog/rules-schema";
-import { reduce, type RunEvent } from "@runlog/engine";
+import { reduce } from "./reduce.ts";
+import type { RunEvent } from "./events.ts";
 import { clockNow, isSnapshot, raceOf, snapshotOf } from "./snapshot.ts";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const r = loadPackText(readFileSync(join(repoRoot, "packs/demo/pack.yaml"), "utf8"), "yaml");
 if (!r.ok) throw new Error("could not load the demo pack");
 const kiln = r.pack;

@@ -1,27 +1,13 @@
 import { rollDice, type ChecklistItem, type Pack } from "@runlog/rules-schema";
 import type { RunEvent } from "./events.ts";
 import { createRandom, streamSeed } from "./rng.ts";
-import { nextUnit, reduce } from "./reduce.ts";
-import {
-  activePhases,
-  closeUnitEvents,
-  nextStep,
-  stepCompletionEvents,
-  type ActiveStep,
-} from "./flow.ts";
-import {
-  dueObligations,
-  executeActions,
-  executeMove,
-  executeObligation,
-  executeTableRoll,
-  openNotes,
-  type AnswerValue,
-  type ExecContext,
-  type ExecResult,
-} from "./execute.ts";
-import { stopClocksEvents, unitClockStart } from "./clock.ts";
+import { reduce } from "./reduce.ts";
+import { checklistOf, currentlyDue, itemText, nextStep, type ActiveStep } from "./flow.ts";
+import { openNotes, type AnswerValue } from "./execute.ts";
+import { answer, drive, type DriveAction, type Pending } from "./drive.ts";
 import type { InputRequest, Obligation, RunState } from "./types.ts";
+
+export { currentlyDue };
 
 /**
  * Playing a pack, headlessly.
@@ -39,6 +25,12 @@ import type { InputRequest, Obligation, RunState } from "./types.ts";
  * answers (or, for a seeded run, by rolling from the seed itself). What comes
  * out is exactly what a real run produces: an event log and the state folded
  * from it.
+ *
+ * It is built on `drive`/`answer`, the same primitives a headless caller (a
+ * Discord bot, say) drives one action at a time: a script step is one
+ * `drive` call, and the loop that resolves whatever it asks for is the same
+ * request/answer round trip, just run synchronously here instead of across
+ * two Lambda invocations.
  */
 
 export type PlayAnswerValue = AnswerValue;
@@ -144,10 +136,6 @@ function queueName(request: InputRequest): string {
   return request.kind; // "ask" | "chooseTarget"
 }
 
-function itemText(item: ChecklistItem): string {
-  return typeof item === "string" ? item : item.text;
-}
-
 /** Events since the current unit began, for counting how many times a purpose has already rolled. */
 function eventsThisUnit(events: readonly RunEvent[]): readonly RunEvent[] {
   const start = events.map((e) => e.t).lastIndexOf("UnitEntered");
@@ -159,28 +147,26 @@ function countRolls(events: readonly RunEvent[], purpose: string): number {
 }
 
 /**
- * Answer the engine's interruptions for one block of work — a table roll, an
- * action list, a move, an obligation — re-running it from the top each time,
- * exactly as the app does.
+ * Drive one action and answer the engine's interruptions for it — a table
+ * roll, an action list, a move, an obligation — from a script step's table
+ * of answers, exactly as the app's own request/answer loop would if a
+ * player supplied them one at a time.
  */
 function runBlock(
-  exec: (ctx: ExecContext) => ExecResult,
+  pack: Pack,
+  action: DriveAction,
   opts: {
     stepAnswers: PlayAnswers | undefined;
     seed: string | undefined;
-    committed: readonly RunEvent[];
+    events: () => readonly RunEvent[];
+    unit: number;
     scriptIndex: number;
     describeStep: () => string;
     given: () => string[];
     requests: PlayRequest[];
-    /** Stamped on every event this block produces, exactly as one `now()` call in the app is reused across a whole retried action. */
     at: string;
-    /** The unit this block runs in, so a seeded roll draws from that unit's own stream rather than colliding with another unit's. */
-    unit: number;
   },
 ): RunEvent[] {
-  const answers: Record<string, AnswerValue> = {};
-  const generated: string[] = [];
   // Queues, one list per key the script gave, consumed in the order requests
   // of that shape are asked. An exact request key is checked first and is
   // never drawn from these — it answers itself, however many times it recurs.
@@ -189,55 +175,38 @@ function runBlock(
     queues.set(key, Array.isArray(value) ? [...value] : [value]);
   }
 
+  let result = drive(pack, opts.events(), action, { now: opts.at, seed: opts.seed });
+
   for (let guard = 0; guard < 500; guard++) {
-    const result = exec({ answers, now: opts.at, generatedAnswers: generated });
     if (result.status === "done") return result.events;
-    const request = result.request!;
+    const request = result.request;
+    const pending: Pending = result.pending;
 
     const exact = opts.stepAnswers?.[request.key];
     if (exact !== undefined) {
-      answers[request.key] = Array.isArray(exact) ? exact[0]! : exact;
-      opts.requests.push({
-        step: opts.scriptIndex,
-        key: request.key,
-        kind: request.kind,
-        label: requestLabel(request),
-        answer: answers[request.key]!,
-        source: "given",
-      });
+      const value = Array.isArray(exact) ? exact[0]! : exact;
+      opts.requests.push({ step: opts.scriptIndex, key: request.key, kind: request.kind, label: requestLabel(request), answer: value, source: "given" });
+      result = answer(pack, opts.events(), pending, request.key, value, { now: opts.at });
       continue;
     }
 
     const q = queues.get(queueName(request));
     if (q && q.length > 0) {
       const value = q.shift()!;
-      answers[request.key] = value;
-      opts.requests.push({
-        step: opts.scriptIndex,
-        key: request.key,
-        kind: request.kind,
-        label: requestLabel(request),
-        answer: value,
-        source: "given",
-      });
+      opts.requests.push({ step: opts.scriptIndex, key: request.key, kind: request.kind, label: requestLabel(request), answer: value, source: "given" });
+      result = answer(pack, opts.events(), pending, request.key, value, { now: opts.at });
       continue;
     }
 
     if (opts.seed !== undefined && request.kind === "roll") {
       const occurrence =
-        countRolls(eventsThisUnit(opts.committed), request.purpose) + countRolls(result.events, request.purpose);
+        countRolls(eventsThisUnit(opts.events()), request.purpose) + countRolls(pending.partial, request.purpose);
       const random = createRandom(streamSeed(opts.seed, opts.unit, request.purpose, occurrence));
       const { total } = rollDice(request.dice, random);
-      answers[request.key] = total;
-      generated.push(request.key);
-      opts.requests.push({
-        step: opts.scriptIndex,
-        key: request.key,
-        kind: request.kind,
-        label: requestLabel(request),
-        answer: total,
-        source: "seed",
-      });
+      opts.requests.push({ step: opts.scriptIndex, key: request.key, kind: request.kind, label: requestLabel(request), answer: total, source: "seed" });
+      // `autoRoll: true` on `answer` marks this key generated rather than
+      // physical, the same distinction a "roll for me" button makes in the app.
+      result = answer(pack, opts.events(), pending, request.key, total, { now: opts.at, autoRoll: true });
       continue;
     }
 
@@ -298,23 +267,22 @@ export function playThrough(pack: Pack, script: readonly PlayStep[], options: Pl
 
   const given = (raw: PlayStep): string[] => Object.keys(raw.answers ?? {});
 
-  const runBlockFor = (
-    exec: (ctx: ExecContext) => ExecResult,
-    index: number,
-    raw: PlayStep,
-    at: string,
-  ): RunEvent[] =>
-    runBlock(exec, {
+  const runBlockFor = (action: DriveAction, index: number, raw: PlayStep, at: string): RunEvent[] =>
+    runBlock(pack, action, {
       stepAnswers: raw.answers,
       seed,
-      committed: events,
+      events: () => events,
+      unit: state.unit,
       scriptIndex: index,
       describeStep: () => JSON.stringify({ ...raw, answers: undefined }),
       given: () => given(raw),
       requests,
       at,
-      unit: state.unit,
     });
+
+  /** Tick every point on a step's checklist, script-convenience style: a script names the step, not each box. */
+  const tickAll = (active: ActiveStep, items: ChecklistItem[]): RunEvent[] =>
+    items.map((_, i) => ({ t: "Checked" as const, at: now(), step: `${active.phase.id}#${active.index}`, item: `${i}`, on: true }));
 
   const finalizeCurrentUnit = (active: ActiveStep, index: number): void => {
     if (active.step.kind !== "finalizeUnit") {
@@ -323,25 +291,19 @@ export function playThrough(pack: Pack, script: readonly PlayStep[], options: Pl
         { step: index },
       );
     }
-    const confirm = active.step.confirm ?? [];
-    const ticks: RunEvent[] = confirm.map((_, i) => ({
-      t: "Checked",
-      at: now(),
-      step: `${active.phase.id}#${active.index}`,
-      item: `${i}`,
-      on: true,
-    }));
-    const stopped = stopClocksEvents(state, now());
+    commit(tickAll(active, checklistOf(active.step)));
     const at = now();
-    commit([...ticks, ...stopped, { t: "UnitFinalized", at }, ...stepCompletionEvents(active.phase, active.index, state, at)]);
+    const result = drive(pack, events, { finalize: true }, { now: at });
+    if (result.status !== "done") throw new Error("unreachable: finalize never awaits");
+    commit(result.events);
   };
 
   script.forEach((raw, index) => {
     if ("enter" in raw) {
-      const unit = nextUnit(state);
       const at = now();
-      const clockEvent = unitClockStart(pack, state, unit, at);
-      commit([{ t: "UnitEntered", at }, ...(clockEvent ? [clockEvent] : [])]);
+      const result = drive(pack, events, { enter: true }, { now: at });
+      if (result.status !== "done") throw new Error("unreachable: enter never awaits");
+      commit(result.events);
       if (state.unit !== raw.enter) {
         throw new PlayError(
           `script step #${index} expected to enter unit ${raw.enter}, but the run is now at unit ${state.unit}`,
@@ -359,12 +321,10 @@ export function playThrough(pack: Pack, script: readonly PlayStep[], options: Pl
           { step: index },
         );
       }
-      const declaredAt = now();
       const at = now();
-      commit([
-        { t: "SubjectDeclared", at: declaredAt, subjectType: raw.declare },
-        ...stepCompletionEvents(active.phase, active.index, state, at),
-      ]);
+      const result = drive(pack, events, { declare: raw.declare }, { now: at });
+      if (result.status !== "done") throw new Error("unreachable: declare never awaits");
+      commit(result.events);
       return;
     }
 
@@ -385,38 +345,29 @@ export function playThrough(pack: Pack, script: readonly PlayStep[], options: Pl
         case "rollTable": {
           const table = active.step.table;
           // A step whose table still owes extra rolls this unit stays open:
-          // stepCompletionEvents reports only that one roll was taken, and
-          // the same step must be rolled again.
+          // `drive`'s completion event is `ExtraRollTaken`, not `StepCompleted`,
+          // and the same step must be rolled again.
           for (let guard = 0; guard < 20; guard++) {
             const rollAt = now();
-            const rolled = runBlockFor((ctx) => executeTableRoll(pack, state, table, ctx), index, raw, rollAt);
-            const at = now();
-            const completion = stepCompletionEvents(active.phase, active.index, state, at);
-            commit([...rolled, ...completion]);
-            if (completion.length === 1 && completion[0]!.t === "ExtraRollTaken") continue;
+            const rolled = runBlockFor({ step: true }, index, raw, rollAt);
+            commit(rolled);
+            const last = rolled[rolled.length - 1];
+            if (last?.t === "ExtraRollTaken" && last.table === table) continue;
             break;
           }
           break;
         }
         case "actions": {
-          const doActions = active.step.do;
           const at = now();
-          const acted = runBlockFor((ctx) => executeActions(pack, state, doActions, ctx), index, raw, at);
-          const doneAt = now();
-          commit([...acted, ...stepCompletionEvents(active.phase, active.index, state, doneAt)]);
+          commit(runBlockFor({ step: true }, index, raw, at));
           break;
         }
         case "manual": {
-          const list = active.step.checklist ?? [];
-          const ticks: RunEvent[] = list.map((_, i) => ({
-            t: "Checked",
-            at: now(),
-            step: `${active.phase.id}#${active.index}`,
-            item: `${i}`,
-            on: true,
-          }));
+          commit(tickAll(active, checklistOf(active.step)));
           const at = now();
-          commit([...ticks, ...stepCompletionEvents(active.phase, active.index, state, at)]);
+          const result = drive(pack, events, { step: true }, { now: at });
+          if (result.status !== "done") throw new Error("unreachable: a manual step never awaits");
+          commit(result.events);
           break;
         }
         case "declareSubject":
@@ -443,12 +394,8 @@ export function playThrough(pack: Pack, script: readonly PlayStep[], options: Pl
     if ("move" in raw) {
       const move = pack.moves?.[raw.move];
       if (!move) throw new PlayError(`script step #${index}: no such move "${raw.move}"`, { step: index });
-      const moveId = raw.move;
       const at = now();
-      const executed = runBlockFor((ctx) => executeMove(pack, state, moveId, ctx), index, raw, at);
-      const closeAt = now();
-      const extra = move.finalizes ? [...stopClocksEvents(state, closeAt), ...closeUnitEvents(pack, state, closeAt)] : [];
-      commit([...executed, ...extra]);
+      commit(runBlockFor({ move: raw.move }, index, raw, at));
       return;
     }
 
@@ -458,48 +405,24 @@ export function playThrough(pack: Pack, script: readonly PlayStep[], options: Pl
       if (!target) {
         throw new PlayError(`script step #${index}: no due obligation matching "${raw.settle}"`, { step: index });
       }
-      const obligationId = target.id;
       const at = now();
-      const resolved = runBlockFor((ctx) => executeObligation(pack, state, obligationId, ctx), index, raw, at);
-      commit(resolved);
+      commit(runBlockFor({ settle: target.id }, index, raw, at));
       return;
     }
 
     // "tick"
     const active = nextStep(pack, state);
     if (!active) throw new PlayError(`cannot tick "${raw.tick}" at script step #${index}: no active step`, { step: index });
-    const list = active.step.kind === "manual" ? (active.step.checklist ?? []) : active.step.kind === "finalizeUnit" ? (active.step.confirm ?? []) : [];
+    const list = checklistOf(active.step);
     const itemIndex = list.findIndex((item) => itemText(item) === raw.tick);
     if (itemIndex < 0) {
       throw new PlayError(`script step #${index}: no checklist item "${raw.tick}" on the active step`, { step: index });
     }
-    commit([{ t: "Checked", at: now(), step: `${active.phase.id}#${active.index}`, item: `${itemIndex}`, on: true }]);
+    const at = now();
+    const result = drive(pack, events, { tick: { index: itemIndex, on: true } }, { now: at });
+    if (result.status !== "done") throw new Error("unreachable: a tick never awaits");
+    commit(result.events);
   });
 
   return { state: state!, events, requests };
-}
-
-/**
- * Obligations due right now, by the same lifecycle points the app checks.
- *
- * Exported so a test can drive an arbitrary event log at this gate directly —
- * a clock expiring is not something a `playThrough` script can cause (it is
- * the app that notices a timer hit zero, not any action a pack can run), so
- * the only way to prove this gate reacts to one is to reduce the events by
- * hand and ask it.
- */
-export function currentlyDue(pack: Pack, state: RunState): Obligation[] {
-  const reached: string[] = ["immediately", "onEnterUnit"];
-  if (state.subjects.some((s) => s.unit === state.unit && s.type)) reached.push("onDeclareSubject");
-  const manualDone = activePhases(pack, state).every((p) =>
-    p.steps.every((s, i) => s.kind !== "manual" || state.stepsDone.includes(`${p.id}#${i}`)),
-  );
-  if (manualDone) reached.push("afterWork");
-  if (nextStep(pack, state)?.step.kind === "finalizeUnit") reached.push("onFinalize");
-  // A clock that already expired this unit makes an onTimerExpired obligation
-  // due immediately, even one queued afterward -- the bell already rang.
-  if (state.clocks.some((c) => c.unit === state.unit && c.status === "done" && c.expired)) {
-    reached.push("onTimerExpired");
-  }
-  return reached.flatMap((point) => dueObligations(state, point));
 }
