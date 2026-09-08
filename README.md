@@ -1,7 +1,7 @@
-# Runlog
-
-[![r/runlog_scrthq](https://img.shields.io/reddit/subreddit-subscribers/runlog_scrthq?style=flat-square&logo=reddit&label=r%2Frunlog_scrthq)](https://www.reddit.com/r/runlog_scrthq/)
-[![Discord](https://img.shields.io/badge/Discord-join-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/ZwWeRCaV5J)
+<p align="center"><img src="apps/web/public/icon.svg" alt="" width="88"></p>
+<h1 align="center">Runlog</h1>
+<p align="center"><img src="apps/web/public/SCRTHQ-LOGOMARK-CIRCLE-COLOR.png" alt="" height="20"> by <a href="https://scrthq.com">Secret Headquarters</a></p>
+<p align="center"><a href="https://www.reddit.com/r/runlog_scrthq/"><img src="https://img.shields.io/reddit/subreddit-subscribers/runlog_scrthq?style=flat-square&logo=reddit&label=r%2Frunlog_scrthq" alt="r/runlog_scrthq"></a> <a href="https://discord.gg/ZwWeRCaV5J"><img src="https://img.shields.io/badge/Discord-join-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord"></a></p>
 
 An engine for dice-driven creative-practice games — the kind where you roll on
 a table, take whatever constraint comes up, make something under it, and
