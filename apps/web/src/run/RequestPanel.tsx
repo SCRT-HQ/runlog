@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { parseDice, rollDice, type Pack } from "@runlog/rules-schema";
+import { parseDice, rollDice, type Pack, type Table } from "@runlog/rules-schema";
 import { subjectLabel, type InputRequest, type RunState } from "@runlog/engine";
 import { Die } from "../dice/Die.tsx";
 import { DiceTray } from "../dice/DiceTray.tsx";
 import { toDisplayDice, type RolledDie } from "../rolling.ts";
+import { lineFor, tableLines } from "./tableLook.ts";
 
 /**
  * Answering whatever the engine is waiting on.
@@ -37,7 +38,7 @@ export function RequestPanel({
   return (
     <section className="panel request">
       <h3 className="sectionTitle">The game is waiting on you</h3>
-      {request.kind === "roll" && <RollRequest request={request} onAnswer={onAnswer} />}
+      {request.kind === "roll" && <RollRequest request={request} table={pack.tables[request.purpose] ?? null} onAnswer={onAnswer} />}
       {request.kind === "ask" && (
         <YesNo
           label={request.question}
@@ -58,15 +59,22 @@ export function RequestPanel({
   );
 }
 
-/** The number pad. Physical dice first, an in-app roll one tap away. */
+/** The number pad. Physical dice first, an in-app roll one tap away, and the table it is for one tap away too. */
 function RollRequest({
   request,
+  table,
   onAnswer,
 }: {
   request: Extract<InputRequest, { kind: "roll" }>;
+  /** The table this roll is for, when it is a table's own roll rather than an action's. */
+  table: Table | null;
   onAnswer: (key: string, value: number, machineRolled?: boolean, dice?: RolledDie[], seed?: number) => void;
 }) {
   const [typed, setTyped] = useState("");
+  // The table, opened beside the pad. A line pressed puts its number on
+  // the pad; Enter is still the player's, so a forced number is chosen
+  // twice and typed once, and the log says typed.
+  const [tableOpen, setTableOpen] = useState(false);
   /**
    * A roll in flight: decided already, but not yet answered.
    *
@@ -95,6 +103,8 @@ function RollRequest({
   const value = Number(typed);
   const inRange = dice ? value >= dice.min && value <= dice.max : typed.length > 0;
   const ok = typed.length > 0 && inRange;
+  const lines = useMemo(() => (table ? tableLines(table, dice) : []), [table, dice]);
+  const landing = table && ok ? lineFor(lines, table, value) : null;
 
   const submit = () => ok && onAnswer(request.key, value);
 
@@ -134,7 +144,25 @@ function RollRequest({
         >
           {thrown ? "Rolling…" : "Roll for me"}
         </button>
+        {lines.length > 0 && (
+          <button className={`ghost ${tableOpen ? "on" : ""}`} aria-expanded={tableOpen} onClick={() => setTableOpen((o) => !o)} title="See the lines this roll can land on">
+            Table
+          </button>
+        )}
       </div>
+
+      {tableOpen && table && (
+        <ol className="tableLook" aria-label={`${table.title}: what the roll can land on`}>
+          {lines.map((line) => (
+            <li key={line.id} className={landing === line.id ? "on" : ""}>
+              <button type="button" className="tableLine" disabled={!!thrown} onClick={() => setTyped(String(line.value))} title={`Put ${line.value} on the pad`}>
+                <span className="range">{line.range}</span>
+                <span className="text">{line.title}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
 
       {thrown && (
         <div className="throw">
