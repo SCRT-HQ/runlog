@@ -3,7 +3,8 @@ import type { Action, Pack, Phase } from "@runlog/rules-schema";
 import { ulid } from "../storage/ids.ts";
 import { syncBus } from "../sync/bus.ts";
 import { reconcile, stampIds } from "../sync/log.ts";
-import { activeRunFor, forgetActive, NEW_RUN, setActiveRunFor, setLastActive } from "./active.ts";
+import { NEW_RUN } from "./active.ts";
+import { deviceRunStore, type RunStore } from "./store.ts";
 import { drawAgainEvents, drawIsLast, type LastDraw } from "./redraw.ts";
 import { clearHalfStep, loadHalfStep, outcomesAhead, saveHalfStep, toPending } from "./halfStep.ts";
 import { rollsForMeByDefault } from "./pace.ts";
@@ -47,16 +48,7 @@ import {
 
 export type { ActiveStep };
 
-import {
-  clearLegacyRun,
-  currentRun,
-  forgetRun,
-  saveRun,
-  takeLegacyRun,
-  loadRun,
-  runsFor,
-  type StoredRun,
-} from "../storage/db.ts";
+import type { StoredRun } from "../storage/db.ts";
 
 /**
  * The run store.
@@ -102,7 +94,12 @@ export interface Pending {
   closesUnit?: boolean;
 }
 
-export function useRun(pack: Pack) {
+/**
+ * @param store Where the log lives. The device by default; a memory store
+ * for a run that is only a trial, which writes nothing and syncs nothing.
+ */
+export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
+  const { runsFor, loadRun, currentRun, saveRun, forgetRun, takeLegacyRun, clearLegacyRun, activeRunFor, setActiveRunFor, setLastActive, forgetActive } = store;
   const [events, setEvents] = useState<RunEvent[]>([]);
   /**
    * Reading from IndexedDB is asynchronous, so there is a moment before the
@@ -133,7 +130,7 @@ export function useRun(pack: Pack) {
         live.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
         setRunList(live);
       }),
-    [pack.id],
+    [pack.id, runsFor],
   );
   /**
    * True while the player has asked for a fresh run and not started it
@@ -192,7 +189,7 @@ export function useRun(pack: Pack) {
     return () => {
       live = false;
     };
-  }, [pack.id, refreshList]);
+  }, [pack.id, refreshList, store]);
 
   const started = events.length > 0;
   const state: RunState | null = useMemo(
@@ -228,11 +225,11 @@ export function useRun(pack: Pack) {
         )
         .then(() => {
           setLastActive({ packId: pack.id, runId: id });
-          syncBus.localChange("run", id);
+          store.changed(id);
           void refreshList();
         });
     },
-    [pack, refreshList],
+    [pack, refreshList, store],
   );
 
   /**
@@ -244,9 +241,9 @@ export function useRun(pack: Pack) {
    * is how a second device picks up where the first one was: the first
    * pass after sign-in lands here, and the pack opens on the run in play.
    */
-  useEffect(
-    () =>
-      syncBus.subscribe((news) => {
+  useEffect(() => {
+    if (!store.keeps) return;
+    return syncBus.subscribe((news) => {
         if (news.t !== "pulled" || news.kind !== "run") return;
         void refreshList();
         const id = runIdRef.current;
@@ -262,9 +259,8 @@ export function useRun(pack: Pack) {
           if (saved) setActiveRunFor(pack.id, saved.runId);
           setPending(null);
         });
-      }),
-    [pack.id, refreshList],
-  );
+      });
+  }, [pack.id, refreshList, store]);
 
   const commit = useCallback(
     (next: RunEvent[]): RunEvent[] => {
@@ -467,7 +463,7 @@ export function useRun(pack: Pack) {
       setSeed(startSeed);
       return id;
     },
-    [pack, persist],
+    [pack, persist, store],
   );
 
   const enterUnit = useCallback(() => {
@@ -784,7 +780,7 @@ export function useRun(pack: Pack) {
    */
   const restoredFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!hydrated || !state || !runId || pending || readOnly || restoredFor.current === runId) return;
+    if (!hydrated || !state || !runId || pending || readOnly || !store.keeps || restoredFor.current === runId) return;
     restoredFor.current = runId;
     const stored = loadHalfStep(runId);
     if (!stored) return;
@@ -794,13 +790,13 @@ export function useRun(pack: Pack) {
       return;
     }
     runPending(p, p.answers, p.generated);
-  }, [hydrated, state, runId, pending, readOnly, events.length, pack, runPending]);
+  }, [hydrated, state, runId, pending, readOnly, events.length, pack, runPending, store.keeps]);
 
   useEffect(() => {
-    if (!hydrated || !runId) return;
+    if (!hydrated || !runId || !store.keeps) return;
     if (pending) saveHalfStep(runId, events.length, pending);
     else clearHalfStep(runId);
-  }, [hydrated, pending, runId, events.length]);
+  }, [hydrated, pending, runId, events.length, store.keeps]);
 
   /** What the block in flight has resolved so far, ahead of the log. */
   const pendingOutcomes = useMemo(() => outcomesAhead(pack, events, pending?.partial), [pack, events, pending?.partial]);
@@ -840,7 +836,7 @@ export function useRun(pack: Pack) {
     name(null);
     setEvents([]);
     setPending(null);
-  }, [pack, refreshList]);
+  }, [pack, refreshList, store]);
 
   /**
    * Open another run of this pack on this device. The one that was open
@@ -858,7 +854,7 @@ export function useRun(pack: Pack) {
         setPending(null);
       });
     },
-    [pack.id],
+    [pack.id, store],
   );
 
   /**
@@ -871,7 +867,7 @@ export function useRun(pack: Pack) {
     setActiveRunFor(pack.id, NEW_RUN);
     setEvents([]);
     setPending(null);
-  }, [pack.id]);
+  }, [pack.id, store]);
 
   /** Back out of "another": the newest run of the pack is open again. */
   const cancelAnother = useCallback(() => {
@@ -882,7 +878,7 @@ export function useRun(pack: Pack) {
       setActiveRunFor(pack.id, saved.runId);
       setEvents(saved.events as RunEvent[]);
     });
-  }, [pack.id]);
+  }, [pack.id, store]);
 
   /* ---------------------------------------------------------------- *
    * Derived helpers for the view

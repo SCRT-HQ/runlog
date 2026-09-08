@@ -1033,6 +1033,30 @@ p {
 .libraryTitle:hover strong {
   color: var(--accent);
 }
+/* ---- a test run: the strip that says nothing here is kept ------------- */
+.benchBar {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  margin: 0.75rem 0 0.25rem;
+  padding: 0.5rem 0.8rem;
+  border-left: 2px solid var(--accent);
+  background: color-mix(in oklab, var(--accent) 9%, var(--panel));
+  font-size: var(--t-1);
+}
+.benchBar .benchLabel {
+  font-family: var(--mono);
+  color: var(--accent);
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+}
+.benchBar .benchActions {
+  display: flex;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
 .libraryPackActions {
   display: flex;
   gap: 0.4rem;

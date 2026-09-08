@@ -9,6 +9,7 @@ import { clockOfUnit, formatClock, liveClocks, nextUnit } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import { describeSkip, describeSkipReason, phaseSkipped, subjectLabel, type RunEvent, type RunState } from "@runlog/engine";
 import { useRun, type ActiveStep } from "./useRun.ts";
+import type { RunStore } from "./store.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { RequestPanel } from "./RequestPanel.tsx";
 import { Checklist, checklistDone } from "./Checklist.tsx";
@@ -40,8 +41,22 @@ import { useRace } from "./useRace.ts";
  * from its declared flow. Nothing here knows what kind of game it is hosting —
  * which is the same claim the format makes, held to to the last label.
  */
-export function RunView({ pack }: { pack: Pack }) {
-  const run = useRun(pack);
+export function RunView({
+  pack,
+  store,
+  bench,
+}: {
+  pack: Pack;
+  /** Where the log lives; the device unless a bench says otherwise. */
+  store?: RunStore;
+  /**
+   * A test run: the pack is being tried, not played. Nothing is saved
+   * or shared, so the people, race and export panels have nothing to
+   * hold, and the screen says so with a way back to where the trial began.
+   */
+  bench?: { from: string; onLeave: () => void };
+}) {
+  const run = useRun(pack, store);
 
   // Sounds for what happens while nobody is looking at the screen. Hooked
   // here, before any early return, as hooks must be.
@@ -203,7 +218,7 @@ export function RunView({ pack }: { pack: Pack }) {
     ]);
     // Everyone watching sees the same dice land: the value is already
     // decided, so what travels is the throw as it is shown here.
-    if (throwing?.dice && throwing.dice.length > 0 && run.record && !run.readOnly) {
+    if (throwing?.dice && throwing.dice.length > 0 && run.record && !run.readOnly && !bench) {
       sync.gesture(run.record.runId, "rolled", {
         dice: throwing.dice,
         total: throwing.total,
@@ -255,14 +270,17 @@ export function RunView({ pack }: { pack: Pack }) {
 
   if (!run.started || !run.state) {
     return (
-      <Setup
-        pack={pack}
-        onStart={run.startRun}
-        others={run.runList}
-        onContinue={run.switchRun}
-        onBack={run.runList.length > 0 ? run.cancelAnother : undefined}
-        {...(api ? { race: { start: (mode, seed, name) => void startRace(mode, seed, name), join: (code) => void joinRace(code), note: raceNote } } : {})}
-      />
+      <>
+        {bench && <BenchBar pack={pack} bench={bench} />}
+        <Setup
+          pack={pack}
+          onStart={run.startRun}
+          others={run.runList}
+          onContinue={run.switchRun}
+          onBack={run.runList.length > 0 ? run.cancelAnother : undefined}
+          {...(api && !bench ? { race: { start: (mode, seed, name) => void startRace(mode, seed, name), join: (code) => void joinRace(code), note: raceNote } } : {})}
+        />
+      </>
     );
   }
 
@@ -270,6 +288,7 @@ export function RunView({ pack }: { pack: Pack }) {
 
   return (
     <main className="main run">
+      {bench && <BenchBar pack={pack} bench={bench} onRestart={run.discard} />}
       <RunHeader pack={pack} run={run} state={state} onSettings={() => setSettingsOpen(true)} />
 
       {/*
@@ -344,16 +363,18 @@ export function RunView({ pack }: { pack: Pack }) {
             as the step. Folded away until wanted, under a label that says
             what is inside.
           */}
-          <details className="more">
-            <summary>Export and share</summary>
-            <ExportPanel
-              pack={pack}
-              state={state}
-              events={run.events}
-              onLoad={run.loadEvents}
-            />
-            <EnvironmentPanel pack={pack} state={state} />
-          </details>
+          {!bench && (
+            <details className="more">
+              <summary>Export and share</summary>
+              <ExportPanel
+                pack={pack}
+                state={state}
+                events={run.events}
+                onLoad={run.loadEvents}
+              />
+              <EnvironmentPanel pack={pack} state={state} />
+            </details>
+          )}
         </div>
 
         <div className="col side">
@@ -361,8 +382,8 @@ export function RunView({ pack }: { pack: Pack }) {
           {run.roles.length > 0 && <Roles pack={pack} run={run} state={state} />}
           <Board pack={pack} state={state} onRename={run.renameSubject} onCorrect={run.readOnly ? undefined : run.correctState} />
           <Trackers pack={pack} state={state} onNudge={run.readOnly ? undefined : run.nudgeCounter} />
-          {run.record && api && <RacePanel pack={pack} race={raceView} />}
-          {run.record && <Members pack={pack} run={run.record} />}
+          {run.record && api && !bench && <RacePanel pack={pack} race={raceView} />}
+          {run.record && !bench && <Members pack={pack} run={run.record} />}
         </div>
       </div>
       {settingsOpen && (
@@ -396,6 +417,32 @@ export function RunView({ pack }: { pack: Pack }) {
 }
 
 /* ------------------------------------------------------------------ */
+
+/**
+ * The strip over a test run. It says what this is — a trial that keeps
+ * nothing — and holds the two things a tester wants: to start the same
+ * pack over, and to go back to where they were testing from.
+ */
+function BenchBar({ pack, bench, onRestart }: { pack: Pack; bench: { from: string; onLeave: () => void }; onRestart?: () => void }) {
+  return (
+    <div className="benchBar" role="status">
+      <span className="benchLabel">Test run</span>
+      <span className="muted">
+        Nothing is saved. Roll for me is a choice here as anywhere; with it off, the Table button beside the pad lands any roll on the line you pick.
+      </span>
+      <span className="benchActions">
+        {onRestart && (
+          <button className="ghost tiny" onClick={onRestart} title={`Start ${pack.title} over from setup`}>
+            Start over
+          </button>
+        )}
+        <button className="ghost tiny" onClick={bench.onLeave}>
+          Back to {bench.from}
+        </button>
+      </span>
+    </div>
+  );
+}
 
 export function Setup({
   pack,

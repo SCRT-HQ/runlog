@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import YAML from "yaml";
-import { parsePack, type Diagnostic, LICENSE_IDS, LICENSE_LABELS } from "@runlog/rules-schema";
+import { parsePack, type Diagnostic, type Pack, LICENSE_IDS, LICENSE_LABELS } from "@runlog/rules-schema";
 import { describe } from "./describe.ts";
 import { at, AreaField, CheckField, NumberField, RowActions, SelectField, TextField } from "./fields.tsx";
 import {
@@ -62,7 +62,7 @@ function get(draft: unknown, path: (string | number)[]): unknown {
 const str = (v: unknown) => (typeof v === "string" ? v : "");
 const num = (v: unknown, fallback = 0) => (typeof v === "number" ? v : fallback);
 
-export function DesignView() {
+export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saved, setSaved] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -251,6 +251,16 @@ export function DesignView() {
               e.target.value = "";
             }}
           />
+          {onTest && (
+            <button
+              className="ghost"
+              disabled={!result?.ok || errors.length > 0}
+              onClick={() => result?.ok && onTest(result.pack)}
+              title={errors.length > 0 ? "Fix the problems first; a pack with errors cannot be played" : "Play this draft in a run that is not saved"}
+            >
+              Try it
+            </button>
+          )}
           <button className="ghost" onClick={download}>
             {saved ? "saved" : `Download ${packFilename(draft)}`}
           </button>
