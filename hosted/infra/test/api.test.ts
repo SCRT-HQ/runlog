@@ -88,6 +88,25 @@ describe("the API", () => {
     expect(api).not.toContain("CorsConfiguration");
   });
 
+  it("traces both functions, and gives Lambda Insights a look at each invocation", () => {
+    template.resourceCountIs("AWS::Lambda::Function", 2);
+    const functions = Object.values(template.findResources("AWS::Lambda::Function"));
+    expect(functions).toHaveLength(2);
+    for (const fn of functions) {
+      const props = fn["Properties"] as { TracingConfig?: { Mode: string }; Layers?: unknown };
+      expect(props.TracingConfig).toEqual({ Mode: "Active" });
+      // The Insights extension: one region- and architecture-specific ARN,
+      // named by the layer construct rather than typed out here.
+      expect(JSON.stringify(props.Layers)).toContain("LambdaInsightsExtension");
+    }
+    // Active tracing needs to write segments and telemetry somewhere no ARN
+    // names, so CDK grants it on the wildcard resource; nothing else here
+    // should ever need one.
+    const policies = JSON.stringify(Object.values(template.findResources("AWS::IAM::Policy")));
+    expect(policies).toContain("xray:PutTraceSegments");
+    expect(policies).toContain("xray:PutTelemetryRecords");
+  });
+
   it("has a ceiling on how often it can be called", () => {
     template.hasResourceProperties("AWS::ApiGatewayV2::Stage", {
       DefaultRouteSettings: Match.objectLike({ ThrottlingRateLimit: 50, ThrottlingBurstLimit: 100 }),
@@ -104,8 +123,9 @@ describe("the API", () => {
 
   it("defines the secrets it will need, and lets only the handler read them", () => {
     template.resourceCountIs("AWS::SecretsManager::Secret", 4);
-    // Bare, without an account to report to: no layer and no wrapper.
-    template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike({ Handler: "index.handler", Layers: Match.absent() }));
+    // Bare, without an account to report to: New Relic's wrapper is absent,
+    // but Lambda Insights' layer is there regardless — it needs no account.
+    template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike({ Handler: "index.handler" }));
     for (const name of ["stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret", "workos/api-key"]) {
       template.hasResourceProperties("AWS::SecretsManager::Secret", { Name: `runlog/${name}` });
     }

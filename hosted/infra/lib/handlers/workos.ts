@@ -1,4 +1,5 @@
 import { WorkOS } from "@workos-inc/node";
+import { tracedCalls } from "./xray.js";
 
 /**
  * WorkOS, through a keyhole.
@@ -49,7 +50,7 @@ const roleOf = (slug: string | undefined): "admin" | "member" => (slug === "admi
 
 export function realWorkOS(apiKey: string): WorkOSLike {
   const workos = new WorkOS(apiKey);
-  return {
+  const impl: WorkOSLike = {
     async createOrganization(name) {
       const org = await workos.organizations.createOrganization({ name });
       return { id: org.id };
@@ -102,4 +103,5 @@ export function realWorkOS(apiKey: string): WorkOSLike {
         .map((i) => ({ id: i.id, email: i.email, state: i.state, expiresAt: i.expiresAt, ...(i.acceptedAt ? { acceptedAt: i.acceptedAt } : {}) }));
     },
   };
+  return tracedCalls("workos", impl);
 }

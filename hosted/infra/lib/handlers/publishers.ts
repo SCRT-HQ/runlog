@@ -1,5 +1,6 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DeleteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { traced } from "./xray.js";
 
 /**
  * Publishers: who lists packs, and where their money goes.
@@ -38,7 +39,7 @@ export interface PublisherStore {
 }
 
 export function dynamoPublishers({ table }: { table: string }): PublisherStore {
-  const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
+  const ddb = DynamoDBDocumentClient.from(traced(new DynamoDBClient({})), { marshallOptions: { removeUndefinedValues: true } });
   const opk = (id: string) => `ORG#${id}`;
   const strip = (row: Record<string, unknown>): Publisher => {
     const { pk: _pk, sk: _sk, kind: _kind, ...rest } = row;
