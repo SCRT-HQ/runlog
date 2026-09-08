@@ -121,6 +121,13 @@ export interface EnvConfig {
     termsDate: string;
     /** Whether the app shows plans, checkout and the portal. Off until Stripe is set up for the environment. */
     billing: boolean;
+    /**
+     * Whether the app's bundled catalog includes the engine-testing pack:
+     * dev yes, production no. Absent is treated as `false`, so a stage
+     * whose configuration predates this flag stays production-safe rather
+     * than shipping a test bench nobody asked for.
+     */
+    testing: boolean;
   };
 }
 
@@ -192,6 +199,8 @@ const rec = (v: unknown, at: string): Record<string, unknown> => {
   if (!isRecord(v)) throw new Error(`configuration: ${at} must be an object`);
   return v;
 };
+/** Like `bool`, but a missing key takes the given default rather than erroring. */
+const boolOr = (v: unknown, at: string, fallback: boolean): boolean => (v === undefined ? fallback : bool(v, at));
 
 /** The zone id, when the operator would rather CDK did not look it up. */
 function zoneIdFor(name: EnvName): string | undefined {
@@ -253,6 +262,7 @@ export function envConfig(name: EnvName): EnvConfig {
       termsVersion: str(hosted["termsVersion"], "hosted.termsVersion"),
       termsDate: str(hosted["termsDate"], "hosted.termsDate"),
       billing: bool(hosted["billing"], "hosted.billing"),
+      testing: boolOr(hosted["testing"], "hosted.testing", false),
     },
   };
 }
