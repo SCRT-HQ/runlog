@@ -331,8 +331,26 @@ export interface Me {
   gates?: boolean;
 }
 
+/** Another account of the person's, linked to this one: Discord's user id and the name it showed when the link was made. */
+export interface DiscordConnection {
+  discordUserId: string;
+  name: string;
+  linkedAt: string;
+}
+
+export interface Connections {
+  /** Whether this copy has a bot to link with at all. */
+  available: boolean;
+  discord: DiscordConnection | null;
+}
+
 export interface Api {
   me(): Promise<Me>;
+  /** The other accounts linked to this one. */
+  connections(): Promise<Connections>;
+  /** Hand in the code `/link` minted in Discord; the Discord account it was minted for is then this one's. */
+  linkDiscord(code: string): Promise<DiscordConnection>;
+  unlinkDiscord(): Promise<void>;
   /** The name and email the SDK reported, so the server's row is never older than the last visit. */
   putProfile(snapshot: { name?: string; handle?: string; email?: string; termsVersion?: string }): Promise<Profile>;
   /** Everything of the caller's on the server, gone. */
@@ -733,6 +751,18 @@ export function createApi(
       return { link: body.link ?? "", code: body.code };
     },
 
+    connections: async () => {
+      const { body } = await request<{ available?: boolean; discord?: DiscordConnection | null }>("GET", "/connections");
+      return { available: body.available === true, discord: body.discord ?? null };
+    },
+    linkDiscord: async (code) => {
+      const { status, body } = await request<{ linked?: boolean; discord?: DiscordConnection; error?: string }>("POST", "/connections/discord", { code });
+      if (status !== 200 || !body.discord) throw new SyncError("error", undefined, body.error ?? "that code could not be linked");
+      return body.discord;
+    },
+    unlinkDiscord: async () => {
+      await request("DELETE", "/connections/discord");
+    },
     createInvite: async (sessionId, email, role) => {
       const { status, body } = await request<{ invite?: Invite; link?: string; error?: string; plan?: string }>("POST", `/sessions/${sessionId}/invites`, { email, role });
       if (status === 402 && body.plan) throw new PlanError(body.plan, body.error ?? "that is part of a plan this account does not have");

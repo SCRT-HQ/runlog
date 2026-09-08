@@ -244,6 +244,11 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
       licenses.set(l.id, l);
       return entryOf(l, l.id);
     },
+    connections: async () => ({ available: false, discord: null }),
+    linkDiscord: async () => {
+      throw new Error("not used here");
+    },
+    unlinkDiscord: async () => {},
     deleteLicense: async (id) => {
       calls.push(`deleteLicense ${id}`);
       licenses.delete(id);
