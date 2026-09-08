@@ -3,6 +3,7 @@ import { usePlan } from "../sync/usePlan.ts";
 import { THEMES, type ThemeId } from "../theme/theme.ts";
 import { WIDGET_BACKGROUNDS, WIDGET_KINDS, widgetHref, widgetSize, type WidgetBackground, type WidgetKind, type WidgetRoute } from "../widget/route.ts";
 import { liveLinkOf } from "../live/route.ts";
+import { dockHref } from "../dock/route.ts";
 import { canFloat } from "./ControlPanel.tsx";
 
 /** The themes an address may pin: every look but "system", which is the choice not to pin one. */
@@ -21,7 +22,7 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
   const [scale, setScale] = useState(1.25);
   // "" is no pin: the widget follows the machine it opens on, like any page.
   const [theme, setTheme] = useState<WidgetRoute["theme"] | "">("");
-  const [copied, setCopied] = useState<WidgetKind | null>(null);
+  const [copied, setCopied] = useState<WidgetKind | "dock" | null>(null);
   const allowed = !plan.gates || plan.can("plus");
   // The live link's token, when the run is shared: a widget with it works on any machine.
   const token = (() => {
@@ -42,9 +43,9 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
     const { w, h } = widgetSize(kind, scale);
     window.open(widgetHref(route(kind)), `runlog-widget-${kind}`, `popup=yes,width=${w},height=${h}`);
   };
-  const copy = async (kind: WidgetKind) => {
+  const copy = async (kind: WidgetKind | "dock") => {
     try {
-      await navigator.clipboard.writeText(widgetHref(route(kind)));
+      await navigator.clipboard.writeText(kind === "dock" ? dockHref({ kind: "controls", runId }) : widgetHref(route(kind)));
       setCopied(kind);
       setTimeout(() => setCopied(null), 1500);
     } catch {
@@ -106,6 +107,12 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
                 ? "A small window the browser keeps above everything else: the next move, the last result, undo."
                 : "Floating a window above the others needs Chrome or Edge; this browser cannot keep one in front."}
             </span>
+          </div>
+          <div className="padRow floatRow">
+            <button className="ghost tiny" onClick={() => void copy("dock")} title="The same controls on a page of their own, for a streaming app's custom browser dock; sign in there once and the run follows">
+              {copied === "dock" ? "Copied" : "Copy dock address"}
+            </button>
+            <span className="muted small">The same controls as a page, for a dock beside your streaming app's preview: OBS calls it a Custom Browser Dock. Sign in there once; the run must be on that machine too.</span>
           </div>
           <ul className="widgetList">
             {WIDGET_KINDS.filter((k) => k.kind !== "race" || race).map((k) => (

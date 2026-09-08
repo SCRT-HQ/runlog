@@ -65,11 +65,18 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     // reload, so the address is moved under the app once the SDK is done.
     const returning = /[?&]code=/.test(location.search);
 
+    // Where to come back to. Sign-in leaves the page and returns to the
+    // app's bare address, which would lose a deep link — a widget, a guide
+    // page, a dock's address in a streaming app — so the hash rides along
+    // as `state` and is put back on return. The value comes back through a
+    // URL nobody signs, so only a hash is accepted, and only ever set as
+    // one: a hash cannot send the page anywhere else.
+    const returnTo = () => ({ state: { returnTo: location.hash } });
     const anonymous = (c: Client | undefined, problem?: string) =>
       setAccount({
         status: "anonymous",
-        signIn: c ? () => void c.signIn() : () => window.location.reload(),
-        signUp: c ? () => void c.signUp() : () => window.location.reload(),
+        signIn: c ? () => void c.signIn(returnTo()) : () => window.location.reload(),
+        signUp: c ? () => void c.signUp(returnTo()) : () => window.location.reload(),
         ...(problem ? { problem } : {}),
       });
 
@@ -84,8 +91,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       // first-party; until then this is the trade, made knowingly.
       devMode: true,
       redirectUri: appUrl(),
+      onRedirectCallback: ({ state }) => {
+        const back = (state as { returnTo?: unknown } | undefined)?.returnTo;
+        if (typeof back === "string" && /^#[A-Za-z0-9_\-/?=&.%:]{1,2000}$/.test(back)) location.hash = back;
+      },
       onRefreshFailure: ({ signIn }) =>
-        setAccount({ status: "anonymous", signIn: () => void signIn(), signUp: () => void signIn() }),
+        setAccount({ status: "anonymous", signIn: () => void signIn(returnTo()), signUp: () => void signIn(returnTo()) }),
     })
       .then((c) => {
         if (disposed) {

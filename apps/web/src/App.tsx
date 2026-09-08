@@ -23,6 +23,7 @@ import { CatalogView } from "./library/CatalogView.tsx";
 import { GuideView } from "./guide/GuideView.tsx";
 import { guideSlugFromHash } from "./guide/pages.ts";
 import { widgetFromHash, type WidgetRoute } from "./widget/route.ts";
+import { dockFromHash, type DockRoute } from "./dock/route.ts";
 import { WidgetView } from "./widget/WidgetView.tsx";
 import { liveFromHash, type LiveRoute } from "./live/route.ts";
 import { LiveRunView } from "./live/LiveRunView.tsx";
@@ -168,6 +169,8 @@ export default function App() {
   const [guideSlug, setGuideSlug] = useState<string>(() => guideSlugFromHash(typeof location !== "undefined" ? location.hash : "") ?? "start");
   /** A widget page: one panel of a run, alone, for a stream to capture. */
   const [widget, setWidget] = useState<WidgetRoute | null>(() => widgetFromHash(typeof location !== "undefined" ? location.hash : ""));
+  /** A dock: one run's remote, alone on the page, for a streaming app's custom browser dock. */
+  const [dock, setDock] = useState<DockRoute | null>(() => dockFromHash(typeof location !== "undefined" ? location.hash : ""));
   /** A live link: one run, watched by anyone, alone on the page. */
   const [liveRoute, setLiveRoute] = useState<LiveRoute | null>(() => liveFromHash(typeof location !== "undefined" ? location.hash : ""));
   /** A pack the catalog opens on, from `#catalog/<packId>`: a live page's "in the catalog" link lands here. */
@@ -177,6 +180,7 @@ export default function App() {
   useEffect(() => {
     const fromHash = () => {
       setWidget(widgetFromHash(location.hash));
+      setDock(dockFromHash(location.hash));
       setLiveRoute(liveFromHash(location.hash));
       const slug = guideSlugFromHash(location.hash);
       if (slug) {
@@ -363,6 +367,29 @@ export default function App() {
     },
     [imported, choose, addFromCatalog],
   );
+
+  // A dock opens its run the way the app would, and says so while it
+  // cannot: the run may not be on this device yet, or the packs may not
+  // have loaded. `openRun` is remade as the packs load, so a run that was
+  // not here a moment ago is tried again without anyone asking.
+  const [dockStatus, setDockStatus] = useState<"opening" | "missing" | "open">("opening");
+  const dockOpened = useRef<string | null>(null);
+  useEffect(() => {
+    if (!dock) {
+      dockOpened.current = null;
+      return;
+    }
+    if (dockOpened.current === dock.runId) return;
+    let live = true;
+    void openRun(dock.runId, true).then((opened) => {
+      if (!live) return;
+      if (opened) dockOpened.current = dock.runId;
+      setDockStatus(opened ? "open" : "missing");
+    });
+    return () => {
+      live = false;
+    };
+  }, [dock, openRun]);
 
   /**
    * Continue where you left off: the run this device touched last, or, when
@@ -737,10 +764,20 @@ export default function App() {
   // for what is and is not sent. `hosted` itself is read further up, so
   // every `loadCatalog` call can see it too.
   useEffect(() => {
-    countView(widget ? "widget" : liveRoute ? "live" : view, { hosted: hosted !== null, version: __RUNLOG_VERSION__ });
-  }, [hosted, widget, liveRoute, view]);
+    countView(dock ? "dock" : widget ? "widget" : liveRoute ? "live" : view, { hosted: hosted !== null, version: __RUNLOG_VERSION__ });
+  }, [hosted, dock, widget, liveRoute, view]);
 
   if (widget) return <WidgetView route={widget} />;
+  if (dock) {
+    if (dockStatus === "open" && result.ok) return <RunView key={`dock:${result.pack.id}`} pack={result.pack} remote />;
+    return (
+      <main className="main remote">
+        <div className="pipPanel">
+          <p className="muted">{dockStatus === "missing" ? "This run is not on this device. Open it in the app here first, and the dock follows." : "Opening the run…"}</p>
+        </div>
+      </main>
+    );
+  }
   if (liveRoute) {
     return (
       <>
