@@ -22,6 +22,7 @@ import { preloadDice3d } from "../dice/settings.ts";
 import { CARRY_ON_HOLD_MS, carriesOnByItself } from "./pace.ts";
 import { flowStrip } from "./flowStrip.ts";
 import { LOG_LIMITS, logLimit, logLines, logOrder, setLogLimit, setLogOrder, type LogOrder } from "./logView.ts";
+import { hitLabel, hitsOn } from "./hits.ts";
 import { ticksFor } from "./stepChecks.ts";
 import { nudgeFirstUnticked } from "./nudge.ts";
 import { Constraints } from "./Constraints.tsx";
@@ -329,6 +330,7 @@ export function RunView({
           {receipts.length > 0 && (
             <Receipt
               receipts={receipts}
+              nameOf={(id) => hitLabel(pack, state, id)}
               pack={pack}
               settled={settled}
               onDismiss={() => setReceipts([])}
@@ -1596,6 +1598,12 @@ function Board({
                   )}
                 </span>
               ))}
+              {/* Results that reached this one without leaving a state: worn here, with the text on hover. */}
+              {hitsOn(pack, state, s.id).map((h, i) => (
+                <span key={`hit-${i}`} className="chip heat" title={`${v.unit.one} ${h.unit}, ${h.table}: ${h.text}`}>
+                  {h.table}
+                </span>
+              ))}
               {onCorrect && !s.removed && missing(s.states).length > 0 && (
                 <select
                   className="chipAdd"
@@ -1835,7 +1843,7 @@ function Timeline({ pack, state }: { pack: Pack; state: RunState }) {
               <div>
                 <span className="where">
                   {pack.vocabulary.unit.one} {o.unit}, {table?.title ?? o.table}
-                  {hit && ` — hit #${o.targetSubject}`}
+                  {hit && ` — ${hitLabel(pack, state, o.targetSubject!)}`}
                 </span>
                 <p>{entry?.title ?? entry?.text ?? o.entryId}</p>
               </div>

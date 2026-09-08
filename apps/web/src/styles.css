@@ -356,6 +356,12 @@ p {
   border-color: var(--accent-dim);
   color: var(--accent);
 }
+/* A result that reached this thing: worn beside its states, filled rather than outlined, in the color the log gives a hit. */
+.chip.heat {
+  color: var(--warn);
+  background: color-mix(in oklab, var(--warn) 14%, transparent);
+  border-color: transparent;
+}
 .chip.state {
   color: var(--warn);
   border-color: color-mix(in oklab, var(--warn) 35%, var(--line));
