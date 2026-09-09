@@ -132,6 +132,11 @@ later — the lines, under "From the app", and a fresh card — and a card
 that is behind refuses a press with a note, rather than building on a
 table that moved.
 
+`/run join` in the thread does what the card's own button would: joins
+the roster in a moderated run, takes the first open seat in a mode
+played by several, and otherwise follows the run into a linked member's
+library as a watcher. `/run leave` leaves the roster or the seat.
+
 `/run status` in the thread posts a fresh card and takes the buttons off
 the old one. `/run link` posts a fresh live link (the old one stops
 working). `/run end` ends the run; the thread stays open to talk about
