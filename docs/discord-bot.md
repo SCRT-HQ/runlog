@@ -153,6 +153,32 @@ the script again replaces the list, so a retired command disappears.
    and watch the run move as you press.
 6. `/run end` closes the run and the thread.
 
+## 8. Selling the plan through Discord (optional)
+
+Runlog for servers is sold from the Runlog profile through Stripe. Discord
+can sell it too, from the bot's own store page, as a **guild
+subscription**: whoever buys it there puts the plan on the server, and
+the bot treats that server as holding the plan, the same as one whose
+claiming account subscribed here.
+
+1. **Monetization** in the developer portal: enable it (Discord asks for
+   a payout account and a team; the terms are theirs). Create a SKU of
+   type **Guild Subscription** named for the plan, with its price. Publish
+   it.
+2. Copy the SKU's id into the stage's configuration as
+   `discord.serverSku`, and deploy. The handler now asks Discord, per
+   press that needs the plan, whether the server holds a live entitlement
+   to that SKU, and `/setup status` says "active through Discord's store"
+   when it does. The Servers page marks such a server.
+3. Nothing else changes: the claiming account still chooses the vault,
+   and a server may hold the plan both ways. Without `serverSku`, the
+   store is never asked.
+
+Discord takes its cut on that sale and handles the refunds; Stripe never
+sees it. The one grant this does not give is the account-side one: a
+server bought through Discord does not put the plan on the claiming
+account's other servers.
+
 ## When something is off
 
 - **"This copy of Runlog cannot host runs"** or **"token is not filled
@@ -182,6 +208,7 @@ the script again replaces the list, so a retired command disappears.
 | --- | --- |
 | Application id and public key | The stage's configuration, `discord.applicationId` and `discord.publicKey`; the handler's `DISCORD_APPLICATION_ID` and `DISCORD_PUBLIC_KEY` |
 | Whether the plan is on sale | `discord.open`; the handler's `DISCORD_OPEN` |
+| The store's SKU, where Discord sells the plan | `discord.serverSku`; the handler's `DISCORD_SERVER_SKU` |
 | The bot token | Secrets Manager `runlog/discord/bot-token` |
 | Who has the plan meanwhile | The WorkOS feature flag `server`, per environment, on the people trying it |
 | The commands | `hosted/infra/lib/handlers/discord/commands.ts`, registered by `hosted/scripts/discord-setup.ts` |

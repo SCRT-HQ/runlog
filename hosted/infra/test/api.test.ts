@@ -155,6 +155,14 @@ describe("the API", () => {
     });
   });
 
+  it("names the store's SKU to the handler only where the stage sells the plan through Discord", () => {
+    const handlerOf = (t: Template) => Object.entries(t.findResources("AWS::Lambda::Function")).find(([id]) => id.startsWith("Handler"))![1] as { Properties: { Environment: { Variables: Record<string, unknown> } } };
+    const selling = templateFor({ discord: { applicationId: "123", publicKey: "ab".repeat(32), open: false, serverSku: "1234567890123456789" } });
+    expect(handlerOf(selling).Properties.Environment.Variables).toHaveProperty("DISCORD_SERVER_SKU", "1234567890123456789");
+    const notSelling = templateFor({ discord: { applicationId: "123", publicKey: "ab".repeat(32), open: false } });
+    expect(handlerOf(notSelling).Properties.Environment.Variables).not.toHaveProperty("DISCORD_SERVER_SKU");
+  });
+
   it("keeps a timer's deadline with a schedule that invokes the job under a role of its own, which both functions may hand over", () => {
     template.hasResourceProperties("AWS::Scheduler::ScheduleGroup", { Name: "runlog-prd-timers" });
     template.hasResourceProperties("AWS::IAM::Role", {

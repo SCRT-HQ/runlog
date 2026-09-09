@@ -40,6 +40,8 @@ export interface InteractionDeps {
   serverFeature?: string;
   /** Whether plans gate anything on this copy. */
   gates?: boolean;
+  /** Whether a server holds the plan through Discord's own store; absent where nothing is sold there. */
+  guildEntitled?: (guildId: string) => Promise<boolean>;
   /** The sessions, for runs; absent, the bot links and sets up but hosts nothing. */
   store?: Store;
   notify?: Notify;
@@ -55,6 +57,18 @@ export interface InteractionDeps {
   defer?: (interaction: Interaction) => Promise<void>;
   /** Somebody to come back when a timer runs out; see `TableDeps.schedule`. */
   schedule?: (job: TimerJob) => Promise<void>;
+}
+
+/**
+ * How a server holds the server plan: plans are open on this copy; the
+ * account that claimed it holds the grant (bought, or flagged); the
+ * server's members bought it through Discord's store; or not at all.
+ */
+export async function serverPlanOf(deps: InteractionDeps, guild: { guildId: string; ownerSub: string }): Promise<"open" | "account" | "discord" | "none"> {
+  if (!deps.gates) return "open";
+  if (deps.grants && (await deps.grants(guild.ownerSub)).includes(deps.serverFeature ?? "server")) return "account";
+  if (deps.guildEntitled && (await deps.guildEntitled(guild.guildId))) return "discord";
+  return "none";
 }
 
 /** How long a link or claim code lasts. */
@@ -168,11 +182,15 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       if (which?.name === "status") {
         const owner = await deps.guilds.connection(guild.ownerSub);
         const packs = await deps.guilds.listGuildPacks(i.guild_id);
-        const plan = !deps.gates
-          ? "plans are open on this copy of Runlog"
-          : deps.grants && (await deps.grants(guild.ownerSub)).includes(deps.serverFeature ?? "server")
-            ? "Runlog for servers, active"
-            : "no server plan yet; the account that claimed it subscribes from its Runlog profile, under Servers";
+        const held = await serverPlanOf(deps, guild);
+        const plan =
+          held === "open"
+            ? "plans are open on this copy of Runlog"
+            : held === "account"
+              ? "Runlog for servers, active"
+              : held === "discord"
+                ? "Runlog for servers, active through Discord's store"
+                : `no server plan yet; the account that claimed it subscribes from its Runlog profile, under Servers${deps.guildEntitled ? ", or the server subscribes through Discord's store" : ""}`;
         const lines = [
           `**Runlog on ${guild.name ?? "this server"}**`,
           `Claimed by ${owner ? owner.name : "a Runlog account not linked to Discord"}.`,
@@ -261,8 +279,8 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     if (!mayHost(i, guild.hostRoleId)) return ephemeral(guild.hostRoleId ? `Hosting a run here takes the <@&${guild.hostRoleId}> role.` : "Hosting a run here takes someone who can manage the server, until /setup role names a role.");
     const hostSub = await deps.guilds.userForDiscord(who.id);
     if (!hostSub) return ephemeral("A host needs a Runlog account linked, so the run is theirs: run /link first, then start again.");
-    if (deps.gates && deps.grants && !(await deps.grants(guild.ownerSub)).includes(deps.serverFeature ?? "server")) {
-      return ephemeral("Hosting runs here needs the server plan, which the account that claimed this server does not have yet. It subscribes from its Runlog profile, under Servers.");
+    if ((await serverPlanOf(deps, guild)) === "none") {
+      return ephemeral(`Hosting runs here needs the server plan, which this server does not hold yet. The account that claimed it subscribes from its Runlog profile, under Servers${deps.guildEntitled ? ", or the server subscribes through Discord's store" : ""}.`);
     }
     const packId = optionValue(which.options, "pack") ?? "";
     const modeId = optionValue(which.options, "mode") ?? "";

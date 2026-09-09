@@ -146,6 +146,11 @@ describe("setting up a server", () => {
     expect(gated.data?.content).toContain("no server plan yet");
     const paid = await handleInteraction(setup("status"), { guilds, appUrl: "https://runlog.test/", now: () => NOW, gates: true, serverFeature: "server", grants: async () => ["server"] });
     expect(paid.data?.content).toContain("Runlog for servers, active");
+    // Bought through Discord's store instead: held all the same, and said so; a server that did not is pointed both ways.
+    const store = await handleInteraction(setup("status"), { guilds, appUrl: "https://runlog.test/", now: () => NOW, gates: true, serverFeature: "server", grants: async () => [], guildEntitled: async (g) => g === "g1" });
+    expect(store.data?.content).toContain("active through Discord's store");
+    const neither = await handleInteraction(setup("status"), { guilds, appUrl: "https://runlog.test/", now: () => NOW, gates: true, serverFeature: "server", grants: async () => [], guildEntitled: async () => false });
+    expect(neither.data?.content).toContain("or the server subscribes through Discord's store");
     // /packs, for anyone: the same list, without the rest.
     const packs = await handleInteraction(press({ guild_id: "g1", member: { user: mira }, data: { name: "packs" } }), { guilds, appUrl: "https://runlog.test/", now: () => NOW });
     expect(packs.data?.content).toContain("**The Long Kiln** — Standard, Short");

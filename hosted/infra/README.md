@@ -455,6 +455,13 @@ dice itself and the log says so; the pack's text never leaves
 run's roster. This is the one place the hosting reduces a pack, on
 purpose, and it is confined to `lib/handlers/discord/`.
 
+The plan gate (`serverPlanOf` in `interactions.ts`) is satisfied by the
+claiming account's grant — bought through Stripe, or the `server` flag —
+or, where `discord.serverSku` names a guild-subscription SKU sold through
+Discord's own store, by a live entitlement on the server itself
+(`guildEntitledFrom` in `rest.ts`, one call per press that needs the
+plan). The Servers page marks a server held that way.
+
 The host may also play a hosted run from the app. The run row keeps
 `seenSeq`, the log's seq the thread has heard up to; the app's events
 route, after appending to a run the bot hosts, hands `{ kind: "moved",

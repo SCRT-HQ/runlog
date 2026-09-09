@@ -113,6 +113,13 @@ export interface EnvConfig {
      * few people try it. On, Checkout is offered. Absent is off.
      */
     open: boolean;
+    /**
+     * The SKU of a guild subscription sold through Discord's own store
+     * (Monetization in the developer portal), where one is set up: a
+     * server whose members bought it holds the server plan the same as
+     * one whose owner subscribed here. Absent, the store is not consulted.
+     */
+    serverSku?: string;
   };
   apm?: {
     newRelic: {
@@ -264,7 +271,14 @@ export function envConfig(name: EnvName): EnvConfig {
       applicationFeeBps: { subscribed: num(fee["subscribed"], "stripe.applicationFeeBps.subscribed"), unsubscribed: num(fee["unsubscribed"], "stripe.applicationFeeBps.unsubscribed") },
     },
     ...(isRecord(c["discord"])
-      ? { discord: { applicationId: str(c["discord"]["applicationId"], "discord.applicationId"), publicKey: str(c["discord"]["publicKey"], "discord.publicKey"), open: boolOr(c["discord"]["open"], "discord.open", false) } }
+      ? {
+          discord: {
+            applicationId: str(c["discord"]["applicationId"], "discord.applicationId"),
+            publicKey: str(c["discord"]["publicKey"], "discord.publicKey"),
+            open: boolOr(c["discord"]["open"], "discord.open", false),
+            ...(typeof c["discord"]["serverSku"] === "string" && c["discord"]["serverSku"].trim() ? { serverSku: c["discord"]["serverSku"].trim() } : {}),
+          },
+        }
       : {}),
     ...(isRecord(c["apm"]) && isRecord(c["apm"]["newRelic"])
       ? {

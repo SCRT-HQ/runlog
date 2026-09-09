@@ -36,8 +36,9 @@ Then, in the server, someone who can manage it:
    plan is active.
 
 Hosting a run needs the server plan, **Runlog for servers**, held by the
-account that claimed the server, where plans are on. Claiming, filling
-the vault and setting up need nothing.
+account that claimed the server, where plans are on; or, where the bot's
+store page sells it, bought for the server through Discord. Claiming,
+filling the vault and setting up need nothing.
 
 ## Linking your account
 
