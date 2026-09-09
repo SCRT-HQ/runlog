@@ -3,7 +3,7 @@
  *
  * The hosting's Content Security Policy says `font-src 'self'`, which is the
  * right thing for it to say, so the faces are bundled rather than fetched from
- * a font host — and precached by the worker like everything else, so they are
+ * a font host, and precached by the worker like everything else, so they are
  * there offline and on the second visit cost nothing.
  *
  * Only the latin subsets. Fontsource's own stylesheets declare every script

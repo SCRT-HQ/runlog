@@ -12,8 +12,8 @@ import type { useRun } from "./useRun.ts";
 /**
  * The floating remote at first paint: whichever of its sections apply to a
  * given moment in the run, stacked in the order it lists them. Static
- * markup, against a small fake `run` — the same style as ClockPanel.test.tsx
- * and SettingsDialog.test.tsx — plus the real demo pack, for real phases,
+ * markup, against a small fake `run`, the same style as ClockPanel.test.tsx
+ * and SettingsDialog.test.tsx, plus the real demo pack, for real phases,
  * tables and endings to point at.
  */
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");

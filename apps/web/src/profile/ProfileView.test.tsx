@@ -1,5 +1,5 @@
 // The account-menu dismiss tests below need real effects and real DOM
-// events (a keydown, a pointerdown outside it) — renderToStaticMarkup runs
+// events (a keydown, a pointerdown outside it): renderToStaticMarkup runs
 // no effects at all, so this file renders those few cases into jsdom.
 // @vitest-environment jsdom
 import { act } from "react";
@@ -47,7 +47,7 @@ const invite = (token: string): PendingInvite => ({
  *
  * Static markup means no effects: storage has not been read and the server
  * has not been asked. What has to be right at that moment is the shape of
- * the page — who it is for, and that nothing destructive is a single press.
+ * the page, who it is for, and that nothing destructive is a single press.
  */
 
 const signedIn: Account = {
@@ -256,7 +256,7 @@ describe("the account menu", () => {
 
   /**
    * The menu used to expand the waiting invitations right there, with their
-   * own Join and Decline buttons — the same list this suite now finds on
+   * own Join and Decline buttons: the same list this suite now finds on
    * the profile's Social page. The menu's job is only to say how many are
    * waiting and open the door to them.
    */

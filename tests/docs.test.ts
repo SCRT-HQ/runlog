@@ -14,8 +14,8 @@ import { runFixtures } from "../packages/cli/src/fixtures.ts";
  * document that is merely out of date would be tolerable; one that is out of
  * date in the place people go to check is worse than none.
  *
- * Rather than re-running the generator here — which would mean a second copy
- * of its logic, the exact trap the schema staleness test fell into — this
+ * Rather than re-running the generator here, which would mean a second copy
+ * of its logic, the exact trap the schema staleness test fell into, this
  * asserts the cheap, load-bearing property: every field the schema accepts is
  * named somewhere in the reference.
  */

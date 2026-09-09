@@ -10,8 +10,8 @@ import type { Gesture } from "../sync/socket.ts";
  * moment something happens and says it in words, but a widget that OBS
  * shut down while off scene, or one that has just opened, heard none of
  * them. So the ticker also reads the difference between one snapshot and
- * the next — a result numbered past the last one seen, a unit closed, a
- * contestant's points moved, a clock that stopped — which is there
+ * the next, a result numbered past the last one seen, a unit closed, a
+ * contestant's points moved, a clock that stopped, which is there
  * whenever the widget is, from whichever device wrote the snapshot. A
  * line's id is the same from either source, so a result told by gesture
  * and then read from the snapshot is one line, not two.

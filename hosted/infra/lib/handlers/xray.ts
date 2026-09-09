@@ -51,8 +51,8 @@ function closing<R>(subsegment: ReturnType<NonNullable<ReturnType<typeof getSegm
 /**
  * Wrap every method of a Stripe- or WorkOS-shaped client in its own
  * subsegment named `name`. Neither SDK's outbound call is something X-Ray
- * can capture cleanly — both speak through `fetch`, which sits below the
- * `http`/`https` modules X-Ray patches — so the boundary is drawn at the
+ * can capture cleanly, both speak through `fetch`, which sits below the
+ * `http`/`https` modules X-Ray patches, so the boundary is drawn at the
  * interface these handlers already call through instead of at the
  * transport. A trace still shows the time spent in each service, even
  * though the request inside it is invisible.
@@ -72,7 +72,7 @@ export function tracedCalls<T extends object>(name: string, impl: T): T {
 /**
  * Annotate the current segment with what this invocation was, so a trace
  * can be searched or filtered by it. Only ever the route and the method:
- * never a request body, a token, or an email — those have no business in
+ * never a request body, a token, or an email: those have no business in
  * a trace.
  */
 export function annotate(fields: Record<string, string>): void {

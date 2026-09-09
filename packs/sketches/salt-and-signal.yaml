@@ -1,18 +1,18 @@
-# Salt & Signal — a sketch pack for Runlog.
+# Salt & Signal: a sketch pack for Runlog.
 #
 # Entirely fictional. A solo journaling game: you keep a lighthouse after the
 # mainland stops answering. Written to STRESS the schema, not to be a polished
-# game — it deliberately reaches for everything a dungeon-shaped pack never
+# game, it deliberately reaches for everything a dungeon-shaped pack never
 # needs, so that gaps surface here rather than in somebody else's pack.
 #
 # What it exercises that The Long Kiln does not:
-#   * opposed resolution  — an action die against two challenge dice, which a
+#   * opposed resolution, an action die against two challenge dice, which a
 #                           single total compared to thresholds cannot express
-#   * keyed resolution    — a table addressed by a card's suit
-#   * standard52 deck     — draws that resolve on that table
-#   * resources           — a progress track, plus a stat that can go negative
+#   * keyed resolution, a table addressed by a card's suit
+#   * standard52 deck, draws that resolve on that table
+#   * resources, a progress track, plus a stat that can go negative
 #                           and is added into an opposed roll
-#   * required journal    — the whole point of the genre
+#   * required journal: the whole point of the genre
 #   * playerChoice targeting rather than an anchored offset
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
@@ -402,7 +402,7 @@ hierarchy:
   - General rules
 
 # Replayed by `runlog test`. Fixtures are logs of events, so they assert what
-# a real Vigil would have recorded — a roll on its own changes nothing, which
+# a real Vigil would have recorded: a roll on its own changes nothing, which
 # is why the earlier version of this passed only while nothing ran it.
 fixtures:
   - name: Nerve falls when a Signal goes badly

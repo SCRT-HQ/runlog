@@ -8,7 +8,7 @@ import { entryTextOf } from "../live/snapshot.ts";
  * The socket says "changed" when the run moves, and a watcher fetches the
  * state; that is enough to draw a scoreboard, and useless for an alert. A
  * ticker, a sound, a scene change in a streaming tool wants to be told
- * *what* moved — a result landed, a unit closed, the run ended — the moment
+ * *what* moved, a result landed, a unit closed, the run ended, the moment
  * it did, in words, without reducing anything. Gestures are that channel:
  * passed through the socket, stored nowhere, the way the dice already
  * travel.
@@ -18,7 +18,7 @@ import { entryTextOf } from "../live/snapshot.ts";
  * in it; a count that went down is nothing to announce. And a move that
  * arrived from another device through sync is the same news as one made
  * here, so the owner's device announces every move at its table, whoever
- * made it, and no other device announces any — one voice per table.
+ * made it, and no other device announces any: one voice per table.
  */
 export interface LifecycleMarks {
   outcomes: number;

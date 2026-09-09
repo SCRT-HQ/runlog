@@ -18,7 +18,7 @@ describe("the environment contract", () => {
     expect(env.status()).toBe("disconnected");
     // A disconnected link reporting an empty world would look identical to a
     // connected one reporting an empty world, so this must not be mistaken for
-    // agreement — the panel gates on status, and the snapshot backs it up.
+    // agreement: the panel gates on status, and the snapshot backs it up.
     expect((await env.snapshot()).subjects).toEqual([]);
   });
 

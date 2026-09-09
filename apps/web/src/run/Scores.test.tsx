@@ -9,7 +9,7 @@ import type { useRun } from "./useRun.ts";
 /**
  * The Scores panel at first paint: what it says about the run that just
  * ended, next to what came before it. Static markup, so nothing here reads
- * storage — the runs it compares are handed in directly.
+ * storage: the runs it compares are handed in directly.
  */
 
 const YAML = `

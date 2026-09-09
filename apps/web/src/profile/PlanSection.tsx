@@ -70,7 +70,7 @@ export function PlanSection({ api }: { api: Api | null }) {
       </h3>
       <p className="muted small">
         {plus
-          ? "Hosting a table — people in your runs on their own devices, races across devices — is yours. Manage the subscription, cards and invoices with Stripe."
+          ? "Hosting a table, people in your runs on their own devices, races across devices, is yours. Manage the subscription, cards and invoices with Stripe."
           : plan.gates
             ? "Free plays everything on one device and syncs your own. Plus hosts a table: invitations and races across devices."
             : "Plans are not switched on here yet: everything is open while Runlog is in preview."}

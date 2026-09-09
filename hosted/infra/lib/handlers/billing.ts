@@ -19,7 +19,7 @@ export interface BillingStore {
   entitlements(sub: string): Promise<string[]>;
   /**
    * The feature flags last seen on this person's session, kept so a rule
-   * about someone else — the fee on a sale, read for the publisher — can
+   * about someone else, the fee on a sale, read for the publisher, can
    * see a flag that only rides in that person's own token.
    */
   putFlags(sub: string, flags: string[], at: string): Promise<void>;

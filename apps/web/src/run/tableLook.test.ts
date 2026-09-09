@@ -14,8 +14,8 @@ describe("a table beside the keypad", () => {
   it("lists a lookup table's lines with their ranges and the number that lands on each", () => {
     const lines = tableLines(kiln.tables["check"]!, { min: 1, max: 100 });
     expect(lines.length).toBe(kiln.tables["check"]!.entries.length);
-    expect(lines[0]).toMatchObject({ range: "1–19", value: 1 });
-    expect(lines[1]).toMatchObject({ range: "20–69", value: 20 });
+    expect(lines[0]).toMatchObject({ range: "1-19", value: 1 });
+    expect(lines[1]).toMatchObject({ range: "20-69", value: 20 });
     expect(lineFor(lines, kiln.tables["check"]!, 30)).toBe("check-kind");
     expect(lineFor(lines, kiln.tables["check"]!, 100)).toBe("check-cold");
   });
@@ -32,7 +32,7 @@ describe("a table beside the keypad", () => {
       ],
     } as Table;
     const lines = tableLines(bands, { min: 1, max: 10 });
-    expect(lines.map((l) => l.range)).toEqual(["up to 3", "4–7", "8+"]);
+    expect(lines.map((l) => l.range)).toEqual(["up to 3", "4-7", "8+"]);
     expect(lines.map((l) => l.value)).toEqual([1, 4, 8]);
     expect(lineFor(lines, bands, 9)).toBe("high");
   });

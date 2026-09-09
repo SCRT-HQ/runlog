@@ -1,4 +1,4 @@
-# Word Count — writing sprints against a clock that keeps score.
+# Word Count: writing sprints against a clock that keeps score.
 #
 # A Session is a series of twelve-minute Sprints. Each Sprint names a
 # Passage, draws a Constraint that says how it must be written, and runs

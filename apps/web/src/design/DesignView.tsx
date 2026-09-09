@@ -70,7 +70,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
   const [link, setLink] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   // Whether to ask "which pack?" before showing the editor at all. Set once,
-  // from what loaded, and never persisted — the choice is for this visit.
+  // from what loaded, and never persisted: the choice is for this visit.
   const [atDoor, setAtDoor] = useState(false);
   const file = useRef<HTMLInputElement>(null);
 
@@ -95,7 +95,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
    *
    * The point of an editor for a data format is usually the second edit, not
    * the first: fixing a table in something you shipped, or starting from a
-   * pack close to what you want. Parsed as YAML — which also reads JSON — and
+   * pack close to what you want. Parsed as YAML, which also reads JSON, and
    * kept as the raw document rather than the validated one, so a pack with a
    * problem in it opens *so you can fix the problem* instead of being refused
    * at the door.
@@ -131,7 +131,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
       // signature is worse than none: it makes an honest edit look like
       // tampering to everyone who opens it. So the signature comes off the
       // moment the pack changes, and is said out loud rather than done
-      // quietly — re-signing is a deliberate act with a private key.
+      // quietly: re-signing is a deliberate act with a private key.
       if (next.signature) {
         const { signature: _dropped, ...rest } = next;
         next = rest;
@@ -246,7 +246,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
             className="hiddenInput"
             onChange={(e) => {
               void open(e.target.files?.[0]);
-              // Cleared so choosing the same file twice fires again — the
+              // Cleared so choosing the same file twice fires again: the
               // obvious thing to do after editing it outside the app.
               e.target.value = "";
             }}
@@ -299,7 +299,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
       {link && (
         <div className="notice shareNotice">
           <div>
-            <strong>Copied.</strong> The whole pack is inside that link — it goes nowhere
+            <strong>Copied.</strong> The whole pack is inside that link, it goes nowhere
             near a server, so anyone you send it to has your game and nothing in between
             has seen it.
           </div>
@@ -315,7 +315,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
 
       {droppedSignature && (
         <div className="notice">
-          This pack was signed, and your edit removed the signature — it no longer
+          This pack was signed, and your edit removed the signature, it no longer
           describes what is in the file. Sign the pack again when you are finished:{" "}
           <code>runlog sign {packFilename(draft)} --key your-key.json</code>
         </div>
@@ -521,7 +521,7 @@ function Vocabulary({ draft, diagnostics, edit }: SectionProps) {
       {words.map(({ key, label, hint }) => (
         <div key={key} className="fieldGrid">
           <TextField
-            label={`${label} — one`}
+            label={`${label} - one`}
             path={`vocabulary.${key}.one`}
             diagnostics={diagnostics}
             help={hint}
@@ -657,10 +657,10 @@ function TableEditor({
               value={str(table.resolution)}
               onChange={(v) => edit(["tables", id, "resolution"], v)}
               options={[
-                { value: "lookup", label: "lookup — a range per entry" },
-                { value: "bands", label: "bands — outcome tiers" },
-                { value: "opposed", label: "opposed — your dice against the game's" },
-                { value: "keyed", label: "keyed — by name" },
+                { value: "lookup", label: "lookup - a range per entry" },
+                { value: "bands", label: "bands - outcome tiers" },
+                { value: "opposed", label: "opposed - your dice against the game's" },
+                { value: "keyed", label: "keyed - by name" },
               ]}
             />
             {isLookup && (
@@ -821,7 +821,7 @@ function CoverageBar({ segments }: { segments: ReturnType<typeof coverage> }) {
       {segments.map((s, i) => {
         const width = ((s.to - s.from + 1) / total) * 100;
         const kind = s.claims === 0 ? "gap" : s.claims > 1 ? "over" : "ok";
-        const span = s.from === s.to ? `${s.from}` : `${s.from}–${s.to}`;
+        const span = s.from === s.to ? `${s.from}` : `${s.from}-${s.to}`;
         return (
           <span
             key={i}

@@ -1,8 +1,8 @@
-# Rocket League: Mechanics Ladder — a challenge pack shaped like the game's ranks.
+# Rocket League: Mechanics Ladder, a challenge pack shaped like the game's ranks.
 #
 # A Match is one game, played as normal. Before it, the app draws a set of
-# mechanics from the table for your rank — three, or as many as the dice
-# say — and after it you tick the ones you landed. Nothing here can see the
+# mechanics from the table for your rank, three, or as many as the dice
+# say, and after it you tick the ones you landed. Nothing here can see the
 # game; it keeps the tally an honest player keeps, and picks what to go for.
 #
 # The tables follow the ranks people already know, Bronze to Supersonic
@@ -271,7 +271,7 @@ phases:
           - { do: when, all: [{ modeIs: [placementRolled, sharedRolled] }, { counter: landed, is: { gte: 30, lte: 34 } }], then: [{ do: rollOn, table: grandChampion, timesFrom: count }] }
           - { do: when, all: [{ modeIs: [placementRolled, sharedRolled] }, { counter: landed, is: { gte: 35 } }], then: [{ do: rollOn, table: ssl, timesFrom: count }] }
       - kind: declareSubject
-        label: Call the match — playlist, and who you are playing with — so the log reads back.
+        label: Call the match, playlist, and who you are playing with, so the log reads back.
 
   - id: play
     label: Play the match

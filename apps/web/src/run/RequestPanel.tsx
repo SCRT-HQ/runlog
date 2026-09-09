@@ -81,7 +81,7 @@ function RollRequest({
    * A roll in flight: decided already, but not yet answered.
    *
    * The value is chosen the moment the button is pressed and the dice then
-   * settle onto it. Nothing is reported to the engine until they stop — a
+   * settle onto it. Nothing is reported to the engine until they stop: a
    * result that appears while they are still in the air answers the question
    * before the throw has finished asking it.
    */
@@ -128,7 +128,7 @@ function RollRequest({
     <div className="rollRequest">
       <p className="askLabel">
         {request.label ?? `Roll ${request.dice}`}
-        <span className="muted"> — {request.dice}</span>
+        <span className="muted">: {request.dice}</span>
       </p>
 
       <div className="padRow">
@@ -137,7 +137,7 @@ function RollRequest({
           inputMode="numeric"
           autoFocus
           value={typed}
-          placeholder={dice ? `${dice.min}–${dice.max}` : "result"}
+          placeholder={dice ? `${dice.min}-${dice.max}` : "result"}
           onChange={(e) => setTyped(e.target.value.replace(/[^0-9]/g, ""))}
           onKeyDown={(e) => e.key === "Enter" && submit()}
           aria-label={`Result of ${request.dice}`}
@@ -189,7 +189,7 @@ function RollRequest({
 
       {typed.length > 0 && !inRange && dice && (
         <p className="warnText">
-          {request.dice} can only produce {dice.min}–{dice.max}.
+          {request.dice} can only produce {dice.min}-{dice.max}.
         </p>
       )}
 

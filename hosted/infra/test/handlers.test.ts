@@ -924,7 +924,7 @@ describe("who is asking", () => {
     expect((await call(request("POST", "/api/races", { body: { id: "R1", packId: "p", packVersion: "1", mode: "race", seed: "s" } }), gated)).status).toBe(200);
   });
 
-  it("makes a publisher once — an organization with its founder in it — and sets up its payouts", async () => {
+  it("makes a publisher once, an organization with its founder in it, and sets up its payouts", async () => {
     const workos = fakeWorkOS();
     const stripe = fakeStripe();
     const publishers = memoryPublishers();
@@ -1940,7 +1940,7 @@ describe("a run hosted in discord", () => {
     const stranger = await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] }, sam)), d);
     expect(content(stranger)).toContain("manage the server");
     const started = await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }, { name: "name", type: 3, value: "First firing" }] })), d);
-    expect(content(started)).toContain("**Mira** started **The Long Kiln · Standard Firing** — First firing in <#thread_1>");
+    expect(content(started)).toContain("**Mira** started **The Long Kiln · Standard Firing** - First firing in <#thread_1>");
     expect(content(started)).toContain("https://runlog.test/r/01000000000000000000000001?t=livetok");
     expect(bot.threads).toEqual(["thread_1 The Long Kiln · Standard Firing · First firing"]);
     expect(bot.pins).toEqual(["msg_2"]);
@@ -2129,7 +2129,7 @@ describe("a run hosted in discord", () => {
     // Beginning the unit starts its timer, and somebody is asked to come back a minute later.
     expect((await call(signed(press(`rl:${id}:enter`)), dd)).body["type"]).toBe(7);
     expect(timers).toEqual([{ sessionId: id, clock: "u1:unit", at: "2026-09-06T12:01:00.000Z" }]);
-    // Come back early — a pause moved nothing here, but the job checks — and it is asked for again, not stopped.
+    // Come back early, a pause moved nothing here, but the job checks, and it is asked for again, not stopped.
     expect(await finishTimer(timers[0]!, dd)).toBe("later");
     expect(timers).toHaveLength(2);
     expect((await store.eventsAfter(id, 0)).filter((e) => e["t"] === "ClockStopped")).toHaveLength(0);
@@ -2439,7 +2439,7 @@ describe("a run hosted in discord", () => {
     expect(table1).toContain("Seat 2: open");
     expect(table1).toContain("Seat 1: Mira · Thrower · presses this stage");
     expect(table1).toContain("Seat 2: open · Watcher");
-    // Nobody unseated presses the table; anyone takes an open chair, and then presses — in their turn.
+    // Nobody unseated presses the table; anyone takes an open chair, and then presses, in their turn.
     expect(content(await call(signed(press(`rl:${id}:enter`, sam)), d))).toContain("whoever holds a seat");
     expect((await call(signed(press(`rl:${id}:seat:2`, sam)), d)).body["type"]).toBe(7);
     expect((await guilds.guildRun(id))!.seats?.["2"]).toEqual({ discordId: "1002", name: "Sam" });

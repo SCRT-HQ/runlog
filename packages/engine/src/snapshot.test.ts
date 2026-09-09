@@ -40,7 +40,7 @@ describe("a live snapshot", () => {
     const declaring = declaredSnap.phases.find((p) => (p.results ?? []).includes("A wide bowl"));
     expect(declaring).toBeDefined();
     expect(kiln.phases.find((p) => p.id === declaring!.id)?.steps.some((st) => st.kind === "declareSubject")).toBe(true);
-    // A table no step rolls — one a roll set off, aimed at an earlier piece — sits under the phase whose roll led to it, named with its hit.
+    // A table no step rolls, one a roll set off, aimed at an earlier piece, sits under the phase whose roll led to it, named with its hit.
     const constrain = kiln.phases.find((p) => p.steps.some((st) => st.kind === "rollTable" && st.table === "constraint"))!;
     const chained: RunEvent[] = [
       ...events,
@@ -52,7 +52,7 @@ describe("a live snapshot", () => {
     const under = chainedSnap.phases.find((p) => p.id === constrain.id)!;
     expect(under.results).toHaveLength(2);
     expect(under.results![0]).not.toContain("Constraint:");
-    expect(under.results![1]).toMatch(/^Setback — hit #1: /);
+    expect(under.results![1]).toMatch(/^Setback - hit #1: /);
     expect(chainedSnap.phases.filter((p) => p.id !== constrain.id).every((p) => !(p.results ?? []).some((r) => r.startsWith("Setback")))).toBe(true);
     // Every unit so far, as what its phases produced: the first stage made nothing, the second the two results under the one phase.
     expect(chainedSnap.units?.map((u) => u.unit)).toEqual([1, 2]);
@@ -72,7 +72,7 @@ describe("a live snapshot", () => {
 
   it("carries a step's constraints, this unit's results in order, and the latest line, the way RunView reads them", () => {
     // Advance past "Enter the Stage" so the active step is "declareSubject",
-    // whose `constrainedBy: form` the demo pack sets — the same table
+    // whose `constrainedBy: form` the demo pack sets, the same table
     // `RunView`'s `Constraints` panel reads on that step.
     const past: RunEvent[] = [
       ...events,

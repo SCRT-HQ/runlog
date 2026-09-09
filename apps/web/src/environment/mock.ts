@@ -8,7 +8,7 @@ import type {
 /**
  * A pretend environment.
  *
- * Every real adapter needs something the developer may not have running — a
+ * Every real adapter needs something the developer may not have running: a
  * host application, a bridge on a socket, a folder on disk. This one needs
  * nothing, which is what lets the whole path be built and tested before any of
  * that exists: connect, snapshot, subscribe, reconcile, write a name back.

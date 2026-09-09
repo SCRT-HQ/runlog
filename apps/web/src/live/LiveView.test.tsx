@@ -119,16 +119,16 @@ describe("the live page", () => {
     // The current room reads from the flow, as ever; the rooms before it from what they produced.
     const snapshot = {
       ...base,
-      phases: base.phases.map((p) => (p.id === "shape" ? { ...p, results: ["A wide bowl", "Setback — hit #1: A crack"] } : p)),
+      phases: base.phases.map((p) => (p.id === "shape" ? { ...p, results: ["A wide bowl", "Setback - hit #1: A crack"] } : p)),
       units: [
         { unit: 1, phases: [{ id: "form", label: "Shape", results: ["A cup"] }] },
-        { unit: 2, phases: [{ id: "form", label: "Shape", results: ["A wide bowl"] }, { id: "constrain", label: "Constraint", results: ["Thin walls", "Setback — hit #1: A crack"] }] },
+        { unit: 2, phases: [{ id: "form", label: "Shape", results: ["A wide bowl"] }, { id: "constrain", label: "Constraint", results: ["Thin walls", "Setback - hit #1: A crack"] }] },
       ],
     };
     const all = renderToStaticMarkup(<LiveView snapshot={snapshot} rooms="all" />);
     expect(all).toContain('class="pastRoom"');
     expect(all).toContain("A cup");
-    expect(all).toContain("Setback — hit #1: A crack");
+    expect(all).toContain("Setback - hit #1: A crack");
     expect(all).not.toContain('class="log"');
     // The current room stays the flow; the rooms before it follow, newest first, and only what they produced.
     const flow = all.slice(all.indexOf('class="stageFlow'));

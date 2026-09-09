@@ -4,7 +4,7 @@ import { loadHosted, type Hosted } from "./config.ts";
 /**
  * The hosted words, for whatever wants them: the footer, the terms gate,
  * the guide's badges. Null until the file has been read, and null for
- * good where there is none — a copy on disk, on Pages, or in dev. The
+ * good where there is none: a copy on disk, on Pages, or in dev. The
  * first paint never waits on it.
  */
 const HostedContext = createContext<Hosted | null>(null);

@@ -4,7 +4,7 @@
  * Two kinds of news: something changed here (the run hook wrote a log, a
  * pack was imported or forgotten, a license key was typed), and something
  * arrived from elsewhere (the engine pulled a run, a pack or a license). Neither side imports the other; both talk
- * to this. Deliberately tiny — a Map of listeners — because the alternative
+ * to this. Deliberately tiny, a Map of listeners, because the alternative
  * is a state library for two events.
  */
 

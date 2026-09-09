@@ -7,8 +7,8 @@ import type { RunState } from "./types.ts";
 /**
  * Turning a run into a number to beat.
  *
- * A pack declares what counts as doing well at its own game — a counter, a
- * resource, how far a run got, or how fast — and this reads that declaration
+ * A pack declares what counts as doing well at its own game, a counter, a
+ * resource, how far a run got, or how fast, and this reads that declaration
  * off a run the same way `progressOf` already reads a race's leaderboard off
  * one. A pack that declares nothing still gets a score: units closed,
  * tiebreak time, which is exactly what a race already ranks by, so nothing
@@ -44,8 +44,8 @@ function tiebreakOf(
 /** Where a run stands against the number its pack said it should beat. */
 export function scoreOf(pack: Pack, state: RunState, events: readonly RunEvent[], nowMs: number): RunScore {
   const mode: Mode | undefined = pack.modes[state.mode];
-  // The mode's own score replaces the pack's outright — the same rule as a
-  // mode's own clock — so a variant that scores differently is never left
+  // The mode's own score replaces the pack's outright, the same rule as a
+  // mode's own clock, so a variant that scores differently is never left
   // having to un-declare the pack's key first.
   const config: ScoreDef | undefined = mode?.score ?? pack.score;
   const progress = progressOf(state, events, nowMs);
@@ -115,7 +115,7 @@ export function compareScores(a: RunScore, b: RunScore): number {
 /**
  * The score's value as a person reads it. Time gets a clock face. A resource
  * or the units fallback gets a plain count with the noun that makes the
- * number legible once it is torn out of its own row — a bare "1,240" says
+ * number legible once it is torn out of its own row: a bare "1,240" says
  * nothing on its own. A counter's label is usually already a whole phrase
  * ("Clean Blocks"), not a noun a number can lead with, so it stays bare.
  */

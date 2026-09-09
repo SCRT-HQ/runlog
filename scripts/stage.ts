@@ -10,8 +10,8 @@ import { dependenciesOf } from "./licenses.ts";
  *
  * The workspace runs on TypeScript source: every package's `main` points at
  * `src/index.ts`, and nothing here is built to be imported. Publishing needs
- * the opposite — JavaScript, declarations, and a package.json that points at
- * them — so each published package is assembled in a `stage/` directory
+ * the opposite, JavaScript, declarations, and a package.json that points at
+ * them, so each published package is assembled in a `stage/` directory
  * from a build, with a package.json written here rather than copied. What
  * the workspace uses and what npm receives never have to agree.
  *

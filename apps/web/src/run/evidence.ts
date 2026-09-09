@@ -6,8 +6,8 @@ import type { RunState } from "@runlog/engine";
  *
  * "The Constraint has been honored" is a promise the app cannot check, but
  * it can put the constraint in front of you while you make it. A point that
- * `shows` a table gets that table's results listed under it — the ones from
- * this unit, or the ones that reached this unit's subject, or all of them —
+ * `shows` a table gets that table's results listed under it, the ones from
+ * this unit, or the ones that reached this unit's subject, or all of them, 
  * each with a box of its own, so the promise is made about something you
  * are looking at rather than something you remember from the log.
  */
@@ -51,7 +51,7 @@ export function evidenceFor(pack: Pack, state: RunState, shows: NonNullable<Poin
     if (shows.scope === "subject" && (!subject || o.targetSubject !== subject.id)) return;
     const entry = table?.entries.find((e) => e.id === o.entryId);
     const hit =
-      o.targetSubject !== null ? ` — ${pack.vocabulary.subject.one.toLowerCase()} #${o.targetSubject}` : "";
+      o.targetSubject !== null ? ` - ${pack.vocabulary.subject.one.toLowerCase()} #${o.targetSubject}` : "";
     out.push({
       key: `o${i}`,
       where: `${pack.vocabulary.unit.one} ${o.unit}, ${table?.title ?? o.table}${hit}`,

@@ -1,8 +1,8 @@
 /*
  * The pages that sit beside the app at the hosted address: terms, privacy,
  * pricing, about. They are plain HTML served from the same bucket, so they
- * cannot borrow the app's hashed stylesheet; this is a small echo of it —
- * the same ground, the same celadon, a serif that falls back gracefully —
+ * cannot borrow the app's hashed stylesheet; this is a small echo of it, 
+ * the same ground, the same celadon, a serif that falls back gracefully, 
  * so a person stepping from the app to its terms does not feel a seam.
  */
 :root {

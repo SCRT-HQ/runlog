@@ -10,7 +10,7 @@
  * passed in, so nothing a pack decides can accidentally become
  * unreproducible. `createRandom`'s own no-seed default is the one narrow
  * exception, for a caller that explicitly asked to roll on a player's behalf
- * with no seed to roll from — there is nothing to reproduce, on purpose.
+ * with no seed to roll from, there is nothing to reproduce, on purpose.
  */
 
 /** Hash an arbitrary string seed into four 32-bit values (cyrb128). */
@@ -42,8 +42,8 @@ function hashSeed(seed: string): [number, number, number, number] {
  * sfc32: small, fast, and good enough for dice.
  *
  * A seed is normally given explicitly, so a run can be reproduced. Called
- * with none — a driver rolling on a player's behalf with nothing to seed
- * from — it makes one up from the moment, which is not reproducible and not
+ * with none, a driver rolling on a player's behalf with nothing to seed
+ * from, it makes one up from the moment, which is not reproducible and not
  * meant to be: nobody replays a roll nobody asked to be able to.
  */
 export function createRandom(seed: string = `unseeded:${Date.now()}:${Math.random()}`): () => number {
@@ -67,8 +67,8 @@ export function createRandom(seed: string = `unseeded:${Date.now()}:${Math.rando
 /**
  * A source that refuses to produce numbers.
  *
- * Used where a roll must have come from the player — physical dice entered by
- * hand — so that a missing value fails loudly instead of silently inventing
+ * Used where a roll must have come from the player, physical dice entered by
+ * hand, so that a missing value fails loudly instead of silently inventing
  * fate on their behalf.
  */
 export const refuseRandom = (): number => {

@@ -6,7 +6,7 @@ import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
  * Plain text and a small HTML twin, no template service, no tracking. The
  * link carries the invite token; the address it goes to was typed by a
  * player who wants this person at their table. Nothing here decides whether
- * the address has an account — the recipient signs in (or up) and the
+ * the address has an account: the recipient signs in (or up) and the
  * token does the rest.
  *
  * The verified identity lives in a different region from the API, which

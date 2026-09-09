@@ -7,7 +7,7 @@ import { bestOf, placeOf, scoresOf } from "./scores.ts";
 /**
  * scoresOf turns the runs a device already has into what a player wants to
  * see: which of them counted, and how they stack up. Every run here goes
- * through the real reducer — a fixture built by hand would not exercise the
+ * through the real reducer: a fixture built by hand would not exercise the
  * one thing this helper adds, which is deciding what to do when a log will
  * not reduce at all.
  */

@@ -24,15 +24,15 @@ import {
  * that sells it. Each of those is a view of the same declaration, so each
  * is generated here from the pack and cannot disagree with it.
  *
- * Five kinds, one shape. A document is a list of blocks — headings, prose,
- * lists, tables, a form to write on — that the Markdown renderer, the HTML
+ * Five kinds, one shape. A document is a list of blocks, headings, prose,
+ * lists, tables, a form to write on, that the Markdown renderer, the HTML
  * renderer and the app's own view all draw the same way. Nothing here
  * touches the file system or the DOM.
  *
  * One of the five is different in what it withholds. The summary is what a
  * catalog shows before anyone has bought or added a pack: it names the
  * tables and says how they are rolled, counts the parts, describes the
- * modes — and never prints an entry, a trigger, an ending's text or a
+ * modes, and never prints an entry, a trigger, an ending's text or a
  * mode's notes. That is the line between describing a game and giving it
  * away, and it holds whatever the license says. The other four print the
  * rules in full, which is the author's to do with their own pack and the
@@ -142,17 +142,17 @@ function whatYouNeed(pack: Pack): string[] {
   const n = nouns(pack);
   const items: string[] = [];
   for (const r of pack.requires ?? []) {
-    items.push(`${cap(r.label)}${r.optional ? " (optional; results that need it are drawn again without it)" : ""}${r.note ? ` — ${r.note}` : ""}${r.url ? ` (${r.url})` : ""}.`);
+    items.push(`${cap(r.label)}${r.optional ? " (optional; results that need it are drawn again without it)" : ""}${r.note ? `: ${r.note}` : ""}${r.url ? ` (${r.url})` : ""}.`);
   }
   const dice = diceInWords(diceNeeded(pack));
   if (dice) items.push(cap(dice) + ".");
   for (const deck of Object.values(pack.decks ?? {})) {
     if (deck.kind === "standard52") items.push(`A standard deck of playing cards${deck.includeJokers ? " with the jokers in" : ""}.`);
-    else items.push(`${plural(deck.cards.length, "card", "cards")} for ${deck.title} — write them out, or use the app.`);
+    else items.push(`${plural(deck.cards.length, "card", "cards")} for ${deck.title} - write them out, or use the app.`);
   }
   if (pack.capabilities.includes("timers") && !pack.unit.clock) items.push("A timer.");
   if (pack.unit.clock) items.push(pack.unit.clock.kind === "timer" ? `A clock: every ${n.unit} is timed, ${pack.unit.clock.minutes} minutes. The app keeps it.` : `A clock: every ${n.unit} is timed. The app keeps it.`);
-  items.push(pack.journal?.enabled === false ? `Somewhere to keep the ${n.run} log.` : `Somewhere to keep the ${n.run} log — the run log sheet, or the app.`);
+  items.push(pack.journal?.enabled === false ? `Somewhere to keep the ${n.run} log.` : `Somewhere to keep the ${n.run} log, the run log sheet, or the app.`);
   return items;
 }
 
@@ -163,7 +163,7 @@ function flowSteps(pack: Pack, opts: { detail: boolean }): string[] {
     const notes: string[] = [];
     if (opts.detail && phase.description) notes.push(phase.description);
     if (opts.detail && phase.skipWhen?.length) notes.push(`Skipped when ${conditionsInWords(pack, phase.skipWhen, "any")}.`);
-    if (phase.steps.length > 1) for (const s of phase.steps) notes.push(`${stepInWords(pack, s)}${opts.detail ? stepDetail(pack, s).map((d) => ` — ${d}`).join("") : ""}`);
+    if (phase.steps.length > 1) for (const s of phase.steps) notes.push(`${stepInWords(pack, s)}${opts.detail ? stepDetail(pack, s).map((d) => `: ${d}`).join("") : ""}`);
     else if (opts.detail) notes.push(...stepDetail(pack, phase.steps[0]!));
     items.push([head, ...notes.map((t) => `  ${t}`)].join("\n"));
   }
@@ -220,7 +220,7 @@ function tableRows(pack: Pack, table: Table, opts: { full: boolean }): string[][
 function license(pack: Pack): string {
   const l = pack.license;
   const who = l.holder ? ` © ${l.holder}` : "";
-  return `${l.id}${who}${l.redistributable ? "" : " — private; not for redistribution"}${l.notice ? `. ${l.notice}` : ""}${l.url ? ` (${l.url})` : ""}`;
+  return `${l.id}${who}${l.redistributable ? "" : ", private; not for redistribution"}${l.notice ? `. ${l.notice}` : ""}${l.url ? ` (${l.url})` : ""}`;
 }
 
 function byline(pack: Pack): string {
@@ -236,7 +236,7 @@ export function summaryDoc(pack: Pack): Doc {
   if (pack.license.text) b.p(pack.license.text, "note");
 
   b.h(2, "How it plays");
-  const unitRange = `${pack.unit.min === pack.unit.max ? pack.unit.min : `${pack.unit.min}–${pack.unit.max}`}`;
+  const unitRange = `${pack.unit.min === pack.unit.max ? pack.unit.min : `${pack.unit.min}-${pack.unit.max}`}`;
   b.p(
     `${an(n.run, true)} is a series of ${n.units}${pack.unit.createsSubject ? `, each producing ${an(n.subject)}` : ""}; ${unitRange} of them, depending on the mode. Each ${n.unit} moves through ${plural(pack.phases.length, "phase", "phases")}: ${pack.phases.map((p) => p.label).join(", ")}.`,
   );
@@ -271,7 +271,7 @@ export function summaryDoc(pack: Pack): Doc {
  * One mode, as the summary would tell it: what is different about it,
  * how long it runs, how many play, its reminders, and the phases in
  * order. Nothing of the rules, so it may be read by anyone the summary
- * may be read by — a watcher of a live link, say.
+ * may be read by: a watcher of a live link, say.
  */
 export function modeDoc(pack: Pack, modeId: string): Doc {
   const m = pack.modes[modeId];
@@ -370,8 +370,8 @@ export function rulebookDoc(pack: Pack): Doc {
           c.label,
           String(c.initial ?? 0),
           [
-            c.min !== undefined && c.max !== undefined ? `Stays within ${c.min}–${c.max}.` : c.max !== undefined ? `Never above ${c.max}.` : c.min !== undefined && c.min !== 0 ? `Never below ${c.min}.` : "",
-            ...(c.triggers ?? []).map((t) => sentence(`${t.label ? `${t.label} — ` : ""}at ${boundText(t.when)}${t.oncePerRun ? `, once per ${n.run}` : ""}: ${actionsInWords(pack, t.do)}`)),
+            c.min !== undefined && c.max !== undefined ? `Stays within ${c.min}-${c.max}.` : c.max !== undefined ? `Never above ${c.max}.` : c.min !== undefined && c.min !== 0 ? `Never below ${c.min}.` : "",
+            ...(c.triggers ?? []).map((t) => sentence(`${t.label ? `${t.label}: ` : ""}at ${boundText(t.when)}${t.oncePerRun ? `, once per ${n.run}` : ""}: ${actionsInWords(pack, t.do)}`)),
           ]
             .filter(Boolean)
             .join(" "),
@@ -442,13 +442,13 @@ export function referenceDoc(pack: Pack): Doc {
   b.h(2, `Each ${n.unit}`);
   b.list(flowSteps(pack, { detail: false }), true);
   for (const [, table] of Object.entries(pack.tables)) {
-    b.h(2, `${table.title} — ${howConsulted(table).replace(/\.$/, "")}`);
+    b.h(2, `${table.title} - ${howConsulted(table).replace(/\.$/, "")}`);
     b.table([table.resolution === "keyed" ? "Key" : "Roll", ""], tableRows(pack, table, { full: true }), true);
   }
   const states = Object.values(pack.states ?? {});
   if (states.length) {
     b.h(2, "States");
-    b.table(["", "State"], states.map((s) => [s.short ?? "", `${s.label}${s.description ? ` — ${s.description}` : ""}`]), true);
+    b.table(["", "State"], states.map((s) => [s.short ?? "", `${s.label}${s.description ? `: ${s.description}` : ""}`]), true);
   }
   const moves = Object.values(pack.moves ?? {});
   if (moves.length) {
@@ -532,7 +532,7 @@ function whenInWords(when: string | undefined, n: ReturnType<typeof nouns>): str
 
 function boundText(b: { eq?: number; gte?: number; lte?: number }): string {
   if (b.eq !== undefined) return String(b.eq);
-  if (b.gte !== undefined && b.lte !== undefined) return `${b.gte}–${b.lte}`;
+  if (b.gte !== undefined && b.lte !== undefined) return `${b.gte}-${b.lte}`;
   if (b.gte !== undefined) return `${b.gte}+`;
   if (b.lte !== undefined) return `≤${b.lte}`;
   return "";
@@ -556,7 +556,7 @@ function targetingInWords(pack: Pack): string {
     case "anchoredOffset": {
       const bands = t.bands.map((b) => {
         const anchor = b.anchor === "playerChoice" ? "you choose" : `count ${b.direction ?? "before"} from the ${b.anchor}`;
-        return `${b.range[0]}–${b.range[1]}: ${anchor}`;
+        return `${b.range[0]}-${b.range[1]}: ${anchor}`;
       });
       return `When a roll reaches back, its ones digit says how far: ${bands.join("; ")}. Counting ${t.wraparound === false ? "stops at the end" : "wraps around"}${t.skipIneligible === false ? "" : ` and skips any ${n.subject} that cannot be targeted`}. A 0 lands on the anchor itself.${t.eventFallback ? ` When something other than a roll reaches back, roll ${t.eventFallback.roll} and read it the same way${t.eventFallback.missOn ? `; a ${t.eventFallback.missOn} misses` : ""}.` : ""}`;
     }
@@ -602,7 +602,7 @@ export function toMarkdown(doc: Doc): string {
         out.push([`| ${block.columns.map(mdEscape).join(" | ")} |`, `| ${block.columns.map(() => "---").join(" | ")} |`, ...block.rows.map((r) => `| ${r.map(mdEscape).join(" | ")} |`)].join("\n"));
         break;
       case "terms":
-        out.push(block.items.map((t) => `**${t.term}** — ${t.text}`).join("\n\n"));
+        out.push(block.items.map((t) => `**${t.term}** - ${t.text}`).join("\n\n"));
         break;
       case "form":
         out.push(block.fields.map((f) => `${f.label}: ${f.box ? "[    ]" : "_".repeat(f.width === "full" ? 40 : f.width === "long" ? 24 : 12)}`).join("  \n"));
@@ -710,7 +710,7 @@ export function toHtml(doc: Doc): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(doc.title)}${doc.subtitle ? ` — ${esc(doc.subtitle)}` : ""}</title>
+<title>${esc(doc.title)}${doc.subtitle ? ` - ${esc(doc.subtitle)}` : ""}</title>
 <style>${CSS}</style>
 </head>
 <body>

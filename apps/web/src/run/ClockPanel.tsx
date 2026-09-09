@@ -16,8 +16,8 @@ import type { useRun } from "./useRun.ts";
  * Steady enough not to jitter: the digits are tabular and the column's
  * width does not change as they do. The view ticks four times a second
  * from the log's timestamps and the present; nothing here is the source of
- * truth. A timer that reaches zero is stopped in the log once — with
- * `expired`, which is what rings the alert — and stays on screen saying so
+ * truth. A timer that reaches zero is stopped in the log once, with
+ * `expired`, which is what rings the alert, and stays on screen saying so
  * until the unit closes.
  *
  * Pause, resume and stop are moves like any other, undoable, and visible to

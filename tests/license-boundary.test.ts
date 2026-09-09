@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
  * converting it into software. The architecture answers that structurally: the
  * repo holds a general engine, the transcription lives in a gitignored private
  * pack, and the two only meet in one person's browser. That answer is only as
- * good as its weakest comment, though — a doc comment quoting a rule, or an
+ * good as its weakest comment, though: a doc comment quoting a rule, or an
  * example naming the game, puts the thing back in the repo no matter how the
  * packages are arranged.
  *
@@ -126,7 +126,7 @@ describe("the license boundary", () => {
       throw new Error(
         `${hits.length} tracked line(s) name the private game.\n\n` +
           `These belong in packs/private/, which is gitignored. Rewrite the ` +
-          `example with a craft this repo does not depend on — a drawing game, ` +
+          `example with a craft this repo does not depend on: a drawing game, ` +
           `a training log, a writing game:\n\n${show(hits)}\n`,
       );
     }

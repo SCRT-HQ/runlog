@@ -5,9 +5,9 @@ import { createPublicKey, verify as verifySignature } from "node:crypto";
  *
  * Discord signs every interaction it sends to the endpoint: an Ed25519
  * signature over the timestamp header and the raw body, with the key it
- * shows on the application's page. There is no shared secret in it — the
+ * shows on the application's page. There is no shared secret in it, the
  * key is public, so it sits in the stage's configuration beside the
- * client ids — and nothing here is ever sent back to Discord to check.
+ * client ids, and nothing here is ever sent back to Discord to check.
  * The body must be the bytes as they arrived: a body parsed and printed
  * again is a different string, and the signature would not match.
  */

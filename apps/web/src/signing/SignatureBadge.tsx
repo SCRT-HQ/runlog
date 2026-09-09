@@ -13,7 +13,7 @@ import { apiBase } from "../sync/config.ts";
  * have not changed since *someone* signed them, and nothing more.
  *
  * So this shows three things instead of a verdict. What the signer calls
- * themselves — labeled as a claim. The fingerprint, which is the thing an
+ * themselves: labeled as a claim. The fingerprint, which is the thing an
  * author publishes and a reader can compare. And whether this browser has seen
  * the key before, which is the only part that gets stronger on its own: a key
  * you have met on four packs since March is a different proposition from one
@@ -83,7 +83,7 @@ export function SignatureBadge({ document, packId }: { document: unknown; packId
     return (
       <div className="signature">
         <span className="muted small">
-          This pack is signed, but {result.reason}. Nothing is wrong with it — the check
+          This pack is signed, but {result.reason}. Nothing is wrong with it: the check
           simply cannot run here.
         </span>
       </div>
@@ -95,7 +95,7 @@ export function SignatureBadge({ document, packId }: { document: unknown; packId
       <div className="signature bad">
         <strong>This pack has been changed since it was signed.</strong>
         <span className="muted small">
-          It will still play — nothing here stops you — but it is not what its author
+          It will still play, nothing here stops you, but it is not what its author
           released, so do not judge their game by it.
         </span>
       </div>
@@ -108,7 +108,7 @@ export function SignatureBadge({ document, packId }: { document: unknown; packId
   return (
     <div className="signature">
       <button className="disclose" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        {open ? "▾" : "▸"} Signed{claim?.publisher ? ` by ${claim.publisher.name}` : claim?.name ? ` by ${claim.name}` : result.signedBy ? ` — “${result.signedBy}”` : ""}
+        {open ? "▾" : "▸"} Signed{claim?.publisher ? ` by ${claim.publisher.name}` : claim?.name ? ` by ${claim.name}` : result.signedBy ? ` - “${result.signedBy}”` : ""}
       </button>{" "}
       <span className="muted small">
         {claim ? "a claimed key" : first ? "a key you have not seen before" : `seen on ${known?.packs.length ?? 1} pack(s)`}
@@ -119,7 +119,7 @@ export function SignatureBadge({ document, packId }: { document: unknown; packId
         <div className="signatureDetail">
           <p className="muted small">
             The contents have not changed since they were signed. That is all a signature
-            proves — the key travels inside the pack, so the name above is what the signer
+            proves: the key travels inside the pack, so the name above is what the signer
             <em> claims</em> to be called, not proof of who they are.
           </p>
           <p className="fingerprint">{result.fingerprint}</p>

@@ -10,8 +10,8 @@ import { playThrough, PlayError, type PlayStep } from "./play.ts";
  * the state I expected" into "the pack actually plays the way I think it
  * does": a table roll runs the table's own triggers, a declared subject
  * really has to be declared, and a finalize really has to be the active step.
- * These tests are the same worked example the demo pack's own fixture uses —
- * the Kiln Check chaining into the Form table — plus the two failure modes a
+ * These tests are the same worked example the demo pack's own fixture uses, 
+ * the Kiln Check chaining into the Form table, plus the two failure modes a
  * pack author needs from a headless player: an unanswered request names
  * itself, and a seeded run needs nobody at all.
  */
@@ -24,7 +24,7 @@ function loadPack(rel: string): Pack {
 }
 const kiln = loadPack("packs/demo/pack.yaml");
 
-/** Enter, declare, throw and fire the first Stage — check and constrain are skipped on it. */
+/** Enter, declare, throw and fire the first Stage: check and constrain are skipped on it. */
 const firstStage: PlayStep[] = [
   { enter: 1 },
   { step: "enter" },

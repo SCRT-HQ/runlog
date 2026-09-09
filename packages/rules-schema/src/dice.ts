@@ -52,7 +52,7 @@ export function tryParseDice(expr: string): ParsedDice | null {
  * Roll an expression with an injected random source.
  *
  * The source is a parameter rather than `Math.random` so that seeded runs and
- * replayed event logs produce identical results — which is what makes shared
+ * replayed event logs produce identical results, which is what makes shared
  * "dungeon seeds" and deterministic tests possible.
  */
 export function rollDice(expr: string, random: () => number): { total: number; dice: number[] } {

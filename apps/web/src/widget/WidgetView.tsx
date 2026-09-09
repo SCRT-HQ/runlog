@@ -18,9 +18,9 @@ import { useTicker, type TickerLine } from "./ticker.ts";
  * One panel of a run, on a page of its own, for a stream to capture.
  *
  * A widget draws a snapshot of the run: on the streamer's own machine
- * the snapshot is taken from this device's storage — the log reduced
+ * the snapshot is taken from this device's storage, the log reduced
  * by the engine, re-read every couple of seconds and at once on a sync
- * pull — and on any other machine it is read by the run's live link,
+ * pull, and on any other machine it is read by the run's live link,
  * with the link's token in the widget's address. Either way the same
  * shape is drawn, so a scoreboard looks the same wherever it is captured.
  * With `bg=clear` the page paints no ground, so the capture shows
@@ -150,8 +150,8 @@ function Frame({ title, children }: { title: string; children?: React.ReactNode 
 
 /**
  * The page: one panel, or every panel stacked in a column. The column
- * leaves out what the run has nothing for — a scoreboard with nobody on
- * it, trackers in a pack that has none — and takes the race leaderboard
+ * leaves out what the run has nothing for, a scoreboard with nobody on
+ * it, trackers in a pack that has none, and takes the race leaderboard
  * where the page can draw one, which is the streamer's own machine.
  */
 function Page({ kind, snapshot, lines, race }: { kind: WidgetRoute["kind"]; snapshot: LiveSnapshot; lines: TickerLine[]; race?: React.ReactNode }) {
@@ -275,7 +275,7 @@ function RaceWidget({ pack, record, state, events, inColumn }: { pack: Pack; rec
 function ClockWidget({ s }: { s: LiveSnapshot }) {
   const now = useNow(s.clocks.some((c) => c.status === "running"));
   const shown = s.clocks[0];
-  const heading = shown?.label ?? `${s.words.unit} ${s.unit || "—"}`;
+  const heading = shown?.label ?? `${s.words.unit} ${s.unit || "-"}`;
   let digits = "0:00";
   let tone = "";
   if (shown) {
@@ -296,7 +296,7 @@ export function StepWidget({ s }: { s: LiveSnapshot }) {
   const constraints = s.constraints ?? [];
   return (
     <div className="widgetBody">
-      <div className="widgetTitle muted small">{s.words.unit} {s.unit || "—"}</div>
+      <div className="widgetTitle muted small">{s.words.unit} {s.unit || "-"}</div>
       <div className="widgetStep">{s.step ?? (s.status === "ended" ? `Ended${s.ending ? ` · ${s.ending}` : ""}` : "Waiting")}</div>
       {constraints.length > 0 && (
         <div className="notice constraints">
@@ -324,7 +324,7 @@ export function StatsWidget({ s }: { s: LiveSnapshot }) {
       <dl className="widgetStats">
         <div>
           <dt className="muted small">{s.words.unit}</dt>
-          <dd>{s.unit ? String(s.unit) : "—"}</dd>
+          <dd>{s.unit ? String(s.unit) : "-"}</dd>
         </div>
         <div>
           <dt className="muted small">{s.words.units} done</dt>
@@ -338,7 +338,7 @@ export function StatsWidget({ s }: { s: LiveSnapshot }) {
         )}
         <div>
           <dt className="muted small">Step</dt>
-          <dd>{s.step ?? "—"}</dd>
+          <dd>{s.step ?? "-"}</dd>
         </div>
         {constraints.length > 0 && (
           <div className="wide">

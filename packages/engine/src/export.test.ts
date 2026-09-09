@@ -109,14 +109,14 @@ describe("the write-up", () => {
   const md = renderLog(kiln, log);
 
   it("opens with the pack, the mode and the shape of the run", () => {
-    expect(md).toContain("# The Long Kiln — Firing");
+    expect(md).toContain("# The Long Kiln - Firing");
     expect(md).toContain("Standard Firing");
     expect(md).toContain("seed `slow-salt-63`");
   });
 
   it("gives each unit a heading named for what was made in it", () => {
-    expect(md).toContain("## Stage 1 — Tall vase");
-    expect(md).toContain("## Stage 2 — Lidded jar");
+    expect(md).toContain("## Stage 1 - Tall vase");
+    expect(md).toContain("## Stage 2 - Lidded jar");
   });
 
   it("shows the roll that produced an outcome, and what it reached", () => {
@@ -138,7 +138,7 @@ describe("the write-up", () => {
 
   it("finishes with the ending and the board", () => {
     expect(md).toContain("## The Shelf");
-    expect(md).toContain("Piece 1: Tall vase — Sealed");
+    expect(md).toContain("Piece 1: Tall vase - Sealed");
   });
 
   it("says so when the run has not been declared over", () => {

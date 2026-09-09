@@ -14,7 +14,7 @@ import { useEnvironment } from "./useEnvironment.ts";
  *
  * Reports, never resolves. The app cannot know whether a track was renamed on
  * purpose or a subject was never made, so it shows the disagreement and leaves
- * the ruling to the person — the same stance the rules take on contradictions.
+ * the ruling to the person: the same stance the rules take on contradictions.
  *
  * Only the mock is wired up so far. A real adapter is a socket away and slots
  * in without this file changing, which is the point of building the port
@@ -54,14 +54,14 @@ export function EnvironmentPanel({ pack, state }: { pack: Pack; state: RunState 
         <>
           <p className="muted small">
             The board on the right is what this app <em>believes</em> you have made. The
-            work itself lives somewhere else — a folder, a project file, a repository.
+            work itself lives somewhere else: a folder, a project file, a repository.
             When the two disagree, the game quietly goes wrong: {v.subject.many.toLowerCase()}{" "}
             are targeted <em>by position</em>, so a run whose order does not match yours
             will reach back and hit the wrong one while showing convincing working.
           </p>
           <p className="muted small">
             Connecting somewhere lets this app compare the two and tell you where they
-            differ. It only ever reads and reports — it never touches your work, and it
+            differ. It only ever reads and reports, it never touches your work, and it
             never decides who is right.
           </p>
           <p className="muted small">
@@ -75,7 +75,7 @@ export function EnvironmentPanel({ pack, state }: { pack: Pack; state: RunState 
           {overHttps && (
             <div className="notice">
               This page is served over https, so it cannot reach a bridge running on this
-              machine. Run the app locally for that — the built files work opened straight
+              machine. Run the app locally for that: the built files work opened straight
               from disk.
             </div>
           )}
@@ -88,7 +88,7 @@ export function EnvironmentPanel({ pack, state }: { pack: Pack; state: RunState 
               Disconnect
             </button>
             <span className="muted small">
-              {env.link?.label} — a stand-in, not your actual work.
+              {env.link?.label}, a stand-in, not your actual work.
             </span>
           </div>
 

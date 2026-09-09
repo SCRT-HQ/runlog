@@ -6,8 +6,8 @@ import { tracedCalls } from "./xray.js";
  *
  * A publisher is a WorkOS organization: it can have several people in
  * it, its members carry an `org_id` in their tokens, and later a Stripe
- * subscription of its own. The API needs two things of WorkOS for that —
- * make an organization, put its founder in it as an admin — and, for the
+ * subscription of its own. The API needs two things of WorkOS for that, 
+ * make an organization, put its founder in it as an admin, and, for the
  * people a publisher brings in, the memberships and invitations WorkOS
  * keeps. Invitations are WorkOS's mail and WorkOS's acceptance; the API
  * only asks for them and reads them back. The interface names those and

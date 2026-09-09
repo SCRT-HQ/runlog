@@ -3,9 +3,9 @@ import type { Entry } from "./diff.ts";
 /**
  * The API, as the app sees it.
  *
- * Every call carries the account's access token. On a 401 — or on a body that
+ * Every call carries the account's access token. On a 401, or on a body that
  * is not JSON, which is what the edge hands back when it has rewritten an
- * error into the app shell — the token is fetched again (the SDK refreshes
+ * error into the app shell, the token is fetched again (the SDK refreshes
  * it) and the call retried once. After that the honest answer is "sign in
  * again", and the engine says so rather than retrying forever.
  *

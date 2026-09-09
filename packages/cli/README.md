@@ -142,7 +142,7 @@ in the environment instead:
 | `RUNLOG_API` | optional: another address, such as a copy you run yourself (`https://<your domain>/api`), with a key made there |
 
 ```yaml
-# .github/workflows/release.yml — a GitHub release is published: check, sign, release
+# .github/workflows/release.yml: a GitHub release is published: check, sign, release
 on:
   release:
     types: [published]

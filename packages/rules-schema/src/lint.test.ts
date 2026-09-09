@@ -189,7 +189,7 @@ describe("lintPack", () => {
 
   /**
    * Unlike most `ref/unknown-*` checks, a dangling score reference cannot
-   * break a run — `scoreOf` is total, so the worst case is a scoreboard that
+   * break a run: `scoreOf` is total, so the worst case is a scoreboard that
    * quietly reads zero. That is why these are warnings rather than errors.
    */
   describe("score", () => {
@@ -245,7 +245,7 @@ describe("lintPack", () => {
    * A trigger the pack owns outright has no result to hang from, so only the
    * points the run itself passes through can reach it. A pack that writes its
    * reckoning for `onFinalize` would otherwise validate clean and then never
-   * fire it — the failure is entirely silent at play time.
+   * fire it: the failure is entirely silent at play time.
    */
   describe("pack-level triggers", () => {
     it("accepts the points a run actually reaches", () => {

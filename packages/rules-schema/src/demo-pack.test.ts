@@ -9,7 +9,7 @@ const demoPath = join(repoRoot, "packs", "demo", "pack.yaml");
 
 /**
  * The demo pack doubles as the contract's own regression test. If a schema
- * change breaks it, that is a signal about every pack in the wild — the demo
+ * change breaks it, that is a signal about every pack in the wild: the demo
  * is meant to use every construct at least once precisely so this test has
  * teeth.
  */

@@ -14,7 +14,7 @@ import type { DiscordRest } from "./rest.js";
  * This is the one place the hosting reduces a pack. A run hosted in
  * Discord has no device of its own: the bot is the device, so it reads
  * the pack from the server's vault, folds the log, decides what is due,
- * and writes the move — exactly what the app does on a phone, in a
+ * and writes the move: exactly what the app does on a phone, in a
  * Lambda that forgets everything between two presses. What it remembers
  * between them is in the session's rows (the log, as for any run) and
  * the guild-run row (where in Discord the run lives, and a block that is
@@ -204,7 +204,7 @@ export type TableAction =
 
 /**
  * Whether this person may press the table's buttons: the host, or whoever
- * holds a seat — and, where the pack says which role acts this unit, a seat
+ * holds a seat, and, where the pack says which role acts this unit, a seat
  * holding that role.
  */
 export function mayPress(run: GuildRun, discordId: string, acting: number[] | null = null): boolean {
@@ -294,7 +294,7 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         if (!run.pending) return { error: "Nothing is waiting for an answer." };
         const waiting = run.pending as unknown as Pending;
         // A roll the block asks for is the bot's to throw, and said so in
-        // the log — unless a person threw real dice and typed the total,
+        // the log, unless a person threw real dice and typed the total,
         // which the log says too. A person's choice is theirs either way.
         const req = waiting.request;
         if (req.kind === "roll" && action.byHand) {

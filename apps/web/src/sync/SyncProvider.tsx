@@ -13,8 +13,8 @@ import { createEngine, storageDb, type Engine, type Report, type SyncStatus } fr
  *
  * Available only where all three are true: there is an API (a hosted build
  * with a client id), somebody is signed in, and this device's switch has
- * not been turned off. Anywhere else — disk, the public page, a player who
- * has not signed in or who switched this device off — the provider renders
+ * not been turned off. Anywhere else, disk, the public page, a player who
+ * has not signed in or who switched this device off, the provider renders
  * its children and nothing else, so the rest of the app never has to ask
  * twice.
  *
@@ -124,7 +124,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
      * The doorbell: one socket while the page is visible and a run is
      * open, watching that run. A "changed" for it is a sync now; the poll
      * slows to a backstop while the socket is up and takes over when it
-     * is not. Nothing here decides anything — a nudge is a fetch.
+     * is not. Nothing here decides anything: a nudge is a fetch.
      */
     let socket: LiveSocket | null = null;
     let socketOpen = false;

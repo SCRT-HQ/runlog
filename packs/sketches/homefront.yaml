@@ -1,4 +1,4 @@
-# Homefront — housework as a dungeon crawl.
+# Homefront: housework as a dungeon crawl.
 #
 # A Sweep is one pass through the house. Each Room is drawn, not chosen, so
 # the dice decide where you go next; a Complication makes the room harder or

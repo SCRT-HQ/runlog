@@ -3,12 +3,12 @@
  *
  * A device with a run open holds one socket to the server and says which
  * session it is watching. When another device changes that session the
- * server sends one line — "changed, seq 12" — and this device syncs at
+ * server sends one line, "changed, seq 12", and this device syncs at
  * once instead of at the next poll. Nothing else travels here: the moves
  * still come down the same authenticated fetch as before, so a socket
  * that lies can only cause a fetch that finds nothing new.
  *
- * Sockets close for a hundred reasons — a laptop lid, a tunnel, a deploy —
+ * Sockets close for a hundred reasons, a laptop lid, a tunnel, a deploy, 
  * so this one reconnects with a backoff that starts at a second and stops
  * growing at half a minute, re-sends its watch on every open, and fetches
  * a fresh token for each attempt, since the last one may have expired

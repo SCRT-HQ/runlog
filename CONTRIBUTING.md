@@ -2,7 +2,7 @@
 
 Two quite different things live here, and they have different rules.
 
-**Writing a pack** needs no knowledge of this codebase at all — see
+**Writing a pack** needs no knowledge of this codebase at all: see
 [the authoring guide](docs/authoring.md). Packs are data; you never touch
 TypeScript.
 
@@ -40,10 +40,10 @@ pack (YAML/JSON, validated)
 - **`packages/rules-schema`** is the contract. Zod is the single source of
   truth; the published JSON Schema is derived from it, so what your editor
   autocompletes cannot drift from what the app enforces. `lint.ts` catches what
-  a schema cannot — ranges that do not tile, dangling references, counters
+  a schema cannot: ranges that do not tile, dangling references, counters
   nothing reads.
 - **`packages/engine`** is pure TypeScript. No DOM, no React, no `Math.random`
-  — a random source is always passed in, so nothing can accidentally become
+  - a random source is always passed in, so nothing can accidentally become
   unreproducible.
 - **`apps/web`** is the only place allowed to know it is in a browser.
 
@@ -72,7 +72,7 @@ land only when the whole thing finishes. Half-resolved never reaches history.
 ## What tests are for here
 
 Tests in this repo are expected to say *why* they exist. A test named "works
-correctly" that asserts an implementation detail is worse than no test — it
+correctly" that asserts an implementation detail is worse than no test, it
 freezes an accident and tells the next person nothing.
 
 Most of the tests worth reading came from a real failure. Some examples:
@@ -80,7 +80,7 @@ Most of the tests worth reading came from a real failure. Some examples:
 - `[].every()` is `true`, so an absent `skipWhen` skipped every phase. Eight
   tests, one of which asserts that `all` and `any` genuinely disagree.
 - Table rolls ran, committed their events, and never recorded the step as
-  done — so the log filled up while the game appeared to refuse to move.
+  done, so the log filled up while the game appeared to refuse to move.
 - Counter thresholds were declared, validated, and never fired, because
   nothing evaluated them. The number on screen was right, so it looked like it
   worked.
@@ -95,14 +95,14 @@ say in a comment what it was.
 
 Three tests exist to stop whole classes of drift, and they will fail loudly:
 
-- **`domain-neutrality.test.ts`** — no identifier in the published schema may
+- **`domain-neutrality.test.ts`**, no identifier in the published schema may
   name one craft. Prose examples may name any domain; a *property name* may
   not, because a pack author in another field then has to write `afterCompose`
   about a deadlift.
-- **`license-boundary.test.ts`** — nothing git tracks may name the private game
+- **`license-boundary.test.ts`**, nothing git tracks may name the private game
   or cite a particular rulebook as a source. See the licensing note in the
   README.
-- **`schema.test.ts` / `docs.test.ts`** — the published schema and the
+- **`schema.test.ts` / `docs.test.ts`**: the published schema and the
   generated reference must match what the code actually does. Run
   `npm run schema:emit` and `npm run docs:emit` and commit the results.
 
@@ -115,12 +115,12 @@ Three tests exist to stop whole classes of drift, and they will fail loudly:
   usually the code should change instead.
 - **Name things for the general case.** This began as a companion to one music
   game and the pull toward its vocabulary is constant. `unit`, `subject`,
-  `run` — never `room`, `track`, `bar`.
+  `run`, never `room`, `track`, `bar`.
 - **Report, do not resolve.** Contradictions between rules, disagreements with
   the environment, honor-system checks: show the player what is in tension and
   let them rule on it. These games want human judgment, and a tool that
   silently decides is one people stop trusting.
-- **Show the working.** Anything derived — a targeting result especially —
+- **Show the working.** Anything derived, a targeting result especially, 
   carries its derivation, and the UI renders it. A verdict with no visible
   reasoning is the thing players distrust most.
 
@@ -197,8 +197,8 @@ the guide: nothing keeps such a number true, so name a few instead.
 
 The pack format is a published contract other people's files depend on.
 
-- **Additive changes** — a new optional field, a new variant in a discriminated
-  union — are fine. Bump the schema's minor version.
+- **Additive changes**, a new optional field, a new variant in a discriminated
+  union, are fine. Bump the schema's minor version.
 - **Anything that changes how an existing pack plays** needs `schemaVersion` to
   go up, and the engine declares which versions it supports.
 - **Unknown keys are errors, not warnings.** A typo in a field name would
@@ -218,7 +218,7 @@ npm test
 
 ## Deliberately not built
 
-Networked multiplayer — co-op here is same-room, pass-the-device. AI narration.
+Networked multiplayer: co-op here is same-room, pass-the-device. AI narration.
 Arbitrary scripting in packs. A pack registry: a URL and a file are enough
 until the format has proven itself.
 

@@ -16,7 +16,7 @@ const text = (bytes: Uint8Array) => new TextDecoder("latin1").decode(bytes);
 /**
  * The threat is narrow and worth restating: a buyer opening the file they
  * downloaded, deleting the two lines that name them, and re-uploading it. Not
- * an attack — a text editor and thirty seconds.
+ * an attack: a text editor and thirty seconds.
  */
 describe("a sealed copy", () => {
   it("round-trips the whole document", async () => {

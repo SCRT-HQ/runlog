@@ -7,7 +7,7 @@ import type { RunState } from "./types.ts";
  *
  * These belong to the game itself rather than to any one result: something
  * that happens every unit, or once the run is over. Rolling to see what the
- * finished run was worth is the obvious case — it is not a consequence of
+ * finished run was worth is the obvious case, it is not a consequence of
  * anything you did, it simply happens at the end.
  *
  * Like counter thresholds, these are *detected* here and executed elsewhere,

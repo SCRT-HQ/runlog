@@ -1,9 +1,9 @@
-# Elden Ring: Trial — a moderated race across the Lands Between.
+# Elden Ring: Trial, a moderated race across the Lands Between.
 #
 # One person runs this from the device; everyone else plays the game and
-# races. Each Region draws a curse that lands on every runner — a status
+# races. Each Region draws a curse that lands on every runner, a status
 # effect the game already has, turned into something a player does without
-# any mod: Scarlet Rot takes your armor off, Frostbite takes your sprint —
+# any mod: Scarlet Rot takes your armor off, Frostbite takes your sprint, 
 # with a cure drawn alongside it, an item that, if you already have it, spares
 # you. Then the region draws a target, a boss, a key item, a hunt of three
 # names, or a collection, worth points, and the first runner to settle it is
@@ -123,7 +123,7 @@ states:
     short: OUT
     scope: contestant
     until: unitEnd
-    description: Out of this region's race — Death Blight took them, or they conceded it.
+    description: Out of this region's race, Death Blight took them, or they conceded it.
 
 counters:
   targetsDone:
@@ -152,7 +152,7 @@ tables:
     entries:
       - id: cu-rot
         range: [1, 1]
-        text: "Scarlet Rot. Every runner unequips all armor until the region is left — unless the cure drawn below is already in their inventory."
+        text: "Scarlet Rot. Every runner unequips all armor until the region is left, unless the cure drawn below is already in their inventory."
         grants: [rot]
         triggers:
           - on: immediately
@@ -160,7 +160,7 @@ tables:
               - { do: rollOn, table: cure }
       - id: cu-poison
         range: [2, 2]
-        text: "Poison. No Crimson Tears until the region is left — unless the cure drawn below is already in their inventory."
+        text: "Poison. No Crimson Tears until the region is left, unless the cure drawn below is already in their inventory."
         grants: [poison]
         triggers:
           - on: immediately
@@ -168,7 +168,7 @@ tables:
               - { do: rollOn, table: cure }
       - id: cu-bleed
         range: [3, 3]
-        text: "Blood Loss. No shield in the left hand until the region is left — unless the cure drawn below is already in their inventory."
+        text: "Blood Loss. No shield in the left hand until the region is left, unless the cure drawn below is already in their inventory."
         grants: [bleed]
         triggers:
           - on: immediately
@@ -176,7 +176,7 @@ tables:
               - { do: rollOn, table: cure }
       - id: cu-frost
         range: [4, 4]
-        text: "Frostbite. No sprinting and no Torrent until the region is left — unless the cure drawn below is already in their inventory."
+        text: "Frostbite. No sprinting and no Torrent until the region is left, unless the cure drawn below is already in their inventory."
         grants: [frost]
         triggers:
           - on: immediately
@@ -184,7 +184,7 @@ tables:
               - { do: rollOn, table: cure }
       - id: cu-sleep
         range: [5, 5]
-        text: "Sleep. No summons and no Spirit Ashes until the region is left — unless the cure drawn below is already in their inventory."
+        text: "Sleep. No summons and no Spirit Ashes until the region is left, unless the cure drawn below is already in their inventory."
         grants: [sleep]
         triggers:
           - on: immediately
@@ -192,7 +192,7 @@ tables:
               - { do: rollOn, table: cure }
       - id: cu-madness
         range: [6, 6]
-        text: "Madness. No lock-on until the region is left — unless the cure drawn below is already in their inventory."
+        text: "Madness. No lock-on until the region is left, unless the cure drawn below is already in their inventory."
         grants: [madness]
         triggers:
           - on: immediately
@@ -200,7 +200,7 @@ tables:
               - { do: rollOn, table: cure }
       - id: cu-blight
         range: [7, 7]
-        text: "Death Blight. One death and you are out of this region's race — unless the cure drawn below is already in their inventory."
+        text: "Death Blight. One death and you are out of this region's race, unless the cure drawn below is already in their inventory."
         grants: [blight]
         triggers:
           - on: immediately
@@ -334,7 +334,7 @@ phases:
         table: target
         label: Draw the target
       - kind: declareSubject
-        label: Name the target in your own words — the boss, the item, the three names, the count.
+        label: Name the target in your own words, the boss, the item, the three names, the count.
 
   - id: race
     label: Race

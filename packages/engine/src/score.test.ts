@@ -7,7 +7,7 @@ import type { RunState } from "./types.ts";
 /**
  * Scoring: a pure read of a run against whatever the pack (or its mode) said
  * counts, so a solo run has a number to beat next time. No score declared is
- * not "no score" — it is the same units-closed, tiebreak-time ranking a race
+ * not "no score", it is the same units-closed, tiebreak-time ranking a race
  * already uses, so nothing that plays today loses a number to beat tomorrow.
  */
 
@@ -124,7 +124,7 @@ describe("scoreOf", () => {
     const s = scoreOf(p, state({ mode: "golf", counters: { cleanBlocks: 3 } }), [], T0);
     expect(s).toMatchObject({ key: "counter", value: 3, better: "lower", label: "Clean Blocks" });
     // golf's own score does not set a tiebreak, and a mode's score is not
-    // merged with the pack's — so none is carried over from it either.
+    // merged with the pack's, so none is carried over from it either.
     expect(s.tiebreak).toBeUndefined();
   });
 

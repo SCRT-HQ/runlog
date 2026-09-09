@@ -10,9 +10,9 @@ import { dependenciesOf, type Dependency } from "../../scripts/licenses";
  *
  * The app in SCRT-HQ/runlog is generic: it runs from disk, from GitHub
  * Pages, or from anyone's bucket, and knows nothing about who operates it.
- * An address someone runs as a service needs more — terms, a privacy
+ * An address someone runs as a service needs more, terms, a privacy
  * policy, pricing, a way to reach the operator, an image for links, the
- * files crawlers ask for — and those are this repository's to say. They
+ * files crawlers ask for, and those are this repository's to say. They
  * live in `hosted/pages/` as templates and are copied into the built `dist` at
  * publish time with the words for the environment filled in. The app finds
  * `hosted.json` at its own root and, when it is there, shows a footer and

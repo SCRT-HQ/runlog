@@ -20,7 +20,7 @@ const KEY = "ABCDE-FGHJK-LMNPQ-RSTUV";
  * names you and a copy that is visibly not the author's release.
  *
  * Here rather than with the container, because the container knows nothing
- * about signatures — that is the point of it being its own package.
+ * about signatures, that is the point of it being its own package.
  */
 describe("a sealed, signed copy", () => {
   it("binds the watermark to the signature", async () => {
