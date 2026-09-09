@@ -1,8 +1,8 @@
 /**
  * Alert sounds, made rather than shipped.
  *
- * Four short sounds synthesized with the Web Audio API — a chime, a bell, a
- * pulse, a tick — so there is nothing to download and nothing the service
+ * Four short sounds synthesized with the Web Audio API, a chime, a bell, a
+ * pulse, a tick, so there is nothing to download and nothing the service
  * worker has to cache. Browsers only let a page make sound after a person
  * has touched it, so the audio context is unlocked on the first pointer or
  * key event and kept; a timer that runs out an hour later can still ring.

@@ -5,8 +5,8 @@ import { DodecahedronGeometry, IcosahedronGeometry, OctahedronGeometry, Tetrahed
  *
  * Every die is a convex polyhedron: a list of vertices and a list of
  * faces, each face the indices of its corners in order around the
- * outside. That is the one shape both engines want — cannon-es for a
- * collider, three.js for a mesh — and the one thing the roller has to
+ * outside. That is the one shape both engines want, cannon-es for a
+ * collider, three.js for a mesh, and the one thing the roller has to
  * know about a die to read it: which face is on top.
  *
  * The regular ones come from three.js's own geometries, whose triangles
@@ -221,7 +221,7 @@ export function faceLabels(p: Polyhedron, faces: number, display: string, top: n
 /** The numbers a die of this kind carries, in a plausible order, the decided one included. */
 export function numbersFor(faces: number, display: string): string[] {
   if (faces === 10 || faces === 100) {
-    // A tens die reads 00–90; a ones die 0–9.
+    // A tens die reads 00-90; a ones die 0-9.
     return display.length === 2 ? Array.from({ length: 10 }, (_, i) => String(i * 10).padStart(2, "0")) : Array.from({ length: 10 }, (_, i) => String(i));
   }
   const n = faces === 4 || faces === 8 || faces === 12 || faces === 20 || faces === 6 ? faces : 6;

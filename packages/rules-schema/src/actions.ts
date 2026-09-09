@@ -65,7 +65,7 @@ export type Action =
    * declared targeting strategy, and bind it as `targetSubject`.
    *
    * This is deliberately explicit rather than implicit. An entry that reaches
-   * backwards has to say so, which keeps "what got hit and why" auditable —
+   * backwards has to say so, which keeps "what got hit and why" auditable: 
    * the derivation is shown to the player rather than happening off-screen.
    */
   | { do: "resolveTarget"; from?: "currentRoll" | "event" | "choice"; into?: string }
@@ -269,7 +269,7 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
             .string()
             .min(1)
             .optional()
-            .describe("Set it to a value bound earlier — a roll's total or a prompt's answer — by name. Overrides `by` and `set`."),
+            .describe("Set it to a value bound earlier, a roll's total or a prompt's answer, by name. Overrides `by` and `set`."),
         })
         .strict()
         .describe("Adjust a counter."),
@@ -283,7 +283,7 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
             .string()
             .min(1)
             .optional()
-            .describe("Set it to a value bound earlier — a roll's total or a prompt's answer — by name. Overrides `by` and `set`."),
+            .describe("Set it to a value bound earlier, a roll's total or a prompt's answer, by name. Overrides `by` and `set`."),
         })
         .strict()
         .describe("Adjust a resource, clamped to its declared min and max."),

@@ -11,12 +11,12 @@ import { useHosted } from "../hosted/HostedProvider.tsx";
  * is the one a marketplace with publishers and prices will fill in.
  *
  * What the sidebar filters on comes from the packs themselves: a category
- * and tags the author wrote, and features read off the modes — solo,
- * together, moderated, seeded — so "show me something we can all play"
+ * and tags the author wrote, and features read off the modes, solo,
+ * together, moderated, seeded, so "show me something we can all play"
  * is a checkbox and not a search for the right word.
  *
  * "About" opens the pack's summary, written from the pack: the shape of the
- * game — its tables by name, its modes, what you need — and never its
+ * game, its tables by name, its modes, what you need, and never its
  * rules. It is what a listing shows before anyone has the pack.
  */
 export function CatalogView({

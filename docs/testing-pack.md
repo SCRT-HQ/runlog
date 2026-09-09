@@ -17,7 +17,7 @@ Every lookup table tiles its whole span, so any line can be forced from the
 keypad by typing a number inside its range, or picked outright from the
 Table button beside the pad, which lists the lines and lands a roll on
 whichever one you choose. The Sky's ten lines are ten numbers wide each
-(1–10, 11–20, and so on); the Eyepiece is one face of a d6 per line.
+(1-10, 11-20, and so on); the Eyepiece is one face of a d6 per line.
 
 ## Vocabulary and the unit
 
@@ -84,22 +84,22 @@ required.
 
 ## Tables and entries
 
-### `bench` — The Sky (d100 lookup, ten bands of ten)
+### `bench`, The Sky (d100 lookup, ten bands of ten)
 
 | Id | Range | In-game name | Exercises |
 | --- | --- | --- | --- |
-| `bc-quiet` | 1–10 | A still sky | `setFlag` |
-| `bc-chain` | 11–20 | Something in the field | `rollOn` chaining into a second table |
-| `bc-reach` | 21–30 | Cloud drifts back | `resolveTarget` from `currentRoll` (the 21–30 band: newest, before), then `applyState` to `targetSubject` |
-| `bc-afterwork` | 31–40 | Dew forming | an `afterWork` obligation with a label and a `persistent` note |
-| `bc-onfinalize` | 41–50 | A late visitor | an `onFinalize` obligation |
-| `bc-end` | 51–60 | The lamp goes out | `modCounter set`, then `endRunAttempt` |
-| `bc-requires` | 61–70 | Two plates side by side | a `requires` predicate on an entry, and the `when` action with `then` and `else` |
-| `bc-needs` | 71–80 | The spare eyepiece | `needs` a requirement, so a run without it draws again; `grantCard` |
-| `bc-grants` | 81–90 | Worth a second look | the `grants` shorthand |
-| `bc-scored` | 91–100 | The clearest night of the season | `tags` and `points` for a moderated run; `extraRoll` with `unit: next` |
+| `bc-quiet` | 1-10 | A still sky | `setFlag` |
+| `bc-chain` | 11-20 | Something in the field | `rollOn` chaining into a second table |
+| `bc-reach` | 21-30 | Cloud drifts back | `resolveTarget` from `currentRoll` (the 21-30 band: newest, before), then `applyState` to `targetSubject` |
+| `bc-afterwork` | 31-40 | Dew forming | an `afterWork` obligation with a label and a `persistent` note |
+| `bc-onfinalize` | 41-50 | A late visitor | an `onFinalize` obligation |
+| `bc-end` | 51-60 | The lamp goes out | `modCounter set`, then `endRunAttempt` |
+| `bc-requires` | 61-70 | Two plates side by side | a `requires` predicate on an entry, and the `when` action with `then` and `else` |
+| `bc-needs` | 71-80 | The spare eyepiece | `needs` a requirement, so a run without it draws again; `grantCard` |
+| `bc-grants` | 81-90 | Worth a second look | the `grants` shorthand |
+| `bc-scored` | 91-100 | The clearest night of the season | `tags` and `points` for a moderated run; `extraRoll` with `unit: next` |
 
-### `chained` — The Eyepiece (d6 lookup)
+### `chained`, The Eyepiece (d6 lookup)
 
 | Id | Face | In-game name | Exercises |
 | --- | --- | --- | --- |
@@ -110,7 +110,7 @@ required.
 | `cn-5` | 5 | Red haze | `grants` of a state inside a `group` |
 | `cn-6` | 6 | Look again | `extraRoll` with `unit: current` |
 
-### `ladder` — The Weather (2d6 bands, open at both ends)
+### `ladder`, The Weather (2d6 bands, open at both ends)
 
 | Id | Band | In-game name | Exercises |
 | --- | --- | --- | --- |
@@ -118,7 +118,7 @@ required.
 | `ld-mid` | 6 through 9 | Holding | an obligation deferred to `onDeclareSubject`; the closed middle band |
 | `ld-high` | 10 or over | Hail | `applyState` to `allPriorSubjects`; the open high band |
 
-### `duel` — The Storm (opposed: d6 plus Nerve against three d8)
+### `duel`, The Storm (opposed: d6 plus Nerve against three d8)
 
 | Id | Beats | In-game name | Exercises |
 | --- | --- | --- | --- |
@@ -127,7 +127,7 @@ required.
 | `du-2` | 2 | Two gusts turned | an obligation deferred to `onDeclareRunOver`, with a `when` on `unitIndex` |
 | `du-3` | 3 | The storm breaks | `applyState` to `allSubjects` |
 
-### `rankcall` — The Almanac (keyed by card rank)
+### `rankcall`, The Almanac (keyed by card rank)
 
 `rk-a` through `rk-k`, one line per rank of the standard deck: keyed
 resolution, reached by `resolveOn`/`resolveBy` on the `cards52` deck.

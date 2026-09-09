@@ -13,7 +13,7 @@ import type { Dice3DProps } from "./three/Dice3D.tsx";
  * true. That ordering is what lets a shared seed reproduce a run exactly while
  * still looking like dice being thrown.
  *
- * Faces shown mid-tumble are cosmetic noise from `Math.random` — deliberately
+ * Faces shown mid-tumble are cosmetic noise from `Math.random`: deliberately
  * not the seeded source, so watching the animation cannot leak or perturb it.
  */
 

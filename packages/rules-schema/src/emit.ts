@@ -7,7 +7,7 @@ import { Pack, SCHEMA_VERSION } from "./pack.ts";
  * This lives in `src` rather than in the script that writes the file because
  * two callers need it: the script, and the test that checks the committed copy
  * is not stale. When the test had its own copy of these three lines, adding a
- * step to the script silently stopped the test checking the thing it shipped —
+ * step to the script silently stopped the test checking the thing it shipped: 
  * which is the exact failure the staleness test exists to prevent.
  */
 

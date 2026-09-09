@@ -15,7 +15,7 @@ const emitted = JSON.parse(
  * This project started as a companion for one music game, and the pull toward
  * its vocabulary is constant: `afterCompose` and `silences` both got as far as
  * the published schema before anyone noticed. Prose examples may name any
- * domain — that is how you explain a thing — but an *identifier* naming one
+ * domain, that is how you explain a thing, but an *identifier* naming one
  * domain is a promise the format cannot keep, because a pack author in another
  * field then has to write `afterCompose` about a deadlift.
  *

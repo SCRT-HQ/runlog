@@ -14,7 +14,7 @@ import { HomeStrip } from "./HomeStrip.tsx";
  * The library: your packs, newest-played first, each with its runs.
  *
  * One view that answers "what am I playing?". A pack is a card with its
- * runs beneath it — Continue on each, Start another, Forget — and the
+ * runs beneath it, Continue on each, Start another, Forget, and the
  * order is what you played last on this device, so the pack you run most
  * nights is at the top with its open run one press away. Load-a-file lives
  * here too. Nothing is a menu; everything is on the page.
@@ -91,7 +91,7 @@ export function LibraryView({
 
   const ordered = useMemo(() => byLastOpened(packs), [packs]);
 
-  /** Each pack, fully parsed, once per source — its words for the rows, and enough to score them. */
+  /** Each pack, fully parsed, once per source: its words for the rows, and enough to score them. */
   const parsedPacks = useMemo(() => {
     const out = new Map<string, Pack>();
     for (const p of packs) {
@@ -110,7 +110,7 @@ export function LibraryView({
   const runsOf = (packId: string) =>
     runs.filter((r) => r.packId === packId).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
 
-  /** Score text for an ended run, by pack — a pack that failed to parse scores nothing. */
+  /** Score text for an ended run, by pack: a pack that failed to parse scores nothing. */
   const scoresByPack = useMemo(() => {
     const out = new Map<string, Map<string, string>>();
     for (const [id, pack] of parsedPacks) {

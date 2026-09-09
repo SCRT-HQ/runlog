@@ -3,7 +3,7 @@ import { offline } from "./offline.ts";
 
 /**
  * The offline worker is generated because a hand-written precache list goes
- * stale the moment an asset hash changes — and when it does, the app keeps
+ * stale the moment an asset hash changes, and when it does, the app keeps
  * serving last week's bundle to anyone who ever loaded it. That is the one
  * failure mode worth a test: silent, permanent, and invisible to the person
  * who caused it.
@@ -97,7 +97,7 @@ describe("the offline worker", () => {
   /**
    * Found the hard way: with the server stopped, the module script missed an
    * exact cache match, the bare `fetch` behind it rejected, and `respondWith`
-   * never resolved. The page came up empty with nothing in the console — the
+   * never resolved. The page came up empty with nothing in the console: the
    * app was cached in full and would not start.
    */
   describe("serving a file the browser asks for in its own way", () => {

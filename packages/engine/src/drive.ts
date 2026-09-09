@@ -35,8 +35,8 @@ import type { InputRequest, Obligation, RunState } from "./types.ts";
  * `playThrough` plays a whole scripted run in one call, which is right for a
  * fixture but wrong for a Discord bot: a Lambda answers one button press,
  * writes down where it got to, and forgets everything until the next press.
- * `drive` and `answer` are that shape. Each call does exactly one thing —
- * advance the flow, or take one more step through an interrupted block — and
+ * `drive` and `answer` are that shape. Each call does exactly one thing, 
+ * advance the flow, or take one more step through an interrupted block, and
  * either finishes with events to commit or hands back a `Pending` the caller
  * can serialize, store, and resume later with the next answer.
  *
@@ -144,7 +144,7 @@ export interface DriveContext {
    *
    * At the top of a block (`drive`) this turns rolling on; mid-block
    * (`answer`, where a request is already awaiting) it instead marks the
-   * one answer just given as generated rather than physical — the same
+   * one answer just given as generated rather than physical: the same
    * distinction `useRun`'s `answer(key, value, machineRolled)` makes, folded
    * into the one flag this narrower call surface has room for.
    */
@@ -157,7 +157,7 @@ export interface DriveContext {
   pending?: Pending;
   /**
    * Mints an id for each event and one shared id for everything one action
-   * produces — the `move` a shared log undoes as a batch. Ids are minted at
+   * produces: the `move` a shared log undoes as a batch. Ids are minted at
    * the edge in the running app (see `useRun.commit`); tests and
    * `playThrough` normally omit this and get unstamped events, exactly as
    * the engine has always produced them.
@@ -178,7 +178,7 @@ export type PendingKind = "table" | "actions" | "obligation" | "move";
  * in DynamoDB between two HTTP requests to a Lambda, so it must survive a
  * `JSON.stringify`/`JSON.parse` round trip unchanged. `completes` names a
  * phase and step index rather than carrying the `Phase` itself for the same
- * reason — the pack is looked up again from `pack`, which every caller
+ * reason: the pack is looked up again from `pack`, which every caller
  * already has.
  */
 export interface Pending {
@@ -193,7 +193,7 @@ export interface Pending {
   /** Keys the driver answered on the caller's behalf, kept out of the physical count. */
   generated: string[];
   request: InputRequest;
-  /** What the block has produced so far, uncommitted — for showing the receipt between two questions. */
+  /** What the block has produced so far, uncommitted, for showing the receipt between two questions. */
   partial: RunEvent[];
   /** The step this work belongs to, recorded as done when the block completes. */
   completes?: { phaseId: string; index: number };
@@ -208,7 +208,7 @@ export interface Pending {
 }
 
 /**
- * Thrown when an action does not fit where the run is — the active step is
+ * Thrown when an action does not fit where the run is: the active step is
  * not the kind the action expects, an index or id names nothing, a
  * checklist the action depends on is not yet satisfied. A headless caller
  * has no disabled button to stop it from asking; this is the refusal that
@@ -226,7 +226,7 @@ export class DriveError extends Error {
 
 /**
  * The stream a seeded run draws from for a request keyed by `keyPrefix`,
- * addressed by unit and occurrence exactly as `useRun.randomSource` does —
+ * addressed by unit and occurrence exactly as `useRun.randomSource` does: 
  * moved here so the driver rolls a shared seed the same way the app would
  * have, and any caller (the bot included) can reproduce it. Unseeded rolls
  * still need a source when the caller asked the driver to roll on its
@@ -301,7 +301,7 @@ function runBlock(
   // `ExecContext.keyPrefix` is left unset here, on purpose: execute.ts's own
   // default (the table, move or obligation's own id) is what `playThrough`
   // has always produced and what its fixtures name requests by. `meta.keyPrefix`
-  // still addresses this block's own random stream below — a block's identity
+  // still addresses this block's own random stream below: a block's identity
   // for reproducing its rolls is not the same thing as how its requests are
   // named, and only the app's interactive `useRun` currently conflates them.
   const execCtx: ExecContext = {
@@ -439,7 +439,7 @@ export function drive(pack: Pack, events: readonly RunEvent[], action: DriveActi
 
   // { step: true }
   const active = nextStep(pack, state);
-  if (!active) throw new DriveError("cannot step: no active step — the unit is finished or has not begun", action);
+  if (!active) throw new DriveError("cannot step: no active step, the unit is finished or has not begun", action);
   const key = `${active.phase.id}#${active.index}`;
   const completes = { phaseId: active.phase.id, index: active.index };
 
@@ -486,7 +486,7 @@ export function drive(pack: Pack, events: readonly RunEvent[], action: DriveActi
  * Resume a block one answer further.
  *
  * Re-runs the block from the top with the new answer folded in, exactly as
- * `execute.ts` always has — resuming is not a different code path, only a
+ * `execute.ts` always has: resuming is not a different code path, only a
  * different starting set of answers. `autoRoll` on this call, unlike on
  * `drive`, marks `value` itself as generated rather than physical; see
  * `DriveContext.autoRoll`.

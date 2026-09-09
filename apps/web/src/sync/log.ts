@@ -9,7 +9,7 @@ import { hashText } from "./hash.ts";
  * had numbered. Sync sends the second part and takes back whatever the
  * server has past what this device last saw; `merge` puts the two back
  * together. Nothing is ever dropped from the first part, and nothing is
- * dropped from the second until the server has given it a number — an
+ * dropped from the second until the server has given it a number: an
  * event this device made is either pending or confirmed, never lost.
  */
 
@@ -29,7 +29,7 @@ export function pendingEvents(events: readonly RunEvent[]): RunEvent[] {
  * Fold what the server sent into what is here.
  *
  * Confirmed events are the union of both sides' numbered events, by id,
- * in sequence order — the server's copy of an event wins, since it carries
+ * in sequence order: the server's copy of an event wins, since it carries
  * the number and the author. Pending events stay pending unless the server
  * has now numbered them, in which case they moved into the first part.
  */

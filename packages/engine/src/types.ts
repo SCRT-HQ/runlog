@@ -4,7 +4,7 @@ import type { Pack, TriggerPoint } from "@runlog/rules-schema";
  * Derived run state.
  *
  * Nothing here is authored or stored directly: every field is a fold over the
- * event log. That is what makes undo, replay and export trustworthy — there is
+ * event log. That is what makes undo, replay and export trustworthy, there is
  * exactly one source of truth, and it is the list of things that happened.
  */
 

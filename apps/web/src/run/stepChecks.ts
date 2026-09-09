@@ -5,7 +5,7 @@ import type { RunState } from "@runlog/engine";
  *
  * A step's boxes live in `state.checks` as `"<key>|<item>"`, so a reload lands
  * on the same boxes and a shared run agrees on them. Both the page's step
- * card and the floating remote need this same set, computed the same way —
+ * card and the floating remote need this same set, computed the same way: 
  * lifted here so neither can drift from the other.
  */
 export function ticksFor(state: RunState, key: string): Set<string> {

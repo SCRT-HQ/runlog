@@ -124,7 +124,7 @@ describe("the API", () => {
   it("defines the secrets it will need, and lets only the handler read them", () => {
     template.resourceCountIs("AWS::SecretsManager::Secret", 6);
     // Bare, without an account to report to: New Relic's wrapper is absent,
-    // but Lambda Insights' layer is there regardless — it needs no account.
+    // but Lambda Insights' layer is there regardless, it needs no account.
     template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike({ Handler: "index.handler" }));
     for (const name of ["stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret", "workos/api-key", "discord/bot-token", "discord/client-secret"]) {
       template.hasResourceProperties("AWS::SecretsManager::Secret", { Name: `runlog/${name}` });

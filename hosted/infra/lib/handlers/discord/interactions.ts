@@ -265,7 +265,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       if (!guild) return ephemeral("This server is not set up for Runlog yet. Someone who can manage it runs /setup claim.");
       const packs = await deps.guilds.listGuildPacks(i.guild_id);
       if (packs.length === 0) return ephemeral("No packs here yet. The account that claimed the server adds them from its Runlog profile, under Servers.");
-      return ephemeral(packs.map((p) => `**${p.title}** — ${p.modes.map((m) => m.label).join(", ") || "one mode"}`).join("\n"));
+      return ephemeral(packs.map((p) => `**${p.title}** - ${p.modes.map((m) => m.label).join(", ") || "one mode"}`).join("\n"));
     }
 
     if (name === "run") return runCommand(i, deps, who);
@@ -362,8 +362,8 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
       );
     }
     // Everything that could refuse has had its say in this turn, to the
-    // person alone. What is left — the session, the thread, the card, the
-    // pin — is a handful of calls to Discord that a cold start plus three
+    // person alone. What is left, the session, the thread, the card, the
+    // pin, is a handful of calls to Discord that a cold start plus three
     // seconds may not cover, so where there is a function with time, it
     // takes over from here.
     if (deps.defer) {
@@ -386,7 +386,7 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     });
     if ("error" in opened) return ephemeral(opened.error);
     const modeLabel = found.pack.modes[modeId]?.label ?? modeId;
-    const what = `**${found.title} · ${modeLabel}**${name ? ` — ${name}` : ""} in <#${opened.threadId}>. Watch it live: ${opened.link}`;
+    const what = `**${found.title} · ${modeLabel}**${name ? ` - ${name}` : ""} in <#${opened.threadId}>. Watch it live: ${opened.link}`;
     // Announcing a thread nobody else can open would only tell the channel
     // what it cannot see, so a private run is answered to the host alone.
     return privately ? ephemeral(`Started ${what}`) : say(`**${nameOf(who)}** started ${what}`);
@@ -596,7 +596,7 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   // The card follows the thread, unless the server pinned it. Following: a
   // press on the card that made a move turns the pressed message into the
   // move's line (the answer to the press, which costs no call) and posts a
-  // fresh card at the bottom; a press that made no line — a tick, a seat —
+  // fresh card at the bottom; a press that made no line, a tick, a seat, 
   // updates the card in place, which keeps it the last message. Pinned:
   // the card is updated in place and the line posted, as it always was.
   // The ending menu lives on an ephemeral message, whose reply is the line.

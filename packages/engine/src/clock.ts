@@ -5,7 +5,7 @@ import type { Clock, RunState } from "./types.ts";
 /**
  * Clocks: a stopwatch that times a unit, a timer that limits it.
  *
- * A clock is four events in the log — started, paused, resumed, stopped —
+ * A clock is four events in the log, started, paused, resumed, stopped, 
  * and nothing else. The log holds timestamps, not a ticking number, so a
  * reload lands on a clock still running from where it was, a second device
  * sees the same time, and a stopped clock's elapsed is written once and

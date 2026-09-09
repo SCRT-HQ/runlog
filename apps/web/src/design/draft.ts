@@ -87,7 +87,7 @@ export function blankPack(): Draft {
  * beginning of someone's own game.
  *
  * Compared against `blankPack()` rather than against some looser "is it
- * empty" rule, so that any change at all — even one field — counts as a
+ * empty" rule, so that any change at all, even one field, counts as a
  * draft worth asking about before it is silently replaced. Structural
  * comparison rather than reference equality, because a draft that has been
  * through storage and back is a new object with the same shape.
@@ -145,7 +145,7 @@ export function coverage(roll: string, entries: readonly unknown[]): Segment[] {
     ({ min, max } = parseDice(roll));
   } catch {
     // Nothing, rather than a guessed span. The schema already complains about
-    // an unreadable expression; a bar reporting "1–100 unreachable" on top of
+    // an unreadable expression; a bar reporting "1-100 unreachable" on top of
     // that would be a second complaint, and a wrong one.
     return [];
   }
@@ -194,7 +194,7 @@ export function coverageSummary(segments: readonly Segment[]): {
   const say = (list: readonly Segment[]) =>
     list
       .slice(0, 3)
-      .map((s) => (s.from === s.to ? `${s.from}` : `${s.from}–${s.to}`))
+      .map((s) => (s.from === s.to ? `${s.from}` : `${s.from}-${s.to}`))
       .join(", ") + (list.length > 3 ? `, +${list.length - 3} more` : "");
 
   const parts: string[] = [];

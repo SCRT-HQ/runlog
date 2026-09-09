@@ -9,7 +9,7 @@ import type { Plugin } from "vite";
  * The whole app is one HTML file, one script and one stylesheet, and it is
  * already built to run from a `file://` URL. Precaching three known filenames
  * is about thirty lines, and thirty lines is cheaper to keep honest than a
- * dependency tree — the same call already made for storage.
+ * dependency tree: the same call already made for storage.
  *
  * The worker is generated rather than written by hand because the built
  * filenames carry content hashes: a hand-written list would go stale on the
@@ -57,7 +57,7 @@ const absolute = (path) => new URL(path, self.location.href).href;
  * be relied on alone: entries were stored from plain URL strings, while the
  * browser asks for a module script or a stylesheet with a request of its own
  * shaping. Those can miss on an exact match with the file sitting right there
- * in the cache — which looks, from the page, like the app simply not loading.
+ * in the cache, which looks, from the page, like the app simply not loading.
  * So a miss falls back to looking the URL up directly.
  */
 async function cached(request) {
@@ -81,7 +81,7 @@ async function handle(request) {
   }
 
   // Cache first for everything else: these files are content-hashed, so a
-  // cached copy is never a stale copy — it is the file that name means.
+  // cached copy is never a stale copy, it is the file that name means.
   const hit = await cached(request);
   if (hit) return hit;
 
@@ -108,12 +108,12 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   // The API is per-person and never cacheable. A cached manifest would be a
-  // sync that silently never happens, so the worker stays out of /api/ —
+  // sync that silently never happens, so the worker stays out of /api/: 
   // wherever that is: the app may be served from a path, so the check is
   // relative to the worker's own scope rather than to the origin's root.
   if (url.href.startsWith(absolute("./api/"))) return;
-  // The hosted layer beside the shell — hosted.json, the legal pages, what
-  // crawlers ask for — is the operator's and changes with a publish; the
+  // The hosted layer beside the shell, hosted.json, the legal pages, what
+  // crawlers ask for, is the operator's and changes with a publish; the
   // app asks for hosted.json with the cache off, and the pages are read,
   // not run, so none of it is held here.
   if (url.href === absolute("./hosted.json") || url.href.startsWith(absolute("./legal/")) || url.href.startsWith(absolute("./.well-known/"))) return;
@@ -139,7 +139,7 @@ export function offline(): Plugin {
       // The version is a hash of the worker itself, which covers both the
       // built filenames it precaches *and* the caching logic around them.
       // Hashing only the filenames would let a fix to this file ship against
-      // a cache the old code had filled — the subtler half of the same trap
+      // a cache the old code had filled: the subtler half of the same trap
       // a hand-written asset list falls into.
       const version = hash(workerSource("", assets));
 

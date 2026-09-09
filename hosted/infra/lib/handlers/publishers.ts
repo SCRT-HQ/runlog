@@ -5,8 +5,8 @@ import { traced } from "./xray.js";
 /**
  * Publishers: who lists packs, and where their money goes.
  *
- * A publisher is an organization — in WorkOS, so it can have members and
- * a subscription of its own — with a Stripe connected account that takes
+ * A publisher is an organization, in WorkOS, so it can have members and
+ * a subscription of its own, with a Stripe connected account that takes
  * the sales directly. What is kept here is small: the organization, who
  * founded it, the connected account and whether Stripe has finished with
  * it. Listings and sales come later and hang under the same key.

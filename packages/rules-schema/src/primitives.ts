@@ -65,7 +65,7 @@ export type DiceExpr = z.infer<typeof DiceExpr>;
 /**
  * Who an action applies to.
  *
- * `subject` is the pack's word for the thing a unit produces — a layer in a
+ * `subject` is the pack's word for the thing a unit produces: a layer in a
  * drawing game, a scene in a writing game, a set in a training log.
  */
 export const TargetRef = z
@@ -120,7 +120,7 @@ export type NumericBound = z.infer<typeof NumericBound>;
 /**
  * Predicates the engine can evaluate against run state.
  *
- * Note `ask`: the engine models units, subjects, states and counters — it does
+ * Note `ask`: the engine models units, subjects, states and counters, it does
  * NOT model the work itself. It cannot know whether a scene has dialogue in
  * it, or whether a track has effects on it. Rather than pretend, a pack asks
  * the player. This keeps the format honest and, not coincidentally, keeps it
@@ -156,7 +156,7 @@ export const Predicate: z.ZodType<Predicate> = z.lazy(() =>
         })
         .strict()
         .describe(
-          "Ask the player. Use this for anything about the work itself, which the engine cannot inspect — whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic.",
+          "Ask the player. Use this for anything about the work itself, which the engine cannot inspect, whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic.",
         ),
       z
         .object({ unitIndex: NumericBound })
@@ -237,7 +237,7 @@ export const Predicate: z.ZodType<Predicate> = z.lazy(() =>
         })
         .strict()
         .describe(
-          "Tests whether any earlier subject was created from an entry carrying this tag — for results that only make sense once something of a given kind exists.",
+          "Tests whether any earlier subject was created from an entry carrying this tag, for results that only make sense once something of a given kind exists.",
         ),
       z
         .object({ modeIs: z.array(Id).min(1).describe("Mode ids in which this holds true.") })
@@ -338,6 +338,6 @@ export const TriggerPoint = z
     "onTimerExpired",
   ])
   .describe(
-    "When a trigger fires. `immediately` lands on resolution; the rest reach forward in time, which is precisely where a player forgets a rule an hour into a session. `afterWork` fires once the player has done the unit's actual work — the part the engine cannot see or verify — but before the unit closes. `onTimerExpired` fires when the timer runs out.",
+    "When a trigger fires. `immediately` lands on resolution; the rest reach forward in time, which is precisely where a player forgets a rule an hour into a session. `afterWork` fires once the player has done the unit's actual work, the part the engine cannot see or verify, but before the unit closes. `onTimerExpired` fires when the timer runs out.",
   );
 export type TriggerPoint = z.infer<typeof TriggerPoint>;

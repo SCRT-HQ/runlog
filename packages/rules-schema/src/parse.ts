@@ -35,7 +35,7 @@ export type ParseResult =
  *  1. **Version.** An unknown major version is refused outright. Guessing at a
  *     format we do not know would risk misplaying somebody's game, and quietly
  *     playing a game wrong is worse than refusing to play it.
- *  2. **Shape.** Zod, in strict mode — unknown keys are rejected rather than
+ *  2. **Shape.** Zod, in strict mode: unknown keys are rejected rather than
  *     ignored, on the same reasoning.
  *  3. **Coherence.** The linter, for dangling references and gapped tables.
  */

@@ -12,8 +12,8 @@ import { isSnapshot, snapshotOf, type LiveSnapshot } from "./snapshot.ts";
  * The one place the live page and a widget by token both go: the public
  * route with the link's token, a socket opened with the same token that
  * rings when the run moves, and a poll behind it. What comes back is
- * turned into a snapshot here — reduced from the log where the pack was
- * handed over, taken as is where the owner's device wrote it — so
+ * turned into a snapshot here, reduced from the log where the pack was
+ * handed over, taken as is where the owner's device wrote it, so
  * everything downstream draws one shape.
  */
 export interface PublicState {

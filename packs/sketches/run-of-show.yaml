@@ -1,4 +1,4 @@
-# Run of Show — rehearsing a talk, a set, a show, one segment at a time.
+# Run of Show: rehearsing a talk, a set, a show, one segment at a time.
 #
 # A Show is a series of Segments. Each Segment names its Bit, says how long
 # it gets, and runs against that clock; a card drawn from a deck says what

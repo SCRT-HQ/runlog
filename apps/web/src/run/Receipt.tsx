@@ -10,7 +10,7 @@ import { lineFor, tableLines } from "./tableLook.ts";
  * What the dice did, held on screen until the player has read it.
  *
  * The engine answers a roll the instant the dice settle, and the step moves
- * on — which is right for the game and wrong for the person, who saw the
+ * on, which is right for the game and wrong for the person, who saw the
  * dice vanish and had to find the result in the log. The receipt is the
  * moment between: the dice as they landed, the total, and what the table said
  * about it, raised like a step and staying put until "Carry on".
@@ -141,7 +141,7 @@ export function Receipt({
                     <div key={i} className={`result ${hit ? "heat" : ""}`}>
                       <span className="band">
                         {table?.title ?? o.table}
-                        {hit && ` — ${nameOf ? nameOf(o.targetSubject!) : `hit ${v.subject.one.toLowerCase()} #${o.targetSubject}`}`}
+                        {hit && ` - ${nameOf ? nameOf(o.targetSubject!) : `hit ${v.subject.one.toLowerCase()} #${o.targetSubject}`}`}
                       </span>
                       <p className="text">{entry?.title ?? entry?.text ?? o.entryId}</p>
                       {entry?.title && entry.text && <p className="muted">{entry.text}</p>}

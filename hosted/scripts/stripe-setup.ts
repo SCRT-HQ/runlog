@@ -3,15 +3,15 @@ import Stripe from "stripe";
 /**
  * What Runlog sells, made in Stripe once per environment.
  *
- * Run with the environment's secret key in STRIPE_SECRET_KEY — the sandbox
- * key for dev, the live key for production — from your own terminal:
+ * Run with the environment's secret key in STRIPE_SECRET_KEY, the sandbox
+ * key for dev, the live key for production, from your own terminal:
  *
  *   $env:STRIPE_SECRET_KEY = "sk_test_…"; npx tsx hosted/scripts/stripe-setup.ts
  *
  * Idempotent: every feature, product and price is found by its lookup key
  * or name before it is made, so running it twice changes nothing. It ends
- * by printing the ids to put in the stage's configuration. Prices are public — they
- * appear in every Checkout — so they are committed; the key is not.
+ * by printing the ids to put in the stage's configuration. Prices are public, they
+ * appear in every Checkout, so they are committed; the key is not.
  */
 
 const KEY = process.env["STRIPE_SECRET_KEY"];

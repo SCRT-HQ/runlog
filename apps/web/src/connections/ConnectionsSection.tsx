@@ -7,8 +7,8 @@ import { clearPendingLink, pendingLink, type LinkRoute } from "./route.ts";
  * The other accounts this one is linked to. Discord first: a link made
  * from Discord's side, where the bot knows who pressed `/link`, handed in
  * here as a code so the two accounts meet on this one's terms. The
- * section shows what is linked, offers to undo it, and — when a code has
- * just arrived by address — asks before binding it, since the code says
+ * section shows what is linked, offers to undo it, and, when a code has
+ * just arrived by address, asks before binding it, since the code says
  * nothing about which Runlog account it should go to until this moment.
  */
 export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | null; pending?: LinkRoute | null }) {

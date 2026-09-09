@@ -10,7 +10,7 @@ import { reduce, type RunEvent } from "@runlog/engine";
  * Until the Discord bot, nothing under hosted/ imported a workspace
  * package: the container is a port, and the API never reads a pack. The
  * bot reduces packs in the Lambda, so the hosting now depends on the
- * engine the way the app does — resolved from the workspace, sources and
+ * engine the way the app does: resolved from the workspace, sources and
  * all. This pins that the resolution works here, under the hosting's own
  * compiler options and test configuration, before any handler relies on
  * it; a broken alias would otherwise surface only in a bundle.

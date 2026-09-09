@@ -4,7 +4,7 @@
 <p align="center"><a href="https://www.npmjs.com/package/@scrthq/runlog"><img src="https://img.shields.io/npm/v/@scrthq/runlog?style=flat-square&logo=npm&label=%40scrthq%2Frunlog" alt="@scrthq/runlog on npm"></a> <a href="https://www.npmjs.com/package/@scrthq/runlog"><img src="https://img.shields.io/npm/dm/@scrthq/runlog?style=flat-square&label=downloads" alt="npm downloads a month"></a> <a href="https://socket.dev/npm/package/@scrthq/runlog"><img src="https://socket.dev/api/badge/npm/package/@scrthq/runlog" alt="Socket score"></a> <a href="https://github.com/SCRT-HQ/runlog/actions/workflows/CI-CD.yml"><img src="https://img.shields.io/github/actions/workflow/status/SCRT-HQ/runlog/CI-CD.yml?branch=main&style=flat-square&label=CI" alt="CI"></a> <a href="https://github.com/SCRT-HQ/runlog/releases/latest"><img src="https://img.shields.io/github/v/release/SCRT-HQ/runlog?style=flat-square&label=release" alt="Latest release"></a></p>
 <p align="center"><a href="https://www.reddit.com/r/runlog_scrthq/"><img src="https://img.shields.io/reddit/subreddit-subscribers/runlog_scrthq?style=flat-square&logo=reddit&label=r%2Frunlog_scrthq" alt="r/runlog_scrthq"></a> <a href="https://discord.gg/ZwWeRCaV5J"><img src="https://img.shields.io/badge/Discord-join-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord"></a></p>
 
-An engine for dice-driven creative-practice games — the kind where you roll on
+An engine for dice-driven creative-practice games: the kind where you roll on
 a table, take whatever constraint comes up, make something under it, and
 occasionally suffer a result that reaches backwards and damages what you made
 an hour ago.
@@ -12,13 +12,13 @@ an hour ago.
 Games like that are usually played on paper, and the bookkeeping is what
 breaks. Backwards targeting is fiddly arithmetic done mid-session while your
 attention is on the work. Persistent states pile up invisibly. Counters run in
-the background. Deferred results — "after you finish, roll a d6" — are simply
+the background. Deferred results, "after you finish, roll a d6", are simply
 forgotten. None of that is the interesting part of the game, and all of it is
 what a computer is for.
 
 **Runlog is a referee and a run log, not a rulebook.** It does not know what
-game you are playing. It reads a *pack* — a YAML or JSON file describing your
-tables, states, counters, flow and modes — and becomes that game: every noun on
+game you are playing. It reads a *pack*, a YAML or JSON file describing your
+tables, states, counters, flow and modes, and becomes that game: every noun on
 screen comes from your vocabulary, every step from your flow. It never judges
 the work itself, because it cannot see it.
 
@@ -35,8 +35,8 @@ npm run dev
 ```
 
 The packs that ship with it are free, in the catalog. Some are for anyone
-with a day, a house, a skill or a kitchen — the app is usable out of the
-box, not only by people who write packs — and the rest are structurally
+with a day, a house, a skill or a kitchen, the app is usable out of the
+box, not only by people who write packs, and the rest are structurally
 different on purpose: if they did not need different features, the format
 would not be proving anything. A few of them:
 
@@ -56,8 +56,8 @@ would not be proving anything. A few of them:
 
 ## The guide
 
-The app carries its own guide — how to play, how to share a run, how to
-design a pack, where the documents are — under Menu, or at `#guide` on any
+The app carries its own guide, how to play, how to share a run, how to
+design a pack, where the documents are, under Menu, or at `#guide` on any
 address. It needs no account. The pages are MDX in `apps/web/src/guide/pages`,
 with screenshots in `apps/web/public/guide` and live pieces of the app where
 a picture would go stale.
@@ -70,13 +70,13 @@ npx @scrthq/runlog validate my-game.yaml --strict
 npx @scrthq/runlog test my-game.yaml          # replays the fixtures your pack ships
 ```
 
-- **[The authoring guide](docs/authoring.md)** — why you would reach for any of
+- **[The authoring guide](docs/authoring.md)**: why you would reach for any of
   it, with a complete pack you can copy.
-- **[The reference](docs/reference.md)** — every field, generated from the
+- **[The reference](docs/reference.md)**: every field, generated from the
   schema, so it cannot be wrong about what loads.
 
-Everything else written down — streaming, the stream API, Discord, selling,
-running a copy — is indexed by who you are in **[docs/README.md](docs/README.md)**.
+Everything else written down, streaming, the stream API, Discord, selling,
+running a copy, is indexed by who you are in **[docs/README.md](docs/README.md)**.
 
 Point your pack at the published schema and your editor does most of the work:
 
@@ -108,7 +108,7 @@ directly. That is what makes undo, exact replay, shared seeds and a
 round-tripping export all the same feature rather than four.
 
 **Packs are data, never code.** The action vocabulary is closed and small, the
-predicates are a whitelist, and there is no scripting and no `eval` anywhere —
+predicates are a whitelist, and there is no scripting and no `eval` anywhere: 
 packs come from strangers. If a pack needs something the actions cannot
 express, it writes a `note`: an instruction the player carries out by hand and
 ticks off. The app is a bookkeeper, not an enforcer.
@@ -123,8 +123,8 @@ opened from disk is always the app.
 
 | | |
 | --- | --- |
-| Hosted | https://runlog.scrthq.com — the copy Secret Headquarters runs, with accounts, sync, tables with company and the catalog |
-| Anyone, no account | https://scrt-hq.github.io/runlog/ — GitHub Pages, tracks `main`, no sign-in and no sync |
+| Hosted | https://runlog.scrthq.com, the copy Secret Headquarters runs, with accounts, sync, tables with company and the catalog |
+| Anyone, no account | https://scrt-hq.github.io/runlog/, GitHub Pages, tracks `main`, no sign-in and no sync |
 | Your own | The guide's [Running your own copy](https://runlog.scrthq.com/play/guide/own-copy): on your machine, on a static host, or on your own AWS |
 
 Static files on S3 behind CloudFront, and behind `/api` on the same origin a
@@ -148,7 +148,7 @@ The hosted copy is reached only through a published release, so it always
 carries a version and has always already been through staging.
 
 It also still runs from a file. `npm run build`, then open
-`apps/web/dist/index.html` — which is the zero-friction path when the app is
+`apps/web/dist/index.html`, which is the zero-friction path when the app is
 sitting next to whatever you are working in. To run a copy of your own, on
 your machine, on a static host, or on your own AWS with accounts and sync,
 see [Running your own copy](https://runlog.scrthq.com/play/guide/own-copy) in the guide; none of the three needs a
@@ -158,14 +158,14 @@ fork.
 
 Two voices. The pack's author speaks in a book serif, Literata, because the
 rules are a rulebook. The player speaks in the same face in italic, because a
-name is a note in the margin. The referee — the app — speaks in IBM Plex Mono,
+name is a note in the margin. The referee, the app, speaks in IBM Plex Mono,
 because it keeps a ledger and its figures have to line up. Both faces ship in
 the bundle: the hosting's Content Security Policy allows no font host, and the
 worker precaches them like everything else.
 
 Two accents with one job each: celadon is the referee's "fine", kiln amber is
 consequence. Four looks share every other decision and differ only in the
-ground — lights down, daylight, ember and glaze — chosen from the header and
+ground, lights down, daylight, ember and glaze, chosen from the header and
 remembered on this machine. With no choice made, the operating system's
 preference picks between the first two.
 
@@ -200,7 +200,7 @@ out. Nothing else lives up there, so a phone's screen is the run.
 The pack's name in the bar opens your library: your packs, newest played
 first, with each pack's runs beneath it. Continue any run, start another
 without disturbing the one that is open, forget one, or load a pack from a
-file. Nothing ships in the library; the catalog is where packs come from — laid
+file. Nothing ships in the library; the catalog is where packs come from: laid
 out as a market, with a sidebar that narrows by category, tag and how a pack
 plays (solo, together, moderated, seeded), all read from the packs themselves.
 The packs that come with the app are there, free, and a device that has
@@ -226,7 +226,7 @@ none. The owner can withdraw an invitation or remove a member.
 What sync carries: your runs; a pack's text only where you tick "keep this
 pack in sync" on the shelf; and the license keys you have typed to open sealed
 copies, so the same file opens on your other devices without the receipt. A
-sealed copy's text itself never travels — the key does, the file is yours to
+sealed copy's text itself never travels: the key does, the file is yours to
 carry, and the server never sees what was inside it.
 
 The build knows whether there is anything to sign into from one variable:
@@ -245,8 +245,8 @@ hosted, against that site's data. `apps/web/.env.example` shows both.
 Anything else the app talks to has to be named in the Content Security Policy
 in `hosted/infra/lib/site-stack.ts`, and today that is `api.workos.com` alone.
 
-The designer can start from a pack you already have — one from the library
-or the catalog whose license allows changed copies — as a new pack of your
+The designer can start from a pack you already have, one from the library
+or the catalog whose license allows changed copies, as a new pack of your
 own with the original credited in its notice. And it can sign a release or
 seal a copy for a buyer in the browser: make or drop in a signing key (it
 never leaves the page), claim it as your account's so the app names you, then
@@ -261,7 +261,7 @@ npx @scrthq/runlog keygen -o my-key.json
 npx @scrthq/runlog sign my-game.yaml --key my-key.json --as "Your Name"
 ```
 
-This proves authorship, not ownership. It does not restrict copying and cannot —
+This proves authorship, not ownership. It does not restrict copying and cannot: 
 the app must read every word of a pack to play it. What it gives an author is
 that an altered copy can no longer claim to be theirs, and what it gives a
 player is a fingerprint to compare against one the author published. See
@@ -276,8 +276,8 @@ npx @scrthq/runlog issue my-game.yaml --to "Buyer" --ref order-1 --key my-key.js
 One file per buyer, stamped with their name and sealed behind a license key.
 The stamp lives inside the signature, so removing it breaks verification; the
 seal means the distributed file is binary rather than YAML and is inert without
-the key. It raises the cost of the leak that actually happens — a text editor
-and thirty seconds — and makes no claim beyond that. See
+the key. It raises the cost of the leak that actually happens, a text editor
+and thirty seconds, and makes no claim beyond that. See
 [the authoring guide](docs/authoring.md#selling-copies), and
 [selling from your own backend](docs/selling.md) for the container format and
 the sealing API in the `@scrthq/runlog` package, which any checkout can call.
@@ -300,7 +300,7 @@ gitignored private pack, and the two only ever meet in one person's browser.
 
 Packs carry their own license, and the app honors it: a pack marked
 `redistributable: false` never has its text embedded in an export meant for
-anyone else — a shared log records *which* results came up without quoting what
+anyone else, a shared log records *which* results came up without quoting what
 they say. A copy you keep for yourself quotes them in full, because personal
 use is what such a license allows.
 

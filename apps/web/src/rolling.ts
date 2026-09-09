@@ -21,7 +21,7 @@ import { parseDice, rollDice, type Pack, type Table } from "@runlog/rules-schema
 export interface RolledDie {
   /** Faces, which picks the silhouette. */
   faces: number;
-  /** What the face shows. Not always the value: percentile tens read 00–90. */
+  /** What the face shows. Not always the value: percentile tens read 00-90. */
   display: string;
   /** Shown under the die. */
   label: string;
@@ -40,7 +40,7 @@ export interface RollResult {
  * How a roll is presented as physical dice.
  *
  * A d100 becomes a percentile pair, because that is what is actually on the
- * table: a tens die reading 00–90 and a ones die reading 0–9, with 00 and 0
+ * table: a tens die reading 00-90 and a ones die reading 0-9, with 00 and 0
  * meaning 100.
  */
 export function toDisplayDice(expr: string, values: number[], total: number): RolledDie[] {
@@ -71,8 +71,8 @@ export function resolveRoll(
         headline: String(total),
         dice: toDisplayDice(table.roll, values, total),
         working: entry
-          ? `${table.roll} → ${total}, which falls in ${entry.range[0]}–${entry.range[1]}`
-          : `${table.roll} → ${total}, which no entry covers — the pack has a gap`,
+          ? `${table.roll} → ${total}, which falls in ${entry.range[0]}-${entry.range[1]}`
+          : `${table.roll} → ${total}, which no entry covers, the pack has a gap`,
       };
     }
 
@@ -132,7 +132,7 @@ export function resolveRoll(
         ],
         working:
           `${table.action} → ${action.total}${bonusText} = ${score}, ` +
-          `against ${challenge.join(" and ")} — beats ${beaten} of ${table.challenge.count} ` +
+          `against ${challenge.join(" and ")} - beats ${beaten} of ${table.challenge.count} ` +
           `(ties go to the challenge)`,
       };
     }
@@ -143,7 +143,7 @@ export function resolveRoll(
       const entry = table.entries[index];
       return {
         entryId: entry?.id ?? null,
-        headline: entry?.key ?? "—",
+        headline: entry?.key ?? "-",
         dice: [],
         working: `drew ${entry?.key ?? "nothing"} from ${table.entries.length} possible keys`,
       };

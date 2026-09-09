@@ -83,7 +83,7 @@ describe("the test bench", () => {
   /**
    * `packs/testing/engine-testing.yaml` is a separate pull request's pack
    * and may not exist on this branch, so its entry is built by hand rather
-   * than read off disk — the rule under test is what `loadCatalog` does
+   * than read off disk: the rule under test is what `loadCatalog` does
    * with a `bench: true` entry, not the pack file itself.
    */
   const bench: CatalogEntry = {

@@ -6,7 +6,7 @@ import type { RunEvent } from "./events.ts";
  * A log is append-only once it can be shared: nothing is ever taken out,
  * because another player may already have built on it. Undo is therefore
  * an event of its own, `Undone`, naming the events it voids by id; and what
- * the reducer folds is the *effective* log — every event that is neither
+ * the reducer folds is the *effective* log: every event that is neither
  * an `Undone` nor named by one. Everything that reads a log for meaning
  * (the reducer, the export) reads it through here; everything that stores
  * or sends one keeps the whole thing.

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
  * A race code that arrived in a link.
  *
  * `?race=<code>` is read once, taken off the address bar, and kept in
- * sessionStorage until it is used or dismissed — joining means signing
+ * sessionStorage until it is used or dismissed: joining means signing
  * in, which is a round trip, and then opening the right pack. The code
  * is offered in the setup screen's Join field once the pack is open.
  */

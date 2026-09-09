@@ -10,11 +10,11 @@ import { DocView } from "./DocView.tsx";
  * the other kinds a press away, and stays over whatever they were doing.
  * Printing opens the same document as its own page, which the browser
  * prints to paper or PDF with the columns and page breaks already right.
- * Files as such — HTML and Markdown to keep — are the Designer's, where
+ * Files as such, HTML and Markdown to keep, are the Designer's, where
  * an author is producing them.
  *
  * Two ways in: a pack and a kind, which lays out every kind as a tab; or
- * a set of documents already made — a watcher's summary and the mode's,
+ * a set of documents already made: a watcher's summary and the mode's,
  * say, which may have been written by the server from a pack this device
  * does not hold.
  */

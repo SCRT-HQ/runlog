@@ -2,7 +2,7 @@
  * Which lights are on.
  *
  * Four looks, all the same app: the same two accents doing the same two jobs,
- * the same faces speaking in the same voices. What changes is the ground —
+ * the same faces speaking in the same voices. What changes is the ground: 
  * the studio with the lights down, daylight on paper, a kiln-lit room, or the
  * inside of a celadon glaze. Choosing is the player's, remembered on this
  * machine only, and "system" hands the choice back to the operating system.
@@ -41,7 +41,7 @@ export function savedTheme(): ThemeId {
  * Put the choice on the document.
  *
  * "system" removes the attribute rather than setting it, so the stylesheet's
- * `prefers-color-scheme` rule is what decides — the attribute is a decision,
+ * `prefers-color-scheme` rule is what decides: the attribute is a decision,
  * and its absence is the decision not to make one.
  */
 export function applyTheme(theme: ThemeId, root: HTMLElement = document.documentElement): void {

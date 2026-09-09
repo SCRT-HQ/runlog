@@ -59,7 +59,7 @@ export type RunEvent =
    *
    * Distinct from declaring one: the thing already exists and keeps its id and
    * its states, only what it is called changes. Recorded rather than edited in
-   * place because the log is the run — a name fixed by hand and not written
+   * place because the log is the run: a name fixed by hand and not written
    * down would be gone on the next reload.
    */
   | (Base & { t: "SubjectRenamed"; subject: number; name: string })

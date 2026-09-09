@@ -95,7 +95,7 @@ export class SiteStack extends Stack {
      * Built assets carry a content hash in the name, so a given URL can never
      * mean anything else and may be cached forever. The shell and the service
      * worker keep the same names across every release, so caching them at the
-     * edge means a deploy that nobody receives — the worst kind, because
+     * edge means a deploy that nobody receives: the worst kind, because
      * everything looks fine from the deploying end.
      */
     const immutable = new cloudfront.CachePolicy(this, "ImmutableAssets", {
@@ -113,7 +113,7 @@ export class SiteStack extends Stack {
       comment: "The shell and the worker. Cached, but never served without asking.",
       // Zero default, so an object arriving without a Cache-Control header is
       // not cached at all. A non-zero maximum so the *origin's* header decides
-      // for objects that carry one — and these carry `no-cache,
+      // for objects that carry one, and these carry `no-cache,
       // must-revalidate`, which means the edge may hold a copy but must check
       // it every time. That is what is wanted: fast when nothing changed,
       // never stale when it did.
@@ -134,7 +134,7 @@ export class SiteStack extends Stack {
 
     // Nothing stands between the edge and the bundle. Who may *use* the app
     // is the app's own question, answered by WorkOS AuthKit with the client
-    // id the build was given — see the application repository. An edge
+    // id the build was given: see the application repository. An edge
     // function cannot verify that session, and a shared password in front of
     // it would be a second door with a different key.
     this.distribution = new cloudfront.Distribution(this, "Distribution", {
@@ -175,13 +175,13 @@ export class SiteStack extends Stack {
       errorResponses: [
         // S3 answers a missing key with 403 through an access control, which
         // would show a viewer an XML error document. The app has no paths of
-        // its own — everything it shares travels in the fragment — so anything
+        // its own, everything it shares travels in the fragment, so anything
         // unrecognized is a mistyped URL, and the app itself is a better
         // answer than a bucket's complaint.
         //
         // These apply to every behavior, the API's included: there is no
-        // per-path setting. That is why the API never answers 403 or 404 — a
-        // bad token is a 401 and an unknown route a 410 — and why the app
+        // per-path setting. That is why the API never answers 403 or 404, a
+        // bad token is a 401 and an unknown route a 410, and why the app
         // treats an HTML body from /api as "sign in again" all the same.
         { httpStatus: 403, responseHttpStatus: 200, responsePagePath: "/index.html" },
         { httpStatus: 404, responseHttpStatus: 200, responsePagePath: "/index.html" },
@@ -326,7 +326,7 @@ export class SiteStack extends Stack {
    * Never cached: every answer is one person's, and a cache key that included
    * the Authorization header would be the same as no cache. The one managed
    * origin request policy that forwards Authorization to a custom origin
-   * leaves Host out, which is what API Gateway needs — it routes on its own
+   * leaves Host out, which is what API Gateway needs, it routes on its own
    * hostname. The same security headers ride along; HSTS on JSON is harmless.
    */
   private apiBehavior(host: string, config: EnvConfig): cloudfront.BehaviorOptions {
@@ -352,7 +352,7 @@ export class SiteStack extends Stack {
    * Headers the app should be served with.
    *
    * The Content-Security-Policy is the interesting one. The app loads no third
-   * party anything — no fonts, no analytics, no CDN — so the policy can say
+   * party anything, no fonts, no analytics, no CDN, so the policy can say
    * exactly that, and any future dependency has to be added here deliberately
    * rather than arriving unnoticed.
    */

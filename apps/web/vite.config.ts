@@ -6,8 +6,8 @@ import { offline } from "./offline.ts";
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 
-// The version a deploy says it is — the release it becomes, or was cut
-// from — else the package's own, which is what a local build is.
+// The version a deploy says it is, the release it becomes, or was cut
+// from, else the package's own, which is what a local build is.
 const version =
   process.env["RUNLOG_VERSION"] || (JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string }).version;
 

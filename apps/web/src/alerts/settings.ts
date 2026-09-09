@@ -6,7 +6,7 @@ import type { SoundId } from "./sounds.ts";
  * Per device, in localStorage, because whether a phone should ring in a
  * studio is a fact about the phone. Every kind can be off. The defaults
  * ring for the things that happen while you are not looking at the screen
- * — a timer running out, a threshold crossed, an award in a race — and
+ * - a timer running out, a threshold crossed, an award in a race, and
  * stay quiet for the things you did yourself.
  */
 

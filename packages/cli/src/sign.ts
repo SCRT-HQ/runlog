@@ -73,19 +73,19 @@ export async function cmdKeygen(args: string[]): Promise<number> {
   console.log("");
   console.log(`  fingerprint  ${paint(GREEN, key.fingerprint)}`);
   console.log("");
-  console.log(paint(DIM, "  Publish that fingerprint where your players will see it — a site, a"));
+  console.log(paint(DIM, "  Publish that fingerprint where your players will see it: a site, a"));
   console.log(paint(DIM, "  video, the back of the book. It is how anyone tells your packs from"));
   console.log(paint(DIM, "  a stranger's claiming to be you."));
   console.log("");
   console.log(paint(YELLOW, "  Keep this file private and backed up."));
   console.log(paint(DIM, "  Anyone who has it can sign as you. Lose it and you cannot sign again"));
-  console.log(paint(DIM, "  under the same fingerprint — your players would have to learn a new one."));
+  console.log(paint(DIM, "  under the same fingerprint: your players would have to learn a new one."));
   return 0;
 }
 
 /**
  * The signing key: `--key file.json`, or the file's contents in
- * `RUNLOG_SIGNING_KEY`, which is how a build server holds it — as a secret
+ * `RUNLOG_SIGNING_KEY`, which is how a build server holds it, as a secret
  * in the environment, never as a file in the repository.
  */
 export function loadKey(args: string[], env: NodeJS.ProcessEnv = process.env): { key: StoredKey; from: string } | { error: string } {
@@ -263,7 +263,7 @@ export async function cmdIssue(args: string[]): Promise<number> {
     console.log(paint(DIM, "  still reach the rules, because the app has to show them to play."));
   } else {
     console.log("");
-    console.log(paint(DIM, "  This marks the copy. It does not restrict it — the buyer can still"));
+    console.log(paint(DIM, "  This marks the copy. It does not restrict it: the buyer can still"));
     console.log(paint(DIM, "  pass the file on, and it will play. What changes is that it, and"));
     console.log(paint(DIM, "  every log exported from it, says whose copy it was."));
     console.log(paint(DIM, "  Add --seal to distribute a sealed copy that needs a license key."));
@@ -271,7 +271,7 @@ export async function cmdIssue(args: string[]): Promise<number> {
   return 0;
 }
 
-/** `long-kiln-1.0.0-nate-ferrell.yaml` — one file per buyer, findable later. */
+/** `long-kiln-1.0.0-nate-ferrell.yaml`: one file per buyer, findable later. */
 function defaultIssueName(document: Record<string, unknown>, to: string, format: string): string {
   const id = typeof document.id === "string" ? document.id : "pack";
   const version = typeof document.version === "string" ? document.version : "0.0.0";

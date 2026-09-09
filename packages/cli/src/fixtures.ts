@@ -4,7 +4,7 @@ import { playThrough, reduce, type PlayStep, type RunEvent } from "@runlog/engin
 /**
  * Replaying the self-tests a pack ships with.
  *
- * This is how an author proves their tables behave — and, more usefully, how
+ * This is how an author proves their tables behave, and, more usefully, how
  * they keep proving it after an edit. A pack with fixtures is one somebody
  * else can pick up and change without guessing at what they broke.
  *
@@ -55,7 +55,7 @@ export function readPath(state: unknown, path: string): unknown {
   for (const segment of path.split(".")) {
     if (cursor === null || cursor === undefined) return undefined;
     if (Array.isArray(cursor)) {
-      // `length` reads naturally in an assertion — "two Pieces were made" —
+      // `length` reads naturally in an assertion, "two Pieces were made", 
       // and is the only non-index property worth exposing here.
       if (segment === "length") {
         cursor = cursor.length;

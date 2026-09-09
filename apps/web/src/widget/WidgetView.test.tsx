@@ -43,7 +43,7 @@ const base: LiveSnapshot = {
 };
 
 describe("the Step widget", () => {
-  it("carries the current step, the constraints in play, and the latest result — enough to follow along by", () => {
+  it("carries the current step, the constraints in play, and the latest result: enough to follow along by", () => {
     const html = renderToStaticMarkup(<StepWidget s={base} />);
     expect(html).toContain("Throw it.");
     expect(html).toContain("The game has already had its say");

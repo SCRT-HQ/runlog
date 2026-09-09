@@ -75,7 +75,7 @@ describe.each(["dev", "prd"] as EnvName[])("observability for %s", (name) => {
     }
   });
 
-  it("lists every alarm — its own seven, and the API stack's existing one — on the alarm status widget", () => {
+  it("lists every alarm, its own seven, and the API stack's existing one, on the alarm status widget", () => {
     const body = dashboardBody();
     // The widget's "alarms" array holds one ARN token per alarm; each
     // becomes its own opaque "<token>" chunk in the joined body, so instead

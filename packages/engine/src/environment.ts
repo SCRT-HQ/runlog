@@ -8,7 +8,7 @@ import type { RunState, Subject } from "./types.ts";
  * "An ordered list of things I am making, which the app does not own" covers a
  * folder of drawings, a git worktree, a workout log and a session in a
  * recording program equally well. The port is named for that shape rather than
- * for whichever adapter happens to get written first — otherwise the first one
+ * for whichever adapter happens to get written first: otherwise the first one
  * quietly becomes the interface, and every later environment has to pretend to
  * be it.
  *
@@ -20,7 +20,7 @@ import type { RunState, Subject } from "./types.ts";
 
 /** One thing the environment is keeping: a track, a file, a layer. */
 export interface ExternalSubject {
-  /** Stable in the environment. A track id, a path — never the display name. */
+  /** Stable in the environment. A track id, a path, never the display name. */
   id: string;
   name: string;
   /** Position in the environment's own ordering, 1-based. */
@@ -114,8 +114,8 @@ export interface Reconciliation {
 /**
  * Compare what the run believes against what the environment reports.
  *
- * Reports rather than resolves. The app cannot know which side is right — the
- * player may have renamed a track for good reason, or forgotten to make one —
+ * Reports rather than resolves. The app cannot know which side is right, the
+ * player may have renamed a track for good reason, or forgotten to make one, 
  * and silently "fixing" a session on their behalf is exactly the kind of help
  * nobody asked for. Same principle as contradictions in the rules: show the
  * disagreement, let the human rule on it.

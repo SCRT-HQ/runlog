@@ -4,9 +4,9 @@
  * Interactions arrive by HTTP and are answered in the same turn, so the
  * bot calls Discord back only for what an answer cannot carry: a thread
  * for a run to live in, the messages posted into it, a pin, and a
- * server's name for the profile. Every call has a short rope — Discord
+ * server's name for the profile. Every call has a short rope, Discord
  * waits three seconds for the interaction's answer, and a slow post must
- * not spend them — and a failure is reported to the caller rather than
+ * not spend them, and a failure is reported to the caller rather than
  * thrown through it, since the run's log is already written and the card
  * is rebuilt from it on the next press.
  */

@@ -79,9 +79,9 @@ import {
 /**
  * The app.
  *
- * It began as the tool that made the pack format tangible — load a pack
+ * It began as the tool that made the pack format tangible, load a pack
  * through the engine's own validator, show what is in it, roll on its tables
- * — and that inspector is still here, one view among three. Play runs the
+ * - and that inspector is still here, one view among three. Play runs the
  * game; Design writes the pack.
  *
  * Everything on screen is driven by pack data. There is no hardcoded "Room" or
@@ -103,7 +103,7 @@ export default function App() {
    * Packs the player imported from their own files.
    *
    * Kept locally so a private transcription of a rulebook survives a reload
-   * without ever leaving the machine — before this, picking a file lasted
+   * without ever leaving the machine, before this, picking a file lasted
    * exactly as long as the tab did.
    */
   const [imported, setImported] = useState<StoredPack[]>([]);
@@ -306,7 +306,7 @@ export default function App() {
   /**
    * The pack exactly as written, before the schema fills in defaults.
    *
-   * A signature covers what the author signed, and they signed their file —
+   * A signature covers what the author signed, and they signed their file: 
    * not the engine's normalized reading of it. Verifying the validated pack
    * would break every signature the moment a default changed.
    */
@@ -479,8 +479,8 @@ export default function App() {
   const autoOpened = useRef(false);
   useEffect(() => {
     if (autoOpened.current || account.status !== "signed-in" || sync.status !== "synced") return;
-    // An address that names a page — the guide, the profile, the catalog, a
-    // link — is what the person asked for; a reload must land there, not on
+    // An address that names a page, the guide, the profile, the catalog, a
+    // link, is what the person asked for; a reload must land there, not on
     // whatever run the account touched last.
     if (lastActive() || wantedRun || (addressOf(location) && addressOf(location) !== "#")) {
       autoOpened.current = true;
@@ -554,7 +554,7 @@ export default function App() {
 
   /**
    * Take the catalog's newer version: the text and the version change, the
-   * record's identity and its switches do not. Runs are untouched — every
+   * record's identity and its switches do not. Runs are untouched: every
    * event is stamped with the pack version it was played under, and the
    * reducer reads whatever pack is loaded now.
    */
@@ -632,7 +632,7 @@ export default function App() {
    *
    * The pack goes on the shelf like any other, marked sealed so its text
    * never travels. The key is filed under the pack's id, which is the first
-   * moment the id is known — the clear header names the sale, not the pack.
+   * moment the id is known: the clear header names the sale, not the pack.
    */
   const keepOpened = useCallback(async (doc: unknown, key: string, header: ContainerHeader) => {
     const extra = purchaseExtra.current;
@@ -798,7 +798,7 @@ export default function App() {
     forgetOpened(record.id);
     // A sealed copy was never told to the server, so there is nobody to
     // tell about its deletion: it goes at once, no tombstone. The license
-    // key stays — it is the receipt, and the file can be opened again.
+    // key stays, it is the receipt, and the file can be opened again.
     if (record.sealed) await purgePack(record.id);
     else await forgetPack(record.id);
     await forgetRunsFor(record.id);
@@ -1135,8 +1135,8 @@ function Diagnostics({ diagnostics }: { diagnostics: Diagnostic[] }) {
  *
  * The paper first: the rulebook, the quick start, the reference card, the
  * run log sheet and the catalog summary, each written from the pack as it
- * is, since that is how a game is read at a table. The pack's structure —
- * every table, the flow, the modes, as the engine holds them — is the last
+ * is, since that is how a game is read at a table. The pack's structure, 
+ * every table, the flow, the modes, as the engine holds them, is the last
  * tab, for a designer or anyone checking a rule against its source.
  */
 export function PackView({
@@ -1413,7 +1413,7 @@ function Boxes({ pack }: { pack: Pack }) {
             <div key={id} className="row">
               <strong>{r.label}</strong>
               <span className="muted">
-                {r.initial} · {r.min}–{r.max ?? "∞"} · {r.display}
+                {r.initial} · {r.min}-{r.max ?? "∞"} · {r.display}
               </span>
             </div>
           ))}
@@ -1472,7 +1472,7 @@ function Boxes({ pack }: { pack: Pack }) {
         <p className="muted small">
           {pack.targeting
             ? `${pack.targeting.strategy}`
-            : "none — nothing in this game reaches backwards"}
+            : "none, nothing in this game reaches backwards"}
         </p>
       </section>
 
@@ -1487,7 +1487,7 @@ function Boxes({ pack }: { pack: Pack }) {
                 : m.units?.roll
                   ? `roll ${m.units.roll}`
                   : m.units
-                    ? `${m.units.min ?? "?"}–${m.units.max ?? "?"}`
+                    ? `${m.units.min ?? "?"}-${m.units.max ?? "?"}`
                     : "open"}
               {m.seeded && " · seeded"}
               {(m.players?.max ?? 1) > 1 && ` · ${m.players?.max} players`}

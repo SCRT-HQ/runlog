@@ -83,7 +83,7 @@ describe("range coverage", () => {
     const segments = coverage("d6", [entry("a", 1, 2), entry("b", 5, 6)]);
     const gap = segments.find((s) => s.claims === 0);
     expect(gap).toMatchObject({ from: 3, to: 4 });
-    expect(coverageSummary(segments).text).toContain("unreachable: 3–4");
+    expect(coverageSummary(segments).text).toContain("unreachable: 3-4");
   });
 
   it("finds a gap at the end, which is the one people miss", () => {
@@ -98,7 +98,7 @@ describe("range coverage", () => {
     const over = segments.find((s) => s.claims > 1);
     expect(over).toMatchObject({ from: 3, to: 4 });
     expect(over!.entries).toEqual(["a", "b"]);
-    expect(coverageSummary(segments).text).toContain("claimed twice: 3–4");
+    expect(coverageSummary(segments).text).toContain("claimed twice: 3-4");
   });
 
   it("reports both a gap and an overlap at once", () => {
@@ -108,7 +108,7 @@ describe("range coverage", () => {
   });
 
   it("uses the dice expression's real span, not an assumed one", () => {
-    // 2d6 runs 2–12; a table covering 1–6 is mostly missing.
+    // 2d6 runs 2-12; a table covering 1-6 is mostly missing.
     const segments = coverage("2d6", [entry("a", 2, 12)]);
     expect(segments).toEqual([{ from: 2, to: 12, claims: 1, entries: ["a"] }]);
   });

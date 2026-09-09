@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
  * `?purchase=<ref>` is what Stripe sends the buyer back with; the mail
  * adds `&t=<token>` so the link works with no account. Both are read once,
  * taken off the address bar, and kept in sessionStorage until the copy
- * has been fetched or the banner dismissed — a sign-in in between is a
+ * has been fetched or the banner dismissed: a sign-in in between is a
  * round trip. What happens next is the app's: a fetch of the sealed file
  * and the same opening a file from disk gets.
  */

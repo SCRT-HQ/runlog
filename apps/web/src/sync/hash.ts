@@ -4,7 +4,7 @@
  * SHA-256 over the text as stored, first sixteen hex characters. The canonical
  * form is the stored string itself: a run log is never reordered, and a pack
  * is kept verbatim, so there is nothing to normalize. This is for skipping
- * work and for `If-Match`, not for integrity — the server stores it as given.
+ * work and for `If-Match`, not for integrity: the server stores it as given.
  */
 
 export async function hashText(text: string): Promise<string> {

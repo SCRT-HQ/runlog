@@ -4,7 +4,7 @@ import { zip, type ZipEntry } from "../docs/zip.ts";
 /**
  * A distribution bundle: everything a buyer, or a shop, gets in one file.
  *
- * The pack itself — signed, or sealed for one buyer — and every document
+ * The pack itself, signed, or sealed for one buyer, and every document
  * written from it, each as a PDF, as HTML and as Markdown, with a short
  * note on what is what. The license key for a sealed copy is
  * never in here: the bundle is the thing that gets passed around, and the

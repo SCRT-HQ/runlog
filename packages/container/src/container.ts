@@ -18,7 +18,7 @@ import { fromBase64Url, toBase64Url } from "./base64url.ts";
  * What it does buy:
  *
  *  - The distributed file is not YAML. Opening it in an editor shows binary.
- *  - Without the license key it is inert, so the file alone is worthless —
+ *  - Without the license key it is inert, so the file alone is worthless: 
  *    passing it on means passing on a key that was issued to one person.
  *  - The buyer's name is inside the sealed, signed payload, so a copy that has
  *    been opened and re-sealed is either still named or no longer verifies.

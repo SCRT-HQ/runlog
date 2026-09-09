@@ -12,7 +12,7 @@ import type { RunState } from "./types.ts";
  *
  * Every result carries a derivation. That is not a nicety. The standing
  * objection to letting a computer decide these things is not that it gets them
- * wrong — it is that you cannot see how it decided, so you cannot own the
+ * wrong, it is that you cannot see how it decided, so you cannot own the
  * outcome. Showing the working answers that directly.
  */
 
@@ -157,7 +157,7 @@ function anchoredOffset(
     d.roll = roll;
     d.explain.push(
       `Rolled ${d.originalRoll}: the tens digit ${tens} is ${tens % 2 === 1 ? "odd" : "even"}, ` +
-        `so read it in the ${bandStart}s — treat as ${roll}.`,
+        `so read it in the ${bandStart}s - treat as ${roll}.`,
     );
   }
 
@@ -171,7 +171,7 @@ function anchoredOffset(
 
   if (found.anchor === "playerChoice") {
     d.outcome = "playerChoice";
-    d.explain.push(`${roll} is in ${found.range[0]}–${found.range[1]}: you choose the target.`);
+    d.explain.push(`${roll} is in ${found.range[0]}-${found.range[1]}: you choose the target.`);
     return d;
   }
 
@@ -185,7 +185,7 @@ function anchoredOffset(
   d.rawOffset = rawOffset;
 
   d.explain.push(
-    `${roll} is in ${found.range[0]}–${found.range[1]}: anchor on the ${found.anchor} ` +
+    `${roll} is in ${found.range[0]}-${found.range[1]}: anchor on the ${found.anchor} ` +
       `of ${n} eligible, counting ${found.direction}.`,
   );
 
@@ -219,7 +219,7 @@ function anchoredOffset(
   d.targetSubject = subject?.id ?? null;
   d.outcome = subject ? "target" : "noTarget";
   d.explain.push(
-    `Position ${index + 1} of ${n}${subject ? "" : " — which does not exist"}.`,
+    `Position ${index + 1} of ${n}${subject ? "" : ", which does not exist"}.`,
   );
   return d;
 }

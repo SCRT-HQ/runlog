@@ -14,7 +14,7 @@ import { JwtVerifier } from "aws-jwt-verify";
  *
  * Verified here, in the handler, rather than in an API Gateway authorizer.
  * An authorizer's refusal comes out of the gateway as a 403, and CloudFront
- * rewrites every 403 on this distribution into the app's index page — so a
+ * rewrites every 403 on this distribution into the app's index page, so a
  * bad token would have been answered with HTML and a 200. A handler can say
  * 401, in JSON, and mean it.
  */
@@ -26,7 +26,7 @@ export interface Caller {
   /**
    * WorkOS feature flags on the session, from the token's `feature_flags`
    * claim: a way to give one person a plan's features without a
-   * subscription — a friend testing, a comped account. A command-line key
+   * subscription: a friend testing, a comped account. A command-line key
    * carries none. The API reads a flag named like a feature as that
    * feature.
    */

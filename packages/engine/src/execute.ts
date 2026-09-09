@@ -247,7 +247,7 @@ const allHold = (f: Frame, preds: Predicate[] | undefined, key: string): boolean
  *
  * Note the asymmetry with `allHold` on an empty list. "All of nothing" is
  * vacuously true; "any of nothing" is false. That distinction is not
- * pedantic — reading an absent `skipWhen` as "all conditions met" silently
+ * pedantic: reading an absent `skipWhen` as "all conditions met" silently
  * skips every phase in the game, which is exactly the bug this replaced.
  */
 const anyHold = (f: Frame, preds: Predicate[] | undefined, key: string): boolean =>
@@ -288,7 +288,7 @@ function obtainRoll(f: Frame, dice: string, key: string, purpose: string, label?
 /**
  * Roll on a table until the result is one this run can do.
  *
- * A pack can say a result `needs` something optional — a barbell, an oven —
+ * A pack can say a result `needs` something optional, a barbell, an oven, 
  * and a run says at the start what it lacks. A result that needs a lacked
  * thing is drawn again, up to a few times, so the dice never demand what the
  * room does not have. The rolls all land in the log; the last one counts.
@@ -437,7 +437,7 @@ function runAction(f: Frame, action: Action, key: string): void {
     case "rollOn": {
       const table = f.pack.tables[action.table];
       if (!table) break;
-      // "Roll for how many to roll": a total bound earlier says the count —
+      // "Roll for how many to roll": a total bound earlier says the count, 
       // or a counter does, which is how a run keeps a setting the moderator
       // chose once and can nudge later.
       const named = action.timesFrom;
@@ -829,8 +829,8 @@ export function availableMoves(
   state: RunState,
   /**
    * Where in the flow the player is. A list because more than one placement
-   * can be open at once — between units, they are both stopping and carrying
-   * on — and because taking a list is what makes the alternative impossible:
+   * can be open at once, between units, they are both stopping and carrying
+   * on, and because taking a list is what makes the alternative impossible:
    * calling this twice and concatenating counted every `anytime` move once per
    * call, and the player was offered it twice.
    */
@@ -887,7 +887,7 @@ export function executeMove(
 /**
  * Fire a counter's threshold trigger and record that it did.
  *
- * The record is what stops it firing again while the threshold still holds —
+ * The record is what stops it firing again while the threshold still holds: 
  * a counter that stays over its limit would otherwise trip on every read.
  */
 export function executeCounterTrigger(
@@ -982,7 +982,7 @@ export function executeObligation(
 }
 
 /**
- * Fire one of the pack's own triggers — the ones that belong to the game
+ * Fire one of the pack's own triggers: the ones that belong to the game
  * rather than to any result rolled up.
  *
  * Recorded once fired, which is what stops the end-of-run roll from being

@@ -20,14 +20,14 @@ import type { useRun, ActiveStep } from "./useRun.ts";
  * front, and it is meant to run the whole thing: the current step, whatever
  * the engine is waiting on, the last receipt, between-units, what is owed,
  * the moves on offer, the clock, undo. It is drawn into a window the browser
- * keeps on top — Chrome and Edge's document picture-in-picture, the same
- * mechanism a floating video uses — and it is still this page's React tree,
+ * keeps on top, Chrome and Edge's document picture-in-picture, the same
+ * mechanism a floating video uses, and it is still this page's React tree,
  * so it presses the same functions the page does. Nothing here writes on its
  * own; the page stays the one writer of the run.
  *
  * Kept a remote, not a second copy of the screen: no side column, no log, no
  * board editing. Everything here either is, or directly reuses, what the
- * step cards already do — `RequestPanel`, `Checklist`, `ClockPanel` — so the
+ * step cards already do, `RequestPanel`, `Checklist`, `ClockPanel`, so the
  * remote cannot say something different from the page.
  */
 
@@ -129,7 +129,7 @@ export function ControlPanel({
 
 /**
  * The controls themselves, apart from the window that floats them: exported
- * on its own so it can be rendered — and tested — without a real
+ * on its own so it can be rendered, and tested, without a real
  * document-picture-in-picture window behind it.
  */
 export function RemoteControls({
@@ -174,7 +174,7 @@ export function RemoteControls({
       <header className="pipHead">
         <strong>{pack.title}</strong>
         <span className="muted small">
-          {unitWord} {state.unit || "—"}
+          {unitWord} {state.unit || "-"}
           {state.name ? ` · ${state.name}` : ""}
         </span>
       </header>
@@ -207,7 +207,7 @@ export function RemoteControls({
                 <li key={i} className={o.targetSubject !== null ? "heat" : ""}>
                   <span className="where">
                     {where}
-                    {o.targetSubject !== null && ` — ${v.subject.one.toLowerCase()} #${o.targetSubject}`}
+                    {o.targetSubject !== null && ` - ${v.subject.one.toLowerCase()} #${o.targetSubject}`}
                   </span>
                   <span>{text}</span>
                 </li>
@@ -283,7 +283,7 @@ function PipSection({ title, children }: { title: string; children: ReactNode })
  * What the page's current step card offers, compactly.
  *
  * A `rollTable` step is a single button here, exactly as on the page: the
- * roll itself — the pad, "Roll for me", the table toggle — is what the game
+ * roll itself, the pad, "Roll for me", the table toggle, is what the game
  * is then waiting on, covered by reusing `RequestPanel` rather than a second
  * copy of it.
  */
