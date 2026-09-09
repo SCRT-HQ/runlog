@@ -694,6 +694,15 @@ export function lintPack(pack: Pack): Diagnostic[] {
         ),
       );
     }
+    if ((players.roles?.length ?? 0) > 1 && players.roles!.every((r) => r.acts)) {
+      d.push(
+        warn(
+          "mode/all-roles-act",
+          `modes.${modeId}.players.roles`,
+          "every role acts, which is what no role acting already means; mark only the roles that take the table's actions",
+        ),
+      );
+    }
     if ((players.roles?.length ?? 0) > 0 && players.max < 2) {
       d.push(
         warn(

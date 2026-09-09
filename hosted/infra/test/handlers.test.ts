@@ -2137,14 +2137,22 @@ describe("a run hosted in discord", () => {
     const table1 = first.embeds[0]!.fields.find((f) => f.name === "At the table")!.value;
     expect(table1).toContain("Seat 1: Mira");
     expect(table1).toContain("Seat 2: open");
-    expect(table1).toMatch(/Thrower|Watcher/);
-    // Nobody unseated presses the table; anyone takes an open chair, and then presses.
+    expect(table1).toContain("Seat 1: Mira · Thrower · presses this stage");
+    expect(table1).toContain("Seat 2: open · Watcher");
+    // Nobody unseated presses the table; anyone takes an open chair, and then presses — in their turn.
     expect(content(await call(signed(press(`rl:${id}:enter`, sam)), d))).toContain("whoever holds a seat");
     expect((await call(signed(press(`rl:${id}:seat:2`, sam)), d)).body["type"]).toBe(7);
     expect((await guilds.guildRun(id))!.seats?.["2"]).toEqual({ discordId: "1002", name: "Sam" });
     expect(content(await call(signed(press(`rl:${id}:seat:2`, { id: "1003", username: "kit", global_name: "Kit" })), d))).toContain("Sam");
-    expect((await call(signed(press(`rl:${id}:enter`, sam)), d)).body["type"]).toBe(7);
+    // The pack marks the Thrower as the one who acts, and this stage that is seat one: Sam, the Watcher, waits.
+    expect(content(await call(signed(press(`rl:${id}:enter`, sam)), d))).toBe("This stage is Mira's to press.");
+    expect((await call(signed(press(`rl:${id}:enter`)), d)).body["type"]).toBe(7);
     expect((await call(request("GET", `/api/public/runs/${id}/metrics?t=livetok`, { token: null }), d)).body).toMatchObject({ unit: 1 });
+    // Were the Thrower's seat open, the note would say so; and the host presses regardless of the roles.
+    const roles = await guilds.guildRun(id);
+    await guilds.putGuildRun({ ...roles!, seats: { "2": { discordId: "1002", name: "Sam" } } });
+    expect(content(await call(signed(press(`rl:${id}:step`, sam)), d))).toBe("Seat 1 presses this stage, and it is open; take it.");
+    await guilds.putGuildRun(roles!);
     // A seat is not the host: no ending, no undo, from that chair.
     expect(content(await call(signed(press(`rl:${id}:undo`, sam)), d))).toContain("whoever holds a seat");
     // Sam, unlinked, cannot follow; linked, Sam is at the session, as a viewer by following and a player by sitting.
