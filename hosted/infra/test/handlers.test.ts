@@ -1953,7 +1953,8 @@ describe("a run hosted in discord", () => {
     const events = await playUntil(2);
     // Between stages the card still shows the closed stage's results under their tables; the next stage begins clean.
     const OURS = new Set(["Waiting on", "The game has already had its say", "On the table", "Clocks", "Standings", "At the table"]);
-    const tableFields = (c: Record<string, unknown>) => ((c["embeds"] as Array<{ fields: Array<{ name: string }> }>)[0]!.fields ?? []).map((f) => f.name).filter((n) => !OURS.has(n));
+    // A table's result is a full-width field; the board's blocks are inline ones, and ours are named.
+    const tableFields = (c: Record<string, unknown>) => ((c["embeds"] as Array<{ fields: Array<{ name: string; inline?: boolean }> }>)[0]!.fields ?? []).filter((f) => !f.inline).map((f) => f.name).filter((n) => !OURS.has(n));
     expect(tableFields(card).length).toBeGreaterThan(0);
     const third = await call(signed(press(`rl:01000000000000000000000001:enter`)), d);
     expect(third.body["type"]).toBe(7);
@@ -2228,6 +2229,9 @@ describe("a run hosted in discord", () => {
     expect(opened.body["type"]).toBe(7);
     card = cardAfter(opened, bot);
     expect(buttons(card).some((b) => b.custom_id.endsWith(":roll"))).toBe(true);
+    // A waiting card is still the table's card: the block can be taken back from it, and a watcher can still wave.
+    expect(buttons(card).some((b) => b.custom_id.endsWith(":undo"))).toBe(true);
+    expect(JSON.stringify(card["components"])).toContain(":wave");
     const enter = buttons(card).find((b) => b.custom_id.endsWith(":typeroll"))!;
     expect(enter.label).toMatch(/^Enter \d*d\d+/);
     const dice = /^Enter (\S+)…/.exec(enter.label!)![1]!;
