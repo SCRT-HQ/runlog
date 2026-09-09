@@ -1,4 +1,4 @@
-import { ArnFormat, CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
+import { CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
 import * as apigwv2 from "aws-cdk-lib/aws-apigatewayv2";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as cloudwatchActions from "aws-cdk-lib/aws-cloudwatch-actions";
@@ -167,22 +167,23 @@ export class ApiStack extends Stack {
     /**
      * A timer at a Discord table is kept by EventBridge Scheduler: the
      * handler makes a one-shot schedule for its deadline, in this group,
-     * that invokes the job function under this role. The job's name is
-     * fixed so its ARN is known to both functions before either exists.
+     * that invokes the job function under this role. The handler is told
+     * the job's ARN once the job exists; the job reads its own from the
+     * invocation, since a function's environment cannot name itself. The
+     * job keeps the name CDK gave it: the dashboard stack imports that
+     * name, and an export in use cannot change, so a rename would refuse
+     * to deploy.
      */
     const timers = new scheduler.ScheduleGroup(this, "Timers", { scheduleGroupName: `runlog-${config.name}-timers`, removalPolicy: RemovalPolicy.DESTROY });
     const timerRole = new iam.Role(this, "TimerRole", {
       assumedBy: new iam.ServicePrincipal("scheduler.amazonaws.com"),
       description: "Lets a timer's schedule invoke the bot's job function when the timer runs out.",
     });
-    const jobName = `runlog-${config.name}-discord-job`;
-    const jobArn = this.formatArn({ service: "lambda", resource: "function", resourceName: jobName, arnFormat: ArnFormat.COLON_RESOURCE_NAME });
 
     const handlerEnvironment: Record<string, string> = {
       TABLE_NAME: this.table.tableName,
       TIMER_SCHEDULE_GROUP: timers.scheduleGroupName,
       TIMER_ROLE_ARN: timerRole.roleArn,
-      DISCORD_JOB_ARN: jobArn,
       BUCKET_NAME: this.bucket.bucketName,
       RUNLOG_ENV: config.name,
       WORKOS_CLIENT_ID: config.workosClientId,
@@ -251,7 +252,6 @@ export class ApiStack extends Stack {
      * Every press that is one read and one write stays on the handler.
      */
     const job = new lambdaNodejs.NodejsFunction(this, "DiscordJob", {
-      functionName: jobName,
       entry: path.join(__dirname, "handlers", "api.ts"),
       handler: "job",
       runtime: lambda.Runtime.NODEJS_24_X,
@@ -286,6 +286,7 @@ export class ApiStack extends Stack {
     timerRole.grantPassRole(handler.grantPrincipal);
     timerRole.grantPassRole(job.grantPrincipal);
     handler.addEnvironment("DISCORD_JOB_FUNCTION", job.functionName);
+    handler.addEnvironment("DISCORD_JOB_ARN", job.functionArn);
     this.table.grantReadWriteData(handler);
     this.bucket.grantReadWrite(handler);
     for (const s of [stripeSecretKey, stripeWebhookSecret, stripeConnectWebhookSecret, workosApiKey, discordBotToken, discordClientSecret]) {
