@@ -49,7 +49,14 @@ export interface LiveSnapshot {
   step: string | null;
   /** The current step's `kind` — `"manual"`, `"declareSubject"`, and so on; null with no step. Absent from snapshots written before it was carried. */
   stepKind?: string | null;
-  phases: Array<{ id: string; label: string; state: "done" | "current" | "skipped" | "todo"; why?: string }>;
+  phases: Array<{
+    id: string;
+    label: string;
+    state: "done" | "current" | "skipped" | "todo";
+    why?: string;
+    /** What the phase produced this unit, in order: the results of the tables its steps roll, and the subject's declared type where it declares one. Absent when nothing yet. */
+    results?: string[];
+  }>;
   /**
    * A rule drawn earlier this unit that the current step must honor, in the
    * pack's own words — the same lines the player's own screen shows in
@@ -167,17 +174,27 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
   const now = Date.parse(at);
   const step = nextStep(pack, state);
   const stepLabel = step ? ("label" in step.step && step.step.label ? step.step.label : step.step.kind === "rollTable" ? (pack.tables[step.step.table]?.title ?? step.step.table) : step.phase.label) : null;
+  const declared = state.subjects.find((s) => s.unit === state.unit && !s.removed);
   const phases = state.unit > 0 && state.status !== "ended"
     ? activePhases(pack, state).map((phase) => {
         const done = state.phasesDone.includes(phase.id);
         const current = step?.phase.id === phase.id;
         const skipped = !done && !current && phaseSkipped(pack, state, phase);
         const why = skipped ? describeSkipReason(pack, phase) : null;
+        // What the phase produced this unit, under it on the watcher's
+        // page: the results of the tables its steps roll, in the order the
+        // dice landed, and the declared type where a step declares.
+        const rolls = new Set(phase.steps.flatMap((st) => (st.kind === "rollTable" ? [st.table] : [])));
+        const results = [
+          ...state.outcomes.filter((o) => o.unit === state.unit && rolls.has(o.table)).map((o) => entryTextOf(pack, o)),
+          ...(phase.steps.some((st) => st.kind === "declareSubject") && declared?.type ? [declared.type] : []),
+        ];
         return {
           id: phase.id,
           label: phase.label,
           state: done ? ("done" as const) : current ? ("current" as const) : skipped ? ("skipped" as const) : ("todo" as const),
           ...(why ? { why } : {}),
+          ...(results.length > 0 ? { results } : {}),
         };
       })
     : [];
