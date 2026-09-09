@@ -160,7 +160,11 @@ packages/*/stage
 hosted/infra/cdk.out
 hosted/infra/.cdk.staging
 hosted/infra/cdk.context.json
-hosted/infra/junit.xml
+
+# What CI hands the test reporter, from the root suite and the hosting's;
+# written on every run and kept by neither.
+junit.xml
+
 # A stage's configuration is the operator's, not the repository's; the example is the template.
 hosted/infra/env/*.json
 !hosted/infra/env/example.json

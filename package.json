@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit -p packages/container/tsconfig.json && tsc --noEmit -p packages/rules-schema/tsconfig.json && tsc --noEmit -p packages/engine/tsconfig.json && tsc --noEmit -p packages/cli/tsconfig.json && tsc --noEmit -p apps/web/tsconfig.json && tsc --noEmit -p hosted/infra/tsconfig.json",
     "schema:emit": "node --experimental-strip-types packages/rules-schema/scripts/emit-schema.ts",
     "test": "vitest run",
+    "test:ci": "vitest run --reporter=default --reporter=junit --outputFile=junit.xml",
     "stage": "node --experimental-strip-types scripts/stage.ts",
     "check:stage": "node --experimental-strip-types scripts/stage.ts 0.0.0-check && node packages/cli/stage/dist/runlog.js validate packs/demo/pack.yaml --strict && node -e \"import('./packages/cli/stage/dist/index.js').then(m => { if (typeof m.seal !== 'function') throw new Error('no seal export') })\"",
     "test:watch": "vitest",

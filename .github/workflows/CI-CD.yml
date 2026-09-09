@@ -58,7 +58,22 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - run: npm run typecheck
-      - run: npm test
+
+      # The same shape the hosting's job has: the run writes JUnit beside
+      # its console output, and the step below turns it into a check with
+      # every test named, so a failure here reads the way a failure there
+      # already did instead of sending somebody into the log.
+      - run: npm run test:ci
+
+      - name: Publish the app and engine test results
+        uses: dorny/test-reporter@v3
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        with:
+          name: App and engine tests
+          path: junit.xml
+          reporter: java-junit
+          fail-on-error: true
 
       # The packs that ship are held to the same standard a contributor's is:
       # --strict fails on warnings, and each pack's own fixtures are replayed
