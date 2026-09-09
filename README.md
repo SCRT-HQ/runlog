@@ -74,12 +74,9 @@ npx @scrthq/runlog test my-game.yaml          # replays the fixtures your pack s
   it, with a complete pack you can copy.
 - **[The reference](docs/reference.md)** — every field, generated from the
   schema, so it cannot be wrong about what loads.
-- **[The stream API](docs/stream-api.md)** — a shared run as one JSON
-  document and a socket that rings, for a plugin of your own.
-- **[Streaming setup](docs/streaming-setup.md)** — the widgets in OBS,
-  Streamlabs, StreamElements and Streamer.bot, field by field.
-- **[Runlog in Discord](docs/discord.md)** — the bot that hosts runs in a
-  server, and **[setting it up](docs/discord-bot.md)** as the operator.
+
+Everything else written down — streaming, the stream API, Discord, selling,
+running a copy — is indexed by who you are in **[docs/README.md](docs/README.md)**.
 
 Point your pack at the published schema and your editor does most of the work:
 
@@ -101,7 +98,7 @@ apps/
 packs/
   demo/           The reference pack. Fictional.
   sketches/       Two more, deliberately unlike it.
-docs/             The authoring guide, and the generated reference.
+docs/             The contracts and walkthroughs, indexed by reader in docs/README.md.
 ```
 
 Two design decisions explain most of the rest:
