@@ -1,4 +1,4 @@
-import { actingSeats, constrainedByOf, constraintsFor, type Pending } from "@runlog/engine";
+import { actingSeats, constrainedByOf, constraintsFor, moderation, type Pending } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import { newCode } from "../races.js";
 import { hashToken } from "../auth.js";
@@ -389,7 +389,39 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     await afterPlay(table, played, { editCard: true, postLine: false });
     return say(played.line ?? "Taken back.");
   }
-  return ephemeral("Run has start, status, link, end and undo.");
+  // Joining from the thread is the card's own Join, Take seat or Follow,
+  // whichever the mode has: the roster in a moderated run, the first open
+  // seat in one played by several, and otherwise the run in a linked
+  // member's own library as a watcher.
+  if (which?.name === "join" || which?.name === "leave") {
+    if (run.endedAt) return ephemeral("This run has ended.");
+    const actor = await seatOf(deps, who, i);
+    const { state } = agendaFor(found.pack, await eventsOf(table.store, run.sessionId));
+    const moderated = Boolean(moderation(found.pack, state));
+    const seated = Object.entries(run.seats ?? {}).some(([, s]) => s.discordId === who.id);
+    const open = state.players > 1 ? Array.from({ length: state.players }, (_, n) => n + 1).find((n) => !run.seats?.[String(n)]) : undefined;
+    let action: TableAction | null = null;
+    if (which.name === "join") {
+      if (moderated) action = { kind: "join" };
+      else if (state.players > 1) {
+        if (seated) return ephemeral("You have a seat here already.");
+        if (!open) return ephemeral("Every seat is taken; watch by the live link, or follow it into your library.");
+        action = { kind: "seat", seat: open };
+      } else action = { kind: "follow" };
+    } else {
+      if (moderated) action = { kind: "leave" };
+      else if (state.players > 1) action = seated ? { kind: "unseat" } : null;
+      if (!action) return ephemeral("There is nothing to leave: you hold no seat here. A run followed into your library is left from the library.");
+    }
+    const played = await play(table, run, found.pack, actor, action);
+    if ("error" in played) return ephemeral(played.error);
+    await afterPlay(table, played, { editCard: true, postLine: false });
+    if (played.line) return say(played.line);
+    if (action.kind === "seat") return ephemeral(`You have seat ${action.seat}. The card says which seat presses this ${found.pack.vocabulary.unit.one.toLowerCase()}.`);
+    if (action.kind === "follow") return ephemeral("Followed: this run is in your Runlog library now, as a watcher.");
+    return ephemeral("Done.");
+  }
+  return ephemeral("Run has start, status, link, end, undo, join and leave.");
 }
 
 async function seatOf(deps: InteractionDeps, who: NonNullable<ReturnType<typeof userOf>>, i: Interaction): Promise<Seat> {

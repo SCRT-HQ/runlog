@@ -2234,6 +2234,31 @@ describe("a run hosted in discord", () => {
     expect((await store.eventsAfter(id, 0)).filter((e) => e["t"] === "Rolled")).toHaveLength(0);
   });
 
+  it("joins and leaves from the thread by command, as the mode allows", async () => {
+    // A mode played by several: the command takes the first open seat, and leaves it.
+    const pairs = await table();
+    await pairs.guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: "h", bytes: demo.length, modes: [{ id: "standard", label: "Standard" }, { id: "pairs", label: "Pairs" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, demo);
+    const id = "01000000000000000000000001";
+    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "pairs" }, { name: "players", type: 4, value: 2 }] })), pairs.d))).toContain("started");
+    expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "thread_1")), pairs.d))).toContain("You have seat 2");
+    expect((await pairs.guilds.guildRun(id))!.seats?.["2"]).toEqual({ discordId: "1002", name: "Sam" });
+    expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "thread_1")), pairs.d))).toContain("seat here already");
+    const kit = { id: "1003", username: "kit", global_name: "Kit" };
+    expect(content(await call(signed(command({ name: "join", type: 1 }, kit, "thread_1")), pairs.d))).toContain("Every seat is taken");
+    expect(content(await call(signed(command({ name: "leave", type: 1 }, sam, "thread_1")), pairs.d))).toContain("Done");
+    expect((await pairs.guilds.guildRun(id))!.seats?.["2"]).toBeUndefined();
+    expect(content(await call(signed(command({ name: "leave", type: 1 }, kit, "thread_1")), pairs.d))).toContain("nothing to leave");
+    // A solo run: joining means following it into a linked member's library; unlinked, the command says to link.
+    const solo = await table();
+    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), solo.d))).toContain("started");
+    expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "thread_1")), solo.d))).toContain("/link first");
+    await solo.guilds.connect("user_2", { discordUserId: "1002", name: "Sam", linkedAt: "2026-09-06T12:00:00.000Z" });
+    expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "thread_1")), solo.d))).toContain("Followed");
+    expect((await call(request("GET", `/api/sessions/${id}`, { token: "guest" }), solo.d)).body["session"]).toMatchObject({ id });
+    // Said outside a run's thread, there is nothing to join.
+    expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "chan")), solo.d))).toContain("run's thread");
+  });
+
   it("offers a clock the pack leaves to the player, once per open unit", async () => {
     const { bot, store, d } = await table(timed(false));
     const timers: TimerJob[] = [];
