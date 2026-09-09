@@ -10,8 +10,10 @@ import type { WorkOSLike } from "../lib/handlers/workos";
 import type { ListingCard, ListingStore, Product } from "../lib/handlers/listings";
 import type { Sale, SaleStore } from "../lib/handlers/sales";
 import { open, readHeader } from "../lib/handlers/container";
-import { memoryGuilds } from "./memory-guilds";
+import { memoryDiscord, memoryGuilds } from "./memory-guilds";
 import { generateKeyPairSync, sign } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 function memorySales(): SaleStore & { sealed: Map<string, Uint8Array> } {
   const sales = new Map<string, Sale>();
@@ -1764,5 +1766,135 @@ describe("a claimed server", () => {
     // The stage putting it on sale is a configuration, not a code change.
     const open = deps(memoryStore(), { guilds, discord: { ...bot, open: true } });
     expect((await call(request("GET", "/api/me", { token: "guest" }), open)).body).toMatchObject({ servers: true, serversOpen: true });
+  });
+});
+
+describe("a run hosted in discord", () => {
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const publicHex = publicKey.export({ type: "spki", format: "der" }).subarray(-32).toString("hex");
+  const signed = (body: unknown) => {
+    const raw = JSON.stringify(body);
+    const signature = sign(null, Buffer.concat([Buffer.from("1700000000"), Buffer.from(raw)]), privateKey).toString("hex");
+    return { ...request("POST", "/api/discord/interactions", { token: null, headers: { "x-signature-ed25519": signature, "x-signature-timestamp": "1700000000" } }), body: raw } as APIGatewayProxyEventV2;
+  };
+  const demo = readFileSync(join(__dirname, "..", "..", "..", "packs", "demo", "pack.yaml"), "utf8");
+  const PACK = "com.scrthq.runlog.long-kiln";
+  const mira = { id: "1001", username: "mira", global_name: "Mira" };
+  const sam = { id: "1002", username: "sam", global_name: "Sam" };
+  const member = (user: typeof mira, permissions = "0") => ({ user, permissions, roles: [] as string[] });
+  const command = (options: unknown, user = mira, channel = "chan") => ({ id: "i", application_id: "app", type: 2, token: "t", guild_id: "g1", channel_id: channel, member: member(user, user === mira ? "32" : "0"), data: { name: "run", options: [options] } });
+  const press = (customId: string, user = mira, extra: Record<string, unknown> = {}) => ({ id: "i", application_id: "app", type: 3, token: "t", guild_id: "g1", channel_id: "thread_1", member: member(user, user === mira ? "32" : "0"), message: { id: "msg_1" }, data: { custom_id: customId, component_type: 2, ...extra } });
+  const typed = (customId: string, value: string) => ({ id: "i", application_id: "app", type: 5, token: "t", guild_id: "g1", channel_id: "thread_1", member: member(mira, "32"), message: { id: "msg_1" }, data: { custom_id: customId, components: [{ components: [{ custom_id: "x", value }] }] } });
+  const content = (out: { body: Record<string, unknown> }) => String((out.body["data"] as Record<string, unknown>)["content"]);
+
+  async function table() {
+    const guilds = memoryGuilds();
+    const bot = memoryDiscord();
+    const store = memoryStore();
+    let ids = 0;
+    await guilds.claimGuild({ guildId: "g1", name: "The Kiln Room", ownerSub: "user_1", claimedAt: "2026-09-06T12:00:00.000Z" });
+    await guilds.connect("user_1", { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" });
+    await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: "h", bytes: demo.length, modes: [{ id: "standard", label: "Standard" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, demo);
+    const d = deps(store, {
+      guilds,
+      discord: { applicationId: "app", publicKey: publicHex, token: async () => null, open: true, rest: async () => bot },
+      mintId: () => `01${String((ids += 1)).padStart(24, "0")}`,
+      token: () => "livetok",
+    });
+    return { guilds, bot, store, d };
+  }
+
+  /** The first press the card offers: a button in its first row, or a select with its first option. */
+  const firstPress = (card: Record<string, unknown>): { customId: string; value?: string } | null => {
+    const rows = card["components"] as Array<{ components: Array<{ custom_id: string; type: number; disabled?: boolean; label?: string; options?: Array<{ value: string }> }> }>;
+    for (const row of rows) {
+      for (const c of row.components) {
+        if (c.type === 2 && !c.disabled && !(c.label ?? "").startsWith("☑")) return { customId: c.custom_id };
+        if (c.type === 3 && c.options?.[0]) return { customId: c.custom_id, value: c.options[0].value };
+      }
+    }
+    return null;
+  };
+
+  it("starts in a thread with a pinned card and a live link, and the host plays a whole unit from the card while everyone else watches", async () => {
+    const { guilds, bot, store, d } = await table();
+    // Somebody who cannot manage the server, with no host role set, cannot host.
+    const stranger = await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] }, sam)), d);
+    expect(content(stranger)).toContain("manage the server");
+    const started = await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }, { name: "name", type: 3, value: "First firing" }] })), d);
+    expect(content(started)).toContain("**Mira** started **The Long Kiln · Standard Firing** — First firing in <#thread_1>");
+    expect(content(started)).toContain("https://runlog.test/r/01000000000000000000000001?t=livetok");
+    expect(bot.threads).toEqual(["thread_1 The Long Kiln · Standard Firing · First firing"]);
+    expect(bot.pins).toEqual(["msg_2"]);
+    const run = await guilds.guildRun("01000000000000000000000001");
+    expect(run).toMatchObject({ hostSub: "user_1", hostDiscordId: "1001", threadId: "thread_1", cardMessageId: "msg_2" });
+    // The session is the host account's, like any run, and a stranger with the link already reads the table.
+    expect((await call(request("GET", "/api/sessions/01000000000000000000000001"), d)).body["session"]).toMatchObject({ ownerSub: "user_1", packTitle: "The Long Kiln", name: "First firing" });
+    const metrics = await call(request("GET", "/api/public/runs/01000000000000000000000001/metrics?t=livetok", { token: null }), d);
+    expect(metrics.body).toMatchObject({ ready: true, unit: 0, runName: "First firing" });
+
+    // A watcher pressing is told so; the host plays the card until the unit closes.
+    let card = bot.posts[0]!.message as unknown as Record<string, unknown>;
+    const first = firstPress(card)!;
+    expect(first.customId).toBe("rl:01000000000000000000000001:enter");
+    expect(content(await call(signed(press(first.customId, sam)), d))).toContain("Only the host");
+    let presses = 0;
+    let closed = false;
+    while (presses < 80 && !closed) {
+      presses += 1;
+      const next = firstPress(card);
+      if (!next) break;
+      let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
+      // A modal was opened: answer it.
+      if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
+      expect(out.body["type"], `${next.customId}: ${JSON.stringify(out.body["data"])}`).toBe(7);
+      card = out.body["data"] as Record<string, unknown>;
+      closed = (await store.eventsAfter("01000000000000000000000001", 0)).filter((e) => e["t"] === "UnitFinalized").length >= 2;
+    }
+    const events = await store.eventsAfter("01000000000000000000000001", 0);
+    expect(closed, JSON.stringify({ presses, rows: card["components"], last: events.slice(-8).map((e) => `${e["t"]}${e["t"] === "StepCompleted" ? `:${e["phase"]}#${e["step"]}` : ""}`) })).toBe(true);
+    // The bot rolled, and said so: nothing physical happened at this table.
+    const rolled = events.filter((e) => e["t"] === "Rolled");
+    expect(rolled.length).toBeGreaterThan(0);
+    expect(rolled.every((e) => e["source"] === "rng")).toBe(true);
+    expect(events.some((e) => e["t"] === "OutcomeResolved")).toBe(true);
+    expect(events.some((e) => e["t"] === "SubjectDeclared" && e["subjectType"] === "A wide bowl")).toBe(true);
+    // Every event is the host account's, stamped the way the app stamps.
+    expect(events.every((e) => e["author"] === "user_1" && /^[0-9A-Z]{26}$/.test(String(e["id"])))).toBe(true);
+    // The table was told in the thread, and the widgets see the same run.
+    expect(bot.posts.filter((p) => p.channel === "thread_1" && p.message.content && !p.message.content.includes("Watch it live")).length).toBeGreaterThan(0);
+    const after = await call(request("GET", "/api/public/runs/01000000000000000000000001/metrics?t=livetok", { token: null }), d);
+    expect(after.body).toMatchObject({ ready: true, unit: 2 });
+    expect((after.body["progress"] as Record<string, unknown>)["unitsDone"]).toBe(2);
+
+    // /run status re-posts the card in the thread; /run end closes the run and the thread.
+    const status = await call(signed(command({ name: "status", type: 1 }, mira, "thread_1")), d);
+    expect(status.body["type"]).toBe(4);
+    expect(Array.isArray((status.body["data"] as Record<string, unknown>)["embeds"])).toBe(true);
+    expect(content(await call(signed(command({ name: "end", type: 1 }, sam, "thread_1")), d))).toContain("Only the host");
+    const ended = await call(signed(command({ name: "end", type: 1, options: [{ name: "ending", type: 3, value: "kept" }] }, mira, "thread_1")), d);
+    expect(content(ended)).toContain("The Shelf");
+    expect(bot.archived).toEqual(["thread_1"]);
+    expect((await call(request("GET", "/api/sessions/01000000000000000000000001"), d)).body["session"]).toMatchObject({ endedAt: "2026-09-06T12:00:00.000Z" });
+    expect(content(await call(signed(press("rl:01000000000000000000000001:enter")), d))).toContain("has ended");
+  });
+
+  it("refuses to host where the owner has no server plan and plans gate, where Discord will not open a thread, and where the bot has no token", async () => {
+    const { d, bot } = await table();
+    const start = command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] });
+    const gated = { ...d, gates: true, features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" } };
+    expect(content(await call(signed(start), gated))).toContain("needs the server plan");
+    bot.down = true;
+    expect(content(await call(signed(start), d))).toContain("would not open a thread");
+    const noToken = { ...d, discord: { ...d.discord!, rest: async () => null } };
+    expect(content(await call(signed(start), noToken))).toContain("token is not filled");
+  });
+
+  it("offers the vault packs and their modes as the command is typed", async () => {
+    const { d } = await table();
+    const ask = (name: string, value: string, options: unknown[] = []) => ({ id: "i", application_id: "app", type: 4, token: "t", guild_id: "g1", member: member(mira, "32"), data: { name: "run", options: [{ name: "start", type: 1, options: [...options, { name, type: 3, value, focused: true }] }] } });
+    expect((await call(signed(ask("pack", "lon")), d)).body).toEqual({ type: 8, data: { choices: [{ name: "The Long Kiln", value: PACK }] } });
+    expect((await call(signed(ask("mode", "", [{ name: "pack", type: 3, value: PACK }])), d)).body).toEqual({ type: 8, data: { choices: [{ name: "Standard", value: "standard" }] } });
+    expect((await call(signed(ask("pack", "zzz")), d)).body).toEqual({ type: 8, data: { choices: [] } });
   });
 });

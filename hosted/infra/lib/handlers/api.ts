@@ -9,7 +9,8 @@ import { dynamoBilling, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
 import { dynamoGuilds, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
 import { handleInteraction } from "./discord/interactions.js";
-import { guildNameFrom } from "./discord/rest.js";
+import { discordRest, guildNameFrom, type DiscordRest } from "./discord/rest.js";
+import { ulid } from "./ids.js";
 import { isInteraction } from "./discord/types.js";
 import { verifyInteraction } from "./discord/verify.js";
 import { featuresOfSummary, realStripe, type StripeLike } from "./stripe.js";
@@ -203,9 +204,13 @@ export interface Deps {
     guildName?: (guildId: string) => Promise<string | null>;
     /** Whether the server plan is on sale; off, the app shows it as coming and only a `server` flag or grant holds it. */
     open?: boolean;
+    /** Discord itself, for the thread and the messages of a hosted run; null until the token is filled. */
+    rest?: () => Promise<DiscordRest | null>;
   };
   /** Link codes are random by default; a test hands in its own. */
   code?: () => string;
+  /** Event and run ids are ULIDs by default; a test hands in its own. */
+  mintId?: () => string;
 }
 
 type Result = APIGatewayProxyResultV2;
@@ -365,6 +370,13 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         now,
         gates: deps.gates,
         serverFeature: deps.features?.server ?? "server",
+        // The table: the bot plays runs through the same store the app's
+        // devices write, and rings the same bell.
+        store,
+        ...(deps.notify ? { notify: deps.notify } : {}),
+        rest: deps.discord.rest ? await deps.discord.rest() : null,
+        mintId: deps.mintId ?? ulid,
+        token: deps.token ?? (() => randomBytes(24).toString("base64url")),
         // What the server's owner has: bought, or flagged on their session and remembered.
         grants: async (sub) => {
           const [bought, kept] = await Promise.all([deps.billing.entitlements(sub), deps.billing.flags(sub)]);
@@ -1856,6 +1868,10 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
                 guildName: async (guildId: string) => {
                   const t = await token();
                   return t ? guildNameFrom(t, guildId) : null;
+                },
+                rest: async () => {
+                  const t = await token();
+                  return t ? discordRest(t) : null;
                 },
               },
             };
