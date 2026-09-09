@@ -7,13 +7,13 @@ import type { Doc } from "@runlog/rules-schema";
  * Version one is the packs that ship in the repository, and they no longer
  * ship in the app's bundle. Each is a chunk of its own that the build emits
  * and the service worker precaches, loaded when the catalog is opened or a
- * pack is added — so a player who never opens the catalog never downloads
+ * pack is added, so a player who never opens the catalog never downloads
  * a pack they did not ask for, and a copy on disk or on the public page
  * still has every one of them.
  *
  * What a listing says about a pack comes from the pack: its category and
- * tags are fields the author wrote, and its features — solo, together,
- * moderated, seeded, timers, cards — are read off its modes and
+ * tags are fields the author wrote, and its features, solo, together,
+ * moderated, seeded, timers, cards, are read off its modes and
  * capabilities, so a filter can never disagree with the rules. When
  * publishers arrive, the same shape comes from the API with their listings,
  * and the view does not change.
@@ -134,11 +134,11 @@ let cached: Promise<CatalogEntry[]> | null = null;
  *
  * `testing` says whether a `bench: true` entry (the pack under
  * `packs/testing/`) should be in what comes back. Left unset, nothing is
- * filtered — a caller that needs every pack it already knows about, such as
+ * filtered: a caller that needs every pack it already knows about, such as
  * resolving a pack a run points at, should never lose it because a flag
  * changed after the fact. A view that lists the catalog for someone to
  * browse should pass the copy's own answer instead: `hosted === null` (no
- * `hosted.json` at all — static, local, self-hosted) or
+ * `hosted.json` at all: static, local, self-hosted) or
  * `hosted.features.testing`.
  */
 export function loadCatalog(opts: { testing?: boolean } = {}): Promise<CatalogEntry[]> {
@@ -173,7 +173,7 @@ export function loadCatalog(opts: { testing?: boolean } = {}): Promise<CatalogEn
 
 /**
  * Drop the bench entries where a copy is not meant to carry them. `testing`
- * left unset keeps everything, the same as `loadCatalog()` with no options —
+ * left unset keeps everything, the same as `loadCatalog()` with no options: 
  * see its doc comment for why. Exported so the rule is checked directly,
  * without needing a real `packs/testing/` pack on disk to exercise it.
  */
@@ -202,7 +202,7 @@ interface FeedCard {
 
 /**
  * The catalog's feed from the API, with no account: public, a minute's
- * cache. Nothing where there is no API — disk, Pages — or where it does
+ * cache. Nothing where there is no API, disk, Pages, or where it does
  * not answer; the bundle is the catalog then, as it always was.
  */
 export async function loadFeed(fetchImpl: typeof fetch = fetch, base = apiBase()): Promise<CatalogEntry[]> {
@@ -285,7 +285,7 @@ export function newerVersion(candidate: string, current: string): boolean {
  * The packs the catalog has a newer version of: those that came from it,
  * by the entry they came from, where the entry has moved on. A pack the
  * player loaded from a file is never offered an update, even if the
- * catalog has one with the same id — it is theirs, and may differ.
+ * catalog has one with the same id, it is theirs, and may differ.
  */
 export function updatesFor(
   packs: ReadonlyArray<{ id: string; origin?: string; catalog?: { id: string; version: string }; deletedAt?: string }>,

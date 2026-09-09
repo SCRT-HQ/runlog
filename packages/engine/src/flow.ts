@@ -9,7 +9,7 @@ import type { Obligation, RunState } from "./types.ts";
  * This lives in the engine rather than the view because it is derived state,
  * not presentation: it is a pure function of the pack and the log. Keeping it
  * here means closing the laptop mid-unit and coming back tomorrow lands you in
- * the same place, and — more usefully — that the flow can be tested without
+ * the same place, and, more usefully, that the flow can be tested without
  * rendering anything.
  */
 
@@ -39,7 +39,7 @@ function shouldSkip(pack: Pack, state: RunState, when: Parameters<typeof testPre
 }
 
 /**
- * Whether a phase is out of play this unit — the same test `nextStep` uses
+ * Whether a phase is out of play this unit: the same test `nextStep` uses
  * to walk past it, exposed so the flow can say so instead of just never
  * arriving there.
  */
@@ -50,7 +50,7 @@ export function phaseSkipped(pack: Pack, state: RunState, phase: Phase): boolean
 /**
  * The step the player is on, or null when the unit is finished.
  *
- * Every step must be recorded as completed for this to advance — which is the
+ * Every step must be recorded as completed for this to advance, which is the
  * whole contract. A step that runs work but never records itself leaves the
  * flow pinned in place while the log fills up behind it, which reads to the
  * player as the game refusing to move.
@@ -96,7 +96,7 @@ export function checklistOf(step: Step): ChecklistItem[] {
 
 /**
  * The results a checklist point is about: those of the table (or tables)
- * it `shows`, in its scope — this unit's, those that reached this unit's
+ * it `shows`, in its scope: this unit's, those that reached this unit's
  * subject, or the whole run's. Empty for a point that shows nothing.
  */
 export function shownFor(pack: Pack, state: RunState, item: ChecklistItem): RunState["outcomes"] {
@@ -114,8 +114,8 @@ export function shownFor(pack: Pack, state: RunState, item: ChecklistItem): RunS
 
 /**
  * Whether a checklist point is asked at all: a point that shows a table's
- * results has nothing to promise when the table produced none in scope —
- * "every constraint was honored" in a unit that drew no constraint — and
+ * results has nothing to promise when the table produced none in scope, 
+ * "every constraint was honored" in a unit that drew no constraint, and
  * is neither listed nor waited for. A plain point is always asked.
  */
 export function itemApplies(pack: Pack, state: RunState, item: ChecklistItem): boolean {
@@ -198,7 +198,7 @@ export function stepCompletionEvents(
  * Obligations due right now, by the same lifecycle points the app checks.
  *
  * Lives here rather than beside `dueObligations` because it needs `nextStep`
- * and `activePhases` too — it is the gate that turns "what point are we at"
+ * and `activePhases` too, it is the gate that turns "what point are we at"
  * into "what does that make due", which both `drive`'s agenda and a
  * headless `playThrough` need to answer identically.
  */

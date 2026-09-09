@@ -8,8 +8,8 @@ import type { Table, Trigger } from "./tables.ts";
  *
  * Everything a pack declares is data the engine acts on; a person reading
  * the rules wants the same things as sentences. These helpers turn the
- * closed vocabularies — actions, predicates, bounds, trigger points, a
- * mode's length — into prose in the pack's own nouns, so a generated
+ * closed vocabularies, actions, predicates, bounds, trigger points, a
+ * mode's length, into prose in the pack's own nouns, so a generated
  * rulebook says "when you Fire the Stage" and not "onFinalize". They are
  * shared by the app (the Rules view, the catalog) and the command line
  * (`runlog docs`), which is why they live here and not in either.
@@ -22,13 +22,13 @@ import type { Table, Trigger } from "./tables.ts";
  * an opposed ladder, or a literal key.
  *
  * Computed per table rather than per entry because only inside a branch on
- * `table.resolution` does the entry type narrow — the element type of
+ * `table.resolution` does the entry type narrow: the element type of
  * `table.entries` is a union until then.
  */
 export function entryKeys(table: Table): string[] {
   switch (table.resolution) {
     case "lookup":
-      return table.entries.map((e) => (e.range[0] === e.range[1] ? `${e.range[0]}` : `${e.range[0]}–${e.range[1]}`));
+      return table.entries.map((e) => (e.range[0] === e.range[1] ? `${e.range[0]}` : `${e.range[0]}-${e.range[1]}`));
     case "bands":
       return table.entries.map((e) =>
         [e.gte !== undefined ? `≥${e.gte}` : "", e.lte !== undefined ? `≤${e.lte}` : ""].filter(Boolean).join(" "),
@@ -161,7 +161,7 @@ export function predicateInWords(pack: Pack, p: Predicate): string {
   return "";
 }
 
-/** "when A and B" — or "" when there is nothing to say. */
+/** "when A and B", or "" when there is nothing to say. */
 export function conditionsInWords(pack: Pack, preds: readonly Predicate[] | undefined, joiner: "all" | "any" = "all"): string {
   if (!preds || preds.length === 0) return "";
   return preds.map((p) => predicateInWords(pack, p)).join(joiner === "all" ? " and " : ", or ");
@@ -282,7 +282,7 @@ export function triggerPointInWords(pack: Pack, on: TriggerPoint): string {
 /** "When you Fire (if this is Stage 4 or more): roll d6; Calm +1." */
 export function triggerInWords(pack: Pack, t: Trigger): string {
   const when = conditionsInWords(pack, t.when);
-  const head = t.label ? `${t.label} — ${triggerPointInWords(pack, t.on).toLowerCase()}` : triggerPointInWords(pack, t.on);
+  const head = t.label ? `${t.label} - ${triggerPointInWords(pack, t.on).toLowerCase()}` : triggerPointInWords(pack, t.on);
   return `${head}${when ? ` (if ${when})` : ""}: ${actionsInWords(pack, t.do)}`;
 }
 
@@ -294,7 +294,7 @@ export function modeLength(pack: Pack, mode: Mode): string {
   const u = mode.units;
   if (u?.fixed !== undefined) return `${u.fixed} ${u.fixed === 1 ? n.unit : n.units}`;
   if (u?.roll) return `roll ${u.roll} for the number of ${n.units}`;
-  if (u?.min !== undefined && u?.max !== undefined) return `${u.min}–${u.max} ${n.units}`;
+  if (u?.min !== undefined && u?.max !== undefined) return `${u.min}-${u.max} ${n.units}`;
   if (u?.max !== undefined) return `up to ${u.max} ${n.units}`;
   if (u?.min !== undefined) return `at least ${u.min} ${n.units}`;
   const max = pack.unit.max;
@@ -304,19 +304,19 @@ export function modeLength(pack: Pack, mode: Mode): string {
 export function modePlayers(mode: Mode): string {
   const m = mode.moderated;
   if (m) {
-    const n = m.contestants.min === m.contestants.max ? `${m.contestants.min}` : `${m.contestants.min}–${m.contestants.max}`;
+    const n = m.contestants.min === m.contestants.max ? `${m.contestants.min}` : `${m.contestants.min}-${m.contestants.max}`;
     return `moderated, ${n} contestants, ${m.award === "everyone" ? "everyone who finishes scores" : "first to finish scores"}${m.firstBonus ? ` (+${m.firstBonus} for first)` : ""}`;
   }
   const p = mode.players;
   if (!p || (p.min <= 1 && p.max <= 1)) return "solo";
-  return p.min === p.max ? `${p.min} players` : `${p.min}–${p.max} players`;
+  return p.min === p.max ? `${p.min} players` : `${p.min}-${p.max} players`;
 }
 
 /**
  * A score, said as a rulebook would: "Scored by Clean Blocks; higher is
  * better, ties by time."
  *
- * Reads only the declaration, never a run — the same split as `modeLength`,
+ * Reads only the declaration, never a run: the same split as `modeLength`,
  * which is why this lives here rather than beside `scoreOf` in the engine.
  */
 export function scoreInWords(pack: Pack, score: Score): string {

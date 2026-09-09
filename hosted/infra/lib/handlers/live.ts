@@ -8,7 +8,7 @@ import { traced } from "./xray.js";
  *
  * A device with a run open holds a WebSocket and says which session it is
  * watching. When another device appends to that session, the API posts a
- * one-line message down every socket watching it — "changed, seq 12" —
+ * one-line message down every socket watching it, "changed, seq 12", 
  * and the device syncs at once instead of at the next poll. The socket
  * carries no data of its own: what changed still comes through the same
  * authenticated HTTP fetch as before, so a socket that lies can only
@@ -118,8 +118,8 @@ export function apiGatewayPoster(endpoint: string): Poster {
 
 /**
  * The notifier the HTTP handler calls after a session changes. A
- * connection that is gone — closed without a disconnect the gateway told
- * us about — is cleaned up on the spot rather than left to the TTL.
+ * connection that is gone, closed without a disconnect the gateway told
+ * us about, is cleaned up on the spot rather than left to the TTL.
  */
 export function notifier(live: LiveStore, poster: Poster): Notify {
   return async (sessionId, seq) => {

@@ -9,7 +9,7 @@ export const SCHEMA_VERSION = 1 as const;
 /**
  * Engine features a pack depends on. A pack declares these so an older app
  * refuses to load it with a useful message, rather than quietly misplaying
- * somebody's game — which is a far worse failure than not loading at all.
+ * somebody's game, which is a far worse failure than not loading at all.
  */
 export const Capability = z
   .enum([
@@ -90,18 +90,18 @@ export const StateDef = z
       .max(8)
       .optional()
       .describe(
-        "Compact form for embedding in the name of the thing itself — a file, a layer, a DAW track. Keep it very short, e.g. VF.",
+        "Compact form for embedding in the name of the thing itself, a file, a layer, a DAW track. Keep it very short, e.g. VF.",
       ),
     scope: z
       .enum(["subject", "run", "contestant"])
       .default("subject")
       .describe(
-        "Whether this attaches to one subject, to the whole run, or — in moderated play — to one contestant on the roster, marked by the moderator: spared from a curse, disqualified, and so on.",
+        "Whether this attaches to one subject, to the whole run, or, in moderated play, to one contestant on the roster, marked by the moderator: spared from a curse, disqualified, and so on.",
       ),
     until: z
       .enum(["unitEnd"])
       .optional()
-      .describe("When the state lifts by itself. `unitEnd`: it is taken off everything it is on when the unit closes — a curse for this region, a cure for this region."),
+      .describe("When the state lifts by itself. `unitEnd`: it is taken off everything it is on when the unit closes, a curse for this region, a cure for this region."),
     semantics: z
       .array(
         z.enum(["blocksEdit", "makesUntargetable", "excludesFromResult", "locksValue", "removesFromPlay"]),
@@ -188,7 +188,7 @@ export type ResourceDef = z.infer<typeof ResourceDef>;
 
 /** One step within a phase. */
 /**
- * A point the player ticks off — and, optionally, what to look at while
+ * A point the player ticks off, and, optionally, what to look at while
  * ticking it. `shows` names a table whose results this unit (or this subject,
  * or the whole run) are listed under the item, each with its own box: "the
  * Constraint has been honored" then means *this* constraint, in front of
@@ -242,7 +242,7 @@ const ScoreCommon = {
  * One of four keys, because a pack's own idea of doing well is always one of
  * a small number of shapes: a tally it already declared, a track it already
  * declared, how far the run got, or how fast. A mode's own `score` replaces
- * the pack's outright, the way a mode's own `clock` does — never merged with
+ * the pack's outright, the way a mode's own `clock` does, never merged with
  * it, so a variant that scores differently is never left un-declaring the
  * pack's key first.
  */
@@ -266,7 +266,7 @@ export const Score = z
       .describe("Score by time taken: the unit clock where the pack runs one, wall time otherwise."),
   ])
   .describe(
-    "How to score a run. With neither a mode's own `score` nor the pack's, a run still scores by units closed, tiebreak time — what a race already ranks by, so nothing that plays today loses a number to beat tomorrow.",
+    "How to score a run. With neither a mode's own `score` nor the pack's, a run still scores by units closed, tiebreak time: what a race already ranks by, so nothing that plays today loses a number to beat tomorrow.",
   );
 export type Score = z.infer<typeof Score>;
 
@@ -371,7 +371,7 @@ export const Step = z
       })
       .strict()
       .describe(
-        "A step the engine cannot perform or verify — the actual creative work. It only tracks that you did it.",
+        "A step the engine cannot perform or verify, the actual creative work. It only tracks that you did it.",
       ),
     z
       .object({
@@ -410,7 +410,7 @@ export const Phase = z
     skipWhen: z
       .array(Predicate)
       .optional()
-      .describe("Reasons to skip this phase. Any one of them is enough — a list of two means skip if either applies. Omit it to always play the phase."),
+      .describe("Reasons to skip this phase. Any one of them is enough: a list of two means skip if either applies. Omit it to always play the phase."),
   })
   .strict()
   .describe("One stage of the per-unit flow.");
@@ -618,7 +618,7 @@ export const Mode = z
       )
       .optional()
       .describe(
-        "Per-unit overrides, for modes with a fixed shape — 'unit three always suffers a consequence', and the like.",
+        "Per-unit overrides, for modes with a fixed shape,'unit three always suffers a consequence', and the like.",
       ),
     clock: Clock.optional().describe("This mode's clock on every unit, instead of the pack's `unit.clock`."),
     score: Score.optional().describe("This mode's own score, instead of the pack's `score`."),
@@ -663,7 +663,7 @@ export type Mode = z.infer<typeof Mode>;
  *
  * The format began with only two ways for anything to happen: a step in the
  * declared flow, or a consequence of a table result. Transcribing a real
- * rulebook made the omission obvious — spending a one-shot card, re-entering an
+ * rulebook made the omission obvious: spending a one-shot card, re-entering an
  * earlier unit to repair it, resampling everything and starting from the
  * wreckage. All are optional, all are gated, most are once per run, and none of
  * them is on a schedule. They are moves.
@@ -733,7 +733,7 @@ export const Expectation = z.union([
       requests: z
         .literal("answered")
         .describe(
-          "Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all — spelled out here so a fixture can say so on purpose.",
+          "Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all: spelled out here so a fixture can say so on purpose.",
         ),
     })
     .strict()
@@ -826,12 +826,12 @@ export type PlayStep = z.infer<typeof PlayStep>;
  *
  * A **replay** fixture hands the reducer a hand-written event log and checks
  * the state that comes out. A **play** fixture instead drives the engine the
- * way the app does — entering units, rolling tables, taking moves — from a
+ * way the app does, entering units, rolling tables, taking moves, from a
  * short script, so the flow itself is exercised and not only the state a log
  * happens to produce.
  *
  * Shipping either inside the pack is how an author proves their own tables
- * behave — including the worked examples printed in their rulebook — without
+ * behave, including the worked examples printed in their rulebook, without
  * those assertions having to live in this repo.
  */
 export const Fixture = z.union([
@@ -855,9 +855,9 @@ export const Fixture = z.union([
       expect: z.array(Expectation).min(1).describe("Assertions checked after the play-through."),
     })
     .strict()
-    .describe("Play the pack through a script — entering units, rolling tables, taking moves — and assert on the state that comes out."),
+    .describe("Play the pack through a script, entering units, rolling tables, taking moves, and assert on the state that comes out."),
 ]).describe(
-  "A self-test shipped with the pack. This is how an author proves their tables behave — including the worked examples printed in their own rulebook — without those assertions living in the engine's repo.",
+  "A self-test shipped with the pack. This is how an author proves their tables behave, including the worked examples printed in their own rulebook, without those assertions living in the engine's repo.",
 );
 export type Fixture = z.infer<typeof Fixture>;
 
@@ -866,7 +866,7 @@ export type Fixture = z.infer<typeof Fixture>;
  *
  * A watermark, and honest about being one. It prevents nothing: a buyer can
  * still pass the file on, and the game plays exactly the same for whoever
- * receives it. What it changes is that the copy is no longer anonymous — a
+ * receives it. What it changes is that the copy is no longer anonymous: a
  * leaked file, and every log exported from it, says whose it was.
  *
  * It works because it is *inside* the signed content. Edit the name out and
@@ -946,21 +946,21 @@ export type LicenseId = (typeof LICENSE_IDS)[number];
 
 /** What each license is, in a line, for a picker. */
 export const LICENSE_LABELS: Record<LicenseId, string> = {
-  "CC0-1.0": "CC0 — no rights reserved",
-  "CC-BY-4.0": "CC BY 4.0 — share and remix, with credit",
-  "CC-BY-SA-4.0": "CC BY-SA 4.0 — credit, same license on remixes",
-  "CC-BY-NC-4.0": "CC BY-NC 4.0 — credit, not commercially",
-  "CC-BY-NC-SA-4.0": "CC BY-NC-SA 4.0 — non-commercial, same license",
-  "CC-BY-ND-4.0": "CC BY-ND 4.0 — unchanged copies only, with credit",
-  "CC-BY-NC-ND-4.0": "CC BY-NC-ND 4.0 — unchanged, non-commercial copies",
-  MIT: "MIT — do anything, keep the notice",
-  "Apache-2.0": "Apache 2.0 — MIT-like, with a patent grant",
-  "BSD-3-Clause": "BSD 3-Clause — keep the notice, no endorsement",
-  Unlicense: "Unlicense — public domain, no credit needed",
+  "CC0-1.0": "CC0 - no rights reserved",
+  "CC-BY-4.0": "CC BY 4.0, share and remix, with credit",
+  "CC-BY-SA-4.0": "CC BY-SA 4.0, credit, same license on remixes",
+  "CC-BY-NC-4.0": "CC BY-NC 4.0, credit, not commercially",
+  "CC-BY-NC-SA-4.0": "CC BY-NC-SA 4.0, non-commercial, same license",
+  "CC-BY-ND-4.0": "CC BY-ND 4.0, unchanged copies only, with credit",
+  "CC-BY-NC-ND-4.0": "CC BY-NC-ND 4.0, unchanged, non-commercial copies",
+  MIT: "MIT - do anything, keep the notice",
+  "Apache-2.0": "Apache 2.0, MIT-like, with a patent grant",
+  "BSD-3-Clause": "BSD 3-Clause, keep the notice, no endorsement",
+  Unlicense: "Unlicense, public domain, no credit needed",
   "OGL-1.0a": "Open Game License 1.0a",
-  ORC: "ORC — the Open RPG Creative license",
-  proprietary: "Proprietary — all rights reserved; see the text",
-  custom: "Custom — your own terms, given in full",
+  ORC: "ORC - the Open RPG Creative license",
+  proprietary: "Proprietary, all rights reserved; see the text",
+  custom: "Custom - your own terms, given in full",
 };
 
 /** Licenses that allow changed copies at all, for the Designer's start-from and the remix notice. */
@@ -1110,7 +1110,7 @@ export const Pack = z
     ),
 
     signature: Signature.optional().describe(
-      "Evidence of who produced this pack. Does not restrict copying — nothing can, since the app must read every word to play it — but proves the contents are unaltered since the author signed them.",
+      "Evidence of who produced this pack. Does not restrict copying, nothing can, since the app must read every word to play it, but proves the contents are unaltered since the author signed them.",
     ),
   })
   .strict()

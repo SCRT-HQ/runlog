@@ -16,7 +16,7 @@ import { listPacks, type StoredPack } from "../storage/db.ts";
  * until now. The account that claims a server pays for the server plan
  * and fills the server's vault from its own shelf: the pack's text goes
  * up once, with the modes named so the bot can list them, and never comes
- * back down — the bot reads it to play, and members see the drawn lines.
+ * back down: the bot reads it to play, and members see the drawn lines.
  */
 export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pending?: LinkRoute | null }) {
   const account = useAccount();

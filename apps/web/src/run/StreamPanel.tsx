@@ -56,7 +56,7 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
   return (
     <div className="streamSettings">
       {!allowed ? (
-        <p className="muted small">Pop-out widgets for a stream — the scoreboard, the clock, the race — are part of Plus, like hosting a table. Subscribe from your profile, under Plan.</p>
+        <p className="muted small">Pop-out widgets for a stream, the scoreboard, the clock, the race, are part of Plus, like hosting a table. Subscribe from your profile, under Plan.</p>
       ) : (
         <>
           <p className="muted small">Each opens on a page of its own, following this run as it moves. Add the address as a browser source in your streaming app, or keep the window on a second screen.{token ? " A streaming app needs the address with the live link's token in it, since its own browser holds none of this device's runs; the plain address is for a window here." : " Share a live link under People at the table first: a streaming app needs the address with the link's token in it, since its own browser holds none of this device's runs."}</p>

@@ -1,7 +1,7 @@
 /**
  * What to do about each thing, given what is here and what is there.
  *
- * Two-way and per item. Logs are only ever replaced whole, never merged — the
+ * Two-way and per item. Logs are only ever replaced whole, never merged: the
  * same rule `loadEvents` already keeps, because half of one run and half of
  * another is not a run. So the question per item is only: which side is
  * newer, and has either side deleted it?
@@ -11,7 +11,7 @@
  * log with a newer stamp, so it travels as "newer", not as "less". A tie is
  * pushed, deterministically; the only way to get one is the same device.
  *
- * A deletion travels unless the other side wrote after it — someone who kept
+ * A deletion travels unless the other side wrote after it: someone who kept
  * working on a run they did not know was forgotten elsewhere keeps it.
  */
 

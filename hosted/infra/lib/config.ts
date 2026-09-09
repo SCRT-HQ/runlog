@@ -44,7 +44,7 @@ export interface EnvConfig {
   /**
    * The WorkOS AuthKit client the app signs people in with, so the API can
    * check that a token was issued for *this* app and not another one in the
-   * same WorkOS account. Public — it appears in every sign-in URL — so it is
+   * same WorkOS account. Public, it appears in every sign-in URL, so it is
    * written here rather than kept as a secret, and it matches the one the app
    * is built with.
    */
@@ -75,8 +75,8 @@ export interface EnvConfig {
    */
   gates: boolean;
   /**
-   * What is sold, by Stripe id. Prices are public — they appear in every
-   * Checkout — so they are written here; the ids come from
+   * What is sold, by Stripe id. Prices are public, they appear in every
+   * Checkout, so they are written here; the ids come from
    * `hosted/scripts/stripe-setup.ts`, run once per environment. Empty until then,
    * and an empty price is a plan that cannot be bought yet.
    */

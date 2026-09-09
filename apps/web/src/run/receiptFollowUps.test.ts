@@ -3,7 +3,7 @@ import type { RollReceipt } from "./Receipt.tsx";
 import { receiptFollowUps } from "./receiptFollowUps.ts";
 
 /**
- * Whether a settled receipt offers more than "Carry on" — the page's
+ * Whether a settled receipt offers more than "Carry on": the page's
  * `<Receipt>` and the floating remote both decide this from the same rule,
  * computed once here so the two cannot disagree about when to offer it.
  */

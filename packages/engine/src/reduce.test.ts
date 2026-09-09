@@ -349,7 +349,7 @@ describe("reduce", () => {
 /**
  * Renaming after the fact.
  *
- * A name typed in the moment is often wrong — a Piece turns out to be
+ * A name typed in the moment is often wrong: a Piece turns out to be
  * something else by the time it is fired. The correction has to be an event
  * like anything else, or it would not survive a reload, an export, or an undo.
  */

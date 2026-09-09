@@ -14,7 +14,7 @@ import { loadPackText } from "@runlog/rules-schema";
  * One pass looks like this. Ask the server what it holds. Runs are
  * sessions with an append-only log: send what this device made and has not
  * had numbered, take back what the server has past what this device saw,
- * and fold the two together — nothing here is ever replaced whole. Packs
+ * and fold the two together, nothing here is ever replaced whole. Packs
  * travel only where the player turned the pack's own switch on, so
  * untoggled text never leaves, and never a sealed copy at all; license keys
  * always, because a key is what lets the next device open the file the
@@ -241,8 +241,8 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
       // ---- packs: only the ones the player said may travel ----
       // A sealed copy is left out even from the tombstones: the server is
       // not told it exists, and `forget` purges it outright for that reason.
-      // And the server's row under the same id — a free copy of the same
-      // pack, or the tombstone of one — is about that copy, not this one:
+      // And the server's row under the same id, a free copy of the same
+      // pack, or the tombstone of one, is about that copy, not this one:
       // it must neither overwrite nor purge what was bought, so it is left
       // out of the plan while the sealed copy is on the shelf.
       const allPacks = await db.listAllPacks();

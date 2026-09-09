@@ -26,7 +26,7 @@ const regenerate = buildSchemaBody;
  * completions self-explanatory.
  */
 describe("the emitted JSON Schema", () => {
-  it("is not stale — regenerating it produces the committed file", () => {
+  it("is not stale: regenerating it produces the committed file", () => {
     const fresh = regenerate() as Record<string, unknown>;
     // The committed file adds $id and title on top of the generated body; the
     // description comes from the Pack schema itself, so it must match.

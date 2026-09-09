@@ -3,7 +3,7 @@ import { appUrl, configuredClientId } from "../auth/config.ts";
 /**
  * Where the API is, and whether this device is allowed to use it.
  *
- * Same origin, under /api — the edge forwards that path to the server, so
+ * Same origin, under /api: the edge forwards that path to the server, so
  * there is no second hostname, no CORS, and nothing new for the Content
  * Security Policy to allow. And only where there is something to sign into:
  * a file on disk and the public page have neither an account nor an API,
@@ -22,7 +22,7 @@ export function apiBase(): string | undefined {
 /**
  * The device switch. On unless the player turned it off here, on this
  * machine: an account is for having your runs everywhere, so signing in is
- * the opt-in and the switch is the way out. Only "off" is remembered — an
+ * the opt-in and the switch is the way out. Only "off" is remembered: an
  * absent value is on, which is also what a device from before the switch
  * defaulted this way reads as, unless it had said "on" already.
  */

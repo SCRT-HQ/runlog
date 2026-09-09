@@ -98,7 +98,7 @@ describe("signing a pack", () => {
 
   /**
    * The point of the whole exercise: an edited pack cannot go on claiming to
-   * be the author's. It still plays — nothing here restricts that — but it
+   * be the author's. It still plays, nothing here restricts that, but it
    * stops being *theirs*.
    */
   it("fails once a single word of the rules changes", async () => {

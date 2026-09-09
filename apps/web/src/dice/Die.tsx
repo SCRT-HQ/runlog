@@ -9,7 +9,7 @@
 
 export interface DieProps {
   faces: number;
-  /** What to show on the face. Not always the raw value: percentile tens read 00–90. */
+  /** What to show on the face. Not always the raw value: percentile tens read 00-90. */
   display: string;
   /** True while tumbling, so the face is cosmetic and the die is in motion. */
   rolling?: boolean;

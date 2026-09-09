@@ -1,8 +1,8 @@
 /**
  * A ZIP file, written by hand.
  *
- * A distribution bundle is a handful of small files — a pack, its paper,
- * a note — and every unzipper on earth opens a store-only archive. That
+ * A distribution bundle is a handful of small files, a pack, its paper,
+ * a note, and every unzipper on earth opens a store-only archive. That
  * is a few dozen lines here against a dependency tree, the same call this
  * project has made everywhere else. Nothing is compressed: the files are
  * text and a sealed pack is already dense.

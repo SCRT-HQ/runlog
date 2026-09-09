@@ -214,7 +214,7 @@ describe("setting up a server", () => {
     expect(neither.data?.content).toContain("or the server subscribes through Discord's store");
     // /packs, for anyone: the same list, without the rest.
     const packs = await handleInteraction(press({ guild_id: "g1", member: { user: mira }, data: { name: "packs" } }), { guilds, appUrl: "https://runlog.test/", now: () => NOW });
-    expect(packs.data?.content).toContain("**The Long Kiln** — Standard, Short");
+    expect(packs.data?.content).toContain("**The Long Kiln** - Standard, Short");
     const none = await handleInteraction(press({ guild_id: "g2", member: { user: mira }, data: { name: "packs" } }), { guilds, appUrl: "https://runlog.test/", now: () => NOW });
     expect(none.data?.content).toContain("not set up");
   });

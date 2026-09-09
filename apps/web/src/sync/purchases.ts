@@ -7,8 +7,8 @@ import type { SyncDb } from "./engine.ts";
  * What the account bought, brought onto this device.
  *
  * A sealed copy's text never syncs: the server does not hold it as a pack
- * and the app never sends it. What the server does hold is the sale — the
- * sealed file under the publisher, the key under the buyer — so a device
+ * and the app never sends it. What the server does hold is the sale, the
+ * sealed file under the publisher, the key under the buyer, so a device
  * that signs in can fetch each bought copy once and keep it as if the
  * receipt's link had been opened here. After that it is an ordinary
  * sealed pack on the shelf, with its key filed beside it.

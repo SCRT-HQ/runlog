@@ -10,13 +10,13 @@ import { detectFormat, fingerprint, listingPayload, signBytes, verifyPack } from
  * The command line, as somebody.
  *
  * `runlog login` signs in the way a terminal can: it asks WorkOS for a short
- * code, shows it with a link, and waits while you confirm it in a browser —
+ * code, shows it with a link, and waits while you confirm it in a browser: 
  * the OAuth device flow, against a WorkOS application of the CLI's own. What
  * comes back is a session: an access token that lasts an hour and a refresh
  * token that renews it, kept in the user's config directory, mode 600, and
  * renewed here without anyone noticing. Signing out forgets it.
  *
- * A machine with no browser and nobody at it — CI publishing a release — has
+ * A machine with no browser and nobody at it, CI publishing a release, has
  * no way to confirm a code, so a key made on the profile page does instead:
  * `RUNLOG_API_KEY` in the environment, or `runlog login --key` pasted once.
  * Either way, every command that talks to the API sends what it has as the
@@ -24,7 +24,7 @@ import { detectFormat, fingerprint, listingPayload, signBytes, verifyPack } from
  *
  * `claim` proves a signing key is the account's: the API hands out a nonce,
  * this signs it with the private key, and the API records the fingerprint
- * under the account — from then on the app names the account beside that
+ * under the account, from then on the app names the account beside that
  * signature. `publish` puts a pack in the account's library, the same call
  * sync makes. `sign` and `issue` ask the API whether the key is claimed
  * before they sign, and refuse if not. Signing is arithmetic and a fork of

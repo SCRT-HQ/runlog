@@ -87,7 +87,7 @@ export interface Pending {
    * The step this work belongs to, recorded as done when it completes.
    *
    * Without this a roll would run, commit its events and leave the flow exactly
-   * where it was — the log fills up while the game appears to refuse to move.
+   * where it was: the log fills up while the game appears to refuse to move.
    */
   completes?: { phase: Phase; index: number };
   /** A move that is the unit's outcome: when it completes, the unit closes with it. */
@@ -119,7 +119,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
    */
   const [runId, setRunId] = useState<string | null>(null);
   const runIdRef = useRef<string | null>(null);
-  /** Fields the record carries besides the log — a race it belongs to — set when a run starts and written with every save. */
+  /** Fields the record carries besides the log, a race it belongs to, set when a run starts and written with every save. */
   const extrasRef = useRef<Pick<StoredRun, "raceId">>({});
   /** Every run of this pack still here, newest first, for the picker. */
   const [runList, setRunList] = useState<StoredRun[]>([]);
@@ -201,7 +201,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
 
   /**
    * The one way a log reaches storage. Every write is the whole log, under
-   * the run's name, stamped now — which is the unit sync will move later.
+   * the run's name, stamped now, which is the unit sync will move later.
    */
   const persist = useCallback(
     (log: RunEvent[], at = new Date().toISOString()) => {
@@ -357,7 +357,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
         });
         return;
       }
-      // Only a completed block reaches the log — and it lands together with
+      // Only a completed block reaches the log, and it lands together with
       // the record of the step finishing, so the two cannot come apart.
       const done = p.completes
         ? stepCompletionEvents(p.completes.phase, p.completes.index, state, now())
@@ -626,7 +626,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     [commit],
   );
 
-  /** The moderator marks a contestant — spared, out, whatever the pack names — or unmarks them. */
+  /** The moderator marks a contestant, spared, out, whatever the pack names, or unmarks them. */
   const markContestant = useCallback(
     (contestant: string, stateId: string, on: boolean) =>
       commit([on ? { t: "ContestantStateApplied", at: now(), contestant, state: stateId } : { t: "ContestantStateRemoved", at: now(), contestant, state: stateId }]),
@@ -693,7 +693,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
   );
 
   /**
-   * The pack's own triggers that have come due — what the game does of its own
+   * The pack's own triggers that have come due: what the game does of its own
    * accord rather than in answer to a roll. The end-of-run reckoning lives
    * here, which is why it outlives the run ending.
    */

@@ -17,7 +17,7 @@ describe("the lights", () => {
     applyTheme("ember", el);
     expect(el.dataset.theme).toBe("ember");
     // Absence is the decision to let prefers-color-scheme decide, so it must
-    // be absent and not "system" — a stylesheet cannot match on a rumor.
+    // be absent and not "system": a stylesheet cannot match on a rumor.
     applyTheme("system", el);
     expect("theme" in el.dataset).toBe(false);
   });

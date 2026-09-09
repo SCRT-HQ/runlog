@@ -12,7 +12,7 @@ import { useDismiss } from "../ui/useDismiss.ts";
 /**
  * The one menu at the end of the bar, for everyone.
  *
- * Signed in, it is the name — the one they chose to be shown as, else
+ * Signed in, it is the name: the one they chose to be shown as, else
  * their first name: a light on it says whether this device is syncing,
  * and the switch behind it is the one decision that is the player's.
  * Profile and the theme sit under it as a list, so billing and publishing
@@ -20,7 +20,7 @@ import { useDismiss } from "../ui/useDismiss.ts";
  * business, not the menu's. Signed out, it is "Menu" with the two doors in,
  * Design and the theme. On disk or the public page, where there is nothing
  * to sign into, it is the same menu
- * without the doors — so the header is the same shape everywhere, and the
+ * without the doors, so the header is the same shape everywhere, and the
  * theme and the designer are never lost for want of an account.
  *
  * This lives apart from the provider because it reads two contexts, the
@@ -28,12 +28,12 @@ import { useDismiss } from "../ui/useDismiss.ts";
  * inside Account.tsx would have made the two files import each other.
  */
 export interface MenuActions {
-  /** Opens the profile, on the page named — the default page absent one. */
+  /** Opens the profile, on the page named: the default page absent one. */
   onOpenProfile?: (page?: ProfilePage) => void;
   /** Opens this device's settings: theme, sounds, dice, who rolls. Absent, the menu holds the theme switch itself. */
   onOpenSettings?: () => void;
   /**
-   * Closes the menu again whenever this changes — the current view, say.
+   * Closes the menu again whenever this changes: the current view, say.
    * Without it the menu stayed open across a page change, with no way to
    * close it but its own toggle.
    */

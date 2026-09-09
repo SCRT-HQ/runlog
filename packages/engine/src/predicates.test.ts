@@ -36,7 +36,7 @@ describe("combining predicates", () => {
    * The empty case is the whole reason this is tested separately.
    *
    * "All of nothing" is vacuously true, and reading an absent `skipWhen` that
-   * way skipped every phase in the game — the flow simply never started. It is
+   * way skipped every phase in the game: the flow simply never started. It is
    * the kind of bug that passes every unit test written about the predicates
    * themselves, because none of them thinks to pass an empty list.
    */

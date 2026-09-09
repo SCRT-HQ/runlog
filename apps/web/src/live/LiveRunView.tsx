@@ -17,8 +17,8 @@ import type { LiveRoute } from "./route.ts";
  * A run watched by its link, by anyone.
  *
  * The page shows what the link's token gets: the whole run, reduced
- * here, when the pack's text may travel — and then the pack's own paper
- * is a press away — or the snapshot the owner's device keeps when it may
+ * here, when the pack's text may travel, and then the pack's own paper
+ * is a press away, or the snapshot the owner's device keeps when it may
  * not. No account is needed, and nothing is kept. Anyone may send one of
  * a few reactions back to the table; someone signed in, where the pack
  * may travel, can take a seat as a watcher on their own account, and the

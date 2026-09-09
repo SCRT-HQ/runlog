@@ -6,7 +6,7 @@ import { useApi } from "./useApi.ts";
  *
  * Two facts: whether plans gate anything on this address, and which
  * features the account is entitled to. Both come from `GET /api/me`, read
- * once per page and again on request — after a Checkout comes back, say.
+ * once per page and again on request, after a Checkout comes back, say.
  * Where plans are off, `can` is true for everything, so nothing in the app
  * has to know whether it is running in preview or for real.
  */

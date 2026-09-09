@@ -7,7 +7,7 @@ import type { WorkOSLike } from "./workos.js";
  * dashboard, not a line in the stage's configuration and a deploy. The
  * API reads each gate's flag by slug with the key it already holds,
  * remembers the answer per container for a minute, and treats anything
- * it cannot read — no key filled in, no such flag, WorkOS down — as
+ * it cannot read, no key filled in, no such flag, WorkOS down, as
  * closed, so nothing goes on sale by accident. A gate says only whether
  * a tier may be bought today; who holds a plan is Stripe's, the comp
  * flags' (`plus`, `server`, `hosted-licensing`, per person in the token)

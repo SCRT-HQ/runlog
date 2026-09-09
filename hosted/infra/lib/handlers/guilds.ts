@@ -12,8 +12,8 @@ import { traced } from "./xray.js";
  * one Discord account; linking again replaces, on both sides, so a row
  * never points at a person who has moved on. A server belongs to one
  * account too, the one that claims it, and claiming again replaces the
- * owner. Discord's ids are the only things kept of Discord's — no token,
- * no email — and a person's rows go when the account does.
+ * owner. Discord's ids are the only things kept of Discord's, no token,
+ * no email, and a person's rows go when the account does.
  *
  * The vault is the one place the hosting holds a pack's text for a
  * purpose other than handing it back to the person who sent it: the bot
@@ -165,7 +165,7 @@ export interface GuildStore {
   listGuildPacks(guildId: string): Promise<GuildPackMeta[]>;
   deleteGuildPack(guildId: string, packId: string): Promise<boolean>;
 
-  /** Everything about this person — links and the servers they own — for the account's deletion; how many rows went. */
+  /** Everything about this person, links and the servers they own, for the account's deletion; how many rows went. */
   forgetUser(sub: string): Promise<number>;
 }
 

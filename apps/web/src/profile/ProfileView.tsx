@@ -51,7 +51,7 @@ export interface ProfileViewProps {
   onBack: () => void;
   /** Which of the four pages; the first one absent. */
   page?: ProfilePage;
-  /** Moves between pages — wired to the address bar by the caller. */
+  /** Moves between pages: wired to the address bar by the caller. */
   onNavigate?: (page: ProfilePage) => void;
   /** Opens a run from Social's "Open tables": the library's own way in. */
   onOpenRun?: (runId: string) => void;
@@ -451,7 +451,7 @@ function PublishingPage({ api }: { api: Api | null }) {
 
 /**
  * What the account pays for and holds: the plan, what it bought, the keys
- * that opened a sealed copy, and the two ways out — a copy of everything,
+ * that opened a sealed copy, and the two ways out: a copy of everything,
  * or the end of it.
  */
 function AccountPage({
@@ -496,8 +496,8 @@ function AccountPage({
           Your data on the server <span className="muted">a copy of it, or the end of it</span>
         </h3>
         <p className="muted small">
-          Everything your account holds — runs, the packs you switched on, license keys, purchases, races, the people you
-          have played with, and this profile — can be downloaded as one file, or removed from the server at once. What is on
+          Everything your account holds, runs, the packs you switched on, license keys, purchases, races, the people you
+          have played with, and this profile, can be downloaded as one file, or removed from the server at once. What is on
           this device stays on this device either way.
         </p>
         <Export disabled={!api} onExport={async () => (api ? api.exportMe() : Promise.reject(new Error("no API")))} />
@@ -692,7 +692,7 @@ function ShownAs({ api, profile, onSaved }: { api: ReturnType<typeof createApi> 
 /**
  * The command line, as you. On your own machine `runlog login` signs in
  * through the browser and needs nothing from here; the keys made here are
- * for a machine with nobody at it — CI publishing a release — shown once.
+ * for a machine with nobody at it, CI publishing a release, shown once.
  * Below them, the signing keys the account has claimed, which is what puts
  * your name beside a signature in the app.
  */

@@ -4,7 +4,7 @@ import { ticksFor } from "./stepChecks.ts";
 
 /**
  * `ticksFor` is what both the page's step card and the floating remote read
- * a step's ticked boxes from — lifted out so a change to how boxes are keyed
+ * a step's ticked boxes from: lifted out so a change to how boxes are keyed
  * cannot happen in one place and not the other.
  */
 const state = (checks: string[]) => ({ checks } as unknown as RunState);
@@ -20,7 +20,7 @@ describe("ticksFor", () => {
   });
 
   it("does not confuse one step's key with a prefix of another's", () => {
-    // "work#1" starts with "work#" the same as "work#10" would — the pipe
+    // "work#1" starts with "work#" the same as "work#10" would: the pipe
     // after the key is what keeps them apart.
     const ticked = ticksFor(state(["work#1|0", "work#10|0"]), "work#1");
     expect(ticked).toEqual(new Set(["0"]));

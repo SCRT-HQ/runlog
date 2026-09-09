@@ -12,7 +12,7 @@ import type { RunState } from "./types.ts";
  * Two shapes, because they answer two different questions. The archive is the
  * event log itself: it round-trips exactly, which is what makes it worth
  * trusting as a backup and as the thing you hand to the next version of this
- * app. The write-up is for a person — the Run Log sheet, filled in.
+ * app. The write-up is for a person: the Run Log sheet, filled in.
  *
  * Neither is allowed to launder a rulebook. A pack marked non-redistributable
  * is a private transcription of something its author sells, and its text does
@@ -94,7 +94,7 @@ export type ImportResult =
  * Read an archive back.
  *
  * Deliberately strict about the envelope and entirely trusting of the events
- * inside it, because the reducer is the thing that knows what an event is —
+ * inside it, because the reducer is the thing that knows what an event is: 
  * and it will throw on a log that does not begin properly. Checking the shape
  * twice would only mean two places to keep in step.
  */
@@ -145,7 +145,7 @@ function stateLabel(pack: Pack, id: string): string {
 /**
  * How a subject is referred to mid-log.
  *
- * By number and by what it was declared to be, but *without* its states —
+ * By number and by what it was declared to be, but *without* its states: 
  * those change as the run goes on, and a line describing what happened in
  * unit two should not be re-labeled by something that happened in unit five.
  */
@@ -158,7 +158,7 @@ function ref(pack: Pack, state: RunState, id: number): string {
  * Render the run as the log sheet a player would otherwise keep by hand.
  *
  * Built from the events rather than from derived state so the order is the
- * order things actually happened in — a log that reorders itself into tidy
+ * order things actually happened in: a log that reorders itself into tidy
  * categories stops being a record of the session.
  */
 export function renderLog(
@@ -171,7 +171,7 @@ export function renderLog(
   const quote = mayQuote(pack, audience);
   const out: string[] = [];
 
-  out.push(`# ${pack.title} — ${v.run.one}`);
+  out.push(`# ${pack.title} - ${v.run.one}`);
   out.push("");
 
   const mode = pack.modes[state.mode]?.label ?? state.mode;
@@ -210,8 +210,8 @@ export function renderLog(
   };
 
   /**
-   * Anything that happens before the first unit — an opening hand, a run-wide
-   * state dealt at the start — needs somewhere to live, or it reads as a stray
+   * Anything that happens before the first unit, an opening hand, a run-wide
+   * state dealt at the start, needs somewhere to live, or it reads as a stray
    * line under the title with nothing to attach it to.
    */
   const opening = () => {
@@ -239,7 +239,7 @@ export function renderLog(
     // What was made: its name, else what it was declared to be. The
     // noun-and-number default would only repeat the heading.
     const named = subject?.name ?? subject?.type;
-    const label = named ? ` — ${named}` : "";
+    const label = named ? ` - ${named}` : "";
     gap();
     out.push(`## ${v.unit.one} ${n}${label}`);
     out.push("");
@@ -265,7 +265,7 @@ export function renderLog(
             ? ` → ${ref(pack, state, e.targetSubject)}`
             : "";
         line(
-          `- **${tableTitle(pack, e.table)}**${shown}${target} — ${entryText(pack, e.table, e.entryId, quote)}`,
+          `- **${tableTitle(pack, e.table)}**${shown}${target} - ${entryText(pack, e.table, e.entryId, quote)}`,
         );
         break;
       }
@@ -354,7 +354,7 @@ export function renderLog(
     for (const s of surviving) {
       const states = s.states.map((id) => stateLabel(pack, id)).join(", ");
       out.push(
-        `- ${subjectName(pack, s)}: ${s.type ?? "undeclared"}${states ? ` — ${states}` : ""}`,
+        `- ${subjectName(pack, s)}: ${s.type ?? "undeclared"}${states ? ` - ${states}` : ""}`,
       );
     }
   }
@@ -371,7 +371,7 @@ export function renderLog(
   out.push("");
   out.push(`---`);
   out.push("");
-  out.push(`*${pack.title} v${pack.version}${pack.author ? ` by ${pack.author}` : ""} — logged with Runlog.*`);
+  out.push(`*${pack.title} v${pack.version}${pack.author ? ` by ${pack.author}` : ""} - logged with Runlog.*`);
   out.push("");
 
   return out.join("\n");

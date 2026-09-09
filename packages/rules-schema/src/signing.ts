@@ -10,7 +10,7 @@
  *
  * What it does is prove *authorship*. A signed pack carries evidence that
  * whoever holds a particular key produced exactly this content. A copy passed
- * around still plays — but a copy someone has edited cannot go on claiming to
+ * around still plays, but a copy someone has edited cannot go on claiming to
  * be the author's, and a pack that turns up claiming to be an official release
  * either verifies or it does not. For a designer selling their own game, the
  * thing worth protecting is usually their name on it.
@@ -18,7 +18,7 @@
  * One honest limitation, stated here because it is easy to oversell: the
  * public key travels *inside* the pack, so a valid signature by itself only
  * says "this content was signed by the holder of this key". It does not say
- * whose key it is. That link has to come from somewhere else — the author
+ * whose key it is. That link has to come from somewhere else: the author
  * publishing their fingerprint, or the app remembering a key it has seen
  * before. `fingerprint()` exists for exactly that, and the app shows it.
  */
@@ -31,7 +31,7 @@ export interface PackSignature {
   /** Base64url signature over the canonical bytes. */
   value: string;
   signedAt: string;
-  /** What the signer claims to be called. A claim, not proof — see above. */
+  /** What the signer claims to be called. A claim, not proof: see above. */
   signedBy?: string;
 }
 
@@ -46,7 +46,7 @@ export interface PackSignature {
  *
  * **Keys are sorted and whitespace is dropped**, so the signature covers the
  * game rather than the file. An author can reformat their YAML, re-indent it,
- * add comments or convert it to JSON, and the signature still verifies —
+ * add comments or convert it to JSON, and the signature still verifies: 
  * which is the difference between a signature people keep and one they stop
  * bothering with.
  *
@@ -98,7 +98,7 @@ export { fromBase64Url, toBase64Url };
 
 /**
  * Web Crypto's JWK type is declared by the DOM library and this package builds
- * without it — it has to run in Node for the CLI as much as in a browser. The
+ * without it, it has to run in Node for the CLI as much as in a browser. The
  * API itself is a platform API present in both, so the shape is spelled out
  * here rather than pulling the whole DOM in.
  */
@@ -134,7 +134,7 @@ export async function generateKeyPair(): Promise<{ publicKey: string; privateKey
 /**
  * A short, readable form of a public key.
  *
- * This is the thing an author publishes and a reader compares — on a website,
+ * This is the thing an author publishes and a reader compares, on a website,
  * in a video, on the back of a printed book. Grouped into fours because a
  * fingerprint that cannot be read aloud does not get checked.
  */
@@ -221,7 +221,7 @@ export type VerifyResult =
 /**
  * Check a pack's signature.
  *
- * Deliberately three-valued. "Unsigned" is not a failure — most packs will
+ * Deliberately three-valued. "Unsigned" is not a failure: most packs will
  * never be signed, and treating an unsigned pack as suspect would make the
  * whole feature a nuisance. "Invalid" means the pack carries a signature that
  * does not match its contents, which is worth saying loudly, because the
@@ -264,7 +264,7 @@ export async function verifyPack(document: unknown): Promise<VerifyResult> {
     if (!ok) {
       return {
         status: "invalid",
-        reason: "the signature does not match this pack's contents — it has been changed since it was signed",
+        reason: "the signature does not match this pack's contents, it has been changed since it was signed",
       };
     }
     return {

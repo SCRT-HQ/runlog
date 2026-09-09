@@ -91,8 +91,8 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
   const m = message as Record<string, unknown>;
   // A link's socket watches the one run it was opened for and takes no requests.
   if (conn.sub.startsWith("public:")) return { statusCode: 200 };
-  // A gesture: something happening at the table that is not a move — dice
-  // in the air, a step opened, a card turned — passed straight on to
+  // A gesture: something happening at the table that is not a move, dice
+  // in the air, a step opened, a card turned, passed straight on to
   // everyone watching the run and kept nowhere. Only a member sends one,
   // it is small, and its kind is a short word the app gives meaning to.
   if (m["t"] === "gesture" && typeof m["id"] === "string" && typeof m["kind"] === "string") {

@@ -5,7 +5,7 @@ import type { StoredRun } from "../storage/db.ts";
 /**
  * A run that has ended, reduced once to the number it made.
  *
- * Everything past this point — the best of them, a run's place among them —
+ * Everything past this point, the best of them, a run's place among them, 
  * reads this array rather than folding the log again, since a side column
  * and a setup screen both want the same answer from the same runs.
  */
@@ -21,8 +21,8 @@ export interface ScoredRun {
  * Every ended run of this pack, best first.
  *
  * A run still in progress has no score to beat yet, and a log this device
- * cannot make sense of — cut short, from a version the engine no longer
- * reads — is skipped rather than shown wrong: history that cannot be read
+ * cannot make sense of, cut short, from a version the engine no longer
+ * reads, is skipped rather than shown wrong: history that cannot be read
  * back is not the same as history that says nothing happened.
  */
 export function scoresOf(pack: Pack, runs: readonly StoredRun[], nowMs: number): ScoredRun[] {

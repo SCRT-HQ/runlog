@@ -4,8 +4,8 @@ import type { Api, Purchase } from "../sync/client.ts";
 /**
  * What this account has bought: each with its key, since the key is the
  * receipt, and a download of the sealed copy for a device that has not
- * got it. The copy opens like any sealed file — from the library's
- * "Load a pack from a file" — with the key kept in the account.
+ * got it. The copy opens like any sealed file, from the library's
+ * "Load a pack from a file", with the key kept in the account.
  */
 export function PurchasesSection({ api }: { api: Api | null }) {
   const [purchases, setPurchases] = useState<Purchase[] | null>(null);

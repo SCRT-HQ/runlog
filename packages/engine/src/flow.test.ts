@@ -129,7 +129,7 @@ describe("moving through a unit", () => {
 
 /**
  * `RunView` and the live snapshot both need to know what a step must
- * honor — a rule drawn earlier in the unit, shown on the step so the
+ * honor: a rule drawn earlier in the unit, shown on the step so the
  * player is not asked to remember it. One function, so the run screen
  * and a watcher's page cannot drift on what "the game has already had
  * its say" means.

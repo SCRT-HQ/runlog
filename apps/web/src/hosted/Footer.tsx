@@ -4,7 +4,7 @@ import { useHosted } from "./HostedProvider.tsx";
  * The foot of every page but a run: where the operator's pages are, and
  * which build this is. A run has no footer because nothing should sit
  * under the board; the pages a person reads do. Nothing at all where the
- * copy is not hosted — a file on disk has no terms to link to.
+ * copy is not hosted: a file on disk has no terms to link to.
  */
 export function Footer({ onGuide }: { onGuide: () => void }) {
   const hosted = useHosted();

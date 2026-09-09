@@ -8,7 +8,7 @@ import { traced } from "./xray.js";
  *
  * A race is several people playing the same seeded mode of the same pack
  * at once, each on their own device, each in an ordinary run of their own
- * — the same seed hands everyone the same dice, so the runs agree without
+ * - the same seed hands everyone the same dice, so the runs agree without
  * ever meeting. What the server holds is small: the race (pack, mode,
  * seed, who started it), one entry per racer naming their run, and the
  * progress each device reports as it goes. The leaderboard is that

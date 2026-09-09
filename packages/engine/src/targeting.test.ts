@@ -15,8 +15,8 @@ function loadPack(rel: string): Pack {
 }
 
 /**
- * The Long Kiln uses the classic scheme: 70–79 anchors on the newest and
- * counts backwards, 80–89 anchors on the oldest and counts forwards, 90–99
+ * The Long Kiln uses the classic scheme: 70-79 anchors on the newest and
+ * counts backwards, 80-89 anchors on the oldest and counts forwards, 90-99
  * hands the choice to the player, with wraparound and ineligible subjects
  * skipped.
  */
@@ -158,7 +158,7 @@ describe("anchored-offset targeting", () => {
   describe("eligibility", () => {
     it("skips subjects a state has made untargetable", () => {
       // Ids 2 and 3 are sealed, so the eligible list is [1, 4, 5]. Anchor is
-      // the newest of *those* — id 5 — and one before it is id 4.
+      // the newest of *those*, id 5, and one before it is id 4.
       const d = target(71, 5, { untargetable: [2, 3] });
       expect(d.eligible).toEqual([1, 4, 5]);
       expect(d.targetSubject).toBe(4);
@@ -185,7 +185,7 @@ describe("anchored-offset targeting", () => {
   });
 
   describe("bands", () => {
-    it("hands 90–99 to the player", () => {
+    it("hands 90-99 to the player", () => {
       const d = target(95, 5);
       expect(d.outcome).toBe("playerChoice");
       expect(d.targetSubject).toBeNull();
@@ -235,7 +235,7 @@ describe("anchored-offset targeting", () => {
     it("shows its working, so the player can check it", () => {
       const d = target(88, 3);
       const working = d.explain.join("\n");
-      expect(working).toContain("88 is in 80–89");
+      expect(working).toContain("88 is in 80-89");
       expect(working).toContain("anchor on the oldest of 3 eligible");
       expect(working).toContain("counting after");
       expect(working).toContain("8 % 3 = 2");

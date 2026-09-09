@@ -18,8 +18,8 @@ const signal = loadPack("packs/sketches/salt-and-signal.yaml");
 describe("presenting a roll as physical dice", () => {
   describe("percentile dice", () => {
     /**
-     * A d100 is not a hundred-sided object. It is a tens die reading 00–90 and
-     * a ones die reading 0–9, and getting that wrong would show the player
+     * A d100 is not a hundred-sided object. It is a tens die reading 00-90 and
+     * a ones die reading 0-9, and getting that wrong would show the player
      * dice they are not holding.
      */
     it("splits a d100 into a tens and a ones die", () => {

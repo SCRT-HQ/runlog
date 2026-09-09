@@ -52,8 +52,8 @@ function checkIn(seed: string, units: number, noise: RunEvent[] = []) {
 /**
  * The promise a shared seed makes.
  *
- * Not "the same numbers in the same order" — two people will always diverge in
- * what they choose — but "the same dungeon": whatever else happened, Stage
+ * Not "the same numbers in the same order", two people will always diverge in
+ * what they choose, but "the same dungeon": whatever else happened, Stage
  * three holds the same thing for both of them.
  */
 describe("seeded runs", () => {
@@ -69,7 +69,7 @@ describe("seeded runs", () => {
 
   it("holds the same result for a player whose run diverged", () => {
     // The whole point: one player wrote a journal entry, drew a Charm and
-    // finalized differently — and still meets the same Stage three.
+    // finalized differently, and still meets the same Stage three.
     const busy: RunEvent[] = [
       ev("JournalWritten", { unit: 1, text: "a tall one" }),
       ev("CardDrawn", { deck: "charms", cardId: "ch-steady" }),

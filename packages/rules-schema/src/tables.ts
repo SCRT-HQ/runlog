@@ -63,7 +63,7 @@ const EntryBase = {
     .array(Id)
     .optional()
     .describe(
-      "Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here — a barbell movement for someone without a barbell, an oven dish in a kitchen without one.",
+      "Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here: a barbell movement for someone without a barbell, an oven dish in a kitchen without one.",
     ),
 };
 
@@ -135,12 +135,12 @@ export type KeyedEntry = z.infer<typeof KeyedEntry>;
  * Resolution kinds, modeled as a discriminated union so that further kinds are
  * an additive change rather than a breaking one.
  *
- * - `lookup` — roll once, find the entry whose range contains the result.
- * - `bands`  — roll an expression, compare the total against thresholds.
- * - `opposed`— roll an action against several challenge dice and count how many
+ * - `lookup`: roll once, find the entry whose range contains the result.
+ * - `bands`: roll an expression, compare the total against thresholds.
+ * - `opposed`: roll an action against several challenge dice and count how many
  *   it beat. Single-total comparison cannot express this, and a whole family of
  *   solo games is built on it.
- * - `keyed`  — selected by a name rather than a number, so a deck draw can
+ * - `keyed`: selected by a name rather than a number, so a deck draw can
  *   resolve on a table.
  */
 export const Table = z

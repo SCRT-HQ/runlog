@@ -604,8 +604,8 @@ export function lintPack(pack: Pack): Diagnostic[] {
 
   // ── Score ───────────────────────────────────────────────────────────────
   //
-  // A dangling reference here does not stop a run — scoreOf is total and
-  // falls back to 0 or to wall time — so these are warnings, not the errors a
+  // A dangling reference here does not stop a run, scoreOf is total and
+  // falls back to 0 or to wall time, so these are warnings, not the errors a
   // dangling reference is everywhere else: the worst case is a scoreboard
   // that quietly reads zero, not a crash mid-session.
   const checkScore = (score: Score | undefined, path: string, modeId?: string) => {
@@ -657,7 +657,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
   //
   // A trigger on the pack rather than on a result has no result to hang from,
   // so only the points the run itself passes through can reach it. Anything
-  // else is silently dead — the end-of-run roll that never happens is exactly
+  // else is silently dead: the end-of-run roll that never happens is exactly
   // the bug a linter should catch before a player notices it missing.
   const globalPoints = new Set(["onEnterUnit", "onRunEnd", "onTimerExpired"]);
   pack.triggers?.forEach((t, i) => {

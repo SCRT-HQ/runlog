@@ -18,7 +18,7 @@ vi.mock("../storage/db.ts", () => ({
 /**
  * The Designer used to load whatever draft was last open and jump straight
  * into it, so pressing the header's Designer button after finishing one
- * pack landed you back inside it — not the blank start a second pack needs.
+ * pack landed you back inside it, not the blank start a second pack needs.
  * These render the real load effect (mocking only the storage it reads
  * from) and drive the door's buttons, because the bug lived in the
  * combination of what loaded and what got shown, not in either alone.

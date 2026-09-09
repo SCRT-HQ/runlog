@@ -1,4 +1,4 @@
-# Sunday Desk — the weekly review, one pass at a time.
+# Sunday Desk: the weekly review, one pass at a time.
 #
 # A Review is seven Passes in a fixed order: Collect, Process, Calendar
 # back, Calendar forward, Projects, Someday, Next actions. Each Pass has its
@@ -7,8 +7,8 @@
 # project gets the deep look; the Someday pass can throw one Curveball. A
 # short Review is three Passes: Collect, Process, Next actions.
 #
-# Written to show a run whose units are all different — each phase belongs
-# to one Pass by its number — a keyed table read from a card's rank, a
+# Written to show a run whose units are all different, each phase belongs
+# to one Pass by its number, a keyed table read from a card's rank, a
 # stopwatch on every unit, and a run that makes nothing, so no subject.
 
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json

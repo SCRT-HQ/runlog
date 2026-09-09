@@ -163,9 +163,9 @@ export function PublisherSection({ api }: { api: Api | null }) {
 }
 
 /**
- * The people in the publisher. An admin invites by email — WorkOS sends
+ * The people in the publisher. An admin invites by email, WorkOS sends
  * the mail, and accepting it through the usual sign-in makes them a
- * member — and can take an invitation back or a member out. A member
+ * member, and can take an invitation back or a member out. A member
  * sees who is in it. Every member can upload, list and see the ledger;
  * the founder alone sets up payouts.
  */
@@ -374,8 +374,8 @@ function HostedLicensing({ api }: { api: Api }) {
 
 /**
  * What the publisher has uploaded, and what it is listed at. Uploading
- * takes a pack from this device's library — the head and the summary the
- * catalog shows are computed here, the way the catalog would — and the
+ * takes a pack from this device's library, the head and the summary the
+ * catalog shows are computed here, the way the catalog would, and the
  * listing is free, or a price in whole dollars once payouts are set up.
  */
 export function PublisherPacks({ api, publisher }: { api: Api; publisher: PublisherView }) {

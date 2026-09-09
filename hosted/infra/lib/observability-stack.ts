@@ -18,7 +18,7 @@ import type { SiteStack } from "./site-stack";
  * takes both, built last, is not.
  *
  * One dashboard, named `runlog-<stage>`, and a handful of alarms that join
- * the API stack's own `Alarms` topic — the operator subscribes an address to
+ * the API stack's own `Alarms` topic: the operator subscribes an address to
  * that topic by hand, same as the alarm the API stack already owns.
  */
 /** How long Discord waits for an interaction's answer before it tells the member the application did not respond. */
@@ -230,7 +230,7 @@ export class ObservabilityStack extends Stack {
     // ---- the store ----
     // Named explicitly, rather than the default of every operation DynamoDB
     // has: these are the ones handlers/store.ts actually issues, and an
-    // alarm on a math expression is capped at ten individual metrics — the
+    // alarm on a math expression is capped at ten individual metrics, the
     // full operation list (fourteen) trips that cap.
     const tableOperations = [Operation.GET_ITEM, Operation.PUT_ITEM, Operation.UPDATE_ITEM, Operation.DELETE_ITEM, Operation.QUERY, Operation.BATCH_WRITE_ITEM, Operation.TRANSACT_WRITE_ITEMS];
     const storeHeading = new cloudwatch.TextWidget({ markdown: "## The store\nDynamoDB, and the sync bucket (S3's own metrics are daily).", width: 24, height: 1 });
@@ -327,7 +327,7 @@ export class ObservabilityStack extends Stack {
         threshold: Math.round(handlerTimeoutMs * 0.6),
         evaluationPeriods: 3,
       },
-      `The handler's p95 duration has stayed above ${Math.round(handlerTimeoutMs * 0.6)}ms (60% of its ${handlerTimeoutMs}ms timeout) for fifteen minutes. Something downstream — DynamoDB, S3, Stripe, WorkOS — is slow, or is about to start timing requests out.`,
+      `The handler's p95 duration has stayed above ${Math.round(handlerTimeoutMs * 0.6)}ms (60% of its ${handlerTimeoutMs}ms timeout) for fifteen minutes. Something downstream, DynamoDB, S3, Stripe, WorkOS, is slow, or is about to start timing requests out.`,
     );
 
     const handlerThrottled = alarm(
@@ -365,8 +365,8 @@ export class ObservabilityStack extends Stack {
 
     // One failure is one member looking at a reply that never came, so the
     // threshold is one. The job catches what it can and reports it as a
-    // failure to reply; what it cannot catch — a timeout, a start that
-    // never got going — is a Lambda error on the job itself.
+    // failure to reply; what it cannot catch, a timeout, a start that
+    // never got going, is a Lambda error on the job itself.
     const interactionFailed = alarm(
       "InteractionFailed",
       {
@@ -386,7 +386,7 @@ export class ObservabilityStack extends Stack {
         threshold: 1,
         evaluationPeriods: 1,
       },
-      "The bot's job function failed outright — most likely it timed out before the deferred reply was filled in, and a member is still looking at \"thinking\". It is invoked once per press, with no retry, so the press is lost; check its duration and the recent handler errors.",
+      "The bot's job function failed outright, most likely it timed out before the deferred reply was filled in, and a member is still looking at \"thinking\". It is invoked once per press, with no retry, so the press is lost; check its duration and the recent handler errors.",
     );
 
     const alarmStatus = new cloudwatch.AlarmStatusWidget({

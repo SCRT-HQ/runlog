@@ -7,7 +7,7 @@ import type { RunState } from "./types.ts";
  * Co-op here is the same-room, pass-the-device kind: nobody is identified, so
  * players are numbered by seating order and the roles walk around the table.
  * Doing it in the engine rather than the view keeps it a pure function of the
- * log — reopen the run tomorrow and the rotation has not lost its place.
+ * log: reopen the run tomorrow and the rotation has not lost its place.
  */
 
 export interface RoleHolder {
@@ -53,7 +53,7 @@ export function rolesForUnit(pack: Pack, state: RunState | null, unit?: number):
 /**
  * The seats whose turn it is to press, this unit: those holding a role the
  * pack marked `acts`. Null where the mode marks no role, which means any
- * seat acts — a table with no one in charge, or a solo mode.
+ * seat acts: a table with no one in charge, or a solo mode.
  */
 export function actingSeats(pack: Pack, state: RunState | null, unit?: number): number[] | null {
   const roles = rolesForUnit(pack, state, unit);

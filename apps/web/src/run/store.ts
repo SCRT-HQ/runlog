@@ -18,7 +18,7 @@ import { activeRunFor, forgetActive, setActiveRunFor, setLastActive, type LastAc
  * The device store is the real one: IndexedDB, the slot that says which
  * run each pack has open, and the sync bus that carries writes to other
  * devices. The memory store is for a run that must not outlive the
- * screen — a pack designer trying a draft, a player testing a pack — where
+ * screen, a pack designer trying a draft, a player testing a pack, where
  * nothing may be written, nothing may sync, and a draft with the same id
  * as a real pack must not touch that pack's runs.
  */

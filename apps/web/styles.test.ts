@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
  *
  * esbuild recovers from a syntax error by dropping the rule it cannot read
  * and printing a warning nobody reads. The build stays green while every rule
- * after the mistake is gone — which is exactly what happened when a merge lost
+ * after the mistake is gone, which is exactly what happened when a merge lost
  * a closing brace. So the same minifier is asked here, and any warning fails.
  */
 const here = dirname(fileURLToPath(import.meta.url));

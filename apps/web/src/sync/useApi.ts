@@ -7,8 +7,8 @@ import { apiBase } from "./config.ts";
  * The API, for a view that wants to ask it something directly.
  *
  * Null where there is nothing to ask: no client configured, or nobody
- * signed in. Views use it for the few things that are not sync — an
- * invitation, a member, the people list — and stay whole without it.
+ * signed in. Views use it for the few things that are not sync, an
+ * invitation, a member, the people list, and stay whole without it.
  */
 export function useApi(): Api | null {
   const account = useAccount();

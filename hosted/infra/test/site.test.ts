@@ -112,7 +112,7 @@ describe("the site", () => {
 
     /**
      * CloudFront treats all three TTLs at zero as caching disabled, and then
-     * refuses the compression settings outright — which failed the very first
+     * refuses the compression settings outright, which failed the very first
      * deploy, after the bucket and certificate had already been created.
      */
     it("does not ask for compression on a policy CloudFront would call disabled", () => {
@@ -182,7 +182,7 @@ describe("the site", () => {
 
   it("puts nothing between the edge and the bundle", () => {
     // Who may use the app is the app's question, answered by AuthKit. A
-    // function at the edge cannot verify that session, so there is none —
+    // function at the edge cannot verify that session, so there is none: 
     // the shared-password door this replaced lived exactly here.
     template.resourceCountIs("AWS::CloudFront::Function", 0);
   });

@@ -7,7 +7,7 @@ import { useHosted } from "./HostedProvider.tsx";
  * Once per version of the terms, for people signed in.
  *
  * The hosted file names the terms' version; the profile remembers which
- * one this account accepted. When they differ, this asks — over the app,
+ * one this account accepted. When they differ, this asks: over the app,
  * not instead of it, so what was on screen is still there behind. Nobody
  * anonymous is asked: they have agreed to nothing and hold nothing here.
  * If the server cannot be reached the gate stays out of the way; asking

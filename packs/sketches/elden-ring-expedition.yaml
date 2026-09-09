@@ -1,8 +1,8 @@
-# Expedition — a challenge pack for Elden Ring, for Runlog.
+# Expedition: a challenge pack for Elden Ring, for Runlog.
 #
 # A challenge pack that is its own adventure, region by region. Each Region
-# draws a handicap for the run, a target — a boss, a key item, a hunt of
-# three names, or a collection — and a vow to keep while you are there. The
+# draws a handicap for the run, a target, a boss, a key item, a hunt of
+# three names, or a collection, and a vow to keep while you are there. The
 # player names the target in their own words, and moves take their word on
 # deaths, targets done and vows kept. Nothing here knows the game's state.
 # It keeps the tally that a stream overlay keeps, and adds the dice.
@@ -66,7 +66,7 @@ states:
     short: OK
     scope: subject
     group: outcome
-    description: The target is settled — felled, found, hunted, or gathered.
+    description: The target is settled, felled, found, hunted, or gathered.
   skipped:
     label: Skipped
     short: --
@@ -278,7 +278,7 @@ moves:
       - { do: modCounter, counter: deaths, by: 1 }
   done:
     label: Target done
-    description: The region's target is settled — felled, found, hunted, or gathered. Leaves the region.
+    description: The region's target is settled, felled, found, hunted, or gathered. Leaves the region.
     when: anytime
     finalizes: true
     available:
@@ -322,7 +322,7 @@ phases:
         table: vow
         label: Draw the vow
       - kind: declareSubject
-        label: Name the target in your own words — the boss, the item, the three names, the count.
+        label: Name the target in your own words, the boss, the item, the three names, the count.
 
   - id: play
     label: Play the region

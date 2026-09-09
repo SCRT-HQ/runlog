@@ -48,7 +48,7 @@ export function toPdfDefinition(doc: Doc): TDocumentDefinitions {
   return {
     pageSize: "LETTER",
     pageMargins: [margin, margin, margin, margin + 10],
-    info: { title: doc.subtitle ? `${doc.title} — ${doc.subtitle}` : doc.title, creator: "Runlog" },
+    info: { title: doc.subtitle ? `${doc.title} - ${doc.subtitle}` : doc.title, creator: "Runlog" },
     defaultStyle: { font: "Literata", fontSize: base, lineHeight: 1.3, color: INK },
     footer: (page, pages) => ({
       columns: [

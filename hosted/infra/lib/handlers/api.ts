@@ -41,7 +41,7 @@ const MAX_SNAPSHOT_CHARS = 320;
  * own, and nothing is stored for anyone who has not signed in.
  *
  * Two conventions matter more than the routes. Every request is checked
- * first, and a bad or missing token is a 401 — never a 403. Nothing here
+ * first, and a bad or missing token is a 401, never a 403. Nothing here
  * answers 404 either: unknown routes are 410, a missing item is a 200 that
  * says so. CloudFront serves this API under the same domain as the app and
  * rewrites every 403 and 404 into the app's index page, so those two codes
@@ -417,15 +417,15 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   const method = event.requestContext.http.method.toUpperCase();
   const path = event.rawPath.replace(/\/+$/, "");
   // What a trace can be filtered by: the shape of the request, never its
-  // contents — no body, no token, no email belongs in an annotation.
+  // contents, no body, no token, no email belongs in an annotation.
   annotate({ method, route: path });
   const { store } = deps;
   const newRef = deps.ref ?? (() => randomBytes(10).toString("base64url").replace(/[-_]/g, "x").toUpperCase());
 
   /**
    * A paid sale, delivered: the master sealed under a fresh key for this
-   * buyer alone, the file kept, a token minted for the mail, and — for a
-   * buyer with an account — the key filed where sync will carry it.
+   * buyer alone, the file kept, a token minted for the mail, and, for a
+   * buyer with an account, the key filed where sync will carry it.
    */
   async function fulfil(sale: Sale, from: { email?: string; sessionId?: string }): Promise<Sale> {
     const product = await deps.listings.getProduct(sale.orgId, sale.packId);
@@ -489,8 +489,8 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   }
 
   // What the command line needs before it can sign in: which WorkOS client
-  // to run the device flow against. A client id is public — it is in every
-  // sign-in URL — and the CLI asking rather than carrying one means one
+  // to run the device flow against. A client id is public, it is in every
+  // sign-in URL, and the CLI asking rather than carrying one means one
   // package serves dev and production alike.
   if (method === "GET" && path === "/api/auth/cli") {
     return json(200, { clientId: deps.cliClientId ?? null, issuer: "https://api.workos.com" });
@@ -855,7 +855,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // `lastSeenAt` moves every time.
   /**
    * What a person has: what Stripe granted them, and what a WorkOS feature
-   * flag on their session grants — a flag named like a feature counts as
+   * flag on their session grants: a flag named like a feature counts as
    * that feature. The flags are remembered per person so a rule that reads
    * someone else's standing (the fee on a sale, for the publisher) sees them.
    */
@@ -906,7 +906,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
    * The server tier, as this copy offers it: at all, where there is a bot
    * to use it with; and for sale, where its release gate is open. Until
    * then the app shows the plan as coming, and the `server` feature flag
-   * on a session is the one way onto it — a flag named like the feature
+   * on a session is the one way onto it: a flag named like the feature
    * is the feature, the way a `plus` flag comps Plus. The publisher tier
    * has a gate of its own; an existing publisher keeps what it has.
    */
@@ -925,7 +925,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
 
   /**
    * The one gate: hosting a table. Moderated play on one device stays
-   * free; people on their own devices — an invitation, a race — need Plus
+   * free; people on their own devices, an invitation, a race, need Plus
    * where plans are on. Off, nothing is asked.
    */
   const plusFeature = deps.features?.plus ?? "plus";
@@ -933,7 +933,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!deps.gates) return null;
     const have = await grantsOf(caller.sub, caller.flags);
     if (have.includes(plusFeature)) return null;
-    return json(402, { error: "hosting a table — people in your run on their own devices — is part of Plus", plan: "plus", upgrade: true });
+    return json(402, { error: "hosting a table, people in your run on their own devices, is part of Plus", plan: "plus", upgrade: true });
   };
 
   // ---- billing: a customer, a Checkout, the Portal, and a re-read ----
@@ -1225,15 +1225,15 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const invite = await store.getInvite(token);
     if (!invite || invite.expiresAt < now()) return json(410, { error: "that invitation has expired or was withdrawn" });
     const profile = await store.touchProfile(caller.sub, now());
-    // Somebody already at the table — the owner opening their own link,
-    // say — does not spend it; the person it was sent to still can.
+    // Somebody already at the table, the owner opening their own link,
+    // say, does not spend it; the person it was sent to still can.
     const existing = await store.getSession(invite.sessionId);
     if (existing?.members.some((m) => m.sub === caller.sub)) return json(200, { sessionId: invite.sessionId, alreadyIn: true });
     // And it goes to the address it was sent to. The app's own snapshot of
     // the address is what is compared, which guards against the wrong
     // account by accident, not against a determined holder of the link.
-    // A fresh account may not have sent its snapshot yet — the profile page
-    // is where it used to happen — so the accept carries one too, and it
+    // A fresh account may not have sent its snapshot yet, the profile page
+    // is where it used to happen, so the accept carries one too, and it
     // is kept the same way the profile route would keep it.
     const body = parse(event);
     const carried = isRecord(body) && str(body["email"]) && EMAIL.test(body["email"].trim()) ? body["email"].trim() : "";
@@ -1627,8 +1627,8 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const stripe = deps.stripe ? await deps.stripe() : null;
     if (path === "/api/publishers/connect" && method === "POST") {
       if (!stripe) return json(200, { available: false });
-      // Stripe's refusals here are configuration, not faults — Connect not
-      // enabled on the platform, a country it does not serve — and its
+      // Stripe's refusals here are configuration, not faults, Connect not
+      // enabled on the platform, a country it does not serve, and its
       // words are the useful ones, so they come back as a 422.
       try {
         let account = mine.connectAccountId;

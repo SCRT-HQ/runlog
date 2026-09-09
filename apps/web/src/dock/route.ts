@@ -1,7 +1,7 @@
 import { appBase, hrefFor } from "../route.ts";
 /**
- * A dock's address: `#dock/controls/<runId>`. The run's remote — the next
- * move, the last result, undo — alone on the page, for a streaming app
+ * A dock's address: `#dock/controls/<runId>`. The run's remote, the next
+ * move, the last result, undo, alone on the page, for a streaming app
  * that keeps a signed-in web page docked beside its preview. Unlike a
  * widget it is not read by a live link: the dock is a second device at
  * the table, signed in as its owner, and the run must be on it.

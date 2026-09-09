@@ -6,8 +6,8 @@ import { effectiveEvents, type RunEvent } from "@runlog/engine";
  * A table sometimes hands out something that cannot be done today: the
  * mechanic needs a partner who is not here, the twist wants an ingredient
  * the pantry lacks. The pack's requirements catch the cases it foresaw;
- * this is for the rest. The draw is unmade the way anything is unmade —
- * an `Undone` naming its events — and a `Corrected` marker says why, so
+ * this is for the rest. The draw is unmade the way anything is unmade, 
+ * an `Undone` naming its events, and a `Corrected` marker says why, so
  * the log reads "drew again: no partner" rather than showing a roll that
  * quietly vanished. Then the same block runs once more.
  *
@@ -32,8 +32,8 @@ export function drawAgainEvents(draw: LastDraw, at: string, reason?: string): Ru
 }
 
 /**
- * Whether the draw is still the last thing that happened. Anything since —
- * a check, a move, an undo — and it is history, and the button goes away
+ * Whether the draw is still the last thing that happened. Anything since, 
+ * a check, a move, an undo, and it is history, and the button goes away
  * rather than reaching back past someone else's move.
  */
 export function drawIsLast(events: readonly RunEvent[], draw: LastDraw | null): boolean {

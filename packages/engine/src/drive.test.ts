@@ -14,7 +14,7 @@ import type { AnswerValue } from "./execute.ts";
  * A Discord bot plays a run one button press at a time, in a Lambda that
  * forgets everything between two presses: it cannot hold a call stack open
  * the way `playThrough` (and the app, in memory) can while waiting on a
- * roll. `drive`/`answer` are the primitives that make that possible — each
+ * roll. `drive`/`answer` are the primitives that make that possible: each
  * call does one thing and either finishes or hands back a `Pending` plain
  * enough to survive a trip through DynamoDB. These tests drive the demo
  * pack the same worked example `play.test.ts` uses, but one action at a
@@ -35,8 +35,8 @@ const T = (n: number) => new Date(Date.parse("2026-01-01T00:00:00.000Z") + n * 1
  * Drive one action to completion under autoRoll, answering anything it still
  * asks with the first eligible/offered choice.
  *
- * A roll never awaits once `ctx.random` is set — `obtainRoll` bypasses the
- * request entirely — but the demo pack's Kiln Check can land on a result
+ * A roll never awaits once `ctx.random` is set, `obtainRoll` bypasses the
+ * request entirely, but the demo pack's Kiln Check can land on a result
  * that hands the *target* to the player by rule (`resolveTarget, from:
  * choice`), which no amount of auto-rolling can answer for itself. A real
  * bot would face the same interruption; this is the same loop it would run.
@@ -54,7 +54,7 @@ function driveToCompletion(pack: Pack, events: readonly RunEvent[], action: Driv
 describe("agenda", () => {
   it("has nothing to offer before the first unit, and nothing once the run has ended", () => {
     // A caller deciding what button to show needs a menu even before there
-    // is a run to speak of — the bot's very first message offers "enter",
+    // is a run to speak of: the bot's very first message offers "enter",
     // not a crash because `nextStep` has no state to look at yet.
     expect(agenda(kiln, null, [])).toMatchObject({ phase: "setup", active: null, moves: [] });
 
@@ -82,7 +82,7 @@ describe("agenda", () => {
   });
 
   it("lists a rollTable step's own moves and due obligations, not a manual step's", () => {
-    // Unit 2's "check" phase is a rollTable step (unit 1 skips it) — the
+    // Unit 2's "check" phase is a rollTable step (unit 1 skips it): the
     // agenda for it should say `active.step.kind === "rollTable"` so a bot
     // knows to offer "roll" rather than a checklist or a declare button.
     const prefix = playThrough(kiln, [
@@ -104,7 +104,7 @@ describe("agenda", () => {
 describe("drive with autoRoll", () => {
   it("completes a table roll in one call, rolling from `createRandom()` rather than asking", () => {
     // With autoRoll on, `obtainRoll` never calls `need()` for this block at
-    // all — the whole roll (and whatever it triggers, here a chained roll on
+    // all: the whole roll (and whatever it triggers, here a chained roll on
     // the Form table) resolves in the single call, no `answer` round trip.
     const prefix = playThrough(kiln, [
       { enter: 1 },
@@ -157,7 +157,7 @@ describe("a block that awaits", () => {
     // Pending sits in DynamoDB between two Lambda invocations, so it has to
     // be plain, serializable data. If any field were a class instance or
     // something JSON drops, a resume that went through a real HTTP round
-    // trip would silently diverge from one answered in the same process —
+    // trip would silently diverge from one answered in the same process: 
     // exactly the kind of bug that would never show up in an in-memory test.
     const prefix = playThrough(kiln, [
       { enter: 1 },
@@ -166,7 +166,7 @@ describe("a block that awaits", () => {
       { step: "work" },
       { finalize: {} },
     ]).events;
-    // "breakOne" is a betweenUnits move that prompts chooseSubject — the
+    // "breakOne" is a betweenUnits move that prompts chooseSubject, the
     // demo pack's example of a block that asks a real question rather than
     // just rolling dice.
     const state = reduce(kiln, prefix);
@@ -262,7 +262,7 @@ describe("tick", () => {
     if (result.status !== "done") return;
     const after = agenda(kiln, reduce(kiln, [...prefix, ...result.events]), [...prefix, ...result.events]);
     expect(after.checklist[0]!.on).toBe(true);
-    // Still on the same step: ticking one box does not advance the flow —
+    // Still on the same step: ticking one box does not advance the flow, 
     // that is what a `{ step: true }` action, gated on every box being
     // ticked, is for.
     expect(after.active?.step.kind).toBe("manual");

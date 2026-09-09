@@ -1,4 +1,4 @@
-# Ladder Work — a sketch pack for Runlog.
+# Ladder Work: a sketch pack for Runlog.
 #
 # Entirely fictional. A training-log game: the dice pick the movement and the
 # loading, you do the work, the app keeps the tally and the rest clock.
@@ -6,13 +6,13 @@
 # Written to stress the OPPOSITE end of the schema from a dungeon-shaped pack.
 # The point is to prove the engine is not quietly built around one genre:
 #
-#   * no targeting at all      — nothing ever reaches back and damages earlier
+#   * no targeting at all, nothing ever reaches back and damages earlier
 #                                work, so the whole targeting section is absent
-#   * no decks, no journal     — both optional, and their absence must be fine
-#   * timers as a core surface — rest intervals are the mechanic, not a garnish
-#   * a hidden counter         — tracked, deliberately not shown
-#   * bar-display resources    — accumulated volume rather than tick boxes
-#   * fixed and rolled lengths — one mode of each
+#   * no decks, no journal, both optional, and their absence must be fine
+#   * timers as a core surface, rest intervals are the mechanic, not a garnish
+#   * a hidden counter, tracked, deliberately not shown
+#   * bar-display resources, accumulated volume rather than tick boxes
+#   * fixed and rolled lengths, one mode of each
 #
 # It also surfaces one genuine engine-level gap, noted at the bottom.
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json

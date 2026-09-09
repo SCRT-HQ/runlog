@@ -1,8 +1,8 @@
-# Pantry Roulette — cooking under constraint.
+# Pantry Roulette: cooking under constraint.
 #
 # A Service is one meal, cooked as a series of Courses. Each Course rolls a
 # Base (what it is built on), a Constraint (a rule about how it must be
-# made), and, after the first, a Kitchen roll — most of the time nothing,
+# made), and, after the first, a Kitchen roll: most of the time nothing,
 # sometimes a mishap that reaches back to a course already plated. Pantry is
 # the resource: every Course uses some of what you have, and at zero the
 # Service is over whatever was planned.

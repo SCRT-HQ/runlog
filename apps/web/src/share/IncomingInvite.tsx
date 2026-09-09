@@ -8,7 +8,7 @@ import { apiBase } from "../sync/config.ts";
  * An invitation that arrived in a link.
  *
  * `?join=<token>` is read once, taken off the address bar so a reload does
- * not re-offer it, and kept in sessionStorage until it has been acted on —
+ * not re-offer it, and kept in sessionStorage until it has been acted on: 
  * because acting on it usually means signing in first, and sign-in is a
  * round trip through WorkOS that comes back to a fresh page. What the link
  * is for is asked of the API without an account, so the banner can say

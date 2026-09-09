@@ -7,8 +7,8 @@ import { AccountBadge } from "./AccountBadge.tsx";
  * The first paint, before WorkOS has been asked.
  *
  * Static markup is that moment exactly: effects have not run. It has to show
- * the app whether or not a client is configured — signing in is an offer, not
- * a door — and the header has to be right from the start, because a button
+ * the app whether or not a client is configured, signing in is an offer, not
+ * a door, and the header has to be right from the start, because a button
  * that appears a second later is a header that shuffles.
  */
 describe("the account", () => {

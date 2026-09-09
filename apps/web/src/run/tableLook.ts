@@ -13,7 +13,7 @@ import type { Table } from "@runlog/rules-schema";
  */
 export interface TableLine {
   id: string;
-  /** "21–40", "80+", "up to 19". */
+  /** "21-40", "80+", "up to 19". */
   range: string;
   /** The lowest number that lands on this line, for the keypad. */
   value: number;
@@ -24,7 +24,7 @@ export function tableLines(table: Table, dice: { min: number; max: number } | nu
   if (table.resolution === "lookup") {
     return table.entries.map((e) => ({
       id: e.id,
-      range: e.range[0] === e.range[1] ? String(e.range[0]) : `${e.range[0]}–${e.range[1]}`,
+      range: e.range[0] === e.range[1] ? String(e.range[0]) : `${e.range[0]}-${e.range[1]}`,
       value: e.range[0],
       title: e.title ?? e.text,
     }));
@@ -32,7 +32,7 @@ export function tableLines(table: Table, dice: { min: number; max: number } | nu
   if (table.resolution === "bands") {
     return table.entries.map((e) => {
       const lo = e.gte ?? dice?.min ?? 1;
-      const range = e.gte !== undefined && e.lte !== undefined ? `${e.gte}–${e.lte}` : e.gte !== undefined ? `${e.gte}+` : e.lte !== undefined ? `up to ${e.lte}` : "any";
+      const range = e.gte !== undefined && e.lte !== undefined ? `${e.gte}-${e.lte}` : e.gte !== undefined ? `${e.gte}+` : e.lte !== undefined ? `up to ${e.lte}` : "any";
       return { id: e.id, range, value: lo, title: e.title ?? e.text };
     });
   }

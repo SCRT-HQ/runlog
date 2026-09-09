@@ -1,4 +1,4 @@
-# Rocket League: Showdown — a moderated race for mechanics.
+# Rocket League: Showdown, a moderated race for mechanics.
 #
 # Nobody can run an app while they are in a match, so somebody else does.
 # The moderator holds the device; the players are a roster. Each Match the
@@ -217,7 +217,7 @@ phases:
                 - { do: rollOn, table: grandChampion }
                 - { do: rollOn, table: ssl }
       - kind: declareSubject
-        label: Call the match — playlist, and what everyone is queueing — so the log reads back.
+        label: Call the match, playlist, and what everyone is queueing, so the log reads back.
 
   - id: race
     label: Race

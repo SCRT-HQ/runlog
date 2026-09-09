@@ -13,14 +13,14 @@ export { currentlyDue };
  * Playing a pack, headlessly.
  *
  * A pack's fixtures could only replay a hand-written event log and check the
- * state that came out — never actually run a table roll, an action list, an
+ * state that came out, never actually run a table roll, an action list, an
  * obligation or a move. That leaves the entire flow untested: an author could
  * break `nextStep`, a trigger, or a move's availability and no fixture would
  * notice, because nothing had ever driven them.
  *
- * `playThrough` drives a pack the same way the app does — `enterUnit`,
+ * `playThrough` drives a pack the same way the app does, `enterUnit`,
  * `declareSubject`, a table roll via `executeTableRoll`, a move via
- * `executeMove`, an obligation via `executeObligation`, `finalizeUnit` — from
+ * `executeMove`, an obligation via `executeObligation`, `finalizeUnit`, from
  * a short script, answering the engine's interruptions from a table of
  * answers (or, for a seeded run, by rolling from the seed itself). What comes
  * out is exactly what a real run produces: an event log and the state folded
@@ -98,7 +98,7 @@ export interface PlayResult {
 
 /**
  * Thrown when the engine asks for something the script never answers and no
- * seed can supply — an unhandled roll, an unanswered prompt, a judgment the
+ * seed can supply: an unhandled roll, an unanswered prompt, a judgment the
  * script forgot. Names the request and what the script did offer, so an
  * author fixing the fixture is not left guessing.
  */
@@ -147,8 +147,8 @@ function countRolls(events: readonly RunEvent[], purpose: string): number {
 }
 
 /**
- * Drive one action and answer the engine's interruptions for it — a table
- * roll, an action list, a move, an obligation — from a script step's table
+ * Drive one action and answer the engine's interruptions for it, a table
+ * roll, an action list, a move, an obligation, from a script step's table
  * of answers, exactly as the app's own request/answer loop would if a
  * player supplied them one at a time.
  */
@@ -169,7 +169,7 @@ function runBlock(
 ): RunEvent[] {
   // Queues, one list per key the script gave, consumed in the order requests
   // of that shape are asked. An exact request key is checked first and is
-  // never drawn from these — it answers itself, however many times it recurs.
+  // never drawn from these, it answers itself, however many times it recurs.
   const queues = new Map<string, PlayAnswerValue[]>();
   for (const [key, value] of Object.entries(opts.stepAnswers ?? {})) {
     queues.set(key, Array.isArray(value) ? [...value] : [value]);
@@ -332,7 +332,7 @@ export function playThrough(pack: Pack, script: readonly PlayStep[], options: Pl
       const [phaseId, indexPart] = raw.step.split("#");
       const active = nextStep(pack, state);
       if (!active) {
-        throw new PlayError(`script step #${index} ("${raw.step}"): no active step — the unit is finished or has not begun`, { step: index });
+        throw new PlayError(`script step #${index} ("${raw.step}"): no active step, the unit is finished or has not begun`, { step: index });
       }
       if (active.phase.id !== phaseId || (indexPart !== undefined && active.index !== Number(indexPart))) {
         throw new PlayError(

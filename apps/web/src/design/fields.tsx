@@ -6,7 +6,7 @@ import type { Diagnostic } from "@runlog/rules-schema";
  *
  * Two things they all share. Help text comes from the schema's own field
  * descriptions rather than being written again here, so the sentence an author
- * reads in the editor is the same one their code editor shows on hover — and
+ * reads in the editor is the same one their code editor shows on hover, and
  * neither can drift from the other. And every field can carry the linter's
  * diagnostics for its own path, so a problem is reported *at* the thing that
  * caused it instead of in a list at the bottom.

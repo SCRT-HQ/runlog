@@ -75,7 +75,7 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
   if (pending) {
     const r = pending.request;
     const what = r.kind === "roll" ? `Roll ${r.dice}${r.label ? ` for ${r.label}` : ""}` : r.kind === "ask" ? r.question : r.label;
-    fields.push({ name: "Waiting on", value: clip(`${what} — or Undo, to take the move back.`) });
+    fields.push({ name: "Waiting on", value: clip(`${what} - or Undo, to take the move back.`) });
   }
   const constraints = active ? constraintsFor(pack, state, constrainedByOf(active.step)) : [];
   if (constraints.length > 0) fields.push({ name: "The game has already had its say", value: clip(constraints.map((c) => `• ${c}`).join("\n")) });
@@ -101,7 +101,7 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
         const hits = hitsOn(pack, state, s.id).map((h) => h.table);
         const states = s.states.map((st) => pack.states?.[st]?.short ?? pack.states?.[st]?.label ?? st);
         const about = [s.type && s.type !== name ? s.type : s.type ? null : "undeclared", hits.length > 0 ? `hit by ${hits.join(", ")}` : null, states.length > 0 ? `[${states.join(" ")}]` : null].filter((x): x is string => x !== null);
-        return { name, value: about.join(" · ") || "—" };
+        return { name, value: about.join(" · ") || "-" };
       }),
     ...Object.entries(state.counters ?? {}).map(([cid, value]) => ({ name: pack.counters?.[cid]?.label ?? cid, value: String(value) })),
     ...Object.entries(state.resources ?? {}).map(([rid, value]) => ({ name: pack.resources?.[rid]?.label ?? rid, value: `${value}${pack.resources?.[rid]?.max !== undefined ? ` / ${pack.resources[rid]!.max}` : ""}` })),
@@ -249,8 +249,8 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
 /**
  * What to say in the thread about a move: the lines, with what kind of
  * thing each is in bold ("**Twist** No music…", "**Declared** caffeine"),
- * and, apart from them, the moment that deserves a colored bar — a unit
- * begun or closed — as a mark. The rolls keep their dice.
+ * and, apart from them, the moment that deserves a colored bar, a unit
+ * begun or closed, as a mark. The rolls keep their dice.
  */
 export function lineFor(pack: Pack, before: RunState, after: RunState, produced: readonly RunEvent[]): { text: string | null; mark: Mark | null } {
   const parts: string[] = [];

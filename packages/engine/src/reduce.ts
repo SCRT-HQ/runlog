@@ -102,12 +102,12 @@ function matches(event: RunEvent, selector: EventSelector): boolean {
  * happen*. Consider a check that itself triggers the very consequence the
  * streak is watching for: within one unit the consequence resolves first, and
  * the phase completes after it. Applying reset and increment in bare event
- * order would leave the counter at 1 when it should be 0 — the streak plainly
+ * order would leave the counter at 1 when it should be 0: the streak plainly
  * broke.
  *
  * So a reset dominates the unit it occurs in: once something resets a counter,
  * further increments from that same unit are suppressed. This keeps the
- * obvious authoring — increment on the phase, reset on the consequence —
+ * obvious authoring, increment on the phase, reset on the consequence, 
  * meaning what an author expects it to mean.
  */
 function applyCounters(

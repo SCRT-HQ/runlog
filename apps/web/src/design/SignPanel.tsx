@@ -21,7 +21,7 @@ import { docToPdf } from "../docs/pdfEngine.ts";
  *
  * Nothing here is behind a paid tier. Signing is the trust system and every
  * author should use it; sealing a copy yourself is the free, self-hosted
- * path. The hosted ledger — who bought what, re-issue, revoke — is the paid
+ * path. The hosted ledger, who bought what, re-issue, revoke, is the paid
  * one and lives on the publisher page when it exists.
  *
  * Either file can go out as a distribution bundle: a zip with the pack and

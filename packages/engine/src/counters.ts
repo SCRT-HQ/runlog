@@ -4,8 +4,8 @@ import type { RunState } from "./types.ts";
 /**
  * Counter thresholds that have come due.
  *
- * A counter can carry a trigger — "six quiet turns in a row and the game comes
- * for you" — but firing one means running actions, and actions may need a die
+ * A counter can carry a trigger, "six quiet turns in a row and the game comes
+ * for you", but firing one means running actions, and actions may need a die
  * roll or a decision from the player. The reducer is pure and total by design,
  * so it cannot do that.
  *
@@ -29,7 +29,7 @@ export interface PendingTrigger {
  *
  * A once-per-run trigger is keyed by the run, so it never returns. Anything
  * else is keyed by the unit, which means "at most once per unit while the
- * threshold holds" — without that a trigger whose condition stays true would
+ * threshold holds", without that a trigger whose condition stays true would
  * fire on every render, forever.
  */
 export function triggerKey(

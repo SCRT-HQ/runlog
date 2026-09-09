@@ -17,7 +17,7 @@ import { elsewhere, pickUp, runLine, runTitle } from "./home.ts";
  * came with) and a busy one sees several. Nothing here is a second copy of
  * the shelf; each card is one press to somewhere.
  *
- * The continue card is this device's own run — Pick up, in review, kept
+ * The continue card is this device's own run, Pick up, in review, kept
  * coming back as the same run the account card opened, so the two were
  * merged into one. Where the account's last-touched run is a different
  * run than this device's (played from somewhere else since), a quiet
@@ -88,7 +88,7 @@ export function HomeStrip<P extends { id: string; title: string }>({
     void loadCatalog().then((all) => {
       if (!live) return;
       // The test bench is never "new" here, whether or not this copy shows
-      // it in the catalog at all — it is not a pack anyone is meant to
+      // it in the catalog at all, it is not a pack anyone is meant to
       // stumble into.
       const out = all.filter((e) => !here.has(e.id) && !e.bench);
       out.sort((a, b) => (a.source === b.source ? 0 : a.source === "listing" ? -1 : 1));

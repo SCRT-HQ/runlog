@@ -4,7 +4,7 @@ import { parsePack, type ParseResult } from "./parse.ts";
 /**
  * Loading packs from text.
  *
- * YAML is the authoring format — hand-writing a hundred-entry table in JSON is
+ * YAML is the authoring format: hand-writing a hundred-entry table in JSON is
  * miserable, and comments matter when you are transcribing a rulebook. JSON is
  * the distribution format, because it is what the app stores and what a
  * release pipeline can hash. Both land in the same validator.

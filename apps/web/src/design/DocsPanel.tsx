@@ -9,7 +9,7 @@ import { docToPdf } from "../docs/pdfEngine.ts";
  * Every document is written from the draft as it stands, so it is never
  * behind the rules. The PDF is the one to hand to people; HTML is the same
  * document for a browser; Markdown is for editing or pasting. The
- * summary is what the catalog will show — worth a look before publishing,
+ * summary is what the catalog will show: worth a look before publishing,
  * since it is the first thing a stranger reads.
  */
 export function DocsPanel({ pack }: { pack: Pack | null }) {

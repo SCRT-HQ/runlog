@@ -12,7 +12,7 @@ import { appUrl, configuredClientId } from "./config.ts";
  * The app never needs an account: everything it does happens on this machine,
  * and a copy on disk or on a public page has nobody to sign in with. Where a
  * build does know an AuthKit client, signing in is an offer in the header, not
- * a door — it unlocks what a server adds (sync, on by default once you have
+ * a door, it unlocks what a server adds (sync, on by default once you have
  * signed in; a switch on this device turns it off) and gates nothing.
  * The first paint is always the app; WorkOS is asked in the background.
  *
@@ -67,8 +67,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     const returning = /[?&]code=/.test(location.search);
 
     // Where to come back to. Sign-in leaves the page and returns to the
-    // app's bare address, which would lose a deep link — a widget, a guide
-    // page, a dock's address in a streaming app — so the hash rides along
+    // app's bare address, which would lose a deep link, a widget, a guide
+    // page, a dock's address in a streaming app, so the hash rides along
     // as `state` and is put back on return. The value comes back through a
     // URL nobody signs, so only a hash is accepted, and only ever set as
     // one: a hash cannot send the page anywhere else.
@@ -86,7 +86,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       // than in a cookie on api.workos.com. That cookie is third-party from
       // here, and browsers increasingly refuse it, so a reload came back
       // signed out; localStorage survives. WorkOS calls this development-only
-      // because a script on the page could read the token — and no script
+      // because a script on the page could read the token, and no script
       // runs on this page but our own, the edge's policy sees to that. The
       // proper fix is a custom auth domain, which makes the cookie
       // first-party; until then this is the trade, made knowingly.

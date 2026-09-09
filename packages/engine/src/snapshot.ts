@@ -26,7 +26,7 @@ import type { RunState } from "./types.ts";
  * whole travel only where they may be quoted.
  *
  * Lives in the engine, not the app, so a server that never renders
- * anything — the Discord bot's Lambda, say — can write the same snapshot
+ * anything, the Discord bot's Lambda, say, can write the same snapshot
  * the owner's browser would, from the same event log, with no DOM in
  * reach anywhere in the call.
  */
@@ -47,7 +47,7 @@ export interface LiveSnapshot {
   where: string | null;
   /** The step in hand, on its own, and the unit's phases with where each stands: what the player's own screen lists. */
   step: string | null;
-  /** The current step's `kind` — `"manual"`, `"declareSubject"`, and so on; null with no step. Absent from snapshots written before it was carried. */
+  /** The current step's `kind`-`"manual"`, `"declareSubject"`, and so on; null with no step. Absent from snapshots written before it was carried. */
   stepKind?: string | null;
   phases: Array<{
     id: string;
@@ -61,7 +61,7 @@ export interface LiveSnapshot {
   units?: Array<{ unit: number; phases: Array<{ id: string; label: string; results: string[] }> }>;
   /**
    * A rule drawn earlier this unit that the current step must honor, in the
-   * pack's own words — the same lines the player's own screen shows in
+   * pack's own words: the same lines the player's own screen shows in
    * front of them while they work. Empty off a step with nothing to honor,
    * or one with no `constrainedBy` table. Absent from snapshots written
    * before it was carried.
@@ -83,7 +83,7 @@ export interface LiveSnapshot {
   /** Newest first, numbered from the start. */
   log: Array<{ n: number; unit: number; where: string; hit: number | null; text: string }>;
   /**
-   * Every result rolled this unit, in the order the dice landed on them —
+   * Every result rolled this unit, in the order the dice landed on them: 
    * "this unit so far" for a watcher, and a table a manual step draws its
    * constraints from may be rolled more than once. Absent from snapshots
    * written before it was carried.
@@ -95,7 +95,7 @@ export interface LiveSnapshot {
   race?: RaceSnapshot;
   /**
    * The paper a watcher may read: the pack's summary and the mode's, as
-   * the summary tells them — the shape of the game, never a rule — so a
+   * the summary tells them, the shape of the game, never a rule, so a
    * link to a pack that may not travel still says what is being played.
    * Written by the owner's device with the snapshot; the server reads no pack.
    */
@@ -178,8 +178,8 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
   const step = nextStep(pack, state);
   const stepLabel = step ? ("label" in step.step && step.step.label ? step.step.label : step.step.kind === "rollTable" ? (pack.tables[step.step.table]?.title ?? step.step.table) : step.phase.label) : null;
   // Which phase each of a unit's results belongs under. A table one of a
-  // phase's steps rolls is that phase's; a table no step rolls — one a
-  // result triggered, a setback aimed at an earlier piece — belongs to the
+  // phase's steps rolls is that phase's; a table no step rolls, one a
+  // result triggered, a setback aimed at an earlier piece, belongs to the
   // phase whose roll led to it, which is the one before it in the log.
   const rolledBy = new Map<string, string>();
   for (const phase of activePhases(pack, state)) for (const st of phase.steps) if (st.kind === "rollTable" && !rolledBy.has(st.table)) rolledBy.set(st.table, phase.id);
@@ -208,7 +208,7 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
         .filter((x) => x.phase === phase.id)
         .map(({ outcome: o }) => {
           const own = rolledBy.get(o.table) === phase.id;
-          const hit = o.targetSubject !== null && o.targetSubject !== undefined ? ` — hit #${o.targetSubject}` : "";
+          const hit = o.targetSubject !== null && o.targetSubject !== undefined ? ` - hit #${o.targetSubject}` : "";
           return own && !hit ? entryTextOf(pack, o) : `${pack.tables[o.table]?.title ?? o.table}${hit}: ${entryTextOf(pack, o)}`;
         }),
       ...(phase.steps.some((st) => st.kind === "declareSubject") && subject?.type ? [subject.type] : []),
@@ -252,7 +252,7 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
       text: entryTextOf(pack, o),
     }));
   const latest = log[0] ? { where: log[0].where, text: log[0].text } : null;
-  // Every result this unit, in the order the dice landed on them — a
+  // Every result this unit, in the order the dice landed on them, a
   // table rolled twice (an extra roll owed) shows both, oldest first,
   // for "this unit so far" rather than the whole run's log.
   const unitResults = state.outcomes

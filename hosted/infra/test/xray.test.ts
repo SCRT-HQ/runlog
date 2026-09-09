@@ -5,7 +5,7 @@ import { annotate, traced, tracedCalls } from "../lib/handlers/xray";
  * A test run and the CLI have no X-Ray daemon behind them, and never
  * should need one: `AWS_XRAY_DAEMON_ADDRESS` and `_X_AMZN_TRACE_ID` are
  * both things the Lambda runtime sets, never a local shell. Everything
- * here confirms that outside that runtime, wrapping is a plain no-op —
+ * here confirms that outside that runtime, wrapping is a plain no-op: 
  * the same client, the same calls, nothing extra to fail without a
  * daemon.
  */

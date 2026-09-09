@@ -42,8 +42,8 @@ export function isLocked(pack: Pack, subject: Subject): boolean {
 }
 
 /**
- * The label a player would write on the thing itself — a file name, a layer,
- * a track — so the board state survives outside the app.
+ * The label a player would write on the thing itself, a file name, a layer,
+ * a track, so the board state survives outside the app.
  */
 /** What a subject is called: its own name, or its noun and number. */
 export function subjectName(pack: Pack, subject: Pick<Subject, "id" | "name">): string {

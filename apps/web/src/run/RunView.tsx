@@ -46,7 +46,7 @@ import { useRace } from "./useRace.ts";
  * Playing a run.
  *
  * Every noun on screen comes from the pack's vocabulary, and every step comes
- * from its declared flow. Nothing here knows what kind of game it is hosting —
+ * from its declared flow. Nothing here knows what kind of game it is hosting: 
  * which is the same claim the format makes, held to to the last label.
  */
 export function RunView({
@@ -65,7 +65,7 @@ export function RunView({
    */
   bench?: { from: string; onLeave: () => void };
   /**
-   * The remote alone — the next move, the last result, undo — as a page
+   * The remote alone, the next move, the last result, undo, as a page
    * of its own, for a streaming app's dock. The same controls the floating
    * window draws, on a page rather than in a window the browser floats;
    * it plays the run like any device, but announces nothing, since the
@@ -165,14 +165,14 @@ export function RunView({
    *
    * The engine moves on the instant a roll is answered, so the dice and the
    * result would otherwise vanish together. The answer is still committed
-   * as the engine sees fit — a receipt is a record, not a hold on the game —
+   * as the engine sees fit, a receipt is a record, not a hold on the game, 
    * but the step's rolls stay on screen, in order, with the next roll's
    * keypad beneath them, until "Carry on" closes the step.
    *
    * Outcomes are the signal: whatever the run had not resolved before an
    * answer, and has now, is what that answer did. Measured from the count
    * rather than the request, so a machine roll with auto-roll on, or a move
-   * that resolves a table, gets a receipt too — just one without dice.
+   * that resolves a table, gets a receipt too, just one without dice.
    */
   const [receipts, setReceipts] = useState<RollReceipt[]>([]);
   const sync = useSync();
@@ -367,7 +367,7 @@ export function RunView({
         <aside className="margin">
           <div className="stageNo">
             <small>{pack.modes[state.mode]?.label ?? state.mode}</small>
-            {pack.vocabulary.unit.one} {state.unit || "—"}
+            {pack.vocabulary.unit.one} {state.unit || "-"}
           </div>
           {state.unit > 0 && <ClockPanel pack={pack} run={run} state={state} />}
           <Flow pack={pack} run={run} state={state} />
@@ -485,8 +485,8 @@ export function RunView({
 /* ------------------------------------------------------------------ */
 
 /**
- * The strip over a test run. It says what this is — a trial that keeps
- * nothing — and holds the two things a tester wants: to start the same
+ * The strip over a test run. It says what this is, a trial that keeps
+ * nothing, and holds the two things a tester wants: to start the same
  * pack over, and to go back to where they were testing from.
  */
 function BenchBar({ pack, bench, onRestart }: { pack: Pack; bench: { from: string; onLeave: () => void }; onRestart?: () => void }) {
@@ -559,7 +559,7 @@ export function Setup({
   const seated = Math.min(Math.max(players, minPlayers), maxPlayers);
   /**
    * The best of what is already here, so far. A first run is not told it
-   * has no best — the line only appears once there is one to beat.
+   * has no best: the line only appears once there is one to beat.
    */
   const scored = useMemo(() => scoresOf(pack, others, Date.now()), [pack, others]);
   const best = bestOf(scored);
@@ -695,7 +695,7 @@ export function Setup({
         {moderated && (
           <>
             <h3 className="sectionTitle">
-              Contestants <span className="muted">{moderated.contestants.min}–{moderated.contestants.max}</span>
+              Contestants <span className="muted">{moderated.contestants.min}-{moderated.contestants.max}</span>
             </h3>
             <p className="muted small">
               You run the {v.run.one.toLowerCase()} from this device; they race it. Names, not accounts: anyone who can hear you can play.
@@ -1330,7 +1330,7 @@ function Winners({ run, state }: { run: ReturnType<typeof useRun>; state: RunSta
                         className={`cell ${mine ? "won" : ""}`}
                         disabled={!editable || (!mine && !canTake)}
                         aria-pressed={Boolean(mine)}
-                        title={mine ? `${c.name} +${mine.points} — press to take it back` : `${c.name} finished it`}
+                        title={mine ? `${c.name} +${mine.points} - press to take it back` : `${c.name} finished it`}
                         onClick={press}
                       >
                         {mine ? `+${mine.points}${first && ch.awards.length > 1 ? " ★" : ""}` : "·"}
@@ -1348,7 +1348,7 @@ function Winners({ run, state }: { run: ReturnType<typeof useRun>; state: RunSta
   );
 }
 
-/** "2nd" from 2, "11th" from 11 — the teens are the exception the mod-10 rule misses. */
+/** "2nd" from 2, "11th" from 11: the teens are the exception the mod-10 rule misses. */
 function ordinal(n: number): string {
   const teens = n % 100;
   if (teens >= 11 && teens <= 13) return `${n}th`;
@@ -1507,7 +1507,7 @@ function Moves({ run, pack }: { run: ReturnType<typeof useRun>; pack: Pack }) {
 /**
  * Who is holding what, this unit.
  *
- * Co-op here is the same-room kind, so nobody is named — people are numbered
+ * Co-op here is the same-room kind, so nobody is named: people are numbered
  * round the table and the roles walk with them. Shown as a panel rather than a
  * line of text because whoever has just been handed the device needs to find
  * it at a glance.
@@ -1602,7 +1602,7 @@ function Board({
                 }}
                 onBlur={(e) => {
                   // Clicking Save moves focus inside this row, and that must
-                  // not be read as clicking away — otherwise the edit is
+                  // not be read as clicking away, otherwise the edit is
                   // discarded a moment before the button it landed on fires.
                   if (!e.currentTarget.closest(".subjectRow")?.contains(e.relatedTarget)) {
                     stopEditing();
@@ -1645,7 +1645,7 @@ function Board({
                 <span key={id} className="chip state" title={pack.states?.[id]?.description}>
                   {pack.states?.[id]?.label ?? id}
                   {onCorrect && !s.removed && (
-                    <button className="chipX" title="Take this state off — a correction, written to the log" onClick={() => onCorrect(s.id, id, false)}>
+                    <button className="chipX" title="Take this state off: a correction, written to the log" onClick={() => onCorrect(s.id, id, false)}>
                       ×
                     </button>
                   )}
@@ -1662,7 +1662,7 @@ function Board({
                   className="chipAdd"
                   value=""
                   aria-label={`Mark ${v.subject.one} ${s.id}`}
-                  title="Put a state on it by hand — a correction, written to the log"
+                  title="Put a state on it by hand, a correction, written to the log"
                   onChange={(e) => e.target.value && onCorrect(s.id, e.target.value, true)}
                 >
                   <option value="">mark…</option>
@@ -1750,13 +1750,13 @@ function Trackers({ pack, state, onNudge }: { pack: Pack; state: RunState; onNud
           <strong>{def.label}</strong>
           <span className="nudge">
             {onNudge && (
-              <button className="ghost tiny" title="One fewer — a correction, written to the log" onClick={() => onNudge(id, -1)}>
+              <button className="ghost tiny" title="One fewer, a correction, written to the log" onClick={() => onNudge(id, -1)}>
                 −
               </button>
             )}
             <span className="muted num">{state.counters[id] ?? def.initial}</span>
             {onNudge && (
-              <button className="ghost tiny" title="One more — a correction, written to the log" onClick={() => onNudge(id, 1)}>
+              <button className="ghost tiny" title="One more: a correction, written to the log" onClick={() => onNudge(id, 1)}>
                 +
               </button>
             )}
@@ -1825,7 +1825,7 @@ function Flow({
               aria-current={current ? "step" : undefined}
               title={skipped ? (describeSkip(pack, phase) ?? undefined) : undefined}
             >
-              <span className="idx">{current ? "▸" : skipped ? "–" : i + 1}</span>
+              <span className="idx">{current ? "▸" : skipped ? "-" : i + 1}</span>
               <span>
                 {phase.label}
                 {why && <span className="why">{why}</span>}
@@ -1896,7 +1896,7 @@ function Timeline({ pack, state }: { pack: Pack; state: RunState }) {
               <div>
                 <span className="where">
                   {pack.vocabulary.unit.one} {o.unit}, {table?.title ?? o.table}
-                  {hit && ` — ${hitLabel(pack, state, o.targetSubject!)}`}
+                  {hit && ` - ${hitLabel(pack, state, o.targetSubject!)}`}
                 </span>
                 <p>{entry?.title ?? entry?.text ?? o.entryId}</p>
               </div>
@@ -1912,7 +1912,7 @@ function Timeline({ pack, state }: { pack: Pack; state: RunState }) {
  * A seed someone can read down the phone to a friend.
  *
  * Two words and a number, because the seed has to survive being spoken aloud
- * and typed in by somebody else — which a hex string does not.
+ * and typed in by somebody else, which a hex string does not.
  */
 function coinSeed(): string {
   const first = ["long", "cold", "slow", "half", "deep", "low", "dry", "loud"];

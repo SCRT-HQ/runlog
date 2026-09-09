@@ -5,7 +5,7 @@ import { describe } from "./describe.ts";
  * Help text in the editor is the schema's own sentence.
  *
  * The alternative is a second set of labels written by hand, drifting from the
- * day they are written — and the copy in the app, which is where a beginner
+ * day they are written, and the copy in the app, which is where a beginner
  * actually is, would be the one nobody remembers to update. These tests are
  * really about the path walker: it has to survive maps, arrays and the
  * discriminated unions the format is built from.

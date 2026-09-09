@@ -57,7 +57,7 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
           <h1 className="liveTitle">{s.packTitle}</h1>
           <p className="muted">
             {s.runName ? `${s.runName} · ` : ""}
-            {s.mode} · {s.status === "ended" ? `ended${s.ending ? `: ${s.ending}` : ""}` : `${s.words.unit} ${s.unit || "—"}`}
+            {s.mode} · {s.status === "ended" ? `ended${s.ending ? `: ${s.ending}` : ""}` : `${s.words.unit} ${s.unit || "-"}`}
             {stale ? " · reconnecting…" : ""}
           </p>
         </div>
@@ -107,7 +107,7 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
               <ol className="flow">
                 {s.phases.map((phase, i) => (
                   <li key={phase.id} className={phase.state === "todo" ? "" : phase.state} aria-current={phase.state === "current" ? "step" : undefined}>
-                    <span className="idx">{phase.state === "current" ? "▸" : phase.state === "skipped" ? "–" : i + 1}</span>
+                    <span className="idx">{phase.state === "current" ? "▸" : phase.state === "skipped" ? "-" : i + 1}</span>
                     <span>
                       {phase.label}
                       {phase.state === "current" && s.step && s.step !== phase.label && <span className="muted"> · {s.step}</span>}
@@ -182,7 +182,7 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
                       )}
                       <span className="where">
                         {line.where}
-                        {line.hit !== null && ` — hit #${line.hit}`}
+                        {line.hit !== null && ` - hit #${line.hit}`}
                       </span>
                       <p>{line.text}</p>
                     </div>

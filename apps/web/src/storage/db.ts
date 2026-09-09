@@ -4,7 +4,7 @@
  * Everything here stays in the browser unless the player signs in, which
  * turns sync on for this device (a switch turns it back off). That default is not incidental: a pack may be a private
  * transcription of a rulebook someone paid for, and a run log is a record of
- * their own work. Neither leaves the machine on its own — and when sync is
+ * their own work. Neither leaves the machine on its own, and when sync is
  * on, a pack's text still only travels if the player says so for that pack.
  *
  * IndexedDB rather than localStorage because runs are event logs that grow all
@@ -177,7 +177,7 @@ function open(): Promise<IDBDatabase | null> {
         db.createObjectStore(RUNS, { keyPath: "runId" }).createIndex(BY_PACK, "packId");
       } else if (e.oldVersion < 4) {
         // A key path cannot be changed in place. Read every run out of the
-        // old store, drop it, make the new one, and put them back with ids —
+        // old store, drop it, make the new one, and put them back with ids: 
         // all inside the version-change transaction, so a failure leaves the
         // old database exactly as it was.
         const old: LegacyRun[] = [];
@@ -213,7 +213,7 @@ function open(): Promise<IDBDatabase | null> {
       const db = request.result;
       // Another tab is trying to upgrade the schema. A connection that stays
       // open blocks that upgrade for as long as it lives, so the older tab
-      // gets out of the way — otherwise a new version of the app is stuck
+      // gets out of the way: otherwise a new version of the app is stuck
       // behind an old one nobody remembers leaving open.
       db.onversionchange = () => {
         db.close();
@@ -393,7 +393,7 @@ export const forgetSyncState = (id: string): Promise<unknown> =>
  * A pack being written in the app.
  *
  * Stored as the object under construction rather than as text: a draft is
- * routinely invalid mid-edit — half a table, a mode with no label — and
+ * routinely invalid mid-edit, half a table, a mode with no label, and
  * serializing it to YAML on every keystroke would mean parsing it back to
  * render the next one.
  */
@@ -419,7 +419,7 @@ export const forgetDraft = (id: string): Promise<unknown> =>
  * A signing key this browser has seen before.
  *
  * A signature proves a pack is unchanged since its author signed it. It does
- * not say who the author is — the key travels inside the pack, so anyone can
+ * not say who the author is: the key travels inside the pack, so anyone can
  * make one and claim any name. What closes that gap for a reader who will
  * never compare a fingerprint by hand is memory: a key seen on three packs
  * since March is a different proposition from one that turned up today

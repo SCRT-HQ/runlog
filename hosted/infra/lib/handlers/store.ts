@@ -23,8 +23,8 @@ import { traced } from "./xray.js";
 /**
  * Where a player's things are kept.
  *
- * DynamoDB holds what is *about* each item — enough to answer "what have you
- * got, and when did it change" in one query — and S3 holds the item itself.
+ * DynamoDB holds what is *about* each item, enough to answer "what have you
+ * got, and when did it change" in one query, and S3 holds the item itself.
  * A run's event log grows all session and a pack's source can be a whole
  * rulebook; neither belongs inside a 400 KB table item, and an object that is
  * written whole matches how the app writes them.
@@ -35,9 +35,9 @@ import { traced } from "./xray.js";
  *
  * Licenses are the exception to the split: a license key is a few dozen
  * characters, so the row is the whole record. The manifest still leaves the
- * key out — it lists what the player has, not what opens it.
+ * key out, it lists what the player has, not what opens it.
  *
- * A session — a run with people in it — has a partition of its own, so its
+ * A session, a run with people in it, has a partition of its own, so its
  * members can share it: a META row, a MEMBER row per person, and one EVENT
  * row per event in the order the server received them. Each member also
  * keeps a pointer row under their own partition, which is what the manifest
@@ -69,8 +69,8 @@ export interface PackMeta extends Entry {
   importedAt: string;
   bytes: number;
   /**
-   * Where the app got it — a file of the player's, the catalog, a sealed
-   * copy, a listing — and for a catalog pack which entry at which version,
+   * Where the app got it, a file of the player's, the catalog, a sealed
+   * copy, a listing, and for a catalog pack which entry at which version,
    * so a device that pulls it can still offer the newer one. Carried, not
    * read: the server decides nothing on these.
    */

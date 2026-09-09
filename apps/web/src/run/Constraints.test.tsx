@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { Constraints } from "./Constraints.tsx";
 
 /**
- * How a step's drawn constraints are shown — what to say lives in the
+ * How a step's drawn constraints are shown: what to say lives in the
  * engine's `constraintsFor` (see packages/engine/src/flow.test.ts); this is
  * only the page's and the remote's shared rendering of it.
  */

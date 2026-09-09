@@ -3,9 +3,9 @@
  *
  * The bare address is the welcome page, the page that says what Runlog
  * is, for anyone who has not chosen to skip it. The app lives under
- * `play`. Anyone who arrived with somewhere to go — a live link, a guide
+ * `play`. Anyone who arrived with somewhere to go, a live link, a guide
  * page, a catalog link, an invitation, a purchase, a race code, a sign-in
- * on its way back — is in the app already, whatever the path says, and
+ * on its way back, is in the app already, whatever the path says, and
  * the address is then made to read `play` so it is honest. One query is
  * the exception: `?welcome` asks for the welcome page by name, which is
  * how the mark in the app's bar and the footer's "What Runlog is" reach

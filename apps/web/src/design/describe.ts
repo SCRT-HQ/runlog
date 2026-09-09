@@ -6,7 +6,7 @@ import schemaText from "../../../../packages/rules-schema/schema/pack-1.schema.j
  * Every field already carries a description, because that is what an editor
  * shows a pack author on hover. Writing a second set of labels here would mean
  * two descriptions of the same field, drifting apart from the day they were
- * written — and the one in the app, which is where a beginner actually is,
+ * written, and the one in the app, which is where a beginner actually is,
  * would be the one nobody remembered to update.
  *
  * The whole schema is bundled for this. It costs about 16KB compressed, which
@@ -31,7 +31,7 @@ function deref(node: Node | undefined): Node | undefined {
  * Unions are searched rather than resolved: at the point a description is
  * wanted, the editor knows which variant it is showing, but the path does not
  * carry that. The first variant that has the field is the right answer often
- * enough — descriptions of a shared field agree across variants.
+ * enough: descriptions of a shared field agree across variants.
  */
 function step(node: Node | undefined, segment: string): Node | undefined {
   const here = deref(node);

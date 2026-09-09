@@ -9,7 +9,7 @@ import { fromBase64Url, toBase64Url } from "@runlog/rules-schema";
  *
  * So the pack travels in the URL's *fragment*, which browsers never send to
  * any server. A link like this can be pasted into a chat, mailed, or written
- * on a card, and the person who opens it has the pack — with nothing in
+ * on a card, and the person who opens it has the pack, with nothing in
  * between having seen it, and nothing to keep running afterwards.
  *
  * The cost is length. Compressed, the demo pack is about 7,600 characters and
@@ -67,7 +67,7 @@ async function gunzip(bytes: Uint8Array): Promise<Uint8Array> {
  * Encode a pack into a fragment.
  *
  * Takes the raw document rather than a validated pack, so whatever the author
- * wrote travels — including a signature, which would otherwise be stripped by
+ * wrote travels: including a signature, which would otherwise be stripped by
  * a round trip through the schema and leave the recipient unable to check it.
  */
 export async function encodePack(document: unknown): Promise<string> {
@@ -127,22 +127,22 @@ export async function decodePack(fragment: string): Promise<DecodeResult> {
 /**
  * What a link's length means for sharing it.
  *
- * Nothing here is a limit the app imposes — a fragment never reaches a server,
+ * Nothing here is a limit the app imposes: a fragment never reaches a server,
  * and browsers accept far longer. The limits that bite belong to whatever the
  * link is pasted into, so those are what get named.
  */
 export function describeLength(link: string): { ok: boolean; text: string } {
   const n = link.length;
   const round = n.toLocaleString();
-  if (n <= 2000) return { ok: true, text: `${round} characters — short enough to paste anywhere` };
+  if (n <= 2000) return { ok: true, text: `${round} characters, short enough to paste anywhere` };
   if (n <= 30000) {
     return {
       ok: true,
-      text: `${round} characters — fine in a mail or a document, too long for most chat apps`,
+      text: `${round} characters, fine in a mail or a document, too long for most chat apps`,
     };
   }
   return {
     ok: false,
-    text: `${round} characters — long enough that many places will truncate it. Send the file instead.`,
+    text: `${round} characters, long enough that many places will truncate it. Send the file instead.`,
   };
 }

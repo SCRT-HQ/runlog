@@ -79,7 +79,7 @@ purpose: a leaked file should not publish someone's name to everyone who
 downloads it. The name, if you stamp one, lives inside the encrypted body.
 
 The key derivation: the license key is normalized (trimmed, upper-cased,
-everything but `A–Z` and `0–9` removed) and run through PBKDF2-HMAC-SHA-256
+everything but `A-Z` and `0-9` removed) and run through PBKDF2-HMAC-SHA-256
 with the header's salt and iteration count to make the 256-bit AES key.
 Six hundred thousand iterations is deliberate; it makes a guessed key cost
 about a second per try on a phone, and a real one a moment on open.

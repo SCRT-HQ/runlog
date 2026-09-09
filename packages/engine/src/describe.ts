@@ -5,7 +5,7 @@ import type { Pack, Phase, Predicate } from "@runlog/rules-schema";
  *
  * A pack says `skipWhen: [{ unitIndex: { gte: 2 } }]`; a player wants to know
  * why a room went gray. This turns the one into the other, in the pack's own
- * words — "from Room 2 on", not "unitIndex ≥ 2". Every predicate kind the
+ * words,"from Room 2 on", not "unitIndex ≥ 2". Every predicate kind the
  * schema admits is covered, so a new kind is a compile error here rather than
  * a blank tooltip.
  */

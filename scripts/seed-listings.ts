@@ -5,7 +5,7 @@ import { listingPayload } from "../packages/rules-schema/src/index.ts";
 /**
  * The built-in packs, listed in the catalog as the platform's own.
  *
- * The catalog's feed carries everything — the built-ins too — so a card
+ * The catalog's feed carries everything, the built-ins too, so a card
  * looks the same whoever published it. This uploads each shipped pack to
  * the platform publisher and lists it free; the head and the summary are
  * computed here exactly as the app would. Idempotent: an upload replaces

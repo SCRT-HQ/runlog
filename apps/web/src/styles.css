@@ -1,15 +1,15 @@
 /*
  * Workbench-first: high contrast, legible at arm's length. The app gets used
- * beside the work rather than instead of it — often with the lights down — so
+ * beside the work rather than instead of it, often with the lights down, so
  * the default is dark, and that is less a stylistic preference than a working
  * condition.
  *
  * Two voices. The pack's author speaks in a book serif, because the rules are
  * a rulebook. The player speaks in the same serif, in italic, because a name
- * is a note in the margin. The referee — the app — speaks in a monospace,
+ * is a note in the margin. The referee, the app, speaks in a monospace,
  * because it keeps a ledger and its figures have to line up.
  *
- * Two accents, one job each. `--accent` is celadon: the referee's "fine" — a
+ * Two accents, one job each. `--accent` is celadon: the referee's "fine", a
  * settled die, a filled box, the current step. `--warn` is kiln: consequence.
  * Nothing else on the screen is colored.
  *
@@ -173,7 +173,7 @@ textarea {
 /*
  * A select's drop-down list is drawn by the browser from the select's own
  * colors. Left transparent, Chrome paints the list white and the options in
- * the page's text color — unreadable in every theme but daylight. So the
+ * the page's text color: unreadable in every theme but daylight. So the
  * select and its options say exactly what they are on.
  */
 select {
@@ -231,7 +231,7 @@ p {
 }
 /*
  * The icon itself, not a lookalike glyph. The block-element character this
- * used to be has its empty quadrant top-left; the mark's is bottom-right —
+ * used to be has its empty quadrant top-left; the mark's is bottom-right: 
  * the same shape turned upside down, which reads as a "j" where an "r" was
  * meant. Relative path, because the same build is opened from disk.
  */
@@ -402,7 +402,7 @@ p {
 
 /*
  * A section label is a ruled line with a small monospace word on it. The rule
- * does the separating, so the word does not have to shout to be found —
+ * does the separating, so the word does not have to shout to be found: 
  * twelve tracked capitals on one screen carry no hierarchy at all.
  */
 .sectionTitle {
@@ -1161,7 +1161,7 @@ p {
 }
 /*
  * The score rides on the same line as the date, at the right, rather than a
- * column of its own — a column is one more thing to collapse on a phone.
+ * column of its own: a column is one more thing to collapse on a phone.
  */
 .runRowMeta {
   display: flex;
@@ -1760,7 +1760,7 @@ button:disabled,
 /*
  * Spacing around a primary action.
  *
- * A section heading immediately below a button crowds it — the two read as one
+ * A section heading immediately below a button crowds it: the two read as one
  * block when they are alternatives to each other. The onward move keeps its
  * hint beside it, and the alternative is set off below a rule.
  */
@@ -1958,7 +1958,7 @@ button:disabled,
 }
 /* The base rule gives inputs `flex: 1 1 16rem` for the flex rows they were
    written for. In a column that makes them grow to the height of the tallest
-   cell in the grid row — a text box the size of a paragraph. */
+   cell in the grid row: a text box the size of a paragraph. */
 .field .textInput {
   flex: none;
   width: 100%;
@@ -2436,7 +2436,7 @@ select.textInput {
   color: var(--warn);
 }
 
-/* A row's own small menu: unlist, remove — folded away so a listing reads as its price, not a control panel. */
+/* A row's own small menu: unlist, remove, folded away so a listing reads as its price, not a control panel. */
 .rowMenu {
   position: relative;
 }
@@ -2629,7 +2629,7 @@ select.textInput {
 /* ---- the run, redrawn --------------------------------------------------- */
 /*
  * No rule under the bar. With a line across the top, the two column rules
- * and a line under the log, the run read as a table with a border — a box
+ * and a line under the log, the run read as a table with a border: a box
  * around the page, which is the look the columns were meant to replace.
  * The margin and the side rail carry their own rules; that is structure
  * enough.
@@ -2915,7 +2915,7 @@ select.textInput {
 /*
  * In the middle column only the step is raised. A move you may make, a
  * threshold the game is holding over you, and what you owe are still boxes
- * of their own kind — a bordered box, a warning, a debt — but the plain
+ * of their own kind, a bordered box, a warning, a debt, but the plain
  * panel around anything else goes, so the step is the one thing that stands
  * off the page.
  */
@@ -3779,7 +3779,7 @@ a.plan:hover { text-decoration: underline; }
 /*
  * The floating controls: this page's tree, drawn in a window the browser
  * keeps in front, and made to scroll internally rather than grow past the
- * screen — the window itself is fixed by openControlsWindow, so the body is
+ * screen: the window itself is fixed by openControlsWindow, so the body is
  * where the scrolling has to happen.
  */
 html[data-pip="controls"] body { margin: 0; height: 100vh; overflow-y: auto; background: var(--bg); color: var(--text); }
@@ -3793,7 +3793,7 @@ html[data-pip="controls"] body { margin: 0; height: 100vh; overflow-y: auto; bac
 .floatRow { align-items: baseline; }
 
 /* Every section of the remote is the same shape: a small heading, then its
-   controls, stacked by the panel's own gap rather than a border of its own —
+   controls, stacked by the panel's own gap rather than a border of its own, 
    a narrow window of bordered boxes reads as heavier than the same window of
    plain sections. `RequestPanel` keeps its own panel look on the page, so it
    is flattened here to match. */

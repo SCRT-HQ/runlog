@@ -30,7 +30,7 @@ function load(relative: string): Pack {
  * which is which.
  *
  * When a schema change breaks one of these, that is the signal to think again
- * — it means something genre-specific has crept into what is supposed to be a
+ * - it means something genre-specific has crept into what is supposed to be a
  * general format.
  */
 describe("one schema, three unrelated games", () => {
@@ -56,7 +56,7 @@ describe("one schema, three unrelated games", () => {
     expect(kinds).toEqual(new Set(["lookup", "bands", "opposed", "keyed"]));
   });
 
-  describe("Salt & Signal — the journaling case", () => {
+  describe("Salt & Signal - the journaling case", () => {
     it("expresses an opposed roll, which a single total cannot", () => {
       const signalTable = signal.tables.signal!;
       expect(signalTable.resolution).toBe("opposed");
@@ -97,7 +97,7 @@ describe("one schema, three unrelated games", () => {
     });
   });
 
-  describe("Ladder Work — the training case", () => {
+  describe("Ladder Work - the training case", () => {
     it("omits targeting entirely, and that is legal", () => {
       // The proof that backward damage is a feature of one genre, not of the
       // engine. Nothing reaches back in a training log.

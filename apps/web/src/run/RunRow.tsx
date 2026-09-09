@@ -5,7 +5,7 @@ import type { StoredRun } from "../storage/db.ts";
 /**
  * One run, as a row: its name or when it began, when it was last played,
  * whose it is, and whether it is the one open on this device. The same
- * row wherever runs are listed — the library, the setup screen — so the
+ * row wherever runs are listed, the library, the setup screen, so the
  * lists read alike.
  */
 export function RunRow({
@@ -19,7 +19,7 @@ export function RunRow({
   run: StoredRun;
   vocabulary: Pack["vocabulary"];
   open?: boolean;
-  /** The run's score, already formatted, where it has one — an ended run only. */
+  /** The run's score, already formatted, where it has one: an ended run only. */
   score?: string;
   onPick: () => void;
   /** Where forgetting belongs on the row; absent where it does not. */

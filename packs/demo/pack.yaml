@@ -1,4 +1,4 @@
-# The Long Kiln — a demo rule pack for Runlog.
+# The Long Kiln: a demo rule pack for Runlog.
 #
 # Entirely fictional. It exists so the engine, the linter and the UI have
 # something to exercise that ships in this repo, and so pack authors have a
@@ -507,7 +507,7 @@ triggers:
             then:
               - do: note
                 text: >-
-                  Cool fast. Two Pieces crack — choose them yourself, and say
+                  Cool fast. Two Pieces crack: choose them yourself, and say
                   in the log why those two.
                 persistent: true
           - is: { gte: 9 }

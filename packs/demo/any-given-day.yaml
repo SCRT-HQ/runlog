@@ -1,9 +1,9 @@
-# Any Given Day — the pack a fresh device gets.
+# Any Given Day: the pack a fresh device gets.
 #
 # The most general thing a run can be: a day, or a stretch of one, cut into
 # Blocks. Each Block names one Task, draws a Twist that says how it must be
-# done, and ends when you call it. Weather rolls in between Blocks — nothing,
-# a boon, or a setback that reaches back to something you already finished —
+# done, and ends when you call it. Weather rolls in between Blocks, nothing,
+# a boon, or a setback that reaches back to something you already finished, 
 # so a day has a shape even when the tasks are dull. Nothing here knows what
 # the task is. It keeps the tally a good to-do list keeps, and adds the dice.
 #
@@ -89,7 +89,7 @@ counters:
         oncePerRun: true
         label: On a roll
         do:
-          - { do: note, text: "Four Blocks without a setback. Take the next Twist or leave it — your choice.", persistent: true }
+          - { do: note, text: "Four Blocks without a setback. Take the next Twist or leave it: your choice.", persistent: true }
           - { do: applyState, state: goldenHour, to: run }
   tasksDone:
     label: Tasks done

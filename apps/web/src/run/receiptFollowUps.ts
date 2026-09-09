@@ -1,7 +1,7 @@
 import type { RollReceipt } from "./Receipt.tsx";
 
 /**
- * When a settled receipt offers more than "Carry on" — drawing again, or
+ * When a settled receipt offers more than "Carry on": drawing again, or
  * having the machine roll from here on. The page's `<Receipt>` and the
  * floating remote both decide this the same way, so it is worked out once
  * here rather than copied between them.

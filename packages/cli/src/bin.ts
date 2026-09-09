@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * `runlog` — the pack author's tool.
+ * `runlog`: the pack author's tool.
  *
  * This is the designer-facing half of the project. Someone writing a game
  * should be able to run one command in CI and know their pack is coherent
@@ -91,7 +91,7 @@ async function cmdValidate(args: string[]): Promise<number> {
       const tables = Object.keys(pack.tables).length;
       const entries = Object.values(pack.tables).reduce((n, t) => n + t.entries.length, 0);
       console.log(
-        `${paint(GREEN, "ok")} ${paint(BOLD, pack.title)} ${paint(DIM, `v${pack.version}`)} — ` +
+        `${paint(GREEN, "ok")} ${paint(BOLD, pack.title)} ${paint(DIM, `v${pack.version}`)} - ` +
           `${tables} table${tables === 1 ? "" : "s"}, ${entries} entries, ` +
           `${Object.keys(pack.modes).length} mode(s)` +
           (diagnostics.length ? paint(YELLOW, `, ${diagnostics.length} warning(s)`) : ""),
@@ -266,7 +266,7 @@ modes:
 defaultMode: standard
 `;
 
-const HELP = `runlog — author and check rule packs
+const HELP = `runlog: author and check rule packs
 
 usage:
   runlog validate <pack...> [--strict]   check a pack's shape and coherence
@@ -299,7 +299,7 @@ workflows to copy.
 
 Signing proves authorship. It does not restrict copying and cannot: the app
 has to read every word of a pack to play it. What it gives you is that an
-altered copy can no longer claim to be yours — and, once the key is claimed
+altered copy can no longer claim to be yours, and, once the key is claimed
 by your account, that the app names you beside it. sign and issue refuse a
 key that is not claimed.
 `;

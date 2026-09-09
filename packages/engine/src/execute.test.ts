@@ -111,7 +111,7 @@ describe("executing actions", () => {
 
   describe("triggers that fire now", () => {
     it("follows an entry that rolls on another table", () => {
-      // Kiln Check 20–69 says: the Kiln dictates the form. Roll on Form.
+      // Kiln Check 20-69 says: the Kiln dictates the form. Roll on Form.
       const result = executeTableRoll(
         kiln,
         runWith(1),
@@ -492,7 +492,7 @@ defaultMode: standard
 describe("roll provenance", () => {
   /**
    * The log says how every number came about. A convenience button must not be
-   * able to launder a generated roll into the record as a physical one — an
+   * able to launder a generated roll into the record as a physical one: an
    * auditable log that quietly lies is worse than no log.
    */
   it("records a player-entered roll as physical", () => {
@@ -525,7 +525,7 @@ describe("moves the player chooses to make", () => {
   /**
    * Before these existed the format had only two ways for anything to happen:
    * a scheduled step, or a consequence of a table result. Transcribing a real
-   * rulebook made the omission obvious — spending a one-shot card, re-entering
+   * rulebook made the omission obvious: spending a one-shot card, re-entering
    * an earlier unit to repair it. All optional, all gated, none on a schedule.
    */
   it("offers nothing on the first unit, when the gate does not hold", () => {
@@ -594,7 +594,7 @@ describe("moves the player chooses to make", () => {
  * Which moves are offered, and how many times.
  *
  * Reported from play: a move appeared twice in the list between units. The
- * cause was asking for two placements with two calls and concatenating — an
+ * cause was asking for two placements with two calls and concatenating: an
  * `anytime` move belongs to every placement, so it came back once per call.
  * React had been warning about the duplicate key for a while and nobody had
  * read it.

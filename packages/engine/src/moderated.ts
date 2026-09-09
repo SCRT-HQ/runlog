@@ -4,9 +4,9 @@ import type { Award, Contestant, RunState } from "./types.ts";
 /**
  * Moderated play: one person runs the game, everyone else races it.
  *
- * The moderator holds the device. The contestants are a roster of names —
+ * The moderator holds the device. The contestants are a roster of names, 
  * not accounts, because a stream's viewers and a room's friends rarely have
- * one — and every draw the flow makes is a challenge they all go for at
+ * one, and every draw the flow makes is a challenge they all go for at
  * once. When somebody finishes, the moderator awards them the result, and
  * its points go on their score. Curses and boons land on everyone the way
  * a run-wide state always has; the only thing that is per person is the
@@ -65,7 +65,7 @@ export function challenges(pack: Pack, state: RunState): Challenge[] {
     const awards = state.awards.filter((a) => a.outcome === index);
     const open = rule?.award === "everyone" ? awards.length < state.contestants.length : awards.length === 0;
     // The follow-ups: what the same block rolled right after this result
-    // — the same moment, since a block commits as one — up to the next
+    // - the same moment, since a block commits as one, up to the next
     // result that scores, which is a challenge of its own.
     const details: string[] = [];
     for (let j = index + 1; j < state.outcomes.length; j++) {

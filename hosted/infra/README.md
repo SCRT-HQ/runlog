@@ -18,7 +18,7 @@ in that account, and A/AAAA alias records.
 Two cache policies, which is the part worth understanding. Built assets carry a
 content hash, so a URL can only ever mean one file and is cached for a year.
 The shell, the service worker and the manifest keep their names across every
-release, so they are never cached at the edge — caching those is how a deploy
+release, so they are never cached at the edge: caching those is how a deploy
 reaches nobody while looking perfect from the deploying end.
 
 ## How the app reaches the bucket
@@ -57,7 +57,7 @@ nothing about a stage but its name, and a third stage is one more entry
 in the stage's configuration, one more in the diff matrix, and two more
 environments.
 
-Versions increment automatically from the newest `v*` tag — patch by default,
+Versions increment automatically from the newest `v*` tag: patch by default,
 or pick `minor`/`major` when running the workflow by hand.
 
 ### Why the release is cut with a GitHub App token
@@ -65,7 +65,7 @@ or pick `minor`/`major` when running the workflow by hand.
 Anything `GITHUB_TOKEN` does is barred from starting another workflow run:
 GitHub blocks it so runs cannot recurse. That applies to a published release
 *and* to a pushed tag, so a release created the obvious way would sit there
-looking correct while production never deployed — a failure with no error
+looking correct while production never deployed: a failure with no error
 anywhere.
 
 The release is therefore created with a token minted from the org's GitHub App
@@ -75,11 +75,11 @@ picks it up.
 
 Tests run with no AWS credentials at all. The stacks are asserted against a
 synthesised template, so they need an account id to render into ARNs and
-nothing more — which is what keeps them runnable on a fork's pull request.
+nothing more, which is what keeps them runnable on a fork's pull request.
 Results are published as JUnit XML, the same as the other CDK repositories.
 
 Deployment itself uses the shared `GitHubActionRole`, which trusts this
-repository — see `SCRT-HQ/shl-cdk-github-iam`, where the list of repositories
+repository: see `SCRT-HQ/shl-cdk-github-iam`, where the list of repositories
 that may assume it lives.
 
 ### The rules
@@ -114,11 +114,11 @@ actions already set, so nothing has to be translated between them and this
 repository. `RUNLOG_ENV` and `RUNLOG_DEV_ACCOUNT` are accepted too.
 
 Account ids come from the environment rather than the repository. They are not
-secret — an account id appears in every ARN — but hardcoding them would tie
+secret, an account id appears in every ARN, but hardcoding them would tie
 this repository to one person's AWS.
 
 Zone ids are optional. Without one, CDK looks the zone up, which needs
-credentials at synth time and caches the answer into `cdk.context.json` — a
+credentials at synth time and caches the answer into `cdk.context.json`: a
 nuisance in a repository that deploys to two accounts, since the cached dev
 zone would then be used for prd.
 
@@ -147,9 +147,9 @@ gh workflow run deploy-production.yml -R SCRT-HQ/runlog -f tag=v1.4.0
 ## The hosted layer
 
 The app is generic and knows nothing about who runs it. What makes an
-address a service — the terms, the privacy policy, the publisher agreement,
+address a service, the terms, the privacy policy, the publisher agreement,
 pricing, an about page, the open-source notice, `robots.txt`, `sitemap.xml`,
-`security.txt`, the image a shared link unfurls with — lives in `hosted/`
+`security.txt`, the image a shared link unfurls with, lives in `hosted/`
 as templates, and `hosted/scripts/overlay.ts` lays them over the built app at
 publish time with the environment's words filled in (the stage's configuration,
 `hosted`). The app finds `hosted.json` at its root and, when it is there,
@@ -167,7 +167,7 @@ questions for legal review are kept outside the repository.
 Nothing here stands in front of the site. Who may *use* the app is the app's
 own question: a hosted build carries a WorkOS AuthKit client id, and asks who
 is there before it opens. That lives in the application, and the id reaches
-the build from this repository's variables when it publishes — not in this
+the build from this repository's variables when it publishes, not in this
 stack, since an edge function cannot verify an AuthKit session,
 and a shared password in front of it would be a second door with a different
 key. The one thing this stack knows about it is the Content Security Policy,
@@ -176,14 +176,14 @@ which lets the app reach `api.workos.com` and nothing else.
 This replaced a shared password baked into a CloudFront Function, and before
 that an attempt to use GitHub Pages with private visibility. Even where that is
 available it authenticates against GitHub, so every viewer would need an
-account with access to the repository — which rules out showing the build to
+account with access to the repository, which rules out showing the build to
 anybody who is not a collaborator.
 
 ## The API
 
 There is one server, and it is behind `/api` on the site's own domain. It
 exists for a signed-in player's sessions, the packs they choose, and the
-license keys they have typed to open sealed copies, on every device they use —
+license keys they have typed to open sealed copies, on every device they use: 
 and it holds nothing for anyone who has not signed in.
 
 A session is a run with people in it, and its log is append-only in the
@@ -207,8 +207,8 @@ second certificate and no second record.
 Two conventions follow from that. The distribution rewrites every 403 and 404
 into the app's index page, for every path, so the API never answers either: a
 bad or missing token is a **401**, an unknown route a **410**, and a missing
-item a 200 that says `found: false`. The token — a WorkOS access token the app
-already holds, or one the command line got from the device flow — is verified
+item a 200 that says `found: false`. The token, a WorkOS access token the app
+already holds, or one the command line got from the device flow, is verified
 inside the handler against the client's published key set, not by a gateway
 authorizer whose refusal would be a 403. Two WorkOS applications are accepted
 per environment: the browser's, and one for the command line with a session
@@ -217,7 +217,7 @@ tells `runlog login` which client to use, so the package carries neither id.
 
 | Where | What |
 | --- | --- |
-| `runlog-<env>` | DynamoDB: one row per pack or license keyed by player, a partition per session (its row, its members, one row per event), and a pointer per member. What is *about* each item — and, for a license, the key itself, since it is a line of text. |
+| `runlog-<env>` | DynamoDB: one row per pack or license keyed by player, a partition per session (its row, its members, one row per event), and a pointer per member. What is *about* each item, and, for a license, the key itself, since it is a line of text. |
 | `runlog-<env>-sync-<account>` | S3: the items themselves, one object each, under the player's own prefix. |
 | `/runlog/api/url` | SSM: `https://<domain>/api`, what the app reaches. |
 | `/runlog/api/endpoint` | SSM: the API Gateway endpoint CloudFront forwards to. |
@@ -267,7 +267,7 @@ the same `Authorization: Bearer` header then names the caller on every route.
 A key cannot mint keys. Signing keys are claimed by proof: `POST
 /api/claims/nonce` hands out a nonce, `POST /api/claims` takes the public key
 and the nonce signed with the private one, and from then on `GET
-/api/authors/{fingerprint}` — the other read that needs no account — answers
+/api/authors/{fingerprint}`, the other read that needs no account, answers
 who signed a pack, which is what the app's badge shows.
 
 The person themselves is one more row: `GET /api/me` answers who is asking
@@ -288,7 +288,7 @@ session to start a subscription (`POST /api/billing/checkout {price}`
 with `plus-monthly`, `plus-yearly`, `hosted-monthly` or `hosted-yearly`),
 a Portal session to manage it (`POST /api/billing/portal`), a re-read of
 what Stripe says the person has (`POST /api/billing/refresh`), and the
-webhook (`POST /api/stripe/webhook`, no bearer — the signature over the
+webhook (`POST /api/stripe/webhook`, no bearer, the signature over the
 raw body is the credential; a bad one is a 401, a replay is a no-op, an
 unknown event is a 200). `entitlements.active_entitlement_summary.updated`
 writes the person's `ENTITLEMENTS` row, which `GET /api/me` returns.
@@ -299,7 +299,7 @@ does not look like a key means every billing route answers
 (`gates`: dev on, prd off until Stripe is live there) and which prices are
 for sale. To set an environment up:
 
-1. `$env:STRIPE_SECRET_KEY = "sk_…"; npx tsx hosted/scripts/stripe-setup.ts` —
+1. `$env:STRIPE_SECRET_KEY = "sk_…"; npx tsx hosted/scripts/stripe-setup.ts`, 
    idempotent; makes the features, products, prices and the Portal
    configuration and prints the price ids for the stage's configuration.
 2. Register `https://<domain>/api/stripe/webhook` in Stripe for
@@ -330,8 +330,8 @@ never holds a signing key; it seals what the publisher signed.
 ## Listings
 
 A publisher uploads a pack (`PUT /api/publishers/packs/{packId}` with
-the signed master text, the head the app computed — title, category,
-tags, features, what it needs — and the catalog summary), lists it
+the signed master text, the head the app computed, title, category,
+tags, features, what it needs, and the catalog summary), lists it
 (`POST …/listing` with an amount in cents, or nothing for free; a price
 makes a product and price on the publisher's connected account, and needs
 payouts set up), and takes it down (`DELETE …/listing`) or removes it
@@ -355,7 +355,7 @@ the same doorbell as sessions; a socket may watch a race id.
 
 ## Live push
 
-Beside the HTTP API there is a WebSocket API — a doorbell, not a channel.
+Beside the HTTP API there is a WebSocket API: a doorbell, not a channel.
 A device with a run open connects to `wss://<domain>/ws?token=<access token>`
 (the token rides in the query string because a browser's socket cannot set
 a header; it is checked exactly as a bearer is), sends `{"t":"watch","id":
@@ -415,8 +415,8 @@ mints a code bound to the server (`DISCORD#CLAIM#<code>`); handed to
 `POST /api/guilds/claim`, it makes the signed-in account the server's
 owner (`GUILD#<id>/META`, pointer `USER#<sub>/GUILD#<id>`), replacing a
 previous owner, three servers to an account. The owner pays for the
-server's plan — the `server` feature, sold as "Runlog for servers"
-through the same Stripe plumbing as Plus — and `/setup status` says
+server's plan, the `server` feature, sold as "Runlog for servers"
+through the same Stripe plumbing as Plus, and `/setup status` says
 whether it is active where plans gate. `/setup role` and `/setup channel`
 set who may host and where runs open; `/setup threads` sets whether they
 open in a public thread or a private one.
@@ -447,7 +447,7 @@ the app computed (title, version, the modes by label), and keeps the
 text at `guilds/<id>/packs/<packId>.<format>` in the bucket. This is the
 one place the hosting holds a pack's text for something other than
 handing it back to whoever sent it: the bot reads it to play, and
-nobody, the owner included, is ever served it from here — the profile
+nobody, the owner included, is ever served it from here, the profile
 and `/packs` list what is there, never the text, so a sealed pack's
 words go no further than the drawn lines the bot will post. That is a
 deliberate bend in the rule the rest of the API keeps, and it is confined
@@ -458,13 +458,13 @@ A **run hosted in a server** is a session like any other, owned by the
 host's account (a host is linked, so the run is somebody's), played by
 the bot as the device at the table: `/run start` creates the session
 with the same opening events the app writes, opens a thread,
-mints a live link, and posts and pins the **table card** —
+mints a live link, and posts and pins the **table card**, 
 `lib/handlers/discord/card.ts`, rebuilt from the log on every press. The
 card follows the thread by default: a press that made a move answers by
 turning the pressed message into the move's line and posts a fresh card
 at the bottom (one call); a press that made none updates the card in
-place (no call); everything else — a command, a timer, the app moving
-the run — posts the line, retires the old card (down if it carried
+place (no call); everything else, a command, a timer, the app moving
+the run, posts the line, retires the old card (down if it carried
 nothing else, stripped to its content if it did, as the opening message
 carries the live link) and posts a fresh one. `cardMessageId` and
 `cardBare` on the run row say which message the buttons are on and how
@@ -479,7 +479,7 @@ thread instead and marks the run `private`. Discord starts a private
 thread with nobody in it but the bot, so the host is put in it with
 `addThreadMember` the moment it is made; whoever else the run is for,
 the host adds. Since a thread others cannot open makes a public
-announcement pointless, a private start answers the host alone — and the
+announcement pointless, a private start answers the host alone, and the
 deferred placeholder carries the ephemeral flag too, which the reply
 `finishDeferred` edits into `@original` keeps. Create Private Threads
 (bit 36) is an optional permission, like Manage Roles and Manage
@@ -514,7 +514,7 @@ own "Verify" button lands on `GET /api/discord/linked-role`, which sends
 the person into the app to begin signed in.
 
 The plan gate (`serverPlanOf` in `interactions.ts`) is satisfied by the
-claiming account's grant — bought through Stripe, or the `server` flag —
+claiming account's grant, bought through Stripe, or the `server` flag, 
 or, where `discord.serverSku` names a guild-subscription SKU sold through
 Discord's own store, by a live entitlement on the server itself
 (`guildEntitledFrom` in `rest.ts`, one call per press that needs the
@@ -587,7 +587,7 @@ WorkOS; the AWS SDK v3 clients each handler constructs are wrapped with
 `captureAWSv3Client`, and the Stripe and WorkOS calls each run inside
 their own subsegment (`hosted/infra/lib/handlers/xray.ts`), since both
 SDKs speak through `fetch` rather than the `http`/`https` modules X-Ray
-patches. A trace never carries a request body, a token or an email —
+patches. A trace never carries a request body, a token or an email: 
 only the route and the method are annotated. The Lambda Insights layer
 (`insightsVersion` on both functions) reports memory, CPU and cold starts
 per invocation, no trace required to see them. Wrapping is a no-op
@@ -618,7 +618,7 @@ sent there.
 
 ### Dashboards and alarms
 
-Every stage gets its own CloudWatch dashboard, `runlog-<env>` — People (views
+Every stage gets its own CloudWatch dashboard, `runlog-<env>`, People (views
 by country, screen and version, from the beacon's embedded metric format),
 the API (HTTP and WebSocket, requests, errors, latency), the handler
 (invocations, errors, throttles, duration, its Lambda Insights memory
@@ -639,7 +639,7 @@ against its own timeout, the handler being throttled at all, DynamoDB being
 throttled at all, CloudFront's 5xx rate, a Discord interaction that was
 not answered (the handler threw, or the job could not fill the deferred
 reply in), and the job function failing outright. All of them, old and new, ring
-the same `runlog-<env>-alarms` topic — **subscribing an address to it is a
+the same `runlog-<env>-alarms` topic: **subscribing an address to it is a
 step this repository cannot take for you**; do it by hand, once per stage,
 the same as the step already named under Billing.
 

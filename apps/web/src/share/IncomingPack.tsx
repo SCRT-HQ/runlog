@@ -6,7 +6,7 @@ import { decodePack, LINK_PREFIX } from "./link.ts";
  * A pack that arrived in a link.
  *
  * Deliberately not opened on arrival. A link replaces what you are looking at,
- * and a link can come from anyone — so this says what it holds, who if anyone
+ * and a link can come from anyone, so this says what it holds, who if anyone
  * signed it, and whether it loads, and then waits to be told. Packs are data
  * and cannot execute anything, so the risk is not danger; it is being dropped
  * into a stranger's game with no idea what happened.
@@ -62,7 +62,7 @@ export function useIncomingPack(): {
     void read(location.hash);
 
     // A link pasted into a tab that already has the app open changes the hash
-    // without reloading, so nothing would happen — which looks exactly like a
+    // without reloading, so nothing would happen, which looks exactly like a
     // broken link to whoever sent it.
     const onHashChange = () => void read(location.hash);
     addEventListener("hashchange", onHashChange);
@@ -116,7 +116,7 @@ export function IncomingPackBanner({
           {" "}
           · shared with you in a link
           {signature.status === "valid" &&
-            ` · signed${signature.signedBy ? ` — “${signature.signedBy}”` : ""}`}
+            ` · signed${signature.signedBy ? `: “${signature.signedBy}”` : ""}`}
           {signature.status === "invalid" && " · signature does not match"}
         </span>
         {!incoming.loads && (
@@ -129,7 +129,7 @@ export function IncomingPackBanner({
         )}
         {signature.status === "invalid" && (
           <div className="muted small">
-            It carries a signature that does not match its contents — someone changed it
+            It carries a signature that does not match its contents: someone changed it
             after it was signed.
           </div>
         )}

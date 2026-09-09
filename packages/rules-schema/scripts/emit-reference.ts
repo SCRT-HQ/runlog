@@ -58,7 +58,7 @@ function typeOf(node: Node): string {
     return `map of ${typeOf(node.additionalProperties as Node)}`;
   }
   if (typeof node.type === "string") return `\`${node.type}\``;
-  return "—";
+  return "-";
 }
 
 const anchor = (name: string) =>
@@ -89,7 +89,7 @@ function table(node: Node): string[] {
   for (const name of names) {
     const field = props[name]!;
     lines.push(
-      `| \`${name}\` | ${typeOf(field)} | ${required.has(name) ? "yes" : "—"} | ${describe(field)} |`,
+      `| \`${name}\` | ${typeOf(field)} | ${required.has(name) ? "yes" : "-"} | ${describe(field)} |`,
     );
   }
   return lines;
@@ -99,7 +99,7 @@ function table(node: Node): string[] {
  * Sections to document, gathered by walking the schema.
  *
  * Zod inlines almost everything rather than emitting `$ref`s, so the shapes an
- * author actually types — a table, a phase, a step — exist only nested inside
+ * author actually types, a table, a phase, a step, exist only nested inside
  * the root. Without this walk the reference would say "object" nineteen times
  * and document none of them. Sections are named by the path that reaches them,
  * because that is how an author finds the thing in their own file.
@@ -292,7 +292,7 @@ for (const [name, node] of Object.entries(defs).sort(([a], [b]) => a.localeCompa
       const summary = deref(variant).description;
       out.push(
         `- ${label ? "`" + label + "`" : typeOf(variant)}${
-          typeof summary === "string" ? ` — ${summary.replace(/\s+/g, " ").trim()}` : ""
+          typeof summary === "string" ? ` - ${summary.replace(/\s+/g, " ").trim()}` : ""
         }`,
       );
     }

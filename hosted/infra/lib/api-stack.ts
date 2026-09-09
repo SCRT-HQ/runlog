@@ -24,7 +24,7 @@ import type { EnvConfig } from "./config";
  * It exists for one thing: a signed-in player's runs, and the packs they
  * choose, on every device they use. Nothing is stored for anyone who has not
  * turned sync on, and what is stored is only ever read back by the same
- * person. The app still works without any of this — from disk, from a public
+ * person. The app still works without any of this, from disk, from a public
  * page, or here with nobody signed in.
  *
  * Served under the app's own domain by a CloudFront behavior, not on a
@@ -73,7 +73,7 @@ export class ApiStack extends Stack {
   readonly handlerLogGroup: logs.LogGroup;
   /** The socket itself, for its connect/message/error metrics. */
   readonly wsApi: apigwv2.WebSocketApi;
-  /** Where an alarm speaks. Public so more alarms — here or in an observability stack — can join the one already wired up. */
+  /** Where an alarm speaks. Public so more alarms, here or in an observability stack, can join the one already wired up. */
   readonly alarmTopic: sns.Topic;
   /** The one alarm this stack already owns, so a dashboard elsewhere can list it beside the ones it adds. */
   readonly handlerErrorsAlarm: cloudwatch.Alarm;
@@ -309,7 +309,7 @@ export class ApiStack extends Stack {
     /**
      * No CORS, on purpose. The API is reached from the app's own origin
      * through CloudFront, and a CORS policy is a list of *other* origins that
-     * may call it — there are none.
+     * may call it, there are none.
      */
     this.api = new apigwv2.HttpApi(this, "HttpApi", {
       apiName: `runlog-${config.name}-api`,

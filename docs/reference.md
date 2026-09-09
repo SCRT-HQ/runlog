@@ -16,40 +16,40 @@ A complete, self-contained description of a dice-driven creative-practice game. 
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `$schema` | `string` | — | Path or URL to this schema, so your editor offers completions and validation. |
+| `$schema` | `string` | - | Path or URL to this schema, so your editor offers completions and validation. |
 | `schemaVersion` | `number` | yes | Major version of the pack contract. An engine that does not know this version refuses to load the pack rather than guessing at it. |
 | `id` | `string` | yes | Globally unique pack identifier in reverse-DNS form, e.g. com.example.my-game. Use a domain you control so two packs never collide in a player's library. |
 | `version` | `string` | yes | Version of this pack's content, e.g. 1.2.0. |
 | `title` | `string` | yes | The game's name. |
-| `author` | `string` | — | Who wrote the game. |
-| `description` | `string` | — | One or two sentences on what the game is. |
-| `homepage` | `string` | — | Where to find out more. |
-| `category` | `string` | — | What kind of thing this is, in a word or two, for a catalog to group by: everyday, games, craft, fitness, cooking, writing… |
-| `tags` | `string`[] | — | Free tags for a catalog to filter by: the game it is for, the hobby, the shape of play. Short, and in the words a person would search for. |
-| `requires` | `object`[] | — | What a person needs before playing, shown in the catalog and the rulebook: the game and a system that runs it, mods or training packs, a wheel, a kitchen, supplies. Mark the ones that are nice to have `optional`; results can `need` those and be drawn again for a player who lacks them. |
+| `author` | `string` | - | Who wrote the game. |
+| `description` | `string` | - | One or two sentences on what the game is. |
+| `homepage` | `string` | - | Where to find out more. |
+| `category` | `string` | - | What kind of thing this is, in a word or two, for a catalog to group by: everyday, games, craft, fitness, cooking, writing… |
+| `tags` | `string`[] | - | Free tags for a catalog to filter by: the game it is for, the hobby, the shape of play. Short, and in the words a person would search for. |
+| `requires` | `object`[] | - | What a person needs before playing, shown in the catalog and the rulebook: the game and a system that runs it, mods or training packs, a wheel, a kitchen, supplies. Mark the ones that are nice to have `optional`; results can `need` those and be drawn again for a player who lacks them. |
 | `license` | `object` | yes | Licensing, and whether the app may share this pack's text. |
-| `capabilities` | `deferredTriggers` \| `seededRuns` \| `decks` \| `standardDeck` \| `resources` \| `counters` \| `coopRoles` \| `backwardTargeting` \| `timers` \| `journal` \| `bandsResolution` \| `opposedResolution` \| `keyedResolution` \| `moderated` \| `clockRules`[] | — | Engine features this pack needs. Declaring them lets an older app refuse the pack with a clear message instead of misplaying it. Default: `[]`. |
-| `extends` | `string` | — | Base pack this one layers on, for house rules and variants. |
+| `capabilities` | `deferredTriggers` \| `seededRuns` \| `decks` \| `standardDeck` \| `resources` \| `counters` \| `coopRoles` \| `backwardTargeting` \| `timers` \| `journal` \| `bandsResolution` \| `opposedResolution` \| `keyedResolution` \| `moderated` \| `clockRules`[] | - | Engine features this pack needs. Declaring them lets an older app refuse the pack with a clear message instead of misplaying it. Default: `[]`. |
+| `extends` | `string` | - | Base pack this one layers on, for house rules and variants. |
 | `vocabulary` | `object` | yes | The words this game uses. The interface speaks these rather than any built-in noun, which is what lets one engine host wholly different games. |
-| `unit` | `object` | — | How units behave in this game. Default: `{"createsSubject":true,"min":1,"max":20}`. |
-| `tables` | map of `object` | — | Tables the game rolls on, keyed by id. Default: `{}`. |
-| `decks` | map of `object` | — | Decks the game draws from, keyed by id. |
-| `states` | map of `object` | — | Persistent states that can attach to subjects or the run, keyed by id. |
-| `counters` | map of `object` | — | Running tallies, keyed by id. |
-| `resources` | map of `object` | — | Numeric tracks, keyed by id. |
+| `unit` | `object` | - | How units behave in this game. Default: `{"createsSubject":true,"min":1,"max":20}`. |
+| `tables` | map of `object` | - | Tables the game rolls on, keyed by id. Default: `{}`. |
+| `decks` | map of `object` | - | Decks the game draws from, keyed by id. |
+| `states` | map of `object` | - | Persistent states that can attach to subjects or the run, keyed by id. |
+| `counters` | map of `object` | - | Running tallies, keyed by id. |
+| `resources` | map of `object` | - | Numeric tracks, keyed by id. |
 | `phases` | `object`[] | yes | The per-unit flow, in order. At least one phase must close the unit. |
-| `moves` | map of `object` | — | Optional moves the player may choose to make, keyed by id. Everything the player initiates rather than has done to them lives here. |
-| `targeting` | `object` | — | How consequences pick an earlier subject. Omit for games where nothing reaches backwards. |
-| `journal` | `object` | — | Free-text notes attached to units. Essential for journaling games, and useful anywhere, since a log of rolls alone does not tell you what you actually made. |
-| `score` | `object` | — | This run's score, so a solo run has a number to beat next time. A mode can set its own with `score`. |
-| `endings` | `object`[] | — | The ways a run can finish. |
-| `triggers` | `object`[] | — | Global triggers not owned by any table entry, e.g. something that fires every unit. |
+| `moves` | map of `object` | - | Optional moves the player may choose to make, keyed by id. Everything the player initiates rather than has done to them lives here. |
+| `targeting` | `object` | - | How consequences pick an earlier subject. Omit for games where nothing reaches backwards. |
+| `journal` | `object` | - | Free-text notes attached to units. Essential for journaling games, and useful anywhere, since a log of rolls alone does not tell you what you actually made. |
+| `score` | `object` | - | This run's score, so a solo run has a number to beat next time. A mode can set its own with `score`. |
+| `endings` | `object`[] | - | The ways a run can finish. |
+| `triggers` | `object`[] | - | Global triggers not owned by any table entry, e.g. something that fires every unit. |
 | `modes` | map of `object` | yes | Ways to play, keyed by id. At least one is required. |
 | `defaultMode` | `string` | yes | Which mode is offered first. Must be a key of `modes`. |
-| `hierarchy` | `string`[] | — | Precedence for contradictory instructions, most specific first. Advisory only: the app shows it and lets the player rule, because these games want human judgment here. |
-| `fixtures` | `object`[] | — | Self-tests shipped with the pack. |
-| `issue` | `object` | — | Marks this copy as issued to one person. Covered by the signature, so removing it invalidates that. |
-| `signature` | `object` | — | Evidence of who produced this pack. Does not restrict copying — nothing can, since the app must read every word to play it — but proves the contents are unaltered since the author signed them. |
+| `hierarchy` | `string`[] | - | Precedence for contradictory instructions, most specific first. Advisory only: the app shows it and lets the player rule, because these games want human judgment here. |
+| `fixtures` | `object`[] | - | Self-tests shipped with the pack. |
+| `issue` | `object` | - | Marks this copy as issued to one person. Covered by the signature, so removing it invalidates that. |
+| `signature` | `object` | - | Evidence of who produced this pack. Does not restrict copying, nothing can, since the app must read every word to play it, but proves the contents are unaltered since the author signed them. |
 
 ## `pack.requires[]`
 
@@ -59,10 +59,10 @@ A physical or software requirement: the game and the system to play it on, a mod
 | --- | --- | --- | --- |
 | `id` | `string` | yes | Unique among requirements. Table entries name it in `needs`. |
 | `label` | `string` | yes | What it is, in the words a person would use: Rocket League, a potter's wheel, an oven. |
-| `kind` | `game` \| `platform` \| `software` \| `equipment` \| `supplies` \| `space` \| `other` | — | What sort of thing it is, so a catalog can say 'needs a game' or 'needs equipment' at a glance. Default: `"other"`. |
-| `optional` | `boolean` | — | Nice to have rather than needed. A player says at the start whether they have it, and results that `need` it are drawn again when they do not. Default: `false`. |
-| `note` | `string` | — | A line on where to get it, which version, or what will do instead. |
-| `url` | `string` | — | Where to find it. |
+| `kind` | `game` \| `platform` \| `software` \| `equipment` \| `supplies` \| `space` \| `other` | - | What sort of thing it is, so a catalog can say 'needs a game' or 'needs equipment' at a glance. Default: `"other"`. |
+| `optional` | `boolean` | - | Nice to have rather than needed. A player says at the start whether they have it, and results that `need` it are drawn again when they do not. Default: `false`. |
+| `note` | `string` | - | A line on where to get it, which version, or what will do instead. |
+| `url` | `string` | - | Where to find it. |
 
 ## `pack.license`
 
@@ -71,11 +71,11 @@ Licensing, and whether the app may share this pack's text.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `id` | `CC0-1.0` \| `CC-BY-4.0` \| `CC-BY-SA-4.0` \| `CC-BY-NC-4.0` \| `CC-BY-NC-SA-4.0` \| `CC-BY-ND-4.0` \| `CC-BY-NC-ND-4.0` \| `MIT` \| `Apache-2.0` \| `BSD-3-Clause` \| `Unlicense` \| `OGL-1.0a` \| `ORC` \| `proprietary` \| `custom` | yes | The license, by SPDX identifier where one applies; `proprietary` or `custom` with the terms in `text`. |
-| `text` | `string` | — | The license or notice in full, shown with the pack and printed in its rulebook. Required for `proprietary` and `custom`; welcome on any. |
+| `text` | `string` | - | The license or notice in full, shown with the pack and printed in its rulebook. Required for `proprietary` and `custom`; welcome on any. |
 | `redistributable` | `boolean` | yes | Whether this pack's text may be included in exports meant for other people. When false the app shares roll results and references but never the rules prose, so a private transcription of a commercial rulebook stays private. |
-| `holder` | `string` | — | Who holds the rights. |
-| `notice` | `string` | — | Notice displayed alongside the pack. |
-| `url` | `string` | — | Where to obtain or license the original. |
+| `holder` | `string` | - | Who holds the rights. |
+| `notice` | `string` | - | Notice displayed alongside the pack. |
+| `url` | `string` | - | Where to obtain or license the original. |
 
 ## `pack.vocabulary`
 
@@ -86,8 +86,8 @@ The words this game uses. The interface speaks these rather than any built-in no
 | `run` | `object` | yes | What one whole play session is called. |
 | `unit` | `object` | yes | What one round of play is called. |
 | `subject` | `object` | yes | What the thing produced in a unit is called. |
-| `finalize` | `string` | — | Verb for closing a unit, e.g. Finalize, Fire, Commit. Default: `"Finalize"`. |
-| `terms` | map of `string` | — | Overrides for other UI strings, keyed by the string's name. |
+| `finalize` | `string` | - | Verb for closing a unit, e.g. Finalize, Fire, Commit. Default: `"Finalize"`. |
+| `terms` | map of `string` | - | Overrides for other UI strings, keyed by the string's name. |
 
 ## `pack.vocabulary.run`
 
@@ -122,10 +122,10 @@ How units behave in this game.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `clock` | `object` | — | A clock every unit runs. A mode can set its own with `clock`. |
-| `createsSubject` | `boolean` | — | Whether entering a unit produces a new subject. Default: `true`. |
-| `min` | `integer` | — | Fewest units in a run. Default: `1`. |
-| `max` | `integer` | — | Most units in a run. Default: `20`. |
+| `clock` | `object` | - | A clock every unit runs. A mode can set its own with `clock`. |
+| `createsSubject` | `boolean` | - | Whether entering a unit produces a new subject. Default: `true`. |
+| `min` | `integer` | - | Fewest units in a run. Default: `1`. |
+| `max` | `integer` | - | Most units in a run. Default: `20`. |
 
 ## `pack.unit.clock`
 
@@ -134,9 +134,9 @@ A clock every unit runs. A mode can set its own with `clock`.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `kind` | `stopwatch` \| `timer` | yes | A stopwatch counts up from the start of the unit; a timer counts down from `minutes`. |
-| `minutes` | `number` | — | How long a timer runs. Required for a timer; ignored by a stopwatch. |
-| `label` | `string` | — | What the clock is called on screen. Defaults to the unit's name and number. |
-| `auto` | `boolean` | — | Start it when the unit is entered and stop it when the unit closes. Off, the player starts it by hand; it still stops with the unit. Default: `true`. |
+| `minutes` | `number` | - | How long a timer runs. Required for a timer; ignored by a stopwatch. |
+| `label` | `string` | - | What the clock is called on screen. Defaults to the unit's name and number. |
+| `auto` | `boolean` | - | Start it when the unit is entered and stop it when the unit closes. Off, the player starts it by hand; it still stops with the unit. Default: `true`. |
 
 ## `pack.tables.* (resolution: lookup)`
 
@@ -146,7 +146,7 @@ A range table: the familiar d100 form where every result owns a span of numbers.
 | --- | --- | --- | --- |
 | `resolution` | `lookup` | yes | Roll once and find the entry whose range contains the result. |
 | `title` | `string` | yes | Table name shown to the player. |
-| `description` | `string` | — | When and why this table is consulted. |
+| `description` | `string` | - | When and why this table is consulted. |
 | `roll` | `string` | yes | What is rolled. Entries must cover its whole range. |
 | `entries` | `object`[] | yes | Results, each owning a roll range. |
 
@@ -157,15 +157,15 @@ One result in a lookup table.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `id` | `string` | yes | Unique within this table. Referenced by saved runs, so avoid renaming. |
-| `title` | `string` | — | Short heading, when the entry has a name of its own. |
+| `title` | `string` | - | Short heading, when the entry has a name of its own. |
 | `text` | `string` | yes | The rules text shown to the player, verbatim. This is what they read and obey. |
-| `triggers` | `object`[] | — | Mechanical consequences of this result. |
-| `requires` | [Predicate](#predicate)[] | — | Conditions that must ALL hold for this result to make sense. When one fails the app offers a re-roll. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
-| `grants` | `string`[] | — | States applied to the relevant subject on resolution. Shorthand for an applyState trigger. |
-| `tags` | `string`[] | — | Free tags, for cross-referencing and for filtering results out in some modes. |
-| `points` | `integer` | — | What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone. |
-| `needs` | `string`[] | — | Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here — a barbell movement for someone without a barbell, an oven dish in a kitchen without one. |
-| `range` | —[] | yes | The inclusive roll range this entry owns. Across the table these must tile the dice range exactly, with no gaps and no overlaps. |
+| `triggers` | `object`[] | - | Mechanical consequences of this result. |
+| `requires` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for this result to make sense. When one fails the app offers a re-roll. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
+| `grants` | `string`[] | - | States applied to the relevant subject on resolution. Shorthand for an applyState trigger. |
+| `tags` | `string`[] | - | Free tags, for cross-referencing and for filtering results out in some modes. |
+| `points` | `integer` | - | What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone. |
+| `needs` | `string`[] | - | Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here: a barbell movement for someone without a barbell, an oven dish in a kitchen without one. |
+| `range` | -[] | yes | The inclusive roll range this entry owns. Across the table these must tile the dice range exactly, with no gaps and no overlaps. |
 
 ## `pack.tables.* (resolution: lookup).entries[].triggers[]`
 
@@ -175,8 +175,8 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 | --- | --- | --- | --- |
 | `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` \| `onTimerExpired` | yes | The lifecycle point at which this fires. |
 | `do` | [Action](#action)[] | yes | Actions to run, in order, when it fires. |
-| `when` | [Predicate](#predicate)[] | — | Only fire if every one of these still holds at trigger time. |
-| `label` | `string` | — | How the pending obligation is described to the player. |
+| `when` | [Predicate](#predicate)[] | - | Only fire if every one of these still holds at trigger time. |
+| `label` | `string` | - | How the pending obligation is described to the player. |
 
 ## `pack.tables.* (resolution: bands)`
 
@@ -186,7 +186,7 @@ An outcome ladder: hit, partial, miss. Use when the total matters more than a lo
 | --- | --- | --- | --- |
 | `resolution` | `bands` | yes | Roll an expression and compare the total against open-ended thresholds. |
 | `title` | `string` | yes | Table name shown to the player. |
-| `description` | `string` | — | When and why this table is consulted. |
+| `description` | `string` | - | When and why this table is consulted. |
 | `roll` | `string` | yes | What is rolled, e.g. 2d10 or d6+2. |
 | `entries` | `object`[] | yes | Outcome tiers, ordered however you like. |
 
@@ -197,16 +197,16 @@ One outcome tier in a bands table, selected by comparing the rolled total.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `id` | `string` | yes | Unique within this table. Referenced by saved runs, so avoid renaming. |
-| `title` | `string` | — | Short heading, when the entry has a name of its own. |
+| `title` | `string` | - | Short heading, when the entry has a name of its own. |
 | `text` | `string` | yes | The rules text shown to the player, verbatim. This is what they read and obey. |
-| `triggers` | `object`[] | — | Mechanical consequences of this result. |
-| `requires` | [Predicate](#predicate)[] | — | Conditions that must ALL hold for this result to make sense. When one fails the app offers a re-roll. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
-| `grants` | `string`[] | — | States applied to the relevant subject on resolution. Shorthand for an applyState trigger. |
-| `tags` | `string`[] | — | Free tags, for cross-referencing and for filtering results out in some modes. |
-| `points` | `integer` | — | What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone. |
-| `needs` | `string`[] | — | Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here — a barbell movement for someone without a barbell, an oven dish in a kitchen without one. |
-| `gte` | `integer` | — | Lower bound of the band, inclusive. Omit for open. |
-| `lte` | `integer` | — | Upper bound of the band, inclusive. Omit for open. |
+| `triggers` | `object`[] | - | Mechanical consequences of this result. |
+| `requires` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for this result to make sense. When one fails the app offers a re-roll. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
+| `grants` | `string`[] | - | States applied to the relevant subject on resolution. Shorthand for an applyState trigger. |
+| `tags` | `string`[] | - | Free tags, for cross-referencing and for filtering results out in some modes. |
+| `points` | `integer` | - | What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone. |
+| `needs` | `string`[] | - | Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here: a barbell movement for someone without a barbell, an oven dish in a kitchen without one. |
+| `gte` | `integer` | - | Lower bound of the band, inclusive. Omit for open. |
+| `lte` | `integer` | - | Upper bound of the band, inclusive. Omit for open. |
 
 ## `pack.tables.* (resolution: bands).entries[].triggers[]`
 
@@ -216,8 +216,8 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 | --- | --- | --- | --- |
 | `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` \| `onTimerExpired` | yes | The lifecycle point at which this fires. |
 | `do` | [Action](#action)[] | yes | Actions to run, in order, when it fires. |
-| `when` | [Predicate](#predicate)[] | — | Only fire if every one of these still holds at trigger time. |
-| `label` | `string` | — | How the pending obligation is described to the player. |
+| `when` | [Predicate](#predicate)[] | - | Only fire if every one of these still holds at trigger time. |
+| `label` | `string` | - | How the pending obligation is described to the player. |
 
 ## `pack.tables.* (resolution: opposed)`
 
@@ -227,9 +227,9 @@ An opposed roll: beat both challenge dice for a strong result, one for a mixed r
 | --- | --- | --- | --- |
 | `resolution` | `opposed` | yes | Roll an action total against several challenge dice and count how many it beat. |
 | `title` | `string` | yes | Table name shown to the player. |
-| `description` | `string` | — | When and why this table is consulted. |
+| `description` | `string` | - | When and why this table is consulted. |
 | `action` | `string` | yes | The action roll, e.g. d6 or d6+1. |
-| `addResource` | `string` | — | Add this resource's current value to the action total, so a stat or standing can weigh on the roll. |
+| `addResource` | `string` | - | Add this resource's current value to the action total, so a stat or standing can weigh on the roll. |
 | `challenge` | `object` | yes | The opposition. These are compared individually, never summed. |
 | `entries` | `object`[] | yes | Outcomes, one for each possible number of challenge dice beaten. |
 
@@ -249,14 +249,14 @@ One rung of an opposed roll's outcome ladder.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `id` | `string` | yes | Unique within this table. Referenced by saved runs, so avoid renaming. |
-| `title` | `string` | — | Short heading, when the entry has a name of its own. |
+| `title` | `string` | - | Short heading, when the entry has a name of its own. |
 | `text` | `string` | yes | The rules text shown to the player, verbatim. This is what they read and obey. |
-| `triggers` | `object`[] | — | Mechanical consequences of this result. |
-| `requires` | [Predicate](#predicate)[] | — | Conditions that must ALL hold for this result to make sense. When one fails the app offers a re-roll. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
-| `grants` | `string`[] | — | States applied to the relevant subject on resolution. Shorthand for an applyState trigger. |
-| `tags` | `string`[] | — | Free tags, for cross-referencing and for filtering results out in some modes. |
-| `points` | `integer` | — | What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone. |
-| `needs` | `string`[] | — | Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here — a barbell movement for someone without a barbell, an oven dish in a kitchen without one. |
+| `triggers` | `object`[] | - | Mechanical consequences of this result. |
+| `requires` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for this result to make sense. When one fails the app offers a re-roll. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
+| `grants` | `string`[] | - | States applied to the relevant subject on resolution. Shorthand for an applyState trigger. |
+| `tags` | `string`[] | - | Free tags, for cross-referencing and for filtering results out in some modes. |
+| `points` | `integer` | - | What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone. |
+| `needs` | `string`[] | - | Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here: a barbell movement for someone without a barbell, an oven dish in a kitchen without one. |
 | `beats` | `integer` | yes | How many challenge dice the action total must strictly exceed to land here. Ties go to the challenge, which is what makes these games bite. |
 
 ## `pack.tables.* (resolution: opposed).entries[].triggers[]`
@@ -267,8 +267,8 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 | --- | --- | --- | --- |
 | `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` \| `onTimerExpired` | yes | The lifecycle point at which this fires. |
 | `do` | [Action](#action)[] | yes | Actions to run, in order, when it fires. |
-| `when` | [Predicate](#predicate)[] | — | Only fire if every one of these still holds at trigger time. |
-| `label` | `string` | — | How the pending obligation is described to the player. |
+| `when` | [Predicate](#predicate)[] | - | Only fire if every one of these still holds at trigger time. |
+| `label` | `string` | - | How the pending obligation is described to the player. |
 
 ## `pack.tables.* (resolution: keyed)`
 
@@ -278,7 +278,7 @@ A table addressed by name. This is what lets a deck draw resolve on a table, rat
 | --- | --- | --- | --- |
 | `resolution` | `keyed` | yes | Selected by a name rather than a number, such as a drawn card's suit. |
 | `title` | `string` | yes | Table name shown to the player. |
-| `description` | `string` | — | When and why this table is consulted. |
+| `description` | `string` | - | When and why this table is consulted. |
 | `entries` | `object`[] | yes | Results, each owning a key. |
 
 ## `pack.tables.* (resolution: keyed).entries[]`
@@ -288,14 +288,14 @@ One result in a keyed table.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `id` | `string` | yes | Unique within this table. Referenced by saved runs, so avoid renaming. |
-| `title` | `string` | — | Short heading, when the entry has a name of its own. |
+| `title` | `string` | - | Short heading, when the entry has a name of its own. |
 | `text` | `string` | yes | The rules text shown to the player, verbatim. This is what they read and obey. |
-| `triggers` | `object`[] | — | Mechanical consequences of this result. |
-| `requires` | [Predicate](#predicate)[] | — | Conditions that must ALL hold for this result to make sense. When one fails the app offers a re-roll. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
-| `grants` | `string`[] | — | States applied to the relevant subject on resolution. Shorthand for an applyState trigger. |
-| `tags` | `string`[] | — | Free tags, for cross-referencing and for filtering results out in some modes. |
-| `points` | `integer` | — | What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone. |
-| `needs` | `string`[] | — | Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here — a barbell movement for someone without a barbell, an oven dish in a kitchen without one. |
+| `triggers` | `object`[] | - | Mechanical consequences of this result. |
+| `requires` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for this result to make sense. When one fails the app offers a re-roll. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
+| `grants` | `string`[] | - | States applied to the relevant subject on resolution. Shorthand for an applyState trigger. |
+| `tags` | `string`[] | - | Free tags, for cross-referencing and for filtering results out in some modes. |
+| `points` | `integer` | - | What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone. |
+| `needs` | `string`[] | - | Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here: a barbell movement for someone without a barbell, an oven dish in a kitchen without one. |
 | `key` | `string` | yes | The value that selects this entry, e.g. a suit (hearts) or a rank (A, 7, K). Compared case-insensitively. |
 
 ## `pack.tables.* (resolution: keyed).entries[].triggers[]`
@@ -306,8 +306,8 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 | --- | --- | --- | --- |
 | `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` \| `onTimerExpired` | yes | The lifecycle point at which this fires. |
 | `do` | [Action](#action)[] | yes | Actions to run, in order, when it fires. |
-| `when` | [Predicate](#predicate)[] | — | Only fire if every one of these still holds at trigger time. |
-| `label` | `string` | — | How the pending obligation is described to the player. |
+| `when` | [Predicate](#predicate)[] | - | Only fire if every one of these still holds at trigger time. |
+| `label` | `string` | - | How the pending obligation is described to the player. |
 
 ## `pack.decks.* (kind: cards)`
 
@@ -317,11 +317,11 @@ A deck of cards you write yourself.
 | --- | --- | --- | --- |
 | `kind` | `cards` | yes | An explicit list of bespoke cards. |
 | `title` | `string` | yes | Deck name shown to the player. |
-| `description` | `string` | — | What this deck is for. |
+| `description` | `string` | - | What this deck is for. |
 | `cards` | `object`[] | yes | Every card in the deck. |
-| `drawAtStart` | `integer` | — | How many cards are dealt when a run begins. Default: `0`. |
-| `unique` | `boolean` | — | Whether two copies of the same card may exist at once. Default: `true`. |
-| `carriesOver` | `boolean` | — | Whether unspent cards survive into the next run. Default: `false`. |
+| `drawAtStart` | `integer` | - | How many cards are dealt when a run begins. Default: `0`. |
+| `unique` | `boolean` | - | Whether two copies of the same card may exist at once. Default: `true`. |
+| `carriesOver` | `boolean` | - | Whether unspent cards survive into the next run. Default: `false`. |
 
 ## `pack.decks.* (kind: cards).cards[]`
 
@@ -332,9 +332,9 @@ A single card.
 | `id` | `string` | yes | Unique within the deck. |
 | `title` | `string` | yes | The card's name. |
 | `text` | `string` | yes | What the card does, in the player's words. |
-| `triggers` | `object`[] | — | Mechanical effects of playing the card. |
-| `requires` | [Predicate](#predicate)[] | — | Conditions that must hold for the card to be playable. |
-| `tags` | `string`[] | — | Free tags, for filtering in some modes. |
+| `triggers` | `object`[] | - | Mechanical effects of playing the card. |
+| `requires` | [Predicate](#predicate)[] | - | Conditions that must hold for the card to be playable. |
+| `tags` | `string`[] | - | Free tags, for filtering in some modes. |
 
 ## `pack.decks.* (kind: cards).cards[].triggers[]`
 
@@ -344,8 +344,8 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 | --- | --- | --- | --- |
 | `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` \| `onTimerExpired` | yes | The lifecycle point at which this fires. |
 | `do` | [Action](#action)[] | yes | Actions to run, in order, when it fires. |
-| `when` | [Predicate](#predicate)[] | — | Only fire if every one of these still holds at trigger time. |
-| `label` | `string` | — | How the pending obligation is described to the player. |
+| `when` | [Predicate](#predicate)[] | - | Only fire if every one of these still holds at trigger time. |
+| `label` | `string` | - | How the pending obligation is described to the player. |
 
 ## `pack.decks.* (kind: standard52)`
 
@@ -355,11 +355,11 @@ A standard 52-card deck. Included because a whole family of solo journaling game
 | --- | --- | --- | --- |
 | `kind` | `standard52` | yes | An ordinary playing-card deck, addressed by rank and suit. |
 | `title` | `string` | yes | Deck name shown to the player. |
-| `description` | `string` | — | What this deck is for. |
-| `includeJokers` | `boolean` | — | Whether to shuffle in two jokers. Default: `false`. |
-| `drawAtStart` | `integer` | — | How many cards are dealt when a run begins. Default: `0`. |
-| `resolveOn` | `string` | — | Table consulted on each draw, if the draw should produce a prompt. |
-| `resolveBy` | `rank` \| `suit` | — | Whether the draw's rank or its suit selects the table entry. Default: `"rank"`. |
+| `description` | `string` | - | What this deck is for. |
+| `includeJokers` | `boolean` | - | Whether to shuffle in two jokers. Default: `false`. |
+| `drawAtStart` | `integer` | - | How many cards are dealt when a run begins. Default: `0`. |
+| `resolveOn` | `string` | - | Table consulted on each draw, if the draw should produce a prompt. |
+| `resolveBy` | `rank` \| `suit` | - | Whether the draw's rank or its suit selects the table entry. Default: `"rank"`. |
 
 ## `pack.states.*`
 
@@ -368,12 +368,12 @@ A persistent condition that sticks to a subject, or to the run, once applied.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `label` | `string` | yes | Name shown to the player, e.g. Volume Fixed. |
-| `short` | `string` | — | Compact form for embedding in the name of the thing itself — a file, a layer, a DAW track. Keep it very short, e.g. VF. |
-| `scope` | `subject` \| `run` \| `contestant` | — | Whether this attaches to one subject, to the whole run, or — in moderated play — to one contestant on the roster, marked by the moderator: spared from a curse, disqualified, and so on. Default: `"subject"`. |
-| `until` | `unitEnd` | — | When the state lifts by itself. `unitEnd`: it is taken off everything it is on when the unit closes — a curse for this region, a cure for this region. |
-| `semantics` | `blocksEdit` \| `makesUntargetable` \| `excludesFromResult` \| `locksValue` \| `removesFromPlay`[] | — | What this state means mechanically. Without it the engine would have to know what your state names mean, which is exactly what keeps an engine game-specific. `makesUntargetable` removes the subject from targeting; `excludesFromResult` leaves it in the run but out of the finished piece; `removesFromPlay` takes it out entirely. |
-| `group` | `string` | — | States in the same group are mutually exclusive on one holder: applying one removes the others. Use it for outcomes that cannot both be true, like landed and missed. |
-| `description` | `string` | — | Explanation shown to the player on hover. |
+| `short` | `string` | - | Compact form for embedding in the name of the thing itself, a file, a layer, a DAW track. Keep it very short, e.g. VF. |
+| `scope` | `subject` \| `run` \| `contestant` | - | Whether this attaches to one subject, to the whole run, or, in moderated play, to one contestant on the roster, marked by the moderator: spared from a curse, disqualified, and so on. Default: `"subject"`. |
+| `until` | `unitEnd` | - | When the state lifts by itself. `unitEnd`: it is taken off everything it is on when the unit closes, a curse for this region, a cure for this region. |
+| `semantics` | `blocksEdit` \| `makesUntargetable` \| `excludesFromResult` \| `locksValue` \| `removesFromPlay`[] | - | What this state means mechanically. Without it the engine would have to know what your state names mean, which is exactly what keeps an engine game-specific. `makesUntargetable` removes the subject from targeting; `excludesFromResult` leaves it in the run but out of the finished piece; `removesFromPlay` takes it out entirely. |
+| `group` | `string` | - | States in the same group are mutually exclusive on one holder: applying one removes the others. Use it for outcomes that cannot both be true, like landed and missed. |
+| `description` | `string` | - | Explanation shown to the player on hover. |
 
 ## `pack.counters.*`
 
@@ -382,13 +382,13 @@ A running tally with declarative rules. This is what turns a mechanic like 'six 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `label` | `string` | yes | Name shown to the player. |
-| `initial` | `integer` | — | Value at the start of a run. Default: `0`. |
-| `min` | `integer` | — | Floor. Values are clamped to it. |
-| `max` | `integer` | — | Ceiling. Values are clamped to it. |
-| `hidden` | `boolean` | — | Track it without showing it, for tension the player should feel but not read. Default: `false`. |
-| `incrementOn` | `object`[] | — | Events that add one. |
-| `resetOn` | `object`[] | — | Events that return it to `initial`. |
-| `triggers` | `object`[] | — | Consequences that fire when the counter reaches a value. |
+| `initial` | `integer` | - | Value at the start of a run. Default: `0`. |
+| `min` | `integer` | - | Floor. Values are clamped to it. |
+| `max` | `integer` | - | Ceiling. Values are clamped to it. |
+| `hidden` | `boolean` | - | Track it without showing it, for tension the player should feel but not read. Default: `false`. |
+| `incrementOn` | `object`[] | - | Events that add one. |
+| `resetOn` | `object`[] | - | Events that return it to `initial`. |
+| `triggers` | `object`[] | - | Consequences that fire when the counter reaches a value. |
 
 ## `pack.counters.*.incrementOn[] (on: phaseCompleted)`
 
@@ -416,7 +416,7 @@ Fires when an entry from a table is actually put into play.
 | --- | --- | --- | --- |
 | `on` | `outcomeResolved` | yes | Fires when an entry from a table is put into play. |
 | `table` | `string` | yes | The id of the table the resolved entry belongs to. |
-| `cause` | `any` \| `phase` \| `action` \| `manual` | — | Narrows how the entry came into play: from a scheduled phase step, from another entry's action, entered by hand, or any of these. This is what lets a counter distinguish consequences the player triggered from ones that arrived some other way. Default: `"any"`. |
+| `cause` | `any` \| `phase` \| `action` \| `manual` | - | Narrows how the entry came into play: from a scheduled phase step, from another entry's action, entered by hand, or any of these. This is what lets a counter distinguish consequences the player triggered from ones that arrived some other way. Default: `"any"`. |
 
 ## `pack.counters.*.incrementOn[] (on: stateApplied)`
 
@@ -453,7 +453,7 @@ Fires when an entry from a table is actually put into play.
 | --- | --- | --- | --- |
 | `on` | `outcomeResolved` | yes | Fires when an entry from a table is put into play. |
 | `table` | `string` | yes | The id of the table the resolved entry belongs to. |
-| `cause` | `any` \| `phase` \| `action` \| `manual` | — | Narrows how the entry came into play: from a scheduled phase step, from another entry's action, entered by hand, or any of these. This is what lets a counter distinguish consequences the player triggered from ones that arrived some other way. Default: `"any"`. |
+| `cause` | `any` \| `phase` \| `action` \| `manual` | - | Narrows how the entry came into play: from a scheduled phase step, from another entry's action, entered by hand, or any of these. This is what lets a counter distinguish consequences the player triggered from ones that arrived some other way. Default: `"any"`. |
 
 ## `pack.counters.*.resetOn[] (on: stateApplied)`
 
@@ -472,8 +472,8 @@ A threshold trigger.
 | --- | --- | --- | --- |
 | `when` | `object` | yes | The threshold at which this fires. |
 | `do` | [Action](#action)[] | yes | What happens when it fires. |
-| `oncePerRun` | `boolean` | — | Fire at most once per run, however often the threshold is met. Default: `false`. |
-| `label` | `string` | — | How the event is announced to the player. |
+| `oncePerRun` | `boolean` | - | Fire at most once per run, however often the threshold is met. Default: `false`. |
+| `label` | `string` | - | How the event is announced to the player. |
 
 ## `pack.counters.*.triggers[].when`
 
@@ -481,11 +481,11 @@ The threshold at which this fires.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `eq` | `integer` | — | Matches only this exact value. |
-| `gte` | `integer` | — | Matches values greater than or equal to this. |
-| `lte` | `integer` | — | Matches values less than or equal to this. |
-| `gteCounter` | `string` | — | Matches values greater than or equal to this counter's current value. |
-| `lteCounter` | `string` | — | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `eq` | `integer` | - | Matches only this exact value. |
+| `gte` | `integer` | - | Matches values greater than or equal to this. |
+| `lte` | `integer` | - | Matches values less than or equal to this. |
+| `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
+| `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 
 ## `pack.resources.*`
 
@@ -494,12 +494,12 @@ A numeric track the player fills or spends: a progress clock, a word count, trai
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `label` | `string` | yes | Name shown to the player. |
-| `initial` | `integer` | — | Value at the start of a run. Default: `0`. |
-| `min` | `integer` | — | Floor. Default: `0`. |
-| `max` | `integer` | — | Ceiling. |
-| `step` | `integer` | — | Increment used by the plus/minus controls. Default: `1`. |
-| `display` | `boxes` \| `bar` \| `number` | — | How to draw it: tick boxes, a filled bar, or a plain number. Default: `"number"`. |
-| `description` | `string` | — | What it represents and how it is spent. |
+| `initial` | `integer` | - | Value at the start of a run. Default: `0`. |
+| `min` | `integer` | - | Floor. Default: `0`. |
+| `max` | `integer` | - | Ceiling. |
+| `step` | `integer` | - | Increment used by the plus/minus controls. Default: `1`. |
+| `display` | `boxes` \| `bar` \| `number` | - | How to draw it: tick boxes, a filled bar, or a plain number. Default: `"number"`. |
+| `description` | `string` | - | What it represents and how it is spent. |
 
 ## `pack.phases[]`
 
@@ -509,9 +509,9 @@ One stage of the per-unit flow.
 | --- | --- | --- | --- |
 | `id` | `string` | yes | Unique among phases. Referenced by counters and mode overrides. |
 | `label` | `string` | yes | Name shown to the player. |
-| `description` | `string` | — | What happens in this phase. |
+| `description` | `string` | - | What happens in this phase. |
 | `steps` | `object`[] | yes | Steps performed in order. |
-| `skipWhen` | [Predicate](#predicate)[] | — | Reasons to skip this phase. Any one of them is enough — a list of two means skip if either applies. Omit it to always play the phase. |
+| `skipWhen` | [Predicate](#predicate)[] | - | Reasons to skip this phase. Any one of them is enough: a list of two means skip if either applies. Omit it to always play the phase. |
 
 ## `pack.phases[].steps[] (kind: rollTable)`
 
@@ -521,10 +521,10 @@ Roll on a table as part of the flow.
 | --- | --- | --- | --- |
 | `kind` | `rollTable` | yes | Roll on a table as part of the flow. |
 | `table` | `string` | yes | Id of the table to roll on. |
-| `label` | `string` | — | Prompt shown with the roll. |
-| `into` | `string` | — | Name to bind the rolled total to. |
-| `optional` | `boolean` | — | Let the player skip this roll rather than requiring it. Default: `false`. |
-| `skipWhen` | [Predicate](#predicate)[] | — | Reasons to skip this step. Any one of them is enough. |
+| `label` | `string` | - | Prompt shown with the roll. |
+| `into` | `string` | - | Name to bind the rolled total to. |
+| `optional` | `boolean` | - | Let the player skip this roll rather than requiring it. Default: `false`. |
+| `skipWhen` | [Predicate](#predicate)[] | - | Reasons to skip this step. Any one of them is enough. |
 
 ## `pack.phases[].steps[] (kind: declareSubject)`
 
@@ -533,21 +533,21 @@ Ask the player to commit to what they are about to make.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `kind` | `declareSubject` | yes | Ask the player to commit to what they are about to make. |
-| `label` | `string` | — | Prompt shown when asking. |
-| `constrainedBy` | `string` | — | Table whose result, if rolled this unit, constrains what may be declared. |
-| `skipWhen` | [Predicate](#predicate)[] | — | Reasons to skip this step. Any one of them is enough. |
+| `label` | `string` | - | Prompt shown when asking. |
+| `constrainedBy` | `string` | - | Table whose result, if rolled this unit, constrains what may be declared. |
+| `skipWhen` | [Predicate](#predicate)[] | - | Reasons to skip this step. Any one of them is enough. |
 
 ## `pack.phases[].steps[] (kind: manual)`
 
-A step the engine cannot perform or verify — the actual creative work. It only tracks that you did it.
+A step the engine cannot perform or verify, the actual creative work. It only tracks that you did it.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `kind` | `manual` | yes | A step the engine cannot perform or verify: the actual creative work. |
 | `label` | `string` | yes | What the player is being asked to do. |
-| `description` | `string` | — | Further guidance. |
-| `constrainedBy` | `string` | — | Table whose results this unit, if any, the work must honor; they are shown on the step, so a rule drawn earlier in the unit is in front of the player while they do it. |
-| `checklist` | `string` \| `object`[] | — | Points the player ticks off before moving on, each optionally showing the results it is about. |
+| `description` | `string` | - | Further guidance. |
+| `constrainedBy` | `string` | - | Table whose results this unit, if any, the work must honor; they are shown on the step, so a rule drawn earlier in the unit is in front of the player while they do it. |
+| `checklist` | `string` \| `object`[] | - | Points the player ticks off before moving on, each optionally showing the results it is about. |
 
 ## `pack.phases[].steps[] (kind: manual).checklist[] (1)`
 
@@ -556,9 +556,9 @@ A point with the results it is about shown beneath it.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `text` | `string` | yes | The point to tick off. |
-| `optional` | `boolean` | — | May be left unticked: closing the unit does not wait for it. For boxes that record an outcome rather than promise one. |
-| `tally` | `string` | — | Each box ticked under this point adds one to this counter, and unticking takes it back. With `shows`, one box per result; without, the point's own box. |
-| `shows` | `object` | — | What to look at while ticking this: a table's results, listed under the point with a box each. A point whose tables produced nothing in scope is not asked at all. |
+| `optional` | `boolean` | - | May be left unticked: closing the unit does not wait for it. For boxes that record an outcome rather than promise one. |
+| `tally` | `string` | - | Each box ticked under this point adds one to this counter, and unticking takes it back. With `shows`, one box per result; without, the point's own box. |
+| `shows` | `object` | - | What to look at while ticking this: a table's results, listed under the point with a box each. |
 
 ## `pack.phases[].steps[] (kind: actions)`
 
@@ -568,7 +568,7 @@ Run actions as part of the flow.
 | --- | --- | --- | --- |
 | `kind` | `actions` | yes | Run actions as part of the flow. |
 | `do` | [Action](#action)[] | yes | Actions to run at this point in the flow. |
-| `skipWhen` | [Predicate](#predicate)[] | — | Reasons to skip this step. Any one of them is enough. |
+| `skipWhen` | [Predicate](#predicate)[] | - | Reasons to skip this step. Any one of them is enough. |
 
 ## `pack.phases[].steps[] (kind: finalizeUnit)`
 
@@ -577,8 +577,8 @@ Close the unit. Every flow needs one of these somewhere.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `kind` | `finalizeUnit` | yes | Close the unit. |
-| `label` | `string` | — | Label for the button that closes the unit. |
-| `confirm` | `string` \| `object`[] | — | Statements the player must affirm before the unit closes. Use this for the honor check: the engine cannot tell whether a constraint was respected, but it can make you look at it. |
+| `label` | `string` | - | Label for the button that closes the unit. |
+| `confirm` | `string` \| `object`[] | - | Statements the player must affirm before the unit closes. Use this for the honor check: the engine cannot tell whether a constraint was respected, but it can make you look at it. |
 
 ## `pack.phases[].steps[] (kind: finalizeUnit).confirm[] (1)`
 
@@ -587,9 +587,9 @@ A point with the results it is about shown beneath it.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `text` | `string` | yes | The point to tick off. |
-| `optional` | `boolean` | — | May be left unticked: closing the unit does not wait for it. For boxes that record an outcome rather than promise one. |
-| `tally` | `string` | — | Each box ticked under this point adds one to this counter, and unticking takes it back. With `shows`, one box per result; without, the point's own box. |
-| `shows` | `object` | — | What to look at while ticking this: a table's results, listed under the point with a box each. |
+| `optional` | `boolean` | - | May be left unticked: closing the unit does not wait for it. For boxes that record an outcome rather than promise one. |
+| `tally` | `string` | - | Each box ticked under this point adds one to this counter, and unticking takes it back. With `shows`, one box per result; without, the point's own box. |
+| `shows` | `object` | - | What to look at while ticking this: a table's results, listed under the point with a box each. |
 
 ## `pack.moves.*`
 
@@ -598,12 +598,12 @@ An optional move the player may choose to make.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `label` | `string` | yes | Name shown on the button. |
-| `description` | `string` | — | What the move does, in the player's words. |
-| `available` | [Predicate](#predicate)[] | — | Conditions that must ALL hold for the move to be offered. Omit to make it always available. |
-| `oncePerRun` | `boolean` | — | Whether the move is spent after a single use. Default: `false`. |
+| `description` | `string` | - | What the move does, in the player's words. |
+| `available` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for the move to be offered. Omit to make it always available. |
+| `oncePerRun` | `boolean` | - | Whether the move is spent after a single use. Default: `false`. |
 | `do` | [Action](#action)[] | yes | What happens when the player takes it. |
-| `finalizes` | `boolean` | — | Taking this move also closes the current unit: the rest of its flow is recorded as done and the unit is finalized. For moves that are outcomes, like landed or missed, so the player is not asked to close the unit a second time. |
-| `when` | `anytime` \| `betweenUnits` \| `beforeEnding` | — | When the move is offered: at any point, only between units, or only when the player is deciding whether to stop. Default: `"anytime"`. |
+| `finalizes` | `boolean` | - | Taking this move also closes the current unit: the rest of its flow is recorded as done and the unit is finalized. For moves that are outcomes, like landed or missed, so the player is not asked to close the unit a second time. |
+| `when` | `anytime` \| `betweenUnits` \| `beforeEnding` | - | When the move is offered: at any point, only between units, or only when the player is deciding whether to stop. Default: `"anytime"`. |
 
 ## `pack.targeting (strategy: anchoredOffset)`
 
@@ -613,10 +613,10 @@ Count a number of places from an anchor subject. Generalizes the 'N before the n
 | --- | --- | --- | --- |
 | `strategy` | `anchoredOffset` | yes | Count a number of places from an anchor subject. |
 | `bands` | `object`[] | yes | How roll ranges map onto anchors and directions. |
-| `offsetFrom` | `onesDigit` | — | How the step count is read out of the roll. Default: `"onesDigit"`. |
-| `wraparound` | `boolean` | — | Wrap past the ends of the list rather than stopping. Default: `true`. |
-| `skipIneligible` | `boolean` | — | Skip untargetable and incomplete subjects while counting. Default: `true`. |
-| `eventFallback` | `object` | — | How to pick a target when the consequence was not triggered by a roll that already selects a band. |
+| `offsetFrom` | `onesDigit` | - | How the step count is read out of the roll. Default: `"onesDigit"`. |
+| `wraparound` | `boolean` | - | Wrap past the ends of the list rather than stopping. Default: `true`. |
+| `skipIneligible` | `boolean` | - | Skip untargetable and incomplete subjects while counting. Default: `true`. |
+| `eventFallback` | `object` | - | How to pick a target when the consequence was not triggered by a roll that already selects a band. |
 
 ## `pack.targeting (strategy: anchoredOffset).bands[]`
 
@@ -624,9 +624,9 @@ One band of the roll, mapping to an anchor and a direction.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `range` | —[] | yes | The roll range that selects this band. |
+| `range` | -[] | yes | The roll range that selects this band. |
 | `anchor` | `newest` \| `oldest` \| `playerChoice` | yes | Which subject counting starts from. |
-| `direction` | `before` \| `after` | — | Which way to count from the anchor. Required unless playerChoice. |
+| `direction` | `before` \| `after` | - | Which way to count from the anchor. Required unless playerChoice. |
 
 ## `pack.targeting (strategy: anchoredOffset).eventFallback`
 
@@ -637,7 +637,7 @@ How to pick a target when the consequence was not triggered by a roll that alrea
 | `roll` | `string` | yes | What to roll to pick a band. |
 | `tensOddBand` | `integer` | yes | Band to use when the tens digit is odd, given as the band's low value. |
 | `tensEvenBand` | `integer` | yes | Band to use when the tens digit is even, given as the band's low value. |
-| `missOn` | `integer` | — | Roll on which the consequence misses entirely but still counts as having happened. |
+| `missOn` | `integer` | - | Roll on which the consequence misses entirely but still counts as having happened. |
 
 ## `pack.journal`
 
@@ -645,9 +645,9 @@ Free-text notes attached to units. Essential for journaling games, and useful an
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `enabled` | `boolean` | — | Offer a free-text note on each unit. Default: `true`. |
-| `prompt` | `string` | — | The question shown above the note field. |
-| `required` | `boolean` | — | Require a note before a unit can be closed. Default: `false`. |
+| `enabled` | `boolean` | - | Offer a free-text note on each unit. Default: `true`. |
+| `prompt` | `string` | - | The question shown above the note field. |
+| `required` | `boolean` | - | Require a note before a unit can be closed. Default: `false`. |
 
 ## `pack.score (0)`
 
@@ -656,9 +656,9 @@ Score by a counter's value.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `counter` | `string` | yes | The declared counter whose value is the score. |
-| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
-| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
-| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+| `better` | `higher` \| `lower` | - | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | - | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | - | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
 
 ## `pack.score (1)`
 
@@ -667,9 +667,9 @@ Score by a resource's value.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `resource` | `string` | yes | The declared resource whose value is the score. |
-| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
-| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
-| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+| `better` | `higher` \| `lower` | - | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | - | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | - | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
 
 ## `pack.score (2)`
 
@@ -678,9 +678,9 @@ Score by how many units the run closed.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `units` | `boolean` | yes | Marks this as scoring by how many units the run closed. |
-| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
-| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
-| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+| `better` | `higher` \| `lower` | - | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | - | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | - | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
 
 ## `pack.score (3)`
 
@@ -689,9 +689,9 @@ Score by time taken: the unit clock where the pack runs one, wall time otherwise
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `time` | `boolean` | yes | Marks this as scoring by time taken. |
-| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
-| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
-| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+| `better` | `higher` \| `lower` | - | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | - | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | - | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
 
 ## `pack.endings[]`
 
@@ -701,8 +701,8 @@ One way a run can finish.
 | --- | --- | --- | --- |
 | `id` | `string` | yes | Unique among endings. |
 | `label` | `string` | yes | Name shown to the player. |
-| `text` | `string` | — | What this ending asks of the player. |
-| `requires` | [Predicate](#predicate)[] | — | Conditions under which this ending is available. |
+| `text` | `string` | - | What this ending asks of the player. |
+| `requires` | [Predicate](#predicate)[] | - | Conditions under which this ending is available. |
 
 ## `pack.triggers[]`
 
@@ -712,8 +712,8 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 | --- | --- | --- | --- |
 | `on` | `immediately` \| `onEnterUnit` \| `onDeclareSubject` \| `afterWork` \| `onFinalize` \| `onDeclareRunOver` \| `onRunEnd` \| `onTimerExpired` | yes | The lifecycle point at which this fires. |
 | `do` | [Action](#action)[] | yes | Actions to run, in order, when it fires. |
-| `when` | [Predicate](#predicate)[] | — | Only fire if every one of these still holds at trigger time. |
-| `label` | `string` | — | How the pending obligation is described to the player. |
+| `when` | [Predicate](#predicate)[] | - | Only fire if every one of these still holds at trigger time. |
+| `label` | `string` | - | How the pending obligation is described to the player. |
 
 ## `pack.modes.*`
 
@@ -722,16 +722,16 @@ A set of deltas over the base ruleset. Keeping modes as deltas rather than separ
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `label` | `string` | yes | Name shown when choosing how to play. |
-| `description` | `string` | — | What is different about this mode. |
-| `disable` | `object` | — | Parts of the base ruleset this mode leaves out. |
-| `units` | `object` | — | How long a run in this mode is. Omit to let the player stop whenever. |
-| `seeded` | `boolean` | — | Pre-roll the whole run from a seed, so several people can attempt the identical sequence and compare results. Default: `false`. |
-| `players` | `object` | — | Multi-player configuration. Omit for solo play. |
-| `perUnit` | `object`[] | — | Per-unit overrides, for modes with a fixed shape — 'unit three always suffers a consequence', and the like. |
-| `clock` | `object` | — | This mode's clock on every unit, instead of the pack's `unit.clock`. |
-| `score` | `object` | — | This mode's own score, instead of the pack's `score`. |
-| `moderated` | `object` | — | Moderated play: one person runs the game on the device, a roster of named contestants races every drawn result, and the moderator awards points. Results with `points` are the challenges; everything else lands on everyone. |
-| `notes` | `string`[] | — | Reminders shown to the player in this mode. |
+| `description` | `string` | - | What is different about this mode. |
+| `disable` | `object` | - | Parts of the base ruleset this mode leaves out. |
+| `units` | `object` | - | How long a run in this mode is. Omit to let the player stop whenever. |
+| `seeded` | `boolean` | - | Pre-roll the whole run from a seed, so several people can attempt the identical sequence and compare results. Default: `false`. |
+| `players` | `object` | - | Multi-player configuration. Omit for solo play. |
+| `perUnit` | `object`[] | - | Per-unit overrides, for modes with a fixed shape,'unit three always suffers a consequence', and the like. |
+| `clock` | `object` | - | This mode's clock on every unit, instead of the pack's `unit.clock`. |
+| `score` | `object` | - | This mode's own score, instead of the pack's `score`. |
+| `moderated` | `object` | - | Moderated play: one person runs the game on the device, a roster of named contestants races every drawn result, and the moderator awards points. Results with `points` are the challenges; everything else lands on everyone. |
+| `notes` | `string`[] | - | Reminders shown to the player in this mode. |
 
 ## `pack.modes.*.disable`
 
@@ -739,10 +739,10 @@ Parts of the base ruleset this mode leaves out.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `tables` | `string`[] | — | Tables not used in this mode. |
-| `decks` | `string`[] | — | Decks not used in this mode. |
-| `counters` | `string`[] | — | Counters not tracked in this mode. |
-| `phases` | `string`[] | — | Phases skipped entirely in this mode. |
+| `tables` | `string`[] | - | Tables not used in this mode. |
+| `decks` | `string`[] | - | Decks not used in this mode. |
+| `counters` | `string`[] | - | Counters not tracked in this mode. |
+| `phases` | `string`[] | - | Phases skipped entirely in this mode. |
 
 ## `pack.modes.*.units`
 
@@ -750,10 +750,10 @@ How long a run in this mode is. Omit to let the player stop whenever.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `fixed` | `integer` | — | Exact number of units. |
-| `roll` | `string` | — | Roll to determine the number of units, e.g. d6+4. |
-| `min` | `integer` | — | Fewest units allowed. |
-| `max` | `integer` | — | Most units allowed. |
+| `fixed` | `integer` | - | Exact number of units. |
+| `roll` | `string` | - | Roll to determine the number of units, e.g. d6+4. |
+| `min` | `integer` | - | Fewest units allowed. |
+| `max` | `integer` | - | Most units allowed. |
 
 ## `pack.modes.*.players`
 
@@ -761,10 +761,10 @@ Multi-player configuration. Omit for solo play.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `min` | `integer` | — | Fewest players. Default: `1`. |
-| `max` | `integer` | — | Most players. Default: `1`. |
-| `roles` | `object`[] | — | The roles players take. One player holds each per unit. |
-| `rotate` | `none` \| `clockwise` | — | Whether roles pass to the next player when a unit closes. Default: `"none"`. |
+| `min` | `integer` | - | Fewest players. Default: `1`. |
+| `max` | `integer` | - | Most players. Default: `1`. |
+| `roles` | `object`[] | - | The roles players take. One player holds each per unit. |
+| `rotate` | `none` \| `clockwise` | - | Whether roles pass to the next player when a unit closes. Default: `"none"`. |
 
 ## `pack.modes.*.players.roles[]`
 
@@ -774,8 +774,8 @@ One role a player can hold.
 | --- | --- | --- | --- |
 | `id` | `string` | yes | Unique among roles. |
 | `label` | `string` | yes | Name shown to the player. |
-| `description` | `string` | — | What this role may and may not do. |
-| `acts` | `boolean` | — | Whether this role takes the table's actions in a unit it holds: rolling, declaring, ticking, closing. Where no role declares it, any seat acts. Default: `false`. |
+| `description` | `string` | - | What this role may and may not do. |
+| `acts` | `boolean` | - | Whether this role takes the table's actions in a unit it holds: rolling, declaring, ticking, closing. Where no role declares it, any seat acts. Default: `false`. |
 
 ## `pack.modes.*.perUnit[]`
 
@@ -784,8 +784,8 @@ An override for one unit.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `unit` | `integer` \| `all` | yes | Which unit this override applies to. |
-| `skipPhases` | `string`[] | — | Phases skipped in this unit. |
-| `extra` | [Action](#action)[] | — | Extra actions run when this unit begins, after any skips are applied. |
+| `skipPhases` | `string`[] | - | Phases skipped in this unit. |
+| `extra` | [Action](#action)[] | - | Extra actions run when this unit begins, after any skips are applied. |
 
 ## `pack.modes.*.clock`
 
@@ -794,9 +794,9 @@ This mode's clock on every unit, instead of the pack's `unit.clock`.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `kind` | `stopwatch` \| `timer` | yes | A stopwatch counts up from the start of the unit; a timer counts down from `minutes`. |
-| `minutes` | `number` | — | How long a timer runs. Required for a timer; ignored by a stopwatch. |
-| `label` | `string` | — | What the clock is called on screen. Defaults to the unit's name and number. |
-| `auto` | `boolean` | — | Start it when the unit is entered and stop it when the unit closes. Off, the player starts it by hand; it still stops with the unit. Default: `true`. |
+| `minutes` | `number` | - | How long a timer runs. Required for a timer; ignored by a stopwatch. |
+| `label` | `string` | - | What the clock is called on screen. Defaults to the unit's name and number. |
+| `auto` | `boolean` | - | Start it when the unit is entered and stop it when the unit closes. Off, the player starts it by hand; it still stops with the unit. Default: `true`. |
 
 ## `pack.modes.*.score (0)`
 
@@ -805,9 +805,9 @@ Score by a counter's value.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `counter` | `string` | yes | The declared counter whose value is the score. |
-| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
-| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
-| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+| `better` | `higher` \| `lower` | - | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | - | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | - | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
 
 ## `pack.modes.*.score (1)`
 
@@ -816,9 +816,9 @@ Score by a resource's value.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `resource` | `string` | yes | The declared resource whose value is the score. |
-| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
-| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
-| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+| `better` | `higher` \| `lower` | - | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | - | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | - | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
 
 ## `pack.modes.*.score (2)`
 
@@ -827,9 +827,9 @@ Score by how many units the run closed.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `units` | `boolean` | yes | Marks this as scoring by how many units the run closed. |
-| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
-| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
-| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+| `better` | `higher` \| `lower` | - | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | - | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | - | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
 
 ## `pack.modes.*.score (3)`
 
@@ -838,9 +838,9 @@ Score by time taken: the unit clock where the pack runs one, wall time otherwise
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `time` | `boolean` | yes | Marks this as scoring by time taken. |
-| `better` | `higher` \| `lower` | — | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
-| `label` | `string` | — | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
-| `tiebreak` | `time` \| `units` | — | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
+| `better` | `higher` \| `lower` | - | Which way wins: a higher number or a lower one. Defaults to higher, except for time, which defaults to lower. |
+| `label` | `string` | - | Name shown beside the score. Defaults to the counter's or resource's own label, "Units closed" in the pack's own word for a unit, or "Time". |
+| `tiebreak` | `time` \| `units` | - | A second key to settle a tie on the first: time (the shorter wins) or units closed (the greater wins). |
 
 ## `pack.modes.*.moderated`
 
@@ -848,9 +848,9 @@ Moderated play: one person runs the game on the device, a roster of named contes
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `contestants` | `object` | — | How many people race. The moderator is not one of them. Default: `{"min":2,"max":10}`. |
-| `award` | `first` \| `everyone` | — | Whether only the first to finish a challenge scores it, or everyone who finishes does. Default: `"first"`. |
-| `firstBonus` | `integer` | — | Extra points for finishing first, on top of the result's own. Meaningful with `everyone`. Default: `0`. |
+| `contestants` | `object` | - | How many people race. The moderator is not one of them. Default: `{"min":2,"max":10}`. |
+| `award` | `first` \| `everyone` | - | Whether only the first to finish a challenge scores it, or everyone who finishes does. Default: `"first"`. |
+| `firstBonus` | `integer` | - | Extra points for finishing first, on top of the result's own. Meaningful with `everyone`. Default: `0`. |
 
 ## `pack.modes.*.moderated.contestants`
 
@@ -858,8 +858,8 @@ How many people race. The moderator is not one of them.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `min` | `integer` | — | Fewest contestants. Default: `2`. |
-| `max` | `integer` | — | Most contestants. Default: `10`. |
+| `min` | `integer` | - | Fewest contestants. Default: `2`. |
+| `max` | `integer` | - | Most contestants. Default: `10`. |
 
 ## `pack.fixtures[] (0)`
 
@@ -868,9 +868,9 @@ Replay a hand-written event log and assert on the state it folds into.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `name` | `string` | yes | What this fixture demonstrates. |
-| `mode` | `string` | — | Mode to replay in. Defaults to the pack's default mode. |
-| `seed` | `string` | — | Seed, for fixtures that depend on generated rolls. |
-| `events` | —[] | yes | The run events to replay, in order. |
+| `mode` | `string` | - | Mode to replay in. Defaults to the pack's default mode. |
+| `seed` | `string` | - | Seed, for fixtures that depend on generated rolls. |
+| `events` | -[] | yes | The run events to replay, in order. |
 | `expect` | `object`[] | yes | Assertions checked after the replay. |
 
 ## `pack.fixtures[] (0).expect[] (0)`
@@ -880,7 +880,7 @@ The value at this path must equal exactly this.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `path` | `string` | yes | Dotted path into derived run state, e.g. counters.calm. |
-| `equals` | — | yes | The value expected at that path. |
+| `equals` | - | yes | The value expected at that path. |
 
 ## `pack.fixtures[] (0).expect[] (1)`
 
@@ -889,7 +889,7 @@ The array at this path must contain this value, among others.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `path` | `string` | yes | Dotted path into derived run state, naming an array. |
-| `contains` | — | yes | The array at this path must contain this value. |
+| `contains` | - | yes | The array at this path must contain this value. |
 
 ## `pack.fixtures[] (0).expect[] (2)`
 
@@ -898,7 +898,7 @@ The array at this path must not contain this value.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `path` | `string` | yes | Dotted path into derived run state, naming an array. |
-| `absent` | — | yes | The array at this path must not contain this value. |
+| `absent` | - | yes | The array at this path must not contain this value. |
 
 ## `pack.fixtures[] (0).expect[] (3)`
 
@@ -906,18 +906,18 @@ Every request the engine made while playing was answered.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `requests` | `answered` | yes | Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all — spelled out here so a fixture can say so on purpose. |
+| `requests` | `answered` | yes | Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all: spelled out here so a fixture can say so on purpose. |
 
 ## `pack.fixtures[] (1)`
 
-Play the pack through a script — entering units, rolling tables, taking moves — and assert on the state that comes out.
+Play the pack through a script, entering units, rolling tables, taking moves, and assert on the state that comes out.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `name` | `string` | yes | What this fixture demonstrates. |
-| `mode` | `string` | — | Mode to play in. Defaults to the pack's default mode. |
-| `seed` | `string` | — | Seed. Unanswered rolls in the script are drawn from it. |
-| `players` | `integer` | — | How many people are playing. |
+| `mode` | `string` | - | Mode to play in. Defaults to the pack's default mode. |
+| `seed` | `string` | - | Seed. Unanswered rolls in the script are drawn from it. |
+| `players` | `integer` | - | How many people are playing. |
 | `play` | `object`[] | yes | The script to play through: entering units, declaring subjects, rolling tables, taking moves. |
 | `expect` | `object`[] | yes | Assertions checked after the play-through. |
 
@@ -928,7 +928,7 @@ Enter the next unit.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `enter` | `integer` | yes | Enter the next unit; asserts it is this one. |
-| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+| `answers` | map of - \| -[] | - | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
 
 ## `pack.fixtures[] (1).play[] (1)`
 
@@ -937,7 +937,7 @@ Declare the current unit's subject. The active step must be a declareSubject ste
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `declare` | `string` | yes | What to declare the current unit's subject as. |
-| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+| `answers` | map of - \| -[] | - | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
 
 ## `pack.fixtures[] (1).play[] (2)`
 
@@ -946,7 +946,7 @@ Run the active step the way the app would: a rollTable step rolls (and rolls aga
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `step` | `string` | yes | The active step: a phase id, or "phaseId#index" for a phase with more than one step. Must be the step the engine is actually waiting on. |
-| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+| `answers` | map of - \| -[] | - | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
 
 ## `pack.fixtures[] (1).play[] (3)`
 
@@ -955,7 +955,7 @@ Finalize the current unit: any confirmations are ticked and the unit closes. The
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `finalize` | `object` | yes | No fields; just marks this as the finalize step. |
-| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+| `answers` | map of - \| -[] | - | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
 
 ## `pack.fixtures[] (1).play[] (4)`
 
@@ -964,7 +964,7 @@ Take a move.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `move` | `string` | yes | Id of the move to take. |
-| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+| `answers` | map of - \| -[] | - | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
 
 ## `pack.fixtures[] (1).play[] (5)`
 
@@ -973,7 +973,7 @@ Settle a due obligation.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `settle` | `string` | yes | The id or label of a due obligation. |
-| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+| `answers` | map of - \| -[] | - | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
 
 ## `pack.fixtures[] (1).play[] (6)`
 
@@ -982,7 +982,7 @@ Tick one checklist item on the active step, without completing it.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `tick` | `string` | yes | The text of a checklist item on the active step. |
-| `answers` | map of — \| —[] | — | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+| `answers` | map of - \| -[] | - | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
 
 ## `pack.fixtures[] (1).expect[] (0)`
 
@@ -991,7 +991,7 @@ The value at this path must equal exactly this.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `path` | `string` | yes | Dotted path into derived run state, e.g. counters.calm. |
-| `equals` | — | yes | The value expected at that path. |
+| `equals` | - | yes | The value expected at that path. |
 
 ## `pack.fixtures[] (1).expect[] (1)`
 
@@ -1000,7 +1000,7 @@ The array at this path must contain this value, among others.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `path` | `string` | yes | Dotted path into derived run state, naming an array. |
-| `contains` | — | yes | The array at this path must contain this value. |
+| `contains` | - | yes | The array at this path must contain this value. |
 
 ## `pack.fixtures[] (1).expect[] (2)`
 
@@ -1009,7 +1009,7 @@ The array at this path must not contain this value.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `path` | `string` | yes | Dotted path into derived run state, naming an array. |
-| `absent` | — | yes | The array at this path must not contain this value. |
+| `absent` | - | yes | The array at this path must not contain this value. |
 
 ## `pack.fixtures[] (1).expect[] (3)`
 
@@ -1017,7 +1017,7 @@ Every request the engine made while playing was answered.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `requests` | `answered` | yes | Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all — spelled out here so a fixture can say so on purpose. |
+| `requests` | `answered` | yes | Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all: spelled out here so a fixture can say so on purpose. |
 
 ## `pack.issue`
 
@@ -1026,12 +1026,12 @@ Marks this copy as issued to one person. Covered by the signature, so removing i
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `to` | `string` | yes | Who this copy was issued to. Shown to them in the app and stamped into anything they export. |
-| `reference` | `string` | — | The seller's own reference for the sale, e.g. an order id. Lets a leaked copy be traced without the name being the only link. |
+| `reference` | `string` | - | The seller's own reference for the sale, e.g. an order id. Lets a leaked copy be traced without the name being the only link. |
 | `issuedAt` | `string` | yes | When this copy was issued, ISO 8601. |
 
 ## `pack.signature`
 
-Evidence of who produced this pack. Does not restrict copying — nothing can, since the app must read every word to play it — but proves the contents are unaltered since the author signed them.
+Evidence of who produced this pack. Does not restrict copying, nothing can, since the app must read every word to play it, but proves the contents are unaltered since the author signed them.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -1039,7 +1039,7 @@ Evidence of who produced this pack. Does not restrict copying — nothing can, s
 | `publicKey` | `string` | yes | The signer's public key, base64url SPKI. Check its fingerprint against one the author published. |
 | `value` | `string` | yes | The signature itself, base64url. |
 | `signedAt` | `string` | yes | When it was signed, ISO 8601. |
-| `signedBy` | `string` | — | What the signer calls themselves. A claim carried by the pack, not proof of identity. |
+| `signedBy` | `string` | - | What the signer calls themselves. A claim carried by the pack, not proof of identity. |
 
 ## Shared definitions
 
@@ -1049,27 +1049,27 @@ These two recurse, so they are defined once and referenced from everywhere they 
 
 One step of behavior. The vocabulary is closed on purpose: packs are data, never code.
 
-- `do: roll` — Roll dice and remember the total under a name.
-- `do: rollOn` — Roll on another table and resolve whatever comes up.
-- `do: branch` — Choose between action lists based on a value bound earlier.
-- `do: prompt` — Put a question to the player and remember the answer.
-- `do: resolveTarget` — Pick which earlier subject a consequence lands on, using the pack's targeting strategy. Required before any action that hits `targetSubject`.
-- `do: applyState` — Attach a persistent state to a subject or to the run.
-- `do: removeState` — Clear a persistent state.
-- `do: removeSubject` — Take a subject out of the run. Its unit still happened, but the subject plays no further part.
-- `do: ban` — Forbid declaring further subjects of a given type for the rest of the run.
-- `do: forceUnit` — Queue mandatory extra units; the run cannot end while any remain.
-- `do: rewind` — Send the player back a unit or more, played again from its start, at the close of the current one.
-- `do: extraRoll` — Owe extra rolls on a table's step, this unit or the next; the flow keeps the step open until they are made.
-- `do: modCounter` — Adjust a counter.
-- `do: modResource` — Adjust a resource, clamped to its declared min and max.
-- `do: grantCard` — Draw cards into the player's hand.
-- `do: discardCard` — Discard cards from hand without resolving them.
-- `do: startTimer` — Start a countdown the player must work against.
-- `do: note` — Give the player an instruction to carry out by hand, tracked as an obligation they tick off. Use this for anything the engine cannot do itself.
-- `do: setFlag` — Set a boolean flag that predicates can later test.
-- `do: endRunAttempt` — Try to end the run. It may be refused, by queued forced units or by a trigger that fires on the attempt.
-- `do: when` — Run actions conditionally on run state.
+- `do: roll` - Roll dice and remember the total under a name.
+- `do: rollOn` - Roll on another table and resolve whatever comes up.
+- `do: branch` - Choose between action lists based on a value bound earlier.
+- `do: prompt` - Put a question to the player and remember the answer.
+- `do: resolveTarget` - Pick which earlier subject a consequence lands on, using the pack's targeting strategy. Required before any action that hits `targetSubject`.
+- `do: applyState` - Attach a persistent state to a subject or to the run.
+- `do: removeState` - Clear a persistent state.
+- `do: removeSubject` - Take a subject out of the run. Its unit still happened, but the subject plays no further part.
+- `do: ban` - Forbid declaring further subjects of a given type for the rest of the run.
+- `do: forceUnit` - Queue mandatory extra units; the run cannot end while any remain.
+- `do: rewind` - Send the player back a unit or more, played again from its start, at the close of the current one.
+- `do: extraRoll` - Owe extra rolls on a table's step, this unit or the next; the flow keeps the step open until they are made.
+- `do: modCounter` - Adjust a counter.
+- `do: modResource` - Adjust a resource, clamped to its declared min and max.
+- `do: grantCard` - Draw cards into the player's hand.
+- `do: discardCard` - Discard cards from hand without resolving them.
+- `do: startTimer` - Start a countdown the player must work against.
+- `do: note` - Give the player an instruction to carry out by hand, tracked as an obligation they tick off. Use this for anything the engine cannot do itself.
+- `do: setFlag` - Set a boolean flag that predicates can later test.
+- `do: endRunAttempt` - Try to end the run. It may be refused, by queued forced units or by a trigger that fires on the attempt.
+- `do: when` - Run actions conditionally on run state.
 
 #### `do: roll`
 
@@ -1080,7 +1080,7 @@ Roll dice and remember the total under a name.
 | `do` | `roll` | yes | Roll dice and remember the total under a name. |
 | `dice` | `string` | yes | What to roll, e.g. d6. |
 | `into` | `string` | yes | Name to bind the total to, so a later branch can test it. |
-| `label` | `string` | — | Shown to the player when prompting for the roll. |
+| `label` | `string` | - | Shown to the player when prompting for the roll. |
 
 #### `do: rollOn`
 
@@ -1090,10 +1090,10 @@ Roll on another table and resolve whatever comes up.
 | --- | --- | --- | --- |
 | `do` | `rollOn` | yes | Roll on another table and resolve whatever comes up. |
 | `table` | `string` | yes | Id of the table to roll on. |
-| `times` | `integer` | — | How many times to roll. Defaults to 1. |
-| `timesFrom` | `string` | — | Name a total bound earlier with `roll … into`; that many times, instead of `times`. How a pack rolls for how many to roll. |
-| `choose` | `one` \| `all` | — | With times > 1: `one` lets the player pick a single result to apply, `all` applies every result. Defaults to `all`. |
-| `into` | `string` | — | Name to bind the rolled total to. |
+| `times` | `integer` | - | How many times to roll. Defaults to 1. |
+| `timesFrom` | `string` | - | Name a total bound earlier with `roll … into`; that many times, instead of `times`. How a pack rolls for how many to roll. |
+| `choose` | `one` \| `all` | - | With times > 1: `one` lets the player pick a single result to apply, `all` applies every result. Defaults to `all`. |
+| `into` | `string` | - | Name to bind the rolled total to. |
 
 #### `do: branch`
 
@@ -1104,7 +1104,7 @@ Choose between action lists based on a value bound earlier.
 | `do` | `branch` | yes | Choose between action lists based on a value bound earlier. |
 | `on` | `string` | yes | Name of a value bound earlier by roll or prompt. |
 | `cases` | `object`[] | yes | Cases tested in order; the first match wins. |
-| `else` | [Action](#action)[] | — | Actions to run when no case matches. |
+| `else` | [Action](#action)[] | - | Actions to run when no case matches. |
 
 ##### `Action (do: branch).cases[]`
 
@@ -1112,8 +1112,8 @@ One arm of a branch. Provide either `in` for exact values or `is` for a range.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `in` | `integer`[] | — | Match when the bound value is exactly one of these numbers. |
-| `is` | `object` | — | Match when the bound value satisfies this comparison. |
+| `in` | `integer`[] | - | Match when the bound value is exactly one of these numbers. |
+| `is` | `object` | - | Match when the bound value satisfies this comparison. |
 | `then` | [Action](#action)[] | yes | Actions to run when this case matches. The first matching case wins. |
 
 ##### `Action (do: branch).cases[].is`
@@ -1122,11 +1122,11 @@ Match when the bound value satisfies this comparison.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `eq` | `integer` | — | Matches only this exact value. |
-| `gte` | `integer` | — | Matches values greater than or equal to this. |
-| `lte` | `integer` | — | Matches values less than or equal to this. |
-| `gteCounter` | `string` | — | Matches values greater than or equal to this counter's current value. |
-| `lteCounter` | `string` | — | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `eq` | `integer` | - | Matches only this exact value. |
+| `gte` | `integer` | - | Matches values greater than or equal to this. |
+| `lte` | `integer` | - | Matches values less than or equal to this. |
+| `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
+| `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 
 ##### `Action (do: branch).cases[].then[] (do: roll)`
 
@@ -1137,7 +1137,7 @@ Roll dice and remember the total under a name.
 | `do` | `roll` | yes | Roll dice and remember the total under a name. |
 | `dice` | `string` | yes | What to roll, e.g. d6. |
 | `into` | `string` | yes | Name to bind the total to, so a later branch can test it. |
-| `label` | `string` | — | Shown to the player when prompting for the roll. |
+| `label` | `string` | - | Shown to the player when prompting for the roll. |
 
 ##### `Action (do: branch).cases[].then[] (do: rollOn)`
 
@@ -1147,10 +1147,10 @@ Roll on another table and resolve whatever comes up.
 | --- | --- | --- | --- |
 | `do` | `rollOn` | yes | Roll on another table and resolve whatever comes up. |
 | `table` | `string` | yes | Id of the table to roll on. |
-| `times` | `integer` | — | How many times to roll. Defaults to 1. |
-| `timesFrom` | `string` | — | Name a total bound earlier with `roll … into`; that many times, instead of `times`. How a pack rolls for how many to roll. |
-| `choose` | `one` \| `all` | — | With times > 1: `one` lets the player pick a single result to apply, `all` applies every result. Defaults to `all`. |
-| `into` | `string` | — | Name to bind the rolled total to. |
+| `times` | `integer` | - | How many times to roll. Defaults to 1. |
+| `timesFrom` | `string` | - | Name a total bound earlier with `roll … into`; that many times, instead of `times`. How a pack rolls for how many to roll. |
+| `choose` | `one` \| `all` | - | With times > 1: `one` lets the player pick a single result to apply, `all` applies every result. Defaults to `all`. |
+| `into` | `string` | - | Name to bind the rolled total to. |
 
 ##### `Action (do: branch).cases[].then[] (do: branch)`
 
@@ -1161,7 +1161,7 @@ Choose between action lists based on a value bound earlier.
 | `do` | `branch` | yes | Choose between action lists based on a value bound earlier. |
 | `on` | `string` | yes | Name of a value bound earlier by roll or prompt. |
 | `cases` | `object`[] | yes | Cases tested in order; the first match wins. |
-| `else` | [Action](#action)[] | — | Actions to run when no case matches. |
+| `else` | [Action](#action)[] | - | Actions to run when no case matches. |
 
 ##### `Action (do: branch).cases[].then[] (do: prompt)`
 
@@ -1172,9 +1172,9 @@ Put a question to the player and remember the answer.
 | `do` | `prompt` | yes | Put a question to the player and remember the answer. |
 | `kind` | `chooseSubject` \| `chooseValue` \| `chooseState` \| `confirm` \| `text` | yes | What kind of answer is wanted: a subject, one of `options`, a state, a yes/no, or free text. |
 | `label` | `string` | yes | The question shown to the player. |
-| `into` | `string` | — | Name to bind the answer to. |
-| `options` | `string`[] | — | The choices offered, for kind `chooseValue`. |
-| `eligibleOnly` | `boolean` | — | For kind `chooseSubject`: restrict the list to currently targetable subjects. |
+| `into` | `string` | - | Name to bind the answer to. |
+| `options` | `string`[] | - | The choices offered, for kind `chooseValue`. |
+| `eligibleOnly` | `boolean` | - | For kind `chooseSubject`: restrict the list to currently targetable subjects. |
 
 ##### `Action (do: branch).cases[].then[] (do: resolveTarget)`
 
@@ -1183,8 +1183,8 @@ Pick which earlier subject a consequence lands on, using the pack's targeting st
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `do` | `resolveTarget` | yes | Pick which earlier subject a consequence lands on. |
-| `from` | `currentRoll` \| `event` \| `choice` | — | How to pick: `currentRoll` reads the roll that triggered this against the pack's targeting bands, `event` uses the fallback roll for consequences not tied to a band, `choice` lets the player decide. Default: `"currentRoll"`. |
-| `into` | `string` | — | Name to bind the chosen subject to. Also always available as targetSubject. |
+| `from` | `currentRoll` \| `event` \| `choice` | - | How to pick: `currentRoll` reads the roll that triggered this against the pack's targeting bands, `event` uses the fallback roll for consequences not tied to a band, `choice` lets the player decide. Default: `"currentRoll"`. |
+| `into` | `string` | - | Name to bind the chosen subject to. Also always available as targetSubject. |
 
 ##### `Action (do: branch).cases[].then[] (do: applyState)`
 
@@ -1222,9 +1222,9 @@ Forbid declaring further subjects of a given type for the rest of the run.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `do` | `ban` | yes | Forbid declaring further subjects of a given type. |
-| `subjectType` | `string` | — | A literal subject type to forbid, when it is known up front. |
-| `from` | `thisSubject` \| `targetSubject` \| `allSubjects` \| `allPriorSubjects` \| `run` \| `object` | — | Take the forbidden type from this subject's declared type instead of naming it. |
-| `label` | `string` | — | How to describe the ban to the player. |
+| `subjectType` | `string` | - | A literal subject type to forbid, when it is known up front. |
+| `from` | `thisSubject` \| `targetSubject` \| `allSubjects` \| `allPriorSubjects` \| `run` \| `object` | - | Take the forbidden type from this subject's declared type instead of naming it. |
+| `label` | `string` | - | How to describe the ban to the player. |
 
 ##### `Action (do: branch).cases[].then[] (do: forceUnit)`
 
@@ -1233,7 +1233,7 @@ Queue mandatory extra units; the run cannot end while any remain.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `do` | `forceUnit` | yes | Queue mandatory extra units before the run may end. |
-| `count` | `integer` | — | How many extra units to queue. Defaults to 1. |
+| `count` | `integer` | - | How many extra units to queue. Defaults to 1. |
 
 ##### `Action (do: branch).cases[].then[] (do: rewind)`
 
@@ -1242,7 +1242,7 @@ Send the player back a unit or more, played again from its start, at the close o
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `do` | `rewind` | yes | Send the player back: when this unit closes, the run enters an earlier unit again instead of the next one. |
-| `count` | `integer` | — | How many units back. Defaults to 1: the previous unit is played again. Never before the first. |
+| `count` | `integer` | - | How many units back. Defaults to 1: the previous unit is played again. Never before the first. |
 
 ##### `Action (do: branch).cases[].then[] (do: extraRoll)`
 
@@ -1252,8 +1252,8 @@ Owe extra rolls on a table's step, this unit or the next; the flow keeps the ste
 | --- | --- | --- | --- |
 | `do` | `extraRoll` | yes | Owe extra rolls on a table's step: the step is rolled again until they are paid. |
 | `table` | `string` | yes | Id of the table whose step rolls again. |
-| `count` | `integer` | — | How many extra rolls. Defaults to 1. |
-| `unit` | `current` \| `next` | — | Which unit owes them: `next` (the default) for "the next Stage rolls two Setbacks", `current` when the step has not happened yet this unit. |
+| `count` | `integer` | - | How many extra rolls. Defaults to 1. |
+| `unit` | `current` \| `next` | - | Which unit owes them: `next` (the default) for "the next Stage rolls two Setbacks", `current` when the step has not happened yet this unit. |
 
 ##### `Action (do: branch).cases[].then[] (do: modCounter)`
 
@@ -1263,9 +1263,9 @@ Adjust a counter.
 | --- | --- | --- | --- |
 | `do` | `modCounter` | yes | Adjust a counter. |
 | `counter` | `string` | yes | Id of the counter to change. |
-| `by` | `integer` | — | Amount to add; negative subtracts. |
-| `set` | `integer` | — | Absolute value to set, overriding `by`. |
-| `setFrom` | `string` | — | Set it to a value bound earlier — a roll's total or a prompt's answer — by name. Overrides `by` and `set`. |
+| `by` | `integer` | - | Amount to add; negative subtracts. |
+| `set` | `integer` | - | Absolute value to set, overriding `by`. |
+| `setFrom` | `string` | - | Set it to a value bound earlier, a roll's total or a prompt's answer, by name. Overrides `by` and `set`. |
 
 ##### `Action (do: branch).cases[].then[] (do: modResource)`
 
@@ -1275,9 +1275,9 @@ Adjust a resource, clamped to its declared min and max.
 | --- | --- | --- | --- |
 | `do` | `modResource` | yes | Adjust a resource. |
 | `resource` | `string` | yes | Id of the resource to change. |
-| `by` | `integer` | — | Amount to add; negative spends. |
-| `set` | `integer` | — | Absolute value to set, overriding `by`. |
-| `setFrom` | `string` | — | Set it to a value bound earlier — a roll's total or a prompt's answer — by name. Overrides `by` and `set`. |
+| `by` | `integer` | - | Amount to add; negative spends. |
+| `set` | `integer` | - | Absolute value to set, overriding `by`. |
+| `setFrom` | `string` | - | Set it to a value bound earlier, a roll's total or a prompt's answer, by name. Overrides `by` and `set`. |
 
 ##### `Action (do: branch).cases[].then[] (do: grantCard)`
 
@@ -1287,7 +1287,7 @@ Draw cards into the player's hand.
 | --- | --- | --- | --- |
 | `do` | `grantCard` | yes | Draw cards into the player's hand. |
 | `deck` | `string` | yes | Id of the deck to draw from. |
-| `count` | `integer` | — | How many to draw. Defaults to 1. |
+| `count` | `integer` | - | How many to draw. Defaults to 1. |
 
 ##### `Action (do: branch).cases[].then[] (do: discardCard)`
 
@@ -1297,7 +1297,7 @@ Discard cards from hand without resolving them.
 | --- | --- | --- | --- |
 | `do` | `discardCard` | yes | Discard cards from hand without resolving them. |
 | `deck` | `string` | yes | Id of the deck the discarded card belongs to. |
-| `count` | `integer` | — | How many to discard. Defaults to 1. |
+| `count` | `integer` | - | How many to discard. Defaults to 1. |
 
 ##### `Action (do: branch).cases[].then[] (do: startTimer)`
 
@@ -1307,7 +1307,7 @@ Start a countdown the player must work against.
 | --- | --- | --- | --- |
 | `do` | `startTimer` | yes | Start a countdown the player must work against. |
 | `minutes` | `number` | yes | Duration in minutes. |
-| `label` | `string` | — | What the timer is for. |
+| `label` | `string` | - | What the timer is for. |
 
 ##### `Action (do: branch).cases[].then[] (do: note)`
 
@@ -1317,7 +1317,7 @@ Give the player an instruction to carry out by hand, tracked as an obligation th
 | --- | --- | --- | --- |
 | `do` | `note` | yes | Give the player an instruction to carry out by hand. |
 | `text` | `string` | yes | The instruction shown to the player. |
-| `persistent` | `boolean` | — | Keep it on screen for the rest of the run rather than clearing it once acknowledged. |
+| `persistent` | `boolean` | - | Keep it on screen for the rest of the run rather than clearing it once acknowledged. |
 
 ##### `Action (do: branch).cases[].then[] (do: setFlag)`
 
@@ -1327,7 +1327,7 @@ Set a boolean flag that predicates can later test.
 | --- | --- | --- | --- |
 | `do` | `setFlag` | yes | Set a boolean flag that predicates can later test. |
 | `flag` | `string` | yes | Name of the flag. |
-| `value` | `boolean` | — | Value to set. Defaults to true. |
+| `value` | `boolean` | - | Value to set. Defaults to true. |
 
 ##### `Action (do: branch).cases[].then[] (do: endRunAttempt)`
 
@@ -1346,7 +1346,7 @@ Run actions conditionally on run state.
 | `do` | `when` | yes | Run actions conditionally on run state. |
 | `all` | [Predicate](#predicate)[] | yes | Every predicate must hold. |
 | `then` | [Action](#action)[] | yes | Actions to run when the conditions hold. |
-| `else` | [Action](#action)[] | — | Actions to run when they do not. |
+| `else` | [Action](#action)[] | - | Actions to run when they do not. |
 
 #### `do: prompt`
 
@@ -1357,9 +1357,9 @@ Put a question to the player and remember the answer.
 | `do` | `prompt` | yes | Put a question to the player and remember the answer. |
 | `kind` | `chooseSubject` \| `chooseValue` \| `chooseState` \| `confirm` \| `text` | yes | What kind of answer is wanted: a subject, one of `options`, a state, a yes/no, or free text. |
 | `label` | `string` | yes | The question shown to the player. |
-| `into` | `string` | — | Name to bind the answer to. |
-| `options` | `string`[] | — | The choices offered, for kind `chooseValue`. |
-| `eligibleOnly` | `boolean` | — | For kind `chooseSubject`: restrict the list to currently targetable subjects. |
+| `into` | `string` | - | Name to bind the answer to. |
+| `options` | `string`[] | - | The choices offered, for kind `chooseValue`. |
+| `eligibleOnly` | `boolean` | - | For kind `chooseSubject`: restrict the list to currently targetable subjects. |
 
 #### `do: resolveTarget`
 
@@ -1368,8 +1368,8 @@ Pick which earlier subject a consequence lands on, using the pack's targeting st
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `do` | `resolveTarget` | yes | Pick which earlier subject a consequence lands on. |
-| `from` | `currentRoll` \| `event` \| `choice` | — | How to pick: `currentRoll` reads the roll that triggered this against the pack's targeting bands, `event` uses the fallback roll for consequences not tied to a band, `choice` lets the player decide. Default: `"currentRoll"`. |
-| `into` | `string` | — | Name to bind the chosen subject to. Also always available as targetSubject. |
+| `from` | `currentRoll` \| `event` \| `choice` | - | How to pick: `currentRoll` reads the roll that triggered this against the pack's targeting bands, `event` uses the fallback roll for consequences not tied to a band, `choice` lets the player decide. Default: `"currentRoll"`. |
+| `into` | `string` | - | Name to bind the chosen subject to. Also always available as targetSubject. |
 
 #### `do: applyState`
 
@@ -1415,9 +1415,9 @@ Forbid declaring further subjects of a given type for the rest of the run.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `do` | `ban` | yes | Forbid declaring further subjects of a given type. |
-| `subjectType` | `string` | — | A literal subject type to forbid, when it is known up front. |
-| `from` | `thisSubject` \| `targetSubject` \| `allSubjects` \| `allPriorSubjects` \| `run` \| `object` | — | Take the forbidden type from this subject's declared type instead of naming it. |
-| `label` | `string` | — | How to describe the ban to the player. |
+| `subjectType` | `string` | - | A literal subject type to forbid, when it is known up front. |
+| `from` | `thisSubject` \| `targetSubject` \| `allSubjects` \| `allPriorSubjects` \| `run` \| `object` | - | Take the forbidden type from this subject's declared type instead of naming it. |
+| `label` | `string` | - | How to describe the ban to the player. |
 
 #### `do: forceUnit`
 
@@ -1426,7 +1426,7 @@ Queue mandatory extra units; the run cannot end while any remain.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `do` | `forceUnit` | yes | Queue mandatory extra units before the run may end. |
-| `count` | `integer` | — | How many extra units to queue. Defaults to 1. |
+| `count` | `integer` | - | How many extra units to queue. Defaults to 1. |
 
 #### `do: rewind`
 
@@ -1435,7 +1435,7 @@ Send the player back a unit or more, played again from its start, at the close o
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `do` | `rewind` | yes | Send the player back: when this unit closes, the run enters an earlier unit again instead of the next one. |
-| `count` | `integer` | — | How many units back. Defaults to 1: the previous unit is played again. Never before the first. |
+| `count` | `integer` | - | How many units back. Defaults to 1: the previous unit is played again. Never before the first. |
 
 #### `do: extraRoll`
 
@@ -1445,8 +1445,8 @@ Owe extra rolls on a table's step, this unit or the next; the flow keeps the ste
 | --- | --- | --- | --- |
 | `do` | `extraRoll` | yes | Owe extra rolls on a table's step: the step is rolled again until they are paid. |
 | `table` | `string` | yes | Id of the table whose step rolls again. |
-| `count` | `integer` | — | How many extra rolls. Defaults to 1. |
-| `unit` | `current` \| `next` | — | Which unit owes them: `next` (the default) for "the next Stage rolls two Setbacks", `current` when the step has not happened yet this unit. |
+| `count` | `integer` | - | How many extra rolls. Defaults to 1. |
+| `unit` | `current` \| `next` | - | Which unit owes them: `next` (the default) for "the next Stage rolls two Setbacks", `current` when the step has not happened yet this unit. |
 
 #### `do: modCounter`
 
@@ -1456,9 +1456,9 @@ Adjust a counter.
 | --- | --- | --- | --- |
 | `do` | `modCounter` | yes | Adjust a counter. |
 | `counter` | `string` | yes | Id of the counter to change. |
-| `by` | `integer` | — | Amount to add; negative subtracts. |
-| `set` | `integer` | — | Absolute value to set, overriding `by`. |
-| `setFrom` | `string` | — | Set it to a value bound earlier — a roll's total or a prompt's answer — by name. Overrides `by` and `set`. |
+| `by` | `integer` | - | Amount to add; negative subtracts. |
+| `set` | `integer` | - | Absolute value to set, overriding `by`. |
+| `setFrom` | `string` | - | Set it to a value bound earlier, a roll's total or a prompt's answer, by name. Overrides `by` and `set`. |
 
 #### `do: modResource`
 
@@ -1468,9 +1468,9 @@ Adjust a resource, clamped to its declared min and max.
 | --- | --- | --- | --- |
 | `do` | `modResource` | yes | Adjust a resource. |
 | `resource` | `string` | yes | Id of the resource to change. |
-| `by` | `integer` | — | Amount to add; negative spends. |
-| `set` | `integer` | — | Absolute value to set, overriding `by`. |
-| `setFrom` | `string` | — | Set it to a value bound earlier — a roll's total or a prompt's answer — by name. Overrides `by` and `set`. |
+| `by` | `integer` | - | Amount to add; negative spends. |
+| `set` | `integer` | - | Absolute value to set, overriding `by`. |
+| `setFrom` | `string` | - | Set it to a value bound earlier, a roll's total or a prompt's answer, by name. Overrides `by` and `set`. |
 
 #### `do: grantCard`
 
@@ -1480,7 +1480,7 @@ Draw cards into the player's hand.
 | --- | --- | --- | --- |
 | `do` | `grantCard` | yes | Draw cards into the player's hand. |
 | `deck` | `string` | yes | Id of the deck to draw from. |
-| `count` | `integer` | — | How many to draw. Defaults to 1. |
+| `count` | `integer` | - | How many to draw. Defaults to 1. |
 
 #### `do: discardCard`
 
@@ -1490,7 +1490,7 @@ Discard cards from hand without resolving them.
 | --- | --- | --- | --- |
 | `do` | `discardCard` | yes | Discard cards from hand without resolving them. |
 | `deck` | `string` | yes | Id of the deck the discarded card belongs to. |
-| `count` | `integer` | — | How many to discard. Defaults to 1. |
+| `count` | `integer` | - | How many to discard. Defaults to 1. |
 
 #### `do: startTimer`
 
@@ -1500,7 +1500,7 @@ Start a countdown the player must work against.
 | --- | --- | --- | --- |
 | `do` | `startTimer` | yes | Start a countdown the player must work against. |
 | `minutes` | `number` | yes | Duration in minutes. |
-| `label` | `string` | — | What the timer is for. |
+| `label` | `string` | - | What the timer is for. |
 
 #### `do: note`
 
@@ -1510,7 +1510,7 @@ Give the player an instruction to carry out by hand, tracked as an obligation th
 | --- | --- | --- | --- |
 | `do` | `note` | yes | Give the player an instruction to carry out by hand. |
 | `text` | `string` | yes | The instruction shown to the player. |
-| `persistent` | `boolean` | — | Keep it on screen for the rest of the run rather than clearing it once acknowledged. |
+| `persistent` | `boolean` | - | Keep it on screen for the rest of the run rather than clearing it once acknowledged. |
 
 #### `do: setFlag`
 
@@ -1520,7 +1520,7 @@ Set a boolean flag that predicates can later test.
 | --- | --- | --- | --- |
 | `do` | `setFlag` | yes | Set a boolean flag that predicates can later test. |
 | `flag` | `string` | yes | Name of the flag. |
-| `value` | `boolean` | — | Value to set. Defaults to true. |
+| `value` | `boolean` | - | Value to set. Defaults to true. |
 
 #### `do: endRunAttempt`
 
@@ -1539,11 +1539,11 @@ Run actions conditionally on run state.
 | `do` | `when` | yes | Run actions conditionally on run state. |
 | `all` | [Predicate](#predicate)[] | yes | Every predicate must hold. |
 | `then` | [Action](#action)[] | yes | Actions to run when the conditions hold. |
-| `else` | [Action](#action)[] | — | Actions to run when they do not. |
+| `else` | [Action](#action)[] | - | Actions to run when they do not. |
 
 ##### `Action (do: when).all[]`
 
-Ask the player. Use this for anything about the work itself, which the engine cannot inspect — whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic.
+Ask the player. Use this for anything about the work itself, which the engine cannot inspect, whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -1563,11 +1563,11 @@ A numeric comparison. Combine gte and lte for a closed range, or eq for an exact
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `eq` | `integer` | — | Matches only this exact value. |
-| `gte` | `integer` | — | Matches values greater than or equal to this. |
-| `lte` | `integer` | — | Matches values less than or equal to this. |
-| `gteCounter` | `string` | — | Matches values greater than or equal to this counter's current value. |
-| `lteCounter` | `string` | — | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `eq` | `integer` | - | Matches only this exact value. |
+| `gte` | `integer` | - | Matches values greater than or equal to this. |
+| `lte` | `integer` | - | Matches values less than or equal to this. |
+| `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
+| `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 
 ##### `Action (do: when).all[]`
 
@@ -1600,11 +1600,11 @@ The comparison the counter's value must satisfy.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `eq` | `integer` | — | Matches only this exact value. |
-| `gte` | `integer` | — | Matches values greater than or equal to this. |
-| `lte` | `integer` | — | Matches values less than or equal to this. |
-| `gteCounter` | `string` | — | Matches values greater than or equal to this counter's current value. |
-| `lteCounter` | `string` | — | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `eq` | `integer` | - | Matches only this exact value. |
+| `gte` | `integer` | - | Matches values greater than or equal to this. |
+| `lte` | `integer` | - | Matches values less than or equal to this. |
+| `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
+| `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 
 ##### `Action (do: when).all[]`
 
@@ -1621,11 +1621,11 @@ The comparison the resource's value must satisfy.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `eq` | `integer` | — | Matches only this exact value. |
-| `gte` | `integer` | — | Matches values greater than or equal to this. |
-| `lte` | `integer` | — | Matches values less than or equal to this. |
-| `gteCounter` | `string` | — | Matches values greater than or equal to this counter's current value. |
-| `lteCounter` | `string` | — | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `eq` | `integer` | - | Matches only this exact value. |
+| `gte` | `integer` | - | Matches values greater than or equal to this. |
+| `lte` | `integer` | - | Matches values less than or equal to this. |
+| `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
+| `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 
 ##### `Action (do: when).all[]`
 
@@ -1642,11 +1642,11 @@ The comparison, in minutes, the clock's live elapsed time must satisfy.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `eq` | `integer` | — | Matches only this exact value. |
-| `gte` | `integer` | — | Matches values greater than or equal to this. |
-| `lte` | `integer` | — | Matches values less than or equal to this. |
-| `gteCounter` | `string` | — | Matches values greater than or equal to this counter's current value. |
-| `lteCounter` | `string` | — | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `eq` | `integer` | - | Matches only this exact value. |
+| `gte` | `integer` | - | Matches values greater than or equal to this. |
+| `lte` | `integer` | - | Matches values less than or equal to this. |
+| `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
+| `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 
 ##### `Action (do: when).all[]`
 
@@ -1663,11 +1663,11 @@ The comparison, in minutes, the timer's overrun must satisfy.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `eq` | `integer` | — | Matches only this exact value. |
-| `gte` | `integer` | — | Matches values greater than or equal to this. |
-| `lte` | `integer` | — | Matches values less than or equal to this. |
-| `gteCounter` | `string` | — | Matches values greater than or equal to this counter's current value. |
-| `lteCounter` | `string` | — | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `eq` | `integer` | - | Matches only this exact value. |
+| `gte` | `integer` | - | Matches values greater than or equal to this. |
+| `lte` | `integer` | - | Matches values less than or equal to this. |
+| `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
+| `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 
 ##### `Action (do: when).all[]`
 
@@ -1676,7 +1676,7 @@ Tests a boolean flag set by a setFlag action.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `flag` | `string` | yes | Which flag to read. |
-| `is` | `boolean` | — | Expected value. Defaults to true. |
+| `is` | `boolean` | - | Expected value. Defaults to true. |
 
 ##### `Action (do: when).all[]`
 
@@ -1685,11 +1685,11 @@ Tests whether a subject, or the run, currently carries a state.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `subjectHasState` | `string` | yes | Which declared state to look for. |
-| `of` | `thisSubject` \| `targetSubject` \| `allSubjects` \| `allPriorSubjects` \| `run` \| `object` | — | Whose state to check. Defaults to thisSubject. |
+| `of` | `thisSubject` \| `targetSubject` \| `allSubjects` \| `allPriorSubjects` \| `run` \| `object` | - | Whose state to check. Defaults to thisSubject. |
 
 ##### `Action (do: when).all[]`
 
-Tests whether any earlier subject was created from an entry carrying this tag — for results that only make sense once something of a given kind exists.
+Tests whether any earlier subject was created from an entry carrying this tag, for results that only make sense once something of a given kind exists.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -1739,26 +1739,26 @@ True when at least one listed predicate holds.
 
 A condition evaluated against run state, or a question put to the player.
 
-- `object` — Ask the player. Use this for anything about the work itself, which the engine cannot inspect — whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic.
-- `object` — Tests the current unit's number, counting from 1.
-- `object` — Tests how many subjects exist, including removed ones.
-- `object` — Tests how many subjects are currently targetable: completed, still in play, and not made untargetable by a state.
-- `object` — Tests a counter's current value.
-- `object` — Tests a resource's current value.
-- `object` — Tests how long a clock has run, live: while it is still going and after it has stopped. Works for a stopwatch or a timer. False if no such clock exists in the current unit.
-- `object` — Tests how far a timer has run past its length, in minutes. False for a stopwatch, and false if no such clock exists in the current unit.
-- `object` — Tests a boolean flag set by a setFlag action.
-- `object` — Tests whether a subject, or the run, currently carries a state.
-- `object` — Tests whether any earlier subject was created from an entry carrying this tag — for results that only make sense once something of a given kind exists.
-- `object` — Tests which mode the run is being played in.
-- `object` — True once the named phase has been completed in the current unit. This is how a move that records an outcome is kept off the screen until there is something to have an outcome about.
-- `object` — True when the inner predicate is false.
-- `object` — True only when every listed predicate holds.
-- `object` — True when at least one listed predicate holds.
+- `object` - Ask the player. Use this for anything about the work itself, which the engine cannot inspect, whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic.
+- `object` - Tests the current unit's number, counting from 1.
+- `object` - Tests how many subjects exist, including removed ones.
+- `object` - Tests how many subjects are currently targetable: completed, still in play, and not made untargetable by a state.
+- `object` - Tests a counter's current value.
+- `object` - Tests a resource's current value.
+- `object` - Tests how long a clock has run, live: while it is still going and after it has stopped. Works for a stopwatch or a timer. False if no such clock exists in the current unit.
+- `object` - Tests how far a timer has run past its length, in minutes. False for a stopwatch, and false if no such clock exists in the current unit.
+- `object` - Tests a boolean flag set by a setFlag action.
+- `object` - Tests whether a subject, or the run, currently carries a state.
+- `object` - Tests whether any earlier subject was created from an entry carrying this tag, for results that only make sense once something of a given kind exists.
+- `object` - Tests which mode the run is being played in.
+- `object` - True once the named phase has been completed in the current unit. This is how a move that records an outcome is kept off the screen until there is something to have an outcome about.
+- `object` - True when the inner predicate is false.
+- `object` - True only when every listed predicate holds.
+- `object` - True when at least one listed predicate holds.
 
 #### `object`
 
-Ask the player. Use this for anything about the work itself, which the engine cannot inspect — whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic.
+Ask the player. Use this for anything about the work itself, which the engine cannot inspect, whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -1831,7 +1831,7 @@ Tests a boolean flag set by a setFlag action.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `flag` | `string` | yes | Which flag to read. |
-| `is` | `boolean` | — | Expected value. Defaults to true. |
+| `is` | `boolean` | - | Expected value. Defaults to true. |
 
 #### `object`
 
@@ -1840,11 +1840,11 @@ Tests whether a subject, or the run, currently carries a state.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `subjectHasState` | `string` | yes | Which declared state to look for. |
-| `of` | `thisSubject` \| `targetSubject` \| `allSubjects` \| `allPriorSubjects` \| `run` \| `object` | — | Whose state to check. Defaults to thisSubject. |
+| `of` | `thisSubject` \| `targetSubject` \| `allSubjects` \| `allPriorSubjects` \| `run` \| `object` | - | Whose state to check. Defaults to thisSubject. |
 
 #### `object`
 
-Tests whether any earlier subject was created from an entry carrying this tag — for results that only make sense once something of a given kind exists.
+Tests whether any earlier subject was created from an entry carrying this tag, for results that only make sense once something of a given kind exists.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |

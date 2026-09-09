@@ -488,7 +488,7 @@
                       "maximum": 9007199254740991
                     },
                     "needs": {
-                      "description": "Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here — a barbell movement for someone without a barbell, an oven dish in a kitchen without one.",
+                      "description": "Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here: a barbell movement for someone without a barbell, an oven dish in a kitchen without one.",
                       "type": "array",
                       "items": {
                         "type": "string",
@@ -664,7 +664,7 @@
                       "maximum": 9007199254740991
                     },
                     "needs": {
-                      "description": "Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here — a barbell movement for someone without a barbell, an oven dish in a kitchen without one.",
+                      "description": "Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here: a barbell movement for someone without a barbell, an oven dish in a kitchen without one.",
                       "type": "array",
                       "items": {
                         "type": "string",
@@ -859,7 +859,7 @@
                       "maximum": 9007199254740991
                     },
                     "needs": {
-                      "description": "Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here — a barbell movement for someone without a barbell, an oven dish in a kitchen without one.",
+                      "description": "Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here: a barbell movement for someone without a barbell, an oven dish in a kitchen without one.",
                       "type": "array",
                       "items": {
                         "type": "string",
@@ -1016,7 +1016,7 @@
                       "maximum": 9007199254740991
                     },
                     "needs": {
-                      "description": "Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here — a barbell movement for someone without a barbell, an oven dish in a kitchen without one.",
+                      "description": "Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here: a barbell movement for someone without a barbell, an oven dish in a kitchen without one.",
                       "type": "array",
                       "items": {
                         "type": "string",
@@ -1282,13 +1282,13 @@
             "description": "Name shown to the player, e.g. Volume Fixed."
           },
           "short": {
-            "description": "Compact form for embedding in the name of the thing itself — a file, a layer, a DAW track. Keep it very short, e.g. VF.",
+            "description": "Compact form for embedding in the name of the thing itself, a file, a layer, a DAW track. Keep it very short, e.g. VF.",
             "type": "string",
             "maxLength": 8
           },
           "scope": {
             "default": "subject",
-            "description": "Whether this attaches to one subject, to the whole run, or — in moderated play — to one contestant on the roster, marked by the moderator: spared from a curse, disqualified, and so on.",
+            "description": "Whether this attaches to one subject, to the whole run, or, in moderated play, to one contestant on the roster, marked by the moderator: spared from a curse, disqualified, and so on.",
             "type": "string",
             "enum": [
               "subject",
@@ -1297,7 +1297,7 @@
             ]
           },
           "until": {
-            "description": "When the state lifts by itself. `unitEnd`: it is taken off everything it is on when the unit closes — a curse for this region, a cure for this region.",
+            "description": "When the state lifts by itself. `unitEnd`: it is taken off everything it is on when the unit closes, a curse for this region, a cure for this region.",
             "type": "string",
             "enum": [
               "unitEnd"
@@ -2075,7 +2075,7 @@
                     "label"
                   ],
                   "additionalProperties": false,
-                  "description": "A step the engine cannot perform or verify — the actual creative work. It only tracks that you did it."
+                  "description": "A step the engine cannot perform or verify, the actual creative work. It only tracks that you did it."
                 },
                 {
                   "type": "object",
@@ -2207,7 +2207,7 @@
             "description": "Steps performed in order."
           },
           "skipWhen": {
-            "description": "Reasons to skip this phase. Any one of them is enough — a list of two means skip if either applies. Omit it to always play the phase.",
+            "description": "Reasons to skip this phase. Any one of them is enough: a list of two means skip if either applies. Omit it to always play the phase.",
             "type": "array",
             "items": {
               "$ref": "#/$defs/Predicate"
@@ -2925,7 +2925,7 @@
             "additionalProperties": false
           },
           "perUnit": {
-            "description": "Per-unit overrides, for modes with a fixed shape — 'unit three always suffers a consequence', and the like.",
+            "description": "Per-unit overrides, for modes with a fixed shape,'unit three always suffers a consequence', and the like.",
             "type": "array",
             "items": {
               "type": "object",
@@ -3333,7 +3333,7 @@
                         "requests": {
                           "type": "string",
                           "const": "answered",
-                          "description": "Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all — spelled out here so a fixture can say so on purpose."
+                          "description": "Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all: spelled out here so a fixture can say so on purpose."
                         }
                       },
                       "required": [
@@ -3762,7 +3762,7 @@
                         "requests": {
                           "type": "string",
                           "const": "answered",
-                          "description": "Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all — spelled out here so a fixture can say so on purpose."
+                          "description": "Nothing the engine asked during a play fixture's script was left unanswered. Always true once a play fixture completes at all: spelled out here so a fixture can say so on purpose."
                         }
                       },
                       "required": [
@@ -3783,10 +3783,10 @@
               "expect"
             ],
             "additionalProperties": false,
-            "description": "Play the pack through a script — entering units, rolling tables, taking moves — and assert on the state that comes out."
+            "description": "Play the pack through a script, entering units, rolling tables, taking moves, and assert on the state that comes out."
           }
         ],
-        "description": "A self-test shipped with the pack. This is how an author proves their tables behave — including the worked examples printed in their own rulebook — without those assertions living in the engine's repo."
+        "description": "A self-test shipped with the pack. This is how an author proves their tables behave, including the worked examples printed in their own rulebook, without those assertions living in the engine's repo."
       }
     },
     "issue": {
@@ -3815,7 +3815,7 @@
       "additionalProperties": false
     },
     "signature": {
-      "description": "Evidence of who produced this pack. Does not restrict copying — nothing can, since the app must read every word to play it — but proves the contents are unaltered since the author signed them.",
+      "description": "Evidence of who produced this pack. Does not restrict copying, nothing can, since the app must read every word to play it, but proves the contents are unaltered since the author signed them.",
       "type": "object",
       "properties": {
         "algorithm": {
@@ -4507,7 +4507,7 @@
               "maximum": 9007199254740991
             },
             "setFrom": {
-              "description": "Set it to a value bound earlier — a roll's total or a prompt's answer — by name. Overrides `by` and `set`.",
+              "description": "Set it to a value bound earlier, a roll's total or a prompt's answer, by name. Overrides `by` and `set`.",
               "type": "string",
               "minLength": 1
             }
@@ -4547,7 +4547,7 @@
               "maximum": 9007199254740991
             },
             "setFrom": {
-              "description": "Set it to a value bound earlier — a roll's total or a prompt's answer — by name. Overrides `by` and `set`.",
+              "description": "Set it to a value bound earlier, a roll's total or a prompt's answer, by name. Overrides `by` and `set`.",
               "type": "string",
               "minLength": 1
             }
@@ -4768,7 +4768,7 @@
             "ask"
           ],
           "additionalProperties": false,
-          "description": "Ask the player. Use this for anything about the work itself, which the engine cannot inspect — whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic."
+          "description": "Ask the player. Use this for anything about the work itself, which the engine cannot inspect, whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic."
         },
         {
           "type": "object",
@@ -5239,7 +5239,7 @@
             "priorSubjectTagged"
           ],
           "additionalProperties": false,
-          "description": "Tests whether any earlier subject was created from an entry carrying this tag — for results that only make sense once something of a given kind exists."
+          "description": "Tests whether any earlier subject was created from an entry carrying this tag, for results that only make sense once something of a given kind exists."
         },
         {
           "type": "object",
