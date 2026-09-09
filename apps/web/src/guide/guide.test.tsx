@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { guideComponents } from "./components.tsx";
-import { GUIDE_PAGES, GUIDE_PARTS, guidePage, guideSlugFromHash } from "./pages.ts";
+import { GuideView } from "./GuideView.tsx";
+import { GUIDE_PAGES, GUIDE_PARTS, guidePage, guideSectionFromHash, guideSlugFromHash, slugOf } from "./pages.ts";
 
 /**
  * The guide is prose that ships with the app, so the checks are the ones a
@@ -44,5 +45,37 @@ describe("the guide", () => {
     expect(guideSlugFromHash("#other")).toBeNull();
     expect(guideSlugFromHash("")).toBeNull();
     expect(guidePage("nope")).toBeUndefined();
+    // A section rides along after the page, and is read apart from it.
+    expect(guideSlugFromHash("#guide/streaming/in-obs-and-streamlabs")).toBe("streaming");
+    expect(guideSectionFromHash("#guide/streaming/in-obs-and-streamlabs")).toBe("in-obs-and-streamlabs");
+    expect(guideSectionFromHash("#guide/streaming")).toBeNull();
+  });
+
+  it("gives every section an id from its words, with an anchor, and no two alike on a page", () => {
+    expect(slugOf("In OBS and Streamlabs")).toBe("in-obs-and-streamlabs");
+    expect(slugOf("Inviting someone (Plus)")).toBe("inviting-someone-plus");
+    for (const page of GUIDE_PAGES) {
+      const html = renderToStaticMarkup(<page.Page components={guideComponents} />);
+      const ids = [...html.matchAll(/<h[23] id="([^"]+)"/g)].map((m) => m[1]);
+      expect(ids.length, page.slug).toBe((html.match(/<h[23]\b/g) ?? []).length);
+      expect(new Set(ids).size, page.slug).toBe(ids.length);
+      for (const id of ids) expect(html, page.slug).toContain(`href="#${id}"`);
+    }
+    // A badge in the heading is not part of its words.
+    const Together = GUIDE_PAGES.find((p) => p.slug === "together")!.Page;
+    const together = renderToStaticMarkup(<Together components={guideComponents} />);
+    expect(together).toContain('<h2 id="inviting-someone">');
+  });
+
+  it("lays the contents out as chapters: the open one with its pages and their blurbs, the others by title alone", () => {
+    const html = renderToStaticMarkup(<GuideView slug="streaming" onNavigate={() => {}} onBack={() => {}} />);
+    expect(html).toContain('class="guidePart open"');
+    expect((html.match(/class="guidePart open"/g) ?? []).length).toBe(1);
+    const streaming = GUIDE_PAGES.find((p) => p.slug === "streaming")!;
+    const start = GUIDE_PAGES.find((p) => p.slug === "start")!;
+    expect(html).toContain(streaming.blurb);
+    expect(html).not.toContain(start.blurb);
+    expect(html).toContain(`>${start.title}<`);
+    expect(html).toContain('aria-label="On this page"');
   });
 });

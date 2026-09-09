@@ -46,9 +46,25 @@ export function guidePage(slug: string): GuidePage | undefined {
   return GUIDE_PAGES.find((p) => p.slug === slug);
 }
 
-/** The slug in the address bar, if the page is the guide. */
+/** The slug in the address bar, if the page is the guide: `#guide`, `#guide/<slug>`, or `#guide/<slug>/<section>`. */
 export function guideSlugFromHash(hash: string): string | null {
-  const m = /^#guide(?:\/([a-z-]+))?$/.exec(hash);
+  const m = /^#guide(?:\/([a-z-]+)(?:\/([a-z0-9-]+))?)?$/.exec(hash);
   if (!m) return null;
   return m[1] ?? GUIDE_PAGES[0]!.slug;
+}
+
+/** The section the address names within a guide page, from `#guide/<slug>/<section>`; null when it names none. */
+export function guideSectionFromHash(hash: string): string | null {
+  const m = /^#guide\/[a-z-]+\/([a-z0-9-]+)$/.exec(hash);
+  return m ? m[1]! : null;
+}
+
+/** The id a heading gets from its words, and the section part of its address: lowercase, letters and digits, hyphens between. */
+export function slugOf(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/[\s-]+/g, "-");
 }
