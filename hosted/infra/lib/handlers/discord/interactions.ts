@@ -146,11 +146,20 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
     const expiresAt = new Date(Date.parse(at) + LINK_MINUTES * 60_000).toISOString();
 
     if (name === "link") {
+      // Linked already, a fresh code still mints: opened signed in to another
+      // account, it moves the link there, which is how a person relinks.
       const already = await deps.guilds.userForDiscord(who.id);
-      if (already) return ephemeral("This Discord account is already linked to a Runlog account. To link a different one, unlink it first from your Runlog profile, under Social.");
       const code = deps.code ? deps.code() : newCode();
       await deps.guilds.putLinkCode({ code, discordUserId: who.id, name: nameOf(who), ...(i.guild_id ? { guildId: i.guild_id } : {}), createdAt: at, expiresAt });
-      return ephemeral(`Open this address signed in to Runlog, within ${LINK_MINUTES} minutes, and your accounts are linked:\n${home}/#link/discord?c=${code}\n\nOnly you can see this message. The code works once.`);
+      return ephemeral(
+        `${already ? "This Discord account is already linked to a Runlog account; opening this signed in to a different one moves the link there. " : ""}Open this address signed in to Runlog, within ${LINK_MINUTES} minutes, and your accounts are linked:\n${home}/#link/discord?c=${code}\n\nOnly you can see this message. The code works once.`,
+      );
+    }
+    if (name === "unlink") {
+      const linked = await deps.guilds.userForDiscord(who.id);
+      if (!linked) return ephemeral("This Discord account is not linked to a Runlog account.");
+      await deps.guilds.disconnect(linked);
+      return ephemeral("Unlinked. The bot no longer knows this Discord account; /link links it again, to the same Runlog account or another. What a linked-role verification wrote on your Discord profile stays until you remove it under Discord's own Connections.");
     }
 
     if (name === "setup") {

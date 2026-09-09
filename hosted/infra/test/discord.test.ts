@@ -75,12 +75,21 @@ describe("the bot", () => {
     expect(guilds.codes.get("GHJKLM")).not.toHaveProperty("guildId");
   });
 
-  it("says so, rather than minting, when the Discord account is already linked", async () => {
+  it("mints again for a Discord account already linked, saying the link would move, and unlinks on request", async () => {
     const guilds = memoryGuilds();
+    const deps = { guilds, appUrl: "https://runlog.test/", now: () => NOW, code: () => "ABCDEF" };
+    expect((await handleInteraction(press({ member: { user: mira }, data: { name: "unlink" } }), deps)).data?.content).toContain("not linked");
     await guilds.connect("user_1", { discordUserId: "1001", name: "Mira", linkedAt: NOW });
-    const out = await handleInteraction(press({ member: { user: mira }, data: { name: "link" } }), { guilds, appUrl: "https://runlog.test/", now: () => NOW, code: () => "ABCDEF" });
+    const out = await handleInteraction(press({ member: { user: mira }, data: { name: "link" } }), deps);
     expect(out.data?.content).toContain("already linked");
-    expect(guilds.codes.size).toBe(0);
+    expect(out.data?.content).toContain("moves the link there");
+    expect(out.data?.content).toContain("#link/discord?c=ABCDEF");
+    expect(guilds.codes.size).toBe(1);
+    const gone = await handleInteraction(press({ member: { user: mira }, data: { name: "unlink" } }), deps);
+    expect(gone.data?.content).toContain("Unlinked");
+    expect(gone.data?.flags).toBe(EPHEMERAL);
+    expect(await guilds.userForDiscord("1001")).toBeNull();
+    expect(await guilds.connection("user_1")).toBeNull();
   });
 
   it("answers a command it does not know, and a press on nothing, rather than leaving Discord waiting", async () => {
