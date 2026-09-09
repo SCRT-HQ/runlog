@@ -75,6 +75,15 @@
         <dd>When the account was first seen and last seen, the run you touched last, which version of the terms you accepted, and — when plans are on — which plan you are on.</dd>
         <dt>Command-line keys</dt>
         <dd>A hashed copy of any API key you make for publishing from the command line, with its label and when it was last used.</dd>
+        <dt>Discord</dt>
+        <dd>
+          If you link a Discord account: its Discord user id and display name, and when you linked it. If you claim a
+          Discord server for the Runlog bot: the server's id and name, which role may host runs there and which channel
+          they open in, and which runs the bot hosted there. A pack you delegate to a server is kept in full for that
+          server, read only by the bot to host runs on it, and never sent to anyone. A run the bot hosts is stored like
+          any synced run, under the host's account; a member who joins its roster or takes a seat is written into it by
+          their Discord id and display name.
+        </dd>
       </dl>
 
       <h2>4. Payments</h2>
@@ -119,6 +128,12 @@
         <dd>Payments and payouts, when plans are on.</dd>
         <dt>New Relic</dt>
         <dd>Monitoring of our servers: how long requests take and what went wrong, with no request bodies, no addresses and no tokens.</dd>
+        <dt>Discord</dt>
+        <dd>
+          Where a server has added the Runlog bot: Discord sends us each command and press made on it, with the member's
+          Discord id and display name, and we post the bot's messages (the run's card, the lines under it, its live link)
+          into that server, under Discord's own terms.
+        </dd>
       </dl>
       <p>
         Data is stored and processed in the United States. If you are in the EU, the UK or another place with rules on
@@ -131,6 +146,8 @@
         <li>Invitations: seven days if unused; the record of an accepted one lives with the run.</li>
         <li>Purchase records: for as long as tax law requires, typically seven years, even after the account is closed.</li>
         <li>Service logs: {{LOG_RETENTION}}.</li>
+        <li>Discord link and claim codes: ten minutes if unused.</li>
+        <li>The record of which runs the bot hosted in a server: thirty days after the run ends; the run itself lives with the host's account.</li>
       </ul>
 
       <h2>9. Your rights</h2>
