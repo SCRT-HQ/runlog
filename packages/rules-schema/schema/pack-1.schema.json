@@ -329,6 +329,14 @@
           ],
           "additionalProperties": false
         },
+        "intro": {
+          "description": "Said once, when the first unit is entered: the welcome that sets the stage for the whole run.",
+          "type": "string"
+        },
+        "onEnter": {
+          "description": "Said every time a unit is entered, until its first step is done. `{n}` stands for the unit's number.",
+          "type": "string"
+        },
         "createsSubject": {
           "default": true,
           "description": "Whether entering a unit produces a new subject.",

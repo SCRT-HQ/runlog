@@ -7,7 +7,7 @@ import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
 import { clockOfUnit, compareScores, formatClock, formatScore, liveClocks, nextUnit, scoreOf } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
-import { closesUnit, constraintsFor, describeSkip, describeSkipReason, phaseSkipped, subjectLabel, subjectName, type RunEvent, type RunState } from "@runlog/engine";
+import { closesUnit, constraintsFor, describeSkip, describeSkipReason, entryWords, phaseSkipped, subjectLabel, subjectName, type RunEvent, type RunState } from "@runlog/engine";
 import { useRun, type ActiveStep } from "./useRun.ts";
 import type { RunStore } from "./store.ts";
 import type { StoredRun } from "../storage/db.ts";
@@ -405,7 +405,10 @@ export function RunView({
           ) : state.unit === 0 ? (
             <StartFirstUnit pack={pack} onEnter={run.enterUnit} />
           ) : run.activeStep ? (
-            <StepPanel pack={pack} run={run} state={state} active={run.activeStep} />
+            <>
+              <EntryWords pack={pack} state={state} />
+              <StepPanel pack={pack} run={run} state={state} active={run.activeStep} />
+            </>
           ) : (
             <BetweenUnits pack={pack} run={run} state={state} />
           )}
@@ -883,6 +886,21 @@ function RunHeader({
           Discard
         </button>
       </div>
+    </section>
+  );
+}
+
+/** What the pack says on entering the unit: its welcome, once, and its word for every unit, until the first step is done. */
+function EntryWords({ pack, state }: { pack: Pack; state: RunState }) {
+  const words = entryWords(pack, state);
+  if (words.length === 0) return null;
+  return (
+    <section className="panel runStep entryWords">
+      {words.map((w, i) => (
+        <p key={i} className={i === 0 && state.unit === 1 && pack.unit.intro ? "intro" : ""}>
+          {w}
+        </p>
+      ))}
     </section>
   );
 }

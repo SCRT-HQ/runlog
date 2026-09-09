@@ -67,6 +67,15 @@ describe("the full documents", () => {
   const pack = starter();
   const docs = generateDocs(pack);
 
+  it("the rulebook prints what the pack says on entering a unit, where it says anything", () => {
+    const quiet = textOf(generateDoc(starter(), "rulebook").blocks);
+    expect(quiet).not.toContain("On entering");
+    const talking = { ...starter(), unit: { ...starter().unit, intro: "Welcome to the kiln yard.", onEnter: "Stage {n} begins at the wheel." } } as Pack;
+    const said = textOf(generateDoc(talking, "rulebook").blocks);
+    expect(said).toContain("On entering the first Stage: “Welcome to the kiln yard.”");
+    expect(said).toContain("On entering a Stage: “Stage … begins at the wheel.”");
+  });
+
   it("the rulebook prints every table entry and every ending, in the pack's own words", () => {
     const said = textOf(docs.rulebook.blocks);
     for (const t of Object.values(pack.tables)) for (const e of t.entries) expect(said).toContain(e.text);
