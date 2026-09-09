@@ -1,4 +1,5 @@
 import { COMMANDS, installLink, PERMISSION_NAMES } from "../infra/lib/handlers/discord/commands";
+import { ROLE_CONNECTION_METADATA } from "../infra/lib/handlers/discord/linked-roles";
 
 /**
  * The bot's commands, told to Discord, once per application.
@@ -47,7 +48,21 @@ async function main() {
   const registered = (await res.json()) as Array<{ name: string; id: string }>;
   console.log(`${GUILD_ID ? `server ${GUILD_ID}` : "every server"}: ${registered.length} command(s)`);
   for (const c of registered) console.log(`  /${c.name}  ${c.id}`);
+  // What a server's linked roles may read about a member: registered once
+  // per application, from the same list the callback writes values for.
+  const meta = await fetch(`https://discord.com/api/v10/applications/${APPLICATION_ID}/role-connections/metadata`, {
+    method: "PUT",
+    headers: { authorization: `Bot ${TOKEN}`, "content-type": "application/json" },
+    body: JSON.stringify(ROLE_CONNECTION_METADATA),
+  });
+  if (!meta.ok) {
+    console.error(`Discord answered ${meta.status} to the linked-role metadata: ${await meta.text()}`);
+    process.exit(1);
+  }
+  console.log(`linked-role metadata: ${ROLE_CONNECTION_METADATA.map((m) => m.key).join(", ")}`);
   console.log(`\nInteractions endpoint: https://<domain>/api/discord/interactions`);
+  console.log(`Linked Roles Verification URL: https://<domain>/api/discord/linked-role`);
+  console.log(`OAuth2 redirect: https://<domain>/api/discord/linked-role/callback`);
   console.log(`Install link (${PERMISSION_NAMES.join(", ")}):\n${installLink(APPLICATION_ID)}`);
   console.log(`\nSee docs/discord-bot.md for the developer-portal settings around this.`);
 }

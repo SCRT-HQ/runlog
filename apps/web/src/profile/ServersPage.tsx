@@ -65,7 +65,7 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
 
   const claim = () =>
     run("claim", async () => {
-      if (!api || !pending) return null;
+      if (!api || !pending || pending.kind !== "guild") return null;
       const { guild, upgrade } = await api.claimGuild(pending.code);
       setKnown((k) => ({ guilds: [...(k?.guilds ?? []).filter((g) => g.guildId !== guild.guildId), guild], server: k?.server ?? !upgrade, open: k?.open ?? false }));
       clearPendingLink();

@@ -91,6 +91,7 @@ function fakeApi(overrides: Partial<Api>): Api {
     connections: notUsed,
     linkDiscord: notUsed,
     unlinkDiscord: notUsed,
+    discordVerifyUrl: notUsed,
     claimGuild: notUsed,
     myGuilds: notUsed,
     releaseGuild: notUsed,

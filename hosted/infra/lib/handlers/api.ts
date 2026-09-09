@@ -11,7 +11,8 @@ import { dynamoGuilds, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
 import { handleInteraction, kindOf, threadHears, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
 import type { TimerJob } from "./discord/play.js";
 import { scheduledTimers } from "./discord/timers.js";
-import { discordRest, guildNameFrom, PATIENT_ROPE_MS, ROPE_MS, type DiscordRest, guildEntitledFrom } from "./discord/rest.js";
+import { authorizeUrl, metadataFor, verifyRedirectUri, VERIFY_MINUTES } from "./discord/linked-roles.js";
+import { discordRest, guildNameFrom, PATIENT_ROPE_MS, ROPE_MS, type DiscordRest, guildEntitledFrom, discordOAuth, type DiscordOAuth } from "./discord/rest.js";
 import { ulid } from "./ids.js";
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { isInteraction, type Interaction } from "./discord/types.js";
@@ -231,6 +232,8 @@ export interface Deps {
     rest?: (patient?: boolean) => Promise<DiscordRest | null>;
     /** Whether a server holds the plan through Discord's own store; absent where no SKU is sold there. */
     entitled?: (guildId: string) => Promise<boolean>;
+    /** Discord's OAuth side, for verifying a linked account for a server's linked roles; null until the client secret is filled. */
+    oauth?: () => Promise<DiscordOAuth | null>;
   };
   /**
    * Somebody to come back when a timer at a Discord table runs out: a
@@ -260,6 +263,11 @@ function json(status: number, body: unknown): Result {
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
     body: JSON.stringify(body),
   };
+}
+
+/** Send the browser on: the one answer a person, rather than the app, is shown. */
+function redirect(location: string): Result {
+  return { statusCode: 302, headers: { location, "cache-control": "no-store" }, body: "" };
 }
 
 /**
@@ -479,6 +487,38 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // package serves dev and production alike.
   if (method === "GET" && path === "/api/auth/cli") {
     return json(200, { clientId: deps.cliClientId ?? null, issuer: "https://api.workos.com" });
+  }
+
+  // Linked roles. A server can make a role depend on a Runlog account
+  // being linked; Discord sends the member here to verify, and the app
+  // asks them, signed in, to begin. The callback below ends what
+  // `POST /api/connections/discord/verify` began: no bearer, since it is
+  // Discord bringing the person back, and the state names who began it.
+  if (method === "GET" && path === "/api/discord/linked-role") {
+    return redirect(`${deps.appUrl ?? "/"}#link/discord?verify=1`);
+  }
+  if (method === "GET" && path === "/api/discord/linked-role/callback") {
+    const back = (ok: boolean) => redirect(`${deps.appUrl ?? "/"}#link/discord?verified=${ok ? 1 : 0}`);
+    const q = event.queryStringParameters ?? {};
+    const state = typeof q["state"] === "string" ? q["state"] : "";
+    const code = typeof q["code"] === "string" ? q["code"] : "";
+    if (!deps.discord?.oauth || !deps.guilds || !state || !code) return back(false);
+    const began = await deps.guilds.takeVerifyState(state, now());
+    if (!began) return back(false);
+    const oauth = await deps.discord.oauth();
+    if (!oauth) return back(false);
+    const token = await oauth.exchange(code, verifyRedirectUri(deps.appUrl ?? "/"));
+    if (!token) return back(false);
+    const who = await oauth.me(token);
+    if (!who) return back(false);
+    // The verification links as it goes: the person just proved which
+    // Discord account is theirs, which is all a /link code ever said.
+    const had = await deps.guilds.connection(began.sub);
+    const connection = had && had.discordUserId === who.id ? had : { discordUserId: who.id, name: who.name, linkedAt: now() };
+    if (connection !== had) await deps.guilds.connect(began.sub, connection);
+    const profile = await store.getProfile(began.sub);
+    const shown = profile?.handle?.trim() || profile?.name?.trim() || who.name;
+    return back(await oauth.pushRoleConnection(token, { platformUsername: shown, metadata: metadataFor(connection) }));
   }
 
   // Discord pressing. No bearer: Discord signs the timestamp and the raw
@@ -994,7 +1034,16 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // Discord's is kept but its user id and the name it showed.
   if (path === "/api/connections" && method === "GET") {
     const discord = deps.guilds ? await deps.guilds.connection(caller.sub) : null;
-    return json(200, { available: Boolean(deps.discord && deps.guilds), discord });
+    return json(200, { available: Boolean(deps.discord && deps.guilds), discord, verify: Boolean(deps.discord?.oauth && deps.guilds) });
+  }
+  // Begin a linked-role verification: a state that names this account,
+  // and the address at Discord where the person grants the two scopes.
+  if (path === "/api/connections/discord/verify" && method === "POST") {
+    if (!deps.discord?.oauth || !deps.guilds || !(await deps.discord.oauth())) return json(200, { available: false });
+    const state = (deps.token ?? (() => randomBytes(24).toString("base64url")))();
+    const at = now();
+    await deps.guilds.putVerifyState({ state, sub: caller.sub, createdAt: at, expiresAt: new Date(Date.parse(at) + VERIFY_MINUTES * 60_000).toISOString() });
+    return json(200, { available: true, url: authorizeUrl(deps.discord.applicationId, verifyRedirectUri(deps.appUrl ?? "/"), state) });
   }
   if (path === "/api/connections/discord") {
     if (!deps.guilds) return json(200, { available: false });
@@ -2019,6 +2068,10 @@ function depsFromEnv(): Deps {
                 rest: async (patient?: boolean) => {
                   const t = await token();
                   return t ? discordRest(t, fetch, patient ? PATIENT_ROPE_MS : ROPE_MS) : null;
+                },
+                oauth: async () => {
+                  const s = await secrets(process.env["DISCORD_CLIENT_SECRET_SECRET"] ?? "");
+                  return looksLike("discord-secret", s) ? discordOAuth(process.env["DISCORD_APPLICATION_ID"] ?? "", s, fetch) : null;
                 },
                 ...(process.env["DISCORD_SERVER_SKU"]
                   ? {

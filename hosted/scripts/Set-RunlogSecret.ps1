@@ -19,7 +19,7 @@
   .\hosted\scripts\Set-RunlogSecret.ps1 -Secret stripe/secret-key
 #>
 param(
-  [Parameter(Mandatory)] [ValidateSet("workos/api-key", "stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret", "newrelic/license-key")] [string] $Secret,
+  [Parameter(Mandatory)] [ValidateSet("workos/api-key", "stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret", "newrelic/license-key", "discord/bot-token", "discord/client-secret")] [string] $Secret,
   [string] $Value = $null
 )
 

@@ -11,7 +11,7 @@ import type { WorkOSLike } from "../lib/handlers/workos";
 import type { ListingCard, ListingStore, Product } from "../lib/handlers/listings";
 import type { Sale, SaleStore } from "../lib/handlers/sales";
 import { open, readHeader } from "../lib/handlers/container";
-import { memoryDiscord, memoryGuilds } from "./memory-guilds";
+import { memoryDiscord, memoryGuilds, memoryOAuth } from "./memory-guilds";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -684,8 +684,11 @@ function request(
 
 async function call(event: APIGatewayProxyEventV2, d = deps()) {
   const out = await route(event, d);
-  if (typeof out === "string" || !out.body) throw new Error("expected a JSON result");
-  return { status: out.statusCode, body: JSON.parse(out.body) as Record<string, unknown> };
+  if (typeof out === "string") throw new Error("expected a result");
+  // A redirect has no body: the headers are the answer.
+  const headers = (out.headers ?? {}) as Record<string, string>;
+  if (!out.body) return { status: out.statusCode, headers, body: {} as Record<string, unknown> };
+  return { status: out.statusCode, headers, body: JSON.parse(out.body) as Record<string, unknown> };
 }
 
 const started = { t: "RunStarted", at: "2026-09-06T00:00:00Z", id: "e0", packId: "p", packVersion: "1", runId: "01RUN" };
@@ -1655,7 +1658,7 @@ describe("discord", () => {
     expect(pressed.body["data"]).toMatchObject({ flags: 64 });
     expect(String((pressed.body["data"] as Record<string, unknown>)["content"])).toContain("https://runlog.test/#link/discord?c=ABCDEF");
     // Nothing linked yet, and the code is a code: typed loosely, it still matches.
-    expect((await call(request("GET", "/api/connections"), d)).body).toEqual({ available: true, discord: null });
+    expect((await call(request("GET", "/api/connections"), d)).body).toEqual({ available: true, discord: null, verify: false });
     expect((await call(request("POST", "/api/connections/discord", { body: { code: "" } }), d)).status).toBe(422);
     const linked = await call(request("POST", "/api/connections/discord", { body: { code: " abcdef " } }), d);
     expect(linked.body).toEqual({ linked: true, discord: { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" } });
@@ -1695,6 +1698,48 @@ describe("discord", () => {
     // What was never signed was never measured.
     await call(signedRequest(ping, "1700000000", true), d);
     expect(measured).toHaveLength(5);
+  });
+
+  it("verifies a linked account for a server's linked roles: begun signed in, ended by Discord bringing the person back", async () => {
+    const guilds = memoryGuilds();
+    const oauth = memoryOAuth();
+    const d: Deps = { ...withBot(guilds), token: () => "state1", discord: { applicationId: "app", publicKey: publicHex, token: async () => null, oauth: async () => oauth } };
+    // The profile knows a verification can be offered.
+    expect((await call(request("GET", "/api/connections"), d)).body).toMatchObject({ available: true, verify: true });
+    expect((await call(request("GET", "/api/connections"), withBot(guilds))).body).toMatchObject({ verify: false });
+    // Discord's own "verify" button lands the person in the app, which asks them to begin, signed in.
+    const landing = await call(request("GET", "/api/discord/linked-role", { token: null }), d);
+    expect(landing.status).toBe(302);
+    expect(landing.headers?.["location"]).toBe("https://runlog.test/#link/discord?verify=1");
+    // Beginning: a state that names this account, and Discord's address with the two scopes.
+    const begun = await call(request("POST", "/api/connections/discord/verify"), d);
+    const url = new URL(String(begun.body["url"]));
+    expect(url.origin + url.pathname).toBe("https://discord.com/oauth2/authorize");
+    expect(url.searchParams.get("client_id")).toBe("app");
+    expect(url.searchParams.get("scope")).toBe("identify role_connections.write");
+    expect(url.searchParams.get("state")).toBe("state1");
+    expect(url.searchParams.get("redirect_uri")).toBe("https://runlog.test/api/discord/linked-role/callback");
+    // Back from Discord with a code: the account is linked to whoever consented, and Runlog's word is written on them.
+    const done = await call({ ...request("GET", "/api/discord/linked-role/callback", { token: null }), queryStringParameters: { code: "good", state: "state1" } } as APIGatewayProxyEventV2, d);
+    expect(done.status).toBe(302);
+    expect(done.headers?.["location"]).toBe("https://runlog.test/#link/discord?verified=1");
+    expect(oauth.exchanged).toEqual([{ code: "good", redirectUri: "https://runlog.test/api/discord/linked-role/callback" }]);
+    expect((await call(request("GET", "/api/connections"), d)).body).toMatchObject({ discord: { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" } });
+    expect(oauth.pushed).toEqual([{ token: "bearer-good", platformUsername: "Mira", metadata: { linked: 1, since: "2026-09-06T12:00:00.000Z" } }]);
+    // The state is spent; a stranger's state, or a bad code, ends in a failure the app can say.
+    for (const q of [{ code: "good", state: "state1" }, { code: "good", state: "nope" }, { code: "bad", state: "state1" }]) {
+      if (q.code === "bad") await guilds.putVerifyState({ state: "state1", sub: "user_1", createdAt: "2026-09-06T12:00:00.000Z", expiresAt: "2026-09-06T12:10:00.000Z" });
+      const failed = await call({ ...request("GET", "/api/discord/linked-role/callback", { token: null }), queryStringParameters: q } as APIGatewayProxyEventV2, d);
+      expect(failed.headers?.["location"]).toBe("https://runlog.test/#link/discord?verified=0");
+    }
+    expect(oauth.pushed).toHaveLength(1);
+    // Already linked to the same Discord account, a second verification keeps the first link's date.
+    await guilds.putVerifyState({ state: "state1", sub: "user_1", createdAt: "2026-09-07T12:00:00.000Z", expiresAt: "2026-09-07T12:10:00.000Z" });
+    await call({ ...request("GET", "/api/discord/linked-role/callback", { token: null }), queryStringParameters: { code: "good", state: "state1" } } as APIGatewayProxyEventV2, { ...d, now: () => "2026-09-07T12:00:00.000Z" });
+    expect(oauth.pushed[1]?.metadata).toEqual({ linked: 1, since: "2026-09-06T12:00:00.000Z" });
+    // Without a client secret, nothing is offered and the callback fails softly.
+    const unfilled: Deps = { ...d, discord: { ...d.discord!, oauth: async () => null } };
+    expect((await call(request("POST", "/api/connections/discord/verify"), unfilled)).body).toEqual({ available: false });
   });
 
   it("refuses a code past its ten minutes", async () => {

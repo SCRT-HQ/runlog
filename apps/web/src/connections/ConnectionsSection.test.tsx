@@ -29,6 +29,16 @@ describe("the linked-accounts section", () => {
     expect(html).toContain("Not now");
   });
 
+  it("asks before sending a person to Discord to verify for a linked role, and says how a verification ended", () => {
+    const asked = render(signedIn, { api, pending: { kind: "verify", result: "asked" } });
+    expect(asked).toContain("A server asked Discord to verify your Runlog account");
+    expect(asked).toContain("Verify with Discord");
+    expect(asked).toContain("mira@example.com");
+    expect(render(anonymous, { api: null, pending: { kind: "verify", result: "asked" } })).toContain("Sign in to verify");
+    expect(render(signedIn, { api, pending: { kind: "verify", result: "done" } })).toContain("Verified.");
+    expect(render(signedIn, { api, pending: { kind: "verify", result: "failed" } })).toContain("did not finish");
+  });
+
   it("offers sign-in first when nobody is signed in, and keeps the code for after", () => {
     const html = render(anonymous, { api: null, pending: { kind: "discord", code: "ABCDEF" } });
     expect(html).toContain("Sign in to link");
