@@ -3520,6 +3520,12 @@ select.textInput {
 .licenseText { white-space: pre-wrap; font: inherit; font-size: 0.9em; color: var(--muted); max-width: 62ch; margin: 0.6rem 0 0; padding: 0.6rem 0.8rem; border-left: 3px solid var(--line); }
 
 /* ---- the hosted layer: a footer under the pages, a gate over them ---- */
+/* The shell is a column as tall as the window at least, and the footer takes
+   whatever is left below the view, so a short page ends at the window's
+   foot without a scrollbar and a long one scrolls to it as before. */
+.app { min-height: 100%; display: flex; flex-direction: column; }
+.app > .siteFooter { margin-top: auto; }
+.app > :not(.topbar):not(.siteFooter) { margin-bottom: 2rem; }
 .siteFooter { max-width: 1500px; margin: 2rem auto 0; padding: 1rem 1.25rem 1.5rem; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: baseline; font-size: 0.85rem; color: var(--muted); }
 .siteFooter nav { display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; }
 .siteFooter a { color: var(--muted); text-decoration: none; }
