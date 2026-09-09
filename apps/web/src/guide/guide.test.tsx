@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { guideComponents } from "./components.tsx";
+import { GuidePageContext, guideComponents } from "./components.tsx";
 import { GuideView } from "./GuideView.tsx";
 import { GUIDE_PAGES, GUIDE_PARTS, guidePage, guideSectionFromHash, guideSlugFromHash, slugOf } from "./pages.ts";
 
@@ -59,7 +59,7 @@ describe("the guide", () => {
       const ids = [...html.matchAll(/<h[23] id="([^"]+)"/g)].map((m) => m[1]);
       expect(ids.length, page.slug).toBe((html.match(/<h[23]\b/g) ?? []).length);
       expect(new Set(ids).size, page.slug).toBe(ids.length);
-      for (const id of ids) expect(html, page.slug).toContain(`href="#${id}"`);
+      for (const id of ids) expect(html, page.slug).toContain(`href="#${id}" aria-label="Link to this section"`);
     }
     // A badge in the heading is not part of its words.
     const Plans = GUIDE_PAGES.find((p) => p.slug === "plans")!.Page;
@@ -83,6 +83,20 @@ describe("the guide", () => {
     const contents = html.slice(0, html.indexOf("</aside>"));
     expect(contents).not.toContain("Races across devices");
     expect(contents).toContain("StreamElements");
+  });
+
+  it("spells a page's links for the build, keeping the guide's own spelling to navigate by", () => {
+    // In tests paths are off, so the spelling is the hash; the guide's own address rides along as data either way.
+    const Discord = GUIDE_PAGES.find((p) => p.slug === "discord")!.Page;
+    const html = renderToStaticMarkup(<Discord components={guideComponents} />);
+    expect(html).toContain('href="#guide/discord-setup" data-guide="#guide/discord-setup"');
+    // A heading's anchor names the section's full address once the page knows which it is.
+    const inPage = renderToStaticMarkup(
+      <GuidePageContext.Provider value="discord">
+        <Discord components={guideComponents} />
+      </GuidePageContext.Provider>,
+    );
+    expect(inPage).toContain('href="#guide/discord/the-pages-in-this-group"');
   });
 
   it("draws a table where a page has one", () => {

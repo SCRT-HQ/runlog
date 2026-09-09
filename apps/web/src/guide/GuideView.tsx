@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { guideComponents } from "./components.tsx";
+import { GuidePageContext, guideComponents } from "./components.tsx";
+import { hrefFor } from "../route.ts";
 import { GUIDE_PAGES, GUIDE_PARTS, guidePage, guideSectionFromHash, guideSlugFromHash, type GuidePage } from "./pages.ts";
 
 /**
@@ -46,16 +47,16 @@ export function GuideView({ slug, section, onNavigate, onBack }: { slug: string;
     const anchor = (e.target as HTMLElement).closest?.("a");
     if (!(anchor instanceof HTMLAnchorElement)) return;
     if (anchor.dataset["section"]) return go(e, page.slug, anchor.dataset["section"]);
-    const href = anchor.getAttribute("href") ?? "";
-    const to = guideSlugFromHash(href);
-    if (to) go(e, to, guideSectionFromHash(href) ?? undefined);
+    const address = anchor.dataset["guide"] ?? anchor.getAttribute("href") ?? "";
+    const to = guideSlugFromHash(address);
+    if (to) go(e, to, guideSectionFromHash(address) ?? undefined);
   };
   const sectionList = (className: string, label: string) =>
     sections.length > 0 && (
       <ol className={className} aria-label={label}>
         {sections.map((s) => (
           <li key={s.id} className={`${s.level === 3 ? "sub" : ""}${inView === s.id ? " on" : ""}`}>
-            <a href={`#guide/${page.slug}/${s.id}`} aria-current={inView === s.id ? "location" : undefined} onClick={(e) => go(e, page.slug, s.id)}>
+            <a href={hrefFor(`#guide/${page.slug}/${s.id}`)} aria-current={inView === s.id ? "location" : undefined} onClick={(e) => go(e, page.slug, s.id)}>
               {s.text}
             </a>
           </li>
@@ -94,7 +95,7 @@ export function GuideView({ slug, section, onNavigate, onBack }: { slug: string;
                     <div key={run.group ?? `lone-${n}`} className={`guideRun${run.group ? " grouped" : ""}${here ? " here" : ""}`}>
                       {run.group && (
                         <h4>
-                          <a href={`#guide/${run.pages[0]!.slug}`} onClick={(e) => go(e, run.pages[0]!.slug)}>
+                          <a href={hrefFor(`#guide/${run.pages[0]!.slug}`)} onClick={(e) => go(e, run.pages[0]!.slug)}>
                             {run.group}
                           </a>
                         </h4>
@@ -103,7 +104,7 @@ export function GuideView({ slug, section, onNavigate, onBack }: { slug: string;
                         <ol>
                           {run.pages.map((p) => (
                             <li key={p.slug} className={p.slug === page.slug ? "on" : ""}>
-                              <a href={`#guide/${p.slug}`} aria-current={p.slug === page.slug ? "page" : undefined} onClick={(e) => go(e, p.slug)}>
+                              <a href={hrefFor(`#guide/${p.slug}`)} aria-current={p.slug === page.slug ? "page" : undefined} onClick={(e) => go(e, p.slug)}>
                                 {p.title}
                               </a>
                               {open && here && <span className="muted small">{p.blurb}</span>}
@@ -125,7 +126,9 @@ export function GuideView({ slug, section, onNavigate, onBack }: { slug: string;
         {sectionList("", "Sections")}
       </nav>
       <article className="guidePage doc" onClick={onArticleClick}>
-        <Page components={guideComponents} />
+        <GuidePageContext.Provider value={page.slug}>
+          <Page components={guideComponents} />
+        </GuidePageContext.Provider>
         <nav className="guideNav" aria-label="Neighboring pages">
           {prev ? (
             <button className="ghost" onClick={() => onNavigate(prev.slug)}>
