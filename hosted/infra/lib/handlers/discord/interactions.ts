@@ -5,8 +5,8 @@ import { hashToken } from "../auth.js";
 import type { GuildRun, GuildStore } from "../guilds.js";
 import type { Store } from "../store.js";
 import type { Notify } from "../live.js";
-import { isCommandName } from "./commands.js";
-import { customId, parseCustomId, cardFor, messageFor, type Card } from "./card.js";
+import { hasPermission, installLink, isCommandName, OPTIONAL_PERMISSION_NAMES } from "./commands.js";
+import { customId, parseCustomId, cardFor, COLORS, messageFor, type Card } from "./card.js";
 import { agendaFor, catchUp, eventsOf, expireTimer, mayPress, openRun, packFor, play, whosePress, type Seat, type TableAction, type TableDeps, type TimerJob } from "./play.js";
 import type { DiscordRest } from "./rest.js";
 import { EPHEMERAL, InteractionType, ResponseType, modal, nameOf, userOf, select, type CommandOption, type Interaction, type InteractionResponse } from "./types.js";
@@ -178,6 +178,30 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
         const channelId = optionValue(which.options, "channel");
         await deps.guilds.updateGuild(i.guild_id, at, { channelId });
         return ephemeral(channelId ? `Runs open in <#${channelId}> by default now.` : "Runs open wherever /run is used now.");
+      }
+      // Make what the setup wants, where the bot may: a role for hosts, a
+      // channel for runs. Neither permission is in the install link by
+      // default, so the first answer is often the link that adds it.
+      if (which?.name === "make-role" || which?.name === "make-channel") {
+        const role = which.name === "make-role";
+        const need = role ? "MANAGE_ROLES" : "MANAGE_CHANNELS";
+        if (!hasPermission(i.app_permissions, need)) {
+          return ephemeral(
+            `The bot cannot make ${role ? "roles" : "channels"} here: it was installed without ${OPTIONAL_PERMISSION_NAMES[need]}. Open this link, which asks for that as well, choose this server, and run the command again:\n${installLink(i.application_id, [need])}`,
+          );
+        }
+        if (!deps.rest) return ephemeral("This copy of Runlog has no bot token yet, so it cannot ask Discord to make anything.");
+        const name = (optionValue(which.options, "name")?.trim() || (role ? "Runlog Host" : "runs")).slice(0, 100);
+        const existing = (role ? await deps.rest.listRoles(i.guild_id) : await deps.rest.listChannels(i.guild_id))?.find((r) => r.name.toLowerCase() === name.toLowerCase());
+        const made = existing ? null : role ? await deps.rest.createRole(i.guild_id, name, COLORS.begins) : await deps.rest.createChannel(i.guild_id, name);
+        const id = existing?.id ?? made;
+        if (!id) return ephemeral(`Discord would not ${existing ? "list" : "make"} the ${role ? "role" : "channel"}. Its own settings may say why; the bot's role must sit above any role it makes.`);
+        if (role) {
+          await deps.guilds.updateGuild(i.guild_id, at, { hostRoleId: id });
+          return ephemeral(`${existing ? "Found" : "Made"} <@&${id}>; hosting runs here now takes it. Give it to whoever may host. A role that requires a Runlog account linked is set up by hand: Server Settings → Roles → the role → Links.`);
+        }
+        await deps.guilds.updateGuild(i.guild_id, at, { channelId: id });
+        return ephemeral(`${existing ? "Found" : "Made"} <#${id}>; runs open there by default now. Make sure the bot may post and open public threads in it.`);
       }
       if (which?.name === "status") {
         const owner = await deps.guilds.connection(guild.ownerSub);
