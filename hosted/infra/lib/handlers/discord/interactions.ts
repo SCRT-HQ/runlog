@@ -530,6 +530,24 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
     return { type: ResponseType.ChannelMessage, data: { content: "How does it end?", flags: EPHEMERAL, components: [select(customId(run.sessionId, "ending"), "The ending", pack.endings!.map((e) => ({ label: e.label, value: e.id })))] } };
   }
 
+  // A button that drives a step names the step it was drawn for. Pressed
+  // once the table has moved past it (from the app, from another seat,
+  // from this card an instant ago) it drives nothing: the answer is the
+  // card as it stands now where the pressed message was the card, or a
+  // fresh card at the bottom with the stale message's buttons taken off.
+  const boundTo = ["step", "byhand", "finalize", "declare"].includes(id.verb) ? (id.arg ?? "") : id.verb === "tick" ? ((id.arg ?? "").split("@")[1] ?? "") : "";
+  if (boundTo) {
+    const events = await eventsOf(table.store, run.sessionId);
+    const { state, agenda: now } = agendaFor(pack, events);
+    const current = now.active ? `${now.active.phase.id}#${now.active.index}` : "";
+    if (current !== boundTo) {
+      const fresh = cardFor({ pack, state, events, agenda: now, run, ...(run.pending ? { pending: run.pending as unknown as Pending } : {}) });
+      if (i.message?.id === run.cardMessageId) return withCard(ResponseType.UpdateMessage, fresh);
+      await retire(table, run);
+      await postCard(table, run, fresh);
+      return { type: ResponseType.UpdateMessage, data: { ...(i.message?.content ? { content: i.message.content } : {}), embeds: i.message?.embeds ?? [], components: [] } };
+    }
+  }
   const action = actionFor(id, i, run, pack);
   if (!action) return ephemeral("That press means nothing here any more; the card may be stale. /run status posts a fresh one.");
   const played = await play(table, run, pack, actor, action);
@@ -581,7 +599,7 @@ function actionFor(id: { verb: string; arg?: string }, i: Interaction, run: Guil
     case "finalize":
       return { kind: "drive", action: { finalize: true } };
     case "tick": {
-      const index = Number(id.arg);
+      const index = Number((id.arg ?? "").split("@")[0]);
       if (!Number.isInteger(index)) return null;
       const on = i.message ? !((i.data?.custom_id ?? "") && messageTick(i, id.arg!)) : true;
       return { kind: "drive", action: { tick: { index, on } } };

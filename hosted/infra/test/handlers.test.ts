@@ -2215,14 +2215,14 @@ describe("a run hosted in discord", () => {
     let card = cardAfter(await call(signed(press(`rl:${id}:enter`)), d), bot);
     const buttons = (c: Record<string, unknown>) => (c["components"] as Array<{ components: Array<{ custom_id: string; label?: string; disabled?: boolean }> }>).flatMap((r) => r.components);
     // Press along until the card offers a table to roll on; beside "Roll:" sits "Roll it yourself".
-    for (let n = 0; n < 40 && !buttons(card).some((b) => b.custom_id.endsWith(":byhand")); n += 1) {
+    for (let n = 0; n < 40 && !buttons(card).some((b) => b.custom_id.includes(":byhand")); n += 1) {
       const next = firstPress(card);
       if (!next) break;
       let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
       if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
       card = cardAfter(out, bot);
     }
-    expect(buttons(card).some((b) => b.custom_id.endsWith(":byhand") && b.label === "Roll it yourself")).toBe(true);
+    expect(buttons(card).some((b) => b.custom_id.includes(":byhand") && b.label === "Roll it yourself")).toBe(true);
     // Opening the step by hand rolls nothing: the card waits on the total, with the bot's throw still offered.
     const opened = await call(signed(press(`rl:${id}:byhand`)), d);
     expect(opened.body["type"]).toBe(7);
@@ -2338,6 +2338,32 @@ describe("a run hosted in discord", () => {
     // Back to following: the choice holds from the next run, and reads back on /setup status.
     expect(content(await call(signed(setup("follow")), d))).toContain("follows the thread");
     expect((await guilds.guild("g1"))?.cardMode).toBeUndefined();
+  });
+
+  it("answers a press made for a step the table has moved past with the card as it stands, and drives nothing", async () => {
+    const { bot, store, d } = await table();
+    const id = "01000000000000000000000001";
+    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), d))).toContain("started");
+    const card = cardAfter(await call(signed(press(`rl:${id}:enter`)), d), bot);
+    const buttons = (c: Record<string, unknown>) => (c["components"] as Array<{ components: Array<{ custom_id: string }> }>).flatMap((r) => r.components);
+    // Every button that drives the step names it.
+    const step = buttons(card).find((b) => /:(step|tick|declare|finalize|byhand):/.test(b.custom_id))!;
+    expect(step.custom_id).toMatch(/:[a-z-]+:(\d+@)?[a-z-]+#\d+$/);
+    const events = (await store.eventsAfter(id, 0)).length;
+    // The same verb, bound to a step that is not the one in hand: the card, and nothing in the log.
+    const stale = step.custom_id.replace(/[a-z-]+#\d+$/, "elsewhere#9");
+    const answered = await call(signed(press(stale)), d);
+    expect(answered.body["type"]).toBe(7);
+    expect(buttons(answered.body["data"] as Record<string, unknown>).length).toBeGreaterThan(0);
+    expect((await store.eventsAfter(id, 0)).length).toBe(events);
+    // From a message that is not the card, the stale message loses its buttons and a fresh card goes to the bottom.
+    const posts = bot.posts.length;
+    const elsewhere = await call(signed({ ...press(stale), message: { id: "msg_old", content: "an old card", embeds: [{ title: "old" }] } }), d);
+    expect(elsewhere.body["data"]).toMatchObject({ content: "an old card", components: [] });
+    expect(bot.posts.length).toBe(posts + 1);
+    expect((await store.eventsAfter(id, 0)).length).toBe(events);
+    // Unbound, as an old card without the mark would press, the step drives as before.
+    expect((await call(signed(press(`rl:${id}:step`)), d)).body["type"]).toBe(7);
   });
 
   it("offers a clock the pack leaves to the player, once per open unit", async () => {

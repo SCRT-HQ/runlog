@@ -133,6 +133,10 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
 function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, seats: GuildRun["seats"], pending?: Pending, seeded = false): unknown[] {
   const rows: unknown[] = [];
   const v = pack.vocabulary;
+  // The step this card was drawn for, on every button that drives it, so a
+  // press from a card the table has moved past answers with a fresh card
+  // rather than driving whatever step is current by then.
+  const at = agenda.active ? `${agenda.active.phase.id}#${agenda.active.index}` : "";
   if (state.status === "ended") return rows;
 
   if (pending) {
@@ -165,7 +169,7 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
   const ticked = agenda.checklist.every((c) => c.on || c.optional);
   // Five to a row, up to ten: a longer checklist than that is the app's to tick.
   for (let from = 0; from < Math.min(agenda.checklist.length, 10); from += 5) {
-    rows.push(row(...agenda.checklist.slice(from, from + 5).map((c) => button(customId(id, "tick", String(c.index)), `${c.on ? "☑" : "☐"} ${c.text}${c.optional ? " (optional)" : ""}`, c.on ? ButtonStyle.Success : ButtonStyle.Secondary))));
+    rows.push(row(...agenda.checklist.slice(from, from + 5).map((c) => button(customId(id, "tick", `${c.index}@${at}`), `${c.on ? "☑" : "☐"} ${c.text}${c.optional ? " (optional)" : ""}`, c.on ? ButtonStyle.Success : ButtonStyle.Secondary))));
   }
   const main: unknown[] = [];
   if (agenda.phase === "setup" || agenda.phase === "betweenUnits") {
@@ -173,13 +177,13 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
   } else if (agenda.active) {
     const step = agenda.active.step;
     if (step.kind === "rollTable") {
-      main.push(button(customId(id, "step"), `Roll: ${pack.tables[step.table]?.title ?? step.table}`, ButtonStyle.Primary));
+      main.push(button(customId(id, "step", at), `Roll: ${pack.tables[step.table]?.title ?? step.table}`, ButtonStyle.Primary));
       // Or throw real dice: the step opens, asks for the total, and the log says a person rolled it.
-      if (!seeded) main.push(button(customId(id, "byhand"), "Roll it yourself"));
+      if (!seeded) main.push(button(customId(id, "byhand", at), "Roll it yourself"));
     }
-    else if (step.kind === "declareSubject") main.push(button(customId(id, "declare"), `Declare the ${v.subject.one.toLowerCase()}…`, ButtonStyle.Primary));
-    else if (step.kind === "finalizeUnit") main.push(button(customId(id, "finalize"), `Close the ${v.unit.one.toLowerCase()}`, ButtonStyle.Primary, !ticked || !agenda.canFinalize));
-    else main.push(button(customId(id, "step"), step.kind === "manual" ? "Done" : "Continue", ButtonStyle.Primary, !ticked));
+    else if (step.kind === "declareSubject") main.push(button(customId(id, "declare", at), `Declare the ${v.subject.one.toLowerCase()}…`, ButtonStyle.Primary));
+    else if (step.kind === "finalizeUnit") main.push(button(customId(id, "finalize", at), `Close the ${v.unit.one.toLowerCase()}`, ButtonStyle.Primary, !ticked || !agenda.canFinalize));
+    else main.push(button(customId(id, "step", at), step.kind === "manual" ? "Done" : "Continue", ButtonStyle.Primary, !ticked));
   }
   if (agenda.phase === "betweenUnits" || agenda.phase === "setup") {
     if (state.unit > 0) main.push(button(customId(id, "end"), `End the ${v.run.one.toLowerCase()}`, ButtonStyle.Secondary));
