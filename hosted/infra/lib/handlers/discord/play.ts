@@ -1,4 +1,4 @@
-import { createRandom, drive, answer, reduce, agenda, snapshotOf, paperOf, awardValue, canEndRun, undoableIds, DriveError, type Agenda, type DriveAction, type DriveResult, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import { createRandom, drive, answer, reduce, agenda, snapshotOf, paperOf, awardValue, canEndRun, undoableIds, DriveError, clockOfUnit, deadlineOf, liveClocks, ranOutEvents, unitClockStart, type Agenda, type DriveAction, type DriveResult, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import { loadPackText, rollDice, type Pack } from "@runlog/rules-schema";
 import { SeqConflict, type Store } from "../store.js";
 import type { GuildRun, GuildStore } from "../guilds.js";
@@ -37,6 +37,20 @@ export interface TableDeps {
   /** A live link's token; random by default, a test hands in its own. */
   token: () => string;
   appUrl: string;
+  /**
+   * Somebody to come back when a timer runs out: a one-shot schedule in
+   * production, a list in a test. Absent, a timer that ran out is noticed
+   * at the next press, which is late but never wrong.
+   */
+  schedule?: (job: TimerJob) => Promise<void>;
+}
+
+/** A timer's deadline, handed to whoever will come back for it. */
+export interface TimerJob {
+  sessionId: string;
+  clock: string;
+  /** When it runs out; the schedule's moment, and its name. */
+  at: string;
 }
 
 /** The parsed pack, kept per container by the vault's hash, so a press after the first does not parse again. */
@@ -142,6 +156,7 @@ export async function openRun(
     threadId,
     contestants: {},
     ...(seatsWanted > 1 ? { seats: { "1": { discordId: input.host.discordId, name: input.host.name } } } : {}),
+    seenSeq: created.meta.seq,
     createdAt: at,
     updatedAt: at,
   };
@@ -170,7 +185,8 @@ export type TableAction =
   | { kind: "end"; ending: string }
   | { kind: "undo" }
   | { kind: "journal"; text: string }
-  | { kind: "clock"; clock: string; to: "paused" | "running" }
+  | { kind: "clock"; clock: string; to: "paused" | "running" | "expired" }
+  | { kind: "startClock" }
   | { kind: "react"; emoji: string }
   | { kind: "seat"; seat: number }
   | { kind: "unseat" }
@@ -201,8 +217,22 @@ export interface Played {
  */
 export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Seat, action: TableAction): Promise<Played | { error: string }> {
   const at = deps.now();
-  const events = await eventsOf(deps.store, run.sessionId);
-  const state = reduce(pack, events);
+  let events = await eventsOf(deps.store, run.sessionId);
+  let state = reduce(pack, events);
+  // A timer that ran out since the last press is stopped first, as a move
+  // of its own, so this press lands on a table where it has run out. The
+  // schedule usually gets here first; this is for when it did not.
+  let lead: string | null = null;
+  if (!(action.kind === "clock" && action.to === "expired")) {
+    for (const ran of ranOutEvents(state, Date.parse(at))) {
+      if (ran.t !== "ClockStopped") continue;
+      const first = await play(deps, run, pack, actor, { kind: "clock", clock: ran.clock, to: "expired" });
+      if ("error" in first) return first;
+      lead = [lead, first.line].filter(Boolean).join(" ");
+      events = await eventsOf(deps.store, run.sessionId);
+      state = reduce(pack, events);
+    }
+  }
   // What a member without an account does at the table is written as the
   // host's, the way a moderator's device writes a roster: the log names
   // members of the session, and a Discord id is not one.
@@ -215,6 +245,8 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
   let pending: Pending | undefined = run.pending as unknown as Pending | undefined;
   let line: string | null = null;
   let ended = false;
+  // Which deadlines somebody has been asked to come back for already.
+  const asked = new Map(liveClocks(state).map((c) => [c.id, deadlineOf(c, Date.parse(at))]));
   const redraw = () => cardFor({ pack, state, events, agenda: agenda(pack, state, events), run, ...(pending ? { pending } : {}) });
 
   try {
@@ -292,10 +324,27 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
       case "clock": {
         const clock = state.clocks.find((c) => c.id === action.clock);
         if (!clock || clock.status === "done") return { error: "That clock is not running any more." };
+        if (action.to === "expired") {
+          const ran = ranOutEvents(state, Date.parse(at)).find((e) => e.t === "ClockStopped" && e.clock === clock.id);
+          if (!ran) return { error: `${clock.label} has not run out yet.` };
+          produced = [ran];
+          line = `⏰ ${clock.label} ran out.`;
+          break;
+        }
         if (action.to === "paused" && clock.status !== "running") return { error: "That clock is paused already." };
         if (action.to === "running" && clock.status !== "paused") return { error: "That clock is running already." };
         produced = [{ t: action.to === "paused" ? "ClockPaused" : "ClockResumed", at, clock: clock.id } as RunEvent];
         line = `${clock.label} ${action.to === "paused" ? "paused" : "resumed"}.`;
+        break;
+      }
+      case "startClock": {
+        // The clock a pack leaves to the player: once per unit, while the unit is open.
+        if (state.unit === 0 || agenda(pack, state, events).phase !== "step") return { error: `There is no open ${pack.vocabulary.unit.one.toLowerCase()} to time.` };
+        if (clockOfUnit(state, state.unit)) return { error: `This ${pack.vocabulary.unit.one.toLowerCase()} has its clock already.` };
+        const started = unitClockStart(pack, state, state.unit, at, true);
+        if (!started) return { error: "This pack has no clock to start." };
+        produced = [started];
+        line = `${(started as { label: string }).label} started.`;
         break;
       }
       case "react": {
@@ -366,15 +415,109 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
       throw error;
     }
     if (ended) await deps.store.updateSession(run.sessionId, at, { endedAt: at });
+    run.seenSeq = seq;
     await writeSnapshot(deps, run.sessionId, pack, after, next, seq);
     if (!line) line = lineFor(pack, state, after, stamped);
+    // A timer that started or resumed has a new deadline; somebody is
+    // asked to come back for it. One asked for already is left alone.
+    if (deps.schedule && !ended) {
+      for (const clock of liveClocks(after)) {
+        const deadline = deadlineOf(clock, Date.parse(at));
+        if (deadline !== null && deadline !== asked.get(clock.id)) await deps.schedule({ sessionId: run.sessionId, clock: clock.id, at: new Date(deadline).toISOString() });
+      }
+    }
   }
+  if (lead) line = line ? `${lead} ${line}` : lead;
   run.pending = pending ? (JSON.parse(JSON.stringify(pending)) as Record<string, unknown>) : undefined;
   run.updatedAt = at;
   if (ended) run.endedAt = at;
   await deps.guilds.putGuildRun(run);
   const card = cardFor({ pack, state: after, events: next, agenda: agenda(pack, after, next), run, ...(pending ? { pending } : {}) });
   return { card, line, run, ended };
+}
+
+/**
+ * A timer's deadline came: stop it if it has run out, come back later if a
+ * pause moved its deadline, and do nothing for a clock that was stopped,
+ * paused, or belongs to a run that has ended.
+ */
+export async function expireTimer(deps: TableDeps, job: TimerJob): Promise<{ outcome: "gone" | "later" | "stopped"; played?: Played }> {
+  const run = await deps.guilds.guildRun(job.sessionId);
+  if (!run || run.endedAt) return { outcome: "gone" };
+  const found = await packFor(deps.guilds, run.guildId, run.packId);
+  if (!found) return { outcome: "gone" };
+  const events = await eventsOf(deps.store, run.sessionId);
+  const state = reduce(found.pack, events);
+  const clock = state.clocks.find((c) => c.id === job.clock);
+  if (!clock || clock.status !== "running") return { outcome: "gone" };
+  const nowMs = Date.parse(deps.now());
+  const deadline = deadlineOf(clock, nowMs);
+  if (deadline === null) return { outcome: "gone" };
+  if (deadline > nowMs) {
+    await deps.schedule?.({ sessionId: run.sessionId, clock: clock.id, at: new Date(deadline).toISOString() });
+    return { outcome: "later" };
+  }
+  const host = { discordId: run.hostDiscordId, name: run.hostName, sub: run.hostSub };
+  const played = await play(deps, run, found.pack, host, { kind: "clock", clock: clock.id, to: "expired" });
+  if ("error" in played) return { outcome: "gone" };
+  return { outcome: "stopped", played };
+}
+
+/**
+ * The thread hears what the app did. A host, or a seated player, who plays
+ * the same run in the app writes to its log past what the card shows.
+ * Called by the job after such a write, this posts a line for every move
+ * since the thread last heard, redraws the card, and forgets a block that
+ * was waiting on a Discord answer, since the log has moved on under it.
+ */
+export async function catchUp(deps: TableDeps, sessionId: string): Promise<{ outcome: "gone" | "quiet" | "told"; played?: Played }> {
+  const run = await deps.guilds.guildRun(sessionId);
+  if (!run || run.endedAt) return { outcome: "gone" };
+  const found = await packFor(deps.guilds, run.guildId, run.packId);
+  if (!found) return { outcome: "gone" };
+  const pack = found.pack;
+  const events = await eventsOf(deps.store, sessionId);
+  const seqOf = (e: RunEvent) => (e as { seq?: number }).seq ?? 0;
+  const seen = run.seenSeq ?? 0;
+  const fresh = events.filter((e) => seqOf(e) > seen);
+  if (fresh.length === 0) return { outcome: "quiet" };
+  // One line per move, in order, each read against the table as it stood before it.
+  const moves: RunEvent[][] = [];
+  for (const e of fresh) {
+    const last = moves[moves.length - 1];
+    const move = (e as { move?: string }).move;
+    if (last && move && (last[0] as { move?: string }).move === move) last.push(e);
+    else moves.push([e]);
+  }
+  const lines: string[] = [];
+  let sofar = events.filter((e) => seqOf(e) <= seen);
+  let ended = false;
+  for (const move of moves) {
+    const before = reduce(pack, sofar);
+    sofar = [...sofar, ...move];
+    const after = reduce(pack, sofar);
+    for (const e of move) {
+      if (e.t === "RunEnded") {
+        ended = true;
+        lines.push(`The ${pack.vocabulary.run.one.toLowerCase()} is over: ${pack.endings?.find((x) => x.id === e.ending)?.label ?? e.ending}.`);
+      }
+      if (e.t === "Undone") lines.push("Took a move back.");
+    }
+    const line = lineFor(pack, before, after, move);
+    if (line) lines.push(line);
+  }
+  const at = deps.now();
+  const state = reduce(pack, events);
+  run.seenSeq = seqOf(events[events.length - 1]!);
+  run.pending = undefined;
+  run.updatedAt = at;
+  if (ended) run.endedAt = at;
+  await deps.guilds.putGuildRun(run);
+  const card = cardFor({ pack, state, events, agenda: agenda(pack, state, events), run });
+  // A long stretch in the app is not replayed line by line; the last few, and how many came before.
+  const shown = lines.length > 6 ? [`… ${lines.length - 5} more, then:`, ...lines.slice(-5)] : lines;
+  const line = shown.length > 0 ? `From the app:\n${shown.join("\n")}`.slice(0, 1900) : null;
+  return { outcome: "told", played: { card, line, run, ended } };
 }
 
 function settle(out: DriveResult): { produced: RunEvent[]; pending?: Pending } {

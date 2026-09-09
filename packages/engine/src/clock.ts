@@ -55,15 +55,38 @@ export function clockOfUnit(state: RunState, unit: number): Clock | undefined {
   return state.clocks.findLast((c) => c.unit === unit && c.id.endsWith(":unit"));
 }
 
+/** When a running timer runs out: its deadline, or null for a stopwatch, a paused clock or a stopped one. */
+export function deadlineOf(clock: Clock, nowMs: number): number | null {
+  if (clock.kind !== "timer" || clock.status !== "running" || clock.seconds === null) return null;
+  return nowMs + (clock.seconds * 1000 - elapsedMs(clock, nowMs));
+}
+
+/**
+ * The events that stop every running timer whose time is up, each stamped
+ * with the moment it ran out rather than the moment somebody noticed. The
+ * app's own clock notices as it ticks; a table with nobody watching it
+ * (a bot's, say) notices at the next press, or when a scheduled job does.
+ */
+export function ranOutEvents(state: RunState, nowMs: number): RunEvent[] {
+  return liveClocks(state).flatMap((c) => {
+    const deadline = deadlineOf(c, nowMs);
+    if (deadline === null || deadline > nowMs || c.seconds === null) return [];
+    return [{ t: "ClockStopped", at: new Date(deadline).toISOString(), clock: c.id, elapsedMs: c.seconds * 1000, expired: true } satisfies RunEvent];
+  });
+}
+
 /** The events that stop every live clock now, with its elapsed written in. Used when a unit closes. */
 export function stopClocksEvents(state: RunState, at: string, nowMs = Date.parse(at)): RunEvent[] {
   return liveClocks(state).map((c) => ({ t: "ClockStopped", at, clock: c.id, elapsedMs: elapsedMs(c, nowMs) }));
 }
 
-/** The event that starts a unit's clock, when the mode or the pack runs one automatically. */
-export function unitClockStart(pack: Pack, state: RunState | null, unit: number, at: string): RunEvent | null {
+/**
+ * The event that starts a unit's clock, when the mode or the pack runs one
+ * automatically; or, `byHand`, one the pack leaves to the player to start.
+ */
+export function unitClockStart(pack: Pack, state: RunState | null, unit: number, at: string, byHand = false): RunEvent | null {
   const config = unitClockFor(pack, state);
-  if (!config || config.auto === false) return null;
+  if (!config || (config.auto === false && !byHand)) return null;
   // A unit played again after a rewind gets a clock of its own; the first one's time still counts.
   const taken = state?.clocks.filter((c) => c.unit === unit && c.id.endsWith(":unit")).length ?? 0;
   return {

@@ -7,7 +7,7 @@ import type { Store } from "../store.js";
 import type { Notify } from "../live.js";
 import { isCommandName } from "./commands.js";
 import { customId, parseCustomId, cardFor, type Card } from "./card.js";
-import { agendaFor, eventsOf, mayPress, openRun, packFor, play, type Seat, type TableAction, type TableDeps } from "./play.js";
+import { agendaFor, catchUp, eventsOf, expireTimer, mayPress, openRun, packFor, play, type Seat, type TableAction, type TableDeps, type TimerJob } from "./play.js";
 import type { DiscordRest } from "./rest.js";
 import { EPHEMERAL, InteractionType, ResponseType, modal, nameOf, userOf, select, type CommandOption, type Interaction, type InteractionResponse } from "./types.js";
 
@@ -53,6 +53,8 @@ export interface InteractionDeps {
    * copy prefer.
    */
   defer?: (interaction: Interaction) => Promise<void>;
+  /** Somebody to come back when a timer runs out; see `TableDeps.schedule`. */
+  schedule?: (job: TimerJob) => Promise<void>;
 }
 
 /** How long a link or claim code lasts. */
@@ -217,7 +219,28 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
 
 function tableDeps(deps: InteractionDeps): TableDeps | null {
   if (!deps.store || !deps.mintId) return null;
-  return { store: deps.store, guilds: deps.guilds, rest: deps.rest ?? null, ...(deps.notify ? { notify: deps.notify } : {}), now: deps.now, mintId: deps.mintId, token: deps.token ?? (() => deps.mintId!()), appUrl: deps.appUrl };
+  return { store: deps.store, guilds: deps.guilds, rest: deps.rest ?? null, ...(deps.notify ? { notify: deps.notify } : {}), now: deps.now, mintId: deps.mintId, token: deps.token ?? (() => deps.mintId!()), appUrl: deps.appUrl, ...(deps.schedule ? { schedule: deps.schedule } : {}) };
+}
+
+/**
+ * A timer's deadline came, by way of the schedule made when it started:
+ * stop it and say so in the thread, on the card and to every live page.
+ */
+/** The app moved a run the bot hosts: the thread hears the lines and gets a fresh card. */
+export async function threadHears(deps: InteractionDeps, sessionId: string): Promise<"gone" | "quiet" | "told"> {
+  const table = tableDeps(deps);
+  if (!table) return "gone";
+  const { outcome, played } = await catchUp(table, sessionId);
+  if (played) await afterPlay(table, played, { editCard: true, postLine: true });
+  return outcome;
+}
+
+export async function timerRanOut(deps: InteractionDeps, job: TimerJob): Promise<"gone" | "later" | "stopped"> {
+  const table = tableDeps(deps);
+  if (!table) return "gone";
+  const { outcome, played } = await expireTimer(table, job);
+  if (played) await afterPlay(table, played, { editCard: true, postLine: true });
+  return outcome;
 }
 
 /** Whether this member may host here: the host role where one is set, else anyone who can manage the server. */
@@ -433,6 +456,7 @@ function actionFor(id: { verb: string; arg?: string }, i: Interaction, run: Guil
     case "follow":
       return { kind: "follow" };
     case "clock": {
+      if (id.arg === "start") return { kind: "startClock" };
       const m = /^(pause|resume):(.+)$/.exec(id.arg ?? "");
       return m ? { kind: "clock", clock: m[2]!, to: m[1] === "pause" ? "paused" : "running" } : null;
     }
