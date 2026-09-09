@@ -38,6 +38,9 @@ export interface Shown {
   where: string;
   /** What it said, in the author's. */
   text: string;
+  /** Which result this is, so a caller can tell whether the game owes something on it. */
+  table: string;
+  entryId: string;
 }
 
 export function evidenceFor(pack: Pack, state: RunState, shows: NonNullable<Point["shows"]>): Shown[] {
@@ -56,6 +59,8 @@ export function evidenceFor(pack: Pack, state: RunState, shows: NonNullable<Poin
       key: `o${i}`,
       where: `${pack.vocabulary.unit.one} ${o.unit}, ${table?.title ?? o.table}${hit}`,
       text: entry?.title ?? entry?.text ?? o.entryId,
+      table: o.table,
+      entryId: o.entryId,
     });
   });
   return out;
@@ -67,11 +72,32 @@ export function evidenceFor(pack: Pack, state: RunState, shows: NonNullable<Poin
  * its own box; one whose table produced nothing this unit has nothing to
  * promise and is not asked. Optional points are not waited for.
  */
-export function allMade(points: Point[], evidence: Shown[][], ticked: Set<string>): boolean {
-  return points.every((p, i) => p.optional || pointMade(i, evidence[i] ?? [], ticked, p));
+/**
+ * Whether a row is the game's to settle rather than the player's to
+ * promise, and whether it has settled it.
+ *
+ * A result the pack hung a trigger on is honoured by the trigger running,
+ * not by somebody saying it was: asking for a tick beside it is asking a
+ * question that has an answer already. Absent, every row is the player's
+ * word, which is what it always was.
+ */
+export interface Settling {
+  owing: (s: Shown) => boolean;
+  settled: (s: Shown) => boolean;
 }
 
-export function pointMade(i: number, shown: Shown[], ticked: Set<string>, point?: Point): boolean {
+export function allMade(points: Point[], evidence: Shown[][], ticked: Set<string>, settling?: Settling): boolean {
+  return points.every((p, i) => p.optional || pointMade(i, evidence[i] ?? [], ticked, p, settling));
+}
+
+export function pointMade(i: number, shown: Shown[], ticked: Set<string>, point?: Point, settling?: Settling): boolean {
   if (shown.length === 0) return point?.shows ? true : ticked.has(`${i}`);
-  return shown.every((s) => ticked.has(`${i}:${s.key}`));
+  return shown.every((s) => rowMade(`${i}:${s.key}`, s, ticked, settling));
+}
+
+/** One row: settled by the game where the game owes it, ticked where it does not. */
+export function rowMade(key: string, s: Shown, ticked: Set<string>, settling?: Settling): boolean {
+  if (settling?.settled(s)) return true;
+  if (settling?.owing(s)) return false;
+  return ticked.has(key);
 }

@@ -146,14 +146,36 @@ export function itemApplies(pack: Pack, state: RunState, item: ChecklistItem): b
  * result on that table since the unit began, in order, so a unit that
  * rolled twice (an extra roll owed) shows both.
  */
-export function constraintsFor(pack: Pack, state: RunState, tableId?: string): string[] {
+/** A rule already drawn this unit, with the result it came from. */
+export interface ConstraintLine {
+  text: string;
+  table: string;
+  entryId: string;
+}
+
+/**
+ * The rules already drawn this unit, each with the result behind it.
+ *
+ * The text alone is what most readers want, and `constraintsFor` still
+ * gives them that. A screen that wants to act on one, to offer the roll a
+ * rule is still owed, say, needs to know which result it is looking at,
+ * and cannot tell from a sentence.
+ */
+export function constraintLines(pack: Pack, state: RunState, tableId?: string): ConstraintLine[] {
   if (!tableId) return [];
   const table = pack.tables[tableId];
-  return state.outcomes
-    .filter((o) => o.unit === state.unit && o.table === tableId)
-    .map((o) => table?.entries.find((e) => e.id === o.entryId))
-    .map((entry) => entry?.title ?? entry?.text ?? null)
-    .filter((line): line is string => line !== null);
+  const out: ConstraintLine[] = [];
+  for (const o of state.outcomes) {
+    if (o.unit !== state.unit || o.table !== tableId) continue;
+    const entry = table?.entries.find((e) => e.id === o.entryId);
+    const text = entry?.title ?? entry?.text ?? null;
+    if (text !== null) out.push({ text, table: o.table, entryId: o.entryId });
+  }
+  return out;
+}
+
+export function constraintsFor(pack: Pack, state: RunState, tableId?: string): string[] {
+  return constraintLines(pack, state, tableId).map((line) => line.text);
 }
 
 /**

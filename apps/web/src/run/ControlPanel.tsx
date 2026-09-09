@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Pack } from "@runlog/rules-schema";
-import { closesUnit, constraintsFor, entryWords, type RunState } from "@runlog/engine";
+import { closesUnit, constraintLines, entryWords, type RunState } from "@runlog/engine";
 import type { RolledDie } from "../rolling.ts";
 import type { RollReceipt } from "./Receipt.tsx";
 import { Checklist, checklistDone } from "./Checklist.tsx";
@@ -328,7 +328,7 @@ function RemoteStep({
     }
 
     case "declareSubject": {
-      const constraints = constraintsFor(pack, state, step.constrainedBy);
+      const constraints = constraintLines(pack, state, step.constrainedBy);
       return (
         <PipSection title={step.label ?? `Declare the ${pack.vocabulary.subject.one}`}>
           <Constraints lines={constraints} />
@@ -352,7 +352,7 @@ function RemoteStep({
       if (closesUnit(step)) return <RemoteClosing pack={pack} run={run} state={state} active={active} ticked={ticked} tick={tick} />;
       const list = step.checklist ?? [];
       const done = checklistDone(list, pack, state, ticked);
-      const constraints = constraintsFor(pack, state, step.constrainedBy);
+      const constraints = constraintLines(pack, state, step.constrainedBy);
       return (
         <PipSection title={step.label}>
           <Constraints lines={constraints} />
@@ -403,7 +403,7 @@ function RemoteClosing({
   const points = step.kind === "manual" ? (step.checklist ?? []) : step.kind === "finalizeUnit" ? (step.confirm ?? []) : [];
   const blocked = run.blockingObligations;
   const done = checklistDone(points, pack, state, ticked);
-  const constraints = step.kind === "manual" ? constraintsFor(pack, state, step.constrainedBy) : [];
+  const constraints = step.kind === "manual" ? constraintLines(pack, state, step.constrainedBy) : [];
   const unit = pack.vocabulary.unit.one.toLowerCase();
   const label = (step.kind === "manual" || step.kind === "finalizeUnit" ? step.label : undefined) ?? pack.vocabulary.finalize;
   return (

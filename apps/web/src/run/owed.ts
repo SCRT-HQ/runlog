@@ -1,4 +1,4 @@
-import { counterTriggerAsks, globalTriggerAsks, obligationAsks } from "@runlog/engine";
+import { counterTriggerAsks, globalTriggerAsks, obligationAsks, type RunState } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 
 /**
@@ -29,6 +29,45 @@ export function settleWords(pack: Pack, obligation: { kind?: string; ref?: Param
 /** For one of the pack's own triggers the player is being asked to fire. */
 export function globalWords(pack: Pack, index: number): string {
   return words(globalTriggerAsks(pack, index));
+}
+
+/** One result, as a key the maps below are read by. */
+const at = (table: string, entryId: string) => `${table}/${entryId}`;
+
+/**
+ * What the game still owes on each result it has drawn, and what it has
+ * already paid.
+ *
+ * A result can be three things at once on the same screen: a rule that
+ * binds the step, a box on the closing confirmation, and a trigger waiting
+ * to run. They were three separate things to read and two of them asked
+ * the player to say something about the third. This is what lets them be
+ * one: everything keyed by the result it belongs to, so a rule can carry
+ * the roll it is waiting for and a box can know that rolling it is the
+ * honouring, not a promise about it.
+ *
+ * `true` where the trigger has run, `false` where it has not. A result the
+ * pack hung nothing on is absent, and stays the player's word alone.
+ */
+export function owedOn(state: RunState | null): Map<string, boolean> {
+  const out = new Map<string, boolean>();
+  for (const o of state?.obligations ?? []) {
+    if (o.kind !== "trigger" || o.ref?.kind !== "tableEntry") continue;
+    const key = at(o.ref.table, o.ref.entryId);
+    // Unsettled wins: the same result drawn twice owes until both are paid.
+    out.set(key, (out.get(key) ?? true) && o.resolved);
+  }
+  return out;
+}
+
+/** Whether the game still owes something on this result. */
+export function stillOwed(owed: Map<string, boolean>, on: { table: string; entryId: string }): boolean {
+  return owed.get(at(on.table, on.entryId)) === false;
+}
+
+/** Whether the game owed something on this result and has since paid it. */
+export function settledOn(owed: Map<string, boolean>, on: { table: string; entryId: string }): boolean {
+  return owed.get(at(on.table, on.entryId)) === true;
 }
 
 /** For a counter's trigger that has come due. */

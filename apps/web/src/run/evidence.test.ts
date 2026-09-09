@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText } from "@runlog/rules-schema";
 import type { RunState } from "@runlog/engine";
-import { allMade, evidenceFor, pointMade, pointOf } from "./evidence.ts";
+import { allMade, evidenceFor, pointMade, pointOf, rowMade } from "./evidence.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const loaded = loadPackText(readFileSync(join(repoRoot, "packs/demo/pack.yaml"), "utf8"), "yaml");
@@ -59,7 +59,7 @@ describe("what a point shows", () => {
 
 describe("when a checklist is done", () => {
   const points = [{ text: "plain" }, { text: "with evidence", shows: { table: "constraint", scope: "unit" as const } }];
-  const evidence = [[], [{ key: "o1", where: "", text: "" }, { key: "o2", where: "", text: "" }]];
+  const evidence = [[], [{ key: "o1", where: "", text: "", table: "t", entryId: "o1" }, { key: "o2", where: "", text: "", table: "t", entryId: "o2" }]];
 
   it("needs a plain point's own box", () => {
     expect(pointMade(0, [], new Set())).toBe(false);
@@ -80,5 +80,33 @@ describe("when a checklist is done", () => {
   it("falls back to the point's own box when there was nothing to show", () => {
     // A stage with no constraint rolled still has to be affirmable.
     expect(allMade(points, [[], []], new Set(["0", "1"]))).toBe(true);
+  });
+});
+
+describe("a row the game settles rather than the player", () => {
+  const row = (entryId: string) => ({ key: `o:${entryId}`, where: "Room 5, Mutation", text: "…", table: "mutation", entryId });
+  const settling = {
+    owing: (s: { entryId: string }) => s.entryId === "owing",
+    settled: (s: { entryId: string }) => s.entryId === "paid",
+  };
+
+  it("is not made while the game still owes it, whatever the ticks say", () => {
+    expect(rowMade("k", row("owing"), new Set(["k"]), settling)).toBe(false);
+  });
+
+  it("is made once the game has paid it, without a tick", () => {
+    expect(rowMade("k", row("paid"), new Set(), settling)).toBe(true);
+  });
+
+  it("is the player's word where the game owes nothing", () => {
+    expect(rowMade("k", row("plain"), new Set(), settling)).toBe(false);
+    expect(rowMade("k", row("plain"), new Set(["k"]), settling)).toBe(true);
+  });
+
+  it("holds a point open until the game has settled its rows", () => {
+    const shown = [row("paid"), row("owing")];
+    const ticked = new Set(["0:o:paid", "0:o:owing"]);
+    expect(pointMade(0, shown, ticked, undefined, settling)).toBe(false);
+    expect(pointMade(0, [row("paid")], new Set(), undefined, settling)).toBe(true);
   });
 });

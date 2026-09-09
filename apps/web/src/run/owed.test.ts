@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Pack } from "@runlog/rules-schema";
-import { settleWords, thresholdWords } from "./owed.ts";
+import { owedOn, settleWords, settledOn, stillOwed, thresholdWords } from "./owed.ts";
 
 /**
  * The word on an owed thing's button. "Resolve" read as confirming that
@@ -70,5 +70,41 @@ describe("what an owed thing's button says", () => {
 
   it("reads a counter's trigger the same way, through the table it rolls on", () => {
     expect(thresholdWords(pack, "dread", 0)).toBe("Roll d100");
+  });
+});
+
+describe("what the game owes on a result, and what it has paid", () => {
+  const state = (obligations: unknown[]) => ({ obligations }) as never;
+  const on = { table: "mutation", entryId: "cull" };
+  const trigger = (resolved: boolean, entryId = "cull") => ({
+    id: `o:${entryId}:${resolved}`,
+    kind: "trigger",
+    resolved,
+    ref: { kind: "tableEntry", table: "mutation", entryId, index: 0 },
+  });
+
+  it("owes on a result whose trigger has not run", () => {
+    const owed = owedOn(state([trigger(false)]));
+    expect(stillOwed(owed, on)).toBe(true);
+    expect(settledOn(owed, on)).toBe(false);
+  });
+
+  it("has paid once it has run", () => {
+    const owed = owedOn(state([trigger(true)]));
+    expect(stillOwed(owed, on)).toBe(false);
+    expect(settledOn(owed, on)).toBe(true);
+  });
+
+  it("still owes where the same result was drawn twice and only one is paid", () => {
+    const owed = owedOn(state([trigger(true), trigger(false)]));
+    expect(stillOwed(owed, on)).toBe(true);
+  });
+
+  it("says nothing about a result the pack hung nothing on", () => {
+    const owed = owedOn(state([trigger(false, "other")]));
+    expect(stillOwed(owed, on)).toBe(false);
+    expect(settledOn(owed, on)).toBe(false);
+    // A note is the player's to tick off, not the game's to settle.
+    expect(owedOn(state([{ id: "n", kind: "note", resolved: false }])).size).toBe(0);
   });
 });
