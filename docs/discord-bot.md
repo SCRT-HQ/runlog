@@ -118,10 +118,12 @@ install link it prints, and no more: the bot opens a public thread per
 run, posts and pins the table card in it, and posts a line per move.
 Manage Messages is for the pin. It never closes a thread (Discord does,
 after a day idle), never reads members' messages and never manages
-people. Two more, Manage Roles and Manage Channels, are asked for only
-when a server runs `/setup make-role` or `/setup make-channel`: the
-command answers with a link that adds the one it needs, and a server
-that never uses them never grants either.
+people. Three more are asked for only when a server asks for what they
+are for: Manage Roles and Manage Channels, when it runs `/setup
+make-role` or `/setup make-channel`, and Create Private Threads, when a
+run is started with `private:true` or the server has set `/setup threads
+kind:private`. Each command answers with a link that adds the one it
+needs, and a server that never uses them never grants any.
 
 **OAuth2** tab: nothing, unless you set up linked roles (step 9). The
 bot itself uses no Discord OAuth; linking a Runlog account to a Discord

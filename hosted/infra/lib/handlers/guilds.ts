@@ -70,9 +70,13 @@ export interface Guild {
   channelId?: string;
   /** Where a run's card lives: following the thread as its last message (the default), or pinned at the top and edited in place. Copied onto each run as it starts. */
   cardMode?: CardMode;
+  /** What kind of thread a run opens in when the command does not say: public (the default), or private to the host and whoever they add. */
+  threadMode?: ThreadMode;
 }
 
 export type CardMode = "follow" | "pinned";
+
+export type ThreadMode = "public" | "private";
 
 /** A pack in a server's vault, as the profile lists it: never its text. */
 export interface GuildPackMeta {
@@ -104,6 +108,8 @@ export interface GuildRun {
   packId: string;
   channelId: string;
   threadId: string;
+  /** Set where the thread is private: only the host, and whoever they add, can see the run in Discord. Absent means a public thread. */
+  private?: true;
   /** The message the buttons are on: the thread's last message, as a rule, since a move posts a fresh card at the bottom. */
   cardMessageId?: string;
   /** Whether that message carries nothing but the card, so retiring it means taking it down rather than stripping it. The opening message carries the live link too. */
@@ -148,7 +154,7 @@ export interface GuildStore {
   claimGuild(guild: Omit<Guild, "updatedAt">): Promise<Guild>;
   guild(guildId: string): Promise<Guild | null>;
   guildsOf(sub: string): Promise<Guild[]>;
-  updateGuild(guildId: string, at: string, patch: { name?: string; hostRoleId?: string | null; channelId?: string | null; cardMode?: CardMode | null }): Promise<Guild | null>;
+  updateGuild(guildId: string, at: string, patch: { name?: string; hostRoleId?: string | null; channelId?: string | null; cardMode?: CardMode | null; threadMode?: ThreadMode | null }): Promise<Guild | null>;
   /** The server's row, its pointer, and every pack in its vault; how many rows went. */
   releaseGuild(guildId: string): Promise<number>;
 
@@ -391,7 +397,7 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
         sets.push("#name = :name");
         values[":name"] = patch.name;
       }
-      for (const field of ["hostRoleId", "channelId", "cardMode"] as const) {
+      for (const field of ["hostRoleId", "channelId", "cardMode", "threadMode"] as const) {
         const v = patch[field];
         if (v === undefined) continue;
         if (v === null) removes.push(field);

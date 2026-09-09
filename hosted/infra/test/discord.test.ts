@@ -1,9 +1,12 @@
 import { generateKeyPairSync, sign } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { canManage, handleInteraction, LINK_MINUTES } from "../lib/handlers/discord/interactions";
+import { canManage, handleInteraction, LINK_MINUTES, type InteractionDeps } from "../lib/handlers/discord/interactions";
 import { COMMANDS, isCommandName } from "../lib/handlers/discord/commands";
 import { EPHEMERAL, InteractionType, ResponseType, type Interaction } from "../lib/handlers/discord/types";
 import { verifyInteraction } from "../lib/handlers/discord/verify";
+import type { SessionMeta, Store } from "../lib/handlers/store";
 import { memoryDiscord, memoryGuilds } from "./memory-guilds";
 
 /**
@@ -198,5 +201,137 @@ describe("setting up a server", () => {
     expect(packs.data?.content).toContain("**The Long Kiln** — Standard, Short");
     const none = await handleInteraction(press({ guild_id: "g2", member: { user: mira }, data: { name: "packs" } }), { guilds, appUrl: "https://runlog.test/", now: () => NOW });
     expect(none.data?.content).toContain("not set up");
+  });
+
+  it("sets what kind of thread a run opens in, and clears the choice back to public", async () => {
+    const guilds = memoryGuilds();
+    await guilds.claimGuild({ guildId: "g1", ownerSub: "user_1", claimedAt: NOW });
+    const deps = { guilds, appUrl: "https://runlog.test/", now: () => NOW };
+    expect((await handleInteraction(setup("threads", [{ name: "kind", type: 3, value: "private" }]), deps)).data?.content).toContain("private thread");
+    expect(guilds.guilds.get("g1")?.threadMode).toBe("private");
+    expect((await handleInteraction(setup("threads", [{ name: "kind", type: 3, value: "public" }]), deps)).data?.content).toContain("public thread");
+    expect(guilds.guilds.get("g1")).not.toHaveProperty("threadMode");
+    expect((await handleInteraction(setup("threads", [{ name: "kind", type: 3, value: "secret" }]), deps)).data?.content).toContain("public thread or a private one");
+  });
+});
+
+/**
+ * A run nobody else in the server needs to see.
+ *
+ * The thread is the run, so the kind of thread decides who can watch:
+ * a private one holds the host and whoever they add, which makes the
+ * public announcement a start would post pointless, and the permission
+ * to open one is not in the install link.
+ */
+describe("a run in a private thread", () => {
+  const demo = readFileSync(join(__dirname, "..", "..", "..", "packs", "demo", "pack.yaml"), "utf8");
+  const PACK = "com.scrthq.runlog.long-kiln";
+  /** The permissions the bot is installed with, and no more; and those with Create Private Threads added. */
+  const INSTALLED = String((1n << 10n) | (1n << 11n) | (1n << 13n) | (1n << 14n) | (1n << 16n) | (1n << 35n) | (1n << 38n));
+  const MAY = String(BigInt(INSTALLED) | (1n << 36n));
+
+  /** The little of the store a start touches: the session it writes, the live link's hash, and the snapshot after. */
+  function startStore(): Store {
+    const sessions = new Map<string, SessionMeta>();
+    return {
+      async createSession(meta: Omit<SessionMeta, "seq" | "createdAt" | "updatedAt">, at: string) {
+        const made = { ...meta, seq: 1, createdAt: at, updatedAt: at } as SessionMeta;
+        sessions.set(made.id, made);
+        return { meta: made, events: [] };
+      },
+      async updateSession(id: string) {
+        return sessions.get(id) ?? null;
+      },
+      async putSnapshot() {},
+    } as unknown as Store;
+  }
+
+  /** A server claimed by Mira, with the demo pack in its vault and a bot that answers. */
+  async function server(threadMode?: "private") {
+    const guilds = memoryGuilds();
+    const rest = memoryDiscord();
+    let ids = 0;
+    await guilds.claimGuild({ guildId: "g1", name: "The Kiln Room", ownerSub: "user_1", claimedAt: NOW });
+    await guilds.connect("user_1", { discordUserId: "1001", name: "Mira", linkedAt: NOW });
+    await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: "h", bytes: demo.length, modes: [{ id: "standard", label: "Standard" }], updatedAt: NOW, delegatedBy: "user_1" }, demo);
+    if (threadMode) await guilds.updateGuild("g1", NOW, { threadMode });
+    const deps: InteractionDeps = { guilds, appUrl: "https://runlog.test/", now: () => NOW, store: startStore(), rest, mintId: () => `01${String((ids += 1)).padStart(24, "0")}`, token: () => "livetok" };
+    return { guilds, rest, deps };
+  }
+
+  const start = (options: Array<{ name: string; type: number; value: string | number | boolean }> = [], over: Partial<Interaction> = {}): Interaction => ({
+    ...press({}),
+    guild_id: "g1",
+    channel_id: "chan",
+    member: { user: mira, permissions: String(1 << 5), roles: [] },
+    app_permissions: MAY,
+    ...over,
+    data: { name: "run", options: [{ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }, ...options] }] },
+  });
+
+  it("opens a private thread on request, puts the host in it, and answers the host alone", async () => {
+    const { guilds, rest, deps } = await server();
+    const out = await handleInteraction(start([{ name: "private", type: 5, value: true }]), deps);
+    expect(out.type).toBe(ResponseType.ChannelMessage);
+    expect(out.data?.flags).toBe(EPHEMERAL);
+    expect(out.data?.content).toContain("Started **The Long Kiln · Standard Firing** in <#thread_1>");
+    expect(out.data?.content).toContain("https://runlog.test/r/01000000000000000000000001?t=livetok");
+    // Nobody else is told, since nobody else can open the thread.
+    expect(out.data?.content).not.toContain("**Mira** started");
+    expect(rest.privateThreads).toEqual(["thread_1"]);
+    // A private thread starts with only the bot in it, so the host is put in it.
+    expect(rest.threadMembers).toEqual([{ thread: "thread_1", user: "1001" }]);
+    expect(await guilds.guildRun("01000000000000000000000001")).toMatchObject({ threadId: "thread_1", private: true });
+  });
+
+  it("opens a public thread and tells the channel where nothing asks otherwise", async () => {
+    const { rest, deps } = await server();
+    const out = await handleInteraction(start(), deps);
+    expect(out.data?.flags).toBeUndefined();
+    expect(out.data?.content).toContain("**Mira** started **The Long Kiln · Standard Firing** in <#thread_1>");
+    expect(rest.privateThreads).toEqual([]);
+    expect(rest.threadMembers).toEqual([]);
+  });
+
+  it("takes the server's default where the command leaves the option out, and the command's word where it does not", async () => {
+    const { rest, deps } = await server("private");
+    const said = await handleInteraction(setup("status"), { ...deps, gates: false });
+    expect(said.data?.content).toContain("private thread the host and whoever they add can see");
+    const byDefault = await handleInteraction(start(), deps);
+    expect(byDefault.data?.flags).toBe(EPHEMERAL);
+    expect(rest.privateThreads).toEqual(["thread_1"]);
+    // The option, said either way, decides the run it is said on.
+    const asked = await handleInteraction(start([{ name: "private", type: 5, value: false }]), deps);
+    expect(asked.data?.flags).toBeUndefined();
+    expect(asked.data?.content).toContain("in <#thread_3>");
+    expect(rest.privateThreads).toEqual(["thread_1"]);
+  });
+
+  it("asks for the permission rather than opening the run in the open, where the bot has not been granted it", async () => {
+    const { guilds, rest, deps } = await server();
+    const out = await handleInteraction(start([{ name: "private", type: 5, value: true }], { app_permissions: INSTALLED }), deps);
+    expect(out.data?.flags).toBe(EPHEMERAL);
+    expect(out.data?.content).toContain("installed without Create Private Threads");
+    expect(out.data?.content).toContain(`permissions=${String(BigInt(INSTALLED) | (1n << 36n))}`);
+    // Nothing was made: no thread, no post, no run.
+    expect(rest.threads).toEqual([]);
+    expect(rest.posts).toEqual([]);
+    expect(await guilds.guildRun("01000000000000000000000001")).toBeNull();
+  });
+
+  it("keeps the deferred placeholder to the host for a private run, so the reply filled into it is theirs alone", async () => {
+    const { rest, deps } = await server();
+    const deferred: Interaction[] = [];
+    const withTime: InteractionDeps = {
+      ...deps,
+      defer: async (i) => {
+        deferred.push(i);
+      },
+    };
+    expect(await handleInteraction(start([{ name: "private", type: 5, value: true }]), withTime)).toEqual({ type: ResponseType.DeferredChannelMessage, data: { flags: EPHEMERAL } });
+    expect(await handleInteraction(start(), withTime)).toEqual({ type: ResponseType.DeferredChannelMessage });
+    expect(deferred).toHaveLength(2);
+    // The work itself is the job's; nothing was said to Discord in this turn.
+    expect(rest.threads).toEqual([]);
   });
 });

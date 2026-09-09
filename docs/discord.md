@@ -16,7 +16,9 @@ Runlog Discord has it). Open it, pick your server, accept the permissions
 it asks for: to see channels, to post in them and in threads, to open a
 public thread per run and close it after, to post embeds, to read what
 it posted, and to pin the table card. It never reads members' messages
-and never manages people.
+and never manages people. Opening a run in a *private* thread takes one
+more permission, which the install link does not ask for; the first run
+that wants one answers with a link that adds it.
 
 Then, in the server, someone who can manage it:
 
@@ -37,7 +39,12 @@ Then, in the server, someone who can manage it:
    make-channel`** makes a `#runs` channel (or finds one) and sets it.
    The bot is installed without Manage Roles and Manage Channels; the
    first time you ask, it answers with a link that adds the one it needs.
-4. **`/setup status`** says all of the above, and whether the server's
+4. **`/setup threads kind:private`** to have runs open in a private
+   thread by default, seen by the host and whoever the host adds, rather
+   than a public one anybody in the channel can open. `kind:public` puts
+   it back; a run says either way for itself with the `private` option on
+   `/run start`.
+5. **`/setup status`** says all of the above, and whether the server's
    plan is active.
 
 Hosting a run needs the server plan, **Runlog for servers**, held by the
@@ -79,6 +86,16 @@ old card into the move's line and posts a fresh card at the bottom, so
 the buttons are always the last thing in the thread, where you are. A
 server that would rather have one card pinned at the top and edited in
 place says so with `/setup cards mode:pinned`; it holds from the next run.
+
+A solo run in a busy server need not be a thread everybody sees.
+`/run start … private:true` opens the run in a **private thread**: only
+you, and whoever you add to it from Discord, can see it, and the bot
+answers you alone rather than announcing the run in the channel. The
+live link still works, for anyone you give it to. Leave the option out
+and the server's own default applies, which is public until `/setup
+threads kind:private` says otherwise. The first private run in a server
+answers with a link that adds Create Private Threads, since the bot is
+not installed with it.
 
 The card says where the run stands — the unit, the step, the
 constraints in play, the latest result, what is on the table, the

@@ -14,6 +14,7 @@ const CHAT_INPUT = 1;
 const SUB_COMMAND = 1;
 const STRING = 3;
 const INTEGER = 4;
+const BOOLEAN = 5;
 const CHANNEL = 7;
 const ROLE = 8;
 /** The permission a member needs to manage the server: MANAGE_GUILD, as a bitfield string, which is how Discord takes a default. */
@@ -48,6 +49,12 @@ export const COMMANDS = [
         description: "Where a run's card lives: following the thread as its last message, or pinned at the top",
         options: [{ type: STRING, name: "mode", description: "follow: a fresh card after every move, at the bottom. pinned: one card at the top, edited in place", required: true, choices: [{ name: "follow the thread (default)", value: "follow" }, { name: "pinned at the top", value: "pinned" }] }],
       },
+      {
+        type: SUB_COMMAND,
+        name: "threads",
+        description: "Whether a run opens in a public thread or a private one, unless the command says otherwise",
+        options: [{ type: STRING, name: "kind", description: "public: anyone in the channel can open it. private: only the host, and whoever they add", required: true, choices: [{ name: "public (default)", value: "public" }, { name: "private", value: "private" }] }],
+      },
       { type: SUB_COMMAND, name: "make-channel", description: "Make a channel for runs (or find one by that name) and set it as where runs open", options: [{ type: STRING, name: "name", description: "The channel's name; runs if left out", required: false, max_length: 100 }] },
       { type: SUB_COMMAND, name: "status", description: "Who claimed this server, its plan, its hosts and its packs" },
     ],
@@ -73,6 +80,7 @@ export const COMMANDS = [
           { type: STRING, name: "mode", description: "Which of its modes", required: true, autocomplete: true },
           { type: STRING, name: "name", description: "What to call the run", required: false, max_length: 80 },
           { type: INTEGER, name: "players", description: "How many seats, in a mode played by several; the mode's fewest if left out", required: false, min_value: 1, max_value: 12 },
+          { type: BOOLEAN, name: "private", description: "Open the run in a private thread: only you, and whoever you add, can see it. The server's default if left out", required: false },
         ],
       },
       { type: SUB_COMMAND, name: "status", description: "Post the table card again, in this run's thread" },
@@ -121,14 +129,16 @@ const PERMISSION_BITS = {
 export const PERMISSION_NAMES = ["View Channels", "Send Messages", "Manage Messages", "Embed Links", "Read Message History", "Create Public Threads", "Send Messages in Threads"] as const;
 
 /**
- * Two more the bot asks for only when told to make things: a role for
- * hosts, a channel for runs. Neither is in the install link by default;
- * `/setup make-role` and `/setup make-channel` offer a link that adds the
- * one they need, and a server that never uses them never grants either.
+ * Three more the bot asks for only when a server asks for what they are
+ * for: a role for hosts, a channel for runs, a private thread for a run
+ * nobody else needs to see. None is in the install link by default;
+ * `/setup make-role`, `/setup make-channel` and a private `/run start`
+ * offer a link that adds the one they need, and a server that never uses
+ * them never grants any.
  */
-export const OPTIONAL_PERMISSION_BITS = { MANAGE_CHANNELS: 4n, MANAGE_ROLES: 28n } as const;
+export const OPTIONAL_PERMISSION_BITS = { MANAGE_CHANNELS: 4n, MANAGE_ROLES: 28n, CREATE_PRIVATE_THREADS: 36n } as const;
 export type OptionalPermission = keyof typeof OPTIONAL_PERMISSION_BITS;
-export const OPTIONAL_PERMISSION_NAMES: Record<OptionalPermission, string> = { MANAGE_CHANNELS: "Manage Channels", MANAGE_ROLES: "Manage Roles" };
+export const OPTIONAL_PERMISSION_NAMES: Record<OptionalPermission, string> = { MANAGE_CHANNELS: "Manage Channels", MANAGE_ROLES: "Manage Roles", CREATE_PRIVATE_THREADS: "Create Private Threads" };
 
 const sumOf = (bits: readonly bigint[]) => bits.reduce((sum, bit) => sum | (1n << bit), 0n);
 export const PERMISSIONS = String(sumOf(Object.values(PERMISSION_BITS)));

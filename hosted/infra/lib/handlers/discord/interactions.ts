@@ -130,6 +130,11 @@ const optionNumber = (options: CommandOption[], name: string): number | null => 
   const v = options.find((o) => o.name === name)?.value;
   return typeof v === "number" && Number.isInteger(v) ? v : null;
 };
+/** A true or false option; null where it was left out, which is not the same as false. */
+const optionBoolean = (options: CommandOption[], name: string): boolean | null => {
+  const v = options.find((o) => o.name === name)?.value;
+  return typeof v === "boolean" ? v : null;
+};
 
 export async function handleInteraction(i: Interaction, deps: InteractionDeps): Promise<InteractionResponse> {
   if (i.type === InteractionType.Ping) return { type: ResponseType.Pong };
@@ -194,6 +199,16 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
         await deps.guilds.updateGuild(i.guild_id, at, { cardMode: mode === "follow" ? null : mode });
         return ephemeral(mode === "pinned" ? "From the next run, the card stays pinned at the top of the thread and is edited in place." : "From the next run, the card follows the thread: a fresh one after every move, at the bottom.");
       }
+      if (which?.name === "threads") {
+        const kind = optionValue(which.options, "kind");
+        if (kind !== "public" && kind !== "private") return ephemeral("A run opens in a public thread or a private one.");
+        await deps.guilds.updateGuild(i.guild_id, at, { threadMode: kind === "public" ? null : kind });
+        return ephemeral(
+          kind === "private"
+            ? "Runs open in a private thread now: only the host, and whoever the host adds, can see one. The private option on /run start still decides a run that says either way."
+            : "Runs open in a public thread now, which anyone who can see the channel can open. The private option on /run start still decides a run that says either way.",
+        );
+      }
       // Make what the setup wants, where the bot may: a role for hosts, a
       // channel for runs. Neither permission is in the install link by
       // default, so the first answer is often the link that adds it.
@@ -235,7 +250,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
           `Claimed by ${owner ? owner.name : "a Runlog account not linked to Discord"}.`,
           `Plan: ${plan}.`,
           `Hosts: ${guild.hostRoleId ? `<@&${guild.hostRoleId}>` : "anyone who can manage the server"}.`,
-          `Runs open ${guild.channelId ? `in <#${guild.channelId}>` : "wherever /run is used"}.`,
+          `Runs open ${guild.channelId ? `in <#${guild.channelId}>` : "wherever /run is used"}, in a ${guild.threadMode === "private" ? "private thread the host and whoever they add can see" : "public thread anyone who can see the channel can open"}.`,
           `The card ${guild.cardMode === "pinned" ? "stays pinned at the top of a run's thread" : "follows a run's thread as its last message"}.`,
           packs.length === 0 ? "Packs: none yet; the account that claimed the server adds them from its profile, under Servers." : `Packs: ${packs.map((p) => `${p.title} (${p.modes.map((m) => m.label).join(", ") || "one mode"})`).join("; ")}.`,
         ];
@@ -326,6 +341,8 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     const modeId = optionValue(which.options, "mode") ?? "";
     const name = optionValue(which.options, "name") ?? undefined;
     const players = optionNumber(which.options, "players") ?? undefined;
+    // The command's word where it says either way, else the server's default.
+    const privately = optionBoolean(which.options, "private") ?? guild.threadMode === "private";
     const found = await packFor(deps.guilds, i.guild_id, packId);
     if (!found) return ephemeral("That pack is not in this server's vault. /packs lists what is.");
     const mode = found.pack.modes[modeId];
@@ -336,6 +353,14 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     const channelId = guild.channelId ?? i.channel_id;
     if (!channelId) return ephemeral("Nowhere to open the run: run this in a channel, or set one with /setup channel.");
     if (!table.rest) return ephemeral("The bot cannot post to Discord yet: its token is not filled in on this copy of Runlog.");
+    // A private thread is a permission the bot is not installed with, the
+    // way making a role or a channel is: the first ask answers with the
+    // link that adds it rather than opening the run in the open.
+    if (privately && !hasPermission(i.app_permissions, "CREATE_PRIVATE_THREADS")) {
+      return ephemeral(
+        `The bot cannot open a private thread here: it was installed without ${OPTIONAL_PERMISSION_NAMES["CREATE_PRIVATE_THREADS"]}. Open this link, which asks for that as well, choose this server, and run the command again:\n${installLink(i.application_id, ["CREATE_PRIVATE_THREADS"])}`,
+      );
+    }
     // Everything that could refuse has had its say in this turn, to the
     // person alone. What is left — the session, the thread, the card, the
     // pin — is a handful of calls to Discord that a cold start plus three
@@ -343,12 +368,28 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     // takes over from here.
     if (deps.defer) {
       await deps.defer(i);
-      return { type: ResponseType.DeferredChannelMessage };
+      // The placeholder carries the flags the filled-in reply keeps, so a
+      // private run is thought about, and answered, to the host alone.
+      return { type: ResponseType.DeferredChannelMessage, ...(privately ? { data: { flags: EPHEMERAL } } : {}) };
     }
-    const opened = await openRun(table, { guildId: i.guild_id, channelId, pack: found.pack, packTitle: found.title, modeId, ...(name ? { name } : {}), ...(players !== undefined ? { players } : {}), ...(guild.cardMode ? { cardMode: guild.cardMode } : {}), host: { discordId: who.id, name: i.member?.nick?.trim() || nameOf(who), sub: hostSub } });
+    const opened = await openRun(table, {
+      guildId: i.guild_id,
+      channelId,
+      pack: found.pack,
+      packTitle: found.title,
+      modeId,
+      ...(name ? { name } : {}),
+      ...(players !== undefined ? { players } : {}),
+      ...(guild.cardMode ? { cardMode: guild.cardMode } : {}),
+      ...(privately ? { private: true } : {}),
+      host: { discordId: who.id, name: i.member?.nick?.trim() || nameOf(who), sub: hostSub },
+    });
     if ("error" in opened) return ephemeral(opened.error);
     const modeLabel = found.pack.modes[modeId]?.label ?? modeId;
-    return say(`**${nameOf(who)}** started **${found.title} · ${modeLabel}**${name ? ` — ${name}` : ""} in <#${opened.threadId}>. Watch it live: ${opened.link}`);
+    const what = `**${found.title} · ${modeLabel}**${name ? ` — ${name}` : ""} in <#${opened.threadId}>. Watch it live: ${opened.link}`;
+    // Announcing a thread nobody else can open would only tell the channel
+    // what it cannot see, so a private run is answered to the host alone.
+    return privately ? ephemeral(`Started ${what}`) : say(`**${nameOf(who)}** started ${what}`);
   }
 
   // The rest are said in the run's thread.
