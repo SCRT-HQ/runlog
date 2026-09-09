@@ -207,6 +207,7 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
                 <section key={g.guildId} className="panel">
                   <h3 className="sectionTitle">
                     {g.name ?? `Server ${g.guildId}`} <span className="muted">claimed {onDay(g.claimedAt)}</span>
+                    {g.discord && <span className="plan plan-plus">Subscribed through Discord</span>}
                   </h3>
                   {inVault.length === 0 ? (
                     <p className="muted small">Nothing in the vault yet. Add a pack from your shelf and /packs in Discord lists it.</p>

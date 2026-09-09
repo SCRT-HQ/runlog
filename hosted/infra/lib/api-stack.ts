@@ -199,6 +199,7 @@ export class ApiStack extends Stack {
       STRIPE_FEATURES: JSON.stringify(config.stripe.features),
       DISCORD_BOT_TOKEN_SECRET: secretName("discord/bot-token"),
       ...(config.discord ? { DISCORD_APPLICATION_ID: config.discord.applicationId, DISCORD_PUBLIC_KEY: config.discord.publicKey, DISCORD_OPEN: config.discord.open ? "on" : "off" } : {}),
+      ...(config.discord?.serverSku ? { DISCORD_SERVER_SKU: config.discord.serverSku } : {}),
       // A client the X-Ray SDK captured should fail into "not traced"
       // rather than throw, if it is ever called before the runtime has
       // set up this invocation's segment.
