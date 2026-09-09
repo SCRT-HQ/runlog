@@ -67,7 +67,7 @@ describe("the full documents", () => {
   const pack = starter();
   const docs = generateDocs(pack);
 
-  it("the rulebook says what the pack says on entering a unit, where it says anything", () => {
+  it("the rulebook prints what the pack says on entering a unit, where it says anything", () => {
     const quiet = textOf(generateDoc(starter(), "rulebook").blocks);
     expect(quiet).not.toContain("On entering");
     const talking = { ...starter(), unit: { ...starter().unit, intro: "Welcome to the kiln yard.", onEnter: "Stage {n} begins at the wheel." } } as Pack;
