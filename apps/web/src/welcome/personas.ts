@@ -81,7 +81,7 @@ export const PERSONAS: Persona[] = [
       { where: "Stage 2, Kiln Check", roll: "d100 → 26", text: "The Kiln dictates the form. Roll on the Form table." },
       { where: "Stage 2, Form", roll: "d6 → 4", text: "A cup. Small, and it must be usable." },
       { where: "Stage 2, Constraint", roll: "d12 → 10", text: "One glaze only, applied once." },
-      { where: "Stage 4, Kiln Check", roll: "d100 → 88 · hit #2", text: "Thermal shock reaches back. The cup from Stage 2 cracks; mark it.", heat: true },
+      { where: "Stage 4, Kiln Check", roll: "d100 → 88 · hit Cup (a cup)", text: "Thermal shock reaches back. The cup from Stage 2 cracks; mark it.", heat: true },
     ],
     state: [
       { label: "Glaze", value: "3 / 6" },

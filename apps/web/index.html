@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover so the run's rail can sit on the foot of a phone
+         with a notch and still keep its buttons clear of it; every fixed
+         edge in the sheet pads itself with the safe-area insets. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Runlog</title>
     <meta
       name="description"
@@ -12,7 +15,11 @@
     <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%icon.svg" />
     <link rel="apple-touch-icon" href="%BASE_URL%icon.svg" />
-    <meta name="theme-color" content="#0d0f12" />
+    <!-- The browser's own chrome takes the ground of the theme it is showing:
+         the studio with the lights down, or daylight. Any other value leaves a
+         band of a color that is in none of the four looks. -->
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#151311" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#edeae2" />
     <!-- hosted:head -->
   </head>
   <body>

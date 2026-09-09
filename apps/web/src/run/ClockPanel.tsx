@@ -23,6 +23,38 @@ import type { useRun } from "./useRun.ts";
  * Pause, resume and stop are moves like any other, undoable, and visible to
  * everyone in a shared run. A watcher sees the clocks and presses nothing.
  */
+/**
+ * Start, pause, resume and stop, as a word and as a mark.
+ *
+ * A wide screen says the word, because this sheet speaks in words and has
+ * no icon language. A phone header is one row wide and the words were
+ * taking a third of it, so there the mark stands in: transport marks are
+ * the one set of symbols nobody has to learn, and the word is still the
+ * button's name for anything that reads the page aloud.
+ */
+function ClockButton({
+  kind,
+  word,
+  primary,
+  onPress,
+}: {
+  kind: "start" | "pause" | "stop";
+  word: string;
+  primary?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <button className={`${primary ? "primary" : "ghost"} tiny clockBtn`} aria-label={word} title={word} onClick={onPress}>
+      <span className="clockWord">{word}</span>
+      <svg className="clockMark" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true" focusable="false">
+        {kind === "start" && <path d="M2.5 1.2 10.5 6 2.5 10.8Z" fill="currentColor" />}
+        {kind === "pause" && <path d="M2.4 1.5h2.6v9H2.4Zm4.6 0h2.6v9H7Z" fill="currentColor" />}
+        {kind === "stop" && <rect x="2.2" y="2.2" width="7.6" height="7.6" fill="currentColor" />}
+      </svg>
+    </button>
+  );
+}
+
 export function ClockPanel({ pack, run, state }: { pack: Pack; run: ReturnType<typeof useRun>; state: RunState }) {
   const live = liveClocks(state);
   const config = unitClockFor(pack, state);
@@ -67,16 +99,17 @@ export function ClockPanel({ pack, run, state }: { pack: Pack; run: ReturnType<t
         </div>
       ))}
       {canStartUnit && config && (
-        <div className="clock idle">
+        <div className={`clock idle ${config.kind === "timer" ? "timer" : "stopwatch"}`}>
           <div className="clockHead">
             <span className="clockLabel">{config.label ?? `${pack.vocabulary.unit.one} ${state.unit}`}</span>
-            <span className="chip">{config.kind === "timer" ? `${config.minutes} min` : "stopwatch"}</span>
+            {/* A timer's length is the number right under this, and "25 min"
+                over 25:00 is the same fact twice. A stopwatch's 0:00 says
+                nothing about what it is, so that one keeps its word. */}
+            {config.kind !== "timer" && <span className="chip">stopwatch</span>}
           </div>
           <div className="clockDigits muted">{config.kind === "timer" ? formatClock((config.minutes ?? 0) * 60_000) : "0:00"}</div>
           <div className="clockButtons">
-            <button className="primary tiny" onClick={() => run.startUnitClock()}>
-              Start
-            </button>
+            <ClockButton kind="start" word="Start" primary onPress={() => run.startUnitClock()} />
           </div>
         </div>
       )}
@@ -109,17 +142,11 @@ function ClockFace({ clock, now, run, label }: { clock: Clock; now: number; run:
       {!run.readOnly && (
         <div className="clockButtons">
           {clock.status === "running" ? (
-            <button className="ghost tiny" onClick={() => run.pauseClock(clock.id)}>
-              Pause
-            </button>
+            <ClockButton kind="pause" word="Pause" onPress={() => run.pauseClock(clock.id)} />
           ) : (
-            <button className="primary tiny" onClick={() => run.resumeClock(clock.id)}>
-              Resume
-            </button>
+            <ClockButton kind="start" word="Resume" primary onPress={() => run.resumeClock(clock.id)} />
           )}
-          <button className="ghost tiny" onClick={() => run.stopClock(clock.id)}>
-            Stop
-          </button>
+          <ClockButton kind="stop" word="Stop" onPress={() => run.stopClock(clock.id)} />
         </div>
       )}
     </div>
