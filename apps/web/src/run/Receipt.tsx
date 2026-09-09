@@ -154,7 +154,7 @@ export function Receipt({
 
       {settled ? (
         <>
-          <div className="padRow">
+          <div className="padRow stepAction">
             <button className="primary" onClick={onDismiss} autoFocus>
               Carry on
             </button>

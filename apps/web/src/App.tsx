@@ -917,7 +917,10 @@ export default function App() {
         </a>
         {/* One door to the library, always; a pack in play still says which one, in muted text beside it. */}
         <button className="packNow" onClick={() => setView("library")} title="Your packs and runs" aria-current={onLibrary ? "page" : undefined}>
+          {/* Room for the words on a wide bar; the one word that matters on a
+              phone, where this stands in the row of buttons beside Rules. */}
           <span className="shelfLabel">Your packs</span>
+          <span className="shelfLabelShort">Packs</span>
           {!onLibrary && activeTitle !== null && <span className="muted packTitle">{activeTitle}</span>}
         </button>
         <div className="topbarEnd">

@@ -13,6 +13,12 @@
  * settled die, a filled box, the current step. `--warn` is kiln: consequence.
  * Nothing else on the screen is colored.
  *
+ * Every hover state is written inside `@media (hover: hover)`. A touch screen
+ * keeps :hover on the last thing tapped until something else is tapped, so a
+ * button that borrows the accent on hover stays borrowed and reads as chosen;
+ * a phone should show the resting state and nothing else. Keyboard
+ * affordances, :focus-visible, are never inside that query.
+ *
  * Four looks share every one of those decisions and differ only in the ground.
  * The default is the studio with the lights down; `[data-theme]` picks another,
  * and with no attribute at all the operating system's preference chooses
@@ -219,7 +225,9 @@ p {
   color: inherit;
   text-decoration: none;
 }
-.brand:hover h1 { color: var(--accent); }
+@media (hover: hover) {
+  .brand:hover h1 { color: var(--accent); }
+}
 .brand h1 {
   font-size: var(--t-4);
   font-weight: 600;
@@ -262,8 +270,10 @@ p {
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
-.packBtn:hover {
-  border-color: var(--accent-dim);
+@media (hover: hover) {
+  .packBtn:hover {
+    border-color: var(--accent-dim);
+  }
 }
 .packBtn.on {
   border-color: var(--accent);
@@ -284,7 +294,17 @@ p {
 }
 
 /* ---- layout ----------------------------------------------------------- */
+/*
+ * The page is a flex item of `.app`, and an auto margin in a flex
+ * container's cross axis stops the item stretching: the page was shrinking
+ * to whatever its widest line happened to be and centering itself, so a
+ * screen of short rows sat in a narrow column with air either side while
+ * a screen of long prose filled the window. `width: 100%` puts the stretch
+ * back and leaves the auto margins to do what they were written for, which
+ * is centering the page once it hits its width.
+ */
 .main {
+  width: 100%;
   max-width: 1500px;
   margin: 0 auto;
   padding: 1.25rem;
@@ -439,8 +459,10 @@ p {
   padding: 0.85rem 1rem;
   cursor: pointer;
 }
-.table > header:hover {
-  background: var(--panel-2);
+@media (hover: hover) {
+  .table > header:hover {
+    background: var(--panel-2);
+  }
 }
 .table h4 {
   font-size: var(--t-3);
@@ -473,9 +495,11 @@ p {
   font-size: 0.85rem;
   cursor: pointer;
 }
-.roll:hover {
-  background: var(--accent);
-  color: var(--on-accent);
+@media (hover: hover) {
+  .roll:hover {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
 }
 
 .rollResult {
@@ -647,9 +671,11 @@ p {
   font-size: var(--t-1);
   cursor: pointer;
 }
-.ghost:hover:not(:disabled) {
-  border-color: var(--accent-dim);
-  color: var(--accent);
+@media (hover: hover) {
+  .ghost:hover:not(:disabled) {
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
 }
 
 /* ---- dice tray --------------------------------------------------------- */
@@ -827,8 +853,10 @@ p {
   text-decoration-color: var(--line);
   text-underline-offset: 0.15em;
 }
-.packNow:hover .shelfLabel {
-  text-decoration-color: currentColor;
+@media (hover: hover) {
+  .packNow:hover .shelfLabel {
+    text-decoration-color: currentColor;
+  }
 }
 /* The current page: still a real link (one press from the run back to it
    would be odd to disable), but read as landed-on rather than reachable. */
@@ -955,14 +983,18 @@ p {
   text-underline-offset: 0.15em;
   cursor: pointer;
 }
-.linkButton:hover {
-  text-decoration-color: currentColor;
+@media (hover: hover) {
+  .linkButton:hover {
+    text-decoration-color: currentColor;
+  }
 }
 .libraryTitle.static {
   cursor: default;
 }
-.libraryTitle.static:hover strong {
-  color: inherit;
+@media (hover: hover) {
+  .libraryTitle.static:hover strong {
+    color: inherit;
+  }
 }
 .publisherHead {
   display: flex;
@@ -988,8 +1020,10 @@ p {
   text-underline-offset: 0.15em;
   cursor: pointer;
 }
-.publisherLink:hover {
-  text-decoration-color: currentColor;
+@media (hover: hover) {
+  .publisherLink:hover {
+    text-decoration-color: currentColor;
+  }
 }
 .catalogBlurb {
   margin: 0;
@@ -1036,8 +1070,10 @@ p {
 .libraryTitle strong {
   font-size: var(--t-4);
 }
-.libraryTitle:hover strong {
-  color: var(--accent);
+@media (hover: hover) {
+  .libraryTitle:hover strong {
+    color: var(--accent);
+  }
 }
 /* ---- a test run: the strip that says nothing here is kept ------------- */
 .benchBar {
@@ -1158,8 +1194,10 @@ p {
   text-align: left;
   cursor: pointer;
 }
-.runRowMain:hover strong {
-  color: var(--accent);
+@media (hover: hover) {
+  .runRowMain:hover strong {
+    color: var(--accent);
+  }
 }
 /*
  * The score rides on the same line as the date, at the right, rather than a
@@ -1309,8 +1347,10 @@ p {
   font-size: var(--t-2);
   cursor: pointer;
 }
-.primary:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--accent) 85%, var(--text));
+@media (hover: hover) {
+  .primary:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--accent) 85%, var(--text));
+  }
 }
 /*
  * Disabled reads as disabled everywhere, not as a dimmer, still-pressable
@@ -1391,8 +1431,10 @@ button:disabled,
   align-items: baseline;
   gap: 0.4rem;
 }
-.choice:hover {
-  border-color: var(--accent-dim);
+@media (hover: hover) {
+  .choice:hover {
+    border-color: var(--accent-dim);
+  }
 }
 .choice.on {
   border-color: var(--accent);
@@ -1473,8 +1515,10 @@ button:disabled,
   text-align: left;
   cursor: pointer;
 }
-.tableLook .tableLine:hover:not(:disabled) {
-  background: var(--panel-2);
+@media (hover: hover) {
+  .tableLook .tableLine:hover:not(:disabled) {
+    background: var(--panel-2);
+  }
 }
 .tableLook .range {
   font-family: var(--mono);
@@ -1510,8 +1554,10 @@ button:disabled,
   font-size: 1.05rem;
   cursor: pointer;
 }
-.key:hover {
-  border-color: var(--accent);
+@media (hover: hover) {
+  .key:hover {
+    border-color: var(--accent);
+  }
 }
 .key.wide {
   grid-column: span 2;
@@ -1745,9 +1791,11 @@ button:disabled,
   line-height: 1;
   cursor: pointer;
 }
-.forget:hover {
-  color: var(--err);
-  background: color-mix(in oklab, var(--err) 12%, var(--panel));
+@media (hover: hover) {
+  .forget:hover {
+    color: var(--err);
+    background: color-mix(in oklab, var(--err) 12%, var(--panel));
+  }
 }
 
 /* A threshold is the game acting on you, so it reads louder than a choice. */
@@ -1809,8 +1857,10 @@ button:disabled,
   font-size: 0.85rem;
   color: var(--text);
 }
-.chip.pick:hover {
-  border-color: var(--accent-dim);
+@media (hover: hover) {
+  .chip.pick:hover {
+    border-color: var(--accent-dim);
+  }
 }
 .chip.pick.on {
   border-color: var(--accent);
@@ -1890,8 +1940,10 @@ button:disabled,
   color: inherit;
   cursor: pointer;
 }
-.disclose:hover {
-  color: var(--accent);
+@media (hover: hover) {
+  .disclose:hover {
+    color: var(--accent);
+  }
 }
 .agreeing {
   margin-top: 0.7rem;
@@ -1919,8 +1971,10 @@ button:disabled,
   cursor: text;
   border-bottom: 1px dashed transparent;
 }
-.renameTrigger:hover {
-  border-bottom-color: var(--accent-dim);
+@media (hover: hover) {
+  .renameTrigger:hover {
+    border-bottom-color: var(--accent-dim);
+  }
 }
 .renameInput {
   width: 100%;
@@ -2194,9 +2248,13 @@ select.textInput {
 .accountMenu > summary::-webkit-details-marker {
   display: none;
 }
-.accountMenu > summary:hover,
 .accountMenu[open] > summary {
   border-color: var(--line);
+}
+@media (hover: hover) {
+  .accountMenu > summary:hover {
+    border-color: var(--line);
+  }
 }
 .accountMenu .caret {
   font-size: 0.7rem;
@@ -2351,8 +2409,10 @@ select.textInput {
   color: var(--warn);
   border-color: color-mix(in oklab, var(--warn) 40%, var(--line));
 }
-.ghost.danger:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--warn) 10%, transparent);
+@media (hover: hover) {
+  .ghost.danger:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--warn) 10%, transparent);
+  }
 }
 
 /*
@@ -2455,9 +2515,11 @@ select.textInput {
 .rowMenu > summary::-webkit-details-marker {
   display: none;
 }
-.rowMenu > summary:hover {
-  border-color: var(--line-2);
-  color: var(--text);
+@media (hover: hover) {
+  .rowMenu > summary:hover {
+    border-color: var(--line-2);
+    color: var(--text);
+  }
 }
 .rowMenuPanel {
   position: absolute;
@@ -2484,8 +2546,10 @@ select.textInput {
   border-radius: 6px;
   cursor: pointer;
 }
-.rowMenuPanel button:hover {
-  background: var(--panel-2);
+@media (hover: hover) {
+  .rowMenuPanel button:hover {
+    background: var(--panel-2);
+  }
 }
 
 /* Social's "Open tables": a run row that is also a button. */
@@ -2502,8 +2566,10 @@ select.textInput {
 .openTableRow:first-of-type {
   border-top-color: transparent;
 }
-.openTableRow:hover {
-  background: var(--panel-2);
+@media (hover: hover) {
+  .openTableRow:hover {
+    background: var(--panel-2);
+  }
 }
 
 /* ---- the shelf, the lights, and the end of the bar ---------------------- */
@@ -2531,9 +2597,13 @@ select.textInput {
 .shelf > summary::-webkit-details-marker {
   display: none;
 }
-.shelf > summary:hover,
 .shelf[open] > summary {
   border-color: var(--line-2);
+}
+@media (hover: hover) {
+  .shelf > summary:hover {
+    border-color: var(--line-2);
+  }
 }
 .shelf .shelfLabel {
   color: var(--muted);
@@ -2571,8 +2641,10 @@ select.textInput {
 .shelf .packBtn.on {
   background: var(--panel-2);
 }
-.shelf .packBtn:hover {
-  background: var(--panel-2);
+@media (hover: hover) {
+  .shelf .packBtn:hover {
+    background: var(--panel-2);
+  }
 }
 .shelf .packBtn.imported {
   border-radius: 6px;
@@ -2692,114 +2764,74 @@ select.textInput {
   }
 }
 /*
- * The bar on a phone. Flex-wrap left the three groups landing wherever they
- * fell, which read as a mess; a grid gives each its row. The brand and the
- * account share the first, the shelf takes the second whole, and the view
- * switch the third, its buttons sharing the width. The theme select keeps
- * its control and loses its label, which the control already says.
+ * The bar on a phone: one row, not three.
+ *
+ * It used to be a grid of rows, the mark and the account on the first, the
+ * shelf across the second, and that second row cost forty pixels to say a
+ * thing the screen under it already says. So the shelf becomes a button in
+ * the row with the rest, under its shorter name, and the pack it is holding
+ * is named where the run names its unit. The mark stands for the name.
  */
-@media (max-width: 720px) {
+.shelfLabelShort { display: none; }
+@media (max-width: 760px) {
   .topbar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.55rem 0.75rem;
-    padding: 0.6rem 0.9rem;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.5rem 0.7rem;
   }
-  .topbar .brand {
-    grid-column: 1;
-    grid-row: 1;
-  }
-  .topbar .topbarEnd {
-    grid-column: 2;
-    grid-row: 1;
-    gap: 0.5rem;
-  }
-  .topbar .packNow {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  /* Four buttons and a name do not share a phone's width: the mark stands for the name. */
-  .topbar .topbarEnd .ghost { padding: 0.25rem 0.5rem; font-size: var(--t-1); }
-  .topbar .topbarEnd .accountMenu > summary { padding: 0.25rem 0.5rem; font-size: var(--t-1); }
-}
-@media (max-width: 520px) {
+  .topbar .brand { flex: 0 0 auto; }
   .topbar .brand h1 { display: none; }
-  .topbar .packNow .packTitle {
-    flex: 1;
+  /* The shelf joins the row of buttons rather than taking a row of its own. */
+  .topbar .packNow {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-left: auto;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-size: var(--t-1);
+  }
+  .topbar .packNow .shelfLabel,
+  .topbar .packNow .packTitle { display: none; }
+  .topbar .packNow .shelfLabelShort { display: inline; }
+  .topbar .packNow[aria-current="page"] { color: var(--muted); border-color: var(--line-2); }
+  /* Five things on one line at 360 pixels: nothing wraps, and a long label,
+     Back to the app where Designer was, gives up its end rather than the
+     row giving up its shape. */
+  .topbar .topbarEnd { flex: 0 1 auto; min-width: 0; gap: 0.25rem; }
+  /* The caret says the menu opens; the word Menu says it too, and on a
+     phone the row is measured in single characters. */
+  .topbar .topbarEnd .accountMenu .caret { display: none; }
+  .topbar .topbarEnd .ghost,
+  .topbar .packNow {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .topbar .topbarEnd .ghost { padding: 0.3rem 0.4rem; font-size: 0.75rem; }
+  .topbar .topbarEnd .accountMenu > summary { padding: 0.3rem 0.4rem; font-size: 0.75rem; }
+  .topbar .packNow { font-size: 0.75rem; padding: 0.3rem 0.45rem; }
+}
+@media (max-width: 520px) {
   .menuTheme .themeMenu > span {
     font-size: 0.75rem;
   }
   .accountPanel {
     max-width: calc(100vw - 1.8rem);
   }
-  .main {
-    padding-left: 0.9rem;
-    padding-right: 0.9rem;
-  }
-
 }
 
 /*
- * On a phone the margin gives up its column: the step card needs the width
- * for its keypad. The unit's number shrinks to a line, and the list of
- * phases folds to "2 of 6, Kiln Check, then Declare the form" until tapped.
+ * On a wide screen the margin is where you are, not what happened: the log
+ * says that, a hand's width to the right of it. What each phase produced is
+ * read there and on the phone's own plane for the unit, where there is no
+ * log beside it to say the same thing twice.
  */
-.flowNow {
-  display: none;
-}
-@media (max-width: 640px) {
-  .columns.run {
-    grid-template-columns: 1fr;
-  }
-  .columns.run > .margin {
-    border-right: none;
-    padding-right: 0;
-    padding-top: 0.75rem;
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 0.25rem;
-  }
-  .margin .stageNo {
-    font-size: 1.3rem;
-  }
-  .margin .stageNo small {
-    display: inline;
-    margin: 0 0.5rem 0 0;
-  }
-  .flowNow {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.5rem;
-    width: 100%;
-    margin-top: 0.5rem;
-    padding: 0.5rem 0;
-    background: none;
-    border: 0;
-    border-top: 1px solid var(--line);
-    color: var(--text);
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-  }
-  .flowNow .idx {
-    font-family: var(--mono);
-    font-size: var(--t-1);
-    color: var(--accent);
-  }
-  .flowNow .muted {
-    font-size: var(--t-2);
-  }
-  .stageFlow:not(.open) .sectionTitle,
-  .stageFlow:not(.open) .flow {
-    display: none;
-  }
+@media (min-width: 761px) {
+  .margin .flow .result { display: none; }
 }
 
 /* The number in the margin: the referee, at scoreboard weight. */
@@ -3056,8 +3088,10 @@ select.textInput {
 .more[open] > summary::before {
   content: "▾ ";
 }
-.more > summary:hover {
-  color: var(--text);
+@media (hover: hover) {
+  .more > summary:hover {
+    color: var(--text);
+  }
 }
 .more > .panel {
   margin-bottom: 0.75rem;
@@ -3406,9 +3440,37 @@ select.textInput {
 .marketCardFootLeft { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 .pill { padding: 0.1rem 0.55rem; border-radius: 999px; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase; background: var(--accent-dim); color: var(--text); }
 .visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.filtersToggle { display: none; }
+/*
+ * The catalog on a phone. The facets are a side column on a wide screen and
+ * a fold on a narrow one: eleven ways to narrow nineteen packs, stacked
+ * above them, put the first pack two screens down. The search field stays
+ * out, because it is what most people reach for, and the rest waits behind
+ * a word that says whether anything is set.
+ */
 @media (max-width: 760px) {
   .marketBody { grid-template-columns: 1fr; }
-  .marketSide { position: static; }
+  .marketSide { position: static; gap: 0.6rem; }
+  .filtersToggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--text);
+    font: inherit;
+    font-family: var(--mono);
+    font-size: var(--t-2);
+    text-align: left;
+    cursor: pointer;
+  }
+  .marketSide:not(.open) .facet,
+  .marketSide:not(.open) > .ghost.tiny { display: none; }
 }
 
 /* ---- what a pack needs in the world ---- */
@@ -3438,6 +3500,9 @@ select.textInput {
 .clockBar span { display: block; height: 100%; background: var(--accent); transition: width 0.25s linear; }
 .clock.warn .clockBar span { background: var(--warn); }
 .clockButtons { display: flex; gap: 0.3rem; flex-wrap: wrap; justify-content: center; margin-top: 0.1rem; }
+/* The word on a wide screen, the mark on a phone; see ClockButton. */
+.clockBtn { display: inline-flex; align-items: center; justify-content: center; }
+.clockBtn .clockMark { display: none; }
 .chip.time { font-variant-numeric: tabular-nums; }
 /* Folded under the header on a phone: the clock takes one row, digits and buttons side by side. */
 @media (max-width: 640px) {
@@ -3508,21 +3573,27 @@ select.textInput {
 .guideRun h4 { margin: 0; padding: 0.25rem 0.6rem; font-size: 0.95rem; font-weight: 600; }
 .guideRun h4 a { color: var(--muted); text-decoration: none; }
 .guideRun.here h4 a { color: var(--text); }
-.guideRun h4 a:hover { color: var(--accent); }
+@media (hover: hover) {
+  .guideRun h4 a:hover { color: var(--accent); }
+}
 .guideRun.grouped ol { margin-left: 0.6rem; }
 .guideToc li { display: grid; gap: 0.05rem; padding: 0.35rem 0.6rem; border-left: 2px solid transparent; }
 .guidePart:not(.open) li { padding-top: 0.2rem; padding-bottom: 0.2rem; }
 .guideToc li.on { border-left-color: var(--accent); background: var(--panel-2); border-radius: 0 var(--radius) var(--radius) 0; }
 .guideToc a { color: var(--text); text-decoration: none; font-weight: 600; }
 .guidePart:not(.open) a { font-weight: 500; color: var(--muted); }
-.guideToc a:hover { color: var(--accent); }
+@media (hover: hover) {
+  .guideToc a:hover { color: var(--accent); }
+}
 /* The open page's sections, under its title: each a link into the page. */
 .guideSections { list-style: none; margin: 0.35rem 0 0.1rem; padding: 0 0 0 0.2rem; display: grid; gap: 0.1rem; border-left: 1px solid var(--line); }
 .guideToc .guideSections li { padding: 0.15rem 0.5rem; border-left: 0; background: none; }
 .guideToc .guideSections li.sub { padding-left: 1.1rem; }
 .guideToc .guideSections a { font-weight: 400; font-size: 0.9rem; color: var(--muted); }
 .guideToc .guideSections li.on a { color: var(--text); }
-.guideToc .guideSections a:hover { color: var(--accent); }
+@media (hover: hover) {
+  .guideToc .guideSections a:hover { color: var(--accent); }
+}
 /* On this page: the same sections beside the page, the one in view marked. */
 .guideOnPage { grid-area: onpage; position: sticky; top: 1.25rem; display: grid; gap: 0.35rem; font-size: 0.85rem; }
 .guideOnPage h4 { margin: 0; font-family: var(--mono); font-size: var(--t-1); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
@@ -3532,7 +3603,9 @@ select.textInput {
 .guideOnPage li.on { border-left-color: var(--accent); }
 .guideOnPage a { color: var(--muted); text-decoration: none; }
 .guideOnPage li.on a { color: var(--text); }
-.guideOnPage a:hover { color: var(--accent); }
+@media (hover: hover) {
+  .guideOnPage a:hover { color: var(--accent); }
+}
 .guidePage { grid-area: page; max-width: 72ch; min-width: 0; }
 .guidePage h1 { margin: 0 0 1.2rem; font-size: 2.2rem; line-height: 1.1; text-wrap: balance; }
 .guidePage h2 { margin: 2.4rem 0 0.7rem; font-size: 1.35rem; border-bottom: 1px solid var(--line); padding-bottom: 0.3rem; scroll-margin-top: 1rem; }
@@ -3540,7 +3613,9 @@ select.textInput {
 /* A heading's anchor: there on hover, so a section can be sent to someone at the right place. */
 .guidePage h2 .anchor, .guidePage h3 .anchor { margin-left: 0.45rem; font-family: var(--mono); font-weight: 400; font-size: 0.8em; color: var(--muted); text-decoration: none; opacity: 0; transition: opacity 120ms; }
 .guidePage h2:hover .anchor, .guidePage h3:hover .anchor, .guidePage .anchor:focus-visible { opacity: 1; }
-.guidePage .anchor:hover { color: var(--accent); }
+@media (hover: hover) {
+  .guidePage .anchor:hover { color: var(--accent); }
+}
 .guidePage p, .guidePage li { line-height: 1.6; }
 .guidePage ul, .guidePage ol { padding-left: 1.4rem; }
 .guidePage pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.75rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.85em; }
@@ -3601,11 +3676,17 @@ select.textInput {
 .siteFooter nav { display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; }
 .siteFooter a { color: var(--muted); text-decoration: none; }
 .siteFooter .build a { color: inherit; text-decoration: underline dotted; text-underline-offset: 0.2em; }
-.siteFooter .build a:hover { color: var(--text); }
-.siteFooter a:hover { color: var(--text); text-decoration: underline; }
+@media (hover: hover) {
+  .siteFooter .build a:hover { color: var(--text); }
+}
+@media (hover: hover) {
+  .siteFooter a:hover { color: var(--text); text-decoration: underline; }
+}
 .siteFooter .build { margin-left: auto; font-family: var(--mono); font-size: 0.75rem; }
 a.plan { text-decoration: none; }
-a.plan:hover { text-decoration: underline; }
+@media (hover: hover) {
+  a.plan:hover { text-decoration: underline; }
+}
 .veil { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 1rem; background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(6px); }
 .termsGate { max-width: 34rem; display: grid; gap: 0.75rem; }
 .nameGate .inviteForm { align-items: center; }
@@ -3744,7 +3825,9 @@ a.plan:hover { text-decoration: underline; }
 @media (prefers-reduced-motion: reduce) { .diceCurtain { animation: none; } }
 .reactRow { display: flex; gap: 0.25rem; }
 .reactButton { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 0.2rem 0.5rem; font-size: 1.1rem; line-height: 1; cursor: pointer; }
-.reactButton:hover { border-color: var(--line-2); transform: translateY(-1px); }
+@media (hover: hover) {
+  .reactButton:hover { border-color: var(--line-2); transform: translateY(-1px); }
+}
 .reactRecent { display: flex; gap: 0.3rem; flex-wrap: wrap; justify-content: flex-end; }
 /* On the live page the reactions are a panel above the board: buttons that wrap, and what came back, read left to right. */
 .liveSide .react .reactRow { flex-wrap: wrap; }
@@ -3916,3 +3999,419 @@ html[data-pip="controls"] body { margin: 0; height: 100vh; overflow-y: auto; bac
 
 /* A line read off the table before the step has resolved it: the throw is real, the outcome is not yet. */
 .receipt .result.provisional { opacity: 0.85; }
+
+/* ---- the run on a phone ------------------------------------------------ *
+ *
+ * The desk does not fit, and stacking it does not work: the three columns
+ * one under another put the step under four rows of chrome and the counters
+ * a thousand pixels below the dice that move them. So the columns become
+ * three planes, one at a time, with the rail at the foot of the screen as
+ * the way between them (RunRail), and the margin keeps its job as a single
+ * line that stays: which unit, which phase, the clock, and the run's own
+ * bar folded behind a mark.
+ *
+ * Nothing here is a phone convention borrowed from elsewhere. The rail is
+ * three words in the referee's mono, the plane you are on marked in celadon
+ * because celadon is what marks the current thing everywhere else in the
+ * sheet, and the sheet that mark raises is the same bar the wide screen
+ * draws, laid on its side.
+ */
+.flowNow {
+  display: none;
+}
+.runRail,
+.runMenuBtn,
+.runBarScrim,
+.sheetClose,
+.stagePack {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  /* The rail owns the foot of the screen, so the page ends above it. */
+  .main.run {
+    padding: 0.9rem 0.9rem calc(4.2rem + env(safe-area-inset-bottom, 0px));
+  }
+  .columns.run {
+    display: block;
+    gap: 0;
+  }
+
+  /* ---- the line that says where you are ---- */
+  /*
+   * One row of data: which unit, which pack, how long is left, and the way
+   * into the run's own bar. Only the pack's name may take or give up room,
+   * so the unit and the clock stand in the same place from the first roll
+   * to the last and the eye can go straight to either. Under it, a rule and
+   * one thin line for the phases, which is a control rather than data: it
+   * says which one of how many, and what comes after, and opens the list.
+   */
+  .columns.run > .margin {
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    column-gap: 0.45rem;
+    /*
+     * The same box as the panes, and by construction rather than by two
+     * paddings agreeing: no negative margin to bleed and no padding to
+     * put back, so the bar cannot end up a different width from what is
+     * under it. Its ground runs to both edges all the same, painted by
+     * the layer below, so the page passes under it cleanly.
+     */
+    margin: 0;
+    padding: 0.25rem 0 0;
+    border-right: none;
+    border-bottom: none;
+  }
+  .columns.run > .margin::before {
+    content: "";
+    position: absolute;
+    inset: 0 -0.9rem;
+    z-index: -1;
+    background: var(--bg);
+  }
+  .margin .stageNo {
+    grid-area: 1 / 1;
+    font-size: var(--t-3);
+    white-space: nowrap;
+  }
+  /* Which mode this is stays in the sheet: it is read once at the start,
+     and on a phone the line has better uses for ninety pixels. */
+  .margin .stageNo small { display: none; }
+  /* The pack, beside its unit, giving up its letters before anything else
+     on the line does: which unit and how long is left are read at a glance
+     and the pack's name is read once. */
+  .stagePack {
+    display: block;
+    grid-area: 1 / 2;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--muted);
+    font-size: var(--t-2);
+  }
+  /* The clock keeps its face and its buttons and gives up its label: the
+     line beside it already says which unit this is. */
+  /* The clock keeps the corner: it is the one thing on the line that
+     changes by itself, and the eye goes to the same place for it. */
+  .margin .clocks {
+    grid-area: 1 / 3;
+    margin: 0;
+    gap: 0.2rem 0.5rem;
+    justify-items: end;
+  }
+  .margin .clock {
+    grid-template-columns: auto auto auto;
+    grid-template-areas: "head digits buttons" "bar bar bar";
+    align-items: center;
+    column-gap: 0.4rem;
+    row-gap: 0.1rem;
+    width: auto;
+  }
+  /*
+   * A running clock says what it is by counting: a timer falls and carries
+   * a bar under it, a stopwatch climbs. Paused and stopped are the two
+   * states the digits cannot say by themselves, so those are the two the
+   * header keeps a word for.
+   */
+  .margin .clockHead { display: none; }
+  .margin .clock.paused .clockHead,
+  .margin .clock.done .clockHead { display: block; grid-area: head; }
+  .margin .clockLabel { display: none; }
+  .margin .clockDigits { grid-area: digits; font-size: var(--t-4); }
+  .margin .clock.done .clockDigits { font-size: var(--t-3); }
+  .margin .clockBar { grid-area: bar; width: 100%; }
+  .margin .clockButtons { grid-area: buttons; margin: 0; flex-wrap: nowrap; gap: 0.3rem; }
+  /* The header row is one line wide and three words of transport were
+     taking a third of it. The marks say the same thing in a quarter of
+     the room, and each is still a square big enough to hit. */
+  .margin .clockButtons > .clockBtn { width: 2rem; height: 2rem; padding: 0; }
+  .margin .clockButtons > .clockBtn .clockWord { display: none; }
+  .margin .clockButtons > .clockBtn .clockMark { display: block; }
+
+  .runMenuBtn {
+    grid-area: 1 / 4;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: var(--t-4);
+    line-height: 1;
+    cursor: pointer;
+  }
+  .runMenuBtn[aria-expanded="true"] {
+    border-color: var(--line);
+    color: var(--text);
+  }
+  /* Something in the sheet the player would want to have seen. */
+  .runMenuBtn.flagged { color: var(--warn); }
+
+  /* The phases fold to one line until tapped. */
+  .stageFlow {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-top: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .flowNow {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: 0.45rem;
+    width: 100%;
+    padding: 0.3rem 0;
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--line);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--t-2);
+    text-align: left;
+    cursor: pointer;
+  }
+  .flowNow > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .flowNow .idx {
+    font-family: var(--mono);
+    font-size: var(--t-1);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .flowNow .muted {
+    font-size: var(--t-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .stageFlow:not(.open) .sectionTitle,
+  .stageFlow:not(.open) .flow {
+    display: none;
+  }
+  .stageFlow.open .flow {
+    padding-bottom: 0.5rem;
+  }
+  /*
+   * A phase that is done reads as done by going quiet rather than by being
+   * struck through. The strike was drawn over a bare list of labels; with
+   * what each phase produced under it, the line falls across things that
+   * did happen and reads as though they had been undone.
+   */
+  .margin .flow > li.done { text-decoration: none; color: var(--muted); }
+  .margin .flow > li { padding: 0.45rem 0; }
+
+  /* ---- one plane at a time ---- */
+  .columns.run > .col.wide {
+    padding-top: 0.9rem;
+  }
+  .columns.run > .col.side {
+    display: none;
+    padding: 0.9rem 0 0;
+    border: none;
+    gap: 1.4rem;
+  }
+  .columns.run > .col.wide > .log,
+  .columns.run > .col.wide > .more {
+    display: none;
+  }
+  .columns.run[data-pane="board"] > .col.wide { display: none; }
+  .columns.run[data-pane="board"] > .col.side { display: flex; }
+  /*
+   * The unit, phase by phase, with what each produced: the reading the
+   * watcher's page gives, on the player's own screen. The line that says
+   * where you are opens it, and so does the rail; on this plane that line
+   * stops being a header and the list under it is the page.
+   */
+  .columns.run[data-pane="unit"] > .col.wide,
+  .columns.run[data-pane="unit"] > .col.side { display: none; }
+  .columns.run[data-pane="unit"] > .margin {
+    position: static;
+    padding-bottom: 0.5rem;
+    border-bottom: none;
+  }
+  .columns.run[data-pane="unit"] .stageFlow { border-bottom: none; }
+  .columns.run[data-pane="unit"] .stageFlow .sectionTitle { display: none; }
+  .columns.run[data-pane="unit"] .flowNow { border-bottom: 1px solid var(--line); }
+  /* The log's plane holds the log and the way to take it out of the app,
+     which is the same subject: what happened, and how to keep it. */
+  .columns.run[data-pane="log"] > .col.wide > * { display: none; }
+  .columns.run[data-pane="log"] > .col.wide > .log,
+  .columns.run[data-pane="log"] > .col.wide > .more { display: block; }
+  .columns.run[data-pane="log"] > .col.wide > .log { margin-top: 0; }
+
+  /* ---- the step ---- *
+   * The card can be longer than the screen, and the button under it is the
+   * whole of the move. It sticks to the foot of the plane wearing the
+   * card's own ground, so a long step is read with its move under the
+   * thumb and a short one looks like an ordinary card.
+   */
+  .run .runStep {
+    padding: 1.1rem 1.1rem 0;
+  }
+  /* Setting a run up is a long page with one button at the end of it, and
+     the button should be under the thumb wherever the page is. Nothing is
+     fixed on this screen, so it sits on the foot of the window itself. */
+  .setup > .stepAction:last-child {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: 1rem -1rem 0;
+    padding: 0.8rem 1rem calc(0.8rem + env(safe-area-inset-bottom, 0px));
+    background: var(--panel);
+  }
+  .setup > .stepAction:last-child > .primary.big { width: 100%; }
+  .run .runStep > .stepAction:last-child {
+    position: sticky;
+    bottom: calc(3.3rem + env(safe-area-inset-bottom, 0px));
+    z-index: 2;
+    margin: 1rem -1.1rem 0;
+    padding: 0.8rem 1.1rem 1.1rem;
+    background: var(--panel);
+  }
+  .run .runStep .primary.big { margin-top: 0; }
+  /* One move: the button is the width of the card. A fork, Next or Finish,
+     keeps both on the line with the onward move taking what is left. */
+  .run .runStep > .stepAction > .primary.big { width: 100%; }
+  .run .runStep > .padRow.stepAction {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  .run .runStep > .padRow.stepAction > .primary.big { width: auto; flex: 1 1 auto; }
+  .run .runStep > .padRow.stepAction > .ghost.big { flex: 0 0 auto; padding: 0.6rem 0.9rem; }
+  /* Typing a name is the move here, so the field takes the room and the
+     button beside it stays the size of its word. */
+  .run .runStep > .padRow.stepAction > .textInput { flex: 1 1 auto; min-width: 0; }
+  .run .runStep > .padRow.stepAction > .primary:not(.big) { flex: 0 0 auto; }
+  /* A box you have to look at is a box you have to be able to hit. */
+  .checklist input[type="checkbox"] { width: 1.15rem; height: 1.15rem; }
+  .checklist label { align-items: flex-start; gap: 0.6rem; padding: 0.15rem 0; }
+
+  /* ---- the rail ---- */
+  .runRail {
+    display: grid;
+    /* However many planes a pack's words give it, they share the one row. */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 25;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .railTab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    min-width: 0;
+    min-height: 3.2rem;
+    padding: 0.6rem 0.3rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: -1px;
+    background: none;
+    border: 0;
+    border-top: 2px solid transparent;
+    color: var(--muted);
+    font: inherit;
+    font-family: var(--mono);
+    font-size: var(--t-2);
+    cursor: pointer;
+  }
+  .railTab[aria-current] {
+    color: var(--text);
+    border-top-color: var(--accent);
+  }
+  .railTab:active { background: var(--panel); }
+  .railMark {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 999px;
+    background: var(--accent);
+  }
+
+  /* ---- the run's own bar, as a sheet ---- */
+  .runBar { display: none; }
+  .runBar.open {
+    display: grid;
+    gap: 0.9rem;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    max-height: 75vh;
+    overflow: auto;
+    padding: 1rem 0.9rem calc(1rem + env(safe-area-inset-bottom, 0px));
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    box-shadow: var(--raise);
+  }
+  .runBar.open .runMeta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+  }
+  .runBar.open .headerActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .runBar.open .headerActions > .chip { grid-column: 1 / -1; }
+  .runBar.open .headerActions > button { width: 100%; min-height: 2.75rem; }
+  .runBar.open .sheetClose { display: block; grid-column: 1 / -1; }
+  .runBarScrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    padding: 0;
+    border: 0;
+    background: color-mix(in oklab, var(--bg) 72%, transparent);
+  }
+
+  /* While the dice are in the air the field and Enter have nothing to take;
+     the throw is the only thing on the screen worth the room. */
+  .rollRequest .padRow.rolling .rollInput,
+  .rollRequest .padRow.rolling > .primary { display: none; }
+
+  /* ---- the pad ---- *
+   * Ten keys across a phone, each one a thumb wide. Fixed 3rem columns left
+   * a third of the width unused and every key smaller than it had to be.
+   */
+  .pad {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+  .key { height: 3.1rem; font-size: var(--t-4); }
+}
+
+/*
+ * A phone's width is the scarce thing on it. The page keeps a thumb's
+ * margin and no more, and what sits inside the page follows: a panel that
+ * gave a whole rem to each edge was giving away eight per cent of the
+ * screen to say where it began, which a rule and a ground already say.
+ */
+@media (max-width: 760px) {
+  .main { padding: 0.9rem; }
+  .panel { padding: 0.75rem 0.85rem; }
+  .hero { padding: 0.85rem 0.9rem; gap: 1rem; }
+  .incoming { padding: 0.6rem 0.9rem; }
+  .settingsDialog { padding: 0.9rem; }
+  .veil { padding: 0.6rem; }
+}

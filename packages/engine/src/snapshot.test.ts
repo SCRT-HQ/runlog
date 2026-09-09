@@ -6,6 +6,7 @@ import { loadPackText } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
 import type { RunEvent } from "./events.ts";
 import { clockNow, isSnapshot, raceOf, resultText, snapshotOf } from "./snapshot.ts";
+import { subjectTitle } from "./eligibility.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const r = loadPackText(readFileSync(join(repoRoot, "packs/demo/pack.yaml"), "utf8"), "yaml");
@@ -55,6 +56,12 @@ describe("a live snapshot", () => {
     // The phase's own table gives its text alone; the table it set off says which, and which piece it hit, so a page can color it.
     expect(under.results![0]).toEqual({ text: resultText(under.results![0]!) });
     expect(under.results![1]).toMatchObject({ table: "Setback", hit: 1 });
+    // And named, not only numbered: a reader of the flow, the log or a
+    // Discord card should not have to go and look up which piece #1 was.
+    const reached = subjectTitle(kiln, reduce(kiln, chained).subjects.find((s) => s.id === 1)!);
+    expect(under.results![1]).toMatchObject({ hitName: reached });
+    expect(chainedSnap.log.find((l) => l.hit === 1)?.hitName).toBe(reached);
+    expect(chainedSnap.unitResults?.find((r) => r.hit === 1)?.hitName).toBe(reached);
     expect(chainedSnap.phases.filter((p) => p.id !== constrain.id).every((p) => !(p.results ?? []).some((r) => typeof r !== "string" && r.table === "Setback"))).toBe(true);
     // Every unit so far, as what its phases produced: the first stage made nothing, the second the two results under the one phase.
     expect(chainedSnap.units?.map((u) => u.unit)).toEqual([1, 2]);
