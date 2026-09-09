@@ -46,10 +46,11 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
     setNote(null);
     try {
       const discord = await api.linkDiscord(pending.code);
-      setKnown((k) => ({ available: true, discord, ...(k ? {} : {}) }));
+      // What was known stays known: whether a verification can be offered, in particular, so the button for it is there right away.
+      setKnown((k) => ({ ...(k ?? { available: true }), available: true, discord }));
       clearPendingLink();
       setPending(null);
-      setNote(`Linked. In Discord you are ${discord.name}; the bot knows you now.`);
+      setNote(`Linked. In Discord you are ${discord.name}; the bot knows you now.${known?.verify ? " For a server whose role asks for a linked account, press Verify for linked roles." : ""}`);
     } catch (error) {
       setNote(error instanceof Error && error.message ? error.message : "That code could not be linked.");
     } finally {
