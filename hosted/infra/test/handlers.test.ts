@@ -1871,21 +1871,26 @@ describe("a run hosted in discord", () => {
     const first = firstPress(card)!;
     expect(first.customId).toBe("rl:01000000000000000000000001:enter");
     expect(content(await call(signed(press(first.customId, sam)), d))).toContain("Only the host");
-    let presses = 0;
-    let closed = false;
-    while (presses < 80 && !closed) {
-      presses += 1;
-      const next = firstPress(card);
-      if (!next) break;
-      let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
-      // A modal was opened: answer it.
-      if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
-      expect(out.body["type"], `${next.customId}: ${JSON.stringify(out.body["data"])}`).toBe(7);
-      card = out.body["data"] as Record<string, unknown>;
-      closed = (await store.eventsAfter("01000000000000000000000001", 0)).filter((e) => e["t"] === "UnitFinalized").length >= 2;
-    }
-    const events = await store.eventsAfter("01000000000000000000000001", 0);
-    expect(closed, JSON.stringify({ presses, rows: card["components"], last: events.slice(-8).map((e) => `${e["t"]}${e["t"] === "StepCompleted" ? `:${e["phase"]}#${e["step"]}` : ""}`) })).toBe(true);
+    /** Press whatever the card offers until `units` stages have been closed, answering any modal with a bowl. */
+    const playUntil = async (units: number) => {
+      let presses = 0;
+      let closed = false;
+      while (presses < 80 && !closed) {
+        presses += 1;
+        const next = firstPress(card);
+        if (!next) break;
+        let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
+        // A modal was opened: answer it.
+        if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
+        expect(out.body["type"], `${next.customId}: ${JSON.stringify(out.body["data"])}`).toBe(7);
+        card = out.body["data"] as Record<string, unknown>;
+        closed = (await store.eventsAfter("01000000000000000000000001", 0)).filter((e) => e["t"] === "UnitFinalized").length >= units;
+      }
+      const events = await store.eventsAfter("01000000000000000000000001", 0);
+      expect(closed, JSON.stringify({ presses, rows: card["components"], last: events.slice(-8).map((e) => `${e["t"]}${e["t"] === "StepCompleted" ? `:${e["phase"]}#${e["step"]}` : ""}`) })).toBe(true);
+      return events;
+    };
+    const events = await playUntil(2);
     // The bot rolled, and said so: nothing physical happened at this table.
     const rolled = events.filter((e) => e["t"] === "Rolled");
     expect(rolled.length).toBeGreaterThan(0);
@@ -1912,7 +1917,14 @@ describe("a run hosted in discord", () => {
     // The old card lost its buttons, so a press on it cannot drive the table from a stale view.
     expect(bot.edits[bot.edits.length - 1]).toMatchObject({ id: "msg_2", message: { components: [] } });
     expect(content(await call(signed(command({ name: "end", type: 1 }, sam, "thread_1")), d))).toContain("Only the host");
-    const ended = await call(signed(command({ name: "end", type: 1, options: [{ name: "ending", type: 3, value: "kept" }] }, mira, "thread_1")), d);
+    const end = () => call(signed(command({ name: "end", type: 1, options: [{ name: "ending", type: 3, value: "kept" }] }, mira, "thread_1")), d);
+    let ended = await end();
+    // The dice may have queued a forced stage, which must be played out before the firing can end.
+    for (let more = 3; content(ended).includes("still queued") && more <= 5; more += 1) {
+      card = freshest.message as unknown as Record<string, unknown>;
+      await playUntil(more);
+      ended = await end();
+    }
     expect(content(ended)).toContain("The Shelf");
     // The thread stays open to talk in; Discord closes it after a day idle.
     expect(bot.archived).toEqual([]);
