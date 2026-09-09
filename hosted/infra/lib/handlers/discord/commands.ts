@@ -73,6 +73,8 @@ export const COMMANDS = [
       { type: SUB_COMMAND, name: "link", description: "The live link: anyone watches, no account needed" },
       { type: SUB_COMMAND, name: "end", description: "End the run", options: [{ type: STRING, name: "ending", description: "How it ends, where the pack offers a choice", required: false, autocomplete: true }] },
       { type: SUB_COMMAND, name: "undo", description: "Take the last move back" },
+      { type: SUB_COMMAND, name: "join", description: "Join this run: the roster, an open seat, or your own library as a watcher" },
+      { type: SUB_COMMAND, name: "leave", description: "Leave this run's roster or your seat" },
     ],
   },
   {
