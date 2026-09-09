@@ -17,7 +17,8 @@ import { HomeStrip } from "./HomeStrip.tsx";
  * runs beneath it, Continue on each, Start another, Forget, and the
  * order is what you played last on this device, so the pack you run most
  * nights is at the top with its open run one press away. Load-a-file lives
- * here too. Nothing is a menu; everything is on the page.
+ * here too, and a pack of your own takes a newer file on its own row, its
+ * runs kept. Nothing is a menu; everything is on the page.
  *
  * Nothing ships in it. The catalog is where packs come from, and this view
  * is where the catalog is reached from.
@@ -56,6 +57,7 @@ export function LibraryView({
   onSyncToggle,
   onCatalog,
   onUpdate,
+  onReplace,
   onJoinRace,
   onContinueLast,
 }: {
@@ -73,6 +75,8 @@ export function LibraryView({
   onCatalog: () => void;
   /** Take the catalog's newer version of a pack. */
   onUpdate?: (record: StoredPack) => void;
+  /** Take a newer file of a pack already here; its runs stay. Not for a sealed copy. */
+  onReplace?: (record: StoredPack, file: File | undefined) => void;
   /** Join a race by its six-letter code; absent where nobody is signed in. */
   onJoinRace?: (code: string) => void;
   /** Open the run this account touched last, on this device or another. */
@@ -209,6 +213,20 @@ export function LibraryView({
                   <button className="ghost tiny" onClick={() => onTest(p)} title={`Play ${p.title} in ${an(v.run.one.toLowerCase())} that is not saved`}>
                     Test
                   </button>
+                )}
+                {record && !record.sealed && onReplace && (
+                  <label className="ghost tiny fileButton" title={`Load a newer file of ${p.title}; its ${v.run.many.toLowerCase()} are kept`}>
+                    Replace from a file
+                    <input
+                      type="file"
+                      accept=".yaml,.yml,.json"
+                      onChange={(e) => {
+                        onReplace(record, e.target.files?.[0]);
+                        // So the same file, fixed and chosen again, counts as a change.
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
                 )}
                 {record && (
                   <button className="ghost tiny danger" title={`Forget ${p.title} and its ${v.run.many.toLowerCase()}`} onClick={() => onForgetPack(record)}>
