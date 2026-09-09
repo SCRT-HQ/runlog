@@ -18,12 +18,11 @@ The stage's configuration document is one JSON object per stage: in a pipeline, 
 ```json
 "discord": {
   "applicationId": "<Application ID>",
-  "publicKey": "<Public Key>",
-  "open": false
+  "publicKey": "<Public Key>"
 }
 ```
 
-`open` is read no more; leave it out. Whether a tier is on sale is a WorkOS feature flag, `servers-coming-soon` (and `publishers-coming-soon` for the publisher tier), read by the API for everyone at once: on for everyone in the WorkOS dashboard is a hold, and the tier shows as coming soon; off, on for some people only, or deleted, the tier is on sale, within a minute and with no deploy. A new stage is on sale until you put the hold on, so make the flag before the stage meets anyone. While it is held, everyone still sees the Servers page, claims servers and fills vaults, and the people trying the bot get the `server` feature flag, which is the plan as far as the API is concerned.
+Whether a tier is on sale is a WorkOS feature flag, `servers-coming-soon` (and `publishers-coming-soon` for the publisher tier), read by the API for everyone at once: on for everyone in the WorkOS dashboard is a hold, and the tier shows as coming soon; off, on for some people only, or deleted, the tier is on sale, within a minute and with no deploy. A new stage is on sale until you put the hold on, so make the flag before the stage meets anyone. While it is held, everyone still sees the Servers page, claims servers and fills vaults, and the people trying the bot get the `server` feature flag, which is the plan as far as the API is concerned.
 
 Deploy the stage. The API now answers the endpoint.
 

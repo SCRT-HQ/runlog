@@ -233,8 +233,6 @@ export interface Deps {
     publicKey: string;
     token: () => Promise<string | null>;
     guildName?: (guildId: string) => Promise<string | null>;
-    /** Once whether the server plan was on sale; read no more, since the `servers-coming-soon` flag holds a tier back now. Kept until the stage files drop it. */
-    open?: boolean;
     /** Discord itself, for the thread and the messages of a hosted run; null until the token is filled. Patient, with a longer rope, for the job. */
     rest?: (patient?: boolean) => Promise<DiscordRest | null>;
     /** Whether a server holds the plan through Discord's own store; absent where no SKU is sold there. */
@@ -2103,7 +2101,6 @@ function depsFromEnv(selfArn?: string): Deps {
               discord: {
                 applicationId: process.env["DISCORD_APPLICATION_ID"],
                 publicKey: process.env["DISCORD_PUBLIC_KEY"],
-                open: process.env["DISCORD_OPEN"] === "on",
                 token,
                 guildName: async (guildId: string) => {
                   const t = await token();
