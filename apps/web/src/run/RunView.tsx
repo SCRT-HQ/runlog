@@ -7,12 +7,13 @@ import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
 import { clockOfUnit, compareScores, formatClock, formatScore, nextUnit, scoreOf, unitPhases } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
-import { closesUnit, constrainedByOf, constraintsFor, describeSkip, describeSkipReason, entryWords, phaseSkipped, resultText, subjectLabel, subjectName, type PhaseResult, type RunEvent, type RunState } from "@runlog/engine";
+import { closesUnit, constrainedByOf, constraintLines, constraintsFor, describeSkip, describeSkipReason, entryWords, phaseSkipped, resultText, subjectLabel, subjectName, type PhaseResult, type RunEvent, type RunState } from "@runlog/engine";
 import { useRun, type ActiveStep } from "./useRun.ts";
 import type { RunStore } from "./store.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { RequestPanel } from "./RequestPanel.tsx";
 import { Checklist, checklistDone } from "./Checklist.tsx";
+import { evidenceFor, pointOf } from "./evidence.ts";
 import { Receipt, type RollReceipt } from "./Receipt.tsx";
 import type { RolledDie } from "../rolling.ts";
 import { useSync } from "../sync/SyncProvider.tsx";
@@ -27,7 +28,7 @@ import { ticksFor } from "./stepChecks.ts";
 import { nudgeFirstUnticked, nudgeOwed } from "./nudge.ts";
 import { Constraints } from "./Constraints.tsx";
 import { receiptFollowUps } from "./receiptFollowUps.ts";
-import { globalWords, settleWords, thresholdWords } from "./owed.ts";
+import { globalWords, owedOn, settleWords, settledOn, stillOwed, thresholdWords } from "./owed.ts";
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
@@ -479,8 +480,10 @@ export function RunView({
 
           {(run.thresholds.length > 0 || run.globals.length > 0) && <Thresholds pack={pack} run={run} />}
 
-          {(run.blockingObligations.length > 0 || run.notes.length > 0) && (
-            <Obligations pack={pack} run={run} />
+          {/* Whatever is owed and not already offered on the rule that
+              incurred it, plus the standing notes. */}
+          {(elsewhere(pack, run, state).length > 0 || run.notes.length > 0) && (
+            <Obligations pack={pack} run={run} state={state} />
           )}
 
           {run.moderated && run.challenges.length > 0 && <Winners run={run} state={state} />}
@@ -1011,6 +1014,31 @@ function StartFirstUnit({ pack, onEnter }: { pack: Pack; onEnter: () => void }) 
   );
 }
 
+/**
+ * The move a rule is still waiting on, to sit on the rule itself.
+ *
+ * A result can be a rule binding the step and a trigger that has not run,
+ * at once. It used to be said three times over: the rule, a banner
+ * counting what was owed, and a panel underneath with the button on it.
+ * The rule is the statement, so the button belongs on it, and the other
+ * two have nothing left to say.
+ */
+function owedAction(pack: Pack, run: ReturnType<typeof useRun>, state: RunState) {
+  const owed = owedOn(state);
+  return (line: { table: string; entryId: string }) => {
+    if (!stillOwed(owed, line)) return null;
+    const due = state.obligations.find(
+      (o) => !o.resolved && o.kind === "trigger" && o.ref?.kind === "tableEntry" && o.ref.table === line.table && o.ref.entryId === line.entryId,
+    );
+    if (!due || run.readOnly) return null;
+    return (
+      <button className="primary tiny owingMove" onClick={() => run.resolveObligation(due.id, due.text)}>
+        {settleWords(pack, due)}
+      </button>
+    );
+  };
+}
+
 function StepPanel({
   pack,
   run,
@@ -1066,11 +1094,11 @@ function StepPanel({
     }
 
     case "declareSubject": {
-      const constraints = constraintsFor(pack, state, step.constrainedBy);
+      const constraints = constraintLines(pack, state, step.constrainedBy);
       return (
         <section className="panel runStep" key={key}>
           <StepHead phase={phase} label={step.label ?? `Declare the ${v.subject.one}`} />
-          <Constraints lines={constraints} />
+          <Constraints lines={constraints} action={owedAction(pack, run, state)} />
           {state.bannedTypes.length > 0 && (
             <p className="muted small">
               No longer allowed: {state.bannedTypes.join(", ")}
@@ -1103,12 +1131,12 @@ function StepPanel({
       if (closesUnit(step)) return <ClosingStep key={key} pack={pack} run={run} state={state} active={active} ticked={ticked} tick={tick} />;
       const list = step.checklist ?? [];
       const allTicked = checklistDone(list, pack, state, ticked);
-      const constraints = constraintsFor(pack, state, step.constrainedBy);
+      const constraints = constraintLines(pack, state, step.constrainedBy);
       return (
         <section className="panel runStep" key={key}>
           <StepHead phase={phase} label={step.label} />
           {step.description && <p className="muted">{step.description}</p>}
-          <Constraints lines={constraints} />
+          <Constraints lines={constraints} action={owedAction(pack, run, state)} />
           {list.length > 0 && <Checklist items={list} pack={pack} state={state} ticked={ticked} onToggle={tick} />}
           {/*
             Never dim. A dimmed Done beside an unticked list read as broken;
@@ -1201,21 +1229,25 @@ function ClosingStep({
   const v = pack.vocabulary;
   const blocked = run.blockingObligations;
   const points = step.kind === "manual" ? (step.checklist ?? []) : step.kind === "finalizeUnit" ? (step.confirm ?? []) : [];
-  const allTicked = checklistDone(points, pack, state, ticked);
-  const constraints = step.kind === "manual" ? constraintsFor(pack, state, step.constrainedBy) : [];
+  // A result the pack hung a trigger on is honoured by the trigger running.
+  // The confirmation shows it, and does not ask for a promise about it.
+  const owed = owedOn(state);
+  const settling = {
+    owing: (shownRow: { table: string; entryId: string }) => stillOwed(owed, shownRow),
+    settled: (shownRow: { table: string; entryId: string }) => settledOn(owed, shownRow),
+  };
+  const allTicked = checklistDone(points, pack, state, ticked, settling);
+  const constraints = step.kind === "manual" ? constraintLines(pack, state, step.constrainedBy) : [];
   const unit = v.unit.one.toLowerCase();
   const label = (step.kind === "manual" || step.kind === "finalizeUnit" ? step.label : undefined) ?? v.finalize;
   return (
     <section className="panel runStep finalize">
       <StepHead phase={phase} label={label} />
       {step.kind === "manual" && step.description && <p className="muted">{step.description}</p>}
-      {constraints.length > 0 && <Constraints lines={constraints} />}
-      {blocked.length > 0 && (
-        <p className="notice">
-          {blocked.length} thing{blocked.length === 1 ? "" : "s"} still owed. Settle {blocked.length === 1 ? "it" : "them"} before closing this {unit}.
-        </p>
+      {constraints.length > 0 && <Constraints lines={constraints} action={owedAction(pack, run, state)} />}
+      {points.length > 0 && (
+        <Checklist items={points} pack={pack} state={state} ticked={ticked} onToggle={tick} settling={settling} action={owedAction(pack, run, state)} />
       )}
-      {points.length > 0 && <Checklist items={points} pack={pack} state={state} ticked={ticked} onToggle={tick} />}
       <div className="padRow stepAction">
         <button
           className="primary big"
@@ -1351,7 +1383,32 @@ function Ended({ pack, state }: { pack: Pack; state: RunState }) {
  * an obligation the pack defers to the close blocked the button and was
  * nowhere on the screen to settle, which left the unit with no way out.
  */
-function Obligations({ pack, run }: { pack: Pack; run: ReturnType<typeof useRun> }) {
+/**
+ * What the game owes that is not already in front of the player.
+ *
+ * A debt incurred by a rule that binds the step in hand is offered on that
+ * rule, where the rule is; listing it again underneath was the same thing
+ * said twice, with the button on the second one. Anything the step is not
+ * held to still needs somewhere to be, and this is it.
+ */
+function elsewhere(pack: Pack, run: ReturnType<typeof useRun>, state: RunState) {
+  const step = run.activeStep?.step;
+  const shown = new Set(
+    (step ? constraintLines(pack, state, constrainedByOf(step)) : []).map((l) => `${l.table}/${l.entryId}`),
+  );
+  // And whatever its confirmation lists, which is where a closing step puts
+  // what the unit drew.
+  const points = step?.kind === "manual" ? (step.checklist ?? []) : step?.kind === "finalizeUnit" ? (step.confirm ?? []) : [];
+  for (const point of points.map(pointOf)) {
+    if (!point.shows) continue;
+    for (const row of evidenceFor(pack, state, point.shows)) shown.add(`${row.table}/${row.entryId}`);
+  }
+  return run.blockingObligations.filter(
+    (o) => !(o.kind === "trigger" && o.ref?.kind === "tableEntry" && shown.has(`${o.ref.table}/${o.ref.entryId}`)),
+  );
+}
+
+function Obligations({ pack, run, state }: { pack: Pack; run: ReturnType<typeof useRun>; state: RunState }) {
   const v = pack.vocabulary;
   // The engine's word for when a thing comes due, in the pack's own nouns.
   const when = (on: string | undefined): string => {
@@ -1379,7 +1436,7 @@ function Obligations({ pack, run }: { pack: Pack; run: ReturnType<typeof useRun>
       <p className="muted small">
         Results that reach forward in time. These are the ones that get forgotten on paper.
       </p>
-      {run.blockingObligations.map((o) => (
+      {elsewhere(pack, run, state).map((o) => (
         <div key={o.id} className="row owedRow">
           <div>
             <strong>{o.text}</strong>

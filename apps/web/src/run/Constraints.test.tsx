@@ -7,13 +7,16 @@ import { Constraints } from "./Constraints.tsx";
  * engine's `constraintsFor` (see packages/engine/src/flow.test.ts); this is
  * only the page's and the remote's shared rendering of it.
  */
+/** A rule as the engine hands it over: its words, and which result said them. */
+const line = (text: string) => ({ text, table: "form", entryId: text });
+
 describe("Constraints", () => {
   it("renders nothing when there is nothing to say", () => {
     expect(renderToStaticMarkup(<Constraints lines={[]} />)).toBe("");
   });
 
   it("lists every line, under the game's own voice", () => {
-    const html = renderToStaticMarkup(<Constraints lines={["A bowl.", "A vase."]} />);
+    const html = renderToStaticMarkup(<Constraints lines={[line("A bowl."), line("A vase.")]} />);
     expect(html).toContain("The game has already had its say");
     expect(html).toContain("A bowl.");
     expect(html).toContain("A vase.");

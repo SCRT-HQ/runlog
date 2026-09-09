@@ -4380,6 +4380,42 @@ html[data-pip="controls"] body { margin: 0; height: 100vh; overflow-y: auto; bac
   .rollRequest .padRow.rolling > .primary { display: none; }
 }
 
+/* ---- a rule the game has not finished with ------------------------------ */
+/*
+ * The move sits on the rule that is waiting for it, so the rule reads as
+ * one sentence with one thing to press, rather than a sentence here and a
+ * button in a panel further down saying the same thing again.
+ */
+.constraints li.owing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.7rem;
+}
+.constraints li.owing > strong {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.owingMove {
+  flex: 0 0 auto;
+}
+/* A row the game settles for itself: shown, not asked about, and carrying
+   the move it is waiting on where it is still waiting. */
+.checklist .settling {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.7rem;
+}
+.checklist .settling > label {
+  flex: 1 1 12rem;
+  min-width: 0;
+  opacity: 0.85;
+}
+.checklist .settling input[type="checkbox"] {
+  cursor: default;
+}
+
 /* ---- where a pack may be played ---------------------------------------- */
 /*
  * The shelf's answer to "which servers play this", as a row menu like the
