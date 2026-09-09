@@ -76,7 +76,39 @@ export interface GuildPackMeta {
   delegatedBy: string;
 }
 
+/**
+ * A run the bot hosts in a server: which session, whose (the host's
+ * Runlog account owns it, like any run), where in Discord it lives, and
+ * what the table is waiting on between two presses. The log itself is
+ * the session's, in the same rows as any run; this row is what Discord
+ * needs beside it.
+ */
+export interface GuildRun {
+  sessionId: string;
+  guildId: string;
+  hostDiscordId: string;
+  hostSub: string;
+  hostName: string;
+  packId: string;
+  channelId: string;
+  threadId: string;
+  /** The message the buttons are on; replaced when the card is posted again. */
+  cardMessageId?: string;
+  /** A block that began and is waiting on an answer: the engine's `Pending`, as plain data. */
+  pending?: Record<string, unknown>;
+  /** Discord user id → contestant id, for a moderated run's roster. */
+  contestants: Record<string, string>;
+  createdAt: string;
+  updatedAt: string;
+  endedAt?: string;
+}
+
 export interface GuildStore {
+  putGuildRun(run: GuildRun): Promise<void>;
+  guildRun(sessionId: string): Promise<GuildRun | null>;
+  /** The run whose thread this is, for a command typed in it. */
+  guildRunByThread(threadId: string): Promise<GuildRun | null>;
+
   putLinkCode(link: LinkCode): Promise<void>;
   /** The code's row, and the row is gone: a code is spent by being read. Null when missing or past its time. */
   takeLinkCode(code: string, at: string): Promise<LinkCode | null>;
@@ -122,6 +154,13 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
   const guildKey = (guildId: string) => ({ pk: `GUILD#${guildId}`, sk: "META" });
   const guildPointer = (sub: string, guildId: string) => ({ pk: `USER#${sub}`, sk: `GUILD#${guildId}` });
   const packKey = (guildId: string, packId: string) => ({ pk: `GUILD#${guildId}`, sk: `PACK#${packId}` });
+  const runKey = (sessionId: string) => ({ pk: `DISCORD#RUN#${sessionId}`, sk: "RUN" });
+  const threadKey = (threadId: string) => ({ pk: `DISCORD#THREAD#${threadId}`, sk: "RUN" });
+  const runOf = (item: Record<string, unknown> | undefined): GuildRun | null => {
+    if (!item || typeof item["sessionId"] !== "string" || typeof item["guildId"] !== "string") return null;
+    const { pk: _pk, sk: _sk, kind: _kind, ...rest } = item;
+    return { ...(rest as unknown as GuildRun), contestants: typeof item["contestants"] === "object" && item["contestants"] !== null ? (item["contestants"] as Record<string, string>) : {} };
+  };
   const objectKey = (guildId: string, packId: string, format: string) => `guilds/${guildId}/packs/${packId}.${format}`;
 
   const guildOf = (item: Record<string, unknown> | undefined): Guild | null => {
@@ -187,6 +226,24 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
   };
 
   return {
+    async putGuildRun(run) {
+      await ddb.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            { Put: { TableName: table, Item: { ...runKey(run.sessionId), kind: "discord-run", ...run } } },
+            { Put: { TableName: table, Item: { ...threadKey(run.threadId), kind: "discord-thread", sessionId: run.sessionId } } },
+          ],
+        }),
+      );
+    },
+    async guildRun(sessionId) {
+      return runOf((await ddb.send(new GetCommand({ TableName: table, Key: runKey(sessionId) }))).Item);
+    },
+    async guildRunByThread(threadId) {
+      const pointer = (await ddb.send(new GetCommand({ TableName: table, Key: threadKey(threadId) }))).Item;
+      const sessionId = str(pointer?.["sessionId"]);
+      return sessionId ? runOf((await ddb.send(new GetCommand({ TableName: table, Key: runKey(sessionId) }))).Item) : null;
+    },
     async putLinkCode(link) {
       await ddb.send(new PutCommand({ TableName: table, Item: { ...linkKey(link.code), kind: "discord-link", ...link, expiresAt: toEpoch(link.expiresAt), expiresAtIso: link.expiresAt } }));
     },

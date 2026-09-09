@@ -54,6 +54,8 @@ export interface Interaction {
   member?: { user: DiscordUser; permissions?: string; roles?: string[]; nick?: string | null };
   /** In a direct message: the user alone. */
   user?: DiscordUser;
+  /** The message a component was pressed on. */
+  message?: { id: string };
   data?: {
     id?: string;
     name?: string;
@@ -62,6 +64,8 @@ export interface Interaction {
     custom_id?: string;
     component_type?: number;
     values?: string[];
+    /** A modal's rows, each holding one input with its value. */
+    components?: Array<{ components?: Array<{ custom_id?: string; value?: string }> }>;
   };
 }
 
@@ -72,7 +76,82 @@ export interface InteractionResponse {
     flags?: number;
     embeds?: unknown[];
     components?: unknown[];
+    /** A modal's id and title, with `components` its inputs. */
+    custom_id?: string;
+    title?: string;
+    /** Autocomplete's answers. */
+    choices?: Array<{ name: string; value: string }>;
   };
+}
+
+// ---- building blocks for what the bot posts ----
+
+/** Discord's ComponentType and ButtonStyle, the few used. */
+export const Component = { ActionRow: 1, Button: 2, StringSelect: 3, TextInput: 4 } as const;
+export const ButtonStyle = { Primary: 1, Secondary: 2, Success: 3, Danger: 4 } as const;
+
+export interface Button {
+  type: typeof Component.Button;
+  style: number;
+  custom_id: string;
+  label: string;
+  disabled?: boolean;
+}
+
+export const button = (customId: string, label: string, style: number = ButtonStyle.Secondary, disabled = false): Button => ({
+  type: Component.Button,
+  style,
+  custom_id: customId.slice(0, 100),
+  label: label.slice(0, 80),
+  ...(disabled ? { disabled: true } : {}),
+});
+
+export const row = (...components: unknown[]) => ({ type: Component.ActionRow, components: components.slice(0, 5) });
+
+export const select = (customId: string, placeholder: string, options: Array<{ label: string; value: string; description?: string }>) => ({
+  type: Component.ActionRow,
+  components: [
+    {
+      type: Component.StringSelect,
+      custom_id: customId.slice(0, 100),
+      placeholder: placeholder.slice(0, 150),
+      options: options.slice(0, 25).map((o) => ({ label: o.label.slice(0, 100), value: o.value.slice(0, 100), ...(o.description ? { description: o.description.slice(0, 100) } : {}) })),
+    },
+  ],
+});
+
+/** A modal with one text input; the answer comes back as a ModalSubmit with the input's value. */
+export const modal = (customId: string, title: string, input: { id: string; label: string; placeholder?: string; value?: string; paragraph?: boolean }): InteractionResponse => ({
+  type: ResponseType.Modal,
+  data: {
+    custom_id: customId.slice(0, 100),
+    title: title.slice(0, 45),
+    components: [
+      {
+        type: Component.ActionRow,
+        components: [
+          {
+            type: Component.TextInput,
+            custom_id: input.id.slice(0, 100),
+            style: input.paragraph ? 2 : 1,
+            label: input.label.slice(0, 45),
+            required: true,
+            max_length: 200,
+            ...(input.placeholder ? { placeholder: input.placeholder.slice(0, 100) } : {}),
+            ...(input.value ? { value: input.value.slice(0, 200) } : {}),
+          },
+        ],
+      },
+    ],
+  },
+});
+
+export interface Embed {
+  title?: string;
+  description?: string;
+  fields?: Array<{ name: string; value: string; inline?: boolean }>;
+  footer?: { text: string };
+  color?: number;
 }
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);

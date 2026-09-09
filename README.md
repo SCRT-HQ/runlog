@@ -78,6 +78,8 @@ npx @scrthq/runlog test my-game.yaml          # replays the fixtures your pack s
   document and a socket that rings, for a plugin of your own.
 - **[Streaming setup](docs/streaming-setup.md)** — the widgets in OBS,
   Streamlabs, StreamElements and Streamer.bot, field by field.
+- **[Runlog in Discord](docs/discord.md)** — the bot that hosts runs in a
+  server, and **[setting it up](docs/discord-bot.md)** as the operator.
 
 Point your pack at the published schema and your editor does most of the work:
 

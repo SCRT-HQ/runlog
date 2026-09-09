@@ -1,7 +1,50 @@
-import type { ClaimCode, Connection, Guild, GuildPackMeta, GuildStore, LinkCode } from "../lib/handlers/guilds";
+import type { ClaimCode, Connection, Guild, GuildPackMeta, GuildRun, GuildStore, LinkCode } from "../lib/handlers/guilds";
+import type { DiscordMessage, DiscordRest } from "../lib/handlers/discord/rest";
+
+/** Discord, as a list of what was asked of it: threads made, messages posted, in order. */
+export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array<{ channel: string; message: DiscordMessage; id: string }>; edits: Array<{ channel: string; id: string; message: DiscordMessage }>; pins: string[]; archived: string[]; down: boolean } {
+  let n = 0;
+  const me = {
+    threads: [] as string[],
+    posts: [] as Array<{ channel: string; message: DiscordMessage; id: string }>,
+    edits: [] as Array<{ channel: string; id: string; message: DiscordMessage }>,
+    pins: [] as string[],
+    archived: [] as string[],
+    down: false,
+    async createThread(_channelId: string, name: string) {
+      if (me.down) return null;
+      const id = `thread_${(n += 1)}`;
+      me.threads.push(`${id} ${name}`);
+      return id;
+    },
+    async postMessage(channel: string, message: DiscordMessage) {
+      if (me.down) return null;
+      const id = `msg_${(n += 1)}`;
+      me.posts.push({ channel, message, id });
+      return id;
+    },
+    async editMessage(channel: string, id: string, message: DiscordMessage) {
+      if (me.down) return false;
+      me.edits.push({ channel, id, message });
+      return true;
+    },
+    async pinMessage(_channel: string, id: string) {
+      if (me.down) return false;
+      me.pins.push(id);
+      return true;
+    },
+    async archiveThread(threadId: string) {
+      if (me.down) return false;
+      me.archived.push(threadId);
+      return true;
+    },
+  };
+  return me;
+}
 
 /** Discord's rows, in Maps, with the same rules as the real one: a code is spent by being read, a link or a claim replaces on both sides, and a vault never hands its packs back. */
-export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; claims: Map<string, ClaimCode>; links: Map<string, Connection>; guilds: Map<string, Guild>; vault: Map<string, { meta: GuildPackMeta; source: string }> } {
+export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; claims: Map<string, ClaimCode>; links: Map<string, Connection>; guilds: Map<string, Guild>; vault: Map<string, { meta: GuildPackMeta; source: string }>; runs: Map<string, GuildRun> } {
+  const runs = new Map<string, GuildRun>();
   const codes = new Map<string, LinkCode>();
   const claims = new Map<string, ClaimCode>();
   const links = new Map<string, Connection>();
@@ -22,6 +65,18 @@ export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; cla
     links,
     guilds,
     vault,
+    runs,
+    async putGuildRun(run) {
+      runs.set(run.sessionId, structuredClone(run));
+    },
+    async guildRun(sessionId) {
+      const r = runs.get(sessionId);
+      return r ? structuredClone(r) : null;
+    },
+    async guildRunByThread(threadId) {
+      const r = [...runs.values()].find((x) => x.threadId === threadId);
+      return r ? structuredClone(r) : null;
+    },
     async putLinkCode(link) {
       codes.set(link.code, { ...link });
     },

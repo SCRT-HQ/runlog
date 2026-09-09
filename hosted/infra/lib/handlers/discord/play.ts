@@ -1,0 +1,282 @@
+import { createRandom, drive, answer, reduce, agenda, snapshotOf, paperOf, awardValue, canEndRun, DriveError, type Agenda, type DriveAction, type DriveResult, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import { loadPackText, rollDice, type Pack } from "@runlog/rules-schema";
+import type { Store } from "../store.js";
+import type { GuildRun, GuildStore } from "../guilds.js";
+import type { Notify } from "../live.js";
+import { hashToken } from "../auth.js";
+import { cardFor, lineFor, type Card } from "./card.js";
+import type { DiscordRest } from "./rest.js";
+
+/**
+ * The table, as the bot keeps it.
+ *
+ * This is the one place the hosting reduces a pack. A run hosted in
+ * Discord has no device of its own: the bot is the device, so it reads
+ * the pack from the server's vault, folds the log, decides what is due,
+ * and writes the move — exactly what the app does on a phone, in a
+ * Lambda that forgets everything between two presses. What it remembers
+ * between them is in the session's rows (the log, as for any run) and
+ * the guild-run row (where in Discord the run lives, and a block that is
+ * waiting on an answer).
+ *
+ * After every move it writes the same snapshot the app writes for a
+ * shared run and rings the same bell, so the live link, the stream
+ * widgets and a watcher's page all work for a run nobody has open in
+ * the app. The pack's text stops here: what leaves is the drawn line.
+ */
+
+export interface TableDeps {
+  store: Store;
+  guilds: GuildStore;
+  /** Discord itself, for the thread and the messages; null when the bot has no token yet. */
+  rest: DiscordRest | null;
+  notify?: Notify;
+  now: () => string;
+  mintId: () => string;
+  /** A live link's token; random by default, a test hands in its own. */
+  token: () => string;
+  appUrl: string;
+}
+
+/** The parsed pack, kept per container by the vault's hash, so a press after the first does not parse again. */
+const parsed = new Map<string, { hash: string; pack: Pack }>();
+
+export async function packFor(guilds: GuildStore, guildId: string, packId: string): Promise<{ pack: Pack; title: string } | null> {
+  const key = `${guildId}/${packId}`;
+  const found = await guilds.getGuildPack(guildId, packId);
+  if (!found) {
+    parsed.delete(key);
+    return null;
+  }
+  const kept = parsed.get(key);
+  if (kept && kept.hash === found.meta.hash) return { pack: kept.pack, title: found.meta.title };
+  const loaded = loadPackText(found.source, found.meta.format);
+  if (!loaded.ok) return null;
+  parsed.set(key, { hash: found.meta.hash, pack: loaded.pack });
+  return { pack: loaded.pack, title: found.meta.title };
+}
+
+/** The run as the engine sees it: the log with the server's own fields on each row, which the reducer ignores. */
+export async function eventsOf(store: Store, sessionId: string): Promise<RunEvent[]> {
+  return (await store.eventsAfter(sessionId, 0)) as unknown as RunEvent[];
+}
+
+export interface Seat {
+  discordId: string;
+  name: string;
+  /** The Runlog account, where the person linked one; events they make are theirs. */
+  sub: string | null;
+}
+
+export interface Opened {
+  run: GuildRun;
+  threadId: string;
+  link: string;
+  card: Card;
+}
+
+/**
+ * Start a run in a server: the session (the host's, like any run), the
+ * thread it lives in, its live link, and the card with the first press
+ * on it. The seed, for a seeded mode, is minted here: the run is the
+ * bot's to roll, so the bot holds the seed the way a device would.
+ */
+export async function openRun(
+  deps: TableDeps,
+  input: { guildId: string; channelId: string; pack: Pack; packTitle: string; modeId: string; name?: string; host: Seat & { sub: string } },
+): Promise<Opened | { error: string }> {
+  if (!deps.rest) return { error: "The bot cannot post to Discord yet: its token is not filled in on this copy of Runlog." };
+  const { pack, modeId } = input;
+  const mode = pack.modes[modeId];
+  if (!mode) return { error: `This pack has no mode "${modeId}".` };
+  const at = deps.now();
+  const id = deps.mintId();
+  const seed = mode.seeded ? deps.mintId().slice(10) : undefined;
+  const first: RunEvent[] = [{ t: "RunStarted", at, packId: pack.id, packVersion: pack.version, runId: id, mode: modeId, ...(seed ? { seed } : {}) } as RunEvent];
+  // Opening draws, where the pack deals a hand at the start; the same
+  // dealing the app does, from the seed where there is one.
+  for (const [deckId, deck] of Object.entries(pack.decks ?? {})) {
+    if (deck.kind !== "cards" || deck.drawAtStart < 1) continue;
+    const rng = seed ? createRandom(`${seed}:deal`) : createRandom();
+    const pool = [...deck.cards];
+    for (let n = 0; n < deck.drawAtStart && pool.length > 0; n++) {
+      const [card] = pool.splice(Math.floor(rng() * pool.length), 1);
+      if (card) first.push({ t: "CardDrawn", at, deck: deckId, cardId: card.id } as RunEvent);
+    }
+  }
+  if (input.name?.trim()) first.push({ t: "RunRenamed", at, name: input.name.trim() } as RunEvent);
+  const stamped = first.map((e) => ({ ...e, id: deps.mintId() }));
+
+  const created = await deps.store.createSession({ id, packId: pack.id, packVersion: pack.version, packTitle: input.packTitle, ...(input.name?.trim() ? { name: input.name.trim() } : {}), ownerSub: input.host.sub }, at, input.host.name, stamped as unknown as Record<string, unknown>[]);
+  if (!created) return { error: "That run id is taken; try again." };
+
+  const threadName = `${input.packTitle} · ${mode.label}${input.name?.trim() ? ` · ${input.name.trim()}` : ""}`;
+  const threadId = await deps.rest.createThread(input.channelId, threadName);
+  if (!threadId) return { error: "Discord would not open a thread here. The bot needs permission to create public threads in this channel." };
+
+  const token = deps.token();
+  await deps.store.updateSession(id, at, { publicTokenHash: hashToken(token) });
+  const link = `${deps.appUrl.replace(/\/$/, "")}/r/${encodeURIComponent(id)}?t=${encodeURIComponent(token)}`;
+
+  const run: GuildRun = {
+    sessionId: id,
+    guildId: input.guildId,
+    hostDiscordId: input.host.discordId,
+    hostSub: input.host.sub,
+    hostName: input.host.name,
+    packId: pack.id,
+    channelId: input.channelId,
+    threadId,
+    contestants: {},
+    createdAt: at,
+    updatedAt: at,
+  };
+  const events = stamped as unknown as RunEvent[];
+  const state = reduce(pack, events);
+  await writeSnapshot(deps, run.sessionId, pack, state, events, created.meta.seq);
+  const card = cardFor({ pack, state, events, agenda: agenda(pack, state, events), run });
+  const cardId = await deps.rest.postMessage(threadId, card);
+  if (cardId) {
+    run.cardMessageId = cardId;
+    await deps.rest.pinMessage(threadId, cardId);
+  }
+  await deps.rest.postMessage(threadId, { content: `Watch it live, no account needed: ${link}` });
+  await deps.guilds.putGuildRun(run);
+  return { run, threadId, link, card };
+}
+
+export type TableAction =
+  | { kind: "drive"; action: DriveAction }
+  | { kind: "answer"; key: string; value: string | number | boolean }
+  | { kind: "join" }
+  | { kind: "leave" }
+  | { kind: "award"; contestant: string; outcome: number }
+  | { kind: "end"; ending: string }
+  | { kind: "share" };
+
+export interface Played {
+  card: Card;
+  /** What to say in the thread about the move, if anything. */
+  line: string | null;
+  run: GuildRun;
+  ended: boolean;
+}
+
+/**
+ * One press at the table. Reads the log, applies the action, writes
+ * what it produced, and answers with the card as it now stands; a block
+ * that stops to ask is kept on the guild-run row until the next press
+ * answers it.
+ */
+export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Seat, action: TableAction): Promise<Played | { error: string }> {
+  const at = deps.now();
+  const events = await eventsOf(deps.store, run.sessionId);
+  const state = reduce(pack, events);
+  const author = actor.sub ?? `discord:${actor.discordId}`;
+  const seed = seedOf(events);
+  const ctx = { now: at, ...(seed ? { seed } : {}), autoRoll: true, mintId: deps.mintId };
+  let produced: RunEvent[] = [];
+  let pending: Pending | undefined;
+  let line: string | null = null;
+  let ended = false;
+
+  try {
+    switch (action.kind) {
+      case "drive": {
+        const out = drive(pack, events, action.action, ctx);
+        ({ produced, pending } = settle(out));
+        break;
+      }
+      case "answer": {
+        if (!run.pending) return { error: "Nothing is waiting for an answer." };
+        const waiting = run.pending as unknown as Pending;
+        // A roll the block asks for is the bot's to throw, and said so in
+        // the log; a person's choice is theirs, and is not.
+        const req = waiting.request;
+        const rolled = req.kind === "roll";
+        const value = req.kind === "roll" ? rollDice(req.dice, createRandom()).total : action.value;
+        const out = answer(pack, events, waiting, action.key, value, { ...ctx, autoRoll: rolled });
+        ({ produced, pending } = settle(out));
+        break;
+      }
+      case "join": {
+        if (run.contestants[actor.discordId]) return { error: "You are on the roster already." };
+        const contestant = `d${actor.discordId}`;
+        produced = [{ t: "ContestantAdded", at, contestant, name: actor.name } as RunEvent];
+        run.contestants = { ...run.contestants, [actor.discordId]: contestant };
+        line = `${actor.name} joined the roster.`;
+        break;
+      }
+      case "leave": {
+        const contestant = run.contestants[actor.discordId];
+        if (!contestant) return { error: "You are not on the roster." };
+        produced = [{ t: "ContestantRemoved", at, contestant } as RunEvent];
+        const { [actor.discordId]: _gone, ...rest } = run.contestants;
+        run.contestants = rest;
+        line = `${actor.name} left the roster.`;
+        break;
+      }
+      case "award": {
+        const points = awardValue(pack, state, action.outcome, action.contestant);
+        const outcome = state.outcomes[action.outcome];
+        if (points === null || !outcome) return { error: "That result cannot be awarded to them." };
+        produced = [{ t: "Awarded", at, contestant: action.contestant, outcome: action.outcome, table: outcome.table, entryId: outcome.entryId, points } as RunEvent];
+        const who = state.contestants.find((c) => c.id === action.contestant)?.name ?? action.contestant;
+        line = `${who} takes ${points} point${points === 1 ? "" : "s"}.`;
+        break;
+      }
+      case "end": {
+        const may = canEndRun(state);
+        if (!may.ok) return { error: may.reason ?? "The run cannot end here." };
+        produced = [{ t: "RunEnded", at, ending: action.ending } as RunEvent];
+        ended = true;
+        line = `The ${pack.vocabulary.run.one.toLowerCase()} is over: ${pack.endings?.find((e) => e.id === action.ending)?.label ?? action.ending}.`;
+        break;
+      }
+      case "share":
+        break;
+    }
+  } catch (error) {
+    if (error instanceof DriveError) return { error: error.message };
+    throw error;
+  }
+
+  const stamped = produced.map((e) => ({ ...e, id: (e as { id?: string }).id ?? deps.mintId() }));
+  let seq = (await deps.store.getSession(run.sessionId))?.meta.seq ?? 0;
+  const next = [...events, ...stamped];
+  const after = reduce(pack, next);
+  if (stamped.length > 0) {
+    seq = (await deps.store.appendEvents(run.sessionId, author, at, stamped as unknown as Record<string, unknown>[])).seq;
+    if (ended) await deps.store.updateSession(run.sessionId, at, { endedAt: at });
+    await writeSnapshot(deps, run.sessionId, pack, after, next, seq);
+    if (!line) line = lineFor(pack, state, after, stamped);
+  }
+  run.pending = pending ? (JSON.parse(JSON.stringify(pending)) as Record<string, unknown>) : undefined;
+  run.updatedAt = at;
+  if (ended) run.endedAt = at;
+  await deps.guilds.putGuildRun(run);
+  const card = cardFor({ pack, state: after, events: next, agenda: agenda(pack, after, next), run, ...(pending ? { pending } : {}) });
+  return { card, line, run, ended };
+}
+
+function settle(out: DriveResult): { produced: RunEvent[]; pending?: Pending } {
+  return out.status === "done" ? { produced: out.events } : { produced: [], pending: out.pending };
+}
+
+/** The seed the run started with, for a seeded mode's rolls. */
+export function seedOf(events: readonly RunEvent[]): string | undefined {
+  const first = events[0];
+  return first && first.t === "RunStarted" && typeof first.seed === "string" ? first.seed : undefined;
+}
+
+async function writeSnapshot(deps: TableDeps, sessionId: string, pack: Pack, state: RunState, events: readonly RunEvent[], seq: number): Promise<void> {
+  const at = deps.now();
+  await deps.store.putSnapshot(sessionId, at, { ...snapshotOf(pack, state, events, at), paper: paperOf(pack, state.mode) });
+  await deps.notify?.(sessionId, seq);
+}
+
+/** What can happen now, for a card drawn without a press. */
+export function agendaFor(pack: Pack, events: readonly RunEvent[]): { state: RunState; agenda: Agenda } {
+  const state = reduce(pack, events);
+  return { state, agenda: agenda(pack, state, events) };
+}

@@ -1,23 +1,29 @@
+import { constrainedByOf, constraintsFor, type Pending } from "@runlog/engine";
+import type { Pack } from "@runlog/rules-schema";
 import { newCode } from "../races.js";
-import type { GuildStore } from "../guilds.js";
+import type { GuildRun, GuildStore } from "../guilds.js";
+import type { Store } from "../store.js";
+import type { Notify } from "../live.js";
 import { isCommandName } from "./commands.js";
-import { EPHEMERAL, InteractionType, ResponseType, nameOf, userOf, type CommandOption, type Interaction, type InteractionResponse } from "./types.js";
+import { customId, parseCustomId, cardFor, type Card } from "./card.js";
+import { agendaFor, eventsOf, openRun, packFor, play, type Seat, type TableAction, type TableDeps } from "./play.js";
+import type { DiscordRest } from "./rest.js";
+import { EPHEMERAL, InteractionType, ResponseType, modal, nameOf, userOf, select, type CommandOption, type Interaction, type InteractionResponse } from "./types.js";
 
 /**
  * What the bot says back.
  *
  * Discord sends each press here and waits three seconds for the answer,
- * so everything in this file answers in one turn: a row written, a
- * message returned. Nothing is fetched from Discord and nothing posted to
- * it on the way.
+ * so everything in this file answers in one turn: rows written, a
+ * message returned, at most a post or two into the run's thread on the
+ * way. Identity is Discord's word: the user in an interaction is who
+ * Discord says pressed, signed by Discord, so linking and claiming need
+ * no sign-in of their own on this side.
  *
- * Identity is Discord's word: the user in an interaction is who Discord
- * says pressed, signed by Discord, so linking and claiming need no
- * sign-in of their own on this side. `/link` mints a short code bound to
- * that Discord user, `/setup claim` one bound to the server; the person
- * opens the code's address signed in to Runlog, and the app hands the
- * code back with their account behind it. Ten minutes, once, then the
- * code is gone.
+ * A run is a session the host's Runlog account owns, played by the bot
+ * from the server's vault: the host presses the card's buttons in the
+ * run's thread, everyone in the server watches there and by live link,
+ * and in a moderated mode anyone joins the roster and the host awards.
  */
 
 export interface InteractionDeps {
@@ -27,12 +33,18 @@ export interface InteractionDeps {
   now: () => string;
   /** Codes are random by default; a test hands in its own. */
   code?: () => string;
-  /** What a person has been granted, for `/setup status`; absent, the plan is not spoken of. */
+  /** What a person has been granted, for the plan; absent, the plan is not spoken of. */
   grants?: (sub: string) => Promise<string[]>;
   /** What Stripe calls the server plan. */
   serverFeature?: string;
   /** Whether plans gate anything on this copy. */
   gates?: boolean;
+  /** The sessions, for runs; absent, the bot links and sets up but hosts nothing. */
+  store?: Store;
+  notify?: Notify;
+  rest?: DiscordRest | null;
+  mintId?: () => string;
+  token?: () => string;
 }
 
 /** How long a link or claim code lasts. */
@@ -42,7 +54,9 @@ export const LINK_MINUTES = 10;
 const MANAGE_GUILD = 1n << 5n;
 const ADMINISTRATOR = 1n << 3n;
 
-const ephemeral = (content: string): InteractionResponse => ({ type: ResponseType.ChannelMessage, data: { content, flags: EPHEMERAL } });
+const ephemeral = (content: string): InteractionResponse => ({ type: ResponseType.ChannelMessage, data: { content: content.slice(0, 2000), flags: EPHEMERAL } });
+const say = (content: string): InteractionResponse => ({ type: ResponseType.ChannelMessage, data: { content: content.slice(0, 2000) } });
+const withCard = (type: number, card: Card, content?: string): InteractionResponse => ({ type, data: { ...(content ? { content } : {}), embeds: card.embeds, components: card.components } });
 
 /** Whether the member who pressed may manage the server, by the permissions Discord computed for them. */
 export function canManage(i: Interaction): boolean {
@@ -63,6 +77,8 @@ const optionValue = (options: CommandOption[], name: string): string | null => {
 
 export async function handleInteraction(i: Interaction, deps: InteractionDeps): Promise<InteractionResponse> {
   if (i.type === InteractionType.Ping) return { type: ResponseType.Pong };
+  if (i.type === InteractionType.Autocomplete) return autocomplete(i, deps);
+  if (i.type === InteractionType.MessageComponent || i.type === InteractionType.ModalSubmit) return pressed(i, deps);
 
   if (i.type === InteractionType.ApplicationCommand) {
     const name = i.data?.name;
@@ -136,9 +152,217 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       if (packs.length === 0) return ephemeral("No packs here yet. The account that claimed the server adds them from its Runlog profile, under Servers.");
       return ephemeral(packs.map((p) => `**${p.title}** — ${p.modes.map((m) => m.label).join(", ") || "one mode"}`).join("\n"));
     }
+
+    if (name === "run") return runCommand(i, deps, who);
   }
 
-  // Buttons, menus and modals arrive once the bot hosts runs; until then
-  // a press on anything is answered rather than left spinning.
   return ephemeral("Nothing to do with that yet.");
+}
+
+function tableDeps(deps: InteractionDeps): TableDeps | null {
+  if (!deps.store || !deps.mintId) return null;
+  return { store: deps.store, guilds: deps.guilds, rest: deps.rest ?? null, ...(deps.notify ? { notify: deps.notify } : {}), now: deps.now, mintId: deps.mintId, token: deps.token ?? (() => deps.mintId!()), appUrl: deps.appUrl };
+}
+
+/** Whether this member may host here: the host role where one is set, else anyone who can manage the server. */
+function mayHost(i: Interaction, hostRoleId: string | undefined): boolean {
+  if (hostRoleId) return (i.member?.roles ?? []).includes(hostRoleId) || canManage(i);
+  return canManage(i);
+}
+
+async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullable<ReturnType<typeof userOf>>): Promise<InteractionResponse> {
+  if (!i.guild_id) return ephemeral("Runs are hosted in a server; ask in one.");
+  const table = tableDeps(deps);
+  if (!table) return ephemeral("This copy of Runlog cannot host runs.");
+  const which = sub(i);
+  const guild = await deps.guilds.guild(i.guild_id);
+  if (!guild) return ephemeral("This server is not set up for Runlog yet. Someone who can manage it runs /setup claim.");
+
+  if (which?.name === "start") {
+    if (!mayHost(i, guild.hostRoleId)) return ephemeral(guild.hostRoleId ? `Hosting a run here takes the <@&${guild.hostRoleId}> role.` : "Hosting a run here takes someone who can manage the server, until /setup role names a role.");
+    const hostSub = await deps.guilds.userForDiscord(who.id);
+    if (!hostSub) return ephemeral("A host needs a Runlog account linked, so the run is theirs: run /link first, then start again.");
+    if (deps.gates && deps.grants && !(await deps.grants(guild.ownerSub)).includes(deps.serverFeature ?? "server")) {
+      return ephemeral("Hosting runs here needs the server plan, which the account that claimed this server does not have yet. It subscribes from its Runlog profile, under Servers.");
+    }
+    const packId = optionValue(which.options, "pack") ?? "";
+    const modeId = optionValue(which.options, "mode") ?? "";
+    const name = optionValue(which.options, "name") ?? undefined;
+    const found = await packFor(deps.guilds, i.guild_id, packId);
+    if (!found) return ephemeral("That pack is not in this server's vault. /packs lists what is.");
+    const channelId = guild.channelId ?? i.channel_id;
+    if (!channelId) return ephemeral("Nowhere to open the run: run this in a channel, or set one with /setup channel.");
+    const opened = await openRun(table, { guildId: i.guild_id, channelId, pack: found.pack, packTitle: found.title, modeId, ...(name ? { name } : {}), host: { discordId: who.id, name: nameOf(who), sub: hostSub } });
+    if ("error" in opened) return ephemeral(opened.error);
+    const modeLabel = found.pack.modes[modeId]?.label ?? modeId;
+    return say(`**${nameOf(who)}** started **${found.title} · ${modeLabel}**${name ? ` — ${name}` : ""} in <#${opened.threadId}>. Watch it live: ${opened.link}`);
+  }
+
+  // The rest are said in the run's thread.
+  const run = i.channel_id ? await deps.guilds.guildRunByThread(i.channel_id) : null;
+  if (!run) return ephemeral("Say that in a run's thread.");
+  const found = await packFor(deps.guilds, run.guildId, run.packId);
+  if (!found) return ephemeral("This run's pack has left the server's vault, so the bot cannot read it any more.");
+
+  if (which?.name === "status") {
+    const events = await eventsOf(table.store, run.sessionId);
+    const { state, agenda } = agendaFor(found.pack, events);
+    return withCard(ResponseType.ChannelMessage, cardFor({ pack: found.pack, state, events, agenda, run, ...(run.pending ? { pending: run.pending as unknown as Pending } : {}) }));
+  }
+  if (which?.name === "link") {
+    // A fresh token each time, the way the app shares again: only a hash is kept, so the old link cannot be repeated.
+    const token = table.token();
+    const { hashToken } = await import("../auth.js");
+    await table.store.updateSession(run.sessionId, deps.now(), { publicTokenHash: hashToken(token) });
+    return say(`Watch it live, no account needed: ${deps.appUrl.replace(/\/$/, "")}/r/${encodeURIComponent(run.sessionId)}?t=${encodeURIComponent(token)}`);
+  }
+  if (which?.name === "end") {
+    if (who.id !== run.hostDiscordId && !canManage(i)) return ephemeral("Only the host ends the run.");
+    const endingId = optionValue(which.options, "ending") ?? found.pack.endings?.[0]?.id ?? "ended";
+    const actor = await seatOf(deps, who, i);
+    const played = await play(table, run, found.pack, actor, { kind: "end", ending: endingId });
+    if ("error" in played) return ephemeral(played.error);
+    await afterPlay(table, played);
+    return say(played.line ?? "The run is over.");
+  }
+  return ephemeral("Run has start, status, link and end.");
+}
+
+async function seatOf(deps: InteractionDeps, who: NonNullable<ReturnType<typeof userOf>>, i: Interaction): Promise<Seat> {
+  return { discordId: who.id, name: i.member?.nick?.trim() || nameOf(who), sub: await deps.guilds.userForDiscord(who.id) };
+}
+
+/** After a move: the line under the card, the card edited where a press did not carry it, the thread closed after the end. */
+async function afterPlay(table: TableDeps, played: { line: string | null; run: GuildRun; ended: boolean; card: Card }, editCard = true): Promise<void> {
+  if (!table.rest) return;
+  if (played.line) await table.rest.postMessage(played.run.threadId, { content: played.line });
+  if (editCard && played.run.cardMessageId) await table.rest.editMessage(played.run.threadId, played.run.cardMessageId, played.card);
+  if (played.ended) await table.rest.archiveThread(played.run.threadId);
+}
+
+async function pressed(i: Interaction, deps: InteractionDeps): Promise<InteractionResponse> {
+  const table = tableDeps(deps);
+  const id = parseCustomId(i.data?.custom_id ?? "");
+  const who = userOf(i);
+  if (!table || !id || !who) return ephemeral("Nothing to do with that.");
+  const run = await deps.guilds.guildRun(id.runId);
+  if (!run) return ephemeral("This run is not one the bot hosts any more.");
+  if (run.endedAt) return ephemeral("This run has ended.");
+  const found = await packFor(deps.guilds, run.guildId, run.packId);
+  if (!found) return ephemeral("This run's pack has left the server's vault, so the bot cannot read it any more.");
+  const pack = found.pack;
+  const actor = await seatOf(deps, who, i);
+  const host = who.id === run.hostDiscordId || canManage(i);
+  const anyone = id.verb === "join" || id.verb === "leave";
+  if (!host && !anyone) return ephemeral(`Only the host, ${run.hostName}, presses here. Everyone else watches, here and by the live link.`);
+
+  // Two presses open a modal rather than move: the answer is typed.
+  if (i.type === InteractionType.MessageComponent && id.verb === "declare") {
+    const events = await eventsOf(table.store, run.sessionId);
+    const { state, agenda } = agendaFor(pack, events);
+    const hint = agenda.active ? constraintsFor(pack, state, constrainedByOf(agenda.active.step)).join("; ") : "";
+    return modal(customId(run.sessionId, "declared"), `Declare the ${pack.vocabulary.subject.one.toLowerCase()}`, { id: "subject", label: `What is this ${pack.vocabulary.subject.one.toLowerCase()}?`, ...(hint ? { placeholder: hint } : {}) });
+  }
+  if (i.type === InteractionType.MessageComponent && id.verb === "text") {
+    const label = run.pending && typeof (run.pending as { request?: { label?: string } }).request?.label === "string" ? (run.pending as { request: { label: string } }).request.label : "Your answer";
+    return modal(customId(run.sessionId, "answered"), "Answer", { id: "answer", label, paragraph: true });
+  }
+  if (i.type === InteractionType.MessageComponent && id.verb === "end" && (pack.endings?.length ?? 0) > 1) {
+    return { type: ResponseType.ChannelMessage, data: { content: "How does it end?", flags: EPHEMERAL, components: [select(customId(run.sessionId, "ending"), "The ending", pack.endings!.map((e) => ({ label: e.label, value: e.id })))] } };
+  }
+
+  const action = actionFor(id, i, run, pack);
+  if (!action) return ephemeral("That press means nothing here any more; the card may be stale. /run status posts a fresh one.");
+  const played = await play(table, run, pack, actor, action);
+  if ("error" in played) return ephemeral(played.error);
+  // The card is the message pressed, updated in place, so no edit is
+  // needed for it; a press from a select or a modal answers the same way.
+  await afterPlay(table, played, id.verb === "ending");
+  if (id.verb === "ending") return say(played.line ?? "The run is over.");
+  return withCard(ResponseType.UpdateMessage, played.card);
+}
+
+/** Which table action a press is, or null for one the card no longer offers. */
+function actionFor(id: { verb: string; arg?: string }, i: Interaction, run: GuildRun, pack: Pack): TableAction | null {
+  const pending = run.pending as unknown as Pending | undefined;
+  const key = pending?.request.key;
+  const picked = i.data?.values?.[0];
+  const typed = i.data?.components?.[0]?.components?.[0]?.value?.trim();
+  switch (id.verb) {
+    case "enter":
+      return { kind: "drive", action: { enter: true } };
+    case "step":
+      return { kind: "drive", action: { step: true } };
+    case "finalize":
+      return { kind: "drive", action: { finalize: true } };
+    case "tick": {
+      const index = Number(id.arg);
+      if (!Number.isInteger(index)) return null;
+      const on = i.message ? !((i.data?.custom_id ?? "") && messageTick(i, id.arg!)) : true;
+      return { kind: "drive", action: { tick: { index, on } } };
+    }
+    case "move":
+      return id.arg ? { kind: "drive", action: { move: id.arg } } : null;
+    case "settle":
+      return id.arg ? { kind: "drive", action: { settle: id.arg } } : null;
+    case "declared":
+      return typed ? { kind: "drive", action: { declare: typed.slice(0, 100) } } : null;
+    case "join":
+      return { kind: "join" };
+    case "leave":
+      return { kind: "leave" };
+    case "award":
+      return picked && id.arg ? { kind: "award", contestant: picked, outcome: Number(id.arg) } : null;
+    case "end":
+      return { kind: "end", ending: pack.endings?.[0]?.id ?? "ended" };
+    case "ending":
+      return picked ? { kind: "end", ending: picked } : null;
+    case "yes":
+      return key ? { kind: "answer", key, value: true } : null;
+    case "no":
+      return key ? { kind: "answer", key, value: false } : null;
+    case "pick": {
+      const options = pending?.request.kind === "prompt" ? (pending.request.options ?? []) : [];
+      const choice = picked !== undefined ? options[Number(picked)] : undefined;
+      return key && choice !== undefined ? { kind: "answer", key, value: choice } : null;
+    }
+    case "target":
+      return key && picked ? { kind: "answer", key, value: Number(picked) } : null;
+    case "answered":
+      return key && typed ? { kind: "answer", key, value: typed.slice(0, 200) } : null;
+    case "roll":
+      return key ? { kind: "answer", key, value: 0 } : null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Whether the tick pressed is currently on: read from the card the press
+ * came from, where the button's label carries the mark, so a toggle
+ * flips what the person saw rather than what the log says an instant later.
+ */
+function messageTick(i: Interaction, index: string): boolean {
+  const rows = (i as unknown as { message?: { components?: Array<{ components?: Array<{ custom_id?: string; label?: string }> }> } }).message?.components ?? [];
+  for (const r of rows) for (const c of r.components ?? []) if (c.custom_id?.endsWith(`:tick:${index}`)) return (c.label ?? "").startsWith("☑");
+  return false;
+}
+
+async function autocomplete(i: Interaction, deps: InteractionDeps): Promise<InteractionResponse> {
+  const which = sub(i);
+  const focused = which?.options.find((o) => o.focused);
+  const typed = typeof focused?.value === "string" ? focused.value.toLowerCase() : "";
+  const choices: Array<{ name: string; value: string }> = [];
+  if (i.guild_id && which?.name === "start" && focused?.name === "pack") {
+    for (const p of await deps.guilds.listGuildPacks(i.guild_id)) if (!typed || p.title.toLowerCase().includes(typed)) choices.push({ name: p.title, value: p.id });
+  } else if (i.guild_id && which?.name === "start" && focused?.name === "mode") {
+    const packId = optionValue(which.options, "pack") ?? "";
+    const meta = (await deps.guilds.listGuildPacks(i.guild_id)).find((p) => p.id === packId);
+    for (const m of meta?.modes ?? []) if (!typed || m.label.toLowerCase().includes(typed)) choices.push({ name: m.label, value: m.id });
+  } else if (which?.name === "end" && focused?.name === "ending" && i.channel_id) {
+    const run = await deps.guilds.guildRunByThread(i.channel_id);
+    const found = run ? await packFor(deps.guilds, run.guildId, run.packId) : null;
+    for (const e of found?.pack.endings ?? []) if (!typed || e.label.toLowerCase().includes(typed)) choices.push({ name: e.label, value: e.id });
+  }
+  return { type: ResponseType.AutocompleteResult, data: { choices: choices.slice(0, 25) } };
 }

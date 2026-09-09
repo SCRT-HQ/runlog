@@ -432,8 +432,31 @@ and `/packs` list what is there, never the text, so a sealed pack's
 words go no further than the drawn lines the bot will post. That is a
 deliberate bend in the rule the rest of the API keeps, and it is confined
 to the vault. Releasing a server, or deleting the account, empties the
-vault. Hosting runs from a server on those packs comes next, in
-`lib/handlers/discord/`.
+vault.
+
+A **run hosted in a server** is a session like any other, owned by the
+host's account (a host is linked, so the run is somebody's), played by
+the bot as the device at the table: `/run start` creates the session
+with the same opening events the app writes, opens a public thread,
+mints a live link, and posts and pins the **table card** —
+`lib/handlers/discord/card.ts`, rebuilt from the log on every press and
+edited in place. A press goes through `lib/handlers/discord/play.ts`:
+the vault's pack (parsed once per container, by hash), the log folded,
+the engine's `drive`/`answer` applied one action at a time, the events
+appended under the host's account with ids minted the way the app mints
+them, and then the same snapshot the app writes for a shared run and
+the same bell rung, so the live link, the metrics route and every widget
+work for a run nobody has open. A block that stops to ask (a choice, a
+yes or no, a target) is kept on the guild-run row (`DISCORD#RUN#<id>`,
+with `DISCORD#THREAD#<id>` pointing at it) as the engine's serializable
+`Pending`, and answered on the next press. The bot always throws the
+dice itself and the log says so; the pack's text never leaves
+`play.ts`. Only the host presses, except to join or leave a moderated
+run's roster. This is the one place the hosting reduces a pack, on
+purpose, and it is confined to `lib/handlers/discord/`.
+
+Setting the bot up as the operator is `docs/discord-bot.md`; what
+servers do with it is `docs/discord.md`.
 
 ## Monitoring
 
