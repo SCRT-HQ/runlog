@@ -7,7 +7,7 @@ import { apiGatewayPoster, dynamoLive, notifier, type Notify } from "./live.js";
 import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, type RaceStore } from "./races.js";
 import { dynamoBilling, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
-import { dynamoGuilds, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
+import { dynamoGuilds, guildsAllowed, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
 import { handleInteraction, kindOf, threadHears, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
 import type { TimerJob } from "./discord/play.js";
 import { scheduledTimers } from "./discord/timers.js";
@@ -541,8 +541,8 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!who) return back(false);
     // The verification links as it goes: the person just proved which
     // Discord account is theirs, which is all a /link code ever said.
-    const had = await deps.guilds.connection(began.sub);
-    const connection = had && had.discordUserId === who.id ? had : { discordUserId: who.id, name: who.name, linkedAt: now() };
+    const had = (await deps.guilds.connections(began.sub)).find((c) => c.accountId === who.id);
+    const connection = had ?? { service: "discord" as const, accountId: who.id, name: who.name, linkedAt: now() };
     if (connection !== had) await deps.guilds.connect(began.sub, connection);
     const profile = await store.getProfile(began.sub);
     const shown = profile?.handle?.trim() || profile?.name?.trim() || who.name;
@@ -1067,8 +1067,17 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // the code in here, signed in, binds it to this account. Nothing of
   // Discord's is kept but its user id and the name it showed.
   if (path === "/api/connections" && method === "GET") {
-    const discord = deps.guilds ? await deps.guilds.connection(caller.sub) : null;
-    return json(200, { available: Boolean(deps.discord && deps.guilds), discord, verify: Boolean(deps.discord?.oauth && deps.guilds) });
+    const connections = deps.guilds ? await deps.guilds.connections(caller.sub) : [];
+    // `discord` is the first Discord link, spelled the way the one link an
+    // account could hold was spelled, for a page built before there were
+    // several. `connections` is the whole of it.
+    const first = connections.find((c) => c.service === "discord") ?? null;
+    return json(200, {
+      available: Boolean(deps.discord && deps.guilds),
+      discord: first ? { discordUserId: first.accountId, name: first.name, linkedAt: first.linkedAt } : null,
+      connections,
+      verify: Boolean(deps.discord?.oauth && deps.guilds),
+    });
   }
   // Begin a linked-role verification: a state that names this account,
   // and the address at Discord where the person grants the two scopes.
@@ -1087,11 +1096,17 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (!code) return json(422, { error: "code: the one /link gave you" });
       const link = await deps.guilds.takeLinkCode(code, now());
       if (!link) return json(422, { error: "that code is not known here, or its ten minutes are up; run /link in Discord again" });
-      const connection = { discordUserId: link.discordUserId, name: link.name, linkedAt: now() };
+      const connection = { service: "discord" as const, accountId: link.discordUserId, name: link.name, linkedAt: now() };
       await deps.guilds.connect(caller.sub, connection);
-      return json(200, { linked: true, discord: connection });
+      return json(200, { linked: true, discord: { discordUserId: connection.accountId, name: connection.name, linkedAt: connection.linkedAt }, connection });
     }
     if (method === "DELETE") return json(200, { unlinked: await deps.guilds.disconnect(caller.sub) });
+  }
+  // One link let go of, named by the service's own id for the account.
+  const oneConnection = path.match(/^\/api\/connections\/discord\/([^/]+)$/);
+  if (oneConnection && method === "DELETE") {
+    if (!deps.guilds) return json(200, { unlinked: false });
+    return json(200, { unlinked: await deps.guilds.disconnect(caller.sub, decodeURIComponent(oneConnection[1]!)) });
   }
 
   // ---- servers: a Discord server claimed for this account, and its vault ----
@@ -1112,7 +1127,12 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const claim = await guilds.takeClaimCode(code, now());
       if (!claim) return json(422, { error: "that code is not known here, or its ten minutes are up; run /setup claim in Discord again" });
       const mine = await guilds.guildsOf(caller.sub);
-      if (!mine.some((g) => g.guildId === claim.guildId) && mine.length >= MAX_GUILDS_PER_SUB) return json(422, { error: `that is enough servers for one account (${MAX_GUILDS_PER_SUB}); release one from your profile first` });
+      // What this account may hold is the plan's to say; see guildsAllowed.
+      const allowed = guildsAllowed({ plan: await hasServerPlan(), onSale: await serversOpen() });
+      if (!mine.some((g) => g.guildId === claim.guildId) && mine.length >= allowed) {
+        const more = allowed < MAX_GUILDS_PER_SUB ? ", or subscribe to Runlog for servers" : "";
+        return json(422, { error: `that is enough servers for this plan (${allowed}); release one from your profile first${more}` });
+      }
       const name = deps.discord?.guildName ? await deps.discord.guildName(claim.guildId) : null;
       const guild = await guilds.claimGuild({ guildId: claim.guildId, ownerSub: caller.sub, claimedAt: now(), ...(name ? { name } : {}) });
       const upgrade = !(await hasServerPlan());
@@ -1123,7 +1143,9 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const mine = await guilds.guildsOf(caller.sub);
       const entitled = deps.discord?.entitled;
       const listed = entitled ? await Promise.all(mine.map(async (g) => ((await entitled(g.guildId)) ? { ...g, discord: true } : g))) : mine;
-      return json(200, { guilds: listed, server: await hasServerPlan(), plan: serverFeature, open: await serversOpen() });
+      const plan = await hasServerPlan();
+      const onSale = await serversOpen();
+      return json(200, { guilds: listed, server: plan, plan: serverFeature, open: onSale, allowed: guildsAllowed({ plan, onSale }) });
     }
     const one = path.match(/^\/api\/guilds\/([^/]+)$/);
     if (one && method === "DELETE") {
