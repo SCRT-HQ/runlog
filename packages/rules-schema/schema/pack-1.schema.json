@@ -2897,6 +2897,11 @@
                     "description": {
                       "description": "What this role may and may not do.",
                       "type": "string"
+                    },
+                    "acts": {
+                      "default": false,
+                      "description": "Whether this role takes the table's actions in a unit it holds: rolling, declaring, ticking, closing. Where no role declares it, any seat acts.",
+                      "type": "boolean"
                     }
                   },
                   "required": [

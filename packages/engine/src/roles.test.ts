@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
-import { playerConfig, rolesForUnit } from "./roles.ts";
+import { actingSeats, playerConfig, rolesForUnit } from "./roles.ts";
 import type { RunEvent } from "./events.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -35,6 +35,22 @@ function run(mode: string, players: number | undefined, units: number) {
 
 const seats = (mode: string, players: number, unit: number) =>
   rolesForUnit(kiln, run(mode, players, unit)).map((r) => `${r.label}:${r.player}`);
+
+describe("whose turn it is to press", () => {
+  it("is nobody's in particular where no role acts, and the acting role's seat where one does", () => {
+    // The demo's Pairs mode marks the Thrower; a solo mode has no roles at all.
+    expect(actingSeats(kiln, run("standard", undefined, 1))).toBeNull();
+    expect(actingSeats(kiln, run("pairs", 2, 1))).toEqual([1]);
+    expect(actingSeats(kiln, run("pairs", 2, 2))).toEqual([2]);
+    expect(actingSeats(kiln, run("pairs", 3, 3))).toEqual([3]);
+    expect(actingSeats(kiln, run("pairs", 2, 0))).toEqual([1]);
+    expect(actingSeats(kiln, run("pairs", 2, 1), 2)).toEqual([2]);
+    // The same mode with the mark taken off: any seat acts.
+    const unmarked = structuredClone(kiln);
+    for (const r of unmarked.modes["pairs"]!.players!.roles!) r.acts = false;
+    expect(actingSeats(unmarked, run("pairs", 2, 1))).toBeNull();
+  });
+});
 
 describe("role rotation", () => {
   it("has nothing to say about a solo mode", () => {

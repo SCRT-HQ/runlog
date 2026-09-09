@@ -290,6 +290,13 @@ describe("lintPack", () => {
       );
     });
 
+    it("flags every role acting, which says nothing", () => {
+      const acting = (acts: boolean[]) => withPlayers({ min: 2, max: 2, roles: acts.map((a, i) => ({ id: `r${i}`, label: `Role ${i}`, acts: a })) });
+      expect(codesOf(acting([true, true]))).toContain("mode/all-roles-act");
+      expect(codesOf(acting([true, false]))).not.toContain("mode/all-roles-act");
+      expect(codesOf(acting([false, false]))).not.toContain("mode/all-roles-act");
+    });
+
     it("flags roles in a mode only one person plays", () => {
       expect(
         codesOf(withPlayers({ min: 1, max: 1, roles: [{ id: "lead", label: "Lead" }] })),

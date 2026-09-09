@@ -196,7 +196,7 @@ function modeExtras(pack: Pack, m: Mode): string[] {
     const parts = [skip.length ? `skips ${skip.join(", ")}` : "", p.extra?.length ? actionsInWords(pack, p.extra) : ""].filter(Boolean);
     if (parts.length) out.push(sentence(`${which}: ${parts.join("; ")}`));
   }
-  for (const r of m.players?.roles ?? []) out.push(`${r.label}: ${r.description ?? ""}`.trim());
+  for (const r of m.players?.roles ?? []) out.push(`${r.label}${r.acts ? " (takes the actions)" : ""}: ${r.description ?? ""}`.trim());
   return out;
 }
 

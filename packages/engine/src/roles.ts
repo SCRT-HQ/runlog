@@ -16,6 +16,8 @@ export interface RoleHolder {
   description?: string;
   /** 1-based seat, counting round the table from whoever started. */
   player: number;
+  /** Whether this role takes the table's actions this unit; see `actingSeats`. */
+  acts: boolean;
 }
 
 /** The role configuration of the mode being played, if it has one. */
@@ -44,5 +46,17 @@ export function rolesForUnit(pack: Pack, state: RunState | null, unit?: number):
     label: role.label,
     ...(role.description ? { description: role.description } : {}),
     player: ((index + shift) % players) + 1,
+    acts: role.acts === true,
   }));
+}
+
+/**
+ * The seats whose turn it is to press, this unit: those holding a role the
+ * pack marked `acts`. Null where the mode marks no role, which means any
+ * seat acts — a table with no one in charge, or a solo mode.
+ */
+export function actingSeats(pack: Pack, state: RunState | null, unit?: number): number[] | null {
+  const roles = rolesForUnit(pack, state, unit);
+  if (!roles.some((r) => r.acts)) return null;
+  return [...new Set(roles.filter((r) => r.acts).map((r) => r.player))].sort((a, b) => a - b);
 }

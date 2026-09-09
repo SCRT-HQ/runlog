@@ -579,6 +579,10 @@ export const Mode = z
                 id: Id.describe("Unique among roles."),
                 label: z.string().describe("Name shown to the player."),
                 description: z.string().optional().describe("What this role may and may not do."),
+                acts: z
+                  .boolean()
+                  .default(false)
+                  .describe("Whether this role takes the table's actions in a unit it holds: rolling, declaring, ticking, closing. Where no role declares it, any seat acts."),
               })
               .strict()
               .describe("One role a player can hold."),

@@ -775,6 +775,7 @@ One role a player can hold.
 | `id` | `string` | yes | Unique among roles. |
 | `label` | `string` | yes | Name shown to the player. |
 | `description` | `string` | — | What this role may and may not do. |
+| `acts` | `boolean` | — | Whether this role takes the table's actions in a unit it holds: rolling, declaring, ticking, closing. Where no role declares it, any seat acts. Default: `false`. |
 
 ## `pack.modes.*.perUnit[]`
 

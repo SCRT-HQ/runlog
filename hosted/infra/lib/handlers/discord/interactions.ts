@@ -1,4 +1,4 @@
-import { constrainedByOf, constraintsFor, type Pending } from "@runlog/engine";
+import { actingSeats, constrainedByOf, constraintsFor, type Pending } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import { newCode } from "../races.js";
 import { hashToken } from "../auth.js";
@@ -7,7 +7,7 @@ import type { Store } from "../store.js";
 import type { Notify } from "../live.js";
 import { isCommandName } from "./commands.js";
 import { customId, parseCustomId, cardFor, type Card } from "./card.js";
-import { agendaFor, catchUp, eventsOf, expireTimer, mayPress, openRun, packFor, play, type Seat, type TableAction, type TableDeps, type TimerJob } from "./play.js";
+import { agendaFor, catchUp, eventsOf, expireTimer, mayPress, openRun, packFor, play, whosePress, type Seat, type TableAction, type TableDeps, type TimerJob } from "./play.js";
 import type { DiscordRest } from "./rest.js";
 import { EPHEMERAL, InteractionType, ResponseType, modal, nameOf, userOf, select, type CommandOption, type Interaction, type InteractionResponse } from "./types.js";
 
@@ -376,6 +376,12 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   // The host presses anything; whoever holds a seat presses the table; anyone joins, sits, waves or follows.
   if (!anyone && !host && !(mayPress(run, who.id) && !hostOnly)) {
     return ephemeral(run.seats ? `Only ${run.hostName} and whoever holds a seat press here. Take a seat, or watch by the live link.` : `Only the host, ${run.hostName}, presses here. Everyone else watches, here and by the live link.`);
+  }
+  // Where the pack says which role acts this unit, a seat presses only in its turn.
+  if (!anyone && !host && run.seats) {
+    const { state } = agendaFor(pack, await eventsOf(table.store, run.sessionId));
+    const acting = actingSeats(pack, state);
+    if (acting && !mayPress(run, who.id, acting)) return ephemeral(whosePress(pack, run, acting));
   }
 
   // Two presses open a modal rather than move: the answer is typed.

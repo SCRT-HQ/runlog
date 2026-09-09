@@ -1,4 +1,4 @@
-import { challenges, clockOfUnit, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, unitClockFor, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import { actingSeats, challenges, clockOfUnit, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, unitClockFor, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import type { GuildRun } from "../guilds.js";
 import { REACTIONS } from "./reactions.js";
@@ -86,11 +86,13 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
     // rotation the app shows, so a seat knows whether it is its turn to decide.
     const seats = run.seats ?? {};
     const roles = rolesForUnit(pack, state);
+    const acting = actingSeats(pack, state);
     const lines = Array.from({ length: state.players }, (_, i) => {
       const n = i + 1;
       const who = seats[String(n)]?.name ?? "open";
       const held = roles.filter((r) => r.player === n).map((r) => r.label);
-      return `Seat ${n}: ${who}${held.length > 0 ? ` · ${held.join(", ")}` : ""}`;
+      const presses = acting?.includes(n) ? ` · presses this ${v.unit.one.toLowerCase()}` : "";
+      return `Seat ${n}: ${who}${held.length > 0 ? ` · ${held.join(", ")}` : ""}${presses}`;
     });
     fields.push({ name: "At the table", value: clip(lines.join("\n")) });
   }
