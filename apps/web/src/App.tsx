@@ -452,7 +452,10 @@ export default function App() {
   const autoOpened = useRef(false);
   useEffect(() => {
     if (autoOpened.current || account.status !== "signed-in" || sync.status !== "synced") return;
-    if (lastActive()) {
+    // An address that names a page — the guide, the profile, the catalog, a
+    // link — is what the person asked for; a reload must land there, not on
+    // whatever run the account touched last.
+    if (lastActive() || (location.hash && location.hash !== "#")) {
       autoOpened.current = true;
       return;
     }
