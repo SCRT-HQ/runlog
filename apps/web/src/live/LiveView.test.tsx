@@ -40,7 +40,10 @@ const base: LiveSnapshot = {
 describe("the live page", () => {
   it("lists the unit's phases with the step in hand, and the log by unit", () => {
     const html = renderToStaticMarkup(<LiveView snapshot={base} />);
-    expect(html).toContain("Shape · Throw the piece");
+    // The phase carries the weight, the step reads under it.
+    expect(html).toContain("<strong>Shape</strong>");
+    expect(html).toContain("· Throw the piece");
+    expect(html).not.toContain("Shape · Throw the piece");
     expect(html).toContain('class="current"');
     expect(html).toContain("Enter the stage");
     expect(html).toContain("A wide bowl");
