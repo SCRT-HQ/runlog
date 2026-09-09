@@ -1,0 +1,7 @@
+# Undo and the log
+
+**Undo** takes back the last move. Nothing is erased: the log is append-only, and an undo is itself written down, which is what lets two devices share a run without either rewriting the other.
+
+## The log
+
+The log at the bottom of the middle column is the run as it happened: every roll, every result, every tick, every correction, in order. A watcher by [live link](#guide/live-link) reads the same log, newest first or oldest first as they choose.

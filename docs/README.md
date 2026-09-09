@@ -1,8 +1,8 @@
 # The documentation, by who you are
 
 Runlog has two kinds of writing. The **guide** is in the app, under Menu
-or at `#guide` on any address, for people playing: it needs no account
-and stays short. The **documents here** are the contracts and the
+or at `/play/guide` on the hosted address, for people playing, making,
+and running a copy: it needs no account, and each page is one subject. The **documents here** are the contracts and the
 walkthroughs that outlive a screen: what a pack file is, what an API
 answers, how an operator sets something up. When a page in the guide
 runs out of room, it links here.
@@ -29,13 +29,13 @@ runs out of room, it links here.
 | --- | --- |
 | [authoring.md § Licensing](authoring.md#licensing-and-packs-you-should-not-publish), [§ Signing](authoring.md#signing-and-what-it-does-not-do), [§ Selling copies](authoring.md#selling-copies) | Before a pack leaves your hands. |
 | [selling.md](selling.md) | Selling sealed copies from your own backend, outside the catalog. |
-| The guide's [Selling your packs](https://runlog.scrthq.com/#guide/selling) and [Plans](https://runlog.scrthq.com/#guide/plans) | The catalog, the ledger, and what each plan has. |
+| The guide's [Selling your packs](https://runlog.scrthq.com/play/guide/selling) and [Plans](https://runlog.scrthq.com/play/guide/plans) | The catalog, the ledger, and what each plan has. |
 
 ## Running a copy
 
 | Read | When |
 | --- | --- |
-| [self-hosting.md](self-hosting.md) | On your machine, on a static host, or on your own AWS. |
+| The guide's [Running your own copy](https://runlog.scrthq.com/play/guide/own-copy) | On your machine, on a static host, or on your own AWS, one page each; `self-hosting.md` points there. |
 | [discord-bot.md](discord-bot.md) | Making the Discord bot as the operator: the developer portal, the stage, the token, the commands. |
 | [../hosted/infra/README.md](../hosted/infra/README.md) | How the hosting is built and why: the API, billing, selling, races, live push, Discord, monitoring. |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | The shape of the code, the rules the tests enforce, and how a change lands. |

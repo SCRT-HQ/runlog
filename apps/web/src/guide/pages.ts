@@ -1,13 +1,23 @@
 import type { ComponentType } from "react";
 import Start from "./pages/start.mdx";
+import Header from "./pages/header.mdx";
+import Where from "./pages/where.mdx";
 import Playing from "./pages/playing.mdx";
+import Round from "./pages/round.mdx";
+import Board from "./pages/board.mdx";
+import Undo from "./pages/undo.mdx";
+import Ending from "./pages/ending.mdx";
 import Library from "./pages/library.mdx";
+import Catalog from "./pages/catalog.mdx";
+import PackFiles from "./pages/pack-files.mdx";
 import Clocks from "./pages/clocks.mdx";
+import Alerts from "./pages/alerts.mdx";
 import Together from "./pages/together.mdx";
 import Inviting from "./pages/inviting.mdx";
 import Moderated from "./pages/moderated.mdx";
 import LiveLink from "./pages/live-link.mdx";
 import Races from "./pages/races.mdx";
+import Streaming from "./pages/streaming.mdx";
 import StreamAddress from "./pages/stream-address.mdx";
 import Obs from "./pages/obs.mdx";
 import Dock from "./pages/dock.mdx";
@@ -15,13 +25,35 @@ import StreamElements from "./pages/streamelements.mdx";
 import StreamerBot from "./pages/streamer-bot.mdx";
 import StreamTools from "./pages/stream-tools.mdx";
 import StreamTroubles from "./pages/stream-troubles.mdx";
+import Discord from "./pages/discord.mdx";
 import Design from "./pages/design.mdx";
+import Sections from "./pages/sections.mdx";
+import Signing from "./pages/signing.mdx";
 import Documents from "./pages/documents.mdx";
+import Cli from "./pages/cli.mdx";
+import CliCheck from "./pages/cli-check.mdx";
+import CliDocs from "./pages/cli-docs.mdx";
+import CliSign from "./pages/cli-sign.mdx";
+import CliPublish from "./pages/cli-publish.mdx";
+import CliCi from "./pages/cli-ci.mdx";
+import CliAccount from "./pages/cli-account.mdx";
+import CliLibrary from "./pages/cli-library.mdx";
+import Selling from "./pages/selling.mdx";
+import SellingYourself from "./pages/selling-yourself.mdx";
+import SellingCatalog from "./pages/selling-catalog.mdx";
 import Plans from "./pages/plans.mdx";
 import Account from "./pages/account.mdx";
-import Selling from "./pages/selling.mdx";
-import Streaming from "./pages/streaming.mdx";
-import Discord from "./pages/discord.mdx";
+import Stored from "./pages/stored.mdx";
+import TakingBack from "./pages/taking-back.mdx";
+import OwnCopy from "./pages/own-copy.mdx";
+import Serve from "./pages/serve.mdx";
+import StaticHost from "./pages/static-host.mdx";
+import Aws from "./pages/aws.mdx";
+import AwsConfig from "./pages/aws-config.mdx";
+import AwsDeploy from "./pages/aws-deploy.mdx";
+import AwsAfter from "./pages/aws-after.mdx";
+import Monitoring from "./pages/monitoring.mdx";
+import Reference from "./pages/reference.mdx";
 
 /** A guide page: where it lives in the address bar, what it is called, and the MDX that is it. */
 export interface GuidePage {
@@ -35,35 +67,82 @@ export interface GuidePage {
   Page: ComponentType<{ components?: Record<string, ComponentType<never>> }>;
 }
 
-/** The guide's parts, in reading order: what a player needs first, then what others see, then making, then the account. */
-export const GUIDE_PARTS = ["Playing", "With others", "Making a pack", "Your account"] as const;
+/** The guide's parts, in reading order: what a player needs first, then what others see, then making, the account, a copy of your own, and the contracts. */
+export const GUIDE_PARTS = ["Playing", "With others", "Making a pack", "Your account", "Running your own copy", "Reference"] as const;
 export type GuidePart = (typeof GUIDE_PARTS)[number];
 
-/** In reading order, part by part. The first is the landing page. */
+const P = (slug: string, part: GuidePart, group: string | null, title: string, blurb: string, Page: unknown): GuidePage => ({
+  slug,
+  part,
+  ...(group ? { group } : {}),
+  title,
+  blurb,
+  Page: Page as GuidePage["Page"],
+});
+
+/** In reading order, part by part, and within a part group by group. The first is the landing page. Each page is one subject, short enough to read at a sitting. */
 export const GUIDE_PAGES: readonly GuidePage[] = [
-  { slug: "start", part: "Playing", title: "Getting started", blurb: "What Runlog is, and the first five minutes.", Page: Start as GuidePage["Page"] },
-  { slug: "playing", part: "Playing", title: "Playing a run", blurb: "Modes, units, rolls, the board, undo.", Page: Playing as GuidePage["Page"] },
-  { slug: "library", part: "Playing", title: "Your packs and the catalog", blurb: "Finding, adding and keeping packs.", Page: Library as GuidePage["Page"] },
-  { slug: "clocks", part: "Playing", title: "Clocks and alerts", blurb: "Stopwatches, timers, and what rings.", Page: Clocks as GuidePage["Page"] },
-  { slug: "together", part: "With others", group: "Playing together", title: "Playing together", blurb: "What signing in adds, and your runs on every device.", Page: Together as GuidePage["Page"] },
-  { slug: "inviting", part: "With others", group: "Playing together", title: "Inviting someone", blurb: "Players and watchers in your run; a friend to Runlog.", Page: Inviting as GuidePage["Page"] },
-  { slug: "moderated", part: "With others", group: "Playing together", title: "Moderated play", blurb: "One person at the app, a roster of names, points on a grid.", Page: Moderated as GuidePage["Page"] },
-  { slug: "live-link", part: "With others", group: "Playing together", title: "A live link", blurb: "An address anyone opens to watch, no account needed.", Page: LiveLink as GuidePage["Page"] },
-  { slug: "races", part: "With others", group: "Playing together", title: "Races across devices", blurb: "The same seeded mode, each on their own device, one leaderboard.", Page: Races as GuidePage["Page"] },
-  { slug: "streaming", part: "With others", group: "Streaming", title: "Streaming a run", blurb: "The widgets: one panel of the run each, on a page of its own.", Page: Streaming as GuidePage["Page"] },
-  { slug: "stream-address", part: "With others", group: "Streaming", title: "The address that works on a stream", blurb: "Why a browser source needs the live link's token, and how to copy it.", Page: StreamAddress as GuidePage["Page"] },
-  { slug: "obs", part: "With others", group: "Streaming", title: "OBS Studio and Streamlabs", blurb: "A browser source, field by field, with sizes and a line of CSS.", Page: Obs as GuidePage["Page"] },
-  { slug: "dock", part: "With others", group: "Streaming", title: "A dock for the controls", blurb: "The run's remote beside the preview in OBS.", Page: Dock as GuidePage["Page"] },
-  { slug: "streamelements", part: "With others", group: "Streaming", title: "StreamElements", blurb: "A custom widget that reads the run's numbers.", Page: StreamElements as GuidePage["Page"] },
-  { slug: "streamer-bot", part: "With others", group: "Streaming", title: "Streamer.bot, Aitum and Lumia", blurb: "A dice alert and a !score command.", Page: StreamerBot as GuidePage["Page"] },
-  { slug: "stream-tools", part: "With others", group: "Streaming", title: "For a chat bot or your own tool", blurb: "The numbers as JSON, and a socket that rings.", Page: StreamTools as GuidePage["Page"] },
-  { slug: "stream-troubles", part: "With others", group: "Streaming", title: "When a widget does not follow the run", blurb: "What each message means, and what to do.", Page: StreamTroubles as GuidePage["Page"] },
-  { slug: "discord", part: "With others", title: "Runlog in Discord", blurb: "A bot that hosts runs in your server: claim it, fill its vault, press the card.", Page: Discord as GuidePage["Page"] },
-  { slug: "design", part: "Making a pack", title: "Designing a pack", blurb: "Your own game for the engine.", Page: Design as GuidePage["Page"] },
-  { slug: "documents", part: "Making a pack", title: "Documents and the command line", blurb: "Rulebooks, cards, sheets; npx @scrthq/runlog.", Page: Documents as GuidePage["Page"] },
-  { slug: "selling", part: "Making a pack", title: "Selling your packs", blurb: "From your own hands, or through the catalog; where the line is.", Page: Selling as GuidePage["Page"] },
-  { slug: "plans", part: "Your account", title: "Plans and pricing", blurb: "What is free, what a server adds, what running it yourself costs.", Page: Plans as GuidePage["Page"] },
-  { slug: "account", part: "Your account", title: "Your account and what is stored", blurb: "What leaves your device, when, and how to take it back.", Page: Account as GuidePage["Page"] },
+  // Playing
+  P("start", "Playing", "Getting started", "Getting started", "What Runlog is, and the first five minutes.", Start),
+  P("header", "Playing", "Getting started", "The header", "The pack switcher, Rules, the Designer, the menu.", Header),
+  P("where", "Playing", "Getting started", "Where the app runs", "Hosted, from a file, from GitHub Pages; what each has.", Where),
+  P("playing", "Playing", "Playing a run", "Playing a run", "What a run is, and the setup screen.", Playing),
+  P("round", "Playing", "Playing a run", "The round", "The margin, the step in hand, the kinds of step.", Round),
+  P("board", "Playing", "Playing a run", "The board", "What you have made, the tallies, and correcting them.", Board),
+  P("undo", "Playing", "Playing a run", "Undo and the log", "Nothing is erased; the run as it happened.", Undo),
+  P("ending", "Playing", "Playing a run", "Ending a run", "The pack's own endings, and when they open.", Ending),
+  P("library", "Playing", "Your packs", "Your library", "Every pack you have, with its runs beneath.", Library),
+  P("catalog", "Playing", "Your packs", "The catalog", "Packs that ship, packs people published; what each needs.", Catalog),
+  P("pack-files", "Playing", "Your packs", "Packs from a file", "Loading a pack, sealed or not, and keeping it in sync.", PackFiles),
+  P("clocks", "Playing", "Clocks and alerts", "Clocks", "Stopwatches and timers, and what the log keeps of them.", Clocks),
+  P("alerts", "Playing", "Clocks and alerts", "Alerts and sounds", "What rings, and with which sound.", Alerts),
+  // With others
+  P("together", "With others", "Playing together", "Playing together", "What signing in adds, and your runs on every device.", Together),
+  P("inviting", "With others", "Playing together", "Inviting someone", "Players and watchers in your run; a friend to Runlog.", Inviting),
+  P("moderated", "With others", "Playing together", "Moderated play", "One person at the app, a roster of names, points on a grid.", Moderated),
+  P("live-link", "With others", "Playing together", "A live link", "An address anyone opens to watch, no account needed.", LiveLink),
+  P("races", "With others", "Playing together", "Races across devices", "The same seeded mode, each on their own device, one leaderboard.", Races),
+  P("streaming", "With others", "Streaming", "Streaming a run", "The widgets: one panel of the run each, on a page of its own.", Streaming),
+  P("stream-address", "With others", "Streaming", "The address that works on a stream", "Why a browser source needs the live link's token, and how to copy it.", StreamAddress),
+  P("obs", "With others", "Streaming", "OBS Studio and Streamlabs", "A browser source, field by field, with sizes and a line of CSS.", Obs),
+  P("dock", "With others", "Streaming", "A dock for the controls", "The run's remote beside the preview in OBS.", Dock),
+  P("streamelements", "With others", "Streaming", "StreamElements", "A custom widget that reads the run's numbers.", StreamElements),
+  P("streamer-bot", "With others", "Streaming", "Streamer.bot, Aitum and Lumia", "A dice alert and a !score command.", StreamerBot),
+  P("stream-tools", "With others", "Streaming", "For a chat bot or your own tool", "The numbers as JSON, and a socket that rings.", StreamTools),
+  P("stream-troubles", "With others", "Streaming", "When a widget does not follow the run", "What each message means, and what to do.", StreamTroubles),
+  P("discord", "With others", null, "Runlog in Discord", "A bot that hosts runs in your server: claim it, fill its vault, press the card.", Discord),
+  // Making a pack
+  P("design", "Making a pack", "The Designer", "Designing a pack", "Your own game for the engine, written in the browser.", Design),
+  P("sections", "Making a pack", "The Designer", "The sections", "Words, tables, phases, modes, and what Problems catches.", Sections),
+  P("signing", "Making a pack", "The Designer", "Signing and sealing", "Your name on a release; a copy sealed for one buyer.", Signing),
+  P("documents", "Making a pack", null, "Documents", "Rulebook, quick start, reference card, run log sheet, summary.", Documents),
+  P("cli", "Making a pack", "The command line", "The command line", "npx @scrthq/runlog: what it does, in one place.", Cli),
+  P("cli-check", "Making a pack", "The command line", "Checking a pack", "validate, test, and a pack to start from.", CliCheck),
+  P("cli-docs", "Making a pack", "The command line", "Writing the paper", "The documents from the terminal, and one bundled file.", CliDocs),
+  P("cli-sign", "Making a pack", "The command line", "Signing and sealing copies", "keygen, claim, sign, and issue.", CliSign),
+  P("cli-publish", "Making a pack", "The command line", "Publishing and releasing", "Into your library, or to the catalog at a price.", CliPublish),
+  P("cli-ci", "Making a pack", "The command line", "From a build server", "The two variables, and a workflow to copy.", CliCi),
+  P("cli-account", "Making a pack", "The command line", "Your account from the terminal", "login, whoami, logout, and a key for a machine with no browser.", CliAccount),
+  P("cli-library", "Making a pack", "The command line", "Sealing from your own backend", "The package as a library: seal, open, a license key.", CliLibrary),
+  P("selling", "Making a pack", "Selling", "Selling your packs", "Two ways, and who keeps the receipts.", Selling),
+  P("selling-yourself", "Making a pack", "Selling", "From your own hands", "Sign, seal a copy, send it; nothing else involved.", SellingYourself),
+  P("selling-catalog", "Making a pack", "Selling", "Through the catalog", "A card, a sale on your Stripe account, a ledger.", SellingCatalog),
+  // Your account
+  P("plans", "Your account", null, "Plans and pricing", "What is free, what a server adds, what running it yourself costs.", Plans),
+  P("account", "Your account", "What is stored", "Your account and what is stored", "Everything on your device first; what leaves it, and when.", Account),
+  P("stored", "Your account", "What is stored", "What the server holds", "With an account: runs, packs, keys, purchases, people, your name.", Stored),
+  P("taking-back", "Your account", "What is stored", "Taking it back", "Export anything; delete the account.", TakingBack),
+  // Running your own copy
+  P("own-copy", "Running your own copy", null, "Running your own copy", "Three sizes of your own copy, and what each needs.", OwnCopy),
+  P("serve", "Running your own copy", null, "On your machine", "The app on a local port, with nothing else installed.", Serve),
+  P("static-host", "Running your own copy", null, "On a static host", "Any host that serves files, GitHub Pages step by step.", StaticHost),
+  P("aws", "Running your own copy", "On AWS, with accounts", "On AWS, with accounts", "The hosted copy, run by you: what you need first.", Aws),
+  P("aws-config", "Running your own copy", "On AWS, with accounts", "Saying what your copy is", "One JSON file per stage, and the pages that carry your name.", AwsConfig),
+  P("aws-deploy", "Running your own copy", "On AWS, with accounts", "Deploying", "Bootstrap once, then three commands per release.", AwsDeploy),
+  P("aws-after", "Running your own copy", "On AWS, with accounts", "After the first deploy", "The secrets to fill, and the catalog to seed.", AwsAfter),
+  P("monitoring", "Running your own copy", "On AWS, with accounts", "Monitoring", "Traces, insights and an alarm inside your account; New Relic if you want it.", Monitoring),
+  // Reference
+  P("reference", "Reference", null, "Reference", "The contracts, kept beside the code: the pack format, the stream API, selling from a backend.", Reference),
 ];
 
 export function guidePage(slug: string): GuidePage | undefined {
