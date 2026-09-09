@@ -14,7 +14,7 @@ import { LOG_LIMITS, logLimit, logLines, logOrder, setLogLimit, setLogOrder, typ
  * classes for that are computed against the snapshot before, and worn
  * for one render.
  */
-export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot; stale?: boolean; children?: React.ReactNode }) {
+export function LiveView({ snapshot, stale, children, rooms: roomsAtFirst = "this" }: { snapshot: LiveSnapshot; stale?: boolean; children?: React.ReactNode; rooms?: "this" | "all" }) {
   const now = useNow(snapshot.clocks.some((c) => c.status === "running"));
   const s = snapshot;
   const before = useRef<LiveSnapshot | null>(null);
@@ -38,6 +38,15 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
   // its phase, rather than said again in a block of its own.
   const constrains = useMemo(() => new Set(s.constraints ?? []), [s.constraints]);
   const nowPhase = (s.phases ?? []).find((p) => p.state === "current")?.label ?? null;
+  // This room, as the flow with where each phase stands; or every room so
+  // far as what its phases produced, newest first, which stands in for the
+  // log below. The run's story told either way, kept on this device.
+  const [rooms, setRooms] = useState<"this" | "all">(() => roomsAtFirst === "all" ? "all" : roomsKept());
+  const past = useMemo(() => [...(s.units ?? [])].filter((u) => u.unit !== s.unit).reverse(), [s.units, s.unit]);
+  const chooseRooms = (next: "this" | "all") => {
+    setRooms(next);
+    keepRooms(next);
+  };
   useEffect(() => {
     before.current = s;
   }, [s]);
@@ -80,9 +89,21 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
         <div className="liveMain">
           {(s.phases ?? []).length > 0 && (
             <section className={`stageFlow liveFlow${moved.turned ? " turned" : ""}`}>
-              <h3 className="sectionTitle">
-                This {s.words.unit.toLowerCase()} <span className="muted">{s.words.unit} {s.unit}</span>
-              </h3>
+              <div className="logHead">
+                <h3 className="sectionTitle">
+                  {rooms === "all" ? `All ${s.words.units.toLowerCase()}` : `This ${s.words.unit.toLowerCase()}`} <span className="muted">{s.words.unit} {s.unit}</span>
+                </h3>
+                {(s.units ?? []).length > 0 && (
+                  <div className="logTools" role="group" aria-label={`This ${s.words.unit.toLowerCase()}, or every ${s.words.unit.toLowerCase()} so far`}>
+                    <button className={`ghost tiny${rooms === "this" ? " on" : ""}`} aria-pressed={rooms === "this"} onClick={() => chooseRooms("this")}>
+                      This {s.words.unit.toLowerCase()}
+                    </button>
+                    <button className={`ghost tiny${rooms === "all" ? " on" : ""}`} aria-pressed={rooms === "all"} onClick={() => chooseRooms("all")}>
+                      All {s.words.units.toLowerCase()}
+                    </button>
+                  </div>
+                )}
+              </div>
               <ol className="flow">
                 {s.phases.map((phase, i) => (
                   <li key={phase.id} className={phase.state === "todo" ? "" : phase.state} aria-current={phase.state === "current" ? "step" : undefined}>
@@ -100,9 +121,36 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
                   </li>
                 ))}
               </ol>
+              {rooms === "all" &&
+                past.map((u) => (
+                  <div key={u.unit} className="pastRoom">
+                    <h4 className="sectionTitle">
+                      <span className="muted">{s.words.unit}</span> {u.unit}
+                    </h4>
+                    {u.phases.length === 0 ? (
+                      <p className="muted small">Nothing rolled or declared.</p>
+                    ) : (
+                      <ol className="flow">
+                        {u.phases.map((phase, i) => (
+                          <li key={phase.id} className="done">
+                            <span className="idx">{i + 1}</span>
+                            <span>
+                              {phase.label}
+                              {phase.results.map((r, k) => (
+                                <span key={k} className="result">
+                                  {r}
+                                </span>
+                              ))}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                ))}
             </section>
           )}
-          {s.log.length > 0 ? (
+          {rooms === "all" && (s.units ?? []).length > 0 ? null : s.log.length > 0 ? (
             <section className="log">
               <div className="logHead">
                 <h3 className="sectionTitle">
@@ -294,3 +342,22 @@ function useNow(ticking: boolean): number {
   }, [ticking]);
   return now;
 }
+
+const ROOMS_KEY = "runlog:liveRooms";
+/** Which way this device reads a watched run: this room, or all of them. */
+function roomsKept(): "this" | "all" {
+  try {
+    return localStorage.getItem(ROOMS_KEY) === "all" ? "all" : "this";
+  } catch {
+    return "this";
+  }
+}
+function keepRooms(rooms: "this" | "all"): void {
+  try {
+    if (rooms === "all") localStorage.setItem(ROOMS_KEY, "all");
+    else localStorage.removeItem(ROOMS_KEY);
+  } catch {
+    /* the choice lasts the tab */
+  }
+}
+

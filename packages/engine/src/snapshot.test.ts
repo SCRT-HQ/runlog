@@ -40,6 +40,25 @@ describe("a live snapshot", () => {
     const declaring = declaredSnap.phases.find((p) => (p.results ?? []).includes("A wide bowl"));
     expect(declaring).toBeDefined();
     expect(kiln.phases.find((p) => p.id === declaring!.id)?.steps.some((st) => st.kind === "declareSubject")).toBe(true);
+    // A table no step rolls — one a roll set off, aimed at an earlier piece — sits under the phase whose roll led to it, named with its hit.
+    const constrain = kiln.phases.find((p) => p.steps.some((st) => st.kind === "rollTable" && st.table === "constraint"))!;
+    const chained: RunEvent[] = [
+      ...events,
+      { t: "UnitEntered", at: "2026-01-01T00:00:03Z", id: "e4" } as unknown as RunEvent,
+      { t: "OutcomeResolved", at: "2026-01-01T00:00:04Z", id: "e5", table: "constraint", entryId: kiln.tables["constraint"]!.entries[0]!.id, cause: "phase" } as unknown as RunEvent,
+      { t: "OutcomeResolved", at: "2026-01-01T00:00:05Z", id: "e6", table: "setback", entryId: kiln.tables["setback"]!.entries[0]!.id, cause: "action", targetSubject: 1 } as unknown as RunEvent,
+    ];
+    const chainedSnap = snapshotOf(kiln, reduce(kiln, chained), chained, "2026-01-01T00:00:06Z");
+    const under = chainedSnap.phases.find((p) => p.id === constrain.id)!;
+    expect(under.results).toHaveLength(2);
+    expect(under.results![0]).not.toContain("Constraint:");
+    expect(under.results![1]).toMatch(/^Setback — hit #1: /);
+    expect(chainedSnap.phases.filter((p) => p.id !== constrain.id).every((p) => !(p.results ?? []).some((r) => r.startsWith("Setback")))).toBe(true);
+    // Every unit so far, as what its phases produced: the first stage made nothing, the second the two results under the one phase.
+    expect(chainedSnap.units?.map((u) => u.unit)).toEqual([1, 2]);
+    expect(chainedSnap.units?.[0]?.phases).toEqual([]);
+    expect(chainedSnap.units?.[1]?.phases.map((p) => p.id)).toEqual([constrain.id]);
+    expect(chainedSnap.units?.[1]?.phases[0]?.results).toHaveLength(2);
     // Before the first unit there is nothing to list, and nowhere to be.
     const fresh = snapshotOf(kiln, reduce(kiln, [events[0]!]), [events[0]!], "2026-01-01T00:00:05Z");
     expect(fresh.unit).toBe(0);

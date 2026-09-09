@@ -1,5 +1,5 @@
 import { hitsOn } from "./hits.ts";
-import { modeDoc, summaryDoc, type Doc, type Pack } from "@runlog/rules-schema";
+import { modeDoc, summaryDoc, type Doc, type Pack, type Phase } from "@runlog/rules-schema";
 import { activePhases, constrainedByOf, constraintsFor, nextStep, phaseSkipped } from "./flow.ts";
 import { clockOfUnit, elapsedMs, liveClocks } from "./clock.ts";
 import { describeSkipReason } from "./describe.ts";
@@ -57,6 +57,8 @@ export interface LiveSnapshot {
     /** What the phase produced this unit, in order: the results of the tables its steps roll, and the subject's declared type where it declares one. Absent when nothing yet. */
     results?: string[];
   }>;
+  /** Every unit so far, as what each of its phases produced, oldest first; a phase that produced nothing in a unit is left out. Absent from snapshots written before it was carried. */
+  units?: Array<{ unit: number; phases: Array<{ id: string; label: string; results: string[] }> }>;
   /**
    * A rule drawn earlier this unit that the current step must honor, in the
    * pack's own words — the same lines the player's own screen shows in
@@ -174,21 +176,59 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
   const now = Date.parse(at);
   const step = nextStep(pack, state);
   const stepLabel = step ? ("label" in step.step && step.step.label ? step.step.label : step.step.kind === "rollTable" ? (pack.tables[step.step.table]?.title ?? step.step.table) : step.phase.label) : null;
-  const declared = state.subjects.find((s) => s.unit === state.unit && !s.removed);
+  // Which phase each of a unit's results belongs under. A table one of a
+  // phase's steps rolls is that phase's; a table no step rolls — one a
+  // result triggered, a setback aimed at an earlier piece — belongs to the
+  // phase whose roll led to it, which is the one before it in the log.
+  const rolledBy = new Map<string, string>();
+  for (const phase of activePhases(pack, state)) for (const st of phase.steps) if (st.kind === "rollTable" && !rolledBy.has(st.table)) rolledBy.set(st.table, phase.id);
+  const ownedIn = (unit: number): Array<{ outcome: RunState["outcomes"][number]; phase: string }> => {
+    const owned: Array<{ outcome: RunState["outcomes"][number]; phase: string }> = [];
+    let lastPhase: string | null = null;
+    for (const o of state.outcomes) {
+      if (o.unit !== unit) continue;
+      const phaseId: string | null = rolledBy.get(o.table) ?? lastPhase;
+      if (!phaseId) continue;
+      owned.push({ outcome: o, phase: phaseId });
+      lastPhase = phaseId;
+    }
+    return owned;
+  };
+  // What a phase produced in a unit, for the watcher's page: the results of
+  // the tables its steps roll, in the order the dice landed, and the
+  // declared type where a step declares. A result from the phase's own
+  // table is its text; one from a table it set off says which table, and
+  // which piece it hit, so the log need not be consulted to know what
+  // happened and to what.
+  const resultsOf = (phase: Phase, unit: number): string[] => {
+    const subject = state.subjects.find((s) => s.unit === unit && !s.removed);
+    return [
+      ...ownedIn(unit)
+        .filter((x) => x.phase === phase.id)
+        .map(({ outcome: o }) => {
+          const own = rolledBy.get(o.table) === phase.id;
+          const hit = o.targetSubject !== null && o.targetSubject !== undefined ? ` — hit #${o.targetSubject}` : "";
+          return own && !hit ? entryTextOf(pack, o) : `${pack.tables[o.table]?.title ?? o.table}${hit}: ${entryTextOf(pack, o)}`;
+        }),
+      ...(phase.steps.some((st) => st.kind === "declareSubject") && subject?.type ? [subject.type] : []),
+    ];
+  };
+  // Every unit so far, as what each of its phases produced: the whole run
+  // told room by room, for a watcher who would rather read it that way
+  // than as a log. A phase that produced nothing in a unit is left out.
+  const units = Array.from({ length: state.unit }, (_, i) => i + 1).map((unit) => ({
+    unit,
+    phases: activePhases(pack, state)
+      .map((phase) => ({ id: phase.id, label: phase.label, results: resultsOf(phase, unit) }))
+      .filter((p) => p.results.length > 0),
+  }));
   const phases = state.unit > 0 && state.status !== "ended"
     ? activePhases(pack, state).map((phase) => {
         const done = state.phasesDone.includes(phase.id);
         const current = step?.phase.id === phase.id;
         const skipped = !done && !current && phaseSkipped(pack, state, phase);
         const why = skipped ? describeSkipReason(pack, phase) : null;
-        // What the phase produced this unit, under it on the watcher's
-        // page: the results of the tables its steps roll, in the order the
-        // dice landed, and the declared type where a step declares.
-        const rolls = new Set(phase.steps.flatMap((st) => (st.kind === "rollTable" ? [st.table] : [])));
-        const results = [
-          ...state.outcomes.filter((o) => o.unit === state.unit && rolls.has(o.table)).map((o) => entryTextOf(pack, o)),
-          ...(phase.steps.some((st) => st.kind === "declareSubject") && declared?.type ? [declared.type] : []),
-        ];
+        const results = resultsOf(phase, state.unit);
         return {
           id: phase.id,
           label: phase.label,
@@ -246,6 +286,7 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
     step: stepLabel,
     stepKind: step?.step.kind ?? null,
     phases,
+    units,
     constraints,
     quoted,
     standings: standings(state).map((s) => ({ name: s.contestant.name, points: s.points, place: s.place, states: s.contestant.states.map(stateLabel) })),
