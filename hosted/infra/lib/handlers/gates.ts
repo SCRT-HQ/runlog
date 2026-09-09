@@ -3,19 +3,18 @@ import type { WorkOSLike } from "./workos.js";
 /**
  * Release gates: whether a tier is on sale, for everyone at once.
  *
- * A launch is a WorkOS feature flag set to "on, for everyone" in the
- * dashboard, not a line in the stage's configuration and a deploy. The
- * API reads each gate's flag by slug with the key it already holds,
- * remembers the answer per container for a minute, and treats anything
- * it cannot read, no key filled in, no such flag, WorkOS down, as
- * closed, so nothing goes on sale by accident. A gate says only whether
- * a tier may be bought today; who holds a plan is Stripe's, the comp
- * flags' (`plus`, `server`, `hosted-licensing`, per person in the token)
- * and Discord's store's business, and unchanged.
+ * A tier is on sale unless a hold says otherwise. The hold is a WorkOS
+ * feature flag, `servers-coming-soon` or `publishers-coming-soon`, set to
+ * "on, for everyone" in the dashboard; the API reads it by slug with the
+ * key it already holds, once a minute per container, and shows the tier
+ * as coming while the hold stands. A launch is the hold turned off, or
+ * the flag deleted: nothing to deploy, nothing left behind. A flag that
+ * is off, on for some people only, missing, or unreadable (no key filled
+ * in, WorkOS down) is no hold, so the tier reads as open.
  *
- * A gate is open when its flag is enabled in the environment and its
- * default value is on: the state the dashboard calls "on, everyone". A
- * flag on for some people only is not a launch, and reads as closed.
+ * A gate says only whether a tier may be bought today; who holds a plan
+ * is Stripe's, the comp flags' (`plus`, `server`, `hosted-licensing`, per
+ * person in the token) and Discord's store's business, and unchanged.
  */
 export interface ReleaseGates {
   /** Runlog for servers may be bought: the Servers page offers Checkout. */
@@ -24,13 +23,15 @@ export interface ReleaseGates {
   publishers: boolean;
 }
 
-export const GATE_SLUGS: Record<keyof ReleaseGates, string> = { servers: "servers-open", publishers: "publishers-open" };
+/** The flag that holds each tier back while it stands. */
+export const HOLD_SLUGS: Record<keyof ReleaseGates, string> = { servers: "servers-coming-soon", publishers: "publishers-coming-soon" };
 
-export const CLOSED: ReleaseGates = { servers: false, publishers: false };
+export const OPEN: ReleaseGates = { servers: true, publishers: true };
 
 /**
  * A reader that asks once a minute at most. `workos` answers null where
- * the environment's key is not filled, which closes every gate.
+ * the environment's key is not filled, which is no hold: every tier is
+ * open, and the log says why.
  */
 export function gateReader(
   workos: () => Promise<WorkOSLike | null>,
@@ -44,18 +45,18 @@ export function gateReader(
   const read = async (): Promise<ReleaseGates> => {
     const client = await workos();
     if (!client) {
-      warn("release gates: WorkOS is not configured here, so every tier reads as not on sale");
-      return CLOSED;
+      warn("release gates: WorkOS is not configured here, so no hold can be read and every tier is on sale");
+      return { ...OPEN };
     }
-    const out: ReleaseGates = { ...CLOSED };
-    for (const gate of Object.keys(GATE_SLUGS) as Array<keyof ReleaseGates>) {
-      const slug = GATE_SLUGS[gate];
+    const out: ReleaseGates = { ...OPEN };
+    for (const gate of Object.keys(HOLD_SLUGS) as Array<keyof ReleaseGates>) {
+      const slug = HOLD_SLUGS[gate];
       try {
         const flag = await client.flag(slug);
-        if (!flag) warn(`release gates: no flag "${slug}" in this environment; ${gate} reads as not on sale`);
-        else out[gate] = flag.enabled && flag.defaultValue;
+        // A hold is a flag on for everyone; anything less is not one.
+        if (flag) out[gate] = !(flag.enabled && flag.defaultValue);
       } catch (error) {
-        warn(`release gates: "${slug}" could not be read (${error instanceof Error ? error.message : String(error)}); ${gate} reads as not on sale`);
+        warn(`release gates: "${slug}" could not be read (${error instanceof Error ? error.message : String(error)}); ${gate} reads as on sale`);
       }
     }
     return out;

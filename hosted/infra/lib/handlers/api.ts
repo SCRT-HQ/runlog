@@ -20,7 +20,7 @@ import { verifyInteraction } from "./discord/verify.js";
 import { featuresOfSummary, realStripe, type StripeLike } from "./stripe.js";
 import { dynamoPublishers, type PublisherStore } from "./publishers.js";
 import { realWorkOS, type WorkOSLike } from "./workos.js";
-import { CLOSED, gateReader, type ReleaseGates } from "./gates.js";
+import { gateReader, OPEN, type ReleaseGates } from "./gates.js";
 import { dynamoListings, headOf, priceOf, type ListingCard, type ListingStore, type Product } from "./listings.js";
 import { dynamoSales, type Sale, type SaleStore } from "./sales.js";
 import { generateLicenseKey, seal } from "./container.js";
@@ -194,9 +194,9 @@ export interface Deps {
   /** WorkOS, when the environment's key is filled; without it a publisher is a row here and no organization there. */
   workos?: () => Promise<WorkOSLike | null>;
   /**
-   * Which tiers are on sale today, from WorkOS feature flags read for
-   * everyone at once (see gates.ts). Absent, nothing is on sale, except
-   * where the stage's `discord.open` still says the server tier is.
+   * Which tiers are on sale today: every tier, unless a WorkOS feature
+   * flag holds one back for everyone at once (see gates.ts). Absent,
+   * nothing is held.
    */
   releaseGates?: () => Promise<ReleaseGates>;
   /** Whether plans gate anything; surfaced to the app as `gates`. */
@@ -233,7 +233,7 @@ export interface Deps {
     publicKey: string;
     token: () => Promise<string | null>;
     guildName?: (guildId: string) => Promise<string | null>;
-    /** Whether the server plan is on sale, said by the stage's configuration: honored still, on the way to the `servers-open` flag saying it instead. */
+    /** Once whether the server plan was on sale; read no more, since the `servers-coming-soon` flag holds a tier back now. Kept until the stage files drop it. */
     open?: boolean;
     /** Discord itself, for the thread and the messages of a hosted run; null until the token is filled. Patient, with a longer rope, for the job. */
     rest?: (patient?: boolean) => Promise<DiscordRest | null>;
@@ -497,18 +497,15 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   }
 
   /**
-   * Which tiers are on sale, for everyone at once, from the release gates:
-   * WorkOS feature flags flipped in the dashboard rather than a line in
-   * the stage's file. The server tier is also open where the stage still
-   * says so. Read once per request at most, and once a minute per
-   * container underneath.
+   * Which tiers are on sale, for everyone at once: all of them, unless a
+   * release gate holds one back. A gate is a WorkOS feature flag flipped
+   * in the dashboard rather than a line in the stage's file; a launch is
+   * the flag turned off or deleted. Read once per request at most, and
+   * once a minute per container underneath.
    */
   let sale: ReleaseGates | null = null;
   const onSale = async (): Promise<ReleaseGates> => {
-    if (!sale) {
-      const read = deps.releaseGates ? await deps.releaseGates() : CLOSED;
-      sale = { ...read, servers: read.servers || deps.discord?.open === true };
-    }
+    sale ??= deps.releaseGates ? await deps.releaseGates() : { ...OPEN };
     return sale;
   };
   // What is offered here, to a page with no token: the pricing page, the welcome page.
@@ -904,11 +901,12 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
 
   /**
    * The server tier, as this copy offers it: at all, where there is a bot
-   * to use it with; and for sale, where its release gate is open. Until
-   * then the app shows the plan as coming, and the `server` feature flag
-   * on a session is the one way onto it: a flag named like the feature
-   * is the feature, the way a `plus` flag comps Plus. The publisher tier
-   * has a gate of its own; an existing publisher keeps what it has.
+   * to use it with; and for sale, unless its release gate holds it back.
+   * While held, the app shows the plan as coming, and the `server`
+   * feature flag on a session is the one way onto it: a flag named like
+   * the feature is the feature, the way a `plus` flag comps Plus. The
+   * publisher tier has a gate of its own; an existing publisher keeps
+   * what it has.
    */
   const servers = Boolean(deps.discord && deps.guilds);
   const serversOpen = async () => servers && (await onSale()).servers;
