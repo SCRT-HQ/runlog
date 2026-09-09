@@ -86,7 +86,7 @@ jobs:
           environment: prd
           workos-client-id: ${{ vars.WORKOS_CLIENT_ID }}
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
-          env-config: ${{ vars.RUNLOG_ENV_CONFIG }}
+          env-config: ${{ vars.RUNLOG_ENV_CONFIG_PRD || vars.RUNLOG_ENV_CONFIG }}
           version: ${{ steps.tag.outputs.version }}
 
       - name: Deploy the hosting and publish the build to production
@@ -94,7 +94,7 @@ jobs:
         with:
           cdk-command: deploy
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
-          env-config: ${{ vars.RUNLOG_ENV_CONFIG }}
+          env-config: ${{ vars.RUNLOG_ENV_CONFIG_PRD || vars.RUNLOG_ENV_CONFIG }}
           target-region: ${{ env.AWS_REGION }}
           node-version: ${{ env.NODE_VERSION }}
           github-role-name: ${{ env.GITHUB_ROLE_NAME }}
@@ -108,7 +108,7 @@ jobs:
       - name: Prove the stage answers
         uses: ./.github/actions/smoke
         with:
-          env-config: ${{ vars.RUNLOG_ENV_CONFIG }}
+          env-config: ${{ vars.RUNLOG_ENV_CONFIG_PRD || vars.RUNLOG_ENV_CONFIG }}
 
       - name: Seed the catalog with the built-in packs
         env:
