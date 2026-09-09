@@ -332,6 +332,8 @@ export interface Me {
   /** Whether this copy offers the server tier at all (there is a bot), and whether the plan is on sale yet. */
   servers?: boolean;
   serversOpen?: boolean;
+  /** Whether becoming a publisher, and hosted licensing, are on sale yet. */
+  publishersOpen?: boolean;
 }
 
 /** Another account of the person's, linked to this one: Discord's user id and the name it showed when the link was made. */
