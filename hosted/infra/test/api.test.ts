@@ -122,11 +122,11 @@ describe("the API", () => {
   });
 
   it("defines the secrets it will need, and lets only the handler read them", () => {
-    template.resourceCountIs("AWS::SecretsManager::Secret", 5);
+    template.resourceCountIs("AWS::SecretsManager::Secret", 6);
     // Bare, without an account to report to: New Relic's wrapper is absent,
     // but Lambda Insights' layer is there regardless — it needs no account.
     template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike({ Handler: "index.handler" }));
-    for (const name of ["stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret", "workos/api-key", "discord/bot-token"]) {
+    for (const name of ["stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret", "workos/api-key", "discord/bot-token", "discord/client-secret"]) {
       template.hasResourceProperties("AWS::SecretsManager::Secret", { Name: `runlog/${name}` });
     }
     template.hasResourceProperties("AWS::Lambda::Function", {
@@ -136,6 +136,7 @@ describe("the API", () => {
           STRIPE_WEBHOOK_SECRET_SECRET: "runlog/stripe/webhook-secret",
           WORKOS_API_KEY_SECRET: "runlog/workos/api-key",
           DISCORD_BOT_TOKEN_SECRET: "runlog/discord/bot-token",
+          DISCORD_CLIENT_SECRET_SECRET: "runlog/discord/client-secret",
         }),
       },
     });
@@ -197,8 +198,8 @@ describe("the API", () => {
     templateFor({ discord: { applicationId: "123456789012345678", publicKey: "ab".repeat(32), open: true } }).hasResourceProperties("AWS::Lambda::Function", {
       Environment: { Variables: Match.objectLike({ DISCORD_OPEN: "on" }) },
     });
-    // The same five secrets either way: the token's secret exists before anyone has a bot to fill it with.
-    withBot.resourceCountIs("AWS::SecretsManager::Secret", 5);
+    // The same six secrets either way: the token's secret exists before anyone has a bot to fill it with.
+    withBot.resourceCountIs("AWS::SecretsManager::Secret", 6);
     template.hasResourceProperties("AWS::IAM::Policy", {
       PolicyDocument: {
         Statement: Match.arrayWith([
@@ -208,9 +209,9 @@ describe("the API", () => {
     });
   });
 
-  it("wraps every function in New Relic's layer where the stage names an account, and reads the key from a sixth secret", () => {
+  it("wraps every function in New Relic's layer where the stage names an account, and reads the key from a seventh secret", () => {
     const monitored = templateFor({ apm: { newRelic: { accountId: "1234567", layerVersion: 52 } } });
-    monitored.resourceCountIs("AWS::SecretsManager::Secret", 6);
+    monitored.resourceCountIs("AWS::SecretsManager::Secret", 7);
     monitored.hasResourceProperties("AWS::SecretsManager::Secret", { Name: "runlog/newrelic/license-key" });
     const wrapped = Object.values(monitored.findResources("AWS::Lambda::Function", { Properties: { Handler: "newrelic-lambda-wrapper.handler" } }));
     expect(wrapped).toHaveLength(3);

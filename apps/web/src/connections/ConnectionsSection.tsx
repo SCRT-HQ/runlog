@@ -13,7 +13,7 @@ import { clearPendingLink, pendingLink, type LinkRoute } from "./route.ts";
  */
 export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | null; pending?: LinkRoute | null }) {
   const account = useAccount();
-  const [pending, setPending] = useState<LinkRoute | null>(() => pendingProp ?? pendingLink());
+  const [pending, setPending] = useState<LinkRoute | null>(() => pendingProp ?? pendingLink("discord") ?? pendingLink("verify"));
   const [known, setKnown] = useState<Connections | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -27,8 +27,21 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
     };
   }, [api]);
 
+  const verify = async () => {
+    if (!api) return;
+    setBusy(true);
+    setNote(null);
+    try {
+      const url = await api.discordVerifyUrl();
+      clearPendingLink();
+      location.assign(url);
+    } catch (error) {
+      setNote(error instanceof Error && error.message ? error.message : "Verifying is not available on this copy.");
+      setBusy(false);
+    }
+  };
   const link = async () => {
-    if (!api || !pending) return;
+    if (!api || !pending || pending.kind === "verify") return;
     setBusy(true);
     setNote(null);
     try {
@@ -67,7 +80,45 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
       <h3 className="sectionTitle">
         Linked accounts <span className="muted">Discord, and where the bot knows you</span>
       </h3>
-      {pending && (
+      {pending?.kind === "verify" && pending.result === "asked" && (
+        <div className="incoming">
+          <div className="incomingWhat">
+            <strong>A server asked Discord to verify your Runlog account.</strong>
+            <div className="muted small">
+              A role there is for members with a Runlog account linked. Verifying sends you to Discord to say which account is yours, links it here, and writes that on your Discord profile for the server to read.
+              {account.status === "signed-in" ? ` You are signed in as ${account.user.email}.` : " Sign in first, and the request waits."}
+            </div>
+          </div>
+          <div className="incomingActions">
+            {account.status === "signed-in" ? (
+              <button className="primary" disabled={busy || !api} aria-busy={busy || undefined} onClick={() => void verify()}>
+                {busy ? "Going to Discord…" : "Verify with Discord"}
+              </button>
+            ) : account.status === "anonymous" ? (
+              <>
+                <button className="primary" onClick={account.signIn}>
+                  Sign in to verify
+                </button>
+                <button className="ghost" onClick={account.signUp}>
+                  Create an account
+                </button>
+              </>
+            ) : null}
+            <button className="ghost" onClick={dismiss}>
+              Not now
+            </button>
+          </div>
+        </div>
+      )}
+      {pending?.kind === "verify" && pending.result !== "asked" && (
+        <p className="muted small" role="status">
+          {pending.result === "done" ? "Verified. Discord knows this account is linked; a role that asks for it is yours to take in the server." : "Discord did not finish the verification. Try again from the server's role, or from the button here."}{" "}
+          <button className="ghost tiny" onClick={dismiss}>
+            OK
+          </button>
+        </p>
+      )}
+      {pending && pending.kind !== "verify" && (
         <div className="incoming">
           <div className="incomingWhat">
             <strong>Discord asked to link an account to this one.</strong>
@@ -104,7 +155,7 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
       ) : !known.available && !known.discord ? (
         <p className="muted small">This copy of Runlog has no Discord bot to link with.</p>
       ) : (
-        <DiscordRow discord={known.discord} busy={busy} onUnlink={() => void unlink()} />
+        <DiscordRow discord={known.discord} busy={busy} onUnlink={() => void unlink()} onVerify={known.verify ? () => void verify() : undefined} />
       )}
       {note && (
         <p className="muted small" role="status">
@@ -115,7 +166,7 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
   );
 }
 
-function DiscordRow({ discord, busy, onUnlink }: { discord: DiscordConnection | null; busy: boolean; onUnlink: () => void }) {
+function DiscordRow({ discord, busy, onUnlink, onVerify }: { discord: DiscordConnection | null; busy: boolean; onUnlink: () => void; onVerify?: () => void }) {
   if (!discord) {
     return (
       <div className="row spread memberRow">
@@ -123,7 +174,14 @@ function DiscordRow({ discord, busy, onUnlink }: { discord: DiscordConnection | 
           <strong>Discord</strong>
           <span className="muted small"> · not linked</span>
         </span>
-        <span className="muted small">In a server with the Runlog bot, run /link and open the address it gives you.</span>
+        <span className="row">
+          <span className="muted small">In a server with the Runlog bot, run /link and open the address it gives you.</span>
+          {onVerify && (
+            <button className="ghost tiny" disabled={busy} onClick={onVerify} title="Link through Discord instead, and let servers' linked roles see it">
+              Link with Discord
+            </button>
+          )}
+        </span>
       </div>
     );
   }
@@ -133,9 +191,16 @@ function DiscordRow({ discord, busy, onUnlink }: { discord: DiscordConnection | 
         <strong>Discord</strong>
         <span className="muted small"> · linked as {discord.name}</span>
       </span>
-      <button className="ghost tiny" disabled={busy} onClick={onUnlink}>
-        Unlink
-      </button>
+      <span className="row">
+        {onVerify && (
+          <button className="ghost tiny" disabled={busy} onClick={onVerify} title="Write the link on your Discord profile, for servers whose roles ask for it">
+            Verify for linked roles
+          </button>
+        )}
+        <button className="ghost tiny" disabled={busy} onClick={onUnlink}>
+          Unlink
+        </button>
+      </span>
     </div>
   );
 }

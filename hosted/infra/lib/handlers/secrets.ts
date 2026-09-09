@@ -14,9 +14,12 @@ import { traced } from "./xray.js";
 export type SecretReader = (name: string) => Promise<string | null>;
 
 /** Whether a value is the real thing, by the shape the service gives its keys. */
-export function looksLike(kind: "stripe-key" | "webhook-secret" | "workos-key" | "discord-token", value: string | null | undefined): value is string {
+export function looksLike(kind: "stripe-key" | "webhook-secret" | "workos-key" | "discord-token" | "discord-secret", value: string | null | undefined): value is string {
   if (!value) return false;
   switch (kind) {
+    case "discord-secret":
+      // An OAuth2 client secret: thirty-two characters of base64url, no dots.
+      return /^[A-Za-z0-9_-]{32}$/.test(value);
     case "discord-token":
       // Three base64url parts joined by dots: the application id encoded,
       // a timestamp, and the secret itself.

@@ -40,6 +40,16 @@ account that claimed the server, where plans are on; or, where the bot's
 store page sells it, bought for the server through Discord. Claiming,
 filling the vault and setting up need nothing.
 
+## Linked roles
+
+A server can give a role only to members with a Runlog account linked.
+Taking such a role sends you through a short verification: to Runlog,
+signed in, then to Discord to say which account is yours, then back.
+That links the two if they were not, and writes the link on your Discord
+profile for the server to read. The Social page offers the same under
+"Verify for linked roles"; what it wrote is yours to remove under
+Discord's own Connections.
+
 ## Linking your account
 
 `/link`, anywhere the bot is, shows an address to you alone. Open it
