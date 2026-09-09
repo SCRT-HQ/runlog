@@ -1936,6 +1936,15 @@ describe("a run hosted in discord", () => {
       return events;
     };
     const events = await playUntil(2);
+    // Between stages the card still shows the closed stage's results under their tables; the next stage begins clean.
+    const OURS = new Set(["Waiting on", "The game has already had its say", "On the table", "Clocks", "Standings", "At the table"]);
+    const tableFields = (c: Record<string, unknown>) => ((c["embeds"] as Array<{ fields: Array<{ name: string }> }>)[0]!.fields ?? []).map((f) => f.name).filter((n) => !OURS.has(n));
+    expect(tableFields(card).length).toBeGreaterThan(0);
+    const third = await call(signed(press(`rl:01000000000000000000000001:enter`)), d);
+    expect(third.body["type"]).toBe(7);
+    expect(tableFields(third.body["data"] as Record<string, unknown>)).toEqual([]);
+    // Back to where the loop left the table, for what follows.
+    await call(signed(press(`rl:01000000000000000000000001:undo`)), d);
     // The bot rolled, and said so: nothing physical happened at this table.
     const rolled = events.filter((e) => e["t"] === "Rolled");
     expect(rolled.length).toBeGreaterThan(0);

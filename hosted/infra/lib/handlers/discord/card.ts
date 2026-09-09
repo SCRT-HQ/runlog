@@ -79,11 +79,13 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
   }
   const constraints = active ? constraintsFor(pack, state, constrainedByOf(active.step)) : [];
   if (constraints.length > 0) fields.push({ name: "The game has already had its say", value: clip(constraints.map((c) => `• ${c}`).join("\n")) });
-  // The latest result, under the name of the table it came from ("Twist", "Weather"), not a word of ours.
-  const latest = state.outcomes[state.outcomes.length - 1];
-  if (latest) {
-    const hit = latest.targetSubject !== null && latest.targetSubject !== undefined ? state.subjects.find((s) => s.id === latest.targetSubject) : undefined;
-    fields.push({ name: clip(pack.tables[latest.table]?.title ?? latest.table, 256), value: clip(`${entryTextOf(pack, latest)}${hit ? ` → ${subjectName(pack, hit)}` : ""}`) });
+  // This unit's results, each under the name of the table it came from
+  // ("Twist", "Weather"), not a word of ours; the last few, in order. A
+  // result from an earlier unit is the log's, not the table's: what the
+  // live page shows as "this unit so far", and nothing older.
+  for (const o of state.outcomes.filter((o) => o.unit === state.unit).slice(-4)) {
+    const hit = o.targetSubject !== null && o.targetSubject !== undefined ? state.subjects.find((s) => s.id === o.targetSubject) : undefined;
+    fields.push({ name: clip(pack.tables[o.table]?.title ?? o.table, 256), value: clip(`${entryTextOf(pack, o)}${hit ? ` → ${subjectName(pack, hit)}` : ""}`) });
   }
   const trackers = [
     ...state.subjects.filter((s) => s.unit === state.unit || !s.finalized).slice(-6).map((s) => `${subjectName(pack, s)}${s.states.length > 0 ? ` [${s.states.map((st) => pack.states?.[st]?.short ?? pack.states?.[st]?.label ?? st).join(" ")}]` : ""}`),
