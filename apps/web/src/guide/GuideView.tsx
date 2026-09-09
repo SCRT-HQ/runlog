@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { guideComponents } from "./components.tsx";
-import { GUIDE_PAGES, guidePage } from "./pages.ts";
+import { GUIDE_PAGES, GUIDE_PARTS, guidePage } from "./pages.ts";
 
 /**
  * The guide: how to use Runlog, in pages anyone can read without signing
@@ -33,16 +33,23 @@ export function GuideView({ slug, onNavigate, onBack }: { slug: string; onNaviga
             Back to the app
           </button>
         </div>
-        <ol className="guideToc">
-          {GUIDE_PAGES.map((p) => (
-            <li key={p.slug} className={p.slug === page.slug ? "on" : ""}>
-              <a href={`#guide/${p.slug}`} aria-current={p.slug === page.slug ? "page" : undefined} onClick={(e) => { e.preventDefault(); onNavigate(p.slug); }}>
-                {p.title}
-              </a>
-              <span className="muted small">{p.blurb}</span>
-            </li>
+        <nav className="guideToc" aria-label="Pages by part">
+          {GUIDE_PARTS.map((part) => (
+            <section key={part} className="guidePart">
+              <h3>{part}</h3>
+              <ol>
+                {GUIDE_PAGES.filter((p) => p.part === part).map((p) => (
+                  <li key={p.slug} className={p.slug === page.slug ? "on" : ""}>
+                    <a href={`#guide/${p.slug}`} aria-current={p.slug === page.slug ? "page" : undefined} onClick={(e) => { e.preventDefault(); onNavigate(p.slug); }}>
+                      {p.title}
+                    </a>
+                    <span className="muted small">{p.blurb}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
           ))}
-        </ol>
+        </nav>
       </aside>
       <article className="guidePage doc">
         <Page components={guideComponents} />

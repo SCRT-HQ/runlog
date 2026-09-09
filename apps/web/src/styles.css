@@ -3474,7 +3474,10 @@ select.textInput {
 .guideSide { position: sticky; top: 0.75rem; display: grid; gap: 0.6rem; }
 .guideSideHead { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
 .guideSideHead h2 { margin: 0; }
-.guideToc { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; counter-reset: guide; }
+.guideToc { display: grid; gap: 0.9rem; }
+.guidePart { display: grid; gap: 0.15rem; }
+.guidePart h3 { margin: 0 0 0.1rem 0.6rem; font-family: var(--mono); font-size: var(--t-1); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.guidePart ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; }
 .guideToc li { display: grid; gap: 0.05rem; padding: 0.4rem 0.6rem; border-left: 2px solid transparent; }
 .guideToc li.on { border-left-color: var(--accent); background: var(--panel-2); border-radius: 0 var(--radius) var(--radius) 0; }
 .guideToc a { color: var(--text); text-decoration: none; font-weight: 600; }
