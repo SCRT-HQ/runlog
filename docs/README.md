@@ -1,0 +1,53 @@
+# The documentation, by who you are
+
+Runlog has two kinds of writing. The **guide** is in the app, under Menu
+or at `#guide` on any address, for people playing: it needs no account
+and stays short. The **documents here** are the contracts and the
+walkthroughs that outlive a screen: what a pack file is, what an API
+answers, how an operator sets something up. When a page in the guide
+runs out of room, it links here.
+
+## Playing, watching, streaming
+
+| Read | When |
+| --- | --- |
+| The guide's [Streaming a run](https://runlog.scrthq.com/#guide/streaming) | You want a widget on your stream. Start here. |
+| [streaming-setup.md](streaming-setup.md) | OBS, Streamlabs, StreamElements and Streamer.bot, field by field, with sizes and snippets. |
+| [stream-api.md](stream-api.md) | You are writing a plugin, a chat command or a second screen: the numbers, the bell, the gestures. |
+| [discord.md](discord.md) | Runlog in a Discord server: adding the bot, claiming a server, hosting and watching runs. |
+
+## Writing packs
+
+| Read | When |
+| --- | --- |
+| [authoring.md](authoring.md) | You are writing a pack. The idea, a complete example, every part and when you need it. |
+| [reference.md](reference.md) | You need one field's exact shape. Generated from the schema; never edited by hand. |
+| [testing-pack.md](testing-pack.md) | You want to know what the engine-testing pack exercises, or to write fixtures for your own. |
+
+## Publishing and selling
+
+| Read | When |
+| --- | --- |
+| [authoring.md § Licensing](authoring.md#licensing-and-packs-you-should-not-publish), [§ Signing](authoring.md#signing-and-what-it-does-not-do), [§ Selling copies](authoring.md#selling-copies) | Before a pack leaves your hands. |
+| [selling.md](selling.md) | Selling sealed copies from your own backend, outside the catalog. |
+| The guide's [Selling your packs](https://runlog.scrthq.com/#guide/selling) and [Plans](https://runlog.scrthq.com/#guide/plans) | The catalog, the ledger, and what each plan has. |
+
+## Running a copy
+
+| Read | When |
+| --- | --- |
+| [self-hosting.md](self-hosting.md) | On your machine, on a static host, or on your own AWS. |
+| [discord-bot.md](discord-bot.md) | Making the Discord bot as the operator: the developer portal, the stage, the token, the commands. |
+| [../hosted/infra/README.md](../hosted/infra/README.md) | How the hosting is built and why: the API, billing, selling, races, live push, Discord, monitoring. |
+| [../CONTRIBUTING.md](../CONTRIBUTING.md) | The shape of the code, the rules the tests enforce, and how a change lands. |
+
+## Conventions
+
+A document here is one of two things: a contract someone outside the
+repository builds against (`stream-api.md`, `reference.md`, the pack
+format in `authoring.md`), or a walkthrough that names real fields in
+someone else's software (`streaming-setup.md`, `discord-bot.md`). A
+document that is neither belongs in the guide, or in a README beside the
+code it describes. Titles say what the reader is doing, not what the
+thing is called; American English throughout; the demo pack, The Long
+Kiln, is the example everywhere.
