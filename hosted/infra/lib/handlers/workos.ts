@@ -32,6 +32,8 @@ export interface Invitation {
 
 export interface WorkOSLike {
   createOrganization(name: string): Promise<{ id: string }>;
+  /** Keep WorkOS's own name for the organization in step with ours; it is what its invitation mails say. */
+  renameOrganization(organizationId: string, name: string): Promise<void>;
   addMember(organizationId: string, userId: string, role: "admin" | "member"): Promise<void>;
   /** The organization's active members, with what WorkOS knows of each. */
   listMembers(organizationId: string): Promise<Member[]>;
@@ -65,6 +67,9 @@ export function realWorkOS(apiKey: string): WorkOSLike {
     async createOrganization(name) {
       const org = await workos.organizations.createOrganization({ name });
       return { id: org.id };
+    },
+    async renameOrganization(organizationId, name) {
+      await workos.organizations.updateOrganization({ organization: organizationId, name });
     },
     async addMember(organizationId, userId, role) {
       await workos.userManagement.createOrganizationMembership({ organizationId, userId, roleSlug: role });

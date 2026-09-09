@@ -180,6 +180,9 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
     becomePublisher: async () => {
       throw new SyncError("error");
     },
+    renamePublisher: async () => {
+      throw new SyncError("error");
+    },
     connectPublisher: async () => ({ available: false as const }),
     refreshPublisherConnect: async () => null,
     publisherDashboard: async () => ({ available: false as const }),

@@ -7,6 +7,7 @@ function flagsOnly(table: Record<string, { enabled: boolean; defaultValue: boole
   const never = () => Promise.reject(new Error("not this test"));
   return {
     createOrganization: never,
+    renameOrganization: never,
     addMember: never,
     listMembers: never,
     membershipsOf: never,
