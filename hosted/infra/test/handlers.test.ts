@@ -2173,6 +2173,66 @@ describe("a run hosted in discord", () => {
     expect(moved).toHaveLength(3);
   });
 
+  it("lets the host throw real dice and type the total, says so in the log, and refuses a total the dice could not make", async () => {
+    const { bot, store, d } = await table();
+    const id = "01000000000000000000000001";
+    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), d))).toContain("started");
+    let card = (await call(signed(press(`rl:${id}:enter`)), d)).body["data"] as Record<string, unknown>;
+    const buttons = (c: Record<string, unknown>) => (c["components"] as Array<{ components: Array<{ custom_id: string; label?: string; disabled?: boolean }> }>).flatMap((r) => r.components);
+    // Press along until the card offers a table to roll on; beside "Roll:" sits "Roll it yourself".
+    for (let n = 0; n < 40 && !buttons(card).some((b) => b.custom_id.endsWith(":byhand")); n += 1) {
+      const next = firstPress(card);
+      if (!next) break;
+      let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
+      if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
+      card = out.body["data"] as Record<string, unknown>;
+    }
+    expect(buttons(card).some((b) => b.custom_id.endsWith(":byhand") && b.label === "Roll it yourself")).toBe(true);
+    // Opening the step by hand rolls nothing: the card waits on the total, with the bot's throw still offered.
+    const opened = await call(signed(press(`rl:${id}:byhand`)), d);
+    expect(opened.body["type"]).toBe(7);
+    card = opened.body["data"] as Record<string, unknown>;
+    expect(buttons(card).some((b) => b.custom_id.endsWith(":roll"))).toBe(true);
+    const enter = buttons(card).find((b) => b.custom_id.endsWith(":typeroll"))!;
+    expect(enter.label).toMatch(/^Enter \d*d\d+/);
+    const dice = /^Enter (\S+)…/.exec(enter.label!)![1]!;
+    expect((await store.eventsAfter(id, 0)).filter((e) => e["t"] === "Rolled")).toHaveLength(0);
+    // The modal asks for the total; a total the dice could not make is refused; a number they could is the roll.
+    const asked = await call(signed(press(`rl:${id}:typeroll`)), d);
+    expect(asked.body["type"]).toBe(9);
+    expect(String((asked.body["data"] as Record<string, unknown>)["custom_id"])).toBe(`rl:${id}:rolled`);
+    expect(content(await call(signed(typed(`rl:${id}:rolled`, "999")), d))).toContain(`not a ${dice} result`);
+    expect(content(await call(signed(typed(`rl:${id}:rolled`, "many")), d))).toContain("means nothing here");
+    const low = Number(/(\d+)d/.exec(dice)?.[1] ?? 1);
+    const done = await call(signed(typed(`rl:${id}:rolled`, String(low))), d);
+    expect(done.body["type"], JSON.stringify(done.body["data"])).toBe(7);
+    const rolled = (await store.eventsAfter(id, 0)).filter((e) => e["t"] === "Rolled");
+    expect(rolled).toHaveLength(1);
+    expect(rolled[0]).toMatchObject({ dice, total: low, source: "physical" });
+    expect(bot.posts.some((p) => (p.message.content ?? "").includes(`→ **${low}** (by hand)`))).toBe(true);
+  });
+
+  it("throws the dice itself in a seeded mode, whatever the host presses", async () => {
+    const { guilds, store, d } = await table();
+    await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: "h", bytes: demo.length, modes: [{ id: "standard", label: "Standard" }, { id: "shared", label: "Shared" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, demo);
+    const id = "01000000000000000000000001";
+    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "shared" }] })), d))).toContain("started");
+    const rows = (c: Record<string, unknown>) => JSON.stringify(c["components"]);
+    let card = (await call(signed(press(`rl:${id}:enter`)), d)).body["data"] as Record<string, unknown>;
+    for (let n = 0; n < 40 && !rows(card).includes('"label":"Roll:'); n += 1) {
+      const next = firstPress(card);
+      if (!next) break;
+      let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
+      if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
+      card = out.body["data"] as Record<string, unknown>;
+    }
+    expect(rows(card)).toContain('"label":"Roll:');
+    expect(rows(card)).not.toContain("byhand");
+    // A stale press from a card that offered it is refused rather than honored.
+    expect(content(await call(signed(press(`rl:${id}:byhand`)), d))).toContain("seeded run rolls from its seed");
+    expect((await store.eventsAfter(id, 0)).filter((e) => e["t"] === "Rolled")).toHaveLength(0);
+  });
+
   it("offers a clock the pack leaves to the player, once per open unit", async () => {
     const { bot, store, d } = await table(timed(false));
     const timers: TimerJob[] = [];

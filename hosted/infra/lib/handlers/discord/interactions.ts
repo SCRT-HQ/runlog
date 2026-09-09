@@ -436,6 +436,10 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
     const hint = agenda.active ? constraintsFor(pack, state, constrainedByOf(agenda.active.step)).join("; ") : "";
     return modal(customId(run.sessionId, "declared"), `Declare the ${pack.vocabulary.subject.one.toLowerCase()}`, { id: "subject", label: `What is this ${pack.vocabulary.subject.one.toLowerCase()}?`, ...(hint ? { placeholder: hint } : {}) });
   }
+  if (i.type === InteractionType.MessageComponent && id.verb === "typeroll") {
+    const dice = run.pending && typeof (run.pending as { request?: { dice?: string } }).request?.dice === "string" ? (run.pending as { request: { dice: string } }).request.dice : "the dice";
+    return modal(customId(run.sessionId, "rolled"), "Your roll", { id: "total", label: `What did ${dice} come to?`, placeholder: "The total, as a number" });
+  }
   if (i.type === InteractionType.MessageComponent && id.verb === "text") {
     const label = run.pending && typeof (run.pending as { request?: { label?: string } }).request?.label === "string" ? (run.pending as { request: { label: string } }).request.label : "Your answer";
     return modal(customId(run.sessionId, "answered"), "Answer", { id: "answer", label, paragraph: true });
@@ -472,6 +476,10 @@ function actionFor(id: { verb: string; arg?: string }, i: Interaction, run: Guil
       return { kind: "drive", action: { enter: true } };
     case "step":
       return { kind: "drive", action: { step: true } };
+    case "byhand":
+      return { kind: "drive", action: { step: true }, byHand: true };
+    case "rolled":
+      return key && typed && /^-?\d{1,6}$/.test(typed) ? { kind: "answer", key, value: Number(typed), byHand: true } : null;
     case "finalize":
       return { kind: "drive", action: { finalize: true } };
     case "tick": {
