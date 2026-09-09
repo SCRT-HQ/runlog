@@ -188,6 +188,12 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
         await deps.guilds.updateGuild(i.guild_id, at, { channelId });
         return ephemeral(channelId ? `Runs open in <#${channelId}> by default now.` : "Runs open wherever /run is used now.");
       }
+      if (which?.name === "cards") {
+        const mode = optionValue(which.options, "mode");
+        if (mode !== "follow" && mode !== "pinned") return ephemeral("The card either follows the thread or is pinned at the top.");
+        await deps.guilds.updateGuild(i.guild_id, at, { cardMode: mode === "follow" ? null : mode });
+        return ephemeral(mode === "pinned" ? "From the next run, the card stays pinned at the top of the thread and is edited in place." : "From the next run, the card follows the thread: a fresh one after every move, at the bottom.");
+      }
       // Make what the setup wants, where the bot may: a role for hosts, a
       // channel for runs. Neither permission is in the install link by
       // default, so the first answer is often the link that adds it.
@@ -230,6 +236,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
           `Plan: ${plan}.`,
           `Hosts: ${guild.hostRoleId ? `<@&${guild.hostRoleId}>` : "anyone who can manage the server"}.`,
           `Runs open ${guild.channelId ? `in <#${guild.channelId}>` : "wherever /run is used"}.`,
+          `The card ${guild.cardMode === "pinned" ? "stays pinned at the top of a run's thread" : "follows a run's thread as its last message"}.`,
           packs.length === 0 ? "Packs: none yet; the account that claimed the server adds them from its profile, under Servers." : `Packs: ${packs.map((p) => `${p.title} (${p.modes.map((m) => m.label).join(", ") || "one mode"})`).join("; ")}.`,
         ];
         return ephemeral(lines.join("\n"));
@@ -260,7 +267,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       if (!text) return ephemeral("Nothing to write.");
       const played = await play(table, run, found.pack, await seatOf(deps, who, i), { kind: "journal", text });
       if ("error" in played) return ephemeral(played.error);
-      await afterPlay(table, played, { editCard: true, postLine: false });
+      await follow(table, played, { postLine: false });
       return say(played.line ?? "Written.");
     }
   }
@@ -282,7 +289,7 @@ export async function threadHears(deps: InteractionDeps, sessionId: string): Pro
   const table = tableDeps(deps);
   if (!table) return "gone";
   const { outcome, played } = await catchUp(table, sessionId);
-  if (played) await afterPlay(table, played, { editCard: true, postLine: true });
+  if (played) await follow(table, played, { postLine: true });
   return outcome;
 }
 
@@ -290,7 +297,7 @@ export async function timerRanOut(deps: InteractionDeps, job: TimerJob): Promise
   const table = tableDeps(deps);
   if (!table) return "gone";
   const { outcome, played } = await expireTimer(table, job);
-  if (played) await afterPlay(table, played, { editCard: true, postLine: true });
+  if (played) await follow(table, played, { postLine: true });
   return outcome;
 }
 
@@ -338,7 +345,7 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
       await deps.defer(i);
       return { type: ResponseType.DeferredChannelMessage };
     }
-    const opened = await openRun(table, { guildId: i.guild_id, channelId, pack: found.pack, packTitle: found.title, modeId, ...(name ? { name } : {}), ...(players !== undefined ? { players } : {}), host: { discordId: who.id, name: i.member?.nick?.trim() || nameOf(who), sub: hostSub } });
+    const opened = await openRun(table, { guildId: i.guild_id, channelId, pack: found.pack, packTitle: found.title, modeId, ...(name ? { name } : {}), ...(players !== undefined ? { players } : {}), ...(guild.cardMode ? { cardMode: guild.cardMode } : {}), host: { discordId: who.id, name: i.member?.nick?.trim() || nameOf(who), sub: hostSub } });
     if ("error" in opened) return ephemeral(opened.error);
     const modeLabel = found.pack.modes[modeId]?.label ?? modeId;
     return say(`**${nameOf(who)}** started **${found.title} · ${modeLabel}**${name ? ` — ${name}` : ""} in <#${opened.threadId}>. Watch it live: ${opened.link}`);
@@ -358,13 +365,11 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     const events = await eventsOf(table.store, run.sessionId);
     const { state, agenda } = agendaFor(found.pack, events);
     const card = cardFor({ pack: found.pack, state, events, agenda, run, ...(run.pending ? { pending: run.pending as unknown as Pending } : {}) });
-    const posted = await table.rest.postMessage(run.threadId, card);
-    if (!posted) return ephemeral("Discord would not take the card just now; try again in a moment.");
-    if (run.cardMessageId) await table.rest.editMessage(run.threadId, run.cardMessageId, { components: [] });
-    run.cardMessageId = posted;
-    run.updatedAt = deps.now();
-    await deps.guilds.putGuildRun(run);
-    return ephemeral("Posted a fresh card; the old one has no buttons now.");
+    const before = run.cardMessageId;
+    await retire(table, run);
+    await postCard(table, run, card);
+    if (run.cardMessageId === before) return ephemeral("Discord would not take the card just now; try again in a moment.");
+    return ephemeral("Posted a fresh card at the bottom; the old one is out of the way.");
   }
   if (which?.name === "link") {
     // A fresh token each time, the way the app shares again: only a hash is kept, so the old link cannot be repeated.
@@ -378,7 +383,7 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     const actor = await seatOf(deps, who, i);
     const played = await play(table, run, found.pack, actor, { kind: "end", ending: endingId });
     if ("error" in played) return ephemeral(played.error);
-    await afterPlay(table, played, { editCard: true, postLine: false });
+    await follow(table, played, { postLine: false });
     return say(played.line ?? "The run is over.");
   }
   if (which?.name === "undo") {
@@ -386,7 +391,7 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     if (run.endedAt) return ephemeral("This run has ended.");
     const played = await play(table, run, found.pack, await seatOf(deps, who, i), { kind: "undo" });
     if ("error" in played) return ephemeral(played.error);
-    await afterPlay(table, played, { editCard: true, postLine: false });
+    await follow(table, played, { postLine: false });
     return say(played.line ?? "Taken back.");
   }
   // Joining from the thread is the card's own Join, Take seat or Follow,
@@ -415,7 +420,7 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     }
     const played = await play(table, run, found.pack, actor, action);
     if ("error" in played) return ephemeral(played.error);
-    await afterPlay(table, played, { editCard: true, postLine: false });
+    await follow(table, played, { postLine: false });
     if (played.line) return say(played.line);
     if (action.kind === "seat") return ephemeral(`You have seat ${action.seat}. The card says which seat presses this ${found.pack.vocabulary.unit.one.toLowerCase()}.`);
     if (action.kind === "follow") return ephemeral("Followed: this run is in your Runlog library now, as a watcher.");
@@ -435,13 +440,49 @@ async function seatOf(deps: InteractionDeps, who: NonNullable<ReturnType<typeof 
  * thread is not closed at the end: a reply into a closed thread reopens
  * it, and Discord closes an idle one by itself.
  */
-async function afterPlay(table: TableDeps, played: { line: string | null; mark?: import("./card.js").Mark | null; run: GuildRun; ended: boolean; card: Card }, opts: { editCard: boolean; postLine: boolean }): Promise<void> {
+/**
+ * Where the card goes after a move. Following the thread (the default):
+ * the line, if any, is posted; the old card is retired (taken down where
+ * it carried nothing else, stripped to its content where it did, as the
+ * opening message carries the live link); a fresh card is posted at the
+ * bottom, where the people reading the thread already are. Pinned: the
+ * line is posted and the one card is edited in place. A press on the
+ * card itself takes a shorter road; see `pressed`.
+ */
+async function follow(table: TableDeps, played: { line: string | null; mark?: import("./card.js").Mark | null; run: GuildRun; ended: boolean; card: Card }, opts: { postLine: boolean }): Promise<void> {
   if (!table.rest) return;
-  // A mark is the same words as the line where the line is only the mark; the bar says it once.
-  const plain = (s: string) => s.replace(/\*\*/g, "");
-  const said = messageFor(played.mark && played.line && plain(played.line) === plain(played.mark.text) ? null : played.line, played.mark ?? null);
+  const said = sayingOf(played);
   if (opts.postLine && said) await table.rest.postMessage(played.run.threadId, said);
-  if (opts.editCard && played.run.cardMessageId) await table.rest.editMessage(played.run.threadId, played.run.cardMessageId, played.card);
+  if (played.run.cardMode === "pinned") {
+    if (played.run.cardMessageId) await table.rest.editMessage(played.run.threadId, played.run.cardMessageId, played.card);
+    return;
+  }
+  await retire(table, played.run);
+  await postCard(table, played.run, played.card);
+}
+
+/** What a move says in the thread, as one message: the line, and the bar; nothing where it was only the bar's words. */
+function sayingOf(played: { line: string | null; mark?: import("./card.js").Mark | null }): { content?: string; embeds?: unknown[] } | null {
+  const plain = (s: string) => s.replace(/\*\*/g, "");
+  return messageFor(played.mark && played.line && plain(played.line) === plain(played.mark.text) ? null : played.line, played.mark ?? null);
+}
+
+/** The old card, out of the way: down if it was only the card, otherwise left with what else it said. */
+async function retire(table: TableDeps, run: GuildRun): Promise<void> {
+  if (!table.rest || !run.cardMessageId) return;
+  if (run.cardBare) await table.rest.deleteMessage(run.threadId, run.cardMessageId);
+  else await table.rest.editMessage(run.threadId, run.cardMessageId, { embeds: [], components: [] });
+}
+
+/** A fresh card at the bottom, recorded as the one the buttons are on. */
+async function postCard(table: TableDeps, run: GuildRun, card: Card): Promise<void> {
+  if (!table.rest) return;
+  const posted = await table.rest.postMessage(run.threadId, card);
+  if (!posted) return;
+  run.cardMessageId = posted;
+  run.cardBare = true;
+  run.updatedAt = table.now();
+  await table.guilds.putGuildRun(run);
 }
 
 async function pressed(i: Interaction, deps: InteractionDeps): Promise<InteractionResponse> {
@@ -458,7 +499,7 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   const actor = await seatOf(deps, who, i);
   const host = who.id === run.hostDiscordId || canManage(i);
   const anyone = ["join", "leave", "react", "wave", "seat", "unseat", "follow"].includes(id.verb);
-  const hostOnly = ["end", "ending", "undo", "award"].includes(id.verb);
+  const hostOnly = ["end", "ending", "undo", "award", "cards"].includes(id.verb);
   // The host presses anything; whoever holds a seat presses the table; anyone joins, sits, waves or follows.
   if (!anyone && !host && !(mayPress(run, who.id) && !hostOnly)) {
     return ephemeral(run.seats ? `Only ${run.hostName} and whoever holds a seat press here. Take a seat, or watch by the live link.` : `Only the host, ${run.hostName}, presses here. Everyone else watches, here and by the live link.`);
@@ -493,17 +534,33 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   if (!action) return ephemeral("That press means nothing here any more; the card may be stale. /run status posts a fresh one.");
   const played = await play(table, run, pack, actor, action);
   if ("error" in played) return ephemeral(played.error);
-  // The message pressed is updated in place by the answer; the pinned
-  // card is edited too where the press was on some other message, so the
-  // two never disagree. The ending menu lives on an ephemeral message,
-  // whose reply is the line itself.
+  // The card follows the thread, unless the server pinned it. Following: a
+  // press on the card that made a move turns the pressed message into the
+  // move's line (the answer to the press, which costs no call) and posts a
+  // fresh card at the bottom; a press that made no line — a tick, a seat —
+  // updates the card in place, which keeps it the last message. Pinned:
+  // the card is updated in place and the line posted, as it always was.
+  // The ending menu lives on an ephemeral message, whose reply is the line.
   const onCard = i.message?.id === played.run.cardMessageId;
   if (id.verb === "ending") {
-    await afterPlay(table, played, { editCard: true, postLine: false });
+    await follow(table, played, { postLine: false });
     return say(played.line ?? "The run is over.");
   }
-  await afterPlay(table, played, { editCard: !onCard, postLine: true });
-  return withCard(ResponseType.UpdateMessage, played.card);
+  const said = sayingOf(played);
+  if (played.run.cardMode === "pinned") {
+    if (table.rest && said) await table.rest.postMessage(played.run.threadId, said);
+    if (!onCard && table.rest && played.run.cardMessageId) await table.rest.editMessage(played.run.threadId, played.run.cardMessageId, played.card);
+    return withCard(ResponseType.UpdateMessage, played.card);
+  }
+  if (!onCard) {
+    await follow(table, played, { postLine: true });
+    return withCard(ResponseType.UpdateMessage, played.card);
+  }
+  if (!said) return withCard(ResponseType.UpdateMessage, played.card);
+  await postCard(table, played.run, played.card);
+  // What the pressed message said stays above the line: the opening message carries the live link.
+  const kept = [i.message?.content?.trim(), said.content].filter((c): c is string => Boolean(c)).join("\n");
+  return { type: ResponseType.UpdateMessage, data: { ...(kept ? { content: kept } : {}), embeds: said.embeds ?? [], components: [] } };
 }
 
 /** Which table action a press is, or null for one the card no longer offers. */
@@ -555,6 +612,8 @@ function actionFor(id: { verb: string; arg?: string }, i: Interaction, run: Guil
       return { kind: "unseat" };
     case "follow":
       return { kind: "follow" };
+    case "cards":
+      return picked === "follow" || picked === "pinned" ? { kind: "cards", mode: picked } : null;
     case "clock": {
       if (id.arg === "start") return { kind: "startClock" };
       const m = /^(pause|resume):(.+)$/.exec(id.arg ?? "");

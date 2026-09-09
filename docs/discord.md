@@ -72,8 +72,13 @@ and joining a roster need no link at all.
 ## Hosting a run
 
 `/run start` with a pack from the vault and one of its modes, and a name
-if you like. The bot opens a thread, posts the **table card** in it,
-pins it, and posts the run's live link.
+if you like. The bot opens a thread, posts the run's live link and the
+**table card** in it, and pins that first message so the link is always
+a click away. The card itself follows the thread: every move turns the
+old card into the move's line and posts a fresh card at the bottom, so
+the buttons are always the last thing in the thread, where you are. A
+server that would rather have one card pinned at the top and edited in
+place says so with `/setup cards mode:pinned`; it holds from the next run.
 
 The card says where the run stands — the unit, the step, the
 constraints in play, the latest result, what is on the table, the

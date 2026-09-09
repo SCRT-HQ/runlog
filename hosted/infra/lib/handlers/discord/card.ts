@@ -46,7 +46,7 @@ export interface Mark {
   color: number;
 }
 
-export function cardFor(input: { pack: Pack; state: RunState; events: readonly RunEvent[]; agenda: Agenda; run: Pick<GuildRun, "sessionId" | "hostName" | "seats">; pending?: Pending }): Card {
+export function cardFor(input: { pack: Pack; state: RunState; events: readonly RunEvent[]; agenda: Agenda; run: Pick<GuildRun, "sessionId" | "hostName" | "seats" | "cardMode">; pending?: Pending }): Card {
   const { pack, state, agenda, run, pending, events } = input;
   const v = pack.vocabulary;
   const id = run.sessionId;
@@ -117,7 +117,17 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
     fields.push({ name: "At the table", value: clip(lines.join("\n")) });
   }
 
-  return { embeds: [embed], components: componentsFor(id, pack, state, agenda, run.seats, pending, seeded) };
+  const components = componentsFor(id, pack, state, agenda, run.seats, pending, seeded);
+  // The opening card, the one that stays pinned, offers where the cards after it will live; the host chooses.
+  if (state.unit === 0 && components.length < 5) {
+    components.push(
+      select(customId(id, "cards"), run.cardMode === "pinned" ? "The card: pinned at the top, edited in place" : "The card: follows the thread, a fresh one after every move", [
+        { label: "Follow the thread: a fresh card after every move, at the bottom", value: "follow" },
+        { label: "Pinned at the top: one card, edited in place", value: "pinned" },
+      ]),
+    );
+  }
+  return { embeds: [embed], components };
 }
 
 function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, seats: GuildRun["seats"], pending?: Pending, seeded = false): unknown[] {
