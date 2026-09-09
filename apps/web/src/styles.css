@@ -2748,6 +2748,15 @@ select.textInput {
  */
 .shelfLabelShort { display: none; }
 @media (max-width: 760px) {
+  /*
+   * How tall that one row is, for whatever has to sit under it: the run's
+   * own line, which sticks below the app's bar rather than at the top of
+   * the window. Padding above and below, plus the mark, which is the
+   * tallest thing on the row. Change one and change the other.
+   */
+  :root {
+    --topbar: 2.9rem;
+  }
   .topbar {
     display: flex;
     flex-wrap: nowrap;
@@ -4022,8 +4031,14 @@ html[data-pip="controls"] body { margin: 0; height: 100vh; overflow-y: auto; bac
    */
   .columns.run > .margin {
     position: sticky;
-    top: 0;
-    z-index: 15;
+    /*
+     * Under the app's bar, not over it. Both were sticking to the top of
+     * the window, and this one was the higher of the two, so scrolling
+     * slid it over the bar and the account menu opened behind it.
+     * The app's chrome is above the page it is showing.
+     */
+    top: var(--topbar);
+    z-index: 5;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto auto;
     align-items: center;
