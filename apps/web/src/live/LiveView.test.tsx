@@ -115,6 +115,43 @@ describe("the live page", () => {
     expect(untimed).toContain("Stages done");
   });
 
+  it("colors a result from a table the phase set off, and marks a hit the way the log does, in this room and the rooms before", () => {
+    const setback = { text: "A crack", table: "Setback", hit: 1 };
+    const html = renderToStaticMarkup(
+      <LiveView
+        snapshot={{
+          ...base,
+          phases: base.phases.map((p) => (p.id === "shape" ? { ...p, results: ["A wide bowl", setback, { text: "Tall vase", declared: true }] } : p)),
+          units: [{ unit: 1, phases: [{ id: "shape", label: "Shape", results: [{ text: "A chip", table: "Setback", hit: 2 }] }] }],
+        }}
+        rooms="all"
+      />,
+    );
+    expect(html).toContain('<span class="result heat chained"><span class="head">Setback - hit #1: </span>A crack</span>');
+    expect(html).toContain('<span class="result declared">Tall vase</span>');
+    expect(html).toContain('<span class="head">Setback - hit #2: </span>A chip');
+    // Plain text, as an older snapshot carries it, still reads.
+    expect(html).toContain('<span class="result">A wide bowl</span>');
+  });
+
+  it("reads the rooms from either end: the room in play first, or last, as chosen", () => {
+    const snapshot = {
+      ...base,
+      units: [
+        { unit: 1, phases: [{ id: "form", label: "Shape", results: ["A cup"] }] },
+        { unit: 2, phases: [{ id: "form", label: "Shape", results: ["A wide bowl"] }] },
+      ],
+    };
+    const newest = renderToStaticMarkup(<LiveView snapshot={snapshot} rooms="all" />);
+    expect(newest).toContain("Newest first");
+    expect(newest.indexOf('aria-current="step"')).toBeLessThan(newest.indexOf("A cup"));
+    expect(newest.indexOf("Stage</span> 2")).toBeLessThan(newest.indexOf("Stage</span> 1"));
+    const oldest = renderToStaticMarkup(<LiveView snapshot={snapshot} rooms="all" order="oldest" />);
+    expect(oldest).toContain("Oldest first");
+    expect(oldest.indexOf("A cup")).toBeLessThan(oldest.indexOf('aria-current="step"'));
+    expect(oldest.indexOf("Stage</span> 1")).toBeLessThan(oldest.indexOf("Stage</span> 2"));
+  });
+
   it("tells the run room by room when asked, in place of the log, newest first", () => {
     // The current room reads from the flow, as ever; the rooms before it from what they produced.
     const snapshot = {
