@@ -1,5 +1,5 @@
 import { createRandom, drive, answer, reduce, agenda, snapshotOf, paperOf, awardValue, canEndRun, undoableIds, DriveError, clockOfUnit, deadlineOf, liveClocks, ranOutEvents, unitClockStart, type Agenda, type DriveAction, type DriveResult, type Pending, type RunEvent, type RunState } from "@runlog/engine";
-import { loadPackText, rollDice, type Pack } from "@runlog/rules-schema";
+import { loadPackText, rollDice, tryParseDice, type Pack } from "@runlog/rules-schema";
 import { SeqConflict, type Store } from "../store.js";
 import type { GuildRun, GuildStore } from "../guilds.js";
 import type { Notify } from "../live.js";
@@ -177,8 +177,10 @@ export async function openRun(
 }
 
 export type TableAction =
-  | { kind: "drive"; action: DriveAction }
-  | { kind: "answer"; key: string; value: string | number | boolean }
+  /** `byHand`: open the step without rolling for it, so a person can type what their own dice came to. */
+  | { kind: "drive"; action: DriveAction; byHand?: boolean }
+  /** `byHand`: the value is a roll a person made with real dice, not one for the bot to throw. */
+  | { kind: "answer"; key: string; value: string | number | boolean; byHand?: boolean }
   | { kind: "join" }
   | { kind: "leave" }
   | { kind: "award"; contestant: string; outcome: number }
@@ -275,7 +277,8 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         if ("enter" in action.action && state.unit > 0 && agenda(pack, state, events).phase === "step") {
           return { error: `${pack.vocabulary.unit.one} ${state.unit} is still open; this card is stale. /run status posts a fresh one.` };
         }
-        const out = drive(pack, events, action.action, ctx);
+        if (action.byHand && seed) return { error: "A seeded run rolls from its seed; the bot throws here." };
+        const out = drive(pack, events, action.action, { ...ctx, autoRoll: !action.byHand });
         ({ produced, pending } = settle(out));
         break;
       }
@@ -283,10 +286,19 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         if (!run.pending) return { error: "Nothing is waiting for an answer." };
         const waiting = run.pending as unknown as Pending;
         // A roll the block asks for is the bot's to throw, and said so in
-        // the log; a person's choice is theirs, and is not.
+        // the log — unless a person threw real dice and typed the total,
+        // which the log says too. A person's choice is theirs either way.
         const req = waiting.request;
-        const rolled = req.kind === "roll";
-        const value = req.kind === "roll" ? rollDice(req.dice, createRandom()).total : action.value;
+        if (req.kind === "roll" && action.byHand) {
+          if (seed) return { error: "A seeded run rolls from its seed; the bot throws here." };
+          const range = tryParseDice(req.dice);
+          const v = action.value;
+          if (typeof v !== "number" || !Number.isInteger(v) || (range && (v < range.min || v > range.max))) {
+            return { error: `That is not a ${req.dice} result${range ? ` (${range.min} to ${range.max})` : ""}.` };
+          }
+        }
+        const rolled = req.kind === "roll" && !action.byHand;
+        const value = rolled ? rollDice(req.dice, createRandom()).total : action.value;
         const out = answer(pack, events, waiting, action.key, value, { ...ctx, autoRoll: rolled });
         ({ produced, pending } = settle(out));
         break;

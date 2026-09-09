@@ -73,7 +73,10 @@ constraints in play, the latest result, what is on the table, the
 clocks — and carries the one press that is due:
 
 - **Begin** / **Next** the unit.
-- **Roll** on a table: the bot throws the dice and says what landed.
+- **Roll** on a table: the bot throws the dice and says what landed. Or
+  **Roll it yourself**: the step opens and asks for the total your own
+  dice came to, and the log says a person rolled it. Not in a seeded
+  mode, which rolls from its seed.
 - A checklist's boxes, then **Done**.
 - **Declare** what you are making, typed into a small form, with the
   constraint the dice drew shown as a hint.

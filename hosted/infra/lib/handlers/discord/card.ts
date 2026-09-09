@@ -47,9 +47,11 @@ export interface Mark {
 }
 
 export function cardFor(input: { pack: Pack; state: RunState; events: readonly RunEvent[]; agenda: Agenda; run: Pick<GuildRun, "sessionId" | "hostName" | "seats">; pending?: Pending }): Card {
-  const { pack, state, agenda, run, pending } = input;
+  const { pack, state, agenda, run, pending, events } = input;
   const v = pack.vocabulary;
   const id = run.sessionId;
+  // A seeded run rolls from its seed; nobody's own dice belong in it.
+  const seeded = events[0]?.t === "RunStarted" && typeof events[0].seed === "string";
   const mode = pack.modes[state.mode];
   const moderated = Boolean(moderation(pack, state));
   const ending = state.ending ? (pack.endings?.find((e) => e.id === state.ending)?.label ?? state.ending) : null;
@@ -112,10 +114,10 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
     fields.push({ name: "At the table", value: clip(lines.join("\n")) });
   }
 
-  return { embeds: [embed], components: componentsFor(id, pack, state, agenda, run.seats, pending) };
+  return { embeds: [embed], components: componentsFor(id, pack, state, agenda, run.seats, pending, seeded) };
 }
 
-function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, seats: GuildRun["seats"], pending?: Pending): unknown[] {
+function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, seats: GuildRun["seats"], pending?: Pending, seeded = false): unknown[] {
   const rows: unknown[] = [];
   const v = pack.vocabulary;
   if (state.status === "ended") return rows;
@@ -134,7 +136,7 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
       if (options.length === 0) rows.push(row(button(customId(id, "none"), `Nothing to choose for: ${label}`.slice(0, 80), ButtonStyle.Secondary, true), button(customId(id, "undo"), "Undo")));
       else rows.push(select(customId(id, "target"), label, options));
     };
-    if (r.kind === "roll") rows.push(row(button(customId(id, "roll"), `Roll ${r.dice}`, ButtonStyle.Primary)));
+    if (r.kind === "roll") rows.push(row(button(customId(id, "roll"), `Roll ${r.dice}`, ButtonStyle.Primary), ...(seeded ? [] : [button(customId(id, "typeroll"), `Enter ${r.dice}…`)])));
     else if (r.kind === "ask" || (r.kind === "prompt" && r.promptKind === "confirm")) rows.push(row(button(customId(id, "yes"), "Yes", ButtonStyle.Success), button(customId(id, "no"), "No", ButtonStyle.Danger)));
     else if (r.kind === "chooseTarget") choose(r.label, subjects(r.eligible, false));
     else if (r.kind === "prompt" && r.promptKind === "chooseSubject") choose(r.label, subjects(null, r.eligibleOnly === true));
@@ -157,7 +159,11 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
     main.push(button(customId(id, "enter"), `${state.unit === 0 ? "Begin" : "Next"} ${v.unit.one.toLowerCase()}`, ButtonStyle.Primary));
   } else if (agenda.active) {
     const step = agenda.active.step;
-    if (step.kind === "rollTable") main.push(button(customId(id, "step"), `Roll: ${pack.tables[step.table]?.title ?? step.table}`, ButtonStyle.Primary));
+    if (step.kind === "rollTable") {
+      main.push(button(customId(id, "step"), `Roll: ${pack.tables[step.table]?.title ?? step.table}`, ButtonStyle.Primary));
+      // Or throw real dice: the step opens, asks for the total, and the log says a person rolled it.
+      if (!seeded) main.push(button(customId(id, "byhand"), "Roll it yourself"));
+    }
     else if (step.kind === "declareSubject") main.push(button(customId(id, "declare"), `Declare the ${v.subject.one.toLowerCase()}…`, ButtonStyle.Primary));
     else if (step.kind === "finalizeUnit") main.push(button(customId(id, "finalize"), `Close the ${v.unit.one.toLowerCase()}`, ButtonStyle.Primary, !ticked || !agenda.canFinalize));
     else main.push(button(customId(id, "step"), step.kind === "manual" ? "Done" : "Continue", ButtonStyle.Primary, !ticked));
@@ -213,7 +219,7 @@ export function lineFor(pack: Pack, before: RunState, after: RunState, produced:
   const marks: Mark[] = [];
   const unit = pack.vocabulary.unit.one;
   for (const e of produced) {
-    if (e.t === "Rolled") parts.push(`🎲 ${e.dice} → **${e.total}**`);
+    if (e.t === "Rolled") parts.push(`🎲 ${e.dice} → **${e.total}**${e.source === "physical" ? " (by hand)" : ""}`);
     if (e.t === "UnitEntered") marks.push({ text: `**${unit} ${after.unit}** begins.`, color: COLORS.begins });
     if (e.t === "SubjectDeclared") parts.push(`**Declared** ${e.subjectType}`);
     if (e.t === "UnitFinalized") marks.push({ text: `**${unit} ${before.unit}** closed.`, color: COLORS.closed });
