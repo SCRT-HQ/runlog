@@ -56,9 +56,14 @@ export function Checklist({
       {points.map((point, i) => {
         const shown: Shown[] = evidence[i] ?? [];
         if (point.shows && shown.length === 0) return null;
+        // What is already in front of the player as a rule is not listed
+        // again under a box; a point with nothing left to list has nothing
+        // to ask, and the rule it stands for is doing the asking.
+        const listed = shown.filter((s) => !settling?.hidden?.(s));
+        if (point.shows && listed.length === 0) return null;
         // A row the game settles is not offered as a box to tick, and
         // ticking the point over it does not reach down to it.
-        const mine = shown.filter((s) => !settling?.owing(s) && !settling?.settled(s));
+        const mine = listed.filter((s) => !settling?.owing(s) && !settling?.settled(s));
         const childKeys = mine.map((s) => `${i}:${s.key}`);
         const made = pointMade(i, shown, ticked, point, settling);
         const toggle = (keys: string[], on: boolean) => onToggle(keys.filter((k) => ticked.has(k) !== on), on, point.tally);
@@ -68,7 +73,7 @@ export function Checklist({
               <input
                 type="checkbox"
                 checked={made}
-                disabled={shown.length > 0 && childKeys.length === 0}
+                disabled={listed.length > 0 && childKeys.length === 0}
                 onChange={(e) => toggle(shown.length > 0 ? childKeys : [`${i}`], e.target.checked)}
               />
               <span>
@@ -76,9 +81,9 @@ export function Checklist({
                 {point.optional && <span className="chip skip">optional</span>}
               </span>
             </label>
-            {shown.length > 0 && (
+            {listed.length > 0 && (
               <ul className="evidence">
-                {shown.map((s) => {
+                {listed.map((s) => {
                   const key = `${i}:${s.key}`;
                   const theirs = Boolean(settling?.owing(s) || settling?.settled(s));
                   return (

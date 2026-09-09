@@ -411,7 +411,16 @@ export function RunView({
               has given up the room for it, and the line that says where you
               are is where it belongs. The wide screen says it in the run's
               own bar and hides this. */}
-          <span className="stagePack">{pack.title}</span>
+          {/*
+            Which run this is, where a phone has room for one name. A run
+            somebody named is named to tell it from their others, so the
+            name they chose beats the pack's title, which they picked on
+            the way in and which the Rules button leads back to. An
+            unnamed run says the pack, as it always did.
+          */}
+          <span className="stagePack" title={state.name ? `${state.name}, a ${pack.vocabulary.run.one.toLowerCase()} of ${pack.title}` : pack.title}>
+            {state.name?.trim() || pack.title}
+          </span>
           {/*
             On a phone the run's own bar, the name, the seed, undo, settings
             and the way out, is not worth the four rows it costs above the
@@ -1232,12 +1241,16 @@ function ClosingStep({
   // A result the pack hung a trigger on is honoured by the trigger running.
   // The confirmation shows it, and does not ask for a promise about it.
   const owed = owedOn(state);
+  const constraints = step.kind === "manual" ? constraintLines(pack, state, step.constrainedBy) : [];
+  // A result this step is already held to is shown as a rule, with the move
+  // on it; the confirmation neither lists it again nor asks about it.
+  const asRules = new Set(constraints.map((line) => `${line.table}/${line.entryId}`));
   const settling = {
-    owing: (shownRow: { table: string; entryId: string }) => stillOwed(owed, shownRow),
-    settled: (shownRow: { table: string; entryId: string }) => settledOn(owed, shownRow),
+    owing: (row: { table: string; entryId: string }) => stillOwed(owed, row),
+    settled: (row: { table: string; entryId: string }) => settledOn(owed, row),
+    hidden: (row: { table: string; entryId: string }) => asRules.has(`${row.table}/${row.entryId}`),
   };
   const allTicked = checklistDone(points, pack, state, ticked, settling);
-  const constraints = step.kind === "manual" ? constraintLines(pack, state, step.constrainedBy) : [];
   const unit = v.unit.one.toLowerCase();
   const label = (step.kind === "manual" || step.kind === "finalizeUnit" ? step.label : undefined) ?? v.finalize;
   return (
