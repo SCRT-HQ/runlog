@@ -29,7 +29,7 @@ const base: LiveSnapshot = {
   counters: [],
   resources: [],
   clocks: [],
-  progress: { unitsDone: 1, elapsedMs: 90_000 },
+  progress: { unitsDone: 1, elapsedMs: 90_000, timed: true },
   score: { label: "Stages closed", text: "1 stage", value: 1, better: "higher" },
   forcedUnits: 0,
   log: [{ n: 3, unit: 2, where: "Stage 2, Form", hit: null, text: "A wide bowl" }],
@@ -55,7 +55,7 @@ describe("the ticker's lines", () => {
       unit: 3,
       status: "ended" as const,
       ending: "The Shelf",
-      progress: { unitsDone: 2, elapsedMs: 100_000 },
+      progress: { unitsDone: 2, elapsedMs: 100_000, timed: true },
       standings: [{ name: "Mira", points: 7, place: 1, states: [] }],
       clocks: [{ ...prev.clocks[0]!, status: "done" as const, expired: true }],
     };
