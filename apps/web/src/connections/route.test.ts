@@ -8,6 +8,11 @@ describe("a link address from somewhere else of the person's", () => {
     expect(linkFromHash("#link/discord?c=%20ghjklm%20")).toEqual({ kind: "discord", code: "ghjklm" });
     expect(linkFromHash("#link/discord")).toBeNull();
     expect(linkFromHash("#link/discord?c=")).toBeNull();
+    // A verification for linked roles: asked for by Discord, or coming back either way.
+    expect(linkFromHash("#link/discord?verify=1")).toEqual({ kind: "verify", result: "asked" });
+    expect(linkFromHash("#link/discord?verified=1")).toEqual({ kind: "verify", result: "done" });
+    expect(linkFromHash("#link/discord?verified=0")).toEqual({ kind: "verify", result: "failed" });
+    expect(linkFromHash("#link/guild?verify=1")).toBeNull();
     expect(linkFromHash("#link/twitch?c=ABCDEF")).toBeNull();
     expect(linkFromHash("#run/r?t=tok")).toBeNull();
   });

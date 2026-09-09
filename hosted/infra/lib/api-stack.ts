@@ -161,6 +161,7 @@ export class ApiStack extends Stack {
     const stripeConnectWebhookSecret = secret("StripeConnectWebhookSecret", "stripe/connect-webhook-secret", "Signing secret of the Stripe Connect webhook endpoint that points at /api/stripe/connect-webhook");
     const workosApiKey = secret("WorkosApiKey", "workos/api-key", "WorkOS API key for the environment, used to create publisher organisations");
     const discordBotToken = secret("DiscordBotToken", "discord/bot-token", "The Runlog Discord application's bot token, for posting into servers that installed it");
+    const discordClientSecret = secret("DiscordClientSecret", "discord/client-secret", "The Runlog Discord application's OAuth2 client secret, for verifying a linked account for a server's linked roles");
 
     /** What both the API handler and the bot's job function are told; the two run the same code. */
     /**
@@ -198,6 +199,7 @@ export class ApiStack extends Stack {
       STRIPE_PRICES: JSON.stringify(config.stripe.prices),
       STRIPE_FEATURES: JSON.stringify(config.stripe.features),
       DISCORD_BOT_TOKEN_SECRET: secretName("discord/bot-token"),
+      DISCORD_CLIENT_SECRET_SECRET: secretName("discord/client-secret"),
       ...(config.discord ? { DISCORD_APPLICATION_ID: config.discord.applicationId, DISCORD_PUBLIC_KEY: config.discord.publicKey, DISCORD_OPEN: config.discord.open ? "on" : "off" } : {}),
       ...(config.discord?.serverSku ? { DISCORD_SERVER_SKU: config.discord.serverSku } : {}),
       // A client the X-Ray SDK captured should fail into "not traced"
@@ -286,7 +288,7 @@ export class ApiStack extends Stack {
     handler.addEnvironment("DISCORD_JOB_FUNCTION", job.functionName);
     this.table.grantReadWriteData(handler);
     this.bucket.grantReadWrite(handler);
-    for (const s of [stripeSecretKey, stripeWebhookSecret, stripeConnectWebhookSecret, workosApiKey, discordBotToken]) {
+    for (const s of [stripeSecretKey, stripeWebhookSecret, stripeConnectWebhookSecret, workosApiKey, discordBotToken, discordClientSecret]) {
       s.grantRead(handler);
       s.grantRead(job);
     }

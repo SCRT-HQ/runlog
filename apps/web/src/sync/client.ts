@@ -345,6 +345,8 @@ export interface Connections {
   /** Whether this copy has a bot to link with at all. */
   available: boolean;
   discord: DiscordConnection | null;
+  /** Whether a verification for a server's linked roles can be offered: the bot's OAuth side is set up. */
+  verify?: boolean;
 }
 
 /** A Discord server this account claimed: the bot plays there on the packs in its vault. */
@@ -381,6 +383,8 @@ export interface Api {
   /** Hand in the code `/link` minted in Discord; the Discord account it was minted for is then this one's. */
   linkDiscord(code: string): Promise<DiscordConnection>;
   unlinkDiscord(): Promise<void>;
+  /** Begin verifying this account for a server's linked roles: the address at Discord to send the person to. */
+  discordVerifyUrl(): Promise<string>;
   /** Hand in the code `/setup claim` minted; the server is then this account's. `upgrade` says the server plan is wanted and not held. */
   claimGuild(code: string): Promise<{ guild: Guild; plan: string; upgrade: boolean }>;
   /** The servers this account claimed, whether it holds the server plan (always true where plans are open), and whether the plan is on sale. */
@@ -802,6 +806,11 @@ export function createApi(
     },
     unlinkDiscord: async () => {
       await request("DELETE", "/connections/discord");
+    },
+    discordVerifyUrl: async () => {
+      const { body } = await request<{ available?: boolean; url?: string }>("POST", "/connections/discord/verify");
+      if (!body.url) throw new SyncError("error", undefined, "this copy of Runlog cannot verify with Discord");
+      return body.url;
     },
     claimGuild: async (code) => {
       const { status, body } = await request<{ claimed?: boolean; guild?: Guild; plan?: string; upgrade?: boolean; error?: string }>("POST", "/guilds/claim", { code });

@@ -223,6 +223,7 @@ tells `runlog login` which client to use, so the package carries neither id.
 | `runlog/stripe/connect-webhook-secret` | Secrets Manager: the signing secret of the Connect webhook endpoint (events from connected accounts) that points at `/api/stripe/connect-webhook`. |
 | `runlog/workos/api-key` | Secrets Manager: the environment's WorkOS API key, for creating publisher organisations. |
 | `runlog/discord/bot-token` | Secrets Manager: the Runlog Discord application's bot token, for posting into servers that installed it. See [Discord](#discord). |
+| `runlog/discord/client-secret` | Secrets Manager: the application's OAuth2 client secret, for verifying a linked account for a server's linked roles. Unfilled, no verification is offered. |
 
 The secrets are defined here and filled out of band. A deploy creates each
 with a random placeholder, and the handler treats a value that does not look
@@ -454,6 +455,19 @@ dice itself and the log says so; the pack's text never leaves
 `play.ts`. Only the host presses, except to join or leave a moderated
 run's roster. This is the one place the hosting reduces a pack, on
 purpose, and it is confined to `lib/handlers/discord/`.
+
+Linked roles are the one place the hosting speaks Discord's OAuth. A
+server may make a role depend on what Runlog says about a member; the
+setup script registers the two keys (`lib/handlers/discord/linked-roles.ts`),
+and a verification writes the values: `POST /api/connections/discord/verify`
+(signed in) stores a ten-minute state naming the account and answers
+Discord's authorize address for `identify role_connections.write`; the
+public `GET /api/discord/linked-role/callback` takes the state back,
+trades the code for the person's own token with the client secret, asks
+who they are, links the account to that Discord account if it was not,
+and writes the connection through their token, never the bot's. Discord's
+own "Verify" button lands on `GET /api/discord/linked-role`, which sends
+the person into the app to begin signed in.
 
 The plan gate (`serverPlanOf` in `interactions.ts`) is satisfied by the
 claiming account's grant — bought through Stripe, or the `server` flag —
