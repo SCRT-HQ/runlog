@@ -438,9 +438,7 @@ sees the Servers page, may claim a server and fill its vault, and the
 one way onto the plan is the WorkOS feature flag named `server`, per
 person, set on the people trying it: a flag named like a Stripe feature
 is that feature, the way a `plus` flag comps Plus, so a flagged account
-is subscribed as far as the API and the bot can tell. `discord.open` in
-the stage's configuration is read no more, and goes when the stage files
-drop it.
+is subscribed as far as the API and the bot can tell. The stage's configuration says nothing about it.
 
 The owner puts packs in the server's **vault** from their profile:
 `PUT /api/guilds/{id}/packs/{packId}` takes the pack's text and a summary
