@@ -11,7 +11,7 @@ import { dynamoGuilds, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
 import { handleInteraction, kindOf, threadHears, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
 import type { TimerJob } from "./discord/play.js";
 import { scheduledTimers } from "./discord/timers.js";
-import { discordRest, guildNameFrom, PATIENT_ROPE_MS, ROPE_MS, type DiscordRest } from "./discord/rest.js";
+import { discordRest, guildNameFrom, PATIENT_ROPE_MS, ROPE_MS, type DiscordRest, guildEntitledFrom } from "./discord/rest.js";
 import { ulid } from "./ids.js";
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { isInteraction, type Interaction } from "./discord/types.js";
@@ -229,6 +229,8 @@ export interface Deps {
     open?: boolean;
     /** Discord itself, for the thread and the messages of a hosted run; null until the token is filled. Patient, with a longer rope, for the job. */
     rest?: (patient?: boolean) => Promise<DiscordRest | null>;
+    /** Whether a server holds the plan through Discord's own store; absent where no SKU is sold there. */
+    entitled?: (guildId: string) => Promise<boolean>;
   };
   /**
    * Somebody to come back when a timer at a Discord table runs out: a
@@ -325,6 +327,7 @@ async function interactionDepsFor(deps: Deps, now: () => string, patient = false
     ...(deps.code ? { code: deps.code } : {}),
     ...(deps.defer ? { defer: deps.defer } : {}),
     ...(deps.schedule ? { schedule: deps.schedule } : {}),
+    ...(deps.discord?.entitled ? { guildEntitled: deps.discord.entitled } : {}),
   };
 }
 
@@ -1033,7 +1036,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       return json(200, { claimed: true, guild, plan: serverFeature, upgrade });
     }
     if (path === "/api/guilds" && method === "GET") {
-      return json(200, { guilds: await guilds.guildsOf(caller.sub), server: await hasServerPlan(), plan: serverFeature, open: serversOpen });
+      // A server whose members bought the plan through Discord's store says so, per server.
+      const mine = await guilds.guildsOf(caller.sub);
+      const entitled = deps.discord?.entitled;
+      const listed = entitled ? await Promise.all(mine.map(async (g) => ((await entitled(g.guildId)) ? { ...g, discord: true } : g))) : mine;
+      return json(200, { guilds: listed, server: await hasServerPlan(), plan: serverFeature, open: serversOpen });
     }
     const one = path.match(/^\/api\/guilds\/([^/]+)$/);
     if (one && method === "DELETE") {
@@ -2013,6 +2020,14 @@ function depsFromEnv(): Deps {
                   const t = await token();
                   return t ? discordRest(t, fetch, patient ? PATIENT_ROPE_MS : ROPE_MS) : null;
                 },
+                ...(process.env["DISCORD_SERVER_SKU"]
+                  ? {
+                      entitled: async (guildId: string) => {
+                        const t = await token();
+                        return t ? guildEntitledFrom(t, process.env["DISCORD_APPLICATION_ID"] ?? "", guildId, process.env["DISCORD_SERVER_SKU"] ?? "", fetch) : false;
+                      },
+                    }
+                  : {}),
               },
             };
           })()

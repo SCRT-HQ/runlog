@@ -2058,6 +2058,24 @@ describe("a run hosted in discord", () => {
     expect(late.bot.posts.some((p) => p.message.content?.startsWith("\u23f0 The Firing ran out."))).toBe(true);
   });
 
+  it("lets a server whose members bought the plan through Discord's store host runs, and tells the profile which servers did", async () => {
+    const { guilds, d } = await table();
+    await guilds.claimGuild({ guildId: "g2", name: "Another Room", ownerSub: "user_1", claimedAt: "2026-09-06T12:00:00.000Z" });
+    const gated: Deps = { ...d, gates: true, discord: { ...d.discord!, entitled: async (g) => g === "g1" } };
+    // The account holds no grant; the server's own subscription carries it.
+    const start = command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] });
+    expect(content(await call(signed(start), gated))).toContain("started");
+    const elsewhere = { ...start, guild_id: "g2" };
+    expect(content(await call(signed(elsewhere), gated))).toContain("subscribes through Discord's store");
+    // The profile's list says which server bought it there.
+    const listed = (await call(request("GET", "/api/guilds"), gated)).body["guilds"] as Array<{ guildId: string; discord?: boolean }>;
+    expect(listed.find((g) => g.guildId === "g1")?.discord).toBe(true);
+    expect(listed.find((g) => g.guildId === "g2")?.discord).toBeUndefined();
+    // Without a store to ask, nothing is claimed either way.
+    const plain = (await call(request("GET", "/api/guilds"), { ...gated, discord: d.discord })).body["guilds"] as Array<{ discord?: boolean }>;
+    expect(plain.every((g) => g.discord === undefined)).toBe(true);
+  });
+
   it("hears in the thread what the host does from the app: the lines, a fresh card, and the end", async () => {
     const { guilds, bot, d } = await table();
     const moved: Array<{ sessionId: string; seq: number }> = [];

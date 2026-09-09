@@ -352,6 +352,8 @@ export interface Guild {
   guildId: string;
   /** What Discord calls it, where the bot could ask. */
   name?: string;
+  /** The server's members bought the plan through Discord's own store; the server holds it without this account subscribing. */
+  discord?: boolean;
   ownerSub: string;
   claimedAt: string;
   updatedAt: string;
