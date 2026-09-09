@@ -156,6 +156,7 @@ export async function openRun(
     threadId,
     contestants: {},
     ...(seatsWanted > 1 ? { seats: { "1": { discordId: input.host.discordId, name: input.host.name } } } : {}),
+    seenSeq: created.meta.seq,
     createdAt: at,
     updatedAt: at,
   };
@@ -191,9 +192,26 @@ export type TableAction =
   | { kind: "unseat" }
   | { kind: "follow" };
 
-/** Whether this person may press the table's buttons: the host, or whoever holds a seat. */
-export function mayPress(run: GuildRun, discordId: string): boolean {
-  return run.hostDiscordId === discordId || Object.values(run.seats ?? {}).some((s) => s.discordId === discordId);
+/**
+ * Whether this person may press the table's buttons: the host, or whoever
+ * holds a seat — and, where the pack says which role acts this unit, a seat
+ * holding that role.
+ */
+export function mayPress(run: GuildRun, discordId: string, acting: number[] | null = null): boolean {
+  if (run.hostDiscordId === discordId) return true;
+  const seat = Object.entries(run.seats ?? {}).find(([, s]) => s.discordId === discordId)?.[0];
+  if (!seat) return false;
+  return acting === null || acting.includes(Number(seat));
+}
+
+/** Why a seated person may not press this unit: whose turn it is, in the pack's words. */
+export function whosePress(pack: Pack, run: GuildRun, acting: number[]): string {
+  const unit = pack.vocabulary.unit.one.toLowerCase();
+  const holders = acting.map((n) => run.seats?.[String(n)]?.name ?? null);
+  const named = holders.filter((h): h is string => h !== null);
+  if (named.length === acting.length) return `This ${unit} is ${named.join(" and ")}'s to press.`;
+  const open = acting.filter((n, i) => holders[i] === null);
+  return `Seat ${open.join(" and ")} presses this ${unit}, and it is open; take it.`;
 }
 
 /** Events that begin a player-visible move, for undoing a log written before moves were named. Mirrors the app's rule. */
@@ -414,6 +432,7 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
       throw error;
     }
     if (ended) await deps.store.updateSession(run.sessionId, at, { endedAt: at });
+    run.seenSeq = seq;
     await writeSnapshot(deps, run.sessionId, pack, after, next, seq);
     if (!line) line = lineFor(pack, state, after, stamped);
     // A timer that started or resumed has a new deadline; somebody is
@@ -459,6 +478,63 @@ export async function expireTimer(deps: TableDeps, job: TimerJob): Promise<{ out
   const played = await play(deps, run, found.pack, host, { kind: "clock", clock: clock.id, to: "expired" });
   if ("error" in played) return { outcome: "gone" };
   return { outcome: "stopped", played };
+}
+
+/**
+ * The thread hears what the app did. A host, or a seated player, who plays
+ * the same run in the app writes to its log past what the card shows.
+ * Called by the job after such a write, this posts a line for every move
+ * since the thread last heard, redraws the card, and forgets a block that
+ * was waiting on a Discord answer, since the log has moved on under it.
+ */
+export async function catchUp(deps: TableDeps, sessionId: string): Promise<{ outcome: "gone" | "quiet" | "told"; played?: Played }> {
+  const run = await deps.guilds.guildRun(sessionId);
+  if (!run || run.endedAt) return { outcome: "gone" };
+  const found = await packFor(deps.guilds, run.guildId, run.packId);
+  if (!found) return { outcome: "gone" };
+  const pack = found.pack;
+  const events = await eventsOf(deps.store, sessionId);
+  const seqOf = (e: RunEvent) => (e as { seq?: number }).seq ?? 0;
+  const seen = run.seenSeq ?? 0;
+  const fresh = events.filter((e) => seqOf(e) > seen);
+  if (fresh.length === 0) return { outcome: "quiet" };
+  // One line per move, in order, each read against the table as it stood before it.
+  const moves: RunEvent[][] = [];
+  for (const e of fresh) {
+    const last = moves[moves.length - 1];
+    const move = (e as { move?: string }).move;
+    if (last && move && (last[0] as { move?: string }).move === move) last.push(e);
+    else moves.push([e]);
+  }
+  const lines: string[] = [];
+  let sofar = events.filter((e) => seqOf(e) <= seen);
+  let ended = false;
+  for (const move of moves) {
+    const before = reduce(pack, sofar);
+    sofar = [...sofar, ...move];
+    const after = reduce(pack, sofar);
+    for (const e of move) {
+      if (e.t === "RunEnded") {
+        ended = true;
+        lines.push(`The ${pack.vocabulary.run.one.toLowerCase()} is over: ${pack.endings?.find((x) => x.id === e.ending)?.label ?? e.ending}.`);
+      }
+      if (e.t === "Undone") lines.push("Took a move back.");
+    }
+    const line = lineFor(pack, before, after, move);
+    if (line) lines.push(line);
+  }
+  const at = deps.now();
+  const state = reduce(pack, events);
+  run.seenSeq = seqOf(events[events.length - 1]!);
+  run.pending = undefined;
+  run.updatedAt = at;
+  if (ended) run.endedAt = at;
+  await deps.guilds.putGuildRun(run);
+  const card = cardFor({ pack, state, events, agenda: agenda(pack, state, events), run });
+  // A long stretch in the app is not replayed line by line; the last few, and how many came before.
+  const shown = lines.length > 6 ? [`… ${lines.length - 5} more, then:`, ...lines.slice(-5)] : lines;
+  const line = shown.length > 0 ? `From the app:\n${shown.join("\n")}`.slice(0, 1900) : null;
+  return { outcome: "told", played: { card, line, run, ended } };
 }
 
 function settle(out: DriveResult): { produced: RunEvent[]; pending?: Pending } {

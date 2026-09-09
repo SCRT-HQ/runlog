@@ -122,11 +122,11 @@ describe("the API", () => {
   });
 
   it("defines the secrets it will need, and lets only the handler read them", () => {
-    template.resourceCountIs("AWS::SecretsManager::Secret", 5);
+    template.resourceCountIs("AWS::SecretsManager::Secret", 6);
     // Bare, without an account to report to: New Relic's wrapper is absent,
     // but Lambda Insights' layer is there regardless — it needs no account.
     template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike({ Handler: "index.handler" }));
-    for (const name of ["stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret", "workos/api-key", "discord/bot-token"]) {
+    for (const name of ["stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret", "workos/api-key", "discord/bot-token", "discord/client-secret"]) {
       template.hasResourceProperties("AWS::SecretsManager::Secret", { Name: `runlog/${name}` });
     }
     template.hasResourceProperties("AWS::Lambda::Function", {
@@ -136,6 +136,7 @@ describe("the API", () => {
           STRIPE_WEBHOOK_SECRET_SECRET: "runlog/stripe/webhook-secret",
           WORKOS_API_KEY_SECRET: "runlog/workos/api-key",
           DISCORD_BOT_TOKEN_SECRET: "runlog/discord/bot-token",
+          DISCORD_CLIENT_SECRET_SECRET: "runlog/discord/client-secret",
         }),
       },
     });
@@ -155,21 +156,31 @@ describe("the API", () => {
     });
   });
 
+  it("names the store's SKU to the handler only where the stage sells the plan through Discord", () => {
+    const handlerOf = (t: Template) => Object.entries(t.findResources("AWS::Lambda::Function")).find(([id]) => id.startsWith("Handler"))![1] as { Properties: { Environment: { Variables: Record<string, unknown> } } };
+    const selling = templateFor({ discord: { applicationId: "123", publicKey: "ab".repeat(32), open: false, serverSku: "1234567890123456789" } });
+    expect(handlerOf(selling).Properties.Environment.Variables).toHaveProperty("DISCORD_SERVER_SKU", "1234567890123456789");
+    const notSelling = templateFor({ discord: { applicationId: "123", publicKey: "ab".repeat(32), open: false } });
+    expect(handlerOf(notSelling).Properties.Environment.Variables).not.toHaveProperty("DISCORD_SERVER_SKU");
+  });
+
   it("keeps a timer's deadline with a schedule that invokes the job under a role of its own, which both functions may hand over", () => {
     template.hasResourceProperties("AWS::Scheduler::ScheduleGroup", { Name: "runlog-prd-timers" });
     template.hasResourceProperties("AWS::IAM::Role", {
       AssumeRolePolicyDocument: { Statement: Match.arrayWith([Match.objectLike({ Principal: { Service: "scheduler.amazonaws.com" } })]) },
     });
-    // The job's name is fixed, so its ARN is known to both functions before either exists.
+    // The job keeps the name CDK gave it: the dashboard stack imports that name, and an export in use cannot change.
     const functions = template.findResources("AWS::Lambda::Function");
-    const job = Object.entries(functions).find(([id]) => id.startsWith("DiscordJob"))![1] as { Properties: { FunctionName: string; Environment: { Variables: Record<string, unknown> } } };
-    expect(job.Properties.FunctionName).toBe("runlog-prd-discord-job");
+    const job = Object.entries(functions).find(([id]) => id.startsWith("DiscordJob"))![1] as { Properties: { FunctionName?: string; Environment: { Variables: Record<string, unknown> } } };
+    expect(job.Properties.FunctionName).toBeUndefined();
     const handler = Object.entries(functions).find(([id]) => id.startsWith("Handler"))![1] as { Properties: { Environment: { Variables: Record<string, unknown> } } };
     for (const fn of [handler, job]) {
       expect(fn.Properties.Environment.Variables).toHaveProperty("TIMER_SCHEDULE_GROUP", "runlog-prd-timers");
       expect(fn.Properties.Environment.Variables).toHaveProperty("TIMER_ROLE_ARN");
-      expect(JSON.stringify(fn.Properties.Environment.Variables.DISCORD_JOB_ARN)).toContain(":function:runlog-prd-discord-job");
     }
+    // The handler is told the job's ARN; the job reads its own from each invocation.
+    expect(JSON.stringify(handler.Properties.Environment.Variables.DISCORD_JOB_ARN)).toContain("DiscordJob");
+    expect(job.Properties.Environment.Variables).not.toHaveProperty("DISCORD_JOB_ARN");
     template.hasResourceProperties("AWS::IAM::Policy", {
       PolicyDocument: { Statement: Match.arrayWith([Match.objectLike({ Action: Match.arrayWith(["scheduler:CreateSchedule"]) })]) },
     });
@@ -189,8 +200,8 @@ describe("the API", () => {
     templateFor({ discord: { applicationId: "123456789012345678", publicKey: "ab".repeat(32), open: true } }).hasResourceProperties("AWS::Lambda::Function", {
       Environment: { Variables: Match.objectLike({ DISCORD_OPEN: "on" }) },
     });
-    // The same five secrets either way: the token's secret exists before anyone has a bot to fill it with.
-    withBot.resourceCountIs("AWS::SecretsManager::Secret", 5);
+    // The same six secrets either way: the token's secret exists before anyone has a bot to fill it with.
+    withBot.resourceCountIs("AWS::SecretsManager::Secret", 6);
     template.hasResourceProperties("AWS::IAM::Policy", {
       PolicyDocument: {
         Statement: Match.arrayWith([
@@ -200,9 +211,9 @@ describe("the API", () => {
     });
   });
 
-  it("wraps every function in New Relic's layer where the stage names an account, and reads the key from a sixth secret", () => {
+  it("wraps every function in New Relic's layer where the stage names an account, and reads the key from a seventh secret", () => {
     const monitored = templateFor({ apm: { newRelic: { accountId: "1234567", layerVersion: 52 } } });
-    monitored.resourceCountIs("AWS::SecretsManager::Secret", 6);
+    monitored.resourceCountIs("AWS::SecretsManager::Secret", 7);
     monitored.hasResourceProperties("AWS::SecretsManager::Secret", { Name: "runlog/newrelic/license-key" });
     const wrapped = Object.values(monitored.findResources("AWS::Lambda::Function", { Properties: { Handler: "newrelic-lambda-wrapper.handler" } }));
     expect(wrapped).toHaveLength(3);

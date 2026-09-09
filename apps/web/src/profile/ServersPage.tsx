@@ -65,7 +65,7 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
 
   const claim = () =>
     run("claim", async () => {
-      if (!api || !pending) return null;
+      if (!api || !pending || pending.kind !== "guild") return null;
       const { guild, upgrade } = await api.claimGuild(pending.code);
       setKnown((k) => ({ guilds: [...(k?.guilds ?? []).filter((g) => g.guildId !== guild.guildId), guild], server: k?.server ?? !upgrade, open: k?.open ?? false }));
       clearPendingLink();
@@ -207,6 +207,7 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
                 <section key={g.guildId} className="panel">
                   <h3 className="sectionTitle">
                     {g.name ?? `Server ${g.guildId}`} <span className="muted">claimed {onDay(g.claimedAt)}</span>
+                    {g.discord && <span className="plan plan-plus">Subscribed through Discord</span>}
                   </h3>
                   {inVault.length === 0 ? (
                     <p className="muted small">Nothing in the vault yet. Add a pack from your shelf and /packs in Discord lists it.</p>

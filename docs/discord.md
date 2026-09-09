@@ -36,8 +36,19 @@ Then, in the server, someone who can manage it:
    plan is active.
 
 Hosting a run needs the server plan, **Runlog for servers**, held by the
-account that claimed the server, where plans are on. Claiming, filling
-the vault and setting up need nothing.
+account that claimed the server, where plans are on; or, where the bot's
+store page sells it, bought for the server through Discord. Claiming,
+filling the vault and setting up need nothing.
+
+## Linked roles
+
+A server can give a role only to members with a Runlog account linked.
+Taking such a role sends you through a short verification: to Runlog,
+signed in, then to Discord to say which account is yours, then back.
+That links the two if they were not, and writes the link on your Discord
+profile for the server to read. The Social page offers the same under
+"Verify for linked roles"; what it wrote is yours to remove under
+Discord's own Connections.
 
 ## Linking your account
 
@@ -96,9 +107,17 @@ start` takes a `players` count within what the mode allows, the host has
 seat one, and the card shows the seats and which role each holds this
 unit. Anyone takes an open seat with **Take seat**; whoever holds a seat
 presses the table like the host does, though only the host ends, undoes
-and awards. **Leave seat** frees it. **Follow in Runlog** puts the run in
+and awards. Where the pack marks a role as the one that acts (the demo's
+Thrower), the card says which seat presses this unit, and the other
+seats are told whose turn it is. **Leave seat** frees it. **Follow in Runlog** puts the run in
 a linked member's own library as a watcher; a linked member who takes a
 seat is a player there, and can play the same run from the app.
+
+The host, and anyone who took a seat with a linked account, can play the
+same run from the app. The thread hears each move made there a moment
+later — the lines, under "From the app", and a fresh card — and a card
+that is behind refuses a press with a note, rather than building on a
+table that moved.
 
 `/run status` in the thread posts a fresh card and takes the buttons off
 the old one. `/run link` posts a fresh live link (the old one stops

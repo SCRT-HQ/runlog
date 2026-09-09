@@ -44,7 +44,12 @@ only once it knows the key.
 
 ## 2. Tell the stage
 
-In the stage's configuration document, add:
+The stage's configuration document is one JSON object per stage: in
+CI, the `RUNLOG_ENV_CONFIG` variable on the GitHub environment that
+deploys the stage (Settings → Environments → `dev` or `prd` →
+Variables); on your own machine, `hosted/infra/env/<stage>.json`, which
+git ignores, with `env/example.json` as the template. See
+`docs/self-hosting.md`. In it, add:
 
 ```json
 "discord": {
@@ -115,9 +120,9 @@ Manage Messages is for the pin. It never closes a thread (Discord does,
 after a day idle), never reads members' messages and never manages
 people.
 
-**OAuth2** tab: nothing. The bot uses no Discord OAuth; linking a Runlog
-account to a Discord account goes the other way, through a code the bot
-mints.
+**OAuth2** tab: nothing, unless you set up linked roles (step 9). The
+bot itself uses no Discord OAuth; linking a Runlog account to a Discord
+account goes the other way, through a code the bot mints.
 
 ## 6. Register the commands
 
@@ -153,6 +158,61 @@ the script again replaces the list, so a retired command disappears.
    and watch the run move as you press.
 6. `/run end` closes the run and the thread.
 
+## 8. Selling the plan through Discord (optional)
+
+Runlog for servers is sold from the Runlog profile through Stripe. Discord
+can sell it too, from the bot's own store page, as a **guild
+subscription**: whoever buys it there puts the plan on the server, and
+the bot treats that server as holding the plan, the same as one whose
+claiming account subscribed here.
+
+1. **Monetization** in the developer portal: enable it (Discord asks for
+   a payout account and a team; the terms are theirs). Create a SKU of
+   type **Guild Subscription** named for the plan, with its price. Publish
+   it.
+2. Copy the SKU's id into the stage's configuration as
+   `discord.serverSku`, and deploy. The handler now asks Discord, per
+   press that needs the plan, whether the server holds a live entitlement
+   to that SKU, and `/setup status` says "active through Discord's store"
+   when it does. The Servers page marks such a server.
+3. Nothing else changes: the claiming account still chooses the vault,
+   and a server may hold the plan both ways. Without `serverSku`, the
+   store is never asked.
+
+Discord takes its cut on that sale and handles the refunds; Stripe never
+sees it. The one grant this does not give is the account-side one: a
+server bought through Discord does not put the plan on the claiming
+account's other servers.
+
+## 9. Linked roles (optional)
+
+A server can make a role depend on a member having a Runlog account
+linked: Discord calls these **linked roles**. The bot registers what a
+server may ask about a member (linked at all; linked at least so many
+days ago), and a verification — the member consenting once, at Discord —
+writes those values onto their Discord profile for the server to read.
+
+1. **OAuth2** tab: copy the **Client Secret** (reset it once, if you have
+   never seen it) into the secret `runlog/discord/client-secret` with
+   `Set-RunlogSecret.ps1`. Add a redirect:
+   `https://<domain>/api/discord/linked-role/callback`.
+2. **General Information**: set **Linked Roles Verification URL** to
+   `https://<domain>/api/discord/linked-role`.
+3. Run the setup script (step 6) again; it registers the two metadata
+   keys alongside the commands and prints both addresses above.
+4. In a server: **Server Settings → Roles → a role → Links → Add
+   requirement → Runlog**, and choose "Runlog account linked". Members
+   who take that role are sent through the verification: to the app,
+   signed in, then to Discord to consent, then back. The Social page
+   also offers "Verify for linked roles" to anyone already linked, and
+   "Link with Discord" to anyone not yet linked, which links without a
+   code.
+
+Only the person can write to their own connection, so a verification is
+theirs to begin; unlinking on the Social page does not erase what was
+written, and a member removes the connection themselves under Discord's
+Connections. Without the client secret, nothing above is offered.
+
 ## When something is off
 
 - **"This copy of Runlog cannot host runs"** or **"token is not filled
@@ -182,7 +242,9 @@ the script again replaces the list, so a retired command disappears.
 | --- | --- |
 | Application id and public key | The stage's configuration, `discord.applicationId` and `discord.publicKey`; the handler's `DISCORD_APPLICATION_ID` and `DISCORD_PUBLIC_KEY` |
 | Whether the plan is on sale | `discord.open`; the handler's `DISCORD_OPEN` |
+| The store's SKU, where Discord sells the plan | `discord.serverSku`; the handler's `DISCORD_SERVER_SKU` |
 | The bot token | Secrets Manager `runlog/discord/bot-token` |
+| The OAuth2 client secret, for linked roles | Secrets Manager `runlog/discord/client-secret`; without it, no verification is offered |
 | Who has the plan meanwhile | The WorkOS feature flag `server`, per environment, on the people trying it |
 | The commands | `hosted/infra/lib/handlers/discord/commands.ts`, registered by `hosted/scripts/discord-setup.ts` |
 | The handler | `hosted/infra/lib/handlers/discord/` and the route in `api.ts` |

@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { describe, expect, it } from "vitest";
-import { finishDeferred, finishTimer, route, type Deps } from "../lib/handlers/api";
+import { finishDeferred, finishMoved, finishTimer, route, type Deps } from "../lib/handlers/api";
 import type { TimerJob } from "../lib/handlers/discord/play";
 import { SeqConflict, type ApiKey, type Claim, type Invite, type LicenseMeta, type PackMeta, type Person, type Profile, type Reaction, type SessionMember, type SessionMeta, type SessionPointer, type Store, type StoredEvent } from "../lib/handlers/store";
 import type { Race, RaceEntry, RaceMeta, RaceStore } from "../lib/handlers/races";
@@ -11,7 +11,7 @@ import type { WorkOSLike } from "../lib/handlers/workos";
 import type { ListingCard, ListingStore, Product } from "../lib/handlers/listings";
 import type { Sale, SaleStore } from "../lib/handlers/sales";
 import { open, readHeader } from "../lib/handlers/container";
-import { memoryDiscord, memoryGuilds } from "./memory-guilds";
+import { memoryDiscord, memoryGuilds, memoryOAuth } from "./memory-guilds";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -684,8 +684,11 @@ function request(
 
 async function call(event: APIGatewayProxyEventV2, d = deps()) {
   const out = await route(event, d);
-  if (typeof out === "string" || !out.body) throw new Error("expected a JSON result");
-  return { status: out.statusCode, body: JSON.parse(out.body) as Record<string, unknown> };
+  if (typeof out === "string") throw new Error("expected a result");
+  // A redirect has no body: the headers are the answer.
+  const headers = (out.headers ?? {}) as Record<string, string>;
+  if (!out.body) return { status: out.statusCode, headers, body: {} as Record<string, unknown> };
+  return { status: out.statusCode, headers, body: JSON.parse(out.body) as Record<string, unknown> };
 }
 
 const started = { t: "RunStarted", at: "2026-09-06T00:00:00Z", id: "e0", packId: "p", packVersion: "1", runId: "01RUN" };
@@ -1655,7 +1658,7 @@ describe("discord", () => {
     expect(pressed.body["data"]).toMatchObject({ flags: 64 });
     expect(String((pressed.body["data"] as Record<string, unknown>)["content"])).toContain("https://runlog.test/#link/discord?c=ABCDEF");
     // Nothing linked yet, and the code is a code: typed loosely, it still matches.
-    expect((await call(request("GET", "/api/connections"), d)).body).toEqual({ available: true, discord: null });
+    expect((await call(request("GET", "/api/connections"), d)).body).toEqual({ available: true, discord: null, verify: false });
     expect((await call(request("POST", "/api/connections/discord", { body: { code: "" } }), d)).status).toBe(422);
     const linked = await call(request("POST", "/api/connections/discord", { body: { code: " abcdef " } }), d);
     expect(linked.body).toEqual({ linked: true, discord: { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" } });
@@ -1695,6 +1698,48 @@ describe("discord", () => {
     // What was never signed was never measured.
     await call(signedRequest(ping, "1700000000", true), d);
     expect(measured).toHaveLength(5);
+  });
+
+  it("verifies a linked account for a server's linked roles: begun signed in, ended by Discord bringing the person back", async () => {
+    const guilds = memoryGuilds();
+    const oauth = memoryOAuth();
+    const d: Deps = { ...withBot(guilds), token: () => "state1", discord: { applicationId: "app", publicKey: publicHex, token: async () => null, oauth: async () => oauth } };
+    // The profile knows a verification can be offered.
+    expect((await call(request("GET", "/api/connections"), d)).body).toMatchObject({ available: true, verify: true });
+    expect((await call(request("GET", "/api/connections"), withBot(guilds))).body).toMatchObject({ verify: false });
+    // Discord's own "verify" button lands the person in the app, which asks them to begin, signed in.
+    const landing = await call(request("GET", "/api/discord/linked-role", { token: null }), d);
+    expect(landing.status).toBe(302);
+    expect(landing.headers?.["location"]).toBe("https://runlog.test/#link/discord?verify=1");
+    // Beginning: a state that names this account, and Discord's address with the two scopes.
+    const begun = await call(request("POST", "/api/connections/discord/verify"), d);
+    const url = new URL(String(begun.body["url"]));
+    expect(url.origin + url.pathname).toBe("https://discord.com/oauth2/authorize");
+    expect(url.searchParams.get("client_id")).toBe("app");
+    expect(url.searchParams.get("scope")).toBe("identify role_connections.write");
+    expect(url.searchParams.get("state")).toBe("state1");
+    expect(url.searchParams.get("redirect_uri")).toBe("https://runlog.test/api/discord/linked-role/callback");
+    // Back from Discord with a code: the account is linked to whoever consented, and Runlog's word is written on them.
+    const done = await call({ ...request("GET", "/api/discord/linked-role/callback", { token: null }), queryStringParameters: { code: "good", state: "state1" } } as APIGatewayProxyEventV2, d);
+    expect(done.status).toBe(302);
+    expect(done.headers?.["location"]).toBe("https://runlog.test/#link/discord?verified=1");
+    expect(oauth.exchanged).toEqual([{ code: "good", redirectUri: "https://runlog.test/api/discord/linked-role/callback" }]);
+    expect((await call(request("GET", "/api/connections"), d)).body).toMatchObject({ discord: { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" } });
+    expect(oauth.pushed).toEqual([{ token: "bearer-good", platformUsername: "Mira", metadata: { linked: 1, since: "2026-09-06T12:00:00.000Z" } }]);
+    // The state is spent; a stranger's state, or a bad code, ends in a failure the app can say.
+    for (const q of [{ code: "good", state: "state1" }, { code: "good", state: "nope" }, { code: "bad", state: "state1" }]) {
+      if (q.code === "bad") await guilds.putVerifyState({ state: "state1", sub: "user_1", createdAt: "2026-09-06T12:00:00.000Z", expiresAt: "2026-09-06T12:10:00.000Z" });
+      const failed = await call({ ...request("GET", "/api/discord/linked-role/callback", { token: null }), queryStringParameters: q } as APIGatewayProxyEventV2, d);
+      expect(failed.headers?.["location"]).toBe("https://runlog.test/#link/discord?verified=0");
+    }
+    expect(oauth.pushed).toHaveLength(1);
+    // Already linked to the same Discord account, a second verification keeps the first link's date.
+    await guilds.putVerifyState({ state: "state1", sub: "user_1", createdAt: "2026-09-07T12:00:00.000Z", expiresAt: "2026-09-07T12:10:00.000Z" });
+    await call({ ...request("GET", "/api/discord/linked-role/callback", { token: null }), queryStringParameters: { code: "good", state: "state1" } } as APIGatewayProxyEventV2, { ...d, now: () => "2026-09-07T12:00:00.000Z" });
+    expect(oauth.pushed[1]?.metadata).toEqual({ linked: 1, since: "2026-09-06T12:00:00.000Z" });
+    // Without a client secret, nothing is offered and the callback fails softly.
+    const unfilled: Deps = { ...d, discord: { ...d.discord!, oauth: async () => null } };
+    expect((await call(request("POST", "/api/connections/discord/verify"), unfilled)).body).toEqual({ available: false });
   });
 
   it("refuses a code past its ten minutes", async () => {
@@ -1871,21 +1916,26 @@ describe("a run hosted in discord", () => {
     const first = firstPress(card)!;
     expect(first.customId).toBe("rl:01000000000000000000000001:enter");
     expect(content(await call(signed(press(first.customId, sam)), d))).toContain("Only the host");
-    let presses = 0;
-    let closed = false;
-    while (presses < 80 && !closed) {
-      presses += 1;
-      const next = firstPress(card);
-      if (!next) break;
-      let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
-      // A modal was opened: answer it.
-      if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
-      expect(out.body["type"], `${next.customId}: ${JSON.stringify(out.body["data"])}`).toBe(7);
-      card = out.body["data"] as Record<string, unknown>;
-      closed = (await store.eventsAfter("01000000000000000000000001", 0)).filter((e) => e["t"] === "UnitFinalized").length >= 2;
-    }
-    const events = await store.eventsAfter("01000000000000000000000001", 0);
-    expect(closed, JSON.stringify({ presses, rows: card["components"], last: events.slice(-8).map((e) => `${e["t"]}${e["t"] === "StepCompleted" ? `:${e["phase"]}#${e["step"]}` : ""}`) })).toBe(true);
+    /** Press whatever the card offers until `units` stages have been closed, answering any modal with a bowl. */
+    const playUntil = async (units: number) => {
+      let presses = 0;
+      let closed = false;
+      while (presses < 80 && !closed) {
+        presses += 1;
+        const next = firstPress(card);
+        if (!next) break;
+        let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
+        // A modal was opened: answer it.
+        if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
+        expect(out.body["type"], `${next.customId}: ${JSON.stringify(out.body["data"])}`).toBe(7);
+        card = out.body["data"] as Record<string, unknown>;
+        closed = (await store.eventsAfter("01000000000000000000000001", 0)).filter((e) => e["t"] === "UnitFinalized").length >= units;
+      }
+      const events = await store.eventsAfter("01000000000000000000000001", 0);
+      expect(closed, JSON.stringify({ presses, rows: card["components"], last: events.slice(-8).map((e) => `${e["t"]}${e["t"] === "StepCompleted" ? `:${e["phase"]}#${e["step"]}` : ""}`) })).toBe(true);
+      return events;
+    };
+    const events = await playUntil(2);
     // The bot rolled, and said so: nothing physical happened at this table.
     const rolled = events.filter((e) => e["t"] === "Rolled");
     expect(rolled.length).toBeGreaterThan(0);
@@ -1912,7 +1962,14 @@ describe("a run hosted in discord", () => {
     // The old card lost its buttons, so a press on it cannot drive the table from a stale view.
     expect(bot.edits[bot.edits.length - 1]).toMatchObject({ id: "msg_2", message: { components: [] } });
     expect(content(await call(signed(command({ name: "end", type: 1 }, sam, "thread_1")), d))).toContain("Only the host");
-    const ended = await call(signed(command({ name: "end", type: 1, options: [{ name: "ending", type: 3, value: "kept" }] }, mira, "thread_1")), d);
+    const end = () => call(signed(command({ name: "end", type: 1, options: [{ name: "ending", type: 3, value: "kept" }] }, mira, "thread_1")), d);
+    let ended = await end();
+    // The dice may have queued a forced stage, which must be played out before the firing can end.
+    for (let more = 3; content(ended).includes("still queued") && more <= 5; more += 1) {
+      card = freshest.message as unknown as Record<string, unknown>;
+      await playUntil(more);
+      ended = await end();
+    }
     expect(content(ended)).toContain("The Shelf");
     // The thread stays open to talk in; Discord closes it after a day idle.
     expect(bot.archived).toEqual([]);
@@ -2046,6 +2103,66 @@ describe("a run hosted in discord", () => {
     expect(late.bot.posts.some((p) => p.message.content?.startsWith("\u23f0 The Firing ran out."))).toBe(true);
   });
 
+  it("lets a server whose members bought the plan through Discord's store host runs, and tells the profile which servers did", async () => {
+    const { guilds, d } = await table();
+    await guilds.claimGuild({ guildId: "g2", name: "Another Room", ownerSub: "user_1", claimedAt: "2026-09-06T12:00:00.000Z" });
+    const gated: Deps = { ...d, gates: true, discord: { ...d.discord!, entitled: async (g) => g === "g1" } };
+    // The account holds no grant; the server's own subscription carries it.
+    const start = command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] });
+    expect(content(await call(signed(start), gated))).toContain("started");
+    const elsewhere = { ...start, guild_id: "g2" };
+    expect(content(await call(signed(elsewhere), gated))).toContain("subscribes through Discord's store");
+    // The profile's list says which server bought it there.
+    const listed = (await call(request("GET", "/api/guilds"), gated)).body["guilds"] as Array<{ guildId: string; discord?: boolean }>;
+    expect(listed.find((g) => g.guildId === "g1")?.discord).toBe(true);
+    expect(listed.find((g) => g.guildId === "g2")?.discord).toBeUndefined();
+    // Without a store to ask, nothing is claimed either way.
+    const plain = (await call(request("GET", "/api/guilds"), { ...gated, discord: d.discord })).body["guilds"] as Array<{ discord?: boolean }>;
+    expect(plain.every((g) => g.discord === undefined)).toBe(true);
+  });
+
+  it("hears in the thread what the host does from the app: the lines, a fresh card, and the end", async () => {
+    const { guilds, bot, d } = await table();
+    const moved: Array<{ sessionId: string; seq: number }> = [];
+    const dd: Deps = { ...d, later: async (job) => void moved.push(job) };
+    const id = "01000000000000000000000001";
+    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), dd))).toContain("started");
+    expect((await guilds.guildRun(id))?.seenSeq).toBeGreaterThan(0);
+    // A press from Discord tells the job nothing: the thread heard it as it happened.
+    expect((await call(signed(press(`rl:${id}:enter`)), dd)).body["type"]).toBe(7);
+    expect(moved).toHaveLength(0);
+    const heard = (await guilds.guildRun(id))!.seenSeq!;
+    // The host, in the app, takes the move back and begins again; the route hands the run to the job.
+    const undo = await call(request("POST", `/api/sessions/${id}/events`, { body: { events: [{ t: "Undone", at: "2026-09-06T12:01:00Z", id: "app_1", move: "app_m1", ids: [] }] } }), dd);
+    expect(undo.status).toBe(200);
+    const again = await call(request("POST", `/api/sessions/${id}/events`, { body: { events: [{ t: "UnitEntered", at: "2026-09-06T12:01:30Z", id: "app_2", move: "app_m2" }] } }), dd);
+    expect(again.status).toBe(200);
+    expect(moved).toEqual([{ sessionId: id, seq: heard + 1 }, { sessionId: id, seq: heard + 2 }]);
+    // The job tells the thread once for both, redraws the card, and remembers how far it heard.
+    const posts = bot.posts.length;
+    const edits = bot.edits.length;
+    expect(await finishMoved(moved[0]!, dd)).toBe("told");
+    expect(bot.posts).toHaveLength(posts + 1);
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("From the app:");
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("Took a move back.");
+    // The undo named no ids, so the app's begin opened the next stage; the line reads the log as it is.
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toMatch(/Stage \d begins\./);
+    expect(bot.edits).toHaveLength(edits + 1);
+    expect((await guilds.guildRun(id))!.seenSeq).toBe(heard + 2);
+    // Nothing new: nothing said.
+    expect(await finishMoved(moved[1]!, dd)).toBe("quiet");
+    expect(bot.posts).toHaveLength(posts + 1);
+    // The app ends the run; the thread hears that too, and the card is done pressing.
+    expect((await call(request("POST", `/api/sessions/${id}/events`, { body: { events: [{ t: "RunEnded", at: "2026-09-06T12:02:00Z", id: "app_3", move: "app_m3", ending: "kept" }] } }), dd)).status).toBe(200);
+    expect(await finishMoved(moved[moved.length - 1]!, dd)).toBe("told");
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("The firing is over: The Shelf.");
+    expect((await guilds.guildRun(id))!.endedAt).toBeTruthy();
+    expect(content(await call(signed(press(`rl:${id}:enter`)), dd))).toContain("has ended");
+    // An ended run the app writes to again is nobody's to tell.
+    expect(await finishMoved({ sessionId: id, seq: 99 }, dd)).toBe("gone");
+    expect(moved).toHaveLength(3);
+  });
+
   it("offers a clock the pack leaves to the player, once per open unit", async () => {
     const { bot, store, d } = await table(timed(false));
     const timers: TimerJob[] = [];
@@ -2083,14 +2200,22 @@ describe("a run hosted in discord", () => {
     const table1 = first.embeds[0]!.fields.find((f) => f.name === "At the table")!.value;
     expect(table1).toContain("Seat 1: Mira");
     expect(table1).toContain("Seat 2: open");
-    expect(table1).toMatch(/Thrower|Watcher/);
-    // Nobody unseated presses the table; anyone takes an open chair, and then presses.
+    expect(table1).toContain("Seat 1: Mira · Thrower · presses this stage");
+    expect(table1).toContain("Seat 2: open · Watcher");
+    // Nobody unseated presses the table; anyone takes an open chair, and then presses — in their turn.
     expect(content(await call(signed(press(`rl:${id}:enter`, sam)), d))).toContain("whoever holds a seat");
     expect((await call(signed(press(`rl:${id}:seat:2`, sam)), d)).body["type"]).toBe(7);
     expect((await guilds.guildRun(id))!.seats?.["2"]).toEqual({ discordId: "1002", name: "Sam" });
     expect(content(await call(signed(press(`rl:${id}:seat:2`, { id: "1003", username: "kit", global_name: "Kit" })), d))).toContain("Sam");
-    expect((await call(signed(press(`rl:${id}:enter`, sam)), d)).body["type"]).toBe(7);
+    // The pack marks the Thrower as the one who acts, and this stage that is seat one: Sam, the Watcher, waits.
+    expect(content(await call(signed(press(`rl:${id}:enter`, sam)), d))).toBe("This stage is Mira's to press.");
+    expect((await call(signed(press(`rl:${id}:enter`)), d)).body["type"]).toBe(7);
     expect((await call(request("GET", `/api/public/runs/${id}/metrics?t=livetok`, { token: null }), d)).body).toMatchObject({ unit: 1 });
+    // Were the Thrower's seat open, the note would say so; and the host presses regardless of the roles.
+    const roles = await guilds.guildRun(id);
+    await guilds.putGuildRun({ ...roles!, seats: { "2": { discordId: "1002", name: "Sam" } } });
+    expect(content(await call(signed(press(`rl:${id}:step`, sam)), d))).toBe("Seat 1 presses this stage, and it is open; take it.");
+    await guilds.putGuildRun(roles!);
     // A seat is not the host: no ending, no undo, from that chair.
     expect(content(await call(signed(press(`rl:${id}:undo`, sam)), d))).toContain("whoever holds a seat");
     // Sam, unlinked, cannot follow; linked, Sam is at the session, as a viewer by following and a player by sitting.

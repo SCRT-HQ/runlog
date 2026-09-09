@@ -48,6 +48,7 @@ async function call(token: string, method: string, path: string, body: unknown, 
     if (!res.ok) return null;
     if (res.status === 204) return {};
     const parsed: unknown = await res.json();
+    if (Array.isArray(parsed)) return { items: parsed };
     return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : {};
   } catch {
     return null;
@@ -84,6 +85,94 @@ export function discordRest(token: string, fetchImpl: typeof fetch = fetch, rope
 }
 
 /** A server's name, for the profile; best effort, since a claim must not wait on Discord. */
+/**
+ * The three calls a linked-role verification makes on a person's behalf,
+ * with the token their consent minted rather than the bot's: trade the
+ * code for the token, ask who they are, and write Runlog's word about
+ * them onto their connection. See linked-roles.ts for what is written.
+ */
+export interface DiscordOAuth {
+  exchange(code: string, redirectUri: string): Promise<string | null>;
+  me(accessToken: string): Promise<{ id: string; name: string } | null>;
+  pushRoleConnection(accessToken: string, connection: { platformUsername: string; metadata: Record<string, string | number> }): Promise<boolean>;
+}
+
+export function discordOAuth(applicationId: string, clientSecret: string, fetchImpl: typeof fetch = fetch, ropeMs: number = PATIENT_ROPE_MS): DiscordOAuth {
+  const bearer = async (method: string, path: string, token: string, body?: unknown): Promise<Record<string, unknown> | null> => {
+    const rope = new AbortController();
+    const timer = setTimeout(() => rope.abort(), ropeMs);
+    try {
+      const res = await fetchImpl(`${API}${path}`, {
+        method,
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        signal: rope.signal,
+      });
+      if (!res.ok) return null;
+      if (res.status === 204) return {};
+      const parsed: unknown = await res.json();
+      return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : {};
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  return {
+    async exchange(code, redirectUri) {
+      const rope = new AbortController();
+      const timer = setTimeout(() => rope.abort(), ropeMs);
+      try {
+        const res = await fetchImpl(`${API}/oauth2/token`, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ client_id: applicationId, client_secret: clientSecret, grant_type: "authorization_code", code, redirect_uri: redirectUri }).toString(),
+          signal: rope.signal,
+        });
+        if (!res.ok) return null;
+        const parsed = (await res.json()) as { access_token?: unknown };
+        return typeof parsed.access_token === "string" && parsed.access_token ? parsed.access_token : null;
+      } catch {
+        return null;
+      } finally {
+        clearTimeout(timer);
+      }
+    },
+    async me(accessToken) {
+      const out = await bearer("GET", "/users/@me", accessToken);
+      const id = out?.["id"];
+      if (typeof id !== "string" || !/^\d{15,22}$/.test(id)) return null;
+      const global = out?.["global_name"];
+      const username = out?.["username"];
+      const name = (typeof global === "string" && global.trim()) || (typeof username === "string" && username.trim()) || id;
+      return { id, name: name.slice(0, 100) };
+    },
+    async pushRoleConnection(accessToken, connection) {
+      return (await bearer("PUT", `/users/@me/applications/${applicationId}/role-connection`, accessToken, { platform_name: "Runlog", platform_username: connection.platformUsername.slice(0, 100), metadata: connection.metadata })) !== null;
+    },
+  };
+}
+
+/**
+ * Whether a server holds a live entitlement to a SKU sold through Discord's
+ * own store: one that is not deleted and has not ended. A subscription
+ * that lapsed keeps its entitlement row with an `ends_at` in the past;
+ * Discord can also be asked to leave ended ones out, and is.
+ */
+export async function guildEntitledFrom(token: string, applicationId: string, guildId: string, skuId: string, fetchImpl: typeof fetch = fetch, nowMs = Date.now()): Promise<boolean> {
+  if (!/^\d{15,22}$/.test(guildId) || !/^\d{15,22}$/.test(skuId)) return false;
+  const out = await call(token, "GET", `/applications/${applicationId}/entitlements?guild_id=${guildId}&sku_ids=${skuId}&exclude_ended=true`, undefined, fetchImpl, ROPE_MS);
+  const rows: unknown = out && Array.isArray(out["items"]) ? out["items"] : out;
+  if (!Array.isArray(rows)) return false;
+  return rows.some((row) => {
+    if (typeof row !== "object" || row === null) return false;
+    const r = row as Record<string, unknown>;
+    if (r["deleted"] === true || r["sku_id"] !== skuId) return false;
+    const ends = typeof r["ends_at"] === "string" ? Date.parse(r["ends_at"]) : null;
+    return ends === null || Number.isNaN(ends) || ends > nowMs;
+  });
+}
+
 export async function guildNameFrom(token: string, guildId: string, fetchImpl: typeof fetch = fetch): Promise<string | null> {
   if (!/^\d{15,22}$/.test(guildId)) return null;
   const out = await call(token, "GET", `/guilds/${guildId}`, undefined, fetchImpl, ROPE_MS);

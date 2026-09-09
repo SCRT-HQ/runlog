@@ -1,4 +1,4 @@
-import { constrainedByOf, constraintsFor, type Pending } from "@runlog/engine";
+import { actingSeats, constrainedByOf, constraintsFor, type Pending } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import { newCode } from "../races.js";
 import { hashToken } from "../auth.js";
@@ -7,7 +7,7 @@ import type { Store } from "../store.js";
 import type { Notify } from "../live.js";
 import { isCommandName } from "./commands.js";
 import { customId, parseCustomId, cardFor, type Card } from "./card.js";
-import { agendaFor, eventsOf, expireTimer, mayPress, openRun, packFor, play, type Seat, type TableAction, type TableDeps, type TimerJob } from "./play.js";
+import { agendaFor, catchUp, eventsOf, expireTimer, mayPress, openRun, packFor, play, whosePress, type Seat, type TableAction, type TableDeps, type TimerJob } from "./play.js";
 import type { DiscordRest } from "./rest.js";
 import { EPHEMERAL, InteractionType, ResponseType, modal, nameOf, userOf, select, type CommandOption, type Interaction, type InteractionResponse } from "./types.js";
 
@@ -40,6 +40,8 @@ export interface InteractionDeps {
   serverFeature?: string;
   /** Whether plans gate anything on this copy. */
   gates?: boolean;
+  /** Whether a server holds the plan through Discord's own store; absent where nothing is sold there. */
+  guildEntitled?: (guildId: string) => Promise<boolean>;
   /** The sessions, for runs; absent, the bot links and sets up but hosts nothing. */
   store?: Store;
   notify?: Notify;
@@ -55,6 +57,18 @@ export interface InteractionDeps {
   defer?: (interaction: Interaction) => Promise<void>;
   /** Somebody to come back when a timer runs out; see `TableDeps.schedule`. */
   schedule?: (job: TimerJob) => Promise<void>;
+}
+
+/**
+ * How a server holds the server plan: plans are open on this copy; the
+ * account that claimed it holds the grant (bought, or flagged); the
+ * server's members bought it through Discord's store; or not at all.
+ */
+export async function serverPlanOf(deps: InteractionDeps, guild: { guildId: string; ownerSub: string }): Promise<"open" | "account" | "discord" | "none"> {
+  if (!deps.gates) return "open";
+  if (deps.grants && (await deps.grants(guild.ownerSub)).includes(deps.serverFeature ?? "server")) return "account";
+  if (deps.guildEntitled && (await deps.guildEntitled(guild.guildId))) return "discord";
+  return "none";
 }
 
 /** How long a link or claim code lasts. */
@@ -168,11 +182,15 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       if (which?.name === "status") {
         const owner = await deps.guilds.connection(guild.ownerSub);
         const packs = await deps.guilds.listGuildPacks(i.guild_id);
-        const plan = !deps.gates
-          ? "plans are open on this copy of Runlog"
-          : deps.grants && (await deps.grants(guild.ownerSub)).includes(deps.serverFeature ?? "server")
-            ? "Runlog for servers, active"
-            : "no server plan yet; the account that claimed it subscribes from its Runlog profile, under Servers";
+        const held = await serverPlanOf(deps, guild);
+        const plan =
+          held === "open"
+            ? "plans are open on this copy of Runlog"
+            : held === "account"
+              ? "Runlog for servers, active"
+              : held === "discord"
+                ? "Runlog for servers, active through Discord's store"
+                : `no server plan yet; the account that claimed it subscribes from its Runlog profile, under Servers${deps.guildEntitled ? ", or the server subscribes through Discord's store" : ""}`;
         const lines = [
           `**Runlog on ${guild.name ?? "this server"}**`,
           `Claimed by ${owner ? owner.name : "a Runlog account not linked to Discord"}.`,
@@ -226,6 +244,15 @@ function tableDeps(deps: InteractionDeps): TableDeps | null {
  * A timer's deadline came, by way of the schedule made when it started:
  * stop it and say so in the thread, on the card and to every live page.
  */
+/** The app moved a run the bot hosts: the thread hears the lines and gets a fresh card. */
+export async function threadHears(deps: InteractionDeps, sessionId: string): Promise<"gone" | "quiet" | "told"> {
+  const table = tableDeps(deps);
+  if (!table) return "gone";
+  const { outcome, played } = await catchUp(table, sessionId);
+  if (played) await afterPlay(table, played, { editCard: true, postLine: true });
+  return outcome;
+}
+
 export async function timerRanOut(deps: InteractionDeps, job: TimerJob): Promise<"gone" | "later" | "stopped"> {
   const table = tableDeps(deps);
   if (!table) return "gone";
@@ -252,8 +279,8 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     if (!mayHost(i, guild.hostRoleId)) return ephemeral(guild.hostRoleId ? `Hosting a run here takes the <@&${guild.hostRoleId}> role.` : "Hosting a run here takes someone who can manage the server, until /setup role names a role.");
     const hostSub = await deps.guilds.userForDiscord(who.id);
     if (!hostSub) return ephemeral("A host needs a Runlog account linked, so the run is theirs: run /link first, then start again.");
-    if (deps.gates && deps.grants && !(await deps.grants(guild.ownerSub)).includes(deps.serverFeature ?? "server")) {
-      return ephemeral("Hosting runs here needs the server plan, which the account that claimed this server does not have yet. It subscribes from its Runlog profile, under Servers.");
+    if ((await serverPlanOf(deps, guild)) === "none") {
+      return ephemeral(`Hosting runs here needs the server plan, which this server does not hold yet. The account that claimed it subscribes from its Runlog profile, under Servers${deps.guildEntitled ? ", or the server subscribes through Discord's store" : ""}.`);
     }
     const packId = optionValue(which.options, "pack") ?? "";
     const modeId = optionValue(which.options, "mode") ?? "";
@@ -367,6 +394,12 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   // The host presses anything; whoever holds a seat presses the table; anyone joins, sits, waves or follows.
   if (!anyone && !host && !(mayPress(run, who.id) && !hostOnly)) {
     return ephemeral(run.seats ? `Only ${run.hostName} and whoever holds a seat press here. Take a seat, or watch by the live link.` : `Only the host, ${run.hostName}, presses here. Everyone else watches, here and by the live link.`);
+  }
+  // Where the pack says which role acts this unit, a seat presses only in its turn.
+  if (!anyone && !host && run.seats) {
+    const { state } = agendaFor(pack, await eventsOf(table.store, run.sessionId));
+    const acting = actingSeats(pack, state);
+    if (acting && !mayPress(run, who.id, acting)) return ephemeral(whosePress(pack, run, acting));
   }
 
   // Two presses open a modal rather than move: the answer is typed.

@@ -249,6 +249,7 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
       throw new Error("not used here");
     },
     unlinkDiscord: async () => {},
+    discordVerifyUrl: async () => "https://discord.test/authorize",
     claimGuild: async () => {
       throw new Error("not used here");
     },

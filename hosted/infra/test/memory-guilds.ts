@@ -1,5 +1,5 @@
-import type { ClaimCode, Connection, Guild, GuildPackMeta, GuildRun, GuildStore, LinkCode } from "../lib/handlers/guilds";
-import type { DiscordMessage, DiscordRest } from "../lib/handlers/discord/rest";
+import type { ClaimCode, Connection, Guild, GuildPackMeta, GuildRun, GuildStore, LinkCode, VerifyState } from "../lib/handlers/guilds";
+import type { DiscordMessage, DiscordOAuth, DiscordRest } from "../lib/handlers/discord/rest";
 
 /** Discord, as a list of what was asked of it: threads made, messages posted, in order. */
 export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array<{ channel: string; message: DiscordMessage; id: string }>; edits: Array<{ channel: string; id: string; message: DiscordMessage }>; originals: Array<{ token: string; message: DiscordMessage }>; pins: string[]; archived: string[]; down: boolean } {
@@ -48,10 +48,33 @@ export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array
   return me;
 }
 
+/** Discord's OAuth side, for a verification: one code is good, and what was written onto the person is kept. */
+export function memoryOAuth(): DiscordOAuth & { pushed: Array<{ token: string; platformUsername: string; metadata: Record<string, string | number> }>; exchanged: Array<{ code: string; redirectUri: string }>; who: { id: string; name: string } } {
+  const me = {
+    pushed: [] as Array<{ token: string; platformUsername: string; metadata: Record<string, string | number> }>,
+    exchanged: [] as Array<{ code: string; redirectUri: string }>,
+    who: { id: "1001", name: "Mira" },
+    async exchange(code: string, redirectUri: string) {
+      me.exchanged.push({ code, redirectUri });
+      return code === "good" ? `bearer-${code}` : null;
+    },
+    async me(token: string) {
+      return token === "bearer-good" ? { ...me.who } : null;
+    },
+    async pushRoleConnection(token: string, connection: { platformUsername: string; metadata: Record<string, string | number> }) {
+      if (token !== "bearer-good") return false;
+      me.pushed.push({ token, ...connection });
+      return true;
+    },
+  };
+  return me;
+}
+
 /** Discord's rows, in Maps, with the same rules as the real one: a code is spent by being read, a link or a claim replaces on both sides, and a vault never hands its packs back. */
 export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; claims: Map<string, ClaimCode>; links: Map<string, Connection>; guilds: Map<string, Guild>; vault: Map<string, { meta: GuildPackMeta; source: string }>; runs: Map<string, GuildRun> } {
   const runs = new Map<string, GuildRun>();
   const codes = new Map<string, LinkCode>();
+  const verifying = new Map<string, VerifyState>();
   const claims = new Map<string, ClaimCode>();
   const links = new Map<string, Connection>();
   const owners = new Map<string, string>();
@@ -94,6 +117,15 @@ export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; cla
     },
     async putLinkCode(link) {
       codes.set(link.code, { ...link });
+    },
+    async putVerifyState(v) {
+      verifying.set(v.state, { ...v });
+    },
+    async takeVerifyState(state, at) {
+      const found = verifying.get(state);
+      verifying.delete(state);
+      if (!found || found.expiresAt < at) return null;
+      return { ...found };
     },
     async takeLinkCode(code, at) {
       const found = codes.get(code);

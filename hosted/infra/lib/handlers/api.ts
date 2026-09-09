@@ -8,10 +8,11 @@ import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, ty
 import { dynamoBilling, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
 import { dynamoGuilds, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
-import { handleInteraction, kindOf, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
+import { handleInteraction, kindOf, threadHears, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
 import type { TimerJob } from "./discord/play.js";
 import { scheduledTimers } from "./discord/timers.js";
-import { discordRest, guildNameFrom, PATIENT_ROPE_MS, ROPE_MS, type DiscordRest } from "./discord/rest.js";
+import { authorizeUrl, metadataFor, verifyRedirectUri, VERIFY_MINUTES } from "./discord/linked-roles.js";
+import { discordRest, guildNameFrom, PATIENT_ROPE_MS, ROPE_MS, type DiscordRest, guildEntitledFrom, discordOAuth, type DiscordOAuth } from "./discord/rest.js";
 import { ulid } from "./ids.js";
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { isInteraction, type Interaction } from "./discord/types.js";
@@ -163,6 +164,12 @@ export interface Measured {
   ok: boolean;
 }
 
+/** A run the bot hosts was written to from the app: which, and how far the log now goes. */
+export interface MovedJob {
+  sessionId: string;
+  seq: number;
+}
+
 /** The screens the beacon may name: families, never an id. Mirrors apps/web/src/hosted/beacon.ts. */
 const SCREENS = ["welcome", "library", "play", "rules", "catalog", "guide", "design", "profile", "live", "widget"] as const;
 
@@ -223,6 +230,10 @@ export interface Deps {
     open?: boolean;
     /** Discord itself, for the thread and the messages of a hosted run; null until the token is filled. Patient, with a longer rope, for the job. */
     rest?: (patient?: boolean) => Promise<DiscordRest | null>;
+    /** Whether a server holds the plan through Discord's own store; absent where no SKU is sold there. */
+    entitled?: (guildId: string) => Promise<boolean>;
+    /** Discord's OAuth side, for verifying a linked account for a server's linked roles; null until the client secret is filled. */
+    oauth?: () => Promise<DiscordOAuth | null>;
   };
   /**
    * Somebody to come back when a timer at a Discord table runs out: a
@@ -230,6 +241,12 @@ export interface Deps {
    * a timer that ran out is noticed at the next press.
    */
   schedule?: (job: TimerJob) => Promise<void>;
+  /**
+   * Tell the job function, in its own time, that the app moved a run the
+   * bot hosts, so the thread hears and the card is redrawn. Absent, the
+   * thread hears at the next press there.
+   */
+  later?: (job: MovedJob) => Promise<void>;
   /** Link codes are random by default; a test hands in its own. */
   code?: () => string;
   /** Event and run ids are ULIDs by default; a test hands in its own. */
@@ -246,6 +263,11 @@ function json(status: number, body: unknown): Result {
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
     body: JSON.stringify(body),
   };
+}
+
+/** Send the browser on: the one answer a person, rather than the app, is shown. */
+function redirect(location: string): Result {
+  return { statusCode: 302, headers: { location, "cache-control": "no-store" }, body: "" };
 }
 
 /**
@@ -313,6 +335,7 @@ async function interactionDepsFor(deps: Deps, now: () => string, patient = false
     ...(deps.code ? { code: deps.code } : {}),
     ...(deps.defer ? { defer: deps.defer } : {}),
     ...(deps.schedule ? { schedule: deps.schedule } : {}),
+    ...(deps.discord?.entitled ? { guildEntitled: deps.discord.entitled } : {}),
   };
 }
 
@@ -320,6 +343,21 @@ async function interactionDepsFor(deps: Deps, now: () => string, patient = false
  * A timer's deadline, kept by the job function: the schedule made when
  * the timer started comes back here, and the table is told it ran out.
  */
+/** The app moved a run the bot hosts; the job tells the thread. */
+export async function finishMoved(job: MovedJob, deps: Deps): Promise<"gone" | "quiet" | "told"> {
+  if (!deps.discord || !deps.guilds) return "gone";
+  const now = deps.now ?? (() => new Date().toISOString());
+  const started = Date.now();
+  let ok = false;
+  try {
+    const outcome = await threadHears(await interactionDepsFor(deps, now, true), job.sessionId);
+    ok = true;
+    return outcome;
+  } finally {
+    deps.measure?.({ kind: "job:moved", ms: Date.now() - started, ok });
+  }
+}
+
 export async function finishTimer(job: TimerJob, deps: Deps): Promise<"gone" | "later" | "stopped"> {
   if (!deps.discord || !deps.guilds) return "gone";
   const now = deps.now ?? (() => new Date().toISOString());
@@ -449,6 +487,38 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // package serves dev and production alike.
   if (method === "GET" && path === "/api/auth/cli") {
     return json(200, { clientId: deps.cliClientId ?? null, issuer: "https://api.workos.com" });
+  }
+
+  // Linked roles. A server can make a role depend on a Runlog account
+  // being linked; Discord sends the member here to verify, and the app
+  // asks them, signed in, to begin. The callback below ends what
+  // `POST /api/connections/discord/verify` began: no bearer, since it is
+  // Discord bringing the person back, and the state names who began it.
+  if (method === "GET" && path === "/api/discord/linked-role") {
+    return redirect(`${deps.appUrl ?? "/"}#link/discord?verify=1`);
+  }
+  if (method === "GET" && path === "/api/discord/linked-role/callback") {
+    const back = (ok: boolean) => redirect(`${deps.appUrl ?? "/"}#link/discord?verified=${ok ? 1 : 0}`);
+    const q = event.queryStringParameters ?? {};
+    const state = typeof q["state"] === "string" ? q["state"] : "";
+    const code = typeof q["code"] === "string" ? q["code"] : "";
+    if (!deps.discord?.oauth || !deps.guilds || !state || !code) return back(false);
+    const began = await deps.guilds.takeVerifyState(state, now());
+    if (!began) return back(false);
+    const oauth = await deps.discord.oauth();
+    if (!oauth) return back(false);
+    const token = await oauth.exchange(code, verifyRedirectUri(deps.appUrl ?? "/"));
+    if (!token) return back(false);
+    const who = await oauth.me(token);
+    if (!who) return back(false);
+    // The verification links as it goes: the person just proved which
+    // Discord account is theirs, which is all a /link code ever said.
+    const had = await deps.guilds.connection(began.sub);
+    const connection = had && had.discordUserId === who.id ? had : { discordUserId: who.id, name: who.name, linkedAt: now() };
+    if (connection !== had) await deps.guilds.connect(began.sub, connection);
+    const profile = await store.getProfile(began.sub);
+    const shown = profile?.handle?.trim() || profile?.name?.trim() || who.name;
+    return back(await oauth.pushRoleConnection(token, { platformUsername: shown, metadata: metadataFor(connection) }));
   }
 
   // Discord pressing. No bearer: Discord signs the timestamp and the raw
@@ -964,7 +1034,16 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // Discord's is kept but its user id and the name it showed.
   if (path === "/api/connections" && method === "GET") {
     const discord = deps.guilds ? await deps.guilds.connection(caller.sub) : null;
-    return json(200, { available: Boolean(deps.discord && deps.guilds), discord });
+    return json(200, { available: Boolean(deps.discord && deps.guilds), discord, verify: Boolean(deps.discord?.oauth && deps.guilds) });
+  }
+  // Begin a linked-role verification: a state that names this account,
+  // and the address at Discord where the person grants the two scopes.
+  if (path === "/api/connections/discord/verify" && method === "POST") {
+    if (!deps.discord?.oauth || !deps.guilds || !(await deps.discord.oauth())) return json(200, { available: false });
+    const state = (deps.token ?? (() => randomBytes(24).toString("base64url")))();
+    const at = now();
+    await deps.guilds.putVerifyState({ state, sub: caller.sub, createdAt: at, expiresAt: new Date(Date.parse(at) + VERIFY_MINUTES * 60_000).toISOString() });
+    return json(200, { available: true, url: authorizeUrl(deps.discord.applicationId, verifyRedirectUri(deps.appUrl ?? "/"), state) });
   }
   if (path === "/api/connections/discord") {
     if (!deps.guilds) return json(200, { available: false });
@@ -1006,7 +1085,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       return json(200, { claimed: true, guild, plan: serverFeature, upgrade });
     }
     if (path === "/api/guilds" && method === "GET") {
-      return json(200, { guilds: await guilds.guildsOf(caller.sub), server: await hasServerPlan(), plan: serverFeature, open: serversOpen });
+      // A server whose members bought the plan through Discord's store says so, per server.
+      const mine = await guilds.guildsOf(caller.sub);
+      const entitled = deps.discord?.entitled;
+      const listed = entitled ? await Promise.all(mine.map(async (g) => ((await entitled(g.guildId)) ? { ...g, discord: true } : g))) : mine;
+      return json(200, { guilds: listed, server: await hasServerPlan(), plan: serverFeature, open: serversOpen });
     }
     const one = path.match(/^\/api\/guilds\/([^/]+)$/);
     if (one && method === "DELETE") {
@@ -1804,6 +1887,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (!log) return json(422, { error: "events: a list of events with ids, at most a move's worth" });
       const { appended, seq } = await store.appendEvents(id, caller.sub, now(), log);
       await deps.notify?.(id, seq);
+      // A run the bot hosts hears of a move made here, in the job's time.
+      if (deps.later && deps.guilds) {
+        const hosted = await deps.guilds.guildRun(id);
+        if (hosted && !hosted.endedAt) await deps.later({ sessionId: id, seq });
+      }
       return json(200, { appended, seq });
     }
 
@@ -1924,7 +2012,8 @@ export function featuresFromEnv(raw: string | undefined): { plus: string; hosted
 }
 
 /** The API's dependencies, from the function's environment; made once per container. */
-function depsFromEnv(): Deps {
+function depsFromEnv(selfArn?: string): Deps {
+  const jobArn = process.env["DISCORD_JOB_ARN"] ?? selfArn;
     const clientId = process.env["WORKOS_CLIENT_ID"] ?? "";
     const cliClientId = process.env["WORKOS_CLI_CLIENT_ID"] ?? "";
     return {
@@ -1953,6 +2042,11 @@ function depsFromEnv(): Deps {
                 new InvokeCommand({ FunctionName: process.env["DISCORD_JOB_FUNCTION"], InvocationType: "Event", Payload: Buffer.from(JSON.stringify({ kind: "discord-interaction", interaction })) }),
               );
             },
+            later: async (job: MovedJob) => {
+              await (lambdaClient ??= new LambdaClient({})).send(
+                new InvokeCommand({ FunctionName: process.env["DISCORD_JOB_FUNCTION"], InvocationType: "Event", Payload: Buffer.from(JSON.stringify({ kind: "moved", ...job })) }),
+              );
+            },
           }
         : {}),
       guilds: dynamoGuilds({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
@@ -1976,6 +2070,18 @@ function depsFromEnv(): Deps {
                   const t = await token();
                   return t ? discordRest(t, fetch, patient ? PATIENT_ROPE_MS : ROPE_MS) : null;
                 },
+                oauth: async () => {
+                  const s = await secrets(process.env["DISCORD_CLIENT_SECRET_SECRET"] ?? "");
+                  return looksLike("discord-secret", s) ? discordOAuth(process.env["DISCORD_APPLICATION_ID"] ?? "", s, fetch) : null;
+                },
+                ...(process.env["DISCORD_SERVER_SKU"]
+                  ? {
+                      entitled: async (guildId: string) => {
+                        const t = await token();
+                        return t ? guildEntitledFrom(t, process.env["DISCORD_APPLICATION_ID"] ?? "", guildId, process.env["DISCORD_SERVER_SKU"] ?? "", fetch) : false;
+                      },
+                    }
+                  : {}),
               },
             };
           })()
@@ -2052,8 +2158,8 @@ function depsFromEnv(): Deps {
       // A timer's deadline is kept by EventBridge Scheduler, which invokes
       // the job function at the moment; without a group and a role to
       // invoke it, a timer that ran out waits for the next press.
-      ...(process.env["TIMER_SCHEDULE_GROUP"] && process.env["TIMER_ROLE_ARN"] && process.env["DISCORD_JOB_ARN"]
-        ? { schedule: scheduledTimers({ group: process.env["TIMER_SCHEDULE_GROUP"], roleArn: process.env["TIMER_ROLE_ARN"], jobArn: process.env["DISCORD_JOB_ARN"] }) }
+      ...(process.env["TIMER_SCHEDULE_GROUP"] && process.env["TIMER_ROLE_ARN"] && jobArn
+        ? { schedule: scheduledTimers({ group: process.env["TIMER_SCHEDULE_GROUP"], roleArn: process.env["TIMER_ROLE_ARN"], jobArn }) }
         : {}),
       mailer: sesMailer({ from: process.env["EMAIL_FROM"] ?? "", region: process.env["EMAIL_REGION"] ?? "us-west-2" }),
       appUrl: process.env["APP_URL"] ?? "/",
@@ -2077,15 +2183,20 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
  * The job function's entry: a deferred interaction, sent by the route as
  * an event, finished with the time Discord's three seconds did not allow.
  */
-export async function job(event: unknown): Promise<void> {
-  deps ??= depsFromEnv();
+export async function job(event: unknown, context?: { invokedFunctionArn?: string }): Promise<void> {
+  // The job's own ARN, for a timer's schedule it makes when a pause moved
+  // a deadline: a function's environment cannot name itself, but every
+  // invocation is told who it is.
+  deps ??= depsFromEnv(context?.invokedFunctionArn);
   try {
     if (isRecord(event) && event["kind"] === "discord-interaction" && isInteraction(event["interaction"])) {
       await finishDeferred(event["interaction"], deps);
     } else if (isRecord(event) && event["kind"] === "timer" && typeof event["sessionId"] === "string" && typeof event["clock"] === "string" && typeof event["at"] === "string") {
       await finishTimer({ sessionId: event["sessionId"], clock: event["clock"], at: event["at"] }, deps);
+    } else if (isRecord(event) && event["kind"] === "moved" && typeof event["sessionId"] === "string" && typeof event["seq"] === "number") {
+      await finishMoved({ sessionId: event["sessionId"], seq: event["seq"] }, deps);
     } else {
-      console.error("job: not a deferred interaction or a timer", event);
+      console.error("job: not a deferred interaction, a timer or a move", event);
     }
   } catch (error) {
     console.error(error);

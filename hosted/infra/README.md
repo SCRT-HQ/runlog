@@ -223,6 +223,7 @@ tells `runlog login` which client to use, so the package carries neither id.
 | `runlog/stripe/connect-webhook-secret` | Secrets Manager: the signing secret of the Connect webhook endpoint (events from connected accounts) that points at `/api/stripe/connect-webhook`. |
 | `runlog/workos/api-key` | Secrets Manager: the environment's WorkOS API key, for creating publisher organisations. |
 | `runlog/discord/bot-token` | Secrets Manager: the Runlog Discord application's bot token, for posting into servers that installed it. See [Discord](#discord). |
+| `runlog/discord/client-secret` | Secrets Manager: the application's OAuth2 client secret, for verifying a linked account for a server's linked roles. Unfilled, no verification is offered. |
 
 The secrets are defined here and filled out of band. A deploy creates each
 with a random placeholder, and the handler treats a value that does not look
@@ -455,6 +456,36 @@ dice itself and the log says so; the pack's text never leaves
 run's roster. This is the one place the hosting reduces a pack, on
 purpose, and it is confined to `lib/handlers/discord/`.
 
+Linked roles are the one place the hosting speaks Discord's OAuth. A
+server may make a role depend on what Runlog says about a member; the
+setup script registers the two keys (`lib/handlers/discord/linked-roles.ts`),
+and a verification writes the values: `POST /api/connections/discord/verify`
+(signed in) stores a ten-minute state naming the account and answers
+Discord's authorize address for `identify role_connections.write`; the
+public `GET /api/discord/linked-role/callback` takes the state back,
+trades the code for the person's own token with the client secret, asks
+who they are, links the account to that Discord account if it was not,
+and writes the connection through their token, never the bot's. Discord's
+own "Verify" button lands on `GET /api/discord/linked-role`, which sends
+the person into the app to begin signed in.
+
+The plan gate (`serverPlanOf` in `interactions.ts`) is satisfied by the
+claiming account's grant — bought through Stripe, or the `server` flag —
+or, where `discord.serverSku` names a guild-subscription SKU sold through
+Discord's own store, by a live entitlement on the server itself
+(`guildEntitledFrom` in `rest.ts`, one call per press that needs the
+plan). The Servers page marks a server held that way.
+
+The host may also play a hosted run from the app. The run row keeps
+`seenSeq`, the log's seq the thread has heard up to; the app's events
+route, after appending to a run the bot hosts, hands `{ kind: "moved",
+sessionId, seq }` to the job function, which posts one line per move
+since `seenSeq` under "From the app", redraws the card, drops a block
+that was waiting on a Discord answer (the log moved under it), marks the
+run ended if the app ended it, and moves `seenSeq` up. A press from
+Discord meanwhile is refused by `expectSeq` rather than built on a table
+that moved; the next card is fresh.
+
 A timer at a Discord table has nobody's browser ticking for it. When one
 starts or resumes, the handler makes a one-shot **EventBridge Scheduler**
 schedule for its deadline, in the stage's `runlog-<env>-timers` group,
@@ -465,9 +496,12 @@ a later schedule if a pause moved the deadline. The schedule is named
 for the run, the clock and the deadline, so the same deadline asked for
 twice is one schedule, and it deletes itself once it has run. Without a
 schedule (a copy without the group, or a schedule that never came), the
-next press stops the timer first and lands after it. The job's name is
-fixed (`runlog-<env>-discord-job`) so its ARN is in both functions'
-environment before either exists.
+next press stops the timer first and lands after it. The handler is
+told the job's ARN; the job reads its own from each invocation, since a
+function's environment cannot name itself. The job keeps the name CDK
+gave it: the dashboard stack imports that name, and CloudFormation
+refuses to change an export another stack is using, which is what a
+fixed name would do.
 
 Discord waits three seconds for an interaction's answer. A press is one
 read and one write and answers in its turn; a start is a session, a

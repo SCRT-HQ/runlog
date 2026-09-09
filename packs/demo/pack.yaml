@@ -578,7 +578,7 @@ modes:
       max: 3
       rotate: clockwise
       roles:
-        - { id: thrower, label: Thrower, description: Makes every decision this Stage. }
+        - { id: thrower, label: Thrower, description: Makes every decision this Stage., acts: true }
         - { id: watcher, label: Watcher, description: Handles the rolls and holds the Charms. }
 
 defaultMode: standard

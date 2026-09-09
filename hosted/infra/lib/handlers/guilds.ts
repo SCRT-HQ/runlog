@@ -34,6 +34,14 @@ export interface LinkCode {
   expiresAt: string;
 }
 
+/** A linked-role verification begun from the profile: who began it, until when. Spent by the callback that ends it. */
+export interface VerifyState {
+  state: string;
+  sub: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
 export interface Connection {
   discordUserId: string;
   name: string;
@@ -100,6 +108,8 @@ export interface GuildRun {
   contestants: Record<string, string>;
   /** Seat number → who sits there, in a mode played by several; a seat's holder may press. */
   seats?: Record<string, { discordId: string; name: string }>;
+  /** The log's seq the thread has heard up to: the card drawn and the lines posted. A move from the app lands past it. */
+  seenSeq?: number;
   createdAt: string;
   updatedAt: string;
   endedAt?: string;
@@ -114,6 +124,9 @@ export interface GuildStore {
   putLinkCode(link: LinkCode): Promise<void>;
   /** The code's row, and the row is gone: a code is spent by being read. Null when missing or past its time. */
   takeLinkCode(code: string, at: string): Promise<LinkCode | null>;
+  putVerifyState(state: VerifyState): Promise<void>;
+  /** The verification's row, and the row is gone. Null when missing or past its time. */
+  takeVerifyState(state: string, at: string): Promise<VerifyState | null>;
   /** Link, replacing whatever either side was linked to before. */
   connect(sub: string, connection: Connection): Promise<void>;
   connection(sub: string): Promise<Connection | null>;
@@ -153,6 +166,7 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
   const s3 = traced(new S3Client({}));
   const linkKey = (code: string) => ({ pk: `DISCORD#LINK#${code}`, sk: "LINK" });
   const claimKey = (code: string) => ({ pk: `DISCORD#CLAIM#${code}`, sk: "CLAIM" });
+  const verifyKey = (state: string) => ({ pk: `DISCORD#VERIFY#${state}`, sk: "VERIFY" });
   const userKey = (sub: string) => ({ pk: `USER#${sub}`, sk: "CONNECTION#discord" });
   const discordKey = (id: string) => ({ pk: `DISCORD#${id}`, sk: "USER" });
   const guildKey = (guildId: string) => ({ pk: `GUILD#${guildId}`, sk: "META" });
@@ -293,6 +307,17 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
       const expiresAt = str(item["expiresAtIso"]) ?? "";
       if (!expiresAt || expiresAt < at) return null;
       return { code, discordUserId: item["discordUserId"], name: str(item["name"]) ?? "", ...(str(item["guildId"]) ? { guildId: item["guildId"] as string } : {}), createdAt: str(item["createdAt"]) ?? at, expiresAt };
+    },
+    async putVerifyState(v) {
+      await ddb.send(new PutCommand({ TableName: table, Item: { ...verifyKey(v.state), kind: "discord-verify", ...v, expiresAt: toEpoch(v.expiresAt), expiresAtIso: v.expiresAt } }));
+    },
+    async takeVerifyState(state, at) {
+      const out = await ddb.send(new DeleteCommand({ TableName: table, Key: verifyKey(state), ReturnValues: "ALL_OLD" }));
+      const item = out.Attributes;
+      if (!item || typeof item["sub"] !== "string") return null;
+      const expiresAt = str(item["expiresAtIso"]) ?? "";
+      if (!expiresAt || expiresAt < at) return null;
+      return { state, sub: item["sub"], createdAt: str(item["createdAt"]) ?? at, expiresAt };
     },
     async connect(sub, c) {
       // Whatever either side pointed at before goes, so no row is left
