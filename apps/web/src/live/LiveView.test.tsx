@@ -77,27 +77,29 @@ describe("the live page", () => {
     expect(between).toContain("Stage 2 is closed; the next has not begun");
   });
 
-  it("shows a step's constraints the way the run screen does, and this stage's results so far", () => {
+  it("lights a result that holds over the step in hand where it sits under its phase, and says nothing twice", () => {
     const html = renderToStaticMarkup(
       <LiveView
         snapshot={{
           ...base,
           constraints: ["The wall must be thin enough to admit light."],
           unitResults: [{ table: "Constraint", text: "The wall must be thin enough to admit light.", hit: null }],
+          phases: [
+            { id: "constrain", label: "Constraint", state: "done", results: ["The wall must be thin enough to admit light."] },
+            { id: "work", label: "Throw", state: "current" },
+          ],
         }}
       />,
     );
-    expect(html).toContain("The game has already had its say");
-    expect(html).toContain("The wall must be thin enough to admit light.");
-    // The unit's results read under the phases that produced them, not in a block of their own.
+    expect(html).toContain('class="result constrains"');
+    expect(html.match(/The wall must be thin enough to admit light\./g)?.length).toBe(1);
+    // No block of its own, above or below the phases.
+    expect(html).not.toContain('class="notice constraints"');
     expect(html).not.toContain("This stage so far");
-    // Nothing to honor: the block does not appear.
-    const empty = renderToStaticMarkup(<LiveView snapshot={{ ...base, constraints: [], unitResults: [] }} />);
-    expect(empty).not.toContain("The game has already had its say");
     // A snapshot written before these fields existed carries neither key at all.
     const { constraints: _c, unitResults: _u, ...withoutFields } = base;
     const legacy = renderToStaticMarkup(<LiveView snapshot={withoutFields as LiveSnapshot} />);
-    expect(legacy).not.toContain("The game has already had its say");
+    expect(legacy).not.toContain("constrains");
   });
 
   it("shows what each phase produced this unit under the phase, in order", () => {

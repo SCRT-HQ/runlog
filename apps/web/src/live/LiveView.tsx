@@ -34,6 +34,9 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
     setLogLimit(n);
   };
   const lines = useMemo(() => logLines([...s.log].reverse(), order, limit).map((l) => l.outcome), [s.log, order, limit]);
+  // A result that holds over the step in hand is lit where it sits, under
+  // its phase, rather than said again in a block of its own.
+  const constrains = useMemo(() => new Set(s.constraints ?? []), [s.constraints]);
   useEffect(() => {
     before.current = s;
   }, [s]);
@@ -58,19 +61,6 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
         </p>
       )}
 
-      {(s.constraints ?? []).length > 0 && (
-        <div className="notice constraints">
-          <span className="muted small">The game has already had its say</span>
-          <ul>
-            {(s.constraints ?? []).map((line, i) => (
-              <li key={i}>
-                <strong>{line}</strong>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       <div className="liveGrid">
         <div className="liveMain">
           {(s.phases ?? []).length > 0 && (
@@ -87,7 +77,7 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
                       {phase.state === "current" && s.step && s.step !== phase.label && <span className="muted"> · {s.step}</span>}
                       {phase.state === "skipped" && phase.why && <span className="why">{phase.why}</span>}
                       {(phase.results ?? []).map((r, k) => (
-                        <span key={k} className="result">
+                        <span key={k} className={constrains.has(r) ? "result constrains" : "result"} title={constrains.has(r) ? "The game has already had its say: this holds over the step in hand" : undefined}>
                           {r}
                         </span>
                       ))}
