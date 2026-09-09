@@ -6,7 +6,9 @@ import type { StoredRun } from "../storage/db.ts";
  * One run, as a row: its name or when it began, when it was last played,
  * whose it is, and whether it is the one open on this device. The same
  * row wherever runs are listed, the library, the setup screen, so the
- * lists read alike.
+ * lists read alike. The open run is marked, not locked: from the library
+ * it is still a press away, and a row that says it is open but does
+ * nothing when pressed reads as broken.
  */
 export function RunRow({
   run: r,
@@ -33,11 +35,11 @@ export function RunRow({
   const people = r.members?.length ?? 0;
   return (
     <div className={`runRow ${open ? "open" : ""}`}>
-      <button className="runRowMain" onClick={onPick} disabled={open}>
+      <button className="runRowMain" onClick={onPick}>
         <strong>{named ?? `${vocabulary.run.one} from ${began}`}</strong>
         <span className="muted small runRowMeta">
           <span>
-            {open ? "open here" : `last played ${onDay(r.updatedAt)}`}
+            {open ? "currently open" : `last played ${onDay(r.updatedAt)}`}
             {ended && " · ended"}
             {people > 1 && ` · ${people} at the table`}
             {r.role && r.role !== "owner" && ` · you ${r.role === "viewer" ? "watch" : "play"}`}
@@ -46,11 +48,9 @@ export function RunRow({
         </span>
       </button>
       <span className="runRowActions">
-        {!open && (
-          <button className="ghost tiny" onClick={onPick}>
-            Continue
-          </button>
-        )}
+        <button className="ghost tiny" onClick={onPick}>
+          Continue
+        </button>
         {onForget && (
           <button className="ghost tiny danger" title={`Forget this ${vocabulary.run.one.toLowerCase()}`} onClick={onForget}>
             Forget
