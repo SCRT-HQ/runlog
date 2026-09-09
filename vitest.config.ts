@@ -1,10 +1,11 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
 import mdx from "@mdx-js/rollup";
+import remarkGfm from "remark-gfm";
 
 export default defineConfig({
   // The guide's pages are MDX; the app's tests render them.
-  plugins: [{ enforce: "pre", ...mdx({ jsxImportSource: "react" }) }],
+  plugins: [{ enforce: "pre", ...mdx({ jsxImportSource: "react", remarkPlugins: [remarkGfm] }) }],
   resolve: {
     alias: {
       "@runlog/rules-schema": fileURLToPath(

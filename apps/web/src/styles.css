@@ -3483,23 +3483,51 @@ select.textInput {
 .heroDocs { margin-top: 0.6rem; }
 
 /* ---- the guide ---- */
-.guide { display: grid; grid-template-columns: 16rem minmax(0, 1fr); gap: 2rem; width: min(100%, 72rem); margin: 0 auto; align-items: start; }
-.guideSide { position: sticky; top: 0.75rem; display: grid; gap: 0.6rem; }
+/* Three columns on a wide screen: the contents, the page at a reading
+   width, and the page's own sections beside it. Below about 1100px the
+   sections fold into the top of the page; below 760px everything stacks. */
+.guide { display: grid; grid-template-columns: 16rem minmax(0, 1fr) 13rem; grid-template-areas: "side page onpage"; gap: 2.5rem; width: min(100%, 86rem); margin: 0 auto; align-items: start; }
+.guideSide { grid-area: side; position: sticky; top: 0.75rem; max-height: calc(100vh - 1.5rem); overflow-y: auto; scrollbar-width: thin; display: grid; gap: 0.6rem; padding-right: 0.25rem; }
 .guideSideHead { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
 .guideSideHead h2 { margin: 0; }
-.guideToc { display: grid; gap: 0.9rem; }
+.guideToc { display: grid; gap: 1.1rem; }
+/* Parts read as chapters: a serif heading with a rule under it; the open one shows its pages with their blurbs, the others their titles alone. */
 .guidePart { display: grid; gap: 0.15rem; }
-.guidePart h3 { margin: 0 0 0.1rem 0.6rem; font-family: var(--mono); font-size: var(--t-1); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.guidePart h3 { margin: 0 0 0.35rem; padding-bottom: 0.25rem; font-size: 1.05rem; font-weight: 600; border-bottom: 1px solid var(--line); color: var(--text); }
+.guidePart:not(.open) h3 { color: var(--muted); font-weight: 500; }
 .guidePart ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; }
-.guideToc li { display: grid; gap: 0.05rem; padding: 0.4rem 0.6rem; border-left: 2px solid transparent; }
+.guideToc li { display: grid; gap: 0.05rem; padding: 0.35rem 0.6rem; border-left: 2px solid transparent; }
+.guidePart:not(.open) li { padding-top: 0.2rem; padding-bottom: 0.2rem; }
 .guideToc li.on { border-left-color: var(--accent); background: var(--panel-2); border-radius: 0 var(--radius) var(--radius) 0; }
 .guideToc a { color: var(--text); text-decoration: none; font-weight: 600; }
+.guidePart:not(.open) a { font-weight: 500; color: var(--muted); }
 .guideToc a:hover { color: var(--accent); }
-.guidePage { max-width: 68ch; min-width: 0; }
-.guidePage h1 { margin: 0 0 1rem; font-size: 2rem; line-height: 1.1; text-wrap: balance; }
-.guidePage h2 { margin: 2rem 0 0.6rem; font-size: 1.3rem; border-bottom: 1px solid var(--line); padding-bottom: 0.25rem; }
-.guidePage h3 { margin: 1.4rem 0 0.4rem; font-size: 1.05rem; }
-.guidePage p, .guidePage li { line-height: 1.55; }
+/* The open page's sections, under its title: each a link into the page. */
+.guideSections { list-style: none; margin: 0.35rem 0 0.1rem; padding: 0 0 0 0.2rem; display: grid; gap: 0.1rem; border-left: 1px solid var(--line); }
+.guideToc .guideSections li { padding: 0.15rem 0.5rem; border-left: 0; background: none; }
+.guideToc .guideSections li.sub { padding-left: 1.1rem; }
+.guideToc .guideSections a { font-weight: 400; font-size: 0.9rem; color: var(--muted); }
+.guideToc .guideSections li.on a { color: var(--text); }
+.guideToc .guideSections a:hover { color: var(--accent); }
+/* On this page: the same sections beside the page, the one in view marked. */
+.guideOnPage { grid-area: onpage; position: sticky; top: 1.25rem; display: grid; gap: 0.35rem; font-size: 0.85rem; }
+.guideOnPage h4 { margin: 0; font-family: var(--mono); font-size: var(--t-1); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.guideOnPage ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.1rem; border-left: 1px solid var(--line); }
+.guideOnPage li { padding: 0.15rem 0.7rem; margin-left: -1px; border-left: 2px solid transparent; }
+.guideOnPage li.sub { padding-left: 1.4rem; }
+.guideOnPage li.on { border-left-color: var(--accent); }
+.guideOnPage a { color: var(--muted); text-decoration: none; }
+.guideOnPage li.on a { color: var(--text); }
+.guideOnPage a:hover { color: var(--accent); }
+.guidePage { grid-area: page; max-width: 72ch; min-width: 0; }
+.guidePage h1 { margin: 0 0 1.2rem; font-size: 2.2rem; line-height: 1.1; text-wrap: balance; }
+.guidePage h2 { margin: 2.4rem 0 0.7rem; font-size: 1.35rem; border-bottom: 1px solid var(--line); padding-bottom: 0.3rem; scroll-margin-top: 1rem; }
+.guidePage h3 { margin: 1.6rem 0 0.45rem; font-size: 1.05rem; scroll-margin-top: 1rem; }
+/* A heading's anchor: there on hover, so a section can be sent to someone at the right place. */
+.guidePage h2 .anchor, .guidePage h3 .anchor { margin-left: 0.45rem; font-family: var(--mono); font-weight: 400; font-size: 0.8em; color: var(--muted); text-decoration: none; opacity: 0; transition: opacity 120ms; }
+.guidePage h2:hover .anchor, .guidePage h3:hover .anchor, .guidePage .anchor:focus-visible { opacity: 1; }
+.guidePage .anchor:hover { color: var(--accent); }
+.guidePage p, .guidePage li { line-height: 1.6; }
 .guidePage ul, .guidePage ol { padding-left: 1.4rem; }
 .guidePage pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.75rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.85em; }
 .guidePage code { font-family: var(--mono); font-size: 0.9em; }
@@ -3515,9 +3543,16 @@ select.textInput {
 .plan { display: inline-block; vertical-align: middle; margin-left: 0.4rem; padding: 0.08rem 0.5rem; border-radius: 999px; font-family: var(--mono); font-size: 0.65em; letter-spacing: 0.05em; text-transform: uppercase; border: 1px solid var(--line); color: var(--muted); }
 .plan-plus { border-color: var(--accent); color: var(--accent); }
 .plan-publisher { border-color: var(--warn); color: var(--warn); }
+@media (max-width: 1100px) {
+  .guide { grid-template-columns: 16rem minmax(0, 1fr); grid-template-areas: "side onpage" "side page"; gap: 1rem 2rem; }
+  .guideOnPage { position: static; padding: 0.6rem 0.8rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+  .guideOnPage ol { border-left: 0; display: flex; flex-wrap: wrap; gap: 0.2rem 0.6rem; }
+  .guideOnPage li, .guideOnPage li.sub { padding: 0; border-left: 0; margin: 0; }
+  .guideOnPage li.on a { text-decoration: underline; text-underline-offset: 0.2em; }
+}
 @media (max-width: 760px) {
-  .guide { grid-template-columns: 1fr; }
-  .guideSide { position: static; }
+  .guide { grid-template-columns: 1fr; grid-template-areas: "side" "onpage" "page"; }
+  .guideSide { position: static; max-height: none; overflow: visible; }
 }
 
 /* ---- what a mode changes ---- */

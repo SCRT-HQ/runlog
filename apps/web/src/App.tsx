@@ -21,7 +21,7 @@ import { profileHash, profilePageFromHash, type ProfilePage } from "./profile/ro
 import { LibraryView, type LibraryPack } from "./library/LibraryView.tsx";
 import { CatalogView } from "./library/CatalogView.tsx";
 import { GuideView } from "./guide/GuideView.tsx";
-import { guideSlugFromHash } from "./guide/pages.ts";
+import { guideSectionFromHash, guideSlugFromHash } from "./guide/pages.ts";
 import { widgetFromHash, type WidgetRoute } from "./widget/route.ts";
 import { dockFromHash, type DockRoute } from "./dock/route.ts";
 import { linkFromHash, stashLink } from "./connections/route.ts";
@@ -169,6 +169,8 @@ export default function App() {
    * Leaving any of them clears the hash; nothing else in the app lives there.
    */
   const [guideSlug, setGuideSlug] = useState<string>(() => guideSlugFromHash(typeof location !== "undefined" ? addressOf(location) : "") ?? "start");
+  /** A section within the guide's page, from `#guide/<slug>/<section>`; the page scrolls to it. */
+  const [guideSection, setGuideSection] = useState<string | null>(() => guideSectionFromHash(typeof location !== "undefined" ? addressOf(location) : ""));
   /** A widget page: one panel of a run, alone, for a stream to capture. */
   const [widget, setWidget] = useState<WidgetRoute | null>(() => widgetFromHash(typeof location !== "undefined" ? addressOf(location) : ""));
   /** A dock: one run's remote, alone on the page, for a streaming app's custom browser dock. */
@@ -192,6 +194,7 @@ export default function App() {
       const run = runFromAddress(address);
       if (slug) {
         setGuideSlug(slug);
+        setGuideSection(guideSectionFromHash(address));
         setView("guide");
       } else if (address === "#create") {
         setView("design");
@@ -226,10 +229,11 @@ export default function App() {
       window.removeEventListener("popstate", fromAddress);
     };
   }, []);
-  const openGuide = (slug = guideSlug) => {
+  const openGuide = (slug = guideSlug, section?: string) => {
     setGuideSlug(slug);
+    setGuideSection(section ?? null);
     setView("guide");
-    goTo(`#guide/${slug}`);
+    goTo(section ? `#guide/${slug}/${section}` : `#guide/${slug}`);
   };
   const leaveGuide = () => {
     setView("play");
@@ -1075,7 +1079,7 @@ export default function App() {
             : {})}
         />
       ) : view === "guide" ? (
-        <GuideView slug={guideSlug} onNavigate={(slug) => openGuide(slug)} onBack={leaveGuide} />
+        <GuideView slug={guideSlug} section={guideSection} onNavigate={(slug, section) => openGuide(slug, section)} onBack={leaveGuide} />
       ) : view === "profile" ? (
         <ProfileView
           onBack={leaveProfile}
