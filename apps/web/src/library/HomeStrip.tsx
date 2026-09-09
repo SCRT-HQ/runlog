@@ -37,7 +37,8 @@ export function HomeStrip<P extends { id: string; title: string }>({
   vocabularies: ReadonlyMap<string, Pack["vocabulary"]>;
   onContinue: (pack: P, run: StoredRun) => void;
   /** The account's last run, wherever it was touched; absent where nobody is signed in. */
-  onContinueLast?: () => void;
+  /** Open a run of the account's that this device is not on; with no id, whatever was last active here. */
+  onContinueLast?: (runId?: string) => void;
   onOpen: (pack: P) => void;
   onCatalog: () => void;
 }) {
@@ -146,8 +147,8 @@ export function HomeStrip<P extends { id: string; title: string }>({
           </div>
           {other && onContinueLast && (
             <div className="homeElsewhere muted small">
-              <span>On another device: {runLine(other.run!, vocabularies.get(other.pack.id)?.unit.one ?? "Unit")}</span>
-              <button className="ghost tiny" onClick={onContinueLast}>
+              <span>Elsewhere on your account: {runLine(other.run!, vocabularies.get(other.pack.id)?.unit.one ?? "Unit")}</span>
+              <button className="ghost tiny" onClick={() => onContinueLast(other.run!.runId)}>
                 Open
               </button>
             </div>
