@@ -2032,6 +2032,13 @@ describe("a run hosted in discord", () => {
     expect(bot.deleted).toContain(previous);
     expect(bot.edits.some((e) => e.id === previous)).toBe(false);
     expect(content(await call(signed(command({ name: "end", type: 1 }, sam, "thread_1")), d))).toContain("Only the host");
+    // End from the card asks how, to the host alone: each ending named, with what it asks of the player under it.
+    const how = await call(signed(press("rl:01000000000000000000000001:end")), d);
+    expect(content(how)).toContain("How does it end?");
+    const endings = ((how.body["data"] as Record<string, unknown>)["components"] as Array<{ components: Array<{ options: Array<{ label: string; value: string; description?: string }> }> }>)[0]!.components[0]!.options;
+    expect(endings.map((e) => e.value)).toEqual(["kept", "broken", "out"]);
+    expect(endings[0]!.description).toBe("Keep the set. Photograph it, log it, leave it intact.");
+    expect(endings[2]!.description).toContain("Carry the work out of the Kiln.");
     const end = () => call(signed(command({ name: "end", type: 1, options: [{ name: "ending", type: 3, value: "kept" }] }, mira, "thread_1")), d);
     let ended = await end();
     // The dice may have queued a forced stage, which must be played out before the firing can end.

@@ -96,13 +96,7 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
     ...state.subjects
       .filter((s) => s.unit === state.unit || !s.finalized)
       .slice(-6)
-      .map((s) => {
-        const name = subjectName(pack, s);
-        const hits = hitsOn(pack, state, s.id).map((h) => h.table);
-        const states = s.states.map((st) => pack.states?.[st]?.short ?? pack.states?.[st]?.label ?? st);
-        const about = [s.type && s.type !== name ? s.type : s.type ? null : "undeclared", hits.length > 0 ? `hit by ${hits.join(", ")}` : null, states.length > 0 ? `[${states.join(" ")}]` : null].filter((x): x is string => x !== null);
-        return { name, value: about.join(" · ") || "-" };
-      }),
+      .map((s) => ({ name: subjectName(pack, s), value: aboutSubject(pack, state, s) || "-" })),
     ...Object.entries(state.counters ?? {}).map(([cid, value]) => ({ name: pack.counters?.[cid]?.label ?? cid, value: String(value) })),
     ...Object.entries(state.resources ?? {}).map(([rid, value]) => ({ name: pack.resources?.[rid]?.label ?? rid, value: `${value}${pack.resources?.[rid]?.max !== undefined ? ` / ${pack.resources[rid]!.max}` : ""}` })),
   ];
@@ -160,7 +154,12 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
     // by Discord and a typed answer would be read as nothing.
     const subjects = (only: number[] | null, eligibleOnly: boolean) => {
       const pool = only ? state.subjects.filter((s) => only.includes(s.id)) : eligibleOnly ? eligibleTargets(pack, state) : state.subjects;
-      return pool.map((s) => ({ label: subjectName(pack, s), value: String(s.id) }));
+      // Each choice says what the piece is, the way the board does, so a
+      // pick among ten tracks is by what they are and not by number alone.
+      return pool.map((s) => {
+        const about = aboutSubject(pack, state, s);
+        return { label: subjectName(pack, s), value: String(s.id), ...(about ? { description: about } : {}) };
+      });
     };
     let undoShown = false;
     const choose = (label: string, options: Array<{ label: string; value: string }>) => {
@@ -243,6 +242,18 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
   // since a row holds five buttons and there are six.
   if (rows.length < 5) rows.push(select(customId(id, "wave"), "Wave at the table…", REACTIONS.map((emoji) => ({ label: emoji, value: emoji }))));
   return rows.slice(0, 5);
+}
+
+/**
+ * A subject in a line, the way the board says it: what it was declared to
+ * be, or that it has not been yet; what has hit it; its states. Empty
+ * where there is nothing to say.
+ */
+function aboutSubject(pack: Pack, state: RunState, s: RunState["subjects"][number]): string {
+  const name = subjectName(pack, s);
+  const hits = hitsOn(pack, state, s.id).map((h) => h.table);
+  const states = s.states.map((st) => pack.states?.[st]?.short ?? pack.states?.[st]?.label ?? st);
+  return [s.type && s.type !== name ? s.type : s.type ? null : "undeclared", hits.length > 0 ? `hit by ${hits.join(", ")}` : null, states.length > 0 ? `[${states.join(" ")}]` : null].filter((x): x is string => x !== null).join(" · ");
 }
 
 /** What just happened, for the line under the card: results in the pack's words, the dice as thrown. */
