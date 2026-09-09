@@ -219,9 +219,8 @@ jobs:
       contents: read
       id-token: write
     # One dev deploy at a time; a second merge waits behind the first. The
-    # release is cut at the end of this same job rather than in one of its
-    # own: a lane holds one waiting job, and a second job in it cancelled the
-    # deploy waiting for the next merge.
+    # release is cut by the job after this one, in a lane of its own, so a
+    # release waiting on a person never holds up the next dev deploy.
     concurrency:
       group: deploy-dev
       cancel-in-progress: false
@@ -230,6 +229,10 @@ jobs:
         (github.event_name == 'push' && github.ref == 'refs/heads/main')
         || github.event_name == 'workflow_dispatch'
       }}
+    # The version this build was made with, for the release to tag and no other.
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       # Full history, or `git tag -l` sees nothing and every build is 0.0.1.
       - uses: actions/checkout@v7
@@ -239,8 +242,9 @@ jobs:
       # The version this build becomes when it is released: the tag after
       # the latest, decided here so the footer on dev says the number the
       # release will carry, and the Release job below tags that number and
-      # no other. One dev deploy runs at a time, and the release follows in
-      # the same lane, so the number cannot be taken in between.
+      # no other. Two builds waiting on a release may both name the same
+      # next number; the release job refuses a number already taken, and
+      # the newer build's release supersedes the older one's while it waits.
       #
       # How big the step is comes from the commits since the last tag, which
       # are the squash commits of the pull requests that landed, titled in
@@ -319,7 +323,33 @@ jobs:
 
       - run: echo "### Deployed \`${GITHUB_SHA:0:12}\` to dev" >> "$GITHUB_STEP_SUMMARY"
 
-      # ---- the release, in the same job, so the lane holds one job per merge ----
+  # The release: the tag, the notes and the GitHub release that production
+  # and the package publish deploy from. Behind the `release` environment,
+  # which requires a reviewer, so nothing reaches production or the registry
+  # until a person has said so; the dev deploy above needs no such word.
+  #
+  # Its own lane, with in-progress runs kept: a release being cut finishes,
+  # and while one waits for its reviewer the next merge's release takes its
+  # place in the queue (GitHub keeps one pending run per lane, the newest),
+  # so approving the newest releases everything merged so far, once. What
+  # a superseded run would have tagged, the newer one tags; a number already
+  # taken is refused rather than reused.
+  Release:
+    name: Tag and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: DevDeploy
+    environment: release
+    permissions:
+      contents: read
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    steps:
+      # Full history, for the tags and the notes since the last one.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       # The number the dev build was made with, and no other: a footer on
       # dev that says 0.0.140 is followed by a release called v0.0.140.
@@ -327,7 +357,7 @@ jobs:
         id: release
         run: |
           set -euo pipefail
-          next="${{ steps.version.outputs.tag }}"
+          next="${{ needs.DevDeploy.outputs.tag }}"
           if [ -z "$next" ]; then echo "::error::the deploy named no version"; exit 1; fi
           if git ls-remote --exit-code --tags origin "refs/tags/${next}" >/dev/null 2>&1; then
             echo "::error::${next} is already tagged; the dev deploy and this release fell out of step"
