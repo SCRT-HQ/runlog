@@ -1072,6 +1072,11 @@ p {
   gap: 0.4rem;
   flex-wrap: wrap;
 }
+/* The file picker on a row, dressed as the tiny ghosts beside it. */
+.libraryPackActions .fileButton {
+  color: var(--muted);
+  line-height: inherit;
+}
 .library .packSync {
   padding: 0.5rem 0 0;
 }

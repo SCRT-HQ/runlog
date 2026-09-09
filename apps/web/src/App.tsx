@@ -19,6 +19,7 @@ import { DesignView } from "./design/DesignView.tsx";
 import { ProfileView } from "./profile/ProfileView.tsx";
 import { profileHash, profilePageFromHash, type ProfilePage } from "./profile/route.ts";
 import { LibraryView, type LibraryPack } from "./library/LibraryView.tsx";
+import { formatOf, keptFromFile, notThisPack, replacedNotice } from "./library/replace.ts";
 import { CatalogView } from "./library/CatalogView.tsx";
 import { GuideView } from "./guide/GuideView.tsx";
 import { guideSectionFromHash, guideSlugFromHash } from "./guide/pages.ts";
@@ -673,6 +674,25 @@ export default function App() {
     rememberPack(record.id);
   }, []);
 
+  /**
+   * Keep a pack that came from a file. Where the shelf already has a pack
+   * of that id it is the same record with the new text in it, and the
+   * account is told: left untold, the vault's older text would come back
+   * over the file on the next sync, which is what made replacing a pack
+   * look impossible without forgetting it first. Runs are untouched.
+   */
+  const keepFromFile = useCallback(async (pack: Pack, text: string, filename: string, existing: StoredPack | null): Promise<StoredPack> => {
+    const record = keptFromFile(existing, pack, text, filename, new Date().toISOString());
+    await savePack(record);
+    if (record.sync) syncBus.localChange("pack", record.id);
+    setImported((prev) => [...prev.filter((p) => p.id !== record.id), record].sort((a, b) => a.title.localeCompare(b.title)));
+    if (existing && !existing.deletedAt) {
+      setNotice(replacedNotice(existing, record, pack.vocabulary.run.many.toLowerCase()));
+      setSource((current) => (current === existing.source ? text : current));
+    }
+    return record;
+  }, []);
+
   const onFile = useCallback(async (file: File | undefined) => {
     if (!file) return;
 
@@ -695,7 +715,7 @@ export default function App() {
     }
 
     const text = await file.text();
-    const parsed = loadPackText(text, /\.ya?ml$/i.test(file.name) ? "yaml" : "json");
+    const parsed = loadPackText(text, formatOf(file.name));
     setSource(text);
 
     // Only a pack that actually loads is worth keeping; storing a broken one
@@ -704,22 +724,38 @@ export default function App() {
       setActiveId("upload");
       return;
     }
-    const importedAt = new Date().toISOString();
-    const record: StoredPack = {
-      id: parsed.pack.id,
-      title: parsed.pack.title,
-      version: parsed.pack.version,
-      source: text,
-      format: /\.ya?ml$/i.test(file.name) ? "yaml" : "json",
-      filename: file.name,
-      importedAt,
-      updatedAt: importedAt,
-    };
-    await savePack(record);
-    setImported((prev) => [...prev.filter((p) => p.id !== record.id), record].sort((a, b) => a.title.localeCompare(b.title)));
+    const record = await keepFromFile(parsed.pack, text, file.name, await loadPack(parsed.pack.id));
     setActiveId(record.id);
     rememberPack(record.id);
-  }, [keepOpened]);
+  }, [keepOpened, keepFromFile]);
+
+  /**
+   * A newer file of a pack already on the shelf, chosen on its own row.
+   * The row says which pack it is for, so a file of some other pack is
+   * refused rather than kept beside it; a sealed copy is not a
+   * replacement for anything, it is opened on its own.
+   */
+  const replaceFromFile = useCallback(async (record: StoredPack, file: File | undefined) => {
+    if (!file) return;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (readHeader(bytes)) {
+      setNotice("That is a sealed copy. Open it with Load a pack from a file; it does not replace a pack.");
+      return;
+    }
+    const text = await file.text();
+    const parsed = loadPackText(text, formatOf(file.name));
+    if (!parsed.ok) {
+      const first = parsed.diagnostics.find((d) => d.level === "error");
+      setNotice(`${file.name} does not load${first ? ` (${first.message})` : ""}, so ${record.title} is as it was.`);
+      return;
+    }
+    const why = notThisPack(record, parsed.pack);
+    if (why) {
+      setNotice(why);
+      return;
+    }
+    await keepFromFile(parsed.pack, text, file.name, record);
+  }, [keepFromFile]);
 
   /**
    * A bought copy, fetched and opened. By the receipt's token it needs no
@@ -1057,6 +1093,7 @@ export default function App() {
           }}
           onCatalog={() => setView("catalog")}
           onUpdate={(record) => void updateFromCatalog(record)}
+          onReplace={(record, file) => void replaceFromFile(record, file)}
           {...(api
             ? {
                 onJoinRace: async (code: string) => {
