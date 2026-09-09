@@ -44,6 +44,8 @@ export interface WorkOSLike {
   revokeInvitation(invitationId: string): Promise<void>;
   /** The invitations to the platform this person sent, newest first, whatever their state. */
   invitationsBy(userId: string): Promise<Invitation[]>;
+  /** A feature flag's state in this environment, by slug: whether it is on, and what someone no rule names gets. Null where there is no such flag. */
+  flag(slug: string): Promise<{ enabled: boolean; defaultValue: boolean } | null>;
 }
 
 const roleOf = (slug: string | undefined): "admin" | "member" => (slug === "admin" ? "admin" : "member");
@@ -51,6 +53,15 @@ const roleOf = (slug: string | undefined): "admin" | "member" => (slug === "admi
 export function realWorkOS(apiKey: string): WorkOSLike {
   const workos = new WorkOS(apiKey);
   const impl: WorkOSLike = {
+    async flag(slug) {
+      try {
+        const found = await workos.featureFlags.getFeatureFlag(slug);
+        return { enabled: found.enabled === true, defaultValue: found.defaultValue === true };
+      } catch (error) {
+        if (error instanceof Error && /not.?found|404/i.test(error.message)) return null;
+        throw error;
+      }
+    },
     async createOrganization(name) {
       const org = await workos.organizations.createOrganization({ name });
       return { id: org.id };

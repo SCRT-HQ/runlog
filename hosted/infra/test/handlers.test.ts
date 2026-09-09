@@ -131,12 +131,16 @@ function memoryPublishers(): PublisherStore {
   };
 }
 
-function fakeWorkOS(): WorkOSLike & { calls: string[]; accept: (organizationId: string, userId: string, role: "admin" | "member") => void } {
+function fakeWorkOS(flags: Record<string, { enabled: boolean; defaultValue: boolean }> = {}): WorkOSLike & { calls: string[]; accept: (organizationId: string, userId: string, role: "admin" | "member") => void } {
   const calls: string[] = [];
   const members: Array<{ organizationId: string; membershipId: string; userId: string; role: "admin" | "member" }> = [];
   const invitations: Array<{ id: string; email: string; state: "pending" | "accepted" | "expired" | "revoked"; expiresAt: string; organizationId: string; inviterUserId: string }> = [];
   return {
     calls,
+    async flag(slug) {
+      calls.push(`flag ${slug}`);
+      return flags[slug] ?? null;
+    },
     async createOrganization(name) {
       calls.push(`org ${name}`);
       return { id: `org_${name.toLowerCase().replace(/\W+/g, "-")}` };
@@ -706,6 +710,31 @@ describe("who is asking", () => {
     const { status, body } = await call(request("GET", "/api/auth/cli", { token: null }));
     expect(status).toBe(200);
     expect(body).toEqual({ clientId: "client_cli_test", issuer: "https://api.workos.com" });
+  });
+
+  it("says what is on sale from the release gates, to anyone, and treats a closed gate as not for sale", async () => {
+    // Nothing configured: nothing on sale, and the public answer says so without a token.
+    const plain = await call(request("GET", "/api/plans", { token: null }));
+    expect(plain.status).toBe(200);
+    expect(plain.headers["cache-control"]).toBe("public, max-age=60");
+    expect(plain.body).toEqual({ gates: false, billing: false, servers: false, serversOpen: false, publishersOpen: false });
+    expect((await call(request("GET", "/api/me"))).body).toMatchObject({ servers: false, serversOpen: false, publishersOpen: false });
+    // Gates open in WorkOS: the tiers are on sale, for a signed-in person and for the page with no token alike.
+    const open = deps(memoryStore(), { releaseGates: async () => ({ servers: true, publishers: true }), guilds: memoryGuilds(), discord: { applicationId: "app", publicKey: "00".repeat(32), token: async () => null } });
+    expect((await call(request("GET", "/api/me"), open)).body).toMatchObject({ servers: true, serversOpen: true, publishersOpen: true });
+    expect((await call(request("GET", "/api/plans", { token: null }), open)).body).toMatchObject({ servers: true, serversOpen: true, publishersOpen: true });
+    // The stage's own word still opens the server tier, on the way to the flag saying it alone; the publisher tier has only its flag.
+    const byConfig = deps(memoryStore(), { releaseGates: async () => ({ servers: false, publishers: false }), guilds: memoryGuilds(), discord: { applicationId: "app", publicKey: "00".repeat(32), token: async () => null, open: true } });
+    expect((await call(request("GET", "/api/me"), byConfig)).body).toMatchObject({ serversOpen: true, publishersOpen: false });
+    // Behind a closed gate, a Checkout for the tier is refused, and so is becoming a publisher where plans gate; an existing publisher is untouched.
+    const stripe = fakeStripe();
+    const gated = deps(memoryStore(), { gates: true, stripe: async () => stripe, prices: { "server-monthly": "price_server", "hosted-monthly": "price_hosted", "plus-monthly": "price_plus" }, releaseGates: async () => ({ servers: false, publishers: false }), guilds: memoryGuilds(), discord: { applicationId: "app", publicKey: "00".repeat(32), token: async () => null } });
+    expect((await call(request("POST", "/api/billing/checkout", { body: { price: "server-monthly" } }), gated)).status).toBe(403);
+    expect((await call(request("POST", "/api/billing/checkout", { body: { price: "hosted-monthly" } }), gated)).status).toBe(403);
+    expect((await call(request("POST", "/api/billing/checkout", { body: { price: "plus-monthly" } }), gated)).status).toBe(200);
+    expect((await call(request("POST", "/api/publishers", { body: { name: "Kiln Press" } }), gated)).status).toBe(403);
+    const ungated = deps(memoryStore(), { gates: false, releaseGates: async () => ({ servers: false, publishers: false }) });
+    expect((await call(request("POST", "/api/publishers", { body: { name: "Kiln Press" } }), ungated)).status).toBe(200);
   });
 
   it("says who you are, and starts a profile on first sight", async () => {

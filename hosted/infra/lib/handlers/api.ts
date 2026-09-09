@@ -20,6 +20,7 @@ import { verifyInteraction } from "./discord/verify.js";
 import { featuresOfSummary, realStripe, type StripeLike } from "./stripe.js";
 import { dynamoPublishers, type PublisherStore } from "./publishers.js";
 import { realWorkOS, type WorkOSLike } from "./workos.js";
+import { CLOSED, gateReader, type ReleaseGates } from "./gates.js";
 import { dynamoListings, headOf, priceOf, type ListingCard, type ListingStore, type Product } from "./listings.js";
 import { dynamoSales, type Sale, type SaleStore } from "./sales.js";
 import { generateLicenseKey, seal } from "./container.js";
@@ -192,6 +193,12 @@ export interface Deps {
   ref?: () => string;
   /** WorkOS, when the environment's key is filled; without it a publisher is a row here and no organization there. */
   workos?: () => Promise<WorkOSLike | null>;
+  /**
+   * Which tiers are on sale today, from WorkOS feature flags read for
+   * everyone at once (see gates.ts). Absent, nothing is on sale, except
+   * where the stage's `discord.open` still says the server tier is.
+   */
+  releaseGates?: () => Promise<ReleaseGates>;
   /** Whether plans gate anything; surfaced to the app as `gates`. */
   gates: boolean;
   /** The prices for sale, by plan key; an absent key is a plan that cannot be bought here. */
@@ -226,7 +233,7 @@ export interface Deps {
     publicKey: string;
     token: () => Promise<string | null>;
     guildName?: (guildId: string) => Promise<string | null>;
-    /** Whether the server plan is on sale; off, the app shows it as coming and only a `server` flag or grant holds it. */
+    /** Whether the server plan is on sale, said by the stage's configuration: honored still, on the way to the `servers-open` flag saying it instead. */
     open?: boolean;
     /** Discord itself, for the thread and the messages of a hosted run; null until the token is filled. Patient, with a longer rope, for the job. */
     rest?: (patient?: boolean) => Promise<DiscordRest | null>;
@@ -487,6 +494,32 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // package serves dev and production alike.
   if (method === "GET" && path === "/api/auth/cli") {
     return json(200, { clientId: deps.cliClientId ?? null, issuer: "https://api.workos.com" });
+  }
+
+  /**
+   * Which tiers are on sale, for everyone at once, from the release gates:
+   * WorkOS feature flags flipped in the dashboard rather than a line in
+   * the stage's file. The server tier is also open where the stage still
+   * says so. Read once per request at most, and once a minute per
+   * container underneath.
+   */
+  let sale: ReleaseGates | null = null;
+  const onSale = async (): Promise<ReleaseGates> => {
+    if (!sale) {
+      const read = deps.releaseGates ? await deps.releaseGates() : CLOSED;
+      sale = { ...read, servers: read.servers || deps.discord?.open === true };
+    }
+    return sale;
+  };
+  // What is offered here, to a page with no token: the pricing page, the welcome page.
+  if (method === "GET" && path === "/api/plans") {
+    const open = await onSale();
+    const servers = Boolean(deps.discord && deps.guilds);
+    return {
+      statusCode: 200,
+      headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60" },
+      body: JSON.stringify({ gates: deps.gates, billing: Boolean(deps.stripe), servers, serversOpen: servers && open.servers, publishersOpen: open.publishers }),
+    };
   }
 
   // Linked roles. A server can make a role depend on a Runlog account
@@ -871,13 +904,15 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
 
   /**
    * The server tier, as this copy offers it: at all, where there is a bot
-   * to use it with; and for sale, where the stage has opened it. Until
+   * to use it with; and for sale, where its release gate is open. Until
    * then the app shows the plan as coming, and the `server` feature flag
    * on a session is the one way onto it — a flag named like the feature
-   * is the feature, the way a `plus` flag comps Plus.
+   * is the feature, the way a `plus` flag comps Plus. The publisher tier
+   * has a gate of its own; an existing publisher keeps what it has.
    */
   const servers = Boolean(deps.discord && deps.guilds);
-  const serversOpen = servers && deps.discord?.open === true;
+  const serversOpen = async () => servers && (await onSale()).servers;
+  const publishersOpen = async () => (await onSale()).publishers;
 
   if (method === "GET" && path === "/api/me") {
     const at = now();
@@ -885,7 +920,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const [profile, kept] = await Promise.all([store.touchProfile(caller.sub, at), deps.billing.flags(caller.sub)]);
     if (!caller.sid.startsWith("key:") && (flags.length !== kept.length || flags.some((f) => !kept.includes(f)))) await deps.billing.putFlags(caller.sub, flags, at);
     const entitlements = await grantsOf(caller.sub, flags);
-    return json(200, { sub: caller.sub, sid: caller.sid, ...(caller.scope ? { scope: caller.scope } : {}), env: deps.env, profile, entitlements, gates: deps.gates, servers, serversOpen });
+    return json(200, { sub: caller.sub, sid: caller.sid, ...(caller.scope ? { scope: caller.scope } : {}), env: deps.env, profile, entitlements, gates: deps.gates, servers, serversOpen: await serversOpen(), publishersOpen: await publishersOpen() });
   }
 
   /**
@@ -919,6 +954,9 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const key = isRecord(body) && str(body["price"]) ? body["price"] : "";
       const price = deps.prices?.[key];
       if (!price) return json(422, { error: "price: one of the plans on sale here" });
+      // A tier's gate is about new sales: a price behind a closed gate is not for sale yet.
+      if (key.startsWith("server-") && !(await serversOpen())) return json(403, { error: "Runlog for servers is not on sale yet", open: false });
+      if (key.startsWith("hosted-") && !(await publishersOpen())) return json(403, { error: "hosted licensing is not on sale yet", open: false });
       const url = (await stripe.checkout({ customer: await customer(), price, successUrl: `${appUrl}/?billing=done`, cancelUrl: `${appUrl}/?billing=cancelled`, clientReferenceId: caller.sub })).url;
       return json(200, { url });
     }
@@ -1089,7 +1127,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const mine = await guilds.guildsOf(caller.sub);
       const entitled = deps.discord?.entitled;
       const listed = entitled ? await Promise.all(mine.map(async (g) => ((await entitled(g.guildId)) ? { ...g, discord: true } : g))) : mine;
-      return json(200, { guilds: listed, server: await hasServerPlan(), plan: serverFeature, open: serversOpen });
+      return json(200, { guilds: listed, server: await hasServerPlan(), plan: serverFeature, open: await serversOpen() });
     }
     const one = path.match(/^\/api\/guilds\/([^/]+)$/);
     if (one && method === "DELETE") {
@@ -1496,6 +1534,8 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (path === "/api/publishers/me" && method === "GET") return json(200, { publisher: view(mine) });
     if (path === "/api/publishers" && method === "POST") {
       if (mine) return json(409, { error: "you already publish as " + mine.name, publisher: view(mine) });
+      // Where plans gate, becoming a publisher waits for the tier's gate; a copy with plans off is open as ever.
+      if (deps.gates && !(await publishersOpen())) return json(403, { error: "publishing is not open here yet", open: false });
       const body = parse(event);
       const name = isRecord(body) && str(body["name"]) ? body["name"].trim() : "";
       if (!name || name.length > MAX_NAME) return json(422, { error: "name: what the catalog will call you" });
@@ -1972,6 +2012,7 @@ async function mismatch(event: APIGatewayProxyEventV2, current: PackMeta | Licen
 let deps: Deps | undefined;
 let lambdaClient: LambdaClient | undefined;
 let stripeClient: StripeLike | undefined;
+let gates: (() => Promise<ReleaseGates>) | undefined;
 let workosClient: WorkOSLike | undefined;
 const secrets = secretsReader();
 
@@ -2032,6 +2073,10 @@ function depsFromEnv(selfArn?: string): Deps {
         const key = await secrets(process.env["WORKOS_API_KEY_SECRET"] ?? "");
         return looksLike("workos-key", key) ? (workosClient ??= realWorkOS(key)) : null;
       },
+      releaseGates: (gates ??= gateReader(async () => {
+        const key = await secrets(process.env["WORKOS_API_KEY_SECRET"] ?? "");
+        return looksLike("workos-key", key) ? (workosClient ??= realWorkOS(key)) : null;
+      })),
       gates: process.env["RUNLOG_GATES"] === "on",
       // The function with time, where the stack made one: a slow interaction
       // goes to it as an event, and the route answers Discord at once.
