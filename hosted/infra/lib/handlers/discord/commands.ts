@@ -26,6 +26,11 @@ export const COMMANDS = [
     description: "Link this Discord account to your Runlog account",
   },
   {
+    name: "unlink",
+    type: CHAT_INPUT,
+    description: "Unlink this Discord account from its Runlog account",
+  },
+  {
     name: "setup",
     type: CHAT_INPUT,
     description: "Set up Runlog on this server",
