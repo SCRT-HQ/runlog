@@ -1,0 +1,17 @@
+# Writing the paper
+
+```bash
+npx @scrthq/runlog docs my-game.yaml -o dist/docs
+npx @scrthq/runlog docs my-game.yaml -o dist/docs --only rulebook,reference
+npx @scrthq/runlog docs my-game.yaml -o dist/docs --md      # Markdown only; --html for HTML only
+```
+
+Five documents come out of the pack as it is, so they are never behind the rules: the **rulebook** (everything, in reading order), the **quick start**, the **reference card** (dense columns for the table), the **run log sheet** (a form to write a run on by hand), and the **summary** a catalog shows. Each as HTML, which a browser prints to a PDF with the page breaks and columns already right, and as Markdown for editing or pasting. The app's Designer makes PDFs directly; [Documents](#guide/documents) says what each is for.
+
+## Bundling
+
+```bash
+npx @scrthq/runlog bundle my-game.yaml -o dist/my-game.pack.json
+```
+
+One normalized JSON file, the convenient thing to attach to a release. YAML stays the better thing to author and keep under version control.

@@ -1,0 +1,26 @@
+# Signing and sealing copies
+
+Signing puts your name on a release: an altered copy can no longer claim to be yours, and the app says so when it opens one. Sealing wraps a signed copy for one buyer behind a license key.
+
+## Signing
+
+```bash
+npx @scrthq/runlog keygen -o my-key.json                  # once, ever; keep it private and backed up
+npx @scrthq/runlog login                                  # a code to confirm in your browser
+npx @scrthq/runlog claim my-key.json                      # ties the key to your account; the app names you
+npx @scrthq/runlog sign my-game.yaml --key my-key.json --as "Your Name"
+```
+
+`sign` rewrites the pack file with its signature (comments are dropped; sign a copy if you keep them). `keygen` prints a fingerprint: publish it wherever you publish, since it is the only thing that ties a signature to *you*. `sign` and `issue` refuse a key nobody has claimed.
+
+## Sealing a copy for a buyer
+
+For each buyer, from your own shop or by hand:
+
+```bash
+npx @scrthq/runlog issue my-game.yaml --to "Buyer Name" --ref order-8f3a --key my-key.json --seal
+```
+
+That writes `my-game-buyer-name.rlpack` and prints a license key, once. Send both. The buyer loads the file with **Load a pack from a file** and types the key; signed in, the key is kept in their account, so the same file opens on their other devices. `--license` supplies a key of your own instead; `-o` names the file. Without `--seal` the copy is a plain signed pack stamped with the buyer's name.
+
+Signing does not stop copying, and nothing can: the app has to read every word to play. What it protects is your name on the thing.

@@ -1,0 +1,12 @@
+# Linked roles
+
+A server can make a role depend on a member having a Runlog account linked: Discord calls these **linked roles**. The bot registers what a server may ask about a member (linked at all; linked at least so many days ago), and a verification, the member consenting once, at Discord, writes those values onto their Discord profile for the server to read.
+
+<Steps>
+  <li>**OAuth2** tab: copy the **Client Secret** (reset it once, if you have never seen it) into the secret `runlog/discord/client-secret` with `Set-RunlogSecret.ps1`. Add a redirect: `https://<domain>/api/discord/linked-role/callback`.</li>
+  <li>**General Information**: set **Linked Roles Verification URL** to `https://<domain>/api/discord/linked-role`.</li>
+  <li>Run the setup script again; it registers the two metadata keys alongside the commands and prints both addresses above.</li>
+  <li>In a server: **Server Settings → Roles → a role → Links → Add requirement → Runlog**, and choose "Runlog account linked". Members who take that role are sent through the verification: to the app, signed in, then to Discord to consent, then back. The Social page also offers **Verify for linked roles** to anyone already linked, and **Link with Discord** to anyone not yet linked, which links without a code.</li>
+</Steps>
+
+Only the person can write to their own connection, so a verification is theirs to begin; unlinking on the Social page does not erase what was written, and a member removes the connection themselves under Discord's Connections. Without the client secret, nothing above is offered.

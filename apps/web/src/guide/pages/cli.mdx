@@ -1,0 +1,17 @@
+# The command line
+
+The rest of a designer's toolkit comes from one package, `@scrthq/runlog`, which also carries the app itself. It gives a designer the tools around the pack file:
+
+- [**check**](#guide/cli-check) a pack and replay its own fixtures, in CI or by hand;
+- [**write its paper**](#guide/cli-docs): rulebook, quick start, reference card, run log sheet and catalog summary, as HTML and Markdown;
+- [**sign**](#guide/cli-sign) releases and **seal** copies for buyers, so a pack carries its author's name and a sold copy opens with a license key;
+- [**publish**](#guide/cli-publish) to your own library or **release** to the catalog, from a terminal or [a build server](#guide/cli-ci);
+- [**serve**](#guide/serve) the app from your own machine, offline, with nothing else installed.
+
+```bash
+npx @scrthq/runlog help
+```
+
+Node 20 or later. Every command takes a `.yaml` or `.json` pack. The same package is [a small library](#guide/cli-library) for a seller's own backend.
+
+<Note>The package's own README on npm says the same in one page, for a reader who is not in the app.</Note>

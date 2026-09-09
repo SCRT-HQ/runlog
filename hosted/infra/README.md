@@ -550,8 +550,10 @@ handler's turn; only the work is deferred. A failure in the job leaves
 the reply "thinking" until Discord gives up on it, which is the loud
 kind of failure this wants.
 
-Setting the bot up as the operator is `docs/discord-bot.md`; what
-servers do with it is `docs/discord.md`.
+Setting the bot up as the operator is the guide's "Setting the bot up"
+(`/play/guide/bot`); what servers do with it is "Runlog in Discord"
+(`/play/guide/discord`). `docs/discord-bot.md` and `docs/discord.md`
+point there.
 
 ## Addresses
 
