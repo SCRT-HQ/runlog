@@ -1,6 +1,6 @@
 import { createRandom, drive, answer, reduce, agenda, snapshotOf, paperOf, awardValue, canEndRun, undoableIds, DriveError, type Agenda, type DriveAction, type DriveResult, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import { loadPackText, rollDice, type Pack } from "@runlog/rules-schema";
-import type { Store } from "../store.js";
+import { SeqConflict, type Store } from "../store.js";
 import type { GuildRun, GuildStore } from "../guilds.js";
 import type { Notify } from "../live.js";
 import { hashToken } from "../auth.js";
@@ -90,16 +90,22 @@ export interface Opened {
  */
 export async function openRun(
   deps: TableDeps,
-  input: { guildId: string; channelId: string; pack: Pack; packTitle: string; modeId: string; name?: string; host: Seat & { sub: string } },
+  input: { guildId: string; channelId: string; pack: Pack; packTitle: string; modeId: string; name?: string; players?: number; host: Seat & { sub: string } },
 ): Promise<Opened | { error: string }> {
   if (!deps.rest) return { error: "The bot cannot post to Discord yet: its token is not filled in on this copy of Runlog." };
   const { pack, modeId } = input;
   const mode = pack.modes[modeId];
   if (!mode) return { error: `This pack has no mode "${modeId}".` };
+  // Seats, in a mode played by several: the mode's fewest unless asked
+  // for more, never more than it allows. The host takes seat one.
+  const seatsWanted = mode.players ? Math.max(mode.players.min, Math.min(mode.players.max, input.players ?? mode.players.min)) : 1;
+  if (mode.players && input.players !== undefined && (input.players < mode.players.min || input.players > mode.players.max)) {
+    return { error: `${mode.label} is played by ${mode.players.min === mode.players.max ? mode.players.min : `${mode.players.min} to ${mode.players.max}`}.` };
+  }
   const at = deps.now();
   const id = deps.mintId();
   const seed = mode.seeded ? deps.mintId().slice(10) : undefined;
-  const first: RunEvent[] = [{ t: "RunStarted", at, packId: pack.id, packVersion: pack.version, runId: id, mode: modeId, ...(seed ? { seed } : {}) } as RunEvent];
+  const first: RunEvent[] = [{ t: "RunStarted", at, packId: pack.id, packVersion: pack.version, runId: id, mode: modeId, ...(seed ? { seed } : {}), ...(seatsWanted > 1 ? { players: seatsWanted } : {}) } as RunEvent];
   // Opening draws, where the pack deals a hand at the start; the same
   // dealing the app does, from the seed where there is one.
   for (const [deckId, deck] of Object.entries(pack.decks ?? {})) {
@@ -135,6 +141,7 @@ export async function openRun(
     channelId: input.channelId,
     threadId,
     contestants: {},
+    ...(seatsWanted > 1 ? { seats: { "1": { discordId: input.host.discordId, name: input.host.name } } } : {}),
     createdAt: at,
     updatedAt: at,
   };
@@ -164,7 +171,15 @@ export type TableAction =
   | { kind: "undo" }
   | { kind: "journal"; text: string }
   | { kind: "clock"; clock: string; to: "paused" | "running" }
-  | { kind: "react"; emoji: string };
+  | { kind: "react"; emoji: string }
+  | { kind: "seat"; seat: number }
+  | { kind: "unseat" }
+  | { kind: "follow" };
+
+/** Whether this person may press the table's buttons: the host, or whoever holds a seat. */
+export function mayPress(run: GuildRun, discordId: string): boolean {
+  return run.hostDiscordId === discordId || Object.values(run.seats ?? {}).some((s) => s.discordId === discordId);
+}
 
 /** Events that begin a player-visible move, for undoing a log written before moves were named. Mirrors the app's rule. */
 const isBoundary = (e: RunEvent): boolean =>
@@ -200,6 +215,7 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
   let pending: Pending | undefined = run.pending as unknown as Pending | undefined;
   let line: string | null = null;
   let ended = false;
+  const redraw = () => cardFor({ pack, state, events, agenda: agenda(pack, state, events), run, ...(pending ? { pending } : {}) });
 
   try {
     switch (action.kind) {
@@ -287,8 +303,42 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         if (!(REACTIONS as readonly string[]).includes(action.emoji)) return { error: "Not one of the six." };
         await deps.store.addReaction(run.sessionId, { emoji: action.emoji, name: actor.name, at });
         await deps.notify?.(run.sessionId, (await deps.store.getSession(run.sessionId))?.meta.seq ?? 0);
-        const card = cardFor({ pack, state, events, agenda: agenda(pack, state, events), run, ...(run.pending ? { pending: run.pending as unknown as Pending } : {}) });
-        return { card, line: null, run, ended: false };
+        return { card: redraw(), line: null, run, ended: false };
+      }
+      case "seat": {
+        // Not a move either: who sits where is Discord's, beside the run.
+        // A seat is one person's, a person has one seat, and a linked
+        // person becomes a player at the session so the run follows them.
+        if (!run.seats || state.players < 2) return { error: "This run has no seats to take; the host plays it." };
+        const key = String(action.seat);
+        if (action.seat < 1 || action.seat > state.players) return { error: "No such seat." };
+        if (run.seats[key] && run.seats[key]!.discordId !== actor.discordId) return { error: `Seat ${action.seat} is ${run.seats[key]!.name}'s.` };
+        const mine = Object.entries(run.seats).find(([, s]) => s.discordId === actor.discordId);
+        if (mine) delete run.seats[mine[0]];
+        run.seats[key] = { discordId: actor.discordId, name: actor.name };
+        if (actor.sub && actor.sub !== run.hostSub) await deps.store.joinAs(run.sessionId, actor.sub, "player", actor.name, at);
+        run.updatedAt = at;
+        await deps.guilds.putGuildRun(run);
+        line = `${actor.name} takes seat ${action.seat}.`;
+        if (deps.rest && line) await deps.rest.postMessage(run.threadId, { content: line });
+        return { card: redraw(), line: null, run, ended: false };
+      }
+      case "unseat": {
+        const mine = Object.entries(run.seats ?? {}).find(([, s]) => s.discordId === actor.discordId);
+        if (!mine || !run.seats) return { error: "You have no seat here." };
+        if (actor.discordId === run.hostDiscordId) return { error: "The host keeps a seat." };
+        delete run.seats[mine[0]];
+        run.updatedAt = at;
+        await deps.guilds.putGuildRun(run);
+        if (deps.rest) await deps.rest.postMessage(run.threadId, { content: `${actor.name} leaves seat ${mine[0]}.` });
+        return { card: redraw(), line: null, run, ended: false };
+      }
+      case "follow": {
+        if (!actor.sub) return { error: "Run /link first, so the run has an account to follow you to." };
+        if (actor.sub === run.hostSub) return { error: "It is your run already; it is in your library." };
+        const seat = await deps.store.joinAs(run.sessionId, actor.sub, "viewer", actor.name, at);
+        if (!seat) return { error: "This run cannot be followed any more." };
+        return { card: redraw(), line: null, run, ended: false };
       }
     }
   } catch (error) {
@@ -304,7 +354,17 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
   const next = [...events, ...stamped];
   const after = reduce(pack, next);
   if (stamped.length > 0) {
-    const { seq } = await deps.store.appendEvents(run.sessionId, author, at, stamped as unknown as Record<string, unknown>[]);
+    // Written only onto the log as it was read: the host may be playing
+    // the same run in the app, and a move that landed between the read
+    // and this write must not be built over.
+    const tail = (events[events.length - 1] as { seq?: number } | undefined)?.seq ?? 0;
+    let seq: number;
+    try {
+      ({ seq } = await deps.store.appendEvents(run.sessionId, author, at, stamped as unknown as Record<string, unknown>[], { expectSeq: tail }));
+    } catch (error) {
+      if (error instanceof SeqConflict) return { error: "The table moved since this card was drawn, from the app perhaps. /run status posts a fresh card; press again there." };
+      throw error;
+    }
     if (ended) await deps.store.updateSession(run.sessionId, at, { endedAt: at });
     await writeSnapshot(deps, run.sessionId, pack, after, next, seq);
     if (!line) line = lineFor(pack, state, after, stamped);

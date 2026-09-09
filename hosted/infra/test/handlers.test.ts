@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { describe, expect, it } from "vitest";
 import { finishDeferred, route, type Deps } from "../lib/handlers/api";
-import type { ApiKey, Claim, Invite, LicenseMeta, PackMeta, Person, Profile, Reaction, SessionMember, SessionMeta, SessionPointer, Store, StoredEvent } from "../lib/handlers/store";
+import { SeqConflict, type ApiKey, type Claim, type Invite, type LicenseMeta, type PackMeta, type Person, type Profile, type Reaction, type SessionMember, type SessionMeta, type SessionPointer, type Store, type StoredEvent } from "../lib/handlers/store";
 import type { Race, RaceEntry, RaceMeta, RaceStore } from "../lib/handlers/races";
 import type { BillingStore } from "../lib/handlers/billing";
 import type { StripeLike } from "../lib/handlers/stripe";
@@ -450,8 +450,9 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
     async eventsAfter(id, after) {
       return (sessions.get(id)?.events ?? []).filter((e) => e.seq > after);
     },
-    async appendEvents(id, author, at, events) {
+    async appendEvents(id, author, at, events, opts = {}) {
       const s = sessions.get(id)!;
+      if (opts.expectSeq !== undefined && s.meta.seq !== opts.expectSeq) throw new SeqConflict(opts.expectSeq);
       const appended: StoredEvent[] = [];
       for (const e of events) {
         const eid = String(e["id"]);
@@ -511,12 +512,15 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
       invites.delete(token);
     },
     async joinAsViewer(id, sub, name, at) {
+      return this.joinAs(id, sub, "viewer", name, at);
+    },
+    async joinAs(id, sub, role, name, at) {
       const s = sessions.get(id);
       if (!s || s.meta.deletedAt) return null;
       const already = s.members.find((m) => m.sub === sub);
       if (already) return { role: already.role };
-      s.members.push({ sub, role: "viewer", joinedAt: at, ...(name ? { name } : {}) });
-      return { role: "viewer" };
+      s.members.push({ sub, role, joinedAt: at, ...(name ? { name } : {}) });
+      return { role };
     },
     async addReaction(id, reaction) {
       const kept = [...(reactions.get(id) ?? []), reaction].slice(-30);
@@ -1960,5 +1964,52 @@ describe("a run hosted in discord", () => {
     expect(bot.originals).toHaveLength(1);
     expect(bot.originals[0]!.message.content).toContain("started **The Long Kiln · Standard Firing** in <#thread_1>");
     expect(bot.originals[0]!.token).toBe("t");
+  });
+  it("seats several in a mode played by several: a seat presses, an open chair is anyone\u2019s, a linked seat follows the run home", async () => {
+    const { guilds, bot, store, d } = await table();
+    await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: "h", bytes: demo.length, modes: [{ id: "standard", label: "Standard" }, { id: "pairs", label: "Pairs" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, demo);
+    const id = "01000000000000000000000001";
+    const start = (players?: number) => command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "pairs" }, ...(players ? [{ name: "players", type: 4, value: players }] : [])] });
+    // Too many chairs for the mode is refused before anything is made.
+    expect(content(await call(signed(start(4)), d))).toContain("2 to 3");
+    expect(content(await call(signed(start(2)), d))).toContain("started");
+    // The host has seat one; the card says who sits where and which role each seat holds this unit.
+    const run = (await guilds.guildRun(id))!;
+    expect(run.seats).toEqual({ "1": { discordId: "1001", name: "Mira" } });
+    const first = bot.posts[0]!.message as unknown as { embeds: Array<{ fields: Array<{ name: string; value: string }> }> };
+    const table1 = first.embeds[0]!.fields.find((f) => f.name === "At the table")!.value;
+    expect(table1).toContain("Seat 1: Mira");
+    expect(table1).toContain("Seat 2: open");
+    expect(table1).toMatch(/Thrower|Watcher/);
+    // Nobody unseated presses the table; anyone takes an open chair, and then presses.
+    expect(content(await call(signed(press(`rl:${id}:enter`, sam)), d))).toContain("whoever holds a seat");
+    expect((await call(signed(press(`rl:${id}:seat:2`, sam)), d)).body["type"]).toBe(7);
+    expect((await guilds.guildRun(id))!.seats?.["2"]).toEqual({ discordId: "1002", name: "Sam" });
+    expect(content(await call(signed(press(`rl:${id}:seat:2`, { id: "1003", username: "kit", global_name: "Kit" })), d))).toContain("Sam");
+    expect((await call(signed(press(`rl:${id}:enter`, sam)), d)).body["type"]).toBe(7);
+    expect((await call(request("GET", `/api/public/runs/${id}/metrics?t=livetok`, { token: null }), d)).body).toMatchObject({ unit: 1 });
+    // A seat is not the host: no ending, no undo, from that chair.
+    expect(content(await call(signed(press(`rl:${id}:undo`, sam)), d))).toContain("whoever holds a seat");
+    // Sam, unlinked, cannot follow; linked, Sam is at the session, as a viewer by following and a player by sitting.
+    expect(content(await call(signed(press(`rl:${id}:follow`, sam)), d))).toContain("/link first");
+    await guilds.connect("user_2", { discordUserId: "1002", name: "Sam", linkedAt: "2026-09-06T12:00:00.000Z" });
+    expect((await call(signed(press(`rl:${id}:follow`, sam)), d)).body["type"]).toBe(7);
+    expect((await call(request("GET", `/api/sessions/${id}`, { token: "guest" }), d)).body["session"]).toMatchObject({ id });
+    // Leaving the chair frees it; the host keeps seat one.
+    expect((await call(signed(press(`rl:${id}:unseat`, sam)), d)).body["type"]).toBe(7);
+    expect((await guilds.guildRun(id))!.seats).toEqual({ "1": { discordId: "1001", name: "Mira" } });
+    expect(content(await call(signed(press(`rl:${id}:unseat`)), d))).toContain("host keeps a seat");
+    // A move that landed elsewhere between the read and the write is not built over.
+    await store.appendEvents(id, "user_1", "2026-09-06T12:00:00.000Z", [{ t: "JournalWritten", at: "2026-09-06T12:00:00.000Z", id: "elsewhere", unit: 1, text: "from the app" }]);
+    const original = store.appendEvents.bind(store);
+    let attempts = 0;
+    store.appendEvents = async (sid, author, at, events, opts) => {
+      attempts += 1;
+      // The first read sees the tail; a second move lands right before the write.
+      if (attempts === 1) await original(sid, "user_1", at, [{ t: "JournalWritten", at, id: "raced", unit: 1, text: "raced" }]);
+      return original(sid, author, at, events, opts);
+    };
+    expect(content(await call(signed(press(`rl:${id}:step`)), d))).toContain("The table moved");
+    expect((await store.eventsAfter(id, 0)).filter((e) => e["t"] === "JournalWritten")).toHaveLength(2);
   });
 });

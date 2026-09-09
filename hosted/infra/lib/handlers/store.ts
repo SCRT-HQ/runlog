@@ -209,6 +209,14 @@ export interface Claim {
 /** An event as stored: the client's object, plus where it landed and who made it. */
 export type StoredEvent = Record<string, unknown> & { id: string; seq: number; author: string };
 
+/** Thrown by `appendEvents` when the log's tail is not where the caller expected it. */
+export class SeqConflict extends Error {
+  constructor(readonly expected: number) {
+    super(`the log moved past ${expected}`);
+    this.name = "SeqConflict";
+  }
+}
+
 /** A license key's row, less the key. `id` is the pack the key opens. */
 export interface LicenseMeta extends Entry {
   /** The seller's reference from the sealed file's header, if it had one. */
@@ -251,7 +259,13 @@ export interface Store {
    * are dropped, so a retry after a lost reply appends nothing twice. The
    * returned list is what was actually added, with their sequence numbers.
    */
-  appendEvents(id: string, author: string, at: string, events: Record<string, unknown>[]): Promise<{ appended: StoredEvent[]; seq: number }>;
+  /**
+   * Append a move. With `expectSeq`, only onto a log whose tail is that
+   * number: a caller that folded the log at one moment and writes at
+   * another (the bot, between two presses) must not write over a move
+   * that landed in between. Throws `SeqConflict` when the tail has moved.
+   */
+  appendEvents(id: string, author: string, at: string, events: Record<string, unknown>[], opts?: { expectSeq?: number }): Promise<{ appended: StoredEvent[]; seq: number }>;
   updateSession(id: string, at: string, patch: { name?: string; endedAt?: string; publicTokenHash?: string | null }): Promise<SessionMeta | null>;
   /** What a stranger with the link sees of a run whose pack they may not hold: the owner's device writes it, redacted, after each move. */
   putSnapshot(id: string, at: string, snapshot: unknown): Promise<void>;
@@ -262,6 +276,8 @@ export interface Store {
    * already keeps the role they have. Null when the session is gone.
    */
   joinAsViewer(id: string, sub: string, name: string | undefined, at: string): Promise<{ role: Role } | null>;
+  /** Seat a person as a player or a viewer; someone already at the table keeps the role they have. */
+  joinAs(id: string, sub: string, role: "player" | "viewer", name: string | undefined, at: string): Promise<{ role: Role } | null>;
   /** The name a seat shows, brought up to date when its holder changes theirs; a seat that is not there is left alone. */
   setMemberName(sessionId: string, sub: string, name: string | undefined): Promise<void>;
   /** A reaction from whoever is watching; the last few are kept, newest last. */
@@ -580,7 +596,7 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       return out;
     },
 
-    async appendEvents(id, author, at, events) {
+    async appendEvents(id, author, at, events, opts = {}) {
       const spk = `SESSION#${id}`;
       const appended: StoredEvent[] = [];
       let seq = 0;
@@ -591,15 +607,28 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
         // and go again with the rest. A retry after a lost reply is the
         // common case here, and it costs one failed transaction.
         for (let attempt = 0; attempt < 2 && chunk.length > 0; attempt++) {
-          const reserved = await ddb.send(
-            new UpdateCommand({
-              TableName: table,
-              Key: { pk: spk, sk: "META" },
-              UpdateExpression: "ADD seq :n SET updatedAt = :at",
-              ExpressionAttributeValues: { ":n": chunk.length, ":at": at },
-              ReturnValues: "UPDATED_NEW",
-            }),
-          );
+          // The tail is reserved on the row itself, so where the caller
+          // says where the tail should be, the reservation is refused when
+          // it is not: nothing is written, and the caller reads again.
+          const expected = opts.expectSeq;
+          let reserved;
+          try {
+            reserved = await ddb.send(
+              new UpdateCommand({
+                TableName: table,
+                Key: { pk: spk, sk: "META" },
+                UpdateExpression: "ADD seq :n SET updatedAt = :at",
+                ExpressionAttributeValues: { ":n": chunk.length, ":at": at, ...(expected !== undefined ? { ":expected": expected } : {}) },
+                ...(expected !== undefined ? { ConditionExpression: expected === 0 ? "attribute_not_exists(seq) OR seq = :expected" : "seq = :expected" } : {}),
+                ReturnValues: "UPDATED_NEW",
+              }),
+            );
+          } catch (error) {
+            if ((error as { name?: string }).name === "ConditionalCheckFailedException" && expected !== undefined) throw new SeqConflict(expected);
+            throw error;
+          }
+          // Only the first chunk can be held to the caller's expectation; the rest follow it.
+          opts = {};
           const tail = Number(reserved.Attributes?.["seq"] ?? 0);
           const base = tail - chunk.length;
           const stored: StoredEvent[] = chunk.map((e, k) => ({ ...e, id: String(e["id"]), seq: base + k + 1, author }));
@@ -699,15 +728,19 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
     },
 
     async joinAsViewer(id, sub, name, at) {
+      return store.joinAs(id, sub, "viewer", name, at);
+    },
+
+    async joinAs(id, sub, role, name, at) {
       const found = await store.getSessionRows(id);
       if (!found || found.meta.deletedAt) return null;
       const already = found.members.find((m) => m.sub === sub);
       if (already) return { role: already.role };
       await ddb.send(new PutCommand({ TableName: table, Item: {
-        pk: `SESSION#${id}`, sk: `MEMBER#${sub}`, kind: "member", sub, role: "viewer", joinedAt: at, ...(name ? { name } : {}),
+        pk: `SESSION#${id}`, sk: `MEMBER#${sub}`, kind: "member", sub, role, joinedAt: at, ...(name ? { name } : {}),
       } }));
       await store.touchPointers(id, sub, at, found.meta.seq);
-      return { role: "viewer" };
+      return { role };
     },
 
     async setMemberName(sessionId, sub, name) {

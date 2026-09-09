@@ -87,6 +87,15 @@ roster** and is a contestant by their Discord name; each result with
 points shows an **Award** menu to the host, and the standings are on the
 card.
 
+In a mode **played by several** (the demo pack's Pairs, say), `/run
+start` takes a `players` count within what the mode allows, the host has
+seat one, and the card shows the seats and which role each holds this
+unit. Anyone takes an open seat with **Take seat**; whoever holds a seat
+presses the table like the host does, though only the host ends, undoes
+and awards. **Leave seat** frees it. **Follow in Runlog** puts the run in
+a linked member's own library as a watcher; a linked member who takes a
+seat is a player there, and can play the same run from the app.
+
 `/run status` in the thread posts a fresh card and takes the buttons off
 the old one. `/run link` posts a fresh live link (the old one stops
 working). `/run end` ends the run; the thread stays open to talk about

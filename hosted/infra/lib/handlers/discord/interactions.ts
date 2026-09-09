@@ -7,7 +7,7 @@ import type { Store } from "../store.js";
 import type { Notify } from "../live.js";
 import { isCommandName } from "./commands.js";
 import { customId, parseCustomId, cardFor, type Card } from "./card.js";
-import { agendaFor, eventsOf, openRun, packFor, play, type Seat, type TableAction, type TableDeps } from "./play.js";
+import { agendaFor, eventsOf, mayPress, openRun, packFor, play, type Seat, type TableAction, type TableDeps } from "./play.js";
 import type { DiscordRest } from "./rest.js";
 import { EPHEMERAL, InteractionType, ResponseType, modal, nameOf, userOf, select, type CommandOption, type Interaction, type InteractionResponse } from "./types.js";
 
@@ -81,6 +81,10 @@ const sub = (i: Interaction): { name: string; options: CommandOption[] } | null 
 const optionValue = (options: CommandOption[], name: string): string | null => {
   const v = options.find((o) => o.name === name)?.value;
   return typeof v === "string" ? v : null;
+};
+const optionNumber = (options: CommandOption[], name: string): number | null => {
+  const v = options.find((o) => o.name === name)?.value;
+  return typeof v === "number" && Number.isInteger(v) ? v : null;
 };
 
 export async function handleInteraction(i: Interaction, deps: InteractionDeps): Promise<InteractionResponse> {
@@ -212,9 +216,14 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     const packId = optionValue(which.options, "pack") ?? "";
     const modeId = optionValue(which.options, "mode") ?? "";
     const name = optionValue(which.options, "name") ?? undefined;
+    const players = optionNumber(which.options, "players") ?? undefined;
     const found = await packFor(deps.guilds, i.guild_id, packId);
     if (!found) return ephemeral("That pack is not in this server's vault. /packs lists what is.");
-    if (!found.pack.modes[modeId]) return ephemeral(`${found.title} has no mode "${modeId}". Pick one from the list as you type.`);
+    const mode = found.pack.modes[modeId];
+    if (!mode) return ephemeral(`${found.title} has no mode "${modeId}". Pick one from the list as you type.`);
+    if (players !== undefined && (!mode.players || players < mode.players.min || players > mode.players.max)) {
+      return ephemeral(mode.players ? `${mode.label} is played by ${mode.players.min === mode.players.max ? mode.players.min : `${mode.players.min} to ${mode.players.max}`}.` : `${mode.label} is played by one; leave players out.`);
+    }
     const channelId = guild.channelId ?? i.channel_id;
     if (!channelId) return ephemeral("Nowhere to open the run: run this in a channel, or set one with /setup channel.");
     if (!table.rest) return ephemeral("The bot cannot post to Discord yet: its token is not filled in on this copy of Runlog.");
@@ -227,7 +236,7 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
       await deps.defer(i);
       return { type: ResponseType.DeferredChannelMessage };
     }
-    const opened = await openRun(table, { guildId: i.guild_id, channelId, pack: found.pack, packTitle: found.title, modeId, ...(name ? { name } : {}), host: { discordId: who.id, name: nameOf(who), sub: hostSub } });
+    const opened = await openRun(table, { guildId: i.guild_id, channelId, pack: found.pack, packTitle: found.title, modeId, ...(name ? { name } : {}), ...(players !== undefined ? { players } : {}), host: { discordId: who.id, name: i.member?.nick?.trim() || nameOf(who), sub: hostSub } });
     if ("error" in opened) return ephemeral(opened.error);
     const modeLabel = found.pack.modes[modeId]?.label ?? modeId;
     return say(`**${nameOf(who)}** started **${found.title} · ${modeLabel}**${name ? ` — ${name}` : ""} in <#${opened.threadId}>. Watch it live: ${opened.link}`);
@@ -311,8 +320,12 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   const pack = found.pack;
   const actor = await seatOf(deps, who, i);
   const host = who.id === run.hostDiscordId || canManage(i);
-  const anyone = id.verb === "join" || id.verb === "leave" || id.verb === "react" || id.verb === "wave";
-  if (!host && !anyone) return ephemeral(`Only the host, ${run.hostName}, presses here. Everyone else watches, here and by the live link.`);
+  const anyone = ["join", "leave", "react", "wave", "seat", "unseat", "follow"].includes(id.verb);
+  const hostOnly = ["end", "ending", "undo", "award"].includes(id.verb);
+  // The host presses anything; whoever holds a seat presses the table; anyone joins, sits, waves or follows.
+  if (!anyone && !host && !(mayPress(run, who.id) && !hostOnly)) {
+    return ephemeral(run.seats ? `Only ${run.hostName} and whoever holds a seat press here. Take a seat, or watch by the live link.` : `Only the host, ${run.hostName}, presses here. Everyone else watches, here and by the live link.`);
+  }
 
   // Two presses open a modal rather than move: the answer is typed.
   if (i.type === InteractionType.MessageComponent && id.verb === "declare") {
@@ -385,6 +398,12 @@ function actionFor(id: { verb: string; arg?: string }, i: Interaction, run: Guil
       return id.arg ? { kind: "react", emoji: id.arg } : null;
     case "wave":
       return picked ? { kind: "react", emoji: picked } : null;
+    case "seat":
+      return id.arg && Number.isInteger(Number(id.arg)) ? { kind: "seat", seat: Number(id.arg) } : null;
+    case "unseat":
+      return { kind: "unseat" };
+    case "follow":
+      return { kind: "follow" };
     case "clock": {
       const m = /^(pause|resume):(.+)$/.exec(id.arg ?? "");
       return m ? { kind: "clock", clock: m[2]!, to: m[1] === "pause" ? "paused" : "running" } : null;

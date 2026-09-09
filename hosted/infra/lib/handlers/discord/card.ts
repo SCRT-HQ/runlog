@@ -1,4 +1,4 @@
-import { challenges, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, standings, subjectName, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import { challenges, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import type { GuildRun } from "../guilds.js";
 import { REACTIONS } from "./reactions.js";
@@ -33,7 +33,7 @@ export function parseCustomId(raw: string): { runId: string; verb: string; arg?:
 const MAX_FIELD = 1024;
 const clip = (s: string, n = MAX_FIELD) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
-export function cardFor(input: { pack: Pack; state: RunState; events: readonly RunEvent[]; agenda: Agenda; run: Pick<GuildRun, "sessionId" | "hostName">; pending?: Pending }): Card {
+export function cardFor(input: { pack: Pack; state: RunState; events: readonly RunEvent[]; agenda: Agenda; run: Pick<GuildRun, "sessionId" | "hostName" | "seats">; pending?: Pending }): Card {
   const { pack, state, agenda, run, pending } = input;
   const v = pack.vocabulary;
   const id = run.sessionId;
@@ -81,11 +81,24 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
     const board = standings(state);
     fields.push({ name: "Standings", value: board.length === 0 ? "Nobody on the roster yet. Press Join." : clip(board.map((s) => `#${s.place} ${s.contestant.name} · ${s.points}`).join("\n")) });
   }
+  if (state.players > 1) {
+    // Who sits where, and which role each seat holds this unit: the same
+    // rotation the app shows, so a seat knows whether it is its turn to decide.
+    const seats = run.seats ?? {};
+    const roles = rolesForUnit(pack, state);
+    const lines = Array.from({ length: state.players }, (_, i) => {
+      const n = i + 1;
+      const who = seats[String(n)]?.name ?? "open";
+      const held = roles.filter((r) => r.player === n).map((r) => r.label);
+      return `Seat ${n}: ${who}${held.length > 0 ? ` · ${held.join(", ")}` : ""}`;
+    });
+    fields.push({ name: "At the table", value: clip(lines.join("\n")) });
+  }
 
-  return { embeds: [embed], components: componentsFor(id, pack, state, agenda, pending) };
+  return { embeds: [embed], components: componentsFor(id, pack, state, agenda, run.seats, pending) };
 }
 
-function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, pending?: Pending): unknown[] {
+function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, seats: GuildRun["seats"], pending?: Pending): unknown[] {
   const rows: unknown[] = [];
   const v = pack.vocabulary;
   if (state.status === "ended") return rows;
@@ -146,6 +159,13 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
   ];
   if (extras.length > 0) rows.push(row(...extras));
 
+  if (state.players > 1 && rows.length < 5) {
+    // Open seats to take, a seat to leave, and a way to follow the run
+    // into one's own library; the host's seat is not offered.
+    const taken = seats ?? {};
+    const open = Array.from({ length: state.players }, (_, i) => i + 1).filter((n) => !taken[String(n)]);
+    rows.push(row(...open.slice(0, 3).map((n) => button(customId(id, "seat", String(n)), `Take seat ${n}`, ButtonStyle.Success)), button(customId(id, "unseat"), "Leave seat"), button(customId(id, "follow"), "Follow in Runlog")));
+  }
   if (moderation(pack, state)) {
     rows.push(row(button(customId(id, "join"), "Join the roster", ButtonStyle.Success), button(customId(id, "leave"), "Leave")));
     const open = challenges(pack, state).filter((c) => c.open);
