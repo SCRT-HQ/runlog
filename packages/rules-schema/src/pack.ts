@@ -311,7 +311,7 @@ export const ChecklistItem = z.union([
             .enum(["unit", "subject", "run"])
             .default("unit")
             .describe(
-              "Which results: those rolled this unit, those that reached this unit's subject, or every one in the run.",
+              "Which results: those rolled this unit, those that reached this unit's subject, or every one in the run. A point whose tables produced nothing in scope is not asked at all: nothing to promise, nothing to tick.",
             ),
         })
         .strict()
