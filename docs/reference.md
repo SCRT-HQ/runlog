@@ -558,7 +558,7 @@ A point with the results it is about shown beneath it.
 | `text` | `string` | yes | The point to tick off. |
 | `optional` | `boolean` | — | May be left unticked: closing the unit does not wait for it. For boxes that record an outcome rather than promise one. |
 | `tally` | `string` | — | Each box ticked under this point adds one to this counter, and unticking takes it back. With `shows`, one box per result; without, the point's own box. |
-| `shows` | `object` | — | What to look at while ticking this: a table's results, listed under the point with a box each. |
+| `shows` | `object` | — | What to look at while ticking this: a table's results, listed under the point with a box each. A point whose tables produced nothing in scope is not asked at all. |
 
 ## `pack.phases[].steps[] (kind: actions)`
 

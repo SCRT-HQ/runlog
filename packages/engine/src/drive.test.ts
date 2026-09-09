@@ -6,6 +6,7 @@ import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
 import { playThrough } from "./play.ts";
 import { agenda, answer, drive, type DriveAction, type DriveContext, type Pending } from "./drive.ts";
+import { itemApplies, shownFor } from "./flow.ts";
 import type { RunEvent } from "./events.ts";
 import type { AnswerValue } from "./execute.ts";
 
@@ -188,13 +189,72 @@ describe("a block that awaits", () => {
   });
 });
 
+/**
+ * Drive from wherever the flow is to the close of the current unit, taking
+ * the first answer to everything: ticks every box that is asked, declares a
+ * bowl, settles what is due, steps on. Stops at the finalize step.
+ */
+function toFinalize(events: RunEvent[], ctx: DriveContext): RunEvent[] {
+  let log = events;
+  for (let guard = 0; guard < 80; guard += 1) {
+    const state = reduce(kiln, log);
+    const a = agenda(kiln, state, log);
+    if (!a.active || a.active.step.kind === "finalizeUnit") break;
+    const unticked = a.checklist.find((c) => !c.on && !c.optional);
+    const action: DriveAction = unticked ? { tick: { index: unticked.index, on: true } } : a.active.step.kind === "declareSubject" ? { declare: "A wide bowl" } : a.due[0] ? { settle: a.due[0].id } : { step: true };
+    log = [...log, ...driveToCompletion(kiln, log, action, ctx)];
+  }
+  return log;
+}
+
+describe("a point that shows a table", () => {
+  it("is not asked, and not waited for, in a unit where the table produced nothing; asked, and waited for, where it did", () => {
+    const ctx: DriveContext = { now: T(0), seed: "confirm-test", autoRoll: true };
+    // The demo's first stage draws no Constraint (that phase is skipped in
+    // stage one), so the close asks nothing and closes at once.
+    const first = toFinalize(playThrough(kiln, [{ enter: 1 }], { seed: "confirm-test" }).events, ctx);
+    const one = agenda(kiln, reduce(kiln, first), first);
+    expect(one.active?.step.kind).toBe("finalizeUnit");
+    const confirm = one.active!.step.kind === "finalizeUnit" ? (one.active!.step.confirm ?? []) : [];
+    expect(confirm).toHaveLength(2);
+    expect(confirm.every((item) => !itemApplies(kiln, reduce(kiln, first), item))).toBe(true);
+    expect(one.checklist).toEqual([]);
+    const closed = drive(kiln, first, { finalize: true }, ctx);
+    expect(closed.status).toBe("done");
+    if (closed.status !== "done") return;
+    // The second stage draws a Constraint, so "every Constraint has been
+    // honored" is asked, listed with its results, and the close waits for it.
+    const entered = drive(kiln, [...first, ...closed.events], { enter: true }, ctx);
+    if (entered.status !== "done") throw new Error("enter never awaits");
+    const second = toFinalize([...first, ...closed.events, ...entered.events], ctx);
+    const state = reduce(kiln, second);
+    const two = agenda(kiln, state, second);
+    expect(two.active?.step.kind).toBe("finalizeUnit");
+    expect(itemApplies(kiln, state, confirm[0]!)).toBe(true);
+    expect(shownFor(kiln, state, confirm[0]!).length).toBeGreaterThan(0);
+    expect(two.checklist.map((c) => c.index)).toEqual(confirm.map((item, index) => ({ item, index })).filter((x) => itemApplies(kiln, state, x.item)).map((x) => x.index));
+    expect(two.checklist.some((c) => c.index === 0)).toBe(true);
+    expect(() => drive(kiln, second, { finalize: true }, ctx)).toThrow(/confirmation/);
+    let ticked = second;
+    for (const c of two.checklist) ticked = [...ticked, ...driveToCompletion(kiln, ticked, { tick: { index: c.index, on: true } }, ctx)];
+    const done = drive(kiln, ticked, { finalize: true }, ctx);
+    expect(done.status).toBe("done");
+    if (done.status === "done") expect(done.events.some((e) => e.t === "UnitFinalized")).toBe(true);
+    // A plain point is always asked.
+    expect(itemApplies(kiln, state, "A plain point")).toBe(true);
+  });
+});
+
 describe("tick", () => {
   it("records one checklist box without needing every box ticked", () => {
     const prefix = playThrough(kiln, [{ enter: 1 }, { step: "enter" }, { declare: "Bowl" }]).events;
     const state = reduce(kiln, prefix);
     const before = agenda(kiln, state, prefix);
     expect(before.active?.step.kind).toBe("manual");
-    expect(before.checklist).toHaveLength(2);
+    // "Throw it" has two points, but the one that shows this stage's
+    // Constraint has nothing to show in stage one and is not asked.
+    expect(before.checklist).toHaveLength(1);
+    expect(before.checklist[0]!.index).toBe(0);
     expect(before.checklist.every((c) => !c.on)).toBe(true);
 
     const result = drive(kiln, prefix, { tick: { index: 0, on: true } }, { now: T(0) });
@@ -202,7 +262,6 @@ describe("tick", () => {
     if (result.status !== "done") return;
     const after = agenda(kiln, reduce(kiln, [...prefix, ...result.events]), [...prefix, ...result.events]);
     expect(after.checklist[0]!.on).toBe(true);
-    expect(after.checklist[1]!.on).toBe(false);
     // Still on the same step: ticking one box does not advance the flow —
     // that is what a `{ step: true }` action, gated on every box being
     // ticked, is for.
@@ -216,17 +275,12 @@ describe("finalize", () => {
     const state = reduce(kiln, prefix);
     const a = agenda(kiln, state, prefix);
     expect(a.active?.step.kind).toBe("finalizeUnit");
-    // Nothing on "close"'s confirm list is ticked yet, so the engine — not
-    // a disabled button somewhere the bot cannot see — refuses.
-    expect(a.canFinalize).toBe(true); // no due obligations block it, distinct from the checklist gate below
-    expect(() => drive(kiln, prefix, { finalize: true }, { now: T(0) })).toThrow(/confirmation/);
-
-    let events = prefix;
-    for (let i = 0; i < a.checklist.length; i++) {
-      const r = drive(kiln, events, { tick: { index: i, on: true } }, { now: T(i) });
-      if (r.status !== "done") throw new Error("tick never awaits");
-      events = [...events, ...r.events];
-    }
+    // Stage one drew nothing the close's confirm points are about, so
+    // nothing is asked and nothing stands in the way; the gate itself is
+    // proven in stage two, above.
+    expect(a.canFinalize).toBe(true); // no due obligations block it, distinct from the checklist gate
+    expect(a.checklist).toEqual([]);
+    const events = prefix;
     const result = drive(kiln, events, { finalize: true }, { now: T(10) });
     expect(result.status).toBe("done");
     if (result.status !== "done") return;

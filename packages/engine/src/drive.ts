@@ -4,6 +4,7 @@ import { createRandom, streamSeed } from "./rng.ts";
 import { nextUnit, reduce } from "./reduce.ts";
 import {
   checklistOf,
+  itemApplies,
   closeUnitEvents,
   currentlyDue,
   itemOptional,
@@ -76,13 +77,13 @@ function ticksFor(state: RunState, key: string): Set<string> {
   return new Set(state.checks.filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.length)));
 }
 
-/** Every non-optional point on the active step's checklist is ticked. */
-function checklistSatisfied(state: RunState, active: ActiveStep): boolean {
+/** Every non-optional point on the active step's checklist that applies is ticked. */
+function checklistSatisfied(pack: Pack, state: RunState, active: ActiveStep): boolean {
   const items = checklistOf(active.step);
   if (items.length === 0) return true;
   const key = `${active.phase.id}#${active.index}`;
   const ticked = ticksFor(state, key);
-  return items.every((item, i) => itemOptional(item) || ticked.has(String(i)));
+  return items.every((item, i) => itemOptional(item) || !itemApplies(pack, state, item) || ticked.has(String(i)));
 }
 
 /** What the caller can do at this point in the run: the state and the log, boiled down to a menu. */
@@ -93,14 +94,21 @@ export function agenda(pack: Pack, state: RunState | null, events: readonly RunE
   const active = nextStep(pack, state);
   const due = currentlyDue(pack, state);
   const blocking = [...due, ...dueObligations(state, "onFinalize")].filter((o) => !o.resolved);
+  // A point that shows a table's results is left out where the table
+  // produced none in scope: nothing to promise, nothing to tick. Its index
+  // stays what it is in the step, so a tick names the same box either way.
   const checklist = active
-    ? checklistOf(active.step).map((item, index) => ({
-        index,
-        key: `${active.phase.id}#${active.index}`,
-        text: itemText(item),
-        on: ticksFor(state, `${active.phase.id}#${active.index}`).has(String(index)),
-        optional: itemOptional(item),
-      }))
+    ? checklistOf(active.step)
+        .map((item, index) => ({
+          index,
+          key: `${active.phase.id}#${active.index}`,
+          text: itemText(item),
+          on: ticksFor(state, `${active.phase.id}#${active.index}`).has(String(index)),
+          optional: itemOptional(item),
+          applies: itemApplies(pack, state, item),
+        }))
+        .filter((c) => c.applies)
+        .map(({ applies: _applies, ...c }) => c)
     : [];
   const moves = availableMoves(pack, state, active ? "anytime" : ["betweenUnits", "beforeEnding"]).map((m) => m.id);
   const rule = moderation(pack, state);
@@ -378,7 +386,7 @@ export function drive(pack: Pack, events: readonly RunEvent[], action: DriveActi
     if (!active || active.step.kind !== "finalizeUnit") {
       throw new DriveError(`cannot finalize: the active step is ${active ? `"${active.phase.id}#${active.index}" (${active.step.kind})` : "none"}, not finalizeUnit`, action);
     }
-    if (!checklistSatisfied(state, active)) {
+    if (!checklistSatisfied(pack, state, active)) {
       throw new DriveError("cannot finalize: not every confirmation on the active step is ticked", action);
     }
     return stamp(
@@ -463,7 +471,7 @@ export function drive(pack: Pack, events: readonly RunEvent[], action: DriveActi
       );
     }
     case "manual":
-      if (!checklistSatisfied(state, active)) {
+      if (!checklistSatisfied(pack, state, active)) {
         throw new DriveError("cannot step: not every point on the active step's checklist is ticked", action);
       }
       return stamp(ctx, stepCompletionEvents(active.phase, active.index, state, ctx.now), undefined);

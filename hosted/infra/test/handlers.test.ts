@@ -1953,7 +1953,8 @@ describe("a run hosted in discord", () => {
     const bars = bot.posts.flatMap((p) => (p.message.embeds ?? []) as Array<{ description?: string; color?: number }>).filter((e) => e.description);
     expect(bars.some((e) => /\*\*Stage 1\*\* begins\./.test(e.description!) && e.color === 0x4f8a78)).toBe(true);
     expect(bars.some((e) => /\*\*Stage 1\*\* closed\./.test(e.description!))).toBe(true);
-    expect(bot.posts.some((p) => /begins\.|closed\./.test(p.message.content ?? ""))).toBe(false);
+    // Only as bars, never as a plain line (an entry's own text may end in "closed." too; the bar's form is the mark's).
+    expect(bot.posts.some((p) => /\*\*Stage \d+\*\* (begins|closed)\./.test(p.message.content ?? ""))).toBe(false);
     const after = await call(request("GET", "/api/public/runs/01000000000000000000000001/metrics?t=livetok", { token: null }), d);
     expect(after.body).toMatchObject({ ready: true, unit: 2 });
     expect((after.body["progress"] as Record<string, unknown>)["unitsDone"]).toBe(2);
