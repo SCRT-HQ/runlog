@@ -1,0 +1,19 @@
+# Runlog in Discord <Plan tier="server" />
+
+The Runlog bot hosts runs in a Discord server of yours: a run lives in a thread, its table card carries the buttons, one person hosts, and everyone in the server watches there and by live link. The packs come from the account that claimed the server, out of its own shelf, and never leave the server's vault: members see the lines the dice draw, not the pack.
+
+## Setting a server up
+
+Add the bot with its install link (the Runlog Discord has it), then, as someone who can manage the server, run **/setup claim** and open the address it shows you, signed in. The server is then yours, on your profile under **Servers**: put packs in its vault from your shelf, and in Discord say who may host with **/setup role** and where runs open with **/setup channel**. **/setup status** says all of it.
+
+## Hosting
+
+**/run start** with a pack and a mode opens a thread with the table card in it: where the run stands, and the one press that is due — begin the unit, roll, tick the checklist, declare what you are making, close the unit, end the run. The bot throws the dice and says what landed; every move is a line under the card. Only the host presses. A host has a Runlog account linked with **/link**, because the run is theirs: it lands in their library like any run.
+
+In a moderated mode, anyone presses **Join the roster** and the host awards each result with points from a menu on the card.
+
+## Watching
+
+The thread shows the card and the lines, and the live link the bot posts opens the run in a browser for anyone, no account needed. The same link feeds the stream widgets, so a run hosted in Discord can be on a stream like any other.
+
+<Note>The full walkthrough, commands and what is stored are in the repository's [Runlog in Discord](https://github.com/SCRT-HQ/runlog/blob/main/docs/discord.md). Whoever runs a hosted copy sets the bot up once, following [the operator's guide](https://github.com/SCRT-HQ/runlog/blob/main/docs/discord-bot.md); server owners only install it.</Note>

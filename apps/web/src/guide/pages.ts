@@ -10,6 +10,7 @@ import Plans from "./pages/plans.mdx";
 import Account from "./pages/account.mdx";
 import Selling from "./pages/selling.mdx";
 import Streaming from "./pages/streaming.mdx";
+import Discord from "./pages/discord.mdx";
 
 /** A guide page: where it lives in the address bar, what it is called, and the MDX that is it. */
 export interface GuidePage {
@@ -27,6 +28,7 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   { slug: "clocks", title: "Clocks and alerts", blurb: "Stopwatches, timers, and what rings.", Page: Clocks as GuidePage["Page"] },
   { slug: "together", title: "Playing together", blurb: "Sync, invitations, watchers, moderated races.", Page: Together as GuidePage["Page"] },
   { slug: "streaming", title: "Streaming a run", blurb: "Widgets as browser sources and docks in OBS and Streamlabs, and the numbers for a chat bot.", Page: Streaming as GuidePage["Page"] },
+  { slug: "discord", title: "Runlog in Discord", blurb: "A bot that hosts runs in your server: claim it, fill its vault, press the card.", Page: Discord as GuidePage["Page"] },
   { slug: "design", title: "Designing a pack", blurb: "Your own game for the engine.", Page: Design as GuidePage["Page"] },
   { slug: "documents", title: "Documents and the command line", blurb: "Rulebooks, cards, sheets; npx @scrthq/runlog.", Page: Documents as GuidePage["Page"] },
   { slug: "plans", title: "Plans and pricing", blurb: "What is free, what a server adds, what running it yourself costs.", Page: Plans as GuidePage["Page"] },

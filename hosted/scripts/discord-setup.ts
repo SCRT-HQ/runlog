@@ -1,4 +1,4 @@
-import { COMMANDS } from "../infra/lib/handlers/discord/commands";
+import { COMMANDS, installLink, PERMISSION_NAMES } from "../infra/lib/handlers/discord/commands";
 
 /**
  * The bot's commands, told to Discord, once per application.
@@ -48,7 +48,8 @@ async function main() {
   console.log(`${GUILD_ID ? `server ${GUILD_ID}` : "every server"}: ${registered.length} command(s)`);
   for (const c of registered) console.log(`  /${c.name}  ${c.id}`);
   console.log(`\nInteractions endpoint: https://<domain>/api/discord/interactions`);
-  console.log(`Install link: https://discord.com/oauth2/authorize?client_id=${APPLICATION_ID}&scope=bot+applications.commands&permissions=0`);
+  console.log(`Install link (${PERMISSION_NAMES.join(", ")}):\n${installLink(APPLICATION_ID)}`);
+  console.log(`\nSee docs/discord-bot.md for the developer-portal settings around this.`);
 }
 
 main().catch((error: unknown) => {
