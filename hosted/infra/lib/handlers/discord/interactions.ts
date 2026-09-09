@@ -316,6 +316,9 @@ export async function timerRanOut(deps: InteractionDeps, job: TimerJob): Promise
   return outcome;
 }
 
+/** A paragraph as one line, for the room a select option's description gives it. */
+const oneLine = (text: string): string => text.replace(/\s+/g, " ").trim();
+
 /** Whether this member may host here: the host role where one is set, else anyone who can manage the server. */
 function mayHost(i: Interaction, hostRoleId: string | undefined): boolean {
   if (hostRoleId) return (i.member?.roles ?? []).includes(hostRoleId) || canManage(i);
@@ -568,7 +571,9 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
     return modal(customId(run.sessionId, "answered"), "Answer", { id: "answer", label, paragraph: true });
   }
   if (i.type === InteractionType.MessageComponent && id.verb === "end" && (pack.endings?.length ?? 0) > 1) {
-    return { type: ResponseType.ChannelMessage, data: { content: "How does it end?", flags: EPHEMERAL, components: [select(customId(run.sessionId, "ending"), "The ending", pack.endings!.map((e) => ({ label: e.label, value: e.id })))] } };
+    // Each ending says what it asks of the player, under its name, the way the app's choices do; one line, since that is the room Discord gives it.
+    const endings = pack.endings!.map((e) => ({ label: e.label, value: e.id, ...(e.text?.trim() ? { description: oneLine(e.text) } : {}) }));
+    return { type: ResponseType.ChannelMessage, data: { content: "How does it end?", flags: EPHEMERAL, components: [select(customId(run.sessionId, "ending"), "The ending", endings)] } };
   }
 
   // A button that drives a step names the step it was drawn for. Pressed
