@@ -1734,9 +1734,12 @@ describe("a claimed server", () => {
     expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMC" } }), d)).body).toMatchObject({ claimed: true });
     expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMD" } }), d)).status).toBe(422);
     expect((await call(request("GET", "/api/guilds"), d)).body).toMatchObject({ server: true });
-    // Another account claiming one of them takes it over; the first account's list shrinks.
+    // Another account claiming one of them takes it over; the first account's list shrinks, and the vault, which was the first account's packs, empties.
+    await call(request("PUT", "/api/guilds/g1/packs/com.scrthq.runlog.long-kiln", { body: { title: "The Long Kiln", version: "1", format: "yaml", hash: "h", modes: [], source: "id: x" } }), d);
+    expect(guilds.vault.size).toBe(1);
     await call(signed(claimPress("g1")), d);
     expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIME" }, token: "guest" }), d)).body).toMatchObject({ claimed: true, guild: { guildId: "g1", ownerSub: "user_2" } });
+    expect(guilds.vault.size).toBe(0);
     expect(((await call(request("GET", "/api/guilds"), d)).body["guilds"] as unknown[]).length).toBe(2);
     // Deleting the account releases what it owned.
     await call(request("DELETE", "/api/me"), d);
@@ -1809,7 +1812,8 @@ describe("a run hosted in discord", () => {
     const rows = card["components"] as Array<{ components: Array<{ custom_id: string; type: number; disabled?: boolean; label?: string; options?: Array<{ value: string }> }> }>;
     for (const row of rows) {
       for (const c of row.components) {
-        if (c.type === 2 && !c.disabled && !(c.label ?? "").startsWith("☑")) return { customId: c.custom_id };
+        // Never Undo, which a person would not press to move forward; never a box already ticked.
+        if (c.type === 2 && !c.disabled && !(c.label ?? "").startsWith("☑") && !c.custom_id.endsWith(":undo")) return { customId: c.custom_id };
         if (c.type === 3 && c.options?.[0]) return { customId: c.custom_id, value: c.options[0].value };
       }
     }
@@ -1870,13 +1874,19 @@ describe("a run hosted in discord", () => {
     expect((after.body["progress"] as Record<string, unknown>)["unitsDone"]).toBe(2);
 
     // /run status re-posts the card in the thread; /run end closes the run and the thread.
+    const cardsBefore = bot.posts.filter((p) => Array.isArray(p.message.embeds)).length;
     const status = await call(signed(command({ name: "status", type: 1 }, mira, "thread_1")), d);
-    expect(status.body["type"]).toBe(4);
-    expect(Array.isArray((status.body["data"] as Record<string, unknown>)["embeds"])).toBe(true);
+    expect(content(status)).toContain("Posted a fresh card");
+    const freshest = bot.posts[bot.posts.length - 1]!;
+    expect(bot.posts.filter((p) => Array.isArray(p.message.embeds)).length).toBe(cardsBefore + 1);
+    expect((await guilds.guildRun("01000000000000000000000001"))?.cardMessageId).toBe(freshest.id);
+    // The old card lost its buttons, so a press on it cannot drive the table from a stale view.
+    expect(bot.edits[bot.edits.length - 1]).toMatchObject({ id: "msg_2", message: { components: [] } });
     expect(content(await call(signed(command({ name: "end", type: 1 }, sam, "thread_1")), d))).toContain("Only the host");
     const ended = await call(signed(command({ name: "end", type: 1, options: [{ name: "ending", type: 3, value: "kept" }] }, mira, "thread_1")), d);
     expect(content(ended)).toContain("The Shelf");
-    expect(bot.archived).toEqual(["thread_1"]);
+    // The thread stays open to talk in; Discord closes it after a day idle.
+    expect(bot.archived).toEqual([]);
     expect((await call(request("GET", "/api/sessions/01000000000000000000000001"), d)).body["session"]).toMatchObject({ endedAt: "2026-09-06T12:00:00.000Z" });
     expect(content(await call(signed(press("rl:01000000000000000000000001:enter")), d))).toContain("has ended");
   });
@@ -1925,10 +1935,12 @@ describe("a run hosted in discord", () => {
     expect((await store.eventsAfter(id, 0)).some((e) => e["t"] === "JournalWritten" && e["unit"] === 1 && e["text"] === "Slip trailed, then waited.")).toBe(true);
     expect(content(await call(signed(journal("mine", sam)), d))).toContain("Only the host");
     // A wave from a watcher lands where the live page's waves land, and rings the same bell.
-    const waved = await call(signed(press(`rl:${id}:react:🔥`, sam)), d);
+    const waved = await call(signed(press(`rl:${id}:wave`, sam, { values: ["🔥"] })), d);
     expect(waved.body["type"]).toBe(7);
     expect((await call(request("GET", `/api/sessions/${id}/reactions`), d)).body["reactions"]).toMatchObject([{ emoji: "🔥", name: "Sam" }]);
-    expect(content(await call(signed(press(`rl:${id}:react:🍕`, sam)), d))).toContain("Not one of the six");
+    expect(content(await call(signed(press(`rl:${id}:wave`, sam, { values: ["🍕"] })), d))).toContain("Not one of the six");
+    // A stale card cannot begin a unit the table is already in.
+    expect(content(await call(signed(press(`rl:${id}:enter`)), d))).toContain("stale");
   });
   it("answers a start at once where there is a function with time, and the job fills the reply in", async () => {
     const { bot, d } = await table();

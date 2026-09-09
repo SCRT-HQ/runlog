@@ -130,6 +130,8 @@ export interface GuildStore {
   releaseGuild(guildId: string): Promise<number>;
 
   putGuildPack(guildId: string, meta: GuildPackMeta, source: string): Promise<void>;
+  /** The row alone, so a caller holding a parsed copy can compare hashes before fetching the text. */
+  guildPackMeta(guildId: string, packId: string): Promise<GuildPackMeta | null>;
   getGuildPack(guildId: string, packId: string): Promise<{ meta: GuildPackMeta; source: string } | null>;
   listGuildPacks(guildId: string): Promise<GuildPackMeta[]>;
   deleteGuildPack(guildId: string, packId: string): Promise<boolean>;
@@ -156,10 +158,35 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
   const packKey = (guildId: string, packId: string) => ({ pk: `GUILD#${guildId}`, sk: `PACK#${packId}` });
   const runKey = (sessionId: string) => ({ pk: `DISCORD#RUN#${sessionId}`, sk: "RUN" });
   const threadKey = (threadId: string) => ({ pk: `DISCORD#THREAD#${threadId}`, sk: "RUN" });
+  /** The server's own list of its runs, so releasing the server or forgetting its owner can sweep them. */
+  const runPointer = (guildId: string, sessionId: string) => ({ pk: `GUILD#${guildId}`, sk: `RUN#${sessionId}` });
   const runOf = (item: Record<string, unknown> | undefined): GuildRun | null => {
     if (!item || typeof item["sessionId"] !== "string" || typeof item["guildId"] !== "string") return null;
-    const { pk: _pk, sk: _sk, kind: _kind, ...rest } = item;
+    const { pk: _pk, sk: _sk, kind: _kind, expiresAt: _ttl, ...rest } = item;
     return { ...(rest as unknown as GuildRun), contestants: typeof item["contestants"] === "object" && item["contestants"] !== null ? (item["contestants"] as Record<string, string>) : {} };
+  };
+  /** An ended run's Discord rows go a month after it ended; the run itself is the session's, kept as any run is. */
+  const RUN_DAYS = 30;
+  const deleteRun = async (run: GuildRun) => {
+    await ddb.send(
+      new TransactWriteCommand({
+        TransactItems: [
+          { Delete: { TableName: table, Key: runKey(run.sessionId) } },
+          { Delete: { TableName: table, Key: threadKey(run.threadId) } },
+          { Delete: { TableName: table, Key: runPointer(run.guildId, run.sessionId) } },
+        ],
+      }),
+    );
+  };
+  const runsOf = async (guildId: string): Promise<GuildRun[]> => {
+    const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `GUILD#${guildId}`, ":sk": "RUN#" } }));
+    const runs: GuildRun[] = [];
+    for (const pointer of out.Items ?? []) {
+      const id = str(pointer["sessionId"]);
+      const run = id ? runOf((await ddb.send(new GetCommand({ TableName: table, Key: runKey(id) }))).Item) : null;
+      if (run) runs.push(run);
+    }
+    return runs;
   };
   const objectKey = (guildId: string, packId: string, format: string) => `guilds/${guildId}/packs/${packId}.${format}`;
 
@@ -212,14 +239,22 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
     await ddb.send(new TransactWriteCommand({ TransactItems: [{ Delete: { TableName: table, Key: userKey(sub) } }, { Delete: { TableName: table, Key: discordKey(had.discordUserId) } }] }));
     return 2;
   };
-  const release = async (guildId: string): Promise<number> => {
-    const guild = await getGuild(guildId);
-    if (!guild) return 0;
+  const emptyVault = async (guildId: string): Promise<number> => {
     let rows = 0;
     for (const pack of await listPacks(guildId)) {
       await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey(guildId, pack.id, pack.format) }));
       await ddb.send(new DeleteCommand({ TableName: table, Key: packKey(guildId, pack.id) }));
       rows += 1;
+    }
+    return rows;
+  };
+  const release = async (guildId: string): Promise<number> => {
+    const guild = await getGuild(guildId);
+    if (!guild) return 0;
+    let rows = await emptyVault(guildId);
+    for (const run of await runsOf(guildId)) {
+      await deleteRun(run);
+      rows += 3;
     }
     await ddb.send(new TransactWriteCommand({ TransactItems: [{ Delete: { TableName: table, Key: guildKey(guildId) } }, { Delete: { TableName: table, Key: guildPointer(guild.ownerSub, guildId) } }] }));
     return rows + 2;
@@ -227,11 +262,13 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
 
   return {
     async putGuildRun(run) {
+      const ttl = run.endedAt ? { expiresAt: toEpoch(run.endedAt) + RUN_DAYS * 86400 } : {};
       await ddb.send(
         new TransactWriteCommand({
           TransactItems: [
-            { Put: { TableName: table, Item: { ...runKey(run.sessionId), kind: "discord-run", ...run } } },
-            { Put: { TableName: table, Item: { ...threadKey(run.threadId), kind: "discord-thread", sessionId: run.sessionId } } },
+            { Put: { TableName: table, Item: { ...runKey(run.sessionId), kind: "discord-run", ...run, ...ttl } } },
+            { Put: { TableName: table, Item: { ...threadKey(run.threadId), kind: "discord-thread", sessionId: run.sessionId, ...ttl } } },
+            { Put: { TableName: table, Item: { ...runPointer(run.guildId, run.sessionId), kind: "discord-runpointer", sessionId: run.sessionId, ...ttl } } },
           ],
         }),
       );
@@ -288,7 +325,12 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
       const previous = await getGuild(g.guildId);
       const made: Guild = { ...g, updatedAt: g.claimedAt };
       const items: Array<{ Delete: { TableName: string; Key: Record<string, string> } } | { Put: { TableName: string; Item: Record<string, unknown> } }> = [];
-      if (previous && previous.ownerSub !== g.ownerSub) items.push({ Delete: { TableName: table, Key: guildPointer(previous.ownerSub, g.guildId) } });
+      if (previous && previous.ownerSub !== g.ownerSub) {
+        // The vault was the old owner's, from their shelf: it does not
+        // change hands with the server. The new owner fills it from theirs.
+        await emptyVault(g.guildId);
+        items.push({ Delete: { TableName: table, Key: guildPointer(previous.ownerSub, g.guildId) } });
+      }
       items.push({ Put: { TableName: table, Item: { ...guildKey(g.guildId), kind: "guild", ...made } } });
       items.push({ Put: { TableName: table, Item: { ...guildPointer(g.ownerSub, g.guildId), kind: "guildpointer", guildId: g.guildId, claimedAt: g.claimedAt } } });
       await ddb.send(new TransactWriteCommand({ TransactItems: items }));
@@ -346,6 +388,9 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
     async putGuildPack(guildId, meta, source) {
       await s3.send(new PutObjectCommand({ Bucket: bucket, Key: objectKey(guildId, meta.id, meta.format), Body: source, ContentType: "text/plain; charset=utf-8" }));
       await ddb.send(new PutCommand({ TableName: table, Item: { ...packKey(guildId, meta.id), kind: "guildpack", ...meta } }));
+    },
+    async guildPackMeta(guildId, packId) {
+      return packOf((await ddb.send(new GetCommand({ TableName: table, Key: packKey(guildId, packId) }))).Item);
     },
     async getGuildPack(guildId, packId) {
       const meta = packOf((await ddb.send(new GetCommand({ TableName: table, Key: packKey(guildId, packId) }))).Item);

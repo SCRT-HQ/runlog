@@ -1,6 +1,7 @@
 import { constrainedByOf, constraintsFor, type Pending } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import { newCode } from "../races.js";
+import { hashToken } from "../auth.js";
 import type { GuildRun, GuildStore } from "../guilds.js";
 import type { Store } from "../store.js";
 import type { Notify } from "../live.js";
@@ -174,7 +175,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       if (!text) return ephemeral("Nothing to write.");
       const played = await play(table, run, found.pack, await seatOf(deps, who, i), { kind: "journal", text });
       if ("error" in played) return ephemeral(played.error);
-      await afterPlay(table, played);
+      await afterPlay(table, played, { editCard: true, postLine: false });
       return say(played.line ?? "Written.");
     }
   }
@@ -213,12 +214,15 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     const name = optionValue(which.options, "name") ?? undefined;
     const found = await packFor(deps.guilds, i.guild_id, packId);
     if (!found) return ephemeral("That pack is not in this server's vault. /packs lists what is.");
+    if (!found.pack.modes[modeId]) return ephemeral(`${found.title} has no mode "${modeId}". Pick one from the list as you type.`);
     const channelId = guild.channelId ?? i.channel_id;
     if (!channelId) return ephemeral("Nowhere to open the run: run this in a channel, or set one with /setup channel.");
-    // Everything that could refuse has had its say in this turn. What is
-    // left — the session, the thread, the card, the pin — is a handful of
-    // calls to Discord that a cold start plus three seconds may not cover,
-    // so where there is a function with time, it takes over from here.
+    if (!table.rest) return ephemeral("The bot cannot post to Discord yet: its token is not filled in on this copy of Runlog.");
+    // Everything that could refuse has had its say in this turn, to the
+    // person alone. What is left — the session, the thread, the card, the
+    // pin — is a handful of calls to Discord that a cold start plus three
+    // seconds may not cover, so where there is a function with time, it
+    // takes over from here.
     if (deps.defer) {
       await deps.defer(i);
       return { type: ResponseType.DeferredChannelMessage };
@@ -236,14 +240,24 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
   if (!found) return ephemeral("This run's pack has left the server's vault, so the bot cannot read it any more.");
 
   if (which?.name === "status") {
+    // A fresh card, posted so its id is known and recorded as the card;
+    // the old one loses its buttons, so a press on it cannot drive the
+    // table from a stale view.
+    if (!table.rest) return ephemeral("The bot cannot post to Discord yet.");
     const events = await eventsOf(table.store, run.sessionId);
     const { state, agenda } = agendaFor(found.pack, events);
-    return withCard(ResponseType.ChannelMessage, cardFor({ pack: found.pack, state, events, agenda, run, ...(run.pending ? { pending: run.pending as unknown as Pending } : {}) }));
+    const card = cardFor({ pack: found.pack, state, events, agenda, run, ...(run.pending ? { pending: run.pending as unknown as Pending } : {}) });
+    const posted = await table.rest.postMessage(run.threadId, card);
+    if (!posted) return ephemeral("Discord would not take the card just now; try again in a moment.");
+    if (run.cardMessageId) await table.rest.editMessage(run.threadId, run.cardMessageId, { components: [] });
+    run.cardMessageId = posted;
+    run.updatedAt = deps.now();
+    await deps.guilds.putGuildRun(run);
+    return ephemeral("Posted a fresh card; the old one has no buttons now.");
   }
   if (which?.name === "link") {
     // A fresh token each time, the way the app shares again: only a hash is kept, so the old link cannot be repeated.
     const token = table.token();
-    const { hashToken } = await import("../auth.js");
     await table.store.updateSession(run.sessionId, deps.now(), { publicTokenHash: hashToken(token) });
     return say(`Watch it live, no account needed: ${deps.appUrl.replace(/\/$/, "")}/r/${encodeURIComponent(run.sessionId)}?t=${encodeURIComponent(token)}`);
   }
@@ -253,7 +267,7 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     const actor = await seatOf(deps, who, i);
     const played = await play(table, run, found.pack, actor, { kind: "end", ending: endingId });
     if ("error" in played) return ephemeral(played.error);
-    await afterPlay(table, played);
+    await afterPlay(table, played, { editCard: true, postLine: false });
     return say(played.line ?? "The run is over.");
   }
   if (which?.name === "undo") {
@@ -261,7 +275,7 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     if (run.endedAt) return ephemeral("This run has ended.");
     const played = await play(table, run, found.pack, await seatOf(deps, who, i), { kind: "undo" });
     if ("error" in played) return ephemeral(played.error);
-    await afterPlay(table, played);
+    await afterPlay(table, played, { editCard: true, postLine: false });
     return say(played.line ?? "Taken back.");
   }
   return ephemeral("Run has start, status, link, end and undo.");
@@ -271,12 +285,17 @@ async function seatOf(deps: InteractionDeps, who: NonNullable<ReturnType<typeof 
   return { discordId: who.id, name: i.member?.nick?.trim() || nameOf(who), sub: await deps.guilds.userForDiscord(who.id) };
 }
 
-/** After a move: the line under the card, the card edited where a press did not carry it, the thread closed after the end. */
-async function afterPlay(table: TableDeps, played: { line: string | null; run: GuildRun; ended: boolean; card: Card }, editCard = true): Promise<void> {
+/**
+ * After a move: the line under the card, where the reply does not carry
+ * it (a press updates the card and says nothing; a command's reply is the
+ * line), and the pinned card edited where the press was not on it. The
+ * thread is not closed at the end: a reply into a closed thread reopens
+ * it, and Discord closes an idle one by itself.
+ */
+async function afterPlay(table: TableDeps, played: { line: string | null; run: GuildRun; ended: boolean; card: Card }, opts: { editCard: boolean; postLine: boolean }): Promise<void> {
   if (!table.rest) return;
-  if (played.line) await table.rest.postMessage(played.run.threadId, { content: played.line });
-  if (editCard && played.run.cardMessageId) await table.rest.editMessage(played.run.threadId, played.run.cardMessageId, played.card);
-  if (played.ended) await table.rest.archiveThread(played.run.threadId);
+  if (opts.postLine && played.line) await table.rest.postMessage(played.run.threadId, { content: played.line });
+  if (opts.editCard && played.run.cardMessageId) await table.rest.editMessage(played.run.threadId, played.run.cardMessageId, played.card);
 }
 
 async function pressed(i: Interaction, deps: InteractionDeps): Promise<InteractionResponse> {
@@ -292,7 +311,7 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   const pack = found.pack;
   const actor = await seatOf(deps, who, i);
   const host = who.id === run.hostDiscordId || canManage(i);
-  const anyone = id.verb === "join" || id.verb === "leave" || id.verb === "react";
+  const anyone = id.verb === "join" || id.verb === "leave" || id.verb === "react" || id.verb === "wave";
   if (!host && !anyone) return ephemeral(`Only the host, ${run.hostName}, presses here. Everyone else watches, here and by the live link.`);
 
   // Two presses open a modal rather than move: the answer is typed.
@@ -314,10 +333,16 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   if (!action) return ephemeral("That press means nothing here any more; the card may be stale. /run status posts a fresh one.");
   const played = await play(table, run, pack, actor, action);
   if ("error" in played) return ephemeral(played.error);
-  // The card is the message pressed, updated in place, so no edit is
-  // needed for it; a press from a select or a modal answers the same way.
-  await afterPlay(table, played, id.verb === "ending");
-  if (id.verb === "ending") return say(played.line ?? "The run is over.");
+  // The message pressed is updated in place by the answer; the pinned
+  // card is edited too where the press was on some other message, so the
+  // two never disagree. The ending menu lives on an ephemeral message,
+  // whose reply is the line itself.
+  const onCard = i.message?.id === played.run.cardMessageId;
+  if (id.verb === "ending") {
+    await afterPlay(table, played, { editCard: true, postLine: false });
+    return say(played.line ?? "The run is over.");
+  }
+  await afterPlay(table, played, { editCard: !onCard, postLine: true });
   return withCard(ResponseType.UpdateMessage, played.card);
 }
 
@@ -358,6 +383,8 @@ function actionFor(id: { verb: string; arg?: string }, i: Interaction, run: Guil
       return { kind: "undo" };
     case "react":
       return id.arg ? { kind: "react", emoji: id.arg } : null;
+    case "wave":
+      return picked ? { kind: "react", emoji: picked } : null;
     case "clock": {
       const m = /^(pause|resume):(.+)$/.exec(id.arg ?? "");
       return m ? { kind: "clock", clock: m[2]!, to: m[1] === "pause" ? "paused" : "running" } : null;

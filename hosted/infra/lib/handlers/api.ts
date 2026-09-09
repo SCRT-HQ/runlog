@@ -9,7 +9,7 @@ import { dynamoBilling, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
 import { dynamoGuilds, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
 import { handleInteraction, type InteractionDeps } from "./discord/interactions.js";
-import { discordRest, guildNameFrom, type DiscordRest } from "./discord/rest.js";
+import { discordRest, guildNameFrom, PATIENT_ROPE_MS, ROPE_MS, type DiscordRest } from "./discord/rest.js";
 import { ulid } from "./ids.js";
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { isInteraction, type Interaction } from "./discord/types.js";
@@ -205,8 +205,8 @@ export interface Deps {
     guildName?: (guildId: string) => Promise<string | null>;
     /** Whether the server plan is on sale; off, the app shows it as coming and only a `server` flag or grant holds it. */
     open?: boolean;
-    /** Discord itself, for the thread and the messages of a hosted run; null until the token is filled. */
-    rest?: () => Promise<DiscordRest | null>;
+    /** Discord itself, for the thread and the messages of a hosted run; null until the token is filled. Patient, with a longer rope, for the job. */
+    rest?: (patient?: boolean) => Promise<DiscordRest | null>;
   };
   /** Link codes are random by default; a test hands in its own. */
   code?: () => string;
@@ -271,7 +271,7 @@ const str = (v: unknown): v is string => typeof v === "string";
  * where the stage has one, for a start that a cold start plus three
  * seconds may not cover.
  */
-async function interactionDepsFor(deps: Deps, now: () => string): Promise<InteractionDeps> {
+async function interactionDepsFor(deps: Deps, now: () => string, patient = false): Promise<InteractionDeps> {
   return {
     guilds: deps.guilds!,
     appUrl: deps.appUrl ?? "/",
@@ -280,7 +280,7 @@ async function interactionDepsFor(deps: Deps, now: () => string): Promise<Intera
     serverFeature: deps.features?.server ?? "server",
     store: deps.store,
     ...(deps.notify ? { notify: deps.notify } : {}),
-    rest: deps.discord?.rest ? await deps.discord.rest() : null,
+    rest: deps.discord?.rest ? await deps.discord.rest(patient) : null,
     mintId: deps.mintId ?? ulid,
     token: deps.token ?? (() => randomBytes(24).toString("base64url")),
     // What the server's owner has: bought, or flagged on their session and remembered.
@@ -303,14 +303,18 @@ async function interactionDepsFor(deps: Deps, now: () => string): Promise<Intera
 export async function finishDeferred(interaction: Interaction, deps: Deps): Promise<void> {
   if (!deps.discord || !deps.guilds) return;
   const now = deps.now ?? (() => new Date().toISOString());
-  const { defer: _defer, ...without } = await interactionDepsFor(deps, now);
+  // With time to spare, the calls to Discord get a longer rope than the route allows.
+  const { defer: _defer, ...without } = await interactionDepsFor(deps, now, true);
   const answer = await handleInteraction(interaction, without);
   const message = answer.data ?? { content: "Done." };
-  await without.rest?.editOriginal(deps.discord.applicationId, interaction.token, {
+  const filled = await without.rest?.editOriginal(deps.discord.applicationId, interaction.token, {
     ...(message.content ? { content: message.content } : {}),
     ...(message.embeds ? { embeds: message.embeds } : {}),
     ...(message.components ? { components: message.components } : {}),
   });
+  // The work is done and written; only the reply is missing. Said loudly,
+  // since the person in Discord sees a reply that never came.
+  if (!filled) console.error(`job: the reply to interaction ${interaction.id} could not be filled in`);
 }
 
 export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<Result> {
@@ -1911,9 +1915,9 @@ function depsFromEnv(): Deps {
                   const t = await token();
                   return t ? guildNameFrom(t, guildId) : null;
                 },
-                rest: async () => {
+                rest: async (patient?: boolean) => {
                   const t = await token();
-                  return t ? discordRest(t) : null;
+                  return t ? discordRest(t, fetch, patient ? PATIENT_ROPE_MS : ROPE_MS) : null;
                 },
               },
             };

@@ -12,7 +12,9 @@
  */
 
 const API = "https://discord.com/api/v10";
-const ROPE_MS = 2000;
+/** How long a call may take: short on the route, which has three seconds in all; longer on the job, which has thirty. */
+export const ROPE_MS = 2000;
+export const PATIENT_ROPE_MS = 8000;
 
 export interface DiscordMessage {
   content?: string;
@@ -33,9 +35,9 @@ export interface DiscordRest {
   editOriginal(applicationId: string, interactionToken: string, message: DiscordMessage): Promise<boolean>;
 }
 
-async function call(token: string, method: string, path: string, body: unknown, fetchImpl: typeof fetch): Promise<Record<string, unknown> | null> {
+async function call(token: string, method: string, path: string, body: unknown, fetchImpl: typeof fetch, ropeMs: number): Promise<Record<string, unknown> | null> {
   const rope = new AbortController();
-  const timer = setTimeout(() => rope.abort(), ROPE_MS);
+  const timer = setTimeout(() => rope.abort(), ropeMs);
   try {
     const res = await fetchImpl(`${API}${path}`, {
       method,
@@ -57,26 +59,26 @@ async function call(token: string, method: string, path: string, body: unknown, 
 /** Discord's ChannelType.PublicThread. */
 const PUBLIC_THREAD = 11;
 
-export function discordRest(token: string, fetchImpl: typeof fetch = fetch): DiscordRest {
+export function discordRest(token: string, fetchImpl: typeof fetch = fetch, ropeMs: number = ROPE_MS): DiscordRest {
   const id = (out: Record<string, unknown> | null) => (out && typeof out["id"] === "string" ? out["id"] : null);
   return {
     async createThread(channelId, name) {
-      return id(await call(token, "POST", `/channels/${channelId}/threads`, { name: name.slice(0, 100), type: PUBLIC_THREAD, auto_archive_duration: 1440 }, fetchImpl));
+      return id(await call(token, "POST", `/channels/${channelId}/threads`, { name: name.slice(0, 100), type: PUBLIC_THREAD, auto_archive_duration: 1440 }, fetchImpl, ropeMs));
     },
     async postMessage(channelId, message) {
-      return id(await call(token, "POST", `/channels/${channelId}/messages`, message, fetchImpl));
+      return id(await call(token, "POST", `/channels/${channelId}/messages`, message, fetchImpl, ropeMs));
     },
     async editMessage(channelId, messageId, message) {
-      return (await call(token, "PATCH", `/channels/${channelId}/messages/${messageId}`, message, fetchImpl)) !== null;
+      return (await call(token, "PATCH", `/channels/${channelId}/messages/${messageId}`, message, fetchImpl, ropeMs)) !== null;
     },
     async pinMessage(channelId, messageId) {
-      return (await call(token, "PUT", `/channels/${channelId}/pins/${messageId}`, undefined, fetchImpl)) !== null;
+      return (await call(token, "PUT", `/channels/${channelId}/pins/${messageId}`, undefined, fetchImpl, ropeMs)) !== null;
     },
     async archiveThread(threadId) {
-      return (await call(token, "PATCH", `/channels/${threadId}`, { archived: true }, fetchImpl)) !== null;
+      return (await call(token, "PATCH", `/channels/${threadId}`, { archived: true }, fetchImpl, ropeMs)) !== null;
     },
     async editOriginal(applicationId, interactionToken, message) {
-      return (await call(token, "PATCH", `/webhooks/${applicationId}/${interactionToken}/messages/@original`, message, fetchImpl)) !== null;
+      return (await call(token, "PATCH", `/webhooks/${applicationId}/${interactionToken}/messages/@original`, message, fetchImpl, ropeMs)) !== null;
     },
   };
 }
@@ -84,7 +86,7 @@ export function discordRest(token: string, fetchImpl: typeof fetch = fetch): Dis
 /** A server's name, for the profile; best effort, since a claim must not wait on Discord. */
 export async function guildNameFrom(token: string, guildId: string, fetchImpl: typeof fetch = fetch): Promise<string | null> {
   if (!/^\d{15,22}$/.test(guildId)) return null;
-  const out = await call(token, "GET", `/guilds/${guildId}`, undefined, fetchImpl);
+  const out = await call(token, "GET", `/guilds/${guildId}`, undefined, fetchImpl, ROPE_MS);
   const name = out?.["name"];
   return typeof name === "string" && name.trim() ? name.trim().slice(0, 100) : null;
 }

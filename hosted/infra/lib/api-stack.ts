@@ -249,6 +249,9 @@ export class ApiStack extends Stack {
     });
     this.table.grantReadWriteData(job);
     this.bucket.grantReadWrite(job);
+    // Once: a job that timed out after the session and the thread were made
+    // must not be run again with the same press and make a second of each.
+    job.configureAsyncInvoke({ retryAttempts: 0 });
     job.grantInvoke(handler);
     handler.addEnvironment("DISCORD_JOB_FUNCTION", job.functionName);
     this.table.grantReadWriteData(handler);

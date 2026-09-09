@@ -50,8 +50,8 @@ import type { InputRequest, Obligation, RunState } from "./types.ts";
 export interface Agenda {
   phase: "setup" | "betweenUnits" | "step" | "ended";
   active: ActiveStep | null;
-  /** The active step's checklist or confirm points, with what is ticked so far. */
-  checklist: Array<{ index: number; key: string; text: string; on: boolean }>;
+  /** The active step's checklist or confirm points, with what is ticked so far; an optional point need not be, to step on. */
+  checklist: Array<{ index: number; key: string; text: string; on: boolean; optional: boolean }>;
   due: Obligation[];
   /** Ids of moves offered right now. */
   moves: string[];
@@ -99,6 +99,7 @@ export function agenda(pack: Pack, state: RunState | null, events: readonly RunE
         key: `${active.phase.id}#${active.index}`,
         text: itemText(item),
         on: ticksFor(state, `${active.phase.id}#${active.index}`).has(String(index)),
+        optional: itemOptional(item),
       }))
     : [];
   const moves = availableMoves(pack, state, active ? "anytime" : ["betweenUnits", "beforeEnding"]).map((m) => m.id);

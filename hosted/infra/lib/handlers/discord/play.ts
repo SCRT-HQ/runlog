@@ -44,13 +44,19 @@ const parsed = new Map<string, { hash: string; pack: Pack }>();
 
 export async function packFor(guilds: GuildStore, guildId: string, packId: string): Promise<{ pack: Pack; title: string } | null> {
   const key = `${guildId}/${packId}`;
+  // The row first: where the container holds this pack at this hash, the text need not travel again.
+  const meta = await guilds.guildPackMeta(guildId, packId);
+  if (!meta) {
+    parsed.delete(key);
+    return null;
+  }
+  const kept = parsed.get(key);
+  if (kept && kept.hash === meta.hash) return { pack: kept.pack, title: meta.title };
   const found = await guilds.getGuildPack(guildId, packId);
   if (!found) {
     parsed.delete(key);
     return null;
   }
-  const kept = parsed.get(key);
-  if (kept && kept.hash === found.meta.hash) return { pack: kept.pack, title: found.meta.title };
   const loaded = loadPackText(found.source, found.meta.format);
   if (!loaded.ok) return null;
   parsed.set(key, { hash: found.meta.hash, pack: loaded.pack });
@@ -182,17 +188,25 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
   const at = deps.now();
   const events = await eventsOf(deps.store, run.sessionId);
   const state = reduce(pack, events);
-  const author = actor.sub ?? `discord:${actor.discordId}`;
+  // What a member without an account does at the table is written as the
+  // host's, the way a moderator's device writes a roster: the log names
+  // members of the session, and a Discord id is not one.
+  const author = actor.sub ?? run.hostSub;
   const seed = seedOf(events);
   const ctx = { now: at, ...(seed ? { seed } : {}), autoRoll: true, mintId: deps.mintId };
   let produced: RunEvent[] = [];
-  let pending: Pending | undefined;
+  // A block waiting on an answer stays waiting through anything that is not
+  // an answer to it, an undo, or a step that supersedes it.
+  let pending: Pending | undefined = run.pending as unknown as Pending | undefined;
   let line: string | null = null;
   let ended = false;
 
   try {
     switch (action.kind) {
       case "drive": {
+        if ("enter" in action.action && state.unit > 0 && agenda(pack, state, events).phase === "step") {
+          return { error: `${pack.vocabulary.unit.one} ${state.unit} is still open; this card is stale. /run status posts a fresh one.` };
+        }
         const out = drive(pack, events, action.action, ctx);
         ({ produced, pending } = settle(out));
         break;
@@ -236,6 +250,7 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         break;
       }
       case "end": {
+        if (pending) return { error: "The table is waiting on an answer; answer it, or take the move back, before ending." };
         const may = canEndRun(state);
         if (!may.ok) return { error: may.reason ?? "The run cannot end here." };
         produced = [{ t: "RunEnded", at, ending: action.ending } as RunEvent];
@@ -248,7 +263,7 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         if (ids.length === 0) return { error: "Nothing to take back." };
         produced = [{ t: "Undone", at, ids } as RunEvent];
         // A block waiting on an answer belongs to the move being unmade.
-        run.pending = undefined;
+        pending = undefined;
         line = "Took the last move back.";
         break;
       }
@@ -286,11 +301,10 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
   // back as one.
   const move = deps.mintId();
   const stamped = produced.map((e) => ({ ...e, id: (e as { id?: string }).id ?? deps.mintId(), move: (e as { move?: string }).move ?? move }));
-  let seq = (await deps.store.getSession(run.sessionId))?.meta.seq ?? 0;
   const next = [...events, ...stamped];
   const after = reduce(pack, next);
   if (stamped.length > 0) {
-    seq = (await deps.store.appendEvents(run.sessionId, author, at, stamped as unknown as Record<string, unknown>[])).seq;
+    const { seq } = await deps.store.appendEvents(run.sessionId, author, at, stamped as unknown as Record<string, unknown>[]);
     if (ended) await deps.store.updateSession(run.sessionId, at, { endedAt: at });
     await writeSnapshot(deps, run.sessionId, pack, after, next, seq);
     if (!line) line = lineFor(pack, state, after, stamped);
