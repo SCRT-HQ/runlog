@@ -63,7 +63,7 @@ describe("the bot", () => {
     const out = await handleInteraction(press({ guild_id: "g1", member: { user: mira }, data: { name: "link" } }), { guilds, appUrl: "https://runlog.test/", now: () => NOW, code: () => "ABCDEF" });
     expect(out.type).toBe(ResponseType.ChannelMessage);
     expect(out.data?.flags).toBe(EPHEMERAL);
-    expect(out.data?.content).toContain("https://runlog.test/#link/discord?c=ABCDEF");
+    expect(out.data?.content).toContain("https://runlog.test/play/link/discord?c=ABCDEF");
     expect(out.data?.content).toContain(`${LINK_MINUTES} minutes`);
     expect(guilds.codes.get("ABCDEF")).toEqual({ code: "ABCDEF", discordUserId: "1001", name: "Mira", guildId: "g1", createdAt: NOW, expiresAt: "2026-09-08T12:10:00.000Z" });
   });
@@ -83,7 +83,7 @@ describe("the bot", () => {
     const out = await handleInteraction(press({ member: { user: mira }, data: { name: "link" } }), deps);
     expect(out.data?.content).toContain("already linked");
     expect(out.data?.content).toContain("moves the link there");
-    expect(out.data?.content).toContain("#link/discord?c=ABCDEF");
+    expect(out.data?.content).toContain("play/link/discord?c=ABCDEF");
     expect(guilds.codes.size).toBe(1);
     const gone = await handleInteraction(press({ member: { user: mira }, data: { name: "unlink" } }), deps);
     expect(gone.data?.content).toContain("Unlinked");
@@ -110,7 +110,7 @@ describe("setting up a server", () => {
     expect((await handleInteraction(member, deps)).data?.content).toContain("takes someone who can manage");
     // An administrator may do anything, whatever else the field says.
     const admin = setup("claim", [], { member: { user: mira, permissions: String(1 << 3) } });
-    expect((await handleInteraction(admin, deps)).data?.content).toContain("#link/guild?c=CLAIM1");
+    expect((await handleInteraction(admin, deps)).data?.content).toContain("play/link/guild?c=CLAIM1");
     expect(canManage({ ...manager, member: { user: mira, permissions: "not a number" } })).toBe(false);
     const { member: _m, ...nobody } = manager;
     expect(canManage(nobody)).toBe(false);
@@ -121,7 +121,7 @@ describe("setting up a server", () => {
     const deps = { guilds, appUrl: "https://runlog.test", now: () => NOW, code: () => "CLAIM1" };
     const out = await handleInteraction(setup("claim"), deps);
     expect(out.data?.flags).toBe(EPHEMERAL);
-    expect(out.data?.content).toContain("https://runlog.test/#link/guild?c=CLAIM1");
+    expect(out.data?.content).toContain("https://runlog.test/play/link/guild?c=CLAIM1");
     expect(guilds.claims.get("CLAIM1")).toEqual({ code: "CLAIM1", guildId: "g1", discordUserId: "1001", createdAt: NOW, expiresAt: "2026-09-08T12:10:00.000Z" });
     await guilds.claimGuild({ guildId: "g1", ownerSub: "user_9", claimedAt: NOW });
     expect((await handleInteraction(setup("claim"), deps)).data?.content).toContain("claimed already");

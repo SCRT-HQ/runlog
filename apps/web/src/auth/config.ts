@@ -1,3 +1,4 @@
+import { appBase } from "../route.ts";
 /**
  * Whether there is anything to sign into.
  *
@@ -35,5 +36,5 @@ export function configuredClientId(): string | undefined {
  * `/index.html`.
  */
 export function appUrl(): string {
-  return new URL("./", window.location.href).href;
+  return new URL(appBase(window.location.href), window.location.href).href;
 }

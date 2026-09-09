@@ -34,6 +34,8 @@ runs:
     - name: Build the app
       shell: bash
       env:
+        # The hosted copy lives at one root, so its pages can be paths; see apps/web/src/route.ts.
+        RUNLOG_BASE: /
         VITE_WORKOS_CLIENT_ID: ${{ inputs.workos-client-id }}
         # Shown in the app's footer and its error panel, so a report says
         # which build it came from.

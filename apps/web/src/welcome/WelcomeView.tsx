@@ -1,3 +1,4 @@
+import { hrefFor, PATHS_ON } from "../route.ts";
 import { useCallback, useEffect, useState } from "react";
 import { countView } from "../hosted/beacon.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
@@ -46,7 +47,7 @@ export function WelcomeView() {
   // same-document change the browser does not reload for: go to the app.
   useEffect(() => {
     const onHash = () => {
-      if (location.hash) location.replace(`${play}${location.search}${location.hash}`);
+      if (location.hash) location.replace(PATHS_ON ? `${hrefFor(location.hash)}${location.search}` : `${play}${location.search}${location.hash}`);
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);

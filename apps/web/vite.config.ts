@@ -27,7 +27,10 @@ export default defineConfig(({ mode }) => {
       }
     : undefined;
   return {
-  base: "./",
+  // Relative by default, so the same build runs from a file and from a
+  // subpath on a static host. The hosted build is made with RUNLOG_BASE=/
+  // and lives at one root, which is what lets its pages be paths.
+  base: process.env["RUNLOG_BASE"] ?? "./",
   // What build this is, for the error panel and the footer. The sha comes
   // from the publish workflow; a local build has none.
   define: {

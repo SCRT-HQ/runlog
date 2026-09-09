@@ -1,8 +1,9 @@
+import { appBase, hrefFor, PATHS_ON } from "../route.ts";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 // The badge and menu are in AccountBadge.tsx: they read sync's context too,
 // and sync's provider reads this one.
 import { createClient, type User } from "@workos-inc/authkit-js";
-import { baseOf, honestAddress } from "../welcome/route.ts";
+import { honestAddress } from "../welcome/route.ts";
 import { appUrl, configuredClientId } from "./config.ts";
 
 /**
@@ -71,7 +72,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     // as `state` and is put back on return. The value comes back through a
     // URL nobody signs, so only a hash is accepted, and only ever set as
     // one: a hash cannot send the page anywhere else.
-    const returnTo = () => ({ state: { returnTo: location.hash } });
+    const returnTo = () => ({ state: { returnTo: PATHS_ON ? `${location.pathname}${location.search}${location.hash}` : location.hash } });
     const anonymous = (c: Client | undefined, problem?: string) =>
       setAccount({
         status: "anonymous",
@@ -93,7 +94,15 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       redirectUri: appUrl(),
       onRedirectCallback: ({ state }) => {
         const back = (state as { returnTo?: unknown } | undefined)?.returnTo;
-        if (typeof back === "string" && /^#[A-Za-z0-9_\-/?=&.%:]{1,2000}$/.test(back)) location.hash = back;
+        // A hash cannot send the page anywhere else. A path is accepted only
+        // where paths are on, only under the app's own base, and only as an
+        // in-page change, so neither can either.
+        if (typeof back !== "string") return;
+        if (/^#[A-Za-z0-9_\-/?=&.%:]{1,2000}$/.test(back)) location.hash = back;
+        else if (PATHS_ON && /^\/[A-Za-z0-9_\-/?=&.%:#]{1,2000}$/.test(back) && back.startsWith(hrefFor(""))) {
+          history.replaceState(null, "", back);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }
       },
       onRefreshFailure: ({ signIn }) =>
         setAccount({ status: "anonymous", signIn: () => void signIn(returnTo()), signUp: () => void signIn(returnTo()) }),
@@ -106,7 +115,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         client = c;
         const user = c.getUser();
         if (returning) {
-          const honest = honestAddress({ protocol: location.protocol, pathname: location.pathname, base: baseOf(location.href), hash: location.hash, search: location.search });
+          const honest = honestAddress({ protocol: location.protocol, pathname: location.pathname, base: appBase(location.href), hash: location.hash, search: location.search });
           if (honest) history.replaceState(null, "", honest);
         }
         if (user) {

@@ -152,7 +152,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       const code = deps.code ? deps.code() : newCode();
       await deps.guilds.putLinkCode({ code, discordUserId: who.id, name: nameOf(who), ...(i.guild_id ? { guildId: i.guild_id } : {}), createdAt: at, expiresAt });
       return ephemeral(
-        `${already ? "This Discord account is already linked to a Runlog account; opening this signed in to a different one moves the link there. " : ""}Open this address signed in to Runlog, within ${LINK_MINUTES} minutes, and your accounts are linked:\n${home}/#link/discord?c=${code}\n\nOnly you can see this message. The code works once.`,
+        `${already ? "This Discord account is already linked to a Runlog account; opening this signed in to a different one moves the link there. " : ""}Open this address signed in to Runlog, within ${LINK_MINUTES} minutes, and your accounts are linked:\n${home}/play/link/discord?c=${code}\n\nOnly you can see this message. The code works once.`,
       );
     }
     if (name === "unlink") {
@@ -172,7 +172,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
         const code = deps.code ? deps.code() : newCode();
         await deps.guilds.putClaimCode({ code, guildId: i.guild_id, discordUserId: who.id, createdAt: at, expiresAt });
         return ephemeral(
-          `Open this address signed in to Runlog, within ${LINK_MINUTES} minutes, to claim this server for that account:\n${home}/#link/guild?c=${code}\n\n` +
+          `Open this address signed in to Runlog, within ${LINK_MINUTES} minutes, to claim this server for that account:\n${home}/play/link/guild?c=${code}\n\n` +
             `The account that claims a server pays for its plan and chooses, from its own packs, what the bot plays here.${guild ? " This server is claimed already; claiming again moves it to the new account." : ""} Only you can see this message. The code works once.`,
         );
       }

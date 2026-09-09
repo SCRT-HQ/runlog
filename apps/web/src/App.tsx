@@ -27,6 +27,7 @@ import { dockFromHash, type DockRoute } from "./dock/route.ts";
 import { linkFromHash, stashLink } from "./connections/route.ts";
 import { WidgetView } from "./widget/WidgetView.tsx";
 import { liveFromHash, type LiveRoute } from "./live/route.ts";
+import { addressOf, appBase, goTo, runFromAddress } from "./route.ts";
 import { LiveRunView } from "./live/LiveRunView.tsx";
 import { DocMenu } from "./docs/DocMenu.tsx";
 import { DocView } from "./docs/DocView.tsx";
@@ -47,7 +48,7 @@ import { useAlertSettings } from "./alerts/useAlerts.ts";
 import { Footer } from "./hosted/Footer.tsx";
 import { useHosted } from "./hosted/HostedProvider.tsx";
 import { countView } from "./hosted/beacon.ts";
-import { baseOf, welcomePath } from "./welcome/route.ts";
+import { welcomePath } from "./welcome/route.ts";
 import { TermsGate } from "./hosted/TermsGate.tsx";
 import { NameGate } from "./auth/NameGate.tsx";
 import { useAccount } from "./auth/Account.tsx";
@@ -167,69 +168,80 @@ export default function App() {
    * profile's four pages (`#profile`, `#profile/publishing`, and so on).
    * Leaving any of them clears the hash; nothing else in the app lives there.
    */
-  const [guideSlug, setGuideSlug] = useState<string>(() => guideSlugFromHash(typeof location !== "undefined" ? location.hash : "") ?? "start");
+  const [guideSlug, setGuideSlug] = useState<string>(() => guideSlugFromHash(typeof location !== "undefined" ? addressOf(location) : "") ?? "start");
   /** A widget page: one panel of a run, alone, for a stream to capture. */
-  const [widget, setWidget] = useState<WidgetRoute | null>(() => widgetFromHash(typeof location !== "undefined" ? location.hash : ""));
+  const [widget, setWidget] = useState<WidgetRoute | null>(() => widgetFromHash(typeof location !== "undefined" ? addressOf(location) : ""));
   /** A dock: one run's remote, alone on the page, for a streaming app's custom browser dock. */
-  const [dock, setDock] = useState<DockRoute | null>(() => dockFromHash(typeof location !== "undefined" ? location.hash : ""));
+  const [dock, setDock] = useState<DockRoute | null>(() => dockFromHash(typeof location !== "undefined" ? addressOf(location) : ""));
   /** A live link: one run, watched by anyone, alone on the page. */
-  const [liveRoute, setLiveRoute] = useState<LiveRoute | null>(() => liveFromHash(typeof location !== "undefined" ? location.hash : ""));
+  const [liveRoute, setLiveRoute] = useState<LiveRoute | null>(() => liveFromHash(typeof location !== "undefined" ? addressOf(location) : ""));
   /** A pack the catalog opens on, from `#catalog/<packId>`: a live page's "in the catalog" link lands here. */
   const [catalogFocus, setCatalogFocus] = useState<string | null>(null);
   /** Which of the profile's four pages, from `#profile` or `#profile/<page>`. */
-  const [profilePage, setProfilePage] = useState<ProfilePage>(() => profilePageFromHash(typeof location !== "undefined" ? location.hash : "") ?? "profile");
+  const [profilePage, setProfilePage] = useState<ProfilePage>(() => profilePageFromHash(typeof location !== "undefined" ? addressOf(location) : "") ?? "profile");
+  /** A run named in the address (`#run/<id>`, `/play/run/<id>`), waiting to be opened once the packs and storage are here. */
+  const [wantedRun, setWantedRun] = useState<string | null>(() => runFromAddress(typeof location !== "undefined" ? addressOf(location) : ""));
   useEffect(() => {
-    const fromHash = () => {
-      setWidget(widgetFromHash(location.hash));
-      setDock(dockFromHash(location.hash));
-      setLiveRoute(liveFromHash(location.hash));
-      const slug = guideSlugFromHash(location.hash);
+    // The address in either spelling, read as the hash the parsers know.
+    const fromAddress = () => {
+      const address = addressOf(location);
+      setWidget(widgetFromHash(address));
+      setDock(dockFromHash(address));
+      setLiveRoute(liveFromHash(address));
+      const slug = guideSlugFromHash(address);
+      const run = runFromAddress(address);
       if (slug) {
         setGuideSlug(slug);
         setView("guide");
-      } else if (location.hash === "#create") {
+      } else if (address === "#create") {
         setView("design");
-      } else if (/^#profile(\/|$)/.test(location.hash)) {
-        setProfilePage(profilePageFromHash(location.hash) ?? "profile");
+      } else if (/^#profile(\/|$)/.test(address)) {
+        setProfilePage(profilePageFromHash(address) ?? "profile");
         setView("profile");
-      } else if (linkFromHash(location.hash)) {
+      } else if (linkFromHash(address)) {
         // A code from somewhere else of the person's (the bot's `/link`, or
         // `/setup claim` for a server): kept for the profile page that asks
         // before binding it, and off the address bar so a reload does not
         // offer it twice.
-        const link = linkFromHash(location.hash)!;
+        const link = linkFromHash(address)!;
         stashLink(link);
         const where = link.kind === "guild" ? "servers" : "social";
-        history.replaceState(null, "", `${location.pathname}${location.search}${profileHash(where)}`);
+        goTo(profileHash(where));
         setProfilePage(where);
         setView("profile");
-      } else if (/^#catalog(\/|$)/.test(location.hash)) {
-        const id = location.hash.slice("#catalog/".length);
+      } else if (/^#catalog(\/|$)/.test(address)) {
+        const id = address.slice("#catalog/".length);
         setCatalogFocus(id ? decodeURIComponent(id) : null);
         setView("catalog");
-        history.replaceState(null, "", location.pathname + location.search);
+        goTo("");
+      } else if (run) {
+        setWantedRun(run);
       }
     };
-    fromHash();
-    window.addEventListener("hashchange", fromHash);
-    return () => window.removeEventListener("hashchange", fromHash);
+    fromAddress();
+    window.addEventListener("hashchange", fromAddress);
+    window.addEventListener("popstate", fromAddress);
+    return () => {
+      window.removeEventListener("hashchange", fromAddress);
+      window.removeEventListener("popstate", fromAddress);
+    };
   }, []);
   const openGuide = (slug = guideSlug) => {
     setGuideSlug(slug);
     setView("guide");
-    if (location.hash !== `#guide/${slug}`) history.replaceState(null, "", `#guide/${slug}`);
+    goTo(`#guide/${slug}`);
   };
   const leaveGuide = () => {
     setView("play");
-    if (location.hash.startsWith("#guide")) history.replaceState(null, "", location.pathname + location.search);
+    if (addressOf(location).startsWith("#guide")) goTo("");
   };
   const openDesigner = () => {
     setView("design");
-    if (location.hash !== "#create") history.replaceState(null, "", "#create");
+    goTo("#create");
   };
   const leaveDesigner = () => {
     setView("play");
-    if (location.hash === "#create") history.replaceState(null, "", location.pathname + location.search);
+    if (addressOf(location) === "#create") goTo("");
   };
   /**
    * Opening the profile, or moving between its pages, pushes a history
@@ -239,12 +251,11 @@ export default function App() {
   const openProfile = (page: ProfilePage = "profile") => {
     setProfilePage(page);
     setView("profile");
-    const hash = profileHash(page);
-    if (location.hash !== hash) history.pushState(null, "", hash);
+    goTo(profileHash(page), "push");
   };
   const leaveProfile = () => {
     setView("play");
-    if (location.hash.startsWith("#profile")) history.replaceState(null, "", location.pathname + location.search);
+    if (addressOf(location).startsWith("#profile")) goTo("");
   };
 
   /**
@@ -375,6 +386,8 @@ export default function App() {
       choose(saved.packId, src);
       setView("play");
       setNotice(null);
+      // A run has an address, so a reload comes back to it and a link says which it is.
+      goTo(`#run/${runId}`);
       return true;
     },
     [imported, choose, addFromCatalog],
@@ -445,6 +458,16 @@ export default function App() {
     [openRun, account, sync],
   );
 
+  // A run named in the address opens the way the account's last would:
+  // from this device if it is here, else fetched and tried again. Once per
+  // address, and quietly, since nobody pressed anything.
+  useEffect(() => {
+    if (!wantedRun) return;
+    const id = wantedRun;
+    setWantedRun(null);
+    void continueLast(true, id);
+  }, [wantedRun, continueLast]);
+
   /**
    * A device with nothing open, signed in, after its first pass: open what
    * the account was on. Once, not on every pass, so browsing is left alone.
@@ -455,7 +478,7 @@ export default function App() {
     // An address that names a page — the guide, the profile, the catalog, a
     // link — is what the person asked for; a reload must land there, not on
     // whatever run the account touched last.
-    if (lastActive() || (location.hash && location.hash !== "#")) {
+    if (lastActive() || wantedRun || (addressOf(location) && addressOf(location) !== "#")) {
       autoOpened.current = true;
       return;
     }
@@ -830,7 +853,7 @@ export default function App() {
 
   // Where the mark goes: the welcome page, where there is one. Read once,
   // and only where there is a location to read (the tests render without).
-  const home = typeof location !== "undefined" ? welcomePath(location.protocol, baseOf(location.href)) : null;
+  const home = typeof location !== "undefined" ? welcomePath(location.protocol, appBase(location.href)) : null;
 
   return (
     <div className="app">
@@ -840,16 +863,16 @@ export default function App() {
             and the mark is the way to the shelf instead. */}
         <a
           className="brand"
-          href={home ?? "./"}
+          href={home ?? import.meta.env.BASE_URL}
           title="What Runlog is"
           onClick={(e) => {
             if (home) return;
             e.preventDefault();
             setView("library");
-            if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+            goTo("");
           }}
         >
-          <img className="logo" src="./icon.svg" alt="" />
+          <img className="logo" src={`${import.meta.env.BASE_URL}icon.svg`} alt="" />
           <h1>Runlog</h1>
         </a>
         {/* One door to the library, always; a pack in play still says which one, in muted text beside it. */}

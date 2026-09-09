@@ -13,7 +13,7 @@ import { useHosted } from "../hosted/HostedProvider.tsx";
 export function Screenshot({ src, alt, caption }: { src: string; alt: string; caption?: string }) {
   return (
     <figure className="guideShot">
-      <img src={`./guide/${src}`} alt={alt} loading="lazy" />
+      <img src={`${import.meta.env.BASE_URL}guide/${src}`} alt={alt} loading="lazy" />
       {caption && <figcaption className="muted small">{caption}</figcaption>}
     </figure>
   );

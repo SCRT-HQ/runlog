@@ -50,5 +50,9 @@ describe("which page an address opens", () => {
     expect(baseOf("https://scrt-hq.github.io/runlog/play")).toBe("/runlog/");
     expect(appPath("/runlog/")).toBe("/runlog/play");
     expect(isAppPath("/runlog/play/", "/runlog/")).toBe(true);
+    // A page under play is the app's too; a page beside it is not.
+    expect(isAppPath("/play/guide/streaming", "/")).toBe(true);
+    expect(isAppPath("/runlog/play/profile/servers", "/runlog/")).toBe(true);
+    expect(isAppPath("/playground", "/")).toBe(false);
   });
 });

@@ -123,7 +123,7 @@ function livePage(input: { appUrl: string; id: string; token: string; title: str
       ? `<h1>Not open</h1><p>This link is not open any more, or never was. Ask whoever sent it for a fresh one, or <a href="${esc(home)}/">open Runlog</a>.</p>`
       : (() => {
           const name = input.title ?? (input.pack ? `A ${input.pack} run` : "A run");
-          const target = `${home}/#run/${encodeURIComponent(input.id)}?t=${encodeURIComponent(input.token)}`;
+          const target = `${home}/play/run/${encodeURIComponent(input.id)}?t=${encodeURIComponent(input.token)}`;
           const description = `Watch ${input.pack ?? "this run"} as it happens, live on Runlog.`;
           return `<meta http-equiv="refresh" content="0; url=${esc(target)}">
 <meta property="og:type" content="website">
@@ -495,10 +495,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // `POST /api/connections/discord/verify` began: no bearer, since it is
   // Discord bringing the person back, and the state names who began it.
   if (method === "GET" && path === "/api/discord/linked-role") {
-    return redirect(`${deps.appUrl ?? "/"}#link/discord?verify=1`);
+    return redirect(`${deps.appUrl ?? "/"}play/link/discord?verify=1`);
   }
   if (method === "GET" && path === "/api/discord/linked-role/callback") {
-    const back = (ok: boolean) => redirect(`${deps.appUrl ?? "/"}#link/discord?verified=${ok ? 1 : 0}`);
+    const back = (ok: boolean) => redirect(`${deps.appUrl ?? "/"}play/link/discord?verified=${ok ? 1 : 0}`);
     const q = event.queryStringParameters ?? {};
     const state = typeof q["state"] === "string" ? q["state"] : "";
     const code = typeof q["code"] === "string" ? q["code"] : "";
