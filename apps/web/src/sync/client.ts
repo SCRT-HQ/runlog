@@ -461,6 +461,8 @@ export interface Api {
   refreshEntitlements(): Promise<string[]>;
   myPublisher(): Promise<PublisherView | null>;
   becomePublisher(name: string): Promise<PublisherView>;
+  /** What the catalog calls this publisher, and how many of its listings were re-stamped with it. */
+  renamePublisher(name: string): Promise<{ publisher: PublisherView; listings: number }>;
   /** Stripe's hosted onboarding for payouts; `available: false` where billing is off. */
   connectPublisher(): Promise<{ url: string } | { available: false }>;
   refreshPublisherConnect(): Promise<PublisherView | null>;
@@ -700,6 +702,11 @@ export function createApi(
       const { status, body } = await request<{ publisher?: PublisherView | null; error?: string }>("POST", "/publishers", { name });
       if (status !== 200 || !body.publisher) throw new Error(body.error ?? "that could not be set up");
       return body.publisher;
+    },
+    renamePublisher: async (name) => {
+      const { status, body } = await request<{ publisher?: PublisherView | null; listings?: number; error?: string }>("PATCH", "/publishers", { name });
+      if (status !== 200 || !body.publisher) throw new Error(body.error ?? "that name could not be changed");
+      return { publisher: body.publisher, listings: body.listings ?? 0 };
     },
     connectPublisher: async () => {
       const { status, body } = await request<{ url?: string; available?: boolean; error?: string; publisher?: null }>("POST", "/publishers/connect");

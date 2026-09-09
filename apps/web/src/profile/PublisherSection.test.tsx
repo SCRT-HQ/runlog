@@ -98,6 +98,7 @@ function fakeApi(overrides: Partial<Api>): Api {
     guildPacks: notUsed,
     delegatePack: notUsed,
     undelegatePack: notUsed,
+    renamePublisher: notUsed,
   } satisfies Api;
   return { ...base, ...overrides };
 }

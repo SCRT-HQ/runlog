@@ -1571,6 +1571,45 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     }
     if (!mine) return json(200, { publisher: null });
 
+    /*
+     * What the catalog calls this publisher.
+     *
+     * The name is on the publisher's own row, in WorkOS where a key is
+     * filled, and copied onto every listing card, because a card is what
+     * the catalog reads and joining one row to another to draw a page of
+     * cards is not worth it. So a rename is three writes, and the third
+     * is a loop over this publisher's own listings: there are few, they
+     * are small, and a card left saying the old name is the whole of what
+     * this route exists to prevent.
+     *
+     * What was sold under the old name keeps it. A receipt is a record of
+     * what happened, and a signed release says who signed it at the time.
+     */
+    if (path === "/api/publishers" && method === "PATCH") {
+      if (!admin) return json(422, { error: "only an admin of the publisher changes its name" });
+      const body = parse(event);
+      const name = isRecord(body) && str(body["name"]) ? body["name"].trim() : "";
+      if (!name || name.length > MAX_NAME) return json(422, { error: "name: what the catalog will call you" });
+      const at = now();
+      if (name === mine.name) return json(200, { publisher: view(mine), listings: 0 });
+      const renamed = await deps.publishers.rename(mine.id, name, at);
+      if (!renamed) return json(200, { publisher: null });
+      const workos = deps.workos ? await deps.workos() : null;
+      // WorkOS's own name is what its invitation mails say; a copy with no
+      // key filled has no organization to keep in step.
+      if (workos) await workos.renameOrganization(mine.id, name).catch(() => {});
+      let listings = 0;
+      if (deps.listings) {
+        for (const product of await deps.listings.listProducts(mine.id)) {
+          const card = await deps.listings.getCard(product.packId);
+          if (!card || card.orgId !== mine.id) continue;
+          await deps.listings.putCard({ ...card, publisherName: name });
+          listings += 1;
+        }
+      }
+      return json(200, { publisher: view(renamed), listings });
+    }
+
     // ---- the people in it: members by WorkOS's book, invitations pending ----
     if (path === "/api/publishers/members" && method === "GET") {
       const workos = deps.workos ? await deps.workos() : null;

@@ -103,6 +103,13 @@ function memoryPublishers(): PublisherStore {
       const p = orgs.get(id);
       return p ? { ...p } : null;
     },
+    async rename(id, name, at) {
+      const p = orgs.get(id);
+      if (!p) return null;
+      const next = { ...p, name, updatedAt: at };
+      orgs.set(id, next);
+      return { ...next };
+    },
     async publisherOf(sub) {
       const id = members.get(sub);
       return id ? { ...orgs.get(id)! } : null;
@@ -144,6 +151,9 @@ function fakeWorkOS(flags: Record<string, { enabled: boolean; defaultValue: bool
     async createOrganization(name) {
       calls.push(`org ${name}`);
       return { id: `org_${name.toLowerCase().replace(/\W+/g, "-")}` };
+    },
+    async renameOrganization(organizationId, name) {
+      calls.push(`rename ${organizationId} ${name}`);
     },
     async addMember(organizationId, userId, role) {
       calls.push(`member ${organizationId} ${userId} ${role}`);
@@ -1070,6 +1080,32 @@ describe("who is asking", () => {
     // Gone for good.
     await call(request("DELETE", "/api/publishers/packs/com.example.kiln"), d);
     expect((await call(request("GET", "/api/publishers/packs"), d)).body).toEqual({ packs: [] });
+  });
+
+  it("renames a publisher, and every listing it has says the new name", async () => {
+    const stripe = fakeStripe();
+    const publishers = memoryPublishers();
+    const workos = fakeWorkOS();
+    const d = deps(memoryStore(), { publishers, stripe: async () => stripe, workos: async () => workos });
+    const head = { title: "The Long Kiln", version: "1.0.0", category: "Craft", tags: ["pottery"], features: ["solo"], requires: [], players: 1, license: { id: "MIT", redistributable: true } };
+    await call(request("POST", "/api/publishers", { body: { name: "Kiln Press" } }), d);
+    await call(request("PUT", "/api/publishers/packs/com.example.kiln", { body: { source: "id: com.example.kiln\ntitle: The Long Kiln\n", head, summary: { kind: "summary", blocks: [] } } }), d);
+    await call(request("POST", "/api/publishers/packs/com.example.kiln/listing", { body: {} }), d);
+    expect((await call(request("GET", "/api/listings", { token: null }), d)).body).toMatchObject({ listings: [{ publisherName: "Kiln Press" }] });
+
+    // The name changes on the publisher, in WorkOS, and on the card the
+    // catalog actually reads; the answer says how many cards it touched.
+    const renamed = await call(request("PATCH", "/api/publishers", { body: { name: "Cinder & Salt" } }), d);
+    expect(renamed.body).toMatchObject({ publisher: { name: "Cinder & Salt" }, listings: 1 });
+    expect(workos.calls).toContain("rename org_kiln-press Cinder & Salt");
+    expect((await call(request("GET", "/api/listings", { token: null }), d)).body).toMatchObject({ listings: [{ publisherName: "Cinder & Salt" }] });
+    expect((await call(request("GET", "/api/publishers/me"), d)).body).toMatchObject({ publisher: { name: "Cinder & Salt" } });
+
+    // The same name again is not a rename, and an empty one is refused.
+    expect((await call(request("PATCH", "/api/publishers", { body: { name: " Cinder & Salt " } }), d)).body).toMatchObject({ listings: 0 });
+    expect((await call(request("PATCH", "/api/publishers", { body: { name: "  " } }), d)).status).toBe(422);
+    // Somebody who is not an admin of it does not rename it.
+    expect((await call(request("PATCH", "/api/publishers", { body: { name: "Theirs" }, token: "guest" }), d)).body).toEqual({ publisher: null });
   });
 
   it("sells a pack: a Checkout on the publisher's account, a sealed copy for the buyer alone, a receipt, and a ledger", async () => {
