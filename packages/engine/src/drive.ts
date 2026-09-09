@@ -12,6 +12,7 @@ import {
   nextStep,
   stepCompletionEvents,
   type ActiveStep,
+  closesUnit,
 } from "./flow.ts";
 import {
   availableMoves,
@@ -119,7 +120,7 @@ export function agenda(pack: Pack, state: RunState | null, events: readonly RunE
     checklist,
     due,
     moves,
-    canFinalize: active?.step.kind === "finalizeUnit" && blocking.length === 0,
+    canFinalize: active !== null && closesUnit(active.step) && blocking.length === 0,
     challenges: rule ? challenges(pack, state) : [],
   };
 }
@@ -383,8 +384,8 @@ export function drive(pack: Pack, events: readonly RunEvent[], action: DriveActi
 
   if ("finalize" in action) {
     const active = nextStep(pack, state);
-    if (!active || active.step.kind !== "finalizeUnit") {
-      throw new DriveError(`cannot finalize: the active step is ${active ? `"${active.phase.id}#${active.index}" (${active.step.kind})` : "none"}, not finalizeUnit`, action);
+    if (!active || !closesUnit(active.step)) {
+      throw new DriveError(`cannot finalize: the active step is ${active ? `"${active.phase.id}#${active.index}" (${active.step.kind})` : "none"}, not one that closes the unit`, action);
     }
     if (!checklistSatisfied(pack, state, active)) {
       throw new DriveError("cannot finalize: not every confirmation on the active step is ticked", action);
@@ -471,6 +472,8 @@ export function drive(pack: Pack, events: readonly RunEvent[], action: DriveActi
       );
     }
     case "manual":
+      // A step that closes the unit is finished the way a finalize is: the work's own Done is the close.
+      if (active.step.closesUnit) return drive(pack, events, { finalize: true }, ctx);
       if (!checklistSatisfied(pack, state, active)) {
         throw new DriveError("cannot step: not every point on the active step's checklist is ticked", action);
       }
@@ -480,6 +483,19 @@ export function drive(pack: Pack, events: readonly RunEvent[], action: DriveActi
     case "finalizeUnit":
       return drive(pack, events, { finalize: true }, ctx);
   }
+}
+
+/**
+ * Close the unit and enter the next in one go: the closing step's own
+ * Done, pressed as "next". The clock of the new unit starts as it would
+ * from an enter, and every event carries the same stamp.
+ */
+export function closeAndEnter(pack: Pack, events: readonly RunEvent[], ctx: DriveContext): DriveResult {
+  const closed = drive(pack, events, { finalize: true }, ctx);
+  if (closed.status !== "done") return closed;
+  const entered = drive(pack, [...events, ...closed.events], { enter: true }, ctx);
+  if (entered.status !== "done") return entered;
+  return { status: "done", events: [...closed.events, ...entered.events] };
 }
 
 /**

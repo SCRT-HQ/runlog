@@ -117,7 +117,7 @@ function stepInWords(pack: Pack, step: Step): string {
     case "declareSubject":
       return step.label ?? `Declare the ${n.subject}${step.constrainedBy ? `, within what ${pack.tables[step.constrainedBy]?.title ?? step.constrainedBy} allowed` : ""}`;
     case "manual":
-      return step.label;
+      return step.closesUnit ? `${step.label} ${cap(n.finalize)} the ${n.unit} with it.` : step.label;
     case "actions":
       return sentence(cap(actionsInWords(pack, step.do)));
     case "finalizeUnit":
