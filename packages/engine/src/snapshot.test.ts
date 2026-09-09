@@ -33,6 +33,13 @@ describe("a live snapshot", () => {
     expect(snap.phases.length).toBeGreaterThan(0);
     expect(snap.phases.filter((p) => p.state === "current")).toHaveLength(1);
     expect(snap.phases.every((p) => ["done", "current", "skipped", "todo"].includes(p.state))).toBe(true);
+    // What a phase produced this unit sits under it: the declared type under the phase that declares.
+    expect(snap.phases.every((p) => p.results === undefined)).toBe(true);
+    const declaredEvents = [...events, { t: "SubjectDeclared", at: "2026-01-01T00:00:02Z", id: "e3", subjectType: "A wide bowl" } as unknown as RunEvent];
+    const declaredSnap = snapshotOf(kiln, reduce(kiln, declaredEvents), declaredEvents, "2026-01-01T00:00:05Z");
+    const declaring = declaredSnap.phases.find((p) => (p.results ?? []).includes("A wide bowl"));
+    expect(declaring).toBeDefined();
+    expect(kiln.phases.find((p) => p.id === declaring!.id)?.steps.some((st) => st.kind === "declareSubject")).toBe(true);
     // Before the first unit there is nothing to list, and nowhere to be.
     const fresh = snapshotOf(kiln, reduce(kiln, [events[0]!]), [events[0]!], "2026-01-01T00:00:05Z");
     expect(fresh.unit).toBe(0);
