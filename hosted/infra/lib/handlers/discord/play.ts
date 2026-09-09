@@ -1,7 +1,7 @@
 import { createRandom, drive, answer, reduce, agenda, snapshotOf, paperOf, awardValue, canEndRun, undoableIds, DriveError, clockOfUnit, deadlineOf, liveClocks, ranOutEvents, unitClockStart, type Agenda, type DriveAction, type DriveResult, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import { loadPackText, rollDice, tryParseDice, type Pack } from "@runlog/rules-schema";
 import { SeqConflict, type Store } from "../store.js";
-import type { GuildRun, GuildStore } from "../guilds.js";
+import type { CardMode, GuildRun, GuildStore } from "../guilds.js";
 import type { Notify } from "../live.js";
 import { hashToken } from "../auth.js";
 import { cardFor, COLORS, lineFor, type Card, type Mark } from "./card.js";
@@ -104,7 +104,7 @@ export interface Opened {
  */
 export async function openRun(
   deps: TableDeps,
-  input: { guildId: string; channelId: string; pack: Pack; packTitle: string; modeId: string; name?: string; players?: number; host: Seat & { sub: string } },
+  input: { guildId: string; channelId: string; pack: Pack; packTitle: string; modeId: string; name?: string; players?: number; host: Seat & { sub: string }; cardMode?: CardMode },
 ): Promise<Opened | { error: string }> {
   if (!deps.rest) return { error: "The bot cannot post to Discord yet: its token is not filled in on this copy of Runlog." };
   const { pack, modeId } = input;
@@ -156,6 +156,7 @@ export async function openRun(
     threadId,
     contestants: {},
     ...(seatsWanted > 1 ? { seats: { "1": { discordId: input.host.discordId, name: input.host.name } } } : {}),
+    ...(input.cardMode ? { cardMode: input.cardMode } : {}),
     seenSeq: created.meta.seq,
     createdAt: at,
     updatedAt: at,
@@ -170,6 +171,7 @@ export async function openRun(
   const cardId = await deps.rest.postMessage(threadId, { content: `Watch it live, no account needed: ${link}`, ...card });
   if (cardId) {
     run.cardMessageId = cardId;
+    run.cardBare = false;
     await deps.rest.pinMessage(threadId, cardId);
   }
   await deps.guilds.putGuildRun(run);
@@ -189,6 +191,8 @@ export type TableAction =
   | { kind: "journal"; text: string }
   | { kind: "clock"; clock: string; to: "paused" | "running" | "expired" }
   | { kind: "startClock" }
+  /** Where this run's card lives from now on; the host's choice, from the opening card. */
+  | { kind: "cards"; mode: CardMode }
   | { kind: "react"; emoji: string }
   | { kind: "seat"; seat: number }
   | { kind: "unseat" }
@@ -415,6 +419,13 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         run.updatedAt = at;
         await deps.guilds.putGuildRun(run);
         if (deps.rest) await deps.rest.postMessage(run.threadId, { content: `${actor.name} leaves seat ${mine[0]}.` });
+        return { card: redraw(), line: null, run, ended: false };
+      }
+      case "cards": {
+        if (action.mode === "pinned") run.cardMode = "pinned";
+        else delete run.cardMode;
+        run.updatedAt = at;
+        await deps.guilds.putGuildRun(run);
         return { card: redraw(), line: null, run, ended: false };
       }
       case "follow": {

@@ -2,7 +2,7 @@ import type { ClaimCode, Connection, Guild, GuildPackMeta, GuildRun, GuildStore,
 import type { DiscordMessage, DiscordOAuth, DiscordRest } from "../lib/handlers/discord/rest";
 
 /** Discord, as a list of what was asked of it: threads made, messages posted, in order. */
-export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array<{ channel: string; message: DiscordMessage; id: string }>; edits: Array<{ channel: string; id: string; message: DiscordMessage }>; originals: Array<{ token: string; message: DiscordMessage }>; pins: string[]; archived: string[]; roles: Array<{ id: string; name: string; color?: number }>; channels: Array<{ id: string; name: string }>; down: boolean } {
+export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array<{ channel: string; message: DiscordMessage; id: string }>; edits: Array<{ channel: string; id: string; message: DiscordMessage }>; originals: Array<{ token: string; message: DiscordMessage }>; pins: string[]; deleted: string[]; archived: string[]; roles: Array<{ id: string; name: string; color?: number }>; channels: Array<{ id: string; name: string }>; down: boolean } {
   let n = 0;
   const me = {
     roles: [] as Array<{ id: string; name: string; color?: number }>,
@@ -30,6 +30,7 @@ export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array
     edits: [] as Array<{ channel: string; id: string; message: DiscordMessage }>,
     originals: [] as Array<{ token: string; message: DiscordMessage }>,
     pins: [] as string[],
+    deleted: [] as string[],
     archived: [] as string[],
     down: false,
     async editOriginal(_applicationId: string, token: string, message: DiscordMessage) {
@@ -52,6 +53,11 @@ export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array
     async editMessage(channel: string, id: string, message: DiscordMessage) {
       if (me.down) return false;
       me.edits.push({ channel, id, message });
+      return true;
+    },
+    async deleteMessage(_channel: string, id: string) {
+      if (me.down) return false;
+      me.deleted.push(id);
       return true;
     },
     async pinMessage(_channel: string, id: string) {
@@ -202,10 +208,10 @@ export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; cla
       const g = guilds.get(guildId);
       if (!g) return null;
       if (patch.name !== undefined) g.name = patch.name;
-      for (const field of ["hostRoleId", "channelId"] as const) {
+      for (const field of ["hostRoleId", "channelId", "cardMode"] as const) {
         if (patch[field] === undefined) continue;
         if (patch[field] === null) delete g[field];
-        else g[field] = patch[field] as string;
+        else (g as unknown as Record<string, unknown>)[field] = patch[field];
       }
       g.updatedAt = at;
       return { ...g };

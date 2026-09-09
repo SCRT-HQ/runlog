@@ -56,8 +56,8 @@ export interface Interaction {
   app_permissions?: string;
   /** In a direct message: the user alone. */
   user?: DiscordUser;
-  /** The message a component was pressed on. */
-  message?: { id: string };
+  /** The message a component was pressed on, with what it said, so an answer that replaces it can keep that. */
+  message?: { id: string; content?: string };
   data?: {
     id?: string;
     name?: string;

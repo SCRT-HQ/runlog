@@ -1854,8 +1854,10 @@ describe("a run hosted in discord", () => {
   const sam = { id: "1002", username: "sam", global_name: "Sam" };
   const member = (user: typeof mira, permissions = "0") => ({ user, permissions, roles: [] as string[] });
   const command = (options: unknown, user = mira, channel = "chan") => ({ id: "i", application_id: "app", type: 2, token: "t", guild_id: "g1", channel_id: channel, member: member(user, user === mira ? "32" : "0"), data: { name: "run", options: [options] } });
-  const press = (customId: string, user = mira, extra: Record<string, unknown> = {}) => ({ id: "i", application_id: "app", type: 3, token: "t", guild_id: "g1", channel_id: "thread_1", member: member(user, user === mira ? "32" : "0"), message: { id: "msg_1" }, data: { custom_id: customId, component_type: 2, ...extra } });
-  const typed = (customId: string, value: string) => ({ id: "i", application_id: "app", type: 5, token: "t", guild_id: "g1", channel_id: "thread_1", member: member(mira, "32"), message: { id: "msg_1" }, data: { custom_id: customId, components: [{ components: [{ custom_id: "x", value }] }] } });
+  /** The message the buttons are on, as a press would name it: the opening message at first, then whatever fresh card was posted last (see `cardAfter`). */
+  let currentCard = "msg_2";
+  const press = (customId: string, user = mira, extra: Record<string, unknown> = {}) => ({ id: "i", application_id: "app", type: 3, token: "t", guild_id: "g1", channel_id: "thread_1", member: member(user, user === mira ? "32" : "0"), message: { id: currentCard }, data: { custom_id: customId, component_type: 2, ...extra } });
+  const typed = (customId: string, value: string) => ({ id: "i", application_id: "app", type: 5, token: "t", guild_id: "g1", channel_id: "thread_1", member: member(mira, "32"), message: { id: currentCard }, data: { custom_id: customId, components: [{ components: [{ custom_id: "x", value }] }] } });
   const content = (out: { body: Record<string, unknown> }) => String((out.body["data"] as Record<string, unknown>)["content"]);
 
   /** The demo pack with a one-minute timer on every unit: started by the bot, or left to the player. */
@@ -1865,6 +1867,7 @@ describe("a run hosted in discord", () => {
       .replace(/unit:\r?\n  createsSubject: true\r?\n/, `unit:\n  createsSubject: true\n  clock: { kind: timer, minutes: 1, auto: ${auto}, label: The Firing }\n`);
 
   async function table(source = demo) {
+    currentCard = "msg_2";
     const guilds = memoryGuilds();
     const bot = memoryDiscord();
     const store = memoryStore();
@@ -1880,6 +1883,14 @@ describe("a run hosted in discord", () => {
     });
     return { guilds, bot, store, d };
   }
+
+  /** Where the card is after a press: in the reply when the press changed it in place, else the last message posted, since a move sends a fresh card to the bottom. */
+  const cardAfter = (out: { body: Record<string, unknown> }, bot: ReturnType<typeof memoryDiscord>): Record<string, unknown> => {
+    const data = out.body["data"] as Record<string, unknown> | undefined;
+    if (data && Array.isArray(data["components"]) && data["components"].length > 0) return data;
+    currentCard = bot.posts[bot.posts.length - 1]!.id;
+    return bot.posts[bot.posts.length - 1]!.message as unknown as Record<string, unknown>;
+  };
 
   /** The first press the card offers: a button in its first row, or a select with its first option. */
   const firstPress = (card: Record<string, unknown>): { customId: string; value?: string } | null => {
@@ -1917,6 +1928,7 @@ describe("a run hosted in discord", () => {
     expect(first.customId).toBe("rl:01000000000000000000000001:enter");
     expect(content(await call(signed(press(first.customId, sam)), d))).toContain("Only the host");
     /** Press whatever the card offers until `units` stages have been closed, answering any modal with a bowl. */
+    const saidByPress: Array<{ content?: string; embeds?: unknown[] }> = [];
     const playUntil = async (units: number) => {
       let presses = 0;
       let closed = false;
@@ -1928,7 +1940,10 @@ describe("a run hosted in discord", () => {
         // A modal was opened: answer it.
         if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
         expect(out.body["type"], `${next.customId}: ${JSON.stringify(out.body["data"])}`).toBe(7);
-        card = out.body["data"] as Record<string, unknown>;
+        // A move's reply turns the pressed card into the move's line; the fresh card is the last post.
+        const data = out.body["data"] as { content?: string; embeds?: unknown[]; components?: unknown[] };
+        if (!data.components || data.components.length === 0) saidByPress.push(data);
+        card = cardAfter(out, bot);
         closed = (await store.eventsAfter("01000000000000000000000001", 0)).filter((e) => e["t"] === "UnitFinalized").length >= units;
       }
       const events = await store.eventsAfter("01000000000000000000000001", 0);
@@ -1955,13 +1970,18 @@ describe("a run hosted in discord", () => {
     // An id is a ULID minted here, or the engine's own where it gives one (an obligation resolved is named for the obligation).
     const badly = events.filter((e) => !(e["author"] === "user_1" && typeof e["id"] === "string" && e["id"].length > 0));
     expect(badly, JSON.stringify(badly)).toEqual([]);
-    // The table was told in the thread, and the widgets see the same run.
-    expect(bot.posts.filter((p) => p.channel === "thread_1" && p.message.content && !p.message.content.includes("Watch it live")).length).toBeGreaterThan(0);
+    // The table was told, in the thread or in answer to a press, and the widgets see the same run.
+    // A line said in reply to a press lives on the message that was the card; one posted lives in the thread.
+    const everything = [...bot.posts.map((p) => p.message), ...saidByPress];
+    expect(everything.filter((m) => m.content && !m.content.includes("Watch it live")).length).toBeGreaterThan(0);
     // What kind of thing each line is stands out; a stage beginning or closing is a colored bar, not a line.
-    expect(bot.posts.some((p) => /\*\*Declared\*\* A wide bowl/.test(p.message.content ?? ""))).toBe(true);
-    const bars = bot.posts.flatMap((p) => (p.message.embeds ?? []) as Array<{ description?: string; color?: number }>).filter((e) => e.description);
+    expect(everything.some((m) => /\*\*Declared\*\* A wide bowl/.test(m.content ?? ""))).toBe(true);
+    const bars = everything.flatMap((m) => (m.embeds ?? []) as Array<{ description?: string; color?: number }>).filter((e) => e.description);
     expect(bars.some((e) => /\*\*Stage 1\*\* begins\./.test(e.description!) && e.color === 0x4f8a78)).toBe(true);
     expect(bars.some((e) => /\*\*Stage 1\*\* closed\./.test(e.description!))).toBe(true);
+    // The card is the thread's last message, and only the last card has buttons.
+    expect(Array.isArray((bot.posts[bot.posts.length - 1]!.message as { components?: unknown[] }).components)).toBe(true);
+    expect((await guilds.guildRun("01000000000000000000000001"))!.cardMessageId).toBe(bot.posts[bot.posts.length - 1]!.id);
     // Only as bars, never as a plain line (an entry's own text may end in "closed." too; the bar's form is the mark's).
     expect(bot.posts.some((p) => /\*\*Stage \d+\*\* (begins|closed)\./.test(p.message.content ?? ""))).toBe(false);
     const after = await call(request("GET", "/api/public/runs/01000000000000000000000001/metrics?t=livetok", { token: null }), d);
@@ -1970,13 +1990,15 @@ describe("a run hosted in discord", () => {
 
     // /run status re-posts the card in the thread; /run end closes the run and the thread.
     const cardsBefore = bot.posts.filter((p) => Array.isArray(p.message.embeds)).length;
+    const previous = (await guilds.guildRun("01000000000000000000000001"))!.cardMessageId!;
     const status = await call(signed(command({ name: "status", type: 1 }, mira, "thread_1")), d);
     expect(content(status)).toContain("Posted a fresh card");
     const freshest = bot.posts[bot.posts.length - 1]!;
     expect(bot.posts.filter((p) => Array.isArray(p.message.embeds)).length).toBe(cardsBefore + 1);
     expect((await guilds.guildRun("01000000000000000000000001"))?.cardMessageId).toBe(freshest.id);
-    // The old card lost its buttons, so a press on it cannot drive the table from a stale view.
-    expect(bot.edits[bot.edits.length - 1]).toMatchObject({ id: "msg_2", message: { components: [] } });
+    // The old card, which carried nothing else, is gone rather than stripped.
+    expect(bot.deleted).toContain(previous);
+    expect(bot.edits.some((e) => e.id === previous)).toBe(false);
     expect(content(await call(signed(command({ name: "end", type: 1 }, sam, "thread_1")), d))).toContain("Only the host");
     const end = () => call(signed(command({ name: "end", type: 1, options: [{ name: "ending", type: 3, value: "kept" }] }, mira, "thread_1")), d);
     let ended = await end();
@@ -2090,17 +2112,17 @@ describe("a run hosted in discord", () => {
     // At the deadline the timer is stopped as run out, at the moment it ran out; the thread hears, the card is redrawn.
     clock = "2026-09-06T12:02:00.000Z";
     const postsBefore = bot.posts.length;
-    const editsBefore = bot.edits.length;
+    const retiredBefore = bot.edits.length + bot.deleted.length;
     expect(await finishTimer(timers[timers.length - 1]!, dd)).toBe("stopped");
     const stopped = (await store.eventsAfter(id, 0)).filter((e) => e["t"] === "ClockStopped");
     expect(stopped).toMatchObject([{ clock: "u1:unit", expired: true, elapsedMs: 60000, at: "2026-09-06T12:01:30.000Z" }]);
-    expect(bot.posts.length).toBe(postsBefore + 1);
-    // Said once, as a colored bar: a timer running out is a moment, not a line.
-    const bar = bot.posts[bot.posts.length - 1]!.message;
+    expect(bot.posts.length).toBe(postsBefore + 2);
+    // Said once, as a colored bar: a timer running out is a moment, not a line; the fresh card follows it.
+    const bar = bot.posts[bot.posts.length - 2]!.message;
     expect(bar.content).toBeUndefined();
     expect((bar.embeds?.[0] as { description: string; color: number }).description).toContain("The Firing** ran out");
     expect((bar.embeds?.[0] as { color: number }).color).toBe(0xb8742a);
-    expect(bot.edits.length).toBe(editsBefore + 1);
+    expect(bot.edits.length + bot.deleted.length).toBe(retiredBefore + 1);
     // Stopped is stopped: the same deadline again does nothing, and a later look at the run finds no new line.
     expect(await finishTimer(timers[timers.length - 1]!, dd)).toBe("gone");
     expect(await finishTimer({ sessionId: "nope", clock: "u1:unit", at: clock }, dd)).toBe("gone");
@@ -2112,15 +2134,18 @@ describe("a run hosted in discord", () => {
     expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), ld))).toContain("started");
     const entered = await call(signed(press(`rl:${id}:enter`)), ld);
     later = "2026-09-06T12:05:00.000Z";
-    const next = firstPress(entered.body["data"] as Record<string, unknown>);
+    const next = firstPress(cardAfter(entered, late.bot));
     expect(next).not.toBeNull();
-    expect((await call(signed(press(next!.customId, mira, next!.value ? { values: [next!.value] } : {})), ld)).body["type"]).toBe(7);
+    const lateOut = await call(signed(press(next!.customId, mira, next!.value ? { values: [next!.value] } : {})), ld);
+    expect(lateOut.body["type"]).toBe(7);
     const log = await late.store.eventsAfter(id, 0);
     const ranOut = log.findIndex((e) => e["t"] === "ClockStopped" && e["expired"] === true);
     expect(ranOut).toBeGreaterThan(-1);
     expect(log[ranOut]).toMatchObject({ at: "2026-09-06T12:01:00.000Z" });
     expect(log.length).toBeGreaterThan(ranOut + 1);
-    expect(late.bot.posts.some((p) => p.message.content?.startsWith("\u23f0 The Firing ran out."))).toBe(true);
+    // The press was on the card, so its answer is the line, led by the timer that ran out first.
+    const saidLate = [String((lateOut.body["data"] as { content?: string }).content ?? ""), ...late.bot.posts.map((p) => p.message.content ?? "")];
+    expect(saidLate.some((c) => c.includes("The Firing ran out."))).toBe(true);
   });
 
   it("lets a server whose members bought the plan through Discord's store host runs, and tells the profile which servers did", async () => {
@@ -2160,22 +2185,22 @@ describe("a run hosted in discord", () => {
     expect(moved).toEqual([{ sessionId: id, seq: heard + 1 }, { sessionId: id, seq: heard + 2 }]);
     // The job tells the thread once for both, redraws the card, and remembers how far it heard.
     const posts = bot.posts.length;
-    const edits = bot.edits.length;
+    const retired = bot.edits.length + bot.deleted.length;
     expect(await finishMoved(moved[0]!, dd)).toBe("told");
-    expect(bot.posts).toHaveLength(posts + 1);
-    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("From the app:");
-    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("Took a move back.");
+    expect(bot.posts).toHaveLength(posts + 2);
+    expect(bot.posts[bot.posts.length - 2]!.message.content).toContain("From the app:");
+    expect(bot.posts[bot.posts.length - 2]!.message.content).toContain("Took a move back.");
     // The undo named no ids, so the app's begin opened the next stage; the line reads the log as it is.
-    expect(bot.posts[bot.posts.length - 1]!.message.content).toMatch(/\*\*Stage \d\*\* begins\./);
-    expect(bot.edits).toHaveLength(edits + 1);
+    expect(bot.posts[bot.posts.length - 2]!.message.content).toMatch(/\*\*Stage \d\*\* begins\./);
+    expect(bot.edits.length + bot.deleted.length).toBe(retired + 1);
     expect((await guilds.guildRun(id))!.seenSeq).toBe(heard + 2);
     // Nothing new: nothing said.
     expect(await finishMoved(moved[1]!, dd)).toBe("quiet");
-    expect(bot.posts).toHaveLength(posts + 1);
+    expect(bot.posts).toHaveLength(posts + 2);
     // The app ends the run; the thread hears that too, and the card is done pressing.
     expect((await call(request("POST", `/api/sessions/${id}/events`, { body: { events: [{ t: "RunEnded", at: "2026-09-06T12:02:00Z", id: "app_3", move: "app_m3", ending: "kept" }] } }), dd)).status).toBe(200);
     expect(await finishMoved(moved[moved.length - 1]!, dd)).toBe("told");
-    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("The firing is over: The Shelf.");
+    expect(bot.posts[bot.posts.length - 2]!.message.content).toContain("The firing is over: The Shelf.");
     expect((await guilds.guildRun(id))!.endedAt).toBeTruthy();
     expect(content(await call(signed(press(`rl:${id}:enter`)), dd))).toContain("has ended");
     // An ended run the app writes to again is nobody's to tell.
@@ -2187,7 +2212,7 @@ describe("a run hosted in discord", () => {
     const { bot, store, d } = await table();
     const id = "01000000000000000000000001";
     expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), d))).toContain("started");
-    let card = (await call(signed(press(`rl:${id}:enter`)), d)).body["data"] as Record<string, unknown>;
+    let card = cardAfter(await call(signed(press(`rl:${id}:enter`)), d), bot);
     const buttons = (c: Record<string, unknown>) => (c["components"] as Array<{ components: Array<{ custom_id: string; label?: string; disabled?: boolean }> }>).flatMap((r) => r.components);
     // Press along until the card offers a table to roll on; beside "Roll:" sits "Roll it yourself".
     for (let n = 0; n < 40 && !buttons(card).some((b) => b.custom_id.endsWith(":byhand")); n += 1) {
@@ -2195,13 +2220,13 @@ describe("a run hosted in discord", () => {
       if (!next) break;
       let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
       if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
-      card = out.body["data"] as Record<string, unknown>;
+      card = cardAfter(out, bot);
     }
     expect(buttons(card).some((b) => b.custom_id.endsWith(":byhand") && b.label === "Roll it yourself")).toBe(true);
     // Opening the step by hand rolls nothing: the card waits on the total, with the bot's throw still offered.
     const opened = await call(signed(press(`rl:${id}:byhand`)), d);
     expect(opened.body["type"]).toBe(7);
-    card = opened.body["data"] as Record<string, unknown>;
+    card = cardAfter(opened, bot);
     expect(buttons(card).some((b) => b.custom_id.endsWith(":roll"))).toBe(true);
     const enter = buttons(card).find((b) => b.custom_id.endsWith(":typeroll"))!;
     expect(enter.label).toMatch(/^Enter \d*d\d+/);
@@ -2219,22 +2244,23 @@ describe("a run hosted in discord", () => {
     const rolled = (await store.eventsAfter(id, 0)).filter((e) => e["t"] === "Rolled");
     expect(rolled).toHaveLength(1);
     expect(rolled[0]).toMatchObject({ dice, total: low, source: "physical" });
-    expect(bot.posts.some((p) => (p.message.content ?? "").includes(`→ **${low}** (by hand)`))).toBe(true);
+    const saidRoll = [String((done.body["data"] as { content?: string }).content ?? ""), ...bot.posts.map((p) => p.message.content ?? "")];
+    expect(saidRoll.some((c) => c.includes(`→ **${low}** (by hand)`))).toBe(true);
   });
 
   it("throws the dice itself in a seeded mode, whatever the host presses", async () => {
-    const { guilds, store, d } = await table();
+    const { guilds, bot, store, d } = await table();
     await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: "h", bytes: demo.length, modes: [{ id: "standard", label: "Standard" }, { id: "shared", label: "Shared" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, demo);
     const id = "01000000000000000000000001";
     expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "shared" }] })), d))).toContain("started");
     const rows = (c: Record<string, unknown>) => JSON.stringify(c["components"]);
-    let card = (await call(signed(press(`rl:${id}:enter`)), d)).body["data"] as Record<string, unknown>;
+    let card = cardAfter(await call(signed(press(`rl:${id}:enter`)), d), bot);
     for (let n = 0; n < 40 && !rows(card).includes('"label":"Roll:'); n += 1) {
       const next = firstPress(card);
       if (!next) break;
       let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
       if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
-      card = out.body["data"] as Record<string, unknown>;
+      card = cardAfter(out, bot);
     }
     expect(rows(card)).toContain('"label":"Roll:');
     expect(rows(card)).not.toContain("byhand");
@@ -2268,6 +2294,52 @@ describe("a run hosted in discord", () => {
     expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "chan")), solo.d))).toContain("run's thread");
   });
 
+  it("lets the host choose where the card lives from the opening card, and keeps the live link where that card becomes a line", async () => {
+    const { guilds, bot, d } = await table();
+    const id = "01000000000000000000000001";
+    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), d))).toContain("started");
+    const opening = bot.posts[0]!.message as unknown as { components: Array<{ components: Array<{ custom_id: string; placeholder?: string }> }> };
+    const chooser = opening.components.flatMap((r) => r.components).find((c) => c.custom_id.endsWith(":cards"))!;
+    expect(chooser.placeholder).toContain("follows the thread");
+    // A watcher cannot choose; the host can, and the card says so in place.
+    expect(content(await call(signed(press(`rl:${id}:cards`, sam, { values: ["pinned"] })), d))).toContain("Only the host");
+    const chosen = await call(signed(press(`rl:${id}:cards`, mira, { values: ["pinned"] })), d);
+    expect(chosen.body["type"]).toBe(7);
+    expect(JSON.stringify(chosen.body["data"])).toContain("pinned at the top, edited in place");
+    expect((await guilds.guildRun(id))?.cardMode).toBe("pinned");
+    expect(content(await call(signed(press(`rl:${id}:cards`, mira, { values: ["follow"] })), d)).length).toBeGreaterThan(0);
+    expect((await guilds.guildRun(id))?.cardMode).toBeUndefined();
+    // Following: the first move turns the opening card into its line, with the live link kept above it.
+    const entered = await call(signed({ ...press(`rl:${id}:enter`), message: { id: "msg_2", content: "Watch it live, no account needed: https://runlog.test/r/x?t=livetok" } }), d);
+    expect(entered.body["type"]).toBe(7);
+    const morphed = entered.body["data"] as { content?: string; components?: unknown[] };
+    expect(morphed.content).toContain("Watch it live");
+    expect(morphed.components).toEqual([]);
+    expect((await guilds.guildRun(id))?.cardMessageId).toBe(bot.posts[bot.posts.length - 1]!.id);
+  });
+
+  it("keeps the card pinned at the top and edits it in place where the server asked for that", async () => {
+    const { guilds, bot, d } = await table();
+    const setup = (mode: string) => ({ ...command({ name: "cards", type: 1, options: [{ name: "mode", type: 3, value: mode }] }), data: { name: "setup", options: [{ name: "cards", type: 1, options: [{ name: "mode", type: 3, value: mode }] }] } });
+    expect(content(await call(signed(setup("pinned")), d))).toContain("stays pinned");
+    expect((await guilds.guild("g1"))?.cardMode).toBe("pinned");
+    const id = "01000000000000000000000001";
+    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), d))).toContain("started");
+    expect((await guilds.guildRun(id))?.cardMode).toBe("pinned");
+    // A move's reply is the card itself, in place; its line is posted; no fresh card follows.
+    const posts = bot.posts.length;
+    const entered = await call(signed(press(`rl:${id}:enter`)), d);
+    expect(entered.body["type"]).toBe(7);
+    expect(Array.isArray((entered.body["data"] as { components?: unknown[] }).components)).toBe(true);
+    expect((entered.body["data"] as { components: unknown[] }).components.length).toBeGreaterThan(0);
+    expect(bot.posts).toHaveLength(posts + 1);
+    expect(bot.deleted).toHaveLength(0);
+    expect((await guilds.guildRun(id))?.cardMessageId).toBe("msg_2");
+    // Back to following: the choice holds from the next run, and reads back on /setup status.
+    expect(content(await call(signed(setup("follow")), d))).toContain("follows the thread");
+    expect((await guilds.guild("g1"))?.cardMode).toBeUndefined();
+  });
+
   it("offers a clock the pack leaves to the player, once per open unit", async () => {
     const { bot, store, d } = await table(timed(false));
     const timers: TimerJob[] = [];
@@ -2276,14 +2348,15 @@ describe("a run hosted in discord", () => {
     expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), dd))).toContain("started");
     const entered = await call(signed(press(`rl:${id}:enter`)), dd);
     const labels = (card: Record<string, unknown>) => (card["components"] as Array<{ components: Array<{ label?: string; custom_id: string }> }>).flatMap((r) => r.components.map((c) => c.label ?? c.custom_id));
-    expect(labels(entered.body["data"] as Record<string, unknown>)).toContain("Start The Firing");
+    expect(labels(cardAfter(entered, bot))).toContain("Start The Firing");
     expect(timers).toHaveLength(0);
     const started = await call(signed(press(`rl:${id}:clock:start`)), dd);
     expect(started.body["type"]).toBe(7);
-    expect(labels(started.body["data"] as Record<string, unknown>)).toContain("Pause The Firing");
+    expect(labels(cardAfter(started, bot))).toContain("Pause The Firing");
     expect((await store.eventsAfter(id, 0)).filter((e) => e["t"] === "ClockStarted")).toMatchObject([{ clock: "u1:unit", seconds: 60, label: "The Firing" }]);
     expect(timers).toEqual([{ sessionId: id, clock: "u1:unit", at: "2026-09-06T12:01:00.000Z" }]);
-    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("The Firing started.");
+    // The press was on the card, so its line is the card's own answer; the fresh card is the last post.
+    expect(String((started.body["data"] as { content?: string }).content)).toContain("The Firing started.");
     // Once: the unit has its clock.
     expect(content(await call(signed(press(`rl:${id}:clock:start`)), dd))).toContain("has its clock already");
     // A watcher cannot start it.

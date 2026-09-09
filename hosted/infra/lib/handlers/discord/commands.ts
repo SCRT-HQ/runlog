@@ -42,6 +42,12 @@ export const COMMANDS = [
       { type: SUB_COMMAND, name: "role", description: "Who may host runs here", options: [{ type: ROLE, name: "role", description: "The role that may host; leave it out to allow anyone who can manage the server", required: false }] },
       { type: SUB_COMMAND, name: "channel", description: "Where runs open by default", options: [{ type: CHANNEL, name: "channel", description: "The channel; leave it out to open runs wherever the command is used", required: false }] },
       { type: SUB_COMMAND, name: "make-role", description: "Make a host role (or find one by that name) and set it as who may host", options: [{ type: STRING, name: "name", description: "The role's name; Runlog Host if left out", required: false, max_length: 100 }] },
+      {
+        type: SUB_COMMAND,
+        name: "cards",
+        description: "Where a run's card lives: following the thread as its last message, or pinned at the top",
+        options: [{ type: STRING, name: "mode", description: "follow: a fresh card after every move, at the bottom. pinned: one card at the top, edited in place", required: true, choices: [{ name: "follow the thread (default)", value: "follow" }, { name: "pinned at the top", value: "pinned" }] }],
+      },
       { type: SUB_COMMAND, name: "make-channel", description: "Make a channel for runs (or find one by that name) and set it as where runs open", options: [{ type: STRING, name: "name", description: "The channel's name; runs if left out", required: false, max_length: 100 }] },
       { type: SUB_COMMAND, name: "status", description: "Who claimed this server, its plan, its hosts and its packs" },
     ],

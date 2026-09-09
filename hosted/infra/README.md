@@ -449,8 +449,18 @@ host's account (a host is linked, so the run is somebody's), played by
 the bot as the device at the table: `/run start` creates the session
 with the same opening events the app writes, opens a public thread,
 mints a live link, and posts and pins the **table card** —
-`lib/handlers/discord/card.ts`, rebuilt from the log on every press and
-edited in place. A press goes through `lib/handlers/discord/play.ts`:
+`lib/handlers/discord/card.ts`, rebuilt from the log on every press. The
+card follows the thread by default: a press that made a move answers by
+turning the pressed message into the move's line and posts a fresh card
+at the bottom (one call); a press that made none updates the card in
+place (no call); everything else — a command, a timer, the app moving
+the run — posts the line, retires the old card (down if it carried
+nothing else, stripped to its content if it did, as the opening message
+carries the live link) and posts a fresh one. `cardMessageId` and
+`cardBare` on the run row say which message the buttons are on and how
+to retire it. `/setup cards mode:pinned` keeps one card at the top,
+edited in place, for servers that prefer it; the choice is copied onto
+each run as it starts (`cardMode`). A press goes through `lib/handlers/discord/play.ts`:
 the vault's pack (parsed once per container, by hash), the log folded,
 the engine's `drive`/`answer` applied one action at a time, the events
 appended under the host's account with ids minted the way the app mints
