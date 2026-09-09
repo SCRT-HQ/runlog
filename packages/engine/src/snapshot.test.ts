@@ -59,6 +59,8 @@ describe("a live snapshot", () => {
     expect(chainedSnap.units?.[0]?.phases).toEqual([]);
     expect(chainedSnap.units?.[1]?.phases.map((p) => p.id)).toEqual([constrain.id]);
     expect(chainedSnap.units?.[1]?.phases[0]?.results).toHaveLength(2);
+    // The Long Kiln keeps no clock by stage, so its time is wall time since the start, and the snapshot says so.
+    expect(chainedSnap.progress.timed).toBe(false);
     // Before the first unit there is nothing to list, and nowhere to be.
     const fresh = snapshotOf(kiln, reduce(kiln, [events[0]!]), [events[0]!], "2026-01-01T00:00:05Z");
     expect(fresh.unit).toBe(0);

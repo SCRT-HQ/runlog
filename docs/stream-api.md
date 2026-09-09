@@ -57,7 +57,7 @@ below and fetch it when the socket rings.
   "counters": [{ "id": "cracks", "label": "Cracks", "value": 2 }],
   "resources": [{ "id": "wood", "label": "Wood", "value": 6, "max": 10, "display": "boxes" }],
   "clocks": [{ "id": "u4:unit", "label": "Day 4", "kind": "timer", "seconds": 600, "status": "running", "elapsedMs": 83210, "expired": false }],
-  "progress": { "unitsDone": 3, "elapsedMs": 1490233 },
+  "progress": { "unitsDone": 3, "elapsedMs": 1490233, "timed": true },
   "score": { "label": "Days", "text": "3 days", "value": 3, "better": "higher" },
   "forcedUnits": 0,
   "unitResults": [{ "table": "Weather", "text": "A dry wind from the east.", "hit": null }],
@@ -86,7 +86,7 @@ What the fields mean:
 | `subjects` | What the run tracks (tracks, bowls, rooms: the pack's word), with their states and the results that hit them. |
 | `counters`, `resources` | The pack's counters, and its resources with their maximum and how the pack draws them. |
 | `clocks` | The clocks that are running, paused or just done. See below. |
-| `progress` | Units closed, and time elapsed on the run. |
+| `progress` | Units closed, and time elapsed on the run. `timed` says the run keeps time by unit clocks; without them, `elapsedMs` is wall time since the start, which the pages leave unshown. |
 | `score` | What the pack says this run scores, worded and ready to show: a label, the text, the number, and which way is better. With no score declared, units closed. |
 | `unitResults` | Every result rolled this unit, in the order the dice landed. *newer* |
 | `latest` | The most recent result: where it landed and its words. Null with nothing rolled yet. *newer* |
