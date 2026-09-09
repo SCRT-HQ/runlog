@@ -1,10 +1,11 @@
-import { createRandom, drive, answer, reduce, agenda, snapshotOf, paperOf, awardValue, canEndRun, DriveError, type Agenda, type DriveAction, type DriveResult, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import { createRandom, drive, answer, reduce, agenda, snapshotOf, paperOf, awardValue, canEndRun, undoableIds, DriveError, type Agenda, type DriveAction, type DriveResult, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import { loadPackText, rollDice, type Pack } from "@runlog/rules-schema";
 import type { Store } from "../store.js";
 import type { GuildRun, GuildStore } from "../guilds.js";
 import type { Notify } from "../live.js";
 import { hashToken } from "../auth.js";
 import { cardFor, lineFor, type Card } from "./card.js";
+import { REACTIONS } from "./reactions.js";
 import type { DiscordRest } from "./rest.js";
 
 /**
@@ -135,12 +136,14 @@ export async function openRun(
   const state = reduce(pack, events);
   await writeSnapshot(deps, run.sessionId, pack, state, events, created.meta.seq);
   const card = cardFor({ pack, state, events, agenda: agenda(pack, state, events), run });
-  const cardId = await deps.rest.postMessage(threadId, card);
+  // One message carries the link and the card, so a start is one post and
+  // one pin: Discord waits three seconds for the answer, and every call
+  // to it spends some of them.
+  const cardId = await deps.rest.postMessage(threadId, { content: `Watch it live, no account needed: ${link}`, ...card });
   if (cardId) {
     run.cardMessageId = cardId;
     await deps.rest.pinMessage(threadId, cardId);
   }
-  await deps.rest.postMessage(threadId, { content: `Watch it live, no account needed: ${link}` });
   await deps.guilds.putGuildRun(run);
   return { run, threadId, link, card };
 }
@@ -152,7 +155,14 @@ export type TableAction =
   | { kind: "leave" }
   | { kind: "award"; contestant: string; outcome: number }
   | { kind: "end"; ending: string }
-  | { kind: "share" };
+  | { kind: "undo" }
+  | { kind: "journal"; text: string }
+  | { kind: "clock"; clock: string; to: "paused" | "running" }
+  | { kind: "react"; emoji: string };
+
+/** Events that begin a player-visible move, for undoing a log written before moves were named. Mirrors the app's rule. */
+const isBoundary = (e: RunEvent): boolean =>
+  ["UnitEntered", "StepCompleted", "SubjectRenamed", "Checked", "Corrected", "ClockStarted", "ClockPaused", "ClockResumed", "ClockStopped", "Awarded", "ContestantAdded", "ContestantRemoved", "ContestantStateApplied", "ContestantStateRemoved", "Rolled", "ObligationResolved", "JournalWritten", "RunEnded"].includes(e.t);
 
 export interface Played {
   card: Card;
@@ -233,15 +243,49 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         line = `The ${pack.vocabulary.run.one.toLowerCase()} is over: ${pack.endings?.find((e) => e.id === action.ending)?.label ?? action.ending}.`;
         break;
       }
-      case "share":
+      case "undo": {
+        const ids = undoableIds(events, isBoundary);
+        if (ids.length === 0) return { error: "Nothing to take back." };
+        produced = [{ t: "Undone", at, ids } as RunEvent];
+        // A block waiting on an answer belongs to the move being unmade.
+        run.pending = undefined;
+        line = "Took the last move back.";
         break;
+      }
+      case "journal": {
+        if (state.unit === 0) return { error: `Nothing to write about before the first ${pack.vocabulary.unit.one.toLowerCase()}.` };
+        produced = [{ t: "JournalWritten", at, unit: state.unit, text: action.text } as RunEvent];
+        line = `📓 ${action.text}`;
+        break;
+      }
+      case "clock": {
+        const clock = state.clocks.find((c) => c.id === action.clock);
+        if (!clock || clock.status === "done") return { error: "That clock is not running any more." };
+        if (action.to === "paused" && clock.status !== "running") return { error: "That clock is paused already." };
+        if (action.to === "running" && clock.status !== "paused") return { error: "That clock is running already." };
+        produced = [{ t: action.to === "paused" ? "ClockPaused" : "ClockResumed", at, clock: clock.id } as RunEvent];
+        line = `${clock.label} ${action.to === "paused" ? "paused" : "resumed"}.`;
+        break;
+      }
+      case "react": {
+        // Not a move: the same wave the live page takes, kept beside the run, and rung.
+        if (!(REACTIONS as readonly string[]).includes(action.emoji)) return { error: "Not one of the six." };
+        await deps.store.addReaction(run.sessionId, { emoji: action.emoji, name: actor.name, at });
+        await deps.notify?.(run.sessionId, (await deps.store.getSession(run.sessionId))?.meta.seq ?? 0);
+        const card = cardFor({ pack, state, events, agenda: agenda(pack, state, events), run, ...(run.pending ? { pending: run.pending as unknown as Pending } : {}) });
+        return { card, line: null, run, ended: false };
+      }
     }
   } catch (error) {
     if (error instanceof DriveError) return { error: error.message };
     throw error;
   }
 
-  const stamped = produced.map((e) => ({ ...e, id: (e as { id?: string }).id ?? deps.mintId() }));
+  // What the driver produced is stamped already; what this file makes by
+  // hand is stamped here, each as a move of its own, so an undo takes it
+  // back as one.
+  const move = deps.mintId();
+  const stamped = produced.map((e) => ({ ...e, id: (e as { id?: string }).id ?? deps.mintId(), move: (e as { move?: string }).move ?? move }));
   let seq = (await deps.store.getSession(run.sessionId))?.meta.seq ?? 0;
   const next = [...events, ...stamped];
   const after = reduce(pack, next);

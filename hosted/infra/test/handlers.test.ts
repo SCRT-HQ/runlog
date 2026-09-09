@@ -1899,4 +1899,35 @@ describe("a run hosted in discord", () => {
     expect((await call(signed(ask("mode", "", [{ name: "pack", type: 3, value: PACK }])), d)).body).toEqual({ type: 8, data: { choices: [{ name: "Standard", value: "standard" }] } });
     expect((await call(signed(ask("pack", "zzz")), d)).body).toEqual({ type: 8, data: { choices: [] } });
   });
+  it("takes a move back, writes the journal, and takes a wave from anyone, from the thread", async () => {
+    const { bot, store, d } = await table();
+    const id = "01000000000000000000000001";
+    await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), d);
+    // The card and the link are one message, pinned: a start is one post.
+    expect(bot.posts).toHaveLength(1);
+    expect(bot.posts[0]!.message.content).toContain("Watch it live");
+    expect(Array.isArray(bot.posts[0]!.message.embeds)).toBe(true);
+    const journal = (text: string, user = mira) => ({ id: "i", application_id: "app", type: 2, token: "t", guild_id: "g1", channel_id: "thread_1", member: member(user, user === mira ? "32" : "0"), data: { name: "journal", options: [{ name: "text", type: 3, value: text }] } });
+    // Nothing to write before the first unit, and nothing to take back but the start.
+    expect(content(await call(signed(journal("too soon")), d))).toContain("Nothing to write about");
+    expect((await call(signed(press(`rl:${id}:enter`)), d)).body["type"]).toBe(7);
+    expect((await call(request("GET", `/api/public/runs/${id}/metrics?t=livetok`, { token: null }), d)).body).toMatchObject({ unit: 1 });
+    // Undo from the thread: the unit is back to nothing, as an event, never by shortening the log.
+    const undone = await call(signed(command({ name: "undo", type: 1 }, mira, "thread_1")), d);
+    expect(content(undone)).toContain("Took the last move back");
+    const events = await store.eventsAfter(id, 0);
+    expect(events[events.length - 1]).toMatchObject({ t: "Undone", author: "user_1" });
+    expect((await call(request("GET", `/api/public/runs/${id}/metrics?t=livetok`, { token: null }), d)).body).toMatchObject({ unit: 0 });
+    expect(content(await call(signed(command({ name: "undo", type: 1 }, sam, "thread_1")), d))).toContain("Only the host");
+    // The journal, once there is a unit to write about; the line is posted under the card.
+    await call(signed(press(`rl:${id}:enter`)), d);
+    expect(content(await call(signed(journal("Slip trailed, then waited.")), d))).toContain("📓 Slip trailed");
+    expect((await store.eventsAfter(id, 0)).some((e) => e["t"] === "JournalWritten" && e["unit"] === 1 && e["text"] === "Slip trailed, then waited.")).toBe(true);
+    expect(content(await call(signed(journal("mine", sam)), d))).toContain("Only the host");
+    // A wave from a watcher lands where the live page's waves land, and rings the same bell.
+    const waved = await call(signed(press(`rl:${id}:react:🔥`, sam)), d);
+    expect(waved.body["type"]).toBe(7);
+    expect((await call(request("GET", `/api/sessions/${id}/reactions`), d)).body["reactions"]).toMatchObject([{ emoji: "🔥", name: "Sam" }]);
+    expect(content(await call(signed(press(`rl:${id}:react:🍕`, sam)), d))).toContain("Not one of the six");
+  });
 });
