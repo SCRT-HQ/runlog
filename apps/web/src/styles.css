@@ -4401,6 +4401,32 @@ html[data-pip="controls"] body { margin: 0; height: 100vh; overflow-y: auto; bac
   .key { height: 3.1rem; font-size: var(--t-4); }
 }
 
+/* ---- where a pack may be played ---------------------------------------- */
+/*
+ * The shelf's answer to "which servers play this", as a row menu like the
+ * documents one beside it. It says the answer when closed, because that is
+ * what a reader of the shelf wants, and asks the question inside.
+ */
+.packServers .rowMenuPanel { min-width: 17rem; display: grid; gap: 0.5rem; }
+.packServers .rowMenuPanel p { margin: 0; }
+.packServers .docMenuList li { justify-content: flex-start; gap: 0.6rem; }
+.packServers .toggle { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 760px) {
+  /* No room beside the button: the choice comes up from the foot of the
+     screen, the way the documents menu does. */
+  .packServers .rowMenuPanel {
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    top: auto;
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    min-width: 0;
+    max-height: 60vh;
+    overflow: auto;
+    z-index: 30;
+  }
+}
+
 /*
  * A phone's width is the scarce thing on it. The page keeps a thumb's
  * margin and no more, and what sits inside the page follows: a panel that
