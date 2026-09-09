@@ -4,7 +4,7 @@ import { canManage, handleInteraction, LINK_MINUTES } from "../lib/handlers/disc
 import { COMMANDS, isCommandName } from "../lib/handlers/discord/commands";
 import { EPHEMERAL, InteractionType, ResponseType, type Interaction } from "../lib/handlers/discord/types";
 import { verifyInteraction } from "../lib/handlers/discord/verify";
-import { memoryGuilds } from "./memory-guilds";
+import { memoryDiscord, memoryGuilds } from "./memory-guilds";
 
 /**
  * The bot, apart from the API around it.
@@ -129,6 +129,39 @@ describe("setting up a server", () => {
     expect((await handleInteraction(setup("role"), deps)).data?.content).toContain("Anyone who can manage");
     expect(guilds.guilds.get("g1")).not.toHaveProperty("hostRoleId");
     expect(guilds.guilds.get("g1")?.channelId).toBe("c1");
+  });
+
+  it("makes a host role and a channel for runs where it may, finds them where they exist, and asks for the permission where it may not", async () => {
+    const guilds = memoryGuilds();
+    const rest = memoryDiscord();
+    await guilds.claimGuild({ guildId: "g1", ownerSub: "user_1", claimedAt: NOW });
+    const deps = { guilds, appUrl: "https://runlog.test/", now: () => NOW, rest };
+    // Installed with the seven permissions and no more: the answer is the link that adds the one needed.
+    const seven = String((1n << 10n) | (1n << 11n) | (1n << 13n) | (1n << 14n) | (1n << 16n) | (1n << 35n) | (1n << 38n));
+    const asked = (await handleInteraction(setup("make-role", [], { app_permissions: seven }), deps)).data?.content ?? "";
+    expect(asked).toContain("installed without Manage Roles");
+    expect(asked).toContain(`permissions=${String(BigInt(seven) | (1n << 28n))}`);
+    expect(rest.roles).toHaveLength(0);
+    // With it: a role in the accent, with no permissions of its own, set as the host role.
+    const may = String(BigInt(seven) | (1n << 28n) | (1n << 4n));
+    const made = (await handleInteraction(setup("make-role", [], { app_permissions: may }), deps)).data?.content ?? "";
+    expect(made).toContain("Made <@&role_1>");
+    expect(rest.roles).toEqual([{ id: "role_1", name: "Runlog Host", color: 0x4f8a78 }]);
+    expect(guilds.guilds.get("g1")?.hostRoleId).toBe("role_1");
+    // A role by that name already there is found, not made twice; the name is the person's to choose.
+    rest.roles.push({ id: "role_9", name: "Hosts" });
+    const found = (await handleInteraction(setup("make-role", [{ name: "name", type: 3, value: "hosts" }], { app_permissions: may }), deps)).data?.content ?? "";
+    expect(found).toContain("Found <@&role_9>");
+    expect(rest.roles).toHaveLength(2);
+    expect(guilds.guilds.get("g1")?.hostRoleId).toBe("role_9");
+    // The same for a channel, which needs Manage Channels rather than Manage Roles.
+    expect((await handleInteraction(setup("make-channel", [], { app_permissions: String(BigInt(seven) | (1n << 28n)) }), deps)).data?.content).toContain("installed without Manage Channels");
+    expect((await handleInteraction(setup("make-channel", [], { app_permissions: may }), deps)).data?.content).toContain("Made <#chan_2>");
+    expect(rest.channels).toEqual([{ id: "chan_2", name: "runs" }]);
+    expect(guilds.guilds.get("g1")?.channelId).toBe("chan_2");
+    // An administrator bot may do anything, whatever else the field says; a bot Discord will not answer for says so.
+    rest.down = true;
+    expect((await handleInteraction(setup("make-channel", [], { app_permissions: String(1n << 3n) }), deps)).data?.content).toContain("Discord would not");
   });
 
   it("reports the claim, the plan, the hosts and the packs, in words a member can act on", async () => {

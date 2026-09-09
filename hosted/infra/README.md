@@ -390,6 +390,12 @@ development, and without it for every server, which Discord takes up to
 an hour to show. The install link is
 `https://discord.com/oauth2/authorize?client_id=<applicationId>&scope=bot+applications.commands&permissions=0`.
 
+`/setup make-role` and `/setup make-channel` have the bot make (or find
+by name) a host role and a runs channel and set them; each needs a
+permission the install link leaves out (Manage Roles, Manage Channels),
+and the command answers with a link that adds it when the bot was
+installed without (`app_permissions` on the interaction says).
+
 Linking is Discord's word for who pressed. `/link` mints a six-letter
 code bound to the Discord account in the signed request (row
 `DISCORD#LINK#<code>`, ten minutes, gone when read) and shows it, to that
