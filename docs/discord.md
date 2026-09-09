@@ -69,8 +69,15 @@ clocks — and carries the one press that is due:
 - **Close** the unit, once its confirmations are ticked.
 - A move the pack offers, or something the run owes that is due.
 - **End** the run, with a choice of endings where the pack offers one.
+- **Pause** and **Resume** the unit's clock, where the pack runs one.
+- **Undo**: the last move taken back, as a move of its own, the way the
+  app does it. `/run undo` in the thread does the same.
 
 Only the host presses; a press by anyone else is answered with a note.
+The one row anyone may press is the six waves under the card — the same
+six the live page offers — which land beside a browser's on the live
+page. `/journal` writes a line in the run's journal for the unit, by the
+host.
 When the pack asks a question mid-step (a yes or no, a choice, a
 target), the card shows it and waits for the host. Every move is a line
 under the card, in the pack's words.

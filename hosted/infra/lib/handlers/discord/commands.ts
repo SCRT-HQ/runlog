@@ -63,7 +63,15 @@ export const COMMANDS = [
       { type: SUB_COMMAND, name: "status", description: "Post the table card again, in this run's thread" },
       { type: SUB_COMMAND, name: "link", description: "The live link: anyone watches, no account needed" },
       { type: SUB_COMMAND, name: "end", description: "End the run", options: [{ type: STRING, name: "ending", description: "How it ends, where the pack offers a choice", required: false, autocomplete: true }] },
+      { type: SUB_COMMAND, name: "undo", description: "Take the last move back" },
     ],
+  },
+  {
+    name: "journal",
+    type: CHAT_INPUT,
+    description: "Write a line in the run's journal, for this unit",
+    dm_permission: false,
+    options: [{ type: STRING, name: "text", description: "What to write", required: true, max_length: 500 }],
   },
 ] as const;
 
