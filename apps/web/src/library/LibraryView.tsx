@@ -9,6 +9,8 @@ import { scoresOf } from "../run/scores.ts";
 import { byLastOpened, openedAt } from "./opened.ts";
 import { DocMenu } from "../docs/DocMenu.tsx";
 import { HomeStrip } from "./HomeStrip.tsx";
+import { PackServers } from "./PackServers.tsx";
+import { useGuildVaults } from "./useGuildVaults.ts";
 
 /**
  * The library: your packs, newest-played first, each with its runs.
@@ -83,6 +85,9 @@ export function LibraryView({
   onContinueLast?: (runId?: string) => void;
 }) {
   const [raceCode, setRaceCode] = useState("");
+  // Which servers may play what, read once for the shelf; empty where
+  // there is no bot behind this copy or nobody signed in.
+  const vaults = useGuildVaults();
   const sync = useSync();
   const [runs, setRuns] = useState<StoredRun[]>([]);
   const reload = () => void listRuns().then((all) => setRuns(all.filter((r) => !r.deletedAt)));
@@ -214,6 +219,9 @@ export function LibraryView({
                     Test
                   </button>
                 )}
+                {/* Where this pack may be played, answered at the shelf
+                    rather than from each server's own page. */}
+                {record && <PackServers pack={record} vaults={vaults} />}
                 {record && !record.sealed && onReplace && (
                   <label className="ghost tiny fileButton" title={`Load a newer file of ${p.title}; its ${v.run.many.toLowerCase()} are kept`}>
                     Replace from a file
