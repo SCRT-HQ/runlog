@@ -1,0 +1,29 @@
+# Hosting a run
+
+**/run start** with a pack from the vault and one of its modes, and a name if you like. The bot opens a thread, posts the run's live link and the **table card** in it, and pins that first message so the link is always a click away. The card itself follows the thread: every move turns the old card into the move's line and posts a fresh card at the bottom, so the buttons are always the last thing in the thread, where you are.
+
+## A public or a private thread
+
+A run everyone should see opens in a public thread. A solo run in a busy server need not be a thread everybody sees: **/run start … private:true** opens it in a **private thread**. Only you, and whoever you add to it from Discord, can see it, and the bot answers you alone rather than announcing the run in the channel. The live link still works, for anyone you give it to. Leave the option out and the server's own default applies, which is public until **/setup threads kind:private** says otherwise. The first private run in a server answers with a link that adds Create Private Threads, since the bot is not installed with it.
+
+## The card's presses
+
+The card says where the run stands: the unit, the step, the constraints in play, the latest result under the name of the table it came from, what is on the table, the clocks. It carries the one press that is due:
+
+- **Begin** / **Next** the unit.
+- **Roll** on a table: the bot throws the dice and says what landed. Or **Roll it yourself**: the step opens and asks for the total your own dice came to, and the log says a person rolled it. Not in a seeded mode, which rolls from its seed.
+- A checklist's boxes, then **Done**.
+- **Declare** what you are making, typed into a small form, with the constraint the dice drew shown as a hint.
+- **Close** the unit, once its confirmations are ticked.
+- A move the pack offers, or something the run owes that is due.
+- **End** the run, with a choice of endings where the pack offers one.
+- **Pause** and **Resume** the unit's clock, where the pack runs one; **Start** it, where the pack leaves that to the player. A timer that runs out is stopped at that moment, whether or not anyone is pressing: the thread hears it ran out, the card is redrawn, and whatever the pack does when a timer expires is due at the next press.
+- **Undo**: the last move taken back, as a move of its own, the way the app does it. **/run undo** in the thread does the same.
+
+When the pack asks a question mid-step (a yes or no, a choice, a target), the card shows it and waits for the host. Every move is a line under the card, in the pack's words, with what kind of thing it is in bold; a unit beginning or closing, the run ending, a timer running out, show as a colored bar instead.
+
+## Who presses
+
+Only the host presses; a press by anyone else is answered with a note. The one row anyone may press is the six waves under the card, the same six the live page offers, which land beside a browser's on the live page. **/journal** writes a line in the run's journal for the unit, by the host.
+
+**/run status** in the thread posts a fresh card and takes the buttons off the old one. **/run link** posts a fresh live link (the old one stops working). **/run end** ends the run; the thread stays open to talk about it, and Discord closes it after a day idle. The log stays, in the host's library and by link.

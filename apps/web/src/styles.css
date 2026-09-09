@@ -3495,7 +3495,15 @@ select.textInput {
 .guidePart { display: grid; gap: 0.15rem; }
 .guidePart h3 { margin: 0 0 0.35rem; padding-bottom: 0.25rem; font-size: 1.05rem; font-weight: 600; border-bottom: 1px solid var(--line); color: var(--text); }
 .guidePart:not(.open) h3 { color: var(--muted); font-weight: 500; }
+.guidePart { gap: 0.3rem; }
 .guidePart ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; }
+/* A group within a part: its name as a link to its first page; its pages under it when it holds the open page. */
+.guideRun { display: grid; gap: 0.1rem; }
+.guideRun h4 { margin: 0; padding: 0.25rem 0.6rem; font-size: 0.95rem; font-weight: 600; }
+.guideRun h4 a { color: var(--muted); text-decoration: none; }
+.guideRun.here h4 a { color: var(--text); }
+.guideRun h4 a:hover { color: var(--accent); }
+.guideRun.grouped ol { margin-left: 0.6rem; }
 .guideToc li { display: grid; gap: 0.05rem; padding: 0.35rem 0.6rem; border-left: 2px solid transparent; }
 .guidePart:not(.open) li { padding-top: 0.2rem; padding-bottom: 0.2rem; }
 .guideToc li.on { border-left-color: var(--accent); background: var(--panel-2); border-radius: 0 var(--radius) var(--radius) 0; }
@@ -3531,6 +3539,10 @@ select.textInput {
 .guidePage ul, .guidePage ol { padding-left: 1.4rem; }
 .guidePage pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.75rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.85em; }
 .guidePage code { font-family: var(--mono); font-size: 0.9em; }
+.guidePage table { border-collapse: collapse; width: 100%; margin: 0.8rem 0 1.2rem; font-size: 0.95em; }
+.guidePage th, .guidePage td { text-align: left; vertical-align: top; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line); line-height: 1.45; }
+.guidePage th { font-weight: 600; color: var(--muted); font-size: 0.85em; }
+.guidePage .tableWrap { overflow-x: auto; }
 .guideSteps { counter-reset: step; list-style: none; padding: 0; display: grid; gap: 0.6rem; margin: 0.8rem 0 1.2rem; }
 .guideSteps li { counter-increment: step; position: relative; padding-left: 2.4rem; }
 .guideSteps li::before { content: counter(step); position: absolute; left: 0; top: 0.05rem; width: 1.7rem; height: 1.7rem; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font-family: var(--mono); font-size: var(--t-1); color: var(--muted); }

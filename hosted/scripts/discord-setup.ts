@@ -64,7 +64,7 @@ async function main() {
   console.log(`Linked Roles Verification URL: https://<domain>/api/discord/linked-role`);
   console.log(`OAuth2 redirect: https://<domain>/api/discord/linked-role/callback`);
   console.log(`Install link (${PERMISSION_NAMES.join(", ")}):\n${installLink(APPLICATION_ID)}`);
-  console.log(`\nSee docs/discord-bot.md for the developer-portal settings around this.`);
+  console.log(`\nSee the guide's Setting the bot up (/play/guide/bot) for the developer-portal settings around this.`);
 }
 
 main().catch((error: unknown) => {

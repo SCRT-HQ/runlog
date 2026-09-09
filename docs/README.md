@@ -13,7 +13,7 @@ runs out of room, it links here.
 | --- | --- |
 | The guide's [Streaming a run](https://runlog.scrthq.com/play/guide/streaming) | You want a widget on your stream. Start here; the pages after it take OBS, Streamlabs, StreamElements and Streamer.bot one at a time, field by field. |
 | [stream-api.md](stream-api.md) | You are writing a plugin, a chat command or a second screen: the numbers, the bell, the gestures. |
-| [discord.md](discord.md) | Runlog in a Discord server: adding the bot, claiming a server, hosting and watching runs. |
+| The guide's [Runlog in Discord](https://runlog.scrthq.com/play/guide/discord) | Runlog in a Discord server: adding the bot, claiming a server, hosting and watching runs, one page each; `discord.md` points there. |
 
 ## Writing packs
 
@@ -36,17 +36,17 @@ runs out of room, it links here.
 | Read | When |
 | --- | --- |
 | The guide's [Running your own copy](https://runlog.scrthq.com/play/guide/own-copy) | On your machine, on a static host, or on your own AWS, one page each; `self-hosting.md` points there. |
-| [discord-bot.md](discord-bot.md) | Making the Discord bot as the operator: the developer portal, the stage, the token, the commands. |
+| The guide's [Setting the bot up](https://runlog.scrthq.com/play/guide/bot) | Making the Discord bot as the operator: the developer portal, the stage, the token, the commands; `discord-bot.md` points there. |
 | [../hosted/infra/README.md](../hosted/infra/README.md) | How the hosting is built and why: the API, billing, selling, races, live push, Discord, monitoring. |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | The shape of the code, the rules the tests enforce, and how a change lands. |
 
 ## Conventions
 
-A document here is one of two things: a contract someone outside the
-repository builds against (`stream-api.md`, `reference.md`, the pack
-format in `authoring.md`), or a walkthrough that names real fields in
-someone else's software (`discord-bot.md`). A
-document that is neither belongs in the guide, or in a README beside the
-code it describes. Titles say what the reader is doing, not what the
+A document here is a contract someone outside the repository builds
+against (`stream-api.md`, `reference.md`, the pack format in
+`authoring.md`, the sealed container in `selling.md`). A walkthrough,
+even one that names real fields in someone else's software, belongs in
+the guide, one page per subject; the files that used to hold one point
+there. Anything else belongs in a README beside the code it describes. Titles say what the reader is doing, not what the
 thing is called; American English throughout; the demo pack, The Long
 Kiln, is the example everywhere.

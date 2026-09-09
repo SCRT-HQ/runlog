@@ -1,0 +1,25 @@
+# Setting a server up
+
+Whoever runs the hosted copy publishes the bot's install link (the Runlog Discord has it). Open it, pick your server, accept the permissions it asks for: to see channels, to post in them and in threads, to open a public thread per run, to post embeds, to read what it posted, and to pin the table card. It never reads members' messages and never manages people. Opening a run in a *private* thread takes one more permission, which the install link does not ask for; the first run that wants one answers with a link that adds it.
+
+## Claiming, and the vault
+
+Then, in the server, someone who can manage it:
+
+<Steps>
+  <li>**/setup claim**: the bot shows an address, to you alone. Open it signed in to Runlog and the server is that account's: it pays for the server's plan, and chooses its packs. Claiming again from another account moves the server to that account. One account may claim three.</li>
+  <li>On your profile, under **Servers**, add packs to the server's **vault** from your shelf. A pack goes up once, with its modes named so the bot can list them, and never comes back down: not to members, not to you. **/packs** in the server lists what is there.</li>
+</Steps>
+
+## Who hosts, and where
+
+- **/setup role @Hosts** says who may start runs; without a role, anyone who can manage the server may.
+- **/setup channel #runs** says where runs open; without one, wherever **/run start** is used.
+- Or let the bot make them: **/setup make-role** makes a "Runlog Host" role (or finds one by the name you give) and sets it; **/setup make-channel** makes a `#runs` channel (or finds one) and sets it. The bot is installed without Manage Roles and Manage Channels; the first time you ask, it answers with a link that adds the one it needs.
+- **/setup threads kind:private** has runs open in a private thread by default, seen by the host and whoever the host adds, rather than a public one anybody in the channel can open. `kind:public` puts it back; a run says either way for itself with the `private` option on **/run start**.
+- **/setup cards mode:pinned** keeps one card pinned at the top of each thread and edited in place, instead of a fresh card after every move; it holds from the next run.
+- **/setup status** says all of the above, and whether the server's plan is active.
+
+## The plan
+
+Hosting a run needs the server plan, **Runlog for servers**, held by the account that claimed the server, where plans are on; or, where the bot's store page sells it, bought for the server through Discord. Claiming, filling the vault and setting up need nothing.

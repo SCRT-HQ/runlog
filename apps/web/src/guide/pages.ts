@@ -26,6 +26,12 @@ import StreamerBot from "./pages/streamer-bot.mdx";
 import StreamTools from "./pages/stream-tools.mdx";
 import StreamTroubles from "./pages/stream-troubles.mdx";
 import Discord from "./pages/discord.mdx";
+import DiscordSetup from "./pages/discord-setup.mdx";
+import DiscordLinking from "./pages/discord-linking.mdx";
+import DiscordHosting from "./pages/discord-hosting.mdx";
+import DiscordTogether from "./pages/discord-together.mdx";
+import DiscordWatching from "./pages/discord-watching.mdx";
+import DiscordStored from "./pages/discord-stored.mdx";
 import Design from "./pages/design.mdx";
 import Sections from "./pages/sections.mdx";
 import Signing from "./pages/signing.mdx";
@@ -53,6 +59,12 @@ import AwsConfig from "./pages/aws-config.mdx";
 import AwsDeploy from "./pages/aws-deploy.mdx";
 import AwsAfter from "./pages/aws-after.mdx";
 import Monitoring from "./pages/monitoring.mdx";
+import Bot from "./pages/bot.mdx";
+import BotApplication from "./pages/bot-application.mdx";
+import BotEndpoint from "./pages/bot-endpoint.mdx";
+import BotStore from "./pages/bot-store.mdx";
+import BotLinkedRoles from "./pages/bot-linked-roles.mdx";
+import BotTroubles from "./pages/bot-troubles.mdx";
 import Reference from "./pages/reference.mdx";
 
 /** A guide page: where it lives in the address bar, what it is called, and the MDX that is it. */
@@ -110,7 +122,13 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   P("streamer-bot", "With others", "Streaming", "Streamer.bot, Aitum and Lumia", "A dice alert and a !score command.", StreamerBot),
   P("stream-tools", "With others", "Streaming", "For a chat bot or your own tool", "The numbers as JSON, and a socket that rings.", StreamTools),
   P("stream-troubles", "With others", "Streaming", "When a widget does not follow the run", "What each message means, and what to do.", StreamTroubles),
-  P("discord", "With others", null, "Runlog in Discord", "A bot that hosts runs in your server: claim it, fill its vault, press the card.", Discord),
+  P("discord", "With others", "Discord", "Runlog in Discord", "A bot that hosts runs in your server: claim it, fill its vault, press the card.", Discord),
+  P("discord-setup", "With others", "Discord", "Setting a server up", "The install link, claiming, the vault, who hosts and where.", DiscordSetup),
+  P("discord-linking", "With others", "Discord", "Linking your account", "/link, /unlink, and roles a server gives only to linked members.", DiscordLinking),
+  P("discord-hosting", "With others", "Discord", "Hosting a run", "The thread, public or private, and the card's presses.", DiscordHosting),
+  P("discord-together", "With others", "Discord", "Rosters, seats and the app", "Moderated runs, modes played by several, the same run from the app.", DiscordTogether),
+  P("discord-watching", "With others", "Discord", "Watching", "The thread, the live link, and a stream.", DiscordWatching),
+  P("discord-stored", "With others", "Discord", "What the bot stores", "The run, the server, the vault, and what of Discord's.", DiscordStored),
   // Making a pack
   P("design", "Making a pack", "The Designer", "Designing a pack", "Your own game for the engine, written in the browser.", Design),
   P("sections", "Making a pack", "The Designer", "The sections", "Words, tables, phases, modes, and what Problems catches.", Sections),
@@ -141,6 +159,12 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   P("aws-deploy", "Running your own copy", "On AWS, with accounts", "Deploying", "Bootstrap once, then three commands per release.", AwsDeploy),
   P("aws-after", "Running your own copy", "On AWS, with accounts", "After the first deploy", "The secrets to fill, and the catalog to seed.", AwsAfter),
   P("monitoring", "Running your own copy", "On AWS, with accounts", "Monitoring", "Traces, insights and an alarm inside your account; New Relic if you want it.", Monitoring),
+  P("bot", "Running your own copy", "The Discord bot", "Setting the bot up", "One bot per copy, made by the operator: what you need.", Bot),
+  P("bot-application", "Running your own copy", "The Discord bot", "The application and the stage", "The developer portal, the stage's file, the token.", BotApplication),
+  P("bot-endpoint", "Running your own copy", "The Discord bot", "The endpoint, installation and the commands", "Point Discord at the API, set the install link, register, try it.", BotEndpoint),
+  P("bot-store", "Running your own copy", "The Discord bot", "Selling the plan through Discord", "A guild subscription on the bot's store page.", BotStore),
+  P("bot-linked-roles", "Running your own copy", "The Discord bot", "Linked roles", "The client secret, the verification URL, and the metadata.", BotLinkedRoles),
+  P("bot-troubles", "Running your own copy", "The Discord bot", "When something is off", "What each message means, and where everything lives.", BotTroubles),
   // Reference
   P("reference", "Reference", null, "Reference", "The contracts, kept beside the code: the pack format, the stream API, selling from a backend.", Reference),
 ];

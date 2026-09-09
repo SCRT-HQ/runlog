@@ -13,6 +13,7 @@ of step with it:
 - [After the first deploy](https://runlog.scrthq.com/play/guide/aws-after): the secrets, the catalog.
 - [Monitoring](https://runlog.scrthq.com/play/guide/monitoring), and New Relic if you want it.
 
+- [Setting the bot up](https://runlog.scrthq.com/play/guide/bot), and the pages after it, for a Discord bot of the copy's own.
+
 How the hosting is built, and why, stays in
-[hosted/infra/README.md](../hosted/infra/README.md); setting the Discord
-bot up as the operator is [discord-bot.md](discord-bot.md).
+[hosted/infra/README.md](../hosted/infra/README.md).

@@ -1,0 +1,45 @@
+# The application and the stage
+
+## Make the application
+
+At [discord.com/developers/applications](https://discord.com/developers/applications), **New Application**. Name it what the servers will see: "Runlog" for production, "Runlog (dev)" for development.
+
+**General Information** shows two values you need:
+
+- **Application ID**: public; it is in every install link.
+- **Public Key**: public; it is what Discord signs interactions with, and what the API checks them against.
+
+Leave the **Interactions Endpoint URL** empty for now. Discord verifies it the moment you save it, by sending a signed ping, and the API answers only once it knows the key.
+
+## Tell the stage
+
+The stage's configuration document is one JSON object per stage: in a pipeline, the `RUNLOG_ENV_CONFIG_<STAGE>` repository variable; on your own machine, `hosted/infra/env/<stage>.json`, which git ignores, with `env/example.json` as the template (see [Saying what your copy is](#guide/aws-config)). In it, add:
+
+```json
+"discord": {
+  "applicationId": "<Application ID>",
+  "publicKey": "<Public Key>",
+  "open": false
+}
+```
+
+`open` is whether the server plan is on sale. Leave it `false` while the bot is being tried; everyone still sees the Servers page, claims servers and fills vaults, and the plan shows as coming. The people trying it get the `server` feature flag in WorkOS instead, which is the plan as far as the API is concerned.
+
+Deploy the stage. The API now answers the endpoint.
+
+## The bot user and its token
+
+**Bot** tab:
+
+- **Reset Token**, copy it once, and put it in the stage's secret:
+
+  ```powershell
+  hosted/scripts/Set-RunlogSecret.ps1 -Secret discord/bot-token
+  ```
+
+  (or `aws secretsmanager put-secret-value --secret-id runlog/discord/bot-token --secret-string "$(cat)"` signed in to the stage's account). The handler reads it on its next cold start; no deploy. Nothing in the repository ever sees it.
+- **Public Bot**: on, so any server can install it.
+- **Requires OAuth2 Code Grant**: off.
+- **Privileged Gateway Intents** (Presence, Server Members, Message Content): all off. The bot has no gateway connection; it reads only what Discord sends it and what it posted itself.
+
+Next: [the endpoint, installation and the commands](#guide/bot-endpoint).

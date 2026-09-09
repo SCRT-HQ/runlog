@@ -6,7 +6,7 @@ The API's secrets are created as placeholders, and a feature whose secret is a p
 aws secretsmanager put-secret-value --secret-id runlog/workos/api-key --secret-string "$(cat)"
 ```
 
-`workos/api-key` is needed for publisher organizations and their members. Sign-in and sync need no secret at all: the API verifies tokens against the client ids in the configuration. `stripe/secret-key`, `stripe/webhook-secret` and `stripe/connect-webhook-secret` are for plans and selling; `hosted/infra/README.md` walks through Stripe when you get there. The Discord bot has secrets of its own, set up by the operator's guide in the repository, `docs/discord-bot.md`.
+`workos/api-key` is needed for publisher organizations and their members. Sign-in and sync need no secret at all: the API verifies tokens against the client ids in the configuration. `stripe/secret-key`, `stripe/webhook-secret` and `stripe/connect-webhook-secret` are for plans and selling; `hosted/infra/README.md` walks through Stripe when you get there. The Discord bot has secrets of its own: see [Setting the bot up](#guide/bot).
 
 ## The catalog
 
