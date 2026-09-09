@@ -1948,6 +1948,12 @@ describe("a run hosted in discord", () => {
     expect(badly, JSON.stringify(badly)).toEqual([]);
     // The table was told in the thread, and the widgets see the same run.
     expect(bot.posts.filter((p) => p.channel === "thread_1" && p.message.content && !p.message.content.includes("Watch it live")).length).toBeGreaterThan(0);
+    // What kind of thing each line is stands out; a stage beginning or closing is a colored bar, not a line.
+    expect(bot.posts.some((p) => /\*\*Declared\*\* A wide bowl/.test(p.message.content ?? ""))).toBe(true);
+    const bars = bot.posts.flatMap((p) => (p.message.embeds ?? []) as Array<{ description?: string; color?: number }>).filter((e) => e.description);
+    expect(bars.some((e) => /\*\*Stage 1\*\* begins\./.test(e.description!) && e.color === 0x4f8a78)).toBe(true);
+    expect(bars.some((e) => /\*\*Stage 1\*\* closed\./.test(e.description!))).toBe(true);
+    expect(bot.posts.some((p) => /begins\.|closed\./.test(p.message.content ?? ""))).toBe(false);
     const after = await call(request("GET", "/api/public/runs/01000000000000000000000001/metrics?t=livetok", { token: null }), d);
     expect(after.body).toMatchObject({ ready: true, unit: 2 });
     expect((after.body["progress"] as Record<string, unknown>)["unitsDone"]).toBe(2);
@@ -2079,7 +2085,11 @@ describe("a run hosted in discord", () => {
     const stopped = (await store.eventsAfter(id, 0)).filter((e) => e["t"] === "ClockStopped");
     expect(stopped).toMatchObject([{ clock: "u1:unit", expired: true, elapsedMs: 60000, at: "2026-09-06T12:01:30.000Z" }]);
     expect(bot.posts.length).toBe(postsBefore + 1);
-    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("The Firing ran out");
+    // Said once, as a colored bar: a timer running out is a moment, not a line.
+    const bar = bot.posts[bot.posts.length - 1]!.message;
+    expect(bar.content).toBeUndefined();
+    expect((bar.embeds?.[0] as { description: string; color: number }).description).toContain("The Firing** ran out");
+    expect((bar.embeds?.[0] as { color: number }).color).toBe(0xb8742a);
     expect(bot.edits.length).toBe(editsBefore + 1);
     // Stopped is stopped: the same deadline again does nothing, and a later look at the run finds no new line.
     expect(await finishTimer(timers[timers.length - 1]!, dd)).toBe("gone");
@@ -2146,7 +2156,7 @@ describe("a run hosted in discord", () => {
     expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("From the app:");
     expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("Took a move back.");
     // The undo named no ids, so the app's begin opened the next stage; the line reads the log as it is.
-    expect(bot.posts[bot.posts.length - 1]!.message.content).toMatch(/Stage \d begins\./);
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toMatch(/\*\*Stage \d\*\* begins\./);
     expect(bot.edits).toHaveLength(edits + 1);
     expect((await guilds.guildRun(id))!.seenSeq).toBe(heard + 2);
     // Nothing new: nothing said.
