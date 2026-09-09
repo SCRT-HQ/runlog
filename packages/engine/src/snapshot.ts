@@ -1,7 +1,7 @@
 import { hitsOn } from "./hits.ts";
 import { modeDoc, summaryDoc, type Doc, type Pack, type Phase } from "@runlog/rules-schema";
 import { activePhases, constrainedByOf, constraintsFor, nextStep, phaseSkipped } from "./flow.ts";
-import { clockOfUnit, elapsedMs, liveClocks } from "./clock.ts";
+import { clockOfUnit, elapsedMs, liveClocks, unitClockFor } from "./clock.ts";
 import { describeSkipReason } from "./describe.ts";
 import { mayQuote } from "./export.ts";
 import { progressOf } from "./race.ts";
@@ -75,7 +75,8 @@ export interface LiveSnapshot {
   counters: Array<{ id: string; label: string; value: number }>;
   resources: Array<{ id: string; label: string; value: number; max?: number; display?: "boxes" | "bar" | "number" }>;
   clocks: Array<{ id: string; label: string; kind: "stopwatch" | "timer"; seconds: number | null; status: "running" | "paused" | "done"; elapsedMs: number; expired: boolean }>;
-  progress: { unitsDone: number; elapsedMs: number };
+  /** Units closed, and time on the run. `timed` says the run keeps time by unit clocks; without them, elapsed is wall time since the start, which means little for a run played across days. */
+  progress: { unitsDone: number; elapsedMs: number; timed: boolean };
   /** What the pack (or its mode) says this run scores, worded and ready to show. */
   score: { label: string; text: string; value: number; better: "higher" | "lower" };
   forcedUnits: number;
@@ -297,7 +298,7 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
       .map(([id, c]) => ({ id, label: c.label, value: state.counters[id] ?? 0 })),
     resources: Object.entries(pack.resources ?? {}).map(([id, r]) => ({ id, label: r.label, value: state.resources[id] ?? r.initial, ...(r.max !== undefined ? { max: r.max } : {}), ...(r.display ? { display: r.display } : {}) })),
     clocks,
-    progress: { unitsDone: progress.unitsDone, elapsedMs: progress.elapsedMs },
+    progress: { unitsDone: progress.unitsDone, elapsedMs: progress.elapsedMs, timed: unitClockFor(pack, state) !== null || state.clocks.some((c) => c.id.endsWith(":unit")) },
     score: { label: score.label, text: formatScore(score, pack), value: score.value, better: score.better },
     forcedUnits: state.forcedUnits,
     log,

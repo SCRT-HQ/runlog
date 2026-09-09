@@ -149,7 +149,38 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
     <>
       {bar}
       <DiceCurtain roll={roll} />
-    <LiveView snapshot={snapshot} stale={stale}>
+    <LiveView
+      snapshot={snapshot}
+      stale={stale}
+      side={
+        // Reactions sit above the board, where a watcher looks: the buttons, and what came back from the table.
+        snapshot.status === "active" || recent.length > 0 ? (
+          <section className="panel react">
+            <h3 className="sectionTitle">React</h3>
+            {snapshot.status === "active" && (
+              <div className="reactRow" aria-label="React">
+                {REACTIONS.map((emoji) => (
+                  <button key={emoji} className="reactButton" onClick={() => react(emoji)} title="Send this to the table">
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+            {recent.length > 0 && (
+              <div className="reactRecent" aria-live="polite">
+                {recent.map((r, i) => (
+                  <span key={`${r.at}-${i}`} className="chip reactChip" title={new Date(r.at).toLocaleTimeString()}>
+                    {r.emoji}
+                    {r.name ? ` ${r.name}` : ""}
+                  </span>
+                ))}
+              </div>
+            )}
+            {note && <p className="muted small">{note}</p>}
+          </section>
+        ) : null
+      }
+    >
       <div className="liveTools">
         <div className="padRow">
           {paper && (
@@ -187,26 +218,6 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
             </button>
           )}
         </div>
-        {snapshot.status === "active" && (
-          <div className="reactRow" aria-label="React">
-            {REACTIONS.map((emoji) => (
-              <button key={emoji} className="reactButton" onClick={() => react(emoji)} title="Send this to the table">
-                {emoji}
-              </button>
-            ))}
-          </div>
-        )}
-        {recent.length > 0 && (
-          <div className="reactRecent" aria-live="polite">
-            {recent.map((r, i) => (
-              <span key={`${r.at}-${i}`} className="chip reactChip" title={new Date(r.at).toLocaleTimeString()}>
-                {r.emoji}
-                {r.name ? ` ${r.name}` : ""}
-              </span>
-            ))}
-          </div>
-        )}
-        {note && <p className="muted small">{note}</p>}
       </div>
     </LiveView>
     </>

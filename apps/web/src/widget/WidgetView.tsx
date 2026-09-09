@@ -330,10 +330,12 @@ export function StatsWidget({ s }: { s: LiveSnapshot }) {
           <dt className="muted small">{s.words.units} done</dt>
           <dd>{s.progress.unitsDone}</dd>
         </div>
-        <div>
-          <dt className="muted small">Time</dt>
-          <dd>{formatClock(s.progress.elapsedMs)}</dd>
-        </div>
+        {s.progress.timed !== false && (
+          <div>
+            <dt className="muted small">Time</dt>
+            <dd>{formatClock(s.progress.elapsedMs)}</dd>
+          </div>
+        )}
         <div>
           <dt className="muted small">Step</dt>
           <dd>{s.step ?? "—"}</dd>

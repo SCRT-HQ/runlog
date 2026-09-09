@@ -28,7 +28,7 @@ const base: LiveSnapshot = {
   counters: [],
   resources: [],
   clocks: [],
-  progress: { unitsDone: 1, elapsedMs: 0 },
+  progress: { unitsDone: 1, elapsedMs: 0, timed: true },
   score: { label: "Stages closed", text: "1 stages", value: 1, better: "higher" },
   forcedUnits: 0,
   log: [
@@ -103,6 +103,16 @@ describe("the live page", () => {
     const { constraints: _c, unitResults: _u, ...withoutFields } = base;
     const legacy = renderToStaticMarkup(<LiveView snapshot={withoutFields as LiveSnapshot} />);
     expect(legacy).not.toContain("constrains");
+  });
+
+  it("shows time only for a run that keeps it, and puts what it is handed above the board", () => {
+    const timed = renderToStaticMarkup(<LiveView snapshot={base} side={<section className="panel react">React</section>} />);
+    expect(timed).toContain(">Time<");
+    expect(timed.indexOf('class="panel react"')).toBeLessThan(timed.indexOf("So far"));
+    // A run without unit clocks has only wall time since it started, which says nothing for one played across days.
+    const untimed = renderToStaticMarkup(<LiveView snapshot={{ ...base, progress: { unitsDone: 1, elapsedMs: 9_000_000, timed: false } }} />);
+    expect(untimed).not.toContain(">Time<");
+    expect(untimed).toContain("Stages done");
   });
 
   it("tells the run room by room when asked, in place of the log, newest first", () => {

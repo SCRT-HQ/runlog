@@ -14,7 +14,7 @@ import { LOG_LIMITS, logLimit, logLines, logOrder, setLogLimit, setLogOrder, typ
  * classes for that are computed against the snapshot before, and worn
  * for one render.
  */
-export function LiveView({ snapshot, stale, children, rooms: roomsAtFirst = "this" }: { snapshot: LiveSnapshot; stale?: boolean; children?: React.ReactNode; rooms?: "this" | "all" }) {
+export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst = "this" }: { snapshot: LiveSnapshot; stale?: boolean; children?: React.ReactNode; side?: React.ReactNode; rooms?: "this" | "all" }) {
   const now = useNow(snapshot.clocks.some((c) => c.status === "running"));
   const s = snapshot;
   const before = useRef<LiveSnapshot | null>(null);
@@ -197,6 +197,7 @@ export function LiveView({ snapshot, stale, children, rooms: roomsAtFirst = "thi
         </div>
 
         <aside className="liveSide">
+          {side}
           {s.clocks.length > 0 && (
             <section className="panel clocks">
               {s.clocks.map((c) => {
@@ -320,10 +321,12 @@ export function LiveView({ snapshot, stale, children, rooms: roomsAtFirst = "thi
                 <dt className="muted small">{s.words.units} done</dt>
                 <dd>{s.progress.unitsDone}</dd>
               </div>
-              <div>
-                <dt className="muted small">Time</dt>
-                <dd>{formatClock(s.progress.elapsedMs)}</dd>
-              </div>
+              {s.progress.timed !== false && (
+                <div>
+                  <dt className="muted small">Time</dt>
+                  <dd>{formatClock(s.progress.elapsedMs)}</dd>
+                </div>
+              )}
             </dl>
           </section>
         </aside>
