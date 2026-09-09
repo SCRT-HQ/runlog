@@ -18,7 +18,7 @@ afterEach(cleanup);
 describe("linking with a code", () => {
   it("keeps offering to verify for linked roles once the code is bound, where the bot's OAuth side is set up", async () => {
     const api = {
-      connections: async () => ({ available: true, discord: null, verify: true }),
+      connections: async () => ({ available: true, connections: [], discord: null, verify: true }),
       linkDiscord: async () => ({ discordUserId: "1001", name: "scrthq", linkedAt: "2026-09-09T00:00:00Z" }),
     } as unknown as Api;
     render(
@@ -31,5 +31,8 @@ describe("linking with a code", () => {
     await waitFor(() => expect(screen.getByText(/linked as scrthq/)).toBeTruthy());
     expect(screen.getByText("Verify for linked roles")).toBeTruthy();
     expect(screen.getByText(/press Verify for linked roles/)).toBeTruthy();
+    // And the row that was the invitation now offers another, rather than
+    // the one link having replaced the way to make one.
+    expect(screen.getByText(/link another/)).toBeTruthy();
   });
 });

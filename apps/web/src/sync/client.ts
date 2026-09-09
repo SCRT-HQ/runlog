@@ -343,9 +343,27 @@ export interface DiscordConnection {
   linkedAt: string;
 }
 
+/** A service an account can be linked to. Discord is the only one so far. */
+export type ConnectionService = "discord";
+
+/**
+ * An account this Runlog account is linked to: which service, that
+ * service's own id for the person, and the name it showed. An account
+ * holds as many as it links, of as many kinds.
+ */
+export interface Connection {
+  service: ConnectionService;
+  accountId: string;
+  name: string;
+  linkedAt: string;
+}
+
 export interface Connections {
   /** Whether this copy has a bot to link with at all. */
   available: boolean;
+  /** Everything this account is linked to, oldest first. */
+  connections: Connection[];
+  /** The first Discord link, as a copy written before an account could hold several spelled it. */
   discord: DiscordConnection | null;
   /** Whether a verification for a server's linked roles can be offered: the bot's OAuth side is set up. */
   verify?: boolean;
@@ -384,13 +402,14 @@ export interface Api {
   connections(): Promise<Connections>;
   /** Hand in the code `/link` minted in Discord; the Discord account it was minted for is then this one's. */
   linkDiscord(code: string): Promise<DiscordConnection>;
-  unlinkDiscord(): Promise<void>;
+  /** Let one Discord account go, or every one of them where none is named. */
+  unlinkDiscord(accountId?: string): Promise<void>;
   /** Begin verifying this account for a server's linked roles: the address at Discord to send the person to. */
   discordVerifyUrl(): Promise<string>;
   /** Hand in the code `/setup claim` minted; the server is then this account's. `upgrade` says the server plan is wanted and not held. */
   claimGuild(code: string): Promise<{ guild: Guild; plan: string; upgrade: boolean }>;
   /** The servers this account claimed, whether it holds the server plan (always true where plans are open), and whether the plan is on sale. */
-  myGuilds(): Promise<{ guilds: Guild[]; server: boolean; open: boolean }>;
+  myGuilds(): Promise<{ guilds: Guild[]; server: boolean; open: boolean; allowed: number }>;
   /** Give the server up: its rows and its vault go. */
   releaseGuild(guildId: string): Promise<void>;
   guildPacks(guildId: string): Promise<GuildPackMeta[]>;
@@ -798,16 +817,19 @@ export function createApi(
     },
 
     connections: async () => {
-      const { body } = await request<{ available?: boolean; discord?: DiscordConnection | null }>("GET", "/connections");
-      return { available: body.available === true, discord: body.discord ?? null };
+      const { body } = await request<{ available?: boolean; discord?: DiscordConnection | null; connections?: Connection[]; verify?: boolean }>("GET", "/connections");
+      // A server written before an account could hold several sends the one
+      // it has; the list is made from it so this page has one thing to read.
+      const listed = body.connections ?? (body.discord ? [{ service: "discord" as const, accountId: body.discord.discordUserId, name: body.discord.name, linkedAt: body.discord.linkedAt }] : []);
+      return { available: body.available === true, connections: listed, discord: body.discord ?? null, ...(body.verify === true ? { verify: true } : {}) };
     },
     linkDiscord: async (code) => {
       const { status, body } = await request<{ linked?: boolean; discord?: DiscordConnection; error?: string }>("POST", "/connections/discord", { code });
       if (status !== 200 || !body.discord) throw new SyncError("error", undefined, body.error ?? "that code could not be linked");
       return body.discord;
     },
-    unlinkDiscord: async () => {
-      await request("DELETE", "/connections/discord");
+    unlinkDiscord: async (accountId) => {
+      await request("DELETE", accountId ? `/connections/discord/${encodeURIComponent(accountId)}` : "/connections/discord");
     },
     discordVerifyUrl: async () => {
       const { body } = await request<{ available?: boolean; url?: string }>("POST", "/connections/discord/verify");
@@ -820,8 +842,10 @@ export function createApi(
       return { guild: body.guild, plan: body.plan ?? "server", upgrade: body.upgrade === true };
     },
     myGuilds: async () => {
-      const { body } = await request<{ guilds?: Guild[]; server?: boolean; open?: boolean }>("GET", "/guilds");
-      return { guilds: body.guilds ?? [], server: body.server !== false, open: body.open === true };
+      const { body } = await request<{ guilds?: Guild[]; server?: boolean; open?: boolean; allowed?: number }>("GET", "/guilds");
+      // How many this account may claim is the plan's to say; a server
+      // written before it said so meant three.
+      return { guilds: body.guilds ?? [], server: body.server !== false, open: body.open === true, allowed: typeof body.allowed === "number" ? body.allowed : 3 };
     },
     releaseGuild: async (guildId) => {
       await request("DELETE", `/guilds/${encodeURIComponent(guildId)}`);

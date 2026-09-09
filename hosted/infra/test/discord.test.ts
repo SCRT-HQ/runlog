@@ -98,7 +98,7 @@ describe("the bot", () => {
     const guilds = memoryGuilds();
     const deps = { guilds, appUrl: "https://runlog.test/", now: () => NOW, code: () => "ABCDEF" };
     expect((await handleInteraction(press({ member: { user: mira }, data: { name: "unlink" } }), deps)).data?.content).toContain("not linked");
-    await guilds.connect("user_1", { discordUserId: "1001", name: "Mira", linkedAt: NOW });
+    await guilds.connect("user_1", { service: "discord", accountId: "1001", name: "Mira", linkedAt: NOW });
     const out = await handleInteraction(press({ member: { user: mira }, data: { name: "link" } }), deps);
     expect(out.data?.content).toContain("already linked");
     expect(out.data?.content).toContain("moves the link there");
@@ -108,7 +108,7 @@ describe("the bot", () => {
     expect(gone.data?.content).toContain("Unlinked");
     expect(gone.data?.flags).toBe(EPHEMERAL);
     expect(await guilds.userForDiscord("1001")).toBeNull();
-    expect(await guilds.connection("user_1")).toBeNull();
+    expect(await (await guilds.connections("user_1"))[0] ?? null).toBeNull();
   });
 
   it("answers a command it does not know, and a press on nothing, rather than leaving Discord waiting", async () => {
@@ -195,7 +195,7 @@ describe("setting up a server", () => {
   it("reports the claim, the plan, the hosts and the packs, in words a member can act on", async () => {
     const guilds = memoryGuilds();
     await guilds.claimGuild({ guildId: "g1", name: "The Kiln Room", ownerSub: "user_1", claimedAt: NOW, hostRoleId: "r1" });
-    await guilds.connect("user_1", { discordUserId: "1001", name: "Mira", linkedAt: NOW });
+    await guilds.connect("user_1", { service: "discord", accountId: "1001", name: "Mira", linkedAt: NOW });
     await guilds.putGuildPack("g1", { id: "com.scrthq.runlog.long-kiln", title: "The Long Kiln", version: "1.0.0", format: "yaml", hash: "h", bytes: 10, modes: [{ id: "standard", label: "Standard" }, { id: "short", label: "Short" }], updatedAt: NOW, delegatedBy: "user_1" }, "id: x");
     const open = await handleInteraction(setup("status"), { guilds, appUrl: "https://runlog.test/", now: () => NOW, gates: false });
     expect(open.data?.content).toContain("Runlog on The Kiln Room");
@@ -268,7 +268,7 @@ describe("a run in a private thread", () => {
     const rest = memoryDiscord();
     let ids = 0;
     await guilds.claimGuild({ guildId: "g1", name: "The Kiln Room", ownerSub: "user_1", claimedAt: NOW });
-    await guilds.connect("user_1", { discordUserId: "1001", name: "Mira", linkedAt: NOW });
+    await guilds.connect("user_1", { service: "discord", accountId: "1001", name: "Mira", linkedAt: NOW });
     await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: "h", bytes: demo.length, modes: [{ id: "standard", label: "Standard" }], updatedAt: NOW, delegatedBy: "user_1" }, demo);
     if (threadMode) await guilds.updateGuild("g1", NOW, { threadMode });
     const deps: InteractionDeps = { guilds, appUrl: "https://runlog.test/", now: () => NOW, store: startStore(), rest, mintId: () => `01${String((ids += 1)).padStart(24, "0")}`, token: () => "livetok" };

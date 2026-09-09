@@ -1689,10 +1689,16 @@ describe("discord", () => {
     expect(pressed.body["data"]).toMatchObject({ flags: 64 });
     expect(String((pressed.body["data"] as Record<string, unknown>)["content"])).toContain("https://runlog.test/play/link/discord?c=ABCDEF");
     // Nothing linked yet, and the code is a code: typed loosely, it still matches.
-    expect((await call(request("GET", "/api/connections"), d)).body).toEqual({ available: true, discord: null, verify: false });
+    expect((await call(request("GET", "/api/connections"), d)).body).toEqual({ available: true, discord: null, connections: [], verify: false });
     expect((await call(request("POST", "/api/connections/discord", { body: { code: "" } }), d)).status).toBe(422);
     const linked = await call(request("POST", "/api/connections/discord", { body: { code: " abcdef " } }), d);
-    expect(linked.body).toEqual({ linked: true, discord: { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" } });
+    // `discord` is the one link a page built before several could be held
+    // reads; `connection` is the same thing as this build spells it.
+    expect(linked.body).toEqual({
+      linked: true,
+      discord: { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" },
+      connection: { service: "discord", accountId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" },
+    });
     expect((await call(request("GET", "/api/connections"), d)).body).toMatchObject({ discord: { discordUserId: "1001", name: "Mira" } });
     // Spent: the same code a second time, even from the same person, is refused.
     expect((await call(request("POST", "/api/connections/discord", { body: { code: "ABCDEF" } }), d)).status).toBe(422);
@@ -1704,10 +1710,26 @@ describe("discord", () => {
     expect((await call(request("POST", "/api/connections/discord", { body: { code: "GHJKLM" }, token: "guest" }), d)).body).toMatchObject({ linked: true });
     expect((await call(request("GET", "/api/connections"), d)).body).toMatchObject({ discord: null });
     expect((await call(request("GET", "/api/connections", { token: "guest" }), d)).body).toMatchObject({ discord: { discordUserId: "1001" } });
+    // An account holds as many Discord accounts as it links: a second one
+    // joins the first rather than replacing it, and either can be let go of
+    // by name while the other stays.
+    await guilds.putLinkCode({ code: "NPQRST", discordUserId: "1002", name: "kiln_hand", createdAt: "2026-09-06T12:00:00.000Z", expiresAt: "2026-09-06T12:10:00.000Z" });
+    expect((await call(request("POST", "/api/connections/discord", { body: { code: "NPQRST" }, token: "guest" }), d)).body).toMatchObject({ linked: true });
+    const both = (await call(request("GET", "/api/connections", { token: "guest" }), d)).body as { connections: Array<{ accountId: string }>; discord: { discordUserId: string } };
+    expect(both.connections.map((c) => c.accountId)).toEqual(["1001", "1002"]);
+    // The oldest is what a page built before this reads as "the" link.
+    expect(both.discord.discordUserId).toBe("1001");
+    expect((await call(request("DELETE", "/api/connections/discord/1001", { token: "guest" }), d)).body).toEqual({ unlinked: true });
+    expect((await call(request("DELETE", "/api/connections/discord/1001", { token: "guest" }), d)).body).toEqual({ unlinked: false });
+    const left = (await call(request("GET", "/api/connections", { token: "guest" }), d)).body as { connections: Array<{ accountId: string }> };
+    expect(left.connections.map((c) => c.accountId)).toEqual(["1002"]);
+    expect(await guilds.userForDiscord("1001")).toBeNull();
+    expect(await guilds.userForDiscord("1002")).toBe("user_2");
+
     // Unlinking, and deleting the account, both leave nothing behind.
     expect((await call(request("DELETE", "/api/connections/discord", { token: "guest" }), d)).body).toEqual({ unlinked: true });
     expect((await call(request("DELETE", "/api/connections/discord", { token: "guest" }), d)).body).toEqual({ unlinked: false });
-    await guilds.connect("user_1", { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" });
+    await guilds.connect("user_1", { service: "discord", accountId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" });
     await call(request("DELETE", "/api/me"), d);
     expect(guilds.links.size).toBe(0);
     expect(await guilds.userForDiscord("1001")).toBeNull();
@@ -1904,7 +1926,7 @@ describe("a run hosted in discord", () => {
     const store = memoryStore();
     let ids = 0;
     await guilds.claimGuild({ guildId: "g1", name: "The Kiln Room", ownerSub: "user_1", claimedAt: "2026-09-06T12:00:00.000Z" });
-    await guilds.connect("user_1", { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" });
+    await guilds.connect("user_1", { service: "discord", accountId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" });
     await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: `h${source.length}`, bytes: source.length, modes: [{ id: "standard", label: "Standard" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, source);
     const d = deps(store, {
       guilds,
@@ -2332,7 +2354,7 @@ describe("a run hosted in discord", () => {
     const solo = await table();
     expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), solo.d))).toContain("started");
     expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "thread_1")), solo.d))).toContain("/link first");
-    await solo.guilds.connect("user_2", { discordUserId: "1002", name: "Sam", linkedAt: "2026-09-06T12:00:00.000Z" });
+    await solo.guilds.connect("user_2", { service: "discord", accountId: "1002", name: "Sam", linkedAt: "2026-09-06T12:00:00.000Z" });
     expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "thread_1")), solo.d))).toContain("Followed");
     expect((await call(request("GET", `/api/sessions/${id}`, { token: "guest" }), solo.d)).body["session"]).toMatchObject({ id });
     // Said outside a run's thread, there is nothing to join.
@@ -2469,7 +2491,7 @@ describe("a run hosted in discord", () => {
     expect(content(await call(signed(press(`rl:${id}:undo`, sam)), d))).toContain("whoever holds a seat");
     // Sam, unlinked, cannot follow; linked, Sam is at the session, as a viewer by following and a player by sitting.
     expect(content(await call(signed(press(`rl:${id}:follow`, sam)), d))).toContain("/link first");
-    await guilds.connect("user_2", { discordUserId: "1002", name: "Sam", linkedAt: "2026-09-06T12:00:00.000Z" });
+    await guilds.connect("user_2", { service: "discord", accountId: "1002", name: "Sam", linkedAt: "2026-09-06T12:00:00.000Z" });
     expect((await call(signed(press(`rl:${id}:follow`, sam)), d)).body["type"]).toBe(7);
     expect((await call(request("GET", `/api/sessions/${id}`, { token: "guest" }), d)).body["session"]).toMatchObject({ id });
     // Leaving the chair frees it; the host keeps seat one.

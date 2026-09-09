@@ -234,7 +234,9 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
         return ephemeral(`${existing ? "Found" : "Made"} <#${id}>; runs open there by default now. Make sure the bot may post and open public threads in it.`);
       }
       if (which?.name === "status") {
-        const owner = await deps.guilds.connection(guild.ownerSub);
+        // Whoever claimed it, by the Discord accounts they have linked;
+        // an account may hold several, and any of them is them.
+        const owner = await deps.guilds.connections(guild.ownerSub);
         const packs = await deps.guilds.listGuildPacks(i.guild_id);
         const held = await serverPlanOf(deps, guild);
         const plan =
@@ -247,7 +249,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
                 : `no server plan yet; the account that claimed it subscribes from its Runlog profile, under Servers${deps.guildEntitled ? ", or the server subscribes through Discord's store" : ""}`;
         const lines = [
           `**Runlog on ${guild.name ?? "this server"}**`,
-          `Claimed by ${owner ? owner.name : "a Runlog account not linked to Discord"}.`,
+          `Claimed by ${owner.length > 0 ? owner.map((c) => c.name).join(", ") : "a Runlog account not linked to Discord"}.`,
           `Plan: ${plan}.`,
           `Hosts: ${guild.hostRoleId ? `<@&${guild.hostRoleId}>` : "anyone who can manage the server"}.`,
           `Runs open ${guild.channelId ? `in <#${guild.channelId}>` : "wherever /run is used"}, in a ${guild.threadMode === "private" ? "private thread the host and whoever they add can see" : "public thread anyone who can see the channel can open"}.`,
