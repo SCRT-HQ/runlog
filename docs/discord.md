@@ -96,7 +96,9 @@ start` takes a `players` count within what the mode allows, the host has
 seat one, and the card shows the seats and which role each holds this
 unit. Anyone takes an open seat with **Take seat**; whoever holds a seat
 presses the table like the host does, though only the host ends, undoes
-and awards. **Leave seat** frees it. **Follow in Runlog** puts the run in
+and awards. Where the pack marks a role as the one that acts (the demo's
+Thrower), the card says which seat presses this unit, and the other
+seats are told whose turn it is. **Leave seat** frees it. **Follow in Runlog** puts the run in
 a linked member's own library as a watcher; a linked member who takes a
 seat is a player there, and can play the same run from the app.
 

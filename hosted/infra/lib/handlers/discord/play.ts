@@ -192,9 +192,26 @@ export type TableAction =
   | { kind: "unseat" }
   | { kind: "follow" };
 
-/** Whether this person may press the table's buttons: the host, or whoever holds a seat. */
-export function mayPress(run: GuildRun, discordId: string): boolean {
-  return run.hostDiscordId === discordId || Object.values(run.seats ?? {}).some((s) => s.discordId === discordId);
+/**
+ * Whether this person may press the table's buttons: the host, or whoever
+ * holds a seat — and, where the pack says which role acts this unit, a seat
+ * holding that role.
+ */
+export function mayPress(run: GuildRun, discordId: string, acting: number[] | null = null): boolean {
+  if (run.hostDiscordId === discordId) return true;
+  const seat = Object.entries(run.seats ?? {}).find(([, s]) => s.discordId === discordId)?.[0];
+  if (!seat) return false;
+  return acting === null || acting.includes(Number(seat));
+}
+
+/** Why a seated person may not press this unit: whose turn it is, in the pack's words. */
+export function whosePress(pack: Pack, run: GuildRun, acting: number[]): string {
+  const unit = pack.vocabulary.unit.one.toLowerCase();
+  const holders = acting.map((n) => run.seats?.[String(n)]?.name ?? null);
+  const named = holders.filter((h): h is string => h !== null);
+  if (named.length === acting.length) return `This ${unit} is ${named.join(" and ")}'s to press.`;
+  const open = acting.filter((n, i) => holders[i] === null);
+  return `Seat ${open.join(" and ")} presses this ${unit}, and it is open; take it.`;
 }
 
 /** Events that begin a player-visible move, for undoing a log written before moves were named. Mirrors the app's rule. */
