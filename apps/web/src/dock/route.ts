@@ -1,3 +1,4 @@
+import { appBase, hrefFor } from "../route.ts";
 /**
  * A dock's address: `#dock/controls/<runId>`. The run's remote — the next
  * move, the last result, undo — alone on the page, for a streaming app
@@ -21,8 +22,5 @@ export function dockHash(route: DockRoute): string {
 
 /** The full address, for a custom browser dock. */
 export function dockHref(route: DockRoute, base: string = location.href): string {
-  const url = new URL(base);
-  url.hash = dockHash(route);
-  url.search = "";
-  return url.toString();
+  return new URL(hrefFor(dockHash(route)), new URL(appBase(base), base)).toString();
 }

@@ -1173,7 +1173,7 @@ describe("who is asking", () => {
     const page = await route(request("GET", "/r/01RUN?t=livetok", { token: null }), d);
     const html = typeof page === "string" ? page : (page.body ?? "");
     expect(typeof page !== "string" && page.headers?.["content-type"]).toContain("text/html");
-    expect(html).toContain('http-equiv="refresh" content="0; url=https://runlog.example/#run/01RUN?t=livetok"');
+    expect(html).toContain('http-equiv="refresh" content="0; url=https://runlog.example/play/run/01RUN?t=livetok"');
     expect(html).toContain("og:title");
     expect(html).not.toContain("<script");
     const closed = typeof (await route(request("GET", "/r/01RUN?t=nope", { token: null }), d)) === "string" ? "" : ((await route(request("GET", "/r/01RUN?t=nope", { token: null }), d)) as { body?: string }).body ?? "";
@@ -1656,7 +1656,7 @@ describe("discord", () => {
     const d = withBot(guilds);
     const pressed = await call(signedRequest(press), d);
     expect(pressed.body["data"]).toMatchObject({ flags: 64 });
-    expect(String((pressed.body["data"] as Record<string, unknown>)["content"])).toContain("https://runlog.test/#link/discord?c=ABCDEF");
+    expect(String((pressed.body["data"] as Record<string, unknown>)["content"])).toContain("https://runlog.test/play/link/discord?c=ABCDEF");
     // Nothing linked yet, and the code is a code: typed loosely, it still matches.
     expect((await call(request("GET", "/api/connections"), d)).body).toEqual({ available: true, discord: null, verify: false });
     expect((await call(request("POST", "/api/connections/discord", { body: { code: "" } }), d)).status).toBe(422);
@@ -1710,7 +1710,7 @@ describe("discord", () => {
     // Discord's own "verify" button lands the person in the app, which asks them to begin, signed in.
     const landing = await call(request("GET", "/api/discord/linked-role", { token: null }), d);
     expect(landing.status).toBe(302);
-    expect(landing.headers?.["location"]).toBe("https://runlog.test/#link/discord?verify=1");
+    expect(landing.headers?.["location"]).toBe("https://runlog.test/play/link/discord?verify=1");
     // Beginning: a state that names this account, and Discord's address with the two scopes.
     const begun = await call(request("POST", "/api/connections/discord/verify"), d);
     const url = new URL(String(begun.body["url"]));
@@ -1722,7 +1722,7 @@ describe("discord", () => {
     // Back from Discord with a code: the account is linked to whoever consented, and Runlog's word is written on them.
     const done = await call({ ...request("GET", "/api/discord/linked-role/callback", { token: null }), queryStringParameters: { code: "good", state: "state1" } } as APIGatewayProxyEventV2, d);
     expect(done.status).toBe(302);
-    expect(done.headers?.["location"]).toBe("https://runlog.test/#link/discord?verified=1");
+    expect(done.headers?.["location"]).toBe("https://runlog.test/play/link/discord?verified=1");
     expect(oauth.exchanged).toEqual([{ code: "good", redirectUri: "https://runlog.test/api/discord/linked-role/callback" }]);
     expect((await call(request("GET", "/api/connections"), d)).body).toMatchObject({ discord: { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" } });
     expect(oauth.pushed).toEqual([{ token: "bearer-good", platformUsername: "Mira", metadata: { linked: 1, since: "2026-09-06T12:00:00.000Z" } }]);
@@ -1730,7 +1730,7 @@ describe("discord", () => {
     for (const q of [{ code: "good", state: "state1" }, { code: "good", state: "nope" }, { code: "bad", state: "state1" }]) {
       if (q.code === "bad") await guilds.putVerifyState({ state: "state1", sub: "user_1", createdAt: "2026-09-06T12:00:00.000Z", expiresAt: "2026-09-06T12:10:00.000Z" });
       const failed = await call({ ...request("GET", "/api/discord/linked-role/callback", { token: null }), queryStringParameters: q } as APIGatewayProxyEventV2, d);
-      expect(failed.headers?.["location"]).toBe("https://runlog.test/#link/discord?verified=0");
+      expect(failed.headers?.["location"]).toBe("https://runlog.test/play/link/discord?verified=0");
     }
     expect(oauth.pushed).toHaveLength(1);
     // Already linked to the same Discord account, a second verification keeps the first link's date.

@@ -1,3 +1,4 @@
+import { appBase, hrefFor } from "../route.ts";
 import { isThemeId, type ThemeId } from "../theme/theme.ts";
 
 /**
@@ -85,8 +86,5 @@ export function widgetHash(route: WidgetRoute): string {
 
 /** The full address, for a browser source in a stream. */
 export function widgetHref(route: WidgetRoute, base: string = location.href): string {
-  const url = new URL(base);
-  url.hash = widgetHash(route);
-  url.search = "";
-  return url.toString();
+  return new URL(hrefFor(widgetHash(route)), new URL(appBase(base), base)).toString();
 }

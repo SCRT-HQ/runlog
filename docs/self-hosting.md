@@ -49,6 +49,12 @@ host needs to know:
    - Netlify, Cloudflare Pages: a `_redirects` file with `/* /index.html 200`
    - S3 behind CloudFront: a custom error response turning 403 and 404 into `/index.html` with status 200
    - GitHub Pages: copy `index.html` to `404.html`
+
+   A static host keeps the app's pages as `#` addresses (`/runlog/play#guide/start`),
+   since the build's asset paths are relative and a page under `play/` could not
+   find them. The hosted copy on AWS is built with `RUNLOG_BASE=/`, lives at one
+   root, and spells the same pages as paths (`/play/guide/start`); either spelling
+   opens either way, and the hosted copy rewrites the old one on the way in.
 2. **Cache `assets/` forever and nothing else.** A name under `assets/`
    means one file, so `Cache-Control: public, max-age=31536000, immutable`
    there; `no-cache, must-revalidate` for `index.html`, `sw.js` and

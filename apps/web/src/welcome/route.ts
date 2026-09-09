@@ -32,9 +32,10 @@ export interface Where {
 
 const trimSlash = (p: string) => p.replace(/\/+$/, "");
 
-/** Whether the path is the app's own, `<base>play`, with or without a trailing slash. */
+/** Whether the path is the app's own: `<base>play`, with or without a trailing slash, or a page under it (`<base>play/guide/…`). */
 export function isAppPath(pathname: string, base: string): boolean {
-  return trimSlash(pathname) === trimSlash(base + APP_SEGMENT);
+  const app = trimSlash(base + APP_SEGMENT);
+  return trimSlash(pathname) === app || pathname.startsWith(`${app}/`);
 }
 
 export function whereTo(w: Where): "welcome" | "app" {
