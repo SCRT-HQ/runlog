@@ -2858,6 +2858,13 @@ select.textInput {
 .flow li.done .result { color: var(--muted); }
 .liveBar .themeMenu { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; color: var(--muted); }
 .liveBar .themeMenu select { font-size: 0.85rem; }
+/* The watcher's flow reads one room or all of them; the choice sits beside the title, as the log's controls do. */
+.liveFlow .logHead { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; border-bottom: 1px solid var(--line); margin-bottom: 0.6rem; }
+.liveFlow .logHead .sectionTitle { border-bottom: none; margin-bottom: 0; flex: 1 1 auto; }
+.liveFlow .logTools { display: flex; align-items: center; gap: 0.35rem; padding-bottom: 0.3rem; }
+.liveFlow .pastRoom { margin-top: 1.4rem; padding-top: 0.6rem; border-top: 1px solid var(--line); }
+.liveFlow .pastRoom h4 { margin: 0 0 0.4rem; }
+.liveFlow .logTools .ghost.on { color: var(--text); border-color: var(--accent); }
 .flow li .result.constrains { color: var(--text); font-weight: 600; border-left: 3px solid var(--warn); padding-left: 0.5rem; margin-left: -0.75rem; }
 .flow .why {
   display: block;
