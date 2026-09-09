@@ -104,7 +104,7 @@ export interface Opened {
  */
 export async function openRun(
   deps: TableDeps,
-  input: { guildId: string; channelId: string; pack: Pack; packTitle: string; modeId: string; name?: string; players?: number; host: Seat & { sub: string }; cardMode?: CardMode },
+  input: { guildId: string; channelId: string; pack: Pack; packTitle: string; modeId: string; name?: string; players?: number; host: Seat & { sub: string }; cardMode?: CardMode; private?: boolean },
 ): Promise<Opened | { error: string }> {
   if (!deps.rest) return { error: "The bot cannot post to Discord yet: its token is not filled in on this copy of Runlog." };
   const { pack, modeId } = input;
@@ -138,8 +138,11 @@ export async function openRun(
   if (!created) return { error: "That run id is taken; try again." };
 
   const threadName = `${input.packTitle} · ${mode.label}${input.name?.trim() ? ` · ${input.name.trim()}` : ""}`;
-  const threadId = await deps.rest.createThread(input.channelId, threadName);
-  if (!threadId) return { error: "Discord would not open a thread here. The bot needs permission to create public threads in this channel." };
+  const threadId = await deps.rest.createThread(input.channelId, threadName, input.private);
+  if (!threadId) return { error: `Discord would not open a thread here. The bot needs permission to create ${input.private ? "private" : "public"} threads in this channel.` };
+  // A private thread starts with nobody in it but the bot, so the host is
+  // put in it at once; whoever else the run is for, they add themselves.
+  if (input.private) await deps.rest.addThreadMember(threadId, input.host.discordId);
 
   const token = deps.token();
   await deps.store.updateSession(id, at, { publicTokenHash: hashToken(token) });
@@ -154,6 +157,7 @@ export async function openRun(
     packId: pack.id,
     channelId: input.channelId,
     threadId,
+    ...(input.private ? { private: true as const } : {}),
     contestants: {},
     ...(seatsWanted > 1 ? { seats: { "1": { discordId: input.host.discordId, name: input.host.name } } } : {}),
     ...(input.cardMode ? { cardMode: input.cardMode } : {}),
