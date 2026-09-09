@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { discordOAuth, guildEntitledFrom } from "../lib/handlers/discord/rest";
+import { discordOAuth, discordRest, guildEntitledFrom } from "../lib/handlers/discord/rest";
 
 /** Discord's store, as the entitlements endpoint answers for one server. */
 const answering = (rows: unknown, calls: string[] = []) =>
@@ -65,5 +65,30 @@ describe("a server's entitlement through Discord's store", () => {
   it("holds nothing when Discord does not answer", async () => {
     const down = (async () => new Response("", { status: 500 })) as typeof fetch;
     expect(await guildEntitledFrom("t", "app", GUILD, SKU, down, NOW)).toBe(false);
+  });
+});
+
+describe("the thread a run lives in", () => {
+  const seen: Array<{ url: string; method: string; body: string | null }> = [];
+  const discord = (async (input: string | URL | Request, init?: RequestInit) => {
+    seen.push({ url: String(input), method: init?.method ?? "GET", body: typeof init?.body === "string" ? init.body : null });
+    // Discord answers a thread with its row, and a member put in one with 204 and no body at all.
+    return String(input).includes("/thread-members/") ? new Response(null, { status: 204 }) : new Response(JSON.stringify({ id: "thread_1" }), { status: 200 });
+  }) as typeof fetch;
+
+  it("is public unless a private one was asked for, and a private one is invitable, so the host can add to it", async () => {
+    const rest = discordRest("t", discord);
+    expect(await rest.createThread("chan", "The Long Kiln", false)).toBe("thread_1");
+    expect(JSON.parse(seen[0]!.body!)).toEqual({ name: "The Long Kiln", type: 11, auto_archive_duration: 1440 });
+    expect(await rest.createThread("chan", "The Long Kiln", true)).toBe("thread_1");
+    expect(JSON.parse(seen[1]!.body!)).toEqual({ name: "The Long Kiln", type: 12, invitable: true, auto_archive_duration: 1440 });
+  });
+
+  it("takes the empty answer Discord gives to a member put in it as the yes it is, and a refusal as a no", async () => {
+    expect(await discordRest("t", discord).addThreadMember("thread_1", "1001")).toBe(true);
+    expect(seen[seen.length - 1]).toMatchObject({ url: "https://discord.com/api/v10/channels/thread_1/thread-members/1001", method: "PUT" });
+    const down = (async () => new Response("", { status: 403 })) as typeof fetch;
+    expect(await discordRest("t", down).addThreadMember("thread_1", "1001")).toBe(false);
+    expect(await discordRest("t", down).createThread("chan", "The Long Kiln", true)).toBeNull();
   });
 });
