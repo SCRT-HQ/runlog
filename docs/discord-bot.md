@@ -44,7 +44,12 @@ only once it knows the key.
 
 ## 2. Tell the stage
 
-In the stage's configuration document, add:
+The stage's configuration document is one JSON object per stage: in
+CI, the `RUNLOG_ENV_CONFIG` variable on the GitHub environment that
+deploys the stage (Settings → Environments → `dev` or `prd` →
+Variables); on your own machine, `hosted/infra/env/<stage>.json`, which
+git ignores, with `env/example.json` as the template. See
+`docs/self-hosting.md`. In it, add:
 
 ```json
 "discord": {
