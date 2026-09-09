@@ -187,4 +187,5 @@ the script again replaces the list, so a retired command disappears.
 | The commands | `hosted/infra/lib/handlers/discord/commands.ts`, registered by `hosted/scripts/discord-setup.ts` |
 | The handler | `hosted/infra/lib/handlers/discord/` and the route in `api.ts` |
 | How it is doing | The bot section of the `runlog-<env>` CloudWatch dashboard; alarms `runlog-<env>-discord-failures` and `runlog-<env>-discord-job-errors` |
+| Timers waiting to run out | EventBridge Scheduler, group `runlog-<env>-timers`: one schedule per running timer, gone once it has run |
 | A server's rows and vault | `GUILD#<id>` in the table, `guilds/<id>/packs/` in the bucket |

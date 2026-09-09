@@ -8,7 +8,9 @@ import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, ty
 import { dynamoBilling, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
 import { dynamoGuilds, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
-import { handleInteraction, kindOf, type InteractionDeps } from "./discord/interactions.js";
+import { handleInteraction, kindOf, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
+import type { TimerJob } from "./discord/play.js";
+import { scheduledTimers } from "./discord/timers.js";
 import { discordRest, guildNameFrom, PATIENT_ROPE_MS, ROPE_MS, type DiscordRest } from "./discord/rest.js";
 import { ulid } from "./ids.js";
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
@@ -222,6 +224,12 @@ export interface Deps {
     /** Discord itself, for the thread and the messages of a hosted run; null until the token is filled. Patient, with a longer rope, for the job. */
     rest?: (patient?: boolean) => Promise<DiscordRest | null>;
   };
+  /**
+   * Somebody to come back when a timer at a Discord table runs out: a
+   * one-shot schedule that invokes the job function, in production. Absent,
+   * a timer that ran out is noticed at the next press.
+   */
+  schedule?: (job: TimerJob) => Promise<void>;
   /** Link codes are random by default; a test hands in its own. */
   code?: () => string;
   /** Event and run ids are ULIDs by default; a test hands in its own. */
@@ -304,7 +312,26 @@ async function interactionDepsFor(deps: Deps, now: () => string, patient = false
     },
     ...(deps.code ? { code: deps.code } : {}),
     ...(deps.defer ? { defer: deps.defer } : {}),
+    ...(deps.schedule ? { schedule: deps.schedule } : {}),
   };
+}
+
+/**
+ * A timer's deadline, kept by the job function: the schedule made when
+ * the timer started comes back here, and the table is told it ran out.
+ */
+export async function finishTimer(job: TimerJob, deps: Deps): Promise<"gone" | "later" | "stopped"> {
+  if (!deps.discord || !deps.guilds) return "gone";
+  const now = deps.now ?? (() => new Date().toISOString());
+  const started = Date.now();
+  let ok = false;
+  try {
+    const outcome = await timerRanOut(await interactionDepsFor(deps, now, true), job);
+    ok = true;
+    return outcome;
+  } finally {
+    deps.measure?.({ kind: "job:timer", ms: Date.now() - started, ok });
+  }
 }
 
 /**
@@ -2022,6 +2049,12 @@ function depsFromEnv(): Deps {
           }),
         ),
       ...(cliClientId ? { cliClientId } : {}),
+      // A timer's deadline is kept by EventBridge Scheduler, which invokes
+      // the job function at the moment; without a group and a role to
+      // invoke it, a timer that ran out waits for the next press.
+      ...(process.env["TIMER_SCHEDULE_GROUP"] && process.env["TIMER_ROLE_ARN"] && process.env["DISCORD_JOB_ARN"]
+        ? { schedule: scheduledTimers({ group: process.env["TIMER_SCHEDULE_GROUP"], roleArn: process.env["TIMER_ROLE_ARN"], jobArn: process.env["DISCORD_JOB_ARN"] }) }
+        : {}),
       mailer: sesMailer({ from: process.env["EMAIL_FROM"] ?? "", region: process.env["EMAIL_REGION"] ?? "us-west-2" }),
       appUrl: process.env["APP_URL"] ?? "/",
       ...(process.env["WS_ENDPOINT"]
@@ -2046,12 +2079,14 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
  */
 export async function job(event: unknown): Promise<void> {
   deps ??= depsFromEnv();
-  if (!isRecord(event) || event["kind"] !== "discord-interaction" || !isInteraction(event["interaction"])) {
-    console.error("job: not a deferred interaction", event);
-    return;
-  }
   try {
-    await finishDeferred(event["interaction"], deps);
+    if (isRecord(event) && event["kind"] === "discord-interaction" && isInteraction(event["interaction"])) {
+      await finishDeferred(event["interaction"], deps);
+    } else if (isRecord(event) && event["kind"] === "timer" && typeof event["sessionId"] === "string" && typeof event["clock"] === "string" && typeof event["at"] === "string") {
+      await finishTimer({ sessionId: event["sessionId"], clock: event["clock"], at: event["at"] }, deps);
+    } else {
+      console.error("job: not a deferred interaction or a timer", event);
+    }
   } catch (error) {
     console.error(error);
   }
