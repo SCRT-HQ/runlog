@@ -22,11 +22,19 @@ export interface Plan {
    * rather than true the way `can` is.
    */
   servers: boolean;
+  /**
+   * Whether a tier is on sale today: the server tier, and becoming a
+   * publisher with hosted licensing. A tier can be held back by a flag
+   * the operator flips, so a page shows it as coming rather than offering
+   * Checkout. True until known, so nothing flickers shut on the way in.
+   */
+  serversOpen: boolean;
+  publishersOpen: boolean;
   loaded: boolean;
   refresh: () => Promise<void>;
 }
 
-let cached: { gates: boolean; entitlements: string[]; servers: boolean } | null = null;
+let cached: { gates: boolean; entitlements: string[]; servers: boolean; serversOpen: boolean; publishersOpen: boolean } | null = null;
 
 export function usePlan(): Plan {
   const api = useApi();
@@ -36,7 +44,7 @@ export function usePlan(): Plan {
     if (!api) return;
     try {
       const me = await api.me();
-      cached = { gates: me.gates === true, entitlements: me.entitlements ?? [], servers: me.servers === true };
+      cached = { gates: me.gates === true, entitlements: me.entitlements ?? [], servers: me.servers === true, serversOpen: me.serversOpen === true, publishersOpen: me.publishersOpen !== false };
       setState(cached);
     } catch {
       // Offline, or signed out between renders: what was known stands.
@@ -54,6 +62,8 @@ export function usePlan(): Plan {
     entitlements,
     can: (feature) => !gates || entitlements.includes(feature),
     servers: state?.servers ?? false,
+    serversOpen: state?.serversOpen ?? false,
+    publishersOpen: state?.publishersOpen ?? true,
     loaded: state !== null,
     refresh,
   };
