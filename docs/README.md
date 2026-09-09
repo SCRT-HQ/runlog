@@ -11,8 +11,7 @@ runs out of room, it links here.
 
 | Read | When |
 | --- | --- |
-| The guide's [Streaming a run](https://runlog.scrthq.com/#guide/streaming) | You want a widget on your stream. Start here. |
-| [streaming-setup.md](streaming-setup.md) | OBS, Streamlabs, StreamElements and Streamer.bot, field by field, with sizes and snippets. |
+| The guide's [Streaming a run](https://runlog.scrthq.com/play/guide/streaming) | You want a widget on your stream. Start here; the pages after it take OBS, Streamlabs, StreamElements and Streamer.bot one at a time, field by field. |
 | [stream-api.md](stream-api.md) | You are writing a plugin, a chat command or a second screen: the numbers, the bell, the gestures. |
 | [discord.md](discord.md) | Runlog in a Discord server: adding the bot, claiming a server, hosting and watching runs. |
 
@@ -46,7 +45,7 @@ runs out of room, it links here.
 A document here is one of two things: a contract someone outside the
 repository builds against (`stream-api.md`, `reference.md`, the pack
 format in `authoring.md`), or a walkthrough that names real fields in
-someone else's software (`streaming-setup.md`, `discord-bot.md`). A
+someone else's software (`discord-bot.md`). A
 document that is neither belongs in the guide, or in a README beside the
 code it describes. Titles say what the reader is doing, not what the
 thing is called; American English throughout; the demo pack, The Long

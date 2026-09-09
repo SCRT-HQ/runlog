@@ -1,0 +1,15 @@
+# For a chat bot or your own tool
+
+A shared run is readable by anything that can fetch a URL: a streaming plugin, a stream deck button, a chat bot, a second screen of your own. The live link's token is the key; there is no account, no sign-in, and no rate of your own to manage beyond politeness.
+
+## The numbers
+
+`https://runlog.scrthq.com/api/public/runs/<runId>/metrics?t=<token>`, with the run id and token from the live link, answers with one flat JSON document: the unit, where the run stands, the score in the pack's own words, the last result rolled, standings, counters, resources and clocks, as the owner's device last wrote them. It answers any origin, so a page of your own can read it directly. Read it no more than once every five seconds.
+
+## The bell
+
+A socket at `wss://runlog.scrthq.com/ws?run=<runId>&t=<token>` rings when the run moves, with `{"t":"changed"}`, and carries the table's gestures as they happen: `rolled` with the dice as they land, `outcome`, `award`, `clock`, `unit-closed`, `run-ended`, each with its words in `data`. When the player throws dice, everyone watching sees the same dice land, thrown the same way, on the live page and for a watcher who took a seat; the same throw reaches your tool.
+
+## The fields, in full
+
+The repository's [stream API](https://github.com/SCRT-HQ/runlog/blob/main/docs/stream-api.md) is the contract: every field of the document, the socket's messages, and the shape of each gesture. It is kept beside the code that answers, so it is never out of date.

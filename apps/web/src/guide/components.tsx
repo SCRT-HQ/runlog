@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { Children, isValidElement, useEffect, useState, type ReactNode } from "react";
+import { slugOf } from "./pages.ts";
 import { generateDoc, loadPackText, type Doc } from "@runlog/rules-schema";
 import { DocView } from "../docs/DocView.tsx";
 import { catalogEntry, STARTER_PACK } from "../library/catalog.ts";
@@ -112,5 +113,47 @@ export function Plan({ tier }: { tier: "free" | "plus" | "publisher" | "server" 
   );
 }
 
-/** The set of components a page gets, by the names it uses in MDX. */
-export const guideComponents = { Screenshot, Note, Steps, Kbd, SummaryDemo, ClockDemo, Plan };
+/** The words of a heading's children: its strings, through any wrapping element, leaving out a badge such as a plan's. */
+function wordsOf(children: ReactNode): string {
+  return Children.toArray(children)
+    .map((child) => {
+      if (typeof child === "string" || typeof child === "number") return String(child);
+      if (isValidElement<{ children?: ReactNode }>(child) && child.props.children !== undefined) return wordsOf(child.props.children);
+      return "";
+    })
+    .join("");
+}
+
+/**
+ * A section heading with an id from its words, so the section has an
+ * address of its own, and an anchor beside it that a hover shows: a doc
+ * can be sent to someone at the right place. The address is the guide's
+ * own (`#guide/<page>/<section>`), read by the page; the anchor's href is
+ * only the section's id, which the guide rewrites when pressed.
+ */
+function Heading({ level, children }: { level: 2 | 3; children?: ReactNode }) {
+  const id = slugOf(wordsOf(children));
+  const Tag = level === 2 ? "h2" : "h3";
+  if (!id) return <Tag>{children}</Tag>;
+  return (
+    <Tag id={id}>
+      {children}
+      <a className="anchor" href={`#${id}`} aria-label="Link to this section" data-section={id}>
+        #
+      </a>
+    </Tag>
+  );
+}
+
+/** The set of components a page gets, by the names it uses in MDX, and the headings that make its sections. */
+export const guideComponents = {
+  Screenshot,
+  Note,
+  Steps,
+  Kbd,
+  SummaryDemo,
+  ClockDemo,
+  Plan,
+  h2: (props: { children?: ReactNode }) => <Heading level={2} {...props} />,
+  h3: (props: { children?: ReactNode }) => <Heading level={3} {...props} />,
+};

@@ -171,7 +171,7 @@ Everyone in the thread sees the card and the lines. The live link the
 bot posted opens the run in a browser for anyone, no account needed;
 the same link feeds the stream widgets, so a run hosted in Discord can
 be on a stream like any other — see
-[streaming-setup.md](streaming-setup.md).
+[Streaming a run](https://runlog.scrthq.com/play/guide/streaming) in the guide.
 
 ## What is stored, and where the pack goes
 

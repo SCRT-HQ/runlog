@@ -1,0 +1,47 @@
+# OBS Studio and Streamlabs
+
+A widget goes into a scene as a **browser source**. This page names OBS Studio's fields; Streamlabs Desktop's browser source is the same one, so it follows at the end.
+
+## A browser source in OBS Studio
+
+In a scene, **Sources** → **+** → **Browser**, name it after the widget, and set:
+
+| Field | Value |
+| --- | --- |
+| **URL** | The copied widget address, token and all: see [the address that works on a stream](#guide/stream-address). |
+| **Width** and **Height** | From the table below, at size 1.25×; the Stream panel shows the same numbers for the size you chose. Scale the source in the scene after; the page adapts to the box you give it. |
+| **FPS** | 30. The only motion is a clock's tenths and the ticker's slide; 60 buys nothing. |
+| **Custom CSS** | Leave OBS's default. `body { background-color: rgba(0, 0, 0, 0); … }` is exactly what a clear background expects. |
+| **Shutdown source when not visible** | Tick it. A widget that is off scene costs nothing, and it re-reads the run the moment it is shown again. |
+| **Refresh browser when scene becomes active** | Optional. The widget re-reads on its own; this only helps after a **Stop sharing**, when you have pasted a fresh address. |
+
+## Sizes
+
+Suggested sizes, at 1.25×:
+
+| Widget | Width × height | What it is |
+| --- | --- | --- |
+| Clock | 480 × 200 | The unit's stopwatch or timer, large. |
+| Step | 520 × 380 | The current step, the constraints in play, the latest result. |
+| Stats | 520 × 560 | Unit, units done, time, step, constraints, score. |
+| Scoreboard | 480 × 440 | Standings in a moderated run. Grows with the roster. |
+| Trackers | 480 × 420 | Resources and counters as bars and boxes. Grows with the pack. |
+| Ticker | 520 × 300 | The last few things that happened, one line each, newest on top. |
+| Race | 560 × 440 | The race leaderboard. |
+| Everything, stacked | 460 × 1080 | The panels above in one column, for one source down the side of a scene. |
+
+## Recoloring a widget for a scene
+
+A widget's colors are the app's theme tokens, so a scene that needs the clock in white on nothing can say so in **Custom CSS**, under OBS's own line:
+
+```css
+:root { --text: #fff; --panel: transparent; --line: transparent; --raise: none; }
+```
+
+## How closely it follows
+
+The widget follows the run within a second while its socket is up, and within six seconds by polling if the socket drops. Clocks tick from the log's timestamps, so they agree with the app to the tenth even after a long shutdown. When it does not, [this page](#guide/stream-troubles) says why.
+
+## Streamlabs Desktop
+
+Streamlabs Desktop's browser is the OBS one. **Sources** → **Add Source** → **Browser Source**, then **URL**, **Width**, **Height** and **Custom CSS** exactly as above. Its own gallery of "widgets" (alert box, chat box, goals) is a separate thing; a Runlog widget is a plain browser source and lives alongside them.
