@@ -95,6 +95,34 @@ export function checklistOf(step: Step): ChecklistItem[] {
 }
 
 /**
+ * The results a checklist point is about: those of the table (or tables)
+ * it `shows`, in its scope — this unit's, those that reached this unit's
+ * subject, or the whole run's. Empty for a point that shows nothing.
+ */
+export function shownFor(pack: Pack, state: RunState, item: ChecklistItem): RunState["outcomes"] {
+  if (typeof item === "string" || !item.shows) return [];
+  const shows = item.shows;
+  const tables = new Set(Array.isArray(shows.table) ? shows.table : [shows.table]);
+  const subject = state.subjects.find((s) => s.unit === state.unit && !s.removed);
+  return state.outcomes.filter((o) => {
+    if (!tables.has(o.table) || !pack.tables[o.table]) return false;
+    if (shows.scope === "unit") return o.unit === state.unit;
+    if (shows.scope === "subject") return Boolean(subject) && o.targetSubject === subject!.id;
+    return true;
+  });
+}
+
+/**
+ * Whether a checklist point is asked at all: a point that shows a table's
+ * results has nothing to promise when the table produced none in scope —
+ * "every constraint was honored" in a unit that drew no constraint — and
+ * is neither listed nor waited for. A plain point is always asked.
+ */
+export function itemApplies(pack: Pack, state: RunState, item: ChecklistItem): boolean {
+  return typeof item === "string" || !item.shows || shownFor(pack, state, item).length > 0;
+}
+
+/**
  * What a table has said this unit, for a step that must honor it: every
  * result on that table since the unit began, in order, so a unit that
  * rolled twice (an extra roll owed) shows both.
