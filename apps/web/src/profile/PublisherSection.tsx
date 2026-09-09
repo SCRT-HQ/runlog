@@ -26,6 +26,8 @@ export function PublisherSection({ api }: { api: Api | null }) {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  /** The name being typed, while it is being changed; null when it is not. */
+  const [renaming, setRenaming] = useState<string | null>(null);
 
   useEffect(() => {
     if (!api) return;
@@ -121,11 +123,71 @@ export function PublisherSection({ api }: { api: Api | null }) {
     );
   }
 
+  const admin = publisher.owner || publisher.role === "admin";
+  const rename = async () => {
+    const next = (renaming ?? "").trim();
+    if (!api || !next || next === publisher.name) {
+      setRenaming(null);
+      return;
+    }
+    setBusy(true);
+    setNote(null);
+    try {
+      const { publisher: renamed, listings } = await api.renamePublisher(next);
+      setPublisher(renamed);
+      setRenaming(null);
+      // The catalog reads a name copied onto each listing, so say how many
+      // were re-stamped: it is the difference between the profile saying
+      // one thing and the catalog saying another.
+      setNote(
+        listings === 0
+          ? `The catalog calls you ${renamed.name} now.`
+          : `The catalog calls you ${renamed.name} now, on ${listings === 1 ? "your listing" : `all ${listings} of your listings`}.`,
+      );
+    } catch (error) {
+      setNote(error instanceof Error && error.message ? error.message : "That name could not be changed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className="panel">
       <h3 className="sectionTitle">
         Publishing <span className="muted">as {publisher.name}</span>
       </h3>
+      {/* The name the catalog shows, changed here rather than fixed at the
+          moment of becoming a publisher. */}
+      {admin &&
+        (renaming === null ? (
+          <p className="muted small">
+            Buyers see this name on every pack you list.{" "}
+            <button className="ghost tiny" onClick={() => setRenaming(publisher.name)}>
+              Change it
+            </button>
+          </p>
+        ) : (
+          <div className="padRow">
+            <input
+              className="textInput"
+              autoFocus
+              value={renaming}
+              maxLength={120}
+              aria-label="What the catalog calls you"
+              onChange={(e) => setRenaming(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void rename();
+                if (e.key === "Escape") setRenaming(null);
+              }}
+            />
+            <button className="primary tiny" disabled={busy || !renaming.trim() || renaming.trim() === publisher.name} onClick={() => void rename()}>
+              {busy ? "Changing…" : "Change the name"}
+            </button>
+            <button className="ghost tiny" disabled={busy} onClick={() => setRenaming(null)}>
+              Cancel
+            </button>
+          </div>
+        ))}
       <p className="muted small">
         {publisher.connectReady
           ? "Payouts are set up: buyers pay you directly through Stripe. Your sales, keys and payouts are in the Stripe dashboard."

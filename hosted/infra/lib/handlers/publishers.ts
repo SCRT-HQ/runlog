@@ -32,6 +32,8 @@ export interface PublisherStore {
   /** The publisher a connected account belongs to, for Stripe's callbacks. */
   publisherForAccount(accountId: string): Promise<string | null>;
   setConnect(id: string, at: string, patch: { connectAccountId?: string; connectReady?: boolean }): Promise<Publisher | null>;
+  /** What the catalog calls it. Null where there is no such publisher. */
+  rename(id: string, name: string, at: string): Promise<Publisher | null>;
   /** Record a person's membership here, so the API knows them without asking WorkOS each time. */
   addMember(id: string, sub: string, role: "admin" | "member", at: string): Promise<void>;
   removeMember(id: string, sub: string): Promise<void>;
@@ -86,6 +88,13 @@ export function dynamoPublishers({ table }: { table: string }): PublisherStore {
       if (patch.connectAccountId) {
         await ddb.send(new PutCommand({ TableName: table, Item: { pk: `CONNECT#${patch.connectAccountId}`, sk: "ORG", kind: "connect", orgId: id, createdAt: at } }));
       }
+      return strip(row);
+    },
+    async rename(id, name, at) {
+      const existing = (await ddb.send(new GetCommand({ TableName: table, Key: { pk: opk(id), sk: "META" } }))).Item;
+      if (!existing) return null;
+      const row = { ...existing, name, updatedAt: at };
+      await ddb.send(new PutCommand({ TableName: table, Item: row }));
       return strip(row);
     },
   };
