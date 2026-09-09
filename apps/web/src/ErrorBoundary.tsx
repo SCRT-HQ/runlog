@@ -1,3 +1,4 @@
+import { linkTo } from "./route.ts";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 /**
@@ -44,7 +45,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
             >
               {this.state.copied ? "Copied" : "Copy the error"}
             </button>
-            <a className="ghost buttonLink" href="#guide/start">
+            <a className="ghost buttonLink" href={linkTo("#guide/start")}>
               Open the docs
             </a>
           </div>

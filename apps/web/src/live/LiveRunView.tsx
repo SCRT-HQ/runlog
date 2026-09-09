@@ -12,6 +12,7 @@ import { LiveView } from "./LiveView.tsx";
 import { ThemeMenu } from "../theme/ThemeMenu.tsx";
 import { usePublicRun } from "./usePublic.ts";
 import type { LiveRoute } from "./route.ts";
+import { linkTo } from "../route.ts";
 
 /**
  * A run watched by its link, by anyone.
@@ -37,11 +38,11 @@ function LiveBar({ title, packId, listed }: { title: string | null; packId: stri
       </span>
       <div className="topbarEnd">
         {listed && packId && (
-          <a className="ghost" href={`./#catalog/${encodeURIComponent(packId)}`} title="The pack's card in the catalog: what it is, and how to get it">
+          <a className="ghost" href={linkTo(`#catalog/${encodeURIComponent(packId)}`, "./")} title="The pack's card in the catalog: what it is, and how to get it">
             In the catalog
           </a>
         )}
-        <a className="ghost" href="./#guide/streaming" title="How live links and widgets work">
+        <a className="ghost" href={linkTo("#guide/streaming", "./")} title="How live links and widgets work">
           Docs
         </a>
         {/* The same switch the app has, since a watcher has no settings dialog to find it in; the choice is this device's, as everywhere. */}

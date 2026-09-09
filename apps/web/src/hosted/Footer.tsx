@@ -1,4 +1,5 @@
 import { useHosted } from "./HostedProvider.tsx";
+import { linkTo } from "../route.ts";
 
 /**
  * The foot of every page but a run: where the operator's pages are, and
@@ -14,7 +15,7 @@ export function Footer({ onGuide }: { onGuide: () => void }) {
     <footer className="siteFooter">
       <nav aria-label="About this site">
         <a
-          href="#guide"
+          href={linkTo("#guide")}
           onClick={(e) => {
             e.preventDefault();
             onGuide();
