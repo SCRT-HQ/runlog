@@ -158,14 +158,14 @@ jobs:
           environment: ${{ matrix.env }}
           workos-client-id: ${{ vars.WORKOS_CLIENT_ID }}
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
-          env-config: ${{ vars[format('RUNLOG_ENV_CONFIG_{0}', matrix.env)] || vars.RUNLOG_ENV_CONFIG }}
+          env-config: ${{ vars[format('RUNLOG_ENV_CONFIG_{0}', matrix.env)] }}
       - if: ${{ github.event_name == 'pull_request' }}
         name: Diff the ${{ matrix.env }} stacks
         uses: ./.github/actions/run-cdk
         with:
           cdk-command: diff
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
-          env-config: ${{ vars[format('RUNLOG_ENV_CONFIG_{0}', matrix.env)] || vars.RUNLOG_ENV_CONFIG }}
+          env-config: ${{ vars[format('RUNLOG_ENV_CONFIG_{0}', matrix.env)] }}
           target-region: ${{ env.AWS_REGION }}
           node-version: ${{ env.NODE_VERSION }}
           github-role-name: ${{ env.GITHUB_ROLE_NAME }}
@@ -259,14 +259,14 @@ jobs:
           environment: dev
           workos-client-id: ${{ vars.WORKOS_CLIENT_ID }}
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
-          env-config: ${{ vars.RUNLOG_ENV_CONFIG_DEV || vars.RUNLOG_ENV_CONFIG }}
+          env-config: ${{ vars.RUNLOG_ENV_CONFIG_DEV }}
           version: ${{ steps.version.outputs.version }}
       - name: Deploy the hosting and publish the build to dev
         uses: ./.github/actions/run-cdk
         with:
           cdk-command: deploy
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
-          env-config: ${{ vars.RUNLOG_ENV_CONFIG_DEV || vars.RUNLOG_ENV_CONFIG }}
+          env-config: ${{ vars.RUNLOG_ENV_CONFIG_DEV }}
           target-region: ${{ env.AWS_REGION }}
           node-version: ${{ env.NODE_VERSION }}
           github-role-name: ${{ env.GITHUB_ROLE_NAME }}
@@ -280,7 +280,7 @@ jobs:
       - name: Prove the stage answers
         uses: ./.github/actions/smoke
         with:
-          env-config: ${{ vars.RUNLOG_ENV_CONFIG_DEV || vars.RUNLOG_ENV_CONFIG }}
+          env-config: ${{ vars.RUNLOG_ENV_CONFIG_DEV }}
 
       # The built-ins, listed in the catalog as the platform's own, so the
       # feed carries everything. Needs a key for the platform publisher's

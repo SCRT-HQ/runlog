@@ -630,7 +630,7 @@ prints its account as `***`.
 | `AWS_ACCOUNT_ID` (secret) | The stage's account |
 | `RUNLOG_ZONE_ID` (secret) | The Route 53 zone the stage's domain lives in |
 | `WORKOS_CLIENT_ID` (variable) | The AuthKit client the stage's build signs in with; public by design, embedded in the app and in every sign-in URL |
-| `RUNLOG_ENV_CONFIG_DEV`, `RUNLOG_ENV_CONFIG_PRD` (repository variables) | The stage's configuration as JSON: its domain and zone, sign-in clients, mail identity, plans, the words on its pages, the Discord application. One document per stage, at the repository level, read by that stage's diff and deploy jobs alike; a `RUNLOG_ENV_CONFIG` variable on the environment still works as a fallback. `env/example.json` is the shape; on a machine the same document is `env/<stage>.json`, which git ignores |
+| `RUNLOG_ENV_CONFIG_DEV`, `RUNLOG_ENV_CONFIG_PRD` (repository variables) | The stage's configuration as JSON: its domain and zone, sign-in clients, mail identity, plans, the words on its pages, the Discord application. One document per stage, at the repository level, read by that stage's diff and deploy jobs alike. `env/example.json` is the shape; on a machine the same document is `env/<stage>.json`, which git ignores |
 | `RUNLOG_API_KEY` (secret, `deploy-*` only) | A command-line key for the platform publisher, for seeding the catalog |
 
 And on the repository:
