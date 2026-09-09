@@ -1,0 +1,17 @@
+# Through the catalog <Plan tier="publisher" />
+
+Become a publisher on your profile, set up payouts with Stripe, upload the signed pack, and list it at a price. Then the catalog does the rest:
+
+- The card, with your name, the pack's summary, and **Buy**.
+- The sale, on your own Stripe account: the buyer pays you directly and you are on the receipt.
+- A copy sealed for that buyer alone, under a fresh key, delivered at once and kept in their account.
+- The ledger on your profile: what sold, to whom, for how much; send a lost key again; revoke one.
+- People: under **People in** your publisher, an admin invites others by email; a member uploads, lists, and sees the ledger, an admin also invites and removes people, and payouts stay with the founder.
+
+## From version control
+
+`npx @scrthq/runlog release my-pack.yaml --price 3.00` does the upload and the listing in one command, with `RUNLOG_API_KEY` set; a later release without a price keeps the one it has. The `catalog-release` workflow in the repository's `examples/github-actions` runs it when a release is published; see [Publishing and releasing](#guide/cli-publish).
+
+## The fee
+
+The catalog takes 5% of each sale, or nothing with the hosted-licensing subscription. Stripe's own fees are separate and yours, as they would be selling anywhere.

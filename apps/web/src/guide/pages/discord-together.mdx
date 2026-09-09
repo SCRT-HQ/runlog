@@ -1,0 +1,17 @@
+# Rosters, seats and the app
+
+## A moderated mode
+
+Anyone in the server presses **Join the roster** and is a contestant by their Discord name; each result with points shows an **Award** menu to the host, and the standings are on the card.
+
+## A mode played by several
+
+In a mode played by several (the demo pack's Pairs, say), **/run start** takes a `players` count within what the mode allows, the host has seat one, and the card shows the seats and which role each holds this unit. Anyone takes an open seat with **Take seat**; whoever holds a seat presses the table like the host does, though only the host ends, undoes and awards. Where the pack marks a role as the one that acts (the demo's Thrower), the card says which seat presses this unit, and the other seats are told whose turn it is. **Leave seat** frees it.
+
+## Joining and leaving by command
+
+**/run join** in the thread does what the card's own button would: joins the roster in a moderated run, takes the first open seat in a mode played by several, and otherwise follows the run into a linked member's library as a watcher. **/run leave** leaves the roster or the seat.
+
+## The same run from the app
+
+**Follow in Runlog** puts the run in a linked member's own library as a watcher; a linked member who takes a seat is a player there. The host, and anyone who took a seat with a linked account, can play the same run from the app. The thread hears each move made there a moment later, the lines under "From the app" and a fresh card, and a card that is behind refuses a press with a note, rather than building on a table that moved.

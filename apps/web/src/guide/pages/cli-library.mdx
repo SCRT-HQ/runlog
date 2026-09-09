@@ -1,0 +1,26 @@
+# Sealing from your own backend
+
+The same package is a small library for a seller's own backend: `seal`, `open`, `readHeader`, `isSealed` and `generateLicenseKey`. The command depends on `yaml` and `zod`, declared as such; the library entry point pulls in nothing.
+
+```bash
+npm install @scrthq/runlog
+```
+
+```js
+import { seal, open, readHeader, isSealed, generateLicenseKey } from "@scrthq/runlog";
+
+// `pack` is your signed pack, parsed from YAML or JSON into an object.
+const key = generateLicenseKey();
+const bytes = await seal(pack, key, { ref: order.id, title: pack.title });
+await email(buyer, {
+  attachment: { name: `${pack.id}.rlpack`, bytes },
+  text: `Your license key is ${key}. Open the file in Runlog and type it once.`,
+});
+
+// Later, or elsewhere:
+readHeader(bytes);            // { v: 1, ref, title, ... } without a key
+const result = await open(bytes, key);
+if (result.ok) result.document; // the pack, as sealed
+```
+
+Runs on Node 20 and later and in browsers; this entry point uses none of the package's dependencies. A sealed file made here opens in the app on any address with the key you issued, and nothing is checked online. The container's byte layout is documented in the repository's [selling notes](https://github.com/SCRT-HQ/runlog/blob/main/docs/selling.md), under [Reference](#guide/reference).

@@ -1,0 +1,25 @@
+# On AWS, with accounts
+
+This is the copy at runlog.scrthq.com, run by you. The hosting lives in the repository's [`hosted/`](https://github.com/SCRT-HQ/runlog/tree/main/hosted) directory: a CDK app for the API (a Lambda, a DynamoDB table, an S3 bucket, a WebSocket) and the site (S3, CloudFront, a certificate, DNS), the pages that make an address a service, and the scripts that lay them over a build. It takes the published package as the build, so you deploy a release of the app, not a fork of it.
+
+## What you need first
+
+- An AWS account, with a Route 53 hosted zone for the domain the copy will answer on. The stacks deploy to `us-east-1`; CloudFront accepts a certificate from nowhere else.
+- A [WorkOS](https://workos.com) project with AuthKit enabled: one client, with `https://<your domain>/` as a redirect URI and as the sign-out URI. Its client id is public and goes in the configuration. The command line signs in through a second client of the same project; use the same id for both if you do not need that.
+- An identity verified in SES, for invitation mail. A new account's SES is sandboxed, which means mail reaches verified addresses only; sending to anyone is a request to AWS.
+- Node 22, and the AWS CLI signed in to the account.
+
+Stripe is optional. Without it, plans are off, nothing is charged, and selling priced copies through the catalog is not offered; free listings and sealed copies sold from a publisher's own hands work regardless.
+
+## Take the hosting
+
+Only the `hosted/` directory and one script beside it:
+
+```bash
+git clone --depth 1 --filter=blob:none --sparse https://github.com/SCRT-HQ/runlog runlog-hosting
+cd runlog-hosting
+git sparse-checkout set hosted scripts
+cd hosted/infra && npm install && cd ../..
+```
+
+Then [say what your copy is](#guide/aws-config), and [deploy](#guide/aws-deploy).

@@ -1,0 +1,13 @@
+# Your account from the terminal <Plan tier="free" />
+
+```bash
+npx @scrthq/runlog login              # a short code, confirmed in the browser it opens
+npx @scrthq/runlog login --api https://<your domain>/api   # a copy you run yourself
+npx @scrthq/runlog login --key        # paste a key from your profile page: a machine with no browser
+npx @scrthq/runlog whoami
+npx @scrthq/runlog logout
+```
+
+`login` shows a short code and opens your browser to confirm it; from then on `claim` can tie a signing key to your account so the app names you beside what you sign. The sign-in renews itself while it is used and lapses after a month idle. It lives in your user configuration directory, readable by you alone. `NO_COLOR` in the environment turns the color off.
+
+A machine with nobody at it uses a key from your profile page instead, set as `RUNLOG_API_KEY`: see [From a build server](#guide/cli-ci).

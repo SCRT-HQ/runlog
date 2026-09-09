@@ -1,0 +1,8 @@
+# What the bot stores
+
+- **The run**: a session in the host's account, its log written by the bot as the host's device, one event per move, each saying the bot rolled, or that a person rolled by hand.
+- **The server**: which account claimed it, the host role and channel, the kind of thread and card it chose, and which packs are in its vault.
+- **The vault**: the pack's text, in the hosting's bucket, read by the bot to play. This is the one place the hosting holds a pack's text for something other than handing it back to whoever sent it, and it is handed to nobody. What reaches the thread is the drawn line, which is the run's, not the pack's; a sealed pack goes no further than that.
+- **Of Discord's**: user ids, guild ids, a thread id and a message id per run, and the names Discord showed. No tokens, no messages of anyone's.
+
+Releasing a server from the profile, or deleting the account, removes the server's rows and empties its vault. [What the server holds](#guide/stored) lists everything else an account keeps.

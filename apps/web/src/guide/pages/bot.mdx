@@ -1,0 +1,20 @@
+# Setting the bot up
+
+One bot, made once by whoever runs a hosted copy of Runlog; server owners install that bot with its link. Nobody sets up a bot of their own. This group is the operator's side: the Discord application, what to enable in it, and what the stage needs to know. What server owners and members do is under [Runlog in Discord](#guide/discord).
+
+The bot has no process. Discord sends every slash command and button press as a signed HTTP request to `/api/discord/interactions` on the API, which answers in one turn; the bot never connects to Discord's gateway, so it needs no intents, no host, and nothing that stays up.
+
+## What you need
+
+- A hosted copy deployed: the API answers the endpoint, and only with the application named in its configuration.
+- Access to the stage's configuration document (`env/<stage>.json` on a machine, the `RUNLOG_ENV_CONFIG_<STAGE>` variable in the repository for a pipeline) and to its AWS account, to fill one secret.
+- A Discord account with a developer team or your own developer applications.
+
+Do it once per stage: a development application against the dev copy, a production application against production. The two are unrelated in Discord, so a bot in your test server can be broken freely.
+
+## The steps
+
+1. [The application and the stage](#guide/bot-application): make it, tell the stage its id and key, fill the token.
+2. [The endpoint, installation and the commands](#guide/bot-endpoint): point Discord at the API, set the install link, register the commands, try it.
+3. Optionally, [selling the plan through Discord](#guide/bot-store) and [linked roles](#guide/bot-linked-roles).
+4. [When something is off](#guide/bot-troubles), and where everything lives.

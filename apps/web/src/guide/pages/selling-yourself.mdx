@@ -1,0 +1,17 @@
+# From your own hands <Plan tier="free" />
+
+The Designer and the command line make everything a sale needs, and the app never has to know it happened:
+
+<Steps>
+  <li>Sign the pack, so an altered copy cannot claim to be yours: <Kbd>runlog keygen</Kbd> once, then <Kbd>runlog sign</Kbd>, or **Sign** in the Designer. Claim the key on your profile and the app names you beside it.</li>
+  <li>For each buyer, **Seal a copy for a buyer** in the Designer, or <Kbd>runlog issue my-pack.yaml --to "Their name" --seal</Kbd>. You get a sealed `.rlpack` file and a license key.</li>
+  <li>Send both however you sell: your own shop, a membership page, a mailing list. The buyer loads the file with **Load a pack from a file** and types the key once. Signed in, the key is kept in their account, so the same file opens on their other devices.</li>
+</Steps>
+
+## From a build server, or a shop
+
+A build server can do the signing and the sealing too: `RUNLOG_SIGNING_KEY` holds the key file's contents, `RUNLOG_API_KEY` a command-line key from your profile (one that only releases, so the build server's secret reaches nothing else), and the repository's `examples/github-actions` has a workflow that signs a tagged release and attaches the pack and its paper to it; see [From a build server](#guide/cli-ci). A shop of your own seals copies with [the library](#guide/cli-library).
+
+## What it gives you, and does not
+
+Nothing here costs anything, needs no account, and takes no share. It also gives you nothing back: a lost key is yours to send again, a refund is yours to make, and there is no card in the catalog.

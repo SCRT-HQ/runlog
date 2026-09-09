@@ -1,6 +1,6 @@
 # Designing a pack
 
-A pack is the whole game: its words, its tables, its flow, its modes. The app plays any pack that loads, and the **Designer** — that button in the header, or `#create` in the address — writes one without leaving the browser.
+A pack is the whole game: its words, its tables, its flow, its modes. The app plays any pack that loads, and the **Designer**, that button in the header, or `#create` in the address, writes one without leaving the browser.
 
 The sections run down the left in the order a pack is read; **Problems**, **Sign** and **Documents** sit on the right. Every field carries the same help the file format's reference does.
 
@@ -8,28 +8,8 @@ The sections run down the left in the order a pack is read; **Problems**, **Sign
 
 - **Start from a pack…** opens any pack in your library or the catalog whose license allows changed copies, as a new pack of your own with the original credited in its notice. Packs under a no-derivatives license, and sealed packs, are refused with the reason shown.
 - **Open a file…** loads a `.yaml` or `.json` you wrote elsewhere.
-- Or start empty and fill in the sections in order.
-
-## The sections
-
-- **What it is.** Title, id, version, author, description, and — for the catalog — a category and tags. The license says whether copies may be shared.
-- **The words.** What a run, a unit and a subject are called in this game, and what closing a unit is called. The app uses these words everywhere.
-- **Tables.** What the dice land on. Each entry has its text, and may grant a state, fire a trigger, carry points for moderated play, or need something optional.
-- **Phases.** The flow every unit passes through: roll a table, declare the subject, do the work with a checklist, close.
-- **Modes.** Ways to play: a length, a seed, seats for several players, a clock, a roster for moderated play, and what to leave out.
-
-**Problems** on the right lists anything that would stop the pack loading, or that looks like a mistake — a table whose ranges do not tile the die, a state nothing applies, a counter nothing changes.
-
-## Signing and sealing <Plan tier="free" />
-
-Signing proves you wrote it: a changed copy can no longer claim to be yours, and once the key is claimed by your account the app names you beside it. The **Sign** panel makes or takes a key (it never leaves the page), claims it, and downloads the signed pack.
-
-**Seal a copy for a buyer** stamps a copy with their name, seals it so it needs a license key to open, and gives you the key to send them. That is the whole of selling from your own hands; the app never sees the sale.
-
-## Publishing <Plan tier="publisher" />
-
-Listing a pack in the catalog for others to add, with a price, and keeping the ledger hosted rather than in your own files, is publishing: see [Selling your packs](#guide/selling).
+- Or start empty and fill in [the sections](#guide/sections) in order.
 
 ## The format itself
 
-The Designer writes the same YAML the command line and the file format's reference describe. The authoring guide in the repository walks through a complete pack and every part of the format, and the reference names every field.
+The Designer writes the same YAML [the command line](#guide/cli) and the file format's reference describe. The authoring guide in the repository walks through a complete pack and every part of the format, and the reference names every field; both are under [Reference](#guide/reference).

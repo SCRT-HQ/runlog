@@ -1,0 +1,24 @@
+# When something is off
+
+- **"This copy of Runlog cannot host runs"** or **"token is not filled in"**: the stage has no `discord` block, or the secret is still the deploy's placeholder. Fill it; the next cold start reads it.
+- **"Discord would not open a thread here"**: the bot lacks Create Public Threads (or, for a private run, Create Private Threads) in that channel, or the channel is one threads cannot be made in. Reinstall with the link the bot or the script prints, or pick a channel with **/setup channel**.
+- **Commands are missing from the menu**: registered for every server less than an hour ago, or registered for a different guild id. Run the script with `DISCORD_GUILD_ID` for the server you are in.
+- **The endpoint will not save**: see [the endpoint](#guide/bot-endpoint).
+- **A press says "the card may be stale"**: the card is rebuilt from the log on every press, so a button from an old card can name a step that has passed. **/run status** posts a fresh one.
+- **"This interaction failed" or "thinking" that never ends**: the stage's CloudWatch dashboard, `runlog-<env>`, has a section for the bot: every interaction by kind, how long each kind took to answer against Discord's three seconds, and the job function's cold starts beside it. Two alarms ring the stage's topic for exactly these: an interaction not answered, and the job failing outright.
+
+## Where things are
+
+| What | Where |
+| --- | --- |
+| Application id and public key | The stage's configuration, `discord.applicationId` and `discord.publicKey`; the handler's `DISCORD_APPLICATION_ID` and `DISCORD_PUBLIC_KEY` |
+| Whether the plan is on sale | `discord.open`; the handler's `DISCORD_OPEN` |
+| The store's SKU, where Discord sells the plan | `discord.serverSku`; the handler's `DISCORD_SERVER_SKU` |
+| The bot token | Secrets Manager `runlog/discord/bot-token` |
+| The OAuth2 client secret, for linked roles | Secrets Manager `runlog/discord/client-secret`; without it, no verification is offered |
+| Who has the plan meanwhile | The WorkOS feature flag `server`, per environment, on the people trying it |
+| The commands | `hosted/infra/lib/handlers/discord/commands.ts`, registered by `hosted/scripts/discord-setup.ts` |
+| The handler | `hosted/infra/lib/handlers/discord/` and the route in `api.ts` |
+| How it is doing | The bot section of the `runlog-<env>` CloudWatch dashboard; alarms `runlog-<env>-discord-failures` and `runlog-<env>-discord-job-errors` |
+| Timers waiting to run out | EventBridge Scheduler, group `runlog-<env>-timers`: one schedule per running timer, gone once it has run |
+| A server's rows and vault | `GUILD#<id>` in the table, `guilds/<id>/packs/` in the bucket |

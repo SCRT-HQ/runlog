@@ -125,7 +125,7 @@ opened from disk is always the app.
 | --- | --- |
 | Hosted | https://runlog.scrthq.com — the copy Secret Headquarters runs, with accounts, sync, tables with company and the catalog |
 | Anyone, no account | https://scrt-hq.github.io/runlog/ — GitHub Pages, tracks `main`, no sign-in and no sync |
-| Your own | [docs/self-hosting.md](docs/self-hosting.md): on your machine, on a static host, or on your own AWS |
+| Your own | The guide's [Running your own copy](https://runlog.scrthq.com/play/guide/own-copy): on your machine, on a static host, or on your own AWS |
 
 Static files on S3 behind CloudFront, and behind `/api` on the same origin a
 small server for the parts that outlive one device: accounts, sync, tables
@@ -151,7 +151,7 @@ It also still runs from a file. `npm run build`, then open
 `apps/web/dist/index.html` — which is the zero-friction path when the app is
 sitting next to whatever you are working in. To run a copy of your own, on
 your machine, on a static host, or on your own AWS with accounts and sync,
-see [docs/self-hosting.md](docs/self-hosting.md); none of the three needs a
+see [Running your own copy](https://runlog.scrthq.com/play/guide/own-copy) in the guide; none of the three needs a
 fork.
 
 ### How it looks

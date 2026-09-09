@@ -1,6 +1,6 @@
-# Clocks and alerts
+# Clocks
 
-Some packs time a unit; some limit it. A **stopwatch** counts up from the moment the unit begins; a **timer** counts down from the minutes the pack set. Results can start clocks of their own too — a rest clock after a loading, fifteen minutes for a room.
+Some packs time a unit; some limit it. A **stopwatch** counts up from the moment the unit begins; a **timer** counts down from the minutes the pack set. Results can start clocks of their own too: a rest clock after a loading, fifteen minutes for a room.
 
 <ClockDemo kind="timer" />
 
@@ -8,25 +8,10 @@ The digits are big enough to read from across a room and do not jitter. A timer'
 
 ## What the log keeps
 
-A clock is four moments in the log — started, paused, resumed, stopped — and not a ticking number. What has elapsed is computed from those moments and the present. That is why a reload lands on a clock still running from where it was, why a second device shows the same time, and why the finished time of every unit stays on the board afterward.
+A clock is four moments in the log, started, paused, resumed, stopped, and not a ticking number. What has elapsed is computed from those moments and the present. That is why a reload lands on a clock still running from where it was, why a second device shows the same time, and why the finished time of every unit stays on the board afterward.
 
 When a pack's clock is set to start by hand, the round shows a **Start** button instead of starting on its own. Either way the clock stops when the unit closes, and its time is written once.
 
 ## When a timer runs out
 
-The clock stops itself, marked as having run out, and the app plays an alert. A phone buzzes as well.
-
-## Alerts and sounds
-
-Open **Alerts and sounds** in the side column of any run to choose what rings:
-
-- A timer runs out
-- A threshold fires — a tally reaches a number the pack watches for
-- Something is owed
-- An award is made, in a moderated run
-- A unit begins, or closes
-- Somebody else moves, in a shared run
-
-Each has a sound — chime, bell, pulse, tick — or Off, and one volume for all of them. The sounds are made in the browser, so there is nothing to download and they work offline. The settings stay on the device that set them.
-
-<Note>Browsers only let a page make a sound after you have touched it. The app unlocks sound on your first press, so a timer that runs out an hour later can still ring.</Note>
+The clock stops itself, marked as having run out, and the app plays [an alert](#guide/alerts). A phone buzzes as well.

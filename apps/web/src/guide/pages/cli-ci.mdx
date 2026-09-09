@@ -1,0 +1,36 @@
+# From a build server
+
+Nobody is at a build server to confirm a sign-in code, so two things go in the environment instead:
+
+| Variable | What it is |
+| --- | --- |
+| `RUNLOG_API_KEY` | A command-line key from your profile page in the app; stands in for `login`. Make it a key that *only releases*: it can check, sign, publish and release packs and nothing else, so a leaked build secret cannot reach your runs, sales or people. |
+| `RUNLOG_SIGNING_KEY` | The whole contents of the `my-key.json` that `keygen` wrote; stands in for `--key`. |
+| `RUNLOG_API` | Optional: another address, such as a copy you run yourself (`https://<your domain>/api`), with a key made there. |
+
+## A workflow to copy
+
+```yaml
+# .github/workflows/release.yml — a GitHub release is published: check, sign, release
+on:
+  release:
+    types: [published]
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npx @scrthq/runlog validate my-game.yaml --strict
+      - run: npx @scrthq/runlog test my-game.yaml
+      - run: npx @scrthq/runlog sign my-game.yaml
+        env:
+          RUNLOG_API_KEY: ${{ secrets.RUNLOG_API_KEY }}
+          RUNLOG_SIGNING_KEY: ${{ secrets.RUNLOG_SIGNING_KEY }}
+      - run: npx @scrthq/runlog release my-game.yaml --price 3.00
+        env:
+          RUNLOG_API_KEY: ${{ secrets.RUNLOG_API_KEY }}
+```
+
+The repository's [`examples/github-actions`](https://github.com/SCRT-HQ/runlog/tree/main/examples/github-actions) has this and two more workflows to copy, with a README on setting the secrets: one that checks every push, and one that signs a release and attaches the pack and its paper to it for [selling from your own hands](#guide/selling-yourself).

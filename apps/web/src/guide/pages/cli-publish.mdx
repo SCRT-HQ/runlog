@@ -1,0 +1,15 @@
+# Publishing and releasing
+
+Two destinations, one account.
+
+```bash
+npx @scrthq/runlog publish my-game.yaml                   # into your own library, on every device you sign in on
+npx @scrthq/runlog release my-game.yaml --price 3.00      # to the catalog, as your publisher, listed at $3
+npx @scrthq/runlog release my-game.yaml --free            # listed free
+npx @scrthq/runlog release my-game.yaml                   # a new version; the listing keeps its price
+npx @scrthq/runlog release my-game.yaml --draft           # uploaded, not listed
+```
+
+`release` refuses an unsigned pack, or one whose signature no longer matches its text, since the catalog seals a copy for each buyer under what you signed. Becoming a publisher, and setting up payouts, happens on your profile in the app; a priced listing needs payouts finished. [Through the catalog](#guide/selling-catalog) says what a listing gives you.
+
+From a machine with nobody at it, see [From a build server](#guide/cli-ci).
