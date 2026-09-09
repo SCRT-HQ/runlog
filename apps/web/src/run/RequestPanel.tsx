@@ -131,7 +131,7 @@ function RollRequest({
         <span className="muted">: {request.dice}</span>
       </p>
 
-      <div className="padRow">
+      <div className={`padRow${thrown ? " rolling" : ""}`}>
         <input
           className="rollInput"
           inputMode="numeric"
@@ -193,7 +193,11 @@ function RollRequest({
         </p>
       )}
 
-      <NumberPad onDigit={(n) => setTyped((t) => `${t}${n}`)} onBackspace={() => setTyped((t) => t.slice(0, -1))} />
+      {/* Once the dice are in the air the question has been answered; a pad
+          under them invites an answer that will not be taken, and on a phone
+          it is the tallest thing on the screen at the moment the dice are
+          the only thing worth looking at. */}
+      {!thrown && <NumberPad onDigit={(n) => setTyped((t) => `${t}${n}`)} onBackspace={() => setTyped((t) => t.slice(0, -1))} />}
     </div>
   );
 }

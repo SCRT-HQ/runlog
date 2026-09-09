@@ -14,3 +14,18 @@ export function nudgeFirstUnticked(from: HTMLElement): void {
   box.scrollIntoView({ block: "nearest" });
   box.focus();
 }
+
+/**
+ * What the unit still owes, brought into view.
+ *
+ * Same argument as the box above: a dimmed "Settle what is owed first" says
+ * a thing is owed and gives no way to reach it, and an obligation that came
+ * due at the close was not even on the screen to settle. Pressing the button
+ * takes the player to the debt.
+ */
+export function nudgeOwed(from: HTMLElement): void {
+  const owed = from.closest(".main, body")?.querySelector<HTMLElement>(".panel.owed");
+  if (!owed) return;
+  owed.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  owed.querySelector<HTMLButtonElement>("button.primary")?.focus();
+}

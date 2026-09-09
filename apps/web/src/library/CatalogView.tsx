@@ -52,6 +52,14 @@ export function CatalogView({
   const [tags, setTags] = useState<Set<string>>(new Set());
   const [owned, setOwned] = useState<"all" | "mine" | "new">("all");
   const [publisher, setPublisher] = useState<string | null>(null);
+  /**
+   * Whether the facets are showing. A wide screen keeps them in the side
+   * column and ignores this; a phone has one column, and eleven ways to
+   * narrow a list of nineteen packs put the packs two screens below the
+   * fold. So they fold behind a word, and the search field, which is what
+   * most people reach for first, stays where it is.
+   */
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const hosted = useHosted();
   const testing = hosted === null || hosted.features.testing;
 
@@ -137,11 +145,22 @@ export function CatalogView({
       </header>
 
       <div className="marketBody">
-        <aside className="marketSide" aria-label="Search and filters">
+        <aside className={`marketSide${filtersOpen ? " open" : ""}`} aria-label="Search and filters">
           <label className="marketSearch">
             <span className="visuallyHidden">Search the catalog</span>
             <input className="textInput" type="search" value={q} placeholder="Search packs…" onChange={(e) => setQ(e.target.value)} />
           </label>
+
+          {/* The phone's way in and out of the facets; it draws nothing on a wide screen. */}
+          <button
+            type="button"
+            className="filtersToggle"
+            aria-expanded={filtersOpen}
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            {filtersOpen ? "Hide the filters" : "Filters"}
+            {narrowed && <span className="chip ok">on</span>}
+          </button>
 
           <div className="facet">
             <h4 className="facetTitle">Show</h4>

@@ -1,4 +1,5 @@
 import { hitsOn } from "./hits.ts";
+import { subjectTitle } from "./eligibility.ts";
 import { modeDoc, summaryDoc, type Doc, type Pack, type Phase } from "@runlog/rules-schema";
 import { activePhases, constrainedByOf, constraintsFor, nextStep, phaseSkipped } from "./flow.ts";
 import { clockOfUnit, elapsedMs, liveClocks, unitClockFor } from "./clock.ts";
@@ -34,10 +35,13 @@ import type { RunState } from "./types.ts";
  * One thing a phase produced: the text, and, where it came from a table
  * the phase set off rather than one its own step rolls, which table and
  * which piece it hit, so a page can color it the way the log colors a
- * hit. The declared type carries its mark too. Plain text is what an
- * older snapshot carries, and still reads.
+ * hit. The piece is named as well as numbered: "hit #3" makes a reader
+ * go and look up which piece that was, on a page that may not be in front
+ * of them. The number stays for a page written before the name was
+ * carried, and for one built before it was. The declared type carries its
+ * mark too. Plain text is what an older snapshot carries, and still reads.
  */
-export type PhaseResult = string | { text: string; table?: string; hit?: number | null; declared?: true };
+export type PhaseResult = string | { text: string; table?: string; hit?: number | null; hitName?: string; declared?: true };
 
 /** A result's words, whichever shape it came in. */
 export function resultText(r: PhaseResult): string {
@@ -95,14 +99,14 @@ export interface LiveSnapshot {
   score: { label: string; text: string; value: number; better: "higher" | "lower" };
   forcedUnits: number;
   /** Newest first, numbered from the start. */
-  log: Array<{ n: number; unit: number; where: string; hit: number | null; text: string }>;
+  log: Array<{ n: number; unit: number; where: string; hit: number | null; hitName?: string; text: string }>;
   /**
    * Every result rolled this unit, in the order the dice landed on them: 
    * "this unit so far" for a watcher, and a table a manual step draws its
    * constraints from may be rolled more than once. Absent from snapshots
    * written before it was carried.
    */
-  unitResults?: Array<{ table: string; text: string; hit: number | null }>;
+  unitResults?: Array<{ table: string; text: string; hit: number | null; hitName?: string }>;
   /** The most recent log line, for a widget that shows one thing rather than the whole log. Null with nothing rolled yet; absent from snapshots written before it was carried. */
   latest?: { where: string; text: string } | null;
   /** The race this run is in, as its owner's device last saw the leaderboard; absent outside a race. */
@@ -185,12 +189,27 @@ export function entryTextOf(pack: Pack, o: Pick<RunState["outcomes"][number], "t
   return entry?.title ?? entry?.text ?? `${table?.title ?? o.table} · #${o.entryId}`;
 }
 
-export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEvent[], at: string = new Date().toISOString(), extra: { race?: RaceSnapshot | undefined } = {}): LiveSnapshot {
-  const v = pack.vocabulary;
-  const quoted = mayQuote(pack, "share");
-  const now = Date.parse(at);
+/**
+ * A unit read as its phases: which one is in play, which are done, which
+ * are out, and what each has produced so far.
+ *
+ * The watcher's page is built on this, and so is the list the app itself
+ * opens over the step, so a player and somebody watching over their
+ * shoulder are reading one thing rather than two things that drift.
+ */
+export function unitPhases(pack: Pack, state: RunState): LiveSnapshot["phases"] {
+  return phasesOf(pack, state).phases;
+}
+
+/** Everything snapshotOf and unitPhases both work out about a unit. */
+function phasesOf(pack: Pack, state: RunState) {
+  /** What a piece a result reached is called, for whoever reads that it did. */
+  const named = (id: number | null | undefined): string | undefined => {
+    if (id === null || id === undefined) return undefined;
+    const subject = state.subjects.find((s) => s.id === id);
+    return subject ? subjectTitle(pack, subject) : undefined;
+  };
   const step = nextStep(pack, state);
-  const stepLabel = step ? ("label" in step.step && step.step.label ? step.step.label : step.step.kind === "rollTable" ? (pack.tables[step.step.table]?.title ?? step.step.table) : step.phase.label) : null;
   // Which phase each of a unit's results belongs under. A table one of a
   // phase's steps rolls is that phase's; a table no step rolls, one a
   // result triggered, a setback aimed at an earlier piece, belongs to the
@@ -224,7 +243,10 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
           const own = rolledBy.get(o.table) === phase.id;
           const hit = o.targetSubject !== null && o.targetSubject !== undefined ? o.targetSubject : null;
           const text = entryTextOf(pack, o);
-          return own && hit === null ? { text } : { text, table: pack.tables[o.table]?.title ?? o.table, hit };
+          const name = named(hit);
+          return own && hit === null
+            ? { text }
+            : { text, table: pack.tables[o.table]?.title ?? o.table, hit, ...(name ? { hitName: name } : {}) };
         }),
       ...(phase.steps.some((st) => st.kind === "declareSubject") && subject?.type ? [{ text: subject.type, declared: true as const }] : []),
     ];
@@ -254,7 +276,22 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
         };
       })
     : [];
+  return { step, phases, units };
+}
+
+export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEvent[], at: string = new Date().toISOString(), extra: { race?: RaceSnapshot | undefined } = {}): LiveSnapshot {
+  const v = pack.vocabulary;
+  const quoted = mayQuote(pack, "share");
+  const now = Date.parse(at);
+  const { step, phases, units } = phasesOf(pack, state);
+  const stepLabel = step ? ("label" in step.step && step.step.label ? step.step.label : step.step.kind === "rollTable" ? (pack.tables[step.step.table]?.title ?? step.step.table) : step.phase.label) : null;
   const stateLabel = (id: string) => pack.states?.[id]?.short ?? pack.states?.[id]?.label ?? id;
+  /** What a piece a result reached is called, for whoever reads that it did. */
+  const named = (id: number | null | undefined): string | undefined => {
+    if (id === null || id === undefined) return undefined;
+    const subject = state.subjects.find((s) => s.id === id);
+    return subject ? subjectTitle(pack, subject) : undefined;
+  };
   const total = state.outcomes.length;
   const log = [...state.outcomes]
     .reverse()
@@ -264,6 +301,7 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
       unit: o.unit,
       where: `${v.unit.one} ${o.unit}, ${pack.tables[o.table]?.title ?? o.table}`,
       hit: o.targetSubject,
+      ...(named(o.targetSubject) ? { hitName: named(o.targetSubject)! } : {}),
       text: entryTextOf(pack, o),
     }));
   const latest = log[0] ? { where: log[0].where, text: log[0].text } : null;
@@ -272,7 +310,7 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
   // for "this unit so far" rather than the whole run's log.
   const unitResults = state.outcomes
     .filter((o) => o.unit === state.unit)
-    .map((o) => ({ table: pack.tables[o.table]?.title ?? o.table, text: entryTextOf(pack, o), hit: o.targetSubject }));
+    .map((o) => ({ table: pack.tables[o.table]?.title ?? o.table, text: entryTextOf(pack, o), hit: o.targetSubject, ...(named(o.targetSubject) ? { hitName: named(o.targetSubject)! } : {}) }));
   const constraints = step ? constraintsFor(pack, state, constrainedByOf(step.step)) : [];
   const unitClock = clockOfUnit(state, state.unit);
   const clocks = [...liveClocks(state), ...(unitClock?.status === "done" ? [unitClock] : [])].map((c) => ({

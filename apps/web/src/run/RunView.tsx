@@ -5,9 +5,9 @@ import { SettingsDialog } from "./SettingsDialog.tsx";
 import { ControlPanel, openControlsWindow, RemoteControls } from "./ControlPanel.tsx";
 import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
-import { clockOfUnit, compareScores, formatClock, formatScore, liveClocks, nextUnit, scoreOf } from "@runlog/engine";
+import { clockOfUnit, compareScores, formatClock, formatScore, liveClocks, nextUnit, scoreOf, unitPhases } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
-import { closesUnit, constraintsFor, describeSkip, describeSkipReason, entryWords, phaseSkipped, subjectLabel, subjectName, type RunEvent, type RunState } from "@runlog/engine";
+import { closesUnit, constrainedByOf, constraintsFor, describeSkip, describeSkipReason, entryWords, phaseSkipped, resultText, subjectLabel, subjectName, type PhaseResult, type RunEvent, type RunState } from "@runlog/engine";
 import { useRun, type ActiveStep } from "./useRun.ts";
 import type { RunStore } from "./store.ts";
 import type { StoredRun } from "../storage/db.ts";
@@ -24,7 +24,7 @@ import { flowStrip } from "./flowStrip.ts";
 import { LOG_LIMITS, logLimit, logLines, logOrder, setLogLimit, setLogOrder, type LogOrder } from "./logView.ts";
 import { hitLabel, hitsOn } from "./hits.ts";
 import { ticksFor } from "./stepChecks.ts";
-import { nudgeFirstUnticked } from "./nudge.ts";
+import { nudgeFirstUnticked, nudgeOwed } from "./nudge.ts";
 import { Constraints } from "./Constraints.tsx";
 import { receiptFollowUps } from "./receiptFollowUps.ts";
 import { ExportPanel } from "./ExportPanel.tsx";
@@ -41,6 +41,8 @@ import { liveLinkOf } from "../live/route.ts";
 import { paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
 import { lifecycleGestures, marksOf, type LifecycleMarks } from "./gestures.ts";
 import { useRace } from "./useRace.ts";
+import { RunRail, type Pane } from "./RunRail.tsx";
+import { useEnterMoves } from "../ui/useEnterMoves.ts";
 
 /**
  * Playing a run.
@@ -283,6 +285,29 @@ export function RunView({
   }, [settled]);
   const lastReceipt = receipts[receipts.length - 1] ?? null;
 
+  /**
+   * Which of the three planes a phone is showing; see RunRail. A wide
+   * screen shows all three and ignores this.
+   *
+   * The game asking for something takes the screen back to it. A question
+   * put to a player who is reading the log would be asked where nobody is
+   * looking, and the first they would know of it is a step that will not
+   * move on. The same goes for a new step: the board is a thing you glance
+   * at between moves, not a place to be left standing when the move comes.
+   */
+  const [pane, setPane] = useState<Pane>("now");
+  // Enter presses the one onward button of whatever this screen is; see the hook.
+  useEnterMoves();
+  const [runMenuOpen, setRunMenuOpen] = useState(false);
+  const waiting = Boolean(run.pending?.request) || receipts.length > 0;
+  const stepNow = run.activeStep ? `${run.activeStep.phase.id}#${run.activeStep.index}` : "-";
+  useEffect(() => {
+    if (waiting) setPane("now");
+  }, [waiting]);
+  useEffect(() => {
+    setPane("now");
+  }, [stepNow]);
+
   const answer = useCallback(
     (key: string, value: string | number | boolean, machineRolled?: boolean, dice?: RolledDie[], seed?: number) => {
       const request = run.pending?.request;
@@ -355,22 +380,60 @@ export function RunView({
   return (
     <main className="main run">
       {bench && <BenchBar pack={pack} bench={bench} onRestart={run.discard} />}
-      <RunHeader pack={pack} run={run} state={state} onSettings={() => setSettingsOpen(true)} />
+      <RunHeader
+        pack={pack}
+        run={run}
+        state={state}
+        onSettings={() => setSettingsOpen(true)}
+        open={runMenuOpen}
+        onClose={() => setRunMenuOpen(false)}
+      />
 
       {/*
         Three columns that are not three cards. The margin holds where the
         unit is up to, numbered because it is a sequence. The middle holds the
         one thing to do, which is the only raised object on the screen. The
         side holds the board and the trackers as ruled rows.
+
+        On a phone the same three become three planes, one at a time, and the
+        rail under them is the way between; the margin keeps its job as one
+        sticky line. See RunRail, and the phone's half of the sheet.
       */}
-      <div className="columns run">
+      <div className="columns run" data-pane={pane}>
         <aside className="margin">
           <div className="stageNo">
             <small>{pack.modes[state.mode]?.label ?? state.mode}</small>
             {pack.vocabulary.unit.one} {state.unit || "-"}
           </div>
+          {/* Which pack this is, beside the unit, on a phone: the bar above
+              has given up the room for it, and the line that says where you
+              are is where it belongs. The wide screen says it in the run's
+              own bar and hides this. */}
+          <span className="stagePack">{pack.title}</span>
+          {/*
+            On a phone the run's own bar, the name, the seed, undo, settings
+            and the way out, is not worth the four rows it costs above the
+            step. It folds behind this, at the end of the line that says
+            where you are, and wears a mark when it is holding something the
+            player would want to have seen: a forced unit, a rewind coming.
+          */}
+          <button
+            type="button"
+            className={`runMenuBtn${state.forcedUnits > 0 || state.rewindNext > 0 ? " flagged" : ""}`}
+            aria-expanded={runMenuOpen}
+            onClick={() => setRunMenuOpen((open) => !open)}
+          >
+            <span aria-hidden="true">···</span>
+            <span className="visuallyHidden">This {pack.vocabulary.run.one.toLowerCase()}</span>
+          </button>
           {state.unit > 0 && <ClockPanel pack={pack} run={run} state={state} />}
-          <Flow pack={pack} run={run} state={state} />
+          <Flow
+            pack={pack}
+            run={run}
+            state={state}
+            open={pane === "unit"}
+            onOpen={() => setPane(pane === "unit" ? "now" : "unit")}
+          />
         </aside>
 
         <div className={`col wide ${run.readOnly ? "watching" : ""}`}>
@@ -415,7 +478,7 @@ export function RunView({
 
           {(run.thresholds.length > 0 || run.globals.length > 0) && <Thresholds run={run} />}
 
-          {(run.due.length > 0 || run.notes.length > 0) && (
+          {(run.blockingObligations.length > 0 || run.notes.length > 0) && (
             <Obligations pack={pack} run={run} />
           )}
 
@@ -454,6 +517,14 @@ export function RunView({
           {run.record && !bench && <Members pack={pack} run={run.record} />}
         </div>
       </div>
+      <RunRail
+        pane={pane}
+        onPane={setPane}
+        waiting={waiting}
+        unit={pack.vocabulary.unit.one}
+        board={`The ${pack.vocabulary.subject.many.toLowerCase()}, what is running, and who is here`}
+      />
+      {runMenuOpen && <button type="button" className="runBarScrim" aria-label="Close" onClick={() => setRunMenuOpen(false)} />}
       {settingsOpen && (
         <SettingsDialog
           runId={run.record?.runId ?? null}
@@ -817,7 +888,7 @@ export function Setup({
           onChange={(e) => setRunName(e.target.value)}
         />
 
-        <div className="padRow">
+        <div className="padRow stepAction">
           <button
             className="primary big"
             disabled={!rosterOk}
@@ -832,21 +903,34 @@ export function Setup({
   );
 }
 
+/**
+ * What this run is, and the four things you can do to the whole of it.
+ *
+ * A wide screen reads it as a bar over the columns. A phone has no row to
+ * spare above the step, so the same bar is a sheet at the foot of the
+ * screen, raised by the mark at the end of the line that says where you
+ * are, and dismissed by the scrim behind it or by Close.
+ */
 function RunHeader({
   pack,
   run,
   state,
   onSettings,
+  open,
+  onClose,
 }: {
   pack: Pack;
   run: ReturnType<typeof useRun>;
   state: RunState;
   onSettings: () => void;
+  /** Whether the phone's sheet is raised; a wide screen shows the bar regardless. */
+  open?: boolean;
+  onClose?: () => void;
 }) {
   const v = pack.vocabulary;
   const mode = pack.modes[state.mode];
   return (
-    <section className="runBar">
+    <section className={`runBar${open ? " open" : ""}`}>
       <div className="runMeta">
         <strong>{pack.title}</strong>
         <span className="muted">{mode?.label ?? state.mode}</span>
@@ -885,6 +969,10 @@ function RunHeader({
         >
           Discard
         </button>
+        {/* The phone's sheet needs a way down that is not the scrim. */}
+        <button className="ghost sheetClose" onClick={onClose}>
+          Close
+        </button>
       </div>
     </section>
   );
@@ -913,9 +1001,11 @@ function StartFirstUnit({ pack, onEnter }: { pack: Pack; onEnter: () => void }) 
       <p>
         Entering the first {v.unit.one.toLowerCase()} begins the {v.run.one.toLowerCase()}.
       </p>
-      <button className="primary big" onClick={onEnter}>
-        Enter {v.unit.one} 1
-      </button>
+      <div className="stepAction">
+        <button className="primary big" onClick={onEnter}>
+          Enter {v.unit.one} 1
+        </button>
+      </div>
     </section>
   );
 }
@@ -954,20 +1044,22 @@ function StepPanel({
               This {pack.vocabulary.unit.one.toLowerCase()} rolls {table?.title ?? step.table} {owed + 1} times: {owed === 1 ? "one more is owed" : `${owed} more are owed`} after this one.
             </p>
           )}
-          <button
-            className="primary big"
-            onClick={() =>
-              run.begin({
-                kind: "table",
-                tableId: step.table,
-                keyPrefix: `u${state.unit}:${key}`,
-                label: table?.title ?? step.table,
-                completes: { phase, index },
-              })
-            }
-          >
-            {table?.title ?? "Roll"}
-          </button>
+          <div className="stepAction">
+            <button
+              className="primary big"
+              onClick={() =>
+                run.begin({
+                  kind: "table",
+                  tableId: step.table,
+                  keyPrefix: `u${state.unit}:${key}`,
+                  label: table?.title ?? step.table,
+                  completes: { phase, index },
+                })
+              }
+            >
+              {table?.title ?? "Roll"}
+            </button>
+          </div>
         </section>
       );
     }
@@ -983,7 +1075,7 @@ function StepPanel({
               No longer allowed: {state.bannedTypes.join(", ")}
             </p>
           )}
-          <div className="padRow">
+          <div className="padRow stepAction">
             <input
               className="textInput"
               autoFocus
@@ -1026,12 +1118,14 @@ function StepPanel({
             Never dim. A dimmed Done beside an unticked list read as broken;
             the button says what it is waiting for and points at the box.
           */}
-          <button
-            className="primary big"
-            onClick={(e) => (allTicked ? run.completeStep(phase, index) : nudgeFirstUnticked(e.currentTarget))}
-          >
-            {allTicked ? "Done" : "Tick what you honored"}
-          </button>
+          <div className="stepAction">
+            <button
+              className="primary big"
+              onClick={(e) => (allTicked ? run.completeStep(phase, index) : nudgeFirstUnticked(e.currentTarget))}
+            >
+              {allTicked ? "Done" : "Tick what you honored"}
+            </button>
+          </div>
         </section>
       );
     }
@@ -1040,20 +1134,22 @@ function StepPanel({
       return (
         <section className="panel runStep" key={key}>
           <StepHead phase={phase} label={phase.label} />
-          <button
-            className="primary big"
-            onClick={() =>
-              run.begin({
-                kind: "actions",
-                actions: step.do,
-                keyPrefix: `u${state.unit}:${key}`,
-                label: phase.label,
-                completes: { phase, index },
-              })
-            }
-          >
-            Continue
-          </button>
+          <div className="stepAction">
+            <button
+              className="primary big"
+              onClick={() =>
+                run.begin({
+                  kind: "actions",
+                  actions: step.do,
+                  keyPrefix: `u${state.unit}:${key}`,
+                  label: phase.label,
+                  completes: { phase, index },
+                })
+              }
+            >
+              Continue
+            </button>
+          </div>
         </section>
       );
 
@@ -1129,15 +1225,26 @@ function ClosingStep({
           <Checklist items={points} pack={pack} state={state} ticked={ticked} onToggle={tick} />
         </>
       )}
-      <div className="padRow">
-        <button className="primary big" disabled={blocked.length > 0} onClick={(e) => (allTicked ? run.closeAndEnter(phase, index) : nudgeFirstUnticked(e.currentTarget))}>
+      <div className="padRow stepAction">
+        <button
+          className="primary big"
+          onClick={(e) =>
+            blocked.length > 0
+              ? nudgeOwed(e.currentTarget)
+              : allTicked
+                ? run.closeAndEnter(phase, index)
+                : nudgeFirstUnticked(e.currentTarget)
+          }
+        >
           {blocked.length > 0 ? "Settle what is owed first" : allTicked ? `Next ${unit}` : "Tick what you honored"}
         </button>
         <button
           className="ghost big"
-          disabled={blocked.length > 0 || !run.canEnd.ok}
+          disabled={!run.canEnd.ok}
           title={!run.canEnd.ok ? `Cannot finish yet: ${run.canEnd.reason}` : (pack.endings?.length ?? 0) > 1 ? "Close this and choose how the run ends" : undefined}
-          onClick={(e) => (allTicked ? run.finish(phase, index) : nudgeFirstUnticked(e.currentTarget))}
+          onClick={(e) =>
+            blocked.length > 0 ? nudgeOwed(e.currentTarget) : allTicked ? run.finish(phase, index) : nudgeFirstUnticked(e.currentTarget)
+          }
         >
           Finish
         </button>
@@ -1246,18 +1353,46 @@ function Ended({ pack, state }: { pack: Pack; state: RunState }) {
   );
 }
 
+/**
+ * What the unit owes.
+ *
+ * Everything that is holding the close up, not only what came due earlier:
+ * an obligation the pack defers to the close blocked the button and was
+ * nowhere on the screen to settle, which left the unit with no way out.
+ */
 function Obligations({ pack, run }: { pack: Pack; run: ReturnType<typeof useRun> }) {
+  const v = pack.vocabulary;
+  // The engine's word for when a thing comes due, in the pack's own nouns.
+  const when = (on: string | undefined): string => {
+    const unit = v.unit.one.toLowerCase();
+    switch (on) {
+      case "immediately":
+        return "due now";
+      case "onEnterUnit":
+        return `due on entering a ${unit}`;
+      case "onDeclareSubject":
+        return `due once the ${v.subject.one.toLowerCase()} is named`;
+      case "afterWork":
+        return "due after the work";
+      case "onTimerExpired":
+        return "due when the clock ran out";
+      case "onFinalize":
+        return `due before this ${unit} closes`;
+      default:
+        return on ? `due ${on}` : "owed";
+    }
+  };
   return (
     <section className="panel owed">
       <h3 className="sectionTitle">Owed</h3>
       <p className="muted small">
         Results that reach forward in time. These are the ones that get forgotten on paper.
       </p>
-      {run.due.map((o) => (
+      {run.blockingObligations.map((o) => (
         <div key={o.id} className="row owedRow">
           <div>
             <strong>{o.text}</strong>
-            <span className="muted small"> · due {o.on}</span>
+            <span className="muted small"> · {when(o.on)}</span>
           </div>
           <button className="primary" onClick={() => run.resolveObligation(o.id, o.text)}>
             Resolve
@@ -1838,18 +1973,34 @@ function Flow({
   pack,
   run,
   state,
+  open,
+  onOpen,
 }: {
   pack: Pack;
   run: ReturnType<typeof useRun>;
   state: RunState;
+  /** Whether the list is showing; on a phone that is a plane of its own. */
+  open: boolean;
+  onOpen: () => void;
 }) {
-  // On a phone the list folds to one line, opened by a tap; see flowStrip.
-  const [open, setOpen] = useState(false);
   const strip = flowStrip(run.activePhases, run.activeStep, (p) => phaseSkipped(pack, state, p));
+  // The same reading the watcher's page is built from, from the same call,
+  // so a player and somebody watching over their shoulder are looking at
+  // one thing rather than two things that drift.
+  const phases = unitPhases(pack, state);
+  // What the step in hand is being held to, so a result that is still
+  // biting is marked where it landed and not only in the card.
+  const holding = useMemo(
+    () => new Set(run.activeStep ? constraintsFor(pack, state, constrainedByOf(run.activeStep.step)) : []),
+    [pack, state, run.activeStep],
+  );
+  const listed = phases.length > 0
+    ? phases
+    : run.activePhases.map((p) => ({ id: p.id, label: p.label, state: "todo" as const, why: undefined, results: undefined }));
   return (
     <section className={`stageFlow${open ? " open" : ""}`}>
       {strip && (
-        <button type="button" className="flowNow" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <button type="button" className="flowNow" aria-expanded={open} onClick={onOpen}>
           <span className="idx">
             {strip.index} of {strip.total}
           </span>
@@ -1861,32 +2012,67 @@ function Flow({
         This {pack.vocabulary.unit.one.toLowerCase()}
       </h3>
       <ol className="flow">
-        {run.activePhases.map((phase, i) => {
-          const done = state.phasesDone.includes(phase.id);
-          const current = run.activeStep?.phase.id === phase.id;
+        {listed.map((phase, i) => {
           // Out of play this unit: grayed, with the reason under the name,
           // so a phase that only happens in the first room reads as skipped
           // for a reason rather than as broken. A dash on its own was read
           // as broken.
-          const skipped = !done && !current && phaseSkipped(pack, state, phase);
-          const why = skipped ? describeSkipReason(pack, phase) : null;
+          const skipped = phase.state === "skipped";
+          const found = skipped ? run.activePhases.find((p) => p.id === phase.id) : undefined;
           return (
             <li
               key={phase.id}
-              className={done ? "done" : current ? "current" : skipped ? "skipped" : ""}
-              aria-current={current ? "step" : undefined}
-              title={skipped ? (describeSkip(pack, phase) ?? undefined) : undefined}
+              className={phase.state === "todo" ? "" : phase.state}
+              aria-current={phase.state === "current" ? "step" : undefined}
+              title={found ? (describeSkip(pack, found) ?? undefined) : undefined}
             >
-              <span className="idx">{current ? "▸" : skipped ? "-" : i + 1}</span>
+              <span className="idx">{phase.state === "current" ? "▸" : skipped ? "-" : i + 1}</span>
               <span>
                 {phase.label}
-                {why && <span className="why">{why}</span>}
+                {phase.why && <span className="why">{phase.why}</span>}
+                {(phase.results ?? []).map((r, k) => (
+                  <PhaseLanded key={k} result={r} holding={holding} />
+                ))}
               </span>
             </li>
           );
         })}
       </ol>
     </section>
+  );
+}
+
+/**
+ * One thing a phase produced.
+ *
+ * Its own table's result is its text; one from a table the phase set off
+ * names the table first, and where it hit a piece it carries the log's
+ * color for a hit. A constraint the step in hand is still being held to is
+ * marked, because that is the one worth seeing while the work is happening
+ * rather than after it.
+ */
+function PhaseLanded({ result, holding }: { result: PhaseResult; holding: Set<string> }) {
+  const text = resultText(result);
+  const from = typeof result === "string" ? null : result;
+  const hit = from?.hit !== null && from?.hit !== undefined;
+  // Name the piece it reached. "hit #3" makes a reader go and find out
+  // which piece that was, on a board that is a tap away rather than beside
+  // them; a snapshot written before the name was carried still has only
+  // the number.
+  const reached = hit ? (from?.hitName ?? `#${from!.hit}`) : null;
+  const held = holding.has(text);
+  const cls = ["result", held ? "constrains" : "", hit ? "heat" : "", from?.table ? "chained" : "", from?.declared ? "declared" : ""].filter(Boolean).join(" ");
+  return (
+    <span className={cls} title={held ? "The game has already had its say: this holds over the step in hand" : undefined}>
+      {from?.table && (
+        <span className="head">
+          {from.table}
+          {reached ? ` - hit ${reached}` : ""}
+          {": "}
+        </span>
+      )}
+      {text}
+    </span>
   );
 }
 

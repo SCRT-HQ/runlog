@@ -33,7 +33,10 @@ describe("the clock in the margin", () => {
     expect(html).toContain('class="clocks"');
     expect(html).not.toContain("panel");
     expect(html).toContain("elapsed");
-    expect(html).toContain('class="ghost tiny"');
+    // Small and quiet, and carrying both its word and its mark: the word
+    // shows on a wide screen, the mark on a phone. See ClockButton.
+    expect(html).toContain('class="ghost tiny clockBtn"');
+    expect(html).toContain("clockMark");
     expect(html).toContain("Pause");
     expect(html).toContain("Stop");
     expect(html).not.toContain("big");

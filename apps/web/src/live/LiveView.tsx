@@ -201,7 +201,7 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
                       )}
                       <span className="where">
                         {line.where}
-                        {line.hit !== null && ` - hit #${line.hit}`}
+                        {line.hit !== null && ` - hit ${line.hitName ?? `#${line.hit}`}`}
                       </span>
                       <p>{line.text}</p>
                     </div>
@@ -394,13 +394,15 @@ function Result({ r, constrains }: { r: PhaseResult; constrains?: Set<string> })
   const held = constrains?.has(text) ?? false;
   const from = typeof r === "string" ? null : r;
   const hit = from?.hit !== null && from?.hit !== undefined;
+  // The piece by name where the snapshot carries one; older ones have only its number.
+  const reached = hit ? (from?.hitName ?? `#${from!.hit}`) : null;
   const cls = ["result", held ? "constrains" : "", hit ? "heat" : "", from?.table ? "chained" : "", from?.declared ? "declared" : ""].filter(Boolean).join(" ");
   return (
     <span className={cls} title={held ? "The game has already had its say: this holds over the step in hand" : undefined}>
       {from?.table && (
         <span className="head">
           {from.table}
-          {hit ? ` - hit #${from.hit}` : ""}
+          {reached ? ` - hit ${reached}` : ""}
           {": "}
         </span>
       )}

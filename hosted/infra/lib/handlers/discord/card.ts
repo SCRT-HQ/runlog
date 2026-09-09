@@ -1,4 +1,4 @@
-import { actingSeats, canEndRun, challenges, clockOfUnit, closesUnit, entryWords, hitsOn, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, unitClockFor, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import { actingSeats, canEndRun, challenges, clockOfUnit, closesUnit, entryWords, hitsOn, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, subjectTitle, unitClockFor, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import type { GuildRun } from "../guilds.js";
 import { REACTIONS } from "./reactions.js";
@@ -88,7 +88,7 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
   // live page shows as "this unit so far", and nothing older.
   for (const o of state.outcomes.filter((o) => o.unit === state.unit).slice(-4)) {
     const hit = o.targetSubject !== null && o.targetSubject !== undefined ? state.subjects.find((s) => s.id === o.targetSubject) : undefined;
-    fields.push({ name: clip(pack.tables[o.table]?.title ?? o.table, 256), value: clip(`${entryTextOf(pack, o)}${hit ? ` → ${subjectName(pack, hit)}` : ""}`) });
+    fields.push({ name: clip(pack.tables[o.table]?.title ?? o.table, 256), value: clip(`${entryTextOf(pack, o)}${hit ? ` → ${subjectTitle(pack, hit)}` : ""}`) });
   }
   // The board, as the nearest thing an embed has to a table: one small
   // block per thing, its name in bold over what is known of it, laid three
@@ -291,7 +291,7 @@ export function lineFor(pack: Pack, before: RunState, after: RunState, produced:
   const fresh = after.outcomes.slice(before.outcomes.length);
   for (const o of fresh) {
     const hit = o.targetSubject !== null && o.targetSubject !== undefined ? after.subjects.find((s) => s.id === o.targetSubject) : undefined;
-    parts.push(`**${pack.tables[o.table]?.title ?? o.table}** ${entryTextOf(pack, o)}${hit ? ` → ${subjectName(pack, hit)}` : ""}`);
+    parts.push(`**${pack.tables[o.table]?.title ?? o.table}** ${entryTextOf(pack, o)}${hit ? ` → ${subjectTitle(pack, hit)}` : ""}`);
   }
   // A unit closed and the next begun in one move is one bar, in the color of what begins.
   const mark = marks.length > 0 ? { text: marks.map((m) => m.text).join(" "), color: marks[marks.length - 1]!.color } : null;
