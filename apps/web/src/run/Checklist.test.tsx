@@ -54,18 +54,34 @@ describe("a confirmation beside the rules it repeats", () => {
     expect(screen.getByText(/Swap two slices/)).toBeTruthy();
   });
 
-  it("draws no point at all where every result it lists is already a rule", () => {
+  it("draws no point at all where every result it lists is one the game settles", () => {
+    const both = settling({ owing: () => true, hidden: () => true });
     const { container } = render(
-      <Checklist items={items} pack={pack} state={state} ticked={new Set()} onToggle={() => {}} settling={settling({ hidden: () => true })} />,
+      <Checklist items={items} pack={pack} state={state} ticked={new Set()} onToggle={() => {}} settling={both} />,
     );
     expect(container.querySelectorAll("li").length).toBe(0);
   });
 
   it("still waits for what it does not draw: the rule's move is what settles it", () => {
-    const owing = settling({ hidden: () => true });
+    const owing = settling({ owing: () => true, hidden: () => true });
     expect(checklistDone(items, pack, state, new Set(), owing)).toBe(false);
-    // Once the game has settled the owed one, and the other is the player's word.
-    const paid = settling({ owing: () => false, settled: (s) => s.entryId === "cull", hidden: () => true });
-    expect(checklistDone(items, pack, state, new Set(["0:o1"]), paid)).toBe(true);
+    const paid = settling({ owing: () => false, settled: () => true, hidden: () => true });
+    expect(checklistDone(items, pack, state, new Set(), paid)).toBe(true);
+  });
+
+  /*
+   * The bug this guard exists for. A rule the step is held to that the game
+   * settles nothing on is honoured by the player saying so, and the box is
+   * the only place they can say it. Hiding it because its words appear
+   * above left a step that could not be finished: nothing to tick, and a
+   * button waiting on a tick.
+   */
+  it("keeps the box for a rule the game settles nothing on, however it is shown elsewhere", () => {
+    const nothingOwed = { owing: () => false, settled: () => false, hidden: () => true };
+    render(<Checklist items={items} pack={pack} state={state} ticked={new Set()} onToggle={() => {}} settling={nothingOwed} />);
+    expect(screen.getByText(/Upon finalizing/)).toBeTruthy();
+    expect(screen.getByText(/Swap two slices/)).toBeTruthy();
+    expect(checklistDone(items, pack, state, new Set(), nothingOwed)).toBe(false);
+    expect(checklistDone(items, pack, state, new Set(["0:o0", "0:o1"]), nothingOwed)).toBe(true);
   });
 });
