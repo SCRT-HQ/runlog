@@ -1,0 +1,95 @@
+# StreamElements
+
+StreamElements draws its overlays in its own editor, and a **Custom widget** there can fetch the run's numbers straight from [the stream API](#guide/stream-tools), because that route answers any origin.
+
+## Adding the widget
+
+In the overlay editor, **Add widget** → **Static / Custom** → **Custom widget**, open the widget's **Settings** → **Open editor**, and paste the four tabs below. The run id and token go in the **Fields** tab, so they can be edited from the widget's sidebar rather than the code.
+
+**HTML**
+
+```html
+<div class="runlog">
+  <div class="where">…</div>
+  <div class="score">…</div>
+  <div class="clock"></div>
+  <div class="latest"></div>
+</div>
+```
+
+**CSS**
+
+```css
+.runlog { font-family: "IBM Plex Mono", ui-monospace, monospace; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); display: grid; gap: .3em; }
+.runlog .where { font-size: 1.1em; opacity: .85; }
+.runlog .score { font-size: 2em; font-weight: 600; }
+.runlog .clock { font-size: 3em; font-variant-numeric: tabular-nums; }
+.runlog .latest { font-family: Georgia, serif; font-size: 1em; max-width: 30ch; }
+```
+
+**JS**
+
+```js
+let url = null;
+let doc = null;
+
+window.addEventListener("onWidgetLoad", (obj) => {
+  const f = obj.detail.fieldData;
+  url = `https://runlog.scrthq.com/api/public/runs/${encodeURIComponent(f.runId)}/metrics?t=${encodeURIComponent(f.token)}`;
+  read();
+  setInterval(read, 5000);
+  setInterval(tick, 100);
+});
+
+async function read() {
+  if (!url) return;
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    const next = await res.json();
+    if (next.found === false) return;
+    doc = next;
+    draw();
+  } catch (e) {
+    /* offline for a moment: keep what we have */
+  }
+}
+
+function draw() {
+  if (!doc || !doc.ready) return;
+  const words = doc.words || { unit: "Unit" };
+  text(".where", doc.status === "ended" ? `Ended · ${doc.ending || ""}` : `${words.unit} ${doc.unit} · ${doc.where || ""}`);
+  text(".score", doc.score ? doc.score.text : "");
+  text(".latest", doc.latest ? doc.latest.text : "");
+}
+
+function tick() {
+  if (!doc || !doc.ready || !doc.clocks || !doc.clocks[0]) return text(".clock", "");
+  const c = doc.clocks[0];
+  const since = c.status === "running" ? Date.now() - Date.parse(doc.at) : 0;
+  const elapsed = c.elapsedMs + since;
+  const ms = c.seconds === null ? elapsed : Math.max(0, c.seconds * 1000 - elapsed);
+  const s = Math.floor(ms / 1000);
+  text(".clock", `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`);
+}
+
+function text(sel, value) {
+  document.querySelector(sel).textContent = value;
+}
+```
+
+**Fields**
+
+```json
+{
+  "runId": { "type": "text", "label": "Run id (from the live link)", "value": "" },
+  "token": { "type": "text", "label": "Live link token (the t= part)", "value": "" }
+}
+```
+
+## Politeness, and the token
+
+The widget polls every five seconds; do not go faster. The token sits in the widget's fields, which nobody but you sees, but the overlay is yours to export and share, so strip it before you do.
+
+## The chatbot
+
+StreamElements' chatbot can read the same document with `$(customapi https://runlog.scrthq.com/api/public/runs/<runId>/metrics?t=<token>)`, but it posts whatever the URL returns and cannot pick one field from a JSON document, so that would paste the whole thing into chat. For a `!score` command, use an automation tool that can read JSON: [Streamer.bot](#guide/streamer-bot).

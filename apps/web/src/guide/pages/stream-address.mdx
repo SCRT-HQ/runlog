@@ -1,0 +1,27 @@
+# The address that works on a stream
+
+A widget reads the run one of two ways, and a streaming app needs the second.
+
+- **From this device.** The plain address reads the run from this browser's own storage, the same log the app plays from. That is what **Open** gives you: a pop-out window on the machine you play on, which needs no account and works offline, and which you could window-capture.
+- **By live link.** With [a live link](#guide/live-link) shared, the address can carry the link's token, and the widget reads the run from the server instead. This is what a browser source needs. OBS and Streamlabs run a private browser of their own with nothing in its storage, so a plain address there shows "This run is not on this device," however many times you refresh it.
+
+## Copying the address
+
+Once, for each run you stream:
+
+<Steps>
+<li>In the run, under **People at the table**, choose **Share a live link** (part of Plus where plans are on).</li>
+<li>Open the run's **Settings**, then **Stream**.</li>
+<li>Set **Background** to *Clear* so your scene shows through, or *None* for the words and numbers alone, with no panel. Pin a **Theme** if the capture should not follow the streaming machine's own choice. Tick **For another machine** so the address carries the token.</li>
+<li>Pick a size (1.25× suits most captures), then **Copy address** on the widget you want.</li>
+</Steps>
+
+The address looks like this:
+
+```
+https://runlog.scrthq.com/play#widget/clock/01J…?bg=clear&scale=1.25&theme=ember&t=…
+```
+
+The `t=` part is the live link's token. Whoever has it can watch the run, so keep the address out of anything you publish. **Stop sharing** kills the token; share again and every copied address needs replacing.
+
+<Note>Everything in this part assumes the hosted copy at `runlog.scrthq.com`. A copy you run with your own hosting answers the same way at its own address; a static copy has no server, so only the pop-out window works there.</Note>

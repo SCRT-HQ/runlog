@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { guideComponents } from "./components.tsx";
-import { GUIDE_PAGES, GUIDE_PARTS, guidePage, type GuidePage } from "./pages.ts";
+import { GUIDE_PAGES, GUIDE_PARTS, guidePage, guideSectionFromHash, guideSlugFromHash, type GuidePage } from "./pages.ts";
 
 /**
  * The guide: how to use Runlog, in pages anyone can read without signing
@@ -38,10 +38,17 @@ export function GuideView({ slug, section, onNavigate, onBack }: { slug: string;
     e.preventDefault();
     onNavigate(to, at);
   };
-  // A heading's own anchor names only its section; pressed, it goes through the guide's address like the lists do.
+  // A heading's own anchor names only its section, and a page's links to
+  // other pages are written as `#guide/<slug>`; pressed, either goes
+  // through the guide's address like the lists do, whatever spelling this
+  // build keeps in the address bar.
   const onArticleClick = (e: React.MouseEvent) => {
-    const anchor = (e.target as HTMLElement).closest?.("a.anchor[data-section]");
-    if (anchor instanceof HTMLElement && anchor.dataset["section"]) go(e, page.slug, anchor.dataset["section"]);
+    const anchor = (e.target as HTMLElement).closest?.("a");
+    if (!(anchor instanceof HTMLAnchorElement)) return;
+    if (anchor.dataset["section"]) return go(e, page.slug, anchor.dataset["section"]);
+    const href = anchor.getAttribute("href") ?? "";
+    const to = guideSlugFromHash(href);
+    if (to) go(e, to, guideSectionFromHash(href) ?? undefined);
   };
   const sectionList = (className: string, label: string) =>
     sections.length > 0 && (
@@ -68,20 +75,46 @@ export function GuideView({ slug, section, onNavigate, onBack }: { slug: string;
         <nav className="guideToc" aria-label="Pages by part">
           {GUIDE_PARTS.map((part) => {
             const open = part === page.part;
+            // A part's runs: its groups, each a run of pages on one subject,
+            // and its pages that stand alone, in the order they come.
+            const runs: Array<{ group: string | null; pages: GuidePage[] }> = [];
+            for (const p of GUIDE_PAGES.filter((p) => p.part === part)) {
+              const last = runs[runs.length - 1];
+              if (last && last.group === (p.group ?? null) && last.group !== null) last.pages.push(p);
+              else runs.push({ group: p.group ?? null, pages: [p] });
+            }
             return (
               <section key={part} className={`guidePart${open ? " open" : ""}`}>
                 <h3>{part}</h3>
-                <ol>
-                  {GUIDE_PAGES.filter((p) => p.part === part).map((p) => (
-                    <li key={p.slug} className={p.slug === page.slug ? "on" : ""}>
-                      <a href={`#guide/${p.slug}`} aria-current={p.slug === page.slug ? "page" : undefined} onClick={(e) => go(e, p.slug)}>
-                        {p.title}
-                      </a>
-                      {open && <span className="muted small">{p.blurb}</span>}
-                      {p.slug === page.slug && sectionList("guideSections", "Sections of this page")}
-                    </li>
-                  ))}
-                </ol>
+                {runs.map((run, n) => {
+                  // In the open part, a group shows its pages when it holds the open page, and its name alone otherwise; a closed part shows names and lone titles only.
+                  const here = run.pages.some((p) => p.slug === page.slug);
+                  const shown = run.group === null || here;
+                  return (
+                    <div key={run.group ?? `lone-${n}`} className={`guideRun${run.group ? " grouped" : ""}${here ? " here" : ""}`}>
+                      {run.group && (
+                        <h4>
+                          <a href={`#guide/${run.pages[0]!.slug}`} onClick={(e) => go(e, run.pages[0]!.slug)}>
+                            {run.group}
+                          </a>
+                        </h4>
+                      )}
+                      {shown && (
+                        <ol>
+                          {run.pages.map((p) => (
+                            <li key={p.slug} className={p.slug === page.slug ? "on" : ""}>
+                              <a href={`#guide/${p.slug}`} aria-current={p.slug === page.slug ? "page" : undefined} onClick={(e) => go(e, p.slug)}>
+                                {p.title}
+                              </a>
+                              {open && here && <span className="muted small">{p.blurb}</span>}
+                              {p.slug === page.slug && sectionList("guideSections", "Sections of this page")}
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </div>
+                  );
+                })}
               </section>
             );
           })}

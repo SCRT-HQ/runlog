@@ -32,7 +32,7 @@ describe("the guide", () => {
   });
 
   it("names its plans where features are limited", () => {
-    const together = GUIDE_PAGES.find((p) => p.slug === "together")!;
+    const together = GUIDE_PAGES.find((p) => p.slug === "inviting")!;
     const html = renderToStaticMarkup(<together.Page components={guideComponents} />);
     expect(html).toContain('class="plan plan-plus"');
     const design = GUIDE_PAGES.find((p) => p.slug === "design")!;
@@ -62,9 +62,8 @@ describe("the guide", () => {
       for (const id of ids) expect(html, page.slug).toContain(`href="#${id}"`);
     }
     // A badge in the heading is not part of its words.
-    const Together = GUIDE_PAGES.find((p) => p.slug === "together")!.Page;
-    const together = renderToStaticMarkup(<Together components={guideComponents} />);
-    expect(together).toContain('<h2 id="inviting-someone">');
+    const Plans = GUIDE_PAGES.find((p) => p.slug === "plans")!.Page;
+    expect(renderToStaticMarkup(<Plans components={guideComponents} />)).toContain('<h2 id="plus">');
   });
 
   it("lays the contents out as chapters: the open one with its pages and their blurbs, the others by title alone", () => {
@@ -77,5 +76,28 @@ describe("the guide", () => {
     expect(html).not.toContain(start.blurb);
     expect(html).toContain(`>${start.title}<`);
     expect(html).toContain('aria-label="On this page"');
+    // A group shows its pages when it holds the open page; the part's other groups show their names alone.
+    expect(html).toContain('class="guideRun grouped here"');
+    expect(html).toContain(">Streaming<");
+    expect(html).toContain(">Playing together<");
+    const contents = html.slice(0, html.indexOf("</aside>"));
+    expect(contents).not.toContain("Races across devices");
+    expect(contents).toContain("StreamElements");
+  });
+
+  it("draws a table where a page has one", () => {
+    const Obs = GUIDE_PAGES.find((p) => p.slug === "obs")!.Page;
+    const html = renderToStaticMarkup(<Obs components={guideComponents} />);
+    expect(html).toContain("<table>");
+    expect(html).toContain("<td>480 × 200</td>");
+  });
+
+  it("keeps every slug unique, and every link between pages pointing at a page", () => {
+    const slugs = GUIDE_PAGES.map((p) => p.slug);
+    expect(new Set(slugs).size).toBe(slugs.length);
+    for (const page of GUIDE_PAGES) {
+      const html = renderToStaticMarkup(<page.Page components={guideComponents} />);
+      for (const m of html.matchAll(/href="#guide\/([a-z-]+)(?:\/[a-z0-9-]+)?"/g)) expect(slugs, `${page.slug} links to ${m[1]}`).toContain(m[1]);
+    }
   });
 });
