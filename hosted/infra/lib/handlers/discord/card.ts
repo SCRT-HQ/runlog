@@ -1,4 +1,4 @@
-import { actingSeats, challenges, clockOfUnit, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, unitClockFor, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import { actingSeats, challenges, clockOfUnit, hitsOn, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, unitClockFor, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import type { GuildRun } from "../guilds.js";
 import { REACTIONS } from "./reactions.js";
@@ -75,7 +75,7 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
   if (pending) {
     const r = pending.request;
     const what = r.kind === "roll" ? `Roll ${r.dice}${r.label ? ` for ${r.label}` : ""}` : r.kind === "ask" ? r.question : r.label;
-    fields.push({ name: "Waiting on", value: clip(what) });
+    fields.push({ name: "Waiting on", value: clip(`${what} — or Undo, to take the move back.`) });
   }
   const constraints = active ? constraintsFor(pack, state, constrainedByOf(active.step)) : [];
   if (constraints.length > 0) fields.push({ name: "The game has already had its say", value: clip(constraints.map((c) => `• ${c}`).join("\n")) });
@@ -87,13 +87,26 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
     const hit = o.targetSubject !== null && o.targetSubject !== undefined ? state.subjects.find((s) => s.id === o.targetSubject) : undefined;
     fields.push({ name: clip(pack.tables[o.table]?.title ?? o.table, 256), value: clip(`${entryTextOf(pack, o)}${hit ? ` → ${subjectName(pack, hit)}` : ""}`) });
   }
-  const trackers = [
-    // The name, and what it was declared to be where that is a different thing: "Track 7 · Rhodes".
-    ...state.subjects.filter((s) => s.unit === state.unit || !s.finalized).slice(-6).map((s) => `${subjectName(pack, s)}${s.type && s.type !== subjectName(pack, s) ? ` · ${s.type}` : ""}${s.states.length > 0 ? ` [${s.states.map((st) => pack.states?.[st]?.short ?? pack.states?.[st]?.label ?? st).join(" ")}]` : ""}`),
-    ...Object.entries(state.counters ?? {}).map(([cid, value]) => `${pack.counters?.[cid]?.label ?? cid}: ${value}`),
-    ...Object.entries(state.resources ?? {}).map(([rid, value]) => `${pack.resources?.[rid]?.label ?? rid}: ${value}${pack.resources?.[rid]?.max !== undefined ? ` / ${pack.resources[rid]!.max}` : ""}`),
+  // The board, as the nearest thing an embed has to a table: one small
+  // block per thing, its name in bold over what is known of it, laid three
+  // across. A subject: what it was declared to be, or that it has not been
+  // yet; what has hit it; its states. Then each counter and resource with
+  // its number.
+  const board: Array<{ name: string; value: string }> = [
+    ...state.subjects
+      .filter((s) => s.unit === state.unit || !s.finalized)
+      .slice(-6)
+      .map((s) => {
+        const name = subjectName(pack, s);
+        const hits = hitsOn(pack, state, s.id).map((h) => h.table);
+        const states = s.states.map((st) => pack.states?.[st]?.short ?? pack.states?.[st]?.label ?? st);
+        const about = [s.type && s.type !== name ? s.type : s.type ? null : "undeclared", hits.length > 0 ? `hit by ${hits.join(", ")}` : null, states.length > 0 ? `[${states.join(" ")}]` : null].filter((x): x is string => x !== null);
+        return { name, value: about.join(" · ") || "—" };
+      }),
+    ...Object.entries(state.counters ?? {}).map(([cid, value]) => ({ name: pack.counters?.[cid]?.label ?? cid, value: String(value) })),
+    ...Object.entries(state.resources ?? {}).map(([rid, value]) => ({ name: pack.resources?.[rid]?.label ?? rid, value: `${value}${pack.resources?.[rid]?.max !== undefined ? ` / ${pack.resources[rid]!.max}` : ""}` })),
   ];
-  if (trackers.length > 0) fields.push({ name: "On the table", value: clip(trackers.join("\n")), inline: true });
+  for (const b of board) fields.push({ name: clip(b.name, 256), value: clip(b.value), inline: true });
   const now = Date.now();
   const clocks = liveClocks(state).map((c) => `${c.label}: ${formatClock(c.seconds === null ? elapsedMs(c, now) : Math.max(0, c.seconds * 1000 - elapsedMs(c, now)))}${c.status === "paused" ? " (paused)" : ""}`);
   if (clocks.length > 0) fields.push({ name: "Clocks", value: clip(clocks.join("\n")), inline: true });
@@ -149,9 +162,12 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
       const pool = only ? state.subjects.filter((s) => only.includes(s.id)) : eligibleOnly ? eligibleTargets(pack, state) : state.subjects;
       return pool.map((s) => ({ label: subjectName(pack, s), value: String(s.id) }));
     };
+    let undoShown = false;
     const choose = (label: string, options: Array<{ label: string; value: string }>) => {
-      if (options.length === 0) rows.push(row(button(customId(id, "none"), `Nothing to choose for: ${label}`.slice(0, 80), ButtonStyle.Secondary, true), button(customId(id, "undo"), "Undo")));
-      else rows.push(select(customId(id, "target"), label, options));
+      if (options.length === 0) {
+        rows.push(row(button(customId(id, "none"), `Nothing to choose for: ${label}`.slice(0, 80), ButtonStyle.Secondary, true), button(customId(id, "undo"), "Undo")));
+        undoShown = true;
+      } else rows.push(select(customId(id, "target"), label, options));
     };
     if (r.kind === "roll") rows.push(row(button(customId(id, "roll"), `Roll ${r.dice}`, ButtonStyle.Primary), ...(seeded ? [] : [button(customId(id, "typeroll"), `Enter ${r.dice}…`)])));
     else if (r.kind === "ask" || (r.kind === "prompt" && r.promptKind === "confirm")) rows.push(row(button(customId(id, "yes"), "Yes", ButtonStyle.Success), button(customId(id, "no"), "No", ButtonStyle.Danger)));
@@ -160,6 +176,11 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
     else if (r.kind === "prompt" && r.promptKind === "text") rows.push(row(button(customId(id, "text"), "Answer…", ButtonStyle.Primary)));
     else if (r.kind === "prompt" && r.options && r.options.length > 0) rows.push(select(customId(id, "pick"), r.label, r.options.map((o, i) => ({ label: o, value: String(i) }))));
     else rows.push(row(button(customId(id, "text"), "Answer…", ButtonStyle.Primary)));
+    // A waiting card is still the table's card: the move that began the
+    // block can be taken back from it, and a watcher can still wave, so it
+    // never reads as the controls having gone.
+    if (!undoShown) rows.push(row(button(customId(id, "undo"), "Undo")));
+    if (rows.length < 5) rows.push(select(customId(id, "wave"), "Wave at the table…", REACTIONS.map((emoji) => ({ label: emoji, value: emoji }))));
     return rows;
   }
 
