@@ -2068,6 +2068,10 @@
                         ],
                         "description": "A point to tick off: plain text, or text with the table results it is about."
                       }
+                    },
+                    "closesUnit": {
+                      "description": "Finishing this step closes the unit as well: its checklist is the honor check, and its Done is the unit's close, with the choice of going on to the next unit or finishing the run. A flow with such a step needs no finalizeUnit step.",
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -2199,7 +2203,7 @@
                     "kind"
                   ],
                   "additionalProperties": false,
-                  "description": "Close the unit. Every flow needs one of these somewhere."
+                  "description": "Close the unit. Every flow needs one of these somewhere, or a manual step that closes the unit."
                 }
               ],
               "description": "One step within a phase."

@@ -483,12 +483,12 @@ export function lintPack(pack: Pack): Diagnostic[] {
       });
     });
   });
-  if (!pack.phases.some((p) => p.steps.some((s) => s.kind === "finalizeUnit"))) {
+  if (!pack.phases.some((p) => p.steps.some((s) => s.kind === "finalizeUnit" || (s.kind === "manual" && s.closesUnit === true)))) {
     d.push(
       err(
         "phase/no-finalize",
         "phases",
-        "no phase contains a finalizeUnit step, so a unit can never be completed",
+        "no phase contains a finalizeUnit step, or a manual step that closes the unit, so a unit can never be completed",
       ),
     );
   }

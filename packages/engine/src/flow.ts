@@ -88,6 +88,11 @@ export function itemOptional(item: ChecklistItem): boolean {
 }
 
 /** The checklist or confirm points that gate a step, for whichever kind carries them. */
+/** Whether finishing this step closes the unit: a finalizeUnit step, or a manual step that says it does. */
+export function closesUnit(step: Step): boolean {
+  return step.kind === "finalizeUnit" || (step.kind === "manual" && step.closesUnit === true);
+}
+
 export function checklistOf(step: Step): ChecklistItem[] {
   if (step.kind === "manual") return step.checklist ?? [];
   if (step.kind === "finalizeUnit") return step.confirm ?? [];
@@ -209,7 +214,8 @@ export function currentlyDue(pack: Pack, state: RunState): Obligation[] {
     p.steps.every((s, i) => s.kind !== "manual" || state.stepsDone.includes(`${p.id}#${i}`)),
   );
   if (manualDone) reached.push("afterWork");
-  if (nextStep(pack, state)?.step.kind === "finalizeUnit") reached.push("onFinalize");
+  const next = nextStep(pack, state);
+  if (next && closesUnit(next.step)) reached.push("onFinalize");
   // A clock that already expired this unit makes an onTimerExpired obligation
   // due immediately, even one queued afterward -- the bell already rang.
   if (state.clocks.some((c) => c.unit === state.unit && c.status === "done" && c.expired)) {

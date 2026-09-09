@@ -1,4 +1,4 @@
-import { actingSeats, challenges, clockOfUnit, hitsOn, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, unitClockFor, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import { actingSeats, canEndRun, challenges, clockOfUnit, closesUnit, hitsOn, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, unitClockFor, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import type { GuildRun } from "../guilds.js";
 import { REACTIONS } from "./reactions.js";
@@ -202,8 +202,16 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
       if (!seeded) main.push(button(customId(id, "byhand", at), "Roll it yourself"));
     }
     else if (step.kind === "declareSubject") main.push(button(customId(id, "declare", at), `Declare the ${v.subject.one.toLowerCase()}…`, ButtonStyle.Primary));
-    else if (step.kind === "finalizeUnit") main.push(button(customId(id, "finalize", at), `Close the ${v.unit.one.toLowerCase()}`, ButtonStyle.Primary, !ticked || !agenda.canFinalize));
-    else main.push(button(customId(id, "step", at), step.kind === "manual" ? "Done" : "Continue", ButtonStyle.Primary, !ticked));
+    else if (closesUnit(step)) {
+      // The step that closes the unit is the fork: on to the next unit in
+      // one press, or finish the run, which asks how it ends where the pack
+      // offers a choice. Neither until the honor check is ticked and
+      // nothing owed stands in the way; finishing, not while the dice have
+      // queued a unit that must still be played.
+      const may = ticked && agenda.canFinalize;
+      main.push(button(customId(id, "next", at), `Next ${v.unit.one.toLowerCase()}`, ButtonStyle.Primary, !may));
+      main.push(button(customId(id, "finish", at), "Finish", ButtonStyle.Secondary, !may || !canEndRun(state).ok));
+    } else main.push(button(customId(id, "step", at), step.kind === "manual" ? "Done" : "Continue", ButtonStyle.Primary, !ticked));
   }
   if (agenda.phase === "betweenUnits" || agenda.phase === "setup") {
     if (state.unit > 0) main.push(button(customId(id, "end"), `End the ${v.run.one.toLowerCase()}`, ButtonStyle.Secondary));

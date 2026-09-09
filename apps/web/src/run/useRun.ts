@@ -490,6 +490,35 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     [completeStep, state],
   );
 
+  /**
+   * The closing step's fork. Next closes the unit and enters the next in
+   * one press, the new unit's clock starting with it; Finish closes the
+   * unit and, where the pack offers one ending or none, ends the run with
+   * it, else leaves the endings to choose from between units.
+   */
+  const closeAndEnter = useCallback(
+    (phase: Phase, index: number) => {
+      if (!state) return;
+      const at = now();
+      const closing: RunEvent[] = [...stopClocksEvents(state, at), { t: "UnitFinalized", at }, ...stepCompletionEvents(phase, index, state, at)];
+      const after = reduce(pack, [...events, ...closing]);
+      const clock = unitClockStart(pack, after, nextUnit(after), at);
+      commit([...closing, { t: "UnitEntered", at }, ...(clock ? [clock] : [])]);
+    },
+    [commit, events, pack, state],
+  );
+  const finish = useCallback(
+    (phase: Phase, index: number) => {
+      if (!state) return;
+      const at = now();
+      const closing: RunEvent[] = [...stopClocksEvents(state, at), { t: "UnitFinalized", at }, ...stepCompletionEvents(phase, index, state, at)];
+      const endings = pack.endings ?? [];
+      const may = canEndRun(reduce(pack, [...events, ...closing]));
+      commit(endings.length <= 1 && may.ok ? [...closing, { t: "RunEnded", at, ending: endings[0]?.id ?? "ended" }] : closing);
+    },
+    [commit, events, pack, state],
+  );
+
   /* ---- clocks: start by hand, pause, resume, stop ---- */
 
   const startUnitClock = useCallback(() => {
@@ -970,6 +999,8 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     nudgeCounter,
     renameRun,
     finalizeUnit,
+    closeAndEnter,
+    finish,
     writeJournal,
     resolveObligation,
     takeMove,

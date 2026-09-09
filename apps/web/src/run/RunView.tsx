@@ -7,7 +7,7 @@ import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
 import { clockOfUnit, compareScores, formatClock, formatScore, liveClocks, nextUnit, scoreOf } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
-import { constraintsFor, describeSkip, describeSkipReason, phaseSkipped, subjectLabel, subjectName, type RunEvent, type RunState } from "@runlog/engine";
+import { closesUnit, constraintsFor, describeSkip, describeSkipReason, phaseSkipped, subjectLabel, subjectName, type RunEvent, type RunState } from "@runlog/engine";
 import { useRun, type ActiveStep } from "./useRun.ts";
 import type { RunStore } from "./store.ts";
 import type { StoredRun } from "../storage/db.ts";
@@ -989,6 +989,7 @@ function StepPanel({
     }
 
     case "manual": {
+      if (closesUnit(step)) return <ClosingStep key={key} pack={pack} run={run} state={state} active={active} ticked={ticked} tick={tick} />;
       const list = step.checklist ?? [];
       const allTicked = checklistDone(list, pack, state, ticked);
       const constraints = constraintsFor(pack, state, step.constrainedBy);
@@ -1038,38 +1039,8 @@ function StepPanel({
         </section>
       );
 
-    case "finalizeUnit": {
-      const blocked = run.blockingObligations;
-      const confirmations = step.confirm ?? [];
-      const allTicked = checklistDone(confirmations, pack, state, ticked);
-      return (
-        <section className="panel runStep finalize" key={key}>
-          <StepHead phase={phase} label={step.label ?? v.finalize} />
-          {blocked.length > 0 && (
-            <p className="notice">
-              {blocked.length} thing{blocked.length === 1 ? "" : "s"} still owed. Settle{" "}
-              {blocked.length === 1 ? "it" : "them"} before closing this{" "}
-              {v.unit.one.toLowerCase()}.
-            </p>
-          )}
-          {confirmations.length > 0 && (
-            <>
-              <p className="muted small">
-                The app cannot tell whether you honored these. It can only make you look.
-              </p>
-              <Checklist items={confirmations} pack={pack} state={state} ticked={ticked} onToggle={tick} />
-            </>
-          )}
-          <button
-            className="primary big"
-            disabled={blocked.length > 0}
-            onClick={(e) => (allTicked ? run.finalizeUnit(phase, index) : nudgeFirstUnticked(e.currentTarget))}
-          >
-            {blocked.length > 0 ? "Settle what is owed first" : allTicked ? v.finalize : "Tick what you honored"}
-          </button>
-        </section>
-      );
-    }
+    case "finalizeUnit":
+      return <ClosingStep key={key} pack={pack} run={run} state={state} active={active} ticked={ticked} tick={tick} />;
   }
 }
 
@@ -1091,6 +1062,69 @@ function StepHead({ phase, label }: { phase: { label: string }; label: string })
       <h3 className="sectionTitle">{phase.label}</h3>
       <h4 className="stepLabel">{label}</h4>
     </>
+  );
+}
+
+/**
+ * The step that closes the unit, and the fork at its end: on to the next
+ * unit in one press, or Finish, which ends the run outright where the pack
+ * has one ending, and otherwise closes the unit and leaves the endings to
+ * choose from. A manual step that closes the unit shows its work, its
+ * constraints and its checklist here; a finalize step its confirmations.
+ */
+function ClosingStep({
+  pack,
+  run,
+  state,
+  active,
+  ticked,
+  tick,
+}: {
+  pack: Pack;
+  run: ReturnType<typeof useRun>;
+  state: RunState;
+  active: ActiveStep;
+  ticked: Set<string>;
+  tick: (keys: string[], on: boolean, tally?: string) => void;
+}) {
+  const { phase, step, index } = active;
+  const v = pack.vocabulary;
+  const blocked = run.blockingObligations;
+  const points = step.kind === "manual" ? (step.checklist ?? []) : step.kind === "finalizeUnit" ? (step.confirm ?? []) : [];
+  const allTicked = checklistDone(points, pack, state, ticked);
+  const constraints = step.kind === "manual" ? constraintsFor(pack, state, step.constrainedBy) : [];
+  const unit = v.unit.one.toLowerCase();
+  const label = (step.kind === "manual" || step.kind === "finalizeUnit" ? step.label : undefined) ?? v.finalize;
+  return (
+    <section className="panel runStep finalize">
+      <StepHead phase={phase} label={label} />
+      {step.kind === "manual" && step.description && <p className="muted">{step.description}</p>}
+      {constraints.length > 0 && <Constraints lines={constraints} />}
+      {blocked.length > 0 && (
+        <p className="notice">
+          {blocked.length} thing{blocked.length === 1 ? "" : "s"} still owed. Settle {blocked.length === 1 ? "it" : "them"} before closing this {unit}.
+        </p>
+      )}
+      {points.length > 0 && (
+        <>
+          <p className="muted small">The app cannot tell whether you honored these. It can only make you look.</p>
+          <Checklist items={points} pack={pack} state={state} ticked={ticked} onToggle={tick} />
+        </>
+      )}
+      <div className="padRow">
+        <button className="primary big" disabled={blocked.length > 0} onClick={(e) => (allTicked ? run.closeAndEnter(phase, index) : nudgeFirstUnticked(e.currentTarget))}>
+          {blocked.length > 0 ? "Settle what is owed first" : allTicked ? `Next ${unit}` : "Tick what you honored"}
+        </button>
+        <button
+          className="ghost big"
+          disabled={blocked.length > 0 || !run.canEnd.ok}
+          title={!run.canEnd.ok ? `Cannot finish yet: ${run.canEnd.reason}` : (pack.endings?.length ?? 0) > 1 ? "Close this and choose how the run ends" : undefined}
+          onClick={(e) => (allTicked ? run.finish(phase, index) : nudgeFirstUnticked(e.currentTarget))}
+        >
+          Finish
+        </button>
+      </div>
+    </section>
   );
 }
 
