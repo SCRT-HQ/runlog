@@ -59,7 +59,10 @@ export function Checklist({
         // What is already in front of the player as a rule is not listed
         // again under a box; a point with nothing left to list has nothing
         // to ask, and the rule it stands for is doing the asking.
-        const listed = shown.filter((s) => !settling?.hidden?.(s));
+        // Never hidden unless something else can satisfy it: a row the
+        // player alone can make is a row that must stay on the screen,
+        // whatever else shows its words.
+        const listed = shown.filter((s) => !(settling?.hidden?.(s) && (settling.owing(s) || settling.settled(s))));
         if (point.shows && listed.length === 0) return null;
         // A row the game settles is not offered as a box to tick, and
         // ticking the point over it does not reach down to it.

@@ -1242,13 +1242,24 @@ function ClosingStep({
   // The confirmation shows it, and does not ask for a promise about it.
   const owed = owedOn(state);
   const constraints = step.kind === "manual" ? constraintLines(pack, state, step.constrainedBy) : [];
-  // A result this step is already held to is shown as a rule, with the move
-  // on it; the confirmation neither lists it again nor asks about it.
+  /*
+   * A result the step is held to is shown as a rule above. Where the game
+   * settles it, the rule carries the move and the confirmation neither
+   * lists it again nor asks about it.
+   *
+   * Where the game settles nothing, the box is the only way the player has
+   * of saying they honoured it, so it stays. Hiding those was a rule that
+   * could not be honoured at all: the row went, nothing could tick it, and
+   * the button waited on a box that was no longer on the screen.
+   */
   const asRules = new Set(constraints.map((line) => `${line.table}/${line.entryId}`));
+  const owing = (row: { table: string; entryId: string }) => stillOwed(owed, row);
+  const settled = (row: { table: string; entryId: string }) => settledOn(owed, row);
   const settling = {
-    owing: (row: { table: string; entryId: string }) => stillOwed(owed, row),
-    settled: (row: { table: string; entryId: string }) => settledOn(owed, row),
-    hidden: (row: { table: string; entryId: string }) => asRules.has(`${row.table}/${row.entryId}`),
+    owing,
+    settled,
+    hidden: (row: { table: string; entryId: string }) =>
+      asRules.has(`${row.table}/${row.entryId}`) && (owing(row) || settled(row)),
   };
   const allTicked = checklistDone(points, pack, state, ticked, settling);
   const unit = v.unit.one.toLowerCase();
