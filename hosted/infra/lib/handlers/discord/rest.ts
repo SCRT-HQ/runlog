@@ -28,6 +28,8 @@ export interface DiscordRest {
   /** Post into a channel or thread; the message id, or null. */
   postMessage(channelId: string, message: DiscordMessage): Promise<string | null>;
   editMessage(channelId: string, messageId: string, message: DiscordMessage): Promise<boolean>;
+  /** Take a message of the bot's own down: a retired card that carried nothing else. */
+  deleteMessage(channelId: string, messageId: string): Promise<boolean>;
   pinMessage(channelId: string, messageId: string): Promise<boolean>;
   /** Close a thread once its run has ended; it stays readable. */
   archiveThread(threadId: string): Promise<boolean>;
@@ -79,6 +81,9 @@ export function discordRest(token: string, fetchImpl: typeof fetch = fetch, rope
     },
     async editMessage(channelId, messageId, message) {
       return (await call(token, "PATCH", `/channels/${channelId}/messages/${messageId}`, message, fetchImpl, ropeMs)) !== null;
+    },
+    async deleteMessage(channelId, messageId) {
+      return (await call(token, "DELETE", `/channels/${channelId}/messages/${messageId}`, undefined, fetchImpl, ropeMs)) !== null;
     },
     async pinMessage(channelId, messageId) {
       return (await call(token, "PUT", `/channels/${channelId}/pins/${messageId}`, undefined, fetchImpl, ropeMs)) !== null;

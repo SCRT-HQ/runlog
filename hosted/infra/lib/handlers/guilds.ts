@@ -68,7 +68,11 @@ export interface Guild {
   hostRoleId?: string;
   /** Where runs open by default; absent, wherever the command was used. */
   channelId?: string;
+  /** Where a run's card lives: following the thread as its last message (the default), or pinned at the top and edited in place. Copied onto each run as it starts. */
+  cardMode?: CardMode;
 }
+
+export type CardMode = "follow" | "pinned";
 
 /** A pack in a server's vault, as the profile lists it: never its text. */
 export interface GuildPackMeta {
@@ -100,8 +104,12 @@ export interface GuildRun {
   packId: string;
   channelId: string;
   threadId: string;
-  /** The message the buttons are on; replaced when the card is posted again. */
+  /** The message the buttons are on: the thread's last message, as a rule, since a move posts a fresh card at the bottom. */
   cardMessageId?: string;
+  /** Whether that message carries nothing but the card, so retiring it means taking it down rather than stripping it. The opening message carries the live link too. */
+  cardBare?: boolean;
+  /** The server's choice when the run started: the card follows the thread, or stays pinned and is edited in place. Absent means follow. */
+  cardMode?: CardMode;
   /** A block that began and is waiting on an answer: the engine's `Pending`, as plain data. */
   pending?: Record<string, unknown>;
   /** Discord user id → contestant id, for a moderated run's roster. */
@@ -140,7 +148,7 @@ export interface GuildStore {
   claimGuild(guild: Omit<Guild, "updatedAt">): Promise<Guild>;
   guild(guildId: string): Promise<Guild | null>;
   guildsOf(sub: string): Promise<Guild[]>;
-  updateGuild(guildId: string, at: string, patch: { name?: string; hostRoleId?: string | null; channelId?: string | null }): Promise<Guild | null>;
+  updateGuild(guildId: string, at: string, patch: { name?: string; hostRoleId?: string | null; channelId?: string | null; cardMode?: CardMode | null }): Promise<Guild | null>;
   /** The server's row, its pointer, and every pack in its vault; how many rows went. */
   releaseGuild(guildId: string): Promise<number>;
 
@@ -383,7 +391,7 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
         sets.push("#name = :name");
         values[":name"] = patch.name;
       }
-      for (const field of ["hostRoleId", "channelId"] as const) {
+      for (const field of ["hostRoleId", "channelId", "cardMode"] as const) {
         const v = patch[field];
         if (v === undefined) continue;
         if (v === null) removes.push(field);
