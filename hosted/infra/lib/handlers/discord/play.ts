@@ -4,7 +4,7 @@ import { SeqConflict, type Store } from "../store.js";
 import type { GuildRun, GuildStore } from "../guilds.js";
 import type { Notify } from "../live.js";
 import { hashToken } from "../auth.js";
-import { cardFor, lineFor, type Card } from "./card.js";
+import { cardFor, COLORS, lineFor, type Card, type Mark } from "./card.js";
 import { REACTIONS } from "./reactions.js";
 import type { DiscordRest } from "./rest.js";
 
@@ -222,6 +222,8 @@ export interface Played {
   card: Card;
   /** What to say in the thread about the move, if anything. */
   line: string | null;
+  /** The moment in it worth a colored bar, if any. */
+  mark?: Mark | null;
   run: GuildRun;
   ended: boolean;
 }
@@ -261,6 +263,7 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
   // an answer to it, an undo, or a step that supersedes it.
   let pending: Pending | undefined = run.pending as unknown as Pending | undefined;
   let line: string | null = null;
+  let mark: Mark | null = null;
   let ended = false;
   // Which deadlines somebody has been asked to come back for already.
   const asked = new Map(liveClocks(state).map((c) => [c.id, deadlineOf(c, Date.parse(at))]));
@@ -320,7 +323,8 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         if (!may.ok) return { error: may.reason ?? "The run cannot end here." };
         produced = [{ t: "RunEnded", at, ending: action.ending } as RunEvent];
         ended = true;
-        line = `The ${pack.vocabulary.run.one.toLowerCase()} is over: ${pack.endings?.find((e) => e.id === action.ending)?.label ?? action.ending}.`;
+        mark = { text: `The **${pack.vocabulary.run.one.toLowerCase()}** is over: ${pack.endings?.find((e) => e.id === action.ending)?.label ?? action.ending}.`, color: COLORS.over };
+        line = mark.text;
         break;
       }
       case "undo": {
@@ -329,7 +333,8 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         produced = [{ t: "Undone", at, ids } as RunEvent];
         // A block waiting on an answer belongs to the move being unmade.
         pending = undefined;
-        line = "Took the last move back.";
+        mark = { text: "Took the last move back.", color: COLORS.closed };
+        line = mark.text;
         break;
       }
       case "journal": {
@@ -345,6 +350,7 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
           const ran = ranOutEvents(state, Date.parse(at)).find((e) => e.t === "ClockStopped" && e.clock === clock.id);
           if (!ran) return { error: `${clock.label} has not run out yet.` };
           produced = [ran];
+          mark = { text: `⏰ **${clock.label}** ran out.`, color: COLORS.over };
           line = `⏰ ${clock.label} ran out.`;
           break;
         }
@@ -434,7 +440,11 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
     if (ended) await deps.store.updateSession(run.sessionId, at, { endedAt: at });
     run.seenSeq = seq;
     await writeSnapshot(deps, run.sessionId, pack, after, next, seq);
-    if (!line) line = lineFor(pack, state, after, stamped);
+    if (!line) {
+      const said = lineFor(pack, state, after, stamped);
+      line = said.text;
+      mark = said.mark;
+    }
     // A timer that started or resumed has a new deadline; somebody is
     // asked to come back for it. One asked for already is left alone.
     if (deps.schedule && !ended) {
@@ -450,7 +460,7 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
   if (ended) run.endedAt = at;
   await deps.guilds.putGuildRun(run);
   const card = cardFor({ pack, state: after, events: next, agenda: agenda(pack, after, next), run, ...(pending ? { pending } : {}) });
-  return { card, line, run, ended };
+  return { card, line, mark, run, ended };
 }
 
 /**
@@ -520,8 +530,9 @@ export async function catchUp(deps: TableDeps, sessionId: string): Promise<{ out
       }
       if (e.t === "Undone") lines.push("Took a move back.");
     }
-    const line = lineFor(pack, before, after, move);
-    if (line) lines.push(line);
+    const said = lineFor(pack, before, after, move);
+    if (said.mark) lines.push(said.mark.text);
+    if (said.text) lines.push(said.text);
   }
   const at = deps.now();
   const state = reduce(pack, events);

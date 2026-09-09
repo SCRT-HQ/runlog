@@ -33,6 +33,19 @@ export function parseCustomId(raw: string): { runId: string; verb: string; arg?:
 const MAX_FIELD = 1024;
 const clip = (s: string, n = MAX_FIELD) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
+/**
+ * The colors a thread reads at a glance, from the app's own palette: the
+ * celadon accent for something beginning, the kiln accent for something
+ * over or run out, the muted ink for something closed or taken back.
+ */
+export const COLORS = { begins: 0x4f8a78, over: 0xb8742a, closed: 0x6b7370 } as const;
+
+/** A moment worth a colored bar in the thread rather than a line: a unit begun or closed, the run over, a timer run out. */
+export interface Mark {
+  text: string;
+  color: number;
+}
+
 export function cardFor(input: { pack: Pack; state: RunState; events: readonly RunEvent[]; agenda: Agenda; run: Pick<GuildRun, "sessionId" | "hostName" | "seats">; pending?: Pending }): Card {
   const { pack, state, agenda, run, pending } = input;
   const v = pack.vocabulary;
@@ -53,6 +66,7 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
           : `${v.unit.one} ${state.unit}${active ? ` · ${active.phase.label} · ${stepLabel}` : ` · between ${v.unit.many.toLowerCase()}`}`,
     fields: [],
     footer: { text: `Hosted by ${run.hostName} · Runlog` },
+    color: state.status === "ended" ? COLORS.closed : COLORS.begins,
   };
   const fields = embed.fields!;
 
@@ -63,10 +77,11 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
   }
   const constraints = active ? constraintsFor(pack, state, constrainedByOf(active.step)) : [];
   if (constraints.length > 0) fields.push({ name: "The game has already had its say", value: clip(constraints.map((c) => `• ${c}`).join("\n")) });
+  // The latest result, under the name of the table it came from ("Twist", "Weather"), not a word of ours.
   const latest = state.outcomes[state.outcomes.length - 1];
   if (latest) {
     const hit = latest.targetSubject !== null && latest.targetSubject !== undefined ? state.subjects.find((s) => s.id === latest.targetSubject) : undefined;
-    fields.push({ name: "Latest", value: clip(`${entryTextOf(pack, latest)}${hit ? ` → ${subjectName(pack, hit)}` : ""}`) });
+    fields.push({ name: clip(pack.tables[latest.table]?.title ?? latest.table, 256), value: clip(`${entryTextOf(pack, latest)}${hit ? ` → ${subjectName(pack, hit)}` : ""}`) });
   }
   const trackers = [
     ...state.subjects.filter((s) => s.unit === state.unit || !s.finalized).slice(-6).map((s) => `${subjectName(pack, s)}${s.states.length > 0 ? ` [${s.states.map((st) => pack.states?.[st]?.short ?? pack.states?.[st]?.label ?? st).join(" ")}]` : ""}`),
@@ -187,18 +202,34 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
 }
 
 /** What just happened, for the line under the card: results in the pack's words, the dice as thrown. */
-export function lineFor(pack: Pack, before: RunState, after: RunState, produced: readonly RunEvent[]): string | null {
+/**
+ * What to say in the thread about a move: the lines, with what kind of
+ * thing each is in bold ("**Twist** No music…", "**Declared** caffeine"),
+ * and, apart from them, the moment that deserves a colored bar — a unit
+ * begun or closed — as a mark. The rolls keep their dice.
+ */
+export function lineFor(pack: Pack, before: RunState, after: RunState, produced: readonly RunEvent[]): { text: string | null; mark: Mark | null } {
   const parts: string[] = [];
+  const marks: Mark[] = [];
+  const unit = pack.vocabulary.unit.one;
   for (const e of produced) {
-    if (e.t === "Rolled") parts.push(`🎲 ${e.dice}: **${e.total}**`);
-    if (e.t === "UnitEntered") parts.push(`${pack.vocabulary.unit.one} ${after.unit} begins.`);
-    if (e.t === "SubjectDeclared") parts.push(`Declared: ${e.subjectType}.`);
-    if (e.t === "UnitFinalized") parts.push(`${pack.vocabulary.unit.one} ${before.unit} closed.`);
+    if (e.t === "Rolled") parts.push(`🎲 ${e.dice} → **${e.total}**`);
+    if (e.t === "UnitEntered") marks.push({ text: `**${unit} ${after.unit}** begins.`, color: COLORS.begins });
+    if (e.t === "SubjectDeclared") parts.push(`**Declared** ${e.subjectType}`);
+    if (e.t === "UnitFinalized") marks.push({ text: `**${unit} ${before.unit}** closed.`, color: COLORS.closed });
   }
   const fresh = after.outcomes.slice(before.outcomes.length);
   for (const o of fresh) {
     const hit = o.targetSubject !== null && o.targetSubject !== undefined ? after.subjects.find((s) => s.id === o.targetSubject) : undefined;
-    parts.push(`${pack.tables[o.table]?.title ?? o.table}: ${entryTextOf(pack, o)}${hit ? ` → ${subjectName(pack, hit)}` : ""}`);
+    parts.push(`**${pack.tables[o.table]?.title ?? o.table}** ${entryTextOf(pack, o)}${hit ? ` → ${subjectName(pack, hit)}` : ""}`);
   }
-  return parts.length > 0 ? parts.join("\n").slice(0, 1900) : null;
+  // A unit closed and the next begun in one move is one bar, in the color of what begins.
+  const mark = marks.length > 0 ? { text: marks.map((m) => m.text).join(" "), color: marks[marks.length - 1]!.color } : null;
+  return { text: parts.length > 0 ? parts.join("\n").slice(0, 1900) : null, mark };
+}
+
+/** The message a move posts in the thread: its lines as content, its mark as a colored bar under them. */
+export function messageFor(line: string | null, mark: Mark | null): { content?: string; embeds?: unknown[] } | null {
+  if (!line && !mark) return null;
+  return { ...(line ? { content: line } : {}), ...(mark ? { embeds: [{ description: mark.text, color: mark.color }] } : {}) };
 }

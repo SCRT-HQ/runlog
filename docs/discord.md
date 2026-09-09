@@ -95,7 +95,10 @@ page. `/journal` writes a line in the run's journal for the unit, by the
 host.
 When the pack asks a question mid-step (a yes or no, a choice, a
 target), the card shows it and waits for the host. Every move is a line
-under the card, in the pack's words.
+under the card, in the pack's words, with what kind of thing it is in
+bold ("**Twist** No music, no phone…"); a unit beginning or closing, the
+run ending, a timer running out, show as a colored bar instead. The
+card's latest result sits under the name of the table it came from.
 
 In a **moderated** mode, anyone in the server presses **Join the
 roster** and is a contestant by their Discord name; each result with
