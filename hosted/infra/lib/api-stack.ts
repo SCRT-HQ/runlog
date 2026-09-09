@@ -1,4 +1,4 @@
-import { CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
+import { ArnFormat, CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
 import * as apigwv2 from "aws-cdk-lib/aws-apigatewayv2";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as cloudwatchActions from "aws-cdk-lib/aws-cloudwatch-actions";
@@ -10,6 +10,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as lambdaNodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as scheduler from "aws-cdk-lib/aws-scheduler";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as ssm from "aws-cdk-lib/aws-ssm";
 import { NagSuppressions } from "cdk-nag";
@@ -162,8 +163,25 @@ export class ApiStack extends Stack {
     const discordBotToken = secret("DiscordBotToken", "discord/bot-token", "The Runlog Discord application's bot token, for posting into servers that installed it");
 
     /** What both the API handler and the bot's job function are told; the two run the same code. */
+    /**
+     * A timer at a Discord table is kept by EventBridge Scheduler: the
+     * handler makes a one-shot schedule for its deadline, in this group,
+     * that invokes the job function under this role. The job's name is
+     * fixed so its ARN is known to both functions before either exists.
+     */
+    const timers = new scheduler.ScheduleGroup(this, "Timers", { scheduleGroupName: `runlog-${config.name}-timers`, removalPolicy: RemovalPolicy.DESTROY });
+    const timerRole = new iam.Role(this, "TimerRole", {
+      assumedBy: new iam.ServicePrincipal("scheduler.amazonaws.com"),
+      description: "Lets a timer's schedule invoke the bot's job function when the timer runs out.",
+    });
+    const jobName = `runlog-${config.name}-discord-job`;
+    const jobArn = this.formatArn({ service: "lambda", resource: "function", resourceName: jobName, arnFormat: ArnFormat.COLON_RESOURCE_NAME });
+
     const handlerEnvironment: Record<string, string> = {
       TABLE_NAME: this.table.tableName,
+      TIMER_SCHEDULE_GROUP: timers.scheduleGroupName,
+      TIMER_ROLE_ARN: timerRole.roleArn,
+      DISCORD_JOB_ARN: jobArn,
       BUCKET_NAME: this.bucket.bucketName,
       RUNLOG_ENV: config.name,
       WORKOS_CLIENT_ID: config.workosClientId,
@@ -230,6 +248,7 @@ export class ApiStack extends Stack {
      * Every press that is one read and one write stays on the handler.
      */
     const job = new lambdaNodejs.NodejsFunction(this, "DiscordJob", {
+      functionName: jobName,
       entry: path.join(__dirname, "handlers", "api.ts"),
       handler: "job",
       runtime: lambda.Runtime.NODEJS_24_X,
@@ -256,6 +275,13 @@ export class ApiStack extends Stack {
     // must not be run again with the same press and make a second of each.
     job.configureAsyncInvoke({ retryAttempts: 0 });
     job.grantInvoke(handler);
+    // A timer's schedule invokes the job; both functions make schedules
+    // (the job again, when a pause moved a deadline) and hand the role over.
+    job.grantInvoke(timerRole);
+    timers.grantWriteSchedules(handler);
+    timers.grantWriteSchedules(job);
+    timerRole.grantPassRole(handler.grantPrincipal);
+    timerRole.grantPassRole(job.grantPrincipal);
     handler.addEnvironment("DISCORD_JOB_FUNCTION", job.functionName);
     this.table.grantReadWriteData(handler);
     this.bucket.grantReadWrite(handler);
@@ -540,12 +566,25 @@ export class ApiStack extends Stack {
               { regex: "/^Resource::arn:(aws|<AWS::Partition>):execute-api:[^:]+:[^:]+:<WebSocketApi[A-Za-z0-9]+>/ws/\\*/@connections/\\*$/g" },
               // grantInvoke names the function and its versions, which is how CDK spells "this function".
               { regex: "/^Resource::<DiscordJob[A-Za-z0-9]+\\.Arn>:\\*$/g" },
+              // A timer's schedule is made at runtime, named for its run and deadline; the grant names the group.
+              { regex: "/^Resource::arn:(aws|<AWS::Partition>):scheduler:[^:]+:[^:]+:schedule/runlog-[a-z]+-timers/\\*$/g" },
             ],
           },
         ],
         true,
       );
     }
+    NagSuppressions.addResourceSuppressions(
+      timerRole,
+      [
+        {
+          id: "AwsSolutions-IAM5",
+          reason: "grantInvoke names the job function and its versions, which is how CDK spells \"this function\"; the role may invoke nothing else.",
+          appliesTo: [{ regex: "/^Resource::<DiscordJob[A-Za-z0-9]+\\.Arn>:\\*$/g" }],
+        },
+      ],
+      true,
+    );
     NagSuppressions.addResourceSuppressions(this.bucket, [
       {
         id: "AwsSolutions-S1",
