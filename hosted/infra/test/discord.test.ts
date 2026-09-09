@@ -26,6 +26,22 @@ function discordKeys() {
   return { publicHex, signed };
 }
 
+
+describe("the command list", () => {
+  it("keeps every description within Discord's hundred characters, since registration refuses a longer one", () => {
+    const seen: string[] = [];
+    const walk = (node: unknown, path: string) => {
+      if (Array.isArray(node)) return node.forEach((n, i) => walk(n, `${path}[${i}]`));
+      if (typeof node !== "object" || node === null) return;
+      const rec = node as Record<string, unknown>;
+      if (typeof rec["description"] === "string" && rec["description"].length > 100) seen.push(`${path}: ${rec["description"].length}`);
+      for (const [k, v] of Object.entries(rec)) walk(v, `${path}.${k}`);
+    };
+    walk(COMMANDS, "commands");
+    expect(seen).toEqual([]);
+  });
+});
+
 describe("a Discord signature", () => {
   const keys = discordKeys();
   const body = JSON.stringify({ type: 1 });

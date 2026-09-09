@@ -80,7 +80,7 @@ export const COMMANDS = [
           { type: STRING, name: "mode", description: "Which of its modes", required: true, autocomplete: true },
           { type: STRING, name: "name", description: "What to call the run", required: false, max_length: 80 },
           { type: INTEGER, name: "players", description: "How many seats, in a mode played by several; the mode's fewest if left out", required: false, min_value: 1, max_value: 12 },
-          { type: BOOLEAN, name: "private", description: "Open the run in a private thread: only you, and whoever you add, can see it. The server's default if left out", required: false },
+          { type: BOOLEAN, name: "private", description: "A private thread: only you and whoever you add can see it. Left out, the server's default applies", required: false },
         ],
       },
       { type: SUB_COMMAND, name: "status", description: "Post the table card again, in this run's thread" },
