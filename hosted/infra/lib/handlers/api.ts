@@ -8,7 +8,7 @@ import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, ty
 import { dynamoBilling, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
 import { dynamoGuilds, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
-import { handleInteraction, type InteractionDeps } from "./discord/interactions.js";
+import { handleInteraction, kindOf, type InteractionDeps } from "./discord/interactions.js";
 import { discordRest, guildNameFrom, PATIENT_ROPE_MS, ROPE_MS, type DiscordRest } from "./discord/rest.js";
 import { ulid } from "./ids.js";
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
@@ -149,6 +149,18 @@ export interface View {
   country: string;
 }
 
+/**
+ * One Discord interaction, timed: what it was (see `kindOf`), how long the
+ * handler took to answer it, and whether it did. The answer's clock starts
+ * after the signature check and stops at the response; a cold start is
+ * not in it, which is why the dashboard shows the two side by side.
+ */
+export interface Measured {
+  kind: string;
+  ms: number;
+  ok: boolean;
+}
+
 /** The screens the beacon may name: families, never an id. Mirrors apps/web/src/hosted/beacon.ts. */
 const SCREENS = ["welcome", "library", "play", "rules", "catalog", "guide", "design", "profile", "live", "widget"] as const;
 
@@ -156,6 +168,8 @@ export interface Deps {
   store: Store;
   /** Where a counted view goes: a metric in production, a list in a test. Absent, nothing is counted. */
   count?: (view: View) => void;
+  /** Where a timed Discord interaction goes: a metric in production, a list in a test. Absent, nothing is measured. */
+  measure?: (sample: Measured) => void;
   races: RaceStore;
   billing: BillingStore;
   publishers: PublisherStore;
@@ -305,13 +319,21 @@ export async function finishDeferred(interaction: Interaction, deps: Deps): Prom
   const now = deps.now ?? (() => new Date().toISOString());
   // With time to spare, the calls to Discord get a longer rope than the route allows.
   const { defer: _defer, ...without } = await interactionDepsFor(deps, now, true);
-  const answer = await handleInteraction(interaction, without);
-  const message = answer.data ?? { content: "Done." };
-  const filled = await without.rest?.editOriginal(deps.discord.applicationId, interaction.token, {
-    ...(message.content ? { content: message.content } : {}),
-    ...(message.embeds ? { embeds: message.embeds } : {}),
-    ...(message.components ? { components: message.components } : {}),
-  });
+  const started = Date.now();
+  const kind = `job:${kindOf(interaction)}`;
+  let filled = false;
+  try {
+    const answer = await handleInteraction(interaction, without);
+    const message = answer.data ?? { content: "Done." };
+    filled =
+      (await without.rest?.editOriginal(deps.discord.applicationId, interaction.token, {
+        ...(message.content ? { content: message.content } : {}),
+        ...(message.embeds ? { embeds: message.embeds } : {}),
+        ...(message.components ? { components: message.components } : {}),
+      })) ?? false;
+  } finally {
+    deps.measure?.({ kind, ms: Date.now() - started, ok: filled });
+  }
   // The work is done and written; only the reply is missing. Said loudly,
   // since the person in Discord sees a reply that never came.
   if (!filled) console.error(`job: the reply to interaction ${interaction.id} could not be filled in`);
@@ -418,7 +440,15 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       return json(400, { error: "not an interaction" });
     }
     if (!isInteraction(interaction)) return json(400, { error: "not an interaction" });
-    return json(200, await handleInteraction(interaction, await interactionDepsFor(deps, now)));
+    const started = Date.now();
+    try {
+      const answer = await handleInteraction(interaction, await interactionDepsFor(deps, now));
+      deps.measure?.({ kind: kindOf(interaction), ms: Date.now() - started, ok: true });
+      return json(200, answer);
+    } catch (error) {
+      deps.measure?.({ kind: kindOf(interaction), ms: Date.now() - started, ok: false });
+      throw error;
+    }
   }
 
   // Stripe calling back. No bearer: the signature over the raw body is
@@ -1962,6 +1992,33 @@ function depsFromEnv(): Deps {
             country: view.country,
             version: view.version,
             views: 1,
+          }),
+        ),
+      // An interaction becomes two metrics the same way: how many, by kind,
+      // and how long the answer took, under the same Runlog namespace,
+      // with a rollup by stage alone so an alarm can watch the failures.
+      measure: (sample) =>
+        console.log(
+          JSON.stringify({
+            _aws: {
+              Timestamp: Date.now(),
+              CloudWatchMetrics: [
+                {
+                  Namespace: "Runlog",
+                  Dimensions: [["env", "kind"], ["env"]],
+                  Metrics: [
+                    { Name: "interactions", Unit: "Count" },
+                    { Name: "answerMs", Unit: "Milliseconds" },
+                    { Name: "failures", Unit: "Count" },
+                  ],
+                },
+              ],
+            },
+            env: process.env["RUNLOG_ENV"] ?? "",
+            kind: sample.kind,
+            interactions: 1,
+            answerMs: sample.ms,
+            failures: sample.ok ? 0 : 1,
           }),
         ),
       ...(cliClientId ? { cliClientId } : {}),
