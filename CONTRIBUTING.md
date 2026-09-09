@@ -142,9 +142,12 @@ add it to the `needs` of `Checks` and the ruleset follows.
 
 ## Releases
 
-Every merge to main deploys to dev and is tagged and released from there;
-production deploys from the release. The version is the tag, and nothing in
-the repository carries it.
+Every merge to main deploys to dev on its own. The tag and the release
+wait for a reviewer from the Core team (the `release` environment), and
+production and the npm package deploy from the release. Merges that land
+while a release waits fold into the next one: approving the newest releases
+everything merged so far. The version is the tag, and nothing in the
+repository carries it.
 
 A pull request's title becomes the title of its squash commit on main, and
 that title is written in [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
