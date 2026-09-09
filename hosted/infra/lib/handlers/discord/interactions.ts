@@ -6,7 +6,7 @@ import type { GuildRun, GuildStore } from "../guilds.js";
 import type { Store } from "../store.js";
 import type { Notify } from "../live.js";
 import { isCommandName } from "./commands.js";
-import { customId, parseCustomId, cardFor, type Card } from "./card.js";
+import { customId, parseCustomId, cardFor, messageFor, type Card } from "./card.js";
 import { agendaFor, catchUp, eventsOf, expireTimer, mayPress, openRun, packFor, play, whosePress, type Seat, type TableAction, type TableDeps, type TimerJob } from "./play.js";
 import type { DiscordRest } from "./rest.js";
 import { EPHEMERAL, InteractionType, ResponseType, modal, nameOf, userOf, select, type CommandOption, type Interaction, type InteractionResponse } from "./types.js";
@@ -370,9 +370,12 @@ async function seatOf(deps: InteractionDeps, who: NonNullable<ReturnType<typeof 
  * thread is not closed at the end: a reply into a closed thread reopens
  * it, and Discord closes an idle one by itself.
  */
-async function afterPlay(table: TableDeps, played: { line: string | null; run: GuildRun; ended: boolean; card: Card }, opts: { editCard: boolean; postLine: boolean }): Promise<void> {
+async function afterPlay(table: TableDeps, played: { line: string | null; mark?: import("./card.js").Mark | null; run: GuildRun; ended: boolean; card: Card }, opts: { editCard: boolean; postLine: boolean }): Promise<void> {
   if (!table.rest) return;
-  if (opts.postLine && played.line) await table.rest.postMessage(played.run.threadId, { content: played.line });
+  // A mark is the same words as the line where the line is only the mark; the bar says it once.
+  const plain = (s: string) => s.replace(/\*\*/g, "");
+  const said = messageFor(played.mark && played.line && plain(played.line) === plain(played.mark.text) ? null : played.line, played.mark ?? null);
+  if (opts.postLine && said) await table.rest.postMessage(played.run.threadId, said);
   if (opts.editCard && played.run.cardMessageId) await table.rest.editMessage(played.run.threadId, played.run.cardMessageId, played.card);
 }
 
