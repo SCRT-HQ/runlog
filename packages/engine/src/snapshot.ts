@@ -30,6 +30,20 @@ import type { RunState } from "./types.ts";
  * the owner's browser would, from the same event log, with no DOM in
  * reach anywhere in the call.
  */
+/**
+ * One thing a phase produced: the text, and, where it came from a table
+ * the phase set off rather than one its own step rolls, which table and
+ * which piece it hit, so a page can color it the way the log colors a
+ * hit. The declared type carries its mark too. Plain text is what an
+ * older snapshot carries, and still reads.
+ */
+export type PhaseResult = string | { text: string; table?: string; hit?: number | null; declared?: true };
+
+/** A result's words, whichever shape it came in. */
+export function resultText(r: PhaseResult): string {
+  return typeof r === "string" ? r : r.text;
+}
+
 export interface LiveSnapshot {
   v: 1;
   at: string;
@@ -54,11 +68,11 @@ export interface LiveSnapshot {
     label: string;
     state: "done" | "current" | "skipped" | "todo";
     why?: string;
-    /** What the phase produced this unit, in order: the results of the tables its steps roll, and the subject's declared type where it declares one. Absent when nothing yet. */
-    results?: string[];
+    /** What the phase produced this unit, in order: the results of the tables its steps roll, and the subject's declared type where it declares one. Absent when nothing yet. A snapshot written before results said where they came from carries them as plain text. */
+    results?: PhaseResult[];
   }>;
   /** Every unit so far, as what each of its phases produced, oldest first; a phase that produced nothing in a unit is left out. Absent from snapshots written before it was carried. */
-  units?: Array<{ unit: number; phases: Array<{ id: string; label: string; results: string[] }> }>;
+  units?: Array<{ unit: number; phases: Array<{ id: string; label: string; results: PhaseResult[] }> }>;
   /**
    * A rule drawn earlier this unit that the current step must honor, in the
    * pack's own words: the same lines the player's own screen shows in
@@ -201,17 +215,18 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
   // table is its text; one from a table it set off says which table, and
   // which piece it hit, so the log need not be consulted to know what
   // happened and to what.
-  const resultsOf = (phase: Phase, unit: number): string[] => {
+  const resultsOf = (phase: Phase, unit: number): PhaseResult[] => {
     const subject = state.subjects.find((s) => s.unit === unit && !s.removed);
     return [
       ...ownedIn(unit)
         .filter((x) => x.phase === phase.id)
-        .map(({ outcome: o }) => {
+        .map(({ outcome: o }): PhaseResult => {
           const own = rolledBy.get(o.table) === phase.id;
-          const hit = o.targetSubject !== null && o.targetSubject !== undefined ? ` - hit #${o.targetSubject}` : "";
-          return own && !hit ? entryTextOf(pack, o) : `${pack.tables[o.table]?.title ?? o.table}${hit}: ${entryTextOf(pack, o)}`;
+          const hit = o.targetSubject !== null && o.targetSubject !== undefined ? o.targetSubject : null;
+          const text = entryTextOf(pack, o);
+          return own && hit === null ? { text } : { text, table: pack.tables[o.table]?.title ?? o.table, hit };
         }),
-      ...(phase.steps.some((st) => st.kind === "declareSubject") && subject?.type ? [subject.type] : []),
+      ...(phase.steps.some((st) => st.kind === "declareSubject") && subject?.type ? [{ text: subject.type, declared: true as const }] : []),
     ];
   };
   // Every unit so far, as what each of its phases produced: the whole run

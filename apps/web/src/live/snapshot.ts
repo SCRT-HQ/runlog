@@ -1,1 +1,1 @@
-export { clockNow, entryTextOf, isSnapshot, paperOf, raceOf, snapshotOf, type LiveSnapshot, type Paper, type RaceSnapshot } from "@runlog/engine";
+export { clockNow, entryTextOf, isSnapshot, paperOf, raceOf, resultText, snapshotOf, type LiveSnapshot, type PhaseResult, type Paper, type RaceSnapshot } from "@runlog/engine";

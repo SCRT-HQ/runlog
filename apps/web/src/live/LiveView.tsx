@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatClock } from "@runlog/engine";
-import { clockNow, type LiveSnapshot } from "./snapshot.ts";
+import { clockNow, resultText, type LiveSnapshot, type PhaseResult } from "./snapshot.ts";
 import { motionBetween } from "./motion.ts";
 import { RaceBoard } from "./RaceBoard.tsx";
 import { LOG_LIMITS, logLimit, logLines, logOrder, setLogLimit, setLogOrder, type LogOrder } from "../run/logView.ts";
@@ -14,7 +14,7 @@ import { LOG_LIMITS, logLimit, logLines, logOrder, setLogLimit, setLogOrder, typ
  * classes for that are computed against the snapshot before, and worn
  * for one render.
  */
-export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst = "this" }: { snapshot: LiveSnapshot; stale?: boolean; children?: React.ReactNode; side?: React.ReactNode; rooms?: "this" | "all" }) {
+export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst = "this", order: orderAtFirst }: { snapshot: LiveSnapshot; stale?: boolean; children?: React.ReactNode; side?: React.ReactNode; rooms?: "this" | "all"; order?: "newest" | "oldest" }) {
   const now = useNow(snapshot.clocks.some((c) => c.status === "running"));
   const s = snapshot;
   const before = useRef<LiveSnapshot | null>(null);
@@ -42,7 +42,17 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
   // far as what its phases produced, newest first, which stands in for the
   // log below. The run's story told either way, kept on this device.
   const [rooms, setRooms] = useState<"this" | "all">(() => roomsAtFirst === "all" ? "all" : roomsKept());
-  const past = useMemo(() => [...(s.units ?? [])].filter((u) => u.unit !== s.unit).reverse(), [s.units, s.unit]);
+  // The rooms read newest first, the way the log does, unless turned round; the room in play is the newest.
+  const [roomsOrder, setRoomsOrder] = useState<"newest" | "oldest">(() => orderAtFirst ?? roomsOrderKept());
+  const past = useMemo(() => {
+    const before = (s.units ?? []).filter((u) => u.unit !== s.unit);
+    return roomsOrder === "newest" ? [...before].reverse() : before;
+  }, [s.units, s.unit, roomsOrder]);
+  const turnRooms = () => {
+    const next = roomsOrder === "newest" ? "oldest" : "newest";
+    setRoomsOrder(next);
+    keepRoomsOrder(next);
+  };
   const chooseRooms = (next: "this" | "all") => {
     setRooms(next);
     keepRooms(next);
@@ -101,53 +111,62 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
                     <button className={`ghost tiny${rooms === "all" ? " on" : ""}`} aria-pressed={rooms === "all"} onClick={() => chooseRooms("all")}>
                       All {s.words.units.toLowerCase()}
                     </button>
+                    {rooms === "all" && (
+                      <button className="ghost tiny" onClick={turnRooms} title={`Read the ${s.words.units.toLowerCase()} from the other end`}>
+                        {roomsOrder === "newest" ? "Newest first" : "Oldest first"}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
-              <ol className="flow">
-                {s.phases.map((phase, i) => (
-                  <li key={phase.id} className={phase.state === "todo" ? "" : phase.state} aria-current={phase.state === "current" ? "step" : undefined}>
-                    <span className="idx">{phase.state === "current" ? "▸" : phase.state === "skipped" ? "-" : i + 1}</span>
-                    <span>
-                      {phase.label}
-                      {phase.state === "current" && s.step && s.step !== phase.label && <span className="muted"> · {s.step}</span>}
-                      {phase.state === "skipped" && phase.why && <span className="why">{phase.why}</span>}
-                      {(phase.results ?? []).map((r, k) => (
-                        <span key={k} className={constrains.has(r) ? "result constrains" : "result"} title={constrains.has(r) ? "The game has already had its say: this holds over the step in hand" : undefined}>
-                          {r}
+              {(() => {
+                const current = (
+                  <ol className="flow" key="current">
+                    {s.phases.map((phase, i) => (
+                      <li key={phase.id} className={phase.state === "todo" ? "" : phase.state} aria-current={phase.state === "current" ? "step" : undefined}>
+                        <span className="idx">{phase.state === "current" ? "▸" : phase.state === "skipped" ? "-" : i + 1}</span>
+                        <span>
+                          {phase.label}
+                          {phase.state === "current" && s.step && s.step !== phase.label && <span className="muted"> · {s.step}</span>}
+                          {phase.state === "skipped" && phase.why && <span className="why">{phase.why}</span>}
+                          {(phase.results ?? []).map((r, k) => (
+                            <Result key={k} r={r} constrains={constrains} />
+                          ))}
                         </span>
-                      ))}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-              {rooms === "all" &&
-                past.map((u) => (
-                  <div key={u.unit} className="pastRoom">
-                    <h4 className="sectionTitle">
-                      <span className="muted">{s.words.unit}</span> {u.unit}
-                    </h4>
-                    {u.phases.length === 0 ? (
-                      <p className="muted small">Nothing rolled or declared.</p>
-                    ) : (
-                      <ol className="flow">
-                        {u.phases.map((phase, i) => (
-                          <li key={phase.id} className="done">
-                            <span className="idx">{i + 1}</span>
-                            <span>
-                              {phase.label}
-                              {phase.results.map((r, k) => (
-                                <span key={k} className="result">
-                                  {r}
-                                </span>
+                      </li>
+                    ))}
+                  </ol>
+                );
+                const rest =
+                  rooms === "all"
+                    ? past.map((u) => (
+                        <div key={u.unit} className="pastRoom">
+                          <h4 className="sectionTitle">
+                            <span className="muted">{s.words.unit}</span> {u.unit}
+                          </h4>
+                          {u.phases.length === 0 ? (
+                            <p className="muted small">Nothing rolled or declared.</p>
+                          ) : (
+                            <ol className="flow">
+                              {u.phases.map((phase, i) => (
+                                <li key={phase.id} className="done">
+                                  <span className="idx">{i + 1}</span>
+                                  <span>
+                                    {phase.label}
+                                    {phase.results.map((r, k) => (
+                                      <Result key={k} r={r} />
+                                    ))}
+                                  </span>
+                                </li>
                               ))}
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
-                    )}
-                  </div>
-                ))}
+                            </ol>
+                          )}
+                        </div>
+                      ))
+                    : [];
+                // Newest first puts the room in play at the top; oldest first, at the end, where it belongs in time.
+                return roomsOrder === "newest" || rooms !== "all" ? [current, ...rest] : [...rest, <div key="current" className="pastRoom"><h4 className="sectionTitle"><span className="muted">{s.words.unit}</span> {s.unit}</h4>{current}</div>];
+              })()}
             </section>
           )}
           {rooms === "all" && (s.units ?? []).length > 0 ? null : s.log.length > 0 ? (
@@ -359,6 +378,50 @@ function keepRooms(rooms: "this" | "all"): void {
   try {
     if (rooms === "all") localStorage.setItem(ROOMS_KEY, "all");
     else localStorage.removeItem(ROOMS_KEY);
+  } catch {
+    /* the choice lasts the tab */
+  }
+}
+
+/**
+ * One thing a phase produced. Its own table's result is its text; one
+ * from a table the phase set off names the table first, and where it hit
+ * a piece it carries the log's color for a hit, so the room reads the
+ * way the log does. A constraint in play is marked as the flow marks it.
+ */
+function Result({ r, constrains }: { r: PhaseResult; constrains?: Set<string> }) {
+  const text = resultText(r);
+  const held = constrains?.has(text) ?? false;
+  const from = typeof r === "string" ? null : r;
+  const hit = from?.hit !== null && from?.hit !== undefined;
+  const cls = ["result", held ? "constrains" : "", hit ? "heat" : "", from?.table ? "chained" : "", from?.declared ? "declared" : ""].filter(Boolean).join(" ");
+  return (
+    <span className={cls} title={held ? "The game has already had its say: this holds over the step in hand" : undefined}>
+      {from?.table && (
+        <span className="head">
+          {from.table}
+          {hit ? ` - hit #${from.hit}` : ""}
+          {": "}
+        </span>
+      )}
+      {text}
+    </span>
+  );
+}
+
+const ROOMS_ORDER_KEY = "runlog:liveRoomsOrder";
+/** Which end this device reads the rooms from. */
+function roomsOrderKept(): "newest" | "oldest" {
+  try {
+    return localStorage.getItem(ROOMS_ORDER_KEY) === "oldest" ? "oldest" : "newest";
+  } catch {
+    return "newest";
+  }
+}
+function keepRoomsOrder(order: "newest" | "oldest"): void {
+  try {
+    if (order === "oldest") localStorage.setItem(ROOMS_ORDER_KEY, "oldest");
+    else localStorage.removeItem(ROOMS_ORDER_KEY);
   } catch {
     /* the choice lasts the tab */
   }

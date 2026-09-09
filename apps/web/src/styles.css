@@ -2865,6 +2865,10 @@ select.textInput {
 .liveFlow .pastRoom { margin-top: 1.4rem; padding-top: 0.6rem; border-top: 1px solid var(--line); }
 .liveFlow .pastRoom h4 { margin: 0 0 0.4rem; }
 .liveFlow .logTools .ghost.on { color: var(--text); border-color: var(--accent); }
+/* A result from a table the phase set off names the table first, in the referee's voice; a hit carries the log's color for one. */
+.flow .result .head { font-family: var(--mono); font-size: 0.82em; color: var(--muted); }
+.flow .result.heat .head { color: var(--warn); }
+.flow li.done .result.heat .head { color: var(--warn); opacity: 0.85; }
 .flow li .result.constrains { color: var(--text); font-weight: 600; border-left: 3px solid var(--warn); padding-left: 0.5rem; margin-left: -0.75rem; }
 .flow .why {
   display: block;
