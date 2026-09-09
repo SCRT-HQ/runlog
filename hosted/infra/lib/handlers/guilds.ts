@@ -42,8 +42,26 @@ export interface VerifyState {
   expiresAt: string;
 }
 
+/** A service a Runlog account can be linked to. Discord is the only one so far. */
+export type ConnectionService = "discord";
+
+/**
+ * An account this Runlog account is linked to.
+ *
+ * Discord is the only service so far, and the shape is written for the
+ * next one rather than around the one there is: `service` says which and
+ * `accountId` is that service's own id for the person, and both are in
+ * the row's sort key, so one Runlog account holds as many links as it
+ * likes, of as many kinds, and no row overwrites another.
+ *
+ * A link is exclusive one way only. An account of a service belongs to
+ * one Runlog account, because that is how the bot answers "who pressed
+ * this button"; the other way round is open, and that is the point.
+ */
 export interface Connection {
-  discordUserId: string;
+  service: ConnectionService;
+  /** The service's own id for the person: on Discord, the user id the bot's rows are written in terms of. */
+  accountId: string;
   name: string;
   linkedAt: string;
 }
@@ -141,12 +159,13 @@ export interface GuildStore {
   putVerifyState(state: VerifyState): Promise<void>;
   /** The verification's row, and the row is gone. Null when missing or past its time. */
   takeVerifyState(state: string, at: string): Promise<VerifyState | null>;
-  /** Link, replacing whatever either side was linked to before. */
+  /** Link. Whoever held that service account before lets it go; this account keeps everything else it has linked. */
   connect(sub: string, connection: Connection): Promise<void>;
-  connection(sub: string): Promise<Connection | null>;
+  /** Every account this one is linked to, oldest link first. */
+  connections(sub: string): Promise<Connection[]>;
   userForDiscord(discordUserId: string): Promise<string | null>;
-  /** True when there was a link to remove. */
-  disconnect(sub: string): Promise<boolean>;
+  /** One link, or every link where no account is named. True when there was one to remove. */
+  disconnect(sub: string, accountId?: string): Promise<boolean>;
 
   putClaimCode(claim: ClaimCode): Promise<void>;
   takeClaimCode(code: string, at: string): Promise<ClaimCode | null>;
@@ -169,8 +188,26 @@ export interface GuildStore {
   forgetUser(sub: string): Promise<number>;
 }
 
-/** Servers one account may claim. Enough for a person with a community or two; not a way to resell. */
+/** Servers an account on Runlog for servers may claim. Enough for a person with a community or two; not a way to resell. */
 export const MAX_GUILDS_PER_SUB = 3;
+
+/** Servers an account with no server plan may claim, once the tier is on sale. */
+export const FREE_GUILDS_PER_SUB = 1;
+
+/**
+ * How many servers this account may claim.
+ *
+ * The allowance is the plan's to set rather than a constant's: an account
+ * holding Runlog for servers claims the three the page has always
+ * promised, and one without it claims the same three while the tier is
+ * not on sale, so nothing anybody has already claimed stops working on
+ * the day it opens. The numbers live here; the claim route asks this and
+ * says whatever it answers.
+ */
+export function guildsAllowed(held: { plan: boolean; onSale: boolean }): number {
+  if (held.plan) return MAX_GUILDS_PER_SUB;
+  return held.onSale ? FREE_GUILDS_PER_SUB : MAX_GUILDS_PER_SUB;
+}
 
 const toEpoch = (at: string) => Math.floor(new Date(at).getTime() / 1000);
 const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
@@ -181,7 +218,9 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
   const linkKey = (code: string) => ({ pk: `DISCORD#LINK#${code}`, sk: "LINK" });
   const claimKey = (code: string) => ({ pk: `DISCORD#CLAIM#${code}`, sk: "CLAIM" });
   const verifyKey = (state: string) => ({ pk: `DISCORD#VERIFY#${state}`, sk: "VERIFY" });
-  const userKey = (sub: string) => ({ pk: `USER#${sub}`, sk: "CONNECTION#discord" });
+  const connKey = (sub: string, service: string, accountId: string) => ({ pk: `USER#${sub}`, sk: `CONNECTION#${service}#${accountId}` });
+  /** Where the one link an account could hold was kept before it could hold several. Read, never written. */
+  const legacyConnKey = (sub: string) => ({ pk: `USER#${sub}`, sk: "CONNECTION#discord" });
   const discordKey = (id: string) => ({ pk: `DISCORD#${id}`, sk: "USER" });
   const guildKey = (guildId: string) => ({ pk: `GUILD#${guildId}`, sk: "META" });
   const guildPointer = (sub: string, guildId: string) => ({ pk: `USER#${sub}`, sk: `GUILD#${guildId}` });
@@ -248,12 +287,28 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
     };
   };
 
-  const connectionOf = async (sub: string): Promise<Connection | null> => {
-    const out = await ddb.send(new GetCommand({ TableName: table, Key: userKey(sub) }));
-    const item = out.Item;
-    if (!item || typeof item["discordUserId"] !== "string") return null;
-    return { discordUserId: item["discordUserId"], name: str(item["name"]) ?? "", linkedAt: str(item["linkedAt"]) ?? "" };
+  /**
+   * One stored link. A row written before an account could hold several
+   * carries the Discord id in a field of its own, because its sort key had
+   * no room for one; either shape reads. A row of a kind this build does
+   * not know is left out rather than guessed at.
+   */
+  const connectionOf = (item: Record<string, unknown> | undefined): Connection | null => {
+    if (!item) return null;
+    const accountId = str(item["accountId"]) ?? str(item["discordUserId"]);
+    const service = str(item["service"]) ?? "discord";
+    if (!accountId || service !== "discord") return null;
+    return { service, accountId, name: str(item["name"]) ?? "", linkedAt: str(item["linkedAt"]) ?? "" };
   };
+  /** Every link with the key it is kept under, so one can be replaced or removed exactly. */
+  const connectionRows = async (sub: string): Promise<Array<{ sk: string; connection: Connection }>> => {
+    const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `USER#${sub}`, ":sk": "CONNECTION#" } }));
+    return (out.Items ?? [])
+      .map((item) => ({ sk: str(item["sk"]) ?? "", connection: connectionOf(item) }))
+      .filter((r): r is { sk: string; connection: Connection } => r.connection !== null && r.sk !== "");
+  };
+  const connectionsOf = async (sub: string): Promise<Connection[]> =>
+    (await connectionRows(sub)).map((r) => r.connection).sort((a, b) => a.linkedAt.localeCompare(b.linkedAt));
   const userFor = async (discordUserId: string): Promise<string | null> => {
     const out = await ddb.send(new GetCommand({ TableName: table, Key: discordKey(discordUserId) }));
     return str(out.Item?.["sub"]) ?? null;
@@ -263,11 +318,23 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
     const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `GUILD#${guildId}`, ":sk": "PACK#" } }));
     return (out.Items ?? []).map(packOf).filter((p): p is GuildPackMeta => p !== null);
   };
-  const disconnectRows = async (sub: string): Promise<number> => {
-    const had = await connectionOf(sub);
-    if (!had) return 0;
-    await ddb.send(new TransactWriteCommand({ TransactItems: [{ Delete: { TableName: table, Key: userKey(sub) } }, { Delete: { TableName: table, Key: discordKey(had.discordUserId) } }] }));
-    return 2;
+  /** Every link this account holds, and the pointer each one is found by. */
+  const disconnectRows = async (sub: string, accountId?: string): Promise<number> => {
+    const rows = (await connectionRows(sub)).filter((r) => accountId === undefined || r.connection.accountId === accountId);
+    if (rows.length === 0) return 0;
+    let gone = 0;
+    for (const { sk, connection } of rows) {
+      await ddb.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            { Delete: { TableName: table, Key: { pk: `USER#${sub}`, sk } } },
+            { Delete: { TableName: table, Key: discordKey(connection.accountId) } },
+          ],
+        }),
+      );
+      gone += 2;
+    }
+    return gone;
   };
   const emptyVault = async (guildId: string): Promise<number> => {
     let rows = 0;
@@ -334,21 +401,30 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
       return { state, sub: item["sub"], createdAt: str(item["createdAt"]) ?? at, expiresAt };
     },
     async connect(sub, c) {
-      // Whatever either side pointed at before goes, so no row is left
-      // pointing at someone who has moved on: the Discord account's old
-      // owner, and this account's old Discord account.
-      const [previousOwner, previous] = await Promise.all([userFor(c.discordUserId), connectionOf(sub)]);
+      // A service account belongs to one Runlog account, so whoever held
+      // this one before lets go of it: their row goes, under whichever key
+      // it was written. What this account has linked besides stays, which
+      // is the whole of what changed here.
+      const [previousOwner, mine] = await Promise.all([userFor(c.accountId), connectionRows(sub)]);
       const items: Array<{ Delete: { TableName: string; Key: Record<string, string> } } | { Put: { TableName: string; Item: Record<string, unknown> } }> = [];
-      if (previousOwner && previousOwner !== sub) items.push({ Delete: { TableName: table, Key: userKey(previousOwner) } });
-      if (previous && previous.discordUserId !== c.discordUserId) items.push({ Delete: { TableName: table, Key: discordKey(previous.discordUserId) } });
-      items.push({ Put: { TableName: table, Item: { ...userKey(sub), kind: "connection", ...c } } });
-      items.push({ Put: { TableName: table, Item: { ...discordKey(c.discordUserId), kind: "discord-user", sub, linkedAt: c.linkedAt } } });
+      if (previousOwner && previousOwner !== sub) {
+        for (const row of (await connectionRows(previousOwner)).filter((r) => r.connection.accountId === c.accountId)) {
+          items.push({ Delete: { TableName: table, Key: { pk: `USER#${previousOwner}`, sk: row.sk } } });
+        }
+      }
+      // The same account linked again, under the key an older build wrote:
+      // the row moves rather than doubling.
+      for (const row of mine.filter((r) => r.connection.accountId === c.accountId && r.sk !== connKey(sub, c.service, c.accountId).sk)) {
+        items.push({ Delete: { TableName: table, Key: { pk: `USER#${sub}`, sk: row.sk } } });
+      }
+      items.push({ Put: { TableName: table, Item: { ...connKey(sub, c.service, c.accountId), kind: "connection", ...c, discordUserId: c.accountId } } });
+      items.push({ Put: { TableName: table, Item: { ...discordKey(c.accountId), kind: "discord-user", sub, linkedAt: c.linkedAt } } });
       await ddb.send(new TransactWriteCommand({ TransactItems: items }));
     },
-    connection: connectionOf,
+    connections: connectionsOf,
     userForDiscord: userFor,
-    async disconnect(sub) {
-      return (await disconnectRows(sub)) > 0;
+    async disconnect(sub, accountId) {
+      return (await disconnectRows(sub, accountId)) > 0;
     },
 
     async putClaimCode(claim) {

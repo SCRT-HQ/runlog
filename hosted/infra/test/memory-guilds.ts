@@ -120,12 +120,12 @@ export function memoryOAuth(): DiscordOAuth & { pushed: Array<{ token: string; p
 }
 
 /** Discord's rows, in Maps, with the same rules as the real one: a code is spent by being read, a link or a claim replaces on both sides, and a vault never hands its packs back. */
-export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; claims: Map<string, ClaimCode>; links: Map<string, Connection>; guilds: Map<string, Guild>; vault: Map<string, { meta: GuildPackMeta; source: string }>; runs: Map<string, GuildRun> } {
+export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; claims: Map<string, ClaimCode>; links: Map<string, Connection[]>; guilds: Map<string, Guild>; vault: Map<string, { meta: GuildPackMeta; source: string }>; runs: Map<string, GuildRun> } {
   const runs = new Map<string, GuildRun>();
   const codes = new Map<string, LinkCode>();
   const verifying = new Map<string, VerifyState>();
   const claims = new Map<string, ClaimCode>();
-  const links = new Map<string, Connection>();
+  const links = new Map<string, Connection[]>();
   const owners = new Map<string, string>();
   const guilds = new Map<string, Guild>();
   const vault = new Map<string, { meta: GuildPackMeta; source: string }>();
@@ -183,25 +183,28 @@ export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; cla
       return { ...found };
     },
     async connect(sub, c) {
-      const previousOwner = owners.get(c.discordUserId);
-      if (previousOwner && previousOwner !== sub) links.delete(previousOwner);
-      const previous = links.get(sub);
-      if (previous && previous.discordUserId !== c.discordUserId) owners.delete(previous.discordUserId);
-      links.set(sub, { ...c });
-      owners.set(c.discordUserId, sub);
+      // The service account belongs to one Runlog account; everything else
+      // either side holds stays where it is.
+      const previousOwner = owners.get(c.accountId);
+      if (previousOwner && previousOwner !== sub) links.set(previousOwner, (links.get(previousOwner) ?? []).filter((x) => x.accountId !== c.accountId));
+      links.set(sub, [...(links.get(sub) ?? []).filter((x) => x.accountId !== c.accountId), { ...c }]);
+      owners.set(c.accountId, sub);
     },
-    async connection(sub) {
-      const c = links.get(sub);
-      return c ? { ...c } : null;
+    async connections(sub) {
+      return (links.get(sub) ?? []).map((c) => ({ ...c }));
     },
     async userForDiscord(discordUserId) {
       return owners.get(discordUserId) ?? null;
     },
-    async disconnect(sub) {
-      const had = links.get(sub);
-      if (!had) return false;
-      links.delete(sub);
-      owners.delete(had.discordUserId);
+    async disconnect(sub, accountId) {
+      const had = links.get(sub) ?? [];
+      const going = accountId === undefined ? had : had.filter((c) => c.accountId === accountId);
+      if (going.length === 0) return false;
+      const left = had.filter((c) => !going.includes(c));
+      // No row left behind: an account with nothing linked holds no list.
+      if (left.length > 0) links.set(sub, left);
+      else links.delete(sub);
+      for (const c of going) owners.delete(c.accountId);
       return true;
     },
     async putClaimCode(claim) {
@@ -261,12 +264,11 @@ export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; cla
     },
     async forgetUser(sub) {
       let rows = 0;
-      const had = links.get(sub);
-      if (had) {
-        links.delete(sub);
-        owners.delete(had.discordUserId);
+      for (const c of links.get(sub) ?? []) {
+        owners.delete(c.accountId);
         rows += 2;
       }
+      links.delete(sub);
       for (const g of [...guilds.values()]) if (g.ownerSub === sub) rows += release(g.guildId);
       return rows;
     },

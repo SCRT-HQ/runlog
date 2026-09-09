@@ -244,7 +244,7 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
       licenses.set(l.id, l);
       return entryOf(l, l.id);
     },
-    connections: async () => ({ available: false, discord: null }),
+    connections: async () => ({ available: false, connections: [], discord: null }),
     linkDiscord: async () => {
       throw new Error("not used here");
     },
@@ -253,7 +253,7 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
     claimGuild: async () => {
       throw new Error("not used here");
     },
-    myGuilds: async () => ({ guilds: [], server: true, open: false }),
+    myGuilds: async () => ({ guilds: [], server: true, open: false, allowed: 3 }),
     releaseGuild: async () => {},
     guildPacks: async () => [],
     delegatePack: async () => {
