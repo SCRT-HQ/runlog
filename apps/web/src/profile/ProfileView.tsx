@@ -19,6 +19,7 @@ import { usePlan } from "../sync/usePlan.ts";
 import { useInvites } from "../share/useInvites.ts";
 import { liveLinkOf } from "../live/route.ts";
 import { PROFILE_PAGES, profileHash, type ProfilePage } from "./route.ts";
+import { linkTo } from "../route.ts";
 import { ConnectionsSection } from "../connections/ConnectionsSection.tsx";
 import { PlanSection } from "./PlanSection.tsx";
 import { PublisherSection } from "./PublisherSection.tsx";
@@ -436,7 +437,7 @@ function PublishingPage({ api }: { api: Api | null }) {
           <p className="muted small">
             This is where a publisher lives: who else is in it, what you have listed for sale and what it has
             earned, hosted licensing, and the command-line keys and signing keys tied to your account. Write a pack
-            first, in the <a href="#create">Designer</a>.
+            first, in the <a href={linkTo("#create")}>Designer</a>.
           </p>
         </section>
       ) : (

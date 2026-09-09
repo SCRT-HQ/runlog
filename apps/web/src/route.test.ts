@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addressOf, hrefFor, runFromAddress } from "./route.ts";
+import { addressOf, hrefFor, linkTo, runFromAddress } from "./route.ts";
 
 /**
  * One address, two spellings: the hash the app reads, and the path the
@@ -55,5 +55,13 @@ describe("an address, as a hash and as a path", () => {
     expect(runFromAddress("#run/01ABC")).toBe("01ABC");
     expect(runFromAddress("#run/01ABC?t=tok")).toBeNull();
     expect(runFromAddress("#guide/start")).toBeNull();
+  });
+});
+
+describe("a link the app writes for itself", () => {
+  it("is the hash after where it belongs while paths are off, which is the case in tests", () => {
+    expect(linkTo("#guide/start")).toBe("#guide/start");
+    expect(linkTo("#guide/start", "/play")).toBe("/play#guide/start");
+    expect(linkTo("#catalog/a-pack", "./")).toBe("./#catalog/a-pack");
   });
 });

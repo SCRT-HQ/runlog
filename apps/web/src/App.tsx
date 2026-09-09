@@ -27,7 +27,7 @@ import { dockFromHash, type DockRoute } from "./dock/route.ts";
 import { linkFromHash, stashLink } from "./connections/route.ts";
 import { WidgetView } from "./widget/WidgetView.tsx";
 import { liveFromHash, type LiveRoute } from "./live/route.ts";
-import { addressOf, appBase, goTo, runFromAddress } from "./route.ts";
+import { addressOf, appBase, goTo, runFromAddress, linkTo } from "./route.ts";
 import { LiveRunView } from "./live/LiveRunView.tsx";
 import { DocMenu } from "./docs/DocMenu.tsx";
 import { DocView } from "./docs/DocView.tsx";
@@ -850,7 +850,7 @@ export default function App() {
           }
         }}
       />
-      <Footer onGuide={() => location.assign("./#guide/streaming")} />
+      <Footer onGuide={() => location.assign(linkTo("#guide/streaming", "./"))} />
       </>
     );
   }

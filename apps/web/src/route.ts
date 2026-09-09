@@ -57,6 +57,16 @@ export function hrefFor(hash: string, base: string | null = PATHS_ON ? import.me
   return `${root(base)}/${m[1]}${m[2] ?? ""}${m[3] ?? ""}`;
 }
 
+/**
+ * A link the app writes for itself: the page's path where paths are on,
+ * else the hash after `from`, which is where the hash belongs (the app's
+ * own address from the welcome page, `./` from a page beside it, nothing
+ * from inside the app).
+ */
+export function linkTo(hash: string, from = ""): string {
+  return PATHS_ON ? hrefFor(hash) : `${from}${hash}`;
+}
+
 /** The hash-form address for a run of this device's own: `#run/<id>`, which a live link (`#run/<id>?t=…`) is not. */
 export function runFromAddress(address: string): string | null {
   const m = /^#run\/([A-Za-z0-9_-]+)$/.exec(address);
