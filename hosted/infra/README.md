@@ -38,13 +38,16 @@ the `npm-ci` and `run-cdk` composite actions.
 | Trigger | What runs |
 | --- | --- |
 | Pull request to `main` | Tests against both environments, then `cdk diff` against dev and prd |
-| Push to `main` | Deploy dev, then tag and publish the next release |
+| Push to `main` | Deploy dev; then, once a reviewer approves, tag and publish the next release |
 | Release published | Deploy prd, from the tag |
 
 Production is reached only through a published release, so it always carries a
-version and has always already been to dev. Both deploy jobs sit behind GitHub
-Environments named `deploy-dev` and `deploy-prd`, so a reviewer can be
-required on production without that rule living in a file anyone editing
+version and has always already been to dev. The release itself sits behind
+a GitHub Environment named `release`, which requires a reviewer from the
+Core team: a merge deploys dev on its own, and the tag, the release,
+production and the package publish wait for a person. Both deploy jobs sit
+behind Environments named `deploy-dev` and `deploy-prd`, so a reviewer can
+be required there too without that rule living in a file anyone editing
 the workflow could remove. Each deploys from `main` only, and production
 from a `v*` tag as well. The diffs run under `cdk-diff-dev` and
 `cdk-diff-prd`, which are
