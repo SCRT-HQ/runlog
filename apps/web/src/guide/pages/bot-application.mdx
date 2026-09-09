@@ -23,7 +23,7 @@ The stage's configuration document is one JSON object per stage: in a pipeline, 
 }
 ```
 
-`open` is whether the server plan is on sale. Leave it `false` while the bot is being tried; everyone still sees the Servers page, claims servers and fills vaults, and the plan shows as coming. The people trying it get the `server` feature flag in WorkOS instead, which is the plan as far as the API is concerned.
+`open` is whether the server plan is on sale, said by the stage; leave it `false`. Whether a tier is on sale is a WorkOS feature flag now, `servers-open` (and `publishers-open` for the publisher tier), read by the API for everyone at once: on for everyone in the WorkOS dashboard means on sale, within a minute and with no deploy; anything else, including a flag that does not exist or an API key not filled in, means the tier shows as coming soon. Everyone still sees the Servers page, claims servers and fills vaults meanwhile, and the people trying the bot get the `server` feature flag, which is the plan as far as the API is concerned.
 
 Deploy the stage. The API now answers the endpoint.
 

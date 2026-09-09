@@ -421,16 +421,25 @@ whether it is active where plans gate. `/setup role` and `/setup channel`
 set who may host and where runs open; `/setup threads` sets whether they
 open in a public thread or a private one.
 
-The plan is **not on sale** until the stage says so. With `discord.open`
-absent or `false` in the configuration, everyone sees the Servers page,
-may claim a server and fill its vault, and sees the plan as coming;
-`GET /api/me` says `servers` (there is a bot) and `serversOpen` (it is on
-sale). Meanwhile the one way onto the plan is the WorkOS feature flag
-named `server`, made in WorkOS per environment and set on the people
-trying it: a flag named like a Stripe feature is that feature, the way a
-`plus` flag comps Plus, so a flagged account is subscribed as far as the
-API and the bot can tell. Setting `discord.open: true` and deploying
-offers Checkout to everyone; the flag keeps meaning "comped".
+The plan is **not on sale** until its release gate opens. A release gate
+is a WorkOS feature flag read by the API for everyone at once
+(`lib/handlers/gates.ts`): `servers-open` for this tier, `publishers-open`
+for becoming a publisher and hosted licensing. The API reads each by slug
+with the environment's key, once a minute per container, and opens the
+gate only for a flag that is on for everyone; a flag that is off, on for
+some people, missing, or unreadable (the key not filled in) reads as
+closed, so nothing goes on sale by accident. With the gate closed,
+everyone sees the Servers page, may claim a server and fill its vault,
+and sees the plan as coming; `GET /api/me` says `servers` (there is a
+bot), `serversOpen` and `publishersOpen` (on sale), and `GET /api/plans`
+says the same to a page with no token. A launch is the flag flipped to
+"on, everyone" in the WorkOS dashboard, reaching the API within a minute
+and nobody's deploy. Meanwhile the one way onto the plan is the WorkOS
+feature flag named `server`, per person, set on the people trying it: a
+flag named like a Stripe feature is that feature, the way a `plus` flag
+comps Plus, so a flagged account is subscribed as far as the API and the
+bot can tell. `discord.open: true` in the stage's configuration still
+opens the server tier as well, until the field is retired.
 
 The owner puts packs in the server's **vault** from their profile:
 `PUT /api/guilds/{id}/packs/{packId}` takes the pack's text and a summary
