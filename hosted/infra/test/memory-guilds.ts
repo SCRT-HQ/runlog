@@ -2,15 +2,21 @@ import type { ClaimCode, Connection, Guild, GuildPackMeta, GuildRun, GuildStore,
 import type { DiscordMessage, DiscordRest } from "../lib/handlers/discord/rest";
 
 /** Discord, as a list of what was asked of it: threads made, messages posted, in order. */
-export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array<{ channel: string; message: DiscordMessage; id: string }>; edits: Array<{ channel: string; id: string; message: DiscordMessage }>; pins: string[]; archived: string[]; down: boolean } {
+export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array<{ channel: string; message: DiscordMessage; id: string }>; edits: Array<{ channel: string; id: string; message: DiscordMessage }>; originals: Array<{ token: string; message: DiscordMessage }>; pins: string[]; archived: string[]; down: boolean } {
   let n = 0;
   const me = {
     threads: [] as string[],
     posts: [] as Array<{ channel: string; message: DiscordMessage; id: string }>,
     edits: [] as Array<{ channel: string; id: string; message: DiscordMessage }>,
+    originals: [] as Array<{ token: string; message: DiscordMessage }>,
     pins: [] as string[],
     archived: [] as string[],
     down: false,
+    async editOriginal(_applicationId: string, token: string, message: DiscordMessage) {
+      if (me.down) return false;
+      me.originals.push({ token, message });
+      return true;
+    },
     async createThread(_channelId: string, name: string) {
       if (me.down) return null;
       const id = `thread_${(n += 1)}`;

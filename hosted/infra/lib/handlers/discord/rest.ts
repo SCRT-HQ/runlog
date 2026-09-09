@@ -29,6 +29,8 @@ export interface DiscordRest {
   pinMessage(channelId: string, messageId: string): Promise<boolean>;
   /** Close a thread once its run has ended; it stays readable. */
   archiveThread(threadId: string): Promise<boolean>;
+  /** Fill in a reply the handler deferred: the interaction's own webhook, good for fifteen minutes, needs no bot token. */
+  editOriginal(applicationId: string, interactionToken: string, message: DiscordMessage): Promise<boolean>;
 }
 
 async function call(token: string, method: string, path: string, body: unknown, fetchImpl: typeof fetch): Promise<Record<string, unknown> | null> {
@@ -72,6 +74,9 @@ export function discordRest(token: string, fetchImpl: typeof fetch = fetch): Dis
     },
     async archiveThread(threadId) {
       return (await call(token, "PATCH", `/channels/${threadId}`, { archived: true }, fetchImpl)) !== null;
+    },
+    async editOriginal(applicationId, interactionToken, message) {
+      return (await call(token, "PATCH", `/webhooks/${applicationId}/${interactionToken}/messages/@original`, message, fetchImpl)) !== null;
     },
   };
 }

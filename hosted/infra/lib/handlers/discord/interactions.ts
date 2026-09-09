@@ -45,6 +45,13 @@ export interface InteractionDeps {
   rest?: DiscordRest | null;
   mintId?: () => string;
   token?: () => string;
+  /**
+   * Hand a slow interaction to a function with time: the handler answers
+   * Discord "thinking" at once and the job finishes and fills the reply in.
+   * Absent, everything is done in this turn, which a test and a small
+   * copy prefer.
+   */
+  defer?: (interaction: Interaction) => Promise<void>;
 }
 
 /** How long a link or claim code lasts. */
@@ -208,6 +215,14 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     if (!found) return ephemeral("That pack is not in this server's vault. /packs lists what is.");
     const channelId = guild.channelId ?? i.channel_id;
     if (!channelId) return ephemeral("Nowhere to open the run: run this in a channel, or set one with /setup channel.");
+    // Everything that could refuse has had its say in this turn. What is
+    // left — the session, the thread, the card, the pin — is a handful of
+    // calls to Discord that a cold start plus three seconds may not cover,
+    // so where there is a function with time, it takes over from here.
+    if (deps.defer) {
+      await deps.defer(i);
+      return { type: ResponseType.DeferredChannelMessage };
+    }
     const opened = await openRun(table, { guildId: i.guild_id, channelId, pack: found.pack, packTitle: found.title, modeId, ...(name ? { name } : {}), host: { discordId: who.id, name: nameOf(who), sub: hostSub } });
     if ("error" in opened) return ephemeral(opened.error);
     const modeLabel = found.pack.modes[modeId]?.label ?? modeId;

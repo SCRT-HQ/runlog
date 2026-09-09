@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { describe, expect, it } from "vitest";
-import { route, type Deps } from "../lib/handlers/api";
+import { finishDeferred, route, type Deps } from "../lib/handlers/api";
 import type { ApiKey, Claim, Invite, LicenseMeta, PackMeta, Person, Profile, Reaction, SessionMember, SessionMeta, SessionPointer, Store, StoredEvent } from "../lib/handlers/store";
 import type { Race, RaceEntry, RaceMeta, RaceStore } from "../lib/handlers/races";
 import type { BillingStore } from "../lib/handlers/billing";
@@ -1929,5 +1929,24 @@ describe("a run hosted in discord", () => {
     expect(waved.body["type"]).toBe(7);
     expect((await call(request("GET", `/api/sessions/${id}/reactions`), d)).body["reactions"]).toMatchObject([{ emoji: "🔥", name: "Sam" }]);
     expect(content(await call(signed(press(`rl:${id}:react:🍕`, sam)), d))).toContain("Not one of the six");
+  });
+  it("answers a start at once where there is a function with time, and the job fills the reply in", async () => {
+    const { bot, d } = await table();
+    const handed: unknown[] = [];
+    const deferring = { ...d, defer: async (interaction: unknown) => void handed.push(interaction) };
+    const start = command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] });
+    // What can refuse still refuses in this turn, without deferring.
+    expect(content(await call(signed({ ...start, member: member(sam, "0") }), deferring))).toContain("manage the server");
+    expect(handed).toHaveLength(0);
+    // What cannot is handed over, and Discord is told to wait.
+    expect((await call(signed(start), deferring)).body).toEqual({ type: 5 });
+    expect(handed).toHaveLength(1);
+    expect(bot.threads).toHaveLength(0);
+    // The job does the work and writes the answer into the waiting reply.
+    await finishDeferred(handed[0] as Parameters<typeof finishDeferred>[0], d);
+    expect(bot.threads).toHaveLength(1);
+    expect(bot.originals).toHaveLength(1);
+    expect(bot.originals[0]!.message.content).toContain("started **The Long Kiln · Standard Firing** in <#thread_1>");
+    expect(bot.originals[0]!.token).toBe("t");
   });
 });
