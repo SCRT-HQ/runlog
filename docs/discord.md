@@ -100,6 +100,12 @@ and awards. **Leave seat** frees it. **Follow in Runlog** puts the run in
 a linked member's own library as a watcher; a linked member who takes a
 seat is a player there, and can play the same run from the app.
 
+The host, and anyone who took a seat with a linked account, can play the
+same run from the app. The thread hears each move made there a moment
+later — the lines, under "From the app", and a fresh card — and a card
+that is behind refuses a press with a note, rather than building on a
+table that moved.
+
 `/run status` in the thread posts a fresh card and takes the buttons off
 the old one. `/run link` posts a fresh live link (the old one stops
 working). `/run end` ends the run; the thread stays open to talk about

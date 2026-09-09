@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { describe, expect, it } from "vitest";
-import { finishDeferred, finishTimer, route, type Deps } from "../lib/handlers/api";
+import { finishDeferred, finishMoved, finishTimer, route, type Deps } from "../lib/handlers/api";
 import type { TimerJob } from "../lib/handlers/discord/play";
 import { SeqConflict, type ApiKey, type Claim, type Invite, type LicenseMeta, type PackMeta, type Person, type Profile, type Reaction, type SessionMember, type SessionMeta, type SessionPointer, type Store, type StoredEvent } from "../lib/handlers/store";
 import type { Race, RaceEntry, RaceMeta, RaceStore } from "../lib/handlers/races";
@@ -2044,6 +2044,48 @@ describe("a run hosted in discord", () => {
     expect(log[ranOut]).toMatchObject({ at: "2026-09-06T12:01:00.000Z" });
     expect(log.length).toBeGreaterThan(ranOut + 1);
     expect(late.bot.posts.some((p) => p.message.content?.startsWith("\u23f0 The Firing ran out."))).toBe(true);
+  });
+
+  it("hears in the thread what the host does from the app: the lines, a fresh card, and the end", async () => {
+    const { guilds, bot, d } = await table();
+    const moved: Array<{ sessionId: string; seq: number }> = [];
+    const dd: Deps = { ...d, later: async (job) => void moved.push(job) };
+    const id = "01000000000000000000000001";
+    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), dd))).toContain("started");
+    expect((await guilds.guildRun(id))?.seenSeq).toBeGreaterThan(0);
+    // A press from Discord tells the job nothing: the thread heard it as it happened.
+    expect((await call(signed(press(`rl:${id}:enter`)), dd)).body["type"]).toBe(7);
+    expect(moved).toHaveLength(0);
+    const heard = (await guilds.guildRun(id))!.seenSeq!;
+    // The host, in the app, takes the move back and begins again; the route hands the run to the job.
+    const undo = await call(request("POST", `/api/sessions/${id}/events`, { body: { events: [{ t: "Undone", at: "2026-09-06T12:01:00Z", id: "app_1", move: "app_m1", ids: [] }] } }), dd);
+    expect(undo.status).toBe(200);
+    const again = await call(request("POST", `/api/sessions/${id}/events`, { body: { events: [{ t: "UnitEntered", at: "2026-09-06T12:01:30Z", id: "app_2", move: "app_m2" }] } }), dd);
+    expect(again.status).toBe(200);
+    expect(moved).toEqual([{ sessionId: id, seq: heard + 1 }, { sessionId: id, seq: heard + 2 }]);
+    // The job tells the thread once for both, redraws the card, and remembers how far it heard.
+    const posts = bot.posts.length;
+    const edits = bot.edits.length;
+    expect(await finishMoved(moved[0]!, dd)).toBe("told");
+    expect(bot.posts).toHaveLength(posts + 1);
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("From the app:");
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("Took a move back.");
+    // The undo named no ids, so the app's begin opened the next stage; the line reads the log as it is.
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toMatch(/Stage \d begins\./);
+    expect(bot.edits).toHaveLength(edits + 1);
+    expect((await guilds.guildRun(id))!.seenSeq).toBe(heard + 2);
+    // Nothing new: nothing said.
+    expect(await finishMoved(moved[1]!, dd)).toBe("quiet");
+    expect(bot.posts).toHaveLength(posts + 1);
+    // The app ends the run; the thread hears that too, and the card is done pressing.
+    expect((await call(request("POST", `/api/sessions/${id}/events`, { body: { events: [{ t: "RunEnded", at: "2026-09-06T12:02:00Z", id: "app_3", move: "app_m3", ending: "kept" }] } }), dd)).status).toBe(200);
+    expect(await finishMoved(moved[moved.length - 1]!, dd)).toBe("told");
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("The firing is over: The Shelf.");
+    expect((await guilds.guildRun(id))!.endedAt).toBeTruthy();
+    expect(content(await call(signed(press(`rl:${id}:enter`)), dd))).toContain("has ended");
+    // An ended run the app writes to again is nobody's to tell.
+    expect(await finishMoved({ sessionId: id, seq: 99 }, dd)).toBe("gone");
+    expect(moved).toHaveLength(3);
   });
 
   it("offers a clock the pack leaves to the player, once per open unit", async () => {

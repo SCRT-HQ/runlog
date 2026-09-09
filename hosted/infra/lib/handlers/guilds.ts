@@ -100,6 +100,8 @@ export interface GuildRun {
   contestants: Record<string, string>;
   /** Seat number → who sits there, in a mode played by several; a seat's holder may press. */
   seats?: Record<string, { discordId: string; name: string }>;
+  /** The log's seq the thread has heard up to: the card drawn and the lines posted. A move from the app lands past it. */
+  seenSeq?: number;
   createdAt: string;
   updatedAt: string;
   endedAt?: string;

@@ -455,6 +455,16 @@ dice itself and the log says so; the pack's text never leaves
 run's roster. This is the one place the hosting reduces a pack, on
 purpose, and it is confined to `lib/handlers/discord/`.
 
+The host may also play a hosted run from the app. The run row keeps
+`seenSeq`, the log's seq the thread has heard up to; the app's events
+route, after appending to a run the bot hosts, hands `{ kind: "moved",
+sessionId, seq }` to the job function, which posts one line per move
+since `seenSeq` under "From the app", redraws the card, drops a block
+that was waiting on a Discord answer (the log moved under it), marks the
+run ended if the app ended it, and moves `seenSeq` up. A press from
+Discord meanwhile is refused by `expectSeq` rather than built on a table
+that moved; the next card is fresh.
+
 A timer at a Discord table has nobody's browser ticking for it. When one
 starts or resumes, the handler makes a one-shot **EventBridge Scheduler**
 schedule for its deadline, in the stage's `runlog-<env>-timers` group,
