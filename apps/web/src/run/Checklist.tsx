@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { ChecklistItem, Pack } from "@runlog/rules-schema";
 import type { RunState } from "@runlog/engine";
-import { allMade, evidenceFor, pointMade, pointOf, type Shown } from "./evidence.ts";
+import { allMade, evidenceFor, pointMade, pointOf, rowMade, type Settling, type Shown } from "./evidence.ts";
 
 /**
  * Points to tick off, with their evidence under them.
@@ -32,12 +32,18 @@ export function Checklist({
   state,
   ticked,
   onToggle,
+  settling,
+  action,
 }: {
   items: ChecklistItem[];
   pack: Pack;
   state: RunState;
   ticked: Set<string>;
   onToggle: (keys: string[], on: boolean, tally?: string) => void;
+  /** Which rows the game settles itself, and whether it has; see evidence.ts. */
+  settling?: Settling;
+  /** The move a row is waiting on, drawn on the row rather than in a panel of its own. */
+  action?: (s: Shown) => ReactNode;
 }) {
   const points = useMemo(() => items.map(pointOf), [items]);
   const evidence = useMemo(
@@ -50,8 +56,11 @@ export function Checklist({
       {points.map((point, i) => {
         const shown: Shown[] = evidence[i] ?? [];
         if (point.shows && shown.length === 0) return null;
-        const childKeys = shown.map((s) => `${i}:${s.key}`);
-        const made = pointMade(i, shown, ticked);
+        // A row the game settles is not offered as a box to tick, and
+        // ticking the point over it does not reach down to it.
+        const mine = shown.filter((s) => !settling?.owing(s) && !settling?.settled(s));
+        const childKeys = mine.map((s) => `${i}:${s.key}`);
+        const made = pointMade(i, shown, ticked, point, settling);
         const toggle = (keys: string[], on: boolean) => onToggle(keys.filter((k) => ticked.has(k) !== on), on, point.tally);
         return (
           <li key={i}>
@@ -59,6 +68,7 @@ export function Checklist({
               <input
                 type="checkbox"
                 checked={made}
+                disabled={shown.length > 0 && childKeys.length === 0}
                 onChange={(e) => toggle(shown.length > 0 ? childKeys : [`${i}`], e.target.checked)}
               />
               <span>
@@ -70,15 +80,23 @@ export function Checklist({
               <ul className="evidence">
                 {shown.map((s) => {
                   const key = `${i}:${s.key}`;
+                  const theirs = Boolean(settling?.owing(s) || settling?.settled(s));
                   return (
-                    <li key={key}>
+                    <li key={key} className={theirs ? "settling" : ""}>
                       <label>
-                        <input type="checkbox" checked={ticked.has(key)} onChange={(e) => toggle([key], e.target.checked)} />
+                        <input
+                          type="checkbox"
+                          checked={rowMade(key, s, ticked, settling)}
+                          disabled={theirs}
+                          title={theirs ? "The game settles this one: it is honoured by the roll it asks for, not by saying so." : undefined}
+                          onChange={(e) => toggle([key], e.target.checked)}
+                        />
                         <span>
                           <span className="where">{s.where}</span>
                           {s.text}
                         </span>
                       </label>
+                      {settling?.owing(s) && action?.(s)}
                     </li>
                   );
                 })}
@@ -92,11 +110,12 @@ export function Checklist({
 }
 
 /** Whether every point that must be made is made, for the button that waits on it. */
-export function checklistDone(items: ChecklistItem[], pack: Pack, state: RunState, ticked: Set<string>): boolean {
+export function checklistDone(items: ChecklistItem[], pack: Pack, state: RunState, ticked: Set<string>, settling?: Settling): boolean {
   const points = items.map(pointOf);
   return allMade(
     points,
     points.map((p) => (p.shows ? evidenceFor(pack, state, p.shows) : [])),
     ticked,
+    settling,
   );
 }
