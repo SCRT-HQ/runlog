@@ -65,7 +65,7 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
         ? `Ended · ${ending ?? "finished"}`
         : state.unit === 0
           ? `Not begun. ${run.hostName} begins the first ${v.unit.one.toLowerCase()}.`
-          : `${v.unit.one} ${state.unit}${active ? ` · ${active.phase.label} · ${stepLabel}` : ` · between ${v.unit.many.toLowerCase()}`}`,
+          : `${v.unit.one} ${state.unit}${active ? ` · **${active.phase.label}**${stepLabel && stepLabel !== active.phase.label ? ` · _${stepLabel}_` : ""}` : ` · between ${v.unit.many.toLowerCase()}`}`,
     fields: [],
     footer: { text: `Hosted by ${run.hostName} · Runlog` },
     color: state.status === "ended" ? COLORS.closed : COLORS.begins,
