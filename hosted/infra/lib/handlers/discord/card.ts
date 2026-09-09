@@ -88,7 +88,8 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
     fields.push({ name: clip(pack.tables[o.table]?.title ?? o.table, 256), value: clip(`${entryTextOf(pack, o)}${hit ? ` → ${subjectName(pack, hit)}` : ""}`) });
   }
   const trackers = [
-    ...state.subjects.filter((s) => s.unit === state.unit || !s.finalized).slice(-6).map((s) => `${subjectName(pack, s)}${s.states.length > 0 ? ` [${s.states.map((st) => pack.states?.[st]?.short ?? pack.states?.[st]?.label ?? st).join(" ")}]` : ""}`),
+    // The name, and what it was declared to be where that is a different thing: "Track 7 · Rhodes".
+    ...state.subjects.filter((s) => s.unit === state.unit || !s.finalized).slice(-6).map((s) => `${subjectName(pack, s)}${s.type && s.type !== subjectName(pack, s) ? ` · ${s.type}` : ""}${s.states.length > 0 ? ` [${s.states.map((st) => pack.states?.[st]?.short ?? pack.states?.[st]?.label ?? st).join(" ")}]` : ""}`),
     ...Object.entries(state.counters ?? {}).map(([cid, value]) => `${pack.counters?.[cid]?.label ?? cid}: ${value}`),
     ...Object.entries(state.resources ?? {}).map(([rid, value]) => `${pack.resources?.[rid]?.label ?? rid}: ${value}${pack.resources?.[rid]?.max !== undefined ? ` / ${pack.resources[rid]!.max}` : ""}`),
   ];

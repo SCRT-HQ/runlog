@@ -89,15 +89,38 @@ describe("the live page", () => {
     );
     expect(html).toContain("The game has already had its say");
     expect(html).toContain("The wall must be thin enough to admit light.");
-    expect(html).toContain("This stage so far");
-    // Nothing to honor and nothing rolled yet: neither block appears.
+    // The unit's results read under the phases that produced them, not in a block of their own.
+    expect(html).not.toContain("This stage so far");
+    // Nothing to honor: the block does not appear.
     const empty = renderToStaticMarkup(<LiveView snapshot={{ ...base, constraints: [], unitResults: [] }} />);
     expect(empty).not.toContain("The game has already had its say");
-    expect(empty).not.toContain("This stage so far");
     // A snapshot written before these fields existed carries neither key at all.
     const { constraints: _c, unitResults: _u, ...withoutFields } = base;
     const legacy = renderToStaticMarkup(<LiveView snapshot={withoutFields as LiveSnapshot} />);
     expect(legacy).not.toContain("The game has already had its say");
-    expect(legacy).not.toContain("This stage so far");
+  });
+
+  it("shows what each phase produced this unit under the phase, in order", () => {
+    const html = renderToStaticMarkup(
+      <LiveView
+        snapshot={{
+          ...base,
+          phases: [
+            { id: "check", label: "Kiln Check", state: "done", results: ["Roll on the Form table"] },
+            { id: "form", label: "Shape", state: "done", results: ["A wide bowl"] },
+            { id: "work", label: "Throw", state: "current" },
+          ],
+        }}
+      />,
+    );
+    const flow = html.slice(html.indexOf('class="flow"'));
+    const check = flow.indexOf("Kiln Check");
+    const rolled = flow.indexOf('<span class="result">Roll on the Form table</span>');
+    const shape = flow.indexOf("Shape");
+    const bowl = flow.indexOf('<span class="result">A wide bowl</span>');
+    expect(check).toBeGreaterThan(-1);
+    expect(rolled).toBeGreaterThan(check);
+    expect(shape).toBeGreaterThan(rolled);
+    expect(bowl).toBeGreaterThan(shape);
   });
 });

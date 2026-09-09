@@ -2853,6 +2853,9 @@ select.textInput {
   padding-top: 0.15rem;
 }
 /* Why a phase is out of play this unit, under its name. */
+/* What a phase produced this unit, read under it on the live page: the roll's text, the declared type. */
+.flow .result { display: block; margin-top: 0.15rem; font-size: 0.95rem; color: var(--text); }
+.flow li.done .result { color: var(--muted); }
 .flow .why {
   display: block;
   font-family: var(--mono);
