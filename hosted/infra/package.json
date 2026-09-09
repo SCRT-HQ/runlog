@@ -27,7 +27,7 @@
     "esbuild": "^0.25.12",
     "tsx": "^4.23.13",
     "typescript": "^5.9.0",
-    "vitest": "^3.2.0"
+    "vitest": "^5.0.0"
   },
   "dependencies": {
     "@aws-sdk/s3-request-presigner": "^3.1127.0",
