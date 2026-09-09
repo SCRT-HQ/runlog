@@ -315,6 +315,8 @@ export function rulebookDoc(pack: Pack): Doc {
   if (pack.hierarchy?.length) b.p(`When rules contradict each other, the more specific wins, in this order: ${pack.hierarchy.join(" > ")}.`, "note");
 
   b.h(2, `${an(n.unit, true)}, step by step`);
+  if (pack.unit.intro) b.p(`On entering the first ${n.unit}: “${pack.unit.intro}”`, "note");
+  if (pack.unit.onEnter) b.p(`On entering ${an(n.unit)}: “${pack.unit.onEnter.replace(/\{n\}/g, "…")}”`, "note");
   b.list(flowSteps(pack, { detail: true }), true);
   if (pack.journal?.enabled !== false) b.p(`${pack.journal?.prompt ? `After each ${n.unit}: “${pack.journal.prompt}”` : `Keep a line of notes per ${n.unit}.`}${pack.journal?.required ? " A note is required before moving on." : ""}`);
 

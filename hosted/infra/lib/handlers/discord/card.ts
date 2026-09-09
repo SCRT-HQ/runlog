@@ -1,4 +1,4 @@
-import { actingSeats, canEndRun, challenges, clockOfUnit, closesUnit, hitsOn, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, unitClockFor, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import { actingSeats, canEndRun, challenges, clockOfUnit, closesUnit, entryWords, hitsOn, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, unitClockFor, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import type { GuildRun } from "../guilds.js";
 import { REACTIONS } from "./reactions.js";
@@ -71,6 +71,9 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
     color: state.status === "ended" ? COLORS.closed : COLORS.begins,
   };
   const fields = embed.fields!;
+  // What the pack says on entering the unit, first on the card, until the
+  // unit's first step is done: the welcome once, the unit's word each time.
+  for (const w of entryWords(pack, state)) fields.push({ name: state.unit === 1 && pack.unit.intro && w === pack.unit.intro.trim() ? "Welcome" : `This ${v.unit.one.toLowerCase()}`, value: clip(w) });
 
   if (pending) {
     const r = pending.request;
@@ -277,7 +280,11 @@ export function lineFor(pack: Pack, before: RunState, after: RunState, produced:
   const unit = pack.vocabulary.unit.one;
   for (const e of produced) {
     if (e.t === "Rolled") parts.push(`🎲 ${e.dice} → **${e.total}**${e.source === "physical" ? " (by hand)" : ""}`);
-    if (e.t === "UnitEntered") marks.push({ text: `**${unit} ${after.unit}** begins.`, color: COLORS.begins });
+    if (e.t === "UnitEntered") {
+      // The thread hears what the pack says on entering, once, with the bar.
+      const said = entryWords(pack, after);
+      marks.push({ text: `**${unit} ${after.unit}** begins.${said.length > 0 ? ` ${said.join(" ")}` : ""}`, color: COLORS.begins });
+    }
     if (e.t === "SubjectDeclared") parts.push(`**Declared** ${e.subjectType}`);
     if (e.t === "UnitFinalized") marks.push({ text: `**${unit} ${before.unit}** closed.`, color: COLORS.closed });
   }

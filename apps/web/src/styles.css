@@ -3543,6 +3543,11 @@ select.textInput {
 .guidePage ul, .guidePage ol { padding-left: 1.4rem; }
 .guidePage pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.75rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.85em; }
 .guidePage code { font-family: var(--mono); font-size: 0.9em; }
+/* What the pack says on entering a unit: its welcome, in the game's own voice, above the step. */
+.entryWords p { margin: 0; line-height: 1.55; }
+.entryWords p + p { margin-top: 0.5rem; }
+.entryWords .intro { font-size: 1.05rem; font-style: italic; }
+.pipEntry { margin: 0 0 0.5rem; color: var(--muted); font-size: 0.9rem; line-height: 1.45; }
 .guidePage table { border-collapse: collapse; width: 100%; margin: 0.8rem 0 1.2rem; font-size: 0.95em; }
 .guidePage th, .guidePage td { text-align: left; vertical-align: top; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line); line-height: 1.45; }
 .guidePage th { font-weight: 600; color: var(--muted); font-size: 0.85em; }

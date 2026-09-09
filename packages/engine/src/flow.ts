@@ -88,6 +88,20 @@ export function itemOptional(item: ChecklistItem): boolean {
 }
 
 /** The checklist or confirm points that gate a step, for whichever kind carries them. */
+/**
+ * What the pack says on entering the unit in hand: its welcome, once, on
+ * the first unit, and its word for every unit, with the number filled in.
+ * Said until the unit's first step is done, and nothing after; empty for
+ * a pack that says nothing, or before the first unit.
+ */
+export function entryWords(pack: Pack, state: RunState): string[] {
+  if (state.unit < 1 || state.status === "ended" || state.stepsDone.length > 0) return [];
+  const out: string[] = [];
+  if (state.unit === 1 && pack.unit.intro?.trim()) out.push(pack.unit.intro.trim());
+  if (pack.unit.onEnter?.trim()) out.push(pack.unit.onEnter.trim().replace(/\{n\}/g, String(state.unit)));
+  return out;
+}
+
 /** Whether finishing this step closes the unit: a finalizeUnit step, or a manual step that says it does. */
 export function closesUnit(step: Step): boolean {
   return step.kind === "finalizeUnit" || (step.kind === "manual" && step.closesUnit === true);

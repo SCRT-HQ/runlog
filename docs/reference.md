@@ -123,6 +123,8 @@ How units behave in this game.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `clock` | `object` | - | A clock every unit runs. A mode can set its own with `clock`. |
+| `intro` | `string` | - | Said once, when the first unit is entered: the welcome that sets the stage for the whole run. |
+| `onEnter` | `string` | - | Said every time a unit is entered, until its first step is done. `{n}` stands for the unit's number. |
 | `createsSubject` | `boolean` | - | Whether entering a unit produces a new subject. Default: `true`. |
 | `min` | `integer` | - | Fewest units in a run. Default: `1`. |
 | `max` | `integer` | - | Most units in a run. Default: `20`. |

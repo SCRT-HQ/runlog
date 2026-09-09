@@ -10,6 +10,28 @@ import { cardFor } from "../lib/handlers/discord/card";
  * each, so a pick is by what a piece is and not by its number alone.
  */
 describe("the table card", () => {
+  it("says what the pack says on entering the unit, first on the card, until its first step is done", () => {
+    const text = readFileSync(join(__dirname, "..", "..", "..", "packs", "demo", "pack.yaml"), "utf8");
+    const loaded = loadPackText(text, "yaml");
+    if (!loaded.ok) throw new Error("the demo pack did not load");
+    const pack = { ...loaded.pack, unit: { ...loaded.pack.unit, intro: "Welcome to the kiln yard.", onEnter: "Stage {n}: wedge, throw, fire." } };
+    const at = "2026-01-01T00:00:00Z";
+    const events = [
+      { t: "RunStarted", at, id: "e1", runId: "r1", packId: pack.id, packVersion: pack.version, mode: "standard", players: 1 },
+      { t: "UnitEntered", at, id: "e2" },
+    ] as unknown as RunEvent[];
+    const state = reduce(pack, events);
+    const card = cardFor({ pack, state, events, agenda: agenda(pack, state, events), run: { sessionId: "01ABC", hostName: "Mira" } });
+    const fields = (card.embeds[0] as { fields: Array<{ name: string; value: string }> }).fields;
+    expect(fields.slice(0, 2)).toEqual([
+      { name: "Welcome", value: "Welcome to the kiln yard." },
+      { name: "This stage", value: "Stage 1: wedge, throw, fire." },
+    ]);
+    // A quiet pack's card says nothing of the kind.
+    const quiet = cardFor({ pack: loaded.pack, state, events, agenda: agenda(loaded.pack, state, events), run: { sessionId: "01ABC", hostName: "Mira" } });
+    expect(((quiet.embeds[0] as { fields: Array<{ name: string }> }).fields ?? []).some((f) => f.name === "Welcome")).toBe(false);
+  });
+
   it("says what each piece is under its name in a choice among them, the way the board does", () => {
     const text = readFileSync(join(__dirname, "..", "..", "..", "packs", "demo", "pack.yaml"), "utf8");
     const loaded = loadPackText(text, "yaml");

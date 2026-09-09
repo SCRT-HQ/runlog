@@ -30,6 +30,7 @@ const state = (over: Partial<RunState> = {}): RunState =>
     checks: [],
     outcomes: [],
     subjects: [],
+    stepsDone: [],
     clocks: [],
     ...over,
   }) as unknown as RunState;
@@ -88,6 +89,15 @@ describe("the floating remote", () => {
     expect(html).toContain("Did the surface take a texture?");
     expect(html).toContain(">Yes<");
     expect(html).toContain(">No<");
+  });
+
+  it("says what the pack says on entering the unit, above the step, until its first step is done", () => {
+    const talking = { ...kiln, unit: { ...kiln.unit, intro: "Welcome to the kiln yard.", onEnter: "Stage {n}: wedge, throw, fire." } };
+    const html = panel({ pack: talking, run: run({ activeStep: { phase: kiln.phases[0]!, step: kiln.phases[0]!.steps[0]!, index: 0 } as never }), state: state({ unit: 1, stepsDone: [] }) });
+    expect(html).toContain("Welcome to the kiln yard.");
+    expect(html).toContain("Stage 1: wedge, throw, fire.");
+    const later = panel({ pack: talking, run: run({ activeStep: { phase: kiln.phases[0]!, step: kiln.phases[0]!.steps[0]!, index: 0 } as never }), state: state({ unit: 2, stepsDone: ["enter#0"] }) });
+    expect(later).not.toContain("wedge, throw, fire");
   });
 
   it("offers Next and Finish on the step that closes the unit, and Done on one that does not", () => {
