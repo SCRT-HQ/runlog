@@ -158,9 +158,9 @@ describe("the API", () => {
 
   it("names the store's SKU to the handler only where the stage sells the plan through Discord", () => {
     const handlerOf = (t: Template) => Object.entries(t.findResources("AWS::Lambda::Function")).find(([id]) => id.startsWith("Handler"))![1] as { Properties: { Environment: { Variables: Record<string, unknown> } } };
-    const selling = templateFor({ discord: { applicationId: "123", publicKey: "ab".repeat(32), open: false, serverSku: "1234567890123456789" } });
+    const selling = templateFor({ discord: { applicationId: "123", publicKey: "ab".repeat(32), serverSku: "1234567890123456789" } });
     expect(handlerOf(selling).Properties.Environment.Variables).toHaveProperty("DISCORD_SERVER_SKU", "1234567890123456789");
-    const notSelling = templateFor({ discord: { applicationId: "123", publicKey: "ab".repeat(32), open: false } });
+    const notSelling = templateFor({ discord: { applicationId: "123", publicKey: "ab".repeat(32) } });
     expect(handlerOf(notSelling).Properties.Environment.Variables).not.toHaveProperty("DISCORD_SERVER_SKU");
   });
 
@@ -192,14 +192,12 @@ describe("the API", () => {
   it("names the Discord application to the handler only where the stage has one; the key is public, the token is not", () => {
     const bare = JSON.stringify(Object.values(template.findResources("AWS::Lambda::Function")).map((f) => f.Properties.Environment));
     expect(bare).not.toContain("DISCORD_APPLICATION_ID");
-    const withBot = templateFor({ discord: { applicationId: "123456789012345678", publicKey: "ab".repeat(32), open: false } });
+    const withBot = templateFor({ discord: { applicationId: "123456789012345678", publicKey: "ab".repeat(32) } });
     withBot.hasResourceProperties("AWS::Lambda::Function", {
-      Environment: { Variables: Match.objectLike({ DISCORD_APPLICATION_ID: "123456789012345678", DISCORD_PUBLIC_KEY: "ab".repeat(32), DISCORD_BOT_TOKEN_SECRET: "runlog/discord/bot-token", DISCORD_OPEN: "off" }) },
+      Environment: { Variables: Match.objectLike({ DISCORD_APPLICATION_ID: "123456789012345678", DISCORD_PUBLIC_KEY: "ab".repeat(32), DISCORD_BOT_TOKEN_SECRET: "runlog/discord/bot-token" }) },
     });
-    // The plan goes on sale in the configuration, not in code.
-    templateFor({ discord: { applicationId: "123456789012345678", publicKey: "ab".repeat(32), open: true } }).hasResourceProperties("AWS::Lambda::Function", {
-      Environment: { Variables: Match.objectLike({ DISCORD_OPEN: "on" }) },
-    });
+    // Whether the plan is on sale is a WorkOS flag the handler reads, not a line here.
+    expect(JSON.stringify(withBot.findResources("AWS::Lambda::Function"))).not.toContain("DISCORD_OPEN");
     // The same six secrets either way: the token's secret exists before anyone has a bot to fill it with.
     withBot.resourceCountIs("AWS::SecretsManager::Secret", 6);
     template.hasResourceProperties("AWS::IAM::Policy", {

@@ -106,14 +106,6 @@ export interface EnvConfig {
     applicationId: string;
     publicKey: string;
     /**
-     * Whether Runlog for servers is on sale. Off, everyone sees the tier
-     * and may claim a server and fill its vault, but the plan itself is
-     * shown as coming, and only a `server` feature flag on a WorkOS
-     * session (or a grant Stripe already gave) holds it: the way to let a
-     * few people try it. On, Checkout is offered. Absent is off.
-     */
-    open: boolean;
-    /**
      * The SKU of a guild subscription sold through Discord's own store
      * (Monetization in the developer portal), where one is set up: a
      * server whose members bought it holds the server plan the same as
@@ -275,7 +267,6 @@ export function envConfig(name: EnvName): EnvConfig {
           discord: {
             applicationId: str(c["discord"]["applicationId"], "discord.applicationId"),
             publicKey: str(c["discord"]["publicKey"], "discord.publicKey"),
-            open: boolOr(c["discord"]["open"], "discord.open", false),
             ...(typeof c["discord"]["serverSku"] === "string" && c["discord"]["serverSku"].trim() ? { serverSku: c["discord"]["serverSku"].trim() } : {}),
           },
         }

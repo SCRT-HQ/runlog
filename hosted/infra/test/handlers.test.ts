@@ -725,7 +725,7 @@ describe("who is asking", () => {
     expect((await call(request("GET", "/api/me"), open)).body).toMatchObject({ servers: true, serversOpen: true, publishersOpen: true });
     expect((await call(request("GET", "/api/plans", { token: null }), open)).body).toMatchObject({ servers: true, serversOpen: true, publishersOpen: true });
     // A hold on a tier: coming soon, whatever the stage's file once said.
-    const held = deps(memoryStore(), { releaseGates: async () => ({ servers: false, publishers: false }), guilds: memoryGuilds(), discord: { ...bot, open: true } });
+    const held = deps(memoryStore(), { releaseGates: async () => ({ servers: false, publishers: false }), guilds: memoryGuilds(), discord: { ...bot } });
     expect((await call(request("GET", "/api/me"), held)).body).toMatchObject({ serversOpen: false, publishersOpen: false });
     expect((await call(request("GET", "/api/guilds"), held)).body).toMatchObject({ open: false });
     // Behind a hold, a Checkout for the tier is refused, and so is becoming a publisher where plans gate; an existing publisher is untouched.
@@ -1796,7 +1796,7 @@ describe("a claimed server", () => {
   it("is claimed by handing in the code, lists for its owner alone, takes packs into a vault it never hands back, and is released whole", async () => {
     const guilds = memoryGuilds();
     let codes = 0;
-    const d = deps(memoryStore(), { guilds, discord: { applicationId: "app", publicKey: publicHex, token: async () => null, open: true, guildName: async (id) => (id === "g1" ? "The Kiln Room" : null) }, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
+    const d = deps(memoryStore(), { guilds, discord: { applicationId: "app", publicKey: publicHex, token: async () => null, guildName: async (id) => (id === "g1" ? "The Kiln Room" : null) }, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
     await call(signed(claimPress("g1")), d);
     // With plans off, nothing to upgrade to; the server is simply claimed, and named by Discord where the bot could ask.
     const claimed = await call(request("POST", "/api/guilds/claim", { body: { code: "claima" } }), d);
@@ -1825,7 +1825,7 @@ describe("a claimed server", () => {
     const guilds = memoryGuilds();
     const billing = memoryBilling();
     let codes = 0;
-    const d = deps(memoryStore(), { guilds, billing, gates: true, features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" }, discord: { applicationId: "app", publicKey: publicHex, token: async () => null, open: true }, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
+    const d = deps(memoryStore(), { guilds, billing, gates: true, features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" }, discord: { applicationId: "app", publicKey: publicHex, token: async () => null }, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
     for (const g of ["g1", "g2", "g3", "g4"]) await call(signed(claimPress(g)), d);
     expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMA" } }), d)).body).toMatchObject({ claimed: true, upgrade: true });
     await billing.putEntitlements("user_1", ["server"], "now");
@@ -1862,11 +1862,11 @@ describe("a claimed server", () => {
     // Anyone may claim a server and see the plan as coming; the flag on a session is the plan, the way a plus flag is Plus.
     await call(signed(claimPress("g1")), d);
     expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMA" }, token: "guest" }), d)).body).toMatchObject({ claimed: true, upgrade: true });
-    expect((await call(request("GET", "/api/guilds", { token: "guest" }), d)).body).toMatchObject({ server: false, open: false });
+    expect((await call(request("GET", "/api/guilds", { token: "guest" }), d)).body).toMatchObject({ server: false });
     expect((await call(request("GET", "/api/me"), d)).body["entitlements"]).toContain("server");
-    expect((await call(request("GET", "/api/guilds"), d)).body).toMatchObject({ server: true, open: false });
+    expect((await call(request("GET", "/api/guilds"), d)).body).toMatchObject({ server: true });
     // The stage putting it on sale is a configuration, not a code change.
-    const open = deps(memoryStore(), { guilds, discord: { ...bot, open: true } });
+    const open = deps(memoryStore(), { guilds, discord: { ...bot } });
     expect((await call(request("GET", "/api/me", { token: "guest" }), open)).body).toMatchObject({ servers: true, serversOpen: true });
   });
 });
@@ -1908,7 +1908,7 @@ describe("a run hosted in discord", () => {
     await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: `h${source.length}`, bytes: source.length, modes: [{ id: "standard", label: "Standard" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, source);
     const d = deps(store, {
       guilds,
-      discord: { applicationId: "app", publicKey: publicHex, token: async () => null, open: true, rest: async () => bot },
+      discord: { applicationId: "app", publicKey: publicHex, token: async () => null, rest: async () => bot },
       mintId: () => `01${String((ids += 1)).padStart(24, "0")}`,
       token: () => "livetok",
     });
