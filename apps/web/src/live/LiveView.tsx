@@ -37,6 +37,7 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
   // A result that holds over the step in hand is lit where it sits, under
   // its phase, rather than said again in a block of its own.
   const constrains = useMemo(() => new Set(s.constraints ?? []), [s.constraints]);
+  const nowPhase = (s.phases ?? []).find((p) => p.state === "current")?.label ?? null;
   useEffect(() => {
     before.current = s;
   }, [s]);
@@ -57,7 +58,21 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
       {s.status === "active" && (
         <p key={s.unit} className={`liveWhere${moved.turned ? " turned" : ""}`}>
           <span className="muted small">Now</span>{" "}
-          {s.where ?? (s.unit === 0 ? `Waiting to enter the first ${s.words.unit.toLowerCase()}` : `${s.words.unit} ${s.unit} is closed; the next has not begun`)}
+          {s.where ? (
+            // The phase carries the weight; its step, where it is a different thing, reads as the subline it is.
+            nowPhase ? (
+              <>
+                <strong>{nowPhase}</strong>
+                {s.step && s.step !== nowPhase && <span className="muted"> · {s.step}</span>}
+              </>
+            ) : (
+              s.where
+            )
+          ) : s.unit === 0 ? (
+            `Waiting to enter the first ${s.words.unit.toLowerCase()}`
+          ) : (
+            `${s.words.unit} ${s.unit} is closed; the next has not begun`
+          )}
         </p>
       )}
 
