@@ -84,6 +84,12 @@ export function evidenceFor(pack: Pack, state: RunState, shows: NonNullable<Poin
 export interface Settling {
   owing: (s: Shown) => boolean;
   settled: (s: Shown) => boolean;
+  /**
+   * Rows the step already shows somewhere else, as a rule it is held to.
+   * Not drawn again here, and still counted: the point waits for them,
+   * they are simply asked about where they are rather than twice.
+   */
+  hidden?: (s: Shown) => boolean;
 }
 
 export function allMade(points: Point[], evidence: Shown[][], ticked: Set<string>, settling?: Settling): boolean {
