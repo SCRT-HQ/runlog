@@ -169,16 +169,18 @@ describe("the API", () => {
     template.hasResourceProperties("AWS::IAM::Role", {
       AssumeRolePolicyDocument: { Statement: Match.arrayWith([Match.objectLike({ Principal: { Service: "scheduler.amazonaws.com" } })]) },
     });
-    // The job's name is fixed, so its ARN is known to both functions before either exists.
+    // The job keeps the name CDK gave it: the dashboard stack imports that name, and an export in use cannot change.
     const functions = template.findResources("AWS::Lambda::Function");
-    const job = Object.entries(functions).find(([id]) => id.startsWith("DiscordJob"))![1] as { Properties: { FunctionName: string; Environment: { Variables: Record<string, unknown> } } };
-    expect(job.Properties.FunctionName).toBe("runlog-prd-discord-job");
+    const job = Object.entries(functions).find(([id]) => id.startsWith("DiscordJob"))![1] as { Properties: { FunctionName?: string; Environment: { Variables: Record<string, unknown> } } };
+    expect(job.Properties.FunctionName).toBeUndefined();
     const handler = Object.entries(functions).find(([id]) => id.startsWith("Handler"))![1] as { Properties: { Environment: { Variables: Record<string, unknown> } } };
     for (const fn of [handler, job]) {
       expect(fn.Properties.Environment.Variables).toHaveProperty("TIMER_SCHEDULE_GROUP", "runlog-prd-timers");
       expect(fn.Properties.Environment.Variables).toHaveProperty("TIMER_ROLE_ARN");
-      expect(JSON.stringify(fn.Properties.Environment.Variables.DISCORD_JOB_ARN)).toContain(":function:runlog-prd-discord-job");
     }
+    // The handler is told the job's ARN; the job reads its own from each invocation.
+    expect(JSON.stringify(handler.Properties.Environment.Variables.DISCORD_JOB_ARN)).toContain("DiscordJob");
+    expect(job.Properties.Environment.Variables).not.toHaveProperty("DISCORD_JOB_ARN");
     template.hasResourceProperties("AWS::IAM::Policy", {
       PolicyDocument: { Statement: Match.arrayWith([Match.objectLike({ Action: Match.arrayWith(["scheduler:CreateSchedule"]) })]) },
     });

@@ -496,9 +496,12 @@ a later schedule if a pause moved the deadline. The schedule is named
 for the run, the clock and the deadline, so the same deadline asked for
 twice is one schedule, and it deletes itself once it has run. Without a
 schedule (a copy without the group, or a schedule that never came), the
-next press stops the timer first and lands after it. The job's name is
-fixed (`runlog-<env>-discord-job`) so its ARN is in both functions'
-environment before either exists.
+next press stops the timer first and lands after it. The handler is
+told the job's ARN; the job reads its own from each invocation, since a
+function's environment cannot name itself. The job keeps the name CDK
+gave it: the dashboard stack imports that name, and CloudFormation
+refuses to change an export another stack is using, which is what a
+fixed name would do.
 
 Discord waits three seconds for an interaction's answer. A press is one
 read and one write and answers in its turn; a start is a session, a

@@ -2012,7 +2012,8 @@ export function featuresFromEnv(raw: string | undefined): { plus: string; hosted
 }
 
 /** The API's dependencies, from the function's environment; made once per container. */
-function depsFromEnv(): Deps {
+function depsFromEnv(selfArn?: string): Deps {
+  const jobArn = process.env["DISCORD_JOB_ARN"] ?? selfArn;
     const clientId = process.env["WORKOS_CLIENT_ID"] ?? "";
     const cliClientId = process.env["WORKOS_CLI_CLIENT_ID"] ?? "";
     return {
@@ -2157,8 +2158,8 @@ function depsFromEnv(): Deps {
       // A timer's deadline is kept by EventBridge Scheduler, which invokes
       // the job function at the moment; without a group and a role to
       // invoke it, a timer that ran out waits for the next press.
-      ...(process.env["TIMER_SCHEDULE_GROUP"] && process.env["TIMER_ROLE_ARN"] && process.env["DISCORD_JOB_ARN"]
-        ? { schedule: scheduledTimers({ group: process.env["TIMER_SCHEDULE_GROUP"], roleArn: process.env["TIMER_ROLE_ARN"], jobArn: process.env["DISCORD_JOB_ARN"] }) }
+      ...(process.env["TIMER_SCHEDULE_GROUP"] && process.env["TIMER_ROLE_ARN"] && jobArn
+        ? { schedule: scheduledTimers({ group: process.env["TIMER_SCHEDULE_GROUP"], roleArn: process.env["TIMER_ROLE_ARN"], jobArn }) }
         : {}),
       mailer: sesMailer({ from: process.env["EMAIL_FROM"] ?? "", region: process.env["EMAIL_REGION"] ?? "us-west-2" }),
       appUrl: process.env["APP_URL"] ?? "/",
@@ -2182,8 +2183,11 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
  * The job function's entry: a deferred interaction, sent by the route as
  * an event, finished with the time Discord's three seconds did not allow.
  */
-export async function job(event: unknown): Promise<void> {
-  deps ??= depsFromEnv();
+export async function job(event: unknown, context?: { invokedFunctionArn?: string }): Promise<void> {
+  // The job's own ARN, for a timer's schedule it makes when a pause moved
+  // a deadline: a function's environment cannot name itself, but every
+  // invocation is told who it is.
+  deps ??= depsFromEnv(context?.invokedFunctionArn);
   try {
     if (isRecord(event) && event["kind"] === "discord-interaction" && isInteraction(event["interaction"])) {
       await finishDeferred(event["interaction"], deps);
