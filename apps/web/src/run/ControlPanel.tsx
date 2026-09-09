@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Pack } from "@runlog/rules-schema";
-import { closesUnit, constraintsFor, type RunState } from "@runlog/engine";
+import { closesUnit, constraintsFor, entryWords, type RunState } from "@runlog/engine";
 import type { RolledDie } from "../rolling.ts";
 import type { RollReceipt } from "./Receipt.tsx";
 import { Checklist, checklistDone } from "./Checklist.tsx";
@@ -184,6 +184,11 @@ export function RemoteControls({
       )}
 
       {/* 1. The step: what the page's current card offers. */}
+      {showStep && active && entryWords(pack, state).map((w, i) => (
+        <p key={`entry-${i}`} className="pipEntry">
+          {w}
+        </p>
+      ))}
       {showStep && active && <RemoteStep pack={pack} run={run} state={state} active={active} />}
 
       {/* 2. What the game is waiting on. */}

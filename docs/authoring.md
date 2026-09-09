@@ -488,6 +488,24 @@ tables:
               - { do: rollOn, table: overrun }
 ```
 
+### What the room says on entry
+
+A pack can speak when a unit is entered. `unit.intro` is said once, when
+the first unit begins: the welcome that sets the stage for the run.
+`unit.onEnter` is said every time a unit is entered, with `{n}` standing
+for the unit's number. Both show above the first step, in the app and on
+the bot's card, until the unit's first step is done, and the rulebook
+prints them with the walkthrough. Leave them out and the enter press
+says only what it always did.
+
+```yaml
+unit:
+  intro: >-
+    The kiln yard is cold this morning. Twelve stages, one piece each,
+    and the kiln has opinions.
+  onEnter: "Stage {n}. Wedge, throw, and mind what the dice said."
+```
+
 ### Scoring a run
 
 Most solo games are really asking "can you beat what you did last time?",

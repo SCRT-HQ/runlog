@@ -1056,6 +1056,14 @@ export const Pack = z
     unit: z
       .object({
         clock: Clock.optional().describe("A clock every unit runs. A mode can set its own with `clock`."),
+        intro: z
+          .string()
+          .optional()
+          .describe("Said once, when the first unit is entered: the welcome that sets the stage for the whole run."),
+        onEnter: z
+          .string()
+          .optional()
+          .describe("Said every time a unit is entered, until its first step is done. `{n}` stands for the unit's number."),
         createsSubject: z
           .boolean()
           .default(true)

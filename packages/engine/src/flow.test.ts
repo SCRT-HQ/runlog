@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
-import { activePhases, constrainedByOf, constraintsFor, nextStep, stepCompletionEvents } from "./flow.ts";
+import { activePhases, constrainedByOf, constraintsFor, entryWords, nextStep, stepCompletionEvents } from "./flow.ts";
 import type { RunEvent } from "./events.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -36,6 +36,23 @@ function walk(log: RunEvent[], limit = 12): string[] {
   }
   return visited;
 }
+
+describe("what the unit says on entry", () => {
+  it("says the welcome on the first unit only, and the unit's word until its first step is done", () => {
+    const talking = { ...kiln, unit: { ...kiln.unit, intro: "Welcome to the kiln yard.", onEnter: "Stage {n}: wedge, throw, fire." } } as Pack;
+    // Before the first unit there is nothing to say.
+    expect(entryWords(talking, reduce(talking, start))).toEqual([]);
+    const entered = [...start, ev("UnitEntered", {})];
+    const one = reduce(talking, entered);
+    expect(entryWords(talking, one)).toEqual(["Welcome to the kiln yard.", "Stage 1: wedge, throw, fire."]);
+    const stepped = reduce(talking, [...entered, ...stepCompletionEvents(talking.phases[0]!, 0, one, "2026-01-01T00:00:02Z")]);
+    expect(entryWords(talking, stepped)).toEqual([]);
+    const two = reduce(talking, [...entered, ev("UnitFinalized", {}), ev("UnitEntered", {})]);
+    expect(entryWords(talking, two)).toEqual(["Stage 2: wedge, throw, fire."]);
+    // A pack that says nothing says nothing.
+    expect(entryWords(kiln, one)).toEqual([]);
+  });
+});
 
 describe("moving through a unit", () => {
   it("has no step before the first unit is entered", () => {
