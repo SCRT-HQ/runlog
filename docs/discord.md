@@ -87,9 +87,11 @@ roster** and is a contestant by their Discord name; each result with
 points shows an **Award** menu to the host, and the standings are on the
 card.
 
-`/run status` in the thread posts the card again. `/run link` posts a
-fresh live link (the old one stops working). `/run end` ends the run and
-closes the thread; the log stays, in the host's library and by link.
+`/run status` in the thread posts a fresh card and takes the buttons off
+the old one. `/run link` posts a fresh live link (the old one stops
+working). `/run end` ends the run; the thread stays open to talk about
+it, and Discord closes it after a day idle. The log stays, in the host's
+library and by link.
 
 ## Watching
 

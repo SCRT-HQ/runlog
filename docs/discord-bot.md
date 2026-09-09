@@ -105,14 +105,15 @@ and `401 bad signature` to anything not from Discord in the others.
 - **Default Install Settings → Guild Install**:
   - Scopes: `applications.commands`, `bot`.
   - Permissions: View Channels, Send Messages, Send Messages in Threads,
-    Create Public Threads, Manage Threads, Embed Links, Read Message
-    History, Manage Messages.
+    Create Public Threads, Embed Links, Read Message History, Manage
+    Messages.
 
 Those are exactly the permissions the setup script (next) puts in the
 install link it prints, and no more: the bot opens a public thread per
-run, posts and pins the table card in it, posts a line per move, and
-closes the thread when the run ends. Manage Messages is for the pin.
-It never reads members' messages and never manages people.
+run, posts and pins the table card in it, and posts a line per move.
+Manage Messages is for the pin. It never closes a thread (Discord does,
+after a day idle), never reads members' messages and never manages
+people.
 
 **OAuth2** tab: nothing. The bot uses no Discord OAuth; linking a Runlog
 account to a Discord account goes the other way, through a code the bot

@@ -455,6 +455,18 @@ dice itself and the log says so; the pack's text never leaves
 run's roster. This is the one place the hosting reduces a pack, on
 purpose, and it is confined to `lib/handlers/discord/`.
 
+Discord waits three seconds for an interaction's answer. A press is one
+read and one write and answers in its turn; a start is a session, a
+thread, a card and a pin, and a cold start plus those may not fit. So
+the handler answers "thinking" at once and sends the interaction as an
+event to the **job function** (`DiscordJob`, the same bundle with the
+`job` entry, thirty seconds, the handler's environment and grants),
+which does the work and fills the reply in through the interaction's own
+webhook. Everything that could refuse a start has already said so in the
+handler's turn; only the work is deferred. A failure in the job leaves
+the reply "thinking" until Discord gives up on it, which is the loud
+kind of failure this wants.
+
 Setting the bot up as the operator is `docs/discord-bot.md`; what
 servers do with it is `docs/discord.md`.
 

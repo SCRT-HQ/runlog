@@ -68,7 +68,7 @@ describe("the API", () => {
     expect(routes).toEqual(["$connect", "$default", "$default", "$disconnect", "ANY /api/{proxy+}"]);
     // Two functions: the HTTP handler and the socket's. The HTTP one may
     // post to connections; it knows where through its environment.
-    template.resourceCountIs("AWS::Lambda::Function", 2);
+    template.resourceCountIs("AWS::Lambda::Function", 3);
     const policies = JSON.stringify(Object.values(template.findResources("AWS::IAM::Policy")));
     expect(policies).toContain("execute-api:ManageConnections");
     const env = JSON.stringify(Object.values(template.findResources("AWS::Lambda::Function")).map((f) => f.Properties.Environment));
@@ -88,10 +88,10 @@ describe("the API", () => {
     expect(api).not.toContain("CorsConfiguration");
   });
 
-  it("traces both functions, and gives Lambda Insights a look at each invocation", () => {
-    template.resourceCountIs("AWS::Lambda::Function", 2);
+  it("traces all three functions, and gives Lambda Insights a look at each invocation", () => {
+    template.resourceCountIs("AWS::Lambda::Function", 3);
     const functions = Object.values(template.findResources("AWS::Lambda::Function"));
-    expect(functions).toHaveLength(2);
+    expect(functions).toHaveLength(3);
     for (const fn of functions) {
       const props = fn["Properties"] as { TracingConfig?: { Mode: string }; Layers?: unknown };
       expect(props.TracingConfig).toEqual({ Mode: "Active" });
@@ -141,6 +141,20 @@ describe("the API", () => {
     });
   });
 
+  it("gives the bot a function with time, which the handler may invoke and knows by name", () => {
+    const functions = template.findResources("AWS::Lambda::Function");
+    const job = Object.entries(functions).find(([id]) => id.startsWith("DiscordJob"));
+    expect(job).toBeDefined();
+    expect((job![1] as { Properties: { Handler: string; Timeout: number } }).Properties).toMatchObject({ Handler: "index.job", Timeout: 30 });
+    // The same environment as the handler, so the same code finds the same table, bucket and secrets.
+    const handler = Object.entries(functions).find(([id]) => id.startsWith("Handler"))![1] as { Properties: { Environment: { Variables: Record<string, unknown> } } };
+    expect(handler.Properties.Environment.Variables).toHaveProperty("DISCORD_JOB_FUNCTION");
+    expect(JSON.stringify(handler.Properties.Environment.Variables.TABLE_NAME)).toBe(JSON.stringify((job![1] as { Properties: { Environment: { Variables: Record<string, unknown> } } }).Properties.Environment.Variables.TABLE_NAME));
+    template.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyDocument: { Statement: Match.arrayWith([Match.objectLike({ Action: "lambda:InvokeFunction" })]) },
+    });
+  });
+
   it("names the Discord application to the handler only where the stage has one; the key is public, the token is not", () => {
     const bare = JSON.stringify(Object.values(template.findResources("AWS::Lambda::Function")).map((f) => f.Properties.Environment));
     expect(bare).not.toContain("DISCORD_APPLICATION_ID");
@@ -163,12 +177,12 @@ describe("the API", () => {
     });
   });
 
-  it("wraps both functions in New Relic's layer where the stage names an account, and reads the key from a sixth secret", () => {
+  it("wraps every function in New Relic's layer where the stage names an account, and reads the key from a sixth secret", () => {
     const monitored = templateFor({ apm: { newRelic: { accountId: "1234567", layerVersion: 52 } } });
     monitored.resourceCountIs("AWS::SecretsManager::Secret", 6);
     monitored.hasResourceProperties("AWS::SecretsManager::Secret", { Name: "runlog/newrelic/license-key" });
     const wrapped = Object.values(monitored.findResources("AWS::Lambda::Function", { Properties: { Handler: "newrelic-lambda-wrapper.handler" } }));
-    expect(wrapped).toHaveLength(2);
+    expect(wrapped).toHaveLength(3);
     for (const fn of wrapped) {
       const props = fn["Properties"] as { Layers: unknown; Environment: { Variables: Record<string, string> } };
       expect(JSON.stringify(props.Layers)).toContain("layer:NewRelicNodeJS24XARM64:52");

@@ -1,4 +1,4 @@
-import { challenges, constrainedByOf, constraintsFor, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, standings, subjectName, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import { challenges, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, standings, subjectName, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import type { GuildRun } from "../guilds.js";
 import { REACTIONS } from "./reactions.js";
@@ -33,7 +33,7 @@ export function parseCustomId(raw: string): { runId: string; verb: string; arg?:
 const MAX_FIELD = 1024;
 const clip = (s: string, n = MAX_FIELD) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
-export function cardFor(input: { pack: Pack; state: RunState; events: readonly RunEvent[]; agenda: Agenda; run: GuildRun; pending?: Pending }): Card {
+export function cardFor(input: { pack: Pack; state: RunState; events: readonly RunEvent[]; agenda: Agenda; run: Pick<GuildRun, "sessionId" | "hostName">; pending?: Pending }): Card {
   const { pack, state, agenda, run, pending } = input;
   const v = pack.vocabulary;
   const id = run.sessionId;
@@ -82,22 +82,33 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
     fields.push({ name: "Standings", value: board.length === 0 ? "Nobody on the roster yet. Press Join." : clip(board.map((s) => `#${s.place} ${s.contestant.name} · ${s.points}`).join("\n")) });
   }
 
-  return { embeds: [embed], components: componentsFor(id, pack, state, agenda, run, pending) };
+  return { embeds: [embed], components: componentsFor(id, pack, state, agenda, pending) };
 }
 
-function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, run: GuildRun, pending?: Pending): unknown[] {
+function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, pending?: Pending): unknown[] {
   const rows: unknown[] = [];
   const v = pack.vocabulary;
   if (state.status === "ended") return rows;
 
   if (pending) {
     const r = pending.request;
+    // A choice among subjects is answered with a subject's id, which is what
+    // the engine reads for a target; a select over the ones that qualify, or
+    // a way out where none does, since a select with no options is refused
+    // by Discord and a typed answer would be read as nothing.
+    const subjects = (only: number[] | null, eligibleOnly: boolean) => {
+      const pool = only ? state.subjects.filter((s) => only.includes(s.id)) : eligibleOnly ? eligibleTargets(pack, state) : state.subjects;
+      return pool.map((s) => ({ label: subjectName(pack, s), value: String(s.id) }));
+    };
+    const choose = (label: string, options: Array<{ label: string; value: string }>) => {
+      if (options.length === 0) rows.push(row(button(customId(id, "none"), `Nothing to choose for: ${label}`.slice(0, 80), ButtonStyle.Secondary, true), button(customId(id, "undo"), "Undo")));
+      else rows.push(select(customId(id, "target"), label, options));
+    };
     if (r.kind === "roll") rows.push(row(button(customId(id, "roll"), `Roll ${r.dice}`, ButtonStyle.Primary)));
     else if (r.kind === "ask" || (r.kind === "prompt" && r.promptKind === "confirm")) rows.push(row(button(customId(id, "yes"), "Yes", ButtonStyle.Success), button(customId(id, "no"), "No", ButtonStyle.Danger)));
-    else if (r.kind === "chooseTarget") {
-      const eligible = state.subjects.filter((s) => r.eligible.includes(s.id));
-      rows.push(select(customId(id, "target"), r.label, eligible.map((s) => ({ label: subjectName(pack, s), value: String(s.id) }))));
-    } else if (r.kind === "prompt" && r.promptKind === "text") rows.push(row(button(customId(id, "text"), "Answer…", ButtonStyle.Primary)));
+    else if (r.kind === "chooseTarget") choose(r.label, subjects(r.eligible, false));
+    else if (r.kind === "prompt" && r.promptKind === "chooseSubject") choose(r.label, subjects(null, r.eligibleOnly === true));
+    else if (r.kind === "prompt" && r.promptKind === "text") rows.push(row(button(customId(id, "text"), "Answer…", ButtonStyle.Primary)));
     else if (r.kind === "prompt" && r.options && r.options.length > 0) rows.push(select(customId(id, "pick"), r.label, r.options.map((o, i) => ({ label: o, value: String(i) }))));
     else rows.push(row(button(customId(id, "text"), "Answer…", ButtonStyle.Primary)));
     return rows;
@@ -106,9 +117,10 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
   // The checklist comes first, and the press that closes the step waits on
   // it: the same order the app's step card keeps, and the driver refuses
   // a step whose boxes are not ticked anyway.
-  const ticked = agenda.checklist.every((c) => c.on);
-  if (agenda.checklist.length > 0) {
-    rows.push(row(...agenda.checklist.slice(0, 5).map((c) => button(customId(id, "tick", String(c.index)), `${c.on ? "☑" : "☐"} ${c.text}`, c.on ? ButtonStyle.Success : ButtonStyle.Secondary))));
+  const ticked = agenda.checklist.every((c) => c.on || c.optional);
+  // Five to a row, up to ten: a longer checklist than that is the app's to tick.
+  for (let from = 0; from < Math.min(agenda.checklist.length, 10); from += 5) {
+    rows.push(row(...agenda.checklist.slice(from, from + 5).map((c) => button(customId(id, "tick", String(c.index)), `${c.on ? "☑" : "☐"} ${c.text}${c.optional ? " (optional)" : ""}`, c.on ? ButtonStyle.Success : ButtonStyle.Secondary))));
   }
   const main: unknown[] = [];
   if (agenda.phase === "setup" || agenda.phase === "betweenUnits") {
@@ -142,10 +154,10 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
       rows.push(select(customId(id, "award", String(ch.outcome)), `Award ${ch.points} pt: ${ch.text.slice(0, 80)}`, state.contestants.map((c) => ({ label: c.name, value: c.id }))));
     }
   }
-  // A wave from anyone watching, where the card has a row to spare; the
-  // same six the live page offers, and they land in the same place.
-  if (rows.length < 5) rows.push(row(...REACTIONS.map((emoji) => button(customId(id, "react", emoji), emoji))));
-  void run;
+  // A wave from anyone watching, where the card has a row to spare: the
+  // same six the live page offers, landing in the same place. A menu,
+  // since a row holds five buttons and there are six.
+  if (rows.length < 5) rows.push(select(customId(id, "wave"), "Wave at the table…", REACTIONS.map((emoji) => ({ label: emoji, value: emoji }))));
   return rows.slice(0, 5);
 }
 

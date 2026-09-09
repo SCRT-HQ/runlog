@@ -8,10 +8,11 @@ import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, ty
 import { dynamoBilling, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
 import { dynamoGuilds, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
-import { handleInteraction } from "./discord/interactions.js";
-import { discordRest, guildNameFrom, type DiscordRest } from "./discord/rest.js";
+import { handleInteraction, type InteractionDeps } from "./discord/interactions.js";
+import { discordRest, guildNameFrom, PATIENT_ROPE_MS, ROPE_MS, type DiscordRest } from "./discord/rest.js";
 import { ulid } from "./ids.js";
-import { isInteraction } from "./discord/types.js";
+import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
+import { isInteraction, type Interaction } from "./discord/types.js";
 import { verifyInteraction } from "./discord/verify.js";
 import { featuresOfSummary, realStripe, type StripeLike } from "./stripe.js";
 import { dynamoPublishers, type PublisherStore } from "./publishers.js";
@@ -204,13 +205,15 @@ export interface Deps {
     guildName?: (guildId: string) => Promise<string | null>;
     /** Whether the server plan is on sale; off, the app shows it as coming and only a `server` flag or grant holds it. */
     open?: boolean;
-    /** Discord itself, for the thread and the messages of a hosted run; null until the token is filled. */
-    rest?: () => Promise<DiscordRest | null>;
+    /** Discord itself, for the thread and the messages of a hosted run; null until the token is filled. Patient, with a longer rope, for the job. */
+    rest?: (patient?: boolean) => Promise<DiscordRest | null>;
   };
   /** Link codes are random by default; a test hands in its own. */
   code?: () => string;
   /** Event and run ids are ULIDs by default; a test hands in its own. */
   mintId?: () => string;
+  /** Hand a slow interaction to the job function; absent, the route does everything in its turn. */
+  defer?: (interaction: Interaction) => Promise<void>;
 }
 
 type Result = APIGatewayProxyResultV2;
@@ -260,6 +263,59 @@ function parse(event: APIGatewayProxyEventV2): unknown {
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const str = (v: unknown): v is string => typeof v === "string";
+
+/**
+ * What the bot needs from the API's dependencies: the table, played
+ * through the same store the app's devices write, ringing the same bell;
+ * Discord itself where the token is filled; and a function with time,
+ * where the stage has one, for a start that a cold start plus three
+ * seconds may not cover.
+ */
+async function interactionDepsFor(deps: Deps, now: () => string, patient = false): Promise<InteractionDeps> {
+  return {
+    guilds: deps.guilds!,
+    appUrl: deps.appUrl ?? "/",
+    now,
+    gates: deps.gates,
+    serverFeature: deps.features?.server ?? "server",
+    store: deps.store,
+    ...(deps.notify ? { notify: deps.notify } : {}),
+    rest: deps.discord?.rest ? await deps.discord.rest(patient) : null,
+    mintId: deps.mintId ?? ulid,
+    token: deps.token ?? (() => randomBytes(24).toString("base64url")),
+    // What the server's owner has: bought, or flagged on their session and remembered.
+    grants: async (sub) => {
+      const [bought, kept] = await Promise.all([deps.billing.entitlements(sub), deps.billing.flags(sub)]);
+      return [...new Set([...bought, ...kept])];
+    },
+    ...(deps.code ? { code: deps.code } : {}),
+    ...(deps.defer ? { defer: deps.defer } : {}),
+  };
+}
+
+/**
+ * The slow half of a deferred interaction, run by the job function: the
+ * same handling as the route's, without a way to defer again, and the
+ * answer written into the reply Discord is showing as "thinking". A
+ * failure here is a reply that stays "thinking" until Discord gives up
+ * on it, which is the loud kind of failure this wants.
+ */
+export async function finishDeferred(interaction: Interaction, deps: Deps): Promise<void> {
+  if (!deps.discord || !deps.guilds) return;
+  const now = deps.now ?? (() => new Date().toISOString());
+  // With time to spare, the calls to Discord get a longer rope than the route allows.
+  const { defer: _defer, ...without } = await interactionDepsFor(deps, now, true);
+  const answer = await handleInteraction(interaction, without);
+  const message = answer.data ?? { content: "Done." };
+  const filled = await without.rest?.editOriginal(deps.discord.applicationId, interaction.token, {
+    ...(message.content ? { content: message.content } : {}),
+    ...(message.embeds ? { embeds: message.embeds } : {}),
+    ...(message.components ? { components: message.components } : {}),
+  });
+  // The work is done and written; only the reply is missing. Said loudly,
+  // since the person in Discord sees a reply that never came.
+  if (!filled) console.error(`job: the reply to interaction ${interaction.id} could not be filled in`);
+}
 
 export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<Result> {
   const now = deps.now ?? (() => new Date().toISOString());
@@ -362,29 +418,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       return json(400, { error: "not an interaction" });
     }
     if (!isInteraction(interaction)) return json(400, { error: "not an interaction" });
-    return json(
-      200,
-      await handleInteraction(interaction, {
-        guilds: deps.guilds,
-        appUrl: deps.appUrl ?? "/",
-        now,
-        gates: deps.gates,
-        serverFeature: deps.features?.server ?? "server",
-        // The table: the bot plays runs through the same store the app's
-        // devices write, and rings the same bell.
-        store,
-        ...(deps.notify ? { notify: deps.notify } : {}),
-        rest: deps.discord.rest ? await deps.discord.rest() : null,
-        mintId: deps.mintId ?? ulid,
-        token: deps.token ?? (() => randomBytes(24).toString("base64url")),
-        // What the server's owner has: bought, or flagged on their session and remembered.
-        grants: async (sub) => {
-          const [bought, kept] = await Promise.all([deps.billing.entitlements(sub), deps.billing.flags(sub)]);
-          return [...new Set([...bought, ...kept])];
-        },
-        ...(deps.code ? { code: deps.code } : {}),
-      }),
-    );
+    return json(200, await handleInteraction(interaction, await interactionDepsFor(deps, now)));
   }
 
   // Stripe calling back. No bearer: the signature over the raw body is
@@ -1791,6 +1825,7 @@ async function mismatch(event: APIGatewayProxyEventV2, current: PackMeta | Licen
 /* ---- the Lambda ---------------------------------------------------------- */
 
 let deps: Deps | undefined;
+let lambdaClient: LambdaClient | undefined;
 let stripeClient: StripeLike | undefined;
 let workosClient: WorkOSLike | undefined;
 const secrets = secretsReader();
@@ -1831,11 +1866,11 @@ export function featuresFromEnv(raw: string | undefined): { plus: string; hosted
   }
 }
 
-export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
-  if (!deps) {
+/** The API's dependencies, from the function's environment; made once per container. */
+function depsFromEnv(): Deps {
     const clientId = process.env["WORKOS_CLIENT_ID"] ?? "";
     const cliClientId = process.env["WORKOS_CLI_CLIENT_ID"] ?? "";
-    deps = {
+    return {
       store: dynamoStore({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
       races: dynamoRaces({ table: process.env["TABLE_NAME"] ?? "" }),
       billing: dynamoBilling({ table: process.env["TABLE_NAME"] ?? "" }),
@@ -1852,6 +1887,17 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
         return looksLike("workos-key", key) ? (workosClient ??= realWorkOS(key)) : null;
       },
       gates: process.env["RUNLOG_GATES"] === "on",
+      // The function with time, where the stack made one: a slow interaction
+      // goes to it as an event, and the route answers Discord at once.
+      ...(process.env["DISCORD_JOB_FUNCTION"]
+        ? {
+            defer: async (interaction: Interaction) => {
+              await (lambdaClient ??= new LambdaClient({})).send(
+                new InvokeCommand({ FunctionName: process.env["DISCORD_JOB_FUNCTION"], InvocationType: "Event", Payload: Buffer.from(JSON.stringify({ kind: "discord-interaction", interaction })) }),
+              );
+            },
+          }
+        : {}),
       guilds: dynamoGuilds({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
       ...(process.env["DISCORD_APPLICATION_ID"] && process.env["DISCORD_PUBLIC_KEY"]
         ? (() => {
@@ -1869,9 +1915,9 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
                   const t = await token();
                   return t ? guildNameFrom(t, guildId) : null;
                 },
-                rest: async () => {
+                rest: async (patient?: boolean) => {
                   const t = await token();
-                  return t ? discordRest(t) : null;
+                  return t ? discordRest(t, fetch, patient ? PATIENT_ROPE_MS : ROPE_MS) : null;
                 },
               },
             };
@@ -1925,11 +1971,31 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
         ? { notify: notifier(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])) }
         : {}),
     };
-  }
+}
+
+export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
+  deps ??= depsFromEnv();
   try {
     return await route(event, deps);
   } catch (error) {
     console.error(error);
     return json(500, { error: "something went wrong on this side" });
+  }
+}
+
+/**
+ * The job function's entry: a deferred interaction, sent by the route as
+ * an event, finished with the time Discord's three seconds did not allow.
+ */
+export async function job(event: unknown): Promise<void> {
+  deps ??= depsFromEnv();
+  if (!isRecord(event) || event["kind"] !== "discord-interaction" || !isInteraction(event["interaction"])) {
+    console.error("job: not a deferred interaction", event);
+    return;
+  }
+  try {
+    await finishDeferred(event["interaction"], deps);
+  } catch (error) {
+    console.error(error);
   }
 }

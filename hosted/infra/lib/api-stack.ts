@@ -40,6 +40,7 @@ import type { EnvConfig } from "./config";
 const RUNTIME_SDK = [
   "@aws-sdk/client-apigatewaymanagementapi",
   "@aws-sdk/client-dynamodb",
+  "@aws-sdk/client-lambda",
   "@aws-sdk/client-s3",
   "@aws-sdk/client-secrets-manager",
   "@aws-sdk/client-sesv2",
@@ -158,6 +159,32 @@ export class ApiStack extends Stack {
     const workosApiKey = secret("WorkosApiKey", "workos/api-key", "WorkOS API key for the environment, used to create publisher organisations");
     const discordBotToken = secret("DiscordBotToken", "discord/bot-token", "The Runlog Discord application's bot token, for posting into servers that installed it");
 
+    /** What both the API handler and the bot's job function are told; the two run the same code. */
+    const handlerEnvironment: Record<string, string> = {
+      TABLE_NAME: this.table.tableName,
+      BUCKET_NAME: this.bucket.bucketName,
+      RUNLOG_ENV: config.name,
+      WORKOS_CLIENT_ID: config.workosClientId,
+      WORKOS_CLI_CLIENT_ID: config.workosCliClientId,
+      STRIPE_SECRET_KEY_SECRET: secretName("stripe/secret-key"),
+      STRIPE_WEBHOOK_SECRET_SECRET: secretName("stripe/webhook-secret"),
+      STRIPE_CONNECT_WEBHOOK_SECRET_SECRET: secretName("stripe/connect-webhook-secret"),
+      STRIPE_FEE_BPS: JSON.stringify(config.stripe.applicationFeeBps),
+      WORKOS_API_KEY_SECRET: secretName("workos/api-key"),
+      EMAIL_FROM: config.email.from,
+      EMAIL_REGION: config.email.region,
+      APP_URL: `https://${config.domain}/`,
+      RUNLOG_GATES: config.gates ? "on" : "off",
+      STRIPE_PRICES: JSON.stringify(config.stripe.prices),
+      STRIPE_FEATURES: JSON.stringify(config.stripe.features),
+      DISCORD_BOT_TOKEN_SECRET: secretName("discord/bot-token"),
+      ...(config.discord ? { DISCORD_APPLICATION_ID: config.discord.applicationId, DISCORD_PUBLIC_KEY: config.discord.publicKey, DISCORD_OPEN: config.discord.open ? "on" : "off" } : {}),
+      // A client the X-Ray SDK captured should fail into "not traced"
+      // rather than throw, if it is ever called before the runtime has
+      // set up this invocation's segment.
+      AWS_XRAY_CONTEXT_MISSING: "IGNORE_ERROR",
+    };
+
     const handler = new lambdaNodejs.NodejsFunction(this, "Handler", {
       entry: path.join(__dirname, "handlers", "api.ts"),
       handler: "handler",
@@ -173,30 +200,7 @@ export class ApiStack extends Stack {
       // invocation, without a trace to open.
       tracing: lambda.Tracing.ACTIVE,
       insightsVersion: INSIGHTS_VERSION,
-      environment: {
-        TABLE_NAME: this.table.tableName,
-        BUCKET_NAME: this.bucket.bucketName,
-        RUNLOG_ENV: config.name,
-        WORKOS_CLIENT_ID: config.workosClientId,
-        WORKOS_CLI_CLIENT_ID: config.workosCliClientId,
-        STRIPE_SECRET_KEY_SECRET: secretName("stripe/secret-key"),
-        STRIPE_WEBHOOK_SECRET_SECRET: secretName("stripe/webhook-secret"),
-        STRIPE_CONNECT_WEBHOOK_SECRET_SECRET: secretName("stripe/connect-webhook-secret"),
-        STRIPE_FEE_BPS: JSON.stringify(config.stripe.applicationFeeBps),
-        WORKOS_API_KEY_SECRET: secretName("workos/api-key"),
-        EMAIL_FROM: config.email.from,
-        EMAIL_REGION: config.email.region,
-        APP_URL: `https://${config.domain}/`,
-        RUNLOG_GATES: config.gates ? "on" : "off",
-        STRIPE_PRICES: JSON.stringify(config.stripe.prices),
-        STRIPE_FEATURES: JSON.stringify(config.stripe.features),
-        DISCORD_BOT_TOKEN_SECRET: secretName("discord/bot-token"),
-        ...(config.discord ? { DISCORD_APPLICATION_ID: config.discord.applicationId, DISCORD_PUBLIC_KEY: config.discord.publicKey, DISCORD_OPEN: config.discord.open ? "on" : "off" } : {}),
-        // A client the X-Ray SDK captured should fail into "not traced"
-        // rather than throw, if it is ever called before the runtime has
-        // set up this invocation's segment.
-        AWS_XRAY_CONTEXT_MISSING: "IGNORE_ERROR",
-      },
+      environment: handlerEnvironment,
       bundling: {
         minify: true,
         sourceMap: true,
@@ -213,9 +217,49 @@ export class ApiStack extends Stack {
       },
     });
     this.handler = handler;
+
+    /**
+     * The bot's function with time. Discord waits three seconds for an
+     * interaction's answer, and starting a run is a session, a thread, a
+     * card and a pin: a cold start plus those may not fit. So the handler
+     * answers "thinking" at once and sends the interaction here as an
+     * event; this function, the same code with a different entry, does the
+     * work and fills the reply in through the interaction's own webhook.
+     * Every press that is one read and one write stays on the handler.
+     */
+    const job = new lambdaNodejs.NodejsFunction(this, "DiscordJob", {
+      entry: path.join(__dirname, "handlers", "api.ts"),
+      handler: "job",
+      runtime: lambda.Runtime.NODEJS_24_X,
+      architecture: lambda.Architecture.ARM_64,
+      memorySize: 512,
+      timeout: Duration.seconds(30),
+      logGroup,
+      tracing: lambda.Tracing.ACTIVE,
+      insightsVersion: INSIGHTS_VERSION,
+      environment: handlerEnvironment,
+      bundling: {
+        minify: true,
+        sourceMap: true,
+        format: lambdaNodejs.OutputFormat.ESM,
+        target: "node24",
+        externalModules: RUNTIME_SDK,
+        banner: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+      },
+    });
+    this.table.grantReadWriteData(job);
+    this.bucket.grantReadWrite(job);
+    // Once: a job that timed out after the session and the thread were made
+    // must not be run again with the same press and make a second of each.
+    job.configureAsyncInvoke({ retryAttempts: 0 });
+    job.grantInvoke(handler);
+    handler.addEnvironment("DISCORD_JOB_FUNCTION", job.functionName);
     this.table.grantReadWriteData(handler);
     this.bucket.grantReadWrite(handler);
-    for (const s of [stripeSecretKey, stripeWebhookSecret, stripeConnectWebhookSecret, workosApiKey, discordBotToken]) s.grantRead(handler);
+    for (const s of [stripeSecretKey, stripeWebhookSecret, stripeConnectWebhookSecret, workosApiKey, discordBotToken]) {
+      s.grantRead(handler);
+      s.grantRead(job);
+    }
     // Invitations go out through the domain identity core-infra verified,
     // and through nothing else: the grant names the identity, not the
     // account's SES.
@@ -384,6 +428,7 @@ export class ApiStack extends Stack {
       for (const [fn, app] of [
         [handler, `runlog-${config.name}-api`],
         [wsHandler, `runlog-${config.name}-live`],
+        [job, `runlog-${config.name}-discord`],
       ] as const) {
         fn.addLayers(layer);
         licenseKey.grantRead(fn);
@@ -434,6 +479,8 @@ export class ApiStack extends Stack {
     // endpoint of this stage and permission to post to its connections.
     handler.addEnvironment("WS_ENDPOINT", wsStage.callbackUrl);
     wsStage.grantManagementApiAccess(handler);
+    job.addEnvironment("WS_ENDPOINT", wsStage.callbackUrl);
+    wsStage.grantManagementApiAccess(job);
     // And the socket handler passes gestures from one connection to the
     // rest, so it needs the same.
     wsHandler.addEnvironment("WS_ENDPOINT", wsStage.callbackUrl);
@@ -463,7 +510,7 @@ export class ApiStack extends Stack {
     // to name every connection of the stage, since ids are made as people
     // connect. The managed policies write function logs and the Insights
     // metrics; both are AWS's own and a customer policy would restate them.
-    for (const fn of [handler, wsHandler]) {
+    for (const fn of [handler, wsHandler, job]) {
       NagSuppressions.addResourceSuppressions(
         fn,
         [
@@ -488,6 +535,8 @@ export class ApiStack extends Stack {
               "Resource::*",
               { regex: "/^Resource::<Bucket[A-Za-z0-9]+\\.Arn>/\\*$/g" },
               { regex: "/^Resource::arn:(aws|<AWS::Partition>):execute-api:[^:]+:[^:]+:<WebSocketApi[A-Za-z0-9]+>/ws/\\*/@connections/\\*$/g" },
+              // grantInvoke names the function and its versions, which is how CDK spells "this function".
+              { regex: "/^Resource::<DiscordJob[A-Za-z0-9]+\\.Arn>:\\*$/g" },
             ],
           },
         ],
