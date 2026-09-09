@@ -408,8 +408,17 @@ export default function App() {
    * it has none, the one the account touched last on any device.
    */
   const continueLast = useCallback(
-    async (quiet = false) => {
+    async (quiet = false, runId?: string) => {
       const say = (text: string) => !quiet && setNotice(text);
+      // Asked for one run in particular (the account's, from the home
+      // strip), that one; otherwise whatever was last active on this device,
+      // and only failing that the account's last-touched run.
+      if (runId) {
+        if (await openRun(runId, quiet)) return;
+        sync.syncNow();
+        say("Fetching that run. Try again in a moment.");
+        return;
+      }
       const here = lastActive();
       if (here && (await openRun(here.runId, quiet))) return;
       const base = apiBase();
@@ -992,7 +1001,7 @@ export default function App() {
             choose(p.id, p.source);
             setView("play");
           }}
-          onContinueLast={() => void continueLast()}
+          onContinueLast={(runId) => void continueLast(false, runId)}
           onStartAnother={(p) => {
             setActiveRunFor(p.id, NEW_RUN);
             choose(p.id, p.source);

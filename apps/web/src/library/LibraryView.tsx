@@ -76,7 +76,7 @@ export function LibraryView({
   /** Join a race by its six-letter code; absent where nobody is signed in. */
   onJoinRace?: (code: string) => void;
   /** Open the run this account touched last, on this device or another. */
-  onContinueLast?: () => void;
+  onContinueLast?: (runId?: string) => void;
 }) {
   const [raceCode, setRaceCode] = useState("");
   const sync = useSync();
