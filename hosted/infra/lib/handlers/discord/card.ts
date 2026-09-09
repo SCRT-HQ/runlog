@@ -1,6 +1,7 @@
 import { challenges, constrainedByOf, constraintsFor, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, standings, subjectName, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import type { GuildRun } from "../guilds.js";
+import { REACTIONS } from "./reactions.js";
 import { button, ButtonStyle, row, select, type Embed } from "./types.js";
 
 /**
@@ -122,6 +123,10 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
   if (agenda.phase === "betweenUnits" || agenda.phase === "setup") {
     if (state.unit > 0) main.push(button(customId(id, "end"), `End the ${v.run.one.toLowerCase()}`, ButtonStyle.Secondary));
   }
+  // The first live clock is on the card to pause and resume; a second is in the field above.
+  const clock = liveClocks(state).find((c) => c.status === "running" || c.status === "paused");
+  if (clock) main.push(button(customId(id, "clock", `${clock.status === "running" ? "pause" : "resume"}:${clock.id}`), clock.status === "running" ? `Pause ${clock.label}` : `Resume ${clock.label}`));
+  if (state.unit > 0 && main.length < 5) main.push(button(customId(id, "undo"), "Undo"));
   if (main.length > 0) rows.push(row(...main));
   const extras: unknown[] = [
     ...agenda.moves.slice(0, 3).map((m) => button(customId(id, "move", m), pack.moves?.[m]?.label ?? m)),
@@ -137,6 +142,9 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
       rows.push(select(customId(id, "award", String(ch.outcome)), `Award ${ch.points} pt: ${ch.text.slice(0, 80)}`, state.contestants.map((c) => ({ label: c.name, value: c.id }))));
     }
   }
+  // A wave from anyone watching, where the card has a row to spare; the
+  // same six the live page offers, and they land in the same place.
+  if (rows.length < 5) rows.push(row(...REACTIONS.map((emoji) => button(customId(id, "react", emoji), emoji))));
   void run;
   return rows.slice(0, 5);
 }

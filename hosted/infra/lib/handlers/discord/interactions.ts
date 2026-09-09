@@ -154,6 +154,22 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
     }
 
     if (name === "run") return runCommand(i, deps, who);
+
+    if (name === "journal") {
+      const table = tableDeps(deps);
+      const run = i.channel_id ? await deps.guilds.guildRunByThread(i.channel_id) : null;
+      if (!table || !run) return ephemeral("Write that in a run's thread.");
+      if (run.endedAt) return ephemeral("This run has ended.");
+      if (who.id !== run.hostDiscordId && !canManage(i)) return ephemeral("Only the host writes the journal.");
+      const found = await packFor(deps.guilds, run.guildId, run.packId);
+      if (!found) return ephemeral("This run's pack has left the server's vault, so the bot cannot read it any more.");
+      const text = (i.data?.options?.find((o) => o.name === "text")?.value ?? "").toString().trim().slice(0, 500);
+      if (!text) return ephemeral("Nothing to write.");
+      const played = await play(table, run, found.pack, await seatOf(deps, who, i), { kind: "journal", text });
+      if ("error" in played) return ephemeral(played.error);
+      await afterPlay(table, played);
+      return say(played.line ?? "Written.");
+    }
   }
 
   return ephemeral("Nothing to do with that yet.");
@@ -225,7 +241,15 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     await afterPlay(table, played);
     return say(played.line ?? "The run is over.");
   }
-  return ephemeral("Run has start, status, link and end.");
+  if (which?.name === "undo") {
+    if (who.id !== run.hostDiscordId && !canManage(i)) return ephemeral("Only the host takes a move back.");
+    if (run.endedAt) return ephemeral("This run has ended.");
+    const played = await play(table, run, found.pack, await seatOf(deps, who, i), { kind: "undo" });
+    if ("error" in played) return ephemeral(played.error);
+    await afterPlay(table, played);
+    return say(played.line ?? "Taken back.");
+  }
+  return ephemeral("Run has start, status, link, end and undo.");
 }
 
 async function seatOf(deps: InteractionDeps, who: NonNullable<ReturnType<typeof userOf>>, i: Interaction): Promise<Seat> {
@@ -253,7 +277,7 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   const pack = found.pack;
   const actor = await seatOf(deps, who, i);
   const host = who.id === run.hostDiscordId || canManage(i);
-  const anyone = id.verb === "join" || id.verb === "leave";
+  const anyone = id.verb === "join" || id.verb === "leave" || id.verb === "react";
   if (!host && !anyone) return ephemeral(`Only the host, ${run.hostName}, presses here. Everyone else watches, here and by the live link.`);
 
   // Two presses open a modal rather than move: the answer is typed.
@@ -315,6 +339,14 @@ function actionFor(id: { verb: string; arg?: string }, i: Interaction, run: Guil
       return picked && id.arg ? { kind: "award", contestant: picked, outcome: Number(id.arg) } : null;
     case "end":
       return { kind: "end", ending: pack.endings?.[0]?.id ?? "ended" };
+    case "undo":
+      return { kind: "undo" };
+    case "react":
+      return id.arg ? { kind: "react", emoji: id.arg } : null;
+    case "clock": {
+      const m = /^(pause|resume):(.+)$/.exec(id.arg ?? "");
+      return m ? { kind: "clock", clock: m[2]!, to: m[1] === "pause" ? "paused" : "running" } : null;
+    }
     case "ending":
       return picked ? { kind: "end", ending: picked } : null;
     case "yes":
