@@ -27,6 +27,7 @@ import { ticksFor } from "./stepChecks.ts";
 import { nudgeFirstUnticked, nudgeOwed } from "./nudge.ts";
 import { Constraints } from "./Constraints.tsx";
 import { receiptFollowUps } from "./receiptFollowUps.ts";
+import { globalWords, settleWords, thresholdWords } from "./owed.ts";
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
@@ -476,7 +477,7 @@ export function RunView({
             <BetweenUnits pack={pack} run={run} state={state} />
           )}
 
-          {(run.thresholds.length > 0 || run.globals.length > 0) && <Thresholds run={run} />}
+          {(run.thresholds.length > 0 || run.globals.length > 0) && <Thresholds pack={pack} run={run} />}
 
           {(run.blockingObligations.length > 0 || run.notes.length > 0) && (
             <Obligations pack={pack} run={run} />
@@ -1394,8 +1395,11 @@ function Obligations({ pack, run }: { pack: Pack; run: ReturnType<typeof useRun>
             <strong>{o.text}</strong>
             <span className="muted small"> · {when(o.on)}</span>
           </div>
+          {/* What pressing it does, not whether it has been done: this is
+              where the trigger runs, and "Resolve" read as confirming that
+              somebody had already seen to it. */}
           <button className="primary" onClick={() => run.resolveObligation(o.id, o.text)}>
-            Resolve
+            {settleWords(pack, o)}
           </button>
         </div>
       ))}
@@ -1420,7 +1424,7 @@ function Obligations({ pack, run }: { pack: Pack; run: ReturnType<typeof useRun>
  * Presented separately from the player's own moves, and above them: this is
  * the game acting, not an option being offered.
  */
-function Thresholds({ run }: { run: ReturnType<typeof useRun> }) {
+function Thresholds({ pack, run }: { pack: Pack; run: ReturnType<typeof useRun> }) {
   return (
     <section className="panel threshold">
       <h3 className="sectionTitle">The game has your number</h3>
@@ -1431,7 +1435,7 @@ function Thresholds({ run }: { run: ReturnType<typeof useRun> }) {
             <span className="muted small"> · {g.on === "onRunEnd" ? "the reckoning" : "this turn"}</span>
           </div>
           <button className="primary" onClick={() => run.fireGlobal(g)}>
-            Resolve
+            {globalWords(pack, g.index)}
           </button>
         </div>
       ))}
@@ -1442,7 +1446,7 @@ function Thresholds({ run }: { run: ReturnType<typeof useRun> }) {
             <span className="muted small"> · reached {t.value}</span>
           </div>
           <button className="primary" onClick={() => run.fireThreshold(t)}>
-            Resolve
+            {thresholdWords(pack, t.counter, t.index)}
           </button>
         </div>
       ))}
