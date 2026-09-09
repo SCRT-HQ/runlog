@@ -124,11 +124,14 @@ jobs:
     # matrix and reports as "Diff ${{ matrix.env }}", which the ruleset
     # does not recognize as "Diff dev", and the queue waits for a check
     # that never comes. Nothing that reaches AWS runs for a pull request
-    # from a fork (GitHub would refuse it the OIDC token anyway).
+    # from a fork (GitHub would refuse it the OIDC token anyway), nor for
+    # Dependabot's, which run without the repository's secrets and so
+    # cannot name an account: a dependency bump is diffed in the queue's
+    # deploy, not here.
     if: >-
       ${{
         github.event_name == 'merge_group'
-        || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
       }}
     # Alongside the tests, not after them: a diff needs the built app and
     # nothing the tests decide, and waiting for them doubled the time a
@@ -176,7 +179,8 @@ jobs:
   # is right, and none of it is a ruleset edit. A check that failed or was
   # cancelled fails this one; a test that did not run at all fails it too,
   # since a run with no tests proves nothing; a diff skipped in the merge
-  # queue, or on a fork's pull request, is expected and passes.
+  # queue, on a fork's pull request, or on Dependabot's, is expected and
+  # passes.
   Checks:
     name: Checks
     runs-on: ubuntu-latest
@@ -190,6 +194,7 @@ jobs:
           DIFF: ${{ needs.Diff.result }}
           EVENT: ${{ github.event_name }}
           SAME_REPO: ${{ github.event_name == 'merge_group' || github.event.pull_request.head.repo.full_name == github.repository }}
+          DEPENDABOT: ${{ github.actor == 'dependabot[bot]' }}
         run: |
           set -euo pipefail
           echo "Test: $TEST; hosting tests: $INFRA; diffs: $DIFF ($EVENT)"
@@ -198,7 +203,7 @@ jobs:
           [ "$INFRA" = "success" ] || { echo "::error::the hosting's checks did not pass ($INFRA)"; ok=false; }
           case "$DIFF" in
             success) ;;
-            skipped) if [ "$EVENT" = "merge_group" ] || [ "$SAME_REPO" != "true" ]; then echo "The diffs were skipped here, as expected."; else echo "::error::the diffs did not run"; ok=false; fi ;;
+            skipped) if [ "$EVENT" = "merge_group" ] || [ "$SAME_REPO" != "true" ] || [ "$DEPENDABOT" = "true" ]; then echo "The diffs were skipped here, as expected."; else echo "::error::the diffs did not run"; ok=false; fi ;;
             *) echo "::error::the diffs did not pass ($DIFF)"; ok=false ;;
           esac
           $ok
