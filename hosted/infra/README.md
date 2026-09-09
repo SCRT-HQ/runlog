@@ -515,9 +515,12 @@ by country, screen and version, from the beacon's embedded metric format),
 the API (HTTP and WebSocket, requests, errors, latency), the handler
 (invocations, errors, throttles, duration, its Lambda Insights memory
 utilization and cold start duration, a look at recent errors in its log
-group), the store (DynamoDB, and the sync bucket's daily size and object
-count), the edge (CloudFront requests, error rate, cache hit rate), and an
-alarm status widget listing every alarm the stage owns. It lives in
+group), the bot (Discord interactions by kind and their answer time
+against Discord's three seconds, from the route's own embedded metrics;
+the job function's invocations, errors, duration and cold start), the
+store (DynamoDB, and the sync bucket's daily size and object count), the
+edge (CloudFront requests, error rate, cache hit rate), and an alarm
+status widget listing every alarm the stage owns. It lives in
 `lib/observability-stack.ts`, a stack of its own built after the API and
 site stacks so it can read from both without either reaching forward for
 the other's resources.
@@ -525,7 +528,9 @@ the other's resources.
 Alongside the API handler's own error alarm, each stage's `Alarms` topic
 carries a handful more: the API's 5xx rate, the handler's p95 duration
 against its own timeout, the handler being throttled at all, DynamoDB being
-throttled at all, and CloudFront's 5xx rate. All of them, old and new, ring
+throttled at all, CloudFront's 5xx rate, a Discord interaction that was
+not answered (the handler threw, or the job could not fill the deferred
+reply in), and the job function failing outright. All of them, old and new, ring
 the same `runlog-<env>-alarms` topic — **subscribing an address to it is a
 step this repository cannot take for you**; do it by hand, once per stage,
 the same as the step already named under Billing.

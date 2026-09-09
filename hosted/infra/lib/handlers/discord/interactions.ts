@@ -56,6 +56,34 @@ export interface InteractionDeps {
 }
 
 /** How long a link or claim code lasts. */
+/**
+ * What an interaction is, for the dashboard: the command with its
+ * subcommand ("run start"), a press by its verb ("press:roll", "modal:
+ * declared"), "ping" or "autocomplete". Never the arguments: a kind is
+ * a dimension on a metric, and a dimension wants a few dozen values,
+ * not one per run.
+ */
+export function kindOf(i: Interaction): string {
+  switch (i.type) {
+    case InteractionType.Ping:
+      return "ping";
+    case InteractionType.ApplicationCommand: {
+      const name = i.data?.name ?? "command";
+      const which = sub(i);
+      return which && which.name !== name ? `${name} ${which.name}` : name;
+    }
+    case InteractionType.Autocomplete:
+      return "autocomplete";
+    case InteractionType.MessageComponent:
+    case InteractionType.ModalSubmit: {
+      const parsed = i.data?.custom_id ? parseCustomId(i.data.custom_id) : null;
+      return `${i.type === InteractionType.ModalSubmit ? "modal" : "press"}:${parsed?.verb ?? "unknown"}`;
+    }
+    default:
+      return "unknown";
+  }
+}
+
 export const LINK_MINUTES = 10;
 
 /** Discord's permission bits that mean "may manage this server": MANAGE_GUILD, or ADMINISTRATOR, which implies everything. */

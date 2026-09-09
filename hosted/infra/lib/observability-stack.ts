@@ -21,6 +21,9 @@ import type { SiteStack } from "./site-stack";
  * the API stack's own `Alarms` topic — the operator subscribes an address to
  * that topic by hand, same as the alarm the API stack already owns.
  */
+/** How long Discord waits for an interaction's answer before it tells the member the application did not respond. */
+const DISCORD_BUDGET_MS = 3000;
+
 export interface ObservabilityStackProps extends StackProps {
   config: EnvConfig;
   api: ApiStack;
@@ -177,6 +180,53 @@ export class ObservabilityStack extends Stack {
       height: 6,
     });
 
+    // ---- the bot ----
+    // The route measures every interaction it answers (handlers/api.ts,
+    // `measure`): a count and an answer time by kind, under the Runlog
+    // namespace, plus a rollup by stage alone that the failure alarm reads.
+    // Discord waits three seconds; the answer time is the handler's part
+    // of that, and the job function's cold start beside it is the rest.
+    const interactionsSearch = (metric: "interactions" | "answerMs", statistic: string, label: string) =>
+      new cloudwatch.MathExpression({
+        expression: `SEARCH('{Runlog,env,kind} MetricName="${metric}" env="${env}"', '${statistic}', 300)`,
+        label,
+        period: Duration.minutes(5),
+      });
+    const interactionFailures = new cloudwatch.Metric({ namespace: "Runlog", metricName: "failures", dimensionsMap: { env }, statistic: "sum", period: Duration.minutes(5), label: "failures" });
+    const botHeading = new cloudwatch.TextWidget({ markdown: "## The bot\nDiscord interactions, and the function with time that finishes a deferred one.", width: 24, height: 1 });
+    const interactionsByKind = new cloudwatch.GraphWidget({
+      title: "Interactions by kind",
+      left: [interactionsSearch("interactions", "Sum", "")],
+      width: 6,
+      height: 6,
+    });
+    const answerTime = new cloudwatch.GraphWidget({
+      title: "Answer time p95 by kind (ms)",
+      left: [interactionsSearch("answerMs", "p95", "")],
+      leftAnnotations: [{ value: DISCORD_BUDGET_MS, label: "Discord's three seconds", color: "#d62728" }],
+      width: 6,
+      height: 6,
+    });
+    const jobThroughput = new cloudwatch.GraphWidget({
+      title: "Job: invocations, errors, failures to reply",
+      left: [
+        api.discordJob.metricInvocations({ period: Duration.minutes(5), label: "invocations" }),
+        api.discordJob.metricErrors({ period: Duration.minutes(5), label: "errors" }),
+        interactionFailures,
+      ],
+      width: 6,
+      height: 6,
+    });
+    const jobDuration = new cloudwatch.GraphWidget({
+      title: "Job: duration p95 / cold start (ms)",
+      left: [api.discordJob.metricDuration({ period: Duration.minutes(5), statistic: "p95", label: "p95" })],
+      right: [
+        new cloudwatch.Metric({ namespace: "LambdaInsights", metricName: "init_duration", dimensionsMap: { function_name: api.discordJob.functionName }, statistic: "Average", period: Duration.minutes(5), label: "init duration (ms)" }),
+      ],
+      width: 6,
+      height: 6,
+    });
+
     // ---- the store ----
     // Named explicitly, rather than the default of every operation DynamoDB
     // has: these are the ones handlers/store.ts actually issues, and an
@@ -313,9 +363,35 @@ export class ObservabilityStack extends Stack {
       "More than 5% of CloudFront responses were 5xx for two five-minute periods in a row. The site bucket or the API origin behind it is failing at the edge, not just for one viewer.",
     );
 
+    // One failure is one member looking at a reply that never came, so the
+    // threshold is one. The job catches what it can and reports it as a
+    // failure to reply; what it cannot catch — a timeout, a start that
+    // never got going — is a Lambda error on the job itself.
+    const interactionFailed = alarm(
+      "InteractionFailed",
+      {
+        alarmName: `runlog-${env}-discord-failures`,
+        metric: interactionFailures,
+        threshold: 1,
+        evaluationPeriods: 1,
+      },
+      "A Discord interaction was not answered: the handler threw, or the job function could not fill the deferred reply in. The member saw an error or a reply that never came. Check the recent handler errors for the cause.",
+    );
+
+    const jobErrors = alarm(
+      "DiscordJobErrors",
+      {
+        alarmName: `runlog-${env}-discord-job-errors`,
+        metric: api.discordJob.metricErrors({ period: Duration.minutes(5), statistic: "sum" }),
+        threshold: 1,
+        evaluationPeriods: 1,
+      },
+      "The bot's job function failed outright — most likely it timed out before the deferred reply was filled in, and a member is still looking at \"thinking\". It is invoked once per press, with no retry, so the press is lost; check its duration and the recent handler errors.",
+    );
+
     const alarmStatus = new cloudwatch.AlarmStatusWidget({
       title: "Every alarm this stage owns",
-      alarms: [api.handlerErrorsAlarm, apiServerErrors, handlerSlow, handlerThrottled, tableThrottled, edgeServerErrors],
+      alarms: [api.handlerErrorsAlarm, apiServerErrors, handlerSlow, handlerThrottled, tableThrottled, edgeServerErrors, interactionFailed, jobErrors],
       width: 24,
       height: 4,
     });
@@ -333,6 +409,8 @@ export class ObservabilityStack extends Stack {
     this.dashboard.addWidgets(handlerHeading);
     this.dashboard.addWidgets(handlerThroughput, handlerDuration, handlerConcurrency, handlerInsights);
     this.dashboard.addWidgets(handlerRecentErrors);
+    this.dashboard.addWidgets(botHeading);
+    this.dashboard.addWidgets(interactionsByKind, answerTime, jobThroughput, jobDuration);
     this.dashboard.addWidgets(storeHeading);
     this.dashboard.addWidgets(tableCapacity, tableThrottles, tableErrors, bucketSize);
     this.dashboard.addWidgets(edgeHeading);

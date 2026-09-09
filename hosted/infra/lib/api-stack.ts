@@ -66,6 +66,8 @@ export class ApiStack extends Stack {
   readonly handler: lambdaNodejs.NodejsFunction;
   /** The function behind the socket. */
   readonly wsHandler: lambdaNodejs.NodejsFunction;
+  /** The bot's function with time: a deferred interaction is finished here. Public so the dashboard can chart it beside the handler. */
+  readonly discordJob: lambdaNodejs.NodejsFunction;
   /** Both functions log here; a dashboard reads it for a look at recent errors. */
   readonly handlerLogGroup: logs.LogGroup;
   /** The socket itself, for its connect/message/error metrics. */
@@ -247,6 +249,7 @@ export class ApiStack extends Stack {
         banner: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
       },
     });
+    this.discordJob = job;
     this.table.grantReadWriteData(job);
     this.bucket.grantReadWrite(job);
     // Once: a job that timed out after the session and the thread were made

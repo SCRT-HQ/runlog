@@ -62,9 +62,9 @@ describe.each(["dev", "prd"] as EnvName[])("observability for %s", (name) => {
     }
   });
 
-  it("adds five alarms, all pointed at the API stack's own topic", () => {
+  it("adds seven alarms, all pointed at the API stack's own topic", () => {
     const alarms = template.findResources("AWS::CloudWatch::Alarm");
-    expect(Object.keys(alarms)).toHaveLength(5);
+    expect(Object.keys(alarms)).toHaveLength(7);
     for (const alarm of Object.values(alarms)) {
       expect(alarm.Properties.TreatMissingData).toBe("notBreaching");
       expect(typeof alarm.Properties.AlarmDescription).toBe("string");
@@ -75,7 +75,7 @@ describe.each(["dev", "prd"] as EnvName[])("observability for %s", (name) => {
     }
   });
 
-  it("lists every alarm — its own five, and the API stack's existing one — on the alarm status widget", () => {
+  it("lists every alarm — its own seven, and the API stack's existing one — on the alarm status widget", () => {
     const body = dashboardBody();
     // The widget's "alarms" array holds one ARN token per alarm; each
     // becomes its own opaque "<token>" chunk in the joined body, so instead
@@ -86,16 +86,38 @@ describe.each(["dev", "prd"] as EnvName[])("observability for %s", (name) => {
     const alarmsStart = body.indexOf('"alarms":[', widgetStart);
     const alarmsEnd = body.indexOf("]", alarmsStart);
     const alarmsSection = body.slice(alarmsStart, alarmsEnd);
-    // Five new alarms plus the API stack's HandlerErrors alarm.
-    expect(alarmsSection.split("<token>")).toHaveLength(6 + 1); // 6 tokens, 7 fragments around them
+    // Seven new alarms plus the API stack's HandlerErrors alarm.
+    expect(alarmsSection.split("<token>")).toHaveLength(8 + 1); // 8 tokens, 9 fragments around them
   });
 
   it("names each alarm for the stage", () => {
     const alarms = template.findResources("AWS::CloudWatch::Alarm");
     const alarmNames = Object.values(alarms).map((a) => a.Properties.AlarmName as string);
     expect(alarmNames.sort()).toEqual(
-      [`runlog-${name}-api-5xx`, `runlog-${name}-edge-5xx-rate`, `runlog-${name}-handler-p95-duration`, `runlog-${name}-handler-throttles`, `runlog-${name}-table-throttles`].sort(),
+      [
+        `runlog-${name}-api-5xx`,
+        `runlog-${name}-discord-failures`,
+        `runlog-${name}-discord-job-errors`,
+        `runlog-${name}-edge-5xx-rate`,
+        `runlog-${name}-handler-p95-duration`,
+        `runlog-${name}-handler-throttles`,
+        `runlog-${name}-table-throttles`,
+      ].sort(),
     );
+  });
+
+  it("charts the bot's interactions by searching for kinds, and draws Discord's three seconds on the answer time", () => {
+    const body = dashboardBody();
+    expect(body).toContain(`SEARCH('{Runlog,env,kind} MetricName=\\"interactions\\" env=\\"${name}\\"', 'Sum', 300)`);
+    expect(body).toContain(`SEARCH('{Runlog,env,kind} MetricName=\\"answerMs\\" env=\\"${name}\\"', 'p95', 300)`);
+    expect(body).toContain('"value":3000');
+    // The failure alarm reads the rollup by stage alone: a named metric, not a search, since an alarm cannot search.
+    const failures = template.findResources("AWS::CloudWatch::Alarm", { Properties: { AlarmName: `runlog-${name}-discord-failures` } });
+    const [failureAlarm] = Object.values(failures);
+    expect(failureAlarm!.Properties).toMatchObject({
+      Threshold: 1,
+      Metrics: [{ MetricStat: { Metric: { Namespace: "Runlog", MetricName: "failures", Dimensions: [{ Name: "env", Value: name }] }, Stat: "Sum" } }],
+    });
   });
 
   it("picks the handler's duration threshold from its own timeout, not a hardcoded one", () => {

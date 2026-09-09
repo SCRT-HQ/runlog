@@ -1678,6 +1678,24 @@ describe("discord", () => {
     expect(await guilds.userForDiscord("1001")).toBeNull();
   });
 
+  it("measures every interaction it answers, by kind, never by argument", async () => {
+    const measured: Array<{ kind: string; ms: number; ok: boolean }> = [];
+    const d = { ...withBot(), measure: (sample: { kind: string; ms: number; ok: boolean }) => void measured.push(sample) };
+    await call(signedRequest(ping), d);
+    await call(signedRequest(press), d);
+    await call(signedRequest({ ...press, data: { name: "setup", options: [{ name: "status", type: 1 }] } }), d);
+    await call(signedRequest({ ...press, type: 3, data: { custom_id: "rl:01ABC:tick:3", component_type: 2 } }), d);
+    await call(signedRequest({ ...press, type: 5, data: { custom_id: "rl:01ABC:declared", components: [] } }), d);
+    expect(measured.map((m) => m.kind)).toEqual(["ping", "link", "setup status", "press:tick", "modal:declared"]);
+    for (const m of measured) {
+      expect(m.ok).toBe(true);
+      expect(m.ms).toBeGreaterThanOrEqual(0);
+    }
+    // What was never signed was never measured.
+    await call(signedRequest(ping, "1700000000", true), d);
+    expect(measured).toHaveLength(5);
+  });
+
   it("refuses a code past its ten minutes", async () => {
     const guilds = memoryGuilds();
     const d = withBot(guilds);
@@ -1958,12 +1976,15 @@ describe("a run hosted in discord", () => {
     expect((await call(signed(start), deferring)).body).toEqual({ type: 5 });
     expect(handed).toHaveLength(1);
     expect(bot.threads).toHaveLength(0);
-    // The job does the work and writes the answer into the waiting reply.
-    await finishDeferred(handed[0] as Parameters<typeof finishDeferred>[0], d);
+    // The job does the work and writes the answer into the waiting reply,
+    // and measures itself as the job it is, not as the command's own turn.
+    const measured: Array<{ kind: string; ms: number; ok: boolean }> = [];
+    await finishDeferred(handed[0] as Parameters<typeof finishDeferred>[0], { ...d, measure: (sample) => void measured.push(sample) });
     expect(bot.threads).toHaveLength(1);
     expect(bot.originals).toHaveLength(1);
     expect(bot.originals[0]!.message.content).toContain("started **The Long Kiln · Standard Firing** in <#thread_1>");
     expect(bot.originals[0]!.token).toBe("t");
+    expect(measured).toMatchObject([{ kind: "job:run start", ok: true }]);
   });
   it("seats several in a mode played by several: a seat presses, an open chair is anyone\u2019s, a linked seat follows the run home", async () => {
     const { guilds, bot, store, d } = await table();

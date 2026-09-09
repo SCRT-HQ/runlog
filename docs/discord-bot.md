@@ -169,6 +169,12 @@ the script again replaces the list, so a retired command disappears.
 - **A press says "the card may be stale"**: the card is rebuilt from the
   log on every press, so a button from an old card can name a step that
   has passed. `/run status` posts a fresh one.
+- **"This interaction failed" or "thinking" that never ends**: the
+  stage's CloudWatch dashboard, `runlog-<env>`, has a section for the
+  bot: every interaction by kind, how long each kind took to answer
+  against Discord's three seconds, and the job function's cold starts
+  beside it. Two alarms ring the stage's topic for exactly these: an
+  interaction not answered, and the job failing outright.
 
 ## Where things are
 
@@ -180,4 +186,5 @@ the script again replaces the list, so a retired command disappears.
 | Who has the plan meanwhile | The WorkOS feature flag `server`, per environment, on the people trying it |
 | The commands | `hosted/infra/lib/handlers/discord/commands.ts`, registered by `hosted/scripts/discord-setup.ts` |
 | The handler | `hosted/infra/lib/handlers/discord/` and the route in `api.ts` |
+| How it is doing | The bot section of the `runlog-<env>` CloudWatch dashboard; alarms `runlog-<env>-discord-failures` and `runlog-<env>-discord-job-errors` |
 | A server's rows and vault | `GUILD#<id>` in the table, `guilds/<id>/packs/` in the bucket |
