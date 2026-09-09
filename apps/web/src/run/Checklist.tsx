@@ -18,6 +18,13 @@ import { allMade, evidenceFor, pointMade, pointOf, type Shown } from "./evidence
  * for it. A point with a tally counts its ticks.
  *
  * The ticked set is the step's and lives in the log, so a reload keeps it.
+ *
+ * What the boxes are for used to be written out over every list: the app
+ * cannot see the work, it only records that you did it. It is the premise
+ * of the whole thing, said once in the guide and on the welcome page, and
+ * printing it above every step read as a machine that did not trust the
+ * person using it. The list carries it as its title instead, for whoever
+ * wonders.
  */
 export function Checklist({
   items,
@@ -39,7 +46,7 @@ export function Checklist({
   );
 
   return (
-    <ul className="checklist">
+    <ul className="checklist" title="Nothing here is checked by the app. It cannot see the work; ticking a box is your word, and the log keeps it.">
       {points.map((point, i) => {
         const shown: Shown[] = evidence[i] ?? [];
         if (point.shows && shown.length === 0) return null;

@@ -5,7 +5,7 @@ import { SettingsDialog } from "./SettingsDialog.tsx";
 import { ControlPanel, openControlsWindow, RemoteControls } from "./ControlPanel.tsx";
 import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
-import { clockOfUnit, compareScores, formatClock, formatScore, liveClocks, nextUnit, scoreOf, unitPhases } from "@runlog/engine";
+import { clockOfUnit, compareScores, formatClock, formatScore, nextUnit, scoreOf, unitPhases } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import { closesUnit, constrainedByOf, constraintsFor, describeSkip, describeSkipReason, entryWords, phaseSkipped, resultText, subjectLabel, subjectName, type PhaseResult, type RunEvent, type RunState } from "@runlog/engine";
 import { useRun, type ActiveStep } from "./useRun.ts";
@@ -1109,11 +1109,6 @@ function StepPanel({
           <StepHead phase={phase} label={step.label} />
           {step.description && <p className="muted">{step.description}</p>}
           <Constraints lines={constraints} />
-          <p className="muted small">
-            {liveClocks(state).length > 0
-              ? "The app keeps the clock. The work itself it cannot see; it only records that you did it."
-              : "This is the part the app cannot see. It only records that you did it."}
-          </p>
           {list.length > 0 && <Checklist items={list} pack={pack} state={state} ticked={ticked} onToggle={tick} />}
           {/*
             Never dim. A dimmed Done beside an unticked list read as broken;
@@ -1220,12 +1215,7 @@ function ClosingStep({
           {blocked.length} thing{blocked.length === 1 ? "" : "s"} still owed. Settle {blocked.length === 1 ? "it" : "them"} before closing this {unit}.
         </p>
       )}
-      {points.length > 0 && (
-        <>
-          <p className="muted small">The app cannot tell whether you honored these. It can only make you look.</p>
-          <Checklist items={points} pack={pack} state={state} ticked={ticked} onToggle={tick} />
-        </>
-      )}
+      {points.length > 0 && <Checklist items={points} pack={pack} state={state} ticked={ticked} onToggle={tick} />}
       <div className="padRow stepAction">
         <button
           className="primary big"
