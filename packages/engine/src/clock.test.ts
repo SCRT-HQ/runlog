@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
 import { executeActions } from "./execute.ts";
-import { clockOfUnit, elapsedMs, formatClock, liveClocks, remainingMs, stopClocksEvents, unitClockStart } from "./clock.ts";
+import { clockOfUnit, deadlineOf, elapsedMs, formatClock, liveClocks, ranOutEvents, remainingMs, stopClocksEvents, unitClockStart } from "./clock.ts";
 import type { RunEvent } from "./events.ts";
 
 /**
@@ -105,6 +105,31 @@ describe("the unit's clock", () => {
     const timed = unitClockStart(p, reduce(p, opened(p, "timed")), 2, at(0));
     expect(timed).toMatchObject({ kind: "stopwatch", label: "The round" });
     expect(unitClockStart(p, reduce(p, opened(p, "free")), 1, at(0))).toBeNull();
+  });
+
+  it("starts by hand what the pack leaves to the player, and only then", () => {
+    const p = pack();
+    const state = reduce(p, opened(p, "free"));
+    expect(unitClockStart(p, state, 1, at(0))).toBeNull();
+    expect(unitClockStart(p, state, 1, at(0), true)).toMatchObject({ t: "ClockStarted", clock: "u1:unit", kind: "timer", seconds: 120 });
+  });
+});
+
+describe("a timer running out", () => {
+  it("is stopped as expired at the moment it ran out, whenever that is noticed", () => {
+    const p = pack();
+    const s = (n: number) => n * 1000;
+    const started = reduce(p, [...opened(p), unitClockStart(p, null, 1, at(0))!]);
+    // Sixty seconds long, started at zero: not yet at fifty-nine, up at sixty, and still just once when noticed late.
+    expect(ranOutEvents(started, Date.parse(at(s(59))))).toEqual([]);
+    expect(deadlineOf(started.clocks[0]!, Date.parse(at(s(30))))).toBe(Date.parse(at(s(60))));
+    const late = ranOutEvents(started, Date.parse(at(s(600))));
+    expect(late).toEqual([{ t: "ClockStopped", at: at(s(60)), clock: "u1:unit", elapsedMs: 60000, expired: true }]);
+    // Paused, it has no deadline; stopped, it is not live and runs out of nothing.
+    const paused = reduce(p, [...opened(p), unitClockStart(p, null, 1, at(0))!, { t: "ClockPaused", at: at(s(10)), clock: "u1:unit" }]);
+    expect(deadlineOf(paused.clocks[0]!, Date.parse(at(s(10))))).toBeNull();
+    expect(ranOutEvents(paused, Date.parse(at(s(600))))).toEqual([]);
+    expect(ranOutEvents(reduce(p, [...opened(p), unitClockStart(p, null, 1, at(0))!, ...late]), Date.parse(at(s(900))))).toEqual([]);
   });
 });
 

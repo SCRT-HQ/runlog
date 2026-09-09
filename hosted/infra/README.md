@@ -455,6 +455,30 @@ dice itself and the log says so; the pack's text never leaves
 run's roster. This is the one place the hosting reduces a pack, on
 purpose, and it is confined to `lib/handlers/discord/`.
 
+The host may also play a hosted run from the app. The run row keeps
+`seenSeq`, the log's seq the thread has heard up to; the app's events
+route, after appending to a run the bot hosts, hands `{ kind: "moved",
+sessionId, seq }` to the job function, which posts one line per move
+since `seenSeq` under "From the app", redraws the card, drops a block
+that was waiting on a Discord answer (the log moved under it), marks the
+run ended if the app ended it, and moves `seenSeq` up. A press from
+Discord meanwhile is refused by `expectSeq` rather than built on a table
+that moved; the next card is fresh.
+
+A timer at a Discord table has nobody's browser ticking for it. When one
+starts or resumes, the handler makes a one-shot **EventBridge Scheduler**
+schedule for its deadline, in the stage's `runlog-<env>-timers` group,
+that invokes the job function with the timer's name (`{ kind: "timer",
+sessionId, clock, at }`); the job stops the timer as run out, at the
+moment it ran out, says so in the thread and redraws the card, or makes
+a later schedule if a pause moved the deadline. The schedule is named
+for the run, the clock and the deadline, so the same deadline asked for
+twice is one schedule, and it deletes itself once it has run. Without a
+schedule (a copy without the group, or a schedule that never came), the
+next press stops the timer first and lands after it. The job's name is
+fixed (`runlog-<env>-discord-job`) so its ARN is in both functions'
+environment before either exists.
+
 Discord waits three seconds for an interaction's answer. A press is one
 read and one write and answers in its turn; a start is a session, a
 thread, a card and a pin, and a cold start plus those may not fit. So

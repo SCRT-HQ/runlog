@@ -69,7 +69,11 @@ clocks — and carries the one press that is due:
 - **Close** the unit, once its confirmations are ticked.
 - A move the pack offers, or something the run owes that is due.
 - **End** the run, with a choice of endings where the pack offers one.
-- **Pause** and **Resume** the unit's clock, where the pack runs one.
+- **Pause** and **Resume** the unit's clock, where the pack runs one;
+  **Start** it, where the pack leaves that to the player. A timer that
+  runs out is stopped at that moment, whether or not anyone is pressing:
+  the thread hears it ran out, the card is redrawn, and whatever the
+  pack does when a timer expires is due at the next press.
 - **Undo**: the last move taken back, as a move of its own, the way the
   app does it. `/run undo` in the thread does the same.
 
@@ -95,6 +99,12 @@ presses the table like the host does, though only the host ends, undoes
 and awards. **Leave seat** frees it. **Follow in Runlog** puts the run in
 a linked member's own library as a watcher; a linked member who takes a
 seat is a player there, and can play the same run from the app.
+
+The host, and anyone who took a seat with a linked account, can play the
+same run from the app. The thread hears each move made there a moment
+later — the lines, under "From the app", and a fresh card — and a card
+that is behind refuses a press with a note, rather than building on a
+table that moved.
 
 `/run status` in the thread posts a fresh card and takes the buttons off
 the old one. `/run link` posts a fresh live link (the old one stops

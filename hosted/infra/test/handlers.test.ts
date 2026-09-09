@@ -1,6 +1,7 @@
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { describe, expect, it } from "vitest";
-import { finishDeferred, route, type Deps } from "../lib/handlers/api";
+import { finishDeferred, finishMoved, finishTimer, route, type Deps } from "../lib/handlers/api";
+import type { TimerJob } from "../lib/handlers/discord/play";
 import { SeqConflict, type ApiKey, type Claim, type Invite, type LicenseMeta, type PackMeta, type Person, type Profile, type Reaction, type SessionMember, type SessionMeta, type SessionPointer, type Store, type StoredEvent } from "../lib/handlers/store";
 import type { Race, RaceEntry, RaceMeta, RaceStore } from "../lib/handlers/races";
 import type { BillingStore } from "../lib/handlers/billing";
@@ -1812,14 +1813,20 @@ describe("a run hosted in discord", () => {
   const typed = (customId: string, value: string) => ({ id: "i", application_id: "app", type: 5, token: "t", guild_id: "g1", channel_id: "thread_1", member: member(mira, "32"), message: { id: "msg_1" }, data: { custom_id: customId, components: [{ components: [{ custom_id: "x", value }] }] } });
   const content = (out: { body: Record<string, unknown> }) => String((out.body["data"] as Record<string, unknown>)["content"]);
 
-  async function table() {
+  /** The demo pack with a one-minute timer on every unit: started by the bot, or left to the player. */
+  const timed = (auto: boolean) =>
+    demo
+      .replace(/capabilities:\r?\n/, "capabilities:\n  - timers\n")
+      .replace(/unit:\r?\n  createsSubject: true\r?\n/, `unit:\n  createsSubject: true\n  clock: { kind: timer, minutes: 1, auto: ${auto}, label: The Firing }\n`);
+
+  async function table(source = demo) {
     const guilds = memoryGuilds();
     const bot = memoryDiscord();
     const store = memoryStore();
     let ids = 0;
     await guilds.claimGuild({ guildId: "g1", name: "The Kiln Room", ownerSub: "user_1", claimedAt: "2026-09-06T12:00:00.000Z" });
     await guilds.connect("user_1", { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" });
-    await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: "h", bytes: demo.length, modes: [{ id: "standard", label: "Standard" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, demo);
+    await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: `h${source.length}`, bytes: source.length, modes: [{ id: "standard", label: "Standard" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, source);
     const d = deps(store, {
       guilds,
       discord: { applicationId: "app", publicKey: publicHex, token: async () => null, open: true, rest: async () => bot },
@@ -1986,6 +1993,123 @@ describe("a run hosted in discord", () => {
     expect(bot.originals[0]!.token).toBe("t");
     expect(measured).toMatchObject([{ kind: "job:run start", ok: true }]);
   });
+  it("keeps a timer's deadline with a schedule, stops it when the schedule comes back, and finds it stopped at the next press otherwise", async () => {
+    expect(timed(true)).toContain("auto: true");
+    const { bot, store, d } = await table(timed(true));
+    let clock = "2026-09-06T12:00:00.000Z";
+    const timers: TimerJob[] = [];
+    const dd: Deps = { ...d, now: () => clock, schedule: async (job) => void timers.push(job) };
+    const id = "01000000000000000000000001";
+    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), dd))).toContain("started");
+    // Beginning the unit starts its timer, and somebody is asked to come back a minute later.
+    expect((await call(signed(press(`rl:${id}:enter`)), dd)).body["type"]).toBe(7);
+    expect(timers).toEqual([{ sessionId: id, clock: "u1:unit", at: "2026-09-06T12:01:00.000Z" }]);
+    // Come back early — a pause moved nothing here, but the job checks — and it is asked for again, not stopped.
+    expect(await finishTimer(timers[0]!, dd)).toBe("later");
+    expect(timers).toHaveLength(2);
+    expect((await store.eventsAfter(id, 0)).filter((e) => e["t"] === "ClockStopped")).toHaveLength(0);
+    // Paused, the deadline is nobody's to keep; resumed, it is a new deadline, asked for anew.
+    expect((await call(signed(press(`rl:${id}:clock:pause:u1:unit`)), dd)).body["type"]).toBe(7);
+    clock = "2026-09-06T12:00:30.000Z";
+    expect((await call(signed(press(`rl:${id}:clock:resume:u1:unit`)), dd)).body["type"]).toBe(7);
+    expect(timers[timers.length - 1]).toEqual({ sessionId: id, clock: "u1:unit", at: "2026-09-06T12:01:30.000Z" });
+    expect(await finishTimer(timers[0]!, dd)).toBe("later");
+    // At the deadline the timer is stopped as run out, at the moment it ran out; the thread hears, the card is redrawn.
+    clock = "2026-09-06T12:02:00.000Z";
+    const postsBefore = bot.posts.length;
+    const editsBefore = bot.edits.length;
+    expect(await finishTimer(timers[timers.length - 1]!, dd)).toBe("stopped");
+    const stopped = (await store.eventsAfter(id, 0)).filter((e) => e["t"] === "ClockStopped");
+    expect(stopped).toMatchObject([{ clock: "u1:unit", expired: true, elapsedMs: 60000, at: "2026-09-06T12:01:30.000Z" }]);
+    expect(bot.posts.length).toBe(postsBefore + 1);
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("The Firing ran out");
+    expect(bot.edits.length).toBe(editsBefore + 1);
+    // Stopped is stopped: the same deadline again does nothing, and a later look at the run finds no new line.
+    expect(await finishTimer(timers[timers.length - 1]!, dd)).toBe("gone");
+    expect(await finishTimer({ sessionId: "nope", clock: "u1:unit", at: clock }, dd)).toBe("gone");
+
+    // Without a schedule, the next press notices: the timer is stopped first, and the press lands after it.
+    const late = await table(timed(true));
+    let later = "2026-09-06T12:00:00.000Z";
+    const ld: Deps = { ...late.d, now: () => later };
+    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), ld))).toContain("started");
+    const entered = await call(signed(press(`rl:${id}:enter`)), ld);
+    later = "2026-09-06T12:05:00.000Z";
+    const next = firstPress(entered.body["data"] as Record<string, unknown>);
+    expect(next).not.toBeNull();
+    expect((await call(signed(press(next!.customId, mira, next!.value ? { values: [next!.value] } : {})), ld)).body["type"]).toBe(7);
+    const log = await late.store.eventsAfter(id, 0);
+    const ranOut = log.findIndex((e) => e["t"] === "ClockStopped" && e["expired"] === true);
+    expect(ranOut).toBeGreaterThan(-1);
+    expect(log[ranOut]).toMatchObject({ at: "2026-09-06T12:01:00.000Z" });
+    expect(log.length).toBeGreaterThan(ranOut + 1);
+    expect(late.bot.posts.some((p) => p.message.content?.startsWith("\u23f0 The Firing ran out."))).toBe(true);
+  });
+
+  it("hears in the thread what the host does from the app: the lines, a fresh card, and the end", async () => {
+    const { guilds, bot, d } = await table();
+    const moved: Array<{ sessionId: string; seq: number }> = [];
+    const dd: Deps = { ...d, later: async (job) => void moved.push(job) };
+    const id = "01000000000000000000000001";
+    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), dd))).toContain("started");
+    expect((await guilds.guildRun(id))?.seenSeq).toBeGreaterThan(0);
+    // A press from Discord tells the job nothing: the thread heard it as it happened.
+    expect((await call(signed(press(`rl:${id}:enter`)), dd)).body["type"]).toBe(7);
+    expect(moved).toHaveLength(0);
+    const heard = (await guilds.guildRun(id))!.seenSeq!;
+    // The host, in the app, takes the move back and begins again; the route hands the run to the job.
+    const undo = await call(request("POST", `/api/sessions/${id}/events`, { body: { events: [{ t: "Undone", at: "2026-09-06T12:01:00Z", id: "app_1", move: "app_m1", ids: [] }] } }), dd);
+    expect(undo.status).toBe(200);
+    const again = await call(request("POST", `/api/sessions/${id}/events`, { body: { events: [{ t: "UnitEntered", at: "2026-09-06T12:01:30Z", id: "app_2", move: "app_m2" }] } }), dd);
+    expect(again.status).toBe(200);
+    expect(moved).toEqual([{ sessionId: id, seq: heard + 1 }, { sessionId: id, seq: heard + 2 }]);
+    // The job tells the thread once for both, redraws the card, and remembers how far it heard.
+    const posts = bot.posts.length;
+    const edits = bot.edits.length;
+    expect(await finishMoved(moved[0]!, dd)).toBe("told");
+    expect(bot.posts).toHaveLength(posts + 1);
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("From the app:");
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("Took a move back.");
+    // The undo named no ids, so the app's begin opened the next stage; the line reads the log as it is.
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toMatch(/Stage \d begins\./);
+    expect(bot.edits).toHaveLength(edits + 1);
+    expect((await guilds.guildRun(id))!.seenSeq).toBe(heard + 2);
+    // Nothing new: nothing said.
+    expect(await finishMoved(moved[1]!, dd)).toBe("quiet");
+    expect(bot.posts).toHaveLength(posts + 1);
+    // The app ends the run; the thread hears that too, and the card is done pressing.
+    expect((await call(request("POST", `/api/sessions/${id}/events`, { body: { events: [{ t: "RunEnded", at: "2026-09-06T12:02:00Z", id: "app_3", move: "app_m3", ending: "kept" }] } }), dd)).status).toBe(200);
+    expect(await finishMoved(moved[moved.length - 1]!, dd)).toBe("told");
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("The firing is over: The Shelf.");
+    expect((await guilds.guildRun(id))!.endedAt).toBeTruthy();
+    expect(content(await call(signed(press(`rl:${id}:enter`)), dd))).toContain("has ended");
+    // An ended run the app writes to again is nobody's to tell.
+    expect(await finishMoved({ sessionId: id, seq: 99 }, dd)).toBe("gone");
+    expect(moved).toHaveLength(3);
+  });
+
+  it("offers a clock the pack leaves to the player, once per open unit", async () => {
+    const { bot, store, d } = await table(timed(false));
+    const timers: TimerJob[] = [];
+    const dd: Deps = { ...d, schedule: async (job) => void timers.push(job) };
+    const id = "01000000000000000000000001";
+    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), dd))).toContain("started");
+    const entered = await call(signed(press(`rl:${id}:enter`)), dd);
+    const labels = (card: Record<string, unknown>) => (card["components"] as Array<{ components: Array<{ label?: string; custom_id: string }> }>).flatMap((r) => r.components.map((c) => c.label ?? c.custom_id));
+    expect(labels(entered.body["data"] as Record<string, unknown>)).toContain("Start The Firing");
+    expect(timers).toHaveLength(0);
+    const started = await call(signed(press(`rl:${id}:clock:start`)), dd);
+    expect(started.body["type"]).toBe(7);
+    expect(labels(started.body["data"] as Record<string, unknown>)).toContain("Pause The Firing");
+    expect((await store.eventsAfter(id, 0)).filter((e) => e["t"] === "ClockStarted")).toMatchObject([{ clock: "u1:unit", seconds: 60, label: "The Firing" }]);
+    expect(timers).toEqual([{ sessionId: id, clock: "u1:unit", at: "2026-09-06T12:01:00.000Z" }]);
+    expect(bot.posts[bot.posts.length - 1]!.message.content).toContain("The Firing started.");
+    // Once: the unit has its clock.
+    expect(content(await call(signed(press(`rl:${id}:clock:start`)), dd))).toContain("has its clock already");
+    // A watcher cannot start it.
+    expect(content(await call(signed(press(`rl:${id}:clock:start`, sam)), dd))).toContain("Only the host");
+  });
+
   it("seats several in a mode played by several: a seat presses, an open chair is anyone\u2019s, a linked seat follows the run home", async () => {
     const { guilds, bot, store, d } = await table();
     await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: "h", bytes: demo.length, modes: [{ id: "standard", label: "Standard" }, { id: "pairs", label: "Pairs" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, demo);

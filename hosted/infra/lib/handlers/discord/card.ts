@@ -1,4 +1,4 @@
-import { challenges, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import { challenges, clockOfUnit, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, unitClockFor, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import type { GuildRun } from "../guilds.js";
 import { REACTIONS } from "./reactions.js";
@@ -151,6 +151,9 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
   // The first live clock is on the card to pause and resume; a second is in the field above.
   const clock = liveClocks(state).find((c) => c.status === "running" || c.status === "paused");
   if (clock) main.push(button(customId(id, "clock", `${clock.status === "running" ? "pause" : "resume"}:${clock.id}`), clock.status === "running" ? `Pause ${clock.label}` : `Resume ${clock.label}`));
+  // A clock the pack leaves to the player is offered once per open unit, until it is started.
+  const byHand = unitClockFor(pack, state);
+  if (!clock && agenda.phase === "step" && byHand?.auto === false && !clockOfUnit(state, state.unit)) main.push(button(customId(id, "clock", "start"), `Start ${byHand.label ?? `${v.unit.one} ${state.unit}`}`));
   if (state.unit > 0 && main.length < 5) main.push(button(customId(id, "undo"), "Undo"));
   if (main.length > 0) rows.push(row(...main));
   const extras: unknown[] = [

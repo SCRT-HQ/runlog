@@ -155,6 +155,29 @@ describe("the API", () => {
     });
   });
 
+  it("keeps a timer's deadline with a schedule that invokes the job under a role of its own, which both functions may hand over", () => {
+    template.hasResourceProperties("AWS::Scheduler::ScheduleGroup", { Name: "runlog-prd-timers" });
+    template.hasResourceProperties("AWS::IAM::Role", {
+      AssumeRolePolicyDocument: { Statement: Match.arrayWith([Match.objectLike({ Principal: { Service: "scheduler.amazonaws.com" } })]) },
+    });
+    // The job's name is fixed, so its ARN is known to both functions before either exists.
+    const functions = template.findResources("AWS::Lambda::Function");
+    const job = Object.entries(functions).find(([id]) => id.startsWith("DiscordJob"))![1] as { Properties: { FunctionName: string; Environment: { Variables: Record<string, unknown> } } };
+    expect(job.Properties.FunctionName).toBe("runlog-prd-discord-job");
+    const handler = Object.entries(functions).find(([id]) => id.startsWith("Handler"))![1] as { Properties: { Environment: { Variables: Record<string, unknown> } } };
+    for (const fn of [handler, job]) {
+      expect(fn.Properties.Environment.Variables).toHaveProperty("TIMER_SCHEDULE_GROUP", "runlog-prd-timers");
+      expect(fn.Properties.Environment.Variables).toHaveProperty("TIMER_ROLE_ARN");
+      expect(JSON.stringify(fn.Properties.Environment.Variables.DISCORD_JOB_ARN)).toContain(":function:runlog-prd-discord-job");
+    }
+    template.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyDocument: { Statement: Match.arrayWith([Match.objectLike({ Action: Match.arrayWith(["scheduler:CreateSchedule"]) })]) },
+    });
+    template.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyDocument: { Statement: Match.arrayWith([Match.objectLike({ Action: "iam:PassRole" })]) },
+    });
+  });
+
   it("names the Discord application to the handler only where the stage has one; the key is public, the token is not", () => {
     const bare = JSON.stringify(Object.values(template.findResources("AWS::Lambda::Function")).map((f) => f.Properties.Environment));
     expect(bare).not.toContain("DISCORD_APPLICATION_ID");
