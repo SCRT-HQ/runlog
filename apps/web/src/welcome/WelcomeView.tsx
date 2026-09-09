@@ -1,4 +1,4 @@
-import { hrefFor, PATHS_ON } from "../route.ts";
+import { hrefFor, linkTo, PATHS_ON } from "../route.ts";
 import { useCallback, useEffect, useState } from "react";
 import { countView } from "../hosted/beacon.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
@@ -67,7 +67,7 @@ export function WelcomeView() {
         </a>
         <span />
         <nav className="topbarEnd" aria-label="Ways in">
-          <a className="ghost" href={`${play}#guide/start`}>
+          <a className="ghost" href={linkTo("#guide/start", play)}>
             Docs
           </a>
           {hosted?.links.pricing && (
@@ -106,10 +106,10 @@ export function WelcomeView() {
               <a className="primary" href={play}>
                 Open Runlog
               </a>
-              <a className="ghost" href={`${play}#guide/start`}>
+              <a className="ghost" href={linkTo("#guide/start", play)}>
                 Read the guide
               </a>
-              <a className="ghost" href={`${play}#catalog`}>
+              <a className="ghost" href={linkTo("#catalog", play)}>
                 See the packs
               </a>
             </p>
@@ -118,7 +118,7 @@ export function WelcomeView() {
 
           <figure className="specimen" aria-label="A run log, as Runlog writes it" key={persona.id}>
             <figcaption className="muted small">
-              <a href={`${play}#catalog/${persona.packId}`}>{persona.packTitle}</a> · {persona.mode} · {persona.at}
+              <a href={linkTo(`#catalog/${persona.packId}`, play)}>{persona.packTitle}</a> · {persona.mode} · {persona.at}
             </figcaption>
             <ol className="specimenLog">
               {persona.log.map((line, i) => (
@@ -293,7 +293,7 @@ export function WelcomeView() {
             <a className="primary" href={play}>
               Open Runlog
             </a>
-            <a className="ghost" href={`${play}#guide/design`}>
+            <a className="ghost" href={linkTo("#guide/design", play)}>
               Write a pack
             </a>
           </p>
@@ -312,7 +312,7 @@ export function WelcomeView() {
       </main>
 
       {hosted ? (
-        <Footer onGuide={() => location.assign(`${play}#guide/start`)} />
+        <Footer onGuide={() => location.assign(linkTo("#guide/start", play))} />
       ) : (
         <footer className="siteFooter">
           <nav aria-label="About this app">
