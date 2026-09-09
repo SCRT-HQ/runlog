@@ -938,6 +938,80 @@ export function actionsForRef(pack: Pack, ref: TriggerRef): Action[] {
   return pack.counters?.[ref.counter]?.triggers?.[ref.index]?.do ?? [];
 }
 
+/** What settling an obligation will ask of whoever settles it, if anything. */
+export type ObligationAsk = { kind: "roll"; dice: string } | { kind: "choose" } | null;
+
+/**
+ * What pressing the button on an owed thing is going to do.
+ *
+ * "Resolve" reads as confirming that something has already been done. The
+ * deferred queue is the other way round: the trigger has not run yet, and
+ * pressing it is how it runs. So the button says what it will do, and this
+ * is where it finds out, by reading the actions the trigger would take and
+ * naming the first thing they will ask for.
+ *
+ * It reads rather than runs, so it is an approximation on purpose: every
+ * branch of a `branch` is looked at though only one of them will happen,
+ * which is the safe way round, since a roll in any branch means a roll is
+ * possible. A roll the app makes for itself, in a seeded run or with "Roll
+ * for me" on, still reads as a roll, because that is what it is; only the
+ * asking is skipped.
+ */
+export function obligationAsks(pack: Pack, obligation: { kind?: string; ref?: TriggerRef }): ObligationAsk {
+  if (obligation.kind === "note" || !obligation.ref) return null;
+  return asksOf(pack, actionsForRef(pack, obligation.ref));
+}
+
+/** The same reading for a counter's trigger the player is being asked to fire. */
+export function counterTriggerAsks(pack: Pack, counter: string, index: number): ObligationAsk {
+  return asksOf(pack, pack.counters?.[counter]?.triggers?.[index]?.do ?? []);
+}
+
+/** And for one of the pack's own triggers. */
+export function globalTriggerAsks(pack: Pack, index: number): ObligationAsk {
+  return asksOf(pack, pack.triggers?.[index]?.do ?? []);
+}
+
+/** The first thing a list of actions will ask the player for, if anything. */
+export function asksOf(pack: Pack, actions: readonly Action[]): ObligationAsk {
+  return firstAsk(pack, actions, 0);
+}
+
+function firstAsk(pack: Pack, actions: readonly Action[], depth: number): ObligationAsk {
+  // A pack may nest, but not forever; a cycle is a broken pack, not a hang.
+  if (depth > 6) return null;
+  for (const action of actions) {
+    const a = action as unknown as Record<string, unknown>;
+    switch (a["do"]) {
+      case "roll":
+        return typeof a["dice"] === "string" ? { kind: "roll", dice: a["dice"] } : null;
+      case "rollOn": {
+        // A table rolled the ordinary way names its dice; one resolved
+        // another way, opposed or in bands, still asks for a throw, and the
+        // button says so without naming dice it cannot name.
+        const table = typeof a["table"] === "string" ? pack.tables[a["table"]] : undefined;
+        return { kind: "roll", dice: table && "roll" in table && typeof table.roll === "string" ? table.roll : "" };
+      }
+      case "prompt":
+      case "resolveTarget":
+        return { kind: "choose" };
+      default:
+        break;
+    }
+    // The lists an action can hold: a branch's cases, a condition's arms.
+    const nested: Action[][] = [];
+    for (const key of ["then", "else"]) if (Array.isArray(a[key])) nested.push(a[key] as Action[]);
+    if (Array.isArray(a["cases"])) {
+      for (const one of a["cases"] as Array<Record<string, unknown>>) if (Array.isArray(one["then"])) nested.push(one["then"] as Action[]);
+    }
+    for (const list of nested) {
+      const found = firstAsk(pack, list, depth + 1);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 /**
  * Run a queued trigger and mark it settled.
  *
