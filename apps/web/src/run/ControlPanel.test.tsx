@@ -73,12 +73,16 @@ const panel = (props: Partial<Parameters<typeof RemoteControls>[0]> = {}) =>
   );
 
 describe("the floating remote", () => {
-  it("shows the pad and Roll for me while the game waits on a roll", () => {
+  it("shows the field, Roll for me and the table while the game waits on a roll", () => {
     const html = panel({
       run: run({ pending: { request: { kind: "roll", key: "k", dice: "d100", purpose: "check", label: "Roll the Kiln Check" } } as never }),
     });
     expect(html).toContain("Roll for me");
-    expect(html).toContain('class="pad"');
+    // The field a rolled number is typed into, with the phone's own keypad
+    // behind it; there is no keypad of the app's own any more.
+    expect(html).toContain('class="rollInput"');
+    expect(html).toContain('inputMode="numeric"');
+    expect(html).not.toContain('class="pad"');
     expect(html).toContain("Table");
   });
 
