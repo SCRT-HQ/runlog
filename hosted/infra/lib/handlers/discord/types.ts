@@ -52,6 +52,8 @@ export interface Interaction {
   channel_id?: string;
   /** In a server: the member, with the user inside and their permissions as a bitfield string. */
   member?: { user: DiscordUser; permissions?: string; roles?: string[]; nick?: string | null };
+  /** The bot's own permissions where the command was used, as a bitfield string: what it was installed with, less any channel overwrite. */
+  app_permissions?: string;
   /** In a direct message: the user alone. */
   user?: DiscordUser;
   /** The message a component was pressed on. */

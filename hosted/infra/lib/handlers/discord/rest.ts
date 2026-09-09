@@ -33,6 +33,14 @@ export interface DiscordRest {
   archiveThread(threadId: string): Promise<boolean>;
   /** Fill in a reply the handler deferred: the interaction's own webhook, good for fifteen minutes, needs no bot token. */
   editOriginal(applicationId: string, interactionToken: string, message: DiscordMessage): Promise<boolean>;
+  /** The server's roles, by id and name; null when Discord would not say. */
+  listRoles(guildId: string): Promise<Array<{ id: string; name: string }> | null>;
+  /** A role with no permissions of its own, in a color; its id, or null. */
+  createRole(guildId: string, name: string, color: number): Promise<string | null>;
+  /** The server's text channels, by id and name; null when Discord would not say. */
+  listChannels(guildId: string): Promise<Array<{ id: string; name: string }> | null>;
+  /** A text channel at the top level; its id, or null. */
+  createChannel(guildId: string, name: string): Promise<string | null>;
 }
 
 async function call(token: string, method: string, path: string, body: unknown, fetchImpl: typeof fetch, ropeMs: number): Promise<Record<string, unknown> | null> {
@@ -81,7 +89,29 @@ export function discordRest(token: string, fetchImpl: typeof fetch = fetch, rope
     async editOriginal(applicationId, interactionToken, message) {
       return (await call(token, "PATCH", `/webhooks/${applicationId}/${interactionToken}/messages/@original`, message, fetchImpl, ropeMs)) !== null;
     },
+    async listRoles(guildId) {
+      return named(await call(token, "GET", `/guilds/${guildId}/roles`, undefined, fetchImpl, ropeMs));
+    },
+    async createRole(guildId, name, color) {
+      return id(await call(token, "POST", `/guilds/${guildId}/roles`, { name: name.slice(0, 100), permissions: "0", color, hoist: false, mentionable: true }, fetchImpl, ropeMs));
+    },
+    async listChannels(guildId) {
+      const rows = named(await call(token, "GET", `/guilds/${guildId}/channels`, undefined, fetchImpl, ropeMs), (row) => row["type"] === 0);
+      return rows;
+    },
+    async createChannel(guildId, name) {
+      return id(await call(token, "POST", `/guilds/${guildId}/channels`, { name: name.slice(0, 100), type: 0 }, fetchImpl, ropeMs));
+    },
   };
+}
+
+/** A list Discord answered, kept to the rows with an id and a name, and to those a filter keeps. */
+function named(out: Record<string, unknown> | null, keep: (row: Record<string, unknown>) => boolean = () => true): Array<{ id: string; name: string }> | null {
+  const rows = out?.["items"];
+  if (!Array.isArray(rows)) return null;
+  return rows
+    .filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null && keep(row as Record<string, unknown>))
+    .flatMap((row) => (typeof row["id"] === "string" && typeof row["name"] === "string" ? [{ id: row["id"], name: row["name"] }] : []));
 }
 
 /** A server's name, for the profile; best effort, since a claim must not wait on Discord. */

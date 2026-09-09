@@ -2,9 +2,29 @@ import type { ClaimCode, Connection, Guild, GuildPackMeta, GuildRun, GuildStore,
 import type { DiscordMessage, DiscordOAuth, DiscordRest } from "../lib/handlers/discord/rest";
 
 /** Discord, as a list of what was asked of it: threads made, messages posted, in order. */
-export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array<{ channel: string; message: DiscordMessage; id: string }>; edits: Array<{ channel: string; id: string; message: DiscordMessage }>; originals: Array<{ token: string; message: DiscordMessage }>; pins: string[]; archived: string[]; down: boolean } {
+export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array<{ channel: string; message: DiscordMessage; id: string }>; edits: Array<{ channel: string; id: string; message: DiscordMessage }>; originals: Array<{ token: string; message: DiscordMessage }>; pins: string[]; archived: string[]; roles: Array<{ id: string; name: string; color?: number }>; channels: Array<{ id: string; name: string }>; down: boolean } {
   let n = 0;
   const me = {
+    roles: [] as Array<{ id: string; name: string; color?: number }>,
+    channels: [] as Array<{ id: string; name: string }>,
+    async listRoles() {
+      return me.down ? null : me.roles.map((r) => ({ id: r.id, name: r.name }));
+    },
+    async createRole(_guildId: string, name: string, color: number) {
+      if (me.down) return null;
+      const id = `role_${(n += 1)}`;
+      me.roles.push({ id, name, color });
+      return id;
+    },
+    async listChannels() {
+      return me.down ? null : me.channels.map((c) => ({ ...c }));
+    },
+    async createChannel(_guildId: string, name: string) {
+      if (me.down) return null;
+      const id = `chan_${(n += 1)}`;
+      me.channels.push({ id, name });
+      return id;
+    },
     threads: [] as string[],
     posts: [] as Array<{ channel: string; message: DiscordMessage; id: string }>,
     edits: [] as Array<{ channel: string; id: string; message: DiscordMessage }>,

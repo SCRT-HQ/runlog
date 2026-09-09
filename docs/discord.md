@@ -32,6 +32,11 @@ Then, in the server, someone who can manage it:
 3. **`/setup role @Hosts`** to say who may start runs; without a role,
    anyone who can manage the server may. **`/setup channel #runs`** to
    say where runs open; without one, wherever `/run start` is used.
+   Or let the bot make them: **`/setup make-role`** makes a "Runlog
+   Host" role (or finds one by the name you give) and sets it; **`/setup
+   make-channel`** makes a `#runs` channel (or finds one) and sets it.
+   The bot is installed without Manage Roles and Manage Channels; the
+   first time you ask, it answers with a link that adds the one it needs.
 4. **`/setup status`** says all of the above, and whether the server's
    plan is active.
 

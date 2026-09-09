@@ -36,6 +36,8 @@ export const COMMANDS = [
       { type: SUB_COMMAND, name: "claim", description: "Claim this server for your Runlog account, which pays for it and chooses its packs" },
       { type: SUB_COMMAND, name: "role", description: "Who may host runs here", options: [{ type: ROLE, name: "role", description: "The role that may host; leave it out to allow anyone who can manage the server", required: false }] },
       { type: SUB_COMMAND, name: "channel", description: "Where runs open by default", options: [{ type: CHANNEL, name: "channel", description: "The channel; leave it out to open runs wherever the command is used", required: false }] },
+      { type: SUB_COMMAND, name: "make-role", description: "Make a host role (or find one by that name) and set it as who may host", options: [{ type: STRING, name: "name", description: "The role's name; Runlog Host if left out", required: false, max_length: 100 }] },
+      { type: SUB_COMMAND, name: "make-channel", description: "Make a channel for runs (or find one by that name) and set it as where runs open", options: [{ type: STRING, name: "name", description: "The channel's name; runs if left out", required: false, max_length: 100 }] },
       { type: SUB_COMMAND, name: "status", description: "Who claimed this server, its plan, its hosts and its packs" },
     ],
   },
@@ -105,6 +107,25 @@ const PERMISSION_BITS = {
 
 export const PERMISSION_NAMES = ["View Channels", "Send Messages", "Manage Messages", "Embed Links", "Read Message History", "Create Public Threads", "Send Messages in Threads"] as const;
 
-export const PERMISSIONS = String(Object.values(PERMISSION_BITS).reduce((sum, bit) => sum | (1n << bit), 0n));
+/**
+ * Two more the bot asks for only when told to make things: a role for
+ * hosts, a channel for runs. Neither is in the install link by default;
+ * `/setup make-role` and `/setup make-channel` offer a link that adds the
+ * one they need, and a server that never uses them never grants either.
+ */
+export const OPTIONAL_PERMISSION_BITS = { MANAGE_CHANNELS: 4n, MANAGE_ROLES: 28n } as const;
+export type OptionalPermission = keyof typeof OPTIONAL_PERMISSION_BITS;
+export const OPTIONAL_PERMISSION_NAMES: Record<OptionalPermission, string> = { MANAGE_CHANNELS: "Manage Channels", MANAGE_ROLES: "Manage Roles" };
 
-export const installLink = (applicationId: string) => `https://discord.com/oauth2/authorize?client_id=${applicationId}&scope=bot+applications.commands&permissions=${PERMISSIONS}`;
+const sumOf = (bits: readonly bigint[]) => bits.reduce((sum, bit) => sum | (1n << bit), 0n);
+export const PERMISSIONS = String(sumOf(Object.values(PERMISSION_BITS)));
+
+export const installLink = (applicationId: string, extra: readonly OptionalPermission[] = []) =>
+  `https://discord.com/oauth2/authorize?client_id=${applicationId}&scope=bot+applications.commands&permissions=${String(sumOf([...Object.values(PERMISSION_BITS), ...extra.map((p) => OPTIONAL_PERMISSION_BITS[p])]))}`;
+
+/** Whether a permissions bitfield, as Discord writes it, carries one of the optional permissions. */
+export function hasPermission(bitfield: string | undefined, permission: OptionalPermission): boolean {
+  if (!bitfield || !/^\d{1,30}$/.test(bitfield)) return false;
+  const bits = BigInt(bitfield);
+  return (bits & (1n << 3n)) !== 0n || (bits & (1n << OPTIONAL_PERMISSION_BITS[permission])) !== 0n;
+}
