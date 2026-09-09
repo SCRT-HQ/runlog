@@ -8,8 +8,9 @@ import { DocDrawerProvider } from "./docs/DocDrawer.tsx";
 import { SyncProvider } from "./sync/SyncProvider.tsx";
 import { applyTheme, savedTheme } from "./theme/theme.ts";
 import { WelcomeView } from "./welcome/WelcomeView.tsx";
-import { WELCOME_QUERY, baseOf, honestAddress, skipWelcome, whereTo } from "./welcome/route.ts";
+import {WELCOME_QUERY, honestAddress, skipWelcome, whereTo } from "./welcome/route.ts";
 import { widgetFromHash } from "./widget/route.ts";
+import { addressOf, appBase, hrefFor, PATHS_ON } from "./route.ts";
 import "./fonts.css";
 import "./styles.css";
 
@@ -24,11 +25,18 @@ const storage = (() => {
     return null;
   }
 })();
-const here = { protocol: location.protocol, pathname: location.pathname, base: baseOf(location.href), hash: location.hash, search: location.search };
+const here = { protocol: location.protocol, pathname: location.pathname, base: appBase(location.href), hash: location.hash, search: location.search };
 const page = whereTo({ ...here, skip: skipWelcome(storage) });
 if (page === "app") {
   const honest = honestAddress(here);
   if (honest) history.replaceState(null, "", honest);
+  // An address in the old spelling, a hash, is rewritten as the path it
+  // names where paths are on, so a bookmark or a link in a message keeps
+  // working and the bar reads the new way.
+  if (PATHS_ON && location.hash) {
+    const path = hrefFor(location.hash);
+    if (path !== location.hash) history.replaceState(null, "", path);
+  }
 } else if (here.search === WELCOME_QUERY) {
   // Asked for by name: the bare address is what the page is, so that is
   // what the bar reads.
@@ -40,7 +48,7 @@ if (page === "app") {
 // is still empty, so nothing has been drawn in the wrong light yet. A widget
 // address may pin a theme of its own, and a capture must never show a frame
 // in the machine's light first.
-applyTheme(widgetFromHash(here.hash)?.theme ?? savedTheme());
+applyTheme(widgetFromHash(addressOf(location))?.theme ?? savedTheme());
 
 if (page === "welcome") {
   createRoot(document.getElementById("root")!).render(
@@ -86,6 +94,6 @@ if (
   window.addEventListener("load", () => {
     // Losing offline support is survivable, and there is nothing useful to
     // tell the player about it, so a failure stays in the console.
-    void navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(() => {});
+    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).catch(() => {});
   });
 }

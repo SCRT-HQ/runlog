@@ -45,7 +45,7 @@ export function HomeStrip<P extends { id: string; title: string }>({
   const account = useAccount();
   const api = useApi();
   // Nothing played yet: the page that says what this is.
-  const welcome = runs.length === 0 ? "./" : null;
+  const welcome = runs.length === 0 ? import.meta.env.BASE_URL : null;
   const me = account.status === "signed-in" ? account.user.id : null;
   const [races, setRaces] = useState<Race[]>([]);
   const [fresh, setFresh] = useState<CatalogEntry[]>([]);

@@ -29,7 +29,7 @@ function LiveBar({ title, packId, listed }: { title: string | null; packId: stri
   return (
     <header className="topbar liveBar">
       <a className="brand" href="./?welcome" title="What Runlog is">
-        <img className="logo" src="./icon.svg" alt="" />
+        <img className="logo" src={`${import.meta.env.BASE_URL}icon.svg`} alt="" />
         <h1>Runlog</h1>
       </a>
       <span className="liveBarPack">

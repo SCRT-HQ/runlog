@@ -537,6 +537,20 @@ kind of failure this wants.
 Setting the bot up as the operator is `docs/discord-bot.md`; what
 servers do with it is `docs/discord.md`.
 
+## Addresses
+
+The hosted app is built with `RUNLOG_BASE=/` (the build-app action sets
+it), so its assets are absolute and its pages are paths under `play/`:
+`/play/guide/start`, `/play/profile/servers`, `/play/run/<id>` for a run,
+`/play/run/<id>?t=…` for a live link, `/play/widget/…`, `/play/dock/…`,
+`/play/link/discord?c=…`. The edge already sends any unknown path to
+`index.html`, and `apps/web/src/route.ts` reads a path back into the hash
+form every screen's parser knows, so the old `#` spelling still opens and
+is rewritten on the way in. The API writes the path spelling in what it
+hands out: the live page's target, the bot's link and claim codes, the
+linked-role redirects. A file copy and a static host are built with a
+relative base and keep the hash spelling throughout.
+
 ## Monitoring
 
 AWS-native by default, and always on. Both functions run with
