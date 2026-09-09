@@ -49,6 +49,18 @@ describe("the live page", () => {
     expect(html.match(/mono">Stage 1<\/span>/g)?.length).toBe(1);
   });
 
+  it("reads the log from either end and can keep to the last few, the way the run screen does", () => {
+    const html = renderToStaticMarkup(<LiveView snapshot={base} />);
+    expect(html).toContain("Newest first");
+    expect(html).toContain('aria-label="How much of the log to show"');
+    // Newest first by default: in the timeline, the higher-numbered line comes before the lower.
+    const timeline = html.slice(html.indexOf('class="timeline"'));
+    const first = timeline.indexOf('class="idx">2<');
+    const second = timeline.indexOf('class="idx">1<');
+    expect(first).toBeGreaterThan(-1);
+    expect(first).toBeLessThan(second);
+  });
+
   it("says why a phase is out of play this unit, not just that it is", () => {
     const html = renderToStaticMarkup(
       <LiveView snapshot={{ ...base, phases: [...base.phases, { id: "wedge", label: "Wedging", state: "skipped", why: "after the first stage" }] }} />,

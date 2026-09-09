@@ -3,6 +3,7 @@ import { formatClock } from "@runlog/engine";
 import { clockNow, type LiveSnapshot } from "./snapshot.ts";
 import { motionBetween } from "./motion.ts";
 import { RaceBoard } from "./RaceBoard.tsx";
+import { LOG_LIMITS, logLimit, logLines, logOrder, setLogLimit, setLogOrder, type LogOrder } from "../run/logView.ts";
 
 /**
  * A run, watched: the snapshot laid out for someone who is not at the
@@ -18,6 +19,21 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
   const s = snapshot;
   const before = useRef<LiveSnapshot | null>(null);
   const moved = useMemo(() => motionBetween(before.current, s), [s]);
+  // Which end of the log first, and how much of it: the same choice the
+  // run screen keeps on this device, read here too. The snapshot's log is
+  // newest first; the helpers want it oldest first and order it themselves.
+  const [order, setOrder] = useState<LogOrder>(() => logOrder());
+  const [limit, setLimit] = useState(() => logLimit());
+  const flip = () => {
+    const next: LogOrder = order === "newest" ? "oldest" : "newest";
+    setOrder(next);
+    setLogOrder(next);
+  };
+  const cap = (n: number) => {
+    setLimit(n);
+    setLogLimit(n);
+  };
+  const lines = useMemo(() => logLines([...s.log].reverse(), order, limit).map((l) => l.outcome), [s.log, order, limit]);
   useEffect(() => {
     before.current = s;
   }, [s]);
@@ -97,13 +113,30 @@ export function LiveView({ snapshot, stale, children }: { snapshot: LiveSnapshot
           )}
           {s.log.length > 0 ? (
             <section className="log">
-              <h3 className="sectionTitle">The log</h3>
+              <div className="logHead">
+                <h3 className="sectionTitle">
+                  The log
+                  {lines.length < s.log.length && <span className="muted"> · the last {lines.length} of {s.log.length}</span>}
+                </h3>
+                <div className="logTools">
+                  <button className="ghost tiny" onClick={flip} title="Read the log from the other end">
+                    {order === "newest" ? "Newest first" : "Oldest first"}
+                  </button>
+                  <select className="tiny" value={limit} onChange={(e) => cap(Number(e.target.value))} aria-label="How much of the log to show">
+                    {LOG_LIMITS.map((n) => (
+                      <option key={n} value={n}>
+                        {n === 0 ? "All" : "Last " + n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <ol className="timeline">
-                {s.log.map((line, i) => (
+                {lines.map((line, i) => (
                   <li key={line.n} className={[line.hit !== null ? "heat" : "", line.n > moved.freshFrom ? "fresh" : ""].join(" ").trim()}>
                     <span className="idx">{line.n}</span>
                     <div>
-                      {(i === 0 || s.log[i - 1]!.unit !== line.unit) && (
+                      {(i === 0 || lines[i - 1]!.unit !== line.unit) && (
                         <span className="muted small mono">
                           {s.words.unit} {line.unit}
                         </span>
