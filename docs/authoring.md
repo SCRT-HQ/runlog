@@ -198,6 +198,14 @@ lists what reached this unit's subject instead, a setback that landed on
 this piece, and `scope: run` lists everything. A stage with nothing to show
 falls back to the point's own box.
 
+The step that does the work can be the step that closes the unit. A
+`manual` step with `closesUnit: true` needs no `finalizeUnit` step after
+it: its checklist is the honor check, and its Done is the unit's close,
+offered as a choice between the next unit and finishing the run. Use it
+where a separate closing step would only be a second press saying the
+same thing; keep a `finalizeUnit` step where closing is its own act in the
+game, the way firing is in The Long Kiln.
+
 ### Triggers: the results that reach forward
 
 The thing a tracker is genuinely for. "After you finish working, roll a d6." On
@@ -353,12 +361,13 @@ Each step of `play` is one of:
 - `{ step: "<phaseId>" }` or `{ step: "<phaseId>#<index>" }`, run whatever the
   active step is, the way the app would: a `rollTable` step rolls (and rolls
   again for any extra roll still owed this unit), an `actions` step runs its
-  actions, a `manual` step is ticked and completed, and a `finalizeUnit` step
-  finalizes the unit. The step named must actually be the one the engine is
+  actions, a `manual` step is ticked and completed (and closes the unit, where
+  it says it does), and a `finalizeUnit` step finalizes the unit. The step named must actually be the one the engine is
   waiting on: a fixture drifting out of step with the pack's own flow is
   exactly what this is for catching.
 - `{ finalize: {} }`, finalize the current unit: any confirmations are ticked
-  and the unit closes. The active step must be `finalizeUnit`.
+  and the unit closes. The active step must be one that closes the unit: a
+  `finalizeUnit` step, or a `manual` step with `closesUnit: true`.
 - `{ move: "<moveId>" }`, take a move.
 - `{ settle: "<obligation label or id>" }`, settle a due obligation.
 - `{ tick: "<checklist item text>" }`, tick one checklist item on the active

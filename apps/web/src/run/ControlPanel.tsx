@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Pack } from "@runlog/rules-schema";
-import { constraintsFor, type RunState } from "@runlog/engine";
+import { closesUnit, constraintsFor, type RunState } from "@runlog/engine";
 import type { RolledDie } from "../rolling.ts";
 import type { RollReceipt } from "./Receipt.tsx";
 import { Checklist, checklistDone } from "./Checklist.tsx";
@@ -343,6 +343,7 @@ function RemoteStep({
     }
 
     case "manual": {
+      if (closesUnit(step)) return <RemoteClosing pack={pack} run={run} state={state} active={active} ticked={ticked} tick={tick} />;
       const list = step.checklist ?? [];
       const done = checklistDone(list, pack, state, ticked);
       const constraints = constraintsFor(pack, state, step.constrainedBy);
@@ -371,25 +372,47 @@ function RemoteStep({
         </PipSection>
       );
 
-    case "finalizeUnit": {
-      const confirmations = step.confirm ?? [];
-      const blocked = run.blockingObligations;
-      const done = checklistDone(confirmations, pack, state, ticked);
-      return (
-        <PipSection title={step.label ?? pack.vocabulary.finalize}>
-          {blocked.length > 0 && <p className="muted small">Settle what is owed first.</p>}
-          {confirmations.length > 0 && <Checklist items={confirmations} pack={pack} state={state} ticked={ticked} onToggle={tick} />}
-          <button
-            className="primary big"
-            disabled={blocked.length > 0}
-            onClick={(e) => (done ? run.finalizeUnit(phase, index) : nudgeFirstUnticked(e.currentTarget))}
-          >
-            {blocked.length > 0 ? "Settle first" : done ? pack.vocabulary.finalize : "Tick what you honored"}
-          </button>
-        </PipSection>
-      );
-    }
+    case "finalizeUnit":
+      return <RemoteClosing pack={pack} run={run} state={state} active={active} ticked={ticked} tick={tick} />;
   }
+}
+
+/** The closing step on the remote: the honor check, then Next or Finish, the same fork the page offers. */
+function RemoteClosing({
+  pack,
+  run,
+  state,
+  active,
+  ticked,
+  tick,
+}: {
+  pack: Pack;
+  run: ReturnType<typeof useRun>;
+  state: RunState;
+  active: ActiveStep;
+  ticked: Set<string>;
+  tick: (keys: string[], on: boolean, tally?: string) => void;
+}) {
+  const { phase, step, index } = active;
+  const points = step.kind === "manual" ? (step.checklist ?? []) : step.kind === "finalizeUnit" ? (step.confirm ?? []) : [];
+  const blocked = run.blockingObligations;
+  const done = checklistDone(points, pack, state, ticked);
+  const constraints = step.kind === "manual" ? constraintsFor(pack, state, step.constrainedBy) : [];
+  const unit = pack.vocabulary.unit.one.toLowerCase();
+  const label = (step.kind === "manual" || step.kind === "finalizeUnit" ? step.label : undefined) ?? pack.vocabulary.finalize;
+  return (
+    <PipSection title={label}>
+      {constraints.length > 0 && <Constraints lines={constraints} />}
+      {blocked.length > 0 && <p className="muted small">Settle what is owed first.</p>}
+      {points.length > 0 && <Checklist items={points} pack={pack} state={state} ticked={ticked} onToggle={tick} />}
+      <button className="primary big" disabled={blocked.length > 0} onClick={(e) => (done ? run.closeAndEnter(phase, index) : nudgeFirstUnticked(e.currentTarget))}>
+        {blocked.length > 0 ? "Settle first" : done ? `Next ${unit}` : "Tick what you honored"}
+      </button>
+      <button className="ghost" disabled={blocked.length > 0 || !run.canEnd.ok} title={!run.canEnd.ok ? `Cannot finish yet: ${run.canEnd.reason}` : undefined} onClick={(e) => (done ? run.finish(phase, index) : nudgeFirstUnticked(e.currentTarget))}>
+        Finish
+      </button>
+    </PipSection>
+  );
 }
 
 /** Enter the next unit, or end here: the same choice `BetweenUnits` offers on the page. */

@@ -157,6 +157,9 @@ describe("lintPack", () => {
       const p = basePack();
       (p.phases as any)[0].steps = [{ kind: "manual", label: "do a thing" }];
       expect(codesOf(p)).toContain("phase/no-finalize");
+      // A manual step that closes the unit is a way to complete one.
+      (p.phases as any)[0].steps = [{ kind: "manual", label: "do a thing", closesUnit: true }];
+      expect(codesOf(p)).not.toContain("phase/no-finalize");
     });
 
     it("flags resolveTarget without a targeting strategy", () => {

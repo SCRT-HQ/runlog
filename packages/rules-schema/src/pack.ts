@@ -368,6 +368,12 @@ export const Step = z
           .array(ChecklistItem)
           .optional()
           .describe("Points the player ticks off before moving on, each optionally showing the results it is about."),
+        closesUnit: z
+          .boolean()
+          .optional()
+          .describe(
+            "Finishing this step closes the unit as well: its checklist is the honor check, and its Done is the unit's close, with the choice of going on to the next unit or finishing the run. A flow with such a step needs no finalizeUnit step.",
+          ),
       })
       .strict()
       .describe(
@@ -396,7 +402,7 @@ export const Step = z
           ),
       })
       .strict()
-      .describe("Close the unit. Every flow needs one of these somewhere."),
+      .describe("Close the unit. Every flow needs one of these somewhere, or a manual step that closes the unit."),
   ])
   .describe("One step within a phase.");
 export type Step = z.infer<typeof Step>;

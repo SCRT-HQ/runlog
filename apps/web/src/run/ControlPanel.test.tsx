@@ -29,6 +29,7 @@ const state = (over: Partial<RunState> = {}): RunState =>
     journal: {},
     checks: [],
     outcomes: [],
+    subjects: [],
     clocks: [],
     ...over,
   }) as unknown as RunState;
@@ -51,6 +52,8 @@ const run = (over: Partial<ReturnType<typeof useRun>> = {}): ReturnType<typeof u
     completeStep: vi.fn(),
     declareSubject: vi.fn(),
     finalizeUnit: vi.fn(),
+    closeAndEnter: vi.fn(),
+    finish: vi.fn(),
     enterUnit: vi.fn(),
     writeJournal: vi.fn(),
     endRun: vi.fn(),
@@ -85,6 +88,27 @@ describe("the floating remote", () => {
     expect(html).toContain("Did the surface take a texture?");
     expect(html).toContain(">Yes<");
     expect(html).toContain(">No<");
+  });
+
+  it("offers Next and Finish on the step that closes the unit, and Done on one that does not", () => {
+    const work = kiln.phases.find((p) => p.id === "work")!;
+    const manual = work.steps.find((s) => s.kind === "manual")!;
+    const closing = panel({
+      run: run({ activeStep: { phase: work, step: { ...manual, closesUnit: true, checklist: [] }, index: 0 } as never, canEnd: { ok: true } }),
+      state: state({ unit: 2 }),
+    });
+    expect(closing).toContain("Next stage");
+    expect(closing).toContain("Finish");
+    expect(closing).not.toContain(">Done<");
+    const plain = panel({ run: run({ activeStep: { phase: work, step: { ...manual, checklist: [] }, index: 0 } as never }), state: state({ unit: 2 }) });
+    expect(plain).toContain("Done");
+    expect(plain).not.toContain("Finish");
+    // The pack's own closing step forks the same way; Finish waits while the run may not end.
+    const close = kiln.phases.find((p) => p.id === "close")!;
+    const fire = panel({ run: run({ activeStep: { phase: close, step: close.steps[0]!, index: 0 } as never, canEnd: { ok: false, reason: "too soon" } }), state: state({ unit: 1 }) });
+    // Nothing this stage drew is among what its confirmations show, so nothing waits to be ticked; Finish is there, and held.
+    expect(fire).toContain("Next stage");
+    expect(fire).toMatch(/<button[^>]*disabled[^>]*title="Cannot finish yet: too soon"[^>]*>Finish<\/button>/);
   });
 
   it("between units, offers Enter and the endings once the run may end", () => {

@@ -548,6 +548,7 @@ A step the engine cannot perform or verify, the actual creative work. It only tr
 | `description` | `string` | - | Further guidance. |
 | `constrainedBy` | `string` | - | Table whose results this unit, if any, the work must honor; they are shown on the step, so a rule drawn earlier in the unit is in front of the player while they do it. |
 | `checklist` | `string` \| `object`[] | - | Points the player ticks off before moving on, each optionally showing the results it is about. |
+| `closesUnit` | `boolean` | - | Finishing this step closes the unit as well: its checklist is the honor check, and its Done is the unit's close, with the choice of going on to the next unit or finishing the run. A flow with such a step needs no finalizeUnit step. |
 
 ## `pack.phases[].steps[] (kind: manual).checklist[] (1)`
 
@@ -572,7 +573,7 @@ Run actions as part of the flow.
 
 ## `pack.phases[].steps[] (kind: finalizeUnit)`
 
-Close the unit. Every flow needs one of these somewhere.
+Close the unit. Every flow needs one of these somewhere, or a manual step that closes the unit.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |

@@ -1960,6 +1960,8 @@ describe("a run hosted in discord", () => {
     expect(content(await call(signed(press(first.customId, sam)), d))).toContain("Only the host");
     /** Press whatever the card offers until `units` stages have been closed, answering any modal with a bowl. */
     const saidByPress: Array<{ content?: string; embeds?: unknown[] }> = [];
+    // The card as it stood at the closing step, before its Next press: the closed unit's results are still under their tables there.
+    let closing: Record<string, unknown> | null = null;
     const playUntil = async (units: number) => {
       let presses = 0;
       let closed = false;
@@ -1967,6 +1969,7 @@ describe("a run hosted in discord", () => {
         presses += 1;
         const next = firstPress(card);
         if (!next) break;
+        if (next.customId.includes(":next:")) closing = card;
         let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
         // A modal was opened: answer it.
         if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
@@ -1986,12 +1989,11 @@ describe("a run hosted in discord", () => {
     const OURS = new Set(["Waiting on", "The game has already had its say", "On the table", "Clocks", "Standings", "At the table"]);
     // A table's result is a full-width field; the board's blocks are inline ones, and ours are named.
     const tableFields = (c: Record<string, unknown>) => ((c["embeds"] as Array<{ fields: Array<{ name: string; inline?: boolean }> }>)[0]!.fields ?? []).filter((f) => !f.inline).map((f) => f.name).filter((n) => !OURS.has(n));
-    expect(tableFields(card).length).toBeGreaterThan(0);
-    const third = await call(signed(press(`rl:01000000000000000000000001:enter`)), d);
-    expect(third.body["type"]).toBe(7);
-    expect(tableFields(third.body["data"] as Record<string, unknown>)).toEqual([]);
-    // Back to where the loop left the table, for what follows.
-    await call(signed(press(`rl:01000000000000000000000001:undo`)), d);
+    expect(closing).not.toBeNull();
+    expect(tableFields(closing!).length).toBeGreaterThan(0);
+    // Next closed the stage and entered the next in one press: the card in hand is the third stage's, clean.
+    expect(tableFields(card)).toEqual([]);
+    expect(events.filter((e) => e["t"] === "UnitEntered")).toHaveLength(3);
     // The bot rolled, and said so: nothing physical happened at this table.
     const rolled = events.filter((e) => e["t"] === "Rolled");
     expect(rolled.length).toBeGreaterThan(0);
@@ -2017,7 +2019,8 @@ describe("a run hosted in discord", () => {
     // Only as bars, never as a plain line (an entry's own text may end in "closed." too; the bar's form is the mark's).
     expect(bot.posts.some((p) => /\*\*Stage \d+\*\* (begins|closed)\./.test(p.message.content ?? ""))).toBe(false);
     const after = await call(request("GET", "/api/public/runs/01000000000000000000000001/metrics?t=livetok", { token: null }), d);
-    expect(after.body).toMatchObject({ ready: true, unit: 2 });
+    // Next took the table into the third stage as it closed the second.
+    expect(after.body).toMatchObject({ ready: true, unit: 3 });
     expect((after.body["progress"] as Record<string, unknown>)["unitsDone"]).toBe(2);
 
     // /run status re-posts the card in the thread; /run end closes the run and the thread.

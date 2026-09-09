@@ -316,6 +316,12 @@ export async function timerRanOut(deps: InteractionDeps, job: TimerJob): Promise
   return outcome;
 }
 
+/** How the run ends, asked of the host alone: each ending named, with what it asks of the player under it, the way the app's choices say it; one line, since that is the room Discord gives it. */
+function endingsMenu(pack: Pack, sessionId: string): InteractionResponse {
+  const endings = (pack.endings ?? []).map((e) => ({ label: e.label, value: e.id, ...(e.text?.trim() ? { description: oneLine(e.text) } : {}) }));
+  return { type: ResponseType.ChannelMessage, data: { content: "How does it end?", flags: EPHEMERAL, components: [select(customId(sessionId, "ending"), "The ending", endings)] } };
+}
+
 /** A paragraph as one line, for the room a select option's description gives it. */
 const oneLine = (text: string): string => text.replace(/\s+/g, " ").trim();
 
@@ -543,7 +549,7 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   const actor = await seatOf(deps, who, i);
   const host = who.id === run.hostDiscordId || canManage(i);
   const anyone = ["join", "leave", "react", "wave", "seat", "unseat", "follow"].includes(id.verb);
-  const hostOnly = ["end", "ending", "undo", "award", "cards"].includes(id.verb);
+  const hostOnly = ["end", "ending", "finish", "undo", "award", "cards"].includes(id.verb);
   // The host presses anything; whoever holds a seat presses the table; anyone joins, sits, waves or follows.
   if (!anyone && !host && !(mayPress(run, who.id) && !hostOnly)) {
     return ephemeral(run.seats ? `Only ${run.hostName} and whoever holds a seat press here. Take a seat, or watch by the live link.` : `Only the host, ${run.hostName}, presses here. Everyone else watches, here and by the live link.`);
@@ -570,18 +576,14 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
     const label = run.pending && typeof (run.pending as { request?: { label?: string } }).request?.label === "string" ? (run.pending as { request: { label: string } }).request.label : "Your answer";
     return modal(customId(run.sessionId, "answered"), "Answer", { id: "answer", label, paragraph: true });
   }
-  if (i.type === InteractionType.MessageComponent && id.verb === "end" && (pack.endings?.length ?? 0) > 1) {
-    // Each ending says what it asks of the player, under its name, the way the app's choices do; one line, since that is the room Discord gives it.
-    const endings = pack.endings!.map((e) => ({ label: e.label, value: e.id, ...(e.text?.trim() ? { description: oneLine(e.text) } : {}) }));
-    return { type: ResponseType.ChannelMessage, data: { content: "How does it end?", flags: EPHEMERAL, components: [select(customId(run.sessionId, "ending"), "The ending", endings)] } };
-  }
+  if (i.type === InteractionType.MessageComponent && id.verb === "end" && (pack.endings?.length ?? 0) > 1) return endingsMenu(pack, run.sessionId);
 
   // A button that drives a step names the step it was drawn for. Pressed
   // once the table has moved past it (from the app, from another seat,
   // from this card an instant ago) it drives nothing: the answer is the
   // card as it stands now where the pressed message was the card, or a
   // fresh card at the bottom with the stale message's buttons taken off.
-  const boundTo = ["step", "byhand", "finalize", "declare"].includes(id.verb) ? (id.arg ?? "") : id.verb === "tick" ? ((id.arg ?? "").split("@")[1] ?? "") : "";
+  const boundTo = ["step", "byhand", "finalize", "next", "finish", "declare"].includes(id.verb) ? (id.arg ?? "") : id.verb === "tick" ? ((id.arg ?? "").split("@")[1] ?? "") : "";
   if (boundTo) {
     const events = await eventsOf(table.store, run.sessionId);
     const { state, agenda: now } = agendaFor(pack, events);
@@ -609,6 +611,12 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   if (id.verb === "ending") {
     await follow(table, played, { postLine: false });
     return say(played.line ?? "The run is over.");
+  }
+  // Finish, where the pack offers a choice of endings: the unit is closed
+  // and the thread hears it; the reply asks how it ends, to the host alone.
+  if (id.verb === "finish" && !played.ended) {
+    await follow(table, played, { postLine: true });
+    return endingsMenu(pack, run.sessionId);
   }
   const said = sayingOf(played);
   if (played.run.cardMode === "pinned") {
@@ -644,6 +652,10 @@ function actionFor(id: { verb: string; arg?: string }, i: Interaction, run: Guil
       return key && typed && /^-?\d{1,6}$/.test(typed) ? { kind: "answer", key, value: Number(typed), byHand: true } : null;
     case "finalize":
       return { kind: "drive", action: { finalize: true } };
+    case "next":
+      return { kind: "close", andThen: "enter" };
+    case "finish":
+      return (pack.endings?.length ?? 0) > 1 ? { kind: "close", andThen: "stay" } : { kind: "close", andThen: "end", ending: pack.endings?.[0]?.id ?? "ended" };
     case "tick": {
       const index = Number((id.arg ?? "").split("@")[0]);
       if (!Number.isInteger(index)) return null;

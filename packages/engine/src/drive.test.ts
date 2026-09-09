@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
 import { playThrough } from "./play.ts";
-import { agenda, answer, drive, type DriveAction, type DriveContext, type Pending } from "./drive.ts";
+import { agenda, answer, closeAndEnter, drive, type DriveAction, type DriveContext, type Pending } from "./drive.ts";
 import { itemApplies, shownFor } from "./flow.ts";
 import type { RunEvent } from "./events.ts";
 import type { AnswerValue } from "./execute.ts";
@@ -266,6 +266,40 @@ describe("tick", () => {
     // that is what a `{ step: true }` action, gated on every box being
     // ticked, is for.
     expect(after.active?.step.kind).toBe("manual");
+  });
+});
+
+describe("a step that closes the unit", () => {
+  // The Long Kiln, with its Throw step closing the stage and its Fire phase gone: the work's own Done is the close.
+  const folded = (() => {
+    const phases = kiln.phases.filter((p) => p.id !== "close").map((p) => (p.id === "work" ? { ...p, steps: p.steps.map((s) => (s.kind === "manual" ? { ...s, closesUnit: true, checklist: ["The Constraint has been honored."] } : s)) } : p));
+    return { ...kiln, phases } as typeof kiln;
+  })();
+
+  it("closes the unit when the step is done, refusing until its checklist is ticked, and reaches the next unit in one call", () => {
+    const prefix = playThrough(folded, [{ enter: 1 }, { step: "enter" }, { declare: "Bowl" }]).events;
+    const state = reduce(folded, prefix);
+    const a = agenda(folded, state, prefix);
+    expect(a.active?.step.kind).toBe("manual");
+    expect(a.canFinalize).toBe(true);
+    expect(a.checklist.map((c) => c.text)).toEqual(["The Constraint has been honored."]);
+    expect(() => drive(folded, prefix, { step: true }, { now: T(10) })).toThrow(/confirmation|ticked/);
+    const ticked = [...prefix, ...(drive(folded, prefix, { tick: { index: 0, on: true } }, { now: T(10) }) as { events: RunEvent[] }).events];
+    const done = drive(folded, ticked, { step: true }, { now: T(11) });
+    expect(done.status).toBe("done");
+    if (done.status !== "done") return;
+    expect(done.events.map((e) => e.t)).toContain("UnitFinalized");
+    const after = reduce(folded, [...ticked, ...done.events]);
+    expect(after.phasesDone).toContain("work");
+    expect(agenda(folded, after, [...ticked, ...done.events]).phase).toBe("betweenUnits");
+    // A finalize names the same step, since it is the one that closes.
+    expect(drive(folded, ticked, { finalize: true }, { now: T(11) }).status).toBe("done");
+    // Next: closed and entered, one call, the new unit's clock with it where the pack keeps one.
+    const next = closeAndEnter(folded, ticked, { now: T(12) });
+    expect(next.status).toBe("done");
+    if (next.status !== "done") return;
+    expect(next.events.map((e) => e.t)).toEqual(expect.arrayContaining(["UnitFinalized", "UnitEntered"]));
+    expect(reduce(folded, [...ticked, ...next.events]).unit).toBe(2);
   });
 });
 

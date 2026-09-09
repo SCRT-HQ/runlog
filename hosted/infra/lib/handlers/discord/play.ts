@@ -1,4 +1,4 @@
-import { createRandom, drive, answer, reduce, agenda, snapshotOf, paperOf, awardValue, canEndRun, undoableIds, DriveError, clockOfUnit, deadlineOf, liveClocks, ranOutEvents, unitClockStart, type Agenda, type DriveAction, type DriveResult, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import { createRandom, drive, answer, reduce, agenda, closeAndEnter, snapshotOf, paperOf, awardValue, canEndRun, undoableIds, DriveError, clockOfUnit, deadlineOf, liveClocks, ranOutEvents, unitClockStart, type Agenda, type DriveAction, type DriveResult, type Pending, type RunEvent, type RunState } from "@runlog/engine";
 import { loadPackText, rollDice, tryParseDice, type Pack } from "@runlog/rules-schema";
 import { SeqConflict, type Store } from "../store.js";
 import type { CardMode, GuildRun, GuildStore } from "../guilds.js";
@@ -191,6 +191,8 @@ export type TableAction =
   | { kind: "leave" }
   | { kind: "award"; contestant: string; outcome: number }
   | { kind: "end"; ending: string }
+  /** The closing step's own press: close the unit, then enter the next, stay between units (the endings are asked for), or end with the one ending there is. */
+  | { kind: "close"; andThen: "enter" | "stay" | "end"; ending?: string }
   | { kind: "undo" }
   | { kind: "journal"; text: string }
   | { kind: "clock"; clock: string; to: "paused" | "running" | "expired" }
@@ -335,6 +337,24 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         produced = [{ t: "Awarded", at, contestant: action.contestant, outcome: action.outcome, table: outcome.table, entryId: outcome.entryId, points } as RunEvent];
         const who = state.contestants.find((c) => c.id === action.contestant)?.name ?? action.contestant;
         line = `${who} takes ${points} point${points === 1 ? "" : "s"}.`;
+        break;
+      }
+      case "close": {
+        if (pending) return { error: "The table is waiting on an answer; answer it, or take the move back, before closing." };
+        if (action.andThen === "enter") {
+          ({ produced, pending } = settle(closeAndEnter(pack, events, ctx)));
+          break;
+        }
+        ({ produced, pending } = settle(drive(pack, events, { finalize: true }, ctx)));
+        if (action.andThen === "end") {
+          const may = canEndRun(reduce(pack, [...events, ...produced]));
+          if (!may.ok) return { error: may.reason ?? "The run cannot end here." };
+          const ending = action.ending ?? pack.endings?.[0]?.id ?? "ended";
+          produced = [...produced, { t: "RunEnded", at, ending } as RunEvent];
+          ended = true;
+          mark = { text: `The **${pack.vocabulary.run.one.toLowerCase()}** is over: ${pack.endings?.find((e) => e.id === ending)?.label ?? ending}.`, color: COLORS.over };
+          line = mark.text;
+        }
         break;
       }
       case "end": {
