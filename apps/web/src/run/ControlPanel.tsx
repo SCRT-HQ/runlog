@@ -10,6 +10,7 @@ import { ClockPanel } from "./ClockPanel.tsx";
 import { ticksFor } from "./stepChecks.ts";
 import { nudgeFirstUnticked } from "./nudge.ts";
 import { Constraints } from "./Constraints.tsx";
+import { settleWords } from "./owed.ts";
 import type { useRun, ActiveStep } from "./useRun.ts";
 
 /**
@@ -258,7 +259,7 @@ export function RemoteControls({
       )}
 
       {/* 5. Owed, and moves. */}
-      {editable && (run.due.length > 0 || run.notes.length > 0) && <RemoteOwed run={run} />}
+      {editable && (run.blockingObligations.length > 0 || run.notes.length > 0) && <RemoteOwed pack={pack} run={run} />}
       {editable && run.moves.length > 0 && <RemoteMoves run={run} />}
 
       {/* 6. The clock. */}
@@ -469,14 +470,16 @@ function RemoteBetweenUnits({ pack, run, state }: { pack: Pack; run: ReturnType<
 }
 
 /** Results that reach forward in time, with their buttons: `Obligations` on the page. */
-function RemoteOwed({ run }: { run: ReturnType<typeof useRun> }) {
+function RemoteOwed({ pack, run }: { pack: Pack; run: ReturnType<typeof useRun> }) {
   return (
     <PipSection title="Owed">
-      {run.due.map((o) => (
+      {/* Everything holding the close up, and each button saying what
+          pressing it does, exactly as the page has them. */}
+      {run.blockingObligations.map((o) => (
         <div key={o.id} className="row spread">
           <span>{o.text}</span>
           <button className="primary tiny" onClick={() => run.resolveObligation(o.id, o.text)}>
-            Resolve
+            {settleWords(pack, o)}
           </button>
         </div>
       ))}

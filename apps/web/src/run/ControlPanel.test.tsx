@@ -160,6 +160,7 @@ describe("the floating remote", () => {
     const html = panel({
       run: run({
         due: [{ id: "o1", text: "Roll the Cooling", on: "onRunEnd" } as never],
+        blockingObligations: [{ id: "o1", text: "Roll the Cooling", on: "onRunEnd" } as never],
         moves: [{ id: "salvage", move: { label: "Salvage a Piece", description: "Repair one fired Stage." } } as never],
       }),
     });
@@ -175,7 +176,7 @@ describe("the floating remote", () => {
     const undoButton = (html: string) => html.match(/<button[^>]*>Undo<\/button>/)?.[0] ?? "";
 
     const disabled = panel({
-      run: run({ canUndo: false, due: [{ id: "o1", text: "Owed thing", on: "onRunEnd" } as never] }),
+      run: run({ canUndo: false, blockingObligations: [{ id: "o1", text: "Owed thing", on: "onRunEnd" } as never], due: [{ id: "o1", text: "Owed thing", on: "onRunEnd" } as never] }),
     });
     expect(disabled).toContain("Owed");
     expect(disabled.indexOf("Owed")).toBeLessThan(disabled.indexOf(">Undo<"));
