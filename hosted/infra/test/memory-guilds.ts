@@ -2,15 +2,21 @@ import type { ClaimCode, Connection, Guild, GuildPackMeta, GuildRun, GuildStore,
 import type { DiscordMessage, DiscordRest } from "../lib/handlers/discord/rest";
 
 /** Discord, as a list of what was asked of it: threads made, messages posted, in order. */
-export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array<{ channel: string; message: DiscordMessage; id: string }>; edits: Array<{ channel: string; id: string; message: DiscordMessage }>; pins: string[]; archived: string[]; down: boolean } {
+export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array<{ channel: string; message: DiscordMessage; id: string }>; edits: Array<{ channel: string; id: string; message: DiscordMessage }>; originals: Array<{ token: string; message: DiscordMessage }>; pins: string[]; archived: string[]; down: boolean } {
   let n = 0;
   const me = {
     threads: [] as string[],
     posts: [] as Array<{ channel: string; message: DiscordMessage; id: string }>,
     edits: [] as Array<{ channel: string; id: string; message: DiscordMessage }>,
+    originals: [] as Array<{ token: string; message: DiscordMessage }>,
     pins: [] as string[],
     archived: [] as string[],
     down: false,
+    async editOriginal(_applicationId: string, token: string, message: DiscordMessage) {
+      if (me.down) return false;
+      me.originals.push({ token, message });
+      return true;
+    },
     async createThread(_channelId: string, name: string) {
       if (me.down) return null;
       const id = `thread_${(n += 1)}`;
@@ -52,12 +58,21 @@ export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; cla
   const guilds = new Map<string, Guild>();
   const vault = new Map<string, { meta: GuildPackMeta; source: string }>();
   const packsOf = (guildId: string) => [...vault.entries()].filter(([k]) => k.startsWith(`${guildId}/`));
-  const release = (guildId: string) => {
-    if (!guilds.has(guildId)) return 0;
+  const emptyVault = (guildId: string) => {
     const packs = packsOf(guildId);
     for (const [k] of packs) vault.delete(k);
+    return packs.length;
+  };
+  const release = (guildId: string) => {
+    if (!guilds.has(guildId)) return 0;
+    let rows = emptyVault(guildId);
+    for (const r of [...runs.values()]) {
+      if (r.guildId !== guildId) continue;
+      runs.delete(r.sessionId);
+      rows += 3;
+    }
     guilds.delete(guildId);
-    return packs.length + 2;
+    return rows + 2;
   };
   return {
     codes,
@@ -118,6 +133,8 @@ export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; cla
       return { ...found };
     },
     async claimGuild(g) {
+      const previous = guilds.get(g.guildId);
+      if (previous && previous.ownerSub !== g.ownerSub) emptyVault(g.guildId);
       const made: Guild = { ...g, updatedAt: g.claimedAt };
       guilds.set(g.guildId, made);
       return { ...made };
@@ -146,6 +163,10 @@ export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; cla
     },
     async putGuildPack(guildId, meta, source) {
       vault.set(`${guildId}/${meta.id}`, { meta: { ...meta }, source });
+    },
+    async guildPackMeta(guildId, packId) {
+      const p = vault.get(`${guildId}/${packId}`);
+      return p ? { ...p.meta } : null;
     },
     async getGuildPack(guildId, packId) {
       const p = vault.get(`${guildId}/${packId}`);

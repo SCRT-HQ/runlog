@@ -86,9 +86,10 @@ export function isCommandName(name: unknown): name is CommandName {
 /**
  * What the bot needs in a server, as Discord's permission bits: to see
  * channels, to post in them and in threads, to open a public thread per
- * run and close it after, to post embeds, to read what it posted, and to
- * pin the table card. Nothing that reads members' messages beyond the
- * thread it hosts, and nothing that manages people.
+ * run, to post embeds, to read what it posted, and to pin the table
+ * card. Nothing that reads members' messages beyond the thread it hosts,
+ * nothing that manages people, and nothing that closes a thread: Discord
+ * closes an idle one by itself.
  */
 const PERMISSION_BITS = {
   VIEW_CHANNEL: 10n,
@@ -96,12 +97,11 @@ const PERMISSION_BITS = {
   MANAGE_MESSAGES: 13n,
   EMBED_LINKS: 14n,
   READ_MESSAGE_HISTORY: 16n,
-  MANAGE_THREADS: 34n,
   CREATE_PUBLIC_THREADS: 35n,
   SEND_MESSAGES_IN_THREADS: 38n,
 } as const;
 
-export const PERMISSION_NAMES = ["View Channels", "Send Messages", "Manage Messages", "Embed Links", "Read Message History", "Manage Threads", "Create Public Threads", "Send Messages in Threads"] as const;
+export const PERMISSION_NAMES = ["View Channels", "Send Messages", "Manage Messages", "Embed Links", "Read Message History", "Create Public Threads", "Send Messages in Threads"] as const;
 
 export const PERMISSIONS = String(Object.values(PERMISSION_BITS).reduce((sum, bit) => sum | (1n << bit), 0n));
 
