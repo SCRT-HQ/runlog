@@ -98,6 +98,8 @@ export interface GuildRun {
   pending?: Record<string, unknown>;
   /** Discord user id → contestant id, for a moderated run's roster. */
   contestants: Record<string, string>;
+  /** Seat number → who sits there, in a mode played by several; a seat's holder may press. */
+  seats?: Record<string, { discordId: string; name: string }>;
   createdAt: string;
   updatedAt: string;
   endedAt?: string;

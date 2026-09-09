@@ -13,6 +13,7 @@ const CHAT_INPUT = 1;
 /** Discord's ApplicationCommandOptionType. */
 const SUB_COMMAND = 1;
 const STRING = 3;
+const INTEGER = 4;
 const CHANNEL = 7;
 const ROLE = 8;
 /** The permission a member needs to manage the server: MANAGE_GUILD, as a bitfield string, which is how Discord takes a default. */
@@ -58,6 +59,7 @@ export const COMMANDS = [
           { type: STRING, name: "pack", description: "Which pack", required: true, autocomplete: true },
           { type: STRING, name: "mode", description: "Which of its modes", required: true, autocomplete: true },
           { type: STRING, name: "name", description: "What to call the run", required: false, max_length: 80 },
+          { type: INTEGER, name: "players", description: "How many seats, in a mode played by several; the mode's fewest if left out", required: false, min_value: 1, max_value: 12 },
         ],
       },
       { type: SUB_COMMAND, name: "status", description: "Post the table card again, in this run's thread" },
