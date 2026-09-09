@@ -421,25 +421,26 @@ whether it is active where plans gate. `/setup role` and `/setup channel`
 set who may host and where runs open; `/setup threads` sets whether they
 open in a public thread or a private one.
 
-The plan is **not on sale** until its release gate opens. A release gate
-is a WorkOS feature flag read by the API for everyone at once
-(`lib/handlers/gates.ts`): `servers-open` for this tier, `publishers-open`
-for becoming a publisher and hosted licensing. The API reads each by slug
-with the environment's key, once a minute per container, and opens the
-gate only for a flag that is on for everyone; a flag that is off, on for
-some people, missing, or unreadable (the key not filled in) reads as
-closed, so nothing goes on sale by accident. With the gate closed,
-everyone sees the Servers page, may claim a server and fill its vault,
-and sees the plan as coming; `GET /api/me` says `servers` (there is a
-bot), `serversOpen` and `publishersOpen` (on sale), and `GET /api/plans`
-says the same to a page with no token. A launch is the flag flipped to
-"on, everyone" in the WorkOS dashboard, reaching the API within a minute
-and nobody's deploy. Meanwhile the one way onto the plan is the WorkOS
-feature flag named `server`, per person, set on the people trying it: a
-flag named like a Stripe feature is that feature, the way a `plus` flag
-comps Plus, so a flagged account is subscribed as far as the API and the
-bot can tell. `discord.open: true` in the stage's configuration still
-opens the server tier as well, until the field is retired.
+The plan is on sale unless a **release gate** holds it back. A release
+gate is a WorkOS feature flag read by the API for everyone at once
+(`lib/handlers/gates.ts`): `servers-coming-soon` for this tier,
+`publishers-coming-soon` for becoming a publisher and hosted licensing.
+The API reads each by slug with the environment's key, once a minute per
+container, and a flag that is on for everyone is the hold: the tier
+shows as coming, `GET /api/me` says `serversOpen: false` (and
+`publishersOpen`), `GET /api/plans` says the same to a page with no
+token, and a Checkout for the tier answers 403. A flag that is off, on
+for some people only, deleted, or unreadable (the key not filled in) is
+no hold, so a launch is the flag turned off or deleted in the WorkOS
+dashboard, reaching the API within a minute and nobody's deploy. A new
+stage is open until someone puts the hold on it. While held, everyone
+sees the Servers page, may claim a server and fill its vault, and the
+one way onto the plan is the WorkOS feature flag named `server`, per
+person, set on the people trying it: a flag named like a Stripe feature
+is that feature, the way a `plus` flag comps Plus, so a flagged account
+is subscribed as far as the API and the bot can tell. `discord.open` in
+the stage's configuration is read no more, and goes when the stage files
+drop it.
 
 The owner puts packs in the server's **vault** from their profile:
 `PUT /api/guilds/{id}/packs/{packId}` takes the pack's text and a summary

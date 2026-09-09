@@ -712,23 +712,25 @@ describe("who is asking", () => {
     expect(body).toEqual({ clientId: "client_cli_test", issuer: "https://api.workos.com" });
   });
 
-  it("says what is on sale from the release gates, to anyone, and treats a closed gate as not for sale", async () => {
-    // Nothing configured: nothing on sale, and the public answer says so without a token.
+  it("says what is on sale, to anyone: every tier, unless a release gate holds it back", async () => {
+    // Nothing configured: nothing is held, so every tier is on sale; servers needs a bot to be offered at all.
     const plain = await call(request("GET", "/api/plans", { token: null }));
     expect(plain.status).toBe(200);
     expect(plain.headers["cache-control"]).toBe("public, max-age=60");
-    expect(plain.body).toEqual({ gates: false, billing: false, servers: false, serversOpen: false, publishersOpen: false });
-    expect((await call(request("GET", "/api/me"))).body).toMatchObject({ servers: false, serversOpen: false, publishersOpen: false });
-    // Gates open in WorkOS: the tiers are on sale, for a signed-in person and for the page with no token alike.
-    const open = deps(memoryStore(), { releaseGates: async () => ({ servers: true, publishers: true }), guilds: memoryGuilds(), discord: { applicationId: "app", publicKey: "00".repeat(32), token: async () => null } });
+    expect(plain.body).toEqual({ gates: false, billing: false, servers: false, serversOpen: false, publishersOpen: true });
+    expect((await call(request("GET", "/api/me"))).body).toMatchObject({ servers: false, serversOpen: false, publishersOpen: true });
+    // With a bot, and no hold: on sale, for a signed-in person and for the page with no token alike.
+    const bot = { applicationId: "app", publicKey: "00".repeat(32), token: async () => null };
+    const open = deps(memoryStore(), { releaseGates: async () => ({ servers: true, publishers: true }), guilds: memoryGuilds(), discord: bot });
     expect((await call(request("GET", "/api/me"), open)).body).toMatchObject({ servers: true, serversOpen: true, publishersOpen: true });
     expect((await call(request("GET", "/api/plans", { token: null }), open)).body).toMatchObject({ servers: true, serversOpen: true, publishersOpen: true });
-    // The stage's own word still opens the server tier, on the way to the flag saying it alone; the publisher tier has only its flag.
-    const byConfig = deps(memoryStore(), { releaseGates: async () => ({ servers: false, publishers: false }), guilds: memoryGuilds(), discord: { applicationId: "app", publicKey: "00".repeat(32), token: async () => null, open: true } });
-    expect((await call(request("GET", "/api/me"), byConfig)).body).toMatchObject({ serversOpen: true, publishersOpen: false });
-    // Behind a closed gate, a Checkout for the tier is refused, and so is becoming a publisher where plans gate; an existing publisher is untouched.
+    // A hold on a tier: coming soon, whatever the stage's file once said.
+    const held = deps(memoryStore(), { releaseGates: async () => ({ servers: false, publishers: false }), guilds: memoryGuilds(), discord: { ...bot, open: true } });
+    expect((await call(request("GET", "/api/me"), held)).body).toMatchObject({ serversOpen: false, publishersOpen: false });
+    expect((await call(request("GET", "/api/guilds"), held)).body).toMatchObject({ open: false });
+    // Behind a hold, a Checkout for the tier is refused, and so is becoming a publisher where plans gate; an existing publisher is untouched.
     const stripe = fakeStripe();
-    const gated = deps(memoryStore(), { gates: true, stripe: async () => stripe, prices: { "server-monthly": "price_server", "hosted-monthly": "price_hosted", "plus-monthly": "price_plus" }, releaseGates: async () => ({ servers: false, publishers: false }), guilds: memoryGuilds(), discord: { applicationId: "app", publicKey: "00".repeat(32), token: async () => null } });
+    const gated = deps(memoryStore(), { gates: true, stripe: async () => stripe, prices: { "server-monthly": "price_server", "hosted-monthly": "price_hosted", "plus-monthly": "price_plus" }, releaseGates: async () => ({ servers: false, publishers: false }), guilds: memoryGuilds(), discord: bot });
     expect((await call(request("POST", "/api/billing/checkout", { body: { price: "server-monthly" } }), gated)).status).toBe(403);
     expect((await call(request("POST", "/api/billing/checkout", { body: { price: "hosted-monthly" } }), gated)).status).toBe(403);
     expect((await call(request("POST", "/api/billing/checkout", { body: { price: "plus-monthly" } }), gated)).status).toBe(200);
@@ -1844,7 +1846,7 @@ describe("a claimed server", () => {
     expect(guilds.guilds.has("g1")).toBe(true);
   });
 
-  it("is offered wherever there is a bot, on sale only where the stage says so, and held by the flag named like the feature meanwhile", async () => {
+  it("is offered wherever there is a bot, on sale unless a hold says otherwise, and held by the flag named like the feature meanwhile", async () => {
     const guilds = memoryGuilds();
     let codes = 0;
     const bot = { applicationId: "app", publicKey: publicHex, token: async () => null };
@@ -1853,8 +1855,8 @@ describe("a claimed server", () => {
       if (authorization === "Bearer guest") return { sub: "user_2", sid: "session_2" };
       throw new Error("bad token");
     };
-    const d = deps(memoryStore(), { guilds, gates: true, discord: bot, verify: flagged, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
-    // Without a bot there is no tier at all; with one it is offered to everyone, and not yet for sale.
+    const d = deps(memoryStore(), { guilds, gates: true, discord: bot, verify: flagged, releaseGates: async () => ({ servers: false, publishers: true }), code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
+    // Without a bot there is no tier at all; with one it is offered to everyone, and, while the hold stands, not yet for sale.
     expect((await call(request("GET", "/api/me"), deps())).body).toMatchObject({ servers: false, serversOpen: false });
     expect((await call(request("GET", "/api/me", { token: "guest" }), d)).body).toMatchObject({ servers: true, serversOpen: false });
     // Anyone may claim a server and see the plan as coming; the flag on a session is the plan, the way a plus flag is Plus.
