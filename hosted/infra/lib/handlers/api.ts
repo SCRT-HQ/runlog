@@ -8,7 +8,7 @@ import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, ty
 import { dynamoBilling, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
 import { dynamoGuilds, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
-import { handleInteraction, kindOf, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
+import { handleInteraction, kindOf, threadHears, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
 import type { TimerJob } from "./discord/play.js";
 import { scheduledTimers } from "./discord/timers.js";
 import { discordRest, guildNameFrom, PATIENT_ROPE_MS, ROPE_MS, type DiscordRest } from "./discord/rest.js";
@@ -163,6 +163,12 @@ export interface Measured {
   ok: boolean;
 }
 
+/** A run the bot hosts was written to from the app: which, and how far the log now goes. */
+export interface MovedJob {
+  sessionId: string;
+  seq: number;
+}
+
 /** The screens the beacon may name: families, never an id. Mirrors apps/web/src/hosted/beacon.ts. */
 const SCREENS = ["welcome", "library", "play", "rules", "catalog", "guide", "design", "profile", "live", "widget"] as const;
 
@@ -230,6 +236,12 @@ export interface Deps {
    * a timer that ran out is noticed at the next press.
    */
   schedule?: (job: TimerJob) => Promise<void>;
+  /**
+   * Tell the job function, in its own time, that the app moved a run the
+   * bot hosts, so the thread hears and the card is redrawn. Absent, the
+   * thread hears at the next press there.
+   */
+  later?: (job: MovedJob) => Promise<void>;
   /** Link codes are random by default; a test hands in its own. */
   code?: () => string;
   /** Event and run ids are ULIDs by default; a test hands in its own. */
@@ -320,6 +332,21 @@ async function interactionDepsFor(deps: Deps, now: () => string, patient = false
  * A timer's deadline, kept by the job function: the schedule made when
  * the timer started comes back here, and the table is told it ran out.
  */
+/** The app moved a run the bot hosts; the job tells the thread. */
+export async function finishMoved(job: MovedJob, deps: Deps): Promise<"gone" | "quiet" | "told"> {
+  if (!deps.discord || !deps.guilds) return "gone";
+  const now = deps.now ?? (() => new Date().toISOString());
+  const started = Date.now();
+  let ok = false;
+  try {
+    const outcome = await threadHears(await interactionDepsFor(deps, now, true), job.sessionId);
+    ok = true;
+    return outcome;
+  } finally {
+    deps.measure?.({ kind: "job:moved", ms: Date.now() - started, ok });
+  }
+}
+
 export async function finishTimer(job: TimerJob, deps: Deps): Promise<"gone" | "later" | "stopped"> {
   if (!deps.discord || !deps.guilds) return "gone";
   const now = deps.now ?? (() => new Date().toISOString());
@@ -1804,6 +1831,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (!log) return json(422, { error: "events: a list of events with ids, at most a move's worth" });
       const { appended, seq } = await store.appendEvents(id, caller.sub, now(), log);
       await deps.notify?.(id, seq);
+      // A run the bot hosts hears of a move made here, in the job's time.
+      if (deps.later && deps.guilds) {
+        const hosted = await deps.guilds.guildRun(id);
+        if (hosted && !hosted.endedAt) await deps.later({ sessionId: id, seq });
+      }
       return json(200, { appended, seq });
     }
 
@@ -1953,6 +1985,11 @@ function depsFromEnv(): Deps {
                 new InvokeCommand({ FunctionName: process.env["DISCORD_JOB_FUNCTION"], InvocationType: "Event", Payload: Buffer.from(JSON.stringify({ kind: "discord-interaction", interaction })) }),
               );
             },
+            later: async (job: MovedJob) => {
+              await (lambdaClient ??= new LambdaClient({})).send(
+                new InvokeCommand({ FunctionName: process.env["DISCORD_JOB_FUNCTION"], InvocationType: "Event", Payload: Buffer.from(JSON.stringify({ kind: "moved", ...job })) }),
+              );
+            },
           }
         : {}),
       guilds: dynamoGuilds({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
@@ -2084,8 +2121,10 @@ export async function job(event: unknown): Promise<void> {
       await finishDeferred(event["interaction"], deps);
     } else if (isRecord(event) && event["kind"] === "timer" && typeof event["sessionId"] === "string" && typeof event["clock"] === "string" && typeof event["at"] === "string") {
       await finishTimer({ sessionId: event["sessionId"], clock: event["clock"], at: event["at"] }, deps);
+    } else if (isRecord(event) && event["kind"] === "moved" && typeof event["sessionId"] === "string" && typeof event["seq"] === "number") {
+      await finishMoved({ sessionId: event["sessionId"], seq: event["seq"] }, deps);
     } else {
-      console.error("job: not a deferred interaction or a timer", event);
+      console.error("job: not a deferred interaction, a timer or a move", event);
     }
   } catch (error) {
     console.error(error);
