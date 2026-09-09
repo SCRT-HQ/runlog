@@ -240,6 +240,30 @@ export default function App() {
     setView("play");
     if (addressOf(location).startsWith("#guide")) goTo("");
   };
+  /**
+   * The shelf, and the address bar saying so.
+   *
+   * Going there set the view and left whatever was in the address alone,
+   * so the page said "Your packs" and a reload opened the run, the catalog
+   * or the guide that was still spelled there. The shelf is the app's bare
+   * address, and going to it says so like every other page does.
+   */
+  const openLibrary = useCallback(() => {
+    setView("library");
+    goTo("");
+  }, []);
+
+  /**
+   * The catalog. It has always been read from the address on the way in,
+   * `#catalog` and `#catalog/<packId>`, and never written there on the way
+   * out, so opening it from the shelf and reloading landed back on the
+   * shelf.
+   */
+  const openCatalog = useCallback(() => {
+    setView("catalog");
+    goTo("#catalog");
+  }, []);
+
   const openDesigner = () => {
     setView("design");
     goTo("#create");
@@ -908,15 +932,14 @@ export default function App() {
           onClick={(e) => {
             if (home) return;
             e.preventDefault();
-            setView("library");
-            goTo("");
+            openLibrary();
           }}
         >
           <img className="logo" src={`${import.meta.env.BASE_URL}icon.svg`} alt="" />
           <h1>Runlog</h1>
         </a>
         {/* One door to the library, always; a pack in play still says which one, in muted text beside it. */}
-        <button className="packNow" onClick={() => setView("library")} title="Your packs and runs" aria-current={onLibrary ? "page" : undefined}>
+        <button className="packNow" onClick={openLibrary} title="Your packs and runs" aria-current={onLibrary ? "page" : undefined}>
           {/* Room for the words on a wide bar; the one word that matters on a
               phone, where this stands in the row of buttons beside Rules. */}
           <span className="shelfLabel">Your packs</span>
@@ -1052,7 +1075,7 @@ export default function App() {
               setView("play");
             }
           }}
-          onBack={() => setView("library")}
+          onBack={openLibrary}
         />
       ) : bench && (view === "design" || onLibrary) ? (
         <RunView key={`bench:${bench.pack.id}`} pack={bench.pack} store={bench.store} bench={{ from: bench.from, onLeave: () => setBench(null) }} />
@@ -1094,7 +1117,7 @@ export default function App() {
             setImported((prev) => prev.map((q) => (q.id === record.id ? { ...q, sync: on } : q)));
             void sync.setPackSync(record.id, on);
           }}
-          onCatalog={() => setView("catalog")}
+          onCatalog={openCatalog}
           onUpdate={(record) => void updateFromCatalog(record)}
           onReplace={(record, file) => void replaceFromFile(record, file)}
           {...(api

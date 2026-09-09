@@ -1537,32 +1537,6 @@ button:disabled,
   color: var(--text);
 }
 
-.pad {
-  display: grid;
-  grid-template-columns: repeat(5, 3rem);
-  gap: 0.4rem;
-  margin-top: 0.8rem;
-}
-.key {
-  height: 2.6rem;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--panel-2);
-  color: var(--text);
-  font: inherit;
-  font-family: var(--mono);
-  font-size: 1.05rem;
-  cursor: pointer;
-}
-@media (hover: hover) {
-  .key:hover {
-    border-color: var(--accent);
-  }
-}
-.key.wide {
-  grid-column: span 2;
-}
-
 .request {
   border-color: var(--accent);
 }
@@ -4389,16 +4363,6 @@ html[data-pip="controls"] body { margin: 0; height: 100vh; overflow-y: auto; bac
      the throw is the only thing on the screen worth the room. */
   .rollRequest .padRow.rolling .rollInput,
   .rollRequest .padRow.rolling > .primary { display: none; }
-
-  /* ---- the pad ---- *
-   * Ten keys across a phone, each one a thumb wide. Fixed 3rem columns left
-   * a third of the width unused and every key smaller than it had to be.
-   */
-  .pad {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 0.45rem;
-  }
-  .key { height: 3.1rem; font-size: var(--t-4); }
 }
 
 /* ---- where a pack may be played ---------------------------------------- */
