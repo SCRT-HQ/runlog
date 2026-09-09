@@ -23,8 +23,15 @@ export interface DiscordMessage {
 }
 
 export interface DiscordRest {
-  /** A public thread in a channel, named; the id of the thread, or null when Discord would not. */
-  createThread(channelId: string, name: string): Promise<string | null>;
+  /**
+   * A thread in a channel, named; the id of the thread, or null when
+   * Discord would not. Public by default, so anyone who can see the
+   * channel can open it; private on request, which takes Create Private
+   * Threads and starts with nobody in it but the bot.
+   */
+  createThread(channelId: string, name: string, privately?: boolean): Promise<string | null>;
+  /** Put somebody in a thread: how the host is let into the private one their run opened in. */
+  addThreadMember(threadId: string, userId: string): Promise<boolean>;
   /** Post into a channel or thread; the message id, or null. */
   postMessage(channelId: string, message: DiscordMessage): Promise<string | null>;
   editMessage(channelId: string, messageId: string, message: DiscordMessage): Promise<boolean>;
@@ -67,14 +74,22 @@ async function call(token: string, method: string, path: string, body: unknown, 
   }
 }
 
-/** Discord's ChannelType.PublicThread. */
+/** Discord's ChannelType.PublicThread and ChannelType.PrivateThread. */
 const PUBLIC_THREAD = 11;
+const PRIVATE_THREAD = 12;
 
 export function discordRest(token: string, fetchImpl: typeof fetch = fetch, ropeMs: number = ROPE_MS): DiscordRest {
   const id = (out: Record<string, unknown> | null) => (out && typeof out["id"] === "string" ? out["id"] : null);
   return {
-    async createThread(channelId, name) {
-      return id(await call(token, "POST", `/channels/${channelId}/threads`, { name: name.slice(0, 100), type: PUBLIC_THREAD, auto_archive_duration: 1440 }, fetchImpl, ropeMs));
+    async createThread(channelId, name, privately) {
+      // `invitable` lets the host add whoever else the run is for without
+      // asking the bot to; Discord takes it on a private thread alone.
+      const kind = privately ? { type: PRIVATE_THREAD, invitable: true } : { type: PUBLIC_THREAD };
+      return id(await call(token, "POST", `/channels/${channelId}/threads`, { name: name.slice(0, 100), ...kind, auto_archive_duration: 1440 }, fetchImpl, ropeMs));
+    },
+    async addThreadMember(threadId, userId) {
+      // Discord answers 204 with no body, which `call` reads as an empty object rather than a failure.
+      return (await call(token, "PUT", `/channels/${threadId}/thread-members/${userId}`, undefined, fetchImpl, ropeMs)) !== null;
     },
     async postMessage(channelId, message) {
       return id(await call(token, "POST", `/channels/${channelId}/messages`, message, fetchImpl, ropeMs));

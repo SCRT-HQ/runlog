@@ -2,7 +2,22 @@ import type { ClaimCode, Connection, Guild, GuildPackMeta, GuildRun, GuildStore,
 import type { DiscordMessage, DiscordOAuth, DiscordRest } from "../lib/handlers/discord/rest";
 
 /** Discord, as a list of what was asked of it: threads made, messages posted, in order. */
-export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array<{ channel: string; message: DiscordMessage; id: string }>; edits: Array<{ channel: string; id: string; message: DiscordMessage }>; originals: Array<{ token: string; message: DiscordMessage }>; pins: string[]; deleted: string[]; archived: string[]; roles: Array<{ id: string; name: string; color?: number }>; channels: Array<{ id: string; name: string }>; down: boolean } {
+export function memoryDiscord(): DiscordRest & {
+  threads: string[];
+  /** The ids of the threads that were made private, so a test can tell which kind was asked for. */
+  privateThreads: string[];
+  /** Who was put in a thread, in order; a private thread is empty but for the bot until somebody is. */
+  threadMembers: Array<{ thread: string; user: string }>;
+  posts: Array<{ channel: string; message: DiscordMessage; id: string }>;
+  edits: Array<{ channel: string; id: string; message: DiscordMessage }>;
+  originals: Array<{ token: string; message: DiscordMessage }>;
+  pins: string[];
+  deleted: string[];
+  archived: string[];
+  roles: Array<{ id: string; name: string; color?: number }>;
+  channels: Array<{ id: string; name: string }>;
+  down: boolean;
+} {
   let n = 0;
   const me = {
     roles: [] as Array<{ id: string; name: string; color?: number }>,
@@ -26,6 +41,8 @@ export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array
       return id;
     },
     threads: [] as string[],
+    privateThreads: [] as string[],
+    threadMembers: [] as Array<{ thread: string; user: string }>,
     posts: [] as Array<{ channel: string; message: DiscordMessage; id: string }>,
     edits: [] as Array<{ channel: string; id: string; message: DiscordMessage }>,
     originals: [] as Array<{ token: string; message: DiscordMessage }>,
@@ -38,11 +55,17 @@ export function memoryDiscord(): DiscordRest & { threads: string[]; posts: Array
       me.originals.push({ token, message });
       return true;
     },
-    async createThread(_channelId: string, name: string) {
+    async createThread(_channelId: string, name: string, privately?: boolean) {
       if (me.down) return null;
       const id = `thread_${(n += 1)}`;
       me.threads.push(`${id} ${name}`);
+      if (privately) me.privateThreads.push(id);
       return id;
+    },
+    async addThreadMember(thread: string, user: string) {
+      if (me.down) return false;
+      me.threadMembers.push({ thread, user });
+      return true;
     },
     async postMessage(channel: string, message: DiscordMessage) {
       if (me.down) return null;
@@ -208,7 +231,7 @@ export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; cla
       const g = guilds.get(guildId);
       if (!g) return null;
       if (patch.name !== undefined) g.name = patch.name;
-      for (const field of ["hostRoleId", "channelId", "cardMode"] as const) {
+      for (const field of ["hostRoleId", "channelId", "cardMode", "threadMode"] as const) {
         if (patch[field] === undefined) continue;
         if (patch[field] === null) delete g[field];
         else (g as unknown as Record<string, unknown>)[field] = patch[field];

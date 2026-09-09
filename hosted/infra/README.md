@@ -418,7 +418,8 @@ previous owner, three servers to an account. The owner pays for the
 server's plan — the `server` feature, sold as "Runlog for servers"
 through the same Stripe plumbing as Plus — and `/setup status` says
 whether it is active where plans gate. `/setup role` and `/setup channel`
-set who may host and where runs open.
+set who may host and where runs open; `/setup threads` sets whether they
+open in a public thread or a private one.
 
 The plan is **not on sale** until the stage says so. With `discord.open`
 absent or `false` in the configuration, everyone sees the Servers page,
@@ -447,7 +448,7 @@ vault.
 A **run hosted in a server** is a session like any other, owned by the
 host's account (a host is linked, so the run is somebody's), played by
 the bot as the device at the table: `/run start` creates the session
-with the same opening events the app writes, opens a public thread,
+with the same opening events the app writes, opens a thread,
 mints a live link, and posts and pins the **table card** —
 `lib/handlers/discord/card.ts`, rebuilt from the log on every press. The
 card follows the thread by default: a press that made a move answers by
@@ -460,7 +461,22 @@ carries the live link) and posts a fresh one. `cardMessageId` and
 `cardBare` on the run row say which message the buttons are on and how
 to retire it. `/setup cards mode:pinned` keeps one card at the top,
 edited in place, for servers that prefer it; the choice is copied onto
-each run as it starts (`cardMode`). A press goes through `lib/handlers/discord/play.ts`:
+each run as it starts (`cardMode`).
+
+The thread is **public** unless the run asks otherwise: `/run start
+private:true`, or `/setup threads kind:private` as the server's default
+(`threadMode` on the guild row, absent meaning public), opens a private
+thread instead and marks the run `private`. Discord starts a private
+thread with nobody in it but the bot, so the host is put in it with
+`addThreadMember` the moment it is made; whoever else the run is for,
+the host adds. Since a thread others cannot open makes a public
+announcement pointless, a private start answers the host alone — and the
+deferred placeholder carries the ephemeral flag too, which the reply
+`finishDeferred` edits into `@original` keeps. Create Private Threads
+(bit 36) is an optional permission, like Manage Roles and Manage
+Channels: it is not in the install link, and a private start without it
+answers with the link that adds it rather than opening the run in the
+open. A press goes through `lib/handlers/discord/play.ts`:
 the vault's pack (parsed once per container, by hash), the log folded,
 the engine's `drive`/`answer` applied one action at a time, the events
 appended under the host's account with ids minted the way the app mints
