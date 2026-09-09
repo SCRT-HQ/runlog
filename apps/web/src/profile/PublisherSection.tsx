@@ -14,8 +14,14 @@ import type { Api, PublisherInvitation, PublisherMember, PublisherPack, Publishe
  * come back with `?publisher=` on the address. Listing packs and the
  * sales ledger come with the catalog's next step.
  */
+/** Whether the publisher tier is held back here: plans gate, and the operator has not opened it yet. */
+function publishersHeld(plan: ReturnType<typeof usePlan>): boolean {
+  return plan.loaded && plan.gates && !plan.publishersOpen;
+}
+
 export function PublisherSection({ api }: { api: Api | null }) {
   const hosted = useHosted();
+  const plan = usePlan();
   const [publisher, setPublisher] = useState<PublisherView | null | undefined>(undefined);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -64,6 +70,19 @@ export function PublisherSection({ api }: { api: Api | null }) {
     }
   };
 
+  if (!publisher && publishersHeld(plan)) {
+    return (
+      <section className="panel">
+        <h3 className="sectionTitle">
+          Publishing <span className="muted">coming soon</span>
+        </h3>
+        <p className="muted small">
+          A publisher is a name in the catalog and, once payouts are set up, a seller. Becoming one is not open here yet; when it is, this
+          is where it starts.
+        </p>
+      </section>
+    );
+  }
   if (!publisher) {
     return (
       <section className="panel">
@@ -330,6 +349,7 @@ function HostedLicensing({ api }: { api: Api }) {
   const [note, setNote] = useState<string | null>(null);
   if (!(hosted?.features.billing || plan.gates)) return null;
   const subscribed = plan.entitlements.includes("hosted-licensing");
+  const held = !subscribed && publishersHeld(plan);
   const go = async (fn: () => Promise<{ url: string } | { available: false }>) => {
     setBusy(true);
     setNote(null);
@@ -349,10 +369,12 @@ function HostedLicensing({ api }: { api: Api }) {
       <p className="muted small">
         {subscribed
           ? "The catalog takes no share of your sales. Manage the subscription with Stripe."
-          : "The catalog takes 5% of each sale. With hosted licensing, $9 a month or $90 a year, it takes nothing; worth it once you sell more than a few a month."}
+          : held
+            ? "The catalog takes 5% of each sale. Hosted licensing, which takes that to nothing, is not on sale here yet."
+            : "The catalog takes 5% of each sale. With hosted licensing, $9 a month or $90 a year, it takes nothing; worth it once you sell more than a few a month."}
       </p>
       <div className="padRow">
-        {subscribed ? (
+        {held ? null : subscribed ? (
           <button className="ghost tiny" disabled={busy} onClick={() => void go(() => api.portal())}>
             Manage subscription
           </button>
