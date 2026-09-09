@@ -9,6 +9,7 @@ import { apiBase } from "../sync/config.ts";
 import { reactToRun, REACTIONS, type Reaction } from "../sync/client.ts";
 import { shownAs } from "../profile/shownAs.ts";
 import { LiveView } from "./LiveView.tsx";
+import { ThemeMenu } from "../theme/ThemeMenu.tsx";
 import { usePublicRun } from "./usePublic.ts";
 import type { LiveRoute } from "./route.ts";
 
@@ -43,6 +44,8 @@ function LiveBar({ title, packId, listed }: { title: string | null; packId: stri
         <a className="ghost" href="./#guide/streaming" title="How live links and widgets work">
           Docs
         </a>
+        {/* The same switch the app has, since a watcher has no settings dialog to find it in; the choice is this device's, as everywhere. */}
+        <ThemeMenu />
       </div>
     </header>
   );
