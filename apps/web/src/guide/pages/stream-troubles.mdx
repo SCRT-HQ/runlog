@@ -11,4 +11,4 @@ Each message a widget can show, and what to do about it.
 ## What it does
 
 - **The clock is right but nothing else moves.** The socket is down and the widget is polling; it catches up within six seconds. If it never does, the machine's network blocks WebSockets to the host, which the poll works around on its own.
-- **A dice alert never fires while the source is hidden.** With *Shutdown source when not visible* on, a hidden widget is closed and hears no gestures; it re-reads the run's state when shown, so nothing about the run is lost, only the throw. An automation tool such as [Streamer.bot](#guide/streamer-bot) holds its own socket and is not affected.
+- **A dice alert never fires while the source is hidden.** With *Shutdown source when not visible* on, a hidden widget is closed and hears no gestures. It re-reads the run when shown; only the throw is missed. An automation tool such as [Streamer.bot](#guide/streamer-bot) holds its own socket and is not affected.

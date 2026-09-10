@@ -1,6 +1,6 @@
 # Streaming a run <Plan tier="plus" />
 
-A run on a stream wants its own pieces on screen: the scoreboard beside the camera, the clock in a corner, the race leaderboard across the top. Each of those is a **widget**: one panel of the run on a page of its own, with nothing else on it, that follows the run as it moves. Runlog has no plugin to install; a widget is a web page, and every streaming app can show one. New to Runlog on a stream? [A stream run by dice](#guide/stream-why) says what it is for, what it needs, and what to compare it with.
+A **widget** is one panel of the run (the scoreboard, the clock, the race leaderboard) on a page of its own that follows the run as it moves. There is no plugin to install; a widget is a web page, and any streaming app with a browser source can show one. New to Runlog on a stream? [A stream run by dice](#guide/stream-why) says what it is for and what to compare it with.
 
 ## The widgets
 
@@ -10,21 +10,21 @@ Under **Stream** in the run's Settings, each widget has **Open** and **Copy addr
 - **Race**: the leaderboard, as each racer's device reports it.
 - **Clock**: the unit's stopwatch or timer, large.
 - **Step**: the current step, the constraints in play, the latest result.
-- **Stats**: where the run stands: the unit, units done, time on the clock where the run keeps one, the score.
+- **Stats**: the unit, units done, time on the clock where the run keeps one, the score.
 - **Trackers**: resources and counters, as bars and boxes.
-- **Ticker**: the last few things that happened, one line each, newest on top: dice, results, points, clocks, a tally moving, the unit closing. It hears the table's gestures the moment they happen and reads the rest from the run, so it catches up after being off scene.
+- **Ticker**: the last few things that happened (dice, results, points, clocks, a tally moving, the unit closing), one line each, newest on top. It hears the table's gestures the moment they happen and reads the rest from the run, so it catches up after being off scene.
 - **Everything, stacked**: the panels above in one column, for a single browser source down the side of a scene. It leaves out what the run has nothing for: a scoreboard with nobody on it, trackers in a pack that has none, the race when the run is not in one.
 
-Three more settings travel in the address: a background (clear, so your scene shows through; solid; or none, the words and numbers alone for a scene that frames them itself), a theme pinned for the capture so it looks the same whatever the streaming machine has chosen, and a size, since a capture is usually smaller than a screen.
+Three more settings travel in the address: a background (clear, so your scene shows through; solid; or none, the words and numbers alone), a theme pinned for the capture, and a size.
 
 ## Chat as input
 
-The widgets read the run; chat can also ask it for something. Under **Stream** → **Chat**, **Take asks** makes a key of the run's own and the address a bot posts to. A channel-point redeem, a chat command or a button on a stream deck then asks the table to take a move the pack offers, "I died" say, or to roll the table that is waiting. The ask lands in an **Asks** panel beside the people, where you press Accept, or, if you have said so, the table takes it the moment it lands. [Streamer.bot](#guide/streamer-bot) has the redeem, field by field; [the stream API](#guide/stream-tools) has the request for a tool of your own.
+Under **Stream** → **Chat**, **Take asks** makes a key of the run's own and the address a bot posts to. A channel-point redeem, a chat command or a stream deck button then asks the table to take a move the pack offers ("I died", say) or to roll the table that is waiting. The ask lands in an **Asks** panel beside the people, where you press Accept, or, if you have said so, the table takes it as it lands. [Streamer.bot](#guide/streamer-bot) has the redeem field by field; [the stream API](#guide/stream-tools) has the request for a tool of your own.
 
 ## Where to go next
 
-1. [The address that works on a stream](#guide/stream-address): why a browser source needs the live link's token, and how to copy the address.
+1. [The address that works on a stream](#guide/stream-address): copying the address a browser source needs.
 2. [OBS Studio and Streamlabs](#guide/obs): the browser source, field by field.
 3. [A dock for the controls](#guide/dock), [StreamElements](#guide/streamelements), [Streamer.bot](#guide/streamer-bot), [TikTok Live](#guide/tiktok), [Kick](#guide/kick), or [a tool of your own](#guide/stream-tools).
 
-<Note>Where plans are switched on, widgets are part of Plus, like hosting a table: a stream is a table with an audience. Where they are not, in the preview or a copy you run yourself, they are open to everyone.</Note>
+<Note>Where plans are switched on, widgets are part of Plus, like hosting a table. Where they are not, in the preview or a copy you run yourself, they are open to everyone.</Note>

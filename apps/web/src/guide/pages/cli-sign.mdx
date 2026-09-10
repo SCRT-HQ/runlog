@@ -23,4 +23,4 @@ npx @scrthq/runlog issue my-game.yaml --to "Buyer Name" --ref order-8f3a --key m
 
 That writes `my-game-buyer-name.rlpack` and prints a license key, once. Send both. The buyer loads the file with **Load a pack from a file** and types the key; signed in, the key is kept in their account, so the same file opens on their other devices. `--license` supplies a key of your own instead; `-o` names the file. Without `--seal` the copy is a plain signed pack stamped with the buyer's name.
 
-Signing does not stop copying, and nothing can: the app has to read every word to play. What it protects is your name on the thing.
+Signing does not stop copying; the app has to read every word to play.

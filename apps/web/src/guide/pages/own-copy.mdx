@@ -1,6 +1,6 @@
 # Running your own copy
 
-Runlog is a static app. Every part of it that plays a game runs in the browser, from a file on disk if need be, and nothing leaves the device unless someone signs in. So there are three sizes of "your own copy", and the first two need nothing built and nothing from AWS.
+Runlog is a static app: everything that plays a game runs in the browser, from a file on disk if need be, and nothing leaves the device unless someone signs in. There are three sizes of "your own copy"; the first two need nothing built and nothing from AWS.
 
 | You want | Take |
 | --- | --- |
@@ -8,6 +8,6 @@ Runlog is a static app. Every part of it that plays a game runs in the browser, 
 | The app at an address you control, no accounts | [the `app/` directory of the npm package, on any static host](#guide/static-host) |
 | Accounts, sync, tables with company, the catalog, at your address | [the `hosted/` directory of the repository, deployed to your AWS account over the npm package](#guide/aws) |
 
-None of them asks you to fork the repository. The published package `@scrthq/runlog` carries the built app beside the command line, and the hosting is written to lay its pages over a build it did not make.
+None of them needs a fork: the package `@scrthq/runlog` carries the built app beside the command line, and the hosting lays its pages over a build it did not make.
 
-<Note>Nothing here is a lock. A copy you run yourself has no plans and no gates: everything the app can do is open to everyone on it.</Note>
+<Note>A copy you run yourself has no plans and no gates; everything the app can do is open to everyone on it.</Note>

@@ -2,12 +2,12 @@
 
 Runlog's selling tools come in two shapes, and this page is the free one:
 issue sealed copies of your pack from your own checkout, with your own keys,
-on your own server, and nothing of ours in the loop. The hosted shape, where
+on your own server, and no Runlog service in the loop. The hosted shape, where
 Runlog keeps the ledger of who bought what and places a purchase straight
 into a buyer's account, is a publisher subscription and is described in the
 app; everything below works without it.
 
-The promise this page rests on is short. **Any file in the shape described
+**Any file in the shape described
 here opens in the Runlog app, on any address, with the key you issued, and
 nothing is checked online.** The app does not phone home to ask whether a
 sale was real. It cannot; there is nothing to ask.
@@ -99,7 +99,7 @@ idea for the reason the format exists.
 
 ## What this protects, and what it does not
 
-It stops the leak that actually happens: a buyer opening the file they
+It stops the leak that happens in practice: a buyer opening the file they
 downloaded, deleting the two lines that name them, and re-uploading it. A
 sealed file is binary, so an editor shows nothing to delete; without the key
 it is inert, so passing the file on means passing on a key issued to one
@@ -111,7 +111,6 @@ It does not stop someone determined. The app must show the rules to play
 them, so a person willing to read their own browser's memory, or to build
 the open-source app with one line changed, reaches the plaintext. It does not
 stop anyone retyping the game from a book. Those are out of scope by design.
-Do not sell it to yourself as more than it is.
 
 ## Signing, and what the stamp needs
 
@@ -125,8 +124,8 @@ new document and must be signed again. That is why `runlog issue` takes
 `--key`. If your backend holds your signing key, it can do the same with
 `signPack` from the CLI's library; if you would rather it did not, seal the
 already-signed master without a stamp, and rely on `ref` in the header to
-trace a copy. Runlog's own hosted issuing works that way, precisely so that
-no creator's key ever lives on our server.
+trace a copy. Runlog's own hosted issuing works that way, so that no
+creator's key lives on Runlog's server.
 
 ## What the app does with it
 
