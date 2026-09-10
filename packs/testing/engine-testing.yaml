@@ -699,7 +699,7 @@ phases:
         closesUnit: true
         constrainedBy: bench
         checklist:
-          - { text: "Whatever the Sky sent has been honoured.", shows: { table: bench, scope: unit } }
+          - { text: "Whatever the Sky sent has been honored.", shows: { table: bench, scope: unit } }
           - "The sleeve is sealed."
 
   - id: close

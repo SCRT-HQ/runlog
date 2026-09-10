@@ -45,7 +45,7 @@ const at = (table: string, entryId: string) => `${table}/${entryId}`;
  * the player to say something about the third. This is what lets them be
  * one: everything keyed by the result it belongs to, so a rule can carry
  * the roll it is waiting for and a box can know that rolling it is the
- * honouring, not a promise about it.
+ * honoring, not a promise about it.
  *
  * `true` where the trigger has run, `false` where it has not. A result the
  * pack hung nothing on is absent, and stays the player's word alone.
@@ -74,7 +74,7 @@ export function settledOn(owed: Map<string, boolean>, on: { table: string; entry
 /**
  * Which boxes of a confirmation belong to which result.
  *
- * A rule can carry the tick that honours it, and the tick has to be the one
+ * A rule can carry the tick that honors it, and the tick has to be the one
  * the confirmation was asking for or the step would wait on a box nobody
  * can see. Keyed the way `Checklist` keys its rows, because they are the
  * same rows. A result two points both show is ticked in both.
@@ -113,7 +113,7 @@ export function settlingFor(
   return {
     owing,
     settled,
-    // A rule carries the tick that honours it, so the list can drop the row.
+    // A rule carries the tick that honors it, so the list can drop the row.
     answered: (row) => (boxes.get(at(row.table, row.entryId)) ?? []).length > 0,
     hidden: (row) => asRules.has(at(row.table, row.entryId)),
     boxes,

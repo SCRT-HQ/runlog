@@ -1242,7 +1242,7 @@ function ClosingStep({
   /*
    * A result the step is held to is shown as a rule above, and the rule
    * carries whatever answers it: the move where the game owes one, the tick
-   * where the player is the only one who can say it was honoured. Either
+   * where the player is the only one who can say it was honored. Either
    * way the confirmation does not list it again, and a point with nothing
    * left to list is not drawn at all.
    *
@@ -1273,7 +1273,7 @@ function ClosingStep({
             return (
               <label className="owningTick">
                 <input type="checkbox" checked={on} onChange={() => tick(boxes, !on)} />
-                <span>Honoured</span>
+                <span>Honored</span>
               </label>
             );
           }}

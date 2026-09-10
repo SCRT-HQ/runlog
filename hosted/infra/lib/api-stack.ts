@@ -159,7 +159,7 @@ export class ApiStack extends Stack {
     const stripeSecretKey = secret("StripeSecretKey", "stripe/secret-key", "Stripe secret key: sandbox in dev, live in prd");
     const stripeWebhookSecret = secret("StripeWebhookSecret", "stripe/webhook-secret", "Signing secret of the Stripe webhook endpoint that points at /api/stripe/webhook");
     const stripeConnectWebhookSecret = secret("StripeConnectWebhookSecret", "stripe/connect-webhook-secret", "Signing secret of the Stripe Connect webhook endpoint that points at /api/stripe/connect-webhook");
-    const workosApiKey = secret("WorkosApiKey", "workos/api-key", "WorkOS API key for the environment, used to create publisher organisations");
+    const workosApiKey = secret("WorkosApiKey", "workos/api-key", "WorkOS API key for the environment, used to create publisher organizations");
     const discordBotToken = secret("DiscordBotToken", "discord/bot-token", "The Runlog Discord application's bot token, for posting into servers that installed it");
     const discordClientSecret = secret("DiscordClientSecret", "discord/client-secret", "The Runlog Discord application's OAuth2 client secret, for verifying a linked account for a server's linked roles");
 
