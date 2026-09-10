@@ -67,11 +67,24 @@ describe("the ticker's lines", () => {
     ]);
   });
 
+  it("tell a tally moving in the pack's words: the value as it climbs, and where it came from when it falls", () => {
+    const prev = { ...base, counters: [{ id: "deaths", label: "Deaths", value: 2 }, { id: "streak", label: "Rounds without a forfeit", value: 4 }] };
+    const up = { ...prev, counters: [{ id: "deaths", label: "Deaths", value: 3 }, { id: "streak", label: "Rounds without a forfeit", value: 4 }] };
+    expect(tickerLines(prev, up).map((l) => [l.id, l.kind, l.mark, l.text])).toEqual([["kdeaths:3", "counter", "Tally", "Deaths 3"]]);
+    const back = { ...up, counters: [{ id: "deaths", label: "Deaths", value: 0 }, { id: "streak", label: "Rounds without a forfeit", value: 0 }] };
+    expect(tickerLines(up, back).map((l) => l.text)).toEqual(["Deaths 3 → 0", "Rounds without a forfeit 4 → 0"]);
+    // A tally the last snapshot did not carry is not news; neither is one that stayed put.
+    expect(tickerLines(base, up)).toEqual([]);
+    expect(tickerLines(up, up)).toEqual([]);
+  });
+
   it("read a gesture into the same line the snapshot would make, so the news is told once", () => {
     const byGesture = lineOfGesture({ kind: "outcome", data: { n: 4, text: "A tall vase", subject: "Piece 2" }, at: "2026-01-01T00:01:00Z" });
     expect(byGesture).toMatchObject({ id: "o4", kind: "outcome", text: "A tall vase → Piece 2" });
     expect(lineOfGesture({ kind: "rolled", data: { total: 14, label: "Kiln Check" }, from: "Mira", at: "t" })?.text).toBe("Mira rolled 14 on Kiln Check");
     expect(lineOfGesture({ kind: "clock", data: { clock: "u2:unit", label: "Stage 2", status: "paused" }, at: "t" })).toMatchObject({ id: "cu2:unit:paused", text: "Stage 2 paused" });
+    expect(lineOfGesture({ kind: "counter", data: { counter: "deaths", label: "Deaths", value: 3, was: 2 }, at: "t" })).toMatchObject({ id: "kdeaths:3", kind: "counter", text: "Deaths 3" });
+    expect(lineOfGesture({ kind: "counter", data: { counter: "deaths", label: "Deaths", value: 0, was: 3 }, at: "t" })).toMatchObject({ id: "kdeaths:0", text: "Deaths 3 → 0" });
     expect(lineOfGesture({ kind: "unit-closed", data: { unit: 2, unitsDone: 2 }, at: "t" })).toMatchObject({ id: "u2" });
     // An ask from outside, once the host has answered it: who, what, how, and which way it went.
     expect(lineOfGesture({ kind: "asked", data: { ask: "a1", kind: "move", move: "died", name: "viewer_42", via: "channel-points", accepted: true }, at: "t" })).toMatchObject({
@@ -88,5 +101,6 @@ describe("the ticker's lines", () => {
     expect(lineOfGesture({ kind: "waved", data: { emoji: "🔥" }, at: "t" })).toBeNull();
     expect(lineOfGesture({ kind: "outcome", data: { n: 4 }, at: "t" })).toBeNull();
     expect(lineOfGesture({ kind: "rolled", data: {}, at: "t" })).toBeNull();
+    expect(lineOfGesture({ kind: "counter", data: { counter: "deaths", label: "Deaths", value: 3 }, at: "t" })).toBeNull();
   });
 });

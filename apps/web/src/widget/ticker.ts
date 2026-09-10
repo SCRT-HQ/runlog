@@ -16,7 +16,7 @@ import type { Gesture } from "../sync/socket.ts";
  * line's id is the same from either source, so a result told by gesture
  * and then read from the snapshot is one line, not two.
  */
-export type TickerKind = "rolled" | "outcome" | "award" | "clock" | "unit-closed" | "run-ended" | "asked";
+export type TickerKind = "rolled" | "outcome" | "award" | "clock" | "counter" | "unit-closed" | "run-ended" | "asked";
 
 export interface TickerLine {
   id: string;
@@ -26,9 +26,17 @@ export interface TickerLine {
   text: string;
 }
 
-const MARKS: Record<TickerKind, string> = { rolled: "Rolled", outcome: "Result", award: "Award", clock: "Clock", "unit-closed": "Closed", "run-ended": "Ended", asked: "Chat" };
+const MARKS: Record<TickerKind, string> = { rolled: "Rolled", outcome: "Result", award: "Award", clock: "Clock", counter: "Tally", "unit-closed": "Closed", "run-ended": "Ended", asked: "Chat" };
 
 const line = (kind: TickerKind, id: string, text: string): TickerLine => ({ id, kind, mark: MARKS[kind], text });
+
+/**
+ * A tally moving, in the pack's words: "Deaths 3" as it climbs, "Deaths
+ * 3 → 0" when something sent it back. The id is the value it landed on, so
+ * the gesture and the snapshot that follows make one line.
+ */
+const counterLine = (id: string, label: string, was: number, value: number): TickerLine =>
+  line("counter", `k${id}:${value}`, value > was ? `${label} ${value}` : `${label} ${was} → ${value}`);
 
 /** What `next` has that `prev` did not, oldest first. Nothing for a first reading: what a widget opens onto is old news. */
 export function tickerLines(prev: LiveSnapshot | null, next: LiveSnapshot): TickerLine[] {
@@ -51,6 +59,11 @@ export function tickerLines(prev: LiveSnapshot | null, next: LiveSnapshot): Tick
     const status = c.status === "done" ? (was?.status === "done" ? null : "stopped") : c.status === "paused" ? (was?.status === "paused" ? null : "paused") : !was ? "started" : was.status === "paused" ? "resumed" : null;
     if (!status) continue;
     out.push(line("clock", `c${c.id}:${status}`, `${c.label} ${status}${status === "stopped" && c.expired ? " · time ran out" : ""}`));
+  }
+  for (const c of next.counters) {
+    const was = prev.counters.find((p) => p.id === c.id);
+    if (!was || was.value === c.value) continue;
+    out.push(counterLine(c.id, c.label, was.value, c.value));
   }
   if (next.progress.unitsDone > prev.progress.unitsDone) {
     out.push(line("unit-closed", `u${next.progress.unitsDone}`, `${next.words.unit} ${prev.unit} closed · ${next.progress.unitsDone} ${next.progress.unitsDone === 1 ? next.words.unit.toLowerCase() : next.words.units.toLowerCase()} done`));
@@ -94,6 +107,14 @@ export function lineOfGesture(g: Pick<Gesture, "kind" | "data" | "from" | "at">)
       const id = str(d["clock"]);
       if (!label || !status || !id) return null;
       return line("clock", `c${id}:${status}`, `${label} ${status}${status === "stopped" && d["expired"] === true ? " · time ran out" : ""}`);
+    }
+    case "counter": {
+      const id = str(d["counter"]);
+      const label = str(d["label"]);
+      const value = num(d["value"]);
+      const was = num(d["was"]);
+      if (!id || !label || value === null || was === null) return null;
+      return counterLine(id, label, was, value);
     }
     case "unit-closed": {
       const done = num(d["unitsDone"]);
