@@ -122,7 +122,7 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
   const base = apiBase();
   const name = shown ?? "";
   // The paper a watcher may read: the summary and the mode's, from the
-  // pack here when it travelled, else as the owner's device wrote them
+  // pack here when it traveled, else as the owner's device wrote them
   // beside the snapshot.
   const modeId = snapshot.modeId;
   const paper: { summary: Doc; mode: Doc | null } | null = pack
