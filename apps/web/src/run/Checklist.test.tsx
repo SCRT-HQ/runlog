@@ -76,6 +76,21 @@ describe("a confirmation beside the rules it repeats", () => {
    * above left a step that could not be finished: nothing to tick, and a
    * button waiting on a tick.
    */
+  /*
+   * The rule carries the tick that honours it, so the confirmation drops
+   * the row: one statement, one answer, whichever kind of answer it is.
+   */
+  it("drops a row whose rule carries the tick that honours it", () => {
+    const onTheRule = { owing: () => false, settled: () => false, answered: () => true, hidden: () => true };
+    const { container } = render(
+      <Checklist items={items} pack={pack} state={state} ticked={new Set()} onToggle={() => {}} settling={onTheRule} />,
+    );
+    expect(container.querySelectorAll("li").length).toBe(0);
+    // And the step still waits for it: the tick on the rule is the same tick.
+    expect(checklistDone(items, pack, state, new Set(), onTheRule)).toBe(false);
+    expect(checklistDone(items, pack, state, new Set(["0:o0", "0:o1"]), onTheRule)).toBe(true);
+  });
+
   it("keeps the box for a rule the game settles nothing on, however it is shown elsewhere", () => {
     const nothingOwed = { owing: () => false, settled: () => false, hidden: () => true };
     render(<Checklist items={items} pack={pack} state={state} ticked={new Set()} onToggle={() => {}} settling={nothingOwed} />);

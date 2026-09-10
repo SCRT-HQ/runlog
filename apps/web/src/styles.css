@@ -4399,6 +4399,22 @@ html[data-pip="controls"] body { margin: 0; height: 100vh; overflow-y: auto; bac
 .owingMove {
   flex: 0 0 auto;
 }
+/* The other kind of answer a rule can carry: the player's word, in the
+   same place the roll would have been. */
+.owningTick {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--mono);
+  font-size: var(--t-1);
+  color: var(--muted);
+  cursor: pointer;
+}
+.owningTick input[type="checkbox"] {
+  width: 1.15rem;
+  height: 1.15rem;
+}
 /* A row the game settles for itself: shown, not asked about, and carrying
    the move it is waiting on where it is still waiting. */
 .checklist .settling {

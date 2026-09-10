@@ -28,7 +28,7 @@ import { ticksFor } from "./stepChecks.ts";
 import { nudgeFirstUnticked, nudgeOwed } from "./nudge.ts";
 import { Constraints } from "./Constraints.tsx";
 import { receiptFollowUps } from "./receiptFollowUps.ts";
-import { globalWords, owedOn, settleWords, settledOn, stillOwed, thresholdWords } from "./owed.ts";
+import { boxesByResult, globalWords, owedOn, settleWords, settledOn, stillOwed, thresholdWords } from "./owed.ts";
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
@@ -1243,23 +1243,26 @@ function ClosingStep({
   const owed = owedOn(state);
   const constraints = step.kind === "manual" ? constraintLines(pack, state, step.constrainedBy) : [];
   /*
-   * A result the step is held to is shown as a rule above. Where the game
-   * settles it, the rule carries the move and the confirmation neither
-   * lists it again nor asks about it.
+   * A result the step is held to is shown as a rule above, and the rule
+   * carries whatever answers it: the move where the game owes one, the tick
+   * where the player is the only one who can say it was honoured. Either
+   * way the confirmation does not list it again, and a point with nothing
+   * left to list is not drawn at all.
    *
-   * Where the game settles nothing, the box is the only way the player has
-   * of saying they honoured it, so it stays. Hiding those was a rule that
-   * could not be honoured at all: the row went, nothing could tick it, and
-   * the button waited on a box that was no longer on the screen.
+   * Which boxes belong to which result, so a tick on a rule is the same
+   * tick the confirmation was asking for and the step is satisfied by it.
+   * A result two points both show is ticked in both.
    */
   const asRules = new Set(constraints.map((line) => `${line.table}/${line.entryId}`));
+  const boxesFor = boxesByResult(pack, state, points);
   const owing = (row: { table: string; entryId: string }) => stillOwed(owed, row);
   const settled = (row: { table: string; entryId: string }) => settledOn(owed, row);
+  const answered = (row: { table: string; entryId: string }) => (boxesFor.get(`${row.table}/${row.entryId}`) ?? []).length > 0;
   const settling = {
     owing,
     settled,
-    hidden: (row: { table: string; entryId: string }) =>
-      asRules.has(`${row.table}/${row.entryId}`) && (owing(row) || settled(row)),
+    answered,
+    hidden: (row: { table: string; entryId: string }) => asRules.has(`${row.table}/${row.entryId}`),
   };
   const allTicked = checklistDone(points, pack, state, ticked, settling);
   const unit = v.unit.one.toLowerCase();
@@ -1268,7 +1271,26 @@ function ClosingStep({
     <section className="panel runStep finalize">
       <StepHead phase={phase} label={label} />
       {step.kind === "manual" && step.description && <p className="muted">{step.description}</p>}
-      {constraints.length > 0 && <Constraints lines={constraints} action={owedAction(pack, run, state)} />}
+      {constraints.length > 0 && (
+        <Constraints
+          lines={constraints}
+          action={(line) => {
+            const move = owedAction(pack, run, state)(line);
+            if (move) return move;
+            // Nothing owed on it: the player's word is what it is waiting
+            // for, and this is the box the confirmation would have asked in.
+            const boxes = boxesFor.get(`${line.table}/${line.entryId}`) ?? [];
+            if (boxes.length === 0 || run.readOnly) return null;
+            const on = boxes.every((k) => ticked.has(k));
+            return (
+              <label className="owningTick">
+                <input type="checkbox" checked={on} onChange={() => tick(boxes, !on)} />
+                <span>Honoured</span>
+              </label>
+            );
+          }}
+        />
+      )}
       {points.length > 0 && (
         <Checklist items={points} pack={pack} state={state} ticked={ticked} onToggle={tick} settling={settling} action={owedAction(pack, run, state)} />
       )}
