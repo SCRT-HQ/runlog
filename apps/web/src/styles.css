@@ -3459,7 +3459,6 @@ select.textInput {
 .marketCount { margin: 0; }
 .marketGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 1rem; align-items: stretch; }
 .marketCard { display: flex; flex-direction: column; gap: 0.5rem; }
-.marketCard.about { grid-column: 1 / -1; }
 .marketCardHead { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
 .marketTitle { margin: 0; font-size: var(--t-4); line-height: 1.2; text-wrap: balance; }
 .marketCard > .muted.small { margin: 0; }
