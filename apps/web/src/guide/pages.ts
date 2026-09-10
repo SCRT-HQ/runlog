@@ -17,6 +17,7 @@ import Inviting from "./pages/inviting.mdx";
 import Moderated from "./pages/moderated.mdx";
 import LiveLink from "./pages/live-link.mdx";
 import Races from "./pages/races.mdx";
+import StreamWhy from "./pages/stream-why.mdx";
 import Streaming from "./pages/streaming.mdx";
 import StreamAddress from "./pages/stream-address.mdx";
 import Obs from "./pages/obs.mdx";
@@ -114,6 +115,7 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   P("moderated", "With others", "Playing together", "Moderated play", "One person at the app, a roster of names, points on a grid.", Moderated),
   P("live-link", "With others", "Playing together", "A live link", "An address anyone opens to watch, no account needed.", LiveLink),
   P("races", "With others", "Playing together", "Races across devices", "The same seeded mode, each on their own device, one leaderboard.", Races),
+  P("stream-why", "With others", "Streaming", "A stream run by dice", "What Runlog does for a stream, what it needs, and how it compares.", StreamWhy),
   P("streaming", "With others", "Streaming", "Streaming a run", "The widgets: one panel of the run each, on a page of its own.", Streaming),
   P("stream-address", "With others", "Streaming", "The address that works on a stream", "Why a browser source needs the live link's token, and how to copy it.", StreamAddress),
   P("obs", "With others", "Streaming", "OBS Studio and Streamlabs", "A browser source, field by field, with sizes and a line of CSS.", Obs),

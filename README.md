@@ -25,6 +25,14 @@ the work itself, because it cannot see it.
 Everything runs in the browser, and nothing leaves your machine unless you
 sign in. There is no account you have to have.
 
+It also runs a stream. A challenge pack for the game you already play draws
+a handicap every region, or a curse that lands on the whole roster; chat can
+be the roster, with no accounts for anyone in it; the scoreboard, the clock
+and the latest twist go on a scene as plain browser sources, with no plugin.
+A wheel forgets the spin. A virtual tabletop wants a map, tokens and an
+evening of setup before anyone rolls. Runlog is the piece between them: the
+dice decide what happens next, on screen, and it counts.
+
 ---
 
 ## Try it
@@ -53,6 +61,26 @@ would not be proving anything. A few of them:
 | Elden Ring: Expedition | a challenge pack for a game | draws that draw again, vows, up to ten players |
 | Rocket League: Showdown | a moderated race | one person moderates, a roster races the drawn mechanics, points by rank |
 | Elden Ring: Trial | a moderated race | curses that land on everyone with a cure drawn beside them, targets worth points |
+
+## Not a tabletop, not a wheel
+
+Runlog has no map, no tokens and no character sheets, and does not want
+them. A virtual tabletop is where a group of role-players meets, and it is
+good at that; a wheel is a spin with no memory. What Runlog carries is the
+piece neither does: a game of rounds and consequences that runs beside
+whatever you are already doing, and remembers.
+
+| | Runlog | A virtual tabletop | A wheel or dice overlay |
+| --- | --- | --- | --- |
+| To a first run | Open the app; a minute, no account | An account each, a system, a map, tokens; a quarter of an hour to an evening, more self-hosted | Instant |
+| To a widget on a scene | A live link and one address in a browser source | Screen capture, or a community module | Instant |
+| Remembers what came up | Every roll, every result, whether it was done | The campaign, if you write it down | No |
+| Consequences on earlier work | Results that reach back, states, counters, deferred rolls | By hand | No |
+| A scoreboard or a race | A roster from chat, or channels racing on one seed | No | No |
+| The twists come from | A pack: yours, shipped, or from the catalog | Its store | Whatever you typed in |
+
+The guide's [A stream run by dice](https://runlog.scrthq.com/play/guide/stream-why)
+takes this further, with a first stream in order.
 
 ## The guide
 
