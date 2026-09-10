@@ -1,6 +1,6 @@
 import { counterTriggerAsks, globalTriggerAsks, obligationAsks, type RunState } from "@runlog/engine";
 import type { ChecklistItem, Pack } from "@runlog/rules-schema";
-import { evidenceFor, pointOf } from "./evidence.ts";
+import { evidenceFor, pointOf, type Settling } from "./evidence.ts";
 
 /**
  * What the button on an owed thing says.
@@ -89,6 +89,35 @@ export function boxesByResult(pack: Pack, state: RunState, items: ChecklistItem[
     }
   });
   return out;
+}
+
+/**
+ * What a closing step's confirmation should do about each result it lists.
+ *
+ * The whole decision in one place, and out of the view, so it can be read
+ * against a real pack without a browser: which rows the game settles,
+ * which the player must still answer, and which are already in front of
+ * them as a rule the step is held to and so are not listed twice.
+ */
+export function settlingFor(
+  pack: Pack,
+  state: RunState,
+  rules: Array<{ table: string; entryId: string }>,
+  items: ChecklistItem[],
+): Settling & { boxes: Map<string, string[]> } {
+  const owed = owedOn(state);
+  const asRules = new Set(rules.map((line) => at(line.table, line.entryId)));
+  const boxes = boxesByResult(pack, state, items);
+  const owing = (row: { table: string; entryId: string }) => stillOwed(owed, row);
+  const settled = (row: { table: string; entryId: string }) => settledOn(owed, row);
+  return {
+    owing,
+    settled,
+    // A rule carries the tick that honours it, so the list can drop the row.
+    answered: (row) => (boxes.get(at(row.table, row.entryId)) ?? []).length > 0,
+    hidden: (row) => asRules.has(at(row.table, row.entryId)),
+    boxes,
+  };
 }
 
 /** For a counter's trigger that has come due. */

@@ -682,8 +682,30 @@ phases:
         skipWhen:
           - { flag: skipActionsPhase }
 
+  # The shape a pack takes when the work itself closes the unit and the
+  # rules it was done under are the rules the closing confirms: a manual
+  # step that closes, held to a table, whose confirmation lists what that
+  # same table drew. The app has to say each of those once rather than as a
+  # rule and a box repeating it, and a rule with a trigger on it has to be
+  # answerable by the trigger rather than by a promise. Off unless a run
+  # sets the flag, so the Night closes the ordinary way by default.
+  - id: sealed
+    label: Seal the plate
+    skipWhen:
+      - { flag: benchClose, is: false }
+    steps:
+      - kind: manual
+        label: Seal the plate, under tonight's sky.
+        closesUnit: true
+        constrainedBy: bench
+        checklist:
+          - { text: "Whatever the Sky sent has been honoured.", shows: { table: bench, scope: unit } }
+          - "The sleeve is sealed."
+
   - id: close
     label: Record it
+    skipWhen:
+      - { flag: benchClose }
     steps:
       - kind: finalizeUnit
         label: Record the Night
