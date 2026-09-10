@@ -92,6 +92,8 @@ export interface Pending {
   completes?: { phase: Phase; index: number };
   /** A move that is the unit's outcome: when it completes, the unit closes with it. */
   closesUnit?: boolean;
+  /** Who outside the table asked for this block, when someone did: stamped on every event it commits. */
+  askedBy?: { name?: string; via?: string };
 }
 
 /**
@@ -364,7 +366,8 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
         : p.closesUnit
           ? [...stopClocksEvents(state, now()), ...closeUnitEvents(pack, state, now())]
           : [];
-      const named = commit([...result.events, ...done]);
+      const stamped = p.askedBy ? [...result.events, ...done].map((e) => ({ ...e, askedBy: p.askedBy })) : [...result.events, ...done];
+      const named = commit(stamped);
       setPending(null);
       if (p.kind === "table") {
         const { answers: _a, generated: _g, request: _r, ...block } = p;
@@ -582,13 +585,14 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
   }, [pack, state, activeStep]);
 
   const takeMove = useCallback(
-    (id: string, label: string) =>
+    (id: string, label: string, askedBy?: { name?: string; via?: string }) =>
       begin({
         kind: "move",
         moveId: id,
         keyPrefix: `move:${id}`,
         label,
         ...(pack.moves?.[id]?.finalizes ? { closesUnit: true } : {}),
+        ...(askedBy ? { askedBy } : {}),
       }),
     [begin, pack],
   );

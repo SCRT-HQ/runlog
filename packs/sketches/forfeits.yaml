@@ -1,0 +1,419 @@
+# Forfeits: a penalty wheel for any stream.
+#
+# It names no game, because it does not need to. A Session is a series of
+# Rounds, a level, a boss, a dish, a piece, whatever the stream is doing.
+# Each Round spins the stakes, what the round is worth, and then the player
+# plays. Every death is a press of "I died"; the third one puts the wheel on
+# the board, and spinning it lands a forfeit on the round: off-hand only,
+# no sprinting, muted for two minutes, chat's call. The forfeit holds until
+# the round is called, then lifts by itself. Rounds called with no forfeit
+# on them run a streak; five in a row is a clean sheet.
+#
+# Written to show four things the format does without a game behind it:
+#
+#   * a counter with a threshold trigger that rolls a table and resets
+#     itself, so the wheel is a rule and not a reminder
+#   * a move from outside the flow, "I died", pressed whenever it happens
+#   * states that lift when the unit is left, granted by the table's lines
+#   * a moderated mode where the same wheel lands on a whole roster
+#
+# Two things to know about the wheel. It is offered, not forced: the third
+# death puts a "Three deaths: spin" button on the board, and the spin is
+# the press. And it is offered once per round: a sixth death in one round
+# does not put it up a second time.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.forfeits
+version: "0.1.0"
+title: Forfeits
+author: Runlog
+description: >-
+  A penalty wheel for any stream. Every round spins what it is worth, every
+  third death spins a forfeit that holds until the round is called, and a
+  streak counts the rounds you got through clean.
+
+category: games
+tags: [stream, penalty wheel, forfeits, challenge, moderated]
+
+requires:
+  - { id: thing, label: Something to be bad at on camera, kind: other, note: "A game, a speedrun, a craft, a recipe. The wheel does not care." }
+  - { id: chat, label: A chat that can answer, kind: other, optional: true, note: "Two forfeits hand a choice to chat. Without one, they never come up." }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - seededRuns
+  - counters
+  - timers
+  - journal
+  - moderated
+
+vocabulary:
+  run: { one: Session, many: Sessions }
+  unit: { one: Round, many: Rounds }
+  subject: { one: Round, many: Rounds }
+  finalize: Call the round
+  terms:
+    roll: Spin
+
+unit:
+  createsSubject: true
+  clock: { kind: stopwatch }
+  min: 1
+  max: 20
+
+# One state per forfeit, all in one group, so a round carries at most one.
+# Each lifts when the round is called. In Chat's forfeits the round is
+# everyone's, so a forfeit on it is a forfeit on the whole roster.
+states:
+  noSprint:
+    label: No sprinting
+    short: WALK
+    group: forfeit
+    until: unitEnd
+    description: No sprinting, no dashing, no running for it. Walk until the round is called.
+  offhand:
+    label: Off-hand only
+    short: OFF
+    group: forfeit
+    until: unitEnd
+    description: Whatever you do with your good hand, do with the other until the round is called.
+  chatsCall:
+    label: Chat's call
+    short: CHAT
+    group: forfeit
+    until: unitEnd
+    description: Chat picks the next thing you do. Ask, wait, obey, then carry on.
+  muted:
+    label: Muted
+    short: MUTE
+    group: forfeit
+    until: unitEnd
+    description: No talking for two minutes. The timer says when; the mark stays on the round.
+  inverted:
+    label: Inverted
+    short: INV
+    group: forfeit
+    until: unitEnd
+    description: "Inverted controls, or the nearest thing to them: the mouse upside down, the camera flipped, the knife in the wrong hand."
+  noHealing:
+    label: No healing
+    short: NOHEAL
+    group: forfeit
+    until: unitEnd
+    description: No potions, no patching it up, no second go at the sauce. What breaks stays broken until the round is called.
+  worstLoadout:
+    label: Worst loadout
+    short: WORST
+    group: forfeit
+    until: unitEnd
+    description: "The worst weapon, the wrong tool, the blunt knife. Swap to it and keep it until the round is called."
+  standing:
+    label: Standing
+    short: STAND
+    group: forfeit
+    until: unitEnd
+    description: On your feet until the round is called. The chair is chat's now.
+  narrated:
+    label: Narrated
+    short: 3RD
+    group: forfeit
+    until: unitEnd
+    description: Narrate everything you do in the third person until the round is called.
+  soundOff:
+    label: Sound off
+    short: SILENT
+    group: forfeit
+    until: unitEnd
+    description: No game audio, no music, no cues. Eyes only until the round is called.
+  noPause:
+    label: No pausing
+    short: NOPAUSE
+    group: forfeit
+    until: unitEnd
+    description: No pausing and no menus until the round is called. Whatever comes up, it comes up live.
+
+# A forfeit landing is a state landing on the round, and both the streak
+# and the tally read that rather than the spin, because the wheel's twelfth
+# line is clear skies: a spin that lands nothing is not a forfeit. The one
+# list serves both counters.
+counters:
+  deaths:
+    label: Deaths
+    initial: 0
+    min: 0
+    triggers:
+      - when: { gte: 3 }
+        label: "Three deaths: spin"
+        do:
+          - { do: rollOn, table: forfeits }
+          - { do: modCounter, counter: deaths, set: 0 }
+  streak:
+    label: Rounds without a forfeit
+    initial: 0
+    min: 0
+    incrementOn:
+      - { on: unitFinalized }
+    # A reset holds for the rest of its round, so the round the forfeit
+    # landed in closes at zero and the streak starts again from the next.
+    resetOn: &landed
+      - { on: stateApplied, state: noSprint }
+      - { on: stateApplied, state: offhand }
+      - { on: stateApplied, state: chatsCall }
+      - { on: stateApplied, state: muted }
+      - { on: stateApplied, state: inverted }
+      - { on: stateApplied, state: noHealing }
+      - { on: stateApplied, state: worstLoadout }
+      - { on: stateApplied, state: standing }
+      - { on: stateApplied, state: narrated }
+      - { on: stateApplied, state: soundOff }
+      - { on: stateApplied, state: noPause }
+    triggers:
+      - when: { gte: 5 }
+        oncePerRun: true
+        label: Clean sheet
+        do:
+          - do: note
+            text: Five rounds called without a forfeit. The Session may end on a clean sheet whenever you like.
+  forfeits:
+    label: Forfeits landed
+    initial: 0
+    min: 0
+    incrementOn: *landed
+
+tables:
+  forfeits:
+    resolution: lookup
+    title: Forfeits
+    description: >-
+      The wheel. Spun on the third death, and whatever it lands on holds
+      until the round is called. Every line is something a person does with
+      their hands, their chair or their mouth; none of them needs the game
+      to know.
+    roll: d12
+    entries:
+      - { id: fo-sprint, range: [1, 1], text: "No sprinting until the round is called. Walk it.", grants: [noSprint] }
+      - { id: fo-offhand, range: [2, 2], text: "Off-hand only. Whatever your good hand does, the other one does it now.", grants: [offhand] }
+      - { id: fo-chat, range: [3, 3], text: "Chat picks the next thing you do. Ask, wait, obey.", grants: [chatsCall], needs: [chat] }
+      - id: fo-muted
+        range: [4, 4]
+        text: "Muted for two minutes. Mime it."
+        grants: [muted]
+        triggers:
+          - on: immediately
+            do:
+              - { do: startTimer, minutes: 2, label: Muted }
+      - { id: fo-inverted, range: [5, 5], text: "Inverted controls, or the nearest thing: the mouse upside down, the camera flipped, the knife in the wrong hand.", grants: [inverted] }
+      - { id: fo-noheal, range: [6, 6], text: "No healing. No potions, no patching, no second go at anything until the round is called.", grants: [noHealing] }
+      - { id: fo-loadout, range: [7, 7], text: "Swap to your worst loadout: the worst weapon, the wrong tool, the blunt knife.", grants: [worstLoadout] }
+      - { id: fo-standing, range: [8, 8], text: "Play the rest of the round standing.", grants: [standing] }
+      - { id: fo-narrate, range: [9, 9], text: "Narrate everything you do in the third person until the round is called.", grants: [narrated] }
+      - { id: fo-sound, range: [10, 10], text: "Sound off. No game audio and no music until the round is called.", grants: [soundOff] }
+      - { id: fo-nopause, range: [11, 11], text: "No pausing and no menus until the round is called.", grants: [noPause] }
+      - { id: fo-clear, range: [12, 12], text: "Clear skies, nothing this time. The deaths still go back to zero." }
+
+  stakes:
+    resolution: lookup
+    title: Stakes
+    description: >-
+      Spun as a round opens: what the round is worth. Solo, it is a number
+      to beat; in Chat's forfeits, the first contestant to settle the round
+      is awarded it.
+    roll: d6
+    entries:
+      - { id: st-one, range: [1, 2], text: "A quiet round. One point to whoever settles it first.", points: 1 }
+      - { id: st-two, range: [3, 4], text: "A fair round. Two points.", points: 2 }
+      - { id: st-three, range: [5, 5], text: "A big round. Three points.", points: 3 }
+      - { id: st-five, range: [6, 6], text: "Chat's round. Five points, and chat says what settling it takes.", points: 5, needs: [chat] }
+
+# Every death is a press. The counter is public; at three, the wheel goes
+# up on the board.
+moves:
+  died:
+    label: I died
+    description: One more. The third puts the wheel on the board.
+    when: anytime
+    available:
+      - { unitIndex: { gte: 1 } }
+    do:
+      - { do: modCounter, counter: deaths, by: 1 }
+
+journal:
+  enabled: true
+  prompt: What did chat make you do?
+
+phases:
+  - id: open
+    label: Open the round
+    steps:
+      - kind: rollTable
+        table: stakes
+        label: Spin the stakes
+      - kind: declareSubject
+        label: Name the round, the level, the boss, the dish, the piece.
+
+  - id: play
+    label: Play
+    steps:
+      - kind: manual
+        label: Play it out.
+        description: >-
+          The app cannot see the round. Press "I died" for every death; the
+          third puts "Three deaths: spin" on the board, and the spin lands
+          the forfeit. It holds until the round is called.
+        checklist:
+          - text: The forfeit was kept until the round was called.
+            shows: { table: forfeits, scope: unit }
+          - text: The round was settled, or given up on out loud.
+            shows: { table: stakes, scope: unit }
+
+  - id: call
+    label: Call the round
+    steps:
+      - kind: finalizeUnit
+        label: Call the round
+
+endings:
+  - id: done
+    label: Call it here
+    text: The Session ends. The scoreboard stands as it is.
+  - id: clean
+    label: Clean sheet
+    text: Five rounds in a row with no forfeit on them. End it before the wheel notices.
+    requires:
+      - { counter: streak, is: { gte: 5 } }
+
+modes:
+  everyDeath:
+    label: Every death
+    description: >-
+      One person, one wheel. Up to twenty rounds, ended when you say. The
+      streamer presses "I died" at the app, or from the dock beside the
+      game.
+    units: { min: 1, max: 20 }
+
+  chats:
+    label: Chat's forfeits
+    description: >-
+      One person moderates; two to twelve contestants play. A forfeit lands
+      on everyone in the round, and the round's stake goes to whoever
+      settles it first.
+    units: { min: 1, max: 20 }
+    moderated:
+      contestants: { min: 2, max: 12 }
+      award: first
+
+  seeded:
+    label: Seeded session
+    description: >-
+      Ten rounds from one seed: the same stakes and the same forfeits in the
+      same order for every channel that enters it. Start one here and share
+      its code.
+    seeded: true
+    units: { fixed: 10 }
+
+defaultMode: everyDeath
+
+# Replayed by `runlog test`. The wheel itself is pressed, not scripted: a
+# play fixture takes moves and steps, and a counter's threshold is a button
+# the player presses, so the spin's effects are replayed as the log it
+# leaves.
+fixtures:
+  - name: Three deaths are three presses, and the wheel is due
+    mode: everyDeath
+    play:
+      - { enter: 1 }
+      - { step: open#0, answers: { d6: 3 } }
+      - { declare: The bridge }
+      - { move: died }
+      - { move: died }
+      - { move: died }
+    expect:
+      - { path: outcomes.0.entryId, equals: st-two }
+      - { path: counters.deaths, equals: 3 }
+      - { path: counters.forfeits, equals: 0 }
+      - { requests: answered }
+
+  - name: The spin lands a forfeit and sends the deaths back to zero
+    mode: everyDeath
+    events:
+      - { t: RunStarted, mode: everyDeath }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: stakes, entryId: st-one, cause: phase }
+      - { t: SubjectDeclared, subjectType: The bridge }
+      - { t: CounterChanged, counter: deaths, by: 1 }
+      - { t: CounterChanged, counter: deaths, by: 1 }
+      - { t: CounterChanged, counter: deaths, by: 1 }
+      - { t: OutcomeResolved, table: forfeits, entryId: fo-offhand, cause: action }
+      - { t: StateApplied, state: offhand, subject: 1 }
+      - { t: CounterChanged, counter: deaths, set: 0 }
+      - { t: TriggerFired, key: "counter:deaths:0:u1" }
+    expect:
+      - { path: counters.deaths, equals: 0 }
+      - { path: counters.forfeits, equals: 1 }
+      - { path: counters.streak, equals: 0 }
+      - { path: subjects.0.states, equals: [offhand] }
+      - { path: firedOnce, contains: "counter:deaths:0:u1" }
+
+  - name: The forfeit lifts when the round is called, and the streak starts again from the next
+    mode: everyDeath
+    events:
+      - { t: RunStarted, mode: everyDeath }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: stakes, entryId: st-one, cause: phase }
+      - { t: SubjectDeclared, subjectType: The bridge }
+      - { t: UnitFinalized }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: stakes, entryId: st-two, cause: phase }
+      - { t: SubjectDeclared, subjectType: The tower }
+      - { t: OutcomeResolved, table: forfeits, entryId: fo-standing, cause: action }
+      - { t: StateApplied, state: standing, subject: 2 }
+      - { t: UnitFinalized }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: stakes, entryId: st-one, cause: phase }
+      - { t: SubjectDeclared, subjectType: The gate }
+      - { t: UnitFinalized }
+    expect:
+      - { path: subjects.1.states, equals: [] }
+      - { path: counters.forfeits, equals: 1 }
+      - { path: counters.streak, equals: 1 }
+
+  - name: A round called clean adds one to the streak
+    mode: everyDeath
+    play:
+      - { enter: 1 }
+      - { step: open#0, answers: { d6: 5 } }
+      - { declare: The bridge }
+      - { step: play }
+      - { finalize: {} }
+    expect:
+      - { path: counters.streak, equals: 1 }
+      - { path: counters.deaths, equals: 0 }
+      - { path: subjects.0.finalized, equals: true }
+      - { requests: answered }
+
+  - name: The first to settle the round takes its stake, and a forfeit lands on the roster's round
+    mode: chats
+    events:
+      - { t: RunStarted, mode: chats }
+      - { t: ContestantAdded, contestant: c1, name: Ada }
+      - { t: ContestantAdded, contestant: c2, name: Ben }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: stakes, entryId: st-three, cause: phase }
+      - { t: SubjectDeclared, subjectType: The bridge }
+      - { t: OutcomeResolved, table: forfeits, entryId: fo-sprint, cause: action }
+      - { t: StateApplied, state: noSprint, subject: 1 }
+      - { t: Awarded, contestant: c2, outcome: 0, table: stakes, entryId: st-three, points: 3 }
+      - { t: UnitFinalized }
+    expect:
+      - { path: awards.length, equals: 1 }
+      - { path: awards.0.contestant, equals: c2 }
+      - { path: awards.0.points, equals: 3 }
+      - { path: contestants.length, equals: 2 }
+      - { path: subjects.0.states, equals: [] }
+      - { path: counters.forfeits, equals: 1 }

@@ -61,6 +61,7 @@ would not be proving anything. A few of them:
 | Elden Ring: Expedition | a challenge pack for a game | draws that draw again, vows, up to ten players |
 | Rocket League: Showdown | a moderated race | one person moderates, a roster races the drawn mechanics, points by rank |
 | Elden Ring: Trial | a moderated race | curses that land on everyone with a cure drawn beside them, targets worth points |
+| Forfeits | a penalty wheel for any stream | a counter with a threshold trigger, a move from outside the flow, states that lift when the round is left, moderated and seeded modes |
 
 ## Not a tabletop, not a wheel
 

@@ -105,7 +105,45 @@ export interface SessionMeta {
   /** Set while the run is open to anyone with the link: the link's token, hashed. */
   publicTokenHash?: string;
   publicAt?: string;
+  /**
+   * Set while the run takes asks from outside: the ask key, hashed. Not the
+   * live link's token: that one is on every widget address and in a
+   * streaming scene, and a leaked address must let strangers watch, never
+   * press. Revoked on its own.
+   */
+  askKeyHash?: string;
+  /** What the table does with an ask: waits for the host to press, or takes it as it lands. */
+  askPolicy?: AskPolicy;
+  askAt?: string;
 }
+
+export type AskPolicy = "ask" | "auto";
+
+/**
+ * Something from outside the table, a chat command, a channel-point redeem,
+ * a button on a stream deck, asking the run to take a move the pack offers
+ * or to roll the table that is waiting. The host's device answers it, since
+ * only that device appends to an app-hosted run; the answer is kept beside
+ * the ask so a listener can say what became of it.
+ */
+export interface Ask {
+  id: string;
+  kind: "move" | "roll";
+  /** The move's id in the pack, for `kind: "move"`. */
+  move?: string;
+  /** Who asked, as they gave it. */
+  name?: string;
+  /** How: `channel-points`, `bits`, `gift`, `command`, whatever the caller says. */
+  via?: string;
+  at: string;
+  answer?: "accepted" | "declined";
+  answeredAt?: string;
+  /** Why it was declined, in a few words: no such move right now, nothing to roll. */
+  reason?: string;
+}
+
+/** How many asks a run keeps: enough to see what chat did this stream, not a history. */
+export const ASKS_KEPT = 50;
 
 export type Role = "owner" | "player" | "viewer";
 
@@ -266,7 +304,7 @@ export interface Store {
    * that landed in between. Throws `SeqConflict` when the tail has moved.
    */
   appendEvents(id: string, author: string, at: string, events: Record<string, unknown>[], opts?: { expectSeq?: number }): Promise<{ appended: StoredEvent[]; seq: number }>;
-  updateSession(id: string, at: string, patch: { name?: string; endedAt?: string; publicTokenHash?: string | null }): Promise<SessionMeta | null>;
+  updateSession(id: string, at: string, patch: { name?: string; endedAt?: string; publicTokenHash?: string | null; askKeyHash?: string | null; askPolicy?: AskPolicy }): Promise<SessionMeta | null>;
   /** What a stranger with the link sees of a run whose pack they may not hold: the owner's device writes it, redacted, after each move. */
   putSnapshot(id: string, at: string, snapshot: unknown): Promise<void>;
   getSnapshot(id: string): Promise<{ at: string; snapshot: unknown } | null>;
@@ -283,6 +321,11 @@ export interface Store {
   /** A reaction from whoever is watching; the last few are kept, newest last. */
   addReaction(id: string, reaction: Reaction): Promise<Reaction[]>;
   listReactions(id: string): Promise<Reaction[]>;
+  /** An ask from outside; the last few are kept, newest last. */
+  addAsk(id: string, ask: Ask): Promise<Ask[]>;
+  listAsks(id: string): Promise<Ask[]>;
+  /** The host's answer to one ask; the list as it stands, or null when there is no such ask. */
+  answerAsk(id: string, askId: string, answer: "accepted" | "declined", at: string, reason?: string): Promise<Ask[] | null>;
   /** The owner ends it for everyone (a tombstone on every pointer); a member leaves. */
   deleteSession(id: string, sub: string, at: string): Promise<{ deletedAt: string } | { left: true } | null>;
   createInvite(invite: Invite): Promise<void>;
@@ -708,6 +751,15 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
         row["publicTokenHash"] = patch.publicTokenHash;
         row["publicAt"] = at;
       }
+      if (patch.askKeyHash === null) {
+        delete row["askKeyHash"];
+        delete row["askPolicy"];
+        delete row["askAt"];
+      } else if (patch.askKeyHash) {
+        row["askKeyHash"] = patch.askKeyHash;
+        row["askAt"] = at;
+      }
+      if (patch.askPolicy && row["askKeyHash"]) row["askPolicy"] = patch.askPolicy;
       await ddb.send(new PutCommand({ TableName: table, Item: row }));
       const meta = strip(row) as unknown as SessionMeta;
       await store.touchPointers(id, meta.ownerSub, at, meta.seq);
@@ -774,6 +826,29 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       } catch {
         return [];
       }
+    },
+    async addAsk(id, ask) {
+      const kept = [...(await store.listAsks(id)), ask].slice(-ASKS_KEPT);
+      await ddb.send(new PutCommand({ TableName: table, Item: { pk: `SESSION#${id}`, sk: "ASKS", kind: "asks", asks: JSON.stringify(kept), expiresAt: expiresAfter(ask.at) } }));
+      return kept;
+    },
+    async listAsks(id) {
+      const row = await get_(`SESSION#${id}`, "ASKS");
+      if (!row || typeof row["asks"] !== "string") return [];
+      try {
+        const parsed = JSON.parse(row["asks"]) as unknown;
+        return Array.isArray(parsed) ? (parsed as Ask[]) : [];
+      } catch {
+        return [];
+      }
+    },
+    async answerAsk(id, askId, answer, at, reason) {
+      const asks = await store.listAsks(id);
+      const found = asks.find((a) => a.id === askId);
+      if (!found) return null;
+      const kept = asks.map((a) => (a.id === askId ? { ...a, answer, answeredAt: at, ...(reason ? { reason } : {}) } : a));
+      await ddb.send(new PutCommand({ TableName: table, Item: { pk: `SESSION#${id}`, sk: "ASKS", kind: "asks", asks: JSON.stringify(kept), expiresAt: expiresAfter(at) } }));
+      return kept;
     },
 
     async deleteSession(id, sub, at) {

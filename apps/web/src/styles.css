@@ -3039,6 +3039,52 @@ select.textInput {
   padding-top: 0.75rem;
 }
 
+/* What chat asked of the run, and the host's answer: the same shape as People. */
+.asks {
+  padding: 0;
+}
+.asks > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.asks > summary::-webkit-details-marker {
+  display: none;
+}
+.asks > summary .sectionTitle::after {
+  content: " ▸";
+}
+.asks[open] > summary .sectionTitle::after {
+  content: " ▾";
+}
+.asks > .asksBody {
+  padding-top: 0.75rem;
+}
+.askRow {
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--line);
+}
+.askRow em {
+  font-style: italic;
+}
+.chatSettings {
+  margin-top: 1.25rem;
+}
+.askAddress {
+  display: block;
+  word-break: break-all;
+  padding: 0.5rem 0.6rem;
+  margin: 0.4rem 0;
+  background: var(--panel);
+  font-size: 0.85rem;
+}
+.askMoves {
+  margin: 0.25rem 0 0.75rem;
+  padding-left: 1.2rem;
+}
+.askMoves li {
+  margin: 0.15rem 0;
+}
+
 /* What this run made, once it has ended, against what came before. */
 .scores > summary {
   list-style: none;

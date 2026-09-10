@@ -26,9 +26,10 @@ export interface LifecycleMarks {
   ended: boolean;
   awards: number;
   clocks: Record<string, "running" | "paused" | "done">;
+  counters: Record<string, number>;
 }
 
-export type LifecycleKind = "outcome" | "unit-closed" | "run-ended" | "award" | "clock";
+export type LifecycleKind = "outcome" | "unit-closed" | "run-ended" | "award" | "clock" | "counter";
 
 export interface LifecycleGesture {
   kind: LifecycleKind;
@@ -43,14 +44,15 @@ export function marksOf(state: RunState, events: readonly RunEvent[], nowMs: num
     ended: state.status === "ended",
     awards: state.awards.length,
     clocks: Object.fromEntries(state.clocks.map((c) => [c.id, c.status])),
+    counters: { ...state.counters },
   };
 }
 
 /**
  * The gestures a move produced: everything `state` has that `before` did
  * not, in the pack's own words. Results first, then awards on them, then
- * the clocks, then the unit closing, then the run ending, which is the
- * order the table would say them in.
+ * the clocks, then the tallies, then the unit closing, then the run
+ * ending, which is the order the table would say them in.
  */
 export function lifecycleGestures(pack: Pack, state: RunState, events: readonly RunEvent[], before: LifecycleMarks, nowMs: number = Date.now()): LifecycleGesture[] {
   const out: LifecycleGesture[] = [];
@@ -88,6 +90,16 @@ export function lifecycleGestures(pack: Pack, state: RunState, events: readonly 
     const status = c.status === "done" ? (was === "done" ? null : "stopped") : c.status === "paused" ? (was === "paused" ? null : "paused") : was === undefined ? "started" : was === "paused" ? "resumed" : null;
     if (!status) continue;
     out.push({ kind: "clock", data: { clock: c.id, label: c.label, kind: c.kind, status, ...(status === "stopped" ? { expired: Boolean(c.expired) } : {}) } });
+  }
+
+  // A tally that moved, by its label, with where it was: a death counted,
+  // a streak sent back to zero. A hidden counter is the pack's business.
+  for (const [id, def] of Object.entries(pack.counters ?? {})) {
+    if (def.hidden) continue;
+    const value = now.counters[id] ?? def.initial;
+    const was = before.counters[id] ?? def.initial;
+    if (value === was) continue;
+    out.push({ kind: "counter", data: { counter: id, label: def.label, value, was } });
   }
 
   if (now.unitsDone > before.unitsDone) {

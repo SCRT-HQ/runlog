@@ -1,9 +1,9 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { hashToken, verify as verifyToken, type Caller } from "./auth.js";
-import { dynamoStore, PACK_ORIGINS, shownName, type ApiKey, type LicenseMeta, type Reaction, type PackMeta, type PackOrigin, type Role, type SessionMember, type SessionMeta, type Store } from "./store.js";
+import { dynamoStore, PACK_ORIGINS, shownName, type ApiKey, type Ask, type AskPolicy, type LicenseMeta, type Reaction, type PackMeta, type PackOrigin, type Role, type SessionMember, type SessionMeta, type Store } from "./store.js";
 import { sesMailer, type Mailer } from "./email.js";
 import { fingerprintOf, verifyProof } from "./proof.js";
-import { apiGatewayPoster, dynamoLive, notifier, type Notify } from "./live.js";
+import { apiGatewayPoster, dynamoLive, notifier, teller, type Notify, type Tell } from "./live.js";
 import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, type RaceStore } from "./races.js";
 import { dynamoBilling, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
@@ -55,6 +55,32 @@ const MAX_EVENTS = 500;
 const MAX_NAME = 200;
 /** A command-line key: the prefix says what it is at a glance, the rest is 32 random bytes. */
 const KEY_PREFIX = "rl_";
+
+/**
+ * How often the outside may ask a run for something: one ask a name every
+ * twenty seconds, thirty a minute for the run, whatever chat is doing.
+ * Kept per container; a second container starts its own count, which is
+ * generous rather than wrong. What it guards is the host's tray, not a
+ * budget.
+ */
+const ASK_NAME_EVERY_MS = 20_000;
+const ASK_RUN_PER_MINUTE = 30;
+const askRates = new Map<string, { names: Map<string, number>; minute: number[] }>();
+function askAllowed(runId: string, name: string, atMs: number): boolean {
+  const r = askRates.get(runId) ?? { names: new Map<string, number>(), minute: [] };
+  r.minute = r.minute.filter((t) => atMs - t < 60_000);
+  if (r.minute.length >= ASK_RUN_PER_MINUTE) return false;
+  const last = r.names.get(name);
+  if (last !== undefined && atMs - last < ASK_NAME_EVERY_MS) return false;
+  r.names.set(name, atMs);
+  r.minute.push(atMs);
+  if (r.names.size > 500) for (const [n, t] of r.names) if (atMs - t > ASK_NAME_EVERY_MS) r.names.delete(n);
+  askRates.set(runId, r);
+  return true;
+}
+const ASK_KINDS = new Set(["move", "roll"]);
+const ASK_ID = /^[a-z][a-zA-Z0-9_-]{0,63}$/;
+const isPolicy = (v: unknown): v is AskPolicy => v === "ask" || v === "auto";
 
 /** What a watcher may send back: a few emoji, nothing typed. */
 const REACTIONS = new Set(["👏", "🔥", "😮", "😂", "💀", "❤️"]);
@@ -221,6 +247,8 @@ export interface Deps {
   token?: () => string;
   /** Tell the sockets watching a session that it changed. Absent where there is no live push. */
   notify?: Notify;
+  /** Pass a line of the server's own down the sockets: an ask arriving, an ask answered. Absent with `notify`. */
+  tell?: Tell;
   /** Discord's rows: link codes and which account a Discord account is. Absent, nothing about Discord is offered. */
   guilds?: GuildStore;
   /**
@@ -753,6 +781,31 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const found = await store.getSession(id);
     if (!found || !t || found.meta.deletedAt || !found.meta.publicTokenHash || hashToken(t) !== found.meta.publicTokenHash) return livePage({ appUrl, closed: true });
     return livePage({ appUrl, id, token: t, title: found.meta.name ?? null, pack: found.meta.packTitle ?? null });
+  }
+
+  // ---- an ask from outside: a chat command, a channel-point redeem, a button, keyed by the run's ask key ----
+  const publicAsk = path.match(/^\/api\/public\/runs\/([^/]+)\/asks$/);
+  if (publicAsk && method === "POST") {
+    const id = decodeURIComponent(publicAsk[1]!);
+    const k = event.queryStringParameters?.["k"] ?? "";
+    const found = await store.getSession(id);
+    // The key is not the live token on purpose: whoever has a widget address may watch, never press.
+    if (!found || !k || !found.meta.askKeyHash || hashToken(k) !== found.meta.askKeyHash) return json(403, { error: "no ask key, or the run is not taking asks" });
+    if (found.meta.deletedAt || found.meta.endedAt) return json(410, { error: "this run is over" });
+    const body = parse(event);
+    const kind = isRecord(body) && str(body["kind"]) ? body["kind"] : "";
+    if (!ASK_KINDS.has(kind)) return json(422, { error: "kind: move or roll" });
+    const move = isRecord(body) && str(body["move"]) ? body["move"] : "";
+    if (kind === "move" && !ASK_ID.test(move)) return json(422, { error: "move: the move's id in the pack" });
+    const name = isRecord(body) && str(body["name"]) ? body["name"].trim().slice(0, 40) : "";
+    const via = isRecord(body) && str(body["via"]) ? body["via"].trim().slice(0, 32) : "";
+    const at = now();
+    if (!askAllowed(id, name || "-", Date.parse(at))) return json(429, { error: "too many asks: one a name every twenty seconds, thirty a minute for the run" });
+    const ask: Ask = { id: randomBytes(6).toString("hex"), kind: kind as Ask["kind"], ...(kind === "move" ? { move } : {}), ...(name ? { name } : {}), ...(via ? { via } : {}), at };
+    const asks = await store.addAsk(id, ask);
+    await deps.tell?.(id, "ask", { ask: ask.id, kind: ask.kind, ...(ask.move ? { move: ask.move } : {}), ...(name ? { name } : {}), ...(via ? { via } : {}), policy: found.meta.askPolicy ?? "ask" }, at);
+    await deps.notify?.(id, found.meta.seq);
+    return json(200, { asks: asks.filter((a) => !a.answer) });
   }
 
   // ---- a watcher's reaction: one of a few emoji, to everyone watching and the table ----
@@ -1866,7 +1919,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     }
   }
 
-  const session = path.match(/^\/api\/sessions\/([^/]+)(\/events|\/invites|\/invites\/[^/]+|\/members\/[^/]+|\/public|\/snapshot|\/reactions)?$/);
+  const session = path.match(/^\/api\/sessions\/([^/]+)(\/events|\/invites|\/invites\/[^/]+|\/members\/[^/]+|\/public|\/snapshot|\/reactions|\/asks|\/asks\/[^/]+|\/ask-key)?$/);
   if (session) {
     const id = decodeURIComponent(session[1]!);
     const found = await store.getSession(id);
@@ -1879,7 +1932,56 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
 
     const sub = session[2] ?? "";
     // What a member sees of the session: the hash of a link's token is not theirs to see.
-    const metaView = ({ publicTokenHash, ...rest }: SessionMeta) => ({ ...rest, shared: Boolean(publicTokenHash) });
+    const metaView = ({ publicTokenHash, askKeyHash, askPolicy, askAt, ...rest }: SessionMeta) => ({
+      ...rest,
+      shared: Boolean(publicTokenHash),
+      asks: askKeyHash ? { policy: askPolicy ?? "ask", ...(askAt ? { since: askAt } : {}) } : null,
+    });
+
+    // ---- asks from outside: what chat asked for, and the host's answer ----
+    if (sub === "/asks" && method === "GET") return json(200, { asks: await store.listAsks(id) });
+    const askAnswer = sub.match(/^\/asks\/([^/]+)$/);
+    if (askAnswer && method === "POST") {
+      if (me.role !== "owner") return json(422, { error: "only the host answers an ask" });
+      const body = parse(event);
+      const answer = isRecord(body) && (body["answer"] === "accepted" || body["answer"] === "declined") ? body["answer"] : null;
+      if (!answer) return json(422, { error: "answer: accepted or declined" });
+      const reason = isRecord(body) && str(body["reason"]) ? body["reason"].trim().slice(0, 80) : "";
+      const at = now();
+      const askId = decodeURIComponent(askAnswer[1]!);
+      const asks = await store.answerAsk(id, askId, answer, at, reason || undefined);
+      if (!asks) return json(200, { found: false });
+      const answered = asks.find((a) => a.id === askId)!;
+      await deps.tell?.(id, "asked", { ask: answered.id, kind: answered.kind, ...(answered.move ? { move: answered.move } : {}), ...(answered.name ? { name: answered.name } : {}), ...(answered.via ? { via: answered.via } : {}), accepted: answer === "accepted", ...(reason ? { reason } : {}) }, at);
+      return json(200, { asks });
+    }
+    // ---- the ask key: minted by the host, shown once, revoked on its own ----
+    if (sub === "/ask-key") {
+      if (me.role !== "owner") return json(422, { error: "only the host takes asks" });
+      const body = parse(event);
+      const policy = isRecord(body) && isPolicy(body["policy"]) ? body["policy"] : undefined;
+      if (method === "POST") {
+        const gate = await needsPlus();
+        if (gate) return gate;
+        const key = (deps.token ?? (() => randomBytes(24).toString("base64url")))();
+        const meta = await store.updateSession(id, now(), { askKeyHash: hashToken(key), askPolicy: policy ?? found.meta.askPolicy ?? "ask" });
+        await deps.notify?.(id, found.meta.seq);
+        return json(200, { key, asks: { policy: meta?.askPolicy ?? "ask" } });
+      }
+      if (method === "PUT") {
+        if (!found.meta.askKeyHash) return json(422, { error: "no ask key yet: mint one first" });
+        if (!policy) return json(422, { error: "policy: ask or auto" });
+        const meta = await store.updateSession(id, now(), { askPolicy: policy });
+        await deps.notify?.(id, found.meta.seq);
+        return json(200, { asks: { policy: meta?.askPolicy ?? policy } });
+      }
+      if (method === "DELETE") {
+        await store.updateSession(id, now(), { askKeyHash: null });
+        await deps.notify?.(id, found.meta.seq);
+        return json(200, { asks: null });
+      }
+      return json(410, { error: ROUTE_GONE });
+    }
 
     if (sub === "/reactions" && method === "GET") return json(200, { reactions: await store.listReactions(id) });
     if (sub === "/reactions" && method === "POST") {
@@ -2265,7 +2367,10 @@ function depsFromEnv(selfArn?: string): Deps {
       mailer: sesMailer({ from: process.env["EMAIL_FROM"] ?? "", region: process.env["EMAIL_REGION"] ?? "us-west-2" }),
       appUrl: process.env["APP_URL"] ?? "/",
       ...(process.env["WS_ENDPOINT"]
-        ? { notify: notifier(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])) }
+        ? {
+            notify: notifier(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
+            tell: teller(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
+          }
         : {}),
     };
 }

@@ -37,6 +37,7 @@ const PACKS = [
   "packs/sketches/the-backlog.yaml",
   "packs/sketches/sunday-desk.yaml",
   "packs/sketches/run-of-show.yaml",
+  "packs/sketches/forfeits.yaml",
   // packs/testing/engine-testing.yaml is deliberately absent from this list:
   // a test bench belongs in the bundle a dev copy ships, never in a
   // publisher's listing.

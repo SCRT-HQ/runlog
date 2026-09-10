@@ -95,6 +95,13 @@ export interface Changed {
 /** Something to tell the listeners of a session. Never throws: a failed nudge costs a poll, not a move. */
 export type Notify = (sessionId: string, seq: number) => Promise<void>;
 
+/**
+ * A gesture from the server rather than from a device: an ask arriving, an
+ * ask answered. The same line a table's gesture takes down the socket, so
+ * a listener has one shape to parse. Never throws, like a notify.
+ */
+export type Tell = (sessionId: string, kind: string, data: Record<string, unknown>, at: string) => Promise<void>;
+
 /** A way to post to one connection; the management API, or a test's list. */
 export interface Poster {
   post(connectionId: string, data: string): Promise<"sent" | "gone">;
@@ -121,6 +128,26 @@ export function apiGatewayPoster(endpoint: string): Poster {
  * connection that is gone, closed without a disconnect the gateway told
  * us about, is cleaned up on the spot rather than left to the TTL.
  */
+export function teller(live: LiveStore, poster: Poster): Tell {
+  return async (sessionId, kind, data, at) => {
+    try {
+      const watchers = await live.watchers(sessionId);
+      const line = JSON.stringify({ t: "gesture", id: sessionId, kind, data, at });
+      await Promise.all(
+        watchers.map(async (w) => {
+          try {
+            if ((await poster.post(w.connectionId, line)) === "gone") await live.disconnect(w.connectionId);
+          } catch (error) {
+            console.error("live: could not pass a line on", error);
+          }
+        }),
+      );
+    } catch (error) {
+      console.error("live: could not tell", error);
+    }
+  };
+}
+
 export function notifier(live: LiveStore, poster: Poster): Notify {
   return async (sessionId, seq) => {
     try {

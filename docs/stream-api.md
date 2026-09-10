@@ -150,8 +150,11 @@ The kinds:
 | `outcome` | A result landed: the dice, or a choice, drew a line of a table. | `n`, the result's number from the start of the run (the snapshot's log uses the same); `unit`; `table`, its title; `text`, the line drawn, in the pack's words; `subject`, by name, when the result reached one. |
 | `award` | The moderator gave a result's points to a contestant. | `n`, the result awarded; `contestant`, by name; `points`; `table`; `text`. |
 | `clock` | A clock started, paused, resumed or stopped. | `clock`, its id; `label`; `kind`, `stopwatch` or `timer`; `status`: `started`, `paused`, `resumed` or `stopped`; on `stopped`, `expired`. |
+| `counter` | A tally the pack shows moved: a death counted, a streak sent back to zero. Hidden counters are not told. | `counter`, its id; `label`, in the pack's words; `value`, where it is now; `was`, where it was. |
 | `unit-closed` | A unit was finalized. | `unit`, the one closed; `unitsDone`, how many so far. |
 | `run-ended` | The run ended. | `ending`, its name; `unitsDone`. |
+| `ask` | Something outside asked the run for a move or a roll (see Asks below). Sent by the server. | `ask`, its id; `kind`, `move` or `roll`; `move`, the move's id; `name` and `via` as given; `policy`, `ask` or `auto`. |
+| `asked` | The host answered an ask. Sent by the server. | The same fields, plus `accepted`, true or false, and `reason` when declined. |
 
 `rolled` is sent by whichever device threw, so a plugin can play the same
 throw. The rest are sent by the run's owner's device after each move,
@@ -184,6 +187,47 @@ answer is the run's last thirty reactions, oldest first, which the run
 route above also carries as `reactions`. The socket rings on each one.
 An ended run answers 410.
 
+## Asks: `POST /api/public/runs/<runId>/asks?k=<askKey>`
+
+The one thing outside the table that may move the run, and it may only
+ask. A chat command, a channel-point redeem, a button on a stream deck
+posts a JSON body and the run's host answers it: the ask lands in a tray
+at the table, where the host presses Accept or Decline, or, where the host
+has said so, the table takes it the moment it lands. Accepted, it becomes
+an ordinary move in the log, stamped with who asked and how.
+
+```json
+{ "kind": "move", "move": "died", "name": "viewer_42", "via": "channel-points" }
+{ "kind": "roll", "name": "viewer_42", "via": "bits" }
+```
+
+`kind: "move"` takes a move the pack offers at any time, by its id in the
+pack; `kind: "roll"` rolls the table the run is waiting on, if it is
+waiting on one. `name` (40 characters) and `via` (32) are for the log and
+the tray, as given. The answer is the run's open asks, oldest first:
+
+```json
+{ "asks": [{ "id": "3f9a1c0b2d4e", "kind": "move", "move": "died", "name": "viewer_42", "via": "channel-points", "at": "2026-09-09T20:14:03.120Z" }] }
+```
+
+| Status | Meaning |
+| --- | --- |
+| 403 | No key, the wrong key, or the run is not taking asks. |
+| 410 | The run has ended. |
+| 422 | `kind` is not `move` or `roll`, or a `move` has no id. |
+| 429 | Too many: one ask a name every twenty seconds, thirty a minute for the run. |
+
+**The key is not the live token.** The token is in every widget address
+and so in a streaming scene; a leaked address must let strangers watch,
+never press. The key is minted by the host under **Settings → Stream →
+Chat**, shown once with the full address to post to, and revoked on its
+own; the live link stays. Where plans are on, asks are part of Plus, like
+the link they ride beside.
+
+Whether an ask was answered arrives on the socket as the `asked` gesture
+above, so a bot can tell the channel "the forfeit is in" or "no such move
+right now". A declined ask carries a `reason` in a few words.
+
 ## Politeness
 
 Poll no faster than every five seconds; the socket exists so you need
@@ -191,7 +235,7 @@ not, and a widget is one reader on one machine, never one per viewer.
 Keep the token out of anything you publish: whoever has it can watch,
 and a widget pasted into a shared overlay carries it. If it gets out,
 **Stop sharing** and share again; the old token is dead the moment you
-do. Nothing here writes to the run.
+do. Nothing here writes to the run except an ask, and an ask only asks.
 
 ## From the app
 
