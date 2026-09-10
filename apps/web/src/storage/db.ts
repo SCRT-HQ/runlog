@@ -39,8 +39,6 @@ const DRAFTS = "drafts";
 const KEYS = "keys";
 const SYNC = "sync";
 const LICENSES = "licenses";
-/** The v5 name of the license store, spelt the way the rest of the code no longer is. */
-const LICENSES_V5 = "licences";
 const BY_PACK = "byPack";
 
 /** A pack the player imported from their own file. */
@@ -148,30 +146,6 @@ function open(): Promise<IDBDatabase | null> {
       if (!db.objectStoreNames.contains(KEYS)) db.createObjectStore(KEYS, { keyPath: "publicKey" });
       if (!db.objectStoreNames.contains(SYNC)) db.createObjectStore(SYNC, { keyPath: "id" });
       if (!db.objectStoreNames.contains(LICENSES)) db.createObjectStore(LICENSES, { keyPath: "packId" });
-
-      if (db.objectStoreNames.contains(LICENSES_V5)) {
-        // v5 shipped the store under the British spelling. Copy its rows
-        // into the renamed store, then drop it; the sync store's `kind`
-        // strings get the same treatment so nothing reads as a stranger.
-        const old = tx.objectStore(LICENSES_V5).openCursor();
-        old.onsuccess = () => {
-          const c = old.result;
-          if (c) {
-            tx.objectStore(LICENSES).put(c.value);
-            c.continue();
-            return;
-          }
-          db.deleteObjectStore(LICENSES_V5);
-        };
-        const sync = tx.objectStore(SYNC).openCursor();
-        sync.onsuccess = () => {
-          const c = sync.result;
-          if (!c) return;
-          const state = c.value as Omit<SyncState, "kind"> & { kind: string };
-          if (state.kind === "licence") c.update({ ...state, kind: "license" });
-          c.continue();
-        };
-      }
 
       if (!db.objectStoreNames.contains(RUNS)) {
         db.createObjectStore(RUNS, { keyPath: "runId" }).createIndex(BY_PACK, "packId");
