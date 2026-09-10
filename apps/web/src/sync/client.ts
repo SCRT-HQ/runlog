@@ -247,7 +247,7 @@ export type InvitePeek =
         session: string | null;
         inviter: string | null;
         accepted: boolean;
-        /** The address it went to, masked: enough to recognise. */
+        /** The address it went to, masked: enough to recognize. */
         sentTo: string;
         /** Whether the signed-in account is that address; null when nobody was signed in. */
         forYou: boolean | null;

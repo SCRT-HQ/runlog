@@ -35,7 +35,7 @@ const state = {
   ],
 } as unknown as RunState;
 
-const items = [{ text: "Every Mutation on this Room has been honoured.", shows: { table: "mutation", scope: "unit" } }] as never;
+const items = [{ text: "Every Mutation on this Room has been honored.", shows: { table: "mutation", scope: "unit" } }] as never;
 
 const settling = (over: Partial<Settling> = {}): Settling => ({
   owing: (s) => s.entryId === "cull",
@@ -71,16 +71,16 @@ describe("a confirmation beside the rules it repeats", () => {
 
   /*
    * The bug this guard exists for. A rule the step is held to that the game
-   * settles nothing on is honoured by the player saying so, and the box is
+   * settles nothing on is honored by the player saying so, and the box is
    * the only place they can say it. Hiding it because its words appear
    * above left a step that could not be finished: nothing to tick, and a
    * button waiting on a tick.
    */
   /*
-   * The rule carries the tick that honours it, so the confirmation drops
+   * The rule carries the tick that honors it, so the confirmation drops
    * the row: one statement, one answer, whichever kind of answer it is.
    */
-  it("drops a row whose rule carries the tick that honours it", () => {
+  it("drops a row whose rule carries the tick that honors it", () => {
     const onTheRule = { owing: () => false, settled: () => false, answered: () => true, hidden: () => true };
     const { container } = render(
       <Checklist items={items} pack={pack} state={state} ticked={new Set()} onToggle={() => {}} settling={onTheRule} />,

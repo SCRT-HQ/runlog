@@ -61,7 +61,7 @@ export function Checklist({
         // to ask, and the rule it stands for is doing the asking.
         //
         // Only where something can actually answer it, though: the game
-        // settling it, or the rule carrying the tick that honours it. A row
+        // settling it, or the rule carrying the tick that honors it. A row
         // nothing can answer stays on the screen whatever it is told,
         // because the alternative is a step that cannot be finished.
         const answerable = (s: Shown) => Boolean(settling && (settling.owing(s) || settling.settled(s) || settling.answered?.(s)));
@@ -99,7 +99,7 @@ export function Checklist({
                           type="checkbox"
                           checked={rowMade(key, s, ticked, settling)}
                           disabled={theirs}
-                          title={theirs ? "The game settles this one: it is honoured by the roll it asks for, not by saying so." : undefined}
+                          title={theirs ? "The game settles this one: it is honored by the roll it asks for, not by saying so." : undefined}
                           onChange={(e) => toggle([key], e.target.checked)}
                         />
                         <span>

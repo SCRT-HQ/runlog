@@ -224,7 +224,7 @@ tells `runlog login` which client to use, so the package carries neither id.
 | `runlog/stripe/secret-key` | Secrets Manager: the Stripe secret key, sandbox in dev and live in prd. |
 | `runlog/stripe/webhook-secret` | Secrets Manager: the signing secret of the webhook endpoint that points at `/api/stripe/webhook`. |
 | `runlog/stripe/connect-webhook-secret` | Secrets Manager: the signing secret of the Connect webhook endpoint (events from connected accounts) that points at `/api/stripe/connect-webhook`. |
-| `runlog/workos/api-key` | Secrets Manager: the environment's WorkOS API key, for creating publisher organisations. |
+| `runlog/workos/api-key` | Secrets Manager: the environment's WorkOS API key, for creating publisher organizations. |
 | `runlog/discord/bot-token` | Secrets Manager: the Runlog Discord application's bot token, for posting into servers that installed it. See [Discord](#discord). |
 | `runlog/discord/client-secret` | Secrets Manager: the application's OAuth2 client secret, for verifying a linked account for a server's linked roles. Unfilled, no verification is offered. |
 

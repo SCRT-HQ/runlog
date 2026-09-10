@@ -111,7 +111,7 @@ function GuestMenu({ account, onOpenSettings, closeKey }: MenuActions & { accoun
   );
 }
 
-/** The light's colour, from where sync stands. */
+/** The light's color, from where sync stands. */
 export type Tone = "off" | "fine" | "busy" | "warn";
 
 export function syncTone(sync: Pick<Sync, "available" | "enabled" | "status">): Tone | null {
