@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "description": "An extensible engine for dice-driven creative-practice games.",
+  "description": "An engine for dice-driven challenge and creative-practice games: a twist on a stream, a constraint in the studio, a log that remembers.",
   "workspaces": [
     "packages/*",
     "apps/*",

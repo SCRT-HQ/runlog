@@ -44,6 +44,32 @@ export interface Persona {
 
 export const PERSONAS: Persona[] = [
   {
+    // First, so the page opens on the run a stream wants: a room of
+    // contestants, a twist every region, a scoreboard chat can watch.
+    id: "streamer",
+    noun: "streamer",
+    packId: "com.scrthq.runlog.elden-ring-trial",
+    packTitle: "Elden Ring: Trial",
+    mode: "Trial",
+    at: "Region 2",
+    scene: "A race the whole chat can watch",
+    vocabulary: "a Trial of Regions",
+    unit: "region",
+    log: [
+      { where: "Region 1, Target", roll: "d10 → 3", text: "A boss. The moderator names the one guarding the region; first to fell it takes the points." },
+      { where: "Region 1, Race", roll: "award · Ash", text: "Ash felled it first. 3 points; the others get nothing this region." },
+      { where: "Region 2, Curse", roll: "d8 → 4 · on everyone", text: "Frostbite. No sprinting and no Torrent until the region is left, unless the cure drawn below is already in their inventory.", heat: true },
+      { where: "Region 2, Cure", roll: "d10 → 5", text: "Thawfrost Boluses in the pouch. Nobody has them. Everyone suffers it." },
+    ],
+    state: [
+      { label: "Leading", value: "Ash, 3 pts" },
+      { label: "Targets settled", value: "1" },
+      { label: "Cursed", value: "everyone" },
+    ],
+    clock: "Region 2 · 41:16",
+    closing: "Roll for the next region.",
+  },
+  {
     id: "human",
     noun: "human",
     packId: "com.scrthq.runlog.any-given-day",
