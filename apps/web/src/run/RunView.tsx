@@ -1471,9 +1471,6 @@ function Obligations({ pack, run, state }: { pack: Pack; run: ReturnType<typeof 
   return (
     <section className="panel owed">
       <h3 className="sectionTitle">Owed</h3>
-      <p className="muted small">
-        Results that reach forward in time. These are the ones that get forgotten on paper.
-      </p>
       {elsewhere(pack, run, state).map((o) => (
         <div key={o.id} className="row owedRow">
           <div>
