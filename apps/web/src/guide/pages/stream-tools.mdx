@@ -8,7 +8,7 @@ A shared run is readable by anything that can fetch a URL: a streaming plugin, a
 
 ## The bell
 
-A socket at `wss://runlog.scrthq.com/ws?run=<runId>&t=<token>` rings when the run moves, with `{"t":"changed"}`, and carries the table's gestures as they happen: `rolled` with the dice as they land, `outcome`, `award`, `clock`, `unit-closed`, `run-ended`, each with its words in `data`. When the player throws dice, everyone watching sees the same dice land, thrown the same way, on the live page and for a watcher who took a seat; the same throw reaches your tool.
+A socket at `wss://runlog.scrthq.com/ws?run=<runId>&t=<token>` rings when the run moves, with `{"t":"changed"}`, and carries the table's gestures as they happen: `rolled` with the dice as they land, `outcome`, `award`, `clock`, `counter`, `unit-closed`, `run-ended`, each with its words in `data`. When the player throws dice, everyone watching sees the same dice land, thrown the same way, on the live page and for a watcher who took a seat; the same throw reaches your tool.
 
 ## The fields, in full
 

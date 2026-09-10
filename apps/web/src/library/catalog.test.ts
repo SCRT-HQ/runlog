@@ -14,6 +14,7 @@ describe("the catalog", () => {
       "com.scrthq.runlog.any-given-day",
       "com.scrthq.runlog.elden-ring-expedition",
       "com.scrthq.runlog.elden-ring-trial",
+      "com.scrthq.runlog.forfeits",
       "com.scrthq.runlog.frog-first",
       "com.scrthq.runlog.homefront",
       "com.scrthq.runlog.ladder-work",
