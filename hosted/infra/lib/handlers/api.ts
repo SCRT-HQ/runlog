@@ -425,7 +425,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
    * buyer alone, the file kept, a token minted for the mail, and, for a
    * buyer with an account, the key filed where sync will carry it.
    */
-  async function fulfil(sale: Sale, from: { email?: string; sessionId?: string }): Promise<Sale> {
+  async function fulfill(sale: Sale, from: { email?: string; sessionId?: string }): Promise<Sale> {
     const product = await deps.listings.getProduct(sale.orgId, sale.packId);
     if (!product) throw new Error(`sale ${sale.ref}: its pack is gone`);
     const master = await deps.listings.getMaster(product.masterKey);
@@ -707,7 +707,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (sale.status !== "pending") return json(200, { applied: false, already: sale.status });
       const details = isRecord(session["customer_details"]) ? session["customer_details"] : {};
       const email = sale.buyerEmail ?? (typeof details["email"] === "string" ? details["email"].toLowerCase() : undefined);
-      const fulfilled = await fulfil(sale, { ...(email ? { email } : {}), ...(typeof session["id"] === "string" ? { sessionId: session["id"] } : {}) });
+      const fulfilled = await fulfill(sale, { ...(email ? { email } : {}), ...(typeof session["id"] === "string" ? { sessionId: session["id"] } : {}) });
       return json(200, { applied: true, ref: fulfilled.ref });
     }
     return json(200, { ignored: hook.type });
@@ -953,7 +953,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       // A tier's gate is about new sales: a price behind a closed gate is not for sale yet.
       if (key.startsWith("server-") && !(await serversOpen())) return json(403, { error: "Runlog for servers is not on sale yet", open: false });
       if (key.startsWith("hosted-") && !(await publishersOpen())) return json(403, { error: "hosted licensing is not on sale yet", open: false });
-      const url = (await stripe.checkout({ customer: await customer(), price, successUrl: `${appUrl}/?billing=done`, cancelUrl: `${appUrl}/?billing=cancelled`, clientReferenceId: caller.sub })).url;
+      const url = (await stripe.checkout({ customer: await customer(), price, successUrl: `${appUrl}/?billing=done`, cancelUrl: `${appUrl}/?billing=canceled`, clientReferenceId: caller.sub })).url;
       return json(200, { url });
     }
     if (path === "/api/billing/portal") {
@@ -1384,7 +1384,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       price: product.stripePriceId,
       fee,
       successUrl: `${appUrl}/?purchase=${encodeURIComponent(ref)}`,
-      cancelUrl: `${appUrl}/?purchase=cancelled`,
+      cancelUrl: `${appUrl}/?purchase=canceled`,
       ref,
       ...(profile.email ? { email: profile.email } : {}),
       metadata: { sale_ref: ref, pack_id: packId, org_id: card.orgId, buyer_sub: caller.sub },

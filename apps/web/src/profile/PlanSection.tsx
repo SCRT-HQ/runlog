@@ -39,7 +39,7 @@ export function PlanSection({ api }: { api: Api | null }) {
         },
         () => setNote("The payment went through, but the plan could not be read just now. Press Refresh."),
       );
-    } else if (outcome === "cancelled") setNote("Nothing was charged.");
+    } else if (outcome === "canceled") setNote("Nothing was charged.");
     else if (outcome === "managed") void plan.refresh();
     // The plan's refresh is stable enough; this runs once, on arrival.
     // eslint-disable-next-line react-hooks/exhaustive-deps

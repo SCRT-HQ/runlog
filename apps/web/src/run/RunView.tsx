@@ -218,7 +218,7 @@ export function RunView({
       return;
     }
     if (count < seen.current) {
-      // Undo, or the step cancelled. Whatever the receipts were about has been unmade.
+      // Undo, or the step canceled. Whatever the receipts were about has been unmade.
       seen.current = count;
       awaiting.current = null;
       setReceipts([]);

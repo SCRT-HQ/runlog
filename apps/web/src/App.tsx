@@ -993,7 +993,7 @@ export default function App() {
 
       {raceLink.code && view !== "play" && <RaceBanner code={raceLink.code} onDismiss={raceLink.clear} />}
       {bought.purchase && <PurchaseBanner state={purchaseState} onDismiss={bought.clear} />}
-      {bought.cancelled && (
+      {bought.canceled && (
         <div className="incoming">
           <div className="incomingWhat">
             <span>Nothing was charged.</span>

@@ -181,7 +181,7 @@ turns it off for this device, and a light there says which it is.
 Signed in, your name in the header is a menu: this device's sync switch,
 your profile, and sign-out. The
 profile page shows who the account is, this device's sync switch and what has
-travelled, the license keys the account holds (shown or copied on purpose,
+traveled, the license keys the account holds (shown or copied on purpose,
 hidden by default), and one destructive control that tells the server to
 forget everything of yours. What is on the device stays on the device.
 
