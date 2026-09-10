@@ -23,6 +23,7 @@ import { cmdIssue, cmdKeygen, cmdSign, reportSignature } from "./sign.ts";
 import { cmdClaim, cmdLogin, cmdLogout, cmdPublish, cmdRelease, cmdWhoami } from "./account.ts";
 import { cmdDocs } from "./docs.ts";
 import { cmdServe } from "./serve.ts";
+import { asksForHelp, HELP, helpFor } from "./help.ts";
 
 const RESET = "[0m";
 const RED = "[31m";
@@ -266,47 +267,14 @@ modes:
 defaultMode: standard
 `;
 
-const HELP = `runlog: author and check rule packs
-
-usage:
-  runlog validate <pack...> [--strict]   check a pack's shape and coherence
-  runlog bundle   <pack> [-o out.json]   normalize to a distributable JSON
-  runlog test     <pack>                 replay the pack's own fixtures
-  runlog init     [name]                 scaffold a new pack
-  runlog serve    [--port 3535] [--open] run the app from this machine, offline, nothing else installed
-  runlog docs     <pack> [-o dir]        write its rulebook, quick start, reference card,
-                    [--only kinds]         run log sheet and catalog summary (HTML and Markdown)
-  runlog keygen   [-o key.json]          make a signing key for your packs
-  runlog sign     <pack> --key key.json  sign a pack, proving you wrote it
-  runlog issue    <pack> --to "Name"     stamp a copy with a buyer's name and sign it
-                    [--seal]             …and seal it, so it needs a license key to open
-                                         (both take the key from RUNLOG_SIGNING_KEY instead)
-
-  runlog login    [--api URL]            sign in: a code to confirm in your browser
-                    [--key]              …or paste a key from your profile page, for a machine with no browser
-  runlog whoami                          who the command line is acting as
-  runlog claim    key.json               prove a signing key is yours; the app then names you
-  runlog upload   <pack>                 put a pack in your own library, private to your
-                    (was: publish)         account, on every device you are signed in on
-  runlog release  <pack> [--price 3.00]  put a signed pack in the catalog, where anyone can
-                    [--free] [--draft]     find it, as its publisher; no flag keeps the listing
-  runlog logout                          forget the sign-in
-
---strict makes warnings fail, which is what you want in CI. In CI, set
-RUNLOG_API_KEY to a key from your profile page instead of running login,
-and RUNLOG_SIGNING_KEY to your key file's contents instead of --key; nobody
-is there to confirm a code. examples/github-actions in the repository has
-workflows to copy.
-
-Signing proves authorship. It does not restrict copying and cannot: the app
-has to read every word of a pack to play it. What it gives you is that an
-altered copy can no longer claim to be yours, and, once the key is claimed
-by your account, that the app names you beside it. sign and issue refuse a
-key that is not claimed.
-`;
-
 async function main(argv: string[]): Promise<number> {
   const [command, ...args] = argv;
+  // Asking how a command works must never run it: `login --help` used to
+  // start the device flow. Help wins before anything is dispatched.
+  if (command !== undefined && asksForHelp(args)) {
+    console.log(helpFor(command));
+    return 0;
+  }
   switch (command) {
     case "validate":
       return cmdValidate(args);
