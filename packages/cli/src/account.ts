@@ -434,7 +434,7 @@ export async function requireClaimed(publicKey: string): Promise<void> {
 export async function cmdPublish(args: string[]): Promise<number> {
   const input = args.filter((a) => !a.startsWith("-"))[0];
   if (!input) {
-    console.error("usage: runlog publish <pack.yaml|pack.json>");
+    console.error("usage: runlog upload <pack.yaml|pack.json>");
     return 2;
   }
   try {
@@ -457,7 +457,7 @@ export async function cmdPublish(args: string[]): Promise<number> {
       hash,
       source: text,
     });
-    console.log(`published ${id} to your library; it reaches your devices on their next sync`);
+    console.log(`uploaded ${id} to your own library, where only you can see it; it reaches your devices on their next sync`);
     return 0;
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
