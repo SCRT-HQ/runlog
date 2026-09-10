@@ -8,7 +8,7 @@ tar -xzf scrthq-runlog-*.tgz
 ls package/app
 ```
 
-`package/app` is what you serve: `index.html`, the worker, the manifest, and `assets/` with content-hashed names. Every path in it is relative, so it serves from a domain's root or from a sub-path alike. To build the app yourself instead, from a clone: `npm ci && npm run build`, and `apps/web/dist` is the same directory.
+`package/app` is what you serve: `index.html`, the worker, the manifest, and `assets/` with content-hashed names. Every path in it is relative, so it serves from a root or a sub-path alike. To build it yourself from a clone, `npm ci && npm run build` makes the same directory at `apps/web/dist`.
 
 ## What a host needs to know
 
@@ -18,7 +18,7 @@ ls package/app
   <li>**Serve over HTTPS** if you want the service worker and offline use; browsers allow both on `localhost` only otherwise.</li>
 </Steps>
 
-A static host keeps the app's pages as `#` addresses (`/runlog/play#guide/start`), since the build's asset paths are relative and a page under `play/` could not find them. The hosted copy on AWS is built with `RUNLOG_BASE=/`, lives at one root, and spells the same pages as paths (`/play/guide/start`); either spelling opens either way.
+A static host keeps the app's pages as `#` addresses (`/runlog/play#guide/start`), since the asset paths are relative and a page under `play/` could not find them. The hosted copy on AWS, built with `RUNLOG_BASE=/` at one root, spells them as paths (`/play/guide/start`); either spelling opens either way.
 
 A copy served this way is the plain app: no footer, no sign-in, no sync, no catalog beyond the packs that ship. Everything else works, including sealed copies and license keys, which are opened on the device.
 
@@ -26,9 +26,9 @@ A copy served this way is the plain app: no footer, no sign-in, no sync, no cata
 
 <Steps>
   <li>Make a repository, say `runlog`, and in it a branch or a folder for the site; a `docs/` folder on the default branch is the least ceremony.</li>
-  <li>Put the contents of `package/app` in it, and copy `index.html` to `404.html` beside it, so a deep link lands on the app rather than on GitHub's own page.</li>
+  <li>Put the contents of `package/app` in it and copy `index.html` to `404.html` beside it, so a deep link lands on the app.</li>
   <li>In the repository's **Settings → Pages**, choose **Deploy from a branch**, the branch, and the folder. GitHub gives the site an address, `https://<you>.github.io/runlog/`, and serves it over HTTPS.</li>
-  <li>Open it. The app lives under `/runlog/play`, and its pages are hash addresses such as `/runlog/play#guide/start`.</li>
+  <li>Open it at `/runlog/play`.</li>
   <li>For a new release, replace the files with the new package's `app/` directory and commit. GitHub Pages sets no long cache on `index.html`, so the new build reaches everyone on the next load.</li>
 </Steps>
 

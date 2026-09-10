@@ -1,6 +1,6 @@
 # For a chat bot or your own tool
 
-A shared run is readable by anything that can fetch a URL: a streaming plugin, a stream deck button, a chat bot, a second screen of your own. The live link's token is the key; there is no account, no sign-in, and no rate of your own to manage beyond politeness.
+A shared run is readable by anything that can fetch a URL. The live link's token is the key; there is no account or sign-in.
 
 ## The numbers
 
@@ -8,12 +8,12 @@ A shared run is readable by anything that can fetch a URL: a streaming plugin, a
 
 ## The bell
 
-A socket at `wss://runlog.scrthq.com/ws?run=<runId>&t=<token>` rings when the run moves, with `{"t":"changed"}`, and carries the table's gestures as they happen: `rolled` with the dice as they land, `outcome`, `award`, `clock`, `counter`, `unit-closed`, `run-ended`, each with its words in `data`. When the player throws dice, everyone watching sees the same dice land, thrown the same way, on the live page and for a watcher who took a seat; the same throw reaches your tool.
+A socket at `wss://runlog.scrthq.com/ws?run=<runId>&t=<token>` rings when the run moves, with `{"t":"changed"}`, and carries the table's gestures as they happen: `rolled` with the dice as they land, `outcome`, `award`, `clock`, `counter`, `unit-closed`, `run-ended`, each with its words in `data`. The dice everyone watching sees land, on the live page or in a seat, are the same throw your tool receives.
 
 ## Asking the run for something
 
-The one request that goes the other way: `POST https://runlog.scrthq.com/api/public/runs/<runId>/asks?k=<askKey>` with a JSON body of `{ "kind": "roll" }`, to roll the table the run is waiting on, or `{ "kind": "move", "move": "<id>" }`, to take a move the pack offers at any time; add `name` and `via` so the log says who asked and how. The key is made under the run's **Settings** → **Stream** → **Chat**, and is not the live link's token. The host accepts or declines, or has set the table to act as asks land; the socket says which with an `asked` gesture. One a name every twenty seconds, thirty a minute for the run.
+`POST https://runlog.scrthq.com/api/public/runs/<runId>/asks?k=<askKey>` with a JSON body of `{ "kind": "roll" }` rolls the table the run is waiting on; `{ "kind": "move", "move": "<id>" }` takes a move the pack offers at any time; add `name` and `via` so the log says who asked and how. The key is made under the run's **Settings** → **Stream** → **Chat**, and is not the live link's token. The host accepts or declines, or has set the table to act as asks land; the socket says which with an `asked` gesture. One a name every twenty seconds, thirty a minute for the run.
 
 ## The fields, in full
 
-The repository's [stream API](https://github.com/SCRT-HQ/runlog/blob/main/docs/stream-api.md) is the contract: every field of the document, the socket's messages, and the shape of each gesture. It is kept beside the code that answers, so it is never out of date.
+The repository's [stream API](https://github.com/SCRT-HQ/runlog/blob/main/docs/stream-api.md) is the contract, kept beside the code that answers: every field of the document, the socket's messages, and the shape of each gesture.

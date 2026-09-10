@@ -1,10 +1,10 @@
 # StreamElements
 
-StreamElements draws its overlays in its own editor, and a **Custom widget** there can fetch the run's numbers straight from [the stream API](#guide/stream-tools), because that route answers any origin.
+A **Custom widget** in StreamElements' overlay editor can fetch the run's numbers straight from [the stream API](#guide/stream-tools), which answers any origin.
 
 ## Adding the widget
 
-In the overlay editor, **Add widget** → **Static / Custom** → **Custom widget**, open the widget's **Settings** → **Open editor**, and paste the four tabs below. The run id and token go in the **Fields** tab, so they can be edited from the widget's sidebar rather than the code.
+In the overlay editor, **Add widget** → **Static / Custom** → **Custom widget**, open the widget's **Settings** → **Open editor**, and paste the four tabs below. The run id and token go in **Fields**, so they can be edited from the widget's sidebar.
 
 **HTML**
 
@@ -92,4 +92,4 @@ The widget polls every five seconds; do not go faster. The token sits in the wid
 
 ## The chatbot
 
-StreamElements' chatbot can read the same document with `$(customapi https://runlog.scrthq.com/api/public/runs/<runId>/metrics?t=<token>)`, but it posts whatever the URL returns and cannot pick one field from a JSON document, so that would paste the whole thing into chat. For a `!score` command, use an automation tool that can read JSON: [Streamer.bot](#guide/streamer-bot).
+StreamElements' chatbot can read the same document with `$(customapi https://runlog.scrthq.com/api/public/runs/<runId>/metrics?t=<token>)`, but it posts whatever the URL returns and cannot pick one field, so that would paste the whole document into chat. For a `!score` command use [Streamer.bot](#guide/streamer-bot), which can read JSON.

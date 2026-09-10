@@ -1,10 +1,10 @@
 # hosted
 
-Everything that exists only because one copy of Runlog is run as a
-service. Nothing in here is needed to build, run, or ship the app: a
-clone with this directory deleted still builds the web app, the packages
-and the command line, and everything they do works from a file on disk,
-from `npx @scrthq/runlog serve`, or from any static host.
+This directory holds everything that exists only because one copy of
+Runlog is run as a service. Nothing in here is needed to build, run, or
+ship the app: a clone with this directory deleted still builds the web
+app, the packages and the command line, and everything they do works from
+a file on disk, from `npx @scrthq/runlog serve`, or from any static host.
 
 | Path | What it is |
 | --- | --- |
@@ -23,7 +23,7 @@ file lives in `apps/web/src/hosted/`; the code that talks to `/api` lives
 where the feature does (`sync/`, `auth/`, `live/`, `profile/`) and stays
 quiet without an API to talk to.
 
-So: a change under `hosted/` is a change to the service. A change under
+A change under `hosted/` is a change to the service. A change under
 `apps/`, `packages/` or `packs/` is a change to Runlog, which everyone
 gets.
 
@@ -40,5 +40,16 @@ stack publishes the result.
 The pipeline in `.github/workflows/CI-CD.yml` builds the app, lays the
 pages over it, and runs `cdk deploy` from `hosted/infra` with the build
 handed to the site stack, which publishes it and invalidates the edge.
-A staging copy on every merge; the hosted copy from a published release.
-`infra/README.md` has the accounts, the roles and what the stacks create.
+
+| Trigger | What runs |
+| --- | --- |
+| Pull request to `main` | The suite, the packs, a build; the hosting's tests; a diff of the stacks, staging and hosted |
+| Push to `main` | Build, deploy a staging copy (the site stack publishes the build), seed its catalog, then tag and publish the next release |
+| Release published | Build the tag, deploy the hosted copy |
+| Hosted deploy succeeded | The same run publishes `@scrthq/runlog` at the tag's version to npm, under `next` until the `NPM_CHANNEL` variable says `latest`; OIDC from the `npm-publish` environment, no token |
+| Push to `main` | Build and deploy the no-account version to GitHub Pages |
+| Monday mornings | Dependabot opens one pull request for the week's minor and patch bumps, one per major, and one for the workflows' actions, each for versions at least a week old; a security advisory opens one whenever it lands |
+
+The hosted copy is reached only through a published release, so it always
+carries a version and has already been through staging. `infra/README.md`
+has the accounts, the roles and what the stacks create.

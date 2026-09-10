@@ -76,8 +76,8 @@ pasting. The app's Designer makes PDFs directly.
 npx @scrthq/runlog bundle my-game.yaml -o dist/my-game.pack.json
 ```
 
-One normalized JSON file, the convenient thing to attach to a release.
-YAML stays the better thing to author and keep under version control.
+One normalized JSON file, which is the convenient thing to attach to a
+release. YAML stays the better thing to author and keep under version control.
 
 ## Signing, and sealing copies for buyers
 
@@ -111,11 +111,11 @@ own instead; `-o` names the file. Without `--seal` the copy is a plain
 signed pack stamped with the buyer's name.
 
 Signing does not stop copying, and nothing can: the app has to read
-every word to play. What it protects is your name on the thing.
+every word to play. It protects your name on the thing.
 
 ## Publishing
 
-Two destinations, one account.
+Both destinations use the same account.
 
 ```bash
 npx @scrthq/runlog publish my-game.yaml                   # into your own library, on every device you sign in on

@@ -9,11 +9,11 @@ At [discord.com/developers/applications](https://discord.com/developers/applicat
 - **Application ID**: public; it is in every install link.
 - **Public Key**: public; it is what Discord signs interactions with, and what the API checks them against.
 
-Leave the **Interactions Endpoint URL** empty for now. Discord verifies it the moment you save it, by sending a signed ping, and the API answers only once it knows the key.
+Leave **Interactions Endpoint URL** empty for now: Discord verifies it with a signed ping the moment you save it, and the API answers only once it knows the key.
 
 ## Tell the stage
 
-The stage's configuration document is one JSON object per stage: in a pipeline, the `RUNLOG_ENV_CONFIG_<STAGE>` repository variable; on your own machine, `hosted/infra/env/<stage>.json`, which git ignores, with `env/example.json` as the template (see [Saying what your copy is](#guide/aws-config)). In it, add:
+In the stage's configuration document (the `RUNLOG_ENV_CONFIG_<STAGE>` repository variable in a pipeline, `hosted/infra/env/<stage>.json` on your own machine; see [Saying what your copy is](#guide/aws-config)), add:
 
 ```json
 "discord": {
@@ -22,7 +22,7 @@ The stage's configuration document is one JSON object per stage: in a pipeline, 
 }
 ```
 
-Whether a tier is on sale is a WorkOS feature flag, `servers-coming-soon` (and `publishers-coming-soon` for the publisher tier), read by the API for everyone at once: on for everyone in the WorkOS dashboard is a hold, and the tier shows as coming soon; off, on for some people only, or deleted, the tier is on sale, within a minute and with no deploy. A new stage is on sale until you put the hold on, so make the flag before the stage meets anyone. While it is held, everyone still sees the Servers page, claims servers and fills vaults, and the people trying the bot get the `server` feature flag, which is the plan as far as the API is concerned.
+Whether a tier is on sale is a WorkOS feature flag, `servers-coming-soon` (and `publishers-coming-soon` for the publisher tier), read by the API for everyone at once. On for everyone in the WorkOS dashboard is a hold, and the tier shows as coming soon. Off, on for some people only, or deleted, the tier is on sale, within a minute and with no deploy. A new stage is on sale until you put the hold on, so make the flag before the stage meets anyone. While it is held, everyone still sees the Servers page, claims servers and fills vaults, and the people trying the bot get the `server` feature flag, which is the plan as far as the API is concerned.
 
 Deploy the stage. The API now answers the endpoint.
 
@@ -39,6 +39,6 @@ Deploy the stage. The API now answers the endpoint.
   (or `aws secretsmanager put-secret-value --secret-id runlog/discord/bot-token --secret-string "$(cat)"` signed in to the stage's account). The handler reads it on its next cold start; no deploy. Nothing in the repository ever sees it.
 - **Public Bot**: on, so any server can install it.
 - **Requires OAuth2 Code Grant**: off.
-- **Privileged Gateway Intents** (Presence, Server Members, Message Content): all off. The bot has no gateway connection; it reads only what Discord sends it and what it posted itself.
+- **Privileged Gateway Intents** (Presence, Server Members, Message Content): all off; the bot reads only what Discord sends it and what it posted itself.
 
 Next: [the endpoint, installation and the commands](#guide/bot-endpoint).

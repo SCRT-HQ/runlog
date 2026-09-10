@@ -6,7 +6,7 @@
 - **The endpoint will not save**: see [the endpoint](#guide/bot-endpoint).
 - **The tier shows as coming soon**: the `servers-coming-soon` flag in WorkOS is on for everyone in this environment. Turn it off, or delete it, and the tier is on sale within a minute. The other way around, a tier on sale that should not be: the flag is missing, off, on for some people only, or the `workos/api-key` secret is not filled in so no hold can be read; the API's log says which.
 - **A press says "the card may be stale"**: the card is rebuilt from the log on every press, so a button from an old card can name a step that has passed. **/run status** posts a fresh one.
-- **"This interaction failed" or "thinking" that never ends**: the stage's CloudWatch dashboard, `runlog-<env>`, has a section for the bot: every interaction by kind, how long each kind took to answer against Discord's three seconds, and the job function's cold starts beside it. Two alarms ring the stage's topic for exactly these: an interaction not answered, and the job failing outright.
+- **"This interaction failed" or "thinking" that never ends**: the stage's CloudWatch dashboard, `runlog-<env>`, has a section for the bot: every interaction by kind, how long each kind took to answer against Discord's three seconds, and the job function's cold starts beside it. Two alarms ring the stage's topic for these: an interaction not answered, and the job failing outright.
 
 ## Where things are
 

@@ -17,10 +17,10 @@ npx tsx ../scripts/overlay.ts --dist /tmp/package/app --app /tmp/package --env p
 AWS_ENVIRONMENT=prd RUNLOG_TARGET_ACCOUNT=123456789012 RUNLOG_APP_DIST=/tmp/package/app npx cdk deploy --all
 ```
 
-The overlay writes `hosted.json`, the pages, the third-party notice from the package's `licenses.json`, and stamps the shell with your sign-in client, which is how a build that was built with none signs in at your address. The site stack publishes the directory: the hashed assets with a year's cache, the shell and the pages with none, and an invalidation. `cdk diff --all` with the same variables shows what a deploy would do.
+The overlay writes `hosted.json`, the pages, the third-party notice from the package's `licenses.json`, and stamps the shell with your sign-in client, so a build made with none signs in at your address. The site stack publishes the directory: the hashed assets with a year's cache, the shell and the pages with none, and an invalidation. `cdk diff --all` with the same variables shows what a deploy would do.
 
 A new release is the same three commands with the new package. Then, the first time, [fill the secrets](#guide/aws-after).
 
 ## A pipeline, if you want one
 
-The repository's `.github/workflows/CI-CD.yml` and `deploy-production.yml` are the pipeline Runlog itself runs: tests and diffs on a pull request, a staging copy on a merge, the hosted copy from a release. They build the app from the repository rather than taking the package, and they expect the environments and secrets that `hosted/infra/README.md` lists, and a `GitHubActionRole` in each account that trusts the repository through OIDC. Copy them if that is the shape you want; the three commands above are the whole of what they do.
+The repository's `.github/workflows/CI-CD.yml` and `deploy-production.yml` are the pipeline Runlog itself runs: tests and diffs on a pull request, a staging copy on a merge, the hosted copy from a release. They build the app from the repository rather than taking the package, and they expect the environments and secrets that `hosted/infra/README.md` lists, and a `GitHubActionRole` in each account that trusts the repository through OIDC. Copy them if you want that shape; they do no more than the three commands above.

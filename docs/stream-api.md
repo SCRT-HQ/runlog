@@ -161,7 +161,7 @@ throw. The rest are sent by the run's owner's device after each move,
 whichever device made it, so a table speaks with one voice; they say what
 happened in words a listener without the pack can use, and a result's `n`
 lets a listener drop one it has already shown. An undo says nothing: what
-it unmade is simply not there when the state is next read. Others may
+it unmade is not there when the state is next read. Others may
 follow the same shape; ignore kinds you do not know. A gesture is not a
 move, so a `changed` message does not follow it; the move it belongs to
 rings on its own once the result is written. The socket closes when the

@@ -7,7 +7,7 @@ npx @scrthq/runlog test my-game.yaml                # replay the pack's fixtures
 npx @scrthq/runlog validate packs/*.yaml --strict   # several at once
 ```
 
-`validate` reads the pack, checks it against the format, and lints what a schema cannot see: a d100 table whose ranges leave a gap, a state nothing applies, a trigger on a moment the run never reaches. Errors exit 1; with `--strict`, so do warnings. `test` runs the fixtures a pack declares for its own tables, so a change that breaks a promised outcome fails before anyone plays it.
+`validate` checks the pack against the format and lints what a schema cannot see: a d100 table whose ranges leave a gap, a state nothing applies, a trigger on a moment the run never reaches. Errors exit 1; with `--strict`, so do warnings. `test` replays the fixtures a pack declares for its own tables, so a change that breaks a promised outcome fails before anyone plays it.
 
 ## Starting one
 

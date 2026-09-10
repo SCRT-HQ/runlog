@@ -16,7 +16,7 @@ Then, in the server, someone who can manage it:
 - **/setup role @Hosts** says who may start runs; without a role, anyone who can manage the server may.
 - **/setup channel #runs** says where runs open; without one, wherever **/run start** is used.
 - Or let the bot make them: **/setup make-role** makes a "Runlog Host" role (or finds one by the name you give) and sets it; **/setup make-channel** makes a `#runs` channel (or finds one) and sets it. The bot is installed without Manage Roles and Manage Channels; the first time you ask, it answers with a link that adds the one it needs.
-- **/setup threads kind:private** has runs open in a private thread by default, seen by the host and whoever the host adds, rather than a public one anybody in the channel can open. `kind:public` puts it back; a run says either way for itself with the `private` option on **/run start**.
+- **/setup threads kind:private** opens runs in a private thread by default, seen by the host and whoever the host adds; `kind:public` puts it back, and the `private` option on **/run start** decides per run.
 - **/setup cards mode:pinned** keeps one card pinned at the top of each thread and edited in place, instead of a fresh card after every move; it holds from the next run.
 - **/setup status** says all of the above, and whether the server's plan is active.
 

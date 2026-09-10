@@ -1,13 +1,13 @@
 # Monitoring
 
-On by default, and entirely inside your AWS account. Both functions run with active X-Ray tracing, so a slow or failing request can be opened as a trace and read as time spent in DynamoDB, S3, Secrets Manager, Stripe or WorkOS, and the Lambda Insights layer reports memory, CPU and cold starts for every invocation. A dashboard per stage draws the API, the socket and the bot, and an alarm on the stage's own SNS topic fires when the handler errors repeatedly; subscribe an address to it by hand, since the address is not the repository's to commit. None of it is a service to sign up for or a secret to fill; it costs only what CloudWatch and X-Ray charge for what you run.
+On by default, inside your AWS account. Both functions run with X-Ray tracing, so a slow or failing request opens as a trace of time spent in DynamoDB, S3, Secrets Manager, Stripe or WorkOS, and the Lambda Insights layer reports memory, CPU and cold starts per invocation. A dashboard per stage draws the API, the socket and the bot, and an alarm on the stage's SNS topic fires when the handler errors repeatedly; subscribe an address to it by hand, since the address is not the repository's to commit. There is no service to sign up for and no secret to fill; it costs what CloudWatch and X-Ray charge for what you run.
 
 ## New Relic, optionally
 
-If you would rather have a cross-service trace and an error inbox outside AWS, add an `apm` block to the stage's file:
+For a cross-service trace and an error inbox outside AWS, add an `apm` block to the stage's file:
 
 ```json
 "apm": { "newRelic": { "accountId": "<your account>", "layerVersion": 52 } }
 ```
 
-Deploy, and fill `newrelic/license-key` with the script (it wraps the key the way New Relic's extension reads it). Both functions then report traces, errors and their logs to that account as well, with bodies, tokens and addresses kept out. Leave the block out and nothing is sent there.
+Deploy, then fill `newrelic/license-key` with the script (it wraps the key the way New Relic's extension reads it). Both functions then report traces, errors and logs to that account too, with bodies, tokens and addresses kept out. Without the block, nothing is sent there.
