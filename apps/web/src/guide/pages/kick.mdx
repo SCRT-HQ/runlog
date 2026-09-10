@@ -1,0 +1,19 @@
+# Kick
+
+Kick streams from OBS or Streamlabs with a stream key, so the widgets go in exactly as [the OBS page](#guide/obs) says, and Kick's channel points can ask the run for something through Streamer.bot.
+
+## The widget
+
+In the Creator Dashboard, under **Stream**, copy the stream URL and key into OBS; Kick's own Go Live app is for phones. A widget is a browser source with the address from the run's **Settings** → **Stream**, copied with **For another machine** ticked: see [the address that works on a stream](#guide/stream-address) and [OBS Studio and Streamlabs](#guide/obs) for the fields and sizes.
+
+## A reward that asks
+
+Kick has **Channel Points** with custom rewards, and Streamer.bot hears a redemption once the broadcaster account is linked to it (one account, all permissions; there is no separate bot account on Kick, and events reach Streamer.bot through its website integration, so be signed in to Streamer.bot in the app). The run has to be taking asks: in **Settings** → **Stream** → **Chat**, **Take asks** makes the key and the address to post to.
+
+Then the action from [the Streamer.bot page](#guide/streamer-bot), with the trigger **Kick** → **Channel Reward** → **Reward Redemption** in place of Twitch's: **Fetch URL**, POST, a JSON body of `{ "kind": "move", "move": "died", "name": "%userName%", "via": "channel-points" }` to take a move, or `{ "kind": "roll", "name": "%userName%", "via": "channel-points" }` to spin. A chat command such as `!spin` works the same way with a command trigger and `"via": "command"`; Streamer.bot's commands are the same on Kick as on Twitch.
+
+KickBot's custom commands can fetch a URL, but only with GET, so they cannot post an ask; use Streamer.bot for the press and KickBot for whatever else it does for you.
+
+The answer comes back on the socket as an `asked` gesture, accepted or declined, so the same action can say so in chat.
+
+<Note>Where plans are on, the live link, the widgets and asks are part of Plus, like hosting a table. Playing and every pack that ships are free.</Note>

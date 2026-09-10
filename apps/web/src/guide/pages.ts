@@ -24,6 +24,8 @@ import Obs from "./pages/obs.mdx";
 import Dock from "./pages/dock.mdx";
 import StreamElements from "./pages/streamelements.mdx";
 import StreamerBot from "./pages/streamer-bot.mdx";
+import TikTok from "./pages/tiktok.mdx";
+import Kick from "./pages/kick.mdx";
 import StreamTools from "./pages/stream-tools.mdx";
 import StreamTroubles from "./pages/stream-troubles.mdx";
 import Discord from "./pages/discord.mdx";
@@ -122,6 +124,8 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   P("dock", "With others", "Streaming", "A dock for the controls", "The run's remote beside the preview in OBS.", Dock),
   P("streamelements", "With others", "Streaming", "StreamElements", "A custom widget that reads the run's numbers.", StreamElements),
   P("streamer-bot", "With others", "Streaming", "Streamer.bot, Aitum and Lumia", "A dice alert and a !score command.", StreamerBot),
+  P("tiktok", "With others", "Streaming", "TikTok Live", "LIVE Studio's Link source or OBS, and a gift that asks the run.", TikTok),
+  P("kick", "With others", "Streaming", "Kick", "OBS with the stream key, and a channel-point reward that asks.", Kick),
   P("stream-tools", "With others", "Streaming", "For a chat bot or your own tool", "The numbers as JSON, and a socket that rings.", StreamTools),
   P("stream-troubles", "With others", "Streaming", "When a widget does not follow the run", "What each message means, and what to do.", StreamTroubles),
   P("discord", "With others", "Discord", "Runlog in Discord", "A bot that hosts runs in your server: claim it, fill its vault, press the card.", Discord),
