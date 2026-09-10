@@ -72,6 +72,27 @@ export interface SessionMeta {
   deletedAt?: string;
   /** Open to anyone with its link. */
   shared?: boolean;
+  /** Taking asks from outside, and how: waiting for the host, or taking them as they land. Null when not. */
+  asks?: { policy: AskPolicy; since?: string } | null;
+}
+
+export type AskPolicy = "ask" | "auto";
+
+/**
+ * Something from outside the table, a chat command, a channel-point redeem,
+ * a button, asking the run to take a move or roll the waiting table. The
+ * host's device answers; the answer stays beside the ask.
+ */
+export interface Ask {
+  id: string;
+  kind: "move" | "roll";
+  move?: string;
+  name?: string;
+  via?: string;
+  at: string;
+  answer?: "accepted" | "declined";
+  answeredAt?: string;
+  reason?: string;
 }
 
 /** A run as its link shows it to anyone: the whole thing where the pack may travel, else the owner's snapshot. */
@@ -450,6 +471,15 @@ export interface Api {
   reactions(sessionId: string): Promise<Reaction[]>;
   /** A reaction from someone at the table, named as they are shown. */
   react(sessionId: string, emoji: string): Promise<Reaction[]>;
+  /** What the outside has asked of a run, oldest first, answered or not. */
+  asks(sessionId: string): Promise<Ask[]>;
+  /** The host's answer to one ask. */
+  answerAsk(sessionId: string, askId: string, answer: "accepted" | "declined", reason?: string): Promise<Ask[]>;
+  /** Mint the run's ask key (the host; Plus where plans are on): shown once, and the run takes asks from then on. */
+  mintAskKey(sessionId: string, policy?: AskPolicy): Promise<{ key: string; policy: AskPolicy }>;
+  setAskPolicy(sessionId: string, policy: AskPolicy): Promise<void>;
+  /** Kill the ask key; the run takes no more asks until a new one is minted. */
+  revokeAskKey(sessionId: string): Promise<void>;
   /** What a stranger sees of a run whose pack may not travel: written by the owner's device after each move. */
   putSnapshot(sessionId: string, snapshot: unknown): Promise<void>;
   removeMember(sessionId: string, sub: string): Promise<void>;
@@ -896,6 +926,25 @@ export function createApi(
     },
     unshareRun: async (sessionId) => {
       await request("DELETE", `/sessions/${encodeURIComponent(sessionId)}/public`);
+    },
+    asks: async (sessionId) => (await request<{ asks?: Ask[] }>("GET", `/sessions/${encodeURIComponent(sessionId)}/asks`)).body.asks ?? [],
+    answerAsk: async (sessionId, askId, answer, reason) => {
+      const { status, body } = await request<{ asks?: Ask[]; error?: string }>("POST", `/sessions/${encodeURIComponent(sessionId)}/asks/${encodeURIComponent(askId)}`, { answer, ...(reason ? { reason } : {}) });
+      if (status !== 200 || !body.asks) throw new SyncError("error", undefined, body.error ?? "that answer did not land");
+      return body.asks;
+    },
+    mintAskKey: async (sessionId, policy) => {
+      const { status, body } = await request<{ key?: string; asks?: { policy: AskPolicy }; error?: string; plan?: string }>("POST", `/sessions/${encodeURIComponent(sessionId)}/ask-key`, policy ? { policy } : {});
+      if (status === 402 && body.plan) throw new PlanError(body.plan, body.error ?? "that is part of a plan this account does not have");
+      if (status !== 200 || !body.key) throw new SyncError("error", undefined, body.error ?? "no key could be made");
+      return { key: body.key, policy: body.asks?.policy ?? "ask" };
+    },
+    setAskPolicy: async (sessionId, policy) => {
+      const { status, body } = await request<{ error?: string }>("PUT", `/sessions/${encodeURIComponent(sessionId)}/ask-key`, { policy });
+      if (status !== 200) throw new SyncError("error", undefined, body.error ?? "that did not take");
+    },
+    revokeAskKey: async (sessionId) => {
+      await request("DELETE", `/sessions/${encodeURIComponent(sessionId)}/ask-key`);
     },
     putSnapshot: async (sessionId, snapshot) => {
       await request("PUT", `/sessions/${encodeURIComponent(sessionId)}/snapshot`, { snapshot });

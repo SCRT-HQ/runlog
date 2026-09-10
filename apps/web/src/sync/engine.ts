@@ -138,6 +138,7 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
         let role = local.role;
         let members = local.members;
         let shared = local.shared;
+        let asks = local.asks;
 
         if (!theirs) {
           // The server has never heard of it, or no longer lists it for
@@ -162,6 +163,7 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
               incoming = got.events;
               members = got.members;
               shared = got.session.shared;
+              asks = got.session.asks ?? null;
               const merged = merge(stamped, incoming as unknown as RunEvent[]);
               const still = pendingEvents(merged);
               if (still.length > 0) incoming = [...incoming, ...(await api.appendEvents(local.runId, still)).appended];
@@ -187,6 +189,7 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
               incoming = [...incoming, ...got.events];
               members = got.members;
               shared = got.session.shared;
+              asks = got.session.asks ?? null;
             }
           }
           if (theirs) role = theirs.role;
@@ -194,7 +197,7 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
 
         const merged = merge(stamped, incoming as unknown as RunEvent[]);
         const changed =
-          merged.length !== local.events.length || tailSeq(merged) !== before || stamped !== local.events || members !== local.members || role !== local.role || shared !== local.shared;
+          merged.length !== local.events.length || tailSeq(merged) !== before || stamped !== local.events || members !== local.members || role !== local.role || shared !== local.shared || JSON.stringify(asks ?? null) !== JSON.stringify(local.asks ?? null);
         if (changed) {
           await db.saveRun({
             ...local,
@@ -203,6 +206,7 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
             ...(role ? { role } : {}),
             ...(members ? { members } : {}),
             ...(typeof shared === "boolean" ? { shared } : {}),
+            ...(asks !== undefined ? { asks } : {}),
             updatedAt: theirs && theirs.updatedAt > local.updatedAt ? theirs.updatedAt : local.updatedAt,
           });
           const mine = new Set(pending.map((e) => e.id));

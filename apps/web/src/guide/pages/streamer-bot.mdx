@@ -10,6 +10,20 @@ The message arrives as one JSON string: `{"t":"gesture","kind":"rolled",…}` wh
 
 From there the usual sub-actions apply: **OBS** → **Set Source Visibility** to flash a dice overlay, a sound, a chat line such as `Rolled {total} on {label}`. The gesture's `data` carries the dice as thrown, the total, the roll's label and its notation; [the stream API](#guide/stream-tools) has the shape.
 
+## A channel-point redeem that presses
+
+The other direction. In the run's **Settings** → **Stream** → **Chat**, **Take asks** makes the run's ask key and shows the address a bot posts to, with the key in it. Copy the address. Then make an action on the trigger **Twitch** → **Channel Reward** → **Reward Redemption** (Kick has the same trigger under **Kick** → **Channel Reward**) whose sub-action is **Core** → **Network** → **Fetch URL**, method POST, content type `application/json`, and a body of
+
+```json
+{ "kind": "move", "move": "died", "name": "%userName%", "via": "channel-points" }
+```
+
+to take the move whose id is `died`, or `{ "kind": "roll", "name": "%userName%", "via": "channel-points" }` to roll the table the run is waiting on. The Chat section lists the pack's moves by id. A chat command works the same way with the command's trigger and `"via": "command"`.
+
+What happens next is up to the table: under **Wait for me to accept**, the ask sits in the Asks panel beside the people until you press; under **Act on it as it lands**, the move is taken or the table rolled the moment the ask arrives, if the run is in a place where it can be. Either way the socket above carries an `asked` gesture with `accepted` true or false, so the action that made the request can hear the answer and say so in chat: `Chat's forfeit is in` or `No such move right now`. One ask a name every twenty seconds, thirty a minute for the run; more than that answers 429 and is dropped.
+
+The key is not the live link's token, on purpose: the token is in every widget address and so in your scene, and a leaked address should let strangers watch, never press. **Stop taking asks** kills the key and leaves the link alone.
+
 ## A `!score` command
 
 Make a command action for `!score` whose sub-action is **Core** → **Network** → **Fetch URL** on `https://runlog.scrthq.com/api/public/runs/<runId>/metrics?t=<token>` with *parse as JSON* on and a prefix of your choosing, say `run`. The document's fields become arguments, so a **Twitch** → **Send Message to Channel** of `%run.words.unit% %run.unit% · %run.score.text%` says "Day 4 · 3 days" in the pack's own words. `%run.latest.text%` is the last result rolled, for a `!last` command.

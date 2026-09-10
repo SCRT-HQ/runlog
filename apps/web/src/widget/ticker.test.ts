@@ -73,6 +73,14 @@ describe("the ticker's lines", () => {
     expect(lineOfGesture({ kind: "rolled", data: { total: 14, label: "Kiln Check" }, from: "Mira", at: "t" })?.text).toBe("Mira rolled 14 on Kiln Check");
     expect(lineOfGesture({ kind: "clock", data: { clock: "u2:unit", label: "Stage 2", status: "paused" }, at: "t" })).toMatchObject({ id: "cu2:unit:paused", text: "Stage 2 paused" });
     expect(lineOfGesture({ kind: "unit-closed", data: { unit: 2, unitsDone: 2 }, at: "t" })).toMatchObject({ id: "u2" });
+    // An ask from outside, once the host has answered it: who, what, how, and which way it went.
+    expect(lineOfGesture({ kind: "asked", data: { ask: "a1", kind: "move", move: "died", name: "viewer_42", via: "channel-points", accepted: true }, at: "t" })).toMatchObject({
+      id: "aa1",
+      mark: "Chat",
+      text: "viewer_42 asked for died via channel-points · taken",
+    });
+    expect(lineOfGesture({ kind: "asked", data: { ask: "a2", kind: "roll", accepted: false }, at: "t" })).toMatchObject({ text: "Someone asked for a roll · declined" });
+    expect(lineOfGesture({ kind: "ask", data: { ask: "a3", kind: "roll" }, at: "t" })).toBeNull();
     expect(lineOfGesture({ kind: "run-ended", data: { ending: "The Shelf" }, at: "t" })).toMatchObject({ id: "end", text: "The Shelf" });
   });
 

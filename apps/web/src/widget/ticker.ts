@@ -16,7 +16,7 @@ import type { Gesture } from "../sync/socket.ts";
  * line's id is the same from either source, so a result told by gesture
  * and then read from the snapshot is one line, not two.
  */
-export type TickerKind = "rolled" | "outcome" | "award" | "clock" | "unit-closed" | "run-ended";
+export type TickerKind = "rolled" | "outcome" | "award" | "clock" | "unit-closed" | "run-ended" | "asked";
 
 export interface TickerLine {
   id: string;
@@ -26,7 +26,7 @@ export interface TickerLine {
   text: string;
 }
 
-const MARKS: Record<TickerKind, string> = { rolled: "Rolled", outcome: "Result", award: "Award", clock: "Clock", "unit-closed": "Closed", "run-ended": "Ended" };
+const MARKS: Record<TickerKind, string> = { rolled: "Rolled", outcome: "Result", award: "Award", clock: "Clock", "unit-closed": "Closed", "run-ended": "Ended", asked: "Chat" };
 
 const line = (kind: TickerKind, id: string, text: string): TickerLine => ({ id, kind, mark: MARKS[kind], text });
 
@@ -103,6 +103,16 @@ export function lineOfGesture(g: Pick<Gesture, "kind" | "data" | "from" | "at">)
     }
     case "run-ended":
       return line("run-ended", "end", str(d["ending"]) ?? "Over");
+    case "asked": {
+      // An ask from outside, answered by the host. The server sends it, so it
+      // knows the move's id and not its label; the tray at the table has the words.
+      const id = str(d["ask"]);
+      if (!id) return null;
+      const who = str(d["name"]) ?? "Someone";
+      const what = str(d["move"]) ?? (str(d["kind"]) === "roll" ? "a roll" : null);
+      const via = str(d["via"]);
+      return line("asked", `a${id}`, `${who} asked${what ? ` for ${what}` : ""}${via ? ` via ${via}` : ""} · ${d["accepted"] === true ? "taken" : "declined"}`);
+    }
     default:
       return null;
   }

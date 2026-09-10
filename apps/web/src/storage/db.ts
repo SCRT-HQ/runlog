@@ -111,6 +111,8 @@ export interface StoredRun {
   raceId?: string;
   /** Open to anyone with its link, as the server last said. */
   shared?: boolean;
+  /** Taking asks from outside, as the server last said: the policy, or null when not. */
+  asks?: { policy: "ask" | "auto"; since?: string } | null;
   deletedAt?: string;
 }
 

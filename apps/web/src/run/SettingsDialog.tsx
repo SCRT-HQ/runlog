@@ -5,6 +5,9 @@ import { Dice3dSwitch } from "../dice/Dice3dSwitch.tsx";
 import { ThemeMenu } from "../theme/ThemeMenu.tsx";
 import { carriesOnByItself, rollsForMeByDefault, setCarriesOnByItself, setRollsForMeByDefault } from "./pace.ts";
 import { StreamSettings } from "./StreamPanel.tsx";
+import { ChatSettings } from "./ChatPanel.tsx";
+import type { Pack } from "@runlog/rules-schema";
+import type { StoredRun } from "../storage/db.ts";
 
 /**
  * What is about this device rather than about the run: the theme, the
@@ -23,9 +26,14 @@ export function SettingsDialog({
   rolling,
   onControls,
   onClose,
+  pack,
+  record,
 }: {
   runId: string | null;
   race: boolean;
+  /** The open run's pack and record, for the Chat section: what moves may be asked for, and whether asks are on. Absent outside a run. */
+  pack?: Pack;
+  record?: StoredRun | null;
   alerts: AlertSettings;
   onAlerts: (next: AlertSettings) => void;
   /** Who throws the dice in the open run, and whether the run leaves any choice. Absent outside a run. */
@@ -130,6 +138,7 @@ export function SettingsDialog({
               Stream <span className="muted">pop-out widgets</span>
             </h3>
             <StreamSettings runId={runId} race={race} onControls={onControls} />
+            {pack && record && <ChatSettings pack={pack} record={record} />}
           </section>
         )}
       </section>

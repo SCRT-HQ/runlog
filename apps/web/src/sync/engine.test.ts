@@ -210,6 +210,11 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
     watchPublicRun: async () => ({ sessionId: "", role: "viewer" as const }),
     reactions: async () => [],
     react: async () => [],
+    asks: async () => [],
+    answerAsk: async () => [],
+    mintAskKey: async () => ({ key: "k", policy: "ask" as const }),
+    setAskPolicy: async () => {},
+    revokeAskKey: async () => {},
     putSnapshot: async () => {},
     putPublisherPack: async () => {
       throw new SyncError("error");
