@@ -28,7 +28,7 @@ import { ticksFor } from "./stepChecks.ts";
 import { nudgeFirstUnticked, nudgeOwed } from "./nudge.ts";
 import { Constraints } from "./Constraints.tsx";
 import { receiptFollowUps } from "./receiptFollowUps.ts";
-import { boxesByResult, globalWords, owedOn, settleWords, settledOn, stillOwed, thresholdWords } from "./owed.ts";
+import { globalWords, owedOn, settleWords, settlingFor, stillOwed, thresholdWords } from "./owed.ts";
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
@@ -1238,9 +1238,6 @@ function ClosingStep({
   const v = pack.vocabulary;
   const blocked = run.blockingObligations;
   const points = step.kind === "manual" ? (step.checklist ?? []) : step.kind === "finalizeUnit" ? (step.confirm ?? []) : [];
-  // A result the pack hung a trigger on is honoured by the trigger running.
-  // The confirmation shows it, and does not ask for a promise about it.
-  const owed = owedOn(state);
   const constraints = step.kind === "manual" ? constraintLines(pack, state, step.constrainedBy) : [];
   /*
    * A result the step is held to is shown as a rule above, and the rule
@@ -1253,17 +1250,8 @@ function ClosingStep({
    * tick the confirmation was asking for and the step is satisfied by it.
    * A result two points both show is ticked in both.
    */
-  const asRules = new Set(constraints.map((line) => `${line.table}/${line.entryId}`));
-  const boxesFor = boxesByResult(pack, state, points);
-  const owing = (row: { table: string; entryId: string }) => stillOwed(owed, row);
-  const settled = (row: { table: string; entryId: string }) => settledOn(owed, row);
-  const answered = (row: { table: string; entryId: string }) => (boxesFor.get(`${row.table}/${row.entryId}`) ?? []).length > 0;
-  const settling = {
-    owing,
-    settled,
-    answered,
-    hidden: (row: { table: string; entryId: string }) => asRules.has(`${row.table}/${row.entryId}`),
-  };
+  const settling = settlingFor(pack, state, constraints, points);
+  const boxesFor = settling.boxes;
   const allTicked = checklistDone(points, pack, state, ticked, settling);
   const unit = v.unit.one.toLowerCase();
   const label = (step.kind === "manual" || step.kind === "finalizeUnit" ? step.label : undefined) ?? v.finalize;
