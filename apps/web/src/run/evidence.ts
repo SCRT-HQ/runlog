@@ -90,6 +90,15 @@ export interface Settling {
    * they are simply asked about where they are rather than twice.
    */
   hidden?: (s: Shown) => boolean;
+  /**
+   * Rows something outside this list can satisfy: a rule carrying the tick
+   * that honours it, where the game is not settling it itself.
+   *
+   * A caller has to say so. A row nothing can answer is a row that stays on
+   * the screen however loudly `hidden` asks, because a box the player alone
+   * can make and cannot reach is a step that cannot be finished.
+   */
+  answered?: (s: Shown) => boolean;
 }
 
 export function allMade(points: Point[], evidence: Shown[][], ticked: Set<string>, settling?: Settling): boolean {

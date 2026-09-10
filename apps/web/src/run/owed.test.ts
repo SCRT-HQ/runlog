@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Pack } from "@runlog/rules-schema";
-import { owedOn, settleWords, settledOn, stillOwed, thresholdWords } from "./owed.ts";
+import { boxesByResult, owedOn, settleWords, settledOn, stillOwed, thresholdWords } from "./owed.ts";
 
 /**
  * The word on an owed thing's button. "Resolve" read as confirming that
@@ -106,5 +106,52 @@ describe("what the game owes on a result, and what it has paid", () => {
     expect(settledOn(owed, on)).toBe(false);
     // A note is the player's to tick off, not the game's to settle.
     expect(owedOn(state([{ id: "n", kind: "note", resolved: false }])).size).toBe(0);
+  });
+});
+
+describe("which boxes belong to which result", () => {
+  const pack = {
+    vocabulary: { unit: { one: "Room", many: "Rooms" }, subject: { one: "Track", many: "Tracks" } },
+    tables: {
+      mutation: {
+        resolution: "lookup",
+        title: "Mutation",
+        roll: "d100",
+        entries: [
+          { id: "cull", range: [88, 88], text: "Roll d6 on finalizing." },
+          { id: "cap", range: [1, 1], text: "Three notes per bar." },
+        ],
+      },
+    },
+  } as unknown as Parameters<typeof boxesByResult>[0];
+  const state = {
+    unit: 5,
+    subjects: [],
+    outcomes: [
+      { unit: 5, table: "mutation", entryId: "cap", targetSubject: null },
+      { unit: 5, table: "mutation", entryId: "cull", targetSubject: null },
+    ],
+  } as unknown as Parameters<typeof boxesByResult>[1];
+
+  it("keys a row the way the list keys it, so a tick on a rule is the tick the step waits for", () => {
+    const items = [{ text: "Honoured?", shows: { table: "mutation", scope: "unit" } }] as never;
+    expect(boxesByResult(pack, state, items)).toEqual(
+      new Map([
+        ["mutation/cap", ["0:o0"]],
+        ["mutation/cull", ["0:o1"]],
+      ]),
+    );
+  });
+
+  it("gives a result shown by two points both of their boxes", () => {
+    const items = [
+      { text: "Honoured?", shows: { table: "mutation", scope: "unit" } },
+      { text: "And read back?", shows: { table: "mutation", scope: "unit" } },
+    ] as never;
+    expect(boxesByResult(pack, state, items).get("mutation/cull")).toEqual(["0:o1", "1:o1"]);
+  });
+
+  it("is empty where a point shows nothing", () => {
+    expect(boxesByResult(pack, state, [{ text: "Just say so." }] as never).size).toBe(0);
   });
 });

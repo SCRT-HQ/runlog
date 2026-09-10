@@ -1,5 +1,6 @@
 import { counterTriggerAsks, globalTriggerAsks, obligationAsks, type RunState } from "@runlog/engine";
-import type { Pack } from "@runlog/rules-schema";
+import type { ChecklistItem, Pack } from "@runlog/rules-schema";
+import { evidenceFor, pointOf } from "./evidence.ts";
 
 /**
  * What the button on an owed thing says.
@@ -68,6 +69,26 @@ export function stillOwed(owed: Map<string, boolean>, on: { table: string; entry
 /** Whether the game owed something on this result and has since paid it. */
 export function settledOn(owed: Map<string, boolean>, on: { table: string; entryId: string }): boolean {
   return owed.get(at(on.table, on.entryId)) === true;
+}
+
+/**
+ * Which boxes of a confirmation belong to which result.
+ *
+ * A rule can carry the tick that honours it, and the tick has to be the one
+ * the confirmation was asking for or the step would wait on a box nobody
+ * can see. Keyed the way `Checklist` keys its rows, because they are the
+ * same rows. A result two points both show is ticked in both.
+ */
+export function boxesByResult(pack: Pack, state: RunState, items: ChecklistItem[]): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  items.map(pointOf).forEach((point, i) => {
+    if (!point.shows) return;
+    for (const row of evidenceFor(pack, state, point.shows)) {
+      const key = at(row.table, row.entryId);
+      out.set(key, [...(out.get(key) ?? []), `${i}:${row.key}`]);
+    }
+  });
+  return out;
 }
 
 /** For a counter's trigger that has come due. */
