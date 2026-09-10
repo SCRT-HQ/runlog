@@ -18,7 +18,7 @@ export interface IncomingPurchase {
   token?: string;
 }
 
-function read(): IncomingPurchase | "cancelled" | null {
+function read(): IncomingPurchase | "canceled" | null {
   try {
     const url = new URL(location.href);
     const ref = url.searchParams.get("purchase");
@@ -27,7 +27,7 @@ function read(): IncomingPurchase | "cancelled" | null {
       url.searchParams.delete("purchase");
       url.searchParams.delete("t");
       history.replaceState(null, "", url.pathname + (url.search ? url.search : "") + url.hash);
-      if (ref === "cancelled") return "cancelled";
+      if (ref === "canceled") return "canceled";
       const incoming: IncomingPurchase = { ref, ...(token ? { token } : {}) };
       sessionStorage.setItem(KEY, JSON.stringify(incoming));
       return incoming;
@@ -39,20 +39,20 @@ function read(): IncomingPurchase | "cancelled" | null {
   }
 }
 
-export function useIncomingPurchase(): { purchase: IncomingPurchase | null; cancelled: boolean; clear: () => void } {
+export function useIncomingPurchase(): { purchase: IncomingPurchase | null; canceled: boolean; clear: () => void } {
   const [purchase, setPurchase] = useState<IncomingPurchase | null>(null);
-  const [cancelled, setCancelled] = useState(false);
+  const [canceled, setCanceled] = useState(false);
   useEffect(() => {
     const found = read();
-    if (found === "cancelled") setCancelled(true);
+    if (found === "canceled") setCanceled(true);
     else setPurchase(found);
   }, []);
   return {
     purchase,
-    cancelled,
+    canceled,
     clear: () => {
       setPurchase(null);
-      setCancelled(false);
+      setCanceled(false);
       try {
         sessionStorage.removeItem(KEY);
       } catch {
