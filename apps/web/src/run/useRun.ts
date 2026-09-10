@@ -804,6 +804,27 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
 
   /** The open run's record, as storage has it: who is in it, and what this account may do. */
   const record = useMemo(() => runList.find((r) => r.runId === runId) ?? null, [runList, runId]);
+
+  /**
+   * Write down what the server just said about taking asks.
+   *
+   * The record carries it, and the tray and the Chat panel both read it
+   * there. Nothing in the log changes when a key is minted, so a sync pass
+   * has no reason to fetch the session and no reason to notice: without
+   * this the panel that made the key sits unchanged, and the key it showed
+   * once is lost.
+   */
+  const setAsks = useCallback(
+    async (asks: StoredRun["asks"]) => {
+      const id = runIdRef.current;
+      if (!id) return;
+      const saved = await store.loadRun(id);
+      if (!saved) return;
+      await store.saveRun({ ...saved, asks });
+      await refreshList();
+    },
+    [refreshList, store],
+  );
   /** A viewer watches. Every move is shown; none can be made. */
   const readOnly = record?.role === "viewer";
 
@@ -1019,6 +1040,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     loadEvents,
     runList,
     record,
+    setAsks,
     readOnly,
     switchRun,
     beginAnother,

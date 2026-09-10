@@ -549,6 +549,7 @@ export function RunView({
           rolling={{ auto: run.autoRoll, seeded: run.seededRun, onAuto: run.setAutoRoll }}
           pack={pack}
           record={run.record ?? null}
+          onAsks={run.setAsks}
           onControls={() => {
             setSettingsOpen(false);
             void openControlsWindow().then(setControlsWindow, () => {});

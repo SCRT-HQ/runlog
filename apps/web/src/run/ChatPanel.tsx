@@ -16,7 +16,7 @@ import type { StoredRun } from "../storage/db.ts";
  * key in it, ready to paste into Streamer.bot or whatever holds the
  * channel-point redeem. Lives under Stream in the run's Settings.
  */
-export function ChatSettings({ pack, record }: { pack: Pack; record: StoredRun | null }) {
+export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: StoredRun | null; onAsks?: (asks: StoredRun["asks"]) => void | Promise<void> }) {
   const api = useApi();
   const plan = usePlan();
   const allowed = !plan.gates || plan.can("plus");
@@ -24,7 +24,13 @@ export function ChatSettings({ pack, record }: { pack: Pack; record: StoredRun |
   const [note, setNote] = useState<string | null>(null);
   const [copied, setCopied] = useState<"key" | "address" | null>(null);
   const [busy, setBusy] = useState(false);
-  const taking = record?.asks ?? null;
+  /**
+   * Whether the run takes asks, as this panel knows it: the record on the
+   * way in, this panel's own presses after that. Minting a key changes
+   * nothing in the log, so no pull will tell the record about it; the panel
+   * hands what the server said back to the run, and takes it as read here.
+   */
+  const [taking, setTaking] = useState<{ policy: AskPolicy; since?: string } | null>(record?.asks ?? null);
   const policy: AskPolicy = taking?.policy ?? "ask";
   const moves = Object.entries(pack.moves ?? {}).filter(([, m]) => m.when === "anytime" || m.when === undefined);
 
@@ -43,16 +49,27 @@ export function ChatSettings({ pack, record }: { pack: Pack; record: StoredRun |
       setBusy(false);
     }
   };
+  /** What the server just said, kept where the run and the Asks tray read it. */
+  const remember = async (asks: StoredRun["asks"]) => {
+    setTaking(asks ?? null);
+    await onAsks?.(asks);
+  };
   const mint = () =>
     run(async () => {
       const made = await api.mintAskKey(record.runId, policy);
       setKey(made.key);
+      await remember({ policy: made.policy, since: new Date().toISOString() });
     });
-  const setPolicy = (next: AskPolicy) => run(() => api.setAskPolicy(record.runId, next));
+  const setPolicy = (next: AskPolicy) =>
+    run(async () => {
+      await api.setAskPolicy(record.runId, next);
+      await remember({ policy: next, ...(taking?.since ? { since: taking.since } : {}) });
+    });
   const revoke = () =>
     run(async () => {
       await api.revokeAskKey(record.runId);
       setKey(null);
+      await remember(null);
     });
   // The address a bot posts to is absolute: the bot is on another machine.
   const base = (() => {
