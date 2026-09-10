@@ -28,12 +28,15 @@ export function SettingsDialog({
   onClose,
   pack,
   record,
+  onAsks,
 }: {
   runId: string | null;
   race: boolean;
   /** The open run's pack and record, for the Chat section: what moves may be asked for, and whether asks are on. Absent outside a run. */
   pack?: Pack;
   record?: StoredRun | null;
+  /** Remember what the server said about taking asks, so the tray and this panel agree at once. */
+  onAsks?: (asks: StoredRun["asks"]) => void | Promise<void>;
   alerts: AlertSettings;
   onAlerts: (next: AlertSettings) => void;
   /** Who throws the dice in the open run, and whether the run leaves any choice. Absent outside a run. */
@@ -138,7 +141,7 @@ export function SettingsDialog({
               Stream <span className="muted">pop-out widgets</span>
             </h3>
             <StreamSettings runId={runId} race={race} onControls={onControls} />
-            {pack && record && <ChatSettings pack={pack} record={record} />}
+            {pack && record && <ChatSettings pack={pack} record={record} onAsks={onAsks} />}
           </section>
         )}
       </section>
