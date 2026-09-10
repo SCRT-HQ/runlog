@@ -286,9 +286,10 @@ usage:
                     [--key]              …or paste a key from your profile page, for a machine with no browser
   runlog whoami                          who the command line is acting as
   runlog claim    key.json               prove a signing key is yours; the app then names you
-  runlog publish  <pack>                 put a pack in your library, on every device
-  runlog release  <pack> [--price 3.00]  upload a signed pack to the catalog as its publisher
-                    [--free] [--draft]     and list it; no flag keeps the listing as it is
+  runlog upload   <pack>                 put a pack in your own library, private to your
+                    (was: publish)         account, on every device you are signed in on
+  runlog release  <pack> [--price 3.00]  put a signed pack in the catalog, where anyone can
+                    [--free] [--draft]     find it, as its publisher; no flag keeps the listing
   runlog logout                          forget the sign-in
 
 --strict makes warnings fail, which is what you want in CI. In CI, set
@@ -329,6 +330,9 @@ async function main(argv: string[]): Promise<number> {
       return cmdWhoami();
     case "claim":
       return cmdClaim(args);
+    // `publish` was its name first, and reads as the opposite of what it
+    // does; it still works, and `upload` is what the help says.
+    case "upload":
     case "publish":
       return cmdPublish(args);
     case "release":

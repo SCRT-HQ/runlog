@@ -638,8 +638,11 @@ shows "Signed by Your Name" in the app, where the name is your account's and
 not the file's. A key nobody has claimed still signs, arithmetically, but the
 command line refuses it and the app says no account stands behind it.
 
-`npx @scrthq/runlog publish my-game.yaml` puts a pack straight into your
-library, on every device you are signed in on. In CI nobody is there to
+`npx @scrthq/runlog upload my-game.yaml` puts a pack straight into your own
+library, on every device you are signed in on. It is private: the pack is
+kept under your account and nobody else can see it, which is the difference
+between this and `release` below. (It answered to `publish` first, and still
+does; the name read as the opposite of what it did.) In CI nobody is there to
 confirm a code, so make a command-line key on your profile page in the app,
 one that only releases, and set it as `RUNLOG_API_KEY` there, and put your signing key file's contents
 in `RUNLOG_SIGNING_KEY` so `sign` needs no file; `login --key` pastes a key
