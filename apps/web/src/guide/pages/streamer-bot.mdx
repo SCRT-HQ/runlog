@@ -6,9 +6,23 @@ Streamer.bot runs on the streaming machine and can hold a socket to the run, act
 
 Under **Servers/Clients** → **WebSocket Clients**, add one with the address `wss://runlog.scrthq.com/ws?run=<runId>&t=<token>` and auto-reconnect on. Then make an action with the trigger **WebSocket Client** → **Message** for that client.
 
-The message arrives as one JSON string: `{"t":"gesture","kind":"rolled",…}` when dice land and `{"t":"changed",…}` on every move. Parse it (a *Set argument from JSON* sub-action, or two lines of C#) and act only when `kind` is `rolled`. The other kinds, `outcome`, `award`, `clock`, `unit-closed` and `run-ended`, arrive the same way with the words in `data`, so a result's `text` can go straight to chat and `run-ended` can switch the scene.
+The message arrives as one JSON string: `{"t":"gesture","kind":"rolled",…}` when dice land and `{"t":"changed",…}` on every move. Parse it (a *Set argument from JSON* sub-action, or two lines of C#) and act only when `kind` is `rolled`. The other kinds, `outcome`, `award`, `clock`, `counter`, `unit-closed`, `run-ended`, and `ask` and `asked` for what chat asked and what became of it, arrive the same way with the words in `data`, so a result's `text` can go straight to chat, a death counter's `value` can go on an overlay, and `run-ended` can switch the scene.
 
 From there the usual sub-actions apply: **OBS** → **Set Source Visibility** to flash a dice overlay, a sound, a chat line such as `Rolled {total} on {label}`. The gesture's `data` carries the dice as thrown, the total, the roll's label and its notation; [the stream API](#guide/stream-tools) has the shape.
+
+## A channel-point redeem that presses
+
+The other direction. In the run's **Settings** → **Stream** → **Chat**, **Take asks** makes the run's ask key and shows the address a bot posts to, with the key in it. Copy the address. Then make an action on the trigger **Twitch** → **Channel Reward** → **Reward Redemption** (Kick has the same trigger under **Kick** → **Channel Reward**) whose sub-action is **Core** → **Network** → **Fetch URL**, method POST, content type `application/json`, and a body of
+
+```json
+{ "kind": "move", "move": "died", "name": "%userName%", "via": "channel-points" }
+```
+
+to take the move whose id is `died`, or `{ "kind": "roll", "name": "%userName%", "via": "channel-points" }` to roll the table the run is waiting on. The Chat section lists the pack's moves by id. A chat command works the same way with the command's trigger and `"via": "command"`.
+
+What happens next is up to the table: under **Wait for me to accept**, the ask sits in the Asks panel beside the people until you press; under **Act on it as it lands**, the move is taken or the table rolled the moment the ask arrives, if the run is in a place where it can be. Either way the socket above carries an `asked` gesture with `accepted` true or false, so the action that made the request can hear the answer and say so in chat: `Chat's forfeit is in` or `No such move right now`. One ask a name every twenty seconds, thirty a minute for the run; more than that answers 429 and is dropped.
+
+The key is not the live link's token, on purpose: the token is in every widget address and so in your scene, and a leaked address should let strangers watch, never press. **Stop taking asks** kills the key and leaves the link alone.
 
 ## A `!score` command
 

@@ -32,6 +32,7 @@ import { globalWords, owedOn, settleWords, settlingFor, stillOwed, thresholdWord
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
+import { Asks } from "./Asks.tsx";
 import { RunRow, onDay } from "./RunRow.tsx";
 import { bestOf, placeOf, scoresOf, type ScoredRun } from "./scores.ts";
 import { RacePanel } from "./RacePanel.tsx";
@@ -527,6 +528,7 @@ export function RunView({
           <Board pack={pack} state={state} onRename={run.renameSubject} onCorrect={run.readOnly ? undefined : run.correctState} />
           <Trackers pack={pack} state={state} onNudge={run.readOnly ? undefined : run.nudgeCounter} />
           {run.record && api && !bench && <RacePanel pack={pack} race={raceView} />}
+          {run.record && !bench && api && <Asks pack={pack} run={run} record={run.record} />}
           {run.record && !bench && <Members pack={pack} run={run.record} />}
         </div>
       </div>
@@ -545,6 +547,8 @@ export function RunView({
           alerts={alerts}
           onAlerts={setAlerts}
           rolling={{ auto: run.autoRoll, seeded: run.seededRun, onAuto: run.setAutoRoll }}
+          pack={pack}
+          record={run.record ?? null}
           onControls={() => {
             setSettingsOpen(false);
             void openControlsWindow().then(setControlsWindow, () => {});

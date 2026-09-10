@@ -88,6 +88,18 @@ describe("lifecycle gestures", () => {
     expect(said(at(clock("done")), at(clock("done")))).toEqual([]);
   });
 
+  it("tell a tally moving by its label, with where it was, and keep a hidden one to the pack", () => {
+    const base = reduce(kiln, opening);
+    const before = marksOf(base, opening, NOW);
+    const calm = kiln.counters!.calm!;
+    const moved: RunState = { ...base, counters: { ...base.counters, calm: 3 } };
+    expect(lifecycleGestures(kiln, moved, opening, before, NOW)).toEqual([{ kind: "counter", data: { counter: "calm", label: calm.label, value: 3, was: 0 } }]);
+    // Sent back to zero: the fall is told too, since a reset is the news.
+    expect(lifecycleGestures(kiln, base, opening, marksOf(moved, opening, NOW), NOW)).toEqual([{ kind: "counter", data: { counter: "calm", label: calm.label, value: 0, was: 3 } }]);
+    const shy = { ...kiln, counters: { ...kiln.counters, calm: { ...calm, hidden: true } } };
+    expect(lifecycleGestures(shy, moved, opening, before, NOW)).toEqual([]);
+  });
+
   it("tell an award by the contestant's name and the result's words", () => {
     const base = reduce(kiln, opening);
     const entry = kiln.tables.form!.entries[0]!;

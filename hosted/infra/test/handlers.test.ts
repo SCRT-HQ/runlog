@@ -2,7 +2,7 @@ import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { describe, expect, it } from "vitest";
 import { finishDeferred, finishMoved, finishTimer, route, type Deps } from "../lib/handlers/api";
 import type { TimerJob } from "../lib/handlers/discord/play";
-import { SeqConflict, type ApiKey, type Claim, type Invite, type LicenseMeta, type PackMeta, type Person, type Profile, type Reaction, type SessionMember, type SessionMeta, type SessionPointer, type Store, type StoredEvent } from "../lib/handlers/store";
+import { SeqConflict, type ApiKey, type Ask, type Claim, type Invite, type LicenseMeta, type PackMeta, type Person, type Profile, type Reaction, type SessionMember, type SessionMeta, type SessionPointer, type Store, type StoredEvent } from "../lib/handlers/store";
 import type { Race, RaceEntry, RaceMeta, RaceStore } from "../lib/handlers/races";
 import type { BillingStore } from "../lib/handlers/billing";
 import type { StripeLike } from "../lib/handlers/stripe";
@@ -362,6 +362,7 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
   const invites = new Map<string, Invite>();
   const exports = new Map<string, string>();
   const reactions = new Map<string, Reaction[]>();
+  const asks = new Map<string, Ask[]>();
   const people = new Map<string, Map<string, Person>>();
   const counters = new Map<string, number>();
   const apiKeys = new Map<string, { sub: string; key: ApiKey; hash: string }>();
@@ -492,6 +493,15 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
         s.meta.publicTokenHash = patch.publicTokenHash;
         s.meta.publicAt = at;
       }
+      if (patch.askKeyHash === null) {
+        delete s.meta.askKeyHash;
+        delete s.meta.askPolicy;
+        delete s.meta.askAt;
+      } else if (patch.askKeyHash) {
+        s.meta.askKeyHash = patch.askKeyHash;
+        s.meta.askAt = at;
+      }
+      if (patch.askPolicy && s.meta.askKeyHash) s.meta.askPolicy = patch.askPolicy;
       return s.meta;
     },
     async putSnapshot(id, at, snapshot) {
@@ -544,6 +554,21 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
     },
     async listReactions(id) {
       return reactions.get(id) ?? [];
+    },
+    async addAsk(id, ask) {
+      const kept = [...(asks.get(id) ?? []), ask].slice(-50);
+      asks.set(id, kept);
+      return kept;
+    },
+    async listAsks(id) {
+      return asks.get(id) ?? [];
+    },
+    async answerAsk(id, askId, answer, at, reason) {
+      const list = asks.get(id) ?? [];
+      if (!list.some((a) => a.id === askId)) return null;
+      const kept = list.map((a) => (a.id === askId ? { ...a, answer, answeredAt: at, ...(reason ? { reason } : {}) } : a));
+      asks.set(id, kept);
+      return kept;
     },
     async acceptInvite(token, sub, name, email, at) {
       const invite = invites.get(token);
@@ -1299,6 +1324,51 @@ describe("who is asking", () => {
     // Revoked: the link is dead.
     expect((await call(request("DELETE", "/api/sessions/01RUN/public"), d)).body).toEqual({ shared: false });
     expect((await call(request("GET", "/api/public/runs/01RUN?t=livetok", { token: null }), d)).body).toEqual({ found: false });
+  });
+
+  it("takes asks from outside by an ask key of its own: minted by the host, answered by the host, never the live token", async () => {
+    const told: Array<{ id: string; kind: string; data: Record<string, unknown> }> = [];
+    const rung: string[] = [];
+    let minted = 0;
+    const d = deps(memoryStore(), { notify: async (id) => void rung.push(id), tell: async (id, kind, data) => void told.push({ id, kind, data }), token: () => (minted += 1) === 1 ? "livetok" : "askkey" });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(request("POST", "/api/sessions/01RUN/public"), d);
+    // Not taking asks yet: the live token is no key, and there is no key.
+    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=livetok", { token: null, body: { kind: "roll" } }), d)).status).toBe(403);
+    // Only the host mints one; the answer carries the key once, and the session says it is taking asks, never the hash.
+    expect((await call(request("POST", "/api/sessions/01RUN/ask-key"), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) })).body).toEqual({ found: false });
+    const key = await call(request("POST", "/api/sessions/01RUN/ask-key", { body: { policy: "auto" } }), d);
+    expect(key.body).toEqual({ key: "askkey", asks: { policy: "auto" } });
+    const seen = await call(request("GET", "/api/sessions/01RUN"), d);
+    expect(seen.body["session"]).toMatchObject({ shared: true, asks: { policy: "auto" } });
+    expect(JSON.stringify(seen.body)).not.toContain("askKeyHash");
+    // The live token still opens nothing here; the key does.
+    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=livetok", { token: null, body: { kind: "roll" } }), d)).status).toBe(403);
+    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "dance" } }), d)).status).toBe(422);
+    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "move" } }), d)).status).toBe(422);
+    const asked = await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "move", move: "died", name: "viewer_42", via: "channel-points" } }), d);
+    expect(asked.status).toBe(200);
+    const open = asked.body["asks"] as Ask[];
+    expect(open).toEqual([{ id: expect.any(String) as unknown as string, kind: "move", move: "died", name: "viewer_42", via: "channel-points", at: expect.any(String) as unknown as string }]);
+    // Everyone on the socket hears the ask as a gesture, with the policy, and the table is nudged to read.
+    expect(told).toEqual([{ id: "01RUN", kind: "ask", data: { ask: open[0]!.id, kind: "move", move: "died", name: "viewer_42", via: "channel-points", policy: "auto" } }]);
+    expect(rung).toContain("01RUN");
+    // The same name again inside twenty seconds is too many.
+    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "roll", name: "viewer_42" } }), d)).status).toBe(429);
+    // The host reads the list and answers; the answer is kept beside the ask and told to the socket.
+    expect((await call(request("GET", "/api/sessions/01RUN/asks"), d)).body["asks"]).toHaveLength(1);
+    expect((await call(request("POST", `/api/sessions/01RUN/asks/${open[0]!.id}`, { body: { answer: "accepted" } }), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) })).body).toEqual({ found: false });
+    expect((await call(request("POST", `/api/sessions/01RUN/asks/${open[0]!.id}`, { body: { answer: "maybe" } }), d)).status).toBe(422);
+    const answered = await call(request("POST", `/api/sessions/01RUN/asks/${open[0]!.id}`, { body: { answer: "declined", reason: "no such move right now" } }), d);
+    expect((answered.body["asks"] as Ask[])[0]).toMatchObject({ answer: "declined", reason: "no such move right now" });
+    expect(told.at(-1)).toMatchObject({ kind: "asked", data: { ask: open[0]!.id, accepted: false, reason: "no such move right now" } });
+    expect((await call(request("POST", "/api/sessions/01RUN/asks/nothing", { body: { answer: "accepted" } }), d)).body).toEqual({ found: false });
+    // The policy changes without a new key; the key is revoked on its own, and the live link stays.
+    expect((await call(request("PUT", "/api/sessions/01RUN/ask-key", { body: { policy: "ask" } }), d)).body).toEqual({ asks: { policy: "ask" } });
+    expect((await call(request("DELETE", "/api/sessions/01RUN/ask-key"), d)).body).toEqual({ asks: null });
+    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "roll", name: "someone" } }), d)).status).toBe(403);
+    expect((await call(request("GET", "/api/sessions/01RUN"), d)).body["session"]).toMatchObject({ shared: true, asks: null });
+    expect((await call(request("PUT", "/api/sessions/01RUN/ask-key", { body: { policy: "auto" } }), d)).status).toBe(422);
   });
 
   it("rings the doorbell after a move, a rename, and a seat taken", async () => {

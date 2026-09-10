@@ -33,6 +33,12 @@ interface Base {
    */
   seq?: number;
   author?: string;
+  /**
+   * Who outside the table asked for the move this event belongs to, when
+   * someone did: a chat command, a channel-point redeem, a button. The
+   * host's device took it; this only says at whose asking.
+   */
+  askedBy?: { name?: string; via?: string };
 }
 
 export type RunEvent =
