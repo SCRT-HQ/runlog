@@ -134,7 +134,7 @@ describe("which boxes belong to which result", () => {
   } as unknown as Parameters<typeof boxesByResult>[1];
 
   it("keys a row the way the list keys it, so a tick on a rule is the tick the step waits for", () => {
-    const items = [{ text: "Honoured?", shows: { table: "mutation", scope: "unit" } }] as never;
+    const items = [{ text: "Honored?", shows: { table: "mutation", scope: "unit" } }] as never;
     expect(boxesByResult(pack, state, items)).toEqual(
       new Map([
         ["mutation/cap", ["0:o0"]],
@@ -145,7 +145,7 @@ describe("which boxes belong to which result", () => {
 
   it("gives a result shown by two points both of their boxes", () => {
     const items = [
-      { text: "Honoured?", shows: { table: "mutation", scope: "unit" } },
+      { text: "Honored?", shows: { table: "mutation", scope: "unit" } },
       { text: "And read back?", shows: { table: "mutation", scope: "unit" } },
     ] as never;
     expect(boxesByResult(pack, state, items).get("mutation/cull")).toEqual(["0:o1", "1:o1"]);

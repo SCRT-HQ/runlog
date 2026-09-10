@@ -76,7 +76,7 @@ export function evidenceFor(pack: Pack, state: RunState, shows: NonNullable<Poin
  * Whether a row is the game's to settle rather than the player's to
  * promise, and whether it has settled it.
  *
- * A result the pack hung a trigger on is honoured by the trigger running,
+ * A result the pack hung a trigger on is honored by the trigger running,
  * not by somebody saying it was: asking for a tick beside it is asking a
  * question that has an answer already. Absent, every row is the player's
  * word, which is what it always was.
@@ -92,7 +92,7 @@ export interface Settling {
   hidden?: (s: Shown) => boolean;
   /**
    * Rows something outside this list can satisfy: a rule carrying the tick
-   * that honours it, where the game is not settling it itself.
+   * that honors it, where the game is not settling it itself.
    *
    * A caller has to say so. A row nothing can answer is a row that stays on
    * the screen however loudly `hidden` asks, because a box the player alone

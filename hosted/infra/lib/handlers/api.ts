@@ -100,7 +100,7 @@ const MAX_INVITES_PER_HOUR = 20;
 const INVITE_DAYS = 7;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** An address with its middle hidden: enough to recognise, not enough to copy. */
+/** An address with its middle hidden: enough to recognize, not enough to copy. */
 function maskEmail(email: string): string {
   const [user = "", domain = ""] = email.split("@");
   const shown = user.slice(0, 1);
@@ -579,7 +579,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // Stripe calling back. No bearer: the signature over the raw body is
   // the credential, and a bad one is a 401 (never 403: the edge would
   // rewrite that into the app). Every event is answered 200 once it is
-  // recognised, handled or not, so Stripe stops retrying; one seen twice
+  // recognized, handled or not, so Stripe stops retrying; one seen twice
   // does nothing the second time.
   if (method === "POST" && path === "/api/stripe/webhook") {
     const secret = deps.webhookSecret ? await deps.webhookSecret() : null;
@@ -626,7 +626,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!found || found.meta.deletedAt) return json(200, { found: false });
     // Signed in already? Say whether this link is theirs, so the app can
     // tell somebody on the wrong account before they press anything. The
-    // address it went to is shown masked: enough to recognise, no more.
+    // address it went to is shown masked: enough to recognize, no more.
     let forYou: boolean | null = null;
     let alreadyIn = false;
     try {
