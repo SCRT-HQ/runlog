@@ -98,9 +98,10 @@ export function WelcomeView() {
               <PersonaSwitcher persona={persona} onChange={choose} />.
             </h2>
             <p className="welcomeLede">
-              A day at the wheel, a house cleaned like a dungeon, an hour of practice, a kitchen under constraint. Runlog reads a{" "}
-              <em>pack</em>, a small file of tables, states and steps, and becomes that game: it rolls, remembers, reaches back, and
-              writes the log, so your hands stay on the work.
+              A challenge run where the dice draw the next twist, a day at the wheel, a house cleaned like a dungeon, a kitchen under
+              constraint. Runlog reads a <em>pack</em>, a small file of tables, states and steps, and becomes that game: it rolls,
+              remembers, reaches back, and writes the log, so your hands stay on the work and the twist is on screen for whoever is
+              watching.
             </p>
             <p className="welcomeCtas">
               <a className="primary" href={play}>
@@ -182,9 +183,60 @@ export function WelcomeView() {
 
         <section>
           <h3 className="sectionTitle">
+            On a stream <span className="muted">a twist on screen in minutes, and it remembers</span>
+          </h3>
+          <ol className="welcomeSteps">
+            <li>
+              <span className="idx">1</span>
+              <div>
+                <h4>Pick the game</h4>
+                <p>
+                  A challenge pack for the game you already stream, or one of your own: a handicap every region, a curse that lands
+                  on the whole roster, a target worth points to whoever settles it first. Chat can be the roster; nobody in it needs an
+                  account.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span className="idx">2</span>
+              <div>
+                <h4>Paste one address</h4>
+                <p>
+                  Share a live link, copy a widget's address, paste it into a browser source in OBS, Streamlabs or StreamElements. No
+                  plugin, no download, nothing for viewers to install. The scoreboard, the clock, the latest twist, each on a page of
+                  its own.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span className="idx">3</span>
+              <div>
+                <h4>Let the dice run it</h4>
+                <p>
+                  The dice land where chat can see them. The log remembers what came up and whether it was done, the scoreboard keeps
+                  the standings, and a race on the same seed puts another channel on the leaderboard beside you.
+                </p>
+              </div>
+            </li>
+          </ol>
+          <p className="muted small">
+            A wheel forgets the spin. A virtual tabletop wants a map, tokens and an evening of setup before anyone rolls. Runlog is
+            neither: <a href={linkTo("#guide/stream-why", play)}>what it is for on a stream, what it needs, and what to compare</a>.
+          </p>
+        </section>
+
+        <section>
+          <h3 className="sectionTitle">
             Why Runlog <span className="muted">what it carries, if you would rather not</span>
           </h3>
           <dl className="welcomeReasons">
+            <div>
+              <dt>Minutes, not an evening.</dt>
+              <dd>
+                No map, no tokens, no character sheets, no plugin. Open the app and a first run is a minute away, with no account. A
+                widget on a scene is a live link and one address pasted into a browser source.
+              </dd>
+            </div>
             <div>
               <dt>It does not know your game. That is the point.</dt>
               <dd>
@@ -210,8 +262,9 @@ export function WelcomeView() {
             <div>
               <dt>A table with company.</dt>
               <dd>
-                Invite people into a run as players or watchers, on their own devices. Moderate a race with a live scoreboard. Share a
-                link anyone can watch, put widgets on a stream, throw dice everyone sees land.
+                Invite people into a run as players or watchers, on their own devices. Moderate a room of contestants from chat with
+                a live scoreboard, no accounts for them. Share a link anyone can watch, put widgets on a stream, throw dice everyone
+                sees land, race another device on the same seed.
               </dd>
             </div>
             <div>
