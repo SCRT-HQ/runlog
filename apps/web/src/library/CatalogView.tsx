@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { generateDoc, loadPackText, type Doc, type Pack } from "@runlog/rules-schema";
-import { DocView } from "../docs/DocView.tsx";
-import { DocMenu } from "../docs/DocMenu.tsx";
+import { loadPackText, type Pack } from "@runlog/rules-schema";
+import { useDocDrawer } from "../docs/DocDrawer.tsx";
 import { facets, FEATURES, filterCatalog, loadCatalog, publishersOf, type CatalogEntry, type Feature } from "./catalog.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 
@@ -15,9 +14,11 @@ import { useHosted } from "../hosted/HostedProvider.tsx";
  * together, moderated, seeded, so "show me something we can all play"
  * is a checkbox and not a search for the right word.
  *
- * "About" opens the pack's summary, written from the pack: the shape of the
- * game, its tables by name, its modes, what you need, and never its
- * rules. It is what a listing shows before anyone has the pack.
+ * "Docs" opens the pack's paper in the side drawer, on the summary: the
+ * shape of the game, its tables by name, its modes, what you need, and
+ * never its rules. It is what a listing shows before anyone has the pack;
+ * the other documents are the drawer's tabs, where the pack's text may be
+ * read. A priced listing carries only its summary, so that is the one tab.
  */
 export function CatalogView({
   focus = null,
@@ -45,7 +46,9 @@ export function CatalogView({
 }) {
   const [entries, setEntries] = useState<CatalogEntry[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [about, setAbout] = useState<{ id: string; doc: Doc | null; pack: Pack | null } | null>(null);
+  const drawer = useDocDrawer();
+  /** The pack whose paper is being read for the drawer, while it is. */
+  const [reading, setReading] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [categories, setCategories] = useState<Set<string>>(new Set());
   const [features, setFeatures] = useState<Set<Feature>>(new Set());
@@ -71,13 +74,13 @@ export function CatalogView({
     };
   }, [testing]);
 
-  // Arriving on a pack: its About opens once the feed is here, and the search finds it.
+  // Arriving on a pack: its docs open once the feed is here, and the search finds it.
   useEffect(() => {
     if (!focus || !entries) return;
     const e = entries.find((x) => x.id === focus);
     if (!e) return;
     setQ(e.title);
-    void showAbout(e);
+    void showDocs(e);
     // Once, on arrival.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus, entries]);
@@ -107,29 +110,33 @@ export function CatalogView({
     setPublisher(null);
   };
 
-  const showAbout = async (e: CatalogEntry) => {
-    if (about?.id === e.id) {
-      setAbout(null);
-      return;
-    }
-    setAbout({ id: e.id, doc: null, pack: null });
-    // A listing carries its summary ready-made; a priced one has no text to read.
-    if (e.about) {
-      const doc = await e.about();
-      let pack: Pack | null = null;
-      if (e.price === "free") {
-        try {
-          const loaded = loadPackText(await e.load(), "yaml");
-          pack = loaded.ok ? loaded.pack : null;
-        } catch {
-          pack = null;
+  const showDocs = async (e: CatalogEntry) => {
+    if (reading) return;
+    setReading(e.id);
+    try {
+      // A listing carries its summary ready-made; a priced one has no text to read.
+      if (e.about) {
+        const doc = await e.about();
+        let pack: Pack | null = null;
+        if (e.price === "free") {
+          try {
+            const loaded = loadPackText(await e.load(), "yaml");
+            pack = loaded.ok ? loaded.pack : null;
+          } catch {
+            pack = null;
+          }
         }
+        if (pack) drawer.open(pack, "summary");
+        else if (doc) drawer.show(e.title, [{ label: "Summary", what: "The shape of the game, before you have it.", make: () => doc }]);
+        return;
       }
-      setAbout({ id: e.id, doc, pack });
-      return;
+      const loaded = loadPackText(await e.load(), "yaml");
+      if (loaded.ok) drawer.open(loaded.pack, "summary");
+    } catch {
+      // Nothing to read: the button simply comes back.
+    } finally {
+      setReading(null);
     }
-    const loaded = loadPackText(await e.load(), "yaml");
-    setAbout({ id: e.id, doc: loaded.ok ? generateDoc(loaded.pack, "summary") : null, pack: loaded.ok ? loaded.pack : null });
   };
 
   return (
@@ -273,9 +280,8 @@ export function CatalogView({
           <div className="marketGrid">
             {shown.map((e) => {
               const have = mine.has(e.id);
-              const open = about?.id === e.id;
               return (
-                <article key={e.id} className={`panel marketCard ${open ? "about" : ""}`}>
+                <article key={e.id} className="panel marketCard">
                   <header className="marketCardHead">
                     <span className="pill">{e.category}</span>
                     <span className={`muted small ${e.price !== "free" ? "priceTag" : ""}`}>{e.price === "free" ? "free" : e.price.display}</span>
@@ -296,7 +302,7 @@ export function CatalogView({
                       </>
                     )}
                   </p>
-                  {e.description && <p className={`marketBlurb ${open ? "" : "clamp"}`}>{e.description}</p>}
+                  {e.description && <p className="marketBlurb clamp">{e.description}</p>}
                   {e.requires.length > 0 && (
                     <p className="muted small marketNeeds">
                       {e.requires.some((r) => !r.optional) && (
@@ -329,8 +335,8 @@ export function CatalogView({
                   )}
                   <footer className="marketCardFoot">
                     <div className="marketCardFootLeft">
-                      <button className="ghost tiny" onClick={() => void showAbout(e)}>
-                        {open ? "Less" : "About"}
+                      <button className="ghost tiny" disabled={reading === e.id} title="The summary, and the rest of the pack's paper, in the side drawer" onClick={() => void showDocs(e)}>
+                        {reading === e.id ? "Reading…" : "Docs"}
                       </button>
                       {have && <span className="chip cap">In your packs</span>}
                     </div>
@@ -376,8 +382,6 @@ export function CatalogView({
                       </button>
                     )}
                   </footer>
-                  {open && (about.doc ? <DocView doc={about.doc} /> : <p className="muted small">Reading the pack…</p>)}
-                  {open && about.pack && <DocMenu compact pack={about.pack} />}
                 </article>
               );
             })}

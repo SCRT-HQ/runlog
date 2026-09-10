@@ -59,6 +59,9 @@ describe("the catalog card's footer", () => {
     const card = (await screen.findByText("Owned Pack")).closest("article");
     if (!card) throw new Error("no card rendered for the owned pack");
     expect(within(card).getByText("In your packs")).toBeTruthy();
+    // The paper is one button, Docs, which opens the drawer on the summary; nothing unfolds in the card.
+    expect(within(card).getByRole("button", { name: "Docs" })).toBeTruthy();
+    expect(within(card).queryByText("Documents")).toBeNull();
     const openButton = within(card).getByRole("button", { name: "Open" });
 
     fireEvent.click(openButton);
