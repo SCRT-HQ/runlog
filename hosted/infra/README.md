@@ -1,8 +1,8 @@
 # infra
 
 The AWS hosting behind Runlog: the API, the site, and the pages that make
-an address a service. One workspace of the repository, deployed by the
-same pipeline that builds the app.
+an address a service. It is one workspace of the repository, deployed by
+the same pipeline that builds the app.
 
 | Environment | Account | URL |
 | --- | --- | --- |
@@ -15,7 +15,7 @@ A private S3 bucket, a CloudFront distribution reaching it through an Origin
 Access Control, an ACM certificate validated against the Route 53 zone already
 in that account, and A/AAAA alias records.
 
-Two cache policies, which is the part worth understanding. Built assets carry a
+There are two cache policies, which is the part worth understanding. Built assets carry a
 content hash, so a URL can only ever mean one file and is cached for a year.
 The shell, the service worker and the manifest keep their names across every
 release, so they are never cached at the edge: caching those is how a deploy
@@ -23,11 +23,8 @@ reaches nobody while looking perfect from the deploying end.
 
 ## How the app reaches the bucket
 
-The site stack publishes it. The deploy workflow builds the app, lays the
-hosted pages over the build (`hosted/scripts/overlay.ts`), and hands the directory
-to `cdk deploy` as `RUNLOG_APP_DIST`; the stack uploads the hashed assets
-with a year's cache and the shell with none, and invalidates the edge.
-Three SSM parameters, `/runlog/site/{bucket,distribution,domain}`,
+The site stack publishes it; [Publishing the app](#publishing-the-app) below
+says how. Three SSM parameters, `/runlog/site/{bucket,distribution,domain}`,
 still say where the site is for anything else that needs to know.
 
 ## Deploying
@@ -42,7 +39,7 @@ the `npm-ci` and `run-cdk` composite actions.
 | Release published | Deploy prd, from the tag |
 
 Production is reached only through a published release, so it always carries a
-version and has always already been to dev. The release itself sits behind
+version and has already been to dev. The release itself sits behind
 a GitHub Environment named `release`, which requires a reviewer from the
 Core team: a merge deploys dev on its own, and the tag, the release,
 production and the package publish wait for a person. Both deploy jobs sit
@@ -69,12 +66,12 @@ looking correct while production never deployed: a failure with no error
 anywhere.
 
 The release is therefore created with a token minted from the org's GitHub App
-(`CODE_MGR_APP_ID` / `CODE_MGR_APP_PRIVATE_KEY`). A release created by the App
-is created by the App, so `release: published` fires and *Deploy Production*
+(`CODE_MGR_APP_ID` / `CODE_MGR_APP_PRIVATE_KEY`). A release the App creates
+is not `GITHUB_TOKEN`'s, so `release: published` fires and *Deploy Production*
 picks it up.
 
 Tests run with no AWS credentials at all. The stacks are asserted against a
-synthesised template, so they need an account id to render into ARNs and
+synthesized template, so they need an account id to render into ARNs and
 nothing more, which is what keeps them runnable on a fork's pull request.
 Results are published as JUnit XML, the same as the other CDK repositories.
 
@@ -114,7 +111,7 @@ actions already set, so nothing has to be translated between them and this
 repository. `RUNLOG_ENV` and `RUNLOG_DEV_ACCOUNT` are accepted too.
 
 Account ids come from the environment rather than the repository. They are not
-secret, an account id appears in every ARN, but hardcoding them would tie
+secret (an account id appears in every ARN), but hardcoding them would tie
 this repository to one person's AWS.
 
 Zone ids are optional. Without one, CDK looks the zone up, which needs
@@ -147,9 +144,9 @@ gh workflow run deploy-production.yml -R SCRT-HQ/runlog -f tag=v1.4.0
 ## The hosted layer
 
 The app is generic and knows nothing about who runs it. What makes an
-address a service, the terms, the privacy policy, the publisher agreement,
+address a service (the terms, the privacy policy, the publisher agreement,
 pricing, an about page, the open-source notice, `robots.txt`, `sitemap.xml`,
-`security.txt`, the image a shared link unfurls with, lives in `hosted/`
+`security.txt`, the image a shared link unfurls with) lives in `hosted/`
 as templates, and `hosted/scripts/overlay.ts` lays them over the built app at
 publish time with the environment's words filled in (the stage's configuration,
 `hosted`). The app finds `hosted.json` at its root and, when it is there,
@@ -183,7 +180,7 @@ anybody who is not a collaborator.
 
 There is one server, and it is behind `/api` on the site's own domain. It
 exists for a signed-in player's sessions, the packs they choose, and the
-license keys they have typed to open sealed copies, on every device they use: 
+license keys they have typed to open sealed copies, on every device they use,
 and it holds nothing for anyone who has not signed in.
 
 A session is a run with people in it, and its log is append-only in the
@@ -199,7 +196,7 @@ log somebody else has built on.
 The app works without it: from disk, from the public GitHub Pages build, and
 here with nobody signed in.
 
-Same domain rather than a hostname of its own, on purpose. A CloudFront
+It is on the same domain rather than a hostname of its own, on purpose. A CloudFront
 behavior forwards `/api/*` to an HTTP API, so the app fetches relative, the
 Content Security Policy stays `connect-src 'self'`, and there is no CORS, no
 second certificate and no second record.
@@ -274,7 +271,7 @@ The person themselves is one more row: `GET /api/me` answers who is asking
 and creates a profile on first sight (`createdAt`, `lastSeenAt`, and the name
 and email the app reports through `PUT /api/me/profile`, since the token does
 not carry them). `DELETE /api/me` removes every row and object under the
-person; the app keeps its local copies, this is only the server forgetting.
+person; the app keeps its local copies, so this is only the server forgetting.
 
 A sealed copy's text is never sent here, by the app's own rule: the key
 travels (`/api/licenses/{packId}`), the file stays with the player, and the
@@ -299,7 +296,7 @@ does not look like a key means every billing route answers
 (`gates`: dev on, prd off until Stripe is live there) and which prices are
 for sale. To set an environment up:
 
-1. `$env:STRIPE_SECRET_KEY = "sk_…"; npx tsx hosted/scripts/stripe-setup.ts`, 
+1. `$env:STRIPE_SECRET_KEY = "sk_…"; npx tsx hosted/scripts/stripe-setup.ts`,
    idempotent; makes the features, products, prices and the Portal
    configuration and prints the price ids for the stage's configuration.
 2. Register `https://<domain>/api/stripe/webhook` in Stripe for
@@ -344,7 +341,7 @@ buyer. The server parses no pack: the head and summary are the app's word.
 
 A race is several people playing the same seeded mode of the same pack at
 once, each in an ordinary run on their own device; the same seed hands
-everyone the same dice, so the runs agree without ever meeting. The server
+everyone the same dice, so the runs agree without meeting. The server
 holds the race (`POST /api/races`: pack, mode, seed, who started it, a
 six-letter code), an entry per racer (`POST /api/races/join {code}`), and
 the progress each device reports (`PUT /api/races/{id}/entries/me`). The
@@ -446,7 +443,7 @@ the app computed (title, version, the modes by label), and keeps the
 text at `guilds/<id>/packs/<packId>.<format>` in the bucket. This is the
 one place the hosting holds a pack's text for something other than
 handing it back to whoever sent it: the bot reads it to play, and
-nobody, the owner included, is ever served it from here, the profile
+nobody, the owner included, is ever served it from here; the profile
 and `/packs` list what is there, never the text, so a sealed pack's
 words go no further than the drawn lines the bot will post. That is a
 deliberate bend in the rule the rest of the API keeps, and it is confined
@@ -457,7 +454,7 @@ A **run hosted in a server** is a session like any other, owned by the
 host's account (a host is linked, so the run is somebody's), played by
 the bot as the device at the table: `/run start` creates the session
 with the same opening events the app writes, opens a thread,
-mints a live link, and posts and pins the **table card**, 
+mints a live link, and posts and pins the **table card**,
 `lib/handlers/discord/card.ts`, rebuilt from the log on every press. The
 card follows the thread by default: a press that made a move answers by
 turning the pressed message into the move's line and posts a fresh card
@@ -513,7 +510,7 @@ own "Verify" button lands on `GET /api/discord/linked-role`, which sends
 the person into the app to begin signed in.
 
 The plan gate (`serverPlanOf` in `interactions.ts`) is satisfied by the
-claiming account's grant, bought through Stripe, or the `server` flag, 
+claiming account's grant, bought through Stripe, or the `server` flag,
 or, where `discord.serverSku` names a guild-subscription SKU sold through
 Discord's own store, by a live entitlement on the server itself
 (`guildEntitledFrom` in `rest.ts`, one call per press that needs the
@@ -579,14 +576,14 @@ relative base and keep the hash spelling throughout.
 
 ## Monitoring
 
-AWS-native by default, and always on. Both functions run with
+Monitoring is AWS-native by default, and always on. Both functions run with
 `tracing: lambda.Tracing.ACTIVE`, so a request can be opened as an X-Ray
 trace and read as time spent in DynamoDB, S3, Secrets Manager, Stripe and
 WorkOS; the AWS SDK v3 clients each handler constructs are wrapped with
 `captureAWSv3Client`, and the Stripe and WorkOS calls each run inside
 their own subsegment (`hosted/infra/lib/handlers/xray.ts`), since both
 SDKs speak through `fetch` rather than the `http`/`https` modules X-Ray
-patches. A trace never carries a request body, a token or an email: 
+patches. A trace never carries a request body, a token or an email:
 only the route and the method are annotated. The Lambda Insights layer
 (`insightsVersion` on both functions) reports memory, CPU and cold starts
 per invocation, no trace required to see them. Wrapping is a no-op
@@ -637,7 +634,7 @@ carries a handful more: the API's 5xx rate, the handler's p95 duration
 against its own timeout, the handler being throttled at all, DynamoDB being
 throttled at all, CloudFront's 5xx rate, a Discord interaction that was
 not answered (the handler threw, or the job could not fill the deferred
-reply in), and the job function failing outright. All of them, old and new, ring
+reply in), and the job function failing outright. All of them ring
 the same `runlog-<env>-alarms` topic: **subscribing an address to it is a
 step this repository cannot take for you**; do it by hand, once per stage,
 the same as the step already named under Billing.
@@ -645,9 +642,9 @@ the same as the step already named under Billing.
 ## Environments, secrets and variables
 
 Each stage's account and zone ids are secrets on its environments. Not
-because they are secret, an account id is in every ARN, but so they stay
+because they are secret (an account id is in every ARN) but so they stay
 out of the logs, which anyone can read now, and out of a fork's reach;
-they matter only to the copy run at this address, never to someone
+they matter only to the copy run at this address, not to someone
 building the app. The cost is that GitHub masks them, so an ARN in a diff
 prints its account as `***`.
 

@@ -1,16 +1,16 @@
 # TikTok Live
 
-A widget is a web page, and TikTok LIVE Studio can show one; a gift can ask the run for something. Both halves go through the same two pieces the other pages use: the widget address with the live link's token in it, and the ask address with the run's key in it.
+TikTok LIVE Studio can show a widget, and a gift can ask the run for something. Both use the same two pieces as the other pages: the widget address with the live link's token, and the ask address with the run's key.
 
 ## The widget, in LIVE Studio
 
-In LIVE Studio, add a source of the **Link** kind and paste the widget address from the run's **Settings** → **Stream**, copied with **For another machine** ticked so the token travels with it: see [the address that works on a stream](#guide/stream-address). Size it in the scene afterwards; the page adapts to the box it is given. A clear background lets the scene show through.
+Add a source of the **Link** kind and paste the widget address from the run's **Settings** → **Stream**, copied with **For another machine** ticked: see [the address that works on a stream](#guide/stream-address). Size it in the scene afterwards; a clear background lets the scene show through.
 
 If your account may stream from OBS instead (TikTok's rule at the time of writing: a thousand followers, eighteen or over, a region where it is offered; the server address and stream key are at the foot of the LIVE Center's producer page and change every session), the [OBS page](#guide/obs) applies as it is, browser source and all.
 
 ## A gift that asks
 
-TikTok's currency is the gift. To turn one into a press, the run has to be taking asks: in **Settings** → **Stream** → **Chat**, **Take asks** makes the key and shows the address to post to. Then, in [TikFinity](https://tikfinity.zerody.one/), make a gift rule whose action reaches Streamer.bot through TikFinity's own Streamer.bot connection, and in Streamer.bot make the action from [the Streamer.bot page](#guide/streamer-bot): **Fetch URL**, POST, a JSON body of `{ "kind": "roll", "name": "%userName%", "via": "gift" }` for a spin, or `{ "kind": "move", "move": "died", "via": "gift" }` for a move. A small gift can be a spin and a large one a move; the Chat section lists the pack's moves by id.
+To turn a gift into a press, the run has to be taking asks: in **Settings** → **Stream** → **Chat**, **Take asks** makes the key and shows the address to post to. Then in [TikFinity](https://tikfinity.zerody.one/) make a gift rule whose action reaches Streamer.bot through TikFinity's Streamer.bot connection, and in Streamer.bot make the action from [the Streamer.bot page](#guide/streamer-bot): **Fetch URL**, POST, a JSON body of `{ "kind": "roll", "name": "%userName%", "via": "gift" }` for a spin or `{ "kind": "move", "move": "died", "via": "gift" }` for a move. A small gift can be a spin and a large one a move; the Chat section lists the pack's moves by id.
 
 TikFinity also has a webhook action of its own that posts to a URL. Whether it can send the JSON body Runlog wants is a thing to check in the app; the Streamer.bot route is the one this page vouches for. TikFinity's free tier, five actions and events, is enough for a spin and a move.
 

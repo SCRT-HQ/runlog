@@ -1,6 +1,6 @@
 # Contributing
 
-Two quite different things live here, and they have different rules.
+Two different things live here, and they have different rules.
 
 **Writing a pack** needs no knowledge of this codebase at all: see
 [the authoring guide](docs/authoring.md). Packs are data; you never touch
@@ -21,11 +21,45 @@ npm run check:packs  # every shipped pack, --strict
 npm run build        # static output in apps/web/dist
 ```
 
-CI runs exactly those. If they pass locally they pass there.
+CI runs the same commands. If they pass locally they pass there.
+
+`.npmrc` asks npm not to install a package version younger than a week, so
+a compromised release has time to be noticed before it reaches anyone
+here. npm 11.10 and later enforce it; an older npm ignores the line.
+
+The build knows whether there is anything to sign into from one variable:
+
+| | |
+| --- | --- |
+| `VITE_WORKOS_CLIENT_ID` set | "Sign in" in the header. Set by the deploy from the stage environment's `WORKOS_CLIENT_ID` variable. |
+| unset | No sign-in at all, and no request to WorkOS. Local development, the test-suite, a file on disk and the public GitHub Pages build all run this way. |
+
+To work on sign-in locally, put the staging client id in `apps/web/.env.local`
+and run `npm run dev`; `http://localhost:5173/` is a registered callback. To
+have an API as well, set `VITE_RUNLOG_API_ORIGIN` there to a hosted Runlog
+(the dev site, say): the dev server proxies `/api` and `/ws` to it, so live
+links, widgets by link, sync and purchases work at localhost as they do
+hosted, against that site's data. `apps/web/.env.example` shows both.
+Anything else the app talks to has to be named in the Content Security Policy
+in `hosted/infra/lib/site-stack.ts`, and today that is `api.workos.com` alone.
 
 ---
 
 ## The shape of the thing
+
+```
+packages/
+  rules-schema/   The contract. Zod definitions, the published JSON Schema, the linter.
+  engine/         Pure TypeScript. Events, reducer, targeting, triggers. No DOM.
+  cli/            validate · bundle · test · init · sign · release. What a designer runs in CI.
+apps/
+  web/            The React app.
+packs/
+  demo/           The reference pack. Fictional.
+  sketches/       The rest that ship, each unlike the others on purpose.
+docs/             The contracts and walkthroughs, indexed by reader in docs/README.md.
+hosted/           The hosting: what makes one address a service. See hosted/README.md.
+```
 
 ```
 pack (YAML/JSON, validated)
@@ -42,8 +76,8 @@ pack (YAML/JSON, validated)
   autocompletes cannot drift from what the app enforces. `lint.ts` catches what
   a schema cannot: ranges that do not tile, dangling references, counters
   nothing reads.
-- **`packages/engine`** is pure TypeScript. No DOM, no React, no `Math.random`
-  - a random source is always passed in, so nothing can accidentally become
+- **`packages/engine`** is pure TypeScript. No DOM, no React, no `Math.random`;
+  a random source is always passed in, so nothing can accidentally become
   unreproducible.
 - **`apps/web`** is the only place allowed to know it is in a browser.
 
@@ -56,6 +90,13 @@ angles, which is why they are cheap.
 If you find yourself wanting to mutate state directly, the answer is almost
 always a new event.
 
+### Packs are data, never code
+
+The action vocabulary is closed and small, the predicates are a whitelist,
+and there is no scripting and no `eval` anywhere: packs come from strangers.
+If a pack needs something the actions cannot express, it writes a `note`: an
+instruction the player carries out by hand and ticks off.
+
 ### Execution can be interrupted
 
 A pack may need a die roll or a judgment mid-way through resolving something.
@@ -65,14 +106,14 @@ replayed. Answer keys are derived from the position in the action tree, so a
 re-run asks the same questions in the same order.
 
 The consequence that matters: **an interrupted block commits nothing.** Events
-land only when the whole thing finishes. Half-resolved never reaches history.
+land only when the whole thing finishes.
 
 ---
 
 ## What tests are for here
 
 Tests in this repo are expected to say *why* they exist. A test named "works
-correctly" that asserts an implementation detail is worse than no test, it
+correctly" that asserts an implementation detail is worse than no test: it
 freezes an accident and tells the next person nothing.
 
 Most of the tests worth reading came from a real failure. Some examples:
@@ -95,16 +136,35 @@ say in a comment what it was.
 
 Three tests exist to stop whole classes of drift, and they will fail loudly:
 
-- **`domain-neutrality.test.ts`**, no identifier in the published schema may
+- **`domain-neutrality.test.ts`**: no identifier in the published schema may
   name one craft. Prose examples may name any domain; a *property name* may
   not, because a pack author in another field then has to write `afterCompose`
   about a deadlift.
-- **`license-boundary.test.ts`**, nothing git tracks may name the private game
-  or cite a particular rulebook as a source. See the licensing note in the
-  README.
+- **`license-boundary.test.ts`**: nothing git tracks may name the private game
+  or cite a particular rulebook as a source. See
+  [Licensing](#licensing-and-what-is-deliberately-absent) below.
 - **`schema.test.ts` / `docs.test.ts`**: the published schema and the
   generated reference must match what the code actually does. Run
   `npm run schema:emit` and `npm run docs:emit` and commit the results.
+
+---
+
+## Licensing, and what is deliberately absent
+
+This repository is a general engine. It contains no particular game, by
+design.
+
+This was built alongside a game whose rulebook forbids reproducing or
+adapting it, so the architecture answers that structurally rather than
+hopefully: the engine here is general, any transcription lives in a
+gitignored private pack, and the two only ever meet in one person's browser.
+`tests/license-boundary.test.ts` enforces it against what git actually tracks.
+
+Packs carry their own license, and the app honors it: a pack marked
+`redistributable: false` never has its text embedded in an export meant for
+anyone else, a shared log records *which* results came up without quoting what
+they say. A copy you keep for yourself quotes them in full, because personal
+use is what such a license allows.
 
 ---
 
@@ -120,9 +180,23 @@ Three tests exist to stop whole classes of drift, and they will fail loudly:
   the environment, honor-system checks: show the player what is in tension and
   let them rule on it. These games want human judgment, and a tool that
   silently decides is one people stop trusting.
-- **Show the working.** Anything derived, a targeting result especially, 
-  carries its derivation, and the UI renders it. A verdict with no visible
-  reasoning is the thing players distrust most.
+- **Show the working.** Anything derived (a targeting result especially)
+  carries its derivation, and the UI renders it.
+
+### How it looks
+
+The design has two voices. The pack's author speaks in a book serif, Literata,
+because the rules are a rulebook. The player speaks in the same face in italic,
+because a name is a note in the margin. The referee (the app) speaks in IBM
+Plex Mono, because it keeps a ledger and its figures have to line up. Both faces
+ship in the bundle: the hosting's Content Security Policy allows no font host,
+and the worker precaches them like everything else.
+
+Two accents have one job each: celadon is the referee's "fine", kiln amber is
+consequence. Four looks (lights down, daylight, ember and glaze) share every
+other decision and differ only in the ground, chosen from the header and
+remembered on this machine. With no choice made, the operating system's
+preference picks between the first two.
 
 ---
 
@@ -218,9 +292,7 @@ npm test
 
 ## Deliberately not built
 
-Networked multiplayer: co-op here is same-room, pass-the-device. AI narration.
-Arbitrary scripting in packs. A pack registry: a URL and a file are enough
-until the format has proven itself.
+AI narration. Arbitrary scripting in packs: the action vocabulary is closed,
+and a pack that needs more writes a `note` for the player to carry out.
 
-If you want one of these, open an issue and say what it unlocks. They are
-absent on purpose, but none of them is sacred.
+If you want one of these, open an issue and say what it unlocks.

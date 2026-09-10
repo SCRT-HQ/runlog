@@ -2,17 +2,17 @@
 
 ## The endpoint
 
-Back on **General Information**, set **Interactions Endpoint URL** to `https://<domain>/api/discord/interactions` and save. Discord sends a ping; the API answers pong; the field turns green. If it does not: the stage is not deployed with the key, the key is wrong, or the domain is not the stage's. `curl -i` against the address answers `401 discord is not configured here` in the first case and `401 bad signature` to anything not from Discord in the others.
+Back on **General Information**, set **Interactions Endpoint URL** to `https://<domain>/api/discord/interactions` and save. Discord sends a ping; the API answers pong; the field turns green. If it does not, the stage is not deployed with the key, the key is wrong, or the domain is not the stage's. `curl -i` against the address answers `401 discord is not configured here` in the first case and `401 bad signature` to anything not from Discord in the others.
 
 ## Installation
 
 **Installation** tab:
 
 - **Install Link**: Discord Provided Link.
-- **Installation Contexts**: Guild Install only. The bot hosts runs in servers; it has nothing to do in a person's DMs.
+- **Installation Contexts**: Guild Install only; the bot has nothing to do in a person's DMs.
 - **Default Install Settings → Guild Install**: scopes `applications.commands` and `bot`; permissions View Channels, Send Messages, Send Messages in Threads, Create Public Threads, Embed Links, Read Message History, Manage Messages.
 
-Those are exactly the permissions the setup script (below) puts in the install link it prints, and no more: the bot opens a public thread per run, posts and pins the table card in it, and posts a line per move. Manage Messages is for the pin. It never closes a thread (Discord does, after a day idle), never reads members' messages and never manages people. Three more are asked for only when a server asks for what they are for: Manage Roles and Manage Channels, when it runs `/setup make-role` or `/setup make-channel`, and Create Private Threads, when a run is started with `private:true` or the server has set `/setup threads kind:private`. Each command answers with a link that adds the one it needs, and a server that never uses them never grants any.
+Those are the permissions the setup script puts in the install link it prints, and no more: the bot opens a public thread per run, posts and pins the table card in it, and posts a line per move. Manage Messages is for the pin. It never closes a thread (Discord does, after a day idle), never reads members' messages and never manages people. Three more are asked for only when a server uses what needs them: Manage Roles and Manage Channels, when it runs `/setup make-role` or `/setup make-channel`, and Create Private Threads, when a run is started with `private:true` or the server has set `/setup threads kind:private`. Each command answers with a link that adds the one it needs, and a server that does not use them grants none.
 
 **OAuth2** tab: nothing, unless you set up [linked roles](#guide/bot-linked-roles). The bot itself uses no Discord OAuth; linking a Runlog account to a Discord account goes the other way, through a code the bot mints.
 
@@ -27,7 +27,7 @@ $env:DISCORD_GUILD_ID = "<your test server's id>"   # development only
 npx tsx hosted/scripts/discord-setup.ts
 ```
 
-The script registers the command list the handler answers (`hosted/infra/lib/handlers/discord/commands.ts`), so the two cannot drift, and prints the install link. With `DISCORD_GUILD_ID` set, the commands appear in that one server at once; without it they are registered for every server, which Discord takes up to an hour to show. Register for every server once the bot is meant for everyone. Running the script again replaces the list, so a retired command disappears, and a release that changes the commands needs it run again.
+The script registers the command list the handler answers (`hosted/infra/lib/handlers/discord/commands.ts`), so the two cannot drift, and prints the install link. With `DISCORD_GUILD_ID` set, the commands appear in that one server at once; without it they are registered for every server, which Discord takes up to an hour to show. Running the script again replaces the list, so a retired command disappears, and a release that changes the commands needs it run again.
 
 ## Try it
 
