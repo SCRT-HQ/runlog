@@ -23,7 +23,7 @@ vi.mock("../sync/usePlan.ts", () => ({ usePlan: () => ({ gates: false, entitleme
 const pack = {
   id: "demo",
   vocabulary: { unit: { one: "Room", many: "Rooms" }, subject: { one: "Track", many: "Tracks" }, run: { one: "Run", many: "Runs" } },
-  moves: { playElixir: { label: "Play an Elixir", when: "anytime", do: [] } },
+  moves: { salvage: { label: "Salvage a Piece", when: "anytime", do: [] } },
   tables: {},
 } as unknown as Pack;
 

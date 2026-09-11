@@ -187,14 +187,14 @@ answer is the run's last thirty reactions, oldest first, which the run
 route above also carries as `reactions`. The socket rings on each one.
 An ended run answers 410.
 
-## Asks: `POST /api/public/runs/<runId>/asks?k=<askKey>`
+## Asks: `POST` or `GET /api/public/runs/<runId>/asks?k=<askKey>`
 
 The one thing outside the table that may move the run, and it may only
 ask. A chat command, a channel-point redeem, a button on a stream deck
-posts a JSON body and the run's host answers it: the ask lands in a tray
-at the table, where the host presses Accept or Decline, or, where the host
-has said so, the table takes it the moment it lands. Accepted, it becomes
-an ordinary move in the log, stamped with who asked and how.
+sends the ask and the run's host answers it: it lands in a tray at the
+table, where the host presses Accept or Decline, or, where the host has
+said so, the table takes it the moment it lands. Accepted, it becomes an
+ordinary move in the log, stamped with who asked and how.
 
 ```json
 { "kind": "move", "move": "died", "name": "viewer_42", "via": "channel-points" }
@@ -204,11 +204,32 @@ an ordinary move in the log, stamped with who asked and how.
 `kind: "move"` takes a move the pack offers at any time, by its id in the
 pack; `kind: "roll"` rolls the table the run is waiting on, if it is
 waiting on one. `name` (40 characters) and `via` (32) are for the log and
-the tray, as given. The answer is the run's open asks, oldest first:
+the tray, as given.
+
+The same four fields may travel as query parameters instead, for a tool
+that cannot post a body. Streamer.bot's Fetch URL is the case this exists
+for: it sends a `GET` and nothing else.
+
+```
+GET /api/public/runs/<runId>/asks?k=<askKey>&kind=move&move=died&name=viewer_42&via=channel-points
+```
+
+The answer carries `ok`, one sentence in `say` written for a chat line,
+the new ask's `id`, and the run's open asks, oldest first:
 
 ```json
-{ "asks": [{ "id": "3f9a1c0b2d4e", "kind": "move", "move": "died", "name": "viewer_42", "via": "channel-points", "at": "2026-09-09T20:14:03.120Z" }] }
+{
+  "ok": true,
+  "say": "viewer_42 asked for died. The table answers next.",
+  "ask": "3f9a1c0b2d4e",
+  "asks": [{ "id": "3f9a1c0b2d4e", "kind": "move", "move": "died", "name": "viewer_42", "via": "channel-points", "at": "2026-09-09T20:14:03.120Z" }]
+}
 ```
+
+`say` is the whole of what a bot needs to put in chat, refusals included,
+so nothing has to branch on a status to be useful. It says what happened,
+never why the rule exists: a rate-limited press answers "Too quick.
+viewer_42 can ask again in 11 seconds."
 
 | Status | Meaning |
 | --- | --- |
@@ -217,6 +238,12 @@ the tray, as given. The answer is the run's open asks, oldest first:
 | 422 | `kind` is not `move` or `roll`, or a `move` has no id. |
 | 429 | Too many: one ask a name every twenty seconds, thirty a minute for the run. |
 
+Those are the `POST` form's codes. **The `GET` form always answers 200**,
+refusals included, with the verdict in `ok` and the reason in `say`. A
+tool that can only fetch a URL tends to treat any other status as a failed
+action and stop, which would lose the one sentence worth having; the
+codes are kept where a client can read them.
+
 **The key is not the live token.** The token is in every widget address
 and so in a streaming scene; a leaked address must let strangers watch,
 never press. The key is minted by the host under **Settings → Stream →
@@ -224,9 +251,12 @@ Chat**, shown once with the full address to post to, and revoked on its
 own; the live link stays. Where plans are on, asks are part of Plus, like
 the link they ride beside.
 
-Whether an ask was answered arrives on the socket as the `asked` gesture
-above, so a bot can tell the channel "the forfeit is in" or "no such move
-right now". A declined ask carries a `reason` in a few words.
+Whether an ask was *taken* is a later question than whether it was
+accepted here, under either policy: the host's device does the acting.
+`say` reports that the ask is in, and the verdict arrives on the socket as
+the `asked` gesture above, so a bot can tell the channel "the forfeit is
+in" or "no such move right now". A declined ask carries a `reason` in a
+few words.
 
 ## Politeness
 
