@@ -859,18 +859,45 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     // The key is not the live token on purpose: whoever has a widget address may watch, never press.
     if (!found || !k || !found.meta.askKeyHash || hashToken(k) !== found.meta.askKeyHash) return said(403, "This run is not taking asks, or that is not its key.");
     if (found.meta.deletedAt || found.meta.endedAt) return said(410, "This run is over.");
-    const kind = field("kind");
-    // No kind is a question, not a press: what may be asked for at this
-    // moment. It is what a `!moves` command reads, what the run's own Chat
-    // settings list from, and what makes the bare address harmless.
-    if (!kind) {
-      const held = await store.getSnapshot(id);
+    /**
+     * One field naming the whole ask, for a tool that has one thing to send.
+     *
+     * A channel-point reward carries its own name and little else worth
+     * sending, so `ask=%rewardName%` lets one action serve every reward:
+     * the word roll is a roll, anything else is a move, named by its id or
+     * by the label the pack gives it. Without this a streamer builds one
+     * action per move and edits every one of them when a pack changes.
+     */
+    const asked = field("ask").trim();
+    const kind = asked ? (/^roll$/i.test(asked) ? "roll" : "move") : field("kind");
+    // Nothing asked for at all is a question rather than a press: what may
+    // be asked for at this moment. It is what a `!moves` command reads,
+    // what the run's own Chat settings list from, and what makes a bare
+    // address harmless.
+    const held = kind === "move" || !kind ? await store.getSnapshot(id) : null;
+    if (!kind) return (() => {
       const menu = askMenuOf(held?.snapshot);
       return said(200, sayMenu(menu), { roll: menu.roll, moves: menu.moves });
-    }
+    })();
     if (!ASK_KINDS.has(kind)) return said(422, "Say what to ask for: a roll, or a move by its id.");
-    const move = field("move");
-    if (kind === "move" && !ASK_ID.test(move)) return said(422, "That move needs an id, the one the run's Chat settings list.");
+    // A named move is matched against what the table is offering, by id
+    // first and then by label, which is what a reward is named after. An
+    // id that matches nothing on offer is still passed through: the menu is
+    // only as fresh as the last snapshot, and the table itself is the one
+    // that knows, so a stale list must not refuse a move that is really there.
+    const menu = askMenuOf(held?.snapshot);
+    const named = asked.toLowerCase();
+    const byLabel = kind === "move" && asked ? menu.moves.filter((m) => m.label.toLowerCase() === named) : [];
+    const move = !asked
+      ? field("move")
+      : (menu.moves.find((m) => m.id === asked)?.id ??
+        (byLabel.length === 1 ? byLabel[0]!.id : byLabel.length > 1 ? "" : ASK_ID.test(asked) ? asked : ""));
+    if (kind === "move" && byLabel.length > 1) return said(422, `More than one move is called ${asked}. Name it by its id instead.`);
+    if (kind === "move" && !ASK_ID.test(move)) {
+      // Named after nothing the run has: the refusal is the menu, so chat
+      // learns what there is rather than only what there is not.
+      return said(422, asked ? `Nothing here is called ${asked}. ${sayMenu(menu)}` : "That move needs an id, the one the run's Chat settings list.");
+    }
     const name = field("name").trim().slice(0, 40);
     const via = field("via").trim().slice(0, 32);
     const ref = field("ref").trim().slice(0, 64);

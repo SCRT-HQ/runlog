@@ -231,6 +231,30 @@ so nothing has to branch on a status to be useful. It says what happened,
 never why the rule exists: a rate-limited press answers "Too quick.
 viewer_42 can ask again in 11 seconds."
 
+### Naming the whole ask in one field
+
+A tool often has exactly one thing worth sending. A channel-point reward
+carries its own name and little else, so `ask` takes the place of `kind`
+and `move` together:
+
+```
+GET /api/public/runs/<runId>/asks?k=<askKey>&ask=Salvage%20a%20Piece&name=viewer_42
+```
+
+The word `roll`, in any case, is a roll. Anything else is a move, matched
+against what the table is offering: by id first, then by the label the
+pack gives it, ignoring case. A name matching more than one move is
+refused and asks for the id. A name matching nothing is refused with the
+menu below, so chat is told what there is rather than only what there is
+not.
+
+An id that matches nothing on offer is still sent on. The menu is only as
+fresh as the last snapshot, and the table is the one that knows, so a
+stale list must never refuse a move that is really there.
+
+This is what lets one action serve every reward: name the reward after the
+move, and send `ask=%rewardName%`.
+
 ### What may be asked for
 
 The same address with **no `kind`** is a question rather than a press:
