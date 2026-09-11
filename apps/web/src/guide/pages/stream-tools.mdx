@@ -18,7 +18,7 @@ The same four fields may travel in the address instead, as `?k=&kind=&move=&name
 
 The same address with no `kind` at all is a question instead: it answers with what may be asked for at that moment, `roll` and `moves` by id and label, and a `say` that lists them in the pack's own words. A press may also carry a `ref` of your own, a redemption or message id, and a press whose `ref` has been seen before answers as the first one did rather than pressing twice.
 
-Either way the answer carries `ok` and `say`: one sentence written for a chat line, whether the ask is in or why it is not. The key is made under the run's **Settings** → **Stream** → **Chat**, and is not the live link's token. Whether the table took it comes later, on the socket, as an `asked` gesture. One a name every twenty seconds, thirty a minute for the run.
+Either way the answer carries `ok` and `say`: one sentence written for a chat line, whether the ask is in or why it is not. The key is made under the run's **Settings** → **Stream** → **Chat**, and is not the live link's token. The same panel makes a pair of keys for the account instead, which outlive any one run: `/api/public/stream/asks?k=<pressKey>` presses whichever run is taking asks, and `/api/public/stream/metrics?k=<watchKey>` and `wss://runlog.scrthq.com/ws?k=<watchKey>` read it. Whether the table took it comes later, on the socket, as an `asked` gesture. One a name every twenty seconds, thirty a minute for the run.
 
 ## The fields, in full
 
