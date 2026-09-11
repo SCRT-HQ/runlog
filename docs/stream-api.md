@@ -12,7 +12,7 @@ at its own address.
 
 For the widgets that draw these numbers, and how to put them in OBS,
 Streamlabs, StreamElements and Streamer.bot, see the guide, from
-[Streaming a run](https://runlog.scrthq.com/play/guide/streaming) on.
+[Streaming a run](https://runlog.scrthq.com/guide/streaming) on.
 
 ## Getting a link
 
@@ -449,5 +449,5 @@ do. Nothing here writes to the run except an ask, and an ask only asks.
 The widgets under **Stream** in the run's side column draw the same
 snapshot, on pages of their own, and **Everything, stacked** puts them in
 one column for a single browser source. See the guide's
-[Streaming a run](https://runlog.scrthq.com/play/guide/streaming) for those,
+[Streaming a run](https://runlog.scrthq.com/guide/streaming) for those,
 and the pages after it for the apps.

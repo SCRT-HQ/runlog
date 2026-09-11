@@ -6,21 +6,27 @@ import { APP_SEGMENT, baseOf } from "./welcome/route.ts";
  * Inside the app every page is named the way it always was, as a hash:
  * `#guide/streaming`, `#profile/servers`, `#run/<id>` for a run, and so
  * on; the parsers beside each screen read that form. On the hosted copy,
- * which is built to live at one root, the same page is spelled as a path
- * under `play`: `/play/guide/streaming`. A reload lands on it, a link to
+ * which is built to live at one root, the same page is spelled as a path:
+ * `/guide/streaming`, `/packs`, `/play`. A reload lands on it, a link to
  * it says where it goes, and the old hash spelling still opens it, because
  * the hash is read first and rewritten on the way in. A copy opened from
  * disk, or served from a subpath on a static host, cannot resolve a path
  * to its files and keeps the hash spelling throughout.
+ *
+ * The sections hung under one `play/` segment until every one of them
+ * wanted an address a person could read and type. They sit at the root
+ * now, `play` among them, meaning the run in hand. The old spelling is
+ * still read, so a bookmark keeps working and corrects itself.
  */
 
 /** Whether this build lives at a fixed root and so may spell pages as paths: the hosted build is made with an absolute base; a file or a static host is not. */
 export const PATHS_ON = import.meta.env.BASE_URL.startsWith("/") && import.meta.env.MODE !== "test";
 
 /** The first segment of every page that has a path spelling. Anything else in a hash stays a hash: a shared pack, a race code. */
-const HEADS = new Set(["guide", "profile", "catalog", "run", "widget", "dock", "link", "create"]);
+const HEADS = new Set(["play", "packs", "guide", "profile", "catalog", "run", "widget", "dock", "link", "create"]);
 
-const root = (base: string) => `${base.replace(/\/+$/, "")}/${APP_SEGMENT}`;
+/** Where the sections hang: the base itself, since each one is a section of its own now. */
+const root = (base: string) => base.replace(/\/+$/, "");
 
 /** Where the app is served from: the configured base where paths are on, the page's own directory otherwise. */
 export function appBase(href: string): string {
@@ -34,9 +40,21 @@ export function appBase(href: string): string {
  */
 export function addressOf(loc: { pathname: string; search: string; hash: string }, base: string | null = PATHS_ON ? import.meta.env.BASE_URL : null): string {
   if (base) {
+    // A hash naming a page wins over the path. It is the more specific
+    // thing the address carries, and it is what an old link and the
+    // welcome page's own hand-off both put there.
+    const named = /^#([a-z]+)(?:\/|$)/.exec(loc.hash);
+    if (named && HEADS.has(named[1]!)) return loc.hash;
     const under = `${root(base)}/`;
     if (loc.pathname.startsWith(under)) {
-      const rest = loc.pathname.slice(under.length).replace(/\/+$/, "");
+      let rest = loc.pathname.slice(under.length).replace(/\/+$/, "");
+      // Every section used to hang under `play/`. Those addresses are read
+      // as what they meant, and whoever lands on one writes the address
+      // back in the spelling it has now.
+      if (rest.startsWith(`${APP_SEGMENT}/`)) {
+        const after = rest.slice(APP_SEGMENT.length + 1);
+        if (HEADS.has(after.split("/")[0] ?? "")) rest = after;
+      }
       const head = rest.split("/")[0] ?? "";
       if (HEADS.has(head)) return `#${rest}${loc.search}`;
     }
@@ -50,7 +68,8 @@ export function addressOf(loc: { pathname: string; search: string; hash: string 
  * address. A hash with no path spelling is returned as it is.
  */
 export function hrefFor(hash: string, base: string | null = PATHS_ON ? import.meta.env.BASE_URL : null): string {
-  if (!hash) return base ? root(base) : "";
+  // Nothing said is the run: the app's front door, and a section like the rest.
+  if (!hash) return base ? `${root(base)}/${APP_SEGMENT}` : "";
   if (!base) return hash;
   const m = /^#([a-z]+)((?:\/[^?#]*)?)(\?.*)?$/.exec(hash);
   if (!m || !HEADS.has(m[1]!)) return hash;
