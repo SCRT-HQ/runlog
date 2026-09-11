@@ -366,6 +366,7 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
   const people = new Map<string, Map<string, Person>>();
   const counters = new Map<string, number>();
   const apiKeys = new Map<string, { sub: string; key: ApiKey; hash: string }>();
+  const streamKeys = new Map<string, { sub: string; kind: "watch" | "press"; hash: string; madeAt: string }>();
   const nonces = new Set<string>();
   const claims = new Map<string, Claim>();
   const k = (sub: string, id: string) => `${sub}/${id}`;
@@ -425,7 +426,9 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
           .map((s): SessionPointer => ({
             id: s.meta.id, role: s.members.find((m) => m.sub === sub)!.role, packId: s.meta.packId, packVersion: s.meta.packVersion,
             ownerSub: s.meta.ownerSub, updatedAt: s.meta.updatedAt, seq: s.meta.seq,
-            ...(s.meta.name ? { name: s.meta.name } : {}), ...(s.meta.deletedAt ? { deletedAt: s.meta.deletedAt } : {}),
+            ...(s.meta.packTitle ? { packTitle: s.meta.packTitle } : {}),
+            ...(s.meta.name ? { name: s.meta.name } : {}), ...(s.meta.endedAt ? { endedAt: s.meta.endedAt } : {}),
+            ...(s.meta.deletedAt ? { deletedAt: s.meta.deletedAt } : {}),
           })),
         licenses: [...licenses.entries()].filter(([key]) => key.startsWith(`${sub}/`)).map(([, v]) => v.meta),
       };
@@ -603,6 +606,21 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
       const n = (counters.get(key) ?? 0) + 1;
       counters.set(key, n);
       return n;
+    },
+    async setStreamKey(sub, kind, hash, at) {
+      streamKeys.set(`${sub}/${kind}`, { sub, kind, hash, madeAt: at });
+    },
+    async streamKeyOwner(hash) {
+      const x = [...streamKeys.values()].find((y) => y.hash === hash);
+      return x ? { sub: x.sub, kind: x.kind } : null;
+    },
+    async streamKeys(sub) {
+      const out: { watch?: { madeAt: string }; press?: { madeAt: string } } = {};
+      for (const x of streamKeys.values()) if (x.sub === sub) out[x.kind] = { madeAt: x.madeAt };
+      return out;
+    },
+    async clearStreamKey(sub, kind) {
+      return streamKeys.delete(`${sub}/${kind}`);
     },
     async createApiKey(sub, key, hash) {
       apiKeys.set(key.id, { sub, key, hash });
@@ -1415,6 +1433,51 @@ describe("who is asking", () => {
     expect(menu.body["say"]).toContain("Salvage a Piece");
     // Reading the menu is not a press: nothing is queued by it.
     expect((await call(request("GET", "/api/sessions/01RUN/asks"), d)).body["asks"]).toHaveLength(0);
+  });
+
+  it("mints an account's two stream keys, shows each once, and kills the one it replaces", async () => {
+    let minted = 0;
+    const d = deps(memoryStore(), { token: () => `key${(minted += 1)}` });
+    // Nothing until asked for, and the server never hands a key back twice.
+    expect((await call(request("GET", "/api/me/stream-keys"), d)).body).toEqual({ keys: {} });
+    const watch = await call(request("POST", "/api/me/stream-keys", { body: { kind: "watch" } }), d);
+    expect(watch.body["key"]).toBe("key1");
+    const press = await call(request("POST", "/api/me/stream-keys", { body: { kind: "press" } }), d);
+    expect(press.body["key"]).toBe("key2");
+    const listed = await call(request("GET", "/api/me/stream-keys"), d);
+    expect(listed.body["keys"]).toMatchObject({ watch: { madeAt: expect.any(String) as unknown as string }, press: { madeAt: expect.any(String) as unknown as string } });
+    expect(JSON.stringify(listed.body)).not.toContain("key1");
+    // Minting again replaces: the old one opens nothing from that moment.
+    await call(request("POST", "/api/me/stream-keys", { body: { kind: "watch" } }), d);
+    expect((await call(request("GET", "/api/public/stream/runs?k=key1", { token: null }), d)).body["ok"]).toBe(false);
+    expect((await call(request("GET", "/api/public/stream/runs?k=key3", { token: null }), d)).body["ok"]).toBe(true);
+    // A kind that is not one of the two is refused, and either can be killed on its own.
+    expect((await call(request("POST", "/api/me/stream-keys", { body: { kind: "both" } }), d)).status).toBe(422);
+    expect((await call(request("DELETE", "/api/me/stream-keys?kind=press"), d)).body).toEqual({ keys: { watch: { madeAt: expect.any(String) as unknown as string } } });
+  });
+
+  it("lists the runs a watch key may draw, newest first, and says which is in play", async () => {
+    let minted = 0;
+    const d = deps(memoryStore(), { token: () => `key${(minted += 1)}` });
+    const watch = await call(request("POST", "/api/me/stream-keys", { body: { kind: "watch" } }), d);
+    const k = String(watch.body["key"]);
+    // A run nobody has shared is nobody's to watch, so it is not on the list.
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    expect((await call(request("GET", `/api/public/stream/runs?k=${k}`, { token: null }), d)).body["runs"]).toEqual([]);
+    await call(request("POST", "/api/sessions/01RUN/public"), d);
+    const listed = await call(request("GET", `/api/public/stream/runs?k=${k}`, { token: null }), d);
+    expect(listed.body["ok"]).toBe(true);
+    expect(listed.body["runs"]).toMatchObject([{ id: "01RUN", packTitle: expect.any(String) as unknown as string }]);
+    // The run in play is named on its own, so a widget with no choice made still knows what to draw.
+    expect(listed.body["inPlay"]).toBe("01RUN");
+    // A press key is not a watch key: it opens nothing here.
+    const press = await call(request("POST", "/api/me/stream-keys", { body: { kind: "press" } }), d);
+    expect((await call(request("GET", `/api/public/stream/runs?k=${String(press.body["key"])}`, { token: null }), d)).body["ok"]).toBe(false);
+    // A run that is over leaves the list: a scene should not go on drawing last night's.
+    await call(request("PATCH", "/api/sessions/01RUN", { body: { ended: true } }), d);
+    const after = await call(request("GET", `/api/public/stream/runs?k=${k}`, { token: null }), d);
+    expect(after.body["runs"]).toEqual([]);
+    expect(after.body["inPlay"]).toBeNull();
   });
 
   it("says what became of an ask, by the id the press answered with", async () => {

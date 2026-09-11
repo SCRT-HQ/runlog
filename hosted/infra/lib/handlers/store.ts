@@ -261,6 +261,22 @@ export class SeqConflict extends Error {
   }
 }
 
+/**
+ * Which of an account's two stream keys this is.
+ *
+ * They are kept apart on purpose. A watch key is in every widget address
+ * and so in a streaming scene, where an address that gets out should let
+ * strangers watch and never press; a press key is only ever in a bot's
+ * settings. One leaking must not become the other.
+ */
+export type StreamKeyKind = "watch" | "press";
+
+/** What an account's stream keys look like to their owner: that they exist, and since when. */
+export interface StreamKeys {
+  watch?: { madeAt: string };
+  press?: { madeAt: string };
+}
+
 /** A license key's row, less the key. `id` is the pack the key opens. */
 export interface LicenseMeta extends Entry {
   /** The seller's reference from the sealed file's header, if it had one. */
@@ -347,6 +363,18 @@ export interface Store {
   listPeople(sub: string): Promise<Person[]>;
   /** How many invitations this person sent in the current hour, after counting this one. */
   countInvite(sub: string, at: string): Promise<number>;
+  /**
+   * Put one of an account's stream keys in place, replacing whatever it
+   * had. The old one stops working the moment this returns: a key is
+   * regenerated exactly when its holder wants the old one dead.
+   */
+  setStreamKey(sub: string, kind: StreamKeyKind, hash: string, at: string): Promise<void>;
+  /** Whose key this is, and which of the two; null for a key that is not one. */
+  streamKeyOwner(hash: string): Promise<{ sub: string; kind: StreamKeyKind } | null>;
+  /** What this account has, never the keys themselves: the server keeps only hashes. */
+  streamKeys(sub: string): Promise<StreamKeys>;
+  /** Kill one key. False when there was none to kill. */
+  clearStreamKey(sub: string, kind: StreamKeyKind): Promise<boolean>;
   createApiKey(sub: string, key: ApiKey, hash: string): Promise<void>;
   listApiKeys(sub: string): Promise<ApiKey[]>;
   revokeApiKey(sub: string, id: string): Promise<boolean>;
@@ -1006,6 +1034,46 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
         ReturnValues: "UPDATED_NEW",
       }));
       return Number(out.Attributes?.["n"] ?? 1);
+    },
+
+    async setStreamKey(sub, kind, hash, at) {
+      const had = await get(sub, `STREAMKEY#${kind}`);
+      await ddb.send(new PutCommand({ TableName: table, Item: { pk: pk(sub), sk: `STREAMKEY#${kind}`, kind: "streamkey", which: kind, hash, madeAt: at } }));
+      await ddb.send(new PutCommand({ TableName: table, Item: { pk: `STREAMKEY#${hash}`, sk: "KEY", kind: "streamkeyhash", sub, which: kind } }));
+      // The one it replaced stops opening anything, rather than lingering as a second way in.
+      if (had && String(had["hash"]) !== hash) await ddb.send(new DeleteCommand({ TableName: table, Key: { pk: `STREAMKEY#${String(had["hash"])}`, sk: "KEY" } }));
+    },
+
+    async streamKeyOwner(hash) {
+      const row = await get_(`STREAMKEY#${hash}`, "KEY");
+      if (!row) return null;
+      const which = row["which"];
+      if (which !== "watch" && which !== "press") return null;
+      return { sub: String(row["sub"]), kind: which };
+    },
+
+    async streamKeys(sub) {
+      const out = await ddb.send(new QueryCommand({
+        TableName: table,
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :k)",
+        ExpressionAttributeValues: { ":pk": pk(sub), ":k": "STREAMKEY#" },
+      }));
+      const keys: StreamKeys = {};
+      for (const row of (out.Items ?? []) as Row[]) {
+        const which = row["which"];
+        if (which === "watch" || which === "press") keys[which] = { madeAt: String(row["madeAt"] ?? "") };
+      }
+      return keys;
+    },
+
+    async clearStreamKey(sub, kind) {
+      const row = await get(sub, `STREAMKEY#${kind}`);
+      if (!row) return false;
+      await ddb.send(new BatchWriteCommand({ RequestItems: { [table]: [
+        { DeleteRequest: { Key: { pk: pk(sub), sk: `STREAMKEY#${kind}` } } },
+        { DeleteRequest: { Key: { pk: `STREAMKEY#${String(row["hash"])}`, sk: "KEY" } } },
+      ] } }));
+      return true;
     },
 
     async createApiKey(sub, key, hash) {

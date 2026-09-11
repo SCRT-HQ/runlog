@@ -350,6 +350,49 @@ the `asked` gesture above, so a bot can tell the channel "the forfeit is
 in" or "no such move right now". A declined ask carries a `reason` in a
 few words.
 
+## Stream keys: the account's own, not the run's
+
+Every address above names one run and carries a secret that dies with it,
+so a scene wired for tonight's run is wrong for tomorrow's. An account can
+instead hold two keys of its own, minted under **Settings → Stream →
+Chat**, shown once and kept only as hashes.
+
+| Key | For |
+| --- | --- |
+| watch | Widgets, the numbers, the socket. |
+| press | Asks. |
+
+They are separate on purpose. A watch key is in every widget address and
+so in a streaming scene; an address that gets out should let strangers
+watch and never press.
+
+### `GET /api/public/stream/runs?k=<watchKey>`
+
+What that key may draw: the account's runs that are open to watch, newest
+first, and which is in play.
+
+```json
+{
+  "ok": true,
+  "runs": [{ "id": "01RUN", "name": "Thursday", "packTitle": "Any Given Day", "updatedAt": "2026-09-10T23:04:11.02Z" }],
+  "inPlay": "01RUN",
+  "say": "One run to watch."
+}
+```
+
+`inPlay` is the run moved most recently, which is the one being played
+without anyone having to say so. It is what a widget draws when nobody has
+chosen; choosing is done at the widget's end and remembered there, since
+one answer here could never serve two sources pointed at two runs.
+
+Only runs their host has opened to watchers appear. A key for a scene does
+not quietly make the rest of an account readable, and a run that ends
+leaves the list rather than being drawn all night.
+
+Minting a key again replaces it, and the one it replaces stops working at
+once. That is how a key is rotated: there is no reading one back, because
+the server keeps only the hash.
+
 ## Politeness
 
 Poll no faster than every five seconds; the socket exists so you need
