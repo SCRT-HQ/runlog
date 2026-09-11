@@ -231,6 +231,46 @@ so nothing has to branch on a status to be useful. It says what happened,
 never why the rule exists: a rate-limited press answers "Too quick.
 viewer_42 can ask again in 11 seconds."
 
+### What may be asked for
+
+The same address with **no `kind`** is a question rather than a press:
+
+```
+GET /api/public/runs/<runId>/asks?k=<askKey>
+```
+
+```json
+{
+  "ok": true,
+  "say": "Ask for a roll, or a move: Salvage a Piece.",
+  "roll": true,
+  "moves": [{ "id": "salvage", "label": "Salvage a Piece" }]
+}
+```
+
+`roll` says whether a table is waiting; `moves` are the moves on offer at
+this moment, by id and label. Offered, not declared: whether a move is
+available depends on the pack's conditions and on what the run has already
+spent once, so the run's own device works it out and publishes it with the
+rest of its snapshot. A run whose device has not published since this
+existed names nothing, which reads as a run with nothing to ask for.
+
+This is what a `!moves` command reads. It is also why a bare address is
+harmless: pressed with nothing after the key, it answers a question.
+
+### The same press twice
+
+A press may carry a `ref` of the caller's own: a redemption id, a message
+id, anything stable for that one press. A press whose `ref` has been seen
+before on this run answers with the first press's `ask` id and the same
+sentence, marked `"repeat": true`, and queues nothing. A retry after a
+reply that never arrived looks exactly like the press that was lost.
+
+With no `ref`, two presses alike in name, kind and move within three
+seconds are read the same way, which is what a double-click is. Anything
+beyond that is a person pressing again on purpose, and meets the limit
+below.
+
 | Status | Meaning |
 | --- | --- |
 | 403 | No key, the wrong key, or the run is not taking asks. |

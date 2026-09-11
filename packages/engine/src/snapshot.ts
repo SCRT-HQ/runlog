@@ -4,6 +4,7 @@ import { modeDoc, summaryDoc, type Doc, type Pack, type Phase } from "@runlog/ru
 import { activePhases, constrainedByOf, constraintsFor, nextStep, phaseSkipped } from "./flow.ts";
 import { clockOfUnit, elapsedMs, liveClocks, unitClockFor } from "./clock.ts";
 import { describeSkipReason } from "./describe.ts";
+import { availableMoves } from "./execute.ts";
 import { mayQuote } from "./export.ts";
 import { progressOf } from "./race.ts";
 import { formatScore, scoreOf } from "./score.ts";
@@ -67,6 +68,17 @@ export interface LiveSnapshot {
   step: string | null;
   /** The current step's `kind`-`"manual"`, `"declareSubject"`, and so on; null with no step. Absent from snapshots written before it was carried. */
   stepKind?: string | null;
+  /**
+   * What the outside may ask this run for at this moment: whether a table
+   * is waiting to be rolled, and the moves on offer by id and label.
+   *
+   * Offered, not declared. Whether a move is available depends on the
+   * pack's conditions and on what has already been spent once per run, so
+   * only a device holding the pack and the log can say; the server has
+   * neither and answers a chat bot from this. Absent from snapshots
+   * written before it was carried.
+   */
+  asks?: { roll: boolean; moves: Array<{ id: string; label: string }> };
   phases: Array<{
     id: string;
     label: string;
@@ -339,6 +351,16 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
     where: step && stepLabel ? `${step.phase.label} · ${stepLabel}` : null,
     step: stepLabel,
     stepKind: step?.step.kind ?? null,
+    asks: {
+      roll: step?.step.kind === "rollTable",
+      // The same rule the table itself offers by: what is open at any time
+      // while a step is in hand, and the between-units and ending moves at
+      // the one moment the player is deciding whether to stop.
+      moves:
+        state.status === "ended"
+          ? []
+          : availableMoves(pack, state, step ? "anytime" : ["betweenUnits", "beforeEnding"]).map((m) => ({ id: m.id, label: m.move.label })),
+    },
     phases,
     units,
     constraints,

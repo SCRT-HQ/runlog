@@ -1401,6 +1401,39 @@ describe("who is asking", () => {
     expect(again.body["say"]).toMatch(/second/);
   });
 
+  it("says what may be asked for when no kind is given, from what the table last published", async () => {
+    const d = deps(memoryStore(), { token: () => "askkey" });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
+    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: { v: 1, packTitle: "Any Given Day", asks: { roll: true, moves: [{ id: "salvage", label: "Salvage a Piece" }] } } } }), d);
+    const menu = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey", { token: null }), d);
+    expect(menu.status).toBe(200);
+    expect(menu.body["ok"]).toBe(true);
+    expect(menu.body["roll"]).toBe(true);
+    expect(menu.body["moves"]).toEqual([{ id: "salvage", label: "Salvage a Piece" }]);
+    // The sentence is what a !moves command would put in chat, in the pack's own words.
+    expect(menu.body["say"]).toContain("Salvage a Piece");
+    // Reading the menu is not a press: nothing is queued by it.
+    expect((await call(request("GET", "/api/sessions/01RUN/asks"), d)).body["asks"]).toHaveLength(0);
+  });
+
+  it("answers a press that repeats one already taken with the first answer, not a refusal", async () => {
+    const d = deps(memoryStore(), { token: () => "askkey" });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
+    const first = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&kind=roll&name=twice&ref=redeem-1", { token: null }), d);
+    expect(first.body["ok"]).toBe(true);
+    // The same reference again is the same press, not a second one: the first answer, and nothing new queued.
+    const again = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&kind=roll&name=twice&ref=redeem-1", { token: null }), d);
+    expect(again.body["ok"]).toBe(true);
+    expect(again.body["ask"]).toBe(first.body["ask"]);
+    expect((await call(request("GET", "/api/sessions/01RUN/asks"), d)).body["asks"]).toHaveLength(1);
+    // A different reference from the same name is a real second press, and that one waits its turn.
+    const other = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&kind=roll&name=twice&ref=redeem-2", { token: null }), d);
+    expect(other.body["ok"]).toBe(false);
+    expect(other.body["say"]).toMatch(/second/);
+  });
+
   it("keeps true status codes on the POST form, and puts the same sentence in the body", async () => {
     const d = deps(memoryStore(), { token: () => "askkey" });
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
