@@ -1417,6 +1417,34 @@ describe("who is asking", () => {
     expect((await call(request("GET", "/api/sessions/01RUN/asks"), d)).body["asks"]).toHaveLength(0);
   });
 
+  it("takes what a reward is named, by a move's label or its id, so one action serves every move", async () => {
+    const d = deps(memoryStore(), { token: () => "askkey" });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
+    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: { v: 1, packTitle: "Any Given Day", asks: { roll: true, moves: [{ id: "salvage", label: "Salvage a Piece" }] } } } }), d);
+    // A reward named for the move takes it, whatever case the name is in.
+    const byLabel = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&ask=salvage%20a%20piece&name=a", { token: null }), d);
+    expect(byLabel.body["ok"]).toBe(true);
+    expect((await call(request("GET", "/api/sessions/01RUN/asks"), d)).body["asks"]).toMatchObject([{ kind: "move", move: "salvage" }]);
+    // The word roll is the roll, not a move to look up.
+    const roll = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&ask=Roll&name=b", { token: null }), d);
+    expect(roll.body["ok"]).toBe(true);
+    expect(((await call(request("GET", "/api/sessions/01RUN/asks"), d)).body["asks"] as Ask[]).at(-1)).toMatchObject({ kind: "roll" });
+  });
+
+  it("says what can be asked for when a reward is named after nothing the run offers", async () => {
+    const d = deps(memoryStore(), { token: () => "askkey" });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
+    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: { v: 1, packTitle: "Any Given Day", asks: { roll: true, moves: [{ id: "salvage", label: "Salvage a Piece" }] } } } }), d);
+    const lost = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&ask=Free%20Pizza&name=c", { token: null }), d);
+    expect(lost.status).toBe(200);
+    expect(lost.body["ok"]).toBe(false);
+    // Not "no such move": the sentence says what there is, so chat learns something from the refusal.
+    expect(lost.body["say"]).toContain("Salvage a Piece");
+    expect((await call(request("GET", "/api/sessions/01RUN/asks"), d)).body["asks"]).toHaveLength(0);
+  });
+
   it("answers a press that repeats one already taken with the first answer, not a refusal", async () => {
     const d = deps(memoryStore(), { token: () => "askkey" });
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
