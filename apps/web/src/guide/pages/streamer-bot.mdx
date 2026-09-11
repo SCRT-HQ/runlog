@@ -21,6 +21,18 @@ https://runlog.scrthq.com/api/public/runs/<runId>/asks?k=<askKey>
 
 `kind=roll` rolls the table the run is waiting on; `kind=move` with `move=<id>` takes a move, and the Chat section lists the pack's moves by id beside a button that copies the finished address for each. `name` and `via` are for the log, so it says who asked and how. A chat command works the same way with the command's trigger and `via=command`.
 
+## One action for every reward
+
+Building an action per move, and editing each when the pack changes, is work nobody should do. `ask` takes the place of `kind` and `move` together, and a reward already carries its own name:
+
+```
+~runlogAsk~&ask=%rewardName%&name=%userName%&via=channel-points&ref=%redemptionId%
+```
+
+Name a reward `Roll` and it rolls. Name it after a move, as the pack spells it, and it takes that move. Matching ignores case, and an id works in the same field, so `ask=salvage` and `ask=Salvage a Piece` reach the same move. A reward named after nothing the run offers is refused with a chat line listing what it does offer, which is more use to a viewer than "no such move".
+
+That is one trigger, one action, and a new reward whenever you want another move on the panel.
+
 ## Saying what happened in chat
 
 Set the sub-action's **Variable Name** to `runlog` and turn **Parse result as JSON** on. Every answer carries one sentence written for chat, so a **Twitch** → **Send Message to Channel** of `%runlog.say%` says either `viewer_42 asked for died. The table answers next.` or why it could not be taken: a key that is not the run's, a run that is over, a move id the pack does not have, or `Too quick. viewer_42 can ask again in 11 seconds.` `%runlog.ok%` is `true` or `false` for an action that wants to branch.
