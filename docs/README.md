@@ -11,10 +11,10 @@ runs out of room, it links here.
 
 | Read | When |
 | --- | --- |
-| The guide's [A stream run by dice](https://runlog.scrthq.com/play/guide/stream-why) | You stream, and want the dice to decide the next thing on screen. What Runlog does for a stream, what it needs, and how it compares with a tabletop or a wheel. |
-| The guide's [Streaming a run](https://runlog.scrthq.com/play/guide/streaming) | You want a widget on your stream. Start here; the pages after it take OBS, Streamlabs, StreamElements, Streamer.bot, TikTok Live and Kick one at a time, field by field. |
+| The guide's [A stream run by dice](https://runlog.scrthq.com/guide/stream-why) | You stream, and want the dice to decide the next thing on screen. What Runlog does for a stream, what it needs, and how it compares with a tabletop or a wheel. |
+| The guide's [Streaming a run](https://runlog.scrthq.com/guide/streaming) | You want a widget on your stream. Start here; the pages after it take OBS, Streamlabs, StreamElements, Streamer.bot, TikTok Live and Kick one at a time, field by field. |
 | [stream-api.md](stream-api.md) | You are writing a plugin, a chat command or a second screen: the numbers, the bell, the gestures. |
-| The guide's [Runlog in Discord](https://runlog.scrthq.com/play/guide/discord) | Runlog in a Discord server: adding the bot, claiming a server, hosting and watching runs, one page each; `discord.md` points there. |
+| The guide's [Runlog in Discord](https://runlog.scrthq.com/guide/discord) | Runlog in a Discord server: adding the bot, claiming a server, hosting and watching runs, one page each; `discord.md` points there. |
 
 ## Writing packs
 
@@ -30,14 +30,14 @@ runs out of room, it links here.
 | --- | --- |
 | [authoring.md § Licensing](authoring.md#licensing-and-packs-you-should-not-publish), [§ Signing](authoring.md#signing-and-what-it-does-not-do), [§ Selling copies](authoring.md#selling-copies) | Before a pack leaves your hands. |
 | [selling.md](selling.md) | Selling sealed copies from your own backend, outside the catalog. |
-| The guide's [Selling your packs](https://runlog.scrthq.com/play/guide/selling) and [Plans](https://runlog.scrthq.com/play/guide/plans) | The catalog, the ledger, and what each plan has. |
+| The guide's [Selling your packs](https://runlog.scrthq.com/guide/selling) and [Plans](https://runlog.scrthq.com/guide/plans) | The catalog, the ledger, and what each plan has. |
 
 ## Running a copy
 
 | Read | When |
 | --- | --- |
-| The guide's [Running your own copy](https://runlog.scrthq.com/play/guide/own-copy) | On your machine, on a static host, or on your own AWS, one page each; `self-hosting.md` points there. |
-| The guide's [Setting the bot up](https://runlog.scrthq.com/play/guide/bot) | Making the Discord bot as the operator: the developer portal, the stage, the token, the commands; `discord-bot.md` points there. |
+| The guide's [Running your own copy](https://runlog.scrthq.com/guide/own-copy) | On your machine, on a static host, or on your own AWS, one page each; `self-hosting.md` points there. |
+| The guide's [Setting the bot up](https://runlog.scrthq.com/guide/bot) | Making the Discord bot as the operator: the developer portal, the stage, the token, the commands; `discord-bot.md` points there. |
 | [../hosted/infra/README.md](../hosted/infra/README.md) | How the hosting is built and why: the API, billing, selling, races, live push, Discord, monitoring. |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | The shape of the code, the rules the tests enforce, and how a change lands. |
 
