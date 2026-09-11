@@ -66,18 +66,34 @@ const KEY_PREFIX = "rl_";
 const ASK_NAME_EVERY_MS = 20_000;
 const ASK_RUN_PER_MINUTE = 30;
 const askRates = new Map<string, { names: Map<string, number>; minute: number[] }>();
-function askAllowed(runId: string, name: string, atMs: number): boolean {
+/**
+ * Whether this ask may be taken, and when it may be if not.
+ *
+ * The wait comes back with the refusal because whoever pressed is owed a
+ * number, not the rule: "eleven seconds" is something chat can act on,
+ * "one a name every twenty seconds" is something to argue with.
+ */
+function askAllowed(runId: string, name: string, atMs: number): { ok: true } | { ok: false; waitMs: number } {
   const r = askRates.get(runId) ?? { names: new Map<string, number>(), minute: [] };
   r.minute = r.minute.filter((t) => atMs - t < 60_000);
-  if (r.minute.length >= ASK_RUN_PER_MINUTE) return false;
+  if (r.minute.length >= ASK_RUN_PER_MINUTE) {
+    const oldest = r.minute[0] ?? atMs;
+    return { ok: false, waitMs: Math.max(1000, 60_000 - (atMs - oldest)) };
+  }
   const last = r.names.get(name);
-  if (last !== undefined && atMs - last < ASK_NAME_EVERY_MS) return false;
+  if (last !== undefined && atMs - last < ASK_NAME_EVERY_MS) return { ok: false, waitMs: ASK_NAME_EVERY_MS - (atMs - last) };
   r.names.set(name, atMs);
   r.minute.push(atMs);
   if (r.names.size > 500) for (const [n, t] of r.names) if (atMs - t > ASK_NAME_EVERY_MS) r.names.delete(n);
   askRates.set(runId, r);
-  return true;
+  return { ok: true };
 }
+
+/** A wait, in the words a chat line would use. */
+const inSeconds = (ms: number): string => {
+  const seconds = Math.max(1, Math.ceil(ms / 1000));
+  return seconds === 1 ? "1 second" : `${seconds} seconds`;
+};
 const ASK_KINDS = new Set(["move", "roll"]);
 const ASK_ID = /^[a-z][a-zA-Z0-9_-]{0,63}$/;
 const isPolicy = (v: unknown): v is AskPolicy => v === "ask" || v === "auto";
@@ -785,27 +801,45 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
 
   // ---- an ask from outside: a chat command, a channel-point redeem, a button, keyed by the run's ask key ----
   const publicAsk = path.match(/^\/api\/public\/runs\/([^/]+)\/asks$/);
-  if (publicAsk && method === "POST") {
+  if (publicAsk && (method === "POST" || method === "GET")) {
     const id = decodeURIComponent(publicAsk[1]!);
-    const k = event.queryStringParameters?.["k"] ?? "";
+    const q = event.queryStringParameters ?? {};
+    const k = q["k"] ?? "";
+    // A GET is the door for a tool that cannot POST: Streamer.bot's Fetch URL
+    // sends nothing but a URL. Such a tool also tends to treat any status but
+    // 200 as a failed action and never look at the body, which would lose the
+    // one sentence worth having. So the GET form always answers 200 and puts
+    // the verdict in `ok`; the POST form keeps true status codes.
+    const asGet = method === "GET";
+    const body = asGet ? null : parse(event);
+    const field = (key: string): string => {
+      const raw = asGet ? q[key] : isRecord(body) && str(body[key]) ? body[key] : undefined;
+      return str(raw) ? raw : "";
+    };
+    /** One answer, in the words a chat line would use, whichever door it came in by. */
+    const said = (status: number, say: string, extra: Record<string, unknown> = {}) =>
+      json(asGet ? 200 : status, { ok: status === 200, say, ...(status === 200 ? {} : { error: say }), ...extra });
+
     const found = await store.getSession(id);
     // The key is not the live token on purpose: whoever has a widget address may watch, never press.
-    if (!found || !k || !found.meta.askKeyHash || hashToken(k) !== found.meta.askKeyHash) return json(403, { error: "no ask key, or the run is not taking asks" });
-    if (found.meta.deletedAt || found.meta.endedAt) return json(410, { error: "this run is over" });
-    const body = parse(event);
-    const kind = isRecord(body) && str(body["kind"]) ? body["kind"] : "";
-    if (!ASK_KINDS.has(kind)) return json(422, { error: "kind: move or roll" });
-    const move = isRecord(body) && str(body["move"]) ? body["move"] : "";
-    if (kind === "move" && !ASK_ID.test(move)) return json(422, { error: "move: the move's id in the pack" });
-    const name = isRecord(body) && str(body["name"]) ? body["name"].trim().slice(0, 40) : "";
-    const via = isRecord(body) && str(body["via"]) ? body["via"].trim().slice(0, 32) : "";
+    if (!found || !k || !found.meta.askKeyHash || hashToken(k) !== found.meta.askKeyHash) return said(403, "This run is not taking asks, or that is not its key.");
+    if (found.meta.deletedAt || found.meta.endedAt) return said(410, "This run is over.");
+    const kind = field("kind");
+    if (!ASK_KINDS.has(kind)) return said(422, "Say what to ask for: a roll, or a move by its id.");
+    const move = field("move");
+    if (kind === "move" && !ASK_ID.test(move)) return said(422, "That move needs an id, the one the run's Chat settings list.");
+    const name = field("name").trim().slice(0, 40);
+    const via = field("via").trim().slice(0, 32);
     const at = now();
-    if (!askAllowed(id, name || "-", Date.parse(at))) return json(429, { error: "too many asks: one a name every twenty seconds, thirty a minute for the run" });
+    const allowed = askAllowed(id, name || "-", Date.parse(at));
+    if (!allowed.ok) return said(429, `Too quick. ${name || "Someone"} can ask again in ${inSeconds(allowed.waitMs)}.`);
     const ask: Ask = { id: randomBytes(6).toString("hex"), kind: kind as Ask["kind"], ...(kind === "move" ? { move } : {}), ...(name ? { name } : {}), ...(via ? { via } : {}), at };
     const asks = await store.addAsk(id, ask);
     await deps.tell?.(id, "ask", { ask: ask.id, kind: ask.kind, ...(ask.move ? { move: ask.move } : {}), ...(name ? { name } : {}), ...(via ? { via } : {}), policy: found.meta.askPolicy ?? "ask" }, at);
     await deps.notify?.(id, found.meta.seq);
-    return json(200, { asks: asks.filter((a) => !a.answer) });
+    // What the table decides is not known here, under either policy: the
+    // host's device does the acting and says so on the socket afterwards.
+    return said(200, `${name || "Someone"} asked for ${kind === "roll" ? "a roll" : move}. The table answers next.`, { ask: ask.id, asks: asks.filter((a) => !a.answer) });
   }
 
   // ---- a watcher's reaction: one of a few emoji, to everyone watching and the table ----

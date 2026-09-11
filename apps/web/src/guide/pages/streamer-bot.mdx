@@ -12,15 +12,26 @@ Then the usual sub-actions: **OBS** → **Set Source Visibility** to flash a dic
 
 ## A channel-point redeem that presses
 
-In the run's **Settings** → **Stream** → **Chat**, **Take asks** makes the run's ask key and shows the address a bot posts to, key included. Copy it. Then make an action on the trigger **Twitch** → **Channel Reward** → **Reward Redemption** (Kick has the same trigger under **Kick** → **Channel Reward**) whose sub-action is **Core** → **Network** → **Fetch URL**, method POST, content type `application/json`, and a body of
+In the run's **Settings** → **Stream** → **Chat**, **Take asks** makes the run's ask key and shows the address, key included. Copy it. Then make an action on the trigger **Twitch** → **Channel Reward** → **Reward Redemption** (Kick has the same trigger under **Kick** → **Channel Reward**) whose sub-action is **Core** → **Network** → **Fetch URL**. Fetch URL sends a `GET` and nothing else, no body and no method to choose, so the whole ask travels in the address:
 
-```json
-{ "kind": "move", "move": "died", "name": "%userName%", "via": "channel-points" }
+```
+https://runlog.scrthq.com/api/public/runs/<runId>/asks?k=<askKey>
+  &kind=move&move=died&name=%userName%&via=channel-points
 ```
 
-to take the move whose id is `died`, or `{ "kind": "roll", "name": "%userName%", "via": "channel-points" }` to roll the table the run is waiting on. The Chat section lists the pack's moves by id. A chat command works the same way with the command's trigger and `"via": "command"`.
+`kind=roll` rolls the table the run is waiting on; `kind=move` with `move=<id>` takes a move, and the Chat section lists the pack's moves by id beside a button that copies the finished address for each. `name` and `via` are for the log, so it says who asked and how. A chat command works the same way with the command's trigger and `via=command`.
 
-Under **Wait for me to accept**, the ask sits in the Asks panel beside the people until you press; under **Act on it as it lands**, the move is taken or the table rolled as the ask arrives, if the run is in a place where it can be. Either way the socket carries an `asked` gesture with `accepted` true or false, so the requesting action can say so in chat: `Chat's forfeit is in` or `No such move right now`. One ask a name every twenty seconds, thirty a minute for the run; more answers 429 and is dropped.
+## Saying what happened in chat
+
+Set the sub-action's **Variable Name** to `runlog` and turn **Parse result as JSON** on. Every answer carries one sentence written for chat, so a **Twitch** → **Send Message to Channel** of `%runlog.say%` says either `viewer_42 asked for died. The table answers next.` or why it could not be taken: a key that is not the run's, a run that is over, a move id the pack does not have, or `Too quick. viewer_42 can ask again in 11 seconds.` `%runlog.ok%` is `true` or `false` for an action that wants to branch.
+
+The address always answers `200`, refusals included, so the sub-action runs on and the sentence reaches chat instead of the action stopping dead.
+
+Whether the table took it is a separate question, and a later one: under **Wait for me to accept** the ask sits in the Asks panel until you press, and under **Act on it as it lands** the host's device acts as it arrives. Either way the socket carries an `asked` gesture with `accepted` true or false and a reason, so the action on the **WebSocket Client** → **Message** trigger above can say `Chat's forfeit is in` or `No such move right now`.
+
+## Giving the points back
+
+A refused redeem should not cost anything. In the same action, after the fetch, branch on `%runlog.ok%` and add **Twitch** → **Channel Rewards** → **Update Redemption Status** set to **Cancel**, which refunds the points. It only works on a reward Streamer.bot made itself, so create the reward with **Create Reward** on the trigger rather than by hand in the Twitch dashboard.
 
 The key is not the live link's token, on purpose: the token is in every widget address and so in your scene, and a leaked address should let strangers watch, never press. **Stop taking asks** kills the key and leaves the link alone.
 
