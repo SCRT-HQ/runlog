@@ -46,6 +46,14 @@ describe("the app shell", () => {
     expect(html).toContain("Menu");
   });
 
+  it("offers the shelf, not the way back, when there is no run to go back to", () => {
+    // The shelf button is the way back from the library the way the
+    // Designer's and the Guide's are, but only where a run is loaded. On a
+    // first visit it is still the way there.
+    expect(html).toContain(">Packs<");
+    expect(html).not.toContain(">Play<");
+  });
+
   it("keeps the pack's own paper out of the bar, where there is no run to read it against", () => {
     // Docs sits with the run's controls, beside Undo, so it is absent
     // until there is a run. Rules, which it replaced, is gone from the bar.
