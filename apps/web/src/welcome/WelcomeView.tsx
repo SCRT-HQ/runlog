@@ -65,7 +65,6 @@ export function WelcomeView() {
           <img className="logo" src="./icon.svg" alt="" />
           <h1>Runlog</h1>
         </a>
-        <span />
         <nav className="topbarEnd" aria-label="Ways in">
           <a className="ghost" href={linkTo("#guide/start", play)}>
             Docs

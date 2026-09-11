@@ -648,6 +648,8 @@ export default function App() {
 
   /** Whether the library is what is on screen right now, whichever way it got there. */
   const onLibrary = view === "library" || (source === null && view !== "design" && view !== "profile" && view !== "guide");
+  /** Whether the shelf button is the way back rather than the way there: a run to return to, and the shelf in front of it. */
+  const backFromLibrary = view === "library" && source !== null;
 
   /**
    * A sealed copy, opened: keep it, and keep the key that opened it.
@@ -942,8 +944,20 @@ export default function App() {
             the run's own header, a line below, said the same thing twice
             and pushed the row into two at middling widths.
           */}
-          <button className="ghost packNow" onClick={openLibrary} title="Your packs and runs" aria-current={onLibrary ? "page" : undefined}>
-            Packs
+          {/*
+            The same shape as the Designer and the Guide beside it: the
+            button that took you somewhere is the button that brings you
+            back. It only offers the way back where there is a run to go
+            back to, which is why it still reads Packs on a first visit
+            with nothing loaded.
+          */}
+          <button
+            className={`${backFromLibrary ? "primary" : "ghost"} packNow`}
+            onClick={() => (backFromLibrary ? setView("play") : openLibrary())}
+            title={backFromLibrary ? "Back to the run" : "Your packs and runs"}
+            aria-current={onLibrary && !backFromLibrary ? "page" : undefined}
+          >
+            {backFromLibrary ? "Play" : "Packs"}
           </button>
           <button className={`${view === "design" ? "primary" : "ghost"} createBtn`} onClick={() => (view === "design" ? leaveDesigner() : openDesigner())} title={view === "design" ? "Back to the run" : "Write a pack of your own in the Designer"}>
             {view === "design" ? "Play" : "Designer"}

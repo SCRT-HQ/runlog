@@ -207,11 +207,13 @@ p {
   position: sticky;
   top: 0;
   z-index: 10;
-  /* The mark at one end, every button at the other. It was three columns
-     while the shelf button sat on the page's center line; the shelf joined
-     the row when the run's own header started saying which pack it was. */
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  /* The mark at one end, every button at the other, and whatever a given
+     bar puts between them in the middle: the watcher's bar names the run
+     there, and the landing page nothing at all. A row rather than named
+     columns, so a bar with two children and a bar with three both hold
+     their shape instead of spilling the buttons onto a line of their own. */
+  display: flex;
+  align-items: center;
   gap: 1rem;
   align-items: center;
   padding: 0.85rem 1.25rem;
@@ -2613,7 +2615,8 @@ select.textInput {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.5rem 0.75rem;
-  justify-self: end;
+  /* Whatever else the bar carries, the buttons keep to the far end. */
+  margin-left: auto;
 }
 /* A button gives up the row before it gives up its word: a label broken
    one letter to a line is what a narrowing bar used to do to "Back to the
@@ -2622,8 +2625,12 @@ select.textInput {
 .topbarEnd .ghost,
 .topbarEnd .primary,
 .topbarEnd .packNow { white-space: nowrap; }
+/* An accent button in the bar is a button among buttons: the ghosts' size,
+   the accent's color. The way back from the Guide or the Designer should
+   not tower over what it sits beside. */
+.topbarEnd .primary { padding: 0.25rem 0.7rem; font-size: var(--t-1); }
 .topbar .brand {
-  justify-self: start;
+  flex: 0 0 auto;
 }
 .themeMenu {
   display: flex;
@@ -3807,7 +3814,7 @@ a.plan { text-decoration: none; }
 .liveNote { padding-top: 3rem; text-align: center; }
 .liveTools { display: grid; gap: 0.5rem; justify-items: end; }
 .liveBar { position: static; }
-.liveBar .liveBarPack { justify-self: center; font-family: var(--mono); font-size: 0.85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.liveBar .liveBarPack { margin: 0 auto; font-family: var(--mono); font-size: 0.85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .liveBar .liveBarPack strong { font-family: var(--serif); font-size: var(--t-3); }
 .liveBar .topbarEnd a.ghost { text-decoration: none; }
 @media (max-width: 720px) { .liveBar .liveBarPack { grid-column: 1 / -1; grid-row: 2; justify-self: start; } }
@@ -3911,8 +3918,8 @@ html[data-pip="controls"] body { margin: 0; height: 100vh; overflow-y: auto; bac
 .welcome { min-height: 100vh; display: flex; flex-direction: column; }
 .welcomeBar .topbarEnd { gap: 0.5rem; }
 .welcomeBar .topbarEnd a.ghost, .welcomeBar .topbarEnd a.primary, .welcomeCtas a { text-decoration: none; display: inline-block; }
-/* The accent link is a button among buttons: the ghosts' size, the accent's color. */
-.welcomeBar .topbarEnd a.primary, .welcomeCtas a.primary { padding: 0.25rem 0.7rem; font-size: var(--t-1); }
+/* The hero's own call to action matches the bar's buttons rather than shouting. */
+.welcomeCtas a.primary { padding: 0.25rem 0.7rem; font-size: var(--t-1); }
 .welcomeMain { width: min(100% - 2.5rem, 64rem); margin: 0 auto; padding: 1.5rem 0 3rem; flex: 1; }
 .welcomeHero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 2.5rem; align-items: center; padding: 1.5rem 0 2rem; }
 .welcomeHero h2 { font-size: clamp(1.9rem, 3.4vw, 2.7rem); line-height: 1.15; margin: 0 0 0.6rem; text-wrap: balance; }
