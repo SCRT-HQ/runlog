@@ -975,7 +975,7 @@ function RunHeader({
         {/*
           The pack's paper, beside the run's own controls rather than up in
           the bar, because it is only worth reading while there is a run to
-          read it against. The same word and the same drawer as the catalog
+          read it against. The same word and the same drawer as the marketplace
           and the library use, so "Docs" means one thing everywhere.
         */}
         <button className="ghost" onClick={() => drawer.open(pack, "summary")} title="What this pack is, and the rules of what you are running">

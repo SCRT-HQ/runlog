@@ -465,7 +465,7 @@ requires:
   - { id: barbell, label: A barbell and plates, kind: equipment, optional: true }
 ```
 
-The catalog shows it on the card and the rulebook lists it under "What you
+The marketplace shows it on the card and the rulebook lists it under "What you
 need"; an entry that `needs` an optional one is drawn again for a player
 without it. For anything the pack did not foresee, Undo and roll again.
 
@@ -698,9 +698,9 @@ A pack under version control can be released the way software is: tag it,
 and a workflow checks it, signs it, and ships it. The workflows in
 [`examples/github-actions`](../examples/github-actions/README.md), copied
 into `.github/workflows/`, do that for a release from your own hands
-(`self-publish.yml`) or to the catalog (`catalog-release.yml`); its README
+(`self-publish.yml`) or to the marketplace (`marketplace-release.yml`); its README
 has the two secrets they need, `RUNLOG_API_KEY` and `RUNLOG_SIGNING_KEY`,
-set once in the repository's settings, never in the files. The catalog seals
+set once in the repository's settings, never in the files. The marketplace seals
 a copy for each buyer under a fresh key, and your signing key never leaves
 the runner's memory.
 
@@ -740,7 +740,7 @@ preview, in its Documents panel:
   "frequently forgotten" list built from the pack's global triggers, tally
   thresholds and mode notes.
 - **Run log sheet**: a form to write a run on by hand.
-- **Summary**: what a catalog shows before anyone has the pack. It never
+- **Summary**: what a marketplace shows before anyone has the pack. It never
   prints an entry, a trigger, an ending's text or a mode's notes, whether or
   not the pack is redistributable.
 

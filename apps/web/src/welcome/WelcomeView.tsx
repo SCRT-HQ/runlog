@@ -277,7 +277,7 @@ export function WelcomeView() {
             <div>
               <dt>Sell it your way.</dt>
               <dd>
-                Seal a copy for a buyer from your own hands, for free, forever. Or list it in the catalog and let it handle the sale, the
+                Seal a copy for a buyer from your own hands, for free, forever. Or list it in the marketplace and let it handle the sale, the
                 delivery and the ledger for five percent.
               </dd>
             </div>
@@ -318,7 +318,7 @@ export function WelcomeView() {
                 <h4>
                   Publisher <span className="muted small">5% of a sale</span>
                 </h4>
-                <p>List packs in the catalog, paid through your own Stripe account, with a ledger. Or 0% with hosted licensing.</p>
+                <p>List packs in the marketplace, paid through your own Stripe account, with a ledger. Or 0% with hosted licensing.</p>
               </div>
             </div>
             <p className="muted small">
@@ -333,7 +333,7 @@ export function WelcomeView() {
             </h3>
             <p className="muted">
               This copy is the plain app: no account, no server, no fee. The hosted copy at{" "}
-              <a href="https://runlog.scrthq.com/">runlog.scrthq.com</a> adds accounts, sync, tables with company and the catalog.
+              <a href="https://runlog.scrthq.com/">runlog.scrthq.com</a> adds accounts, sync, tables with company and the marketplace.
             </p>
           </section>
         )}

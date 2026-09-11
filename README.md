@@ -29,7 +29,7 @@ npm install
 npm run dev
 ```
 
-The packs that ship with it are free, in the catalog; a few of them:
+The packs that ship with it are free, in the marketplace; a few of them:
 
 | Pack | Shape | What it exercises |
 | --- | --- | --- |
@@ -72,7 +72,7 @@ npx @scrthq/runlog test my-game.yaml          # replays the fixtures your pack s
 
 | | |
 | --- | --- |
-| Hosted | https://runlog.scrthq.com, the copy Secret Headquarters runs, with accounts, sync, tables with company and the catalog |
+| Hosted | https://runlog.scrthq.com, the copy Secret Headquarters runs, with accounts, sync, tables with company and the marketplace |
 | Anyone, no account | https://scrt-hq.github.io/runlog/, GitHub Pages, tracks `main`, no sign-in and no sync |
 | Your own | The guide's [Running your own copy](https://runlog.scrthq.com/guide/own-copy): on your machine, on a static host, or on your own AWS |
 

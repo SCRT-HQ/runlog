@@ -171,7 +171,7 @@ Nothing may be sent on it; a message from a plugin is dropped.
 ## The whole run: `GET /api/public/runs/<runId>?t=<token>`
 
 What the live page itself reads. Where the pack's license lets its text
-travel (a free catalog listing, or a pack marked redistributable), the
+travel (a free marketplace listing, or a pack marked redistributable), the
 answer is `access: "full"` with the pack's source and the run's whole
 event log, and you reduce it yourself with the engine from this
 repository. Where it may not, the answer is `access: "snapshot"` with the

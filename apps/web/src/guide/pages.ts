@@ -8,7 +8,7 @@ import Board from "./pages/board.mdx";
 import Undo from "./pages/undo.mdx";
 import Ending from "./pages/ending.mdx";
 import Library from "./pages/library.mdx";
-import Catalog from "./pages/catalog.mdx";
+import Marketplace from "./pages/marketplace.mdx";
 import PackFiles from "./pages/pack-files.mdx";
 import Clocks from "./pages/clocks.mdx";
 import Alerts from "./pages/alerts.mdx";
@@ -107,7 +107,7 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   P("undo", "Playing", "Playing a run", "Undo and the log", "Nothing is erased; the run as it happened.", Undo),
   P("ending", "Playing", "Playing a run", "Ending a run", "The pack's own endings, and when they open.", Ending),
   P("library", "Playing", "Your packs", "Your library", "Every pack you have, with its runs beneath.", Library),
-  P("catalog", "Playing", "Your packs", "The catalog", "Packs that ship, packs people published; what each needs.", Catalog),
+  P("marketplace", "Playing", "Your packs", "The marketplace", "Packs that ship, packs people published; what each needs.", Marketplace),
   P("pack-files", "Playing", "Your packs", "Packs from a file", "Loading a pack, sealed or not, and keeping it in sync.", PackFiles),
   P("clocks", "Playing", "Clocks and alerts", "Clocks", "Stopwatches and timers, and what the log keeps of them.", Clocks),
   P("alerts", "Playing", "Clocks and alerts", "Alerts and sounds", "What rings, and with which sound.", Alerts),
@@ -144,13 +144,13 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   P("cli-check", "Making a pack", "The command line", "Checking a pack", "validate, test, and a pack to start from.", CliCheck),
   P("cli-docs", "Making a pack", "The command line", "Writing the paper", "The documents from the terminal, and one bundled file.", CliDocs),
   P("cli-sign", "Making a pack", "The command line", "Signing and sealing copies", "keygen, claim, sign, and issue.", CliSign),
-  P("cli-publish", "Making a pack", "The command line", "Publishing and releasing", "Into your library, or to the catalog at a price.", CliPublish),
+  P("cli-publish", "Making a pack", "The command line", "Publishing and releasing", "Into your library, or to the marketplace at a price.", CliPublish),
   P("cli-ci", "Making a pack", "The command line", "From a build server", "The two variables, and a workflow to copy.", CliCi),
   P("cli-account", "Making a pack", "The command line", "Your account from the terminal", "login, whoami, logout, and a key for a machine with no browser.", CliAccount),
   P("cli-library", "Making a pack", "The command line", "Sealing from your own backend", "The package as a library: seal, open, a license key.", CliLibrary),
   P("selling", "Making a pack", "Selling", "Selling your packs", "Two ways, and who keeps the receipts.", Selling),
   P("selling-yourself", "Making a pack", "Selling", "From your own hands", "Sign, seal a copy, send it; nothing else involved.", SellingYourself),
-  P("selling-catalog", "Making a pack", "Selling", "Through the catalog", "A card, a sale on your Stripe account, a ledger.", SellingCatalog),
+  P("selling-catalog", "Making a pack", "Selling", "Through the marketplace", "A card, a sale on your Stripe account, a ledger.", SellingCatalog),
   // Your account
   P("plans", "Your account", null, "Plans and pricing", "What is free, what a server adds, what running it yourself costs.", Plans),
   P("account", "Your account", "What is stored", "Your account and what is stored", "Everything on your device first; what leaves it, and when.", Account),

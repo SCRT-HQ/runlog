@@ -4,7 +4,7 @@ import type { Block, Doc } from "@runlog/rules-schema";
  * A generated document, drawn in the app.
  *
  * The same blocks the Markdown and HTML renderers get, as elements in the
- * app's own type and color, so a pack's summary in the catalog reads like
+ * app's own type and color, so a pack's summary in the marketplace reads like
  * the rest of the page and not like a pasted file.
  */
 export function DocView({ doc, heading = false }: { doc: Doc; heading?: boolean }) {
