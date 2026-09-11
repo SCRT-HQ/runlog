@@ -217,7 +217,10 @@ export default function App() {
         const id = address.slice("#catalog/".length);
         setCatalogFocus(id ? decodeURIComponent(id) : null);
         setView("catalog");
-        goTo("");
+      } else if (address === "#packs") {
+        setView("library");
+      } else if (address === "#play") {
+        setView("play");
       } else if (run) {
         setWantedRun(run);
       }
@@ -236,21 +239,25 @@ export default function App() {
     setView("guide");
     goTo(section ? `#guide/${slug}/${section}` : `#guide/${slug}`);
   };
-  const leaveGuide = () => {
+  /**
+   * The way back from a section: the run, or the shelf where no pack is
+   * loaded, since the address should name what is on screen either way.
+   */
+  const backToPlay = (from: RegExp) => {
     setView("play");
-    if (addressOf(location).startsWith("#guide")) goTo("");
+    if (from.test(addressOf(location))) goTo(source === null ? "#packs" : "#play");
   };
+  const leaveGuide = () => backToPlay(/^#guide/);
   /**
    * The shelf, and the address bar saying so.
    *
-   * Going there set the view and left whatever was in the address alone,
-   * so the page said "Your packs" and a reload opened the run, the catalog
-   * or the guide that was still spelled there. The shelf is the app's bare
-   * address, and going to it says so like every other page does.
+   * It was the app's bare address for a while, which meant going there
+   * wrote `play` over wherever you had been, and the address named the run
+   * while the shelf was on screen. It is a section like the rest now.
    */
   const openLibrary = useCallback(() => {
     setView("library");
-    goTo("");
+    goTo("#packs");
   }, []);
 
   /**
@@ -268,10 +275,7 @@ export default function App() {
     setView("design");
     goTo("#create");
   };
-  const leaveDesigner = () => {
-    setView("play");
-    if (addressOf(location) === "#create") goTo("");
-  };
+  const leaveDesigner = () => backToPlay(/^#create$/);
   /**
    * Opening the profile, or moving between its pages, pushes a history
    * entry rather than replacing one: unlike the guide and the Designer, the
@@ -282,10 +286,7 @@ export default function App() {
     setView("profile");
     goTo(profileHash(page), "push");
   };
-  const leaveProfile = () => {
-    setView("play");
-    if (addressOf(location).startsWith("#profile")) goTo("");
-  };
+  const leaveProfile = () => backToPlay(/^#profile/);
 
   /**
    * A pack someone shared in a link. Offered rather than opened: a link
@@ -960,7 +961,7 @@ export default function App() {
             {backFromLibrary ? "Play" : "Packs"}
           </button>
           <button className={`${view === "design" ? "primary" : "ghost"} createBtn`} onClick={() => (view === "design" ? leaveDesigner() : openDesigner())} title={view === "design" ? "Back to the run" : "Write a pack of your own in the Designer"}>
-            {view === "design" ? "Play" : "Designer"}
+            {view === "design" ? "Play" : "Create"}
           </button>
           <button className={`${view === "guide" ? "primary" : "ghost"} guideBtn`} onClick={() => (view === "guide" ? leaveGuide() : openGuide())} title={view === "guide" ? "Back to the run" : "How to use Runlog"}>
             {view === "guide" ? "Play" : "Guide"}

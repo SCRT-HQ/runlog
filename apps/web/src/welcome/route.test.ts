@@ -4,12 +4,21 @@ import { appPath, baseOf, honestAddress, isAppPath, welcomePath, whereTo } from 
 const at = (over: Partial<Parameters<typeof whereTo>[0]> = {}) => ({ protocol: "https:", pathname: "/", base: "/", hash: "", search: "", skip: false, ...over });
 
 describe("which page an address opens", () => {
-  it("opens the welcome page at the bare address, and the app under play", () => {
+  it("opens the welcome page at the bare address, and the app at any section of its own", () => {
     expect(whereTo(at())).toBe("welcome");
     expect(whereTo(at({ pathname: "/play" }))).toBe("app");
     expect(whereTo(at({ pathname: "/play/" }))).toBe("app");
+    expect(whereTo(at({ pathname: "/packs" }))).toBe("app");
+    expect(whereTo(at({ pathname: "/guide/streaming" }))).toBe("app");
+    expect(whereTo(at({ pathname: "/create" }))).toBe("app");
+    expect(whereTo(at({ pathname: "/profile/servers" }))).toBe("app");
     expect(whereTo(at({ pathname: "/runlog/", base: "/runlog/" }))).toBe("welcome");
-    expect(whereTo(at({ pathname: "/runlog/play", base: "/runlog/" }))).toBe("app");
+    expect(whereTo(at({ pathname: "/runlog/packs", base: "/runlog/" }))).toBe("app");
+    // What the sections used to be spelled as is still the app's.
+    expect(whereTo(at({ pathname: "/play/guide/streaming" }))).toBe("app");
+    expect(whereTo(at({ pathname: "/runlog/play/profile", base: "/runlog/" }))).toBe("app");
+    // A path the app does not answer to is not the app's.
+    expect(whereTo(at({ pathname: "/nonsense" }))).toBe("welcome");
   });
 
   it("is the app for anyone who arrived with somewhere to go", () => {

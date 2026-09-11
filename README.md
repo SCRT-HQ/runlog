@@ -52,7 +52,7 @@ Runlog has no map, no tokens and no character sheets. A virtual tabletop
 is where a group of role-players meets, and it is good at that; a wheel is
 a spin with no memory. Runlog carries the piece neither does: a game of
 rounds and consequences that runs beside whatever you are already doing,
-and remembers. The guide's [A stream run by dice](https://runlog.scrthq.com/play/guide/stream-why)
+and remembers. The guide's [A stream run by dice](https://runlog.scrthq.com/guide/stream-why)
 compares the three and puts a first stream in order.
 
 ## Write your own
@@ -74,12 +74,12 @@ npx @scrthq/runlog test my-game.yaml          # replays the fixtures your pack s
 | --- | --- |
 | Hosted | https://runlog.scrthq.com, the copy Secret Headquarters runs, with accounts, sync, tables with company and the catalog |
 | Anyone, no account | https://scrt-hq.github.io/runlog/, GitHub Pages, tracks `main`, no sign-in and no sync |
-| Your own | The guide's [Running your own copy](https://runlog.scrthq.com/play/guide/own-copy): on your machine, on a static host, or on your own AWS |
+| Your own | The guide's [Running your own copy](https://runlog.scrthq.com/guide/own-copy): on your machine, on a static host, or on your own AWS |
 
 ## Where the rest is written
 
 - **[docs/README.md](docs/README.md)**: the documents, indexed by who you are.
-- **[The guide](https://runlog.scrthq.com/play/guide)**: playing, streaming,
+- **[The guide](https://runlog.scrthq.com/guide)**: playing, streaming,
   Discord and running a copy. It is in the app under Menu and needs no account.
 - **[CONTRIBUTING.md](CONTRIBUTING.md)**: the shape of the code, and how a
   change lands.

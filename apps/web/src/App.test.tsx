@@ -62,12 +62,11 @@ describe("the app shell", () => {
     expect(html).not.toContain("rulesBtn");
   });
 
-  it("names the header buttons for what the pages call themselves", () => {
-    // "Create" and "Docs" read as verbs for pages that call themselves
-    // Designer and Guide; the header says the same names those pages do.
-    expect(html).toContain(">Designer<");
+  it("names the header buttons for the addresses they go to", () => {
+    // The button and the path say the same word: /create and /guide.
+    expect(html).toContain(">Create<");
     expect(html).toContain(">Guide<");
-    expect(html).not.toContain(">Create<");
+    expect(html).not.toContain(">Designer<");
     expect(html).not.toContain(">Docs<");
   });
 

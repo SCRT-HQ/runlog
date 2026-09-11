@@ -15,6 +15,12 @@
  * Every rule here is pure, so the tests pin it without a browser.
  */
 export const APP_SEGMENT = "play";
+/**
+ * Every first segment the app answers to. They hung under `play/` until
+ * each one wanted an address a person could read and type; `play` is one
+ * of them now, meaning the run in hand, and it is still the front door.
+ */
+const SECTIONS = new Set(["play", "packs", "guide", "profile", "catalog", "run", "widget", "dock", "link", "create"]);
 const SKIP_KEY = "runlog:welcome";
 /** The query that asks for the welcome page by name. */
 export const WELCOME_QUERY = "?welcome";
@@ -32,10 +38,15 @@ export interface Where {
 
 const trimSlash = (p: string) => p.replace(/\/+$/, "");
 
-/** Whether the path is the app's own: `<base>play`, with or without a trailing slash, or a page under it (`<base>play/guide/…`). */
+/** Whether the path is one of the app's sections: `<base>packs`, `<base>guide/streaming`, and the rest, including what they were once spelled as under `play/`. */
 export function isAppPath(pathname: string, base: string): boolean {
-  const app = trimSlash(base + APP_SEGMENT);
-  return trimSlash(pathname) === app || pathname.startsWith(`${app}/`);
+  const rest = trimSlash(pathname).slice(trimSlash(base).length).replace(/^\/+/, "");
+  if (rest === "") return false;
+  const head = rest.split("/")[0] ?? "";
+  if (!SECTIONS.has(head)) return false;
+  // The old spelling, `play/<section>`, is the app's too: it is read as
+  // what it meant and written back in the spelling it has now.
+  return true;
 }
 
 export function whereTo(w: Where): "welcome" | "app" {
