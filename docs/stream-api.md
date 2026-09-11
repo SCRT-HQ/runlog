@@ -366,6 +366,27 @@ They are separate on purpose. A watch key is in every widget address and
 so in a streaming scene; an address that gets out should let strangers
 watch and never press.
 
+### `POST` or `GET /api/public/stream/asks?k=<pressKey>`
+
+The ask address that outlives a run. Every field above travels the same
+way; what changes is that no run is named:
+
+```
+GET /api/public/stream/asks?k=<pressKey>&ask=%rewardName%&name=%userName%&ref=%redemptionId%
+```
+
+It reaches the run in play: of the runs that account is taking asks on,
+the one moved most recently. `run=<runId>` names another, for anyone
+keeping two going at once. The answer carries `run`, so a bot can say
+which one it reached.
+
+Taking asks stays the host's word, per run, under **Settings → Stream →
+Chat**. A press key makes the wiring outlive a run; it does not switch
+anything on. A run that is not taking asks is passed over, and an account
+with none answers `No run is taking asks right now.`
+
+A watch key is refused here. What watches must never also press.
+
 ### `GET /api/public/stream/runs?k=<watchKey>`
 
 What that key may draw: the account's runs that are open to watch, newest

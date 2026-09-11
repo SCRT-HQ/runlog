@@ -1456,6 +1456,28 @@ describe("who is asking", () => {
     expect((await call(request("DELETE", "/api/me/stream-keys?kind=press"), d)).body).toEqual({ keys: { watch: { madeAt: expect.any(String) as unknown as string } } });
   });
 
+  it("presses the run in play by the account's press key, so a bot is wired once and not once a run", async () => {
+    let minted = 0;
+    const d = deps(memoryStore(), { token: () => `key${(minted += 1)}` });
+    const press = await call(request("POST", "/api/me/stream-keys", { body: { kind: "press" } }), d);
+    const k = String(press.body["key"]);
+    // No run taking asks: the refusal says so rather than failing quietly.
+    const none = await call(request("GET", `/api/public/stream/asks?k=${k}&kind=roll&name=a`, { token: null }), d);
+    expect(none.body["ok"]).toBe(false);
+    expect(none.body["say"]).toMatch(/no run/i);
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
+    const pressed = await call(request("GET", `/api/public/stream/asks?k=${k}&kind=roll&name=viewer_3`, { token: null }), d);
+    expect(pressed.status).toBe(200);
+    expect(pressed.body["ok"]).toBe(true);
+    expect(pressed.body["run"]).toBe("01RUN");
+    expect((await call(request("GET", "/api/sessions/01RUN/asks"), d)).body["asks"]).toHaveLength(1);
+    // A watch key belongs in a scene, not in a bot: it cannot press.
+    const watch = await call(request("POST", "/api/me/stream-keys", { body: { kind: "watch" } }), d);
+    const bad = await call(request("GET", `/api/public/stream/asks?k=${String(watch.body["key"])}&kind=roll&name=b`, { token: null }), d);
+    expect(bad.body["ok"]).toBe(false);
+  });
+
   it("lists the runs a watch key may draw, newest first, and says which is in play", async () => {
     let minted = 0;
     const d = deps(memoryStore(), { token: () => `key${(minted += 1)}` });
