@@ -49,9 +49,19 @@ The same address with nothing after the key answers what can be asked for right 
 
 Add `&ref=%redemptionId%` to the address on a redeem, or the message id on a command. A press whose reference has been seen before answers as the first one did and queues nothing, so a retry after a reply that never arrived cannot press twice. Without it, two identical presses within three seconds are read as the double-click they usually are.
 
+## Telling chat what the table did
+
+The reply to a press cannot say whether the table took it, because the table has not decided yet. Under **Act on it as it lands** it decides within a second or two, so the same action can wait and ask.
+
+After the chat line, add **Core → Delay** of about three seconds, then a second **Core → Network → Fetch URL** on `~runlogAsk~&of=%runlog.ask%`, with a *different* variable name, say `verdict`, and parse as JSON on. Then a chat line of `%verdict.say%` says "viewer_42 asked for Salvage a Piece. The table took it." or "The table said no: nothing to roll right now."
+
+`%verdict.answer%` is `accepted`, `declined` or `waiting`, for an action that wants to branch. Under **Wait for me to accept** a verdict can be minutes away, so use the socket below instead of a delay.
+
 ## Giving the points back
 
-A refused redeem should not cost anything. In the same action, after the fetch, branch on `%runlog.ok%` and add **Twitch** → **Channel Rewards** → **Update Redemption Status** set to **Cancel**, which refunds the points. It only works on a reward Streamer.bot made itself, so create the reward with **Create Reward** on the trigger rather than by hand in the Twitch dashboard.
+A redeem the table would not take should not cost anything. Branch on `%runlog.ok%` for a press that was refused outright, or on `%verdict.answer%` being `declined` for one the table turned down, and add **Twitch** → **Channel Rewards** → **Update Redemption Status** set to **Cancel**, which returns the points.
+
+This one has a condition worth knowing before you build around it: Twitch only lets an application cancel redemptions of rewards it created itself, so it works only where the reward was made with **Create Reward** on the trigger rather than by hand in the Twitch dashboard. Creating a reward that way needs the broadcaster account connected, the scope for managing redemptions, and an Affiliate channel, since channel points need one. Where any of that is missing the rest of the action still works; the points simply stay spent.
 
 The key is not the live link's token, on purpose: the token is in every widget address and so in your scene, and a leaked address should let strangers watch, never press. **Stop taking asks** kills the key and leaves the link alone.
 
