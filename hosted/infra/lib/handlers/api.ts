@@ -94,6 +94,41 @@ const inSeconds = (ms: number): string => {
   const seconds = Math.max(1, Math.ceil(ms / 1000));
   return seconds === 1 ? "1 second" : `${seconds} seconds`;
 };
+
+/** Two presses closer together than this, alike in every way, are one press. */
+const ASK_REPEAT_MS = 3_000;
+
+interface AskMenu {
+  roll: boolean;
+  moves: Array<{ id: string; label: string }>;
+}
+
+/**
+ * What may be asked for, out of the snapshot the table last wrote.
+ *
+ * Whether a move is on offer depends on the pack's conditions and on what
+ * the run has already spent, so the device holding both is the only thing
+ * that can say. The server carries the answer rather than works it out. A
+ * snapshot written before this was published names nothing, which reads as
+ * a run with nothing to ask for rather than an error.
+ */
+function askMenuOf(snapshot: unknown): AskMenu {
+  const asks = isRecord(snapshot) && isRecord(snapshot["asks"]) ? snapshot["asks"] : null;
+  const listed = asks && Array.isArray(asks["moves"]) ? asks["moves"] : [];
+  return {
+    roll: asks?.["roll"] === true,
+    moves: listed.flatMap((m) => (isRecord(m) && str(m["id"]) && str(m["label"]) ? [{ id: m["id"], label: m["label"] }] : [])),
+  };
+}
+
+/** The menu as a chat line, in the pack's own words. */
+function sayMenu(menu: AskMenu): string {
+  const named = menu.moves.map((m) => m.label).join(", ");
+  if (menu.roll && menu.moves.length > 0) return `Ask for a roll, or a move: ${named}.`;
+  if (menu.roll) return "A table is waiting. Ask for a roll.";
+  if (menu.moves.length > 0) return `Moves to ask for: ${named}.`;
+  return "Nothing can be asked for right now.";
+}
 const ASK_KINDS = new Set(["move", "roll"]);
 const ASK_ID = /^[a-z][a-zA-Z0-9_-]{0,63}$/;
 const isPolicy = (v: unknown): v is AskPolicy => v === "ask" || v === "auto";
@@ -825,21 +860,40 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!found || !k || !found.meta.askKeyHash || hashToken(k) !== found.meta.askKeyHash) return said(403, "This run is not taking asks, or that is not its key.");
     if (found.meta.deletedAt || found.meta.endedAt) return said(410, "This run is over.");
     const kind = field("kind");
+    // No kind is a question, not a press: what may be asked for at this
+    // moment. It is what a `!moves` command reads, what the run's own Chat
+    // settings list from, and what makes the bare address harmless.
+    if (!kind) {
+      const held = await store.getSnapshot(id);
+      const menu = askMenuOf(held?.snapshot);
+      return said(200, sayMenu(menu), { roll: menu.roll, moves: menu.moves });
+    }
     if (!ASK_KINDS.has(kind)) return said(422, "Say what to ask for: a roll, or a move by its id.");
     const move = field("move");
     if (kind === "move" && !ASK_ID.test(move)) return said(422, "That move needs an id, the one the run's Chat settings list.");
     const name = field("name").trim().slice(0, 40);
     const via = field("via").trim().slice(0, 32);
+    const ref = field("ref").trim().slice(0, 64);
     const at = now();
-    const allowed = askAllowed(id, name || "-", Date.parse(at));
+    const atMs = Date.parse(at);
+    const taken = `${name || "Someone"} asked for ${kind === "roll" ? "a roll" : move}. The table answers next.`;
+    // The same press arriving twice is not a second press. A tool that
+    // retries after a reply it never saw, or a button pressed twice in a
+    // second, should hear what the first one heard rather than be told off
+    // by a limit meant for someone pressing again on purpose.
+    const already = (await store.listAsks(id)).find((a) =>
+      ref ? a.ref === ref : (a.name ?? "") === name && a.kind === kind && (a.move ?? "") === (kind === "move" ? move : "") && atMs - Date.parse(a.at) < ASK_REPEAT_MS,
+    );
+    if (already) return said(200, taken, { ask: already.id, repeat: true });
+    const allowed = askAllowed(id, name || "-", atMs);
     if (!allowed.ok) return said(429, `Too quick. ${name || "Someone"} can ask again in ${inSeconds(allowed.waitMs)}.`);
-    const ask: Ask = { id: randomBytes(6).toString("hex"), kind: kind as Ask["kind"], ...(kind === "move" ? { move } : {}), ...(name ? { name } : {}), ...(via ? { via } : {}), at };
+    const ask: Ask = { id: randomBytes(6).toString("hex"), kind: kind as Ask["kind"], ...(kind === "move" ? { move } : {}), ...(name ? { name } : {}), ...(via ? { via } : {}), ...(ref ? { ref } : {}), at };
     const asks = await store.addAsk(id, ask);
     await deps.tell?.(id, "ask", { ask: ask.id, kind: ask.kind, ...(ask.move ? { move: ask.move } : {}), ...(name ? { name } : {}), ...(via ? { via } : {}), policy: found.meta.askPolicy ?? "ask" }, at);
     await deps.notify?.(id, found.meta.seq);
     // What the table decides is not known here, under either policy: the
     // host's device does the acting and says so on the socket afterwards.
-    return said(200, `${name || "Someone"} asked for ${kind === "roll" ? "a roll" : move}. The table answers next.`, { ask: ask.id, asks: asks.filter((a) => !a.answer) });
+    return said(200, taken, { ask: ask.id, asks: asks.filter((a) => !a.answer) });
   }
 
   // ---- a watcher's reaction: one of a few emoji, to everyone watching and the table ----
