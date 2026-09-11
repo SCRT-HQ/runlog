@@ -43,7 +43,7 @@ function LiveBar({ title, packId, listed }: { title: string | null; packId: stri
           </a>
         )}
         <a className="ghost" href={linkTo("#guide/streaming", "./")} title="How live links and widgets work">
-          Docs
+          Guide
         </a>
         {/* The same switch the app has, since a watcher has no settings dialog to find it in; the choice is this device's, as everywhere. */}
         <ThemeMenu />
@@ -186,7 +186,7 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
         <div className="padRow">
           {paper && (
             <button className="ghost tiny" onClick={openPaper} title="What this pack is, and how the mode being played goes">
-              About this pack
+              Docs
             </button>
           )}
           {pack ? (

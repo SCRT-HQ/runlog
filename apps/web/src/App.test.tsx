@@ -32,7 +32,8 @@ describe("the app shell", () => {
   });
 
   it("ships no pack in the bundle: the first paint is the library, and the bar says so", () => {
-    expect(html).toContain('class="packNow"');
+    expect(html).toContain("packNow");
+    expect(html).toContain(">Packs<");
     expect(html).toContain("Your packs");
     expect(html).toContain('aria-current="page"');
     expect(html).toContain("Get more packs");
@@ -43,6 +44,14 @@ describe("the app shell", () => {
     expect(html).not.toContain("Inspect");
     expect(html).not.toContain(">Design<");
     expect(html).toContain("Menu");
+  });
+
+  it("keeps the pack's own paper out of the bar, where there is no run to read it against", () => {
+    // Docs sits with the run's controls, beside Undo, so it is absent
+    // until there is a run. Rules, which it replaced, is gone from the bar.
+    expect(html).not.toContain(">Rules<");
+    expect(html).not.toContain(">Docs<");
+    expect(html).not.toContain("rulesBtn");
   });
 
   it("names the header buttons for what the pages call themselves", () => {

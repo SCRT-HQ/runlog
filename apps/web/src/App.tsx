@@ -646,9 +646,6 @@ export default function App() {
     [imported, updates, benchIds],
   );
 
-  /** The pack in play, its own title wherever it has one; absent with nothing loaded. */
-  const activeTitle = source === null ? null : (imported.find((p) => p.id === activeId)?.title ?? (result.ok ? result.pack.title : "A pack that did not load"));
-
   /** Whether the library is what is on screen right now, whichever way it got there. */
   const onLibrary = view === "library" || (source === null && view !== "design" && view !== "profile" && view !== "guide");
 
@@ -938,31 +935,21 @@ export default function App() {
           <img className="logo" src={`${import.meta.env.BASE_URL}icon.svg`} alt="" />
           <h1>Runlog</h1>
         </a>
-        {/* One door to the library, always; a pack in play still says which one, in muted text beside it. */}
-        <button className="packNow" onClick={openLibrary} title="Your packs and runs" aria-current={onLibrary ? "page" : undefined}>
-          {/* Room for the words on a wide bar; the one word that matters on a
-              phone, where this stands in the row of buttons beside Rules. */}
-          <span className="shelfLabel">Your packs</span>
-          <span className="shelfLabelShort">Packs</span>
-          {!onLibrary && activeTitle !== null && <span className="muted packTitle">{activeTitle}</span>}
-        </button>
         <div className="topbarEnd">
           {/*
-            The pack's rules, as one button that says which way it goes.
-            Play, Rules and the rest used to be three tabs on every screen;
-            what a player needs on a phone is the run and one way to read
-            the rules of what they are running.
+            One door to the library, in the row with the rest rather than
+            adrift beside the logo. It carried the open pack's name until
+            the run's own header, a line below, said the same thing twice
+            and pushed the row into two at middling widths.
           */}
-          {source !== null && result.ok && (
-            <button className="ghost rulesBtn" onClick={() => setView(view === "rules" ? "play" : "rules")}>
-              {view === "rules" ? "Back to play" : "Rules"}
-            </button>
-          )}
-          <button className="ghost createBtn" onClick={() => (view === "design" ? leaveDesigner() : openDesigner())} title="Write a pack of your own in the Designer">
-            {view === "design" ? "Back to the app" : "Designer"}
+          <button className="ghost packNow" onClick={openLibrary} title="Your packs and runs" aria-current={onLibrary ? "page" : undefined}>
+            Packs
           </button>
-          <button className="ghost guideBtn" onClick={() => (view === "guide" ? leaveGuide() : openGuide())} title="How to use Runlog">
-            {view === "guide" ? "Back to the app" : "Guide"}
+          <button className={`${view === "design" ? "primary" : "ghost"} createBtn`} onClick={() => (view === "design" ? leaveDesigner() : openDesigner())} title={view === "design" ? "Back to the run" : "Write a pack of your own in the Designer"}>
+            {view === "design" ? "Play" : "Designer"}
+          </button>
+          <button className={`${view === "guide" ? "primary" : "ghost"} guideBtn`} onClick={() => (view === "guide" ? leaveGuide() : openGuide())} title={view === "guide" ? "Back to the run" : "How to use Runlog"}>
+            {view === "guide" ? "Play" : "Guide"}
           </button>
           <AccountBadge closeKey={view} onOpenProfile={(page) => openProfile(page)} onOpenSettings={() => setDeviceSettingsOpen(true)} />
         </div>

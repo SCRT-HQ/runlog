@@ -207,9 +207,11 @@ p {
   position: sticky;
   top: 0;
   z-index: 10;
-  /* Three columns with the outer two equal, so the pack button sits on the page's center line, not between the mark and the buttons. */
+  /* The mark at one end, every button at the other. It was three columns
+     while the shelf button sat on the page's center line; the shelf joined
+     the row when the run's own header started saying which pack it was. */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 1rem;
   align-items: center;
   padding: 0.85rem 1.25rem;
@@ -836,37 +838,10 @@ p {
 }
 
 /* ---- one door to the library, from anywhere ----------------------------- */
-.packNow {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  padding: 0.4rem 0.2rem;
-  background: none;
-  border: none;
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-.packNow .shelfLabel {
-  text-decoration: underline;
-  text-decoration-color: var(--line);
-  text-underline-offset: 0.15em;
-}
-@media (hover: hover) {
-  .packNow:hover .shelfLabel {
-    text-decoration-color: currentColor;
-  }
-}
-/* The current page: still a real link (one press from the run back to it
-   would be odd to disable), but read as landed-on rather than reachable. */
-.packNow[aria-current="page"] .shelfLabel {
+/* Marked as landed-on rather than reachable, the way a current page is. */
+.packNow[aria-current="page"] {
   color: var(--muted);
-  text-decoration: none;
-}
-.packNow .packTitle {
-  font-family: var(--serif);
-  font-size: var(--t-3);
+  border-color: var(--line-2);
 }
 
 /* ---- the library -------------------------------------------------------- */
@@ -2324,12 +2299,6 @@ select.textInput {
 .menuTheme .themeMenu {
   justify-content: space-between;
 }
-.rulesBtn {
-  font-family: var(--mono);
-  font-size: var(--t-1);
-  padding: 0.25rem 0.7rem;
-}
-
 /* ---- the profile ---------------------------------------------------------- */
 .profile {
   display: grid;
@@ -2641,16 +2610,20 @@ select.textInput {
 .topbarEnd {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem 0.75rem;
   justify-self: end;
 }
+/* A button gives up the row before it gives up its word: a label broken
+   one letter to a line is what a narrowing bar used to do to "Back to the
+   app", which is half of why that button is now called Play. */
+.topbarEnd > * { flex: 0 0 auto; }
+.topbarEnd .ghost,
+.topbarEnd .primary,
+.topbarEnd .packNow { white-space: nowrap; }
 .topbar .brand {
   justify-self: start;
-}
-.topbar .packNow {
-  justify-self: center;
-  max-width: 100%;
-  box-sizing: border-box;
 }
 .themeMenu {
   display: flex;
@@ -2746,7 +2719,6 @@ select.textInput {
  * the row with the rest, under its shorter name, and the pack it is holding
  * is named where the run names its unit. The mark stands for the name.
  */
-.shelfLabelShort { display: none; }
 @media (max-width: 760px) {
   /*
    * How tall that one row is, for whatever has to sit under it: the run's
@@ -2776,9 +2748,6 @@ select.textInput {
     border-radius: var(--radius);
     font-size: var(--t-1);
   }
-  .topbar .packNow .shelfLabel,
-  .topbar .packNow .packTitle { display: none; }
-  .topbar .packNow .shelfLabelShort { display: inline; }
   .topbar .packNow[aria-current="page"] { color: var(--muted); border-color: var(--line-2); }
   /* Five things on one line at 360 pixels: nothing wraps, and a long label,
      Back to the app where Designer was, gives up its end rather than the
