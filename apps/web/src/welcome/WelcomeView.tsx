@@ -66,16 +66,17 @@ export function WelcomeView() {
           <h1>Runlog</h1>
         </a>
         <nav className="topbarEnd" aria-label="Ways in">
-          <a className="ghost" href={linkTo("#guide/start", play)}>
-            Docs
+          <a className="ghost" href="https://github.com/SCRT-HQ/runlog">
+            Source
           </a>
           {hosted?.links.pricing && (
             <a className="ghost" href={hosted.links.pricing}>
               Pricing
             </a>
           )}
-          <a className="ghost" href="https://github.com/SCRT-HQ/runlog">
-            Source
+          {/* The same word the app's own bar uses for the same place. */}
+          <a className="ghost" href={linkTo("#guide/start", play)}>
+            Guide
           </a>
           <a className="primary" href={play}>
             Play
