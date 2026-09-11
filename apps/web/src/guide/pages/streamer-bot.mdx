@@ -29,6 +29,14 @@ The address always answers `200`, refusals included, so the sub-action runs on a
 
 Whether the table took it is a separate question, and a later one: under **Wait for me to accept** the ask sits in the Asks panel until you press, and under **Act on it as it lands** the host's device acts as it arrives. Either way the socket carries an `asked` gesture with `accepted` true or false and a reason, so the action on the **WebSocket Client** → **Message** trigger above can say `Chat's forfeit is in` or `No such move right now`.
 
+## A `!moves` command
+
+The same address with nothing after the key answers what can be asked for right now, so a command action with a **Fetch URL** on `https://runlog.scrthq.com/api/public/runs/<runId>/asks?k=<askKey>`, variable `runlog`, parse as JSON on, and a chat line of `%runlog.say%` tells the channel "Ask for a roll, or a move: Salvage a Piece." It lists what the table is actually offering at that moment, not everything the pack has, so a move already spent is not advertised.
+
+## Not charging twice for one press
+
+Add `&ref=%redemptionId%` to the address on a redeem, or the message id on a command. A press whose reference has been seen before answers as the first one did and queues nothing, so a retry after a reply that never arrived cannot press twice. Without it, two identical presses within three seconds are read as the double-click they usually are.
+
 ## Giving the points back
 
 A refused redeem should not cost anything. In the same action, after the fetch, branch on `%runlog.ok%` and add **Twitch** → **Channel Rewards** → **Update Redemption Status** set to **Cancel**, which refunds the points. It only works on a reward Streamer.bot made itself, so create the reward with **Create Reward** on the trigger rather than by hand in the Twitch dashboard.

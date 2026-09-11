@@ -19,6 +19,34 @@ const events: RunEvent[] = [
 ];
 
 describe("a live snapshot", () => {
+  it("names what the outside may ask for: the moves offered now, and whether a table waits", () => {
+    const state = reduce(kiln, events);
+    const snap = snapshotOf(kiln, state, events, "2026-01-01T00:00:05Z");
+    // The unit opens on a step a person does by hand, so there is nothing to roll.
+    expect(snap.stepKind).toBe("manual");
+    expect(snap.asks?.roll).toBe(false);
+    // Moves are what the run would offer right now, by id and label, never every move the pack declares.
+    const offered = snap.asks?.moves ?? [];
+    expect(offered.every((m) => typeof m.id === "string" && typeof m.label === "string")).toBe(true);
+    // Salvage is offered only when the player is deciding whether to stop, so not here.
+    expect(Object.keys(kiln.moves ?? {})).toContain("salvage");
+    expect(offered.some((m) => m.id === "salvage")).toBe(false);
+  });
+
+  it("says a roll may be asked for once the flow reaches a table", () => {
+    // Past the opening manual step and into the second unit, where the Kiln Check is no longer skipped.
+    const toTable: RunEvent[] = [
+      ...events,
+      { t: "StepCompleted", at: "2026-01-01T00:00:02Z", id: "e3", phase: "enter", step: 0 } as unknown as RunEvent,
+      { t: "UnitFinalized", at: "2026-01-01T00:00:03Z", id: "e4" } as unknown as RunEvent,
+      { t: "UnitEntered", at: "2026-01-01T00:00:04Z", id: "e5" } as unknown as RunEvent,
+      { t: "StepCompleted", at: "2026-01-01T00:00:05Z", id: "e6", phase: "enter", step: 0 } as unknown as RunEvent,
+    ];
+    const snap = snapshotOf(kiln, reduce(kiln, toTable), toTable, "2026-01-01T00:00:06Z");
+    expect(snap.stepKind).toBe("rollTable");
+    expect(snap.asks?.roll).toBe(true);
+  });
+
   it("carries the state in labels and numbers, and the log's words where the license allows", () => {
     const state = reduce(kiln, events);
     const snap = snapshotOf(kiln, state, events, "2026-01-01T00:00:05Z");

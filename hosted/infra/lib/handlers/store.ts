@@ -135,6 +135,12 @@ export interface Ask {
   name?: string;
   /** How: `channel-points`, `bits`, `gift`, `command`, whatever the caller says. */
   via?: string;
+  /**
+   * The caller's own name for this press, where it has one: a redemption
+   * id, a message id. What makes a retry after a lost reply the same press
+   * rather than a second one.
+   */
+  ref?: string;
   at: string;
   answer?: "accepted" | "declined";
   answeredAt?: string;
