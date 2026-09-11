@@ -377,7 +377,7 @@ GET /api/public/stream/asks?k=<pressKey>&ask=%rewardName%&name=%userName%&ref=%r
 
 It reaches the run in play: of the runs that account is taking asks on,
 the one moved most recently. `run=<runId>` names another, for anyone
-keeping two going at once. The answer carries `run`, so a bot can say
+keeping two going at once. The answer carries `runId`, so a bot can say
 which one it reached.
 
 Taking asks stays the host's word, per run, under **Settings → Stream →
@@ -386,6 +386,27 @@ anything on. A run that is not taking asks is passed over, and an account
 with none answers `No run is taking asks right now.`
 
 A watch key is refused here. What watches must never also press.
+
+### `GET /api/public/stream/metrics?k=<watchKey>`
+
+The same document the per-run metrics address answers with, reached
+without a run id or a link's token. A `!score` command should not ask
+anyone to pick a live link apart for the pieces inside it.
+
+It answers for the run in play, or for `run=<runId>`, and carries `runId`
+alongside. Only a run open to watchers; an account with none answers
+`ok: false`.
+
+### The socket on a watch key: `wss://…/ws?k=<watchKey>`
+
+The same doorbell, opened without naming a run. It watches the run in
+play, or `run=<runId>`, and carries the gestures above exactly as the
+per-run socket does.
+
+Which run it watches is settled when it connects. A socket open across the
+start of a new run goes on watching the old one; `run-ended` on the old
+run is the moment to open it again. A press key is refused here, as it is
+by every address that reads.
 
 ### `GET /api/public/stream/runs?k=<watchKey>`
 
