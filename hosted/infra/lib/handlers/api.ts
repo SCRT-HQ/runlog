@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { hashToken, verify as verifyToken, type Caller } from "./auth.js";
-import { dynamoStore, PACK_ORIGINS, shownName, type ApiKey, type Ask, type AskPolicy, type LicenseMeta, type Reaction, type PackMeta, type PackOrigin, type Role, type SessionMember, type SessionMeta, type Store } from "./store.js";
+import { dynamoStore, PACK_ORIGINS, shownName, type ApiKey, type Ask, type AskPolicy, type LicenseMeta, type Reaction, type PackMeta, type PackOrigin, type Role, type SessionMember, type SessionMeta, type StreamKeyKind, type Store } from "./store.js";
 import { sesMailer, type Mailer } from "./email.js";
 import { fingerprintOf, verifyProof } from "./proof.js";
 import { apiGatewayPoster, dynamoLive, notifier, teller, type Notify, type Tell } from "./live.js";
@@ -129,6 +129,8 @@ function sayMenu(menu: AskMenu): string {
   if (menu.moves.length > 0) return `Moves to ask for: ${named}.`;
   return "Nothing can be asked for right now.";
 }
+/** How many of an account's runs a watch key will list: a chooser, not a library. */
+const STREAM_RUNS_LISTED = 10;
 const ASK_KINDS = new Set(["move", "roll"]);
 const ASK_ID = /^[a-z][a-zA-Z0-9_-]{0,63}$/;
 const isPolicy = (v: unknown): v is AskPolicy => v === "ask" || v === "auto";
@@ -983,6 +985,47 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     return open(200, { found: true, ...metricsOf({ id: m.id, packId: m.packId, packTitle: m.packTitle ?? null, name: m.name ?? null, endedAt: m.endedAt ?? null }, snap, now()) });
   }
 
+  /**
+   * What a watch key may draw: this account's runs that are open to watch,
+   * newest first, and which of them is in play.
+   *
+   * A browser source is set up once and lives in a scene for months, so
+   * its address cannot name a run. It names the account, and this says
+   * what there is. Which one a given source draws is that source's own
+   * business, chosen at its end and remembered there, because one answer
+   * here could never serve two sources pointed at two different runs.
+   *
+   * In play is simply the one moved most recently, which is the one being
+   * played without anyone having to say so.
+   */
+  const streamRuns = path === "/api/public/stream/runs";
+  if (streamRuns && method === "GET") {
+    const k = event.queryStringParameters?.["k"] ?? "";
+    const open = (status: number, body: unknown): Result => ({ statusCode: status, headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", "cache-control": "no-store" }, body: JSON.stringify(body) });
+    const owner = k ? await store.streamKeyOwner(hashToken(k)) : null;
+    // A press key is not a watch key: what presses must never also read.
+    if (!owner || owner.kind !== "watch") return open(200, { ok: false, say: "That is not a key for watching a run." });
+    const { sessions } = await store.manifest(owner.sub);
+    const live = sessions
+      .filter((p) => p.role === "owner" && !p.deletedAt && !p.endedAt)
+      .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
+      .slice(0, STREAM_RUNS_LISTED);
+    // Only a run its host has opened to watchers: a key for a scene does
+    // not quietly make everything else in the account readable.
+    const runs: Array<{ id: string; name: string | null; packTitle: string | null; updatedAt: string }> = [];
+    for (const p of live) {
+      const found = await store.getSession(p.id);
+      if (!found?.meta.publicTokenHash) continue;
+      runs.push({ id: p.id, name: p.name ?? null, packTitle: p.packTitle ?? null, updatedAt: p.updatedAt });
+    }
+    return open(200, {
+      ok: true,
+      runs,
+      inPlay: runs[0]?.id ?? null,
+      say: runs.length === 0 ? "No run is open to watch right now." : `${runs.length === 1 ? "One run" : `${runs.length} runs`} to watch.`,
+    });
+  }
+
   // ---- a run open to anyone with its link: no account, the token is the key ----
   const publicRun = path.match(/^\/api\/public\/runs\/([^/]+)$/);
   if (publicRun && method === "GET") {
@@ -1161,6 +1204,40 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const features = await stripe.activeEntitlements(existing);
       await deps.billing.putEntitlements(caller.sub, features, now());
       return json(200, { entitlements: features });
+    }
+    return json(410, { error: ROUTE_GONE });
+  }
+
+  /**
+   * The account's two stream keys: one to watch by, one to press by.
+   *
+   * A run's own ask key dies with the run, so every address built on it
+   * has to be rebuilt for the next one: the widget in a scene, the action
+   * in a bot, the command in a deck. These belong to the account instead
+   * and outlive any run, so a scene is wired once.
+   *
+   * Shown once, at minting, and kept only as a hash. Minting again
+   * replaces, which is how one is rotated: there is no "show it to me
+   * again", because there is nothing here to show.
+   */
+  if (path === "/api/me/stream-keys") {
+    const kindOf = (v: unknown): StreamKeyKind | null => (v === "watch" || v === "press" ? v : null);
+    if (method === "GET") return json(200, { keys: await store.streamKeys(caller.sub) });
+    if (method === "POST") {
+      const body = parse(event);
+      const kind = kindOf(isRecord(body) ? body["kind"] : null);
+      if (!kind) return json(422, { error: "kind: watch or press" });
+      const gate = await needsPlus();
+      if (gate) return gate;
+      const key = (deps.token ?? (() => randomBytes(24).toString("base64url")))();
+      await store.setStreamKey(caller.sub, kind, hashToken(key), now());
+      return json(200, { key, kind, keys: await store.streamKeys(caller.sub) });
+    }
+    if (method === "DELETE") {
+      const kind = kindOf(event.queryStringParameters?.["kind"]);
+      if (!kind) return json(422, { error: "kind: watch or press" });
+      await store.clearStreamKey(caller.sub, kind);
+      return json(200, { keys: await store.streamKeys(caller.sub) });
     }
     return json(410, { error: ROUTE_GONE });
   }
