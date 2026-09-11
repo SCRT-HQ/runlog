@@ -46,6 +46,19 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
   return {
     live,
     store: {
+      async streamKeyOwner(hash) {
+        if (hash === hashToken("watchkey")) return { sub: "user_1", kind: "watch" as const };
+        if (hash === hashToken("presskey")) return { sub: "user_1", kind: "press" as const };
+        return null;
+      },
+      async manifest(sub) {
+        const owned = sub === "user_1" ? ["open", "shared"] : [];
+        return {
+          packs: [],
+          licenses: [],
+          sessions: owned.map((id) => ({ id, role: "owner" as const, packId: "p", packVersion: "1", ownerSub: sub, updatedAt: id === "open" ? "2026-09-11T00:10:00Z" : "2026-09-11T00:00:00Z", seq: 3 })),
+        };
+      },
       async getSession(id) {
         if (id === "open") return { meta: { ...meta(id, "user_1"), publicTokenHash: hashToken("livetok") }, members: [member("user_1")] };
         if (id === "shared") return { meta: meta(id, "user_1"), members: [member("user_1"), member("user_2")] };
@@ -78,6 +91,30 @@ describe("opening a socket", () => {
     expect((await route(ev("$connect", "c2", { queryStringParameters: { token: "bad" } }), d)).statusCode).toBe(401);
     expect((await route(ev("$connect", "c3"), d)).statusCode).toBe(401);
     expect(d.live.conns.has("c2")).toBe(false);
+  });
+});
+
+describe("a socket on a stream key", () => {
+  it("watches the account's run in play, so a bot holds no run id and no link token", async () => {
+    const d = deps();
+    expect((await route(ev("$connect", "c1", { queryStringParameters: { k: "watchkey" } }), d)).statusCode).toBe(200);
+    // "open" is the one that is both shared and most recently moved.
+    expect(await d.live.watchers("open")).toEqual([{ connectionId: "c1", sub: "stream:user_1" }]);
+  });
+
+  it("refuses a press key, which belongs in a bot and never in a scene", async () => {
+    const d = deps();
+    expect((await route(ev("$connect", "c2", { queryStringParameters: { k: "presskey" } }), d)).statusCode).toBe(401);
+    expect(d.live.conns.has("c2")).toBe(false);
+  });
+
+  it("refuses a key that opens nothing, and takes no requests once open", async () => {
+    const d = deps();
+    expect((await route(ev("$connect", "c3", { queryStringParameters: { k: "nope" } }), d)).statusCode).toBe(401);
+    await route(ev("$connect", "c4", { queryStringParameters: { k: "watchkey" } }), d);
+    // A scene's socket listens; it does not ask to watch anything else.
+    await route(ev("$default", "c4", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d);
+    expect(await d.live.watchers("shared")).toEqual([]);
   });
 });
 

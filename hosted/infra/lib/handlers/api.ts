@@ -980,7 +980,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     await deps.notify?.(id, found.meta.seq);
     // What the table decides is not known here, under either policy: the
     // host's device does the acting and says so on the socket afterwards.
-    return said(200, taken, { ask: ask.id, run: id, asks: asks.filter((a) => !a.answer) });
+    return said(200, taken, { ask: ask.id, runId: id, asks: asks.filter((a) => !a.answer) });
   }
 
   // ---- a watcher's reaction: one of a few emoji, to everyone watching and the table ----
@@ -1029,6 +1029,35 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
    * In play is simply the one moved most recently, which is the one being
    * played without anyone having to say so.
    */
+  /**
+   * The numbers of the run in play, by a watch key.
+   *
+   * The same document the per-run metrics address answers with, reached
+   * without a run id or a link's token: a `!score` command should not ask
+   * anyone to pick a live link apart for the pieces inside it.
+   */
+  const streamMetrics = path === "/api/public/stream/metrics";
+  if (streamMetrics && method === "GET") {
+    const k = event.queryStringParameters?.["k"] ?? "";
+    const open = (status: number, body: unknown): Result => ({ statusCode: status, headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", "cache-control": "no-store" }, body: JSON.stringify(body) });
+    const owner = k ? await store.streamKeyOwner(hashToken(k)) : null;
+    if (!owner || owner.kind !== "watch") return open(200, { ok: false, say: "That is not a key for watching a run." });
+    const named = (event.queryStringParameters?.["run"] ?? "").trim();
+    const { sessions } = await store.manifest(owner.sub);
+    const live = sessions
+      .filter((p) => p.role === "owner" && !p.deletedAt && !p.endedAt && (!named || p.id === named))
+      .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
+      .slice(0, STREAM_RUNS_LISTED);
+    for (const p of live) {
+      const found = await store.getSession(p.id);
+      if (!found?.meta.publicTokenHash) continue;
+      const m = found.meta;
+      const snap = await store.getSnapshot(p.id);
+      return open(200, { ok: true, runId: p.id, ...metricsOf({ id: m.id, packId: m.packId, packTitle: m.packTitle ?? null, name: m.name ?? null, endedAt: m.endedAt ?? null }, snap, now()) });
+    }
+    return open(200, { ok: false, say: "No run is open to watch right now." });
+  }
+
   const streamRuns = path === "/api/public/stream/runs";
   if (streamRuns && method === "GET") {
     const k = event.queryStringParameters?.["k"] ?? "";
