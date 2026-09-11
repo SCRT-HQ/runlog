@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Pack } from "@runlog/rules-schema";
 import { useApi } from "../sync/useApi.ts";
 import { usePlan } from "../sync/usePlan.ts";
-import { PlanError, type AskPolicy } from "../sync/client.ts";
+import { PlanError, type AskPolicy, type StreamKeys } from "../sync/client.ts";
 import { apiBase } from "../sync/config.ts";
 import type { StoredRun } from "../storage/db.ts";
 
@@ -22,7 +22,11 @@ export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: Sto
   const allowed = !plan.gates || plan.can("plus");
   const [key, setKey] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const [copied, setCopied] = useState<"key" | "address" | null>(null);
+  const [copied, setCopied] = useState<"key" | "address" | "press" | null>(null);
+  /** The account's keys, as the server has them: that they exist, never the keys. */
+  const [keys, setKeys] = useState<StreamKeys>({});
+  /** A press key just minted, held only while this panel is open: it is shown once. */
+  const [streamKey, setStreamKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   /**
    * Whether the run takes asks, as this panel knows it: the record on the
@@ -36,6 +40,15 @@ export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: Sto
 
   if (!api || !record) return null;
   if (record.role !== "owner") return null;
+
+  useEffect(() => {
+    if (!api || !allowed) return;
+    let live = true;
+    void api.streamKeys().then((k) => live && setKeys(k), () => {});
+    return () => {
+      live = false;
+    };
+  }, [api, allowed]);
 
   const run = async (work: () => Promise<void>) => {
     if (busy) return;
@@ -77,6 +90,31 @@ export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: Sto
     return /^https?:/.test(b) ? b : `${typeof location !== "undefined" ? location.origin : ""}${b}`;
   })();
   const address = key ? `${base}/public/runs/${encodeURIComponent(record.runId)}/asks?k=${encodeURIComponent(key)}` : null;
+  const makePressKey = () =>
+    run(async () => {
+      const made = await api.mintStreamKey("press");
+      setStreamKey(made.key);
+      setKeys(made.keys);
+    });
+  /** The address a bot holds: the account's, not this run's, so it outlives the run. */
+  const pressAddress = streamKey ? `${base}/public/stream/asks?k=${encodeURIComponent(streamKey)}` : "";
+  /** A press sent the way chat would send one, so the wiring is proved off air. */
+  const tryIt = () =>
+    run(async () => {
+      if (!pressAddress) return;
+      const answer = await fetch(`${pressAddress}&kind=roll&name=you&via=a+test`).then((r) => r.json() as Promise<{ say?: string }>);
+      setNote(answer.say ?? "That did not come back with anything to say.");
+    });
+  const copyText = async (what: "key" | "address" | "press", text: string) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(what);
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      /* no clipboard: the text is on screen to copy */
+    }
+  };
   const copy = async (what: "key" | "address") => {
     const text = what === "key" ? key : address;
     if (!text) return;
@@ -144,25 +182,57 @@ export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: Sto
             </>
           )}
           {note && <p className="muted small">{note}</p>}
+
+          <h4 className="stepLabel">One address for every run</h4>
           <p className="muted small">
-            A request is a POST to the address with a JSON body: <code>{`{"kind":"roll"}`}</code> rolls the table that is waiting;{" "}
-            <code>{`{"kind":"move","move":"<id>"}`}</code> takes a move. Add <code>name</code> and <code>via</code> so the log says who asked and how. One ask a name every
-            twenty seconds, thirty a minute for the run.
+            The address above belongs to this {pack.vocabulary.run.one.toLowerCase()} and dies with it. This one belongs to your account and does not: point a bot at it
+            once and it finds whichever {pack.vocabulary.run.one.toLowerCase()} you have taking asks. Taking asks stays this {pack.vocabulary.run.one.toLowerCase()}
+            &apos;s own switch, above.
           </p>
-          {moves.length > 0 ? (
-            <>
-              <p className="muted small">The moves this pack offers at any time, by id:</p>
-              <ul className="askMoves">
-                {moves.map(([id, m]) => (
-                  <li key={id}>
-                    <code>{id}</code> <span className="muted small">{m.label}</span>
-                  </li>
-                ))}
-              </ul>
-            </>
+          {streamKey ? (
+            <div className="askKey">
+              <p className="muted small">The press key, shown this once. The whole address, key included:</p>
+              <code className="askAddress">{pressAddress}</code>
+              <div className="padRow">
+                <button className="ghost tiny" onClick={() => void copyText("press", pressAddress)}>
+                  {copied === "press" ? "Copied" : "Copy address"}
+                </button>
+                <button className="primary tiny" disabled={busy} onClick={() => void tryIt()}>
+                  Try it
+                </button>
+                <span className="muted small">Sends a roll, the way chat would, so you can see it land before you are live.</span>
+              </div>
+            </div>
           ) : (
-            <p className="muted small">This pack offers no move at any time, so only a roll can be asked for.</p>
+            <div className="padRow">
+              <button className="ghost tiny" disabled={busy} onClick={() => void makePressKey()}>
+                {keys.press ? "New press key" : "Make a press key"}
+              </button>
+              <span className="muted small">
+                {keys.press ? `Made ${new Date(keys.press.madeAt).toLocaleDateString()}. A new one replaces it, and the old one stops working.` : "Shown once, for a bot's settings. It presses and reads nothing."}
+              </span>
+            </div>
           )}
+
+          <h4 className="stepLabel">What to name a reward</h4>
+          <p className="muted small">
+            One action in Streamer.bot serves every reward: send <code>&amp;ask=%rewardName%</code> and name the reward after what it should do. These are the names this
+            pack answers to.
+          </p>
+          <ul className="askMoves">
+            <li>
+              <strong>Roll</strong> <span className="muted small">rolls the table the {pack.vocabulary.run.one.toLowerCase()} is waiting on</span>
+            </li>
+            {moves.map(([id, m]) => (
+              <li key={id}>
+                <strong>{m.label}</strong> <span className="muted small">or its id, {id}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="muted small">
+            One ask a name every twenty seconds, thirty a minute for the {pack.vocabulary.run.one.toLowerCase()}. A press that is refused says why in a sentence a bot can
+            put straight into chat.
+          </p>
         </>
       )}
     </div>

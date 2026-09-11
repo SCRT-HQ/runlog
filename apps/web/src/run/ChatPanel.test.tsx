@@ -32,6 +32,9 @@ const record = (over: Partial<StoredRun> = {}): StoredRun => ({ runId: "r1", pac
 const api = (over: Partial<Api> = {}): Api =>
   ({
     mintAskKey: async () => ({ key: "the-key", policy: "ask" as const }),
+    streamKeys: async () => ({}),
+    mintStreamKey: async () => ({ key: "the-press-key", keys: { press: { madeAt: "2026-09-11T00:00:00Z" } } }),
+    revokeStreamKey: async () => ({}),
     setAskPolicy: async () => {},
     revokeAskKey: async () => {},
     ...over,
@@ -51,6 +54,29 @@ describe("taking asks from chat", () => {
     });
     await waitFor(() => expect(screen.getByText(/the-key/)).toBeTruthy());
     expect(screen.queryByRole("button", { name: "Take asks" })).toBeNull();
+  });
+
+  it("hands over one address for every run, and presses it to prove the wiring", async () => {
+    current.api = api();
+    render(<ChatSettings pack={pack} record={record()} />);
+    await act(async () => {
+      screen.getByRole("button", { name: "Make a press key" }).click();
+    });
+    // The account's address, not the run's: it carries no run id at all.
+    await waitFor(() => expect(screen.getByText(/the-press-key/)).toBeTruthy());
+    const shown = screen.getByText(/the-press-key/).textContent ?? "";
+    expect(shown).toContain("/public/stream/asks");
+    expect(shown).not.toContain("r1");
+    expect(screen.getByRole("button", { name: "Try it" })).toBeTruthy();
+  });
+
+  it("names the rewards a pack answers to, rather than ids to retype", async () => {
+    current.api = api();
+    render(<ChatSettings pack={pack} record={record()} />);
+    // One action serves every reward, so what the panel lists is what to
+    // call one: the word Roll, and each move by the name the pack gives it.
+    expect(screen.getByText("Roll")).toBeTruthy();
+    expect(screen.getByText("Salvage a Piece")).toBeTruthy();
   });
 
   it("says why when the key could not be made", async () => {
