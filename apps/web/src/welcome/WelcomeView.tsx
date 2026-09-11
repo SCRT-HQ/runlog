@@ -61,7 +61,7 @@ export function WelcomeView() {
   return (
     <div className="welcome">
       <header className="topbar welcomeBar">
-        <a className="brand" href={play} title="Open Runlog">
+        <a className="brand" href={play} title="Play">
           <img className="logo" src="./icon.svg" alt="" />
           <h1>Runlog</h1>
         </a>
@@ -79,7 +79,7 @@ export function WelcomeView() {
             Source
           </a>
           <a className="primary" href={play}>
-            Open Runlog
+            Play
           </a>
         </nav>
       </header>
@@ -105,7 +105,7 @@ export function WelcomeView() {
             </p>
             <p className="welcomeCtas">
               <a className="primary" href={play}>
-                Open Runlog
+                Play
               </a>
               <a className="ghost" href={linkTo("#guide/start", play)}>
                 Read the guide
@@ -344,7 +344,7 @@ export function WelcomeView() {
           </h3>
           <p className="welcomeCtas">
             <a className="primary" href={play}>
-              Open Runlog
+              Play
             </a>
             <a className="ghost" href={linkTo("#guide/design", play)}>
               Write a pack

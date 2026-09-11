@@ -8,6 +8,7 @@ import { useAccount } from "../auth/Account.tsx";
 import { clockOfUnit, compareScores, formatClock, formatScore, nextUnit, scoreOf, unitPhases } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import { closesUnit, constrainedByOf, constraintLines, constraintsFor, describeSkip, describeSkipReason, entryWords, phaseSkipped, resultText, subjectLabel, subjectName, type PhaseResult, type RunEvent, type RunState } from "@runlog/engine";
+import { useDocDrawer } from "../docs/DocDrawer.tsx";
 import { useRun, type ActiveStep } from "./useRun.ts";
 import type { RunStore } from "./store.ts";
 import type { StoredRun } from "../storage/db.ts";
@@ -946,6 +947,7 @@ function RunHeader({
   onClose?: () => void;
 }) {
   const v = pack.vocabulary;
+  const drawer = useDocDrawer();
   const mode = pack.modes[state.mode];
   return (
     <section className={`runBar${open ? " open" : ""}`}>
@@ -970,6 +972,15 @@ function RunHeader({
             rolling from the seed
           </span>
         )}
+        {/*
+          The pack's paper, beside the run's own controls rather than up in
+          the bar, because it is only worth reading while there is a run to
+          read it against. The same word and the same drawer as the catalog
+          and the library use, so "Docs" means one thing everywhere.
+        */}
+        <button className="ghost" onClick={() => drawer.open(pack, "summary")} title="What this pack is, and the rules of what you are running">
+          Docs
+        </button>
         <button className="ghost" onClick={run.undo} disabled={!run.canUndo || run.readOnly}>
           Undo
         </button>
