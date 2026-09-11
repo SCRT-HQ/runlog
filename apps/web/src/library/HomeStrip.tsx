@@ -7,12 +7,12 @@ import { useApi } from "../sync/useApi.ts";
 import type { Race } from "../sync/client.ts";
 import { lastActive } from "../run/active.ts";
 import { onDay } from "../run/RunRow.tsx";
-import { loadCatalog, type CatalogEntry } from "./catalog.ts";
+import { loadMarketplace, type MarketplaceEntry } from "./marketplace.ts";
 import { elsewhere, pickUp, runLine, runTitle } from "./home.ts";
 
 /**
  * The strip above the shelf: where you left off, how a race stands, and
- * what is new in the catalog. Small panels, each shown only when it has
+ * what is new in the marketplace. Small panels, each shown only when it has
  * something to say, so a fresh device sees one card (start the pack it
  * came with) and a busy one sees several. Nothing here is a second copy of
  * the shelf; each card is one press to somewhere.
@@ -30,7 +30,7 @@ export function HomeStrip<P extends { id: string; title: string }>({
   onContinue,
   onContinueLast,
   onOpen,
-  onCatalog,
+  onMarketplace,
 }: {
   packs: readonly P[];
   runs: readonly StoredRun[];
@@ -40,7 +40,7 @@ export function HomeStrip<P extends { id: string; title: string }>({
   /** Open a run of the account's that this device is not on; with no id, whatever was last active here. */
   onContinueLast?: (runId?: string) => void;
   onOpen: (pack: P) => void;
-  onCatalog: () => void;
+  onMarketplace: () => void;
 }) {
   const account = useAccount();
   const api = useApi();
@@ -48,7 +48,7 @@ export function HomeStrip<P extends { id: string; title: string }>({
   const welcome = runs.length === 0 ? import.meta.env.BASE_URL : null;
   const me = account.status === "signed-in" ? account.user.id : null;
   const [races, setRaces] = useState<Race[]>([]);
-  const [fresh, setFresh] = useState<CatalogEntry[]>([]);
+  const [fresh, setFresh] = useState<MarketplaceEntry[]>([]);
   const [accountRunId, setAccountRunId] = useState<string | null>(null);
 
   const up = useMemo(() => pickUp(packs, runs, lastActive()), [packs, runs]);
@@ -81,14 +81,14 @@ export function HomeStrip<P extends { id: string; title: string }>({
     };
   }, [api, me]);
 
-  // What the catalog has that the shelf does not: published packs first, three at most.
+  // What the marketplace has that the shelf does not: published packs first, three at most.
   useEffect(() => {
     let live = true;
     const here = new Set(packs.map((p) => p.id));
-    void loadCatalog().then((all) => {
+    void loadMarketplace().then((all) => {
       if (!live) return;
       // The test bench is never "new" here, whether or not this copy shows
-      // it in the catalog at all, it is not a pack anyone is meant to
+      // it in the marketplace at all, it is not a pack anyone is meant to
       // stumble into.
       const out = all.filter((e) => !here.has(e.id) && !e.bench);
       out.sort((a, b) => (a.source === b.source ? 0 : a.source === "listing" ? -1 : 1));
@@ -173,11 +173,11 @@ export function HomeStrip<P extends { id: string; title: string }>({
       ))}
       {fresh.length > 0 && (
         <div className="panel homeCard">
-          <span className="homeLabel muted small">New in the catalog</span>
+          <span className="homeLabel muted small">New in the marketplace</span>
           <ul className="homeList">
             {fresh.map((e) => (
               <li key={e.id}>
-                <button className="linkButton" onClick={onCatalog} title={e.description ?? e.kind}>
+                <button className="linkButton" onClick={onMarketplace} title={e.description ?? e.kind}>
                   {e.title}
                 </button>
                 <span className="muted small"> · {e.price === "free" ? "free" : e.price.display}</span>

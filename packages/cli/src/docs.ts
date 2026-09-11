@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
  * `runlog docs <pack> [-o dir] [--only kinds] [--md | --html]`
  *
  * The paper that goes with a pack, written from the pack: a rulebook, a
- * quick start, a reference card, a run log sheet, and the summary a catalog
+ * quick start, a reference card, a run log sheet, and the summary a marketplace
  * shows. HTML by default because a browser prints it to a PDF with the page
  * breaks and columns already right; Markdown for anyone who wants to edit
  * or paste it. Both, unless told one.

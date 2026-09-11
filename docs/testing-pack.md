@@ -8,7 +8,7 @@ knows about stops being reachable from it. It plays as a game called
 at the keypad reads a run and not a list of scenarios. This page maps the
 game's words back to the feature each of them is there to prove.
 
-The ids in the first column are the ones fixtures, the catalog test and the
+The ids in the first column are the ones fixtures, the marketplace test and the
 features test depend on. The prose can be rewritten freely; the ids cannot.
 
 ## Forcing an entry

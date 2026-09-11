@@ -251,7 +251,9 @@ export interface MovedJob {
 }
 
 /** The screens the beacon may name: families, never an id. Mirrors apps/web/src/hosted/beacon.ts. */
-const SCREENS = ["welcome", "library", "play", "rules", "catalog", "guide", "design", "profile", "live", "widget"] as const;
+// "catalog" stays beside "marketplace": it is what the screen was called
+// until the name settled, and rows already counted under it are real.
+const SCREENS = ["welcome", "library", "play", "rules", "marketplace", "catalog", "guide", "design", "profile", "live", "widget", "dock"] as const;
 
 export interface Deps {
   store: Store;

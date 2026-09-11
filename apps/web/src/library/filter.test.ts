@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { facets, featuresOf, filterCatalog, type CatalogEntry } from "./catalog.ts";
+import { facets, featuresOf, filterMarketplace, type MarketplaceEntry } from "./marketplace.ts";
 
 /**
  * The sidebar's logic, without the sidebar: features read off a pack's
  * declaration, and a query narrowing a list.
  */
 
-const entry = (over: Partial<CatalogEntry> & { id: string }): CatalogEntry => ({
+const entry = (over: Partial<MarketplaceEntry> & { id: string }): MarketplaceEntry => ({
   version: "1",
   title: over.id,
   category: "other",
@@ -51,23 +51,23 @@ describe("narrowing the catalog", () => {
   ];
 
   it("matches words anywhere a person would look, case-insensitively", () => {
-    expect(filterCatalog(list, { q: "elden" }).map((e) => e.id)).toEqual(["trial"]);
-    expect(filterCatalog(list, { q: "things to do" }).map((e) => e.id)).toEqual(["day"]);
-    expect(filterCatalog(list, { q: "runlog craft" })).toHaveLength(0);
-    expect(filterCatalog(list, { q: "" })).toHaveLength(3);
+    expect(filterMarketplace(list, { q: "elden" }).map((e) => e.id)).toEqual(["trial"]);
+    expect(filterMarketplace(list, { q: "things to do" }).map((e) => e.id)).toEqual(["day"]);
+    expect(filterMarketplace(list, { q: "runlog craft" })).toHaveLength(0);
+    expect(filterMarketplace(list, { q: "" })).toHaveLength(3);
   });
 
   it("categories are any-of, features and tags are all-of", () => {
-    expect(filterCatalog(list, { categories: new Set(["games", "craft"]) }).map((e) => e.id)).toEqual(["trial", "kiln"]);
-    expect(filterCatalog(list, { features: new Set(["solo", "cards"]) }).map((e) => e.id)).toEqual(["kiln"]);
-    expect(filterCatalog(list, { tags: new Set(["race"]) }).map((e) => e.id)).toEqual(["trial"]);
-    expect(filterCatalog(list, { tags: new Set(["race", "habits"]) })).toHaveLength(0);
+    expect(filterMarketplace(list, { categories: new Set(["games", "craft"]) }).map((e) => e.id)).toEqual(["trial", "kiln"]);
+    expect(filterMarketplace(list, { features: new Set(["solo", "cards"]) }).map((e) => e.id)).toEqual(["kiln"]);
+    expect(filterMarketplace(list, { tags: new Set(["race"]) }).map((e) => e.id)).toEqual(["trial"]);
+    expect(filterMarketplace(list, { tags: new Set(["race", "habits"]) })).toHaveLength(0);
   });
 
   it("can show only what is already in the library, or only what is not", () => {
     const owned = new Set(["kiln"]);
-    expect(filterCatalog(list, { mine: true }, owned).map((e) => e.id)).toEqual(["kiln"]);
-    expect(filterCatalog(list, { mine: false }, owned).map((e) => e.id)).toEqual(["day", "trial"]);
+    expect(filterMarketplace(list, { mine: true }, owned).map((e) => e.id)).toEqual(["kiln"]);
+    expect(filterMarketplace(list, { mine: false }, owned).map((e) => e.id)).toEqual(["day", "trial"]);
   });
 
   it("offers every value present, most common first", () => {

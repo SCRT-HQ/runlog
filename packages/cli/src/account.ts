@@ -472,7 +472,7 @@ function flag(args: string[], name: string): string | undefined {
 
 /**
  * The price a release is listed at: `--price 3.00` in dollars, `--free`, or
- * neither, which keeps whatever the catalog has. The API takes whole cents.
+ * neither, which keeps whatever the marketplace has. The API takes whole cents.
  */
 export function priceFlag(args: string[]): { amount: number; currency: "usd" } | "free" | "keep" | { error: string } {
   if (args.includes("--free")) return "free";
@@ -486,10 +486,10 @@ export function priceFlag(args: string[]): { amount: number; currency: "usd" } |
 }
 
 /**
- * A release to the catalog: the signed pack goes up as the publisher's
+ * A release to the marketplace: the signed pack goes up as the publisher's
  * master and is listed, at a price, free, or as it already is. This is what
  * a build server runs when a tag is pushed, with RUNLOG_API_KEY set; the
- * catalog seals what you signed and never sees your signing key.
+ * marketplace seals what you signed and never sees your signing key.
  */
 export async function cmdRelease(args: string[]): Promise<number> {
   const input = args.filter((a) => !a.startsWith("-"))[0];
@@ -505,7 +505,7 @@ export async function cmdRelease(args: string[]): Promise<number> {
     const format = detectFormat(path);
     const raw = (format === "json" ? JSON.parse(text) : YAML.parse(text)) as Record<string, unknown>;
     const verified = await verifyPack(raw);
-    if (verified.status === "unsigned") throw new Error("the pack is not signed; run `runlog sign` first, since the catalog seals what you signed");
+    if (verified.status === "unsigned") throw new Error("the pack is not signed; run `runlog sign` first, since the marketplace seals what you signed");
     if (verified.status === "invalid") throw new Error(`the signature does not match the pack (${verified.reason}); sign it again`);
     const listing = listingPayload(text, format, raw);
     if (!listing.ok) throw new Error(listing.error);
@@ -525,7 +525,7 @@ export async function cmdRelease(args: string[]): Promise<number> {
     }
     if (price === "keep") {
       if (put.pack.status === "listed") console.log(`  listed ${put.pack.price ? `at ${dollars(put.pack.price)}` : "free"}, as before`);
-      else console.log("  not listed yet; pass --price 3.00 or --free to put it in the catalog");
+      else console.log("  not listed yet; pass --price 3.00 or --free to put it in the marketplace");
       return 0;
     }
     const listed = await api<{ available?: boolean; error?: string; listing?: { price: "free" | { amount: number; currency: string } } }>("POST", `/publishers/packs/${id}/listing`, price === "free" ? {} : price);

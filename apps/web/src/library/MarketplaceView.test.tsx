@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { CatalogView } from "./CatalogView.tsx";
-import type { CatalogEntry } from "./catalog.ts";
+import { MarketplaceView } from "./MarketplaceView.tsx";
+import type { MarketplaceEntry } from "./marketplace.ts";
 
 /**
  * The catalog card's footer, once owned and not.
@@ -14,7 +14,7 @@ import type { CatalogEntry } from "./catalog.ts";
  * the eye can check but a string match cannot.
  */
 
-const ownedEntry: CatalogEntry = {
+const ownedEntry: MarketplaceEntry = {
   id: "com.example.owned",
   version: "1.0.0",
   title: "Owned Pack",
@@ -29,7 +29,7 @@ const ownedEntry: CatalogEntry = {
   load: async () => "",
 };
 
-const freeEntry: CatalogEntry = {
+const freeEntry: MarketplaceEntry = {
   id: "com.example.free",
   version: "1.0.0",
   title: "Free Pack",
@@ -44,9 +44,9 @@ const freeEntry: CatalogEntry = {
   load: async () => "",
 };
 
-vi.mock("./catalog.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./catalog.ts")>();
-  return { ...actual, loadCatalog: vi.fn(async () => [ownedEntry, freeEntry]) };
+vi.mock("./marketplace.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./marketplace.ts")>();
+  return { ...actual, loadMarketplace: vi.fn(async () => [ownedEntry, freeEntry]) };
 });
 
 afterEach(cleanup);
@@ -54,7 +54,7 @@ afterEach(cleanup);
 describe("the catalog card's footer", () => {
   it("shows an owned pack as a quiet chip plus an Open button that calls onOpen with its id", async () => {
     const onOpen = vi.fn();
-    render(<CatalogView mine={new Set([ownedEntry.id])} onAdd={async () => {}} onOpen={onOpen} onBack={() => {}} />);
+    render(<MarketplaceView mine={new Set([ownedEntry.id])} onAdd={async () => {}} onOpen={onOpen} onBack={() => {}} />);
 
     const card = (await screen.findByText("Owned Pack")).closest("article");
     if (!card) throw new Error("no card rendered for the owned pack");
@@ -69,7 +69,7 @@ describe("the catalog card's footer", () => {
   });
 
   it("offers a free, unowned pack with Add to my packs", async () => {
-    render(<CatalogView mine={new Set()} onAdd={async () => {}} onOpen={() => {}} onBack={() => {}} />);
+    render(<MarketplaceView mine={new Set()} onAdd={async () => {}} onOpen={() => {}} onBack={() => {}} />);
 
     const card = (await screen.findByText("Free Pack")).closest("article");
     if (!card) throw new Error("no card rendered for the free pack");

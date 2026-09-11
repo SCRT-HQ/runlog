@@ -47,7 +47,7 @@ const paint = (packs: LibraryPack[], withReplace = true) =>
       onForgetPack={noop}
       onFile={noop}
       onSyncToggle={noop}
-      onCatalog={noop}
+      onMarketplace={noop}
       {...(withReplace ? { onReplace: noop } : {})}
     />,
   );

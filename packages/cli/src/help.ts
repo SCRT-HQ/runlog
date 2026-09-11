@@ -17,7 +17,7 @@ usage:
   runlog init     [name]                 scaffold a new pack
   runlog serve    [--port 3535] [--open] run the app from this machine, offline, nothing else installed
   runlog docs     <pack> [-o dir]        write its rulebook, quick start, reference card,
-                    [--only kinds]         run log sheet and catalog summary (HTML and Markdown)
+                    [--only kinds]         run log sheet and marketplace summary (HTML and Markdown)
   runlog keygen   [-o key.json]          make a signing key for your packs
   runlog sign     <pack> --key key.json  sign a pack, proving you wrote it
   runlog issue    <pack> --to "Name"     stamp a copy with a buyer's name and sign it
@@ -30,7 +30,7 @@ usage:
   runlog claim    key.json               prove a signing key is yours; the app then names you
   runlog upload   <pack>                 put a pack in your own library, private to your
                     (was: publish)         account, on every device you are signed in on
-  runlog release  <pack> [--price 3.00]  put a signed pack in the catalog, where anyone can
+  runlog release  <pack> [--price 3.00]  put a signed pack in the marketplace, where anyone can
                     [--free] [--draft]     find it, as its publisher; no flag keeps the listing
   runlog logout                          forget the sign-in
 

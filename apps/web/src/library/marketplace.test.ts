@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadPackText } from "@runlog/rules-schema";
-import { catalogEntry, filterCatalog, LEGACY_IDS, loadCatalog, publishersOf, STARTER_PACK, withTesting, type CatalogEntry } from "./catalog.ts";
+import { marketplaceEntry, filterMarketplace, LEGACY_IDS, loadMarketplace, publishersOf, STARTER_PACK, withTesting, type MarketplaceEntry } from "./marketplace.ts";
 
 /**
  * The catalog is the packs directory, read at build. What has to hold: every
@@ -9,7 +9,7 @@ import { catalogEntry, filterCatalog, LEGACY_IDS, loadCatalog, publishersOf, STA
  */
 describe("the catalog", () => {
   it("lists every pack that ships, each of which loads", async () => {
-    const entries = await loadCatalog();
+    const entries = await loadMarketplace();
     expect(entries.map((e) => e.id)).toEqual([
       "com.scrthq.runlog.any-given-day",
       "com.scrthq.runlog.elden-ring-expedition",
@@ -50,15 +50,15 @@ describe("the catalog", () => {
   });
 
   it("puts the starter first, and knows the old short names", async () => {
-    expect((await loadCatalog())[0]?.id).toBe(STARTER_PACK);
-    expect(await catalogEntry(LEGACY_IDS["kiln"]!)).toMatchObject({ title: "The Long Kiln" });
-    expect(await catalogEntry("nope")).toBeNull();
+    expect((await loadMarketplace())[0]?.id).toBe(STARTER_PACK);
+    expect(await marketplaceEntry(LEGACY_IDS["kiln"]!)).toMatchObject({ title: "The Long Kiln" });
+    expect(await marketplaceEntry("nope")).toBeNull();
   });
 });
 
 describe("publishers in the catalog", () => {
-  const entry = (id: string, publisher: { id: string; name: string } | undefined, price: CatalogEntry["price"]): CatalogEntry =>
-    ({ id, version: "1", title: id, category: "games", tags: [], features: [], requires: [], players: 1, kind: "", price, publisher, source: "listing", load: async () => "" }) as CatalogEntry;
+  const entry = (id: string, publisher: { id: string; name: string } | undefined, price: MarketplaceEntry["price"]): MarketplaceEntry =>
+    ({ id, version: "1", title: id, category: "games", tags: [], features: [], requires: [], players: 1, kind: "", price, publisher, source: "listing", load: async () => "" }) as MarketplaceEntry;
   const all = [
     entry("a", { id: "org1", name: "Kiln Works" }, "free"),
     entry("b", { id: "org1", name: "Kiln Works" }, { amount: 300, currency: "usd", display: "$3.00" }),
@@ -75,8 +75,8 @@ describe("publishers in the catalog", () => {
   });
 
   it("narrows to one publisher's packs", () => {
-    expect(filterCatalog(all, { publisher: "org1" }).map((e) => e.id)).toEqual(["a", "b", "c"]);
-    expect(filterCatalog(all, { publisher: "org2", q: "d" }).map((e) => e.id)).toEqual(["d"]);
+    expect(filterMarketplace(all, { publisher: "org1" }).map((e) => e.id)).toEqual(["a", "b", "c"]);
+    expect(filterMarketplace(all, { publisher: "org2", q: "d" }).map((e) => e.id)).toEqual(["d"]);
   });
 });
 
@@ -84,10 +84,10 @@ describe("the test bench", () => {
   /**
    * `packs/testing/engine-testing.yaml` is a separate pull request's pack
    * and may not exist on this branch, so its entry is built by hand rather
-   * than read off disk: the rule under test is what `loadCatalog` does
+   * than read off disk: the rule under test is what `loadMarketplace` does
    * with a `bench: true` entry, not the pack file itself.
    */
-  const bench: CatalogEntry = {
+  const bench: MarketplaceEntry = {
     id: "com.scrthq.runlog.engine-testing",
     version: "1.0.0",
     title: "Engine Testing",
@@ -102,7 +102,7 @@ describe("the test bench", () => {
     load: async () => "",
     bench: true,
   };
-  const ordinary: CatalogEntry = { ...bench, id: "com.scrthq.runlog.any-given-day", title: "Any Given Day", bench: undefined };
+  const ordinary: MarketplaceEntry = { ...bench, id: "com.scrthq.runlog.any-given-day", title: "Any Given Day", bench: undefined };
 
   it("is dropped from a copy whose catalog should not carry it", () => {
     expect(withTesting([ordinary, bench], false).map((e) => e.id)).toEqual([ordinary.id]);

@@ -1,6 +1,6 @@
-# Through the catalog <Plan tier="publisher" />
+# Through the marketplace <Plan tier="publisher" />
 
-Become a publisher on your profile, set up payouts with Stripe, upload the signed pack, and list it at a price. The catalog does the rest:
+Become a publisher on your profile, set up payouts with Stripe, upload the signed pack, and list it at a price. The marketplace does the rest:
 
 - The card, with your name, the pack's summary, and **Buy**.
 - The sale, on your own Stripe account: the buyer pays you directly and you are on the receipt.
@@ -10,8 +10,8 @@ Become a publisher on your profile, set up payouts with Stripe, upload the signe
 
 ## From version control
 
-With `RUNLOG_API_KEY` set, `npx @scrthq/runlog release my-pack.yaml --price 3.00` uploads and lists in one command; a later release without a price keeps the one it has. The `catalog-release` workflow in the repository's `examples/github-actions` runs it when a release is published; see [Publishing and releasing](#guide/cli-publish).
+With `RUNLOG_API_KEY` set, `npx @scrthq/runlog release my-pack.yaml --price 3.00` uploads and lists in one command; a later release without a price keeps the one it has. The `marketplace-release` workflow in the repository's `examples/github-actions` runs it when a release is published; see [Publishing and releasing](#guide/cli-publish).
 
 ## The fee
 
-The catalog takes 5% of each sale, or nothing with the hosted-licensing subscription. Stripe's own fees are separate and yours.
+The marketplace takes 5% of each sale, or nothing with the hosted-licensing subscription. Stripe's own fees are separate and yours.

@@ -23,7 +23,7 @@ import { FEATURES, featuresOf, priceDisplay, type Feature } from "@runlog/rules-
 export { FEATURES, featuresOf, priceDisplay, type Feature };
 import { apiBase } from "../sync/config.ts";
 
-export interface CatalogEntry {
+export interface MarketplaceEntry {
   id: string;
   version: string;
   title: string;
@@ -45,7 +45,7 @@ export interface CatalogEntry {
    * Set on a pack from `packs/testing/`: a test bench, never seeded to the
    * platform as a listing and never counted as "new in the catalog". A
    * hosted copy leaves it out of the bundle entirely where its `hosted.json`
-   * says `features.testing` is off; see `loadCatalog`.
+   * says `features.testing` is off; see `loadMarketplace`.
    */
   bench?: boolean;
   /** Free, or a price in the smallest unit of its currency, with how to show it. */
@@ -94,7 +94,7 @@ function kindOf(category: string, features: Feature[]): string {
 }
 
 /** Read one bundled pack's header into a catalog entry. `bench` marks a `packs/testing/` pack. */
-async function bundledEntry(load: () => Promise<string>, bench: boolean): Promise<CatalogEntry | null> {
+async function bundledEntry(load: () => Promise<string>, bench: boolean): Promise<MarketplaceEntry | null> {
   const text = await load();
   const head = YAML.parse(text) as Record<string, unknown>;
   const id = String(head["id"] ?? "");
@@ -127,7 +127,7 @@ async function bundledEntry(load: () => Promise<string>, bench: boolean): Promis
   };
 }
 
-let cached: Promise<CatalogEntry[]> | null = null;
+let cached: Promise<MarketplaceEntry[]> | null = null;
 
 /**
  * Every catalog entry, with its header read; the text itself stays lazy.
@@ -141,10 +141,10 @@ let cached: Promise<CatalogEntry[]> | null = null;
  * `hosted.json` at all: static, local, self-hosted) or
  * `hosted.features.testing`.
  */
-export function loadCatalog(opts: { testing?: boolean } = {}): Promise<CatalogEntry[]> {
+export function loadMarketplace(opts: { testing?: boolean } = {}): Promise<MarketplaceEntry[]> {
   if (!cached) {
     cached = (async () => {
-      const entries: CatalogEntry[] = [];
+      const entries: MarketplaceEntry[] = [];
       for (const load of Object.values(files)) {
         const entry = await bundledEntry(load, false);
         if (entry) entries.push(entry);
@@ -173,11 +173,11 @@ export function loadCatalog(opts: { testing?: boolean } = {}): Promise<CatalogEn
 
 /**
  * Drop the bench entries where a copy is not meant to carry them. `testing`
- * left unset keeps everything, the same as `loadCatalog()` with no options: 
+ * left unset keeps everything, the same as `loadMarketplace()` with no options: 
  * see its doc comment for why. Exported so the rule is checked directly,
  * without needing a real `packs/testing/` pack on disk to exercise it.
  */
-export function withTesting(entries: readonly CatalogEntry[], testing?: boolean): CatalogEntry[] {
+export function withTesting(entries: readonly MarketplaceEntry[], testing?: boolean): MarketplaceEntry[] {
   return testing === false ? entries.filter((e) => !e.bench) : [...entries];
 }
 
@@ -205,7 +205,7 @@ interface FeedCard {
  * cache. Nothing where there is no API, disk, Pages, or where it does
  * not answer; the bundle is the catalog then, as it always was.
  */
-export async function loadFeed(fetchImpl: typeof fetch = fetch, base = apiBase()): Promise<CatalogEntry[]> {
+export async function loadFeed(fetchImpl: typeof fetch = fetch, base = apiBase()): Promise<MarketplaceEntry[]> {
   if (!base) return [];
   try {
     const response = await fetchImpl(`${base.replace(/\/$/, "")}/listings`);
@@ -217,7 +217,7 @@ export async function loadFeed(fetchImpl: typeof fetch = fetch, base = apiBase()
   }
 }
 
-export function feedEntry(card: FeedCard, base: string): CatalogEntry {
+export function feedEntry(card: FeedCard, base: string): MarketplaceEntry {
   const root = base.replace(/\/$/, "");
   const features = card.head.features.filter((f): f is Feature => FEATURES.some((x) => x.id === f));
   const price = card.price === "free" ? ("free" as const) : { ...card.price, display: priceDisplay(card.price) };
@@ -253,8 +253,8 @@ export function feedEntry(card: FeedCard, base: string): CatalogEntry {
 }
 
 /** One entry by pack id, or null. */
-export async function catalogEntry(id: string): Promise<CatalogEntry | null> {
-  return (await loadCatalog()).find((e) => e.id === id) ?? null;
+export async function marketplaceEntry(id: string): Promise<MarketplaceEntry | null> {
+  return (await loadMarketplace()).find((e) => e.id === id) ?? null;
 }
 
 /**
@@ -289,10 +289,10 @@ export function newerVersion(candidate: string, current: string): boolean {
  */
 export function updatesFor(
   packs: ReadonlyArray<{ id: string; origin?: string; catalog?: { id: string; version: string }; deletedAt?: string }>,
-  entries: readonly CatalogEntry[],
-): Map<string, CatalogEntry> {
+  entries: readonly MarketplaceEntry[],
+): Map<string, MarketplaceEntry> {
   const byId = new Map(entries.map((e) => [e.id, e]));
-  const out = new Map<string, CatalogEntry>();
+  const out = new Map<string, MarketplaceEntry>();
   for (const p of packs) {
     if (p.deletedAt || (p.origin !== "catalog" && p.origin !== "listing") || !p.catalog) continue;
     const entry = byId.get(RENAMED_IDS[p.catalog.id] ?? p.catalog.id);
@@ -303,7 +303,7 @@ export function updatesFor(
 
 /* ---- searching and filtering, pure so the sidebar can be tested ------------ */
 
-export interface CatalogQuery {
+export interface MarketplaceQuery {
   /** Free text, matched against title, description, author, category and tags. */
   q?: string;
   /** Any of these categories. */
@@ -320,7 +320,7 @@ export interface CatalogQuery {
 
 const norm = (s: string) => s.trim().toLowerCase();
 
-export function filterCatalog(entries: readonly CatalogEntry[], query: CatalogQuery, owned: ReadonlySet<string> = new Set()): CatalogEntry[] {
+export function filterMarketplace(entries: readonly MarketplaceEntry[], query: MarketplaceQuery, owned: ReadonlySet<string> = new Set()): MarketplaceEntry[] {
   const q = norm(query.q ?? "");
   const words = q ? q.split(/\s+/) : [];
   return entries.filter((e) => {
@@ -353,7 +353,7 @@ export interface PublisherFacet {
 }
 
 /** Who publishes here, with what they have listed: most packs first. */
-export function publishersOf(entries: readonly CatalogEntry[]): PublisherFacet[] {
+export function publishersOf(entries: readonly MarketplaceEntry[]): PublisherFacet[] {
   const m = new Map<string, PublisherFacet & { low: number }>();
   for (const e of entries) {
     // A test bench is never a publisher's listing (seed-listings.ts leaves
@@ -372,7 +372,7 @@ export function publishersOf(entries: readonly CatalogEntry[]): PublisherFacet[]
   return [...m.values()].map(({ low: _low, ...p }) => p).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
-export function facets(entries: readonly CatalogEntry[]): { categories: Facet[]; tags: Facet[]; features: Array<Facet & { id: Feature }>; authors: Facet[] } {
+export function facets(entries: readonly MarketplaceEntry[]): { categories: Facet[]; tags: Facet[]; features: Array<Facet & { id: Feature }>; authors: Facet[] } {
   const count = (values: string[]): Facet[] => {
     const m = new Map<string, number>();
     for (const v of values) m.set(v, (m.get(v) ?? 0) + 1);

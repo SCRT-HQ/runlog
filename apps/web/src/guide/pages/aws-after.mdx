@@ -8,9 +8,9 @@ aws secretsmanager put-secret-value --secret-id runlog/workos/api-key --secret-s
 
 `workos/api-key` is needed for publisher organizations and their members. Sign-in and sync need no secret: the API verifies tokens against the client ids in the configuration. `stripe/secret-key`, `stripe/webhook-secret` and `stripe/connect-webhook-secret` are for plans and selling; `hosted/infra/README.md` walks through Stripe. The Discord bot has secrets of its own: see [Setting the bot up](#guide/bot).
 
-## The catalog
+## The marketplace
 
-The catalog is empty until the packs that ship are listed in it. Make a publisher for your platform from the app's profile, make a command-line key on it, and from a clone of the repository run:
+The marketplace is empty until the packs that ship are listed in it. Make a publisher for your platform from the app's profile, make a command-line key on it, and from a clone of the repository run:
 
 ```bash
 RUNLOG_API=https://<your domain>/api RUNLOG_API_KEY=<the key> npm run seed:listings

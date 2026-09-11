@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import YAML from "yaml";
 import { listPacks, type StoredPack } from "../storage/db.ts";
-import { loadCatalog, type CatalogEntry } from "../library/catalog.ts";
+import { loadMarketplace, type MarketplaceEntry } from "../library/marketplace.ts";
 import { remixable, remixOf } from "./remix.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 
 /**
  * Start a pack from one that exists.
  *
- * The packs in the library and the catalog, each with what its license
+ * The packs in the library and the marketplace, each with what its license
  * says about being remixed. Those that allow it open as a new pack of
  * your own; those that do not are listed with the reason, because "why is
  * my pack not here" is a question the panel should answer itself. A sealed
@@ -32,7 +32,7 @@ export function StartFrom({ onPick, onClose }: { onPick: (draft: Record<string, 
     let live = true;
     void (async () => {
       const mine = (await listPacks()).filter((p) => !p.sealed);
-      const catalog = await loadCatalog({ testing });
+      const catalog = await loadMarketplace({ testing });
       const seen = new Set<string>();
       const out: Candidate[] = [];
       const push = (id: string, title: string, from: string, text: () => Promise<string>) => {
@@ -46,8 +46,8 @@ export function StartFrom({ onPick, onClose }: { onPick: (draft: Record<string, 
           load: async () => YAML.parse(await text()) as Record<string, unknown>,
         });
       };
-      for (const p of mine) push(p.id, p.title, p.origin === "catalog" ? "your library, from the catalog" : "your library", async () => p.source);
-      for (const e of catalog) push(e.id, e.title, "the catalog", e.load);
+      for (const p of mine) push(p.id, p.title, p.origin === "catalog" ? "your library, from the marketplace" : "your library", async () => p.source);
+      for (const e of catalog) push(e.id, e.title, "the marketplace", e.load);
       // The verdict needs the license, which needs the text; read them all,
       // since a handful of packs is what a library holds.
       for (const c of out) {
@@ -71,7 +71,7 @@ export function StartFrom({ onPick, onClose }: { onPick: (draft: Record<string, 
         Start from a pack <span className="muted">where its license allows</span>
       </h3>
       {candidates === null && <p className="muted small">Reading your packs…</p>}
-      {candidates?.length === 0 && <p className="muted small">Nothing here yet. Add a pack from the catalog or load one from a file first.</p>}
+      {candidates?.length === 0 && <p className="muted small">Nothing here yet. Add a pack from the marketplace or load one from a file first.</p>}
       {candidates?.map((c) => (
         <div key={c.id} className="row spread memberRow">
           <span>
@@ -103,4 +103,4 @@ export function StartFrom({ onPick, onClose }: { onPick: (draft: Record<string, 
   );
 }
 
-export type { StoredPack, CatalogEntry };
+export type { StoredPack, MarketplaceEntry };

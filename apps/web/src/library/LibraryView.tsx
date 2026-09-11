@@ -23,7 +23,7 @@ import { useGuildVaults } from "./useGuildVaults.ts";
  * runs kept. Nothing is a menu; everything is on the page.
  *
  * Nothing ships in it. The catalog is where packs come from, and this view
- * is where the catalog is reached from.
+ * is where the marketplace is reached from.
  */
 
 export interface LibraryPack {
@@ -57,7 +57,7 @@ export function LibraryView({
   onForgetPack,
   onFile,
   onSyncToggle,
-  onCatalog,
+  onMarketplace,
   onUpdate,
   onReplace,
   onJoinRace,
@@ -74,8 +74,8 @@ export function LibraryView({
   onForgetPack: (record: StoredPack) => void;
   onFile: (file: File | undefined) => void;
   onSyncToggle: (record: StoredPack, on: boolean) => void;
-  onCatalog: () => void;
-  /** Take the catalog's newer version of a pack. */
+  onMarketplace: () => void;
+  /** Take the marketplace's newer version of a pack. */
   onUpdate?: (record: StoredPack) => void;
   /** Take a newer file of a pack already here; its runs stay. Not for a sealed copy. */
   onReplace?: (record: StoredPack, file: File | undefined) => void;
@@ -139,7 +139,7 @@ export function LibraryView({
           <div className="libraryActionGroup">
             <h3 className="sectionTitle">Add a pack</h3>
             <div className="libraryActionGroupRow">
-              <button className="primary" onClick={onCatalog}>
+              <button className="primary" onClick={onMarketplace}>
                 Get more packs
               </button>
               <label className="ghost fileButton">
@@ -178,11 +178,11 @@ export function LibraryView({
         </div>
       </header>
 
-      <HomeStrip packs={ordered} runs={runs} vocabularies={vocabularies} onContinue={onContinue} onContinueLast={onContinueLast} onOpen={onOpen} onCatalog={onCatalog} />
+      <HomeStrip packs={ordered} runs={runs} vocabularies={vocabularies} onContinue={onContinue} onContinueLast={onContinueLast} onOpen={onOpen} onMarketplace={onMarketplace} />
 
       {ordered.length === 0 && (
         <section className="panel">
-          <p>No packs here yet. Pick one from the catalog, or load one of your own from a file.</p>
+          <p>No packs here yet. Pick one from the marketplace, or load one of your own from a file.</p>
         </section>
       )}
 
@@ -206,7 +206,7 @@ export function LibraryView({
               </button>
               <div className="libraryPackActions">
                 {record && p.update && onUpdate && (
-                  <button className="ghost tiny update" onClick={() => onUpdate(record)} title={`The catalog has v${p.update}; your ${v.run.many.toLowerCase()} are kept`}>
+                  <button className="ghost tiny update" onClick={() => onUpdate(record)} title={`The marketplace has v${p.update}; your ${v.run.many.toLowerCase()} are kept`}>
                     Update to v{p.update}
                   </button>
                 )}

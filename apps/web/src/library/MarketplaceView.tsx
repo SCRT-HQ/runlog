@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { useDocDrawer } from "../docs/DocDrawer.tsx";
-import { facets, FEATURES, filterCatalog, loadCatalog, publishersOf, type CatalogEntry, type Feature } from "./catalog.ts";
+import { facets, FEATURES, filterMarketplace, loadMarketplace, publishersOf, type MarketplaceEntry, type Feature } from "./marketplace.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 
 /**
@@ -20,7 +20,7 @@ import { useHosted } from "../hosted/HostedProvider.tsx";
  * the other documents are the drawer's tabs, where the pack's text may be
  * read. A priced listing carries only its summary, so that is the one tab.
  */
-export function CatalogView({
+export function MarketplaceView({
   focus = null,
   mine,
   bought = new Set(),
@@ -36,15 +36,15 @@ export function CatalogView({
   mine: ReadonlySet<string>;
   /** Ids of the packs the account has bought, on the shelf here or not. */
   bought?: ReadonlySet<string>;
-  onAdd: (entry: CatalogEntry) => Promise<void>;
+  onAdd: (entry: MarketplaceEntry) => Promise<void>;
   /** Buy a priced listing; absent where nobody is signed in. */
-  onBuy?: (entry: CatalogEntry) => Promise<void>;
+  onBuy?: (entry: MarketplaceEntry) => Promise<void>;
   /** Bring a bought copy onto this device. */
-  onFetch?: (entry: CatalogEntry) => Promise<void>;
+  onFetch?: (entry: MarketplaceEntry) => Promise<void>;
   onOpen: (id: string) => void;
   onBack: () => void;
 }) {
-  const [entries, setEntries] = useState<CatalogEntry[] | null>(null);
+  const [entries, setEntries] = useState<MarketplaceEntry[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const drawer = useDocDrawer();
   /** The pack whose paper is being read for the drawer, while it is. */
@@ -68,7 +68,7 @@ export function CatalogView({
 
   useEffect(() => {
     let live = true;
-    void loadCatalog({ testing }).then((all) => live && setEntries(all));
+    void loadMarketplace({ testing }).then((all) => live && setEntries(all));
     return () => {
       live = false;
     };
@@ -90,7 +90,7 @@ export function CatalogView({
   const publishers = useMemo(() => publishersOf(all), [all]);
   const who = publisher ? publishers.find((p) => p.id === publisher) ?? null : null;
   const shown = useMemo(
-    () => filterCatalog(all, { q, categories, features, tags, ...(owned === "all" ? {} : { mine: owned === "mine" }), ...(publisher ? { publisher } : {}) }, new Set([...mine, ...bought])),
+    () => filterMarketplace(all, { q, categories, features, tags, ...(owned === "all" ? {} : { mine: owned === "mine" }), ...(publisher ? { publisher } : {}) }, new Set([...mine, ...bought])),
     [all, q, categories, features, tags, owned, publisher, mine, bought],
   );
   const narrowed = q.trim() !== "" || categories.size > 0 || features.size > 0 || tags.size > 0 || owned !== "all" || publisher !== null;
@@ -110,7 +110,7 @@ export function CatalogView({
     setPublisher(null);
   };
 
-  const showDocs = async (e: CatalogEntry) => {
+  const showDocs = async (e: MarketplaceEntry) => {
     if (reading) return;
     setReading(e.id);
     try {
@@ -154,7 +154,7 @@ export function CatalogView({
       <div className="marketBody">
         <aside className={`marketSide${filtersOpen ? " open" : ""}`} aria-label="Search and filters">
           <label className="marketSearch">
-            <span className="visuallyHidden">Search the catalog</span>
+            <span className="visuallyHidden">Search the marketplace</span>
             <input className="textInput" type="search" value={q} placeholder="Search packs…" onChange={(e) => setQ(e.target.value)} />
           </label>
 
@@ -268,7 +268,7 @@ export function CatalogView({
               </button>
             </section>
           )}
-          {entries === null && <p className="muted small">Reading the catalog…</p>}
+          {entries === null && <p className="muted small">Reading the marketplace…</p>}
           {entries !== null && (
             <p className="muted small marketCount">
               {shown.length === all.length ? `${all.length} packs` : `${shown.length} of ${all.length} packs`}

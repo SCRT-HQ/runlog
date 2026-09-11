@@ -12,7 +12,7 @@ describe("an address, as a hash and as a path", () => {
     ["#guide", "/guide"],
     ["#profile/servers", "/profile/servers"],
     ["#profile", "/profile"],
-    ["#catalog/com.scrthq.runlog.long-kiln", "/catalog/com.scrthq.runlog.long-kiln"],
+    ["#marketplace/com.scrthq.runlog.long-kiln", "/marketplace/com.scrthq.runlog.long-kiln"],
     ["#packs", "/packs"],
     ["#play", "/play"],
     ["#run/01ABC", "/run/01ABC"],
@@ -36,7 +36,10 @@ describe("an address, as a hash and as a path", () => {
     // Written before the sections moved to the root. Read, then written
     // back in the new spelling by whoever lands on it.
     expect(addressOf({ pathname: "/play/guide/streaming", search: "", hash: "" }, "/")).toBe("#guide/streaming");
-    expect(addressOf({ pathname: "/play/catalog/com.scrthq.runlog.long-kiln", search: "", hash: "" }, "/")).toBe("#catalog/com.scrthq.runlog.long-kiln");
+    // The marketplace was the catalog, under the old prefix and without it.
+    expect(addressOf({ pathname: "/play/catalog/com.scrthq.runlog.long-kiln", search: "", hash: "" }, "/")).toBe("#marketplace/com.scrthq.runlog.long-kiln");
+    expect(addressOf({ pathname: "/catalog", search: "", hash: "" }, "/")).toBe("#marketplace");
+    expect(addressOf({ pathname: "/catalog/com.scrthq.runlog.long-kiln", search: "", hash: "" }, "/")).toBe("#marketplace/com.scrthq.runlog.long-kiln");
     expect(addressOf({ pathname: "/play/run/01ABC", search: "?t=tok", hash: "" }, "/")).toBe("#run/01ABC?t=tok");
     expect(addressOf({ pathname: "/runlog/play/profile", search: "", hash: "" }, "/runlog/")).toBe("#profile");
     // The front door itself is a section now, not a prefix.

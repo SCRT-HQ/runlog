@@ -23,7 +23,7 @@ import { APP_SEGMENT, baseOf } from "./welcome/route.ts";
 export const PATHS_ON = import.meta.env.BASE_URL.startsWith("/") && import.meta.env.MODE !== "test";
 
 /** The first segment of every page that has a path spelling. Anything else in a hash stays a hash: a shared pack, a race code. */
-const HEADS = new Set(["play", "packs", "guide", "profile", "catalog", "run", "widget", "dock", "link", "create"]);
+const HEADS = new Set(["play", "packs", "guide", "profile", "marketplace", "run", "widget", "dock", "link", "create"]);
 
 /** Where the sections hang: the base itself, since each one is a section of its own now. */
 const root = (base: string) => base.replace(/\/+$/, "");
@@ -53,8 +53,10 @@ export function addressOf(loc: { pathname: string; search: string; hash: string 
       // back in the spelling it has now.
       if (rest.startsWith(`${APP_SEGMENT}/`)) {
         const after = rest.slice(APP_SEGMENT.length + 1);
-        if (HEADS.has(after.split("/")[0] ?? "")) rest = after;
+        if (HEADS.has(after.split("/")[0] ?? "") || after.startsWith("catalog")) rest = after;
       }
+      // The marketplace was called the catalog until the name settled.
+      if (rest === "catalog" || rest.startsWith("catalog/")) rest = `marketplace${rest.slice("catalog".length)}`;
       const head = rest.split("/")[0] ?? "";
       if (HEADS.has(head)) return `#${rest}${loc.search}`;
     }
