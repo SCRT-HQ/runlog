@@ -838,10 +838,39 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
 
   // ---- an ask from outside: a chat command, a channel-point redeem, a button, keyed by the run's ask key ----
   const publicAsk = path.match(/^\/api\/public\/runs\/([^/]+)\/asks$/);
-  if (publicAsk && (method === "POST" || method === "GET")) {
-    const id = decodeURIComponent(publicAsk[1]!);
+  const streamAsk = path === "/api/public/stream/asks";
+  if ((publicAsk || streamAsk) && (method === "POST" || method === "GET")) {
     const q = event.queryStringParameters ?? {};
     const k = q["k"] ?? "";
+    /**
+     * The run a press key reaches: the one in play, or the one named.
+     *
+     * A run's own ask key dies with the run, so a bot built on it is
+     * rebuilt every time. An account's press key does not, and this is
+     * what it points at: of the runs that account is taking asks on, the
+     * one moved most recently, which is the one being played. `run` names
+     * another for anyone keeping two going at once.
+     */
+    const inPlayFor = async (sub: string, named: string): Promise<string | null> => {
+      const { sessions } = await store.manifest(sub);
+      const live = sessions
+        .filter((p) => p.role === "owner" && !p.deletedAt && !p.endedAt && (!named || p.id === named))
+        .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
+        .slice(0, STREAM_RUNS_LISTED);
+      // Taking asks stays the host's per-run word, as it was: a press key
+      // makes the wiring outlive a run, it does not switch anything on.
+      for (const p of live) if ((await store.getSession(p.id))?.meta.askKeyHash) return p.id;
+      return null;
+    };
+    let id = publicAsk ? decodeURIComponent(publicAsk[1]!) : "";
+    if (streamAsk) {
+      const owner = k ? await store.streamKeyOwner(hashToken(k)) : null;
+      // A watch key belongs in a scene; what watches must never also press.
+      if (!owner || owner.kind !== "press") return json(method === "GET" ? 200 : 403, { ok: false, say: "That is not a key for pressing.", error: "That is not a key for pressing." });
+      const found = await inPlayFor(owner.sub, (q["run"] ?? "").trim());
+      if (!found) return json(method === "GET" ? 200 : 404, { ok: false, say: "No run is taking asks right now.", error: "No run is taking asks right now." });
+      id = found;
+    }
     // A GET is the door for a tool that cannot POST: Streamer.bot's Fetch URL
     // sends nothing but a URL. Such a tool also tends to treat any status but
     // 200 as a failed action and never look at the body, which would lose the
@@ -858,8 +887,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       json(asGet ? 200 : status, { ok: status === 200, say, ...(status === 200 ? {} : { error: say }), ...extra });
 
     const found = await store.getSession(id);
-    // The key is not the live token on purpose: whoever has a widget address may watch, never press.
-    if (!found || !k || !found.meta.askKeyHash || hashToken(k) !== found.meta.askKeyHash) return said(403, "This run is not taking asks, or that is not its key.");
+    // The key is not the live token on purpose: whoever has a widget address
+    // may watch, never press. A press key was checked above, against the
+    // account rather than the run.
+    if (!found || (!streamAsk && (!k || !found.meta.askKeyHash || hashToken(k) !== found.meta.askKeyHash))) return said(403, "This run is not taking asks, or that is not its key.");
     if (found.meta.deletedAt || found.meta.endedAt) return said(410, "This run is over.");
     /**
      * What became of one ask, by the id its press answered with.
@@ -949,7 +980,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     await deps.notify?.(id, found.meta.seq);
     // What the table decides is not known here, under either policy: the
     // host's device does the acting and says so on the socket afterwards.
-    return said(200, taken, { ask: ask.id, asks: asks.filter((a) => !a.answer) });
+    return said(200, taken, { ask: ask.id, run: id, asks: asks.filter((a) => !a.answer) });
   }
 
   // ---- a watcher's reaction: one of a few emoji, to everyone watching and the table ----
