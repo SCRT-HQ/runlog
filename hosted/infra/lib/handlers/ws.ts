@@ -33,7 +33,7 @@ export interface WsDeps {
   live: LiveStore;
   /** A way to post to connections; absent in a test that only checks routing. */
   poster?: Poster;
-  store: Pick<Store, "getSession">;
+  store: Pick<Store, "getSession" | "streamKeyOwner" | "manifest">;
   races: Pick<RaceStore, "getRace">;
   verify: (authorization: string | undefined) => Promise<Caller>;
   now?: () => string;
@@ -59,6 +59,37 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
       const who = `public:${run}`;
       await deps.live.connect(connectionId, who, now());
       await deps.live.watch(connectionId, run, who, now());
+      return { statusCode: 200 };
+    }
+    /**
+     * A scene's socket, opened on the account's watch key.
+     *
+     * The address in a browser source or a bot's client is set up once and
+     * lives for months, so it cannot name a run: it names the account, and
+     * this finds the run. Of the runs open to watchers, the one moved most
+     * recently, which is the one being played.
+     *
+     * Which run it watches is settled when it connects. A socket open
+     * across the start of a new run goes on watching the old one until it
+     * is opened again; the bot hears `run-ended` on the old one, which is
+     * the moment to reconnect.
+     */
+    const k = event.queryStringParameters?.["k"];
+    if (k) {
+      const owner = await deps.store.streamKeyOwner(hashToken(k));
+      // A press key belongs in a bot's settings, never in a scene.
+      if (!owner || owner.kind !== "watch") return { statusCode: 401, body: "not a key for watching" };
+      const named = (event.queryStringParameters?.["run"] ?? "").trim();
+      const { sessions } = await deps.store.manifest(owner.sub);
+      const live = sessions
+        .filter((p) => p.role === "owner" && !p.deletedAt && !p.endedAt && (!named || p.id === named))
+        .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0));
+      let watching: string | null = null;
+      for (const p of live) if ((await deps.store.getSession(p.id))?.meta.publicTokenHash) { watching = p.id; break; }
+      if (!watching) return { statusCode: 401, body: "no run is open to watch" };
+      const who = `stream:${owner.sub}`;
+      await deps.live.connect(connectionId, who, now());
+      await deps.live.watch(connectionId, watching, who, now());
       return { statusCode: 200 };
     }
     const token = event.queryStringParameters?.["token"];
@@ -89,8 +120,9 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
   }
   if (!message || typeof message !== "object") return { statusCode: 400, body: "an object" };
   const m = message as Record<string, unknown>;
-  // A link's socket watches the one run it was opened for and takes no requests.
-  if (conn.sub.startsWith("public:")) return { statusCode: 200 };
+  // A link's socket, and a scene's, watch the one run they were opened for
+  // and take no requests.
+  if (conn.sub.startsWith("public:") || conn.sub.startsWith("stream:")) return { statusCode: 200 };
   // A gesture: something happening at the table that is not a move, dice
   // in the air, a step opened, a card turned, passed straight on to
   // everyone watching the run and kept nowhere. Only a member sends one,

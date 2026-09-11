@@ -1456,6 +1456,28 @@ describe("who is asking", () => {
     expect((await call(request("DELETE", "/api/me/stream-keys?kind=press"), d)).body).toEqual({ keys: { watch: { madeAt: expect.any(String) as unknown as string } } });
   });
 
+  it("reads the numbers of the run in play by a watch key, so no one picks a link apart for a token", async () => {
+    let minted = 0;
+    const d = deps(memoryStore(), { token: () => `key${(minted += 1)}` });
+    const watch = await call(request("POST", "/api/me/stream-keys", { body: { kind: "watch" } }), d);
+    const k = String(watch.body["key"]);
+    expect((await call(request("GET", `/api/public/stream/metrics?k=${k}`, { token: null }), d)).body["ok"]).toBe(false);
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(request("POST", "/api/sessions/01RUN/public"), d);
+    const numbers = await call(request("GET", `/api/public/stream/metrics?k=${k}`, { token: null }), d);
+    expect(numbers.status).toBe(200);
+    expect(numbers.body["ok"]).toBe(true);
+    expect(numbers.body["runId"]).toBe("01RUN");
+    // The same document the per-run address answers with: what it says about
+    // the run sits under `run`, and `ready` is false until the table has
+    // written a snapshot.
+    expect(numbers.body["ready"]).toBe(false);
+    expect(numbers.body["run"]).toMatchObject({ id: "01RUN", packTitle: "The Pack" });
+    // A press key presses; it does not read.
+    const press = await call(request("POST", "/api/me/stream-keys", { body: { kind: "press" } }), d);
+    expect((await call(request("GET", `/api/public/stream/metrics?k=${String(press.body["key"])}`, { token: null }), d)).body["ok"]).toBe(false);
+  });
+
   it("presses the run in play by the account's press key, so a bot is wired once and not once a run", async () => {
     let minted = 0;
     const d = deps(memoryStore(), { token: () => `key${(minted += 1)}` });
@@ -1470,7 +1492,7 @@ describe("who is asking", () => {
     const pressed = await call(request("GET", `/api/public/stream/asks?k=${k}&kind=roll&name=viewer_3`, { token: null }), d);
     expect(pressed.status).toBe(200);
     expect(pressed.body["ok"]).toBe(true);
-    expect(pressed.body["run"]).toBe("01RUN");
+    expect(pressed.body["runId"]).toBe("01RUN");
     expect((await call(request("GET", "/api/sessions/01RUN/asks"), d)).body["asks"]).toHaveLength(1);
     // A watch key belongs in a scene, not in a bot: it cannot press.
     const watch = await call(request("POST", "/api/me/stream-keys", { body: { kind: "watch" } }), d);
