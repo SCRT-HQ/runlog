@@ -1371,6 +1371,49 @@ describe("who is asking", () => {
     expect((await call(request("PUT", "/api/sessions/01RUN/ask-key", { body: { policy: "auto" } }), d)).status).toBe(422);
   });
 
+  it("takes an ask as a plain GET, since a stream tool may have no way to POST", async () => {
+    const d = deps(memoryStore(), { token: () => "askkey" });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
+    const got = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&kind=move&move=died&name=viewer_7&via=channel-points", { token: null }), d);
+    expect(got.status).toBe(200);
+    expect(got.body["ok"]).toBe(true);
+    expect((got.body["asks"] as Ask[])[0]).toMatchObject({ kind: "move", move: "died", name: "viewer_7", via: "channel-points" });
+  });
+
+  it("answers a press that cannot be taken with 200 and a sentence, so a tool that only fetches can still say why", async () => {
+    const d = deps(memoryStore(), { token: () => "askkey" });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
+    // A wrong key, an unknown kind and a missing move id: all 200 on the GET form, each with its own sentence.
+    for (const query of ["k=nope&kind=roll", "k=askkey&kind=dance", "k=askkey&kind=move"]) {
+      const out = await call(request("GET", `/api/public/runs/01RUN/asks?${query}`, { token: null }), d);
+      expect(out.status).toBe(200);
+      expect(out.body["ok"]).toBe(false);
+      expect(typeof out.body["say"]).toBe("string");
+      expect(out.body["say"]).not.toBe("");
+    }
+    // Too quick: the sentence says how long is left rather than quoting the rule.
+    await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&kind=roll&name=viewer_42", { token: null }), d);
+    const again = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&kind=roll&name=viewer_42", { token: null }), d);
+    expect(again.status).toBe(200);
+    expect(again.body["ok"]).toBe(false);
+    expect(again.body["say"]).toMatch(/second/);
+  });
+
+  it("keeps true status codes on the POST form, and puts the same sentence in the body", async () => {
+    const d = deps(memoryStore(), { token: () => "askkey" });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
+    const refused = await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "dance" } }), d);
+    expect(refused.status).toBe(422);
+    expect(typeof refused.body["say"]).toBe("string");
+    const taken = await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "roll", name: "someone" } }), d);
+    expect(taken.status).toBe(200);
+    expect(taken.body["ok"]).toBe(true);
+    expect(typeof taken.body["say"]).toBe("string");
+  });
+
   it("rings the doorbell after a move, a rename, and a seat taken", async () => {
     const rung: Array<[string, number]> = [];
     const d = deps(memoryStore(), { notify: async (id, seq) => void rung.push([id, seq]) });
