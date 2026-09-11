@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { newerVersion, updatesFor, type CatalogEntry } from "./catalog.ts";
+import { newerVersion, updatesFor, type MarketplaceEntry } from "./marketplace.ts";
 
-const entry = (id: string, version: string): CatalogEntry => ({
+const entry = (id: string, version: string): MarketplaceEntry => ({
   id,
   version,
   title: id,

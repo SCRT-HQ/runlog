@@ -12,7 +12,7 @@ describe("the release command's price", () => {
     expect(priceFlag(["--free"])).toBe("free");
     expect(priceFlag(["pack.yaml"])).toBe("keep");
   });
-  it("refuses what the catalog would", () => {
+  it("refuses what the marketplace would", () => {
     expect(priceFlag(["--price", "0.50"])).toHaveProperty("error");
     expect(priceFlag(["--price", "three"])).toHaveProperty("error");
     expect(priceFlag(["--price", "2000"])).toHaveProperty("error");

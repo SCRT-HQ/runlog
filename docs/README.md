@@ -29,8 +29,8 @@ runs out of room, it links here.
 | Read | When |
 | --- | --- |
 | [authoring.md § Licensing](authoring.md#licensing-and-packs-you-should-not-publish), [§ Signing](authoring.md#signing-and-what-it-does-not-do), [§ Selling copies](authoring.md#selling-copies) | Before a pack leaves your hands. |
-| [selling.md](selling.md) | Selling sealed copies from your own backend, outside the catalog. |
-| The guide's [Selling your packs](https://runlog.scrthq.com/guide/selling) and [Plans](https://runlog.scrthq.com/guide/plans) | The catalog, the ledger, and what each plan has. |
+| [selling.md](selling.md) | Selling sealed copies from your own backend, outside the marketplace. |
+| The guide's [Selling your packs](https://runlog.scrthq.com/guide/selling) and [Plans](https://runlog.scrthq.com/guide/plans) | The marketplace, the ledger, and what each plan has. |
 
 ## Running a copy
 

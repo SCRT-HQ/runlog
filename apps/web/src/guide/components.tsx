@@ -29,7 +29,7 @@ function Link({ href, children, ...rest }: { href?: string; children?: ReactNode
 }
 import { generateDoc, loadPackText, type Doc } from "@runlog/rules-schema";
 import { DocView } from "../docs/DocView.tsx";
-import { catalogEntry, STARTER_PACK } from "../library/catalog.ts";
+import { marketplaceEntry, STARTER_PACK } from "../library/marketplace.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 
 /**
@@ -59,13 +59,13 @@ export function Kbd({ children }: { children: ReactNode }) {
   return <kbd className="kbd">{children}</kbd>;
 }
 
-/** The starter pack's catalog summary, generated on the spot: the same document the catalog's About shows. */
+/** The starter pack's catalog summary, generated on the spot: the same document the marketplace's About shows. */
 export function SummaryDemo() {
   const [doc, setDoc] = useState<Doc | null>(null);
   useEffect(() => {
     let live = true;
     void (async () => {
-      const entry = await catalogEntry(STARTER_PACK);
+      const entry = await marketplaceEntry(STARTER_PACK);
       if (!entry) return;
       const loaded = loadPackText(await entry.load(), "yaml");
       if (live && loaded.ok) setDoc(generateDoc(loaded.pack, "summary"));

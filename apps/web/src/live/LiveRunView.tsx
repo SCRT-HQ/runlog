@@ -25,7 +25,7 @@ import { linkTo } from "../route.ts";
  * may travel, can take a seat as a watcher on their own account, and the
  * run follows them from then on.
  */
-/** The bar above a watched run: the mark home, the pack's name, and the pack's card in the catalog when it has one. */
+/** The bar above a watched run: the mark home, the pack's name, and the pack's card in the marketplace when it has one. */
 function LiveBar({ title, packId, listed }: { title: string | null; packId: string | null; listed: boolean }) {
   return (
     <header className="topbar liveBar">
@@ -38,8 +38,8 @@ function LiveBar({ title, packId, listed }: { title: string | null; packId: stri
       </span>
       <div className="topbarEnd">
         {listed && packId && (
-          <a className="ghost" href={linkTo(`#catalog/${encodeURIComponent(packId)}`, "./")} title="The pack's card in the catalog: what it is, and how to get it">
-            In the catalog
+          <a className="ghost" href={linkTo(`#marketplace/${encodeURIComponent(packId)}`, "./")} title="The pack's card in the marketplace: what it is, and how to get it">
+            In the marketplace
           </a>
         )}
         <a className="ghost" href={linkTo("#guide/streaming", "./")} title="How live links and widgets work">
@@ -192,7 +192,7 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
           {pack ? (
             <DocMenu compact pack={pack} />
           ) : (
-            <span className="muted small">{got.listing ? "The pack is in the catalog; the run shows what the dice drew, not the rules." : "The pack's text is not for redistribution; the run shows what the dice drew, not the rules."}</span>
+            <span className="muted small">{got.listing ? "The pack is in the marketplace; the run shows what the dice drew, not the rules." : "The pack's text is not for redistribution; the run shows what the dice drew, not the rules."}</span>
           )}
           {canSit && (
             <button

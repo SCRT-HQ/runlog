@@ -20,7 +20,7 @@ import { ProfileView } from "./profile/ProfileView.tsx";
 import { profileHash, profilePageFromHash, type ProfilePage } from "./profile/route.ts";
 import { LibraryView, type LibraryPack } from "./library/LibraryView.tsx";
 import { formatOf, keptFromFile, notThisPack, replacedNotice } from "./library/replace.ts";
-import { CatalogView } from "./library/CatalogView.tsx";
+import { MarketplaceView } from "./library/MarketplaceView.tsx";
 import { GuideView } from "./guide/GuideView.tsx";
 import { guideSectionFromHash, guideSlugFromHash } from "./guide/pages.ts";
 import { widgetFromHash, type WidgetRoute } from "./widget/route.ts";
@@ -32,7 +32,7 @@ import { addressOf, appBase, goTo, runFromAddress, linkTo } from "./route.ts";
 import { LiveRunView } from "./live/LiveRunView.tsx";
 import { DocMenu } from "./docs/DocMenu.tsx";
 import { DocView } from "./docs/DocView.tsx";
-import { catalogEntry, LEGACY_IDS, loadCatalog, RENAMED_IDS, STARTER_PACK, updatesFor, type CatalogEntry } from "./library/catalog.ts";
+import { marketplaceEntry, LEGACY_IDS, loadMarketplace, RENAMED_IDS, STARTER_PACK, updatesFor, type MarketplaceEntry } from "./library/marketplace.ts";
 import { markOpened, forgetOpened, openedAt } from "./library/opened.ts";
 import { SignatureBadge } from "./signing/SignatureBadge.tsx";
 import { IncomingPackBanner, useIncomingPack } from "./share/IncomingPack.tsx";
@@ -110,14 +110,14 @@ export default function App() {
   const [imported, setImported] = useState<StoredPack[]>([]);
 
   /**
-   * Whether this copy's bundled catalog includes the test bench: a static,
+   * Whether this copy's bundled marketplace includes the test bench: a static,
    * local or self-hosted copy has no `hosted.json` at all and always does;
    * a hosted one answers with its own `features.testing`, on in dev and off
-   * in production. Declared early so every `loadCatalog` call below can
+   * in production. Declared early so every `loadMarketplace` call below can
    * read it, not just the hosted-words effect further down.
    */
   const hosted = useHosted();
-  const catalogTesting = hosted === null || hosted.features.testing;
+  const marketplaceTesting = hosted === null || hosted.features.testing;
 
   useEffect(() => {
     let first = true;
@@ -146,7 +146,7 @@ export default function App() {
       if (news.t === "pulled" && news.kind === "pack") reload();
     });
   }, []);
-  const [view, setView] = useState<"play" | "rules" | "design" | "profile" | "library" | "catalog" | "guide">("play");
+  const [view, setView] = useState<"play" | "rules" | "design" | "profile" | "library" | "marketplace" | "guide">("play");
   // This device's settings, opened from the account menu on any page. In a
   // run the same sheet is behind the run's own Settings button, with the
   // streaming tab; here it has only the device tab, which needs no run.
@@ -178,8 +178,8 @@ export default function App() {
   const [dock, setDock] = useState<DockRoute | null>(() => dockFromHash(typeof location !== "undefined" ? addressOf(location) : ""));
   /** A live link: one run, watched by anyone, alone on the page. */
   const [liveRoute, setLiveRoute] = useState<LiveRoute | null>(() => liveFromHash(typeof location !== "undefined" ? addressOf(location) : ""));
-  /** A pack the catalog opens on, from `#catalog/<packId>`: a live page's "in the catalog" link lands here. */
-  const [catalogFocus, setCatalogFocus] = useState<string | null>(null);
+  /** A pack the marketplace opens on, from `#marketplace/<packId>`: a live page's "in the marketplace" link lands here. */
+  const [marketplaceFocus, setMarketplaceFocus] = useState<string | null>(null);
   /** Which of the profile's four pages, from `#profile` or `#profile/<page>`. */
   const [profilePage, setProfilePage] = useState<ProfilePage>(() => profilePageFromHash(typeof location !== "undefined" ? addressOf(location) : "") ?? "profile");
   /** A run named in the address (`#run/<id>`, `/play/run/<id>`), waiting to be opened once the packs and storage are here. */
@@ -213,10 +213,10 @@ export default function App() {
         goTo(profileHash(where));
         setProfilePage(where);
         setView("profile");
-      } else if (/^#catalog(\/|$)/.test(address)) {
-        const id = address.slice("#catalog/".length);
-        setCatalogFocus(id ? decodeURIComponent(id) : null);
-        setView("catalog");
+      } else if (/^#marketplace(\/|$)/.test(address)) {
+        const id = address.slice("#marketplace/".length);
+        setMarketplaceFocus(id ? decodeURIComponent(id) : null);
+        setView("marketplace");
       } else if (address === "#packs") {
         setView("library");
       } else if (address === "#play") {
@@ -261,14 +261,14 @@ export default function App() {
   }, []);
 
   /**
-   * The catalog. It has always been read from the address on the way in,
-   * `#catalog` and `#catalog/<packId>`, and never written there on the way
+   * The marketplace. It has always been read from the address on the way in,
+   * `#marketplace` and `#marketplace/<packId>`, and never written there on the way
    * out, so opening it from the shelf and reloading landed back on the
    * shelf.
    */
-  const openCatalog = useCallback(() => {
-    setView("catalog");
-    goTo("#catalog");
+  const openMarketplace = useCallback(() => {
+    setView("marketplace");
+    goTo("#marketplace");
   }, []);
 
   const openDesigner = () => {
@@ -304,10 +304,10 @@ export default function App() {
   const raceLink = useIncomingRace();
   const bought = useIncomingPurchase();
   const [purchaseState, setPurchaseState] = useState<PurchaseState>({ kind: "waiting" });
-  /** What the account has bought, for the catalog; read when the catalog opens. */
+  /** What the account has bought, for the marketplace; read when the marketplace opens. */
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   useEffect(() => {
-    if (view !== "catalog" || !api) return;
+    if (view !== "marketplace" || !api) return;
     let live = true;
     void api.myPurchases().then((p) => live && setPurchases(p), () => {});
     return () => {
@@ -360,12 +360,12 @@ export default function App() {
   }, []);
 
   /**
-   * Add a catalog pack to the library. Its text is public, so it syncs to
+   * Add a marketplace pack to the library. Its text is public, so it syncs to
    * the account without the per-pack switch; on a second device it is
    * simply there.
    */
   const addFromCatalog = useCallback(async (id: string): Promise<StoredPack | null> => {
-    const entry = await catalogEntry(id);
+    const entry = await marketplaceEntry(id);
     if (!entry) return null;
     const text = await entry.load();
     const parsed = loadPackText(text, "yaml");
@@ -381,6 +381,9 @@ export default function App() {
       importedAt: at,
       updatedAt: at,
       sync: true,
+      // `origin` and `catalog` are the shape already written on every pack
+      // in every library: stored values, not words on a screen, so they
+      // keep their spelling while the place they name is the marketplace.
       origin: entry.source === "listing" ? "listing" : "catalog",
       catalog: { id: entry.id, version: entry.version },
     };
@@ -401,7 +404,7 @@ export default function App() {
       if (!saved || saved.deletedAt) return false;
       let mine = imported.find((p) => p.id === saved.packId);
       if (!mine) {
-        // A catalog pack this device lacks is simply fetched: the run is
+        // A marketplace pack this device lacks is simply fetched: the run is
         // the player's, and the pack is free.
         const added = await addFromCatalog(saved.packId);
         if (added) mine = added;
@@ -505,7 +508,7 @@ export default function App() {
   const autoOpened = useRef(false);
   useEffect(() => {
     if (autoOpened.current || account.status !== "signed-in" || sync.status !== "synced") return;
-    // An address that names a page, the guide, the profile, the catalog, a
+    // An address that names a page, the guide, the profile, the marketplace, a
     // link, is what the person asked for; a reload must land there, not on
     // whatever run the account touched last.
     if (lastActive() || wantedRun || (addressOf(location) && addressOf(location) !== "#")) {
@@ -555,14 +558,14 @@ export default function App() {
   );
 
   /**
-   * Which of the packs here the catalog has moved past. Read once the
-   * library is open and the catalog has loaded; a pack the player loaded
+   * Which of the packs here the marketplace has moved past. Read once the
+   * library is open and the marketplace has loaded; a pack the player loaded
    * from a file is never offered anything.
    */
-  const [updates, setUpdates] = useState<Map<string, CatalogEntry>>(() => new Map());
+  const [updates, setUpdates] = useState<Map<string, MarketplaceEntry>>(() => new Map());
   /**
    * Ids of the test bench packs, so a copy of one already on the shelf can
-   * be marked in the library even where this copy's catalog does not offer
+   * be marked in the library even where this copy's marketplace does not offer
    * it (production, or a device that added it while testing was on).
    * Unfiltered on purpose: whether a pack you already have is a bench pack
    * does not depend on whether this copy is still handing them out.
@@ -571,26 +574,26 @@ export default function App() {
   useEffect(() => {
     if (view !== "library") return;
     let live = true;
-    void loadCatalog({ testing: catalogTesting }).then((entries) => live && setUpdates(updatesFor(imported, entries)));
-    void loadCatalog().then((all) => live && setBenchIds(new Set(all.filter((e) => e.bench).map((e) => e.id))));
+    void loadMarketplace({ testing: marketplaceTesting }).then((entries) => live && setUpdates(updatesFor(imported, entries)));
+    void loadMarketplace().then((all) => live && setBenchIds(new Set(all.filter((e) => e.bench).map((e) => e.id))));
     return () => {
       live = false;
     };
-  }, [view, imported, catalogTesting]);
+  }, [view, imported, marketplaceTesting]);
 
   /**
-   * Take the catalog's newer version: the text and the version change, the
+   * Take the marketplace's newer version: the text and the version change, the
    * record's identity and its switches do not. Runs are untouched: every
    * event is stamped with the pack version it was played under, and the
    * reducer reads whatever pack is loaded now.
    */
   const updateFromCatalog = useCallback(async (record: StoredPack) => {
-    const entry = updates.get(record.id) ?? (record.catalog ? await catalogEntry(record.catalog.id) : null);
+    const entry = updates.get(record.id) ?? (record.catalog ? await marketplaceEntry(record.catalog.id) : null);
     if (!entry) return;
     const at = new Date().toISOString();
     let next: StoredPack;
     if (record.sealed) {
-      // A sealed copy is fetched through its purchase: the catalog's file
+      // A sealed copy is fetched through its purchase: the marketplace's file
       // is not for a buyer, and the server seals the current master
       // under the same key on the way.
       if (!api) return;
@@ -638,7 +641,7 @@ export default function App() {
       imported.map((p) => ({
         id: p.id,
         title: p.title,
-        sub: `${p.sealed ? "your sealed copy" : p.origin === "catalog" || p.origin === "listing" ? "from the catalog" : "from your file"}, v${p.version}`,
+        sub: `${p.sealed ? "your sealed copy" : p.origin === "catalog" || p.origin === "listing" ? "from the marketplace" : "from your file"}, v${p.version}`,
         source: p.source,
         record: p,
         ...(updates.has(p.id) ? { update: updates.get(p.id)!.version } : {}),
@@ -786,7 +789,7 @@ export default function App() {
    * account and the key is typed from the mail (or is already here); as
    * the signed-in buyer the key comes with the purchase and the copy
    * opens by itself. Either way it is kept marked as a listing, so the
-   * catalog can offer the newer version when there is one.
+   * marketplace can offer the newer version when there is one.
    */
   useEffect(() => {
     const incoming = bought.purchase;
@@ -835,7 +838,7 @@ export default function App() {
           }
           if (purchase.status === "fulfilled" && purchase.key) {
             setPurchaseState({ kind: "opening" });
-            const pack = await catalogEntry(purchase.packId);
+            const pack = await marketplaceEntry(purchase.packId);
             await arrive(await api.purchaseFile(incoming.ref), purchase.key, purchase.packId, pack?.version);
             return;
           }
@@ -873,7 +876,7 @@ export default function App() {
 
   // A hosted copy counts the screen, once per change; see hosted/beacon.ts
   // for what is and is not sent. `hosted` itself is read further up, so
-  // every `loadCatalog` call can see it too.
+  // every `loadMarketplace` call can see it too.
   useEffect(() => {
     countView(dock ? "dock" : widget ? "widget" : liveRoute ? "live" : view, { hosted: hosted !== null, version: __RUNLOG_VERSION__ });
   }, [hosted, dock, widget, liveRoute, view]);
@@ -1033,20 +1036,20 @@ export default function App() {
           onCancel={() => setSealed(null)}
           onOpened={(doc, key) => void keepOpened(doc, key, sealed.header)}
         />
-      ) : view === "catalog" ? (
-        <CatalogView
-          focus={catalogFocus}
+      ) : view === "marketplace" ? (
+        <MarketplaceView
+          focus={marketplaceFocus}
           mine={new Set(imported.map((p) => p.id))}
           bought={new Set(purchases.filter((p) => p.status === "fulfilled").map((p) => p.packId))}
           {...(api
             ? {
-                onBuy: async (entry: CatalogEntry) => {
+                onBuy: async (entry: MarketplaceEntry) => {
                   const out = await api.startPurchase(entry.id);
                   if ("url" in out) location.href = out.url;
                   else if ("owned" in out && out.owned) setNotice("You already own this pack; it is on your profile under Purchases.");
                   else setNotice("available" in out ? "Buying is not switched on here yet." : "That pack is not for sale just now.");
                 },
-                onFetch: async (entry: CatalogEntry) => {
+                onFetch: async (entry: MarketplaceEntry) => {
                   const purchase = purchases.find((p) => p.packId === entry.id && p.status === "fulfilled" && p.key);
                   if (!purchase) return;
                   try {
@@ -1119,7 +1122,7 @@ export default function App() {
             setImported((prev) => prev.map((q) => (q.id === record.id ? { ...q, sync: on } : q)));
             void sync.setPackSync(record.id, on);
           }}
-          onCatalog={openCatalog}
+          onMarketplace={openMarketplace}
           onUpdate={(record) => void updateFromCatalog(record)}
           onReplace={(record, file) => void replaceFromFile(record, file)}
           {...(api
@@ -1130,7 +1133,7 @@ export default function App() {
                     rememberRaceCode(code);
                     const here = imported.find((p) => p.id === race.meta.packId);
                     if (!here) {
-                      setNotice(`That race plays ${race.meta.packTitle ?? race.meta.packId}, which is not on your shelf. Add it from the catalog; the code is kept.`);
+                      setNotice(`That race plays ${race.meta.packTitle ?? race.meta.packId}, which is not on your shelf. Add it from the marketplace; the code is kept.`);
                       return;
                     }
                     setActiveRunFor(here.id, NEW_RUN);
@@ -1199,7 +1202,7 @@ function Diagnostics({ diagnostics }: { diagnostics: Diagnostic[] }) {
  * The pack, read.
  *
  * The paper first: the rulebook, the quick start, the reference card, the
- * run log sheet and the catalog summary, each written from the pack as it
+ * run log sheet and the marketplace summary, each written from the pack as it
  * is, since that is how a game is read at a table. The pack's structure, 
  * every table, the flow, the modes, as the engine holds them, is the last
  * tab, for a designer or anyone checking a rule against its source.
@@ -1226,7 +1229,7 @@ export function PackView({
             {k.label}
           </button>
         ))}
-        <button className={`chip pick ${tab === "summary" ? "on" : ""}`} title="What a catalog shows: the shape of the game without its rules." onClick={() => setTab("summary")}>
+        <button className={`chip pick ${tab === "summary" ? "on" : ""}`} title="What the marketplace shows: the shape of the game without its rules." onClick={() => setTab("summary")}>
           Summary
         </button>
         <button className={`chip pick ${tab === "structure" ? "on" : ""}`} title="Every table, the flow, the modes, as the engine holds them" onClick={() => setTab("structure")}>
@@ -1566,7 +1569,7 @@ function Boxes({ pack }: { pack: Pack }) {
 
 /**
  * The built-ins moved under the operator's domain. A pack stored under an
- * old id becomes the catalog's current copy under the new one, its runs
+ * old id becomes the marketplace's current copy under the new one, its runs
  * follow it, and the old record is forgotten (a tombstone, so the account
  * hears too). Idempotent: nothing is left under an old id to move twice.
  */
@@ -1578,7 +1581,7 @@ async function renameBuiltIns(packs: StoredPack[]): Promise<StoredPack[]> {
       out.push(p);
       continue;
     }
-    const entry = await catalogEntry(next);
+    const entry = await marketplaceEntry(next);
     const text = entry ? await entry.load() : null;
     const parsed = text ? loadPackText(text, "yaml") : null;
     if (!entry || !text || !parsed?.ok) {
@@ -1619,7 +1622,7 @@ const PACK_KEY = "runlog:pack";
 function rememberedPack(): string | null {
   try {
     const id = localStorage.getItem(PACK_KEY);
-    // The header shelf's short names for the built-ins, from before the catalog.
+    // The header shelf's short names for the built-ins, from before the marketplace.
     return id ? (LEGACY_IDS[id] ?? id) : null;
   } catch {
     return null;
@@ -1629,9 +1632,9 @@ function rememberedPack(): string | null {
 /**
  * The library on first load: what should be there that is not.
  *
- * A device that played a built-in before the catalog has runs for a pack
+ * A device that played a built-in before the marketplace has runs for a pack
  * it no longer has in the bundle; each such pack is added from the
- * catalog so the runs have their pack. A device with nothing at all gets
+ * marketplace so the runs have their pack. A device with nothing at all gets
  * the starter pack once, so Play works before anyone has read anything.
  */
 async function settleLibrary(packs: StoredPack[]): Promise<StoredPack[]> {
@@ -1650,7 +1653,7 @@ async function settleLibrary(packs: StoredPack[]): Promise<StoredPack[]> {
   if (packs.length === 0 && wanted.size === 0 && !seeded) wanted.add(STARTER_PACK);
   const added: StoredPack[] = [];
   for (const id of wanted) {
-    const entry = await catalogEntry(id);
+    const entry = await marketplaceEntry(id);
     if (!entry) continue;
     const text = await entry.load();
     const parsed = loadPackText(text, "yaml");

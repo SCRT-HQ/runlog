@@ -11,7 +11,7 @@ import type { Table, Trigger } from "./tables.ts";
  * closed vocabularies, actions, predicates, bounds, trigger points, a
  * mode's length, into prose in the pack's own nouns, so a generated
  * rulebook says "when you Fire the Stage" and not "onFinalize". They are
- * shared by the app (the Rules view, the catalog) and the command line
+ * shared by the app (the Rules view, the marketplace) and the command line
  * (`runlog docs`), which is why they live here and not in either.
  */
 

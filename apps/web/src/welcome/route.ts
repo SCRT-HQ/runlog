@@ -20,7 +20,7 @@ export const APP_SEGMENT = "play";
  * each one wanted an address a person could read and type; `play` is one
  * of them now, meaning the run in hand, and it is still the front door.
  */
-const SECTIONS = new Set(["play", "packs", "guide", "profile", "catalog", "run", "widget", "dock", "link", "create"]);
+const SECTIONS = new Set(["play", "packs", "guide", "profile", "marketplace", "catalog", "run", "widget", "dock", "link", "create"]);
 const SKIP_KEY = "runlog:welcome";
 /** The query that asks for the welcome page by name. */
 export const WELCOME_QUERY = "?welcome";

@@ -139,7 +139,7 @@ async function settle() {
   }
 }
 
-describe("a publisher's packs in the catalog", () => {
+describe("a publisher's packs in the marketplace", () => {
   let root: Root;
   let container: HTMLElement;
 
@@ -212,7 +212,7 @@ describe("a publisher's packs in the catalog", () => {
     const remove = Array.from(menu.querySelectorAll('[role="menuitem"]')).find((b) => b.textContent === "Remove") as HTMLButtonElement;
     act(() => remove.click());
 
-    expect(container.textContent).toContain(`Remove ${onePack.head.title} from the catalog?`);
+    expect(container.textContent).toContain(`Remove ${onePack.head.title} from the marketplace?`);
     expect(removed).toBe(false);
 
     const confirm = Array.from(container.querySelectorAll("button")).find((b) => b.textContent === "Yes, remove it") as HTMLButtonElement;

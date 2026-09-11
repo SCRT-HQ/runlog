@@ -12,7 +12,7 @@ import type { Api, PublisherInvitation, PublisherMember, PublisherPack, Publishe
  * Stripe, open the Stripe dashboard. Stripe's onboarding is its own
  * pages; the app sends the person there and reads the state when they
  * come back with `?publisher=` on the address. Listing packs and the
- * sales ledger come with the catalog's next step.
+ * sales ledger come with the marketplace's next step.
  */
 /** Whether the publisher tier is held back here: plans gate, and the operator has not opened it yet. */
 function publishersHeld(plan: ReturnType<typeof usePlan>): boolean {
@@ -79,7 +79,7 @@ export function PublisherSection({ api }: { api: Api | null }) {
           Publishing <span className="muted">coming soon</span>
         </h3>
         <p className="muted small">
-          A publisher is a name in the catalog and, once payouts are set up, a seller. Becoming one is not open here yet; when it is, this
+          A publisher is a name in the marketplace and, once payouts are set up, a seller. Becoming one is not open here yet; when it is, this
           is where it starts.
         </p>
       </section>
@@ -89,11 +89,11 @@ export function PublisherSection({ api }: { api: Api | null }) {
     return (
       <section className="panel">
         <h3 className="sectionTitle">
-          Publishing <span className="muted">list packs in the catalog</span>
+          Publishing <span className="muted">list packs in the marketplace</span>
         </h3>
         <p className="muted small">
-          A publisher is a name in the catalog and, once payouts are set up, a seller: buyers pay you directly through Stripe, and the
-          catalog takes a small share per sale{hosted?.links.pricing ? <> (<a href={hosted.links.pricing}>how much</a>)</> : null}.
+          A publisher is a name in the marketplace and, once payouts are set up, a seller: buyers pay you directly through Stripe, and the
+          marketplace takes a small share per sale{hosted?.links.pricing ? <> (<a href={hosted.links.pricing}>how much</a>)</> : null}.
           {hosted?.links.publishers ? (
             <>
               {" "}
@@ -113,7 +113,7 @@ export function PublisherSection({ api }: { api: Api | null }) {
             });
           }}
         >
-          <input className="textInput" value={name} placeholder="your name in the catalog" maxLength={120} onChange={(e) => setName(e.target.value)} />
+          <input className="textInput" value={name} placeholder="your name in the marketplace" maxLength={120} onChange={(e) => setName(e.target.value)} />
           <button className="primary tiny" type="submit" disabled={busy || !name.trim()}>
             Become a publisher
           </button>
@@ -138,7 +138,7 @@ export function PublisherSection({ api }: { api: Api | null }) {
       setRenaming(null);
       // The catalog reads a name copied onto each listing, so say how many
       // were re-stamped: it is the difference between the profile saying
-      // one thing and the catalog saying another.
+      // one thing and the marketplace saying another.
       setNote(
         listings === 0
           ? `The catalog calls you ${renamed.name} now.`
@@ -156,7 +156,7 @@ export function PublisherSection({ api }: { api: Api | null }) {
       <h3 className="sectionTitle">
         Publishing <span className="muted">as {publisher.name}</span>
       </h3>
-      {/* The name the catalog shows, changed here rather than fixed at the
+      {/* The name the marketplace shows, changed here rather than fixed at the
           moment of becoming a publisher. */}
       {admin &&
         (renaming === null ? (
@@ -173,7 +173,7 @@ export function PublisherSection({ api }: { api: Api | null }) {
               autoFocus
               value={renaming}
               maxLength={120}
-              aria-label="What the catalog calls you"
+              aria-label="What the marketplace calls you"
               onChange={(e) => setRenaming(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") void rename();
@@ -401,7 +401,7 @@ function Sales({ api }: { api: Api }) {
 
 /**
  * Hosted licensing: the publisher's subscription, held by the founder.
- * With it the catalog takes no share of a sale; without it, five percent.
+ * With it the marketplace takes no share of a sale; without it, five percent.
  * Stripe's Checkout and Portal, like Plus; shown where billing is on.
  */
 function HostedLicensing({ api }: { api: Api }) {
@@ -459,7 +459,7 @@ function HostedLicensing({ api }: { api: Api }) {
 /**
  * What the publisher has uploaded, and what it is listed at. Uploading
  * takes a pack from this device's library, the head and the summary the
- * catalog shows are computed here, the way the catalog would, and the
+ * catalog shows are computed here, the way the marketplace would, and the
  * listing is free, or a price in whole dollars once payouts are set up.
  */
 export function PublisherPacks({ api, publisher }: { api: Api; publisher: PublisherView }) {
@@ -541,7 +541,7 @@ export function PublisherPacks({ api, publisher }: { api: Api; publisher: Publis
 
   return (
     <div className="publisherPacks">
-      <h4 className="stepLabel">Your packs in the catalog</h4>
+      <h4 className="stepLabel">Your packs in the marketplace</h4>
       {packs && packs.length > 0 && (
         <div className="padRow">
           <button className="ghost tiny" disabled={changedPacks.length === 0 || busy !== null} onClick={() => void updateAll()}>
@@ -568,7 +568,7 @@ export function PublisherPacks({ api, publisher }: { api: Api; publisher: Publis
               </span>
               {confirmingRemove === p.packId ? (
                 <span className="row">
-                  <span className="warnText small">Remove {p.head.title} from the catalog?</span>
+                  <span className="warnText small">Remove {p.head.title} from the marketplace?</span>
                   <button
                     className="ghost tiny danger"
                     disabled={isBusy}

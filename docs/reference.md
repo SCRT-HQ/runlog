@@ -24,9 +24,9 @@ A complete, self-contained description of a dice-driven creative-practice game. 
 | `author` | `string` | - | Who wrote the game. |
 | `description` | `string` | - | One or two sentences on what the game is. |
 | `homepage` | `string` | - | Where to find out more. |
-| `category` | `string` | - | What kind of thing this is, in a word or two, for a catalog to group by: everyday, games, craft, fitness, cooking, writing… |
-| `tags` | `string`[] | - | Free tags for a catalog to filter by: the game it is for, the hobby, the shape of play. Short, and in the words a person would search for. |
-| `requires` | `object`[] | - | What a person needs before playing, shown in the catalog and the rulebook: the game and a system that runs it, mods or training packs, a wheel, a kitchen, supplies. Mark the ones that are nice to have `optional`; results can `need` those and be drawn again for a player who lacks them. |
+| `category` | `string` | - | What kind of thing this is, in a word or two, for a marketplace to group by: everyday, games, craft, fitness, cooking, writing… |
+| `tags` | `string`[] | - | Free tags for a marketplace to filter by: the game it is for, the hobby, the shape of play. Short, and in the words a person would search for. |
+| `requires` | `object`[] | - | What a person needs before playing, shown in the marketplace and the rulebook: the game and a system that runs it, mods or training packs, a wheel, a kitchen, supplies. Mark the ones that are nice to have `optional`; results can `need` those and be drawn again for a player who lacks them. |
 | `license` | `object` | yes | Licensing, and whether the app may share this pack's text. |
 | `capabilities` | `deferredTriggers` \| `seededRuns` \| `decks` \| `standardDeck` \| `resources` \| `counters` \| `coopRoles` \| `backwardTargeting` \| `timers` \| `journal` \| `bandsResolution` \| `opposedResolution` \| `keyedResolution` \| `moderated` \| `clockRules`[] | - | Engine features this pack needs. Declaring them lets an older app refuse the pack with a clear message instead of misplaying it. Default: `[]`. |
 | `extends` | `string` | - | Base pack this one layers on, for house rules and variants. |
@@ -59,7 +59,7 @@ A physical or software requirement: the game and the system to play it on, a mod
 | --- | --- | --- | --- |
 | `id` | `string` | yes | Unique among requirements. Table entries name it in `needs`. |
 | `label` | `string` | yes | What it is, in the words a person would use: Rocket League, a potter's wheel, an oven. |
-| `kind` | `game` \| `platform` \| `software` \| `equipment` \| `supplies` \| `space` \| `other` | - | What sort of thing it is, so a catalog can say 'needs a game' or 'needs equipment' at a glance. Default: `"other"`. |
+| `kind` | `game` \| `platform` \| `software` \| `equipment` \| `supplies` \| `space` \| `other` | - | What sort of thing it is, so a marketplace can say 'needs a game' or 'needs equipment' at a glance. Default: `"other"`. |
 | `optional` | `boolean` | - | Nice to have rather than needed. A player says at the start whether they have it, and results that `need` it are drawn again when they do not. Default: `false`. |
 | `note` | `string` | - | A line on where to get it, which version, or what will do instead. |
 | `url` | `string` | - | Where to find it. |
