@@ -282,6 +282,34 @@ existed names nothing, which reads as a run with nothing to ask for.
 This is what a `!moves` command reads. It is also why a bare address is
 harmless: pressed with nothing after the key, it answers a question.
 
+### What became of one ask
+
+The verdict is never known when a press is answered: under either policy
+the table's own device decides, a moment later or a minute later. A press
+answers with the new ask's `id`, and that id reads back:
+
+```
+GET /api/public/runs/<runId>/asks?k=<askKey>&of=<askId>
+```
+
+```json
+{ "ok": true, "answer": "declined", "reason": "nothing to roll right now",
+  "say": "viewer_42 asked for a roll. The table said no: nothing to roll right now." }
+```
+
+`answer` is `accepted`, `declined`, or `waiting`. A move is named by its
+label rather than its id, since the sentence is for chat. An id this run
+no longer remembers answers `ok: false`, since a run keeps only its last
+few asks.
+
+A press, a short wait and one of these is the whole round trip for a tool
+that can only fetch a URL. Under the act-as-it-lands policy the table
+answers within a second or two, so a brief delay is enough. Where the host
+accepts by hand a verdict may be minutes away, and the socket's `asked`
+gesture is the right way to hear it.
+
+Reading a verdict is not a press and does not count against the limit.
+
 ### The same press twice
 
 A press may carry a `ref` of the caller's own: a redemption id, a message
