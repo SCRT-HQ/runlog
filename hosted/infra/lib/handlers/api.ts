@@ -860,6 +860,33 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!found || !k || !found.meta.askKeyHash || hashToken(k) !== found.meta.askKeyHash) return said(403, "This run is not taking asks, or that is not its key.");
     if (found.meta.deletedAt || found.meta.endedAt) return said(410, "This run is over.");
     /**
+     * What became of one ask, by the id its press answered with.
+     *
+     * The verdict is never known when the press is answered: under either
+     * policy the table's own device decides, a moment later or a minute
+     * later. The socket carries it, but a tool that can only fetch a URL
+     * cannot listen. So a press, a short wait and one more fetch is the
+     * whole round trip for whoever has nothing but Fetch URL, and the
+     * socket stays for a verdict that may be minutes away.
+     */
+    const of = field("of").trim();
+    if (of) {
+      const one = (await store.listAsks(id)).find((a) => a.id === of);
+      if (!one) return said(404, "That ask is not one this run remembers.");
+      const menu = askMenuOf((await store.getSnapshot(id))?.snapshot);
+      const what = one.kind === "roll" ? "a roll" : (menu.moves.find((m) => m.id === one.move)?.label ?? one.move ?? "a move");
+      const who = one.name ?? "Someone";
+      const answer = one.answer ?? "waiting";
+      const say =
+        answer === "accepted"
+          ? `${who} asked for ${what}. The table took it.`
+          : answer === "declined"
+            ? `${who} asked for ${what}. The table said no${one.reason ? `: ${one.reason}` : ""}.`
+            : `${who} asked for ${what}. Still waiting on the table.`;
+      return said(200, say, { answer, ...(one.reason ? { reason: one.reason } : {}) });
+    }
+
+    /**
      * One field naming the whole ask, for a tool that has one thing to send.
      *
      * A channel-point reward carries its own name and little else worth

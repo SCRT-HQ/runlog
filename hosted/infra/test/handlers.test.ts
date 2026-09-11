@@ -1417,6 +1417,41 @@ describe("who is asking", () => {
     expect((await call(request("GET", "/api/sessions/01RUN/asks"), d)).body["asks"]).toHaveLength(0);
   });
 
+  it("says what became of an ask, by the id the press answered with", async () => {
+    const d = deps(memoryStore(), { token: () => "askkey" });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
+    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: { v: 1, packTitle: "Any Given Day", asks: { roll: true, moves: [{ id: "salvage", label: "Salvage a Piece" }] } } } }), d);
+    const pressed = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&ask=salvage&name=viewer_9", { token: null }), d);
+    const askId = String(pressed.body["ask"]);
+    // Before the table has answered, the read says so rather than guessing.
+    const waiting = await call(request("GET", `/api/public/runs/01RUN/asks?k=askkey&of=${askId}`, { token: null }), d);
+    expect(waiting.body["ok"]).toBe(true);
+    expect(waiting.body["answer"]).toBe("waiting");
+    expect(waiting.body["say"]).toMatch(/waiting/i);
+    // Once the host accepts, the same read is the chat line, in the move's own words rather than its id.
+    await call(request("POST", `/api/sessions/01RUN/asks/${askId}`, { body: { answer: "accepted" } }), d);
+    const took = await call(request("GET", `/api/public/runs/01RUN/asks?k=askkey&of=${askId}`, { token: null }), d);
+    expect(took.body["answer"]).toBe("accepted");
+    expect(took.body["say"]).toContain("Salvage a Piece");
+  });
+
+  it("carries the table's reason back when an ask was declined, and says so when the id is not one of this run's", async () => {
+    const d = deps(memoryStore(), { token: () => "askkey" });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
+    const pressed = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&kind=roll&name=viewer_10", { token: null }), d);
+    const askId = String(pressed.body["ask"]);
+    await call(request("POST", `/api/sessions/01RUN/asks/${askId}`, { body: { answer: "declined", reason: "nothing to roll right now" } }), d);
+    const said = await call(request("GET", `/api/public/runs/01RUN/asks?k=askkey&of=${askId}`, { token: null }), d);
+    expect(said.body["answer"]).toBe("declined");
+    expect(said.body["say"]).toContain("nothing to roll right now");
+    // An id this run does not have is a failed read, not a verdict.
+    const lost = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&of=nosuchask", { token: null }), d);
+    expect(lost.body["ok"]).toBe(false);
+    expect(lost.body["answer"]).toBeUndefined();
+  });
+
   it("takes what a reward is named, by a move's label or its id, so one action serves every move", async () => {
     const d = deps(memoryStore(), { token: () => "askkey" });
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
