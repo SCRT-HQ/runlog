@@ -69,8 +69,8 @@ export function GuideView({ slug, section, onNavigate, onBack }: { slug: string;
       <aside className="guideSide" aria-label="Docs contents">
         <div className="guideSideHead">
           <h2>Guide</h2>
-          <button className="ghost tiny" onClick={onBack}>
-            Back to the app
+          <button className="primary tiny" onClick={onBack} title="Back to the run">
+            Play
           </button>
         </div>
         <nav className="guideToc" aria-label="Pages by part">
