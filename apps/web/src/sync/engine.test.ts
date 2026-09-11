@@ -215,6 +215,9 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
     mintAskKey: async () => ({ key: "k", policy: "ask" as const }),
     setAskPolicy: async () => {},
     revokeAskKey: async () => {},
+    streamKeys: async () => ({}),
+    mintStreamKey: async () => ({ key: "", keys: {} }),
+    revokeStreamKey: async () => ({}),
     putSnapshot: async () => {},
     putPublisherPack: async () => {
       throw new SyncError("error");

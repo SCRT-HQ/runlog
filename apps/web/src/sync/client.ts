@@ -78,6 +78,15 @@ export interface SessionMeta {
 
 export type AskPolicy = "ask" | "auto";
 
+/** Which of the account's two stream keys: one to watch by, one to press by. */
+export type StreamKeyKind = "watch" | "press";
+
+/** What the account holds, as the server will say: that a key exists, and since when. */
+export interface StreamKeys {
+  watch?: { madeAt: string };
+  press?: { madeAt: string };
+}
+
 /**
  * Something from outside the table, a chat command, a channel-point redeem,
  * a button, asking the run to take a move or roll the waiting table. The
@@ -480,6 +489,15 @@ export interface Api {
   setAskPolicy(sessionId: string, policy: AskPolicy): Promise<void>;
   /** Kill the ask key; the run takes no more asks until a new one is minted. */
   revokeAskKey(sessionId: string): Promise<void>;
+  /**
+   * The account's stream keys: what it has, never the keys themselves.
+   * A watch key is for widgets, the numbers and the socket; a press key is
+   * for asks. Both outlive any run, so a scene is wired once.
+   */
+  streamKeys(): Promise<StreamKeys>;
+  /** Make one, shown this once. Making it again replaces what was there. */
+  mintStreamKey(kind: StreamKeyKind): Promise<{ key: string; keys: StreamKeys }>;
+  revokeStreamKey(kind: StreamKeyKind): Promise<StreamKeys>;
   /** What a stranger sees of a run whose pack may not travel: written by the owner's device after each move. */
   putSnapshot(sessionId: string, snapshot: unknown): Promise<void>;
   removeMember(sessionId: string, sub: string): Promise<void>;
@@ -946,6 +964,14 @@ export function createApi(
     revokeAskKey: async (sessionId) => {
       await request("DELETE", `/sessions/${encodeURIComponent(sessionId)}/ask-key`);
     },
+    streamKeys: async () => (await request<{ keys?: StreamKeys }>("GET", "/me/stream-keys")).body.keys ?? {},
+    mintStreamKey: async (kind) => {
+      const { status, body } = await request<{ key?: string; keys?: StreamKeys; error?: string; plan?: string }>("POST", "/me/stream-keys", { kind });
+      if (status === 402 && body.plan) throw new PlanError(body.plan, body.error ?? "that is part of a plan this account does not have");
+      if (status !== 200 || !body.key) throw new SyncError("error", undefined, body.error ?? "no key could be made");
+      return { key: body.key, keys: body.keys ?? {} };
+    },
+    revokeStreamKey: async (kind) => (await request<{ keys?: StreamKeys }>("DELETE", `/me/stream-keys?kind=${kind}`)).body.keys ?? {},
     putSnapshot: async (sessionId, snapshot) => {
       await request("PUT", `/sessions/${encodeURIComponent(sessionId)}/snapshot`, { snapshot });
     },
