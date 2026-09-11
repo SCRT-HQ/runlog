@@ -4,7 +4,7 @@ Streamer.bot runs on the streaming machine and can hold a socket to the run, act
 
 ## A dice alert
 
-Under **Servers/Clients** → **WebSocket Clients**, add one with the address `wss://runlog.scrthq.com/ws?run=<runId>&t=<token>` and auto-reconnect on. Then make an action with the trigger **WebSocket Client** → **Message** for that client.
+Under **Servers/Clients** → **WebSocket Clients**, add one with the address `wss://runlog.scrthq.com/ws?k=<watchKey>` and auto-reconnect on. The watch key is made in the same panel as the press key and is the one that reads: it opens the run you have in play, so there is no run id or link token to find. A client's address field does not read a global, so this is the one value in a Streamer.bot setup that is typed in place. Then make an action with the trigger **WebSocket Client** → **Message** for that client.
 
 The message is one JSON string: `{"t":"gesture","kind":"rolled",…}` when dice land and `{"t":"changed",…}` on every move. Parse it (a *Set argument from JSON* sub-action, or two lines of C#) and act only when `kind` is `rolled`. The other kinds (`outcome`, `award`, `clock`, `counter`, `unit-closed`, `run-ended`, and `ask` and `asked` for what chat asked and what became of it) arrive the same way with their words in `data`, so a result's `text` can go to chat, a death counter's `value` on an overlay, and `run-ended` can switch the scene.
 
@@ -12,26 +12,29 @@ Then the usual sub-actions: **OBS** → **Set Source Visibility** to flash a dic
 
 ## A channel-point redeem that presses
 
-In the run's **Settings** → **Stream** → **Chat**, **Take asks** makes the run's ask key and shows the address, key included. Copy it. Then make an action on the trigger **Twitch** → **Channel Reward** → **Reward Redemption** (Kick has the same trigger under **Kick** → **Channel Reward**) whose sub-action is **Core** → **Network** → **Fetch URL**. Fetch URL sends a `GET` and nothing else, no body and no method to choose, so the whole ask travels in the address:
+In the run's **Settings** → **Stream** → **Chat**, **Take asks** switches this run to taking them. Below that, **Make a press key** gives you one address for every run you will ever play: it belongs to your account, not to this run, so a bot built on it is built once. Copy it, and keep it somewhere only you can read, since whoever holds it can press.
 
-```
-https://runlog.scrthq.com/api/public/runs/<runId>/asks?k=<askKey>
-  &kind=move&move=died&name=%userName%&via=channel-points
-```
+Streamer.bot reads it best from a global. Make a persisted global variable called `runlogAsk` holding that address; a persisted global can be read inside any field as `~runlogAsk~`, so the address lives in one place and changing keys later is one edit.
 
-`kind=roll` rolls the table the run is waiting on; `kind=move` with `move=<id>` takes a move, and the Chat section lists the pack's moves by id beside a button that copies the finished address for each. `name` and `via` are for the log, so it says who asked and how. A chat command works the same way with the command's trigger and `via=command`.
-
-## One action for every reward
-
-Building an action per move, and editing each when the pack changes, is work nobody should do. `ask` takes the place of `kind` and `move` together, and a reward already carries its own name:
+Then make an action on the trigger **Twitch** → **Channel Reward** → **Reward Redemption** (Kick has the same trigger under **Kick** → **Channel Reward**) whose sub-action is **Core** → **Network** → **Fetch URL**. Fetch URL sends a `GET` and nothing else, no body and no method to choose, so the whole ask travels in the address:
 
 ```
 ~runlogAsk~&ask=%rewardName%&name=%userName%&via=channel-points&ref=%redemptionId%
 ```
 
-Name a reward `Roll` and it rolls. Name it after a move, as the pack spells it, and it takes that move. Matching ignores case, and an id works in the same field, so `ask=salvage` and `ask=Salvage a Piece` reach the same move. A reward named after nothing the run offers is refused with a chat line listing what it does offer, which is more use to a viewer than "no such move".
+`name` and `via` are for the log, so it says who asked and how. `ref` is what stops a retry pressing twice. A chat command works the same way with the command's trigger and `via=command`.
 
-That is one trigger, one action, and a new reward whenever you want another move on the panel.
+The address finds whichever run you have taking asks, so a new run needs nothing here: press **Take asks** on it and the bot is already pointing at it. Two runs at once is the one case that needs more, and `&run=<runId>` names one.
+
+The run's own key, above the press key in that panel, still works and still dies with the run. It is there for anything that wants an address scoped to one run and nothing else.
+
+## What to name a reward
+
+`ask` takes the place of naming a kind and a move separately, and a reward already carries its own name, so one trigger and one action serve every reward you will ever add.
+
+Name a reward `Roll` and it rolls. Name it after a move, as the pack spells it, and it takes that move. Matching ignores case, and the move's id works in the same field, so a reward called `Salvage a Piece` and one called `salvage` reach the same move. The run's **Chat** panel lists the names the pack answers to.
+
+A reward named after nothing the run offers is refused with a chat line listing what it does offer, which is more use to a viewer than "no such move".
 
 ## Saying what happened in chat
 
@@ -43,7 +46,7 @@ Whether the table took it is a separate question, and a later one: under **Wait 
 
 ## A `!moves` command
 
-The same address with nothing after the key answers what can be asked for right now, so a command action with a **Fetch URL** on `https://runlog.scrthq.com/api/public/runs/<runId>/asks?k=<askKey>`, variable `runlog`, parse as JSON on, and a chat line of `%runlog.say%` tells the channel "Ask for a roll, or a move: Salvage a Piece." It lists what the table is actually offering at that moment, not everything the pack has, so a move already spent is not advertised.
+The same address with nothing after the key answers what can be asked for right now, so a command action with a **Fetch URL** on `~runlogAsk~` alone, nothing appended, variable `runlog`, parse as JSON on, and a chat line of `%runlog.say%` tells the channel "Ask for a roll, or a move: Salvage a Piece." It lists what the table is actually offering at that moment, not everything the pack has, so a move already spent is not advertised.
 
 ## Not charging twice for one press
 
@@ -67,4 +70,4 @@ The key is not the live link's token, on purpose: the token is in every widget a
 
 ## A `!score` command
 
-Make a command action for `!score` whose sub-action is **Core** → **Network** → **Fetch URL** on `https://runlog.scrthq.com/api/public/runs/<runId>/metrics?t=<token>` with *parse as JSON* on and a prefix of your choosing, say `run`. The document's fields become arguments, so a **Twitch** → **Send Message to Channel** of `%run.words.unit% %run.unit% · %run.score.text%` says "Day 4 · 3 days" in the pack's own words. `%run.latest.text%` is the last result rolled, for a `!last` command.
+Make a command action for `!score` whose sub-action is **Core** → **Network** → **Fetch URL** on `https://runlog.scrthq.com/api/public/stream/metrics?k=<watchKey>` with *parse as JSON* on and a prefix of your choosing, say `run`. The document's fields become arguments, so a **Twitch** → **Send Message to Channel** of `%run.words.unit% %run.unit% · %run.score.text%` says "Day 4 · 3 days" in the pack's own words. `%run.latest.text%` is the last result rolled, for a `!last` command.
