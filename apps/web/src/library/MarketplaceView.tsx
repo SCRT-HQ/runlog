@@ -5,7 +5,7 @@ import { facets, FEATURES, filterMarketplace, loadMarketplace, publishersOf, typ
 import { useHosted } from "../hosted/HostedProvider.tsx";
 
 /**
- * The catalog, laid out as a market: cards in a grid, a sidebar to narrow
+ * The marketplace, laid out as a market: cards in a grid, a sidebar to narrow
  * them. Everything here is free and comes with the app for now; the shape
  * is the one a marketplace with publishers and prices will fill in.
  *
@@ -143,7 +143,7 @@ export function MarketplaceView({
     <main className="main market">
       <header className="libraryHead marketHead">
         <div>
-          <h2>Catalog</h2>
+          <h2>Marketplace</h2>
           <p className="muted">Packs anyone may add: the ones that come with the app, and what people have published. Free ones go straight to your packs; a priced one is bought from its publisher.</p>
         </div>
         <button className="ghost tiny" onClick={onBack}>

@@ -48,7 +48,7 @@ describe("which page an address opens", () => {
     expect(honestAddress(at({ search: "?invite=tok" }))).toBe("/play?invite=tok");
     expect(honestAddress(at({ search: "?open" }))).toBe("/play");
     expect(honestAddress(at({ base: "/runlog/", pathname: "/runlog/", skip: true }))).toBe("/runlog/play");
-    expect(honestAddress(at({ pathname: "/play", hash: "#catalog" }))).toBeNull();
+    expect(honestAddress(at({ pathname: "/play", hash: "#marketplace" }))).toBeNull();
     expect(honestAddress(at({ search: "?code=abc&state=x" }))).toBeNull();
     expect(honestAddress(at({ protocol: "file:", pathname: "/C:/runlog/index.html", base: "/C:/runlog/" }))).toBeNull();
   });

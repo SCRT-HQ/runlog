@@ -325,7 +325,7 @@ export interface RemotePack {
   updatedAt: string;
   hash: string;
   source: string;
-  /** Where it came from and, for a catalog pack, which entry at which version; carried so another device can offer the update. */
+  /** Where it came from and, for a marketplace pack, which entry at which version; carried so another device can offer the update. */
   origin?: "file" | "catalog" | "sealed" | "listing";
   catalog?: { id: string; version: string };
   /** The license's word on whether the text may be handed to others; a run shared by link shows the pack only when true. */
@@ -509,7 +509,7 @@ export interface Api {
   refreshEntitlements(): Promise<string[]>;
   myPublisher(): Promise<PublisherView | null>;
   becomePublisher(name: string): Promise<PublisherView>;
-  /** What the catalog calls this publisher, and how many of its listings were re-stamped with it. */
+  /** What the marketplace calls this publisher, and how many of its listings were re-stamped with it. */
   renamePublisher(name: string): Promise<{ publisher: PublisherView; listings: number }>;
   /** Stripe's hosted onboarding for payouts; `available: false` where billing is off. */
   connectPublisher(): Promise<{ url: string } | { available: false }>;

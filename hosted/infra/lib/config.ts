@@ -141,7 +141,7 @@ export interface EnvConfig {
     /** Whether the app shows plans, checkout and the portal. Off until Stripe is set up for the environment. */
     billing: boolean;
     /**
-     * Whether the app's bundled catalog includes the engine-testing pack:
+     * Whether the app's bundled marketplace includes the engine-testing pack:
      * dev yes, production no. Absent is treated as `false`, so a stage
      * whose configuration predates this flag stays production-safe rather
      * than shipping a test bench nobody asked for.

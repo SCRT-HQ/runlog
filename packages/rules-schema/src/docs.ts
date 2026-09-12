@@ -30,7 +30,7 @@ import {
  * touches the file system or the DOM.
  *
  * One of the five is different in what it withholds. The summary is what a
- * catalog shows before anyone has bought or added a pack: it names the
+ * marketplace shows before anyone has bought or added a pack: it names the
  * tables and says how they are rolled, counts the parts, describes the
  * modes, and never prints an entry, a trigger, an ending's text or a
  * mode's notes. That is the line between describing a game and giving it
@@ -42,7 +42,7 @@ import {
 export type DocKind = "summary" | "rulebook" | "quickstart" | "reference" | "runlog";
 
 export const DOC_KINDS: ReadonlyArray<{ kind: DocKind; label: string; what: string; full: boolean }> = [
-  { kind: "summary", label: "Summary", what: "What a catalog shows: the shape of the game without its rules.", full: false },
+  { kind: "summary", label: "Summary", what: "What the marketplace shows: the shape of the game without its rules.", full: false },
   { kind: "rulebook", label: "Rulebook", what: "Everything, in reading order: setup, flow, every table, every rule.", full: true },
   { kind: "quickstart", label: "Quick start", what: "Enough to play the first time; the rest is on the reference card.", full: true },
   { kind: "reference", label: "Reference card", what: "Every table and the things people forget, compact enough to keep beside you.", full: true },

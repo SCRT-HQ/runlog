@@ -9,10 +9,10 @@ document. This package gives a designer the tools around that file:
 
 - **check** a pack and replay its own fixtures, in CI or by hand;
 - **write its paper**: rulebook, quick start, reference card, run log sheet
-  and catalog summary, as HTML and Markdown;
+  and marketplace summary, as HTML and Markdown;
 - **sign** releases and **seal** copies for buyers, so a pack carries its
   author's name and a sold copy opens with a license key;
-- **publish** to your own library or **release** to the catalog, from a
+- **publish** to your own library or **release** to the marketplace, from a
   terminal or a build server;
 - **serve** the app from your own machine, offline, with nothing else
   installed.
@@ -119,14 +119,14 @@ Both destinations use the same account.
 
 ```bash
 npx @scrthq/runlog publish my-game.yaml                   # into your own library, on every device you sign in on
-npx @scrthq/runlog release my-game.yaml --price 3.00      # to the catalog, as your publisher, listed at $3
+npx @scrthq/runlog release my-game.yaml --price 3.00      # to the marketplace, as your publisher, listed at $3
 npx @scrthq/runlog release my-game.yaml --free            # listed free
 npx @scrthq/runlog release my-game.yaml                   # a new version; the listing keeps its price
 npx @scrthq/runlog release my-game.yaml --draft           # uploaded, not listed
 ```
 
 `release` refuses an unsigned pack, or one whose signature no longer
-matches its text, since the catalog seals a copy for each buyer under
+matches its text, since the marketplace seals a copy for each buyer under
 what you signed. Becoming a publisher, and setting up payouts, happens on
 your profile in the app; a priced listing needs payouts finished.
 

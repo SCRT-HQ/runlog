@@ -4,12 +4,12 @@ import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3
 import { traced } from "./xray.js";
 
 /**
- * What publishers list, and what the catalog shows.
+ * What publishers list, and what the marketplace shows.
  *
  * A product is a publisher's pack as uploaded: the signed master text in
  * the bucket, the head the app computed from it (title, tags, what it
- * needs, how it plays), the catalog summary, and a price if it has one.
- * A listing is the public card the catalog reads: one row per listed
+ * needs, how it plays), the marketplace summary, and a price if it has one.
+ * A listing is the public card the marketplace reads: one row per listed
  * pack under a single partition, so the feed is one query. The server
  * parses no pack; the head and the summary are the app's word, sent
  * alongside the text.
@@ -38,7 +38,7 @@ export interface Product {
   packId: string;
   orgId: string;
   head: ListingHead;
-  /** The catalog summary, as the app generated it: a Doc, kept as JSON. */
+  /** The marketplace summary, as the app generated it: a Doc, kept as JSON. */
   summary: unknown;
   price?: Price;
   /** On the publisher's connected account. */

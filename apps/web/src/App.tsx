@@ -364,7 +364,7 @@ export default function App() {
    * the account without the per-pack switch; on a second device it is
    * simply there.
    */
-  const addFromCatalog = useCallback(async (id: string): Promise<StoredPack | null> => {
+  const addFromMarketplace = useCallback(async (id: string): Promise<StoredPack | null> => {
     const entry = await marketplaceEntry(id);
     if (!entry) return null;
     const text = await entry.load();
@@ -381,7 +381,7 @@ export default function App() {
       importedAt: at,
       updatedAt: at,
       sync: true,
-      // `origin` and `catalog` are the shape already written on every pack
+      // `origin` and `marketplace` are the shape already written on every pack
       // in every library: stored values, not words on a screen, so they
       // keep their spelling while the place they name is the marketplace.
       origin: entry.source === "listing" ? "listing" : "catalog",
@@ -406,7 +406,7 @@ export default function App() {
       if (!mine) {
         // A marketplace pack this device lacks is simply fetched: the run is
         // the player's, and the pack is free.
-        const added = await addFromCatalog(saved.packId);
+        const added = await addFromMarketplace(saved.packId);
         if (added) mine = added;
       }
       const src = mine?.source;
@@ -423,7 +423,7 @@ export default function App() {
       goTo(`#run/${runId}`);
       return true;
     },
-    [imported, choose, addFromCatalog],
+    [imported, choose, addFromMarketplace],
   );
 
   // A dock opens its run the way the app would, and says so while it
@@ -587,7 +587,7 @@ export default function App() {
    * event is stamped with the pack version it was played under, and the
    * reducer reads whatever pack is loaded now.
    */
-  const updateFromCatalog = useCallback(async (record: StoredPack) => {
+  const updateFromMarketplace = useCallback(async (record: StoredPack) => {
     const entry = updates.get(record.id) ?? (record.catalog ? await marketplaceEntry(record.catalog.id) : null);
     if (!entry) return;
     const at = new Date().toISOString();
@@ -1071,7 +1071,7 @@ export default function App() {
               }
             : {})}
           onAdd={async (entry) => {
-            await addFromCatalog(entry.id);
+            await addFromMarketplace(entry.id);
           }}
           onOpen={(id) => {
             const p = imported.find((q) => q.id === id);
@@ -1123,7 +1123,7 @@ export default function App() {
             void sync.setPackSync(record.id, on);
           }}
           onMarketplace={openMarketplace}
-          onUpdate={(record) => void updateFromCatalog(record)}
+          onUpdate={(record) => void updateFromMarketplace(record)}
           onReplace={(record, file) => void replaceFromFile(record, file)}
           {...(api
             ? {

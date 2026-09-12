@@ -45,13 +45,13 @@
       "format": "uri"
     },
     "category": {
-      "description": "What kind of thing this is, in a word or two, for a catalog to group by: everyday, games, craft, fitness, cooking, writing…",
+      "description": "What kind of thing this is, in a word or two, for a marketplace to group by: everyday, games, craft, fitness, cooking, writing…",
       "type": "string",
       "minLength": 1,
       "maxLength": 40
     },
     "tags": {
-      "description": "Free tags for a catalog to filter by: the game it is for, the hobby, the shape of play. Short, and in the words a person would search for.",
+      "description": "Free tags for a marketplace to filter by: the game it is for, the hobby, the shape of play. Short, and in the words a person would search for.",
       "maxItems": 12,
       "type": "array",
       "items": {
@@ -61,7 +61,7 @@
       }
     },
     "requires": {
-      "description": "What a person needs before playing, shown in the catalog and the rulebook: the game and a system that runs it, mods or training packs, a wheel, a kitchen, supplies. Mark the ones that are nice to have `optional`; results can `need` those and be drawn again for a player who lacks them.",
+      "description": "What a person needs before playing, shown in the marketplace and the rulebook: the game and a system that runs it, mods or training packs, a wheel, a kitchen, supplies. Mark the ones that are nice to have `optional`; results can `need` those and be drawn again for a player who lacks them.",
       "maxItems": 20,
       "type": "array",
       "items": {
@@ -81,7 +81,7 @@
           },
           "kind": {
             "default": "other",
-            "description": "What sort of thing it is, so a catalog can say 'needs a game' or 'needs equipment' at a glance.",
+            "description": "What sort of thing it is, so a marketplace can say 'needs a game' or 'needs equipment' at a glance.",
             "type": "string",
             "enum": [
               "game",
