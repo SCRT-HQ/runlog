@@ -17,6 +17,7 @@ import { describeLength, encodePackLink } from "../share/link.ts";
 import { StartFrom } from "./StartFrom.tsx";
 import { SignPanel } from "./SignPanel.tsx";
 import { DocsPanel } from "./DocsPanel.tsx";
+import { StructurePanel } from "./StructurePanel.tsx";
 
 /**
  * Writing a pack without writing YAML.
@@ -334,6 +335,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
           <Problems diagnostics={diagnostics} />
           <SignPanel draft={draft} pack={result?.ok ? result.pack : null} loads={errors.length === 0} />
           <DocsPanel pack={result?.ok ? result.pack : null} />
+          {result?.ok && <StructurePanel pack={result.pack} warnings={result.diagnostics} random={() => Math.random} />}
         </div>
       </div>
     </main>

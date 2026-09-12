@@ -4,7 +4,8 @@ import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
-import App, { PackView } from "./App.tsx";
+import App from "./App.tsx";
+import { StructurePanel } from "./design/StructurePanel.tsx";
 import { RunView, Setup } from "./run/RunView.tsx";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -111,7 +112,7 @@ describe("the setup screen", () => {
 
 describe("the inspector", () => {
   const html = renderToStaticMarkup(
-    <PackView pack={kiln} warnings={[]} random={() => Math.random} initial="structure" />,
+    <StructurePanel pack={kiln} warnings={[]} random={() => Math.random} />,
   );
 
   it("shows the pack's own vocabulary rather than generic nouns", () => {
