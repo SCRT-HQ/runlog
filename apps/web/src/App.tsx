@@ -49,6 +49,7 @@ import { useAlertSettings } from "./alerts/useAlerts.ts";
 import { Footer } from "./hosted/Footer.tsx";
 import { useHosted } from "./hosted/HostedProvider.tsx";
 import { countView } from "./hosted/beacon.ts";
+import { docsFromHash, useDocDrawer, type DocsAt } from "./docs/DocDrawer.tsx";
 import { welcomePath } from "./welcome/route.ts";
 import { TermsGate } from "./hosted/TermsGate.tsx";
 import { NameGate } from "./auth/NameGate.tsx";
@@ -99,6 +100,8 @@ export default function App() {
    * none in play, the library is the screen.
    */
   const [source, setSource] = useState<string | null>(null);
+  /** A pack's paper asked for by address, held until the pack is in hand. */
+  const [wantedDocs, setWantedDocs] = useState<{ at: DocsAt; kind: DocKind } | null>(null);
   const [activeId, setActiveId] = useState<string>("");
   /**
    * Packs the player imported from their own files.
@@ -213,6 +216,14 @@ export default function App() {
         goTo(profileHash(where));
         setProfilePage(where);
         setView("profile");
+      } else if (docsFromHash(address)) {
+        // A pack's paper, named: the section it is read in, the pack, and
+        // which document. Opened once the pack is in hand, which for a
+        // marketplace pack means after it has been fetched.
+        const want = docsFromHash(address)!;
+        setView(want.at.section === "marketplace" ? "marketplace" : "library");
+        if (want.at.section === "marketplace") setMarketplaceFocus(want.at.id);
+        setWantedDocs(want);
       } else if (/^#marketplace(\/|$)/.test(address)) {
         const id = address.slice("#marketplace/".length);
         setMarketplaceFocus(id ? decodeURIComponent(id) : null);
@@ -326,6 +337,38 @@ export default function App() {
 
   /** A sealed copy waiting on its license key. */
   const [sealed, setSealed] = useState<{ data: Uint8Array; header: ContainerHeader } | null>(null);
+
+  /**
+   * A pack's paper asked for by address.
+   *
+   * The pack has to be in hand before there is anything to render, and
+   * that is not true the moment the address is read: a library pack
+   * arrives when storage answers, and a marketplace pack has to be
+   * fetched. So the want is held and spent once, whenever it can be.
+   */
+  const drawer = useDocDrawer();
+  useEffect(() => {
+    if (!wantedDocs) return;
+    let live = true;
+    void (async () => {
+      const { at, kind } = wantedDocs;
+      if (at.section === "packs") {
+        const mine = imported.find((p) => p.id === at.id);
+        // Storage has not answered yet; the next list is another chance.
+        if (!mine) return;
+        const parsed = loadPackText(mine.source, mine.format ?? "yaml");
+        if (live && parsed.ok) drawer.open(parsed.pack, kind, at);
+      } else {
+        const entry = await marketplaceEntry(at.id);
+        const parsed = entry ? loadPackText(await entry.load(), "yaml") : null;
+        if (live && parsed?.ok) drawer.open(parsed.pack, kind, at);
+      }
+      if (live) setWantedDocs(null);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [wantedDocs, imported, drawer]);
 
   const result = useMemo(() => loadPackText(source ?? "", "yaml"), [source]);
 

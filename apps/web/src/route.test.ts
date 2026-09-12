@@ -14,6 +14,8 @@ describe("an address, as a hash and as a path", () => {
     ["#profile", "/profile"],
     ["#marketplace/com.scrthq.runlog.long-kiln", "/marketplace/com.scrthq.runlog.long-kiln"],
     ["#packs", "/packs"],
+    ["#packs/dev.runlog.kiln/docs", "/packs/dev.runlog.kiln/docs"],
+    ["#marketplace/dev.runlog.kiln/docs/rulebook", "/marketplace/dev.runlog.kiln/docs/rulebook"],
     ["#play", "/play"],
     ["#run/01ABC", "/run/01ABC"],
     ["#run/01ABC?t=tok", "/run/01ABC?t=tok"],

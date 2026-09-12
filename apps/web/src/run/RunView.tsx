@@ -978,7 +978,7 @@ function RunHeader({
           read it against. The same word and the same drawer as the marketplace
           and the library use, so "Docs" means one thing everywhere.
         */}
-        <button className="ghost" onClick={() => drawer.open(pack, "summary")} title="What this pack is, and the rules of what you are running">
+        <button className="ghost" onClick={() => drawer.open(pack, "summary", { section: "packs", id: pack.id })} title="What this pack is, and the rules of what you are running">
           Docs
         </button>
         <button className="ghost" onClick={run.undo} disabled={!run.canUndo || run.readOnly}>
