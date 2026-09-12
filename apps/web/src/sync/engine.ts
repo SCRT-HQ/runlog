@@ -272,8 +272,10 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
           updatedAt: local.updatedAt,
           hash,
           source: local.source,
-          ...(local.origin ? { origin: local.origin } : {}),
-          ...(local.catalog ? { catalog: local.catalog } : {}),
+          ...(local.origin ? { origin: local.origin === "catalog" ? "marketplace" : local.origin } : {}),
+          // Either spelling, since a record written before the rename may not
+          // have passed through storage since.
+          ...((local.marketplace ?? local.catalog) ? { marketplace: (local.marketplace ?? local.catalog)! } : {}),
           // The license's word rides with the text, so the server can hand
           // the pack to a stranger with a live link only where it may.
           shareable: shareableOf(local),
@@ -310,7 +312,8 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
           // the marketplace's newer version too; a copy from before that was
           // recorded keeps whatever this device knew.
           ...((theirs.origin ?? existing?.origin) ? { origin: theirs.origin ?? existing!.origin! } : {}),
-          ...((theirs.catalog ?? existing?.catalog) ? { catalog: theirs.catalog ?? existing!.catalog! } : {}),
+          // Either spelling from the account, kept as the one written now.
+          ...((theirs.marketplace ?? theirs.catalog ?? existing?.marketplace ?? existing?.catalog) ? { marketplace: (theirs.marketplace ?? theirs.catalog ?? existing?.marketplace ?? existing?.catalog)! } : {}),
         });
         await db.putSyncState({ id, kind: "pack", updatedAt: theirs.updatedAt, hash: theirs.hash });
         pulledPacks.push(id);

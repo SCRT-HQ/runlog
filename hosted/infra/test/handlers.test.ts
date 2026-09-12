@@ -832,14 +832,18 @@ describe("who is asking", () => {
 
   it("carries where a pack came from, and which marketplace entry, without reading them", async () => {
     const d = deps();
-    const put = await call(request("PUT", "/api/packs/p", { body: { ...packBody, origin: "catalog", catalog: { id: "dev.runlog.kiln", version: "1.2.0" } } }), d);
+    const put = await call(request("PUT", "/api/packs/p", { body: { ...packBody, origin: "marketplace", marketplace: { id: "dev.runlog.kiln", version: "1.2.0" } } }), d);
     expect(put.status).toBe(200);
     const got = await call(request("GET", "/api/packs/p"), d);
-    expect(got.body["pack"]).toMatchObject({ origin: "catalog", catalog: { id: "dev.runlog.kiln", version: "1.2.0" } });
+    expect(got.body["pack"]).toMatchObject({ origin: "marketplace", marketplace: { id: "dev.runlog.kiln", version: "1.2.0" } });
     const manifest = await call(request("GET", "/api/sync/manifest"), d);
-    expect((manifest.body["packs"] as Array<Record<string, unknown>>)[0]).toMatchObject({ origin: "catalog" });
+    expect((manifest.body["packs"] as Array<Record<string, unknown>>)[0]).toMatchObject({ origin: "marketplace" });
+    // A client written before the field was renamed is understood, and what
+    // it sent is kept under the name the field has now.
+    await call(request("PUT", "/api/packs/old", { body: { ...packBody, origin: "catalog", catalog: { id: "dev.runlog.kiln", version: "1.2.0" } } }), d);
+    expect((await call(request("GET", "/api/packs/old"), d)).body["pack"]).toMatchObject({ marketplace: { id: "dev.runlog.kiln", version: "1.2.0" } });
     expect((await call(request("PUT", "/api/packs/q", { body: { ...packBody, origin: "stolen" } }), d)).status).toBe(422);
-    expect((await call(request("PUT", "/api/packs/q", { body: { ...packBody, catalog: { id: "x" } } }), d)).status).toBe(422);
+    expect((await call(request("PUT", "/api/packs/q", { body: { ...packBody, marketplace: { id: "x" } } }), d)).status).toBe(422);
     // Without them, nothing is invented.
     await call(request("PUT", "/api/packs/plain", { body: packBody }), d);
     expect((await call(request("GET", "/api/packs/plain"), d)).body["pack"]).not.toHaveProperty("origin");

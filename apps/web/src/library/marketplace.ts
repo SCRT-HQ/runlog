@@ -288,15 +288,18 @@ export function newerVersion(candidate: string, current: string): boolean {
  * marketplace has one with the same id, it is theirs, and may differ.
  */
 export function updatesFor(
-  packs: ReadonlyArray<{ id: string; origin?: string; catalog?: { id: string; version: string }; deletedAt?: string }>,
+  packs: ReadonlyArray<{ id: string; origin?: string; marketplace?: { id: string; version: string }; catalog?: { id: string; version: string }; deletedAt?: string }>,
   entries: readonly MarketplaceEntry[],
 ): Map<string, MarketplaceEntry> {
   const byId = new Map(entries.map((e) => [e.id, e]));
   const out = new Map<string, MarketplaceEntry>();
   for (const p of packs) {
-    if (p.deletedAt || (p.origin !== "catalog" && p.origin !== "listing") || !p.catalog) continue;
-    const entry = byId.get(RENAMED_IDS[p.catalog.id] ?? p.catalog.id);
-    if (entry && newerVersion(entry.version, p.catalog.version)) out.set(p.id, entry);
+    // Either spelling of where it came from: a library written before the
+    // rename still gets told about a newer version.
+    const from = p.marketplace ?? p.catalog;
+    if (p.deletedAt || (p.origin !== "marketplace" && p.origin !== "catalog" && p.origin !== "listing") || !from) continue;
+    const entry = byId.get(RENAMED_IDS[from.id] ?? from.id);
+    if (entry && newerVersion(entry.version, from.version)) out.set(p.id, entry);
   }
   return out;
 }

@@ -447,15 +447,25 @@ describe("the sync engine", () => {
     expect(server.packs.has("private")).toBe(false);
   });
 
-  it("carries where a pack came from to the account and back", async () => {
+  it("takes a pack stored under the name the field used to have, and brings it forward", async () => {
+    // A library written before the marketplace was called that: the account
+    // gets the pack under the name the field has now.
     const local = fakeDb();
     const server = fakeApi();
     local.packs.set("kiln", pack("kiln", { sync: true, origin: "catalog", catalog: { id: "dev.runlog.kiln", version: "1.0.0" } }));
     await createEngine(server.api, local.db).sync();
-    expect(server.packs.get("kiln")).toMatchObject({ origin: "catalog", catalog: { id: "dev.runlog.kiln", version: "1.0.0" } });
+    expect(server.packs.get("kiln")).toMatchObject({ marketplace: { id: "dev.runlog.kiln", version: "1.0.0" } });
+  });
+
+  it("carries where a pack came from to the account and back", async () => {
+    const local = fakeDb();
+    const server = fakeApi();
+    local.packs.set("kiln", pack("kiln", { sync: true, origin: "marketplace", marketplace: { id: "dev.runlog.kiln", version: "1.0.0" } }));
+    await createEngine(server.api, local.db).sync();
+    expect(server.packs.get("kiln")).toMatchObject({ origin: "marketplace", marketplace: { id: "dev.runlog.kiln", version: "1.0.0" } });
     const other = fakeDb();
     await createEngine(server.api, other.db).sync();
-    expect(other.packs.get("kiln")).toMatchObject({ origin: "catalog", catalog: { id: "dev.runlog.kiln", version: "1.0.0" } });
+    expect(other.packs.get("kiln")).toMatchObject({ origin: "marketplace", marketplace: { id: "dev.runlog.kiln", version: "1.0.0" } });
   });
 
   it("never sends a sealed copy, switch or no switch, and does not mention its deletion", async () => {

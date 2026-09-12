@@ -427,8 +427,8 @@ export default function App() {
       // `origin` and `marketplace` are the shape already written on every pack
       // in every library: stored values, not words on a screen, so they
       // keep their spelling while the place they name is the marketplace.
-      origin: entry.source === "listing" ? "listing" : "catalog",
-      catalog: { id: entry.id, version: entry.version },
+      origin: entry.source === "listing" ? "listing" : "marketplace",
+      marketplace: { id: entry.id, version: entry.version },
     };
     await savePack(record);
     syncBus.localChange("pack", record.id);
@@ -631,7 +631,7 @@ export default function App() {
    * reducer reads whatever pack is loaded now.
    */
   const updateFromMarketplace = useCallback(async (record: StoredPack) => {
-    const entry = updates.get(record.id) ?? (record.catalog ? await marketplaceEntry(record.catalog.id) : null);
+    const entry = updates.get(record.id) ?? (record.marketplace ? await marketplaceEntry(record.marketplace.id) : null);
     if (!entry) return;
     const at = new Date().toISOString();
     let next: StoredPack;
@@ -640,7 +640,7 @@ export default function App() {
       // is not for a buyer, and the server seals the current master
       // under the same key on the way.
       if (!api) return;
-      const packId = record.catalog?.id ?? record.id;
+      const packId = record.marketplace?.id ?? record.id;
       const mine = purchases.length > 0 ? purchases : await api.myPurchases().catch(() => []);
       const purchase = mine.find((p) => p.packId === packId && p.status === "fulfilled" && p.key);
       if (!purchase) {
@@ -656,7 +656,7 @@ export default function App() {
         setNotice("The publisher's new version is not ready to fetch yet; try again in a little while.");
         return;
       }
-      next = { ...record, title: got.pack.title, version: got.pack.version, source: got.text, format: "yaml", updatedAt: at, catalog: { id: packId, version: got.pack.version } };
+      next = { ...record, title: got.pack.title, version: got.pack.version, source: got.text, format: "yaml", updatedAt: at, marketplace: { id: packId, version: got.pack.version } };
     } else {
       const text = await entry.load();
       const parsed = loadPackText(text, "yaml");
@@ -668,8 +668,8 @@ export default function App() {
         source: text,
         format: "yaml",
         updatedAt: at,
-        origin: "catalog",
-        catalog: { id: entry.id, version: entry.version },
+        origin: "marketplace",
+        marketplace: { id: entry.id, version: entry.version },
       };
     }
     await savePack(next);
@@ -684,7 +684,7 @@ export default function App() {
       imported.map((p) => ({
         id: p.id,
         title: p.title,
-        sub: `${p.sealed ? "your sealed copy" : p.origin === "catalog" || p.origin === "listing" ? "from the marketplace" : "from your file"}, v${p.version}`,
+        sub: `${p.sealed ? "your sealed copy" : p.origin === "marketplace" || p.origin === "listing" ? "from the marketplace" : "from your file"}, v${p.version}`,
         source: p.source,
         record: p,
         ...(updates.has(p.id) ? { update: updates.get(p.id)!.version } : {}),
@@ -842,7 +842,7 @@ export default function App() {
     const arrive = async (bytes: Uint8Array, key: string | null, packId?: string, version?: string) => {
       const header = readHeader(bytes);
       if (!header) throw new Error("that is not a sealed pack");
-      purchaseExtra.current = { origin: "listing", ...(packId ? { catalog: { id: packId, version: version ?? "" } } : {}) };
+      purchaseExtra.current = { origin: "listing", ...(packId ? { marketplace: { id: packId, version: version ?? "" } } : {}) };
       const keys = key ? [{ key }] : await licensesToTry(header);
       for (const license of keys) {
         const result = await openSealed(bytes, license.key);
@@ -1641,8 +1641,8 @@ async function renameBuiltIns(packs: StoredPack[]): Promise<StoredPack[]> {
       format: "yaml",
       filename: `${next}.yaml`,
       updatedAt: at,
-      origin: "catalog",
-      catalog: { id: next, version: entry.version },
+      origin: "marketplace",
+      marketplace: { id: next, version: entry.version },
     };
     await savePack(moved);
     for (const r of await runsFor(p.id)) await saveRun({ ...r, packId: next });
@@ -1704,7 +1704,7 @@ async function settleLibrary(packs: StoredPack[]): Promise<StoredPack[]> {
     const at = new Date().toISOString();
     const record: StoredPack = {
       id: parsed.pack.id, title: parsed.pack.title, version: parsed.pack.version, source: text, format: "yaml",
-      filename: `${entry.id}.yaml`, importedAt: at, updatedAt: at, sync: true, origin: "catalog", catalog: { id: entry.id, version: entry.version },
+      filename: `${entry.id}.yaml`, importedAt: at, updatedAt: at, sync: true, origin: "marketplace", marketplace: { id: entry.id, version: entry.version },
     };
     await savePack(record);
     added.push(record);
