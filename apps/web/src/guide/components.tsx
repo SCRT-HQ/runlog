@@ -59,7 +59,7 @@ export function Kbd({ children }: { children: ReactNode }) {
   return <kbd className="kbd">{children}</kbd>;
 }
 
-/** The starter pack's catalog summary, generated on the spot: the same document the marketplace's About shows. */
+/** The starter pack's marketplace summary, generated on the spot: the same document the marketplace's About shows. */
 export function SummaryDemo() {
   const [doc, setDoc] = useState<Doc | null>(null);
   useEffect(() => {

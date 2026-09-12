@@ -48,7 +48,7 @@ describe("a file of a pack already on the shelf", () => {
     expect(keptFromFile({ ...onShelf, sync: false }, pack(), "t", "kiln.yaml", "2026-02-01T00:00:00Z").sync).toBe(false);
   });
 
-  it("is the player's own from then on: no catalog to ask, no seal", () => {
+  it("is the player's own from then on: no marketplace to ask, no seal", () => {
     const wasCatalog: StoredPack = { ...onShelf, origin: "catalog", catalog: { id: "com.example.kiln", version: "1.0.0" } };
     const replaced = keptFromFile(wasCatalog, pack(), "t", "kiln.yaml", "2026-02-01T00:00:00Z");
     expect(replaced.origin).toBeUndefined();

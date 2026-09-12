@@ -4,7 +4,7 @@
  * The bare address is the welcome page, the page that says what Runlog
  * is, for anyone who has not chosen to skip it. The app lives under
  * `play`. Anyone who arrived with somewhere to go, a live link, a guide
- * page, a catalog link, an invitation, a purchase, a race code, a sign-in
+ * page, a marketplace link, an invitation, a purchase, a race code, a sign-in
  * on its way back, is in the app already, whatever the path says, and
  * the address is then made to read `play` so it is honest. One query is
  * the exception: `?welcome` asks for the welcome page by name, which is
@@ -20,7 +20,7 @@ export const APP_SEGMENT = "play";
  * each one wanted an address a person could read and type; `play` is one
  * of them now, meaning the run in hand, and it is still the front door.
  */
-const SECTIONS = new Set(["play", "packs", "guide", "profile", "marketplace", "catalog", "run", "widget", "dock", "link", "create"]);
+const SECTIONS = new Set(["play", "packs", "guide", "profile", "marketplace", "marketplace", "run", "widget", "dock", "link", "create"]);
 const SKIP_KEY = "runlog:welcome";
 /** The query that asks for the welcome page by name. */
 export const WELCOME_QUERY = "?welcome";

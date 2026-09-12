@@ -328,11 +328,11 @@ never holds a signing key; it seals what the publisher signed.
 
 A publisher uploads a pack (`PUT /api/publishers/packs/{packId}` with
 the signed master text, the head the app computed, title, category,
-tags, features, what it needs, and the catalog summary), lists it
+tags, features, what it needs, and the marketplace summary), lists it
 (`POST …/listing` with an amount in cents, or nothing for free; a price
 makes a product and price on the publisher's connected account, and needs
 payouts set up), and takes it down (`DELETE …/listing`) or removes it
-(`DELETE …/packs/{packId}`). The catalog reads `GET /api/listings` (public,
+(`DELETE …/packs/{packId}`). The marketplace reads `GET /api/listings` (public,
 a minute's cache) and `GET /api/listings/{packId}` for the summary; a free
 listing's text is `GET …/file`, a priced one is delivered sealed to its
 buyer. The server parses no pack: the head and summary are the app's word.
@@ -654,7 +654,7 @@ prints its account as `***`.
 | `RUNLOG_ZONE_ID` (secret) | The Route 53 zone the stage's domain lives in |
 | `WORKOS_CLIENT_ID` (variable) | The AuthKit client the stage's build signs in with; public by design, embedded in the app and in every sign-in URL |
 | `RUNLOG_ENV_CONFIG_DEV`, `RUNLOG_ENV_CONFIG_PRD` (repository variables) | The stage's configuration as JSON: its domain and zone, sign-in clients, mail identity, plans, the words on its pages, the Discord application. One document per stage, at the repository level, read by that stage's diff and deploy jobs alike. `env/example.json` is the shape; on a machine the same document is `env/<stage>.json`, which git ignores |
-| `RUNLOG_API_KEY` (secret, `deploy-*` only) | A command-line key for the platform publisher, for seeding the catalog |
+| `RUNLOG_API_KEY` (secret, `deploy-*` only) | A command-line key for the platform publisher, for seeding the marketplace |
 
 And on the repository:
 

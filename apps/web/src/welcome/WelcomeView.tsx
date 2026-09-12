@@ -110,7 +110,7 @@ export function WelcomeView() {
               <a className="ghost" href={linkTo("#guide/start", play)}>
                 Read the guide
               </a>
-              <a className="ghost" href={linkTo("#catalog", play)}>
+              <a className="ghost" href={linkTo("#marketplace", play)}>
                 See the packs
               </a>
             </p>
@@ -119,7 +119,7 @@ export function WelcomeView() {
 
           <figure className="specimen" aria-label="A run log, as Runlog writes it" key={persona.id}>
             <figcaption className="muted small">
-              <a href={linkTo(`#catalog/${persona.packId}`, play)}>{persona.packTitle}</a> · {persona.mode} · {persona.at}
+              <a href={linkTo(`#marketplace/${persona.packId}`, play)}>{persona.packTitle}</a> · {persona.mode} · {persona.at}
             </figcaption>
             <ol className="specimenLog">
               {persona.log.map((line, i) => (
@@ -270,7 +270,7 @@ export function WelcomeView() {
             <div>
               <dt>Paper included.</dt>
               <dd>
-                A rulebook, a quick start, a reference card, a run log sheet and a catalog summary, all written from the pack as it is,
+                A rulebook, a quick start, a reference card, a run log sheet and a marketplace summary, all written from the pack as it is,
                 as PDF, HTML and Markdown. A signed release carries your name.
               </dd>
             </div>

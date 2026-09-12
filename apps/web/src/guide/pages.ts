@@ -163,7 +163,7 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   P("aws", "Running your own copy", "On AWS, with accounts", "On AWS, with accounts", "The hosted copy, run by you: what you need first.", Aws),
   P("aws-config", "Running your own copy", "On AWS, with accounts", "Saying what your copy is", "One JSON file per stage, and the pages that carry your name.", AwsConfig),
   P("aws-deploy", "Running your own copy", "On AWS, with accounts", "Deploying", "Bootstrap once, then three commands per release.", AwsDeploy),
-  P("aws-after", "Running your own copy", "On AWS, with accounts", "After the first deploy", "The secrets to fill, and the catalog to seed.", AwsAfter),
+  P("aws-after", "Running your own copy", "On AWS, with accounts", "After the first deploy", "The secrets to fill, and the marketplace to seed.", AwsAfter),
   P("monitoring", "Running your own copy", "On AWS, with accounts", "Monitoring", "Traces, insights and an alarm inside your account; New Relic if you want it.", Monitoring),
   P("bot", "Running your own copy", "The Discord bot", "Setting the bot up", "One bot per copy, made by the operator: what you need.", Bot),
   P("bot-application", "Running your own copy", "The Discord bot", "The application and the stage", "The developer portal, the stage's file, the token.", BotApplication),

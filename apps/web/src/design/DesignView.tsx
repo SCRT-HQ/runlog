@@ -466,7 +466,7 @@ const REQUIREMENT_KINDS: ReadonlyArray<{ value: string; label: string }> = [
 ];
 
 /**
- * What a person needs before they play. The catalog says it on the card
+ * What a person needs before they play. The marketplace says it on the card
  * and the setup screen asks about the optional ones, so results that need
  * an absent thing are drawn again. Entries name a requirement by id in
  * `needs`, which is why the id is shown beside the label.

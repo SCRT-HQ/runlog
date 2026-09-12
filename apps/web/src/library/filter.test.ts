@@ -43,7 +43,7 @@ describe("what a pack's declaration says about how it plays", () => {
   });
 });
 
-describe("narrowing the catalog", () => {
+describe("narrowing the marketplace", () => {
   const list = [
     entry({ id: "day", title: "Any Given Day", category: "everyday", tags: ["habits", "focus"], features: ["solo", "together"], description: "A day of things to do." }),
     entry({ id: "trial", title: "Elden Ring: Trial", category: "games", tags: ["Elden Ring", "race"], features: ["moderated", "seeded"], author: "Runlog" }),

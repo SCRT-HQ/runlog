@@ -830,7 +830,7 @@ describe("who is asking", () => {
     });
   });
 
-  it("carries where a pack came from, and which catalog entry, without reading them", async () => {
+  it("carries where a pack came from, and which marketplace entry, without reading them", async () => {
     const d = deps();
     const put = await call(request("PUT", "/api/packs/p", { body: { ...packBody, origin: "catalog", catalog: { id: "dev.runlog.kiln", version: "1.2.0" } } }), d);
     expect(put.status).toBe(200);
@@ -1137,7 +1137,7 @@ describe("who is asking", () => {
     expect((await call(request("GET", "/api/listings", { token: null }), d)).body).toMatchObject({ listings: [{ publisherName: "Kiln Press" }] });
 
     // The name changes on the publisher, in WorkOS, and on the card the
-    // catalog actually reads; the answer says how many cards it touched.
+    // marketplace actually reads; the answer says how many cards it touched.
     const renamed = await call(request("PATCH", "/api/publishers", { body: { name: "Cinder & Salt" } }), d);
     expect(renamed.body).toMatchObject({ publisher: { name: "Cinder & Salt" }, listings: 1 });
     expect(workos.calls).toContain("rename org_kiln-press Cinder & Salt");

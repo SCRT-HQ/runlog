@@ -69,8 +69,8 @@ export interface PackMeta extends Entry {
   importedAt: string;
   bytes: number;
   /**
-   * Where the app got it, a file of the player's, the catalog, a sealed
-   * copy, a listing, and for a catalog pack which entry at which version,
+   * Where the app got it, a file of the player's, the marketplace, a sealed
+   * copy, a listing, and for a marketplace pack which entry at which version,
    * so a device that pulls it can still offer the newer one. Carried, not
    * read: the server decides nothing on these.
    */
@@ -85,6 +85,8 @@ export interface PackMeta extends Entry {
 }
 
 export type PackOrigin = "file" | "catalog" | "sealed" | "listing";
+// "catalog" is the value already stored on packs everywhere; the place it
+// names is the marketplace, but the value is data and does not move.
 export const PACK_ORIGINS: readonly PackOrigin[] = ["file", "catalog", "sealed", "listing"];
 
 /** A session's own row: what it is, and how far its log has got. */

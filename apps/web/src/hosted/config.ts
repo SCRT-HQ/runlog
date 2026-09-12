@@ -45,7 +45,7 @@ export interface Hosted {
   features: {
     /** Whether plans, checkout and the billing portal are on. */
     billing: boolean;
-    /** Whether the bundled catalog includes the engine-testing pack. */
+    /** Whether the bundled marketplace includes the engine-testing pack. */
     testing: boolean;
   };
 }

@@ -11,10 +11,10 @@ import type { StoredPack } from "../storage/db.ts";
  * than to the file: when it first arrived, and whether it travels to the
  * account. Runs are not touched at all. Each is stamped with the version it
  * was played under and reads whatever text is loaded now, which is the
- * same rule a catalog update follows.
+ * same rule a marketplace update follows.
  *
  * Where the pack came from does not carry over. Text from a file is the
- * player's own now, so the catalog is no longer asked for a newer one, and
+ * player's own now, so the marketplace is no longer asked for a newer one, and
  * a plain file in place of a sealed copy is a plain pack.
  */
 export function keptFromFile(existing: StoredPack | null, pack: Pack, text: string, filename: string, at: string): StoredPack {
