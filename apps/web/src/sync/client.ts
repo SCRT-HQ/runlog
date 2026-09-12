@@ -326,7 +326,9 @@ export interface RemotePack {
   hash: string;
   source: string;
   /** Where it came from and, for a marketplace pack, which entry at which version; carried so another device can offer the update. */
-  origin?: "file" | "catalog" | "sealed" | "listing";
+  origin?: "file" | "marketplace" | "catalog" | "sealed" | "listing";
+  marketplace?: { id: string; version: string };
+  /** What `marketplace` was called before the place was named; still read. */
   catalog?: { id: string; version: string };
   /** The license's word on whether the text may be handed to others; a run shared by link shows the pack only when true. */
   shareable?: boolean;

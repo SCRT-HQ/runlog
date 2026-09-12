@@ -75,6 +75,8 @@ export interface PackMeta extends Entry {
    * read: the server decides nothing on these.
    */
   origin?: PackOrigin;
+  marketplace?: { id: string; version: string };
+  /** What `marketplace` was called before the place was named; still accepted. */
   catalog?: { id: string; version: string };
   /**
    * Whether the pack's text may be handed to people who are not this
@@ -84,10 +86,10 @@ export interface PackMeta extends Entry {
   shareable?: boolean;
 }
 
-export type PackOrigin = "file" | "catalog" | "sealed" | "listing";
+export type PackOrigin = "file" | "marketplace" | "catalog" | "sealed" | "listing";
 // "catalog" is the value already stored on packs everywhere; the place it
 // names is the marketplace, but the value is data and does not move.
-export const PACK_ORIGINS: readonly PackOrigin[] = ["file", "catalog", "sealed", "listing"];
+export const PACK_ORIGINS: readonly PackOrigin[] = ["file", "marketplace", "catalog", "sealed", "listing"];
 
 /** A session's own row: what it is, and how far its log has got. */
 export interface SessionMeta {
