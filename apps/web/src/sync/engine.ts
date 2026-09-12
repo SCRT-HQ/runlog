@@ -307,7 +307,7 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
           // Arriving from the account means it was chosen to travel.
           sync: existing?.sync ?? true,
           // Where it came from travels with it, so this device can offer
-          // the catalog's newer version too; a copy from before that was
+          // the marketplace's newer version too; a copy from before that was
           // recorded keeps whatever this device knew.
           ...((theirs.origin ?? existing?.origin) ? { origin: theirs.origin ?? existing!.origin! } : {}),
           ...((theirs.catalog ?? existing?.catalog) ? { catalog: theirs.catalog ?? existing!.catalog! } : {}),

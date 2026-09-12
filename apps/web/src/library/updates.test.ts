@@ -27,9 +27,9 @@ describe("versions", () => {
   });
 });
 
-describe("what the catalog can update", () => {
+describe("what the marketplace can update", () => {
   const entries = [entry("dev.runlog.kiln", "1.2.0"), entry("dev.runlog.day", "0.1.0")];
-  it("offers a newer version to a pack that came from the catalog, and only to those", () => {
+  it("offers a newer version to a pack that came from the marketplace, and only to those", () => {
     const packs = [
       { id: "kiln", origin: "catalog", catalog: { id: "dev.runlog.kiln", version: "1.0.0" } },
       { id: "day", origin: "catalog", catalog: { id: "dev.runlog.day", version: "0.1.0" } },

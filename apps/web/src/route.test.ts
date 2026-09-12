@@ -36,10 +36,10 @@ describe("an address, as a hash and as a path", () => {
     // Written before the sections moved to the root. Read, then written
     // back in the new spelling by whoever lands on it.
     expect(addressOf({ pathname: "/play/guide/streaming", search: "", hash: "" }, "/")).toBe("#guide/streaming");
-    // The marketplace was the catalog, under the old prefix and without it.
-    expect(addressOf({ pathname: "/play/catalog/com.scrthq.runlog.long-kiln", search: "", hash: "" }, "/")).toBe("#marketplace/com.scrthq.runlog.long-kiln");
-    expect(addressOf({ pathname: "/catalog", search: "", hash: "" }, "/")).toBe("#marketplace");
-    expect(addressOf({ pathname: "/catalog/com.scrthq.runlog.long-kiln", search: "", hash: "" }, "/")).toBe("#marketplace/com.scrthq.runlog.long-kiln");
+    // The marketplace was the marketplace, under the old prefix and without it.
+    expect(addressOf({ pathname: "/play/marketplace/com.scrthq.runlog.long-kiln", search: "", hash: "" }, "/")).toBe("#marketplace/com.scrthq.runlog.long-kiln");
+    expect(addressOf({ pathname: "/marketplace", search: "", hash: "" }, "/")).toBe("#marketplace");
+    expect(addressOf({ pathname: "/marketplace/com.scrthq.runlog.long-kiln", search: "", hash: "" }, "/")).toBe("#marketplace/com.scrthq.runlog.long-kiln");
     expect(addressOf({ pathname: "/play/run/01ABC", search: "?t=tok", hash: "" }, "/")).toBe("#run/01ABC?t=tok");
     expect(addressOf({ pathname: "/runlog/play/profile", search: "", hash: "" }, "/runlog/")).toBe("#profile");
     // The front door itself is a section now, not a prefix.
@@ -79,6 +79,6 @@ describe("a link the app writes for itself", () => {
   it("is the hash after where it belongs while paths are off, which is the case in tests", () => {
     expect(linkTo("#guide/start")).toBe("#guide/start");
     expect(linkTo("#guide/start", "/play")).toBe("/play#guide/start");
-    expect(linkTo("#catalog/a-pack", "./")).toBe("./#catalog/a-pack");
+    expect(linkTo("#marketplace/a-pack", "./")).toBe("./#marketplace/a-pack");
   });
 });

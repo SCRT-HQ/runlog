@@ -35,8 +35,8 @@ describe("the guide", () => {
     const together = GUIDE_PAGES.find((p) => p.slug === "inviting")!;
     const html = renderToStaticMarkup(<together.Page components={guideComponents} />);
     expect(html).toContain('class="plan plan-plus"');
-    const catalog = GUIDE_PAGES.find((p) => p.slug === "selling-catalog")!;
-    expect(renderToStaticMarkup(<catalog.Page components={guideComponents} />)).toContain('class="plan plan-publisher"');
+    const selling = GUIDE_PAGES.find((p) => p.slug === "selling-catalog")!;
+    expect(renderToStaticMarkup(<selling.Page components={guideComponents} />)).toContain('class="plan plan-publisher"');
   });
 
   it("reads its page from the address bar, and falls back to the first", () => {

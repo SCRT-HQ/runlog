@@ -14,7 +14,7 @@ import type { SyncDb } from "./engine.ts";
  * sealed pack on the shelf, with its key filed beside it.
  *
  * A copy forgotten on this device is not brought back on the next pass;
- * the catalog offers it again instead, since forgetting was a choice.
+ * the marketplace offers it again instead, since forgetting was a choice.
  */
 
 const SETTLED = "runlog:purchases:settled";
@@ -84,7 +84,7 @@ export async function openPurchase(purchase: Purchase, bytes: Uint8Array): Promi
 /**
  * Fetch every fulfilled purchase this device has not seen and whose pack
  * is not on the shelf. Never throws: a purchase that will not come is
- * left for the next pass, and the catalog's own button.
+ * left for the next pass, and the marketplace's own button.
  */
 export async function settlePurchases(api: Pick<Api, "myPurchases" | "purchaseFile">, db: SyncDb): Promise<string[]> {
   const arrived: string[] = [];

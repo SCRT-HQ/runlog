@@ -22,7 +22,7 @@ import { useGuildVaults } from "./useGuildVaults.ts";
  * here too, and a pack of your own takes a newer file on its own row, its
  * runs kept. Nothing is a menu; everything is on the page.
  *
- * Nothing ships in it. The catalog is where packs come from, and this view
+ * Nothing ships in it. The marketplace is where packs come from, and this view
  * is where the marketplace is reached from.
  */
 
@@ -34,7 +34,7 @@ export interface LibraryPack {
   source: string;
   /** The stored record, for the packs that are yours; none for a built-in. */
   record?: StoredPack;
-  /** The catalog's newer version of this pack, when it has one. */
+  /** The marketplace's newer version of this pack, when it has one. */
   update?: string;
   /** Whether this is the test bench pack. */
   bench?: boolean;

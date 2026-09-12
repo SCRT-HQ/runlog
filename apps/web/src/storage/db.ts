@@ -64,9 +64,9 @@ export interface StoredPack {
    * license key does instead, so the file can be opened on another device.
    */
   sealed?: boolean;
-  /** Where it came from: a file of the player's, the catalog, or a sealed copy. Absent means a file. */
+  /** Where it came from: a file of the player's, the marketplace, or a sealed copy. Absent means a file. */
   origin?: "file" | "catalog" | "sealed" | "listing";
-  /** For a catalog pack: which entry, at which version, so a newer one can be offered. */
+  /** For a marketplace pack: which entry, at which version, so a newer one can be offered. */
   catalog?: { id: string; version: string };
   deletedAt?: string;
 }

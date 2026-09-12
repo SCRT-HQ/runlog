@@ -2,12 +2,12 @@ import YAML from "yaml";
 import type { Doc } from "@runlog/rules-schema";
 
 /**
- * The catalog: packs anyone may add to their library.
+ * The marketplace: packs anyone may add to their library.
  *
  * Version one is the packs that ship in the repository, and they no longer
  * ship in the app's bundle. Each is a chunk of its own that the build emits
- * and the service worker precaches, loaded when the catalog is opened or a
- * pack is added, so a player who never opens the catalog never downloads
+ * and the service worker precaches, loaded when the marketplace is opened or a
+ * pack is added, so a player who never opens the marketplace never downloads
  * a pack they did not ask for, and a copy on disk or on the public page
  * still has every one of them.
  *
@@ -43,7 +43,7 @@ export interface MarketplaceEntry {
   kind: string;
   /**
    * Set on a pack from `packs/testing/`: a test bench, never seeded to the
-   * platform as a listing and never counted as "new in the catalog". A
+   * platform as a listing and never counted as "new in the marketplace". A
    * hosted copy leaves it out of the bundle entirely where its `hosted.json`
    * says `features.testing` is off; see `loadMarketplace`.
    */
@@ -55,7 +55,7 @@ export interface MarketplaceEntry {
   source: "bundled" | "listing";
   /** The pack's text, when asked for. A priced listing has none to give: it is bought. */
   load: () => Promise<string>;
-  /** The catalog summary, where the feed carries one already made. */
+  /** The marketplace summary, where the feed carries one already made. */
   about?: () => Promise<Doc | null>;
 }
 
@@ -65,7 +65,7 @@ export interface MarketplaceEntry {
  */
 export const STARTER_PACK = "com.scrthq.runlog.any-given-day";
 
-/** In the order the catalog shows them: the starter first, then by title. */
+/** In the order the marketplace shows them: the starter first, then by title. */
 const ORDER = [STARTER_PACK];
 
 const files = import.meta.glob("../../../../packs/{demo,sketches}/*.yaml", { query: "?raw", import: "default" }) as Record<
@@ -93,7 +93,7 @@ function kindOf(category: string, features: Feature[]): string {
   return `${category} · ${how}`;
 }
 
-/** Read one bundled pack's header into a catalog entry. `bench` marks a `packs/testing/` pack. */
+/** Read one bundled pack's header into a marketplace entry. `bench` marks a `packs/testing/` pack. */
 async function bundledEntry(load: () => Promise<string>, bench: boolean): Promise<MarketplaceEntry | null> {
   const text = await load();
   const head = YAML.parse(text) as Record<string, unknown>;
@@ -130,13 +130,13 @@ async function bundledEntry(load: () => Promise<string>, bench: boolean): Promis
 let cached: Promise<MarketplaceEntry[]> | null = null;
 
 /**
- * Every catalog entry, with its header read; the text itself stays lazy.
+ * Every marketplace entry, with its header read; the text itself stays lazy.
  *
  * `testing` says whether a `bench: true` entry (the pack under
  * `packs/testing/`) should be in what comes back. Left unset, nothing is
  * filtered: a caller that needs every pack it already knows about, such as
  * resolving a pack a run points at, should never lose it because a flag
- * changed after the fact. A view that lists the catalog for someone to
+ * changed after the fact. A view that lists the marketplace for someone to
  * browse should pass the copy's own answer instead: `hosted === null` (no
  * `hosted.json` at all: static, local, self-hosted) or
  * `hosted.features.testing`.
@@ -201,9 +201,9 @@ interface FeedCard {
 }
 
 /**
- * The catalog's feed from the API, with no account: public, a minute's
+ * The marketplace's feed from the API, with no account: public, a minute's
  * cache. Nothing where there is no API, disk, Pages, or where it does
- * not answer; the bundle is the catalog then, as it always was.
+ * not answer; the bundle is the marketplace then, as it always was.
  */
 export async function loadFeed(fetchImpl: typeof fetch = fetch, base = apiBase()): Promise<MarketplaceEntry[]> {
   if (!base) return [];
@@ -238,7 +238,7 @@ export function feedEntry(card: FeedCard, base: string): MarketplaceEntry {
     publisher: { id: card.orgId, name: card.publisherName },
     source: "listing",
     load: async () => {
-      if (price !== "free") throw new Error("this pack is sold, not given; buy it from the catalog");
+      if (price !== "free") throw new Error("this pack is sold, not given; buy it from the marketplace");
       const response = await fetch(`${url}/file`);
       if (!response.ok) throw new Error("the pack could not be fetched");
       return response.text();
@@ -282,10 +282,10 @@ export function newerVersion(candidate: string, current: string): boolean {
 }
 
 /**
- * The packs the catalog has a newer version of: those that came from it,
+ * The packs the marketplace has a newer version of: those that came from it,
  * by the entry they came from, where the entry has moved on. A pack the
  * player loaded from a file is never offered an update, even if the
- * catalog has one with the same id, it is theirs, and may differ.
+ * marketplace has one with the same id, it is theirs, and may differ.
  */
 export function updatesFor(
   packs: ReadonlyArray<{ id: string; origin?: string; catalog?: { id: string; version: string }; deletedAt?: string }>,
@@ -388,7 +388,7 @@ export function facets(entries: readonly MarketplaceEntry[]): { categories: Face
 }
 
 /**
- * The ids the header shelf used for the built-ins before the catalog, so a
+ * The ids the header shelf used for the built-ins before the marketplace, so a
  * device that remembered one of those lands on the same pack.
  */
 /**

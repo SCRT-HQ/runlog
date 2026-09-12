@@ -136,13 +136,13 @@ export function PublisherSection({ api }: { api: Api | null }) {
       const { publisher: renamed, listings } = await api.renamePublisher(next);
       setPublisher(renamed);
       setRenaming(null);
-      // The catalog reads a name copied onto each listing, so say how many
+      // The marketplace reads a name copied onto each listing, so say how many
       // were re-stamped: it is the difference between the profile saying
       // one thing and the marketplace saying another.
       setNote(
         listings === 0
-          ? `The catalog calls you ${renamed.name} now.`
-          : `The catalog calls you ${renamed.name} now, on ${listings === 1 ? "your listing" : `all ${listings} of your listings`}.`,
+          ? `The marketplace calls you ${renamed.name} now.`
+          : `The marketplace calls you ${renamed.name} now, on ${listings === 1 ? "your listing" : `all ${listings} of your listings`}.`,
       );
     } catch (error) {
       setNote(error instanceof Error && error.message ? error.message : "That name could not be changed.");
@@ -430,10 +430,10 @@ function HostedLicensing({ api }: { api: Api }) {
       <h4 className="stepLabel">Hosted licensing {subscribed ? <span className="muted">on</span> : null}</h4>
       <p className="muted small">
         {subscribed
-          ? "The catalog takes no share of your sales. Manage the subscription with Stripe."
+          ? "The marketplace takes no share of your sales. Manage the subscription with Stripe."
           : held
-            ? "The catalog takes 5% of each sale. Hosted licensing, which takes that to nothing, is not on sale here yet."
-            : "The catalog takes 5% of each sale. With hosted licensing, $9 a month or $90 a year, it takes nothing; worth it once you sell more than a few a month."}
+            ? "The marketplace takes 5% of each sale. Hosted licensing, which takes that to nothing, is not on sale here yet."
+            : "The marketplace takes 5% of each sale. With hosted licensing, $9 a month or $90 a year, it takes nothing; worth it once you sell more than a few a month."}
       </p>
       <div className="padRow">
         {held ? null : subscribed ? (
@@ -459,7 +459,7 @@ function HostedLicensing({ api }: { api: Api }) {
 /**
  * What the publisher has uploaded, and what it is listed at. Uploading
  * takes a pack from this device's library, the head and the summary the
- * catalog shows are computed here, the way the marketplace would, and the
+ * marketplace shows are computed here, the way the marketplace would, and the
  * listing is free, or a price in whole dollars once payouts are set up.
  */
 export function PublisherPacks({ api, publisher }: { api: Api; publisher: PublisherView }) {

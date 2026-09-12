@@ -251,7 +251,7 @@ export interface MovedJob {
 }
 
 /** The screens the beacon may name: families, never an id. Mirrors apps/web/src/hosted/beacon.ts. */
-// "catalog" stays beside "marketplace": it is what the screen was called
+// "marketplace" stays beside "marketplace": it is what the screen was called
 // until the name settled, and rows already counted under it are real.
 const SCREENS = ["welcome", "library", "play", "rules", "marketplace", "catalog", "guide", "design", "profile", "live", "widget", "dock"] as const;
 
@@ -806,7 +806,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     return deliver(sale);
   }
 
-  // The catalog's feed: what is listed, for anyone. A minute at the edge
+  // The marketplace's feed: what is listed, for anyone. A minute at the edge
   // and in the browser is plenty; nothing here is per-person.
   const publicCache = { "cache-control": "public, max-age=60" };
   const withCache = (r: Result): Result => (typeof r === "string" ? r : { ...r, headers: { ...(r.headers ?? {}), ...publicCache } });
@@ -821,7 +821,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (listing[2] === "/file") {
       // A free listing's text is public. A priced one is delivered sealed,
       // to its buyer, by the checkout that follows.
-      if (card.price !== "free" || !product) return json(410, { error: "this pack is sold, not given; buy it from the catalog" });
+      if (card.price !== "free" || !product) return json(410, { error: "this pack is sold, not given; buy it from the marketplace" });
       return withCache({ statusCode: 200, headers: { "content-type": "text/yaml; charset=utf-8" }, body: await deps.listings.getMaster(product.masterKey) });
     }
     return withCache(json(200, { found: true, listing: card, summary: product?.summary ?? null }));
@@ -1890,7 +1890,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (deps.gates && !(await publishersOpen())) return json(403, { error: "publishing is not open here yet", open: false });
       const body = parse(event);
       const name = isRecord(body) && str(body["name"]) ? body["name"].trim() : "";
-      if (!name || name.length > MAX_NAME) return json(422, { error: "name: what the catalog will call you" });
+      if (!name || name.length > MAX_NAME) return json(422, { error: "name: what the marketplace will call you" });
       const at = now();
       // The organization lives in WorkOS where the key is filled, so its
       // members' tokens carry it; the row here is what the API reads.
@@ -1906,11 +1906,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!mine) return json(200, { publisher: null });
 
     /*
-     * What the catalog calls this publisher.
+     * What the marketplace calls this publisher.
      *
      * The name is on the publisher's own row, in WorkOS where a key is
      * filled, and copied onto every listing card, because a card is what
-     * the catalog reads and joining one row to another to draw a page of
+     * the marketplace reads and joining one row to another to draw a page of
      * cards is not worth it. So a rename is three writes, and the third
      * is a loop over this publisher's own listings: there are few, they
      * are small, and a card left saying the old name is the whole of what
@@ -1923,7 +1923,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (!admin) return json(422, { error: "only an admin of the publisher changes its name" });
       const body = parse(event);
       const name = isRecord(body) && str(body["name"]) ? body["name"].trim() : "";
-      if (!name || name.length > MAX_NAME) return json(422, { error: "name: what the catalog will call you" });
+      if (!name || name.length > MAX_NAME) return json(422, { error: "name: what the marketplace will call you" });
       const at = now();
       if (name === mine.name) return json(200, { publisher: view(mine), listings: 0 });
       const renamed = await deps.publishers.rename(mine.id, name, at);

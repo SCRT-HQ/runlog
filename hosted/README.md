@@ -17,7 +17,7 @@ a file on disk, from `npx @scrthq/runlog serve`, or from any static host.
 The app is written to run without any of this. It finds `hosted.json` at
 its own root and, when the file is there, shows a footer, asks people
 signed in to accept the terms, and offers accounts, sync, tables with
-company and the catalog through `/api` on the same origin. Where the file
+company and the marketplace through `/api` on the same origin. Where the file
 is not there, none of that is offered. The code in the app that reads the
 file lives in `apps/web/src/hosted/`; the code that talks to `/api` lives
 where the feature does (`sync/`, `auth/`, `live/`, `profile/`) and stays

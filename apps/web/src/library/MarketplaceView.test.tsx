@@ -5,7 +5,7 @@ import { MarketplaceView } from "./MarketplaceView.tsx";
 import type { MarketplaceEntry } from "./marketplace.ts";
 
 /**
- * The catalog card's footer, once owned and not.
+ * The marketplace card's footer, once owned and not.
  *
  * "In your packs · open" used to be one button: it read as a status until
  * you noticed it was pressable. Splitting it into a quiet chip and a real
@@ -51,7 +51,7 @@ vi.mock("./marketplace.ts", async (importOriginal) => {
 
 afterEach(cleanup);
 
-describe("the catalog card's footer", () => {
+describe("the marketplace card's footer", () => {
   it("shows an owned pack as a quiet chip plus an Open button that calls onOpen with its id", async () => {
     const onOpen = vi.fn();
     render(<MarketplaceView mine={new Set([ownedEntry.id])} onAdd={async () => {}} onOpen={onOpen} onBack={() => {}} />);

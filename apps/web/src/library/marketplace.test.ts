@@ -3,11 +3,11 @@ import { loadPackText } from "@runlog/rules-schema";
 import { marketplaceEntry, filterMarketplace, LEGACY_IDS, loadMarketplace, publishersOf, STARTER_PACK, withTesting, type MarketplaceEntry } from "./marketplace.ts";
 
 /**
- * The catalog is the packs directory, read at build. What has to hold: every
+ * The marketplace is the packs directory, read at build. What has to hold: every
  * entry is a pack that loads, the starter is first, and the names the old
  * header used still find their packs.
  */
-describe("the catalog", () => {
+describe("the marketplace", () => {
   it("lists every pack that ships, each of which loads", async () => {
     const entries = await loadMarketplace();
     expect(entries.map((e) => e.id)).toEqual([
@@ -56,7 +56,7 @@ describe("the catalog", () => {
   });
 });
 
-describe("publishers in the catalog", () => {
+describe("publishers in the marketplace", () => {
   const entry = (id: string, publisher: { id: string; name: string } | undefined, price: MarketplaceEntry["price"]): MarketplaceEntry =>
     ({ id, version: "1", title: id, category: "games", tags: [], features: [], requires: [], players: 1, kind: "", price, publisher, source: "listing", load: async () => "" }) as MarketplaceEntry;
   const all = [
@@ -104,7 +104,7 @@ describe("the test bench", () => {
   };
   const ordinary: MarketplaceEntry = { ...bench, id: "com.scrthq.runlog.any-given-day", title: "Any Given Day", bench: undefined };
 
-  it("is dropped from a copy whose catalog should not carry it", () => {
+  it("is dropped from a copy whose marketplace should not carry it", () => {
     expect(withTesting([ordinary, bench], false).map((e) => e.id)).toEqual([ordinary.id]);
   });
 

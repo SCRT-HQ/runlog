@@ -278,7 +278,7 @@ export const Requirement = z
     kind: z
       .enum(["game", "platform", "software", "equipment", "supplies", "space", "other"])
       .default("other")
-      .describe("What sort of thing it is, so a catalog can say 'needs a game' or 'needs equipment' at a glance."),
+      .describe("What sort of thing it is, so a marketplace can say 'needs a game' or 'needs equipment' at a glance."),
     optional: z
       .boolean()
       .default(false)
@@ -1028,18 +1028,18 @@ export const Pack = z
       .min(1)
       .max(40)
       .optional()
-      .describe("What kind of thing this is, in a word or two, for a catalog to group by: everyday, games, craft, fitness, cooking, writing…"),
+      .describe("What kind of thing this is, in a word or two, for a marketplace to group by: everyday, games, craft, fitness, cooking, writing…"),
     tags: z
       .array(z.string().min(1).max(40))
       .max(12)
       .optional()
-      .describe("Free tags for a catalog to filter by: the game it is for, the hobby, the shape of play. Short, and in the words a person would search for."),
+      .describe("Free tags for a marketplace to filter by: the game it is for, the hobby, the shape of play. Short, and in the words a person would search for."),
     requires: z
       .array(Requirement)
       .max(20)
       .optional()
       .describe(
-        "What a person needs before playing, shown in the catalog and the rulebook: the game and a system that runs it, mods or training packs, a wheel, a kitchen, supplies. Mark the ones that are nice to have `optional`; results can `need` those and be drawn again for a player who lacks them.",
+        "What a person needs before playing, shown in the marketplace and the rulebook: the game and a system that runs it, mods or training packs, a wheel, a kitchen, supplies. Mark the ones that are nice to have `optional`; results can `need` those and be drawn again for a player who lacks them.",
       ),
     license: License,
     capabilities: z

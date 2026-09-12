@@ -32,7 +32,7 @@ export function StartFrom({ onPick, onClose }: { onPick: (draft: Record<string, 
     let live = true;
     void (async () => {
       const mine = (await listPacks()).filter((p) => !p.sealed);
-      const catalog = await loadMarketplace({ testing });
+      const marketplace = await loadMarketplace({ testing });
       const seen = new Set<string>();
       const out: Candidate[] = [];
       const push = (id: string, title: string, from: string, text: () => Promise<string>) => {
@@ -47,7 +47,7 @@ export function StartFrom({ onPick, onClose }: { onPick: (draft: Record<string, 
         });
       };
       for (const p of mine) push(p.id, p.title, p.origin === "catalog" ? "your library, from the marketplace" : "your library", async () => p.source);
-      for (const e of catalog) push(e.id, e.title, "the marketplace", e.load);
+      for (const e of marketplace) push(e.id, e.title, "the marketplace", e.load);
       // The verdict needs the license, which needs the text; read them all,
       // since a handful of packs is what a library holds.
       for (const c of out) {

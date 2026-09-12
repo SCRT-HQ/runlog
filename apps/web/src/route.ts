@@ -53,10 +53,10 @@ export function addressOf(loc: { pathname: string; search: string; hash: string 
       // back in the spelling it has now.
       if (rest.startsWith(`${APP_SEGMENT}/`)) {
         const after = rest.slice(APP_SEGMENT.length + 1);
-        if (HEADS.has(after.split("/")[0] ?? "") || after.startsWith("catalog")) rest = after;
+        if (HEADS.has(after.split("/")[0] ?? "") || after.startsWith("marketplace")) rest = after;
       }
-      // The marketplace was called the catalog until the name settled.
-      if (rest === "catalog" || rest.startsWith("catalog/")) rest = `marketplace${rest.slice("catalog".length)}`;
+      // The marketplace was called the marketplace until the name settled.
+      if (rest === "marketplace" || rest.startsWith("marketplace/")) rest = `marketplace${rest.slice("marketplace".length)}`;
       const head = rest.split("/")[0] ?? "";
       if (HEADS.has(head)) return `#${rest}${loc.search}`;
     }

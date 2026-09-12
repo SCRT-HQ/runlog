@@ -23,7 +23,7 @@ export interface Persona {
   id: string;
   /** The word in the heading: "as a potter". */
   noun: string;
-  /** The pack the example is drawn from, and where the catalog shows it. */
+  /** The pack the example is drawn from, and where the marketplace shows it. */
   packId: string;
   packTitle: string;
   mode: string;

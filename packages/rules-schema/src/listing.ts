@@ -4,7 +4,7 @@ import { loadPackText, type PackFormat } from "./load.ts";
 import type { Pack } from "./pack.ts";
 
 /**
- * What the catalog is told about a pack when it is uploaded: the head a card
+ * What the marketplace is told about a pack when it is uploaded: the head a card
  * is drawn from and the summary a listing page shows, computed from the
  * source exactly as the app would. The command line, the deploy that seeds
  * the built-ins, and the app's own upload all go through here, so a card
