@@ -147,7 +147,7 @@ The kinds:
 | `kind` | When | `data` |
 | --- | --- | --- |
 | `rolled` | The player threw dice, and they have landed. | `dice`: each die's `faces`, what it shows (`display`) and its `label`; `total`; the roll's `label`; its `notation`, such as `2d6`. |
-| `outcome` | A result landed: the dice, or a choice, drew a line of a table. | `n`, the result's number from the start of the run (the snapshot's log uses the same); `unit`; `table`, its title; `text`, the line drawn, in the pack's words; `subject`, by name, when the result reached one. |
+| `outcome` | A result landed: the dice, or a choice, drew a line of a table. | `n`, the result's number from the start of the run (the snapshot's log uses the same); `unit`; `table`, its title; `tableId` and `entryId`, what it landed on, by id; `tags`, the entry's own, where it has any; `text`, the line drawn, in the pack's words; `subject`, by name, when the result reached one. |
 | `award` | The moderator gave a result's points to a contestant. | `n`, the result awarded; `contestant`, by name; `points`; `table`; `text`. |
 | `clock` | A clock started, paused, resumed or stopped. | `clock`, its id; `label`; `kind`, `stopwatch` or `timer`; `status`: `started`, `paused`, `resumed` or `stopped`; on `stopped`, `expired`. |
 | `counter` | A tally the pack shows moved: a death counted, a streak sent back to zero. Hidden counters are not told. | `counter`, its id; `label`, in the pack's words; `value`, where it is now; `was`, where it was. |
@@ -160,7 +160,9 @@ The kinds:
 throw. The rest are sent by the run's owner's device after each move,
 whichever device made it, so a table speaks with one voice; they say what
 happened in words a listener without the pack can use, and a result's `n`
-lets a listener drop one it has already shown. An undo says nothing: what
+lets a listener drop one it has already shown. Words are for showing: match
+on `tableId` and `entryId`, or on a tag, for anything that acts on a result,
+since the text changes whenever its author edits it. An undo says nothing: what
 it unmade is not there when the state is next read. Others may
 follow the same shape; ignore kinds you do not know. A gesture is not a
 move, so a `changed` message does not follow it; the move it belongs to
