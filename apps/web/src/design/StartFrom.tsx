@@ -46,7 +46,7 @@ export function StartFrom({ onPick, onClose }: { onPick: (draft: Record<string, 
           load: async () => YAML.parse(await text()) as Record<string, unknown>,
         });
       };
-      for (const p of mine) push(p.id, p.title, p.origin === "catalog" ? "your library, from the marketplace" : "your library", async () => p.source);
+      for (const p of mine) push(p.id, p.title, p.origin === "marketplace" ? "your library, from the marketplace" : "your library", async () => p.source);
       for (const e of marketplace) push(e.id, e.title, "the marketplace", e.load);
       // The verdict needs the license, which needs the text; read them all,
       // since a handful of packs is what a library holds.

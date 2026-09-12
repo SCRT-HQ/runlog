@@ -1527,14 +1527,17 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (method === "PUT") {
       const body = parse(event);
       if (!isRecord(body)) return json(422, { error: "a pack, as JSON" });
-      const { title, version, format, filename, importedAt, updatedAt, hash, source, origin, catalog, shareable } = body;
+      const { title, version, format, filename, importedAt, updatedAt, hash, source, origin, marketplace, catalog, shareable } = body;
       if (!str(title) || !str(version) || !str(filename) || !str(importedAt) || !str(updatedAt) || !str(hash) || !str(source)) {
         return json(422, { error: "title, version, filename, importedAt, updatedAt, hash and source are all required" });
       }
       if (format !== "yaml" && format !== "json") return json(422, { error: "format is yaml or json" });
       if (origin !== undefined && !(PACK_ORIGINS as readonly unknown[]).includes(origin)) return json(422, { error: `origin is one of ${PACK_ORIGINS.join(", ")}` });
-      if (catalog !== undefined && !(isRecord(catalog) && str(catalog["id"]) && str(catalog["version"]) && catalog["id"].length <= MAX_NAME && catalog["version"].length <= MAX_NAME)) {
-        return json(422, { error: "catalog is {id, version}" });
+      // Either spelling: a client of any age is understood, and what it
+      // sent is what is kept.
+      const from = marketplace ?? catalog;
+      if (from !== undefined && !(isRecord(from) && str(from["id"]) && str(from["version"]) && from["id"].length <= MAX_NAME && from["version"].length <= MAX_NAME)) {
+        return json(422, { error: "marketplace is {id, version}" });
       }
       if (Buffer.byteLength(source) > MAX_BYTES) return json(413, { error: "this pack is too large to sync" });
       const conflict = await mismatch(event, (await store.getPack(caller.sub, id))?.meta);
@@ -1550,7 +1553,8 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         hash,
         bytes: Buffer.byteLength(source),
         ...(origin !== undefined ? { origin: origin as PackOrigin } : {}),
-        ...(catalog !== undefined ? { catalog: { id: (catalog as Record<string, string>)["id"]!, version: (catalog as Record<string, string>)["version"]! } } : {}),
+        // Kept under the name it has now, whichever name it arrived under.
+        ...(from !== undefined ? { marketplace: { id: (from as Record<string, string>)["id"]!, version: (from as Record<string, string>)["version"]! } } : {}),
         ...(typeof shareable === "boolean" ? { shareable } : {}),
       };
       await store.putPack(caller.sub, meta, source);

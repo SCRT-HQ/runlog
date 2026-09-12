@@ -65,10 +65,33 @@ export interface StoredPack {
    */
   sealed?: boolean;
   /** Where it came from: a file of the player's, the marketplace, or a sealed copy. Absent means a file. */
-  origin?: "file" | "catalog" | "sealed" | "listing";
+  origin?: "file" | "marketplace" | "catalog" | "sealed" | "listing";
   /** For a marketplace pack: which entry, at which version, so a newer one can be offered. */
+  marketplace?: { id: string; version: string };
+  /**
+   * What `marketplace` was called while the place was the catalog. Read,
+   * never written: a record that still has it is brought forward the first
+   * time it is read, so this can go once nothing has one.
+   */
   catalog?: { id: string; version: string };
   deletedAt?: string;
+}
+
+/**
+ * A stored pack as the rest of the app should see it, whichever spelling
+ * storage happens to hold.
+ *
+ * The field and the value were named for the catalog, and the place is the
+ * marketplace. Rather than rewrite every record at once, whatever comes out
+ * of storage is brought forward here, and what goes back in is written the
+ * new way, so a library converges as it is used.
+ */
+export function asRead(pack: StoredPack): StoredPack {
+  const from = pack.marketplace ?? pack.catalog;
+  const origin = pack.origin === "catalog" ? "marketplace" : pack.origin;
+  if (from === pack.marketplace && origin === pack.origin) return pack;
+  const { catalog: _was, ...rest } = pack;
+  return { ...rest, ...(origin ? { origin } : {}), ...(from ? { marketplace: from } : {}) };
 }
 
 /**
@@ -242,14 +265,14 @@ const now = () => new Date().toISOString();
 
 /** Every pack, tombstones included. Sync reads this; the shelf does not. */
 export const listAllPacks = (): Promise<StoredPack[]> =>
-  run<StoredPack[]>(PACKS, "readonly", (s) => s.getAll()).then((r) => r ?? []);
+  run<StoredPack[]>(PACKS, "readonly", (s) => s.getAll()).then((r) => (r ?? []).map(asRead));
 
 /** The packs still on the shelf. */
 export const listPacks = (): Promise<StoredPack[]> =>
   listAllPacks().then((packs) => packs.filter((p) => !p.deletedAt));
 
 export const loadPack = (id: string): Promise<StoredPack | null> =>
-  run<StoredPack>(PACKS, "readonly", (s) => s.get(id));
+  run<StoredPack>(PACKS, "readonly", (s) => s.get(id)).then((p) => (p ? asRead(p) : p));
 
 export const savePack = (pack: StoredPack): Promise<unknown> =>
   run(PACKS, "readwrite", (s) => s.put({ ...pack, updatedAt: pack.updatedAt || now() }));
