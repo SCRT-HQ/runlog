@@ -3908,10 +3908,6 @@ html[data-pip="controls"] body { margin: 0; height: 100vh; overflow-y: auto; bac
 .pipChoices { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 
 /* ---- the Rules page: the paper, with the structure as one more tab ---- */
-.rulesTabs { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0 0 1rem; }
-.rulesNote { margin: -0.4rem 0 1rem; font-family: var(--mono); }
-.docPage { max-width: 46rem; margin: 0 auto; padding: 1.5rem 2rem; }
-@media (max-width: 760px) { .docPage { padding: 1rem 1.1rem; } }
 
 
 /* ---- the welcome page: what Runlog is, at the bare address ---- */
