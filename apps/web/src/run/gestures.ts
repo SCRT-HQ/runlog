@@ -64,12 +64,20 @@ export function lifecycleGestures(pack: Pack, state: RunState, events: readonly 
   for (let i = before.outcomes; i < state.outcomes.length; i++) {
     const o = state.outcomes[i]!;
     const subject = o.targetSubject === null || o.targetSubject === undefined ? undefined : state.subjects.find((s) => s.id === o.targetSubject);
+    // The words are for a person; the ids are for a tool acting on this.
+    // A listener keying off `text` breaks the first time an author fixes a
+    // typo, so the entry it landed on travels beside what it says, with
+    // the tags the pack put there for exactly this kind of cross-reference.
+    const tags = pack.tables[o.table]?.entries.find((e) => e.id === o.entryId)?.tags;
     out.push({
       kind: "outcome",
       data: {
         n: i + 1,
         unit: o.unit,
         table: tableTitle(o.table),
+        tableId: o.table,
+        entryId: o.entryId,
+        ...(tags && tags.length > 0 ? { tags } : {}),
         text: entryTextOf(pack, o),
         ...(subject ? { subject: subjectName(pack, subject) } : {}),
       },

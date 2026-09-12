@@ -44,10 +44,32 @@ describe("lifecycle gestures", () => {
     expect(told).toHaveLength(1);
     expect(told[0]).toEqual({
       kind: "outcome",
-      data: { n: 1, unit: 1, table: kiln.tables.form!.title, text: entry.title ?? entry.text, subject: "The tall one" },
+      data: { n: 1, unit: 1, table: kiln.tables.form!.title, tableId: "form", entryId: entry.id, text: entry.title ?? entry.text, subject: "The tall one" },
     });
     // The next reading starts from here: the same result is not told twice.
     expect(lifecycleGestures(kiln, state, opening, marksOf(state, opening, NOW), NOW)).toEqual([]);
+  });
+
+  it("carry the entry's tags, so a listener can act on a class of result rather than on one line", () => {
+    const base = reduce(kiln, opening);
+    const before = marksOf(base, opening, NOW);
+    const state: RunState = {
+      ...base,
+      outcomes: [{ unit: 1, table: "check", entryId: "check-recent", targetSubject: null, at: "2026-01-01T00:00:02Z" } as RunState["outcomes"][number]],
+    };
+    const [told] = lifecycleGestures(kiln, state, opening, before, NOW);
+    expect(told!.data).toMatchObject({ tableId: "check", entryId: "check-recent", tags: ["setback"] });
+  });
+
+  it("leave tags out where the entry has none, rather than sending an empty list", () => {
+    const base = reduce(kiln, opening);
+    const before = marksOf(base, opening, NOW);
+    const state: RunState = {
+      ...base,
+      outcomes: [{ unit: 1, table: "form", entryId: "form-bowl", targetSubject: null, at: "2026-01-01T00:00:02Z" } as RunState["outcomes"][number]],
+    };
+    const [told] = lifecycleGestures(kiln, state, opening, before, NOW);
+    expect(told!.data).not.toHaveProperty("tags");
   });
 
   it("say nothing for an undo: a count that went down is not news", () => {
