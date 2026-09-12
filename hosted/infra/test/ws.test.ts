@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { notifier, type LiveStore, type Poster, type Watcher } from "../lib/handlers/live";
+import { notifier, type Attached, type LiveStore, type Poster, type Watcher } from "../lib/handlers/live";
 import { hashToken } from "../lib/handlers/auth";
 import { route, type WsDeps, type WsEvent } from "../lib/handlers/ws";
 import type { Race } from "../lib/handlers/races";
@@ -12,28 +12,33 @@ import type { SessionMember, SessionMeta } from "../lib/handlers/store";
  * connection that has gone is cleaned up the first time it is missed.
  */
 
-function memoryLive(): LiveStore & { conns: Map<string, string>; watches: Map<string, Set<string>> } {
+function memoryLive(): LiveStore & { conns: Map<string, string>; watches: Map<string, Set<string>>; marks: Map<string, Attached> } {
   const conns = new Map<string, string>();
   const watches = new Map<string, Set<string>>();
+  const marks = new Map<string, Attached>();
   return {
     conns,
     watches,
-    async connect(id, sub) {
+    marks,
+    async connect(id, sub, _at, attached) {
       conns.set(id, sub);
+      if (attached) marks.set(id, attached);
     },
     async connection(id) {
       const sub = conns.get(id);
-      return sub ? { sub } : null;
+      return sub ? { sub, ...(marks.get(id) ?? {}) } : null;
     },
-    async watch(id, sessionId) {
+    async watch(id, sessionId, _sub, _at, attached) {
       if (!watches.has(sessionId)) watches.set(sessionId, new Set());
       watches.get(sessionId)!.add(id);
+      if (attached) marks.set(id, attached);
     },
     async watchers(sessionId): Promise<Watcher[]> {
-      return [...(watches.get(sessionId) ?? [])].map((connectionId) => ({ connectionId, sub: conns.get(connectionId) ?? "" }));
+      return [...(watches.get(sessionId) ?? [])].map((connectionId) => ({ connectionId, sub: conns.get(connectionId) ?? "", ...(marks.get(connectionId) ?? {}) }));
     },
     async disconnect(id) {
       conns.delete(id);
+      marks.delete(id);
       for (const set of watches.values()) set.delete(id);
     },
   };
@@ -46,6 +51,9 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
   return {
     live,
     store: {
+      async getSnapshot() {
+        return null;
+      },
       async streamKeyOwner(hash) {
         if (hash === hashToken("watchkey")) return { sub: "user_1", kind: "watch" as const };
         if (hash === hashToken("presskey")) return { sub: "user_1", kind: "press" as const };
@@ -183,6 +191,124 @@ describe("telling the listeners", () => {
     expect(posted).toEqual([]);
     expect((await send("c1", { t: "gesture", id: "shared", kind: "Not A Kind" })).statusCode).toBe(400);
     expect((await send("c1", { t: "gesture", id: "shared", kind: "big", data: { pad: "x".repeat(3000) } })).statusCode).toBe(400);
+  });
+
+  /**
+   * A tool attached to somebody's game is a watcher like any other: same
+   * addresses, same keys, told the same moves. What differs is that it is
+   * told in operations rather than in words, and that an effect meant for
+   * one player reaches only that player.
+   */
+  describe("a tool attached to a game", () => {
+    const profile = {
+      control: {
+        setup: [{ op: "flag.set", args: { name: "player.noRoll", value: true } }],
+        rows: [
+          { tag: "curse", label: "A curse", for: 90, ops: [{ op: "speffect.apply", args: { id: 6900 } }] },
+          { entry: "mira-only", to: "Mira", ops: [{ op: "flag.set", args: { name: "player.noDeath", value: true } }] },
+        ],
+      },
+    };
+
+    function attached(live = memoryLive(), snapshot: unknown = profile) {
+      const posted: Array<[string, string]> = [];
+      const base = deps(live);
+      const d: WsDeps = {
+        ...base,
+        store: { ...base.store, async getSnapshot() { return { at: "", snapshot }; } },
+        poster: { async post(connectionId: string, data: string) { posted.push([connectionId, data]); return "sent" as const; } },
+      };
+      return { live, posted, d };
+    }
+
+    it("is marked as one when it says so, and watches the run the key resolved", async () => {
+      const { live, d } = attached();
+      const connect = (q: Record<string, string>) => route({ requestContext: { routeKey: "$connect", connectionId: "c1" }, queryStringParameters: q }, d);
+      expect((await connect({ k: "watchkey", as: "control", seat: "Mira" })).statusCode).toBe(200);
+      expect(live.marks.get("c1")).toEqual({ control: true, seat: "Mira", run: "open" });
+      // Without saying so it is an ordinary watcher, whose row is
+      // exactly what it always was; a seat alone does not make it one.
+      live.marks.clear();
+      await connect({ k: "watchkey", seat: "Mira" });
+      expect(live.marks.get("c1")).toBeUndefined();
+      expect(await live.watchers("open")).toEqual([{ connectionId: "c1", sub: "stream:user_1" }]);
+    });
+
+    it("attaches on a run's own live link, which is how a player who is not the host joins", async () => {
+      const { live, d } = attached();
+      const r = await route({ requestContext: { routeKey: "$connect", connectionId: "c2" }, queryStringParameters: { t: "livetok", run: "open", as: "control", seat: "Kel" } }, d);
+      expect(r.statusCode).toBe(200);
+      expect(live.marks.get("c2")).toEqual({ control: true, seat: "Kel", run: "open" });
+    });
+
+    it("hears the run's terms when it says hello, and nothing when the run has none", async () => {
+      const { live, posted, d } = attached();
+      await live.connect("c1", "public:shared", "", { control: true, run: "shared" });
+      const hello = () => route({ requestContext: { routeKey: "$default", connectionId: "c1" }, body: JSON.stringify({ t: "hello", ops: ["flag.set"] }) }, d);
+      expect((await hello()).statusCode).toBe(200);
+      expect(JSON.parse(posted[0]![1])).toEqual({
+        t: "apply",
+        id: "setup",
+        label: "The run's terms",
+        ops: [{ op: "flag.set", args: { name: "player.noRoll", value: true } }],
+      });
+
+      const bare = attached(memoryLive(), { control: { rows: [] } });
+      await bare.live.connect("c1", "public:shared", "", { control: true, run: "shared" });
+      await route({ requestContext: { routeKey: "$default", connectionId: "c1" }, body: JSON.stringify({ t: "hello" }) }, bare.d);
+      expect(bare.posted).toEqual([]);
+    });
+
+    it("takes no requests other than hello, the same as any other link", async () => {
+      const { live, posted, d } = attached();
+      await live.connect("c1", "public:shared", "", { control: true, run: "shared" });
+      await live.watch("c1", "shared", "public:shared", "", { control: true, run: "shared" });
+      const r = await route({ requestContext: { routeKey: "$default", connectionId: "c1" }, body: JSON.stringify({ t: "gesture", id: "shared", kind: "rolling" }) }, d);
+      expect(r.statusCode).toBe(200);
+      expect(posted).toEqual([]);
+    });
+
+    it("is told a result in operations, while a watcher beside it is told it in words", async () => {
+      const { live, posted, d } = attached();
+      await live.connect("c1", "user_1", "");
+      await live.connect("watcher", "public:shared", "");
+      await live.connect("tool", "public:shared", "", { control: true, run: "shared" });
+      for (const c of ["c1", "watcher", "tool"]) await live.watch(c, "shared", "", "", live.marks.get(c));
+      const gesture = { t: "gesture", id: "shared", kind: "outcome", data: { n: 4, tableId: "curse", entryId: "rot", tags: ["curse"], text: "Scarlet rot." } };
+      await route({ requestContext: { routeKey: "$default", connectionId: "c1" }, body: JSON.stringify(gesture) }, d);
+      const by = (c: string) => posted.filter(([who]) => who === c).map(([, line]) => JSON.parse(line));
+      expect(by("watcher")[0]).toMatchObject({ t: "gesture", kind: "outcome" });
+      expect(by("tool")).toEqual([{ t: "apply", id: "o4#0", label: "A curse", for: 90, ops: [{ op: "speffect.apply", args: { id: 6900 } }] }]);
+    });
+
+    it("hears what is addressed to its own player, and not what is addressed to another", async () => {
+      const { live, posted, d } = attached();
+      await live.connect("c1", "user_1", "");
+      await live.connect("mira", "public:shared", "", { control: true, seat: "Mira", run: "shared" });
+      await live.connect("kel", "public:shared", "", { control: true, seat: "Kel", run: "shared" });
+      for (const c of ["c1", "mira", "kel"]) await live.watch(c, "shared", "", "", live.marks.get(c));
+      const gesture = { t: "gesture", id: "shared", kind: "outcome", data: { n: 1, tableId: "t", entryId: "mira-only" } };
+      await route({ requestContext: { routeKey: "$default", connectionId: "c1" }, body: JSON.stringify(gesture) }, d);
+      expect(posted.map(([c]) => c)).toEqual(["mira"]);
+    });
+
+    it("is told to take everything off when the run ends", async () => {
+      const { live, posted, d } = attached();
+      await live.connect("c1", "user_1", "");
+      await live.connect("tool", "public:shared", "", { control: true, run: "shared" });
+      for (const c of ["c1", "tool"]) await live.watch(c, "shared", "", "", live.marks.get(c));
+      await route({ requestContext: { routeKey: "$default", connectionId: "c1" }, body: JSON.stringify({ t: "gesture", id: "shared", kind: "run-ended", data: { ending: "Cooled" } }) }, d);
+      expect(posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l))).toEqual([{ t: "revert", id: "*" }]);
+    });
+
+    it("hears nothing at all from a run carrying no profile", async () => {
+      const { live, posted, d } = attached(memoryLive(), { unit: 4 });
+      await live.connect("c1", "user_1", "");
+      await live.connect("tool", "public:shared", "", { control: true, run: "shared" });
+      for (const c of ["c1", "tool"]) await live.watch(c, "shared", "", "", live.marks.get(c));
+      await route({ requestContext: { routeKey: "$default", connectionId: "c1" }, body: JSON.stringify({ t: "gesture", id: "shared", kind: "outcome", data: { n: 1, tableId: "curse", entryId: "rot", tags: ["curse"] } }) }, d);
+      expect(posted.filter(([c]) => c === "tool")).toEqual([]);
+    });
   });
 
   it("posts one line to every watcher, and drops a connection that has gone", async () => {

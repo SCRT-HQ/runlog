@@ -24,19 +24,51 @@ import { traced } from "./xray.js";
 const CONN_HOURS = 2;
 const expiresAfter = (at: string) => Math.floor(new Date(at).getTime() / 1000) + CONN_HOURS * 3600;
 
-export interface Watcher {
+/**
+ * A socket that is driving something rather than drawing something.
+ *
+ * A tool attached to a player's game is a watcher like any other, and is
+ * told what happened the same way; what differs is that it is sent
+ * operations rather than words, and that it may name which player it is
+ * so an effect meant for one of them reaches only that one.
+ */
+export interface Attached {
+  control?: boolean;
+  seat?: string;
+  /** The run it was opened for, settled at connect.  */
+  run?: string;
+}
+
+export interface Watcher extends Attached {
   connectionId: string;
   sub: string;
 }
 
 export interface LiveStore {
-  connect(connectionId: string, sub: string, at: string): Promise<void>;
+  connect(connectionId: string, sub: string, at: string, attached?: Attached): Promise<void>;
   /** Who holds this connection, or null for one that was never accepted or has expired. */
-  connection(connectionId: string): Promise<{ sub: string } | null>;
-  watch(connectionId: string, sessionId: string, sub: string, at: string): Promise<void>;
+  connection(connectionId: string): Promise<({ sub: string } & Attached) | null>;
+  watch(connectionId: string, sessionId: string, sub: string, at: string, attached?: Attached): Promise<void>;
   watchers(sessionId: string): Promise<Watcher[]>;
   /** The connection and every watch it held, gone. */
   disconnect(connectionId: string): Promise<void>;
+}
+
+/** Only what was actually said, since a row of undefined is a row of nulls. */
+function marks(attached: Attached): Record<string, unknown> {
+  return {
+    ...(attached.control ? { control: true } : {}),
+    ...(attached.seat ? { seat: attached.seat } : {}),
+    ...(attached.run ? { run: attached.run } : {}),
+  };
+}
+
+function read(row: Record<string, unknown>): Attached {
+  return {
+    ...(row["control"] === true ? { control: true as const } : {}),
+    ...(typeof row["seat"] === "string" ? { seat: row["seat"] } : {}),
+    ...(typeof row["run"] === "string" ? { run: row["run"] } : {}),
+  };
 }
 
 export function dynamoLive({ table }: { table: string }): LiveStore {
@@ -45,21 +77,21 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
   const spk = (id: string) => `SESSION#${id}`;
 
   return {
-    async connect(connectionId, sub, at) {
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: cpk(connectionId), sk: "CONN", kind: "conn", sub, connectedAt: at, expiresAt: expiresAfter(at) } }));
+    async connect(connectionId, sub, at, attached = {}) {
+      await ddb.send(new PutCommand({ TableName: table, Item: { pk: cpk(connectionId), sk: "CONN", kind: "conn", sub, connectedAt: at, expiresAt: expiresAfter(at), ...marks(attached) } }));
     },
     async connection(connectionId) {
       const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND sk = :sk", ExpressionAttributeValues: { ":pk": cpk(connectionId), ":sk": "CONN" } }));
       const row = out.Items?.[0];
       if (!row || typeof row["sub"] !== "string") return null;
       if (typeof row["expiresAt"] === "number" && row["expiresAt"] * 1000 < Date.now()) return null;
-      return { sub: row["sub"] };
+      return { sub: row["sub"], ...read(row) };
     },
-    async watch(connectionId, sessionId, sub, at) {
+    async watch(connectionId, sessionId, sub, at, attached = {}) {
       const expiresAt = expiresAfter(at);
       await Promise.all([
-        ddb.send(new PutCommand({ TableName: table, Item: { pk: spk(sessionId), sk: `CONN#${connectionId}`, kind: "watch", sub, expiresAt } })),
-        ddb.send(new PutCommand({ TableName: table, Item: { pk: cpk(connectionId), sk: `WATCH#${sessionId}`, kind: "watch", sub, expiresAt } })),
+        ddb.send(new PutCommand({ TableName: table, Item: { pk: spk(sessionId), sk: `CONN#${connectionId}`, kind: "watch", sub, expiresAt, ...marks(attached) } })),
+        ddb.send(new PutCommand({ TableName: table, Item: { pk: cpk(connectionId), sk: `WATCH#${sessionId}`, kind: "watch", sub, expiresAt, ...marks(attached) } })),
       ]);
     },
     async watchers(sessionId) {
@@ -67,7 +99,7 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
       const now = Date.now() / 1000;
       return (out.Items ?? [])
         .filter((r) => typeof r["expiresAt"] !== "number" || r["expiresAt"] > now)
-        .map((r) => ({ connectionId: String(r["sk"]).slice("CONN#".length), sub: String(r["sub"] ?? "") }));
+        .map((r) => ({ connectionId: String(r["sk"]).slice("CONN#".length), sub: String(r["sub"] ?? ""), ...read(r) }));
     },
     async disconnect(connectionId) {
       const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk", ExpressionAttributeValues: { ":pk": cpk(connectionId) } }));

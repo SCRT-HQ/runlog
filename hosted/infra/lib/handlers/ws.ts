@@ -1,4 +1,5 @@
 import { hashToken, verify as verifyToken, type Caller } from "./auth.js";
+import { framesForGesture, profileOf, setupFor } from "./control.js";
 import { apiGatewayPoster, type Poster } from "./live.js";
 import { dynamoLive, type LiveStore } from "./live.js";
 import { dynamoStore, type Store } from "./store.js";
@@ -33,7 +34,7 @@ export interface WsDeps {
   live: LiveStore;
   /** A way to post to connections; absent in a test that only checks routing. */
   poster?: Poster;
-  store: Pick<Store, "getSession" | "streamKeyOwner" | "manifest">;
+  store: Pick<Store, "getSession" | "streamKeyOwner" | "manifest" | "getSnapshot">;
   races: Pick<RaceStore, "getRace">;
   verify: (authorization: string | undefined) => Promise<Caller>;
   now?: () => string;
@@ -42,6 +43,21 @@ export interface WsDeps {
 interface WsResult {
   statusCode: number;
   body?: string;
+}
+
+/**
+ * A socket opened by something that drives a game rather than draws a
+ * scoreboard.
+ *
+ * It arrives on the same addresses as every other watcher, with the same
+ * keys, because what it is allowed to see is exactly what a watcher is
+ * allowed to see. What it asks for in addition is to be told in
+ * operations, and to say which player it is sitting in front of.
+ */
+function attachedOf(event: WsEvent, run: string): { control: true; seat?: string; run: string } | undefined {
+  if (event.queryStringParameters?.["as"] !== "control") return undefined;
+  const raw = (event.queryStringParameters?.["seat"] ?? "").trim().slice(0, 40);
+  return { control: true, ...(raw ? { seat: raw } : {}), run };
 }
 
 export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
@@ -57,8 +73,9 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
       const session = await deps.store.getSession(run);
       if (!session || session.meta.deletedAt || !session.meta.publicTokenHash || hashToken(t) !== session.meta.publicTokenHash) return { statusCode: 401, body: "not shared" };
       const who = `public:${run}`;
-      await deps.live.connect(connectionId, who, now());
-      await deps.live.watch(connectionId, run, who, now());
+      const attached = attachedOf(event, run);
+      await deps.live.connect(connectionId, who, now(), attached);
+      await deps.live.watch(connectionId, run, who, now(), attached);
       return { statusCode: 200 };
     }
     /**
@@ -88,8 +105,9 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
       for (const p of live) if ((await deps.store.getSession(p.id))?.meta.publicTokenHash) { watching = p.id; break; }
       if (!watching) return { statusCode: 401, body: "no run is open to watch" };
       const who = `stream:${owner.sub}`;
-      await deps.live.connect(connectionId, who, now());
-      await deps.live.watch(connectionId, watching, who, now());
+      const attached = attachedOf(event, watching);
+      await deps.live.connect(connectionId, who, now(), attached);
+      await deps.live.watch(connectionId, watching, who, now(), attached);
       return { statusCode: 200 };
     }
     const token = event.queryStringParameters?.["token"];
@@ -120,6 +138,30 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
   }
   if (!message || typeof message !== "object") return { statusCode: 400, body: "an object" };
   const m = message as Record<string, unknown>;
+
+  /**
+   * A tool saying what it is and what it can do.
+   *
+   * The one message an attached tool sends, and the only one any of them
+   * may: what comes back is the run's own terms, the settings it wants in
+   * force before anything is rolled. Everything else it hears is sent
+   * because the table moved, never because it asked.
+   *
+   * What the tool can do is not read here. A source that only ever sends
+   * what a profile names cannot send an operation an old build lacks, and
+   * a build that receives one refuses it by name, which is the answer in
+   * both directions.
+   */
+  if (conn.control && m["t"] === "hello" && conn.run) {
+    const poster = deps.poster;
+    if (!poster) return { statusCode: 200 };
+    const snapshot = await deps.store.getSnapshot(conn.run);
+    const profile = snapshot ? profileOf(snapshot.snapshot) : null;
+    const terms = profile ? setupFor(profile) : null;
+    if (terms && (await poster.post(connectionId, terms)) === "gone") await deps.live.disconnect(connectionId);
+    return { statusCode: 200 };
+  }
+
   // A link's socket, and a scene's, watch the one run they were opened for
   // and take no requests.
   if (conn.sub.startsWith("public:") || conn.sub.startsWith("stream:")) return { statusCode: 200 };
@@ -139,17 +181,26 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     const line = JSON.stringify({ t: "gesture", id, kind, data, ...(member.name ? { from: member.name } : {}), at: now() });
     const poster = deps.poster;
     if (poster) {
-      const watchers = await deps.live.watchers(id);
+      const watchers = (await deps.live.watchers(id)).filter((w) => w.connectionId !== connectionId);
+      // A tool attached to somebody's game is told in operations rather
+      // than in words, and the profile that decides which is read only
+      // when one of them is listening.
+      const attached = watchers.filter((w) => w.control);
+      const profile = attached.length > 0 ? profileOf((await deps.store.getSnapshot(id))?.snapshot) : null;
       await Promise.all(
-        watchers
-          .filter((w) => w.connectionId !== connectionId)
-          .map(async (w) => {
+        watchers.map(async (w) => {
+          const lines = !w.control ? [line] : profile ? framesForGesture(profile, kind, data, w.seat) : [];
+          for (const out of lines) {
             try {
-              if ((await poster.post(w.connectionId, line)) === "gone") await deps.live.disconnect(w.connectionId);
+              if ((await poster.post(w.connectionId, out)) === "gone") {
+                await deps.live.disconnect(w.connectionId);
+                return;
+              }
             } catch (error) {
               console.error("live: could not pass a gesture on", error);
             }
-          }),
+          }
+        }),
       );
     }
     return { statusCode: 200 };
