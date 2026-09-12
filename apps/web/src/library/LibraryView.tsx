@@ -210,7 +210,7 @@ export function LibraryView({
                     Update to v{p.update}
                   </button>
                 )}
-                <DocMenu compact pack={() => loadPackText(p.source, p.record?.format ?? "yaml").pack} />
+                <DocMenu compact pack={() => loadPackText(p.source, p.record?.format ?? "yaml").pack} at={{ section: "packs", id: p.id }} />
                 <button className="ghost tiny" onClick={() => onStartAnother(p)}>
                   {mine.length > 0 ? `Start another ${v.run.one.toLowerCase()}` : `Start ${an(v.run.one.toLowerCase())}`}
                 </button>

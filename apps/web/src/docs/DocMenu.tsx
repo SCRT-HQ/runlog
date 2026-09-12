@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { DOC_KINDS, type Pack } from "@runlog/rules-schema";
-import { useDocDrawer } from "./DocDrawer.tsx";
+import { useDocDrawer, type DocsAt } from "./DocDrawer.tsx";
 
 /**
  * The paper for a pack, for a reader: a small menu naming each document,
  * each opening in the side drawer. The pack is handed in lazily because a
  * library row may not have parsed its text yet.
  */
-export function DocMenu({ pack, compact = false }: { pack: Pack | (() => Pack | null); compact?: boolean }) {
+export function DocMenu({ pack, compact = false, at }: { pack: Pack | (() => Pack | null); compact?: boolean; /** Where this pack is read, so the document it opens has an address. Absent on a watcher's page, where there is no library behind it. */ at?: DocsAt }) {
   const [open, setOpen] = useState(false);
   const drawer = useDocDrawer();
   const resolve = () => (typeof pack === "function" ? pack() : pack);
@@ -29,7 +29,7 @@ export function DocMenu({ pack, compact = false }: { pack: Pack | (() => Pack | 
                 onClick={() => {
                   const p = resolve();
                   setOpen(false);
-                  if (p) drawer.open(p, k.kind);
+                  if (p) drawer.open(p, k.kind, at);
                 }}
               >
                 <span className="docMenuLabel">{k.label}</span>

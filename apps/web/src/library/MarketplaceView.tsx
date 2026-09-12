@@ -126,12 +126,12 @@ export function MarketplaceView({
             pack = null;
           }
         }
-        if (pack) drawer.open(pack, "summary");
+        if (pack) drawer.open(pack, "summary", { section: "marketplace", id: e.id });
         else if (doc) drawer.show(e.title, [{ label: "Summary", what: "The shape of the game, before you have it.", make: () => doc }]);
         return;
       }
       const loaded = loadPackText(await e.load(), "yaml");
-      if (loaded.ok) drawer.open(loaded.pack, "summary");
+      if (loaded.ok) drawer.open(loaded.pack, "summary", { section: "marketplace", id: e.id });
     } catch {
       // Nothing to read: the button simply comes back.
     } finally {
