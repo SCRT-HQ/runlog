@@ -435,6 +435,106 @@ Minting a key again replaces it, and the one it replaces stops working at
 once. That is how a key is rotated: there is no reading one back, because
 the server keeps only the hash.
 
+## Driving a game: `wss://…/ws?…&as=control`
+
+Everything above tells somebody what happened. This one tells a program
+what to do about it: a status effect applied, a restriction switched on,
+a player moved, in whatever game a tool on their machine can reach. The
+result a table read out loud becomes the thing it describes.
+
+It is the same socket, on the same keys, with `as=control` added. A host
+attaches on their watch key; anyone else at the table attaches on the
+run's live link, which is what lets one result land on four people at
+once. `seat=<name>` says which player this is, for effects meant for one
+of them.
+
+```
+wss://runlog.scrthq.com/ws?k=<watchKey>&as=control&seat=Mira
+wss://runlog.scrthq.com/ws?run=<runId>&t=<token>&as=control&seat=Kel
+```
+
+An attached tool is a watcher and nothing more: it may read what a
+watcher reads and it may not press anything, which is why a watch key is
+enough and a press key is refused here as everywhere else. Effects come
+from the run. No tool can reach another tool.
+
+### What travels
+
+The tool speaks first, saying what it is and which operations it can
+perform:
+
+```json
+{ "t": "hello", "protocol": 1, "app": "TarnishedTool", "version": "1.4.2",
+  "seat": "Mira", "game": { "title": "ELDEN RING", "patch": "1.17.1" },
+  "ops": ["speffect.apply", "flag.set", "value.set", "warp.position"] }
+```
+
+The answer, where the run has terms of its own, is the settings it wants
+in force before anything is rolled: an ordinary effect with no lifetime,
+under the id `setup`.
+
+Then, as the table plays, an effect per result:
+
+```json
+{ "t": "apply", "id": "o4#0", "label": "Scarlet Rot", "for": 90,
+  "ops": [{ "op": "speffect.apply", "args": { "id": 6900 } }] }
+```
+
+Several operations under one id is the ordinary case, not a batch: a
+curse is usually a status effect and a restriction together, and they
+have to land and be taken back as one thing. `for` is in seconds; without
+it the effect holds until it is taken back. The id is the result's number
+and the row it matched, so the same result arriving twice after a
+reconnection is the same effect rather than a second one.
+
+Taking one back names it. Taking back everything in force uses the
+reserved id, which is what the end of a run sends, since only the tool
+knows what it is still holding:
+
+```json
+{ "t": "revert", "id": "o4#0" }
+{ "t": "revert", "id": "*" }
+```
+
+The tool answers each apply with `{ "t": "applied", "id": "o4#0", "ok": true, "until": "…" }`,
+or `ok: false` with an `error` naming what it could not do.
+
+### The profile
+
+Which operation a result means is a **control profile**, kept with the
+run and edited in the app, never in the pack. A pack that only worked
+with one program attached to one game would not be a pack, and every
+pack here still plays with nothing attached at all.
+
+A profile is a setup set and a list of rows. A row selects by the entry a
+result landed on, by a tag the entry carries, or by a whole table, and
+says what to do, for how long, and who it reaches.
+
+```json
+{
+  "setup": [{ "op": "flag.set", "args": { "name": "player.noRoll", "value": true } }],
+  "rows": [
+    { "tag": "curse", "label": "A curse", "for": 90,
+      "ops": [{ "op": "speffect.apply", "args": { "id": 6900 } }] },
+    { "table": "relocate", "to": "all",
+      "ops": [{ "op": "warp.position", "args": { "block": 60, "x": 1, "y": 2, "z": 3 } }] }
+  ]
+}
+```
+
+`to` names a seat, or `all`, or is left out, which is also everyone. A
+tool that never said which player it is hears only what is for everyone.
+Every matching row lands as its own effect, so a tag row covering eleven
+curses and an entry row for the twelfth both apply without either knowing
+about the other. A row selecting nothing at all is ignored rather than
+matching everything.
+
+The operation names are the tool's, not ours. This end sends only what a
+profile names; that end refuses by name anything its build does not have,
+so a profile that gets ahead of somebody's version degrades instead of
+failing. Which also means a mapping somebody got wrong is fixed here, in
+the app, rather than in a program everyone has to download again.
+
 ## Politeness
 
 Poll no faster than every five seconds; the socket exists so you need
