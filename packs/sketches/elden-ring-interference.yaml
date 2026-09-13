@@ -98,12 +98,12 @@ states:
     scope: run
     until: unitEnd
     description: You move at two thirds.
-  swift:
-    label: Swift
-    short: SWFT
+  mired:
+    label: Mired
+    short: MIRE
     scope: run
     until: unitEnd
-    description: A mercy. You move a quarter faster.
+    description: You move at half speed.
   hurried:
     label: Hurried
     short: FAST
@@ -116,12 +116,24 @@ states:
     scope: run
     until: unitEnd
     description: The world runs half again as fast.
+  berserk:
+    label: Berserk
+    short: BSRK
+    scope: run
+    until: unitEnd
+    description: The world runs at nearly double speed.
   sluggish:
     label: Sluggish
     short: DRAG
     scope: run
     until: unitEnd
     description: The whole world at four fifths.
+  tender:
+    label: Tender
+    short: TEND
+    scope: run
+    until: unitEnd
+    description: You take half again the damage.
   glass:
     label: Glass
     short: GLAS
@@ -146,18 +158,66 @@ states:
     scope: run
     until: unitEnd
     description: You deal two fifths damage.
-  sharp:
-    label: Sharpened
-    short: SHRP
+  useless:
+    label: Useless
+    short: USLS
     scope: run
     until: unitEnd
-    description: A mercy. You deal double damage.
-  lethal:
-    label: Lethal
-    short: KILL
+    description: You deal a quarter damage.
+  hollow:
+    label: Hollow
+    short: HOLW
     scope: run
     until: unitEnd
-    description: A mercy. Anything you hit dies.
+    description: Vigor is one.
+  feeble:
+    label: Feeble
+    short: FEEB
+    scope: run
+    until: unitEnd
+    description: Strength is one.
+  clumsy:
+    label: Clumsy
+    short: CLMS
+    scope: run
+    until: unitEnd
+    description: Dexterity is one.
+  winded:
+    label: Winded
+    short: ENDR
+    scope: run
+    until: unitEnd
+    description: Endurance is one.
+  empty:
+    label: Empty
+    short: MIND
+    scope: run
+    until: unitEnd
+    description: Mind is one.
+  poor:
+    label: Poor
+    short: POOR
+    scope: run
+    until: unitEnd
+    description: No runes from anything.
+  robbed:
+    label: Robbed
+    short: ROBD
+    scope: run
+    until: unitEnd
+    description: Your runes are gone for the stretch.
+  mapless:
+    label: Mapless
+    short: LOST
+    scope: run
+    until: unitEnd
+    description: The map cannot be opened.
+  blind:
+    label: Blind
+    short: BLND
+    scope: run
+    until: unitEnd
+    description: Characters are not drawn.
   risen:
     label: The risen
     short: RISE
@@ -170,108 +230,12 @@ states:
     scope: run
     until: unitEnd
     description: Nothing can be damaged.
-  peace:
-    label: Peace
-    short: PEAC
-    scope: run
-    until: unitEnd
-    description: A mercy. Nothing attacks.
-  still:
-    label: Stillness
-    short: STIL
-    scope: run
-    until: unitEnd
-    description: A mercy. Nothing moves.
-  asleep:
-    label: Asleep
-    short: SLEP
-    scope: run
-    until: unitEnd
-    description: A mercy. Nothing is paying attention.
   rooted:
     label: Rooted
     short: ROOT
     scope: run
     until: unitEnd
     description: No rolling.
-  poor:
-    label: Poor
-    short: POOR
-    scope: run
-    until: unitEnd
-    description: No runes from anything.
-  insured:
-    label: Insured
-    short: KEEP
-    scope: run
-    until: unitEnd
-    description: A mercy. Death costs no runes.
-  tireless:
-    label: Tireless
-    short: WIND
-    scope: run
-    until: unitEnd
-    description: A mercy. Stamina does not run out.
-  focused:
-    label: Focused
-    short: FOCS
-    scope: run
-    until: unitEnd
-    description: A mercy. FP does not run out.
-  stocked:
-    label: Stocked
-    short: FULL
-    scope: run
-    until: unitEnd
-    description: A mercy. Consumables are not used up.
-  quivered:
-    label: Quivered
-    short: AMMO
-    scope: run
-    until: unitEnd
-    description: A mercy. Arrows are not used up.
-  mending:
-    label: Mending
-    short: MEND
-    scope: run
-    until: unitEnd
-    description: A mercy. You heal over time.
-  anchored:
-    label: Anchored
-    short: POIS
-    scope: run
-    until: unitEnd
-    description: A mercy. You cannot be staggered.
-  unheard:
-    label: Unheard
-    short: HUSH
-    scope: run
-    until: unitEnd
-    description: A mercy. Nothing hears you.
-  unseen:
-    label: Unseen
-    short: DARK
-    scope: run
-    until: unitEnd
-    description: A mercy. Nothing sees you.
-  lucky:
-    label: Lucky
-    short: DROP
-    scope: run
-    until: unitEnd
-    description: A mercy. Drops are guaranteed.
-  mounted:
-    label: Mounted
-    short: HORS
-    scope: run
-    until: unitEnd
-    description: A mercy. Torrent is available anywhere.
-  mapless:
-    label: Mapless
-    short: LOST
-    scope: run
-    until: unitEnd
-    description: The map cannot be opened.
   bound:
     label: Bound
     short: STAY
@@ -326,6 +290,12 @@ states:
     scope: run
     until: unitEnd
     description: One weapon, no swapping.
+  ill-armed:
+    label: Ill-armed
+    short: WRST
+    scope: run
+    until: unitEnd
+    description: Your worst weapon, and only that.
   grounded:
     label: Grounded
     short: DOWN
@@ -362,6 +332,12 @@ states:
     scope: run
     until: unitEnd
     description: No Ashes of War or skills.
+  honest:
+    label: Honest
+    short: BACK
+    scope: run
+    until: unitEnd
+    description: No backstabs or ripostes.
   restless:
     label: Restless
     short: REST
@@ -380,6 +356,12 @@ states:
     scope: run
     until: unitEnd
     description: No fast travel.
+  empty-handed:
+    label: Empty-handed
+    short: LOOT
+    scope: run
+    until: unitEnd
+    description: Pick nothing up.
   standing:
     label: Standing
     short: FGHT
@@ -392,6 +374,12 @@ states:
     scope: run
     until: unitEnd
     description: Two hands on one weapon.
+  driven:
+    label: Driven
+    short: MOVE
+    scope: run
+    until: unitEnd
+    description: Never stand still.
   blessed-wind:
     label: Second wind
     short: WIND+
@@ -446,6 +434,54 @@ states:
     scope: run
     until: unitEnd
     description: A boon. Torrent anywhere.
+  blessed-swift:
+    label: Swift
+    short: SWFT
+    scope: run
+    until: unitEnd
+    description: A boon. You move a quarter faster.
+  blessed-peace:
+    label: Peace
+    short: PEAC
+    scope: run
+    until: unitEnd
+    description: A boon. Nothing attacks.
+  blessed-still:
+    label: Stillness
+    short: STIL
+    scope: run
+    until: unitEnd
+    description: A boon. Nothing moves.
+  blessed-sleep:
+    label: Asleep
+    short: SLEP
+    scope: run
+    until: unitEnd
+    description: A boon. Nothing is paying attention.
+  blessed-stock:
+    label: Stocked
+    short: FULL
+    scope: run
+    until: unitEnd
+    description: A boon. Consumables are not used up.
+  blessed-ammo:
+    label: Quivered
+    short: AMMO
+    scope: run
+    until: unitEnd
+    description: A boon. Arrows are not used up.
+  blessed-poise:
+    label: Anchored
+    short: POIS
+    scope: run
+    until: unitEnd
+    description: A boon. You cannot be staggered.
+  blessed-unseen:
+    label: Unseen
+    short: DARK
+    scope: run
+    until: unitEnd
+    description: A boon. Nothing sees you.
   blessed-lethal:
     label: Dreadful
     short: KILL+
@@ -489,9 +525,12 @@ tables:
     description: >-
       Drawn at the top of every stretch, and it holds until the
       stretch ends. Some of these a tool does to the game; the rest
-      are vows, which nothing enforces but you. None are worth
-      points: an interference lands on everyone, and living with it
-      is the ordinary business of a stretch.
+      are vows, which nothing enforces but you. Nothing in here is
+      good for you, which is the point of it: a kindness you rolled
+      into by accident is not a reward, and being paid is what the
+      Boon table is for. None are worth points either. An
+      interference lands on everyone, and living with it is the
+      ordinary business of a stretch.
     roll: d100
     entries:
       - id: in-slow
@@ -506,40 +545,54 @@ tables:
           You are wading. Two thirds speed, everywhere, all stretch.
         tags: [interference, effect]
         grants: [wading]
-      - id: in-swift
-        range: [4, 5]
+      - id: in-mired
+        range: [4, 4]
         text: >-
-          A mercy. You move a quarter faster.
-        tags: [mercy, effect]
-        grants: [swift]
+          Mired. Half speed, and everything in this game is faster
+          than you.
+        tags: [interference, effect]
+        grants: [mired]
       - id: in-quick
-        range: [6, 6]
+        range: [5, 5]
         text: >-
           The world is hurried. Everything but you runs a fifth
           faster.
         tags: [interference, effect]
         grants: [hurried]
       - id: in-frantic
-        range: [7, 8]
+        range: [6, 7]
         text: >-
           The world is frantic. Half again as fast as it should be.
         tags: [interference, effect]
         grants: [frantic]
+      - id: in-berserk
+        range: [8, 8]
+        text: >-
+          The world has lost its mind. Everything at nearly double
+          speed.
+        tags: [interference, effect]
+        grants: [berserk]
       - id: in-slower
         range: [9, 10]
         text: >-
           Everything slows, you included. The world at four fifths.
         tags: [interference, effect]
         grants: [sluggish]
-      - id: in-glass
+      - id: in-tender
         range: [11, 11]
+        text: >-
+          You bruise. Half again the damage from everything.
+        tags: [interference, effect]
+        grants: [tender]
+      - id: in-glass
+        range: [12, 12]
         text: >-
           You are glass. Everything that touches you hits twice as
           hard.
         tags: [interference, effect]
         grants: [glass]
       - id: in-paper
-        range: [12, 13]
+        range: [13, 13]
         text: >-
           You are paper. Three times damage, and you will feel all
           of it.
@@ -559,298 +612,289 @@ tables:
           twice as long.
         tags: [interference, effect]
         grants: [dulled]
-      - id: in-sharp
+      - id: in-useless
         range: [17, 17]
         text: >-
-          A mercy. You hit twice as hard as you should.
-        tags: [mercy, effect]
-        grants: [sharp]
-      - id: in-oneshot
-        range: [18, 18]
+          Your weapons are useless. A quarter damage. Consider
+          running.
+        tags: [interference, effect]
+        grants: [useless]
+      - id: in-hollow
+        range: [18, 19]
         text: >-
-          A mercy, and a strange one. Everything dies to one hit.
-        tags: [mercy, effect]
-        grants: [lethal]
+          Hollow. Your vigor is one for the stretch; everything
+          kills you.
+        tags: [interference, effect]
+        grants: [hollow]
+      - id: in-feeble
+        range: [20, 21]
+        text: >-
+          Feeble. Your strength is one, and half of what you carry
+          is unusable.
+        tags: [interference, effect]
+        grants: [feeble]
+      - id: in-clumsy
+        range: [22, 23]
+        text: >-
+          Clumsy. Your dexterity is one; hope you were not built for
+          it.
+        tags: [interference, effect]
+        grants: [clumsy]
+      - id: in-winded
+        range: [24, 25]
+        text: >-
+          Winded. Your endurance is one. Two swings and a roll, if
+          that.
+        tags: [interference, effect]
+        grants: [winded]
+      - id: in-empty
+        range: [26, 26]
+        text: >-
+          Empty. Your mind is one. Whatever you cast, you do not,
+          now.
+        tags: [interference, effect]
+        grants: [empty]
+      - id: in-poor
+        range: [27, 27]
+        text: >-
+          Nothing is owed to you. No runes from anything that dies.
+        tags: [interference, effect]
+        grants: [poor]
+      - id: in-robbed
+        range: [28, 29]
+        text: >-
+          Robbed. Whatever you were carrying is gone until the
+          stretch ends.
+        tags: [interference, effect]
+        grants: [robbed]
+      - id: in-toll
+        range: [30, 31]
+        text: >-
+          A toll. Ten thousand runes, taken, whether you had them or
+          not.
+        tags: [interference, effect]
+      - id: in-lost
+        range: [32, 33]
+        text: >-
+          No map. You cannot open it this stretch; go by landmark.
+        tags: [interference, effect]
+        grants: [mapless]
+      - id: in-unseen-world
+        range: [34, 34]
+        text: >-
+          Nothing renders. You can see the world and nothing living
+          in it.
+        tags: [interference, effect]
+        grants: [blind]
       - id: in-risen
-        range: [19, 19]
+        range: [35, 35]
         text: >-
           The dead get up. Nothing you kill this stretch stays down.
         tags: [interference, effect]
         grants: [risen]
       - id: in-stone
-        range: [20, 21]
+        range: [36, 37]
         text: >-
           Nothing here can be hurt. Kill nothing; go around.
         tags: [interference, effect]
         grants: [stone]
-      - id: in-peace
-        range: [22, 23]
-        text: >-
-          A mercy. Nothing will raise a hand to you.
-        tags: [mercy, effect]
-        grants: [peace]
-      - id: in-still
-        range: [24, 25]
-        text: >-
-          A mercy. Nothing here moves from where it stands.
-        tags: [mercy, effect]
-        grants: [still]
-      - id: in-asleep
-        range: [26, 26]
-        text: >-
-          A mercy. Nothing is thinking about you at all.
-        tags: [mercy, effect]
-        grants: [asleep]
       - id: in-root
-        range: [27, 27]
+        range: [38, 39]
         text: >-
           You cannot dodge. No rolling this stretch, at all.
         tags: [interference, effect]
         grants: [rooted]
-      - id: in-poor
-        range: [28, 28]
-        text: >-
-          Nothing is owed to you. No runes from anything that dies.
-        tags: [interference, effect]
-        grants: [poor]
-      - id: in-spared
-        range: [29, 30]
-        text: >-
-          A mercy. You lose no runes if you die this stretch.
-        tags: [mercy, effect]
-        grants: [insured]
-      - id: in-wind
-        range: [31, 32]
-        text: >-
-          A mercy. Your stamina does not run out.
-        tags: [mercy, effect]
-        grants: [tireless]
-      - id: in-well
-        range: [33, 34]
-        text: >-
-          A mercy. Your focus does not run out.
-        tags: [mercy, effect]
-        grants: [focused]
-      - id: in-full
-        range: [35, 36]
-        text: >-
-          A mercy. Your pouch does not empty.
-        tags: [mercy, effect]
-        grants: [stocked]
-      - id: in-quiver
-        range: [37, 37]
-        text: >-
-          A mercy. Your quiver does not empty.
-        tags: [mercy, effect]
-        grants: [quivered]
-      - id: in-mend
-        range: [38, 39]
-        text: >-
-          A mercy. You heal slowly, on your own, the whole stretch.
-        tags: [mercy, effect]
-        grants: [mending]
-      - id: in-anchored
-        range: [40, 40]
-        text: >-
-          A mercy. Nothing staggers you.
-        tags: [mercy, effect]
-        grants: [anchored]
-      - id: in-hush
-        range: [41, 42]
-        text: >-
-          A mercy. Nothing hears you coming this stretch.
-        tags: [mercy, effect]
-        grants: [unheard]
-      - id: in-unseen
-        range: [43, 43]
-        text: >-
-          A mercy. Nothing sees you either.
-        tags: [mercy, effect]
-        grants: [unseen]
-      - id: in-lucky
-        range: [44, 44]
-        text: >-
-          A mercy. Everything drops what it has.
-        tags: [mercy, effect]
-        grants: [lucky]
-      - id: in-horse
-        range: [45, 45]
-        text: >-
-          A mercy. Torrent comes when called, anywhere.
-        tags: [mercy, effect]
-        grants: [mounted]
-      - id: in-lost
-        range: [46, 47]
-        text: >-
-          No map. You cannot open it this stretch; go by landmark.
-        tags: [interference, effect]
-        grants: [mapless]
       - id: in-night
-        range: [48, 49]
+        range: [40, 41]
         text: >-
           Night falls, now, wherever you are.
         tags: [interference, effect]
       - id: in-dusk
-        range: [50, 51]
+        range: [42, 43]
         text: >-
           Dusk, and the light going.
         tags: [interference, effect]
       - id: in-noon
-        range: [52, 53]
+        range: [44, 44]
         text: >-
           Noon, whether it suits you or not.
         tags: [interference, effect]
       - id: in-morning
-        range: [54, 54]
+        range: [45, 45]
         text: >-
-          Morning. The light comes back.
+          Morning. The light comes back, for what it is worth.
         tags: [interference, effect]
       - id: in-fog
-        range: [55, 56]
+        range: [46, 47]
         text: >-
           Fog rolls in and stays.
         tags: [interference, effect]
       - id: in-rain
-        range: [57, 58]
+        range: [48, 49]
         text: >-
           Rain, for the whole stretch.
         tags: [interference, effect]
       - id: in-snow
-        range: [59, 60]
+        range: [50, 51]
         text: >-
           Snow, wherever you happen to be.
         tags: [interference, effect]
       - id: in-clear
-        range: [61, 61]
+        range: [52, 52]
         text: >-
-          A mercy. Clear skies, for once.
-        tags: [mercy, effect]
+          Clear skies, for once. Which means everything can see you.
+        tags: [interference, effect]
       - id: vo-stay
-        range: [62, 62]
+        range: [53, 54]
         text: >-
           Do not leave this region. Whatever you meant to do
           elsewhere, do it here.
         tags: [interference, vow]
         grants: [bound]
       - id: vo-alone
-        range: [63, 63]
+        range: [55, 56]
         text: >-
           Alone. No summons and no Spirit Ashes.
         tags: [interference, vow]
         grants: [alone]
       - id: vo-naked
-        range: [64, 65]
+        range: [57, 58]
         text: >-
           Unequip your armor, all four slots.
         tags: [interference, vow]
         grants: [bare]
       - id: vo-noshield
-        range: [66, 67]
+        range: [59, 60]
         text: >-
           Nothing in the left hand but a weapon, a catalyst, or air.
         tags: [interference, vow]
         grants: [openhanded]
       - id: vo-noflask
-        range: [68, 69]
+        range: [61, 62]
         text: >-
           No Crimson Tears. Whatever you have, you keep.
         tags: [interference, vow]
         grants: [thirsty]
       - id: vo-notears
-        range: [70, 71]
+        range: [63, 64]
         text: >-
           No flasks at all, of either colour.
         tags: [interference, vow]
         grants: [parched]
       - id: vo-nolock
-        range: [72, 73]
+        range: [65, 66]
         text: >-
           No lock-on. Aim by hand.
         tags: [interference, vow]
         grants: [unaimed]
       - id: vo-walk
-        range: [74, 75]
+        range: [67, 68]
         text: >-
           Walk. No sprinting and no Torrent.
         tags: [interference, vow]
         grants: [afoot]
       - id: vo-onehand
-        range: [76, 77]
+        range: [69, 70]
         text: >-
           One weapon, and no swapping it.
         tags: [interference, vow]
         grants: [committed]
+      - id: vo-worst
+        range: [71, 72]
+        text: >-
+          The worst weapon you are carrying, and only that.
+        tags: [interference, vow]
+        grants: [ill-armed]
       - id: vo-nojump
-        range: [78, 79]
+        range: [73, 74]
         text: >-
           No jumping, and no jump attacks.
         tags: [interference, vow]
         grants: [grounded]
       - id: vo-noitem
-        range: [80, 81]
+        range: [75, 76]
         text: >-
           No consumables of any kind. Nothing from the pouch.
         tags: [interference, vow]
         grants: [frugal]
       - id: vo-noblock
-        range: [82, 83]
+        range: [77, 78]
         text: >-
           No blocking. Dodge it or wear it.
         tags: [interference, vow]
         grants: [unguarded]
       - id: vo-melee
-        range: [84, 85]
+        range: [79, 80]
         text: >-
           Nothing at range. No bows, no thrown, no spells from afar.
         tags: [interference, vow]
         grants: [close]
       - id: vo-nomagic
-        range: [86, 87]
+        range: [81, 82]
         text: >-
           No spells and no incantations, whatever you are built for.
         tags: [interference, vow]
         grants: [mundane]
       - id: vo-noskill
-        range: [88, 89]
+        range: [83, 84]
         text: >-
           No Ashes of War and no weapon skills.
         tags: [interference, vow]
         grants: [plain]
+      - id: vo-noback
+        range: [85, 86]
+        text: >-
+          Nothing cheap. No backstabs and no ripostes.
+        tags: [interference, vow]
+        grants: [honest]
       - id: vo-norest
-        range: [90, 91]
+        range: [87, 88]
         text: >-
           Do not rest at a grace. Not once.
         tags: [interference, vow]
         grants: [restless]
       - id: vo-nolevel
-        range: [92, 93]
+        range: [89, 90]
         text: >-
           No levelling, no upgrading, no spending anything.
         tags: [interference, vow]
         grants: [unspent]
       - id: vo-notravel
-        range: [94, 95]
+        range: [91, 92]
         text: >-
           No fast travel. Ride or walk wherever you are going.
         tags: [interference, vow]
         grants: [overland]
+      - id: vo-noloot
+        range: [93, 94]
+        text: >-
+          Pick nothing up. Walk past all of it.
+        tags: [interference, vow]
+        grants: [empty-handed]
       - id: vo-fight
-        range: [96, 97]
+        range: [95, 96]
         text: >-
           Fight what you wake. Nothing you aggro may be left behind.
         tags: [interference, vow]
         grants: [standing]
       - id: vo-twohand
-        range: [98, 98]
+        range: [97, 97]
         text: >-
           Two hands on one weapon, the whole stretch.
         tags: [interference, vow]
         grants: [twohanded]
+      - id: vo-moving
+        range: [98, 98]
+        text: >-
+          Keep moving. Never stand still for longer than it takes to
+          swing.
+        tags: [interference, vow]
+        grants: [driven]
       - id: in-calm
         range: [99, 100]
         text: >-
           Nothing at all. Ten quiet minutes; use them.
-        tags: [mercy, vow]
+        tags: [interference, quiet]
 
   target:
     resolution: lookup
@@ -1195,200 +1239,251 @@ tables:
         text: >-
           Runes, five thousand of them, for nothing but doing as you
           were told.
-        tags: [interference, effect]
+        tags: [boon, blessing]
       - id: bo-runes2
         range: [6, 8]
         text: >-
           Runes, twenty thousand. Spend them before something takes
           them.
-        tags: [interference, effect]
+        tags: [boon, blessing]
       - id: bo-seed
         range: [9, 13]
         text: >-
           A Golden Seed. One more swallow, for the rest of the run.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-tear
-        range: [14, 16]
+        range: [14, 15]
         text: >-
           A Sacred Tear. What you have goes further now.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-arc
-        range: [17, 21]
+        range: [16, 20]
         text: >-
           A Rune Arc, and the great rune to go with it.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-stone
-        range: [22, 25]
+        range: [21, 25]
         text: >-
           Smithing Stones, three of them, for whatever you are
           carrying.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-somber
-        range: [26, 28]
+        range: [26, 27]
         text: >-
           A Somber Smithing Stone, for the thing you actually use.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-key
-        range: [29, 31]
+        range: [28, 29]
         text: >-
           Two Stonesword Keys. Something behind an imp statue is
           yours.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-gold
-        range: [32, 34]
+        range: [30, 31]
         text: >-
           Golden Runes, ten of them, held for when you need them.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-flesh
-        range: [35, 37]
+        range: [32, 33]
         text: >-
           Exalted Flesh. Hit harder for a while; it is up to you
           when.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-blessing
-        range: [38, 40]
+        range: [34, 35]
         text: >-
           Blessings of Marika, three. Healing you did not have to
           earn.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-baldachin
-        range: [41, 43]
+        range: [36, 37]
         text: >-
           Baldachin's Blessing. Somebody is looking out for you.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-dragon
-        range: [44, 46]
+        range: [38, 39]
         text: >-
           An Ancient Dragon's Blessing. Save it for something
           enormous.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-fowl
-        range: [47, 49]
+        range: [40, 41]
         text: >-
           Silver-Pickled Fowl Feet. Everything is worth more for a
           while.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-boluses
-        range: [50, 52]
+        range: [42, 43]
         text: >-
           Neutralizing Boluses, against whatever is about to poison
           you.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-branch
-        range: [53, 55]
+        range: [44, 45]
         text: >-
           Bewitching Branches. Make a friend of something that was
           not one.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-shards
-        range: [56, 58]
+        range: [46, 47]
         text: >-
           Starlight Shards, for anyone who casts.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-grease
-        range: [59, 61]
+        range: [48, 49]
         text: >-
           Fire Grease. Put it on something and go and use it.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-prawn
-        range: [62, 62]
+        range: [50, 50]
         text: >-
           Boiled Prawn. Small, and it has saved better runners than
           you.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-warming
-        range: [63, 63]
+        range: [51, 51]
         text: >-
           A Warming Stone, for whatever the next stretch does to
           you.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-medallion
-        range: [64, 64]
+        range: [52, 52]
         text: >-
           A Crimson Amber Medallion. Wear it or sell it.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-cerulean
-        range: [65, 65]
+        range: [53, 53]
         text: >-
           A Cerulean Crystal Tear, for the flask you keep
           forgetting.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-opaline
-        range: [66, 66]
+        range: [54, 54]
         text: >-
           An Opaline Bubbletear. One hit that will not land.
-        tags: [interference, effect]
+        tags: [boon, item]
       - id: bo-mend
-        range: [67, 70]
+        range: [55, 59]
         text: >-
           You are made whole. Health, focus and flasks, all back.
-        tags: [interference, effect]
+        tags: [boon, blessing]
       - id: bo-heal
-        range: [71, 74]
+        range: [60, 64]
         text: >-
           Healed to full, where you stand.
-        tags: [interference, effect]
+        tags: [boon, blessing]
       - id: bo-wind
-        range: [75, 78]
+        range: [65, 69]
         text: >-
           The next stretch costs you no stamina.
-        tags: [interference, effect]
+        tags: [boon, blessing]
         grants: [blessed-wind]
       - id: bo-focus
-        range: [79, 81]
+        range: [70, 71]
         text: >-
           The next stretch costs you no focus.
-        tags: [interference, effect]
+        tags: [boon, blessing]
         grants: [blessed-focus]
       - id: bo-sharp
-        range: [82, 85]
+        range: [72, 76]
         text: >-
           Your weapons bite. Double damage until the stretch is out.
-        tags: [interference, effect]
+        tags: [boon, blessing]
         grants: [blessed-sharp]
       - id: bo-tough
-        range: [86, 88]
+        range: [77, 78]
         text: >-
           Nothing hurts as much. Half damage until the stretch is
           out.
-        tags: [interference, effect]
+        tags: [boon, blessing]
         grants: [blessed-tough]
       - id: bo-luck
-        range: [89, 91]
+        range: [79, 80]
         text: >-
           Everything drops what it is carrying, for a while.
-        tags: [interference, effect]
+        tags: [boon, blessing]
         grants: [blessed-luck]
       - id: bo-quiet
-        range: [92, 94]
+        range: [81, 82]
         text: >-
           Nothing hears you for the rest of the stretch.
-        tags: [interference, effect]
+        tags: [boon, blessing]
         grants: [blessed-quiet]
       - id: bo-mending
-        range: [95, 97]
+        range: [83, 84]
         text: >-
           You mend as you walk, for the rest of the stretch.
-        tags: [interference, effect]
+        tags: [boon, blessing]
         grants: [blessed-mend]
       - id: bo-keep
-        range: [98, 98]
+        range: [85, 85]
         text: >-
           Whatever happens next, it will not cost you runes.
-        tags: [interference, effect]
+        tags: [boon, blessing]
         grants: [blessed-keep]
       - id: bo-horse
-        range: [99, 99]
+        range: [86, 86]
         text: >-
           Torrent comes when called, anywhere, for the rest of the
           stretch.
-        tags: [interference, effect]
+        tags: [boon, blessing]
         grants: [blessed-horse]
+      - id: bo-swift
+        range: [87, 88]
+        text: >-
+          You are quick. A quarter faster for the rest of the
+          stretch.
+        tags: [boon, blessing]
+        grants: [blessed-swift]
+      - id: bo-peace
+        range: [89, 90]
+        text: >-
+          Nothing will raise a hand to you for the rest of the
+          stretch.
+        tags: [boon, blessing]
+        grants: [blessed-peace]
+      - id: bo-still
+        range: [91, 92]
+        text: >-
+          Nothing moves from where it stands, for the rest of the
+          stretch.
+        tags: [boon, blessing]
+        grants: [blessed-still]
+      - id: bo-asleep
+        range: [93, 93]
+        text: >-
+          Nothing is thinking about you at all any more.
+        tags: [boon, blessing]
+        grants: [blessed-sleep]
+      - id: bo-stocked
+        range: [94, 95]
+        text: >-
+          Your pouch does not empty for the rest of the stretch.
+        tags: [boon, blessing]
+        grants: [blessed-stock]
+      - id: bo-quiver
+        range: [96, 96]
+        text: >-
+          Your quiver does not empty for the rest of the stretch.
+        tags: [boon, blessing]
+        grants: [blessed-ammo]
+      - id: bo-anchored
+        range: [97, 98]
+        text: >-
+          Nothing staggers you for the rest of the stretch.
+        tags: [boon, blessing]
+        grants: [blessed-poise]
+      - id: bo-unseen
+        range: [99, 99]
+        text: >-
+          Nothing sees you for the rest of the stretch.
+        tags: [boon, blessing]
+        grants: [blessed-unseen]
       - id: bo-lethal
         range: [100, 100]
         text: >-
           For the rest of this stretch, anything you hit dies.
-        tags: [interference, effect]
+        tags: [boon, blessing]
         grants: [blessed-lethal]
 
   displacement:

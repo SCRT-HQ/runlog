@@ -24,52 +24,49 @@ def press(action):
 S = lambda i, l, sh, d: (i, l, sh, d)
 
 # ---- interference: what is wrong with the world for one stretch --------
+# Everything here is adverse, or at worst weather. There is nothing good
+# in this table: a reward you rolled into by accident is not a reward,
+# and the boon table below is where being paid belongs.
 I = [
     # Slower, faster, frailer, feebler.
     (3, "in-slow", "Your legs are heavy. You move at four fifths.", S("slowed", "Slowed", "SLOW", "You move at four fifths."), val("player.speed", 0.8)),
     (2, "in-wade", "You are wading. Two thirds speed, everywhere, all stretch.", S("wading", "Wading", "WADE", "You move at two thirds."), val("player.speed", 0.66)),
-    (2, "in-swift", "A mercy. You move a quarter faster.", S("swift", "Swift", "SWFT", "A mercy. You move a quarter faster."), val("player.speed", 1.25)),
+    (1, "in-mired", "Mired. Half speed, and everything in this game is faster than you.", S("mired", "Mired", "MIRE", "You move at half speed."), val("player.speed", 0.5)),
     (3, "in-quick", "The world is hurried. Everything but you runs a fifth faster.", S("hurried", "Hurried", "FAST", "The world runs a fifth faster."), val("game.speed", 1.2)),
     (2, "in-frantic", "The world is frantic. Half again as fast as it should be.", S("frantic", "Frantic", "MANC", "The world runs half again as fast."), val("game.speed", 1.5)),
+    (1, "in-berserk", "The world has lost its mind. Everything at nearly double speed.", S("berserk", "Berserk", "BSRK", "The world runs at nearly double speed."), val("game.speed", 1.75)),
     (2, "in-slower", "Everything slows, you included. The world at four fifths.", S("sluggish", "Sluggish", "DRAG", "The whole world at four fifths."), val("game.speed", 0.8)),
+    (3, "in-tender", "You bruise. Half again the damage from everything.", S("tender", "Tender", "TEND", "You take half again the damage."), val("player.incomingDamage", 1.5)),
     (3, "in-glass", "You are glass. Everything that touches you hits twice as hard.", S("glass", "Glass", "GLAS", "Everything hits twice as hard."), val("player.incomingDamage", 2)),
-    (2, "in-paper", "You are paper. Three times damage, and you will feel all of it.", S("paper", "Paper", "PAPR", "Everything hits three times as hard."), val("player.incomingDamage", 3)),
+    (1, "in-paper", "You are paper. Three times damage, and you will feel all of it.", S("paper", "Paper", "PAPR", "Everything hits three times as hard."), val("player.incomingDamage", 3)),
     (3, "in-blunt", "Your weapons are blunt. A little over half of what you should deal.", S("blunted", "Blunted", "BLNT", "You deal three fifths damage."), val("player.outgoingDamage", 0.6)),
     (2, "in-dull", "Your weapons are dull. Two fifths, and everything takes twice as long.", S("dulled", "Dulled", "DULL", "You deal two fifths damage."), val("player.outgoingDamage", 0.4)),
-    (1, "in-sharp", "A mercy. You hit twice as hard as you should.", S("sharp", "Sharpened", "SHRP", "A mercy. You deal double damage."), val("player.outgoingDamage", 2)),
-    (1, "in-oneshot", "A mercy, and a strange one. Everything dies to one hit.", S("lethal", "Lethal", "KILL", "A mercy. Anything you hit dies."), flag("player.oneShot")),
+    (1, "in-useless", "Your weapons are useless. A quarter damage. Consider running.", S("useless", "Useless", "USLS", "You deal a quarter damage."), val("player.outgoingDamage", 0.25)),
+    # What you are made of, taken away.
+    (2, "in-hollow", "Hollow. Your vigor is one for the stretch; everything kills you.", S("hollow", "Hollow", "HOLW", "Vigor is one."), val("player.vigor", 1)),
+    (2, "in-feeble", "Feeble. Your strength is one, and half of what you carry is unusable.", S("feeble", "Feeble", "FEEB", "Strength is one."), val("player.strength", 1)),
+    (2, "in-clumsy", "Clumsy. Your dexterity is one; hope you were not built for it.", S("clumsy", "Clumsy", "CLMS", "Dexterity is one."), val("player.dexterity", 1)),
+    (2, "in-winded", "Winded. Your endurance is one. Two swings and a roll, if that.", S("winded", "Winded", "ENDR", "Endurance is one."), val("player.endurance", 1)),
+    (1, "in-empty", "Empty. Your mind is one. Whatever you cast, you do not, now.", S("empty", "Empty", "MIND", "Mind is one."), val("player.mind", 1)),
+    # Money and sight.
+    (3, "in-poor", "Nothing is owed to you. No runes from anything that dies.", S("poor", "Poor", "POOR", "No runes from anything."), flag("player.noRuneGain")),
+    (2, "in-robbed", "Robbed. Whatever you were carrying is gone until the stretch ends.", S("robbed", "Robbed", "ROBD", "Your runes are gone for the stretch."), val("player.runes", 0)),
+    (2, "in-toll", "A toll. Ten thousand runes, taken, whether you had them or not.", None, [{"op": "value.add", "args": {"name": "player.runes", "by": -10000}}]),
+    (2, "in-lost", "No map. You cannot open it this stretch; go by landmark.", S("mapless", "Mapless", "LOST", "The map cannot be opened."), flag("world.hideMap")),
+    (1, "in-unseen-world", "Nothing renders. You can see the world and nothing living in it.", S("blind", "Blind", "BLND", "Characters are not drawn."), flag("world.hideCharacters")),
     # What the dead do.
     (3, "in-risen", "The dead get up. Nothing you kill this stretch stays down.", S("risen", "The risen", "RISE", "Nothing you kill stays dead."), flag("enemies.noDeath")),
     (2, "in-stone", "Nothing here can be hurt. Kill nothing; go around.", S("stone", "Unkillable", "STON", "Nothing can be damaged."), flag("enemies.noDamage")),
-    (2, "in-peace", "A mercy. Nothing will raise a hand to you.", S("peace", "Peace", "PEAC", "A mercy. Nothing attacks."), flag("enemies.noAttack")),
-    (2, "in-still", "A mercy. Nothing here moves from where it stands.", S("still", "Stillness", "STIL", "A mercy. Nothing moves."), flag("enemies.noMove")),
-    (1, "in-asleep", "A mercy. Nothing is thinking about you at all.", S("asleep", "Asleep", "SLEP", "A mercy. Nothing is paying attention."), flag("enemies.noAi")),
-    # Movement and dodging.
     (3, "in-root", "You cannot dodge. No rolling this stretch, at all.", S("rooted", "Rooted", "ROOT", "No rolling."), flag("player.noRoll")),
-    # Money.
-    (3, "in-poor", "Nothing is owed to you. No runes from anything that dies.", S("poor", "Poor", "POOR", "No runes from anything."), flag("player.noRuneGain")),
-    (2, "in-spared", "A mercy. You lose no runes if you die this stretch.", S("insured", "Insured", "KEEP", "A mercy. Death costs no runes."), flag("player.noRuneLoss")),
-    # Comfort.
-    (2, "in-wind", "A mercy. Your stamina does not run out.", S("tireless", "Tireless", "WIND", "A mercy. Stamina does not run out."), flag("player.infiniteStamina")),
-    (2, "in-well", "A mercy. Your focus does not run out.", S("focused", "Focused", "FOCS", "A mercy. FP does not run out."), flag("player.infiniteFp")),
-    (2, "in-full", "A mercy. Your pouch does not empty.", S("stocked", "Stocked", "FULL", "A mercy. Consumables are not used up."), flag("player.infiniteConsumables")),
-    (1, "in-quiver", "A mercy. Your quiver does not empty.", S("quivered", "Quivered", "AMMO", "A mercy. Arrows are not used up."), flag("player.infiniteArrows")),
-    (2, "in-mend", "A mercy. You heal slowly, on your own, the whole stretch.", S("mending", "Mending", "MEND", "A mercy. You heal over time."), flag("player.healOverTime")),
-    (1, "in-anchored", "A mercy. Nothing staggers you.", S("anchored", "Anchored", "POIS", "A mercy. You cannot be staggered."), flag("player.infinitePoise")),
-    (2, "in-hush", "A mercy. Nothing hears you coming this stretch.", S("unheard", "Unheard", "HUSH", "A mercy. Nothing hears you."), flag("player.silent")),
-    (1, "in-unseen", "A mercy. Nothing sees you either.", S("unseen", "Unseen", "DARK", "A mercy. Nothing sees you."), flag("player.hidden")),
-    (1, "in-lucky", "A mercy. Everything drops what it has.", S("lucky", "Lucky", "DROP", "A mercy. Drops are guaranteed."), flag("world.guaranteedDrop")),
-    (1, "in-horse", "A mercy. Torrent comes when called, anywhere.", S("mounted", "Mounted", "HORS", "A mercy. Torrent is available anywhere."), flag("player.torrentAnywhere")),
-    # The world itself.
-    (2, "in-lost", "No map. You cannot open it this stretch; go by landmark.", S("mapless", "Mapless", "LOST", "The map cannot be opened."), flag("world.hideMap")),
+    # Weather is not a kindness or a cruelty. It is weather.
     (2, "in-night", "Night falls, now, wherever you are.", None, press("SetNight")),
     (2, "in-dusk", "Dusk, and the light going.", None, press("SetDusk")),
-    (2, "in-noon", "Noon, whether it suits you or not.", None, press("SetNoon")),
-    (1, "in-morning", "Morning. The light comes back.", None, press("SetMorning")),
+    (1, "in-noon", "Noon, whether it suits you or not.", None, press("SetNoon")),
+    (1, "in-morning", "Morning. The light comes back, for what it is worth.", None, press("SetMorning")),
     (2, "in-fog", "Fog rolls in and stays.", None, press("FoggyWeather")),
     (2, "in-rain", "Rain, for the whole stretch.", None, press("RainyWeather")),
     (2, "in-snow", "Snow, wherever you happen to be.", None, press("SnowyWeather")),
-    (1, "in-clear", "A mercy. Clear skies, for once.", None, press("DefaultWeather")),
+    (1, "in-clear", "Clear skies, for once. Which means everything can see you.", None, press("DefaultWeather")),
     # Vows: nothing enforces these but you.
     (3, "vo-stay", "Do not leave this region. Whatever you meant to do elsewhere, do it here.", S("bound", "Bound", "STAY", "Do not leave this region."), None),
     (3, "vo-alone", "Alone. No summons and no Spirit Ashes.", S("alone", "Alone", "ALON", "No summons, no Spirit Ashes."), None),
@@ -78,19 +75,23 @@ I = [
     (3, "vo-noflask", "No Crimson Tears. Whatever you have, you keep.", S("thirsty", "Thirsty", "DRY", "No Crimson Tears."), None),
     (2, "vo-notears", "No flasks at all, of either colour.", S("parched", "Parched", "NONE", "No flasks of any kind."), None),
     (2, "vo-nolock", "No lock-on. Aim by hand.", S("unaimed", "Unaimed", "FREE", "No lock-on."), None),
-    (2, "vo-walk", "Walk. No sprinting and no Torrent.", S("afoot", "Afoot", "WALK", "No sprinting, no Torrent."), None),
+    (3, "vo-walk", "Walk. No sprinting and no Torrent.", S("afoot", "Afoot", "WALK", "No sprinting, no Torrent."), None),
     (2, "vo-onehand", "One weapon, and no swapping it.", S("committed", "Committed", "ONE", "One weapon, no swapping."), None),
+    (2, "vo-worst", "The worst weapon you are carrying, and only that.", S("ill-armed", "Ill-armed", "WRST", "Your worst weapon, and only that."), None),
     (2, "vo-nojump", "No jumping, and no jump attacks.", S("grounded", "Grounded", "DOWN", "No jumping."), None),
     (2, "vo-noitem", "No consumables of any kind. Nothing from the pouch.", S("frugal", "Frugal", "POCK", "No consumables."), None),
     (2, "vo-noblock", "No blocking. Dodge it or wear it.", S("unguarded", "Unguarded", "NOBL", "No blocking."), None),
     (2, "vo-melee", "Nothing at range. No bows, no thrown, no spells from afar.", S("close", "Close quarters", "MELE", "Nothing at range."), None),
     (2, "vo-nomagic", "No spells and no incantations, whatever you are built for.", S("mundane", "Mundane", "MUND", "No spells or incantations."), None),
     (2, "vo-noskill", "No Ashes of War and no weapon skills.", S("plain", "Plain", "SKIL", "No Ashes of War or skills."), None),
+    (2, "vo-noback", "Nothing cheap. No backstabs and no ripostes.", S("honest", "Honest", "BACK", "No backstabs or ripostes."), None),
     (2, "vo-norest", "Do not rest at a grace. Not once.", S("restless", "Restless", "REST", "No resting at graces."), None),
     (2, "vo-nolevel", "No levelling, no upgrading, no spending anything.", S("unspent", "Unspent", "SPND", "Nothing spent, nothing upgraded."), None),
     (2, "vo-notravel", "No fast travel. Ride or walk wherever you are going.", S("overland", "Overland", "TRVL", "No fast travel."), None),
+    (2, "vo-noloot", "Pick nothing up. Walk past all of it.", S("empty-handed", "Empty-handed", "LOOT", "Pick nothing up."), None),
     (2, "vo-fight", "Fight what you wake. Nothing you aggro may be left behind.", S("standing", "Standing", "FGHT", "Nothing you aggro is left behind."), None),
     (1, "vo-twohand", "Two hands on one weapon, the whole stretch.", S("twohanded", "Two-handed", "BOTH", "Two hands on one weapon."), None),
+    (1, "vo-moving", "Keep moving. Never stand still for longer than it takes to swing.", S("driven", "Driven", "MOVE", "Never stand still."), None),
     (2, "in-calm", "Nothing at all. Ten quiet minutes; use them.", None, None),
 ]
 
@@ -224,6 +225,14 @@ B = [
     (2, "bo-mending", "You mend as you walk, for the rest of the stretch.", S("blessed-mend", "Mending", "MEND+", "A boon. You heal over time."), flag("player.healOverTime")),
     (1, "bo-keep", "Whatever happens next, it will not cost you runes.", S("blessed-keep", "Held", "KEEP+", "A boon. Death costs no runes."), flag("player.noRuneLoss")),
     (1, "bo-horse", "Torrent comes when called, anywhere, for the rest of the stretch.", S("blessed-horse", "Mounted", "HORS+", "A boon. Torrent anywhere."), flag("player.torrentAnywhere")),
+    (2, "bo-swift", "You are quick. A quarter faster for the rest of the stretch.", S("blessed-swift", "Swift", "SWFT", "A boon. You move a quarter faster."), val("player.speed", 1.25)),
+    (2, "bo-peace", "Nothing will raise a hand to you for the rest of the stretch.", S("blessed-peace", "Peace", "PEAC", "A boon. Nothing attacks."), flag("enemies.noAttack")),
+    (2, "bo-still", "Nothing moves from where it stands, for the rest of the stretch.", S("blessed-still", "Stillness", "STIL", "A boon. Nothing moves."), flag("enemies.noMove")),
+    (1, "bo-asleep", "Nothing is thinking about you at all any more.", S("blessed-sleep", "Asleep", "SLEP", "A boon. Nothing is paying attention."), flag("enemies.noAi")),
+    (2, "bo-stocked", "Your pouch does not empty for the rest of the stretch.", S("blessed-stock", "Stocked", "FULL", "A boon. Consumables are not used up."), flag("player.infiniteConsumables")),
+    (1, "bo-quiver", "Your quiver does not empty for the rest of the stretch.", S("blessed-ammo", "Quivered", "AMMO", "A boon. Arrows are not used up."), flag("player.infiniteArrows")),
+    (2, "bo-anchored", "Nothing staggers you for the rest of the stretch.", S("blessed-poise", "Anchored", "POIS", "A boon. You cannot be staggered."), flag("player.infinitePoise")),
+    (1, "bo-unseen", "Nothing sees you for the rest of the stretch.", S("blessed-unseen", "Unseen", "DARK", "A boon. Nothing sees you."), flag("player.hidden")),
     (1, "bo-lethal", "For the rest of this stretch, anything you hit dies.", S("blessed-lethal", "Dreadful", "KILL+", "A boon. Anything you hit dies."), flag("player.oneShot")),
 ]
 
@@ -277,12 +286,21 @@ def table(name, title, desc, built, extra_of):
     return "\n".join(out) + "\n"
 
 def i_extra(row):
+    """An interference: something a tool does, or a vow only you keep."""
     state, ops = row[3], row[4]
-    tags = ["interference"]
-    if "mercy" in row[2].lower() or row[1] == "in-calm":
-        tags = ["mercy"]
-    tags.append("effect" if ops else "vow")
+    tags = ["interference", "effect" if ops else "vow"]
+    if row[1] == "in-calm":
+        tags = ["interference", "quiet"]
     lines = ["tags: [" + ", ".join(tags) + "]"]
+    if state:
+        lines.append("grants: [" + state[0] + "]")
+    return lines
+
+def b_extra(row):
+    """A boon: a thing handed over, or a blessing that holds a while."""
+    state, ops = row[3], row[4]
+    kind = "item" if ops and ops[0]["op"] == "item.named" else "blessing"
+    lines = ["tags: [" + ", ".join(["boon", kind]) + "]"]
     if state:
         lines.append("grants: [" + state[0] + "]")
     return lines
@@ -329,7 +347,7 @@ tables += "\n" + table("target", "Target",
                        built_t, t_extra)
 tables += "\n" + table("boon", "Boon",
                        "What settling a target is worth. Drawn when you say you settled it, which is the only way anything here can know. Nothing in it is a punishment and nothing is worth points: the points were on the target.",
-                       built_b, i_extra)
+                       built_b, b_extra)
 tables += "\n" + table("displacement", "Displacement",
                        "Every fourth stretch the Lands Between are done with you where you are. Drawn as a stretch closes and taken before the next one opens. A tool does the moving: these are real places by name, and most of them are somewhere you would not have chosen.",
                        built_d, d_extra)

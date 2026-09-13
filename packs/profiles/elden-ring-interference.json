@@ -41,16 +41,16 @@
       ]
     },
     {
-      "entry": "in-swift",
+      "entry": "in-mired",
       "table": "interference",
-      "label": "Swift",
+      "label": "Mired",
       "until": "unit",
       "ops": [
         {
           "op": "value.set",
           "args": {
             "name": "player.speed",
-            "value": 1.25
+            "value": 0.5
           }
         }
       ]
@@ -86,6 +86,21 @@
       ]
     },
     {
+      "entry": "in-berserk",
+      "table": "interference",
+      "label": "Berserk",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "game.speed",
+            "value": 1.75
+          }
+        }
+      ]
+    },
+    {
       "entry": "in-slower",
       "table": "interference",
       "label": "Sluggish",
@@ -96,6 +111,21 @@
           "args": {
             "name": "game.speed",
             "value": 0.8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-tender",
+      "table": "interference",
+      "label": "Tender",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.incomingDamage",
+            "value": 1.5
           }
         }
       ]
@@ -161,30 +191,165 @@
       ]
     },
     {
-      "entry": "in-sharp",
+      "entry": "in-useless",
       "table": "interference",
-      "label": "Sharpened",
+      "label": "Useless",
       "until": "unit",
       "ops": [
         {
           "op": "value.set",
           "args": {
             "name": "player.outgoingDamage",
-            "value": 2
+            "value": 0.25
           }
         }
       ]
     },
     {
-      "entry": "in-oneshot",
+      "entry": "in-hollow",
       "table": "interference",
-      "label": "Lethal",
+      "label": "Hollow",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-feeble",
+      "table": "interference",
+      "label": "Feeble",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-clumsy",
+      "table": "interference",
+      "label": "Clumsy",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-winded",
+      "table": "interference",
+      "label": "Winded",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-empty",
+      "table": "interference",
+      "label": "Empty",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-poor",
+      "table": "interference",
+      "label": "Poor",
       "until": "unit",
       "ops": [
         {
           "op": "flag.set",
           "args": {
-            "name": "player.oneShot",
+            "name": "player.noRuneGain",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-robbed",
+      "table": "interference",
+      "label": "Robbed",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.runes",
+            "value": 0
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-toll",
+      "table": "interference",
+      "label": "Toll",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.add",
+          "args": {
+            "name": "player.runes",
+            "by": -10000
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-lost",
+      "table": "interference",
+      "label": "Mapless",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "world.hideMap",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-unseen-world",
+      "table": "interference",
+      "label": "Blind",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "world.hideCharacters",
             "value": true
           }
         }
@@ -221,51 +386,6 @@
       ]
     },
     {
-      "entry": "in-peace",
-      "table": "interference",
-      "label": "Peace",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "enemies.noAttack",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-still",
-      "table": "interference",
-      "label": "Stillness",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "enemies.noMove",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-asleep",
-      "table": "interference",
-      "label": "Asleep",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "enemies.noAi",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
       "entry": "in-root",
       "table": "interference",
       "label": "Rooted",
@@ -275,201 +395,6 @@
           "op": "flag.set",
           "args": {
             "name": "player.noRoll",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-poor",
-      "table": "interference",
-      "label": "Poor",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "player.noRuneGain",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-spared",
-      "table": "interference",
-      "label": "Insured",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "player.noRuneLoss",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-wind",
-      "table": "interference",
-      "label": "Tireless",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "player.infiniteStamina",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-well",
-      "table": "interference",
-      "label": "Focused",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "player.infiniteFp",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-full",
-      "table": "interference",
-      "label": "Stocked",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "player.infiniteConsumables",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-quiver",
-      "table": "interference",
-      "label": "Quivered",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "player.infiniteArrows",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-mend",
-      "table": "interference",
-      "label": "Mending",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "player.healOverTime",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-anchored",
-      "table": "interference",
-      "label": "Anchored",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "player.infinitePoise",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-hush",
-      "table": "interference",
-      "label": "Unheard",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "player.silent",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-unseen",
-      "table": "interference",
-      "label": "Unseen",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "player.hidden",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-lucky",
-      "table": "interference",
-      "label": "Lucky",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "world.guaranteedDrop",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-horse",
-      "table": "interference",
-      "label": "Mounted",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "player.torrentAnywhere",
-            "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-lost",
-      "table": "interference",
-      "label": "Mapless",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "flag.set",
-          "args": {
-            "name": "world.hideMap",
             "value": true
           }
         }
@@ -1057,6 +982,126 @@
           "op": "flag.set",
           "args": {
             "name": "player.torrentAnywhere",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-swift",
+      "table": "boon",
+      "label": "Swift",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.speed",
+            "value": 1.25
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-peace",
+      "table": "boon",
+      "label": "Peace",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "enemies.noAttack",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-still",
+      "table": "boon",
+      "label": "Stillness",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "enemies.noMove",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-asleep",
+      "table": "boon",
+      "label": "Asleep",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "enemies.noAi",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-stocked",
+      "table": "boon",
+      "label": "Stocked",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infiniteConsumables",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-quiver",
+      "table": "boon",
+      "label": "Quivered",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infiniteArrows",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-anchored",
+      "table": "boon",
+      "label": "Anchored",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infinitePoise",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-unseen",
+      "table": "boon",
+      "label": "Unseen",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.hidden",
             "value": true
           }
         }
