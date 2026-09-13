@@ -24,6 +24,7 @@ import Obs from "./pages/obs.mdx";
 import Dock from "./pages/dock.mdx";
 import StreamElements from "./pages/streamelements.mdx";
 import StreamerBot from "./pages/streamer-bot.mdx";
+import Control from "./pages/control.mdx";
 import TikTok from "./pages/tiktok.mdx";
 import Kick from "./pages/kick.mdx";
 import StreamTools from "./pages/stream-tools.mdx";
@@ -127,6 +128,7 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   P("tiktok", "With others", "Streaming", "TikTok Live", "LIVE Studio's Link source or OBS, and a gift that asks the run.", TikTok),
   P("kick", "With others", "Streaming", "Kick", "OBS with the stream key, and a channel-point reward that asks.", Kick),
   P("stream-tools", "With others", "Streaming", "For a chat bot or your own tool", "The numbers as JSON, and a socket that rings.", StreamTools),
+  P("control", "With others", "Streaming", "Making a result happen in the game", "A tool beside the game does what the dice said, and puts it back after.", Control),
   P("stream-troubles", "With others", "Streaming", "When a widget does not follow the run", "What each message means, and what to do.", StreamTroubles),
   P("discord", "With others", "Discord", "Runlog in Discord", "A bot that hosts runs in your server: claim it, fill its vault, press the card.", Discord),
   P("discord-setup", "With others", "Discord", "Setting a server up", "The install link, claiming, the vault, who hosts and where.", DiscordSetup),
