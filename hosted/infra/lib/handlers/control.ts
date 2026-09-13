@@ -23,6 +23,19 @@
 export interface ControlOp {
   op: string;
   args?: Record<string, unknown>;
+  /**
+   * Given once in a run, rather than every time a tool attaches.
+   *
+   * The terms are sent on every attach because a tool that restarted is
+   * holding none of them: its restore log puts prior values back, it does
+   * not re-apply. That is right for a setting and wrong for a gift. A
+   * run whose terms hand over fifty thousand runes handed them over again
+   * on every reconnect, which is a different game by the third one.
+   *
+   * So an operation that cannot be taken back says so, and the run
+   * remembers who has had it.
+   */
+  once?: boolean;
 }
 
 /**
@@ -119,7 +132,15 @@ function opsOf(value: unknown): ControlOp[] {
       const op = (entry as Record<string, unknown>)["op"];
       if (typeof op !== "string" || op.length === 0 || op.length > 64) return null;
       const args = (entry as Record<string, unknown>)["args"];
-      return { op, args: args && typeof args === "object" && !Array.isArray(args) ? (args as Record<string, unknown>) : {} };
+      // `once` survives the trip: it is what stops a gift in the terms
+      // being handed over again on every reconnect, and a field dropped
+      // here would be a field the run silently ignores.
+      const once = (entry as Record<string, unknown>)["once"] === true;
+      return {
+        op,
+        args: args && typeof args === "object" && !Array.isArray(args) ? (args as Record<string, unknown>) : {},
+        ...(once ? { once: true } : {}),
+      };
     })
     .filter((o): o is ControlOp => o !== null);
 }
@@ -235,9 +256,22 @@ export function appliesFor(profile: ControlProfile, landed: Landed, seat: string
 }
 
 /** The run's terms, applied when a tool attaches and held until it ends. */
-export function setupFor(profile: ControlProfile): string | null {
-  if (!profile.setup || profile.setup.length === 0) return null;
-  return JSON.stringify({
+/**
+ * The run's terms, for a tool that has just attached.
+ *
+ * `had` is whether this seat has already been given the parts that are
+ * given once. Everything else goes every time, because a tool that
+ * restarted is holding none of it and a setting reapplied is the same
+ * setting. A gift reapplied is a second gift.
+ *
+ * Answers what to send and whether anything in it was a once, so the
+ * caller knows there is something to remember.
+ */
+export function setupFor(profile: ControlProfile, had = false): { frame: string; gave: boolean } | null {
+  const ops = (profile.setup ?? []).filter((o) => !(o.once && had));
+  if (ops.length === 0) return null;
+  const gave = ops.some((o) => o.once === true);
+  const frame = JSON.stringify({
     t: "apply",
     id: SETUP_ID,
     label: "The run's terms",
@@ -248,8 +282,9 @@ export function setupFor(profile: ControlProfile): string | null {
     // against a newer build than the one attached should not cost
     // somebody the other eight.
     each: true,
-    ops: profile.setup.map((o) => ({ op: o.op, args: o.args ?? {} })),
+    ops: ops.map((o) => ({ op: o.op, args: o.args ?? {} })),
   });
+  return { frame, gave };
 }
 
 /** Take back one effect, or with the reserved id, all of them. */
