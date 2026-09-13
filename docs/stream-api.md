@@ -510,6 +510,20 @@ run sends, since only the tool knows what it is still holding:
 The tool answers each apply with `{ "t": "applied", "id": "o4#0", "ok": true, "until": "…" }`,
 or `ok: false` with an `error` naming what it could not do.
 
+### What the game says back
+
+A tool may say what happened to it, on the same socket:
+
+```json
+{ "t": "event", "kind": "died" }
+```
+
+It is a mention rather than a command. Here it becomes an ask, exactly as
+a viewer pressing a button does, and the table still accepts it: the run
+has to be taking asks, and the same rate holds as for anything else
+asking. A kind this end does not know is ignored, so a tool that says
+more than `died` does not break against an older server.
+
 ### The profile
 
 Which operation a result means is a **control profile**, kept with the

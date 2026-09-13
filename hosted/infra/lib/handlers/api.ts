@@ -1,4 +1,5 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
+import { askAllowed } from "./asking.js";
 import { hashToken, verify as verifyToken, type Caller } from "./auth.js";
 import { dynamoStore, PACK_ORIGINS, shownName, type ApiKey, type Ask, type AskPolicy, type LicenseMeta, type Reaction, type PackMeta, type PackOrigin, type Role, type SessionMember, type SessionMeta, type StreamKeyKind, type Store } from "./store.js";
 import { sesMailer, type Mailer } from "./email.js";
@@ -56,38 +57,6 @@ const MAX_NAME = 200;
 /** A command-line key: the prefix says what it is at a glance, the rest is 32 random bytes. */
 const KEY_PREFIX = "rl_";
 
-/**
- * How often the outside may ask a run for something: one ask a name every
- * twenty seconds, thirty a minute for the run, whatever chat is doing.
- * Kept per container; a second container starts its own count, which is
- * generous rather than wrong. What it guards is the host's tray, not a
- * budget.
- */
-const ASK_NAME_EVERY_MS = 20_000;
-const ASK_RUN_PER_MINUTE = 30;
-const askRates = new Map<string, { names: Map<string, number>; minute: number[] }>();
-/**
- * Whether this ask may be taken, and when it may be if not.
- *
- * The wait comes back with the refusal because whoever pressed is owed a
- * number, not the rule: "eleven seconds" is something chat can act on,
- * "one a name every twenty seconds" is something to argue with.
- */
-function askAllowed(runId: string, name: string, atMs: number): { ok: true } | { ok: false; waitMs: number } {
-  const r = askRates.get(runId) ?? { names: new Map<string, number>(), minute: [] };
-  r.minute = r.minute.filter((t) => atMs - t < 60_000);
-  if (r.minute.length >= ASK_RUN_PER_MINUTE) {
-    const oldest = r.minute[0] ?? atMs;
-    return { ok: false, waitMs: Math.max(1000, 60_000 - (atMs - oldest)) };
-  }
-  const last = r.names.get(name);
-  if (last !== undefined && atMs - last < ASK_NAME_EVERY_MS) return { ok: false, waitMs: ASK_NAME_EVERY_MS - (atMs - last) };
-  r.names.set(name, atMs);
-  r.minute.push(atMs);
-  if (r.names.size > 500) for (const [n, t] of r.names) if (atMs - t > ASK_NAME_EVERY_MS) r.names.delete(n);
-  askRates.set(runId, r);
-  return { ok: true };
-}
 
 /** A wait, in the words a chat line would use. */
 const inSeconds = (ms: number): string => {
