@@ -72,12 +72,16 @@ describe("lifecycle gestures", () => {
     expect(told!.data).not.toHaveProperty("tags");
   });
 
-  it("say nothing for an undo: a count that went down is not news", () => {
+  it("tell an undo, because a tool holding what the result applied hears no other way", () => {
+    // This said nothing until somebody undid their way back past a
+    // result and found the game still doing what it said. A count that
+    // goes down is news: the board drops the result, and the effect it
+    // applied is in a different program that was never told.
     const base = reduce(kiln, opening);
     const entry = kiln.tables.form!.entries[0]!;
     const withOne: RunState = { ...base, outcomes: [{ unit: 1, table: "form", entryId: entry.id, targetSubject: null, at: "2026-01-01T00:00:02Z" } as RunState["outcomes"][number]] };
     const before = marksOf(withOne, opening, NOW);
-    expect(lifecycleGestures(kiln, base, opening, before, NOW)).toEqual([]);
+    expect(lifecycleGestures(kiln, base, opening, before, NOW)).toEqual([{ kind: "outcome-undone", data: { n: 1 } }]);
   });
 
   it("tell a unit closing with the count so far, and the run ending with its ending, in that order", () => {
@@ -93,6 +97,24 @@ describe("lifecycle gestures", () => {
     expect(told.map((g) => g.kind)).toEqual(["unit-closed", "run-ended"]);
     expect(told[0]!.data).toEqual({ unit: 1, unitsDone: 1 });
     expect(told[1]!.data).toEqual({ ending: "Cooled", unitsDone: 1 });
+  });
+
+  it("tell a result being taken back, newest first, one per result", () => {
+    const entry = kiln.tables.form!.entries[0]!;
+    const two: RunState = {
+      ...reduce(kiln, opening),
+      outcomes: [
+        { unit: 1, table: "form", entryId: entry.id, targetSubject: null, at: "2026-01-01T00:00:02Z" },
+        { unit: 1, table: "form", entryId: entry.id, targetSubject: null, at: "2026-01-01T00:00:03Z" },
+      ] as RunState["outcomes"],
+    };
+    const before = marksOf(two, opening, NOW);
+    // Undone back to none: the two that went are named, the later first.
+    const told = lifecycleGestures(kiln, reduce(kiln, opening), opening, before, NOW);
+    expect(told.map((g) => [g.kind, g.data["n"]])).toEqual([
+      ["outcome-undone", 2],
+      ["outcome-undone", 1],
+    ]);
   });
 
   it("name the unit that closed, not the one opened in the same press", () => {

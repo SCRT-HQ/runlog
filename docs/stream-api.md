@@ -503,6 +503,15 @@ name for should take itself out and leave the other seven standing.
 { "t": "apply", "id": "o4#0", "group": "unit:4", "ops": [ … ] }
 ```
 
+A result undone takes its effects with it: undo voids the move that
+drew it, and a tool holding what that result applied hears about it no
+other way. Every rule that matched filed its effect under the result's
+own number, so the number names all of them at once.
+
+```json
+{ "t": "revert", "id": "o4#*" }
+```
+
 Taking one back names it. Taking back a group names the group. Taking
 back everything in force uses the reserved id, which is what the end of a
 run sends, since only the tool knows what it is still holding:
