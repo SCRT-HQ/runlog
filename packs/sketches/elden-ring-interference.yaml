@@ -31,8 +31,28 @@ category: games
 tags: [Elden Ring, souls, solo, timed, effects]
 
 requires:
-  - { id: game, label: Elden Ring, kind: game }
-  - { id: system, label: A PC, kind: platform, note: "Offline. Attaching anything to the game online is a ban." }
+  - id: game
+    label: Elden Ring
+    kind: game
+    note: >-
+      Started in offline mode. Anything attached to the game while it is
+      online is a ban; the machine itself stays online, since that is how
+      the run reaches it. Tarnished Tool's Launch Game button starts it
+      the right way.
+  - { id: system, label: A PC, kind: platform }
+  # Optional on purpose, and no result needs it. Without it every draw is
+  # a thing you do on your honor and the game is the same game; with it,
+  # nobody has to be trusted.
+  - id: tool
+    label: A tool that can drive the game
+    kind: software
+    optional: true
+    note: >-
+      Not needed. With one attached, every draw is done to the game
+      instead of being acted out: you really are slower, the dead really
+      do get up. Tarnished Tool with a Control tab is the one this was
+      written for, and the profile beside this pack maps the draws to it.
+    url: https://github.com/SCRT-HQ/TarnishedTool-runlog-integration
 
 license:
   id: MIT

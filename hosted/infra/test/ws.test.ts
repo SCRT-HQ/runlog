@@ -3,7 +3,7 @@ import { notifier, type Attached, type LiveStore, type Poster, type Watcher } fr
 import { hashToken } from "../lib/handlers/auth";
 import { route, type WsDeps, type WsEvent } from "../lib/handlers/ws";
 import type { Race } from "../lib/handlers/races";
-import type { SessionMember, SessionMeta } from "../lib/handlers/store";
+import type { Ask, SessionMember, SessionMeta } from "../lib/handlers/store";
 
 /**
  * The socket is a doorbell: it carries a "changed" and nothing else. What
@@ -47,12 +47,20 @@ function memoryLive(): LiveStore & { conns: Map<string, string>; watches: Map<st
 const meta = (id: string, ownerSub: string): SessionMeta => ({ id, packId: "p", packVersion: "1", ownerSub, createdAt: "", updatedAt: "", seq: 3 });
 const member = (sub: string): SessionMember => ({ sub, role: "player", joinedAt: "" });
 
+/** Every ask the socket raised, for the tests that care. */
+const asked: Ask[] = [];
+
 function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLive> } {
+  asked.length = 0;
   return {
     live,
     store: {
       async getSnapshot() {
         return null;
+      },
+      async addAsk(_id, ask) {
+        asked.push(ask);
+        return asked;
       },
       async streamKeyOwner(hash) {
         if (hash === hashToken("watchkey")) return { sub: "user_1", kind: "watch" as const };
@@ -68,6 +76,7 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
         };
       },
       async getSession(id) {
+        if (id === "asking") return { meta: { ...meta(id, "user_1"), publicTokenHash: hashToken("livetok"), askPolicy: "ask" as const }, members: [member("user_1")] };
         if (id === "open") return { meta: { ...meta(id, "user_1"), publicTokenHash: hashToken("livetok") }, members: [member("user_1")] };
         if (id === "shared") return { meta: meta(id, "user_1"), members: [member("user_1"), member("user_2")] };
         if (id === "private") return { meta: meta(id, "user_9"), members: [member("user_9")] };
@@ -303,6 +312,45 @@ describe("telling the listeners", () => {
       for (const c of ["c1", "tool"]) await live.watch(c, "shared", "", "", live.marks.get(c));
       await route({ requestContext: { routeKey: "$default", connectionId: "c1" }, body: JSON.stringify({ t: "gesture", id: "shared", kind: "unit-closed", data: { unit: 4, unitsDone: 4 } }) }, d);
       expect(posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l))).toEqual([{ t: "revert", group: "unit:4" }]);
+    });
+
+    it("raises an ask when the game says what happened, and only where the host takes them", async () => {
+      const { live, posted, d } = attached();
+      await live.connect("tool", "public:asking", "", { control: true, seat: "Mira", run: "asking" });
+      await live.watch("tool", "asking", "public:asking", "", { control: true, seat: "Mira", run: "asking" });
+      await live.connect("watcher", "public:asking", "");
+      await live.watch("watcher", "asking", "public:asking", "");
+      const say = (kind: string, run = "asking") =>
+        route({ requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "event", kind, run }) }, d);
+
+      expect((await say("died")).statusCode).toBe(200);
+      expect(asked).toEqual([expect.objectContaining({ kind: "move", move: "died", name: "Mira", via: "the game" })]);
+      // Everyone watching hears it land, the same as any other ask.
+      expect(JSON.parse(posted.at(-1)![1])).toMatchObject({ t: "gesture", kind: "ask", data: { move: "died", name: "Mira" } });
+
+      // A kind nobody knows is ignored rather than guessed at, so a later
+      // tool saying more than this does not break against this server.
+      asked.length = 0;
+      expect((await say("teleported")).statusCode).toBe(200);
+      expect(asked).toEqual([]);
+    });
+
+    it("says nothing where the host has not switched asks on, since attaching is not permission", async () => {
+      const { live, d } = attached();
+      await live.connect("tool", "public:open", "", { control: true, run: "open" });
+      await live.watch("tool", "open", "public:open", "", { control: true, run: "open" });
+      await route({ requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "event", kind: "died" }) }, d);
+      expect(asked).toEqual([]);
+    });
+
+    it("holds a tool to the same rate as anything else asking", async () => {
+      const { live, d } = attached();
+      await live.connect("tool", "public:asking", "", { control: true, seat: "Solo", run: "asking" });
+      await live.watch("tool", "asking", "public:asking", "", { control: true, seat: "Solo", run: "asking" });
+      const say = () => route({ requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "event", kind: "died" }) }, d);
+      await say();
+      await say();
+      expect(asked).toHaveLength(1);
     });
 
     it("is told a result in operations, while a watcher beside it is told it in words", async () => {

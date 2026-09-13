@@ -280,3 +280,26 @@ export function framesForGesture(profile: ControlProfile, kind: string, data: un
   if (!landed) return [];
   return appliesFor(profile, landed, seat);
 }
+
+/**
+ * What a tool may say happened in the game, and what a run does about it.
+ *
+ * The tool reports on the socket it already holds rather than fetching a
+ * URL of ours, which is the difference between a protocol and an
+ * integration: a tool that says `died` is saying something true about the
+ * game, and what that means is the listener's business. Here it means an
+ * ask, which is the same thing a viewer pressing a button raises, and
+ * which the table still has to accept.
+ *
+ * Deliberately a short list. A kind nobody here knows is ignored, so a
+ * later tool saying more than this does not break against an older
+ * server.
+ */
+const MEANS: Record<string, { move: string }> = {
+  died: { move: "died" },
+};
+
+export function askFor(kind: string): { move: string } | null {
+  if (typeof kind !== "string") return null;
+  return MEANS[kind] ?? null;
+}
