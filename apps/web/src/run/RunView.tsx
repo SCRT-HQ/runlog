@@ -556,6 +556,7 @@ export function RunView({
           record={run.record ?? null}
           onAsks={run.setAsks}
           onControl={run.setControl}
+          seats={(run.state?.contestants ?? []).map((c) => c.name)}
           onControls={() => {
             setSettingsOpen(false);
             void openControlsWindow().then(setControlsWindow, () => {});
