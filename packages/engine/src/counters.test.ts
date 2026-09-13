@@ -15,7 +15,7 @@ function loadPack(rel: string): Pack {
   return r.pack;
 }
 const kiln = loadPack("packs/demo/pack.yaml");
-const interference = loadPack("packs/sketches/elden-ring-interference.yaml");
+const tarnished = loadPack("packs/sketches/elden-ring-tarnishedtool.yaml");
 
 const NOW = "2026-01-01T00:00:00.000Z";
 const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent =>
@@ -117,34 +117,34 @@ describe("counter thresholds", () => {
 /**
  * A threshold read off a dial.
  *
- * Interference leaves you where you are for a few stretches and then
+ * The pack leaves you where you are for a few scenes and then
  * the world moves you. How few was a number the pack picked; it is a
  * dial now, and the same two stretches owe a displacement or owe
  * nothing depending on where the dial is.
  */
 describe("a threshold that reads a resource", () => {
   const after = (stretches: number, dial?: number) =>
-    reduce(interference, [
-      ev("RunStarted", { packId: interference.id, packVersion: interference.version, mode: "solo" }),
+    reduce(tarnished, [
+      ev("RunStarted", { packId: tarnished.id, packVersion: tarnished.version, mode: "solo" }),
       ...(dial === undefined ? [] : [ev("ResourceChanged", { resource: "warpEvery", set: dial })]),
       ev("UnitEntered"),
       ev("CounterChanged", { counter: "wander", by: stretches }),
     ]);
 
   it("holds off while the dial is above the tally", () => {
-    expect(pendingTriggers(interference, after(2))).toEqual([]);
-    expect(pendingTriggers(interference, after(2, 10))).toEqual([]);
+    expect(pendingTriggers(tarnished, after(2))).toEqual([]);
+    expect(pendingTriggers(tarnished, after(2, 10))).toEqual([]);
   });
 
   it("comes due as soon as the tally reaches the dial", () => {
-    expect(pendingTriggers(interference, after(2, 2))).toHaveLength(1);
+    expect(pendingTriggers(tarnished, after(2, 2))).toHaveLength(1);
     // What the pack always did, which the dial's default preserves.
-    expect(pendingTriggers(interference, after(4))).toHaveLength(1);
+    expect(pendingTriggers(tarnished, after(4))).toHaveLength(1);
   });
 
   it("turns a run that owed nothing into one that owes a displacement, and back", () => {
-    expect(pendingTriggers(interference, after(3))).toEqual([]);
-    expect(pendingTriggers(interference, after(3, 1))).toHaveLength(1);
-    expect(pendingTriggers(interference, after(3, 9))).toEqual([]);
+    expect(pendingTriggers(tarnished, after(3))).toEqual([]);
+    expect(pendingTriggers(tarnished, after(3, 1))).toHaveLength(1);
+    expect(pendingTriggers(tarnished, after(3, 9))).toEqual([]);
   });
 });

@@ -8,7 +8,7 @@
  * repository, and the run they are in the middle of goes on playing the
  * old flow while the fix sits on main.
  *
- * That happened to `elden-ring-interference`, which was rewritten four
+ * That happened to `elden-ring-tarnishedtool`, which was rewritten four
  * times at 0.1.0. This is the check that would have caught it, run
  * against the base of the pull request rather than as a unit test,
  * because the question is not what the file says but whether it says

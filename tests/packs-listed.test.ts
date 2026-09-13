@@ -9,13 +9,16 @@ import { describe, expect, it } from "vitest";
  * A pack in this repository is named in four places: the app picks the
  * bundle up with a glob, and three hand-written lists validate it, play
  * its fixtures, and seed it into the catalog. Three of those are lists
- * somebody has to remember to add a line to, and Interference was in
+ * somebody has to remember to add a line to, and one pack was in
  * two of them for a week: written, tested, shipped in the app, and
  * absent from the catalog because one array had not been touched.
  *
- * A glob would have been the other fix, and the lists are deliberate:
- * the test bench is validated and played and never listed. So this
- * holds the lists to the directory instead.
+ * A glob would have been the other fix, and the lists are deliberate,
+ * because two directories are validated and played and never offered:
+ * `packs/testing` is the bench, and `packs/demo` is the worked example
+ * the guide and most of these tests are written against. What a player
+ * is offered is `packs/sketches`, which is what the app globs. So this
+ * holds the lists to the directories instead.
  */
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -26,18 +29,22 @@ const yamlIn = (dir: string) =>
     .map((f) => `${dir}/${f}`)
     .sort();
 
-/** What a player can be given: the demo packs and the sketches. */
-const shipped = [...yamlIn("packs/demo"), ...yamlIn("packs/sketches")];
-/** The bench, which is validated and played and never listed anywhere. */
-const bench = yamlIn("packs/testing");
+/** What a player is offered, and what the app globs into its bundle. */
+const shipped = yamlIn("packs/sketches");
+/**
+ * Validated and played, never listed: the bench, and the demo pack that
+ * the authoring guide and most of the suite are written against. Both
+ * have to keep loading; neither belongs in a storefront.
+ */
+const bench = [...yamlIn("packs/demo"), ...yamlIn("packs/testing")];
 
 const scripts = JSON.parse(read("package.json")).scripts as Record<string, string>;
 const seed = read("scripts/seed-listings.ts");
 
 describe("every pack this repo ships", () => {
   it("has some to check at all, so an empty directory cannot pass this file", () => {
-    expect(shipped.length).toBeGreaterThan(15);
-    expect(bench.length).toBeGreaterThan(0);
+    expect(shipped.length).toBeGreaterThan(5);
+    expect(bench.length).toBeGreaterThan(1);
   });
 
   it("is validated by npm run check:packs", () => {
@@ -55,7 +62,7 @@ describe("every pack this repo ships", () => {
     expect(missing, `add these to PACKS in scripts/seed-listings.ts:\n  ${missing.join("\n  ")}`).toEqual([]);
   });
 
-  it("leaves the test bench out of the catalog, which is the one deliberate absence", () => {
+  it("leaves the bench and the demo pack out of the catalog, the deliberate absences", () => {
     for (const p of bench) expect(seed).not.toContain(`"${p}"`);
   });
 });

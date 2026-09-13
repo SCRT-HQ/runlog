@@ -1,7 +1,7 @@
 {
   "tool": "TarnishedTool",
-  "pack": "com.scrthq.runlog.elden-ring-interference",
-  "title": "Elden Ring: Interference",
+  "pack": "com.scrthq.runlog.elden-ring-tarnishedtool",
+  "title": "Elden Ring: TarnishedTool",
   "setup": [
     {
       "op": "flag.set",
@@ -13,8 +13,8 @@
   ],
   "rows": [
     {
-      "entry": "in-slow",
-      "table": "interference",
+      "entry": "cu-slow",
+      "table": "curse",
       "label": "Slowed",
       "until": "unit",
       "ops": [
@@ -28,8 +28,8 @@
       ]
     },
     {
-      "entry": "in-wade",
-      "table": "interference",
+      "entry": "cu-wade",
+      "table": "curse",
       "label": "Wading",
       "until": "unit",
       "ops": [
@@ -43,8 +43,8 @@
       ]
     },
     {
-      "entry": "in-mired",
-      "table": "interference",
+      "entry": "cu-mired",
+      "table": "curse",
       "label": "Mired",
       "until": "unit",
       "ops": [
@@ -58,8 +58,8 @@
       ]
     },
     {
-      "entry": "in-quick",
-      "table": "interference",
+      "entry": "cu-quick",
+      "table": "curse",
       "label": "Hurried",
       "until": "unit",
       "ops": [
@@ -73,8 +73,8 @@
       ]
     },
     {
-      "entry": "in-frantic",
-      "table": "interference",
+      "entry": "cu-frantic",
+      "table": "curse",
       "label": "Frantic",
       "until": "unit",
       "ops": [
@@ -88,8 +88,8 @@
       ]
     },
     {
-      "entry": "in-berserk",
-      "table": "interference",
+      "entry": "cu-berserk",
+      "table": "curse",
       "label": "Berserk",
       "until": "unit",
       "ops": [
@@ -103,8 +103,8 @@
       ]
     },
     {
-      "entry": "in-slower",
-      "table": "interference",
+      "entry": "cu-slower",
+      "table": "curse",
       "label": "Sluggish",
       "until": "unit",
       "ops": [
@@ -118,8 +118,8 @@
       ]
     },
     {
-      "entry": "in-tender",
-      "table": "interference",
+      "entry": "cu-tender",
+      "table": "curse",
       "label": "Tender",
       "until": "unit",
       "ops": [
@@ -133,8 +133,8 @@
       ]
     },
     {
-      "entry": "in-glass",
-      "table": "interference",
+      "entry": "cu-glass",
+      "table": "curse",
       "label": "Glass",
       "until": "unit",
       "ops": [
@@ -148,8 +148,8 @@
       ]
     },
     {
-      "entry": "in-paper",
-      "table": "interference",
+      "entry": "cu-paper",
+      "table": "curse",
       "label": "Paper",
       "until": "unit",
       "ops": [
@@ -163,8 +163,8 @@
       ]
     },
     {
-      "entry": "in-blunt",
-      "table": "interference",
+      "entry": "cu-blunt",
+      "table": "curse",
       "label": "Blunted",
       "until": "unit",
       "ops": [
@@ -178,8 +178,8 @@
       ]
     },
     {
-      "entry": "in-dull",
-      "table": "interference",
+      "entry": "cu-dull",
+      "table": "curse",
       "label": "Dulled",
       "until": "unit",
       "ops": [
@@ -193,8 +193,8 @@
       ]
     },
     {
-      "entry": "in-useless",
-      "table": "interference",
+      "entry": "cu-useless",
+      "table": "curse",
       "label": "Useless",
       "until": "unit",
       "ops": [
@@ -208,8 +208,8 @@
       ]
     },
     {
-      "entry": "in-hollow",
-      "table": "interference",
+      "entry": "cu-hollow",
+      "table": "curse",
       "label": "Hollow",
       "until": "unit",
       "ops": [
@@ -223,8 +223,8 @@
       ]
     },
     {
-      "entry": "in-feeble",
-      "table": "interference",
+      "entry": "cu-feeble",
+      "table": "curse",
       "label": "Feeble",
       "until": "unit",
       "ops": [
@@ -238,8 +238,8 @@
       ]
     },
     {
-      "entry": "in-clumsy",
-      "table": "interference",
+      "entry": "cu-clumsy",
+      "table": "curse",
       "label": "Clumsy",
       "until": "unit",
       "ops": [
@@ -253,8 +253,8 @@
       ]
     },
     {
-      "entry": "in-winded",
-      "table": "interference",
+      "entry": "cu-winded",
+      "table": "curse",
       "label": "Winded",
       "until": "unit",
       "ops": [
@@ -268,8 +268,8 @@
       ]
     },
     {
-      "entry": "in-empty",
-      "table": "interference",
+      "entry": "cu-empty",
+      "table": "curse",
       "label": "Empty",
       "until": "unit",
       "ops": [
@@ -283,8 +283,8 @@
       ]
     },
     {
-      "entry": "in-poor",
-      "table": "interference",
+      "entry": "cu-poor",
+      "table": "curse",
       "label": "Poor",
       "until": "unit",
       "ops": [
@@ -298,8 +298,8 @@
       ]
     },
     {
-      "entry": "in-robbed",
-      "table": "interference",
+      "entry": "cu-robbed",
+      "table": "curse",
       "label": "Robbed",
       "until": "unit",
       "ops": [
@@ -319,8 +319,8 @@
       ]
     },
     {
-      "entry": "in-toll",
-      "table": "interference",
+      "entry": "cu-toll",
+      "table": "curse",
       "label": "Toll",
       "until": "unit",
       "ops": [
@@ -333,8 +333,8 @@
       ]
     },
     {
-      "entry": "in-lost",
-      "table": "interference",
+      "entry": "cu-lost",
+      "table": "curse",
       "label": "Mapless",
       "until": "unit",
       "ops": [
@@ -348,8 +348,8 @@
       ]
     },
     {
-      "entry": "in-unseen-world",
-      "table": "interference",
+      "entry": "cu-unseen-world",
+      "table": "curse",
       "label": "Blind",
       "until": "unit",
       "ops": [
@@ -363,8 +363,8 @@
       ]
     },
     {
-      "entry": "in-risen",
-      "table": "interference",
+      "entry": "cu-risen",
+      "table": "curse",
       "label": "The risen",
       "until": "unit",
       "ops": [
@@ -378,8 +378,8 @@
       ]
     },
     {
-      "entry": "in-stone",
-      "table": "interference",
+      "entry": "cu-stone",
+      "table": "curse",
       "label": "Unkillable",
       "until": "unit",
       "ops": [
@@ -393,8 +393,8 @@
       ]
     },
     {
-      "entry": "in-root",
-      "table": "interference",
+      "entry": "cu-root",
+      "table": "curse",
       "label": "Rooted",
       "until": "unit",
       "ops": [
@@ -408,8 +408,8 @@
       ]
     },
     {
-      "entry": "in-night",
-      "table": "interference",
+      "entry": "cu-night",
+      "table": "curse",
       "label": "Night",
       "ops": [
         {
@@ -421,8 +421,8 @@
       ]
     },
     {
-      "entry": "in-dusk",
-      "table": "interference",
+      "entry": "cu-dusk",
+      "table": "curse",
       "label": "Dusk",
       "ops": [
         {
@@ -434,8 +434,8 @@
       ]
     },
     {
-      "entry": "in-noon",
-      "table": "interference",
+      "entry": "cu-noon",
+      "table": "curse",
       "label": "Noon",
       "ops": [
         {
@@ -447,8 +447,8 @@
       ]
     },
     {
-      "entry": "in-morning",
-      "table": "interference",
+      "entry": "cu-morning",
+      "table": "curse",
       "label": "Morning",
       "ops": [
         {
@@ -460,8 +460,8 @@
       ]
     },
     {
-      "entry": "in-fog",
-      "table": "interference",
+      "entry": "cu-fog",
+      "table": "curse",
       "label": "Fog",
       "ops": [
         {
@@ -473,8 +473,8 @@
       ]
     },
     {
-      "entry": "in-rain",
-      "table": "interference",
+      "entry": "cu-rain",
+      "table": "curse",
       "label": "Rain",
       "ops": [
         {
@@ -486,8 +486,8 @@
       ]
     },
     {
-      "entry": "in-snow",
-      "table": "interference",
+      "entry": "cu-snow",
+      "table": "curse",
       "label": "Snow",
       "ops": [
         {
@@ -499,8 +499,8 @@
       ]
     },
     {
-      "entry": "in-clear",
-      "table": "interference",
+      "entry": "cu-clear",
+      "table": "curse",
       "label": "Clear",
       "ops": [
         {
@@ -1138,6 +1138,12 @@
             "area": "Limgrave",
             "name": "Church of Elleh"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1151,6 +1157,12 @@
           "args": {
             "area": "Limgrave",
             "name": "The First Step"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1166,6 +1178,12 @@
             "area": "Limgrave",
             "name": "Gatefront"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1179,6 +1197,12 @@
           "args": {
             "area": "Limgrave",
             "name": "Artist's Shack"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1194,6 +1218,12 @@
             "area": "Weeping Peninsula",
             "name": "Church of Pilgrimage"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1207,6 +1237,12 @@
           "args": {
             "area": "Weeping Peninsula",
             "name": "Castle Morne Rampart"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1222,6 +1258,12 @@
             "area": "Liurnia of the Lakes",
             "name": "Lake-Facing Cliffs"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1235,6 +1277,12 @@
           "args": {
             "area": "Liurnia of the Lakes",
             "name": "Liurnia Lake Shore"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1250,6 +1298,12 @@
             "area": "Liurnia of the Lakes",
             "name": "Scenic Isle"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1263,6 +1317,12 @@
           "args": {
             "area": "Stormveil Castle",
             "name": "Stormveil Main Gate"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1278,6 +1338,12 @@
             "area": "Stormveil Castle",
             "name": "Gateside Chamber"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1291,6 +1357,12 @@
           "args": {
             "area": "Altus Plateau",
             "name": "Altus Plateau"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1306,6 +1378,12 @@
             "area": "Altus Plateau",
             "name": "Erdtree-Gazing Hill"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1319,6 +1397,12 @@
           "args": {
             "area": "Altus Plateau",
             "name": "Windmill Village"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1334,6 +1418,12 @@
             "area": "Caelid",
             "name": "Smoldering Church"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1347,6 +1437,12 @@
           "args": {
             "area": "Caelid",
             "name": "Rotview Balcony"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1362,6 +1458,12 @@
             "area": "Caelid",
             "name": "Cathedral of Dragon Communion"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1375,6 +1477,12 @@
           "args": {
             "area": "Mt. Gelmir",
             "name": "Bridge of Iniquity"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1390,6 +1498,12 @@
             "area": "Mt. Gelmir",
             "name": "Seethewater River"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1403,6 +1517,12 @@
           "args": {
             "area": "Siofra River",
             "name": "Siofra River Bank"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1418,6 +1538,12 @@
             "area": "Siofra River",
             "name": "Worshippers' Woods"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1431,6 +1557,12 @@
           "args": {
             "area": "Ainsel River",
             "name": "Ainsel River Sluice Gate"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1446,6 +1578,12 @@
             "area": "Volcano Manor",
             "name": "Volcano Manor"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1459,6 +1597,12 @@
           "args": {
             "area": "Volcano Manor",
             "name": "Temple of Eiglay"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1474,6 +1618,12 @@
             "area": "Mountaintops of the Giants",
             "name": "Zamor Ruins"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1487,6 +1637,12 @@
           "args": {
             "area": "Mountaintops of the Giants",
             "name": "Freezing Lake"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1502,6 +1658,12 @@
             "area": "Lake of Rot",
             "name": "Lake of Rot Shoreside"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1515,6 +1677,12 @@
           "args": {
             "area": "Subterranean Shunning-Grounds",
             "name": "Underground Roadside"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1530,6 +1698,12 @@
             "area": "Deeproot Depths",
             "name": "Root-Facing Cliffs"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1543,6 +1717,12 @@
           "args": {
             "area": "Consecrated Snowfield",
             "name": "Consecrated Snowfield"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1558,6 +1738,12 @@
             "area": "Consecrated Snowfield",
             "name": "Ordina- Liturgical Town"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1571,6 +1757,12 @@
           "args": {
             "area": "Crumbling Farum Azula",
             "name": "Crumbling Beast Grave"
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]
@@ -1586,6 +1778,12 @@
             "area": "Roundtable Hold",
             "name": "Table of Lost Grace"
           }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
+          }
         }
       ]
     },
@@ -1598,6 +1796,12 @@
           "op": "player.drop",
           "args": {
             "height": 220
+          }
+        },
+        {
+          "op": "runes.give",
+          "args": {
+            "amount": 50000
           }
         }
       ]

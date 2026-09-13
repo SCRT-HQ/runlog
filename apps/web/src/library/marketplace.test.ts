@@ -11,12 +11,8 @@ describe("the marketplace", () => {
   it("lists every pack that ships, each of which loads", async () => {
     const entries = await loadMarketplace();
     expect(entries.map((e) => e.id)).toEqual([
-      "com.scrthq.runlog.any-given-day",
-      "com.scrthq.runlog.elden-ring-expedition",
-      "com.scrthq.runlog.elden-ring-interference",
-      "com.scrthq.runlog.elden-ring-trial",
       "com.scrthq.runlog.forfeits",
-      "com.scrthq.runlog.frog-first",
+      "com.scrthq.runlog.elden-ring-tarnishedtool",
       "com.scrthq.runlog.homefront",
       "com.scrthq.runlog.ladder-work",
       "com.scrthq.runlog.engine-testing",
@@ -26,12 +22,7 @@ describe("the marketplace", () => {
       "com.scrthq.runlog.rocket-league-showdown",
       "com.scrthq.runlog.run-of-show",
       "com.scrthq.runlog.salt-and-signal",
-      "com.scrthq.runlog.sunday-desk",
-      "com.scrthq.runlog.the-backlog",
-      "com.scrthq.runlog.long-kiln",
       "com.scrthq.runlog.twenty-five",
-      "com.scrthq.runlog.two-doors",
-      "com.scrthq.runlog.word-count",
     ]);
     for (const e of entries) {
       const parsed = loadPackText(await e.load(), "yaml");
@@ -43,16 +34,16 @@ describe("the marketplace", () => {
       expect(e.tags.length, e.id).toBeGreaterThan(0);
       expect(e.features.length, e.id).toBeGreaterThan(0);
     }
-    const trial = entries.find((e) => e.id === "com.scrthq.runlog.elden-ring-trial");
-    expect(trial?.features).toContain("moderated");
-    expect(trial?.features).not.toContain("solo");
-    const day = entries.find((e) => e.id === "com.scrthq.runlog.any-given-day");
-    expect(day?.features).toEqual(expect.arrayContaining(["solo", "together", "seeded", "timers", "cards", "journal", "reachesBack"]));
+    const showdown = entries.find((e) => e.id === "com.scrthq.runlog.rocket-league-showdown");
+    expect(showdown?.features).toContain("moderated");
+    expect(showdown?.features).not.toContain("solo");
+    const pantry = entries.find((e) => e.id === "com.scrthq.runlog.pantry-roulette");
+    expect(pantry?.features).toEqual(expect.arrayContaining(["solo", "together", "seeded", "timers", "journal", "reachesBack"]));
   });
 
   it("puts the starter first, and knows the old short names", async () => {
     expect((await loadMarketplace())[0]?.id).toBe(STARTER_PACK);
-    expect(await marketplaceEntry(LEGACY_IDS["kiln"]!)).toMatchObject({ title: "The Long Kiln" });
+    expect(await marketplaceEntry(LEGACY_IDS["ladder"]!)).toMatchObject({ title: "Ladder Work" });
     expect(await marketplaceEntry("nope")).toBeNull();
   });
 });
@@ -103,7 +94,7 @@ describe("the test bench", () => {
     load: async () => "",
     bench: true,
   };
-  const ordinary: MarketplaceEntry = { ...bench, id: "com.scrthq.runlog.any-given-day", title: "Any Given Day", bench: undefined };
+  const ordinary: MarketplaceEntry = { ...bench, id: "com.scrthq.runlog.twenty-five", title: "Twenty-five", bench: undefined };
 
   it("is dropped from a copy whose marketplace should not carry it", () => {
     expect(withTesting([ordinary, bench], false).map((e) => e.id)).toEqual([ordinary.id]);

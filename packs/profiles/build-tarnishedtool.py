@@ -1,9 +1,10 @@
-"""Build Interference's states, tables and control profile from one source.
+"""Build Elden Ring: TarnishedTool's states, tables and control profile
+from one source.
 
-Run it from anywhere: python packs/profiles/build-interference.py
+Run it from anywhere: python packs/profiles/build-tarnishedtool.py
 
 
-Each interference row is (weight, id, text, state, ops). `state` is
+Each curse row is (weight, id, text, state, ops). `state` is
 (id, label, short, description) or None; `ops` is what a tool does about
 it, or None for a vow that only the player enforces.
 """
@@ -27,53 +28,53 @@ def press(action):
 
 S = lambda i, l, sh, d: (i, l, sh, d)
 
-# ---- interference: what is wrong with the world for one stretch --------
+# ---- curse: what is wrong with the world for one scene --------
 # Everything here is adverse, or at worst weather. There is nothing good
 # in this table: a reward you rolled into by accident is not a reward,
 # and the boon table below is where being paid belongs.
 I = [
     # Slower, faster, frailer, feebler.
-    (3, "in-slow", "Your legs are heavy. You move at four fifths.", S("slowed", "Slowed", "SLOW", "You move at four fifths."), val("player.speed", 0.8)),
-    (2, "in-wade", "You are wading. Two thirds speed, everywhere, all stretch.", S("wading", "Wading", "WADE", "You move at two thirds."), val("player.speed", 0.66)),
-    (1, "in-mired", "Mired. Half speed, and everything in this game is faster than you.", S("mired", "Mired", "MIRE", "You move at half speed."), val("player.speed", 0.5)),
-    (3, "in-quick", "The world is hurried. Everything but you runs a fifth faster.", S("hurried", "Hurried", "FAST", "The world runs a fifth faster."), val("game.speed", 1.2)),
-    (2, "in-frantic", "The world is frantic. Half again as fast as it should be.", S("frantic", "Frantic", "MANC", "The world runs half again as fast."), val("game.speed", 1.5)),
-    (1, "in-berserk", "The world has lost its mind. Everything at nearly double speed.", S("berserk", "Berserk", "BSRK", "The world runs at nearly double speed."), val("game.speed", 1.75)),
-    (2, "in-slower", "Everything slows, you included. The world at four fifths.", S("sluggish", "Sluggish", "DRAG", "The whole world at four fifths."), val("game.speed", 0.8)),
-    (3, "in-tender", "You bruise. Half again the damage from everything.", S("tender", "Tender", "TEND", "You take half again the damage."), val("player.incomingDamage", 1.5)),
-    (3, "in-glass", "You are glass. Everything that touches you hits twice as hard.", S("glass", "Glass", "GLAS", "Everything hits twice as hard."), val("player.incomingDamage", 2)),
-    (1, "in-paper", "You are paper. Three times damage, and you will feel all of it.", S("paper", "Paper", "PAPR", "Everything hits three times as hard."), val("player.incomingDamage", 3)),
-    (3, "in-blunt", "Your weapons are blunt. A little over half of what you should deal.", S("blunted", "Blunted", "BLNT", "You deal three fifths damage."), val("player.outgoingDamage", 0.6)),
-    (2, "in-dull", "Your weapons are dull. Two fifths, and everything takes twice as long.", S("dulled", "Dulled", "DULL", "You deal two fifths damage."), val("player.outgoingDamage", 0.4)),
-    (1, "in-useless", "Your weapons are useless. A quarter damage. Consider running.", S("useless", "Useless", "USLS", "You deal a quarter damage."), val("player.outgoingDamage", 0.25)),
+    (3, "cu-slow", "Your legs are heavy. You move at four fifths.", S("slowed", "Slowed", "SLOW", "You move at four fifths."), val("player.speed", 0.8)),
+    (2, "cu-wade", "You are wading. Two thirds speed, everywhere, all scene.", S("wading", "Wading", "WADE", "You move at two thirds."), val("player.speed", 0.66)),
+    (1, "cu-mired", "Mired. Half speed, and everything in this game is faster than you.", S("mired", "Mired", "MIRE", "You move at half speed."), val("player.speed", 0.5)),
+    (3, "cu-quick", "The world is hurried. Everything but you runs a fifth faster.", S("hurried", "Hurried", "FAST", "The world runs a fifth faster."), val("game.speed", 1.2)),
+    (2, "cu-frantic", "The world is frantic. Half again as fast as it should be.", S("frantic", "Frantic", "MANC", "The world runs half again as fast."), val("game.speed", 1.5)),
+    (1, "cu-berserk", "The world has lost its mind. Everything at nearly double speed.", S("berserk", "Berserk", "BSRK", "The world runs at nearly double speed."), val("game.speed", 1.75)),
+    (2, "cu-slower", "Everything slows, you included. The world at four fifths.", S("sluggish", "Sluggish", "DRAG", "The whole world at four fifths."), val("game.speed", 0.8)),
+    (3, "cu-tender", "You bruise. Half again the damage from everything.", S("tender", "Tender", "TEND", "You take half again the damage."), val("player.incomingDamage", 1.5)),
+    (3, "cu-glass", "You are glass. Everything that touches you hits twice as hard.", S("glass", "Glass", "GLAS", "Everything hits twice as hard."), val("player.incomingDamage", 2)),
+    (1, "cu-paper", "You are paper. Three times damage, and you will feel all of it.", S("paper", "Paper", "PAPR", "Everything hits three times as hard."), val("player.incomingDamage", 3)),
+    (3, "cu-blunt", "Your weapons are blunt. A little over half of what you should deal.", S("blunted", "Blunted", "BLNT", "You deal three fifths damage."), val("player.outgoingDamage", 0.6)),
+    (2, "cu-dull", "Your weapons are dull. Two fifths, and everything takes twice as long.", S("dulled", "Dulled", "DULL", "You deal two fifths damage."), val("player.outgoingDamage", 0.4)),
+    (1, "cu-useless", "Your weapons are useless. A quarter damage. Consider running.", S("useless", "Useless", "USLS", "You deal a quarter damage."), val("player.outgoingDamage", 0.25)),
     # What you are made of, taken away.
-    (2, "in-hollow", "Hollow. Your vigor is one for the stretch; everything kills you.", S("hollow", "Hollow", "HOLW", "Vigor is one."), val("player.vigor", 1)),
-    (2, "in-feeble", "Feeble. Your strength is one, and half of what you carry is unusable.", S("feeble", "Feeble", "FEEB", "Strength is one."), val("player.strength", 1)),
-    (2, "in-clumsy", "Clumsy. Your dexterity is one; hope you were not built for it.", S("clumsy", "Clumsy", "CLMS", "Dexterity is one."), val("player.dexterity", 1)),
-    (2, "in-winded", "Winded. Your endurance is one. Two swings and a roll, if that.", S("winded", "Winded", "ENDR", "Endurance is one."), val("player.endurance", 1)),
-    (1, "in-empty", "Empty. Your mind is one. Whatever you cast, you do not, now.", S("empty", "Empty", "MIND", "Mind is one."), val("player.mind", 1)),
+    (2, "cu-hollow", "Hollow. Your vigor is one for the scene; everything kills you.", S("hollow", "Hollow", "HOLW", "Vigor is one."), val("player.vigor", 1)),
+    (2, "cu-feeble", "Feeble. Your strength is one, and half of what you carry is unusable.", S("feeble", "Feeble", "FEEB", "Strength is one."), val("player.strength", 1)),
+    (2, "cu-clumsy", "Clumsy. Your dexterity is one; hope you were not built for it.", S("clumsy", "Clumsy", "CLMS", "Dexterity is one."), val("player.dexterity", 1)),
+    (2, "cu-winded", "Winded. Your endurance is one. Two swings and a roll, if that.", S("winded", "Winded", "ENDR", "Endurance is one."), val("player.endurance", 1)),
+    (1, "cu-empty", "Empty. Your mind is one. Whatever you cast, you do not, now.", S("empty", "Empty", "MIND", "Mind is one."), val("player.mind", 1)),
     # Money and sight.
-    (3, "in-poor", "Nothing is owed to you. No runes from anything that dies.", S("poor", "Poor", "POOR", "No runes from anything."), flag("player.noRuneGain")),
-    (2, "in-robbed", "Robbed. Ten thousand gone now, and nothing earned this stretch is yours either.", S("robbed", "Robbed", "ROBD", "Ten thousand taken, and no runes earned."), runes(-10000) + flag("player.noRuneGain")),
-    (2, "in-toll", "A toll. Ten thousand runes, taken, whether you had them or not.", None, runes(-10000)),
-    (2, "in-lost", "No map. You cannot open it this stretch; go by landmark.", S("mapless", "Mapless", "LOST", "The map cannot be opened."), flag("world.hideMap")),
-    (1, "in-unseen-world", "Nothing renders. You can see the world and nothing living in it.", S("blind", "Blind", "BLND", "Characters are not drawn."), flag("world.hideCharacters")),
+    (3, "cu-poor", "Nothing is owed to you. No runes from anything that dies.", S("poor", "Poor", "POOR", "No runes from anything."), flag("player.noRuneGain")),
+    (2, "cu-robbed", "Robbed. Ten thousand gone now, and nothing earned this scene is yours either.", S("robbed", "Robbed", "ROBD", "Ten thousand taken, and no runes earned."), runes(-10000) + flag("player.noRuneGain")),
+    (2, "cu-toll", "A toll. Ten thousand runes, taken, whether you had them or not.", None, runes(-10000)),
+    (2, "cu-lost", "No map. You cannot open it this scene; go by landmark.", S("mapless", "Mapless", "LOST", "The map cannot be opened."), flag("world.hideMap")),
+    (1, "cu-unseen-world", "Nothing renders. You can see the world and nothing living in it.", S("blind", "Blind", "BLND", "Characters are not drawn."), flag("world.hideCharacters")),
     # What the dead do.
-    (3, "in-risen", "The dead get up. Nothing you kill this stretch stays down.", S("risen", "The risen", "RISE", "Nothing you kill stays dead."), flag("enemies.noDeath")),
-    (2, "in-stone", "Nothing here can be hurt. Kill nothing; go around.", S("stone", "Unkillable", "STON", "Nothing can be damaged."), flag("enemies.noDamage")),
-    (3, "in-root", "You cannot dodge. No rolling this stretch, at all.", S("rooted", "Rooted", "ROOT", "No rolling."), flag("player.noRoll")),
+    (3, "cu-risen", "The dead get up. Nothing you kill this scene stays down.", S("risen", "The risen", "RISE", "Nothing you kill stays dead."), flag("enemies.noDeath")),
+    (2, "cu-stone", "Nothing here can be hurt. Kill nothing; go around.", S("stone", "Unkillable", "STON", "Nothing can be damaged."), flag("enemies.noDamage")),
+    (3, "cu-root", "You cannot dodge. No rolling this scene, at all.", S("rooted", "Rooted", "ROOT", "No rolling."), flag("player.noRoll")),
     # Weather is not a kindness or a cruelty. It is weather. Each
-    # carries a badge so the board says what this stretch is like,
+    # carries a badge so the board says what this scene is like,
     # though the weather itself outlives the badge: nothing puts the sun
     # back up, and the next thing to change it is the next draw.
-    (2, "in-night", "Night falls, now, wherever you are.", S("nightfall", "Night", "NGHT", "Night fell on this stretch. The dark outlives it; the badge does not."), press("SetNight")),
-    (2, "in-dusk", "Dusk, and the light going.", S("dusk", "Dusk", "DUSK", "Dusk came on this stretch."), press("SetDusk")),
-    (1, "in-noon", "Noon, whether it suits you or not.", S("noon", "Noon", "NOON", "Noon, on this stretch."), press("SetNoon")),
-    (1, "in-morning", "Morning. The light comes back, for what it is worth.", S("morning", "Morning", "MORN", "Morning came on this stretch."), press("SetMorning")),
-    (2, "in-fog", "Fog rolls in and stays.", S("fog", "Fog", "FOG", "Fog came in on this stretch."), press("FoggyWeather")),
-    (2, "in-rain", "Rain, for the whole stretch.", S("rain", "Rain", "RAIN", "Rain, for this stretch."), press("RainyWeather")),
-    (2, "in-snow", "Snow, wherever you happen to be.", S("snow", "Snow", "SNOW", "Snow, on this stretch."), press("SnowyWeather")),
-    (1, "in-clear", "Clear skies, for once. Which means everything can see you.", S("clear", "Clear", "CLR", "Clear skies on this stretch, and nothing to hide behind."), press("DefaultWeather")),
+    (2, "cu-night", "Night falls, now, wherever you are.", S("nightfall", "Night", "NGHT", "Night fell on this scene. The dark outlives it; the badge does not."), press("SetNight")),
+    (2, "cu-dusk", "Dusk, and the light going.", S("dusk", "Dusk", "DUSK", "Dusk came on this scene."), press("SetDusk")),
+    (1, "cu-noon", "Noon, whether it suits you or not.", S("noon", "Noon", "NOON", "Noon, on this scene."), press("SetNoon")),
+    (1, "cu-morning", "Morning. The light comes back, for what it is worth.", S("morning", "Morning", "MORN", "Morning came on this scene."), press("SetMorning")),
+    (2, "cu-fog", "Fog rolls in and stays.", S("fog", "Fog", "FOG", "Fog came in on this scene."), press("FoggyWeather")),
+    (2, "cu-rain", "Rain, for the whole scene.", S("rain", "Rain", "RAIN", "Rain, for this scene."), press("RainyWeather")),
+    (2, "cu-snow", "Snow, wherever you happen to be.", S("snow", "Snow", "SNOW", "Snow, on this scene."), press("SnowyWeather")),
+    (1, "cu-clear", "Clear skies, for once. Which means everything can see you.", S("clear", "Clear", "CLR", "Clear skies on this scene, and nothing to hide behind."), press("DefaultWeather")),
     # Vows: nothing enforces these but you.
     (3, "vo-stay", "Do not leave this region. Whatever you meant to do elsewhere, do it here.", S("bound", "Bound", "STAY", "Do not leave this region."), None),
     (3, "vo-alone", "Alone. No summons and no Spirit Ashes.", S("alone", "Alone", "ALON", "No summons, no Spirit Ashes."), None),
@@ -97,64 +98,64 @@ I = [
     (2, "vo-notravel", "No fast travel. Ride or walk wherever you are going.", S("overland", "Overland", "TRVL", "No fast travel."), None),
     (2, "vo-noloot", "Pick nothing up. Walk past all of it.", S("empty-handed", "Empty-handed", "LOOT", "Pick nothing up."), None),
     (2, "vo-fight", "Fight what you wake. Nothing you aggro may be left behind.", S("standing", "Standing", "FGHT", "Nothing you aggro is left behind."), None),
-    (1, "vo-twohand", "Two hands on one weapon, the whole stretch.", S("twohanded", "Two-handed", "BOTH", "Two hands on one weapon."), None),
+    (1, "vo-twohand", "Two hands on one weapon, the whole scene.", S("twohanded", "Two-handed", "BOTH", "Two hands on one weapon."), None),
     (1, "vo-moving", "Keep moving. Never stand still for longer than it takes to swing.", S("driven", "Driven", "MOVE", "Never stand still."), None),
-    (2, "in-calm", "Nothing at all. Ten quiet minutes; use them.", None, None),
+    (2, "cu-calm", "Nothing at all. Ten quiet minutes; use them.", None, None),
 ]
 
-# ---- target: what the stretch is for -----------------------------------
+# ---- objective: what the scene is for -----------------------------------
 T = [
-    (4, "ta-near", "Whatever holds the nearest ruin, cave, catacomb or camp. Name it and kill it.", 3, []),
-    (3, "ta-boss", "A named boss of wherever you have landed. Name it, find it, put it down.", 5, ["hard"]),
-    (2, "ta-field", "A field boss out in the open. The kind with a health bar and no door.", 4, []),
-    (2, "ta-again", "A boss you have already beaten, again, at whatever it costs.", 4, ["hard"]),
-    (2, "ta-gaol", "An evergaol. Name one, open it, and finish what is inside.", 4, ["hard"]),
-    (2, "ta-tunnel", "A mine or tunnel, all the way to whatever is at the end.", 4, ["hard"]),
-    (2, "ta-catacomb", "A catacomb, to the bottom, including the thing at the bottom.", 4, ["hard"]),
-    (2, "ta-cave", "A cave, to the bottom, including whatever lives there.", 3, []),
-    (2, "ta-tunnel-boss", "A mine. Down to the bottom and through whatever is guarding the ore.", 4, ["hard"]),
-    (3, "ta-knight", "A knight. Any of the big armored ones, wherever you are.", 3, []),
-    (2, "ta-dragon", "Something enormous. A dragon, a giant, a troll. Name it.", 5, ["hard"]),
-    (2, "ta-invader", "A hostile NPC. Whoever invades, or whoever you go and invade.", 3, []),
-    (2, "ta-beast", "A great beast: a lion, a bear, a crab, a pack of wolves that will not come one at a time.", 3, []),
-    (3, "ta-three", "Three of a kind. Pick an enemy type you can see and kill three.", 2, []),
-    (3, "ta-five", "Five of a kind. Pick a type and count to five.", 3, []),
-    (1, "ta-ten", "Ten of a kind. Yes, ten. Pick something common.", 5, ["hard"]),
-    (2, "ta-camp", "Clear a camp. Every enemy in one encampment, to the last.", 4, ["hard"]),
-    (2, "ta-building", "Clear a building. Everything inside one structure, top to bottom.", 3, []),
-    (2, "ta-patrol", "A patrol. Follow it to the end of its round, then kill all of it where it stops.", 3, []),
-    (1, "ta-night", "Something that only comes out at night. Wait for it if you must.", 5, ["hard"]),
-    (3, "ta-church", "A church you have not been inside. Find one, get to the altar, and take what is on it.", 3, []),
-    (2, "ta-key", "A key item: a stonesword key, a whetblade, a medallion half. Name one and take it.", 3, []),
-    (2, "ta-map", "A map fragment. Name which one and go and get it.", 3, []),
-    (2, "ta-seed", "A Golden Seed or a Sacred Tear. Either will do; name it first.", 3, []),
-    (2, "ta-stone", "Smithing stones, three of them, of any kind.", 2, []),
-    (2, "ta-talisman", "A talisman you do not own. Name it and wear it out of there.", 3, []),
-    (2, "ta-weapon", "A weapon you do not own, and swing it once before the stretch ends.", 3, []),
-    (2, "ta-ash", "An Ash of War, or a Spirit Ash. Name it and take it.", 3, []),
-    (2, "ta-spell", "A spell or incantation you do not know.", 3, []),
-    (2, "ta-scarab", "A teardrop scarab. Chase one down and kill it before it gets away.", 3, []),
-    (3, "ta-grace", "A grace you have never lit. Get to one and light it, however far that is.", 2, []),
-    (3, "ta-erdtree", "A Minor Erdtree. Get to one and kill whatever is standing under it.", 4, ["hard"]),
-    (2, "ta-cross", "Into the next region, overland. No fast travel, and arrive at a grace on the other side.", 3, []),
-    (2, "ta-caravan", "A caravan. Kill what is pulling it, kill what is guarding it, and take what it was carrying.", 4, ["hard"]),
-    (2, "ta-runebear", "A Runebear. Find one, fight it, and do not leave until one of you is finished.", 5, ["hard"]),
-    (2, "ta-door", "An imp statue door. Find one, find a stonesword key, and take what is behind it.", 3, []),
-    (2, "ta-upgrade", "Put a weapon up a tier. Find the stones for it this stretch, whatever that takes.", 3, []),
-    (2, "ta-rise", "A Rise. Get inside it, work out what it wants, and take what is at the top.", 4, ["hard"]),
-    (2, "ta-level", "A level. Earn the runes for it this stretch and spend them before it ends.", 3, []),
-    (2, "ta-road", "A road. Follow it to the next grace along it and kill everything that contests the way.", 3, []),
-    (2, "ta-nohit", "Whatever you name, do it without being hit once.", 6, ["hard"]),
-    (2, "ta-nofla", "Whatever you name, do it without drinking anything.", 5, ["hard"]),
-    (1, "ta-fast", "Whatever you name, do it in the first half of the stretch.", 5, ["hard"]),
-    (2, "ta-two", "One more than you were going to have. Draw again, and settle both before the stretch is out.", None,
+    (4, "ob-near", "Whatever holds the nearest ruin, cave, catacomb or camp. Name it and kill it.", 3, []),
+    (3, "ob-boss", "A named boss of wherever you have landed. Name it, find it, put it down.", 5, ["hard"]),
+    (2, "ob-field", "A field boss out in the open. The kind with a health bar and no door.", 4, []),
+    (2, "ob-again", "A boss you have already beaten, again, at whatever it costs.", 4, ["hard"]),
+    (2, "ob-gaol", "An evergaol. Name one, open it, and finish what is inside.", 4, ["hard"]),
+    (2, "ob-tunnel", "A mine or tunnel, all the way to whatever is at the end.", 4, ["hard"]),
+    (2, "ob-catacomb", "A catacomb, to the bottom, including the thing at the bottom.", 4, ["hard"]),
+    (2, "ob-cave", "A cave, to the bottom, including whatever lives there.", 3, []),
+    (2, "ob-tunnel-boss", "A mine. Down to the bottom and through whatever is guarding the ore.", 4, ["hard"]),
+    (3, "ob-knight", "A knight. Any of the big armored ones, wherever you are.", 3, []),
+    (2, "ob-dragon", "Something enormous. A dragon, a giant, a troll. Name it.", 5, ["hard"]),
+    (2, "ob-invader", "A hostile NPC. Whoever invades, or whoever you go and invade.", 3, []),
+    (2, "ob-beast", "A great beast: a lion, a bear, a crab, a pack of wolves that will not come one at a time.", 3, []),
+    (3, "ob-three", "Three of a kind. Pick an enemy type you can see and kill three.", 2, []),
+    (3, "ob-five", "Five of a kind. Pick a type and count to five.", 3, []),
+    (1, "ob-ten", "Ten of a kind. Yes, ten. Pick something common.", 5, ["hard"]),
+    (2, "ob-camp", "Clear a camp. Every enemy in one encampment, to the last.", 4, ["hard"]),
+    (2, "ob-building", "Clear a building. Everything inside one structure, top to bottom.", 3, []),
+    (2, "ob-patrol", "A patrol. Follow it to the end of its round, then kill all of it where it stops.", 3, []),
+    (1, "ob-night", "Something that only comes out at night. Wait for it if you must.", 5, ["hard"]),
+    (3, "ob-church", "A church you have not been inside. Find one, get to the altar, and take what is on it.", 3, []),
+    (2, "ob-key", "A key item: a stonesword key, a whetblade, a medallion half. Name one and take it.", 3, []),
+    (2, "ob-map", "A map fragment. Name which one and go and get it.", 3, []),
+    (2, "ob-seed", "A Golden Seed or a Sacred Tear. Either will do; name it first.", 3, []),
+    (2, "ob-stone", "Smithing stones, three of them, of any kind.", 2, []),
+    (2, "ob-talisman", "A talisman you do not own. Name it and wear it out of there.", 3, []),
+    (2, "ob-weapon", "A weapon you do not own, and swing it once before the scene ends.", 3, []),
+    (2, "ob-ash", "An Ash of War, or a Spirit Ash. Name it and take it.", 3, []),
+    (2, "ob-spell", "A spell or incantation you do not know.", 3, []),
+    (2, "ob-scarab", "A teardrop scarab. Chase one down and kill it before it gets away.", 3, []),
+    (3, "ob-grace", "A grace you have never lit. Get to one and light it, however far that is.", 2, []),
+    (3, "ob-erdtree", "A Minor Erdtree. Get to one and kill whatever is standing under it.", 4, ["hard"]),
+    (2, "ob-cross", "Into the next region, overland. No fast travel, and arrive at a grace on the other side.", 3, []),
+    (2, "ob-caravan", "A caravan. Kill what is pulling it, kill what is guarding it, and take what it was carrying.", 4, ["hard"]),
+    (2, "ob-runebear", "A Runebear. Find one, fight it, and do not leave until one of you is finished.", 5, ["hard"]),
+    (2, "ob-door", "An imp statue door. Find one, find a stonesword key, and take what is behind it.", 3, []),
+    (2, "ob-upgrade", "Put a weapon up a tier. Find the stones for it this scene, whatever that takes.", 3, []),
+    (2, "ob-rise", "A Rise. Get inside it, work out what it wants, and take what is at the top.", 4, ["hard"]),
+    (2, "ob-level", "A level. Earn the runes for it this scene and spend them before it ends.", 3, []),
+    (2, "ob-road", "A road. Follow it to the next grace along it and kill everything that contests the way.", 3, []),
+    (2, "ob-nohit", "Whatever you name, do it without being hit once.", 6, ["hard"]),
+    (2, "ob-nofla", "Whatever you name, do it without drinking anything.", 5, ["hard"]),
+    (1, "ob-fast", "Whatever you name, do it in the first half of the scene.", 5, ["hard"]),
+    (2, "ob-two", "One more than you were going to have. Draw again, and settle both before the scene is out.", None,
      ["hard", "TRIGGER1"]),
-    (1, "ta-three-t", "Two more than you were going to have. Draw twice again. Good luck.", None, ["hard", "TRIGGER2"]),
-    (3, "ta-rest", "Nothing is asked of you. Survive the stretch and that is enough.", None, ["mercy"]),
-    # Nothing to go back to on the first stretch, so the tag keeps it
+    (1, "ob-three-t", "Two more than you were going to have. Draw twice again. Good luck.", None, ["hard", "TRIGGER2"]),
+    (3, "ob-rest", "Nothing is asked of you. Survive the scene and that is enough.", None, ["mercy"]),
+    # Nothing to go back to on the first scene, so the tag keeps it
     # out of that draw rather than handing somebody an instruction with
     # no referent.
-    (2, "ta-back", "Back to where the last stretch started, overland, on foot or on Torrent. No fast travel.", 3, ["BEHIND"]),
+    (2, "ob-back", "Back to where the last scene started, overland, on foot or on Torrent. No fast travel.", 3, ["BEHIND"]),
 ]
 
 PLACES = [
@@ -196,7 +197,7 @@ PLACES = [
 def item(name, quantity=1):
     return [{"op": "item.named", "args": {"name": name, "quantity": quantity}}]
 
-# ---- boon: what settling a target is worth -----------------------------
+# ---- boon: what settling an objective is worth -----------------------------
 # Drawn when the player says they settled it, which is the only way
 # anything here can know. A boon is a reward, so nothing in it is a
 # punishment and nothing is worth points.
@@ -220,30 +221,30 @@ B = [
     (2, "bo-shards", "Starlight Shards, for anyone who casts.", None, item("Starlight Shards", 3)),
     (2, "bo-grease", "Fire Grease. Put it on something and go and use it.", None, item("Fire Grease", 3)),
     (1, "bo-prawn", "Boiled Prawn. Small, and it has saved better runners than you.", None, item("Boiled Prawn", 3)),
-    (1, "bo-warming", "A Warming Stone, for whatever the next stretch does to you.", None, item("Warming Stone", 2)),
+    (1, "bo-warming", "A Warming Stone, for whatever the next scene does to you.", None, item("Warming Stone", 2)),
     (1, "bo-medallion", "A Crimson Amber Medallion. Wear it or sell it.", None, item("Crimson Amber Medallion")),
     (1, "bo-cerulean", "A Cerulean Crystal Tear, for the flask you keep forgetting.", None, item("Cerulean Crystal Tear")),
     (1, "bo-opaline", "An Opaline Bubbletear. One hit that will not land.", None, item("Opaline Bubbletear")),
     (3, "bo-mend", "You are made whole. Health, focus and flasks, all back.", None, press("SetRfbs")),
     (3, "bo-heal", "Healed to full, where you stand.", None, press("SetMaxHp")),
-    (3, "bo-wind", "The next stretch costs you no stamina.", S("blessed-wind", "Second wind", "WIND+", "A boon. Stamina does not run out."), flag("player.infiniteStamina")),
-    (2, "bo-focus", "The next stretch costs you no focus.", S("blessed-focus", "Clear head", "FOCS+", "A boon. FP does not run out."), flag("player.infiniteFp")),
-    (3, "bo-sharp", "Your weapons bite. Double damage until the stretch is out.", S("blessed-sharp", "Whetted", "SHRP+", "A boon. Double damage."), val("player.outgoingDamage", 2)),
-    (2, "bo-tough", "Nothing hurts as much. Half damage until the stretch is out.", S("blessed-tough", "Warded", "WARD", "A boon. Half damage taken."), val("player.incomingDamage", 0.5)),
+    (3, "bo-wind", "The next scene costs you no stamina.", S("blessed-wind", "Second wind", "WIND+", "A boon. Stamina does not run out."), flag("player.infiniteStamina")),
+    (2, "bo-focus", "The next scene costs you no focus.", S("blessed-focus", "Clear head", "FOCS+", "A boon. FP does not run out."), flag("player.infiniteFp")),
+    (3, "bo-sharp", "Your weapons bite. Double damage until the scene is out.", S("blessed-sharp", "Whetted", "SHRP+", "A boon. Double damage."), val("player.outgoingDamage", 2)),
+    (2, "bo-tough", "Nothing hurts as much. Half damage until the scene is out.", S("blessed-tough", "Warded", "WARD", "A boon. Half damage taken."), val("player.incomingDamage", 0.5)),
     (2, "bo-luck", "Everything drops what it is carrying, for a while.", S("blessed-luck", "Fortunate", "DROP+", "A boon. Drops are guaranteed."), flag("world.guaranteedDrop")),
-    (2, "bo-quiet", "Nothing hears you for the rest of the stretch.", S("blessed-quiet", "Quiet", "HUSH+", "A boon. Nothing hears you."), flag("player.silent")),
-    (2, "bo-mending", "You mend as you walk, for the rest of the stretch.", S("blessed-mend", "Mending", "MEND+", "A boon. You heal over time."), flag("player.healOverTime")),
+    (2, "bo-quiet", "Nothing hears you for the rest of the scene.", S("blessed-quiet", "Quiet", "HUSH+", "A boon. Nothing hears you."), flag("player.silent")),
+    (2, "bo-mending", "You mend as you walk, for the rest of the scene.", S("blessed-mend", "Mending", "MEND+", "A boon. You heal over time."), flag("player.healOverTime")),
     (1, "bo-keep", "Whatever happens next, it will not cost you runes.", S("blessed-keep", "Held", "KEEP+", "A boon. Death costs no runes."), flag("player.noRuneLoss")),
-    (1, "bo-horse", "Torrent comes when called, anywhere, for the rest of the stretch.", S("blessed-horse", "Mounted", "HORS+", "A boon. Torrent anywhere."), flag("player.torrentAnywhere")),
-    (2, "bo-swift", "You are quick. A quarter faster for the rest of the stretch.", S("blessed-swift", "Swift", "SWFT", "A boon. You move a quarter faster."), val("player.speed", 1.25)),
-    (2, "bo-peace", "Nothing will raise a hand to you for the rest of the stretch.", S("blessed-peace", "Peace", "PEAC", "A boon. Nothing attacks."), flag("enemies.noAttack")),
-    (2, "bo-still", "Nothing moves from where it stands, for the rest of the stretch.", S("blessed-still", "Stillness", "STIL", "A boon. Nothing moves."), flag("enemies.noMove")),
+    (1, "bo-horse", "Torrent comes when called, anywhere, for the rest of the scene.", S("blessed-horse", "Mounted", "HORS+", "A boon. Torrent anywhere."), flag("player.torrentAnywhere")),
+    (2, "bo-swift", "You are quick. A quarter faster for the rest of the scene.", S("blessed-swift", "Swift", "SWFT", "A boon. You move a quarter faster."), val("player.speed", 1.25)),
+    (2, "bo-peace", "Nothing will raise a hand to you for the rest of the scene.", S("blessed-peace", "Peace", "PEAC", "A boon. Nothing attacks."), flag("enemies.noAttack")),
+    (2, "bo-still", "Nothing moves from where it stands, for the rest of the scene.", S("blessed-still", "Stillness", "STIL", "A boon. Nothing moves."), flag("enemies.noMove")),
     (1, "bo-asleep", "Nothing is thinking about you at all any more.", S("blessed-sleep", "Asleep", "SLEP", "A boon. Nothing is paying attention."), flag("enemies.noAi")),
-    (2, "bo-stocked", "Your pouch does not empty for the rest of the stretch.", S("blessed-stock", "Stocked", "FULL", "A boon. Consumables are not used up."), flag("player.infiniteConsumables")),
-    (1, "bo-quiver", "Your quiver does not empty for the rest of the stretch.", S("blessed-ammo", "Quivered", "AMMO", "A boon. Arrows are not used up."), flag("player.infiniteArrows")),
-    (2, "bo-anchored", "Nothing staggers you for the rest of the stretch.", S("blessed-poise", "Anchored", "POIS", "A boon. You cannot be staggered."), flag("player.infinitePoise")),
-    (1, "bo-unseen", "Nothing sees you for the rest of the stretch.", S("blessed-unseen", "Unseen", "DARK", "A boon. Nothing sees you."), flag("player.hidden")),
-    (1, "bo-lethal", "For the rest of this stretch, anything you hit dies.", S("blessed-lethal", "Dreadful", "KILL+", "A boon. Anything you hit dies."), flag("player.oneShot")),
+    (2, "bo-stocked", "Your pouch does not empty for the rest of the scene.", S("blessed-stock", "Stocked", "FULL", "A boon. Consumables are not used up."), flag("player.infiniteConsumables")),
+    (1, "bo-quiver", "Your quiver does not empty for the rest of the scene.", S("blessed-ammo", "Quivered", "AMMO", "A boon. Arrows are not used up."), flag("player.infiniteArrows")),
+    (2, "bo-anchored", "Nothing staggers you for the rest of the scene.", S("blessed-poise", "Anchored", "POIS", "A boon. You cannot be staggered."), flag("player.infinitePoise")),
+    (1, "bo-unseen", "Nothing sees you for the rest of the scene.", S("blessed-unseen", "Unseen", "DARK", "A boon. Nothing sees you."), flag("player.hidden")),
+    (1, "bo-lethal", "For the rest of this scene, anything you hit dies.", S("blessed-lethal", "Dreadful", "KILL+", "A boon. Anything you hit dies."), flag("player.oneShot")),
 ]
 
 # ---- emit ---------------------------------------------------------------
@@ -296,11 +297,11 @@ def table(name, title, desc, built, extra_of):
     return "\n".join(out) + "\n"
 
 def i_extra(row):
-    """An interference: something a tool does, or a vow only you keep."""
+    """A curse: something a tool does, or a vow only you keep."""
     state, ops = row[3], row[4]
-    tags = ["interference", "effect" if ops else "vow"]
-    if row[1] == "in-calm":
-        tags = ["interference", "quiet"]
+    tags = ["curse", "effect" if ops else "vow"]
+    if row[1] == "cu-calm":
+        tags = ["curse", "quiet"]
     lines = ["tags: [" + ", ".join(tags) + "]"]
     if state:
         lines.append("grants: [" + state[0] + "]")
@@ -327,14 +328,14 @@ def t_extra(row):
         if t == "BEHIND":
             behind = True
             tags.remove(t)
-    lines.append("tags: [" + ", ".join(["target"] + tags) + "]")
+    lines.append("tags: [" + ", ".join(["objective"] + tags) + "]")
     if points:
         lines.append(f"points: {points}")
     if behind:
         lines += ["requires:", "  - { unitIndex: { gte: 2 } }"]
     if trigger:
         lines += ["triggers:", "  - on: immediately", "    do:"]
-        lines += ["      - { do: rollOn, table: target }"] * trigger
+        lines += ["      - { do: rollOn, table: objective }"] * trigger
     return lines
 
 def d_extra(row):
@@ -355,22 +356,22 @@ for row in I + B:
     sid, label, short, desc = st
     states.append(f"  {sid}:\n    label: {label}\n    short: {short}\n    scope: run\n    until: unitEnd\n    description: {desc}")
 
-tables = table("interference", "Interference",
-               "Drawn at the top of every stretch, and it holds until the stretch ends. Some of these a tool does to the game; the rest are vows, which nothing enforces but you. How many are drawn is Interferences per stretch, a dial in the trackers: one is a game, two is unpleasant, four is a different game. Nothing in here is good for you, which is the point of it. A kindness you rolled into by accident is not a reward, and being paid is what the Boon table is for. None are worth points either, since an interference lands on everyone.",
+tables = table("curse", "Curse",
+               "Drawn at the top of every scene, and it holds until the scene ends. Some of these a tool does to the game; the rest are vows, which nothing enforces but you. How many are drawn is Curses per scene, a dial in the trackers: one is a game, two is unpleasant, four is a different game. Nothing in here is good for you, which is the point of it. A kindness you rolled into by accident is not a reward, and being paid is what the Boon table is for. None are worth points either, since a curse lands on everyone.",
                built_i, i_extra)
-tables += "\n" + table("target", "Target",
-                       "What the stretch is for. Drawn after the interference, so you know what is wrong with the world before you are told what to do in it. Name the target in your own words: the app cannot see your game, and the log should read like something that happened. How many are drawn is Targets per stretch, the other dial in the trackers. Two results in here add one and two more on top of whatever it says.",
+tables += "\n" + table("objective", "Objective",
+                       "What the scene is for. Drawn after the curse, so you know what is wrong with the world before you are told what to do in it. Name the objective in your own words: the app cannot see your game, and the log should read like something that happened. How many are drawn is Objectives per scene, the other dial in the trackers. Two results in here add one and two more on top of whatever it says.",
                        built_t, t_extra)
 tables += "\n" + table("boon", "Boon",
-                       "What settling a target is worth. Drawn when you say you settled it, which is the only way anything here can know. Nothing in it is a punishment and nothing is worth points: the points were on the target.",
+                       "What settling an objective is worth. Drawn when you say you settled it, which is the only way anything here can know. Nothing in it is a punishment and nothing is worth points: the points were on the objective.",
                        built_b, b_extra)
 tables += "\n" + table("displacement", "Displacement",
-                       "Every fourth stretch the Lands Between are done with you where you are. Drawn as a stretch closes and taken before the next one opens. A tool does the moving: these are real places by name, and most of them are somewhere you would not have chosen.",
+                       "Every fourth scene the Lands Between are done with you where you are. Drawn as a scene closes and taken before the next one opens. A tool does the moving: these are real places by name, and most of them are somewhere you would not have chosen.",
                        built_d, d_extra)
 
 here = os.path.dirname(os.path.abspath(__file__))
 root = os.path.dirname(os.path.dirname(here))
-pack_path = os.path.join(root, "packs", "sketches", "elden-ring-interference.yaml")
+pack_path = os.path.join(root, "packs", "sketches", "elden-ring-tarnishedtool.yaml")
 s = io.open(pack_path, encoding="utf-8").read()
 head = s[:s.index("states:\n")]
 tail = s[s.index("\ncounters:"):]
@@ -391,8 +392,8 @@ for row in I:
     eid, state, ops = row[1], row[3], row[4]
     if not ops:
         continue
-    label = state[1] if state else eid.replace("in-", "").capitalize()
-    r = {"entry": eid, "table": "interference", "label": label}
+    label = state[1] if state else eid.replace("cu-", "").capitalize()
+    r = {"entry": eid, "table": "curse", "label": label}
     # Weather and time hold until something changes them, which is weather.
     if ops[0]["op"] != "action.invoke":
         r["until"] = "unit"
@@ -402,24 +403,31 @@ for row in I:
 for row in B:
     eid, state, ops = row[1], row[3], row[4]
     r = {"entry": eid, "table": "boon", "label": state[1] if state else eid.replace("bo-", "").capitalize()}
-    # A buff lasts the stretch; an item or a heal is simply given.
+    # A buff lasts the scene; an item or a heal is simply given.
     if ops[0]["op"] in ("flag.set", "value.set"):
         r["until"] = "unit"
     r["ops"] = ops
     rows.append(r)
 
+# Fare for the journey. A displacement can put somebody twenty levels
+# out of their depth with no way back but the walk, so every landing
+# pays: fifty thousand is a weapon upgrade or a level or two, which is
+# the difference between a scene and a death sentence. One way, like
+# every grant, and paid whether or not the place turns out to be kind.
+FARE = 50000
+
 for w, eid, name, area, text in PLACES:
     rows.append({"entry": eid, "table": "displacement", "label": name,
-                 "ops": [{"op": "warp.grace", "args": {"area": area, "name": name}}]})
+                 "ops": [{"op": "warp.grace", "args": {"area": area, "name": name}}] + runes(FARE)})
 rows.append({"entry": "dis-sky", "table": "displacement", "label": "The sky",
-             "ops": [{"op": "player.drop", "args": {"height": 220}}]})
+             "ops": [{"op": "player.drop", "args": {"height": 220}}] + runes(FARE)})
 
 profile = {"tool": "TarnishedTool",
-           "pack": "com.scrthq.runlog.elden-ring-interference",
-           "title": "Elden Ring: Interference",
+           "pack": "com.scrthq.runlog.elden-ring-tarnishedtool",
+           "title": "Elden Ring: TarnishedTool",
            "setup": [{"op": "flag.set", "args": {"name": "world.noCutscenes", "value": True}}],
            "rows": rows}
-io.open(os.path.join(here, "elden-ring-interference.json"), "w", encoding="utf-8", newline="").write(json.dumps(profile, indent=2) + "\n")
+io.open(os.path.join(here, "elden-ring-tarnishedtool.json"), "w", encoding="utf-8", newline="").write(json.dumps(profile, indent=2) + "\n")
 
-print("interference %d (%d driven), target %d, boon %d, displacement %d, states %d, profile rows %d"
+print("curse %d (%d driven), objective %d, boon %d, displacement %d, states %d, profile rows %d"
       % (len(I), sum(1 for r in I if r[4]), len(T), len(B), len(displacement), len(states), len(rows)))
