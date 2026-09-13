@@ -20,11 +20,23 @@ import { complaints, describes, entriesOf, EMPTY, isEmpty, parse, selectorOf, ta
  * Nothing here is required. A run with no rules sends nothing, which is
  * every run that existed before this panel did.
  */
-export function ControlSettings({ pack, record, onControl }: { pack: Pack; record: StoredRun | null; onControl?: (control: unknown) => void | Promise<void> }) {
+export function ControlSettings({
+  pack,
+  record,
+  seats,
+  onControl,
+}: {
+  pack: Pack;
+  record: StoredRun | null;
+  /** The roster of a moderated run, so each racer can be given their own address. */
+  seats?: string[];
+  onControl?: (control: unknown) => void | Promise<void>;
+}) {
   const saved = (record?.control as ControlProfile | undefined) ?? undefined;
   const [profile, setProfile] = useState<ControlProfile>(saved && !isEmpty(saved) ? saved : EMPTY);
   const [note, setNote] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  /** Which address was last copied: the empty string for the table's own. */
+  const [copied, setCopied] = useState<string | null>(null);
   const file = useRef<HTMLInputElement | null>(null);
   const api = useApi();
   /** Whether the account has keys, as the server has it: never the keys. */
@@ -73,13 +85,31 @@ export function ControlSettings({ pack, record, onControl }: { pack: Pack; recor
   const dropRow = (i: number) => update({ ...profile, rows: (profile.rows ?? []).filter((_, at) => at !== i) });
   const addRow = () => update({ ...profile, rows: [...(profile.rows ?? []), { tag: tags[0] ?? "", ops: [] }] });
 
-  /** The address the tool dials, finished where the key is in hand. */
-  const address = (() => {
+  /**
+   * The address the tool dials, finished where the key is in hand.
+   *
+   * One per person where there is a roster. A connection that says which
+   * seat it is hears the rules addressed to that seat as well as the ones
+   * addressed to nobody, so a race is set up by handing each runner their
+   * own line of this and nothing else: one curse can land on one of them
+   * and the warp can still land on all of them.
+   */
+  const addressFor = (seat?: string) => {
     const b = (apiBase() ?? "/api").replace(/\/$/, "");
     const origin = /^https?:/.test(b) ? new URL(b).origin : typeof location !== "undefined" ? location.origin : "";
     const k = key ? encodeURIComponent(key) : "REPLACE-WITH-YOUR-WATCH-KEY";
-    return `${origin.replace(/^http/, "ws")}/ws?k=${k}&as=control`;
-  })();
+    const tail = seat ? `&seat=${encodeURIComponent(seat)}` : "";
+    return `${origin.replace(/^http/, "ws")}/ws?k=${k}&as=control${tail}`;
+  };
+  const address = addressFor();
+  /** The roster, without the blanks and without anybody twice. */
+  const roster = useMemo(() => [...new Set((seats ?? []).map((n) => n.trim()).filter(Boolean))], [seats]);
+
+  const copy = (text: string, which: string) => {
+    void navigator.clipboard?.writeText(text);
+    setCopied(which);
+    window.setTimeout(() => setCopied(null), 1200);
+  };
 
   const makeKey = async () => {
     if (!api) return;
@@ -162,23 +192,34 @@ export function ControlSettings({ pack, record, onControl }: { pack: Pack; recor
         </p>
         <code className="askAddress">{address}</code>
         <div className="padRow">
-          <button
-            className="ghost tiny"
-            onClick={() => {
-              void navigator.clipboard?.writeText(address);
-              setCopied(true);
-              window.setTimeout(() => setCopied(false), 1200);
-            }}
-          >
-            {copied ? "Copied" : "Copy address"}
+          <button className="ghost tiny" onClick={() => copy(address, "")}>
+            {copied === "" ? "Copied" : "Copy address"}
           </button>
           {api && (
             <button className={key ? "ghost tiny" : "primary tiny"} disabled={busy} onClick={() => void makeKey()}>
               {keys.watch ? "New watch key" : "Make a watch key"}
             </button>
           )}
-          <span className="muted small">Add &amp;seat=Name where more than one person is playing.</span>
+          {roster.length === 0 && <span className="muted small">Add &amp;seat=Name where more than one person is playing.</span>}
         </div>
+
+        {roster.length > 0 && (
+          <>
+            <p className="muted small">
+              One each, so a rule can be addressed to one person. A tool that dials its own line hears the rules with that name on them and the rules with no name
+              on them; the address above hears only the second kind.
+            </p>
+            {roster.map((name) => (
+              <div className="padRow" key={name}>
+                <strong className="small">{name}</strong>
+                <code className="askAddress">{addressFor(name)}</code>
+                <button className="ghost tiny" onClick={() => copy(addressFor(name), name)}>
+                  {copied === name ? "Copied" : "Copy"}
+                </button>
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
       {itsOwn && isEmpty(profile) && (
@@ -224,6 +265,13 @@ export function ControlSettings({ pack, record, onControl }: { pack: Pack; recor
       <Ops catalog={catalog} ops={profile.setup ?? []} onChange={(setup) => update({ ...profile, setup })} />
 
       <h4 className="stepLabel">Rules</h4>
+      {roster.length > 0 && (
+        <datalist id="controlSeats">
+          {roster.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
+      )}
       {(profile.rows ?? []).length === 0 && <p className="muted small">None. Nothing is sent.</p>}
       {(profile.rows ?? []).map((row, i) => (
         <div className="askKey" key={i}>
@@ -318,6 +366,7 @@ export function ControlSettings({ pack, record, onControl }: { pack: Pack; recor
               value={row.to ?? ""}
               placeholder="everyone"
               aria-label="Who it reaches"
+              list={roster.length > 0 ? "controlSeats" : undefined}
               onChange={(e) => setRow(i, { ...row, to: e.target.value || undefined })}
               style={{ width: "8rem" }}
             />
