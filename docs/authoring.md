@@ -16,10 +16,12 @@ npx @scrthq/runlog validate my-game.yaml # schema, then coherence
 Put this at the top of your file and your editor will complete fields and underline mistakes as you type:
 
 ```yaml
-# yaml-language-server: $schema=https://runlog.dev/schema/pack-1.schema.json
+# yaml-language-server: $schema=https://runlog.scrthq.com/schema/pack-1.schema.json
 ```
 
 (In VS Code that needs the YAML extension. For JSON, use `"$schema"` as a normal key.)
+
+A relative path works too, and is what the packs in this repository use: `$schema=../../packages/rules-schema/schema/pack-1.schema.json`. Point at a file on disk and your editor needs no network, and cannot be caught out by a deploy.
 
 ---
 
@@ -59,7 +61,7 @@ If your game has no word for one of these, it probably does not need that concep
 Everything below is optional except `vocabulary`, `tables`, `phases`, `modes` and the identifying fields. This one plays end to end:
 
 ```yaml
-# yaml-language-server: $schema=https://runlog.dev/schema/pack-1.schema.json
+# yaml-language-server: $schema=https://runlog.scrthq.com/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.example.two-line-days
 version: 0.1.0
@@ -423,7 +425,7 @@ A pack says what the dice can do. A setup says what a tool attached to the game 
 It is a separate file because it depends on none of the things a pack depends on. The same setup fits every pack for the same game, one person can write it and everybody else can use it, and a run picks one where it picks its mode. A pack that named `speffect.apply` would be a pack that only plays with one Windows program attached to one game, and the schema has a test against exactly that.
 
 ```yaml
-# yaml-language-server: $schema=https://runlog.dev/schema/setup-1.schema.json
+# yaml-language-server: $schema=https://runlog.scrthq.com/schema/setup-1.schema.json
 
 kind: setup
 schemaVersion: 1

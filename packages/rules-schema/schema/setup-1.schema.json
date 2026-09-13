@@ -1,5 +1,5 @@
 {
-  "$id": "https://runlog.dev/schema/setup-1.schema.json",
+  "$id": "https://runlog.scrthq.com/schema/setup-1.schema.json",
   "title": "Runlog setup (schema version 1)",
   "description": "What a tool attached to the game is set to while a run lasts, and what the player is handed to start with. Written for a tool rather than for a pack, so one fits every pack for the same game.",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
