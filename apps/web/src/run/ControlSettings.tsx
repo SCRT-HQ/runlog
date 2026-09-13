@@ -6,6 +6,7 @@ import type { StreamKeys } from "../sync/client.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { CATALOGS, catalogFor, opDef, rangeOfValue, type ArgDef, type ToolCatalog } from "../control/catalog.ts";
 import { builtins, forPack, type Builtin } from "../control/builtin.ts";
+import { chosenFrom } from "../control/setups.ts";
 import { areasFor, known, listsFor, type Lists } from "../control/lists.ts";
 import { rememberWatchKey, watchKeyHere } from "./watchKey.ts";
 import { liveLinkOf, rememberLiveLink } from "../live/route.ts";
@@ -36,6 +37,8 @@ export function ControlSettings({
   onControl?: (control: unknown) => void | Promise<void>;
 }) {
   const saved = (record?.control as ControlProfile | undefined) ?? undefined;
+  /** The setup this run was started under, where one was chosen. */
+  const chosenSetup = chosenFrom(record?.setup);
   /** What this pack calls a run, for the sentences below. */
   const noun = pack.vocabulary.run.one.toLowerCase();
   const [profile, setProfile] = useState<ControlProfile>(saved && !isEmpty(saved) ? saved : EMPTY);
@@ -424,6 +427,19 @@ export function ControlSettings({
 
       <h4 className="stepLabel">The {pack.vocabulary.run.one.toLowerCase()}&apos;s terms</h4>
       <p className="muted small">Applied when a tool attaches and held until the {pack.vocabulary.run.one.toLowerCase()} ends. The settings that would otherwise be a paragraph nobody reads.</p>
+      {chosenSetup && (
+        /*
+         * What the run was started under, said here because this is the
+         * panel that shows what a tool is sent, and the setup goes out in
+         * these same terms. Read-only: it was chosen where the run was
+         * chosen, and changing it mid-run is handing somebody a new one,
+         * which is its own thing rather than an edit to this list.
+         */
+        <p className="muted small">
+          This {pack.vocabulary.run.one.toLowerCase()} was started under <strong>{chosenSetup.title}</strong>, and its{" "}
+          {chosenSetup.ops.length === 1 ? "one operation goes" : `${chosenSetup.ops.length} operations go`} out after these.
+        </p>
+      )}
       <Ops catalog={catalog} lists={lists} ops={profile.setup ?? []} onChange={(setup) => update({ ...profile, setup })} />
 
       <h4 className="stepLabel">Rules</h4>

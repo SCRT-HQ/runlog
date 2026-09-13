@@ -125,8 +125,8 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
    */
   const [runId, setRunId] = useState<string | null>(null);
   const runIdRef = useRef<string | null>(null);
-  /** Fields the record carries besides the log, a race it belongs to, set when a run starts and written with every save. */
-  const extrasRef = useRef<Pick<StoredRun, "raceId">>({});
+  /** Fields the record carries besides the log, a race it belongs to and the setup it was started under, set when a run starts and written with every save. */
+  const extrasRef = useRef<Pick<StoredRun, "raceId" | "setup">>({});
   /** Every run of this pack still here, newest first, for the picker. */
   const [runList, setRunList] = useState<StoredRun[]>([]);
   const refreshList = useCallback(
@@ -428,7 +428,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
    * ---------------------------------------------------------------- */
 
   const startRun = useCallback(
-    (mode: string, startSeed: string, players = 1, runName = "", contestants: string[] = [], lacks: string[] = [], extras: Pick<StoredRun, "raceId"> = {}): string => {
+    (mode: string, startSeed: string, players = 1, runName = "", contestants: string[] = [], lacks: string[] = [], extras: Pick<StoredRun, "raceId" | "setup"> = {}): string => {
       const at = now();
       // Named before it is written, and the name goes into the first event
       // too, so the log says what it is wherever it is read back.
@@ -905,6 +905,25 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     },
     [refreshList, store],
   );
+  /**
+   * Change the setup this run is played under, mid-run.
+   *
+   * The record and the ref both, because `persist` writes the ref over
+   * the record on every save: setting one without the other would last
+   * until the next move and then quietly go back.
+   */
+  const setSetup = useCallback(
+    async (setup: StoredRun["setup"]) => {
+      const id = runIdRef.current;
+      if (!id) return;
+      extrasRef.current = { ...extrasRef.current, setup };
+      const saved = await store.loadRun(id);
+      if (!saved) return;
+      await store.saveRun({ ...saved, setup });
+      await refreshList();
+    },
+    [refreshList, store],
+  );
   /** A viewer watches. Every move is shown; none can be made. */
   const readOnly = record?.role === "viewer";
 
@@ -1144,6 +1163,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     record,
     setAsks,
     setControl,
+    setSetup,
     readOnly,
     switchRun,
     beginAnother,

@@ -46,6 +46,8 @@ import { PlanError } from "../sync/client.ts";
 import { liveLinkOf } from "../live/route.ts";
 import { paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
 import { isEmpty, tidy, type ControlProfile } from "../control/profile.ts";
+import { chosenFrom, withChosen, type ChosenSetup } from "../control/setups.ts";
+import { SetupPicker } from "./SetupPicker.tsx";
 import { lifecycleGestures, marksOf, type LifecycleMarks } from "./gestures.ts";
 import { useRace } from "./useRace.ts";
 import { RunRail, type Pane } from "./RunRail.tsx";
@@ -122,25 +124,34 @@ export function RunView({
     const events = run.events;
     const race = raceOf(raceView.race, raceView.standings, pack.vocabulary.unit);
     const timer = window.setTimeout(() => {
-      // The control profile rides along: the server reads it there to
-      // decide what a tool attached to somebody's game should be told.
-      const control = record.control && !isEmpty(record.control as ControlProfile) ? { control: tidy(record.control as ControlProfile) } : {};
+      /*
+       * The control profile rides along: the server reads it there to
+       * decide what a tool attached to somebody's game should be told.
+       *
+       * With the run's setup folded into its terms, because that is what
+       * a setup is for: one field on the wire, applied on attach, its
+       * gifts held back on a reconnect by the record the server already
+       * keeps. A run with a setup and no profile still has something to
+       * send, which is why the emptiness check comes after the fold.
+       */
+      const profile = withChosen((record.control as ControlProfile) ?? {}, chosenFrom(record.setup));
+      const control = isEmpty(profile) ? {} : { control: tidy(profile) };
       void api.putSnapshot(record.runId, { ...snapshotOf(pack, state, events, undefined, { race }), paper: paperOf(pack, state.mode), ...control }).catch(() => {});
     }, 800);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, shared, run.events, pack, raceView.race, run.record?.control]);
+  }, [api, shared, run.events, pack, raceView.race, run.record?.control, run.record?.setup]);
 
   /**
    * Starting a race, or joining one: an ordinary run of this pack with the
    * race's seed and mode, and the race told which run this is. Joining a
    * race that is for another pack says so rather than guessing.
    */
-  const startRace = async (mode: string, seed: string, runName: string) => {
+  const startRace = async (mode: string, seed: string, runName: string, setup: ChosenSetup | null) => {
     if (!api) return;
     setRaceNote(null);
     const raceId = ulid();
-    const runId = run.startRun(mode, seed, 1, runName, [], [], { raceId });
+    const runId = run.startRun(mode, seed, 1, runName, [], [], { raceId, ...(setup ? { setup } : {}) });
     try {
       const race = await api.createRace({ id: raceId, packId: pack.id, packVersion: pack.version, packTitle: pack.title, ...(runName.trim() ? { name: runName.trim() } : {}), mode, seed, sessionId: runId });
       setRaceNote(`Racing. The code is ${race.meta.code}; it is in the side column too.`);
@@ -149,7 +160,7 @@ export function RunView({
       else setRaceNote(error instanceof Error && error.message ? error.message : "The race could not be started; this is an ordinary run.");
     }
   };
-  const joinRace = async (code: string) => {
+  const joinRace = async (code: string, setup: ChosenSetup | null) => {
     if (!api) return;
     setRaceNote(null);
     try {
@@ -163,7 +174,7 @@ export function RunView({
         return;
       }
       clearPendingRaceCode();
-      const runId = run.startRun(race.meta.mode, race.meta.seed, 1, race.meta.name ?? "", [], [], { raceId: race.meta.id });
+      const runId = run.startRun(race.meta.mode, race.meta.seed, 1, race.meta.name ?? "", [], [], { raceId: race.meta.id, ...(setup ? { setup } : {}) });
       await api.putRaceEntry(race.meta.id, { sessionId: runId });
     } catch (error) {
       setRaceNote(error instanceof Error && error.message ? error.message : "That code did not open a race.");
@@ -370,13 +381,13 @@ export function RunView({
             <BenchBar pack={pack} bench={bench} />
           </div>
         )}
-        <Setup
+        <StartScreen
           pack={pack}
           onStart={run.startRun}
           others={run.runList}
           onContinue={run.switchRun}
           onBack={run.runList.length > 0 ? run.cancelAnother : undefined}
-          {...(api && !bench ? { race: { start: (mode, seed, name) => void startRace(mode, seed, name), join: (code) => void joinRace(code), note: raceNote } } : {})}
+          {...(api && !bench ? { race: { start: (mode, seed, name, setup) => void startRace(mode, seed, name, setup), join: (code, setup) => void joinRace(code, setup), note: raceNote } } : {})}
         />
       </>
     );
@@ -617,7 +628,7 @@ function BenchBar({ pack, bench, onRestart }: { pack: Pack; bench: { from: strin
   );
 }
 
-export function Setup({
+export function StartScreen({
   pack,
   onStart,
   others = [],
@@ -626,9 +637,9 @@ export function Setup({
   race,
 }: {
   pack: Pack;
-  onStart: (mode: string, seed: string, players: number, name?: string, contestants?: string[], lacks?: string[]) => void;
+  onStart: (mode: string, seed: string, players: number, name?: string, contestants?: string[], lacks?: string[], extras?: { setup?: ChosenSetup }) => void;
   /** Races across devices, where there is an account to hold one. */
-  race?: { start: (mode: string, seed: string, name: string) => void; join: (code: string) => void; note: string | null };
+  race?: { start: (mode: string, seed: string, name: string, setup: ChosenSetup | null) => void; join: (code: string, setup: ChosenSetup | null) => void; note: string | null };
   /** Runs of this pack already here, offered before a new one. */
   others?: StoredRun[];
   onContinue?: (runId: string) => void;
@@ -636,6 +647,8 @@ export function Setup({
   onBack?: () => void;
 }) {
   const [mode, setMode] = useState(pack.defaultMode);
+  /** What this run starts under, where the pack's game has a tool and somebody wrote one. */
+  const [setup, setSetup] = useState<ChosenSetup | null>(null);
   const [seed, setSeed] = useState("");
   const [runName, setRunName] = useState("");
   const [raceCode, setRaceCode] = useState(() => pendingRaceCode() ?? "");
@@ -722,6 +735,8 @@ export function Setup({
           ))}
         </div>
 
+        <SetupPicker pack={pack} chosen={setup} onChoose={setSetup} />
+
         {/*
           The seed lives where a run starts. A shared mode needs one; any
           other mode may take one, and the rolls the app makes for it then
@@ -786,12 +801,12 @@ export function Setup({
             </p>
             <div className="row raceRow">
               {chosen?.seeded && (
-                <button className="ghost" onClick={() => race.start(mode, seed.trim() || coinSeed(), runName)}>
+                <button className="ghost" onClick={() => race.start(mode, seed.trim() || coinSeed(), runName, setup)}>
                   Start a race
                 </button>
               )}
               <input className="textInput code" value={raceCode} placeholder="code" maxLength={8} onChange={(e) => setRaceCode(e.target.value.toUpperCase())} />
-              <button className="ghost" disabled={raceCode.trim().length < 6} onClick={() => race.join(raceCode.trim())}>
+              <button className="ghost" disabled={raceCode.trim().length < 6} onClick={() => race.join(raceCode.trim(), setup)}>
                 Join
               </button>
             </div>
@@ -926,7 +941,7 @@ export function Setup({
             className="primary big"
             disabled={!rosterOk}
             title={rosterOk ? undefined : `Add ${moderated?.contestants.min ?? 2} or more contestants first`}
-            onClick={() => onStart(mode, seed, seated, runName, roster, [...lacking])}
+            onClick={() => onStart(mode, seed, seated, runName, roster, [...lacking], setup ? { setup } : {})}
           >
             Enter the {v.run.one.toLowerCase()}
           </button>
