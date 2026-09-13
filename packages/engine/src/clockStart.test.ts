@@ -4,7 +4,8 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
-import { clockOnPhase, unitClockStart } from "./clock.ts";
+import { clockOnPhase, clockStartUndone, unitClockStart } from "./clock.ts";
+import { effectiveEvents } from "./log.ts";
 import type { RunEvent } from "./events.ts";
 
 /**
@@ -90,5 +91,53 @@ describe("how long the timer runs", () => {
       ev("ResourceChanged", { resource: "minutes", set: 40 }),
     ]);
     expect(after.clocks[0]?.seconds).toBe(10 * 60);
+  });
+});
+
+/**
+ * Undo is an answer.
+ *
+ * Reported from play: the clock could not be undone past. The event
+ * went, the thing that starts a clock whenever one is missing put it
+ * straight back, and the step before was unreachable. Pausing or
+ * stopping first did not help: undoing the stop set it running again,
+ * and the undo after that hit the same wall.
+ */
+describe("a clock the player has taken back", () => {
+  const log = (extra: RunEvent[] = []): RunEvent[] => [
+    { ...ev("RunStarted", { packId: interference.id, packVersion: interference.version, mode: "solo" }), id: "e1" },
+    { ...ev("UnitEntered"), id: "e2" },
+    ...extra,
+  ];
+
+  it("is not started again, where the log says it was undone", () => {
+    const started = { ...clockOnPhase(interference, reduce(interference, log()), "play", NOW)!, id: "clock1" };
+    const events = log([started, ev("Undone", { id: "u1", ids: ["clock1"] })]);
+    const state = reduce(interference, events);
+    // The fold has no clock, exactly as if none had ever started.
+    expect(state.clocks).toHaveLength(0);
+    expect(clockStartUndone(events, 1)).toBe(true);
+    expect(clockOnPhase(interference, state, "play", NOW, events)).toBeNull();
+  });
+
+  it("is started as usual where nothing was undone", () => {
+    const events = log();
+    expect(clockStartUndone(events, 1)).toBe(false);
+    expect(clockOnPhase(interference, reduce(interference, events), "play", NOW, events)).not.toBeNull();
+  });
+
+  it("does not confuse one unit's clock with another's", () => {
+    const started = { ...clockOnPhase(interference, reduce(interference, log()), "play", NOW)!, id: "clock1" };
+    const events = log([started, ev("Undone", { id: "u1", ids: ["clock1"] })]);
+    // Unit 1's was taken back; unit 2 has said nothing either way.
+    expect(clockStartUndone(events, 1)).toBe(true);
+    expect(clockStartUndone(events, 2)).toBe(false);
+  });
+
+  it("leaves the log able to say what happened, which is the point of not dropping events", () => {
+    const started = { ...clockOnPhase(interference, reduce(interference, log()), "play", NOW)!, id: "clock1" };
+    const events = log([started, ev("Undone", { id: "u1", ids: ["clock1"] })]);
+    expect(events.some((e) => e.t === "ClockStarted")).toBe(true);
+    expect(effectiveEvents(events).some((e) => e.t === "ClockStarted")).toBe(false);
   });
 });

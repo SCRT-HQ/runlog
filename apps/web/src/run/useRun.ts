@@ -33,6 +33,7 @@ import {
   challenges,
   standings,
   awardValue,
+  effectiveEvents,
   clockOnPhase,
   unitClockStart,
   unitClockFor,
@@ -918,9 +919,15 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
    */
   useEffect(() => {
     if (readOnly || !state || state.status !== "active" || !activeStep) return;
-    const start = clockOnPhase(pack, state, activeStep.phase.id, now());
-    if (start) commit([start]);
-  }, [pack, state, activeStep, readOnly, commit]);
+    const start = clockOnPhase(pack, state, activeStep.phase.id, now(), events);
+    if (!start) return;
+    // Joined to the move that brought the flow here rather than made a
+    // move of its own, so one undo takes back the arrival and the clock
+    // together. On its own it was a step the player had to undo past,
+    // and undoing it put them back where they already were.
+    const arrived = effectiveEvents(events).at(-1)?.move;
+    commit([arrived ? { ...start, move: arrived } : start]);
+  }, [pack, state, activeStep, readOnly, commit, events]);
 
   /**
    * A step half answered comes back with the run.
