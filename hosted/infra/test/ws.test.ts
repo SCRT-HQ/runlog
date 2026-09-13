@@ -268,6 +268,43 @@ describe("telling the listeners", () => {
       expect(posted).toEqual([]);
     });
 
+    it("remembers what a tool calls itself, and holds a profile to that program", async () => {
+      const forOne = { control: { tool: "TarnishedTool", rows: [{ tag: "curse", ops: [{ op: "speffect.apply", args: { id: 1 } }] }] } };
+      const { live, posted, d } = attached(memoryLive(), forOne);
+      await live.connect("c1", "user_1", "");
+      await live.connect("tool", "public:shared", "", { control: true, run: "shared" });
+      await live.watch("tool", "shared", "public:shared", "", { control: true, run: "shared" });
+      const hello = (app: string) => route({ requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "hello", app }) }, d);
+
+      // Something else entirely: told why, rather than left to sit there
+      // doing nothing.
+      await hello("SomethingElse");
+      expect(JSON.parse(posted[0]![1])).toMatchObject({ t: "note" });
+      expect(JSON.parse(posted[0]![1]).text).toContain("TarnishedTool");
+
+      await live.connect("c1", "user_1", "");
+      await live.watch("c1", "shared", "user_1", "");
+      const roll = () => route({ requestContext: { routeKey: "$default", connectionId: "c1" }, body: JSON.stringify({ t: "gesture", id: "shared", kind: "outcome", data: { n: 1, unit: 1, tableId: "curse", entryId: "rot", tags: ["curse"] } }) }, d);
+      posted.length = 0;
+      await roll();
+      expect(posted.filter(([c]) => c === "tool")).toEqual([]);
+
+      // The program it was written for hears it.
+      await hello("TarnishedTool");
+      posted.length = 0;
+      await roll();
+      expect(posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l).ops)).toEqual([[{ op: "speffect.apply", args: { id: 1 } }]]);
+    });
+
+    it("is told to take a unit's effects back when that unit closes", async () => {
+      const { live, posted, d } = attached();
+      await live.connect("c1", "user_1", "");
+      await live.connect("tool", "public:shared", "", { control: true, run: "shared" });
+      for (const c of ["c1", "tool"]) await live.watch(c, "shared", "", "", live.marks.get(c));
+      await route({ requestContext: { routeKey: "$default", connectionId: "c1" }, body: JSON.stringify({ t: "gesture", id: "shared", kind: "unit-closed", data: { unit: 4, unitsDone: 4 } }) }, d);
+      expect(posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l))).toEqual([{ t: "revert", group: "unit:4" }]);
+    });
+
     it("is told a result in operations, while a watcher beside it is told it in words", async () => {
       const { live, posted, d } = attached();
       await live.connect("c1", "user_1", "");
