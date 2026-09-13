@@ -1,10 +1,12 @@
 import { hashToken, verify as verifyToken, type Caller } from "./auth.js";
-import { fits, framesForGesture, profileOf, setupFor } from "./control.js";
+import { askFor, fits, framesForGesture, profileOf, setupFor } from "./control.js";
+import { askAllowed } from "./asking.js";
 import { apiGatewayPoster, type Poster } from "./live.js";
 import { dynamoLive, type LiveStore } from "./live.js";
-import { dynamoStore, type Store } from "./store.js";
+import { dynamoStore, type Ask, type Store } from "./store.js";
 import { dynamoRaces, type RaceStore } from "./races.js";
 import { annotate } from "./xray.js";
+import { randomBytes } from "node:crypto";
 
 /**
  * The socket's three moments.
@@ -34,7 +36,7 @@ export interface WsDeps {
   live: LiveStore;
   /** A way to post to connections; absent in a test that only checks routing. */
   poster?: Poster;
-  store: Pick<Store, "getSession" | "streamKeyOwner" | "manifest" | "getSnapshot">;
+  store: Pick<Store, "getSession" | "streamKeyOwner" | "manifest" | "getSnapshot" | "addAsk">;
   races: Pick<RaceStore, "getRace">;
   verify: (authorization: string | undefined) => Promise<Caller>;
   now?: () => string;
@@ -175,6 +177,44 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
       ? setupFor(profile)
       : JSON.stringify({ t: "note", text: `This run is set up for ${profile.tool}, so nothing here will reach ${app || "a tool that did not say what it is"}.` });
     if (line && (await poster.post(connectionId, line)) === "gone") await deps.live.disconnect(connectionId);
+    return { statusCode: 200 };
+  }
+
+  /**
+   * A tool saying what happened in the game.
+   *
+   * The one thing that travels the other way. It is a mention rather than
+   * a command: it becomes an ask, exactly as a viewer pressing a button
+   * does, and the table still decides. Which is why this needs the host
+   * to have switched asks on, and is refused as politely as anything else
+   * when they have not.
+   */
+  if (conn.control && m["t"] === "event" && conn.run) {
+    const meant = askFor(String(m["kind"] ?? ""));
+    if (!meant) return { statusCode: 200 };
+    const session = await deps.store.getSession(conn.run);
+    if (!session || session.meta.deletedAt || session.meta.endedAt) return { statusCode: 200 };
+    // Taking asks stays the host's word, per run, the same as it is for
+    // chat. A tool cannot switch it on by being attached.
+    if (!session.meta.askPolicy) return { statusCode: 200 };
+    const who = conn.seat || "the game";
+    const at = now();
+    if (!askAllowed(conn.run, who, Date.parse(at)).ok) return { statusCode: 200 };
+    const ask: Ask = { id: randomBytes(6).toString("hex"), kind: "move", move: meant.move, name: who, via: "the game", at };
+    await deps.store.addAsk(conn.run, ask);
+    const poster = deps.poster;
+    if (poster) {
+      const line = JSON.stringify({ t: "gesture", id: conn.run, kind: "ask", data: { ask: ask.id, kind: ask.kind, move: ask.move, name: who, via: ask.via, policy: session.meta.askPolicy }, at });
+      for (const w of await deps.live.watchers(conn.run)) {
+        if (w.control) continue;
+        try {
+          if ((await poster.post(w.connectionId, line)) === "gone") await deps.live.disconnect(w.connectionId);
+        } catch (error) {
+          console.error("live: could not pass an ask on", error);
+        }
+      }
+    }
+
     return { statusCode: 200 };
   }
 
