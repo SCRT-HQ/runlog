@@ -1,0 +1,42 @@
+# Faith, which in this game is a weapon.
+#
+# A seal is a weapon rather than an item, which is why it arrives by
+# `weapon.named` like a sword. Finger Seal is the ordinary one and takes
+# twenty-five; Erdtree Seal scales harder and caps at ten.
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.cleric
+version: "1.0.0"
+title: Cleric
+author: Runlog
+description: >-
+  Faith to pray with, a seal in hand, and heavy enough armor that the
+  praying can be done standing up.
+
+tool: TarnishedTool
+
+ops:
+  - { op: value.set, args: { name: player.faith, value: 60 } }
+  - { op: value.set, args: { name: player.mind, value: 40 } }
+
+  - { op: weapon.named, args: { name: Finger Seal, upgrade: 25 } }
+  # Something to swing when praying is not the answer.
+  - { op: weapon.named, args: { name: Greatsword, upgrade: 25, affinity: Sacred } }
+
+  - { op: item.named, args: { name: Tree Sentinel Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Banished Knight Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Banished Knight Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Banished Knight Greaves, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Erdtree's Favor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Blessed Dew Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Dragoncrest Greatshield Talisman, quantity: 1 }, once: true }
+
+  - { op: runes.give, args: { amount: 120000 }, once: true }
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

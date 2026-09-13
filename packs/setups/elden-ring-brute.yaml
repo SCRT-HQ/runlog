@@ -1,0 +1,44 @@
+# The heaviest thing in the game, and the weight to carry it.
+#
+# Bull-Goat is the fattest armor there is and the reason the equip load
+# talisman is here: without it this is a loadout that rolls like a barrel.
+# Strength is set rather than hoped for, because Giant-Crusher asks for a
+# great deal of it and a colossal hammer nobody can lift is a joke, not a
+# gift.
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.brute
+version: "1.0.0"
+title: Brute
+author: Runlog
+description: >-
+  A colossal hammer, the heaviest armor in the game, and the strength and
+  endurance to move in it. Nothing here is subtle and none of it needs to be.
+
+tool: TarnishedTool
+
+ops:
+  - { op: value.set, args: { name: player.strength, value: 70 } }
+  - { op: value.set, args: { name: player.endurance, value: 50 } }
+  - { op: value.set, args: { name: player.vigor, value: 50 } }
+
+  - { op: weapon.named, args: { name: Giant-Crusher, upgrade: 25, affinity: Heavy, ash: Royal Knight's Resolve } }
+
+  - { op: item.named, args: { name: Bull-Goat Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Bull-Goat Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Bull-Goat Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Bull-Goat Greaves, quantity: 1 }, once: true }
+
+  # The one that makes the rest wearable.
+  - { op: item.named, args: { name: Erdtree's Favor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Green Turtle Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Shard of Alexander, quantity: 1 }, once: true }
+
+  - { op: runes.give, args: { amount: 120000 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true
