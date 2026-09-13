@@ -1,86 +1,1603 @@
 {
   "tool": "TarnishedTool",
-  "setup": [{ "op": "flag.set", "args": { "name": "world.noCutscenes", "value": true } }],
+  "pack": "com.scrthq.runlog.elden-ring-interference",
+  "title": "Elden Ring: Interference",
+  "setup": [
+    {
+      "op": "flag.set",
+      "args": {
+        "name": "world.noCutscenes",
+        "value": true
+      }
+    }
+  ],
   "rows": [
     {
       "entry": "in-slow",
       "table": "interference",
       "label": "Slowed",
       "until": "unit",
-      "ops": [{ "op": "value.set", "args": { "name": "player.speed", "value": 0.8 } }]
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.speed",
+            "value": 0.8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-wade",
+      "table": "interference",
+      "label": "Wading",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.speed",
+            "value": 0.66
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-mired",
+      "table": "interference",
+      "label": "Mired",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.speed",
+            "value": 0.5
+          }
+        }
+      ]
     },
     {
       "entry": "in-quick",
       "table": "interference",
       "label": "Hurried",
       "until": "unit",
-      "ops": [{ "op": "value.set", "args": { "name": "game.speed", "value": 1.2 } }]
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "game.speed",
+            "value": 1.2
+          }
+        }
+      ]
     },
     {
-      "entry": "in-root",
+      "entry": "in-frantic",
       "table": "interference",
-      "label": "Rooted",
+      "label": "Frantic",
       "until": "unit",
-      "ops": [{ "op": "flag.set", "args": { "name": "player.noRoll", "value": true } }]
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "game.speed",
+            "value": 1.5
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-berserk",
+      "table": "interference",
+      "label": "Berserk",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "game.speed",
+            "value": 1.75
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-slower",
+      "table": "interference",
+      "label": "Sluggish",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "game.speed",
+            "value": 0.8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-tender",
+      "table": "interference",
+      "label": "Tender",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.incomingDamage",
+            "value": 1.5
+          }
+        }
+      ]
     },
     {
       "entry": "in-glass",
       "table": "interference",
       "label": "Glass",
       "until": "unit",
-      "ops": [{ "op": "value.set", "args": { "name": "player.incomingDamage", "value": 2 } }]
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.incomingDamage",
+            "value": 2
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-paper",
+      "table": "interference",
+      "label": "Paper",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.incomingDamage",
+            "value": 3
+          }
+        }
+      ]
     },
     {
       "entry": "in-blunt",
       "table": "interference",
       "label": "Blunted",
       "until": "unit",
-      "ops": [{ "op": "value.set", "args": { "name": "player.outgoingDamage", "value": 0.6 } }]
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.outgoingDamage",
+            "value": 0.6
+          }
+        }
+      ]
     },
     {
-      "entry": "in-risen",
+      "entry": "in-dull",
       "table": "interference",
-      "label": "The risen",
+      "label": "Dulled",
       "until": "unit",
-      "ops": [{ "op": "flag.set", "args": { "name": "enemies.noDeath", "value": true } }]
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.outgoingDamage",
+            "value": 0.4
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-useless",
+      "table": "interference",
+      "label": "Useless",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.outgoingDamage",
+            "value": 0.25
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-hollow",
+      "table": "interference",
+      "label": "Hollow",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-feeble",
+      "table": "interference",
+      "label": "Feeble",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-clumsy",
+      "table": "interference",
+      "label": "Clumsy",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-winded",
+      "table": "interference",
+      "label": "Winded",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-empty",
+      "table": "interference",
+      "label": "Empty",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 1
+          }
+        }
+      ]
     },
     {
       "entry": "in-poor",
       "table": "interference",
       "label": "Poor",
       "until": "unit",
-      "ops": [{ "op": "flag.set", "args": { "name": "player.noRuneGain", "value": true } }]
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.noRuneGain",
+            "value": true
+          }
+        }
+      ]
     },
     {
-      "entry": "in-hush",
+      "entry": "in-robbed",
       "table": "interference",
-      "label": "Unheard",
+      "label": "Robbed",
       "until": "unit",
-      "ops": [{ "op": "flag.set", "args": { "name": "player.silent", "value": true } }]
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.runes",
+            "value": 0
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-toll",
+      "table": "interference",
+      "label": "Toll",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.add",
+          "args": {
+            "name": "player.runes",
+            "by": -10000
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-lost",
+      "table": "interference",
+      "label": "Mapless",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "world.hideMap",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-unseen-world",
+      "table": "interference",
+      "label": "Blind",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "world.hideCharacters",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-risen",
+      "table": "interference",
+      "label": "The risen",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "enemies.noDeath",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-stone",
+      "table": "interference",
+      "label": "Unkillable",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "enemies.noDamage",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-root",
+      "table": "interference",
+      "label": "Rooted",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.noRoll",
+            "value": true
+          }
+        }
+      ]
     },
     {
       "entry": "in-night",
       "table": "interference",
-      "label": "Night falls",
-      "ops": [{ "op": "action.invoke", "args": { "action": "SetNight" } }]
+      "label": "Night",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SetNight"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-dusk",
+      "table": "interference",
+      "label": "Dusk",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SetDusk"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-noon",
+      "table": "interference",
+      "label": "Noon",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SetNoon"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-morning",
+      "table": "interference",
+      "label": "Morning",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SetMorning"
+          }
+        }
+      ]
     },
     {
       "entry": "in-fog",
       "table": "interference",
       "label": "Fog",
-      "ops": [{ "op": "action.invoke", "args": { "action": "FoggyWeather" } }]
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "FoggyWeather"
+          }
+        }
+      ]
     },
     {
       "entry": "in-rain",
       "table": "interference",
       "label": "Rain",
-      "ops": [{ "op": "action.invoke", "args": { "action": "RainyWeather" } }]
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "RainyWeather"
+          }
+        }
+      ]
     },
     {
-      "entry": "dis-grace",
+      "entry": "in-snow",
+      "table": "interference",
+      "label": "Snow",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SnowyWeather"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-clear",
+      "table": "interference",
+      "label": "Clear",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "DefaultWeather"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-runes",
+      "table": "boon",
+      "label": "Runes",
+      "ops": [
+        {
+          "op": "value.add",
+          "args": {
+            "name": "player.runes",
+            "by": 5000
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-runes2",
+      "table": "boon",
+      "label": "Runes2",
+      "ops": [
+        {
+          "op": "value.add",
+          "args": {
+            "name": "player.runes",
+            "by": 20000
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-seed",
+      "table": "boon",
+      "label": "Seed",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-tear",
+      "table": "boon",
+      "label": "Tear",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-arc",
+      "table": "boon",
+      "label": "Arc",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Rune Arc",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-stone",
+      "table": "boon",
+      "label": "Stone",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Smithing Stone [3]",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-somber",
+      "table": "boon",
+      "label": "Somber",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Somber Smithing Stone [3]",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-key",
+      "table": "boon",
+      "label": "Key",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Stonesword Key",
+            "quantity": 2
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-gold",
+      "table": "boon",
+      "label": "Gold",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Rune [10]",
+            "quantity": 10
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-flesh",
+      "table": "boon",
+      "label": "Flesh",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Exalted Flesh",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-blessing",
+      "table": "boon",
+      "label": "Blessing",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blessing of Marika",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-baldachin",
+      "table": "boon",
+      "label": "Baldachin",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Baldachin's Blessing",
+            "quantity": 2
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-dragon",
+      "table": "boon",
+      "label": "Dragon",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Ancient Dragon's Blessing",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-fowl",
+      "table": "boon",
+      "label": "Fowl",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Silver-Pickled Fowl Foot",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-boluses",
+      "table": "boon",
+      "label": "Boluses",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Neutralizing Boluses",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-branch",
+      "table": "boon",
+      "label": "Branch",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bewitching Branch",
+            "quantity": 2
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-shards",
+      "table": "boon",
+      "label": "Shards",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Starlight Shards",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-grease",
+      "table": "boon",
+      "label": "Grease",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Fire Grease",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-prawn",
+      "table": "boon",
+      "label": "Prawn",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Boiled Prawn",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-warming",
+      "table": "boon",
+      "label": "Warming",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Warming Stone",
+            "quantity": 2
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-medallion",
+      "table": "boon",
+      "label": "Medallion",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Crimson Amber Medallion",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-cerulean",
+      "table": "boon",
+      "label": "Cerulean",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Cerulean Crystal Tear",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-opaline",
+      "table": "boon",
+      "label": "Opaline",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Opaline Bubbletear",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-mend",
+      "table": "boon",
+      "label": "Mend",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SetRfbs"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-heal",
+      "table": "boon",
+      "label": "Heal",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SetMaxHp"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-wind",
+      "table": "boon",
+      "label": "Second wind",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infiniteStamina",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-focus",
+      "table": "boon",
+      "label": "Clear head",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infiniteFp",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-sharp",
+      "table": "boon",
+      "label": "Whetted",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.outgoingDamage",
+            "value": 2
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-tough",
+      "table": "boon",
+      "label": "Warded",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.incomingDamage",
+            "value": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-luck",
+      "table": "boon",
+      "label": "Fortunate",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "world.guaranteedDrop",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-quiet",
+      "table": "boon",
+      "label": "Quiet",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.silent",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-mending",
+      "table": "boon",
+      "label": "Mending",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.healOverTime",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-keep",
+      "table": "boon",
+      "label": "Held",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.noRuneLoss",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-horse",
+      "table": "boon",
+      "label": "Mounted",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.torrentAnywhere",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-swift",
+      "table": "boon",
+      "label": "Swift",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.speed",
+            "value": 1.25
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-peace",
+      "table": "boon",
+      "label": "Peace",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "enemies.noAttack",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-still",
+      "table": "boon",
+      "label": "Stillness",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "enemies.noMove",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-asleep",
+      "table": "boon",
+      "label": "Asleep",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "enemies.noAi",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-stocked",
+      "table": "boon",
+      "label": "Stocked",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infiniteConsumables",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-quiver",
+      "table": "boon",
+      "label": "Quivered",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infiniteArrows",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-anchored",
+      "table": "boon",
+      "label": "Anchored",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infinitePoise",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-unseen",
+      "table": "boon",
+      "label": "Unseen",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.hidden",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-lethal",
+      "table": "boon",
+      "label": "Dreadful",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.oneShot",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-elleh",
       "table": "displacement",
-      "label": "Sent back",
-      "ops": [{ "op": "action.invoke", "args": { "action": "Quitout" } }]
+      "label": "Church of Elleh",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Limgrave",
+            "name": "Church of Elleh"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-first",
+      "table": "displacement",
+      "label": "The First Step",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Limgrave",
+            "name": "The First Step"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-gatefront",
+      "table": "displacement",
+      "label": "Gatefront",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Limgrave",
+            "name": "Gatefront"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-artist",
+      "table": "displacement",
+      "label": "Artist's Shack",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Limgrave",
+            "name": "Artist's Shack"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-pilgrim",
+      "table": "displacement",
+      "label": "Church of Pilgrimage",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Weeping Peninsula",
+            "name": "Church of Pilgrimage"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-morne",
+      "table": "displacement",
+      "label": "Castle Morne Rampart",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Weeping Peninsula",
+            "name": "Castle Morne Rampart"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-cliffs",
+      "table": "displacement",
+      "label": "Lake-Facing Cliffs",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Liurnia of the Lakes",
+            "name": "Lake-Facing Cliffs"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-shore",
+      "table": "displacement",
+      "label": "Liurnia Lake Shore",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Liurnia of the Lakes",
+            "name": "Liurnia Lake Shore"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-scenic",
+      "table": "displacement",
+      "label": "Scenic Isle",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Liurnia of the Lakes",
+            "name": "Scenic Isle"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-stormveil",
+      "table": "displacement",
+      "label": "Stormveil Main Gate",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Stormveil Castle",
+            "name": "Stormveil Main Gate"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-gateside",
+      "table": "displacement",
+      "label": "Gateside Chamber",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Stormveil Castle",
+            "name": "Gateside Chamber"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-altus",
+      "table": "displacement",
+      "label": "Altus Plateau",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Altus Plateau",
+            "name": "Altus Plateau"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-erdtree",
+      "table": "displacement",
+      "label": "Erdtree-Gazing Hill",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Altus Plateau",
+            "name": "Erdtree-Gazing Hill"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-windmill",
+      "table": "displacement",
+      "label": "Windmill Village",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Altus Plateau",
+            "name": "Windmill Village"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-smoulder",
+      "table": "displacement",
+      "label": "Smoldering Church",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Caelid",
+            "name": "Smoldering Church"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-rotview",
+      "table": "displacement",
+      "label": "Rotview Balcony",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Caelid",
+            "name": "Rotview Balcony"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-dragon",
+      "table": "displacement",
+      "label": "Cathedral of Dragon Communion",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Caelid",
+            "name": "Cathedral of Dragon Communion"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-gelmir",
+      "table": "displacement",
+      "label": "Bridge of Iniquity",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Mt. Gelmir",
+            "name": "Bridge of Iniquity"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-seethe",
+      "table": "displacement",
+      "label": "Seethewater River",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Mt. Gelmir",
+            "name": "Seethewater River"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-siofra",
+      "table": "displacement",
+      "label": "Siofra River Bank",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Siofra River",
+            "name": "Siofra River Bank"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-worship",
+      "table": "displacement",
+      "label": "Worshippers' Woods",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Siofra River",
+            "name": "Worshippers' Woods"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-ainsel",
+      "table": "displacement",
+      "label": "Ainsel River Sluice Gate",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Ainsel River",
+            "name": "Ainsel River Sluice Gate"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-volcano",
+      "table": "displacement",
+      "label": "Volcano Manor",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Volcano Manor",
+            "name": "Volcano Manor"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-eiglay",
+      "table": "displacement",
+      "label": "Temple of Eiglay",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Volcano Manor",
+            "name": "Temple of Eiglay"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-zamor",
+      "table": "displacement",
+      "label": "Zamor Ruins",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Mountaintops of the Giants",
+            "name": "Zamor Ruins"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-freezing",
+      "table": "displacement",
+      "label": "Freezing Lake",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Mountaintops of the Giants",
+            "name": "Freezing Lake"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-rot",
+      "table": "displacement",
+      "label": "Lake of Rot Shoreside",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Lake of Rot",
+            "name": "Lake of Rot Shoreside"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-shunning",
+      "table": "displacement",
+      "label": "Underground Roadside",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Subterranean Shunning-Grounds",
+            "name": "Underground Roadside"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-deeproot",
+      "table": "displacement",
+      "label": "Root-Facing Cliffs",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Deeproot Depths",
+            "name": "Root-Facing Cliffs"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-snowfield",
+      "table": "displacement",
+      "label": "Consecrated Snowfield",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Consecrated Snowfield",
+            "name": "Consecrated Snowfield"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-ordina",
+      "table": "displacement",
+      "label": "Ordina- Liturgical Town",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Consecrated Snowfield",
+            "name": "Ordina- Liturgical Town"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-farum",
+      "table": "displacement",
+      "label": "Crumbling Beast Grave",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Crumbling Farum Azula",
+            "name": "Crumbling Beast Grave"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-table",
+      "table": "displacement",
+      "label": "Table of Lost Grace",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Roundtable Hold",
+            "name": "Table of Lost Grace"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-sky",
+      "table": "displacement",
+      "label": "The sky",
+      "ops": [
+        {
+          "op": "player.drop",
+          "args": {
+            "height": 220
+          }
+        }
+      ]
     }
   ]
 }

@@ -175,6 +175,42 @@ export const TARNISHED_TOOL: ToolCatalog = {
       ],
     },
     {
+      op: "item.named",
+      label: "Give an item, by name",
+      note: "From the tool's own lists: consumables, upgrade and crafting materials, crystal tears, talismans, arrows, spells, and the key items that are simply given. Spell it as the game does.",
+      oneWay: true,
+      args: [
+        { name: "name", kind: "text", label: "Item", required: true, note: "Golden Seed, Rune Arc, Smithing Stone [3]." },
+        { name: "quantity", kind: "number", label: "How many", least: 1, most: 99 },
+      ],
+    },
+    {
+      op: "value.add",
+      label: "Change a number by an amount",
+      note: "Giving somebody five thousand runes is not the same as setting their runes to five thousand, and only one of those is a gift. Reverts to what it was.",
+      args: [
+        { name: "name", kind: "choice", label: "What", required: true, options: VALUES.map((v) => v.name) },
+        { name: "by", kind: "number", label: "By", required: true, note: "Negative takes it away. Held to the same range as setting it." },
+      ],
+    },
+    {
+      op: "warp.grace",
+      label: "Move the player to a grace",
+      note: "By name, from the tool's own list of every grace in the game. Works for graces the player has never found, which is the point. Say the area too where a name is used twice.",
+      oneWay: true,
+      args: [
+        { name: "name", kind: "text", label: "Grace", required: true, note: "Exactly as the tool spells it: Church of Elleh, Lake-Facing Cliffs." },
+        { name: "area", kind: "text", label: "Area", note: "Limgrave, Caelid, Stormveil Castle. Needed only where two graces share a name." },
+      ],
+    },
+    {
+      op: "player.drop",
+      label: "Lift the player, and let go",
+      note: "Straight up from wherever they are, and then gravity. Usually fatal, which is generally why it is being asked for. Needs no map at all.",
+      oneWay: true,
+      args: [{ name: "height", kind: "number", label: "How far up", least: 5, most: 500, note: "Metres. Around 150 is reliably fatal; 20 hurts." }],
+    },
+    {
       op: "item.give",
       label: "Give an item",
       oneWay: true,
