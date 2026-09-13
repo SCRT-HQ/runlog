@@ -1,0 +1,86 @@
+{
+  "tool": "TarnishedTool",
+  "setup": [{ "op": "flag.set", "args": { "name": "world.noCutscenes", "value": true } }],
+  "rows": [
+    {
+      "entry": "in-slow",
+      "table": "interference",
+      "label": "Slowed",
+      "until": "unit",
+      "ops": [{ "op": "value.set", "args": { "name": "player.speed", "value": 0.8 } }]
+    },
+    {
+      "entry": "in-quick",
+      "table": "interference",
+      "label": "Hurried",
+      "until": "unit",
+      "ops": [{ "op": "value.set", "args": { "name": "game.speed", "value": 1.2 } }]
+    },
+    {
+      "entry": "in-root",
+      "table": "interference",
+      "label": "Rooted",
+      "until": "unit",
+      "ops": [{ "op": "flag.set", "args": { "name": "player.noRoll", "value": true } }]
+    },
+    {
+      "entry": "in-glass",
+      "table": "interference",
+      "label": "Glass",
+      "until": "unit",
+      "ops": [{ "op": "value.set", "args": { "name": "player.incomingDamage", "value": 2 } }]
+    },
+    {
+      "entry": "in-blunt",
+      "table": "interference",
+      "label": "Blunted",
+      "until": "unit",
+      "ops": [{ "op": "value.set", "args": { "name": "player.outgoingDamage", "value": 0.6 } }]
+    },
+    {
+      "entry": "in-risen",
+      "table": "interference",
+      "label": "The risen",
+      "until": "unit",
+      "ops": [{ "op": "flag.set", "args": { "name": "enemies.noDeath", "value": true } }]
+    },
+    {
+      "entry": "in-poor",
+      "table": "interference",
+      "label": "Poor",
+      "until": "unit",
+      "ops": [{ "op": "flag.set", "args": { "name": "player.noRuneGain", "value": true } }]
+    },
+    {
+      "entry": "in-hush",
+      "table": "interference",
+      "label": "Unheard",
+      "until": "unit",
+      "ops": [{ "op": "flag.set", "args": { "name": "player.silent", "value": true } }]
+    },
+    {
+      "entry": "in-night",
+      "table": "interference",
+      "label": "Night falls",
+      "ops": [{ "op": "action.invoke", "args": { "action": "SetNight" } }]
+    },
+    {
+      "entry": "in-fog",
+      "table": "interference",
+      "label": "Fog",
+      "ops": [{ "op": "action.invoke", "args": { "action": "FoggyWeather" } }]
+    },
+    {
+      "entry": "in-rain",
+      "table": "interference",
+      "label": "Rain",
+      "ops": [{ "op": "action.invoke", "args": { "action": "RainyWeather" } }]
+    },
+    {
+      "entry": "dis-grace",
+      "table": "displacement",
+      "label": "Sent back",
+      "ops": [{ "op": "action.invoke", "args": { "action": "Quitout" } }]
+    }
+  ]
+}

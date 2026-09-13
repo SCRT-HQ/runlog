@@ -1,0 +1,396 @@
+# Elden Ring: Interference, a run the world keeps interfering with.
+#
+# The other two Elden Ring packs here are honest about being playable by
+# hand: a curse is a thing a runner agrees to act out, on their word. This
+# one is written the other way round. Every stretch draws something that
+# happens to the game itself, and a tool attached to it makes it happen:
+# you really are slower, the dead really do get up, it really is night.
+#
+# It still plays with nothing attached. Every draw says plainly what it
+# does, and two people at a table can honor it the way they always have.
+# What changes with a tool attached is that nobody has to.
+#
+# The mapping from a draw to what the tool does is not in here, and could
+# not be: this is a pack, and a pack that only worked with one Windows
+# program attached to one game would not be one. It lives beside this file
+# as a control profile. See packs/profiles/elden-ring-interference.json.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+schemaVersion: 1
+id: com.scrthq.runlog.elden-ring-interference
+version: "0.1.0"
+title: "Elden Ring: Interference"
+author: Runlog
+description: >-
+  Ten minutes at a time, with the world against you. Every stretch draws an
+  interference, slower legs, harder hits, a night that falls, the dead
+  getting back up, and it lasts until the stretch is over. Play by hand on
+  your honor, or attach a tool and let the dice do it to you.
+
+category: games
+tags: [Elden Ring, souls, solo, timed, effects]
+
+requires:
+  - { id: game, label: Elden Ring, kind: game }
+  - { id: system, label: A PC, kind: platform, note: "Offline. Attaching anything to the game online is a ban." }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - counters
+  - timers
+  - seededRuns
+  - journal
+  - moderated
+
+vocabulary:
+  run: { one: Interference, many: Interferences }
+  unit: { one: Stretch, many: Stretches }
+  # Nothing is tracked one by one here: a stretch is the thing, and it
+  # leaves nothing behind but a count.
+  subject: { one: Stretch, many: Stretches }
+  finalize: End the stretch
+  terms:
+    roll: Draw
+
+unit:
+  clock: { kind: timer, minutes: 10 }
+  min: 3
+  max: 20
+
+# What is on you right now. Every one of these lifts when the stretch
+# ends, which is the whole shape of the game: ten minutes of something
+# being wrong, then ten minutes of something else.
+states:
+  slowed:
+    label: Slowed
+    short: SLOW
+    scope: run
+    until: unitEnd
+    description: You move at four fifths. Walk it off.
+  hurried:
+    label: Hurried
+    short: FAST
+    scope: run
+    until: unitEnd
+    description: The world runs quicker than you do.
+  rooted:
+    label: Rooted
+    short: ROOT
+    scope: run
+    until: unitEnd
+    description: No dodging. Block, step, or take it.
+  glass:
+    label: Glass
+    short: GLAS
+    scope: run
+    until: unitEnd
+    description: Everything hits twice as hard.
+  blunted:
+    label: Blunted
+    short: BLNT
+    scope: run
+    until: unitEnd
+    description: Your own hits land soft.
+  risen:
+    label: The risen
+    short: RISE
+    scope: run
+    until: unitEnd
+    description: Nothing here stays dead.
+  poor:
+    label: Poor
+    short: POOR
+    scope: run
+    until: unitEnd
+    description: Nothing you kill is worth anything.
+  unheard:
+    label: Unheard
+    short: HUSH
+    scope: run
+    until: unitEnd
+    description: A mercy. Nothing hears you coming.
+
+counters:
+  stretches:
+    label: Stretches survived
+    initial: 0
+    min: 0
+    incrementOn:
+      - { on: unitFinalized }
+
+  deaths:
+    label: Deaths
+    initial: 0
+    min: 0
+
+  # Four stretches in one place is long enough. This is the counter that
+  # moves you on, and it puts itself back to nothing each time it fires.
+  wander:
+    label: Since you were moved
+    initial: 0
+    min: 0
+    hidden: true
+    incrementOn:
+      - { on: unitFinalized }
+    triggers:
+      - when: { gte: 4 }
+        label: Four stretches in one place
+        do:
+          - { do: rollOn, table: displacement }
+          - { do: modCounter, counter: wander, set: 0 }
+
+tables:
+  interference:
+    resolution: lookup
+    title: Interference
+    description: >-
+      Drawn at the top of every stretch, and it holds until the stretch
+      ends. With a tool attached it is done to the game; without one it is
+      done on your honor, which works exactly as well and is less fun.
+    roll: d12
+    entries:
+      - id: in-slow
+        range: [1, 1]
+        text: Your legs are heavy. You move at four fifths for this stretch.
+        tags: [interference]
+        points: 1
+        grants: [slowed]
+      - id: in-quick
+        range: [2, 2]
+        text: The world is hurried. Everything but you runs a fifth faster.
+        tags: [interference]
+        points: 2
+        grants: [hurried]
+      - id: in-root
+        range: [3, 3]
+        text: You cannot dodge. No rolling this stretch, at all.
+        tags: [interference]
+        points: 3
+        grants: [rooted]
+      - id: in-glass
+        range: [4, 4]
+        text: You are glass. Everything that touches you hits twice as hard.
+        tags: [interference]
+        points: 3
+        grants: [glass]
+      - id: in-blunt
+        range: [5, 5]
+        text: Your weapons are blunt. You deal a little over half of what you should.
+        tags: [interference]
+        points: 2
+        grants: [blunted]
+      - id: in-risen
+        range: [6, 6]
+        text: The dead get up. Nothing you kill this stretch stays down.
+        tags: [interference]
+        points: 3
+        grants: [risen]
+      - id: in-poor
+        range: [7, 7]
+        text: Nothing is owed to you. No runes from anything that dies this stretch.
+        tags: [interference]
+        points: 1
+        grants: [poor]
+      - id: in-night
+        range: [8, 8]
+        text: Night falls, now, wherever you are.
+        tags: [interference, weather]
+        points: 1
+      - id: in-fog
+        range: [9, 9]
+        text: Fog rolls in and stays for the stretch.
+        tags: [interference, weather]
+        points: 1
+      - id: in-rain
+        range: [10, 10]
+        text: Rain, for the whole stretch.
+        tags: [interference, weather]
+        points: 1
+      - id: in-hush
+        range: [11, 11]
+        text: A mercy. Nothing hears you coming this stretch.
+        tags: [interference, mercy]
+        grants: [unheard]
+      - id: in-calm
+        range: [12, 12]
+        text: Nothing at all. Ten quiet minutes; use them.
+        tags: [mercy]
+
+  displacement:
+    resolution: lookup
+    title: Displacement
+    description: >-
+      Every fourth stretch the Lands Between are done with you where you
+      are. Drawn as a stretch closes, and taken before the next one opens.
+    roll: d4
+    entries:
+      - id: dis-grace
+        range: [1, 1]
+        text: You wake where you last rested. Whatever you were in the middle of, you are not any more.
+        tags: [displacement]
+      - id: dis-ride
+        range: [2, 2]
+        text: Ride. Leave this region by the nearest road and do not come back this stretch.
+        tags: [displacement]
+      - id: dis-down
+        range: [3, 3]
+        text: Go down. The nearest cave, tomb, well or tunnel, and into it.
+        tags: [displacement]
+      - id: dis-stay
+        range: [4, 4]
+        text: You may stay. The land has not noticed you yet.
+        tags: [displacement]
+
+moves:
+  died:
+    label: I died
+    when: anytime
+    description: Count it. Nothing else happens; dying is its own punishment.
+    do:
+      - { do: modCounter, counter: deaths, by: 1 }
+
+phases:
+  - id: meddle
+    label: Interference
+    steps:
+      - kind: rollTable
+        table: interference
+        label: Draw this stretch's interference
+
+  - id: play
+    label: Play
+    steps:
+      - kind: manual
+        label: Play the stretch. Stop when the clock does.
+        description: >-
+          Ten minutes. Go where you like and do what you like; the
+          interference is the rule. If you die, say so, it is only counted.
+        checklist:
+          - text: The interference is in force.
+            shows: { table: interference, scope: unit }
+          - text: You were moved, if the land said so.
+            shows: { table: displacement, scope: unit }
+
+  - id: close
+    label: End the stretch
+    steps:
+      - kind: finalizeUnit
+        label: End the stretch
+
+endings:
+  - id: stop
+    label: Call it
+    text: The Interference ends. What you got through, you got through.
+  - id: ten
+    label: Ten stretches
+    text: Ten stretches, and the world never did settle down.
+    requires:
+      - { counter: stretches, is: { gte: 10 } }
+
+modes:
+  solo:
+    label: Solo
+    description: Three to twenty stretches, one player, ten minutes each.
+    units: { min: 3, max: 20 }
+
+  short:
+    label: An hour
+    description: Six stretches. An hour of play, near enough, and then it is over.
+    units: { fixed: 6 }
+
+  seeded:
+    label: Seeded
+    description: The same stretches in the same order from one seed, so two people can run it against each other.
+    seeded: true
+    units: { fixed: 6 }
+
+  party:
+    label: Everyone at once
+    description: >-
+      One person draws and everybody plays it, each on their own copy, and
+      the interference lands on every runner at the same moment. The harsh
+      draws are worth points; award them to whoever got through the
+      stretch under one. A mercy is worth nothing, which is fair.
+    units: { min: 3, max: 20 }
+    moderated:
+      contestants: { min: 2, max: 8 }
+      award: everyone
+
+defaultMode: solo
+
+hierarchy:
+  - Displacement
+  - Interference
+  - General rules
+
+fixtures:
+  - name: An interference lands, holds for the stretch, and is gone by the next one
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: interference, entryId: in-root, cause: phase }
+      - { t: StateApplied, state: rooted }
+      - { t: UnitFinalized }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: interference, entryId: in-calm, cause: phase }
+    expect:
+      - { path: counters.stretches, equals: 1 }
+      - { path: runStates.length, equals: 0 }
+      - { path: outcomes.length, equals: 2 }
+
+  - name: Four stretches in one place leaves a displacement owed
+    mode: solo
+    play:
+      - { enter: 1 }
+      - { step: "meddle#0", answers: { d12: 12 } }
+      - { step: "play#0" }
+      - { finalize: {} }
+      - { enter: 2 }
+      - { step: "meddle#0", answers: { d12: 12 } }
+      - { step: "play#0" }
+      - { finalize: {} }
+      - { enter: 3 }
+      - { step: "meddle#0", answers: { d12: 12 } }
+      - { step: "play#0" }
+      - { finalize: {} }
+      - { enter: 4 }
+      - { step: "meddle#0", answers: { d12: 12 } }
+      - { step: "play#0" }
+      - { finalize: {} }
+    expect:
+      - { path: counters.stretches, equals: 4 }
+      # Owed, not taken: a threshold is put in front of the player, since
+      # firing it means rolling, and the reducer cannot roll.
+      - { path: counters.wander, equals: 4 }
+      - { path: outcomes.length, equals: 4 }
+      - { requests: answered }
+
+  - name: Taking the displacement moves you on and starts the count again
+    mode: solo
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: CounterChanged, counter: wander, by: 4 }
+      - { t: OutcomeResolved, table: displacement, entryId: dis-grace, cause: action }
+      - { t: CounterChanged, counter: wander, set: 0 }
+      - { t: TriggerFired, key: "counter:wander:0:u1" }
+    expect:
+      - { path: counters.wander, equals: 0 }
+      - { path: outcomes.0.entryId, equals: dis-grace }
+      - { path: firedOnce, contains: "counter:wander:0:u1" }
+
+  - name: A death is counted and nothing else happens
+    mode: solo
+    play:
+      - { enter: 1 }
+      - { step: "meddle#0", answers: { d12: 12 } }
+      - { move: died }
+      - { move: died }
+    expect:
+      - { path: counters.deaths, equals: 2 }
+      - { path: runStates.length, equals: 0 }
