@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-interference
-version: "0.3.1"
+version: "0.4.0"
 title: "Elden Ring: Interference"
 author: Runlog
 description: >-
@@ -505,8 +505,9 @@ counters:
     min: 0
 
 
-  # Four stretches in one place is long enough. This is the counter that
-  # moves you on, and it puts itself back to nothing each time it fires.
+  # Long enough in one place, and the Lands Between are done with you.
+  # How long is the player's, on the dial below: this counts the
+  # stretches and puts itself back to nothing each time it fires.
   wander:
     label: Since you were moved
     initial: 0
@@ -515,16 +516,17 @@ counters:
     incrementOn:
       - { on: unitFinalized }
     triggers:
-      - when: { gte: 4 }
-        label: Four stretches in one place
+      - when: { gteResource: warpEvery }
+        label: Long enough in one place
         do:
           - { do: rollOn, table: displacement }
           - { do: modCounter, counter: wander, set: 0 }
 
-# Not a tally of anything that happened: a dial, with plus and minus on
-# it, which the player turns whenever one thing to do in ten minutes
-# stops being enough. The Target step reads it and rolls that many
-# times; nothing has to be pressed for that to happen.
+# Not tallies of anything that happened: dials, with plus and minus on
+# them in the trackers, which the player turns whenever the run turns
+# out to be a different shape from the one they wanted. The steps read
+# them and roll that many times; nothing has to be pressed for that to
+# happen.
 resources:
   interferences:
     label: Interferences per stretch
@@ -542,6 +544,14 @@ resources:
     step: 1
     display: number
     description: How many targets a stretch draws. Turn it up when one thing to do stops being enough.
+  warpEvery:
+    label: Stretches before a warp
+    initial: 4
+    min: 1
+    max: 10
+    step: 1
+    display: number
+    description: How long you are left where you are. At one, every stretch ends somewhere else; at ten, you will mostly stay put and the warp is a shock when it comes.
 
 tables:
   interference:

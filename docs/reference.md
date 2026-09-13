@@ -488,6 +488,8 @@ The threshold at which this fires.
 | `lte` | `integer` | - | Matches values less than or equal to this. |
 | `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
+| `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
 
 ## `pack.resources.*`
 
@@ -1131,6 +1133,8 @@ Match when the bound value satisfies this comparison.
 | `lte` | `integer` | - | Matches values less than or equal to this. |
 | `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
+| `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
 
 ##### `Action (do: branch).cases[].then[] (do: roll)`
 
@@ -1572,6 +1576,8 @@ A numeric comparison. Combine gte and lte for a closed range, or eq for an exact
 | `lte` | `integer` | - | Matches values less than or equal to this. |
 | `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
+| `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
 
 ##### `Action (do: when).all[]`
 
@@ -1609,6 +1615,8 @@ The comparison the counter's value must satisfy.
 | `lte` | `integer` | - | Matches values less than or equal to this. |
 | `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
+| `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
 
 ##### `Action (do: when).all[]`
 
@@ -1630,6 +1638,8 @@ The comparison the resource's value must satisfy.
 | `lte` | `integer` | - | Matches values less than or equal to this. |
 | `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
+| `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
 
 ##### `Action (do: when).all[]`
 
@@ -1651,6 +1661,8 @@ The comparison, in minutes, the clock's live elapsed time must satisfy.
 | `lte` | `integer` | - | Matches values less than or equal to this. |
 | `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
+| `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
 
 ##### `Action (do: when).all[]`
 
@@ -1672,6 +1684,8 @@ The comparison, in minutes, the timer's overrun must satisfy.
 | `lte` | `integer` | - | Matches values less than or equal to this. |
 | `gteCounter` | `string` | - | Matches values greater than or equal to this counter's current value. |
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
+| `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
+| `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
 
 ##### `Action (do: when).all[]`
 

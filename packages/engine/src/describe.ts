@@ -10,10 +10,14 @@ import type { Pack, Phase, Predicate } from "@runlog/rules-schema";
  * a blank tooltip.
  */
 
-type Bound = { eq?: number; gte?: number; lte?: number; gteCounter?: string; lteCounter?: string };
+type Bound = { eq?: number; gte?: number; lte?: number; gteCounter?: string; lteCounter?: string; gteResource?: string; lteResource?: string };
 
 function counterName(pack: Pack, id: string): string {
   return pack.counters?.[id]?.label ?? id;
+}
+
+function resourceName(pack: Pack, id: string): string {
+  return pack.resources?.[id]?.label ?? id;
 }
 
 function bound(pack: Pack, b: Bound): string {
@@ -24,6 +28,8 @@ function bound(pack: Pack, b: Bound): string {
   if (b.lte !== undefined) parts.push(`is ${b.lte} or fewer`);
   if (b.gteCounter) parts.push(`is at least ${counterName(pack, b.gteCounter)}`);
   if (b.lteCounter) parts.push(`is at most ${counterName(pack, b.lteCounter)}`);
+  if (b.gteResource) parts.push(`is at least ${resourceName(pack, b.gteResource)}`);
+  if (b.lteResource) parts.push(`is at most ${resourceName(pack, b.lteResource)}`);
   return parts.join(" and ");
 }
 

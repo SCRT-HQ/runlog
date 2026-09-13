@@ -1,5 +1,6 @@
 import type { Pack } from "@runlog/rules-schema";
 import type { RunState } from "./types.ts";
+import { withinBound } from "./bounds.ts";
 
 /**
  * Counter thresholds that have come due.
@@ -47,10 +48,9 @@ export function pendingTriggers(pack: Pack, state: RunState): PendingTrigger[] {
   for (const [counterId, def] of Object.entries(pack.counters ?? {})) {
     const value = state.counters[counterId] ?? def.initial;
     def.triggers?.forEach((trigger, index) => {
-      const { eq, gte, lte } = trigger.when;
-      if (eq !== undefined && value !== eq) return;
-      if (gte !== undefined && value < gte) return;
-      if (lte !== undefined && value > lte) return;
+      // Every form of bound, including the ones that read a counter or
+      // a dial rather than a number the pack wrote down.
+      if (!withinBound(value, trigger.when, state)) return;
 
       const key = triggerKey(counterId, index, trigger.oncePerRun, state.unit);
       if (state.firedOnce.includes(key)) return;

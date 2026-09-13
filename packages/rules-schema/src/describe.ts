@@ -129,6 +129,8 @@ export function boundInWords(pack: Pack, b: NumericBound): string {
   }
   if (b.gteCounter !== undefined) parts.push(`at least the ${label(pack, "counters", b.gteCounter)} tally`);
   if (b.lteCounter !== undefined) parts.push(`no more than the ${label(pack, "counters", b.lteCounter)} tally`);
+  if (b.gteResource !== undefined) parts.push(`at least ${label(pack, "resources", b.gteResource)}`);
+  if (b.lteResource !== undefined) parts.push(`no more than ${label(pack, "resources", b.lteResource)}`);
   return parts.join(" and ");
 }
 

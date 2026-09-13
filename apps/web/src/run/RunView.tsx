@@ -531,7 +531,7 @@ export function RunView({
           {run.moderated && <Scoreboard run={run} state={state} pack={pack} />}
           {run.roles.length > 0 && <Roles pack={pack} run={run} state={state} />}
           <Board pack={pack} state={state} onRename={run.renameSubject} onCorrect={run.readOnly ? undefined : run.correctState} />
-          <Trackers pack={pack} state={state} onNudge={run.readOnly ? undefined : run.nudgeCounter} />
+          <Trackers pack={pack} state={state} onNudge={run.readOnly ? undefined : run.nudgeCounter} onTurn={run.readOnly ? undefined : run.turnResource} />
           {run.record && api && !bench && <RacePanel pack={pack} race={raceView} />}
           {run.record && !bench && api && <Asks pack={pack} run={run} record={run.record} />}
           {run.record && !bench && <Members pack={pack} run={run.record} />}
@@ -2069,7 +2069,27 @@ function Board({
   );
 }
 
-function Trackers({ pack, state, onNudge }: { pack: Pack; state: RunState; onNudge?: (counter: string, by: number) => void }) {
+/**
+ * The dials and the tallies, side by side.
+ *
+ * A resource is a setting somebody chose and a counter is a tally of
+ * what happened, and both are turned by hand from here. The dials had
+ * no way to be turned at all: a resource with no bar and no boxes drew
+ * its number and nothing else, so "Targets per stretch 1 / 4" was a
+ * statement rather than a control, and the only way to change it was
+ * to be asked at the start of the run.
+ */
+function Trackers({
+  pack,
+  state,
+  onNudge,
+  onTurn,
+}: {
+  pack: Pack;
+  state: RunState;
+  onNudge?: (counter: string, by: number) => void;
+  onTurn?: (resource: string, by: number) => void;
+}) {
   const resources = Object.entries(pack.resources ?? {});
   const counters = Object.entries(pack.counters ?? {}).filter(([, c]) => !c.hidden);
   const cards = state.hand;
@@ -2081,13 +2101,28 @@ function Trackers({ pack, state, onNudge }: { pack: Pack; state: RunState; onNud
       {resources.map(([id, def]) => {
         const value = state.resources[id] ?? def.initial;
         const max = def.max ?? Math.max(value, 10);
+        const step = def.step ?? 1;
+        const low = value <= (def.min ?? 0);
+        const high = def.max !== undefined && value >= def.max;
         return (
           <div key={id} className="tracker">
             <div className="trackerHead">
-              <strong>{def.label}</strong>
-              <span className="muted">
-                {value}
-                {def.max !== undefined && ` / ${def.max}`}
+              <strong title={def.description}>{def.label}</strong>
+              <span className="nudge">
+                {onTurn && (
+                  <button className="ghost tiny" disabled={low} title={`Down to ${Math.max(def.min ?? 0, value - step)}`} onClick={() => onTurn(id, -step)}>
+                    −
+                  </button>
+                )}
+                <span className="muted num">
+                  {value}
+                  {def.max !== undefined && ` / ${def.max}`}
+                </span>
+                {onTurn && (
+                  <button className="ghost tiny" disabled={high} title={`Up to ${def.max !== undefined ? Math.min(def.max, value + step) : value + step}`} onClick={() => onTurn(id, step)}>
+                    +
+                  </button>
+                )}
               </span>
             </div>
             {def.display === "boxes" ? (
