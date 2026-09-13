@@ -36,7 +36,7 @@ export interface WsDeps {
   live: LiveStore;
   /** A way to post to connections; absent in a test that only checks routing. */
   poster?: Poster;
-  store: Pick<Store, "getSession" | "streamKeyOwner" | "manifest" | "getSnapshot" | "addAsk">;
+  store: Pick<Store, "getSession" | "streamKeyOwner" | "manifest" | "getSnapshot" | "addAsk" | "updateSession">;
   races: Pick<RaceStore, "getRace">;
   verify: (authorization: string | undefined) => Promise<Caller>;
   now?: () => string;
@@ -214,16 +214,34 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     // having no rules at all: an address names an account and the
     // server picks the run, so a tool can attach perfectly to a run
     // nobody is playing and report itself connected for ever.
-    const which = (await deps.store.getSession(conn.run))?.meta.packTitle ?? "a run";
+    const session = await deps.store.getSession(conn.run);
+    const which = session?.meta.packTitle ?? "a run";
+    /**
+     * Who has already had the parts of the terms that are given once.
+     *
+     * A seat, or the table where a tool named none. The terms go out on
+     * every attach, because a tool that restarted is holding none of
+     * them and a setting applied twice is the same setting. A gift is
+     * not: a run whose terms hand over runes or an item handed them over
+     * again on every reconnect, and by the third one it is a different
+     * game. So the run remembers, and those parts are left out.
+     */
+    const whose = conn.seat || "the table";
+    const given = session?.meta.termsGiven ?? [];
+    let setup: { frame: string; gave: boolean } | null = null;
     const line = !profile
       ? JSON.stringify({
           t: "note",
           text: `Attached to ${which}, which has no rules for a tool. An address finds the most recently played run that is open to watchers; if that is not the one you are playing, open that one to watchers and connect again.`,
         })
       : fits(profile, app || undefined)
-        ? setupFor(profile)
+        ? ((setup = setupFor(profile, given.includes(whose))), setup?.frame ?? null)
         : JSON.stringify({ t: "note", text: `${which} is set up for ${profile.tool}, so nothing here will reach ${app || "a tool that did not say what it is"}.` });
     if (line && (await poster.post(connectionId, line)) === "gone") await deps.live.disconnect(connectionId);
+    // Remembered only once it has actually gone out. A post that failed
+    // is a tool that never got its terms, and marking it given would
+    // leave the next attach short of them for the rest of the run.
+    if (setup?.gave && !given.includes(whose)) await deps.store.updateSession(conn.run, now(), { termsGiven: [...given, whose] });
     return { statusCode: 200 };
   }
 

@@ -129,7 +129,7 @@ describe("who an effect reaches", () => {
 
 describe("the run's own terms", () => {
   it("are a list of separate things, under an id the run can take back", () => {
-    expect(JSON.parse(setupFor(curses)!)).toEqual({
+    expect(JSON.parse(setupFor(curses)!.frame)).toEqual({
       t: "apply",
       id: "setup",
       label: "The run's terms",
@@ -141,6 +141,33 @@ describe("the run's own terms", () => {
   it("are the only thing that says so: a rule's operations stand or fall together", () => {
     const frames = appliesFor(curses, landed({ tags: ["curse"] }), undefined);
     for (const f of frames) expect(JSON.parse(f).each).toBeUndefined();
+  });
+
+  /**
+   * The terms go out on every attach, because a tool that restarted is
+   * holding none of them and a setting applied twice is the same setting.
+   * A gift is not: runes or an item handed over again on every reconnect
+   * is a different game by the third one.
+   */
+  it("leave out what is given once, for somebody who has had it", () => {
+    const withGift: ControlProfile = {
+      setup: [
+        { op: "flag.set", args: { name: "player.noRoll", value: true } },
+        { op: "runes.give", args: { amount: 50000 }, once: true },
+      ],
+    };
+    const first = setupFor(withGift, false)!;
+    expect(first.gave).toBe(true);
+    expect(JSON.parse(first.frame).ops).toHaveLength(2);
+
+    // Attaching again: the setting, not the runes.
+    const again = setupFor(withGift, true)!;
+    expect(again.gave).toBe(false);
+    expect(JSON.parse(again.frame).ops).toEqual([{ op: "flag.set", args: { name: "player.noRoll", value: true } }]);
+
+    // And terms that are nothing but a gift say nothing at all the
+    // second time, rather than an apply with an empty list in it.
+    expect(setupFor({ setup: [{ op: "runes.give", args: { amount: 1 }, once: true }] }, true)).toBeNull();
   });
 
   it("are nothing where a profile sets none", () => {

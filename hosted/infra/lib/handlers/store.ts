@@ -119,6 +119,16 @@ export interface SessionMeta {
   /** What the table does with an ask: waits for the host to press, or takes it as it lands. */
   askPolicy?: AskPolicy;
   askAt?: string;
+  /**
+   * Who has already had the parts of the run's terms that are given once.
+   *
+   * A seat, or "the table" where a tool named none. The terms go out on
+   * every attach, because a tool that restarted is holding none of them
+   * and a setting applied twice is the same setting. A gift is not: runes
+   * or an item handed over again on every reconnect is a different game
+   * by the third one.
+   */
+  termsGiven?: string[];
 }
 
 export type AskPolicy = "ask" | "auto";
@@ -330,7 +340,7 @@ export interface Store {
    * that landed in between. Throws `SeqConflict` when the tail has moved.
    */
   appendEvents(id: string, author: string, at: string, events: Record<string, unknown>[], opts?: { expectSeq?: number }): Promise<{ appended: StoredEvent[]; seq: number }>;
-  updateSession(id: string, at: string, patch: { name?: string; endedAt?: string; publicTokenHash?: string | null; askKeyHash?: string | null; askPolicy?: AskPolicy }): Promise<SessionMeta | null>;
+  updateSession(id: string, at: string, patch: { name?: string; endedAt?: string; publicTokenHash?: string | null; askKeyHash?: string | null; askPolicy?: AskPolicy; termsGiven?: string[] }): Promise<SessionMeta | null>;
   /** What a stranger with the link sees of a run whose pack they may not hold: the owner's device writes it, redacted, after each move. */
   putSnapshot(id: string, at: string, snapshot: unknown): Promise<void>;
   getSnapshot(id: string): Promise<{ at: string; snapshot: unknown } | null>;
