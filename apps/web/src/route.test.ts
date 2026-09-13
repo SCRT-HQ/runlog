@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addressOf, hrefFor, linkTo, runFromAddress } from "./route.ts";
+import { addressForPlay, addressOf, hrefFor, linkTo, runFromAddress } from "./route.ts";
 
 /**
  * One address, two spellings: the hash the app reads, and the path the
@@ -82,5 +82,42 @@ describe("a link the app writes for itself", () => {
     expect(linkTo("#guide/start")).toBe("#guide/start");
     expect(linkTo("#guide/start", "/play")).toBe("/play#guide/start");
     expect(linkTo("#marketplace/a-pack", "./")).toBe("./#marketplace/a-pack");
+  });
+});
+
+/**
+ * Where the run writes its own address.
+ *
+ * Reported from play: starting a run from the shelf left `/packs` in
+ * the bar, so a refresh went back to the shelf. Every other section
+ * wrote its address on the way in and the run did not.
+ */
+describe("the address the run should be wearing", () => {
+  it("takes over another section's address, since that section is no longer on screen", () => {
+    for (const at of ["#packs", "#guide", "#guide/streaming", "#profile", "#profile/servers", "#marketplace", "#create"]) {
+      expect(addressForPlay(at, true)).toBe("#play");
+    }
+  });
+
+  it("says the shelf where there is no pack loaded, which is what the run view shows then", () => {
+    expect(addressForPlay("#packs", false)).toBe("#packs");
+    expect(addressForPlay("#marketplace", false)).toBe("#packs");
+  });
+
+  it("leaves a run that has named itself alone", () => {
+    expect(addressForPlay("#run/01ABC", true)).toBeNull();
+    expect(addressForPlay("#play", true)).toBeNull();
+  });
+
+  it("leaves alone what is not a section: the run view has nothing better to say", () => {
+    // A shared pack, a race code, a widget, an empty address.
+    for (const at of ["", "#shared/abc", "#race/XYZ", "#widget/log", "#dock/1"]) {
+      expect(addressForPlay(at, true)).toBeNull();
+    }
+  });
+
+  it("is not fooled by a section's name inside another word", () => {
+    expect(addressForPlay("#packsomething", true)).toBeNull();
+    expect(addressForPlay("#guidebook", true)).toBeNull();
   });
 });
