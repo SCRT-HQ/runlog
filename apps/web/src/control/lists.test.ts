@@ -28,7 +28,12 @@ const lists: Lists = {
 describe("the tool's own names", () => {
   it("carries every list the catalog asks for", () => {
     expect(raw.graces.length).toBeGreaterThan(400);
-    expect(raw.items.length).toBeGreaterThan(900);
+    // Armor is in here too: it is a thing with a name and a count, which
+    // is what this list is for, and a weapon is not.
+    expect(raw.items.length).toBeGreaterThan(1600);
+    expect(raw.items).toContain("White Mask");
+    expect(raw.items).toContain("Lord of Blood's Exultation");
+    expect(raw.items).not.toContain("Godskin Peeler");
     expect(raw.weapons.length).toBeGreaterThan(480);
     expect(raw.ashes.length).toBe(116);
     expect(raw.bosses.length).toBeGreaterThan(200);

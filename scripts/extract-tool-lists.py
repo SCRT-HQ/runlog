@@ -32,7 +32,7 @@ graces = sorted({(r[2].strip(), r[1].strip()) for r in rows("Graces") if len(r) 
 # Everything `item.named` will match against, in the same order the tool
 # builds its own pool. Key items only where the tool hands them over
 # without an event behind them, which is the ones with no event id.
-ITEMS = ["Consumables", "UpgradeMaterials", "CraftingMaterials", "CrystalTears", "Talismans", "Arrows", "PotsAndPerfumes", "Sorceries", "Incantations"]
+ITEMS = ["Consumables", "UpgradeMaterials", "CraftingMaterials", "CrystalTears", "Talismans", "Armor", "Arrows", "PotsAndPerfumes", "Sorceries", "Incantations"]
 items = {r[2].strip() for key in ITEMS for r in rows(key) if len(r) >= 3}
 items |= {r[2].strip() for r in rows("KeyItems") if len(r) >= 7 and r[6].strip() in ("-1", "")}
 
