@@ -35,7 +35,7 @@ describe("the guide", () => {
     const together = GUIDE_PAGES.find((p) => p.slug === "inviting")!;
     const html = renderToStaticMarkup(<together.Page components={guideComponents} />);
     expect(html).toContain('class="plan plan-plus"');
-    const selling = GUIDE_PAGES.find((p) => p.slug === "selling-catalog")!;
+    const selling = GUIDE_PAGES.find((p) => p.slug === "selling-marketplace")!;
     expect(renderToStaticMarkup(<selling.Page components={guideComponents} />)).toContain('class="plan plan-publisher"');
   });
 

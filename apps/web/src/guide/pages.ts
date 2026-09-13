@@ -50,7 +50,7 @@ import CliAccount from "./pages/cli-account.mdx";
 import CliLibrary from "./pages/cli-library.mdx";
 import Selling from "./pages/selling.mdx";
 import SellingYourself from "./pages/selling-yourself.mdx";
-import SellingCatalog from "./pages/selling-catalog.mdx";
+import SellingMarketplace from "./pages/selling-marketplace.mdx";
 import Plans from "./pages/plans.mdx";
 import Account from "./pages/account.mdx";
 import Stored from "./pages/stored.mdx";
@@ -152,7 +152,7 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   P("cli-library", "Making a pack", "The command line", "Sealing from your own backend", "The package as a library: seal, open, a license key.", CliLibrary),
   P("selling", "Making a pack", "Selling", "Selling your packs", "Two ways, and who keeps the receipts.", Selling),
   P("selling-yourself", "Making a pack", "Selling", "From your own hands", "Sign, seal a copy, send it; nothing else involved.", SellingYourself),
-  P("selling-catalog", "Making a pack", "Selling", "Through the marketplace", "A card, a sale on your Stripe account, a ledger.", SellingCatalog),
+  P("selling-marketplace", "Making a pack", "Selling", "Through the marketplace", "A card, a sale on your Stripe account, a ledger.", SellingMarketplace),
   // Your account
   P("plans", "Your account", null, "Plans and pricing", "What is free, what a server adds, what running it yourself costs.", Plans),
   P("account", "Your account", "What is stored", "Your account and what is stored", "Everything on your device first; what leaves it, and when.", Account),
