@@ -36,7 +36,7 @@ The packs that ship with it are free, in the marketplace; a few of them:
 
 ## Not a tabletop, not a wheel
 
-Runlog has no map, no tokens and no character sheets. A virtual tabletop is where a group of role-players meets, and it is good at that; a wheel is a spin with no memory. Runlog carries the piece neither does: a game of rounds and consequences that runs beside whatever you are already doing, and remembers. The guide's [A stream run by dice](https://runlog.scrthq.com/guide/stream-why) compares the three and puts a first stream in order.
+Runlog has no map, no tokens and no character sheets. A virtual tabletop is where a group of role-players meets, and it is good at that; a wheel is a spin with no memory; a chaos platform is a remote control for viewers, where chat pays and something happens to the game. Runlog answers a different question: what the run says happens next, and whether it counts. It is the referee, so anything can be the hand that acts. The guide's [A stream run by dice](https://runlog.scrthq.com/guide/stream-why) puts them side by side and a first stream in order.
 
 ## Write your own
 

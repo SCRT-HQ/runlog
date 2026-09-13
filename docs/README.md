@@ -6,7 +6,7 @@ Runlog has two kinds of writing. The **guide** is in the app, under Menu or at `
 
 | Read | When |
 | --- | --- |
-| The guide's [A stream run by dice](https://runlog.scrthq.com/guide/stream-why) | You stream, and want the dice to decide the next thing on screen. What Runlog does for a stream, what it needs, and how it compares with a tabletop or a wheel. |
+| The guide's [A stream run by dice](https://runlog.scrthq.com/guide/stream-why) | You stream, and want the dice to decide the next thing on screen. What Runlog does for a stream, what it needs, and where it sits beside a tabletop, a wheel or a chaos platform. |
 | The guide's [Streaming a run](https://runlog.scrthq.com/guide/streaming) | You want a widget on your stream. Start here; the pages after it take OBS, Streamlabs, StreamElements, Streamer.bot, TikTok Live and Kick one at a time, field by field. |
 | [stream-api.md](stream-api.md) | You are writing a plugin, a chat command or a second screen: the numbers, the bell, the gestures. |
 | The guide's [Runlog in Discord](https://runlog.scrthq.com/guide/discord) | Runlog in a Discord server: adding the bot, claiming a server, hosting and watching runs, one page each; `discord.md` points there. |
