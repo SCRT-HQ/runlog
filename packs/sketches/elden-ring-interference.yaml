@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-interference
-version: "0.1.0"
+version: "0.2.0"
 title: "Elden Ring: Interference"
 author: Runlog
 description: >-
