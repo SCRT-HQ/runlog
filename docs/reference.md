@@ -139,6 +139,8 @@ A clock every unit runs. A mode can set its own with `clock`.
 | `minutes` | `number` | - | How long a timer runs. Required for a timer; ignored by a stopwatch. |
 | `label` | `string` | - | What the clock is called on screen. Defaults to the unit's name and number. |
 | `auto` | `boolean` | - | Start it when the unit is entered and stop it when the unit closes. Off, the player starts it by hand; it still stops with the unit. Default: `true`. |
+| `startsOn` | `string` | - | The phase whose arrival starts it, instead of the unit's own start. For a unit that draws before it plays: the clock is on the playing, and the drawing should not be spending it. It still stops with the unit. |
+| `minutesFrom` | `string` | - | A resource holding how long a timer runs, so the length is the player's rather than the pack's. Read when the clock starts, so turning the dial changes the next one and not the one running. Falls back to `minutes` where the resource is not set. |
 
 ## `pack.tables.* (resolution: lookup)`
 
@@ -804,6 +806,8 @@ This mode's clock on every unit, instead of the pack's `unit.clock`.
 | `minutes` | `number` | - | How long a timer runs. Required for a timer; ignored by a stopwatch. |
 | `label` | `string` | - | What the clock is called on screen. Defaults to the unit's name and number. |
 | `auto` | `boolean` | - | Start it when the unit is entered and stop it when the unit closes. Off, the player starts it by hand; it still stops with the unit. Default: `true`. |
+| `startsOn` | `string` | - | The phase whose arrival starts it, instead of the unit's own start. For a unit that draws before it plays: the clock is on the playing, and the drawing should not be spending it. It still stops with the unit. |
+| `minutesFrom` | `string` | - | A resource holding how long a timer runs, so the length is the player's rather than the pack's. Read when the clock starts, so turning the dial changes the next one and not the one running. Falls back to `minutes` where the resource is not set. |
 
 ## `pack.modes.*.score (0)`
 

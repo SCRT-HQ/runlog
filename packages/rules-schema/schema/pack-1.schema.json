@@ -322,6 +322,20 @@
               "default": true,
               "description": "Start it when the unit is entered and stop it when the unit closes. Off, the player starts it by hand; it still stops with the unit.",
               "type": "boolean"
+            },
+            "startsOn": {
+              "description": "The phase whose arrival starts it, instead of the unit's own start. For a unit that draws before it plays: the clock is on the playing, and the drawing should not be spending it. It still stops with the unit.",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+            },
+            "minutesFrom": {
+              "description": "A resource holding how long a timer runs, so the length is the player's rather than the pack's. Read when the clock starts, so turning the dial changes the next one and not the one running. Falls back to `minutes` where the resource is not set.",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
             }
           },
           "required": [
@@ -3044,6 +3058,20 @@
                 "default": true,
                 "description": "Start it when the unit is entered and stop it when the unit closes. Off, the player starts it by hand; it still stops with the unit.",
                 "type": "boolean"
+              },
+              "startsOn": {
+                "description": "The phase whose arrival starts it, instead of the unit's own start. For a unit that draws before it plays: the clock is on the playing, and the drawing should not be spending it. It still stops with the unit.",
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+              },
+              "minutesFrom": {
+                "description": "A resource holding how long a timer runs, so the length is the player's rather than the pack's. Read when the clock starts, so turning the dial changes the next one and not the one running. Falls back to `minutes` where the resource is not set.",
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
               }
             },
             "required": [

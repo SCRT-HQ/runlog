@@ -204,6 +204,12 @@ export const Clock = z
       .boolean()
       .default(true)
       .describe("Start it when the unit is entered and stop it when the unit closes. Off, the player starts it by hand; it still stops with the unit."),
+    startsOn: Id.optional().describe(
+      "The phase whose arrival starts it, instead of the unit's own start. For a unit that draws before it plays: the clock is on the playing, and the drawing should not be spending it. It still stops with the unit.",
+    ),
+    minutesFrom: Id.optional().describe(
+      "A resource holding how long a timer runs, so the length is the player's rather than the pack's. Read when the clock starts, so turning the dial changes the next one and not the one running. Falls back to `minutes` where the resource is not set.",
+    ),
   })
   .strict()
   .refine((c) => c.kind !== "timer" || c.minutes !== undefined, { message: "a timer needs minutes", path: ["minutes"] })
