@@ -21,9 +21,7 @@ import { listingPayload } from "../packages/rules-schema/src/index.ts";
 const PACKS = [
   "packs/sketches/ladder-work.yaml",
   "packs/sketches/rocket-league-ladder.yaml",
-  "packs/sketches/homefront.yaml",
   "packs/sketches/practice-room.yaml",
-  "packs/sketches/pantry-roulette.yaml",
   "packs/sketches/elden-ring-tarnishedtool.yaml",
   "packs/sketches/rocket-league-showdown.yaml",
   "packs/sketches/twenty-five.yaml",

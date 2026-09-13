@@ -13,10 +13,8 @@ describe("the marketplace", () => {
     expect(entries.map((e) => e.id)).toEqual([
       "com.scrthq.runlog.forfeits",
       "com.scrthq.runlog.elden-ring-tarnishedtool",
-      "com.scrthq.runlog.homefront",
       "com.scrthq.runlog.ladder-work",
       "com.scrthq.runlog.engine-testing",
-      "com.scrthq.runlog.pantry-roulette",
       "com.scrthq.runlog.practice-room",
       "com.scrthq.runlog.rocket-league-ladder",
       "com.scrthq.runlog.rocket-league-showdown",
@@ -37,8 +35,8 @@ describe("the marketplace", () => {
     const showdown = entries.find((e) => e.id === "com.scrthq.runlog.rocket-league-showdown");
     expect(showdown?.features).toContain("moderated");
     expect(showdown?.features).not.toContain("solo");
-    const pantry = entries.find((e) => e.id === "com.scrthq.runlog.pantry-roulette");
-    expect(pantry?.features).toEqual(expect.arrayContaining(["solo", "together", "seeded", "timers", "journal", "reachesBack"]));
+    const practice = entries.find((e) => e.id === "com.scrthq.runlog.practice-room");
+    expect(practice?.features).toEqual(expect.arrayContaining(["solo", "seeded", "timers", "journal", "reachesBack"]));
   });
 
   it("puts the starter first, and knows the old short names", async () => {
