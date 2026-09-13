@@ -18,6 +18,8 @@
 #   * one flow serving many modes, with the mode choosing the table
 
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
+# yaml-language-server: $schema=https://runlog.dev/schema/pack-1.schema.json
+
 schemaVersion: 1
 id: com.scrthq.runlog.rocket-league-ladder
 version: "0.2.0"

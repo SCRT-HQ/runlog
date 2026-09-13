@@ -11,6 +11,8 @@
 # an overrun measured in minutes, and a streak that only the clock can keep.
 
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
+# yaml-language-server: $schema=https://runlog.dev/schema/pack-1.schema.json
+
 schemaVersion: 1
 id: com.scrthq.runlog.twenty-five
 version: "0.1.0"
