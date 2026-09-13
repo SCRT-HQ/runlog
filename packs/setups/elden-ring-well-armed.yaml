@@ -3,25 +3,43 @@
 # The other half of what a setup is for. Bare-handed takes things away;
 # this hands them over, which is the run where the interest is in what
 # the dice do rather than in whether you can survive the first scene.
+#
+# The generalist of the class loadouts: a weapon that works, armor that
+# holds, and enough in the purse to buy whatever this one does not cover.
+# The others beside it commit to something.
 
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.well-armed
-version: "1.0.0"
+version: "2.0.0"
 title: Well armed
 author: Runlog
 description: >-
-  A katana at twenty-five with blood on it, a staff for the other kind of
-  answer, and enough to buy what neither covers. For a run where the point
+  A katana at twenty-five with blood on it, a knight's armor, four
+  talismans and a hundred and twenty thousand. For a run where the point
   is the twists, not the first hour of scraping.
 
 tool: TarnishedTool
 
 ops:
-  # Somber weapons cap at ten and take no affinity; these two are the
-  # ordinary kind, which is why they can carry both.
+  # An ordinary weapon, so it takes twenty-five and an affinity. The
+  # somber ones cap at ten and take none, which is why none are here.
   - { op: weapon.named, args: { name: Uchigatana, upgrade: 25, affinity: Blood, ash: Seppuku } }
-  - { op: weapon.named, args: { name: Academy Glintstone Staff, upgrade: 25 } }
+
+  # Armor is four pieces and the game has no notion of a set, so a set is
+  # four lines. Banished Knight carries weight without being fat-rolling.
+  - { op: item.named, args: { name: Banished Knight Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Banished Knight Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Banished Knight Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Banished Knight Greaves, quantity: 1 }, once: true }
+
+  # Talismans nobody would argue with: more equip load, more health, and
+  # two that pay for attacking rather than for surviving.
+  - { op: item.named, args: { name: Erdtree's Favor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Green Turtle Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Winged Sword Insignia, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Shard of Alexander, quantity: 1 }, once: true }
+
   - { op: runes.give, args: { amount: 120000 }, once: true }
   - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
   - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
