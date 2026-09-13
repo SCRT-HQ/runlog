@@ -731,16 +731,24 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     [commit, pack],
   );
 
-  /** Move a tally by hand, when what was recorded was not what happened. */
+  /**
+   * Move a tally by hand, when what was recorded was not what happened.
+   *
+   * Whose, where the pack keeps it per racer: the same correction on a
+   * board of four is four different corrections, and the log should say
+   * which of them it was.
+   */
   const nudgeCounter = useCallback(
-    (counter: string, by: number) => {
+    (counter: string, by: number, contestant?: string) => {
       const at = now();
+      const label = pack.counters?.[counter]?.label ?? counter;
+      const who = contestant ? state?.contestants.find((c) => c.id === contestant)?.name : undefined;
       commit([
-        { t: "Corrected", at, note: `${pack.counters?.[counter]?.label ?? counter} ${by > 0 ? "+" : ""}${by}` },
-        { t: "CounterChanged", at, counter, by },
+        { t: "Corrected", at, note: `${who ? `${who}: ` : ""}${label} ${by > 0 ? "+" : ""}${by}` },
+        { t: "CounterChanged", at, counter, by, ...(contestant ? { contestant } : {}) },
       ]);
     },
-    [commit, pack],
+    [commit, pack, state],
   );
 
   /**

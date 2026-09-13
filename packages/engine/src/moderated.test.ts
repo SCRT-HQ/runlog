@@ -25,7 +25,7 @@ vocabulary:
   finalize: Close
 unit: { createsSubject: true, min: 1, max: 5 }
 counters:
-  deaths: { label: Deaths, initial: 0, min: 0 }
+  deaths: { label: Deaths, initial: 0, min: 0, per: contestant }
   heats: { label: Heats, initial: 0, min: 0 }
 tables:
   trick:
@@ -296,5 +296,36 @@ describe("an outcome drawn for one racer", () => {
     // Nobody's rather than a name the board no longer has: an outcome
     // addressed to a ghost would never reach a game.
     expect(state.outcomes.at(-1)?.contestant).toBeUndefined();
+  });
+});
+
+/**
+ * A tally the pack keeps per racer.
+ *
+ * The run-wide copy was a nought sitting beside somebody's two, and
+ * neither of them was a number anybody could act on.
+ */
+describe("a counter declared per contestant", () => {
+  it("says so, so a board knows to carry it and the trackers know to leave it", () => {
+    const p = pack();
+    expect(p.counters?.["deaths"]?.per).toBe("contestant");
+    expect(p.counters?.["heats"]?.per).toBe("table");
+  });
+
+  it("is each racer's, and moving one leaves the others where they were", () => {
+    const p = pack();
+    const state = reduce(p, [
+      ...opened(p, "first"),
+      ev("CounterChanged", { counter: "deaths", by: 2, contestant: "c1" }),
+      ev("CounterChanged", { counter: "deaths", by: -1, contestant: "c1" }),
+      ev("CounterChanged", { counter: "deaths", by: 1, contestant: "c3" }),
+    ]);
+    expect(state.contestants.map((c) => c.counters["deaths"] ?? 0)).toEqual([1, 0, 1]);
+  });
+
+  it("is held to its own floor per racer, so a correction cannot go below nothing", () => {
+    const p = pack();
+    const state = reduce(p, [...opened(p, "first"), ev("CounterChanged", { counter: "deaths", by: -3, contestant: "c1" })]);
+    expect(state.contestants[0]!.counters["deaths"]).toBe(0);
   });
 });

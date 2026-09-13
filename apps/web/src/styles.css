@@ -3442,6 +3442,10 @@ select.textInput {
 .chipAdd { font: inherit; font-size: 0.75rem; background: transparent; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 0.05rem 0.5rem; cursor: pointer; }
 .nudge { display: inline-flex; align-items: center; gap: 0.35rem; }
 .nudge .num { min-width: 1.5em; text-align: center; }
+/* A racer's own tally, turned where it is read. Tighter than the run's
+   trackers because several of these sit on one line beside a name. */
+.chip.nudge { gap: 0.15rem; }
+.chip.nudge .num { min-width: 1.1em; }
 
 /* ---- moderated play: the roster, the winners, the scoreboard ---- */
 .roster { list-style: none; margin: 0 0 0.5rem; padding: 0; display: grid; gap: 0.3rem; }

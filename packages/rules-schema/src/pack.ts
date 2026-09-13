@@ -133,6 +133,12 @@ export const CounterDef = z
     initial: z.number().int().default(0).describe("Value at the start of a run."),
     min: z.number().int().optional().describe("Floor. Values are clamped to it."),
     max: z.number().int().optional().describe("Ceiling. Values are clamped to it."),
+    per: z
+      .enum(["table", "contestant"])
+      .default("table")
+      .describe(
+        "Whose tally it is. `table` is the default and is the run's. `contestant` is each racer's: in a moderated run it sits on the scoreboard beside their score, one per name, and stays off the run's own trackers, since a run-wide number for a thing being counted per person is a number nobody can act on. Where there is no roster it is the run's as usual, which is every solo run.",
+      ),
     hidden: z
       .boolean()
       .default(false)

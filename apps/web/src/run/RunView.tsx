@@ -1739,6 +1739,8 @@ function Scoreboard({ run, state, pack }: { run: ReturnType<typeof useRun>; stat
   };
   /** The marks a contestant can be given: contestant-scoped states they do not carry. */
   const marks = (held: string[]) => Object.entries(pack.states ?? {}).filter(([id, def]) => def.scope === "contestant" && !held.includes(id));
+  /** The tallies the pack keeps per racer, which is what this board carries for each of them. */
+  const theirs = Object.entries(pack.counters ?? {}).filter(([, def]) => def.per === "contestant" && !def.hidden);
   return (
     <section className="panel">
       <h3 className="sectionTitle">
@@ -1771,13 +1773,25 @@ function Scoreboard({ run, state, pack }: { run: ReturnType<typeof useRun>; stat
             )}
           </span>
           <span className="nudge">
-            {/* Their own tallies, beside their score: a per-contestant
-                move moves this one and nobody else's, so a race with
-                four names has four death counts and the trackers below
-                keep only what belongs to the table. */}
-            {Object.entries(s.contestant.counters).map(([id, value]) => (
-              <span key={id} className="chip" title={pack.counters?.[id]?.label ?? id}>
-                {pack.counters?.[id]?.label ?? id} {value}
+            {/* Their own tallies, beside their score, and turned here:
+                a race with four names has four death counts and the
+                trackers below keep only what belongs to the table.
+                Shown from nought rather than from the first one, so
+                there is something to press before anybody has died. */}
+            {theirs.map(([id, def]) => (
+              <span key={id} className="chip nudge" title={`${def.label}, for ${s.contestant.name}`}>
+                {def.label}
+                {editable && (
+                  <button className="chipX" title={`One fewer for ${s.contestant.name}`} onClick={() => run.nudgeCounter(id, -1, s.contestant.id)}>
+                    −
+                  </button>
+                )}
+                <span className="num">{s.contestant.counters[id] ?? def.initial}</span>
+                {editable && (
+                  <button className="chipX" title={`One more for ${s.contestant.name}`} onClick={() => run.nudgeCounter(id, 1, s.contestant.id)}>
+                    +
+                  </button>
+                )}
               </span>
             ))}
             <span className="muted num">{s.points}</span>
@@ -2090,8 +2104,13 @@ function Trackers({
   onNudge?: (counter: string, by: number) => void;
   onTurn?: (resource: string, by: number) => void;
 }) {
+  // A tally kept per racer belongs on the scoreboard, next to the name
+  // it belongs to. Keeping a run-wide copy here as well showed a nought
+  // beside somebody's two, and there was nothing anybody could do with
+  // either. Alone, there is no board and it is the run's as usual.
+  const racing = state.contestants.length > 0;
   const resources = Object.entries(pack.resources ?? {});
-  const counters = Object.entries(pack.counters ?? {}).filter(([, c]) => !c.hidden);
+  const counters = Object.entries(pack.counters ?? {}).filter(([, c]) => !c.hidden && !(racing && c.per === "contestant"));
   const cards = state.hand;
   if (resources.length + counters.length + cards.length === 0) return null;
 
