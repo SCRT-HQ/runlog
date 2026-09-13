@@ -102,3 +102,23 @@ export function goTo(hash: string, how: "replace" | "push" = "replace"): void {
   if (how === "push") history.pushState(null, "", target);
   else history.replaceState(null, "", target);
 }
+
+/**
+ * The address the run should be wearing, or null to leave it alone.
+ *
+ * The run is reached from a dozen places that all say "show the run"
+ * and none of which said where that was, so a run started from the
+ * shelf left `/packs` in the bar and a reload went back to the shelf.
+ * The other sections each write their own address on the way in; this
+ * is the run's, applied wherever it lands rather than at each door.
+ *
+ * Only over another section's address. A run that has named itself
+ * keeps its name, and an address that is not a section at all -- a
+ * shared pack, a race code, a widget -- is left alone, because the run
+ * view has nothing better to say than what is already there.
+ */
+export function addressForPlay(at: string, hasPack: boolean): string | null {
+  if (!/^#(packs|guide|profile|marketplace|create)(\/|$)/.test(at)) return null;
+  // With no pack loaded the run view is the shelf, and says so.
+  return hasPack ? "#play" : "#packs";
+}

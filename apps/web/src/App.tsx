@@ -28,7 +28,7 @@ import { dockFromHash, type DockRoute } from "./dock/route.ts";
 import { linkFromHash, stashLink } from "./connections/route.ts";
 import { WidgetView } from "./widget/WidgetView.tsx";
 import { liveFromHash, type LiveRoute } from "./live/route.ts";
-import { addressOf, appBase, goTo, runFromAddress, linkTo } from "./route.ts";
+import { addressForPlay, addressOf, appBase, goTo, runFromAddress, linkTo } from "./route.ts";
 import { LiveRunView } from "./live/LiveRunView.tsx";
 import { DocMenu } from "./docs/DocMenu.tsx";
 import { DocView } from "./docs/DocView.tsx";
@@ -259,6 +259,27 @@ export default function App() {
     if (from.test(addressOf(location))) goTo(source === null ? "#packs" : "#play");
   };
   const leaveGuide = () => backToPlay(/^#guide/);
+
+  /**
+   * The address says what is on screen, for the run as for every section.
+   *
+   * Each section writes its own address on the way in. The run did not:
+   * it is reached from a dozen places that all say `setView("play")` and
+   * none of them said where that was, so a run started from the shelf
+   * left `/packs` in the bar and a reload went back to the shelf. This
+   * is the one rule rather than a `goTo` beside each of them, because
+   * the next one added would have been the next one to forget.
+   *
+   * Only over another section's address. A run that named itself keeps
+   * its name, and anything that is not a section at all -- a shared
+   * pack, a race code, a widget -- is left alone: the run view has
+   * nothing better to say than what is already there.
+   */
+  useEffect(() => {
+    if (view !== "play") return;
+    const wanted = addressForPlay(addressOf(location), source !== null);
+    if (wanted) goTo(wanted);
+  }, [view, source]);
   /**
    * The shelf, and the address bar saying so.
    *
@@ -1140,6 +1161,10 @@ export default function App() {
             setLastActive({ packId: p.id, runId: r.runId });
             choose(p.id, p.source);
             setView("play");
+            // This one knows which run, so it says which run: the rule
+            // above would settle for `play`, which is a reload away
+            // from the same place but not a link worth sending.
+            goTo(`#run/${r.runId}`);
           }}
           onContinueLast={(runId) => void continueLast(false, runId)}
           onStartAnother={(p) => {
