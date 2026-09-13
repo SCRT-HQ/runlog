@@ -749,6 +749,7 @@ Parts of the base ruleset this mode leaves out.
 | `decks` | `string`[] | - | Decks not used in this mode. |
 | `counters` | `string`[] | - | Counters not tracked in this mode. |
 | `phases` | `string`[] | - | Phases skipped entirely in this mode. |
+| `moves` | `string`[] | - | Moves not offered in this mode. For a move another part of the mode already does: a race awards a challenge to say somebody finished it, so the move that said the same thing is a second way to do one thing. |
 
 ## `pack.modes.*.units`
 
@@ -857,6 +858,7 @@ Moderated play: one person runs the game on the device, a roster of named contes
 | `contestants` | `object` | - | How many people race. The moderator is not one of them. Default: `{"min":2,"max":10}`. |
 | `award` | `first` \| `everyone` | - | Whether only the first to finish a challenge scores it, or everyone who finishes does. Default: `"first"`. |
 | `firstBonus` | `integer` | - | Extra points for finishing first, on top of the result's own. Meaningful with `everyone`. Default: `0`. |
+| `onAward` | [Action](#action)[] | - | What happens when the moderator awards a challenge, run for the contestant who won it: their draw, their counter. In a race the award *is* the declaration that somebody finished, so a pack that would otherwise offer a move saying so can put what that move did here instead and be rid of the second press. |
 
 ## `pack.modes.*.moderated.contestants`
 

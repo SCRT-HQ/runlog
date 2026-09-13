@@ -554,6 +554,12 @@ export const Mode = z
         decks: z.array(Id).optional().describe("Decks not used in this mode."),
         counters: z.array(Id).optional().describe("Counters not tracked in this mode."),
         phases: z.array(Id).optional().describe("Phases skipped entirely in this mode."),
+        moves: z
+          .array(Id)
+          .optional()
+          .describe(
+            "Moves not offered in this mode. For a move another part of the mode already does: a race awards a challenge to say somebody finished it, so the move that said the same thing is a second way to do one thing.",
+          ),
       })
       .strict()
       .optional()
@@ -648,6 +654,12 @@ export const Mode = z
           .min(0)
           .default(0)
           .describe("Extra points for finishing first, on top of the result's own. Meaningful with `everyone`."),
+        onAward: z
+          .array(Action)
+          .optional()
+          .describe(
+            "What happens when the moderator awards a challenge, run for the contestant who won it: their draw, their counter. In a race the award *is* the declaration that somebody finished, so a pack that would otherwise offer a move saying so can put what that move did here instead and be rid of the second press.",
+          ),
       })
       .strict()
       .optional()

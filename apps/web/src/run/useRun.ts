@@ -616,7 +616,15 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
   const challengeList = useMemo(() => (state && moderated ? challenges(pack, state) : []), [pack, state, moderated]);
   const standingsList = useMemo(() => (state ? standings(state) : []), [state]);
 
-  /** The moderator's word: this contestant finished this drawn result. */
+  /**
+   * The moderator's word: this contestant finished this drawn result.
+   *
+   * In a race this *is* the declaration that somebody settled it, so
+   * the mode can say what settling pays and it is drawn here, for them.
+   * A pack that puts a move in front of the same sentence is asking for
+   * the same thing twice, and the second press was always going to be
+   * the one that got forgotten.
+   */
   const award = useCallback(
     (contestant: string, outcome: number) => {
       if (!state) return;
@@ -624,8 +632,18 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
       const o = state.outcomes[outcome];
       if (value === null || !o) return;
       commit([{ t: "Awarded", at: now(), contestant, outcome, table: o.table, entryId: o.entryId, points: value }]);
+      const pays = moderation(pack, state)?.onAward;
+      if (!pays || pays.length === 0) return;
+      const who = state.contestants.find((c) => c.id === contestant)?.name ?? contestant;
+      begin({
+        kind: "actions",
+        actions: pays,
+        keyPrefix: `award:${outcome}:${contestant}`,
+        label: `${who} settled it`,
+        contestant,
+      });
     },
-    [pack, state, commit],
+    [pack, state, commit, begin],
   );
 
   const revokeAward = useCallback(

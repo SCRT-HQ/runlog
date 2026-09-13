@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-interference
-version: "0.4.0"
+version: "0.5.0"
 title: "Elden Ring: Interference"
 author: Runlog
 description: >-
@@ -1756,10 +1756,13 @@ moves:
   # so each is offered once per name and counts against the one who
   # pressed it. In a run with nobody on the board they are the table's,
   # which is every solo run of this pack.
+  # The one thing only the player knows, in a run with nobody on a
+  # board. Where there is a roster the moderator awards the target
+  # instead, which says the same thing and says who, so this is dropped
+  # from that mode rather than offered beside it.
   settled:
     label: I settled it
     when: anytime
-    per: contestant
     description: The target is done. Draw what it was worth.
     available:
       - { unitIndex: { gte: 1 } }
@@ -1886,9 +1889,18 @@ modes:
       draws are worth points; award them to whoever got through the
       stretch under one. A mercy is worth nothing, which is fair.
     units: { min: 3, max: 20 }
+    # Awarding a target is how a race says somebody settled it, so that
+    # is where the boon is drawn and it is drawn for them. The move that
+    # said the same thing is gone from this mode: two ways to declare
+    # one thing meant the boon was the run's rather than the winner's,
+    # and the second press was the one nobody remembered.
+    disable:
+      moves: [settled]
     moderated:
       contestants: { min: 2, max: 8 }
       award: everyone
+      onAward:
+        - { do: rollOn, table: boon }
 
 defaultMode: solo
 

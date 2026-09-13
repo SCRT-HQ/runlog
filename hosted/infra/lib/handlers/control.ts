@@ -288,6 +288,14 @@ export function framesForGesture(profile: ControlProfile, kind: string, data: un
   if (kind !== "outcome") return [];
   const landed = landedOf(data);
   if (!landed) return [];
+  // A result drawn for one racer reaches that racer's game and no
+  // other, whatever the rules say about who they reach. A boon Nate
+  // earned is not half damage on four machines, and a connection that
+  // never said which seat it is cannot be the one that gets it.
+  const only = data && typeof data === "object" ? (data as Record<string, unknown>)["seat"] : undefined;
+  if (typeof only === "string" && only.length > 0) {
+    if (!seat || seat.toLowerCase() !== only.toLowerCase()) return [];
+  }
   return appliesFor(profile, landed, seat);
 }
 
