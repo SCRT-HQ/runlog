@@ -64,6 +64,28 @@ export const Vocabulary = z
       .string()
       .default("Finalize")
       .describe("Verb for closing a unit, e.g. Finalize, Fire, Commit."),
+    /**
+     * What a bundle of tool operations is called here.
+     *
+     * One of these configures a tool at the start of a run and can be
+     * applied again during one, which is how somebody running a table
+     * hands out a new one mid-play. "Setup" is what that is; it is not
+     * what anybody calls it. A challenge run for a game with gear calls
+     * it a loadout, a game about restrictions might call it terms, and
+     * neither should have to read the other's word on their own screen.
+     *
+     * The document, the file and the marketplace go on saying setup. The
+     * word people buy under and the word people play under do not have to
+     * be the same word.
+     */
+    setup: z
+      .object({
+        one: z.string().describe("Singular, e.g. Setup, Loadout, Terms, Handicap."),
+        many: z.string().describe("Plural form."),
+      })
+      .strict()
+      .default({ one: "Setup", many: "Setups" })
+      .describe("What a bundle of tool operations is called, where this game has a better word than Setup."),
     terms: z
       .record(z.string(), z.string())
       .optional()
