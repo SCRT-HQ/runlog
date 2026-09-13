@@ -162,7 +162,7 @@ One result in a lookup table.
 | `title` | `string` | - | Short heading, when the entry has a name of its own. |
 | `text` | `string` | yes | The rules text shown to the player, verbatim. This is what they read and obey. |
 | `triggers` | `object`[] | - | Mechanical consequences of this result. |
-| `requires` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for this result to make sense. When one fails the app offers a re-roll. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
+| `requires` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for this result to make sense. When one fails the dice are thrown again, up to a few times, the way they are for a result the run lacks a requirement for. Use it where a result has no referent yet rather than where it is merely hard: `unitIndex: { gte: 2 }` on a result that sends somebody back to where the last one started. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
 | `grants` | `string`[] | - | States applied to the relevant subject on resolution. Shorthand for an applyState trigger. |
 | `tags` | `string`[] | - | Free tags, for cross-referencing and for filtering results out in some modes. |
 | `points` | `integer` | - | What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone. |
@@ -202,7 +202,7 @@ One outcome tier in a bands table, selected by comparing the rolled total.
 | `title` | `string` | - | Short heading, when the entry has a name of its own. |
 | `text` | `string` | yes | The rules text shown to the player, verbatim. This is what they read and obey. |
 | `triggers` | `object`[] | - | Mechanical consequences of this result. |
-| `requires` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for this result to make sense. When one fails the app offers a re-roll. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
+| `requires` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for this result to make sense. When one fails the dice are thrown again, up to a few times, the way they are for a result the run lacks a requirement for. Use it where a result has no referent yet rather than where it is merely hard: `unitIndex: { gte: 2 }` on a result that sends somebody back to where the last one started. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
 | `grants` | `string`[] | - | States applied to the relevant subject on resolution. Shorthand for an applyState trigger. |
 | `tags` | `string`[] | - | Free tags, for cross-referencing and for filtering results out in some modes. |
 | `points` | `integer` | - | What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone. |
@@ -254,7 +254,7 @@ One rung of an opposed roll's outcome ladder.
 | `title` | `string` | - | Short heading, when the entry has a name of its own. |
 | `text` | `string` | yes | The rules text shown to the player, verbatim. This is what they read and obey. |
 | `triggers` | `object`[] | - | Mechanical consequences of this result. |
-| `requires` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for this result to make sense. When one fails the app offers a re-roll. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
+| `requires` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for this result to make sense. When one fails the dice are thrown again, up to a few times, the way they are for a result the run lacks a requirement for. Use it where a result has no referent yet rather than where it is merely hard: `unitIndex: { gte: 2 }` on a result that sends somebody back to where the last one started. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
 | `grants` | `string`[] | - | States applied to the relevant subject on resolution. Shorthand for an applyState trigger. |
 | `tags` | `string`[] | - | Free tags, for cross-referencing and for filtering results out in some modes. |
 | `points` | `integer` | - | What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone. |
@@ -293,7 +293,7 @@ One result in a keyed table.
 | `title` | `string` | - | Short heading, when the entry has a name of its own. |
 | `text` | `string` | yes | The rules text shown to the player, verbatim. This is what they read and obey. |
 | `triggers` | `object`[] | - | Mechanical consequences of this result. |
-| `requires` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for this result to make sense. When one fails the app offers a re-roll. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
+| `requires` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for this result to make sense. When one fails the dice are thrown again, up to a few times, the way they are for a result the run lacks a requirement for. Use it where a result has no referent yet rather than where it is merely hard: `unitIndex: { gte: 2 }` on a result that sends somebody back to where the last one started. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does. |
 | `grants` | `string`[] | - | States applied to the relevant subject on resolution. Shorthand for an applyState trigger. |
 | `tags` | `string`[] | - | Free tags, for cross-referencing and for filtering results out in some modes. |
 | `points` | `integer` | - | What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone. |

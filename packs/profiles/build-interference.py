@@ -144,7 +144,10 @@ T = [
      ["hard", "TRIGGER1"]),
     (1, "ta-three-t", "Two more than you were going to have. Draw twice again. Good luck.", None, ["hard", "TRIGGER2"]),
     (3, "ta-rest", "Nothing is asked of you. Survive the stretch and that is enough.", None, ["mercy"]),
-    (2, "ta-back", "Back to where the last stretch started, overland, on foot or on Torrent. No fast travel.", 3, []),
+    # Nothing to go back to on the first stretch, so the tag keeps it
+    # out of that draw rather than handing somebody an instruction with
+    # no referent.
+    (2, "ta-back", "Back to where the last stretch started, overland, on foot or on Torrent. No fast travel.", 3, ["BEHIND"]),
 ]
 
 PLACES = [
@@ -309,13 +312,19 @@ def t_extra(row):
     points, tags = row[3], list(row[4])
     lines = []
     trigger = None
+    behind = False
     for t in list(tags):
         if t.startswith("TRIGGER"):
             trigger = int(t[-1])
             tags.remove(t)
+        if t == "BEHIND":
+            behind = True
+            tags.remove(t)
     lines.append("tags: [" + ", ".join(["target"] + tags) + "]")
     if points:
         lines.append(f"points: {points}")
+    if behind:
+        lines += ["requires:", "  - { unitIndex: { gte: 2 } }"]
     if trigger:
         lines += ["triggers:", "  - on: immediately", "    do:"]
         lines += ["      - { do: rollOn, table: target }"] * trigger
