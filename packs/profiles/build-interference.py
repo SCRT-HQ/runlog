@@ -62,15 +62,18 @@ I = [
     (3, "in-risen", "The dead get up. Nothing you kill this stretch stays down.", S("risen", "The risen", "RISE", "Nothing you kill stays dead."), flag("enemies.noDeath")),
     (2, "in-stone", "Nothing here can be hurt. Kill nothing; go around.", S("stone", "Unkillable", "STON", "Nothing can be damaged."), flag("enemies.noDamage")),
     (3, "in-root", "You cannot dodge. No rolling this stretch, at all.", S("rooted", "Rooted", "ROOT", "No rolling."), flag("player.noRoll")),
-    # Weather is not a kindness or a cruelty. It is weather.
-    (2, "in-night", "Night falls, now, wherever you are.", None, press("SetNight")),
-    (2, "in-dusk", "Dusk, and the light going.", None, press("SetDusk")),
-    (1, "in-noon", "Noon, whether it suits you or not.", None, press("SetNoon")),
-    (1, "in-morning", "Morning. The light comes back, for what it is worth.", None, press("SetMorning")),
-    (2, "in-fog", "Fog rolls in and stays.", None, press("FoggyWeather")),
-    (2, "in-rain", "Rain, for the whole stretch.", None, press("RainyWeather")),
-    (2, "in-snow", "Snow, wherever you happen to be.", None, press("SnowyWeather")),
-    (1, "in-clear", "Clear skies, for once. Which means everything can see you.", None, press("DefaultWeather")),
+    # Weather is not a kindness or a cruelty. It is weather. Each
+    # carries a badge so the board says what this stretch is like,
+    # though the weather itself outlives the badge: nothing puts the sun
+    # back up, and the next thing to change it is the next draw.
+    (2, "in-night", "Night falls, now, wherever you are.", S("nightfall", "Night", "NGHT", "Night fell on this stretch. The dark outlives it; the badge does not."), press("SetNight")),
+    (2, "in-dusk", "Dusk, and the light going.", S("dusk", "Dusk", "DUSK", "Dusk came on this stretch."), press("SetDusk")),
+    (1, "in-noon", "Noon, whether it suits you or not.", S("noon", "Noon", "NOON", "Noon, on this stretch."), press("SetNoon")),
+    (1, "in-morning", "Morning. The light comes back, for what it is worth.", S("morning", "Morning", "MORN", "Morning came on this stretch."), press("SetMorning")),
+    (2, "in-fog", "Fog rolls in and stays.", S("fog", "Fog", "FOG", "Fog came in on this stretch."), press("FoggyWeather")),
+    (2, "in-rain", "Rain, for the whole stretch.", S("rain", "Rain", "RAIN", "Rain, for this stretch."), press("RainyWeather")),
+    (2, "in-snow", "Snow, wherever you happen to be.", S("snow", "Snow", "SNOW", "Snow, on this stretch."), press("SnowyWeather")),
+    (1, "in-clear", "Clear skies, for once. Which means everything can see you.", S("clear", "Clear", "CLR", "Clear skies on this stretch, and nothing to hide behind."), press("DefaultWeather")),
     # Vows: nothing enforces these but you.
     (3, "vo-stay", "Do not leave this region. Whatever you meant to do elsewhere, do it here.", S("bound", "Bound", "STAY", "Do not leave this region."), None),
     (3, "vo-alone", "Alone. No summons and no Spirit Ashes.", S("alone", "Alone", "ALON", "No summons, no Spirit Ashes."), None),
