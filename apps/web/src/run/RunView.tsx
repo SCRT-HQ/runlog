@@ -43,6 +43,7 @@ import { clearPendingRaceCode, pendingRaceCode } from "../share/IncomingRace.tsx
 import { PlanError } from "../sync/client.ts";
 import { liveLinkOf } from "../live/route.ts";
 import { paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
+import { isEmpty, tidy, type ControlProfile } from "../control/profile.ts";
 import { lifecycleGestures, marksOf, type LifecycleMarks } from "./gestures.ts";
 import { useRace } from "./useRace.ts";
 import { RunRail, type Pane } from "./RunRail.tsx";
@@ -119,11 +120,14 @@ export function RunView({
     const events = run.events;
     const race = raceOf(raceView.race, raceView.standings, pack.vocabulary.unit);
     const timer = window.setTimeout(() => {
-      void api.putSnapshot(record.runId, { ...snapshotOf(pack, state, events, undefined, { race }), paper: paperOf(pack, state.mode) }).catch(() => {});
+      // The control profile rides along: the server reads it there to
+      // decide what a tool attached to somebody's game should be told.
+      const control = record.control && !isEmpty(record.control as ControlProfile) ? { control: tidy(record.control as ControlProfile) } : {};
+      void api.putSnapshot(record.runId, { ...snapshotOf(pack, state, events, undefined, { race }), paper: paperOf(pack, state.mode), ...control }).catch(() => {});
     }, 800);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, shared, run.events, pack, raceView.race]);
+  }, [api, shared, run.events, pack, raceView.race, run.record?.control]);
 
   /**
    * Starting a race, or joining one: an ordinary run of this pack with the
@@ -551,6 +555,7 @@ export function RunView({
           pack={pack}
           record={run.record ?? null}
           onAsks={run.setAsks}
+          onControl={run.setControl}
           onControls={() => {
             setSettingsOpen(false);
             void openControlsWindow().then(setControlsWindow, () => {});

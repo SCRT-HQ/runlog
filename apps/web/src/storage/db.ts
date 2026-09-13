@@ -136,6 +136,14 @@ export interface StoredRun {
   shared?: boolean;
   /** Taking asks from outside, as the server last said: the policy, or null when not. */
   asks?: { policy: "ask" | "auto"; since?: string } | null;
+  /**
+   * What a tool attached to the game should do about what the dice say.
+   *
+   * Kept with the run, on the device hosting it, since that device is the
+   * one that publishes the snapshot a tool reads. It travels as a file
+   * rather than through sync: see apps/web/src/control/profile.ts.
+   */
+  control?: unknown;
   deletedAt?: string;
 }
 
