@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Pack } from "@runlog/rules-schema";
 import { apiBase } from "../sync/config.ts";
 import { useApi } from "../sync/useApi.ts";
@@ -6,7 +6,7 @@ import type { StreamKeys } from "../sync/client.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { CATALOGS, catalogFor, opDef, rangeOfValue, type ArgDef, type ToolCatalog } from "../control/catalog.ts";
 import { builtins, forPack, type Builtin } from "../control/builtin.ts";
-import { known, listsFor, type Lists } from "../control/lists.ts";
+import { areasFor, known, listsFor, type Lists } from "../control/lists.ts";
 import { complaints, describes, entriesOf, EMPTY, isEmpty, parse, selectorOf, tablesOf, tagsOf, tidy, type ControlProfile, type ProfileOp, type ProfileRow } from "../control/profile.ts";
 
 /**
@@ -499,6 +499,9 @@ function Ops({ catalog, lists, ops, onChange }: { catalog: ToolCatalog | null; l
 
 function Arg({ arg, op, lists, onChange }: { arg: ArgDef; op: ProfileOp; lists: Lists; onChange: (value: unknown) => void }) {
   const value = op.args[arg.name];
+  // The areas offered depend on the name beside them, so this list is
+  // this field's own rather than one of the sheet's shared ones.
+  const listId = useId();
 
   if (arg.kind === "flag") {
     return (
@@ -533,6 +536,42 @@ function Arg({ arg, op, lists, onChange }: { arg: ArgDef; op: ProfileOp; lists: 
         title={fits === false ? `Nothing the tool knows is called that` : arg.note}
         onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
       />
+    );
+  }
+
+  /**
+   * The area, which is only ever asked because two places share a name.
+   *
+   * So it is asked in terms of the name already chosen: one place, and
+   * the field says there is nothing to answer; two, and it offers
+   * exactly those two rather than every region in the game. An empty
+   * name has not narrowed anything yet, and gets all of them.
+   */
+  if (arg.kind === "area") {
+    const areas = areasFor(lists, arg.list, op.args["name"]);
+    const settled = areas.length === 1 && typeof op.args["name"] === "string" && op.args["name"].trim().length > 0;
+    const typed = typeof value === "string" ? value : "";
+    return (
+      <>
+        <input
+          type="text"
+          value={typed}
+          list={areas.length > 1 ? listId : undefined}
+          placeholder={settled ? areas[0] : arg.label}
+          aria-label={arg.label}
+          disabled={settled}
+          title={settled ? `Only one place is called that, so there is nothing to tell apart` : arg.note}
+          onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
+          style={{ width: "9rem" }}
+        />
+        {areas.length > 1 && (
+          <datalist id={listId}>
+            {areas.map((a) => (
+              <option key={a} value={a} />
+            ))}
+          </datalist>
+        )}
+      </>
     );
   }
 
