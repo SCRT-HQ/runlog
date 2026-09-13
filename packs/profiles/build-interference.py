@@ -399,6 +399,8 @@ rows.append({"entry": "dis-sky", "table": "displacement", "label": "The sky",
              "ops": [{"op": "player.drop", "args": {"height": 220}}]})
 
 profile = {"tool": "TarnishedTool",
+           "pack": "com.scrthq.runlog.elden-ring-interference",
+           "title": "Elden Ring: Interference",
            "setup": [{"op": "flag.set", "args": {"name": "world.noCutscenes", "value": True}}],
            "rows": rows}
 io.open(os.path.join(here, "elden-ring-interference.json"), "w", encoding="utf-8", newline="").write(json.dumps(profile, indent=2) + "\n")

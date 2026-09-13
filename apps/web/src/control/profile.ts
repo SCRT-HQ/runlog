@@ -36,6 +36,18 @@ export interface ProfileRow {
 
 export interface ControlProfile {
   tool?: string;
+  /**
+   * The pack this was written for, by id.
+   *
+   * Only the ones shipped with the app need it, so a picker can offer
+   * the right one for the run being played rather than a list of files
+   * somebody has to recognise. The server ignores it; matching a rule is
+   * done by table and entry, and a profile pointed at the wrong pack
+   * simply matches nothing.
+   */
+  pack?: string;
+  /** What to call it in a list. */
+  title?: string;
   setup?: ProfileOp[];
   rows?: ProfileRow[];
 }
@@ -190,7 +202,13 @@ export function tidy(profile: ControlProfile): ControlProfile {
       return out;
     })
     .filter((row) => row.ops.length > 0);
-  return { ...(profile.tool ? { tool: profile.tool } : {}), ...(setup.length ? { setup } : {}), ...(rows.length ? { rows } : {}) };
+  return {
+    ...(profile.tool ? { tool: profile.tool } : {}),
+    ...(profile.pack ? { pack: profile.pack } : {}),
+    ...(profile.title ? { title: profile.title } : {}),
+    ...(setup.length ? { setup } : {}),
+    ...(rows.length ? { rows } : {}),
+  };
 }
 
 /**
@@ -250,6 +268,8 @@ export function parse(text: string): ControlProfile | null {
 
   return {
     ...(typeof doc["tool"] === "string" && doc["tool"] ? { tool: doc["tool"] } : {}),
+    ...(typeof doc["pack"] === "string" && doc["pack"] ? { pack: doc["pack"] } : {}),
+    ...(typeof doc["title"] === "string" && doc["title"] ? { title: doc["title"] } : {}),
     setup: opsOf(doc["setup"]),
     rows,
   };

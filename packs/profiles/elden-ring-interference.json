@@ -1,5 +1,7 @@
 {
   "tool": "TarnishedTool",
+  "pack": "com.scrthq.runlog.elden-ring-interference",
+  "title": "Elden Ring: Interference",
   "setup": [
     {
       "op": "flag.set",
