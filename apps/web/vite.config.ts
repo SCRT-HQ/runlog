@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import mdx from "@mdx-js/rollup";
 import remarkGfm from "remark-gfm";
 import { offline } from "./offline.ts";
+import { schemas } from "./schemas.ts";
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 
@@ -39,7 +40,7 @@ export default defineConfig(({ mode }) => {
     __RUNLOG_SHA__: JSON.stringify((process.env["RUNLOG_SHA"] ?? "").slice(0, 12)),
   },
   // MDX first, so the guide's pages reach the React plugin as JSX.
-  plugins: [{ enforce: "pre", ...mdx({ jsxImportSource: "react", remarkPlugins: [remarkGfm] }) }, react(), offline()],
+  plugins: [{ enforce: "pre", ...mdx({ jsxImportSource: "react", remarkPlugins: [remarkGfm] }) }, react(), offline(), schemas()],
   resolve: {
     alias: {
       "@runlog/rules-schema": fileURLToPath(

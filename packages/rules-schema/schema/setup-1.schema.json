@@ -1,0 +1,117 @@
+{
+  "$id": "https://runlog.dev/schema/setup-1.schema.json",
+  "title": "Runlog setup (schema version 1)",
+  "description": "What a tool attached to the game is set to while a run lasts, and what the player is handed to start with. Written for a tool rather than for a pack, so one fits every pack for the same game.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "setup",
+      "description": "What this document is. A pack says `pack`; this says `setup`."
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991,
+      "description": "The format's major version, as a pack carries one."
+    },
+    "id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$",
+      "description": "Reverse-domain id, the way a pack is identified: `com.example.setups.bare-handed`."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Semantic version. A setup that changes what it does changes this, or nobody holding it is offered the new one."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "description": "What it is called, on a card and in a chooser."
+    },
+    "author": {
+      "description": "Who wrote it, for a card and a list. A setup travels on its own, so this is the only credit it carries.",
+      "type": "string",
+      "maxLength": 120
+    },
+    "description": {
+      "description": "What playing under it is like, in a line or two.",
+      "type": "string",
+      "maxLength": 2000
+    },
+    "tool": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "The tool this is for, by the name that tool calls itself when it attaches."
+    },
+    "ops": {
+      "minItems": 1,
+      "maxItems": 200,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "The operation, in the tool's own vocabulary: `flag.set`, `runes.give`. A tool refuses by name anything its build does not have."
+          },
+          "args": {
+            "description": "What the operation takes. Its shape is the tool's business, not this format's.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "once": {
+            "description": "Given one time in a run rather than every time a tool attaches. The terms go out on every attach, because a tool that restarted is holding none of them and a setting applied twice is the same setting. A gift is not: runes handed over on every reconnect is a different game by the third one.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "op"
+        ],
+        "additionalProperties": false
+      },
+      "description": "What to do when a tool attaches, in order."
+    },
+    "license": {
+      "description": "As a pack carries one. Absent means the author said nothing, which is not the same as permission.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "An SPDX identifier where there is one, else whatever name the terms go by."
+        },
+        "redistributable": {
+          "type": "boolean",
+          "description": "Whether somebody may pass this on. False means it was shared with you, not given to you."
+        }
+      },
+      "required": [
+        "id",
+        "redistributable"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "id",
+    "version",
+    "title",
+    "tool",
+    "ops"
+  ],
+  "additionalProperties": false
+}

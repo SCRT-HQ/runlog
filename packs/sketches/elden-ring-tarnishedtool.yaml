@@ -16,6 +16,8 @@
 # as a control profile. See packs/profiles/elden-ring-tarnishedtool.json.
 
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
+# yaml-language-server: $schema=https://runlog.dev/schema/pack-1.schema.json
+
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-tarnishedtool
 version: "3.2.0"

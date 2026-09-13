@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Pack, SCHEMA_VERSION } from "./pack.ts";
+import { Setup, SETUP_SCHEMA_VERSION } from "./setup.ts";
 
 /**
  * Building the published JSON Schema.
@@ -74,5 +75,32 @@ export function buildSchemaDocument(): Record<string, unknown> {
       "A declarative description of a dice-driven creative-practice game: its tables, " +
       "decks, states, counters, phases and modes. Packs are data, never code.",
     ...buildSchemaBody(),
+  };
+}
+
+/**
+ * The same, for a setup.
+ *
+ * A setup is a document somebody writes by hand in YAML, exactly as a
+ * pack is, so it gets the same help: point an editor at this and the
+ * field names complete themselves and a typo is underlined where it was
+ * made rather than found an hour into somebody's run.
+ *
+ * No renaming pass is needed here. Nothing in a setup recurses, so Zod
+ * has no anonymous definitions to hoist and name.
+ */
+export function buildSetupSchemaBody(): Record<string, unknown> {
+  return z.toJSONSchema(Setup, { target: "draft-2020-12", io: "input", unrepresentable: "any" }) as Record<string, unknown>;
+}
+
+/** The complete published document, as `buildSchemaDocument` is for a pack. */
+export function buildSetupSchemaDocument(): Record<string, unknown> {
+  return {
+    $id: `https://runlog.dev/schema/setup-${SETUP_SCHEMA_VERSION}.schema.json`,
+    title: `Runlog setup (schema version ${SETUP_SCHEMA_VERSION})`,
+    description:
+      "What a tool attached to the game is set to while a run lasts, and what the player is handed " +
+      "to start with. Written for a tool rather than for a pack, so one fits every pack for the same game.",
+    ...buildSetupSchemaBody(),
   };
 }
