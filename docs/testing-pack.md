@@ -1,23 +1,12 @@
 # The test bench, and what each part of it exercises
 
-`packs/testing/engine-testing.yaml` is the engine's test bench: every
-construct the pack format accepts appears in it at least once, and
-`packages/rules-schema/src/features.test.ts` fails if a feature the schema
-knows about stops being reachable from it. It plays as a game called
-**Night Watch**, a season of nights at a small observatory, so that a person
-at the keypad reads a run and not a list of scenarios. This page maps the
-game's words back to the feature each of them is there to prove.
+`packs/testing/engine-testing.yaml` is the engine's test bench: every construct the pack format accepts appears in it at least once, and `packages/rules-schema/src/features.test.ts` fails if a feature the schema knows about stops being reachable from it. It plays as a game called **Night Watch**, a season of nights at a small observatory, so that a person at the keypad reads a run and not a list of scenarios. This page maps the game's words back to the feature each of them is there to prove.
 
-The ids in the first column are the ones fixtures, the marketplace test and the
-features test depend on. The prose can be rewritten freely; the ids cannot.
+The ids in the first column are the ones fixtures, the marketplace test and the features test depend on. The prose can be rewritten freely; the ids cannot.
 
 ## Forcing an entry
 
-Every lookup table tiles its whole span, so any line can be forced from the
-keypad by typing a number inside its range, or picked outright from the
-Table button beside the pad, which lists the lines and lands a roll on
-whichever one you choose. The Sky's ten lines are ten numbers wide each
-(1-10, 11-20, and so on); the Eyepiece is one face of a d6 per line.
+Every lookup table tiles its whole span, so any line can be forced from the keypad by typing a number inside its range, or picked outright from the Table button beside the pad, which lists the lines and lands a roll on whichever one you choose. The Sky's ten lines are ten numbers wide each (1-10, 11-20, and so on); the Eyepiece is one face of a d6 per line.
 
 ## Vocabulary and the unit
 
@@ -28,9 +17,7 @@ whichever one you choose. The Sky's ten lines are ten numbers wide each
 | subject | Plate |
 | finalize | Record it |
 
-The unit runs a stopwatch (`clock: { kind: stopwatch }`, the exposure clock),
-creates a subject, and allows 1 to 99 units. The journal is enabled and
-required.
+The unit runs a stopwatch (`clock: { kind: stopwatch }`, the exposure clock), creates a subject, and allows 1 to 99 units. The journal is enabled and required.
 
 ## States
 
@@ -129,14 +116,11 @@ required.
 
 ### `rankcall`, The Almanac (keyed by card rank)
 
-`rk-a` through `rk-k`, one line per rank of the standard deck: keyed
-resolution, reached by `resolveOn`/`resolveBy` on the `cards52` deck.
+`rk-a` through `rk-k`, one line per rank of the standard deck: keyed resolution, reached by `resolveOn`/`resolveBy` on the `cards52` deck.
 
 ### Targeting
 
-`anchoredOffset` from the ones digit, with every anchor (newest before, oldest
-after, player choice), `wraparound`, `skipIneligible`, and an `eventFallback`
-with `missOn`.
+`anchoredOffset` from the ones digit, with every anchor (newest before, oldest after, player choice), `wraparound`, `skipIneligible`, and an `eventFallback` with `missOn`.
 
 ## Phases
 
@@ -177,8 +161,4 @@ with `missOn`.
 
 ## Fixtures
 
-The pack carries seventeen replay fixtures, each named for what it proves
-(tables, reaching back, deferred obligations, units, extra rolls, states,
-moderated play, counters, resources, clocks, decks, journal and checklist).
-`npm run test:packs` replays them; `npm run check:packs` validates the pack
-with `--strict`.
+The pack carries seventeen replay fixtures, each named for what it proves (tables, reaching back, deferred obligations, units, extra rolls, states, moderated play, counters, resources, clocks, decks, journal and checklist). `npm run test:packs` replays them; `npm run check:packs` validates the pack with `--strict`.

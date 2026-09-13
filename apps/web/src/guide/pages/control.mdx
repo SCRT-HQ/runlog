@@ -2,59 +2,32 @@
 
 Most of Runlog tells people things. This tells a program.
 
-A tool running beside the game, on the same machine, can hold the socket
-open the way a widget does, and do what a result says: apply the status
-effect, switch the restriction on, take it off when the unit closes. The
-result a table read out loud stops being something you agree to act out
-and becomes the thing itself.
+A tool running beside the game, on the same machine, can hold the socket open the way a widget does, and do what a result says: apply the status effect, switch the restriction on, take it off when the unit closes. The result a table read out loud stops being something you agree to act out and becomes the thing itself.
 
-Nothing about this is required, and no pack needs it. A pack with rules
-here plays exactly the same with nothing attached; what changes is that
-nobody has to be trusted.
+Nothing about this is required, and no pack needs it. A pack with rules here plays exactly the same with nothing attached; what changes is that nobody has to be trusted.
 
-**The game goes offline; the machine does not.** A tool that reaches into
-a game's memory is against the terms of service of every game that has
-any, and doing it while the game is online is how accounts get banned.
-The PC itself stays online, since that is how the run reaches it. In
-Tarnished Tool, the **Launch Game** button starts Elden Ring the right
-way.
+**The game goes offline; the machine does not.** A tool that reaches into a game's memory is against the terms of service of every game that has any, and doing it while the game is online is how accounts get banned. The PC itself stays online, since that is how the run reaches it. In Tarnished Tool, the **Launch Game** button starts Elden Ring the right way.
 
 ## What you need
 
-A tool that speaks the control protocol. Today that means a build of
-**Tarnished Tool** with a Control tab, for Elden Ring. The protocol is
-not ours and not its: anything that can hold a WebSocket open can speak
-it, and [the stream API](https://github.com/SCRT-HQ/runlog/blob/main/docs/stream-api.md)
-says how.
+A tool that speaks the control protocol. Today that means a build of **Tarnished Tool** with a Control tab, for Elden Ring. The protocol is not ours and not its: anything that can hold a WebSocket open can speak it, and [the stream API](https://github.com/SCRT-HQ/runlog/blob/main/docs/stream-api.md) says how.
 
 ## Setting it up
 
 1. In the run, open **Settings → Stream**.
-2. Under **Chat**, make a **watch key** if you have not. That key is what
-   lets a tool read this run.
-3. Under **Control**, copy the address and paste it into the tool, with
-   your watch key where the address says to put it.
-4. Press Connect in the tool. It says what it is and what it can do; the
-   run answers with its terms, if it has any.
+2. Under **Chat**, make a **watch key** if you have not. That key is what lets a tool read this run.
+3. Under **Control**, copy the address and paste it into the tool, with your watch key where the address says to put it.
+4. Press Connect in the tool. It says what it is and what it can do; the run answers with its terms, if it has any.
 
-Where more than one person is playing, everyone else attaches on the
-run's **live link** instead of a watch key, which they already have.
+Where more than one person is playing, everyone else attaches on the run's **live link** instead of a watch key, which they already have.
 
-In a run with a roster, the Control section lists one address per racer
-and each carries that person's name, so setting up a race is handing each
-of them their own line and nothing else. A rule addressed to one of those
-names reaches only that machine; a rule addressed to nobody reaches all of
-them, which is how one warp lands on four games at the same moment.
+In a run with a roster, the Control section lists one address per racer and each carries that person's name, so setting up a race is handing each of them their own line and nothing else. A rule addressed to one of those names reaches only that machine; a rule addressed to nobody reaches all of them, which is how one warp lands on four games at the same moment.
 
 ## Writing the rules
 
 **Settings → Stream → Control** is where a run says what a result means.
 
-A rule matches one result, or anything carrying a tag, or anything from a
-whole table, and says what to do about it. The panel knows the pack and
-the tool, so it will tell you when a rule can never fire, when a number is
-outside what the tool accepts, and when an operation is one it has never
-heard of.
+A rule matches one result, or anything carrying a tag, or anything from a whole table, and says what to do about it. The panel knows the pack and the tool, so it will tell you when a rule can never fire, when a number is outside what the tool accepts, and when an operation is one it has never heard of.
 
 How long an effect lasts is the part worth thinking about:
 
@@ -64,41 +37,22 @@ How long an effect lasts is the part worth thinking about:
 | Until this unit closes | Almost always this. A curse drawn for a region lasts that region. |
 | For a while | Where seconds are genuinely the point. |
 
-There is also **the run's terms**: what a tool is set to the moment it
-attaches, held until the run ends and then put back. The settings that
-would otherwise be a paragraph in a description and fifteen boxes ticked
-by hand.
+There is also **the run's terms**: what a tool is set to the moment it attaches, held until the run ends and then put back. The settings that would otherwise be a paragraph in a description and fifteen boxes ticked by hand.
 
 ## Taking it back
 
-Everything applied comes off, and the tool is the one that remembers what
-it is holding. An effect ends when its time runs out, when its unit
-closes, when the run ends, when the connection stays gone, and when the
-tool closes. What it restores is what you had, not a switch flipped the
-other way, so a setting you turned on yourself survives a run that
-borrowed it.
+Everything applied comes off, and the tool is the one that remembers what it is holding. An effect ends when its time runs out, when its unit closes, when the run ends, when the connection stays gone, and when the tool closes. What it restores is what you had, not a switch flipped the other way, so a setting you turned on yourself survives a run that borrowed it.
 
 A tool that dies mid-run puts things back on its next start and says so.
 
 ## What the game can say back
 
-The other direction is smaller and optional: a tool can mention what
-happened, and the run decides what to do about it. A death, said by the
-game, lands in the Asks tray like any other ask, and the table still
-accepts it.
+The other direction is smaller and optional: a tool can mention what happened, and the run decides what to do about it. A death, said by the game, lands in the Asks tray like any other ask, and the table still accepts it.
 
-It travels on the socket the tool already holds, so there is nothing more
-to set up: switch on **Say when I die** in the tool. The run has to be
-taking asks, under **Settings → Stream → Chat**, since being attached is
-not the same as being allowed.
+It travels on the socket the tool already holds, so there is nothing more to set up: switch on **Say when I die** in the tool. The run has to be taking asks, under **Settings → Stream → Chat**, since being attached is not the same as being allowed.
 
 ## A pack written for it
 
-**Elden Ring: Interference** is the one to try. Ten minutes a stretch,
-and each stretch draws something that happens to the game: you are
-slower, the dead get back up, night falls. Its profile is in the
-repository under `packs/profiles`, and **Import** in the Control panel
-loads it.
+**Elden Ring: Interference** is the one to try. Ten minutes a stretch, and each stretch draws something that happens to the game: you are slower, the dead get back up, night falls. Its profile is in the repository under `packs/profiles`, and **Import** in the Control panel loads it.
 
-It also plays perfectly well with nothing attached. That is the test every
-pack here has to pass.
+It also plays perfectly well with nothing attached. That is the test every pack here has to pass.
