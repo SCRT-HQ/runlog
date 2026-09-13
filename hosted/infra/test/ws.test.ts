@@ -348,11 +348,33 @@ describe("telling the listeners", () => {
     });
 
     it("says nothing where the host has not switched asks on, since attaching is not permission", async () => {
-      const { live, d } = attached();
+      const { live, posted, d } = attached();
       await live.connect("tool", "public:open", "", { control: true, run: "open" });
       await live.watch("tool", "open", "public:open", "", { control: true, run: "open" });
       await route({ requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "event", kind: "died" }) }, d);
       expect(asked).toEqual([]);
+      /**
+       * And the tool is told so. This answered 200 and sent nothing, so a
+       * death said by the game counted nowhere while the tool's own log
+       * said it had been said: the one thing it cannot work out from its
+       * end is that the far end threw it away.
+       */
+      const notes = posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l) as { t: string; text?: string });
+      expect(notes.at(-1)).toMatchObject({ t: "note" });
+      expect(notes.at(-1)!.text).toContain("not taking asks");
+    });
+
+    it("tells a tool whether what it said was counted or is waiting for the table", async () => {
+      const { live, posted, d } = attached();
+      // A seat of its own: the rate a tool is held to is per name, and the
+      // tests above have already spoken for the others.
+      await live.connect("tool", "public:asking", "", { control: true, seat: "Rennala", run: "asking" });
+      await live.watch("tool", "asking", "public:asking", "", { control: true, seat: "Rennala", run: "asking" });
+      await route({ requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "event", kind: "died" }) }, d);
+      const notes = posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l) as { t: string; text?: string });
+      // This run asks rather than takes, so the honest answer is "waiting".
+      expect(notes.at(-1)).toMatchObject({ t: "note" });
+      expect(notes.at(-1)!.text).toContain("waiting");
     });
 
     it("holds a tool to the same rate as anything else asking", async () => {
