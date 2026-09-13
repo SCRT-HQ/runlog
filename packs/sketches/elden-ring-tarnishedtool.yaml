@@ -440,109 +440,109 @@ states:
     short: WIND+
     scope: run
     until: unitEnd
-    description: A boon. Stamina does not run out.
+    description: A blessing. Stamina does not run out.
   blessed-focus:
     label: Clear head
     short: FOCS+
     scope: run
     until: unitEnd
-    description: A boon. FP does not run out.
+    description: A blessing. FP does not run out.
   blessed-sharp:
     label: Whetted
     short: SHRP+
     scope: run
     until: unitEnd
-    description: A boon. Double damage.
+    description: A blessing. Double damage.
   blessed-tough:
     label: Warded
     short: WARD
     scope: run
     until: unitEnd
-    description: A boon. Half damage taken.
+    description: A blessing. Half damage taken.
   blessed-luck:
     label: Fortunate
     short: DROP+
     scope: run
     until: unitEnd
-    description: A boon. Drops are guaranteed.
+    description: A blessing. Drops are guaranteed.
   blessed-quiet:
     label: Quiet
     short: HUSH+
     scope: run
     until: unitEnd
-    description: A boon. Nothing hears you.
+    description: A blessing. Nothing hears you.
   blessed-mend:
     label: Mending
     short: MEND+
     scope: run
     until: unitEnd
-    description: A boon. You heal over time.
+    description: A blessing. You heal over time.
   blessed-keep:
     label: Held
     short: KEEP+
     scope: run
     until: unitEnd
-    description: A boon. Death costs no runes.
+    description: A blessing. Death costs no runes.
   blessed-horse:
     label: Mounted
     short: HORS+
     scope: run
     until: unitEnd
-    description: A boon. Torrent anywhere.
+    description: A blessing. Torrent anywhere.
   blessed-swift:
     label: Swift
     short: SWFT
     scope: run
     until: unitEnd
-    description: A boon. You move a quarter faster.
+    description: A blessing. You move a quarter faster.
   blessed-peace:
     label: Peace
     short: PEAC
     scope: run
     until: unitEnd
-    description: A boon. Nothing attacks.
+    description: A blessing. Nothing attacks.
   blessed-still:
     label: Stillness
     short: STIL
     scope: run
     until: unitEnd
-    description: A boon. Nothing moves.
+    description: A blessing. Nothing moves.
   blessed-sleep:
     label: Asleep
     short: SLEP
     scope: run
     until: unitEnd
-    description: A boon. Nothing is paying attention.
+    description: A blessing. Nothing is paying attention.
   blessed-stock:
     label: Stocked
     short: FULL
     scope: run
     until: unitEnd
-    description: A boon. Consumables are not used up.
+    description: A blessing. Consumables are not used up.
   blessed-ammo:
     label: Quivered
     short: AMMO
     scope: run
     until: unitEnd
-    description: A boon. Arrows are not used up.
+    description: A blessing. Arrows are not used up.
   blessed-poise:
     label: Anchored
     short: POIS
     scope: run
     until: unitEnd
-    description: A boon. You cannot be staggered.
+    description: A blessing. You cannot be staggered.
   blessed-unseen:
     label: Unseen
     short: DARK
     scope: run
     until: unitEnd
-    description: A boon. Nothing sees you.
+    description: A blessing. Nothing sees you.
   blessed-lethal:
     label: Dreadful
     short: KILL+
     scope: run
     until: unitEnd
-    description: A boon. Anything you hit dies.
+    description: A blessing. Anything you hit dies.
 
 counters:
   scenes:
@@ -630,8 +630,8 @@ tables:
       is unpleasant, four is a different game. Nothing in here is
       good for you, which is the point of it. A kindness you rolled
       into by accident is not a reward, and being paid is what the
-      Boon table is for. None are worth points either, since a curse
-      lands on everyone.
+      Blessing table is for. None are worth points either, since a
+      curse lands on everyone.
     roll: d100
     entries:
       - id: cu-slow
@@ -1341,9 +1341,9 @@ tables:
         requires:
           - { unitIndex: { gte: 2 } }
 
-  boon:
+  blessing:
     resolution: lookup
-    title: Boon
+    title: Blessing
     description: >-
       What settling an objective is worth. Drawn when you say you
       settled it, which is the only way anything here can know.
@@ -1351,253 +1351,253 @@ tables:
       points were on the objective.
     roll: d100
     entries:
-      - id: bo-runes
+      - id: bl-runes
         range: [1, 5]
         text: >-
           Runes, five thousand of them, for nothing but doing as you
           were told.
-        tags: [boon, blessing]
-      - id: bo-runes2
+        tags: [blessing, lasting]
+      - id: bl-runes2
         range: [6, 8]
         text: >-
           Runes, twenty thousand. Spend them before something takes
           them.
-        tags: [boon, blessing]
-      - id: bo-seed
+        tags: [blessing, lasting]
+      - id: bl-seed
         range: [9, 13]
         text: >-
           A Golden Seed. One more swallow, for the rest of the run.
-        tags: [boon, item]
-      - id: bo-tear
+        tags: [blessing, item]
+      - id: bl-tear
         range: [14, 15]
         text: >-
           A Sacred Tear. What you have goes further now.
-        tags: [boon, item]
-      - id: bo-arc
+        tags: [blessing, item]
+      - id: bl-arc
         range: [16, 20]
         text: >-
           A Rune Arc, and the great rune to go with it.
-        tags: [boon, item]
-      - id: bo-stone
+        tags: [blessing, item]
+      - id: bl-stone
         range: [21, 25]
         text: >-
           Smithing Stones, three of them, for whatever you are
           carrying.
-        tags: [boon, item]
-      - id: bo-somber
+        tags: [blessing, item]
+      - id: bl-somber
         range: [26, 27]
         text: >-
           A Somber Smithing Stone, for the thing you actually use.
-        tags: [boon, item]
-      - id: bo-key
+        tags: [blessing, item]
+      - id: bl-key
         range: [28, 29]
         text: >-
           Two Stonesword Keys. Something behind an imp statue is
           yours.
-        tags: [boon, item]
-      - id: bo-gold
+        tags: [blessing, item]
+      - id: bl-gold
         range: [30, 31]
         text: >-
           Golden Runes, ten of them, held for when you need them.
-        tags: [boon, item]
-      - id: bo-flesh
+        tags: [blessing, item]
+      - id: bl-flesh
         range: [32, 33]
         text: >-
           Exalted Flesh. Hit harder for a while; it is up to you
           when.
-        tags: [boon, item]
-      - id: bo-blessing
+        tags: [blessing, item]
+      - id: bl-blessing
         range: [34, 35]
         text: >-
           Blessings of Marika, three. Healing you did not have to
           earn.
-        tags: [boon, item]
-      - id: bo-baldachin
+        tags: [blessing, item]
+      - id: bl-baldachin
         range: [36, 37]
         text: >-
           Baldachin's Blessing. Somebody is looking out for you.
-        tags: [boon, item]
-      - id: bo-dragon
+        tags: [blessing, item]
+      - id: bl-dragon
         range: [38, 39]
         text: >-
           An Ancient Dragon's Blessing. Save it for something
           enormous.
-        tags: [boon, item]
-      - id: bo-fowl
+        tags: [blessing, item]
+      - id: bl-fowl
         range: [40, 41]
         text: >-
           Silver-Pickled Fowl Feet. Everything is worth more for a
           while.
-        tags: [boon, item]
-      - id: bo-boluses
+        tags: [blessing, item]
+      - id: bl-boluses
         range: [42, 43]
         text: >-
           Neutralizing Boluses, against whatever is about to poison
           you.
-        tags: [boon, item]
-      - id: bo-branch
+        tags: [blessing, item]
+      - id: bl-branch
         range: [44, 45]
         text: >-
           Bewitching Branches. Make a friend of something that was
           not one.
-        tags: [boon, item]
-      - id: bo-shards
+        tags: [blessing, item]
+      - id: bl-shards
         range: [46, 47]
         text: >-
           Starlight Shards, for anyone who casts.
-        tags: [boon, item]
-      - id: bo-grease
+        tags: [blessing, item]
+      - id: bl-grease
         range: [48, 49]
         text: >-
           Fire Grease. Put it on something and go and use it.
-        tags: [boon, item]
-      - id: bo-prawn
+        tags: [blessing, item]
+      - id: bl-prawn
         range: [50, 50]
         text: >-
           Boiled Prawn. Small, and it has saved better runners than
           you.
-        tags: [boon, item]
-      - id: bo-warming
+        tags: [blessing, item]
+      - id: bl-warming
         range: [51, 51]
         text: >-
           A Warming Stone, for whatever the next scene does to you.
-        tags: [boon, item]
-      - id: bo-medallion
+        tags: [blessing, item]
+      - id: bl-medallion
         range: [52, 52]
         text: >-
           A Crimson Amber Medallion. Wear it or sell it.
-        tags: [boon, item]
-      - id: bo-cerulean
+        tags: [blessing, item]
+      - id: bl-cerulean
         range: [53, 53]
         text: >-
           A Cerulean Crystal Tear, for the flask you keep
           forgetting.
-        tags: [boon, item]
-      - id: bo-opaline
+        tags: [blessing, item]
+      - id: bl-opaline
         range: [54, 54]
         text: >-
           An Opaline Bubbletear. One hit that will not land.
-        tags: [boon, item]
-      - id: bo-mend
+        tags: [blessing, item]
+      - id: bl-mend
         range: [55, 59]
         text: >-
           You are made whole. Health, focus and flasks, all back.
-        tags: [boon, blessing]
-      - id: bo-heal
+        tags: [blessing, lasting]
+      - id: bl-heal
         range: [60, 64]
         text: >-
           Healed to full, where you stand.
-        tags: [boon, blessing]
-      - id: bo-wind
+        tags: [blessing, lasting]
+      - id: bl-wind
         range: [65, 69]
         text: >-
           The next scene costs you no stamina.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-wind]
-      - id: bo-focus
+      - id: bl-focus
         range: [70, 71]
         text: >-
           The next scene costs you no focus.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-focus]
-      - id: bo-sharp
+      - id: bl-sharp
         range: [72, 76]
         text: >-
           Your weapons bite. Double damage until the scene is out.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-sharp]
-      - id: bo-tough
+      - id: bl-tough
         range: [77, 78]
         text: >-
           Nothing hurts as much. Half damage until the scene is out.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-tough]
-      - id: bo-luck
+      - id: bl-luck
         range: [79, 80]
         text: >-
           Everything drops what it is carrying, for a while.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-luck]
-      - id: bo-quiet
+      - id: bl-quiet
         range: [81, 82]
         text: >-
           Nothing hears you for the rest of the scene.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-quiet]
-      - id: bo-mending
+      - id: bl-mending
         range: [83, 84]
         text: >-
           You mend as you walk, for the rest of the scene.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-mend]
-      - id: bo-keep
+      - id: bl-keep
         range: [85, 85]
         text: >-
           Whatever happens next, it will not cost you runes.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-keep]
-      - id: bo-horse
+      - id: bl-horse
         range: [86, 86]
         text: >-
           Torrent comes when called, anywhere, for the rest of the
           scene.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-horse]
-      - id: bo-swift
+      - id: bl-swift
         range: [87, 88]
         text: >-
           You are quick. A quarter faster for the rest of the scene.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-swift]
-      - id: bo-peace
+      - id: bl-peace
         range: [89, 90]
         text: >-
           Nothing will raise a hand to you for the rest of the
           scene.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-peace]
-      - id: bo-still
+      - id: bl-still
         range: [91, 92]
         text: >-
           Nothing moves from where it stands, for the rest of the
           scene.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-still]
-      - id: bo-asleep
+      - id: bl-asleep
         range: [93, 93]
         text: >-
           Nothing is thinking about you at all any more.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-sleep]
-      - id: bo-stocked
+      - id: bl-stocked
         range: [94, 95]
         text: >-
           Your pouch does not empty for the rest of the scene.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-stock]
-      - id: bo-quiver
+      - id: bl-quiver
         range: [96, 96]
         text: >-
           Your quiver does not empty for the rest of the scene.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-ammo]
-      - id: bo-anchored
+      - id: bl-anchored
         range: [97, 98]
         text: >-
           Nothing staggers you for the rest of the scene.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-poise]
-      - id: bo-unseen
+      - id: bl-unseen
         range: [99, 99]
         text: >-
           Nothing sees you for the rest of the scene.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-unseen]
-      - id: bo-lethal
+      - id: bl-lethal
         range: [100, 100]
         text: >-
           For the rest of this scene, anything you hit dies.
-        tags: [boon, blessing]
+        tags: [blessing, lasting]
         grants: [blessed-lethal]
 
   displacement:
@@ -1817,7 +1817,7 @@ tables:
 
 moves:
   # The two things only the player knows. The app cannot see the game, so
-  # settling an objective is something you say, and saying it is what a boon
+  # settling an objective is something you say, and saying it is what a blessing
   # is drawn on.
   #
   # Both are one racer's. On a board with four names, "I died" is four
@@ -1836,7 +1836,7 @@ moves:
     available:
       - { unitIndex: { gte: 1 } }
     do:
-      - { do: rollOn, table: boon }
+      - { do: rollOn, table: blessing }
 
   died:
     label: I died
@@ -1912,8 +1912,8 @@ phases:
             shows: { table: curse, scope: unit }
           - text: The objective was named, and settled or not.
             shows: { table: objective, scope: unit }
-          - text: If you settled it, you said so and took the boon.
-            shows: { table: boon, scope: unit }
+          - text: If you settled it, you said so and took the blessing.
+            shows: { table: blessing, scope: unit }
           - text: You were moved, if the land said so.
             shows: { table: displacement, scope: unit }
 
@@ -1959,9 +1959,9 @@ modes:
       scene under one. A mercy is worth nothing, which is fair.
     units: { min: 3, max: 20 }
     # Awarding an objective is how a race says somebody settled it, so that
-    # is where the boon is drawn and it is drawn for them. The move that
+    # is where the blessing is drawn and it is drawn for them. The move that
     # said the same thing is gone from this mode: two ways to declare
-    # one thing meant the boon was the run's rather than the winner's,
+    # one thing meant the blessing was the run's rather than the winner's,
     # and the second press was the one nobody remembered.
     disable:
       moves: [settled]
@@ -1969,12 +1969,12 @@ modes:
       contestants: { min: 2, max: 8 }
       award: everyone
       onAward:
-        - { do: rollOn, table: boon }
+        - { do: rollOn, table: blessing }
 
 defaultMode: solo
 
 hierarchy:
-  - Boon
+  - Blessing
   - Displacement
   - Curse
   - General rules
@@ -2078,7 +2078,7 @@ fixtures:
       - { path: outcomes.length, equals: 3 }
       - { requests: answered }
 
-  - name: Settling an objective pays, and the boon is drawn on the word of the player
+  - name: Settling an objective pays, and the blessing is drawn on the word of the player
     mode: solo
     play:
       - { enter: 1 }
@@ -2090,7 +2090,7 @@ fixtures:
       # Two draws for the scene, and a third because the objective was
       # settled: nothing but the player could have told it that.
       - { path: outcomes.length, equals: 3 }
-      - { path: outcomes.2.table, equals: boon }
+      - { path: outcomes.2.table, equals: blessing }
       - { requests: answered }
 
   - name: A death is counted and nothing else happens
