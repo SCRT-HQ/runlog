@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import App from "./App.tsx";
 import { StructurePanel } from "./design/StructurePanel.tsx";
-import { RunView, Setup } from "./run/RunView.tsx";
+import { RunView, StartScreen } from "./run/RunView.tsx";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 function loadPack(rel: string): Pack {
@@ -82,7 +82,7 @@ describe("the setup screen", () => {
   const noop = () => {};
 
   it("names the run in the pack's own words", () => {
-    const html = renderToStaticMarkup(<Setup pack={kiln} onStart={noop} />);
+    const html = renderToStaticMarkup(<StartScreen pack={kiln} onStart={noop} />);
     expect(html).toContain("Begin a Firing");
     expect(html).toContain("Standard Firing");
   });
@@ -90,13 +90,13 @@ describe("the setup screen", () => {
   it("relabels itself entirely for a different game", () => {
     // The generality claim, held to at the last mile: no hardcoded noun
     // survives a change of pack.
-    const html = renderToStaticMarkup(<Setup pack={ladder} onStart={noop} />);
+    const html = renderToStaticMarkup(<StartScreen pack={ladder} onStart={noop} />);
     expect(html).toContain("Begin a Session");
     expect(html).not.toContain("Firing");
   });
 
   it("offers a seed for every mode, and says a shared mode needs one", () => {
-    const html = renderToStaticMarkup(<Setup pack={kiln} onStart={noop} />);
+    const html = renderToStaticMarkup(<StartScreen pack={kiln} onStart={noop} />);
     // Standard Firing is the default and is not seeded: the seed is optional,
     // and the copy about sharing stays with the modes meant to be shared.
     expect(html).toContain("unseeded, dice are unrepeatable");
@@ -105,7 +105,7 @@ describe("the setup screen", () => {
   });
 
   it("lists every mode the pack declares", () => {
-    const html = renderToStaticMarkup(<Setup pack={kiln} onStart={noop} />);
+    const html = renderToStaticMarkup(<StartScreen pack={kiln} onStart={noop} />);
     for (const mode of Object.values(kiln.modes)) expect(html).toContain(mode.label);
   });
 });
