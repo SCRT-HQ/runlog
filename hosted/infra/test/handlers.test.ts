@@ -1890,6 +1890,10 @@ describe("sessions", () => {
     expect((await asKey("GET", "/api/claims")).status).toBe(200);
     expect((await asKey("GET", "/api/publishers/me")).status).toBe(200);
     expect((await asKey("PUT", "/api/packs/p", packBody)).status).toBe(200);
+    // Taking a listing down is the seeder's, so a pack that stopped shipping
+    // stops being offered. Deleting the product is not: that discards a master.
+    expect((await asKey("DELETE", "/api/publishers/packs/p/listing")).status).not.toBe(422);
+    expect((await asKey("DELETE", "/api/publishers/packs/p")).status).toBe(422);
     // Not play, not people, not money, not more keys. Never 403: CloudFront would answer the app's page instead.
     expect((await asKey("GET", "/api/sync/manifest")).status).toBe(422);
     expect((await asKey("GET", "/api/keys")).status).toBe(422);

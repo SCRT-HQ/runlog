@@ -11,6 +11,18 @@ import { listingPayload } from "../packages/rules-schema/src/index.ts";
  * computed here exactly as the app would. Idempotent: an upload replaces
  * the master and refreshes the card; nothing is made twice.
  *
+ * It also takes down what this list no longer names. Seeding only ever
+ * added, so a pack removed from the repository went on being offered for
+ * as long as the shelf existed: thirteen of them were still listed in
+ * production after they had stopped shipping. So the list below is the
+ * whole truth about what is listed, and anything else the platform
+ * publisher has on the shelf comes off on the next deploy.
+ *
+ * Taken down, not deleted: the card leaves the shelf and the product goes
+ * back to draft, so the master is kept and re-listing restores it. Anyone
+ * who already has one of these keeps it, since a pack lives in a library
+ * on their own device; what stops is being offered it again.
+ *
  *   RUNLOG_API=https://runlog.dev.scrthq.com/api RUNLOG_API_KEY=rl_… \
  *     node --experimental-strip-types scripts/seed-listings.ts
  *
@@ -63,6 +75,13 @@ async function main() {
     process.exit(1);
   }
   let failed = 0;
+  /**
+   * Every pack this list names, recorded the moment its id is known rather
+   * than once it has uploaded. A pack that fails to upload is still a pack
+   * this repository ships, and must not be mistaken below for one that was
+   * removed and taken off the shelf on the strength of a timeout.
+   */
+  const ours = new Set<string>();
   for (const file of PACKS) {
     const source = readFileSync(join(process.cwd(), file), "utf8");
     const raw = (await import("yaml")).default.parse(source) as Record<string, unknown>;
@@ -73,6 +92,7 @@ async function main() {
       continue;
     }
     const { pack, payload } = listing;
+    ours.add(pack.id);
     const put = await call("PUT", `/publishers/packs/${encodeURIComponent(pack.id)}`, payload);
     if (put.status !== 200) {
       console.error(`${pack.id}: upload failed (${put.status}) ${String(put.body["error"] ?? "")}`);
@@ -87,6 +107,30 @@ async function main() {
     }
     console.log(`${pack.id} v${pack.version}: listed free`);
   }
+
+  // Anything else the platform publisher has on the shelf stopped shipping,
+  // so it stops being offered. Not attempted at all after a failure above:
+  // a run that could not say what it ships is not one to trust about what
+  // it does not.
+  if (failed > 0) {
+    console.error("seed-listings: something failed above, so nothing is being taken down");
+    process.exit(1);
+  }
+  const theirs = await call("GET", "/publishers/packs");
+  const products = Array.isArray(theirs.body["packs"]) ? (theirs.body["packs"] as Array<Record<string, unknown>>) : [];
+  const stale = products.filter((p) => p["status"] === "listed" && typeof p["packId"] === "string" && !ours.has(p["packId"] as string));
+  for (const p of stale) {
+    const id = p["packId"] as string;
+    const down = await call("DELETE", `/publishers/packs/${encodeURIComponent(id)}/listing`);
+    if (down.status !== 200) {
+      console.error(`${id}: taking the listing down failed (${down.status}) ${String(down.body["error"] ?? "")}`);
+      failed += 1;
+      continue;
+    }
+    console.log(`${id}: off the shelf, master kept`);
+  }
+  if (stale.length === 0) console.log("nothing to take down");
+
   process.exit(failed > 0 ? 1 : 0);
 }
 
