@@ -5,8 +5,12 @@ import { executeActions, executeTableRoll } from "./execute.ts";
 import type { RunEvent } from "./events.ts";
 
 /**
- * What a pack needs in the world: a run says what it lacks, and a result
- * that needs a lacked thing is drawn again.
+ * The two reasons the dice are thrown again.
+ *
+ * A run says what it lacks, and a result that needs a lacked thing is
+ * drawn again. And a result can say what must be true of the run for it
+ * to mean anything: "back to where the last block started" has no
+ * referent on the first block, and is not a result anybody can act on.
  */
 
 const YAML = `
@@ -35,6 +39,15 @@ tables:
       - { id: press, range: [2, 2], text: "Press.", needs: [barbell] }
       - { id: pushup, range: [3, 3], text: "Push-up." }
       - { id: plank, range: [4, 4], text: "Plank." }
+  place:
+    resolution: lookup
+    title: Place
+    roll: d4
+    entries:
+      - { id: back, range: [1, 1], text: "Back to where the last block started.", requires: [{ unitIndex: { gte: 2 } }] }
+      - { id: deeper, range: [2, 2], text: "Deeper than the last one went.", requires: [{ unitIndex: { gte: 2 } }] }
+      - { id: here, range: [3, 3], text: "Wherever you are." }
+      - { id: away, range: [4, 4], text: "Somewhere else." }
 phases:
   - id: draw
     label: Draw
@@ -105,5 +118,50 @@ describe("a run that lacks something", () => {
     const result = executeActions(p, state, [{ do: "rollOn", table: "movement", times: 2 }], { answers: {}, now: NOW, random: faces(2, 4, 1, 1, 3) });
     const ids = result.events.filter((e) => e.t === "OutcomeResolved").map((e) => (e.t === "OutcomeResolved" ? e.entryId : ""));
     expect(ids).toEqual(["plank", "pushup"]);
+  });
+});
+
+describe("a result that has nothing to refer to yet", () => {
+  const first = (p: Pack) => reduce(p, opened(p, []));
+  const second = (p: Pack) => reduce(p, [...opened(p, []), ev("UnitFinalized"), ev("UnitEntered")]);
+
+  it("is drawn past on the first unit, and the one that lands is one that means something", () => {
+    const p = pack();
+    const result = executeTableRoll(p, first(p), "place", { answers: {}, now: NOW, random: faces(1, 2, 3) });
+    expect(result.status).toBe("done");
+    // Both backward-looking results came up and both were thrown again.
+    expect(result.events.filter((e) => e.t === "Rolled")).toHaveLength(3);
+    const outcome = result.events.find((e) => e.t === "OutcomeResolved");
+    expect(outcome && outcome.t === "OutcomeResolved" ? outcome.entryId : null).toBe("here");
+  });
+
+  it("is drawn like any other once there is a unit behind it", () => {
+    const p = pack();
+    const state = second(p);
+    expect(state.unit).toBe(2);
+    const result = executeTableRoll(p, state, "place", { answers: {}, now: NOW, random: faces(1) });
+    const outcome = result.events.find((e) => e.t === "OutcomeResolved");
+    expect(outcome && outcome.t === "OutcomeResolved" ? outcome.entryId : null).toBe("back");
+    expect(result.events.filter((e) => e.t === "Rolled")).toHaveLength(1);
+  });
+
+  it("does not throw again for a result that merely has no conditions", () => {
+    const p = pack();
+    const result = executeTableRoll(p, first(p), "place", { answers: {}, now: NOW, random: faces(4) });
+    const outcome = result.events.find((e) => e.t === "OutcomeResolved");
+    expect(outcome && outcome.t === "OutcomeResolved" ? outcome.entryId : null).toBe("away");
+    expect(result.events.filter((e) => e.t === "Rolled")).toHaveLength(1);
+  });
+
+  it("gives up rather than rolling for ever, and says so in the log", () => {
+    const p = pack();
+    // Dice that land on a backward-looking result every single time.
+    const result = executeTableRoll(p, first(p), "place", { answers: {}, now: NOW, random: faces(1) });
+    expect(result.status).toBe("done");
+    expect(result.events.filter((e) => e.t === "Rolled").length).toBeLessThanOrEqual(9);
+    // The last one counts, even where the last one is the one it could
+    // not get away from: a draw that never resolves is worse.
+    const outcome = result.events.find((e) => e.t === "OutcomeResolved");
+    expect(outcome && outcome.t === "OutcomeResolved" ? outcome.entryId : null).toBe("back");
   });
 });
