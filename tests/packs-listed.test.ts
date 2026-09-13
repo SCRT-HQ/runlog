@@ -38,6 +38,16 @@ const shipped = yamlIn("packs/sketches");
  */
 const bench = [...yamlIn("packs/demo"), ...yamlIn("packs/testing")];
 
+/**
+ * Setups, which are a different document and not offered as packs.
+ *
+ * They are validated with everything else, because a setup that does not
+ * load is one somebody finds out about when a run will not start. They
+ * are not played, since there are no fixtures to replay, and not listed,
+ * since the marketplace does not know the kind yet.
+ */
+const setups = yamlIn("packs/setups");
+
 const scripts = JSON.parse(read("package.json")).scripts as Record<string, string>;
 const seed = read("scripts/seed-listings.ts");
 
@@ -48,7 +58,7 @@ describe("every pack this repo ships", () => {
   });
 
   it("is validated by npm run check:packs", () => {
-    const missing = [...shipped, ...bench].filter((p) => !scripts["check:packs"]?.includes(p));
+    const missing = [...shipped, ...bench, ...setups].filter((p) => !scripts["check:packs"]?.includes(p));
     expect(missing, `add these to check:packs in package.json:\n  ${missing.join("\n  ")}`).toEqual([]);
   });
 
@@ -64,5 +74,7 @@ describe("every pack this repo ships", () => {
 
   it("leaves the bench and the demo pack out of the catalog, the deliberate absences", () => {
     for (const p of bench) expect(seed).not.toContain(`"${p}"`);
+    // A setup is not a pack, and the shelf has no kind for one yet.
+    for (const p of setups) expect(seed).not.toContain(`"${p}"`);
   });
 });

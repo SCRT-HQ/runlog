@@ -22,7 +22,7 @@
     "test:watch": "vitest",
     "runlog": "node --experimental-strip-types packages/cli/src/bin.ts",
     "check:demo": "npm run runlog -- validate packs/demo/pack.yaml --strict",
-    "check:packs": "npm run runlog -- validate packs/demo/pack.yaml packs/testing/salt-and-signal.yaml packs/sketches/ladder-work.yaml packs/sketches/rocket-league-ladder.yaml packs/sketches/practice-room.yaml packs/sketches/elden-ring-tarnishedtool.yaml packs/sketches/rocket-league-showdown.yaml packs/sketches/twenty-five.yaml packs/sketches/run-of-show.yaml packs/sketches/forfeits.yaml packs/testing/engine-testing.yaml --strict",
+    "check:packs": "npm run runlog -- validate packs/demo/pack.yaml packs/testing/salt-and-signal.yaml packs/sketches/ladder-work.yaml packs/sketches/rocket-league-ladder.yaml packs/sketches/practice-room.yaml packs/sketches/elden-ring-tarnishedtool.yaml packs/sketches/rocket-league-showdown.yaml packs/sketches/twenty-five.yaml packs/sketches/run-of-show.yaml packs/sketches/forfeits.yaml packs/testing/engine-testing.yaml packs/setups/elden-ring-bare-handed.yaml --strict",
     "docs:emit": "node --experimental-strip-types packages/rules-schema/scripts/emit-reference.ts",
     "seed:listings": "node --experimental-strip-types scripts/seed-listings.ts",
     "check:pack-versions": "node --experimental-strip-types scripts/check-pack-versions.ts",
