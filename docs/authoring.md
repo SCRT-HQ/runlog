@@ -416,6 +416,39 @@ The most common mistake is reaching for machinery you do not need. A training lo
 
 ---
 
+## Setups, which are their own document
+
+A pack says what the dice can do. A setup says what a tool attached to the game is set to while a run lasts, and what the player is handed to start with: no rolling, three fifths of the damage, fifty thousand runes.
+
+It is a separate file because it depends on none of the things a pack depends on. The same setup fits every pack for the same game, one person can write it and everybody else can use it, and a run picks one where it picks its mode. A pack that named `speffect.apply` would be a pack that only plays with one Windows program attached to one game, and the schema has a test against exactly that.
+
+```yaml
+# yaml-language-server: $schema=https://runlog.dev/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.example.setups.bare-handed
+version: "1.0.0"
+title: Bare-handed
+description: No rolling, and runes to make up for it.
+
+tool: TarnishedTool
+
+ops:
+  - { op: flag.set, args: { name: player.noRoll, value: true } }
+  - { op: runes.give, args: { amount: 50000 }, once: true }
+```
+
+`kind: setup` is what tells a file apart from a pack, which has never carried a `kind` and does not need one. `validate` takes either and says which it read.
+
+`tool` names the program this is written for, by the name that program uses when it attaches. Operation names say nothing between programs: two tools for two games could both have a `warp.position`, and a setup meant for one of them reaching the other would move somebody for no reason. What the operations are and what arguments they take is the tool's business, not this format's.
+
+`once` is the difference between a setting and a gift. Settings go out every time a tool attaches, because a tool that restarted is holding none of them, and applying a setting twice is that setting. Runes handed over on every reconnect are a different game by the third one, so mark those `once` and the server keeps the record of what has already been given.
+
+What a setup is called on screen is the pack's to say. `vocabulary.setup` defaults to Setup, and a game with gear in it should probably say Loadout instead.
+
+---
+
 ## Licensing, and packs you should not publish
 
 `license.id` is an SPDX identifier from the list in [the reference](reference.md), or `proprietary` or `custom`, which carry their terms in `license.text`; the app shows the text beside the pack and the rulebook prints it, and any license may carry one as a notice. The Designer offers all of them in a list and opens a text box for the terms.

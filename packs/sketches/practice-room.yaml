@@ -11,6 +11,8 @@
 # and a run-end bands roll that says how the session landed.
 
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
+# yaml-language-server: $schema=https://runlog.dev/schema/pack-1.schema.json
+
 schemaVersion: 1
 id: com.scrthq.runlog.practice-room
 version: "0.1.0"

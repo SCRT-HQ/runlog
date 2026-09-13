@@ -12,13 +12,19 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildSchemaDocument } from "../src/emit.ts";
+import { buildSchemaDocument, buildSetupSchemaDocument } from "../src/emit.ts";
 import { SCHEMA_VERSION } from "../src/pack.ts";
+import { SETUP_SCHEMA_VERSION } from "../src/setup.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const outDir = join(here, "..", "schema");
-const outFile = join(outDir, `pack-${SCHEMA_VERSION}.schema.json`);
-
 mkdirSync(outDir, { recursive: true });
-writeFileSync(outFile, `${JSON.stringify(buildSchemaDocument(), null, 2)}\n`, "utf8");
-console.log(`wrote ${outFile}`);
+
+for (const [name, document] of [
+  [`pack-${SCHEMA_VERSION}.schema.json`, buildSchemaDocument()],
+  [`setup-${SETUP_SCHEMA_VERSION}.schema.json`, buildSetupSchemaDocument()],
+] as const) {
+  const outFile = join(outDir, name);
+  writeFileSync(outFile, `${JSON.stringify(document, null, 2)}\n`, "utf8");
+  console.log(`wrote ${outFile}`);
+}

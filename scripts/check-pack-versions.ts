@@ -16,6 +16,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { parse as parseYaml } from "yaml";
 
 const base = process.argv[2];
 if (!base) {
@@ -31,15 +32,40 @@ function versionOf(text: string): string | null {
   return line ? line.replace(/^version:\s*/, "").trim().replace(/^["']|["']$/g, "") : null;
 }
 
+/**
+ * What the document says, with nothing of how it was written.
+ *
+ * The question this guard asks is whether a holder of the old copy is
+ * holding something different from what is on main, and a comment is not
+ * something different: an editor hint added to the top of eighteen files
+ * is eighteen version bumps that offer everybody a pack identical to the
+ * one they have. So the comparison is of the parsed document, and a file
+ * that will not parse is treated as changed, since a pack that stopped
+ * loading is the one case where saying nothing would be worst.
+ */
+function meaningOf(text: string): string {
+  try {
+    return JSON.stringify(parseYaml(text) ?? null);
+  } catch {
+    return text;
+  }
+}
+
 const changed = git("diff", "--name-only", "--diff-filter=M", base, "--", "packs")
   .split("\n")
   .map((l) => l.trim())
   .filter((l) => l.endsWith(".yaml"));
 
 const stale: string[] = [];
+/** The ones that say something different, as opposed to the ones that were merely edited. */
+const different: string[] = [];
 for (const file of changed) {
-  const was = versionOf(git("show", `${base}:${file}`));
-  const now = versionOf(readFileSync(file, "utf8"));
+  const before = git("show", `${base}:${file}`);
+  const after = readFileSync(file, "utf8");
+  if (meaningOf(before) === meaningOf(after)) continue;
+  different.push(file);
+  const was = versionOf(before);
+  const now = versionOf(after);
   if (was === null || now === null) continue;
   if (was === now) stale.push(`${file} changed but is still ${now}`);
 }
@@ -51,4 +77,6 @@ if (stale.length > 0) {
   process.exit(1);
 }
 
-console.log(changed.length === 0 ? "No pack changed." : `${changed.length} pack${changed.length === 1 ? "" : "s"} changed, each with a new version.`);
+const touched = changed.length - different.length;
+const aside = touched > 0 ? ` (${touched} edited without saying anything different.)` : "";
+console.log(different.length === 0 ? `No pack changed.${aside}` : `${different.length} pack${different.length === 1 ? "" : "s"} changed, each with a new version.${aside}`);

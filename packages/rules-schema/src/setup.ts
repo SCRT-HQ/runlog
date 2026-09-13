@@ -47,7 +47,7 @@ export const Setup = z
     id: PackId.describe("Reverse-domain id, the way a pack is identified: `com.example.setups.bare-handed`."),
     version: z.string().min(1).describe("Semantic version. A setup that changes what it does changes this, or nobody holding it is offered the new one."),
     title: z.string().min(1).max(120).describe("What it is called, on a card and in a chooser."),
-    author: z.string().max(120).optional(),
+    author: z.string().max(120).optional().describe("Who wrote it, for a card and a list. A setup travels on its own, so this is the only credit it carries."),
     description: z.string().max(2000).optional().describe("What playing under it is like, in a line or two."),
     /**
      * Which tool this is written for.
@@ -60,12 +60,19 @@ export const Setup = z
     tool: z.string().min(1).max(64).describe("The tool this is for, by the name that tool calls itself when it attaches."),
     ops: z.array(SetupOp).min(1).max(200).describe("What to do when a tool attaches, in order."),
     license: z
-      .object({ id: z.string().min(1), redistributable: z.boolean() })
+      .object({
+        id: z.string().min(1).describe("An SPDX identifier where there is one, else whatever name the terms go by."),
+        redistributable: z.boolean().describe("Whether somebody may pass this on. False means it was shared with you, not given to you."),
+      })
       .strict()
       .optional()
       .describe("As a pack carries one. Absent means the author said nothing, which is not the same as permission."),
   })
-  .strict();
+  .strict()
+  .describe(
+    "What a tool attached to the game is set to while a run lasts, and what the player is handed " +
+      "to start with. Written for a tool rather than for a pack, so one fits every pack for the same game.",
+  );
 
 export type Setup = z.infer<typeof Setup>;
 

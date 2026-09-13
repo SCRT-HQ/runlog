@@ -5,6 +5,8 @@
 # no pack, so any Elden Ring pack played through Tarnished Tool can use
 # it, and a mode can name a different one without the pack changing.
 
+# yaml-language-server: $schema=https://runlog.dev/schema/setup-1.schema.json
+
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.bare-handed

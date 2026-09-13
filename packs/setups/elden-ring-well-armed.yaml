@@ -8,6 +8,8 @@
 # holds, and enough in the purse to buy whatever this one does not cover.
 # The others beside it commit to something.
 
+# yaml-language-server: $schema=https://runlog.dev/schema/setup-1.schema.json
+
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.well-armed

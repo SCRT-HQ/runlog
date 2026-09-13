@@ -4,6 +4,8 @@
 # nothing here is given. It is all settings, which is why a reconnect can
 # be sent the whole thing again and nothing about the run changes.
 
+# yaml-language-server: $schema=https://runlog.dev/schema/setup-1.schema.json
+
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.glass

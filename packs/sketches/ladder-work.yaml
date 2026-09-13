@@ -16,6 +16,8 @@
 #
 # It also surfaces one genuine engine-level gap, noted at the bottom.
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
+# yaml-language-server: $schema=https://runlog.dev/schema/pack-1.schema.json
+
 schemaVersion: 1
 id: com.scrthq.runlog.ladder-work
 version: "0.2.0"
