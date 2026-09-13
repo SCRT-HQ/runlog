@@ -34,7 +34,7 @@ the `npm-ci` and `run-cdk` composite actions.
 
 | Trigger | What runs |
 | --- | --- |
-| Pull request to `main` | Tests against both environments, then `cdk diff` against dev and prd |
+| Pull request to `main` | Tests against both environments, and `cdk diff` against dev and prd where the pull request touches this directory, the lockfile or the workflow |
 | Push to `main` | Deploy dev; then, once a reviewer approves, tag and publish the next release |
 | Release published | Deploy prd, from the tag |
 
