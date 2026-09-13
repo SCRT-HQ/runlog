@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-tarnishedtool
-version: "1.0.0"
+version: "2.0.0"
 title: "Elden Ring: TarnishedTool"
 author: Runlog
 description: >-
