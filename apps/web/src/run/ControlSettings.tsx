@@ -6,6 +6,7 @@ import type { StreamKeys } from "../sync/client.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { CATALOGS, catalogFor, opDef, rangeOfValue, type ArgDef, type ToolCatalog } from "../control/catalog.ts";
 import { builtins, forPack, type Builtin } from "../control/builtin.ts";
+import { known, listsFor, type Lists } from "../control/lists.ts";
 import { complaints, describes, entriesOf, EMPTY, isEmpty, parse, selectorOf, tablesOf, tagsOf, tidy, type ControlProfile, type ProfileOp, type ProfileRow } from "../control/profile.ts";
 
 /**
@@ -53,6 +54,14 @@ export function ControlSettings({
   const [busy, setBusy] = useState(false);
   /** The profiles that ship with the app, and which of them fits this pack. */
   const [shipped, setShipped] = useState<Builtin[]>([]);
+  /**
+   * The names this tool will match a frame against.
+   *
+   * Fetched rather than shipped, and only once a profile names a tool
+   * that has any: an empty box asking for one grace out of four hundred
+   * is a box nobody can fill without leaving the run.
+   */
+  const [lists, setLists] = useState<Lists>({});
 
   useEffect(() => {
     let live = true;
@@ -70,6 +79,14 @@ export function ControlSettings({
       live = false;
     };
   }, [api]);
+
+  useEffect(() => {
+    let live = true;
+    void listsFor(profile.tool).then((l) => live && setLists(l), () => {});
+    return () => {
+      live = false;
+    };
+  }, [profile.tool]);
 
   const catalog = catalogFor(profile.tool);
   const tags = useMemo(() => tagsOf(pack), [pack]);
@@ -102,6 +119,18 @@ export function ControlSettings({
     return `${origin.replace(/^http/, "ws")}/ws?k=${k}&as=control${tail}`;
   };
   const address = addressFor();
+  /**
+   * The lists this profile has a field for, so the sheet carries those
+   * options and not eighteen hundred of them.
+   */
+  const inUse = useMemo(() => {
+    const out = new Set<string>();
+    for (const op of [...(profile.setup ?? []), ...(profile.rows ?? []).flatMap((r) => r.ops)]) {
+      for (const arg of opDef(catalog, op.op)?.args ?? []) if (arg.list) out.add(arg.list);
+    }
+    return [...out];
+  }, [catalog, profile]);
+
   /** The roster, without the blanks and without anybody twice. */
   const roster = useMemo(() => [...new Set((seats ?? []).map((n) => n.trim()).filter(Boolean))], [seats]);
 
@@ -264,9 +293,18 @@ export function ControlSettings({
 
       <h4 className="stepLabel">The {pack.vocabulary.run.one.toLowerCase()}&apos;s terms</h4>
       <p className="muted small">Applied when a tool attaches and held until the {pack.vocabulary.run.one.toLowerCase()} ends. The settings that would otherwise be a paragraph nobody reads.</p>
-      <Ops catalog={catalog} ops={profile.setup ?? []} onChange={(setup) => update({ ...profile, setup })} />
+      <Ops catalog={catalog} lists={lists} ops={profile.setup ?? []} onChange={(setup) => update({ ...profile, setup })} />
 
       <h4 className="stepLabel">Rules</h4>
+      {inUse.map((list) => (
+        <datalist id={`controlNames-${list}`} key={list}>
+          {(lists[list] ?? []).map((n) => (
+            <option key={`${n.name}·${n.area ?? ""}`} value={n.name}>
+              {n.area ?? (n.max !== undefined ? `to +${n.max}` : "")}
+            </option>
+          ))}
+        </datalist>
+      ))}
       {roster.length > 0 && (
         <datalist id="controlSeats">
           {roster.map((name) => (
@@ -375,7 +413,7 @@ export function ControlSettings({
             <input type="text" value={row.label ?? ""} placeholder="what to call it" aria-label="What to call it" onChange={(e) => setRow(i, { ...row, label: e.target.value || undefined })} />
           </div>
 
-          <Ops catalog={catalog} ops={row.ops} onChange={(ops) => setRow(i, { ...row, ops })} />
+          <Ops catalog={catalog} lists={lists} ops={row.ops} onChange={(ops) => setRow(i, { ...row, ops })} />
         </div>
       ))}
 
@@ -410,7 +448,7 @@ export function ControlSettings({
 }
 
 /** A list of operations, which is what both the terms and a rule hold. */
-function Ops({ catalog, ops, onChange }: { catalog: ToolCatalog | null; ops: ProfileOp[]; onChange: (ops: ProfileOp[]) => void }) {
+function Ops({ catalog, lists, ops, onChange }: { catalog: ToolCatalog | null; lists: Lists; ops: ProfileOp[]; onChange: (ops: ProfileOp[]) => void }) {
   const set = (i: number, op: ProfileOp) => onChange(ops.map((o, at) => (at === i ? op : o)));
   const add = () => onChange([...ops, { op: catalog?.ops[0]?.op ?? "", args: {} }]);
 
@@ -440,7 +478,7 @@ function Ops({ catalog, ops, onChange }: { catalog: ToolCatalog | null; ops: Pro
             </select>
 
             {(def?.args ?? []).map((arg) => (
-              <Arg key={arg.name} arg={arg} op={op} onChange={(value) => set(i, { ...op, args: { ...op.args, [arg.name]: value } })} />
+              <Arg key={arg.name} arg={arg} op={op} lists={lists} onChange={(value) => set(i, { ...op, args: { ...op.args, [arg.name]: value } })} />
             ))}
 
             <button className="ghost tiny" onClick={() => onChange(ops.filter((_, at) => at !== i))} aria-label="Remove this">
@@ -459,7 +497,7 @@ function Ops({ catalog, ops, onChange }: { catalog: ToolCatalog | null; ops: Pro
   );
 }
 
-function Arg({ arg, op, onChange }: { arg: ArgDef; op: ProfileOp; onChange: (value: unknown) => void }) {
+function Arg({ arg, op, lists, onChange }: { arg: ArgDef; op: ProfileOp; lists: Lists; onChange: (value: unknown) => void }) {
   const value = op.args[arg.name];
 
   if (arg.kind === "flag") {
@@ -468,6 +506,33 @@ function Arg({ arg, op, onChange }: { arg: ArgDef; op: ProfileOp; onChange: (val
         <input type="checkbox" checked={value === true} onChange={(e) => onChange(e.target.checked)} />
         <span>{arg.label}</span>
       </label>
+    );
+  }
+
+  /**
+   * A name out of one of the tool's lists.
+   *
+   * Typed rather than chosen, because a select with nine hundred
+   * options is not a thing anybody scrolls, and a browser's own
+   * suggestion list narrows as you type. What the field adds over a
+   * plain box is that it says, while you are still in it, whether what
+   * you typed is a name the tool will find.
+   */
+  if (arg.kind === "name") {
+    const typed = typeof value === "string" ? value : "";
+    const fits = known(lists, arg.list, typed);
+    return (
+      <input
+        type="text"
+        value={typed}
+        list={arg.list ? `controlNames-${arg.list}` : undefined}
+        placeholder={arg.label}
+        aria-label={arg.label}
+        aria-invalid={fits === false}
+        className={fits === false ? "wrongName" : undefined}
+        title={fits === false ? `Nothing the tool knows is called that` : arg.note}
+        onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
+      />
     );
   }
 
