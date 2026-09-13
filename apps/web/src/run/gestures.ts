@@ -39,7 +39,7 @@ export interface LifecycleMarks {
   counters: Record<string, number>;
 }
 
-export type LifecycleKind = "outcome" | "unit-closed" | "run-ended" | "award" | "clock" | "counter";
+export type LifecycleKind = "outcome" | "outcome-undone" | "unit-closed" | "run-ended" | "award" | "clock" | "counter";
 
 export interface LifecycleGesture {
   kind: LifecycleKind;
@@ -69,6 +69,14 @@ export function lifecycleGestures(pack: Pack, state: RunState, events: readonly 
   const out: LifecycleGesture[] = [];
   const now = marksOf(state, events, nowMs);
   const tableTitle = (id: string) => pack.tables[id]?.title ?? id;
+
+  // A result taken back. Undo voids the last move, so what goes is
+  // always the tail, and a tool holding an effect the result applied has
+  // no other way of hearing about it: this stream only ever said what
+  // had happened, and an undo is a thing that happened too.
+  for (let n = before.outcomes; n > state.outcomes.length; n--) {
+    out.push({ kind: "outcome-undone", data: { n } });
+  }
 
   // Numbered from the start of the run, the way the snapshot's log numbers
   // them, so a listener can drop a line it has already shown.
