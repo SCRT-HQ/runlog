@@ -1635,10 +1635,19 @@ function Winners({ run, state }: { run: ReturnType<typeof useRun>; state: RunSta
                         className={`cell ${mine ? "won" : ""}`}
                         disabled={!editable || (!mine && !canTake)}
                         aria-pressed={Boolean(mine)}
-                        title={mine ? `${c.name} +${mine.points} - press to take it back` : `${c.name} finished it`}
+                        title={mine ? `${c.name} +${mine.points}${first && ch.awards.length > 1 ? ", first" : ""} - press to take it back` : `${c.name} finished it`}
                         onClick={press}
                       >
-                        {mine ? `+${mine.points}${first && ch.awards.length > 1 ? " ★" : ""}` : "·"}
+                        {mine ? `+${mine.points}` : "·"}
+                        {/* A mark in the corner rather than a word beside the
+                            score: in the run of the cell it made the button
+                            wider than the ones without it, and every cell
+                            here is meant to be the same button. */}
+                        {mine && first && ch.awards.length > 1 && (
+                          <span className="firstMark" aria-hidden="true">
+                            ★
+                          </span>
+                        )}
                       </button>
                     </td>
                   );
