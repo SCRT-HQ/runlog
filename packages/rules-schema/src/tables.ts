@@ -39,7 +39,7 @@ const EntryBase = {
     .array(Predicate)
     .optional()
     .describe(
-      "Conditions that must ALL hold for this result to make sense. When one fails the app offers a re-roll. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does.",
+      "Conditions that must ALL hold for this result to make sense. When one fails the dice are thrown again, up to a few times, the way they are for a result the run lacks a requirement for. Use it where a result has no referent yet rather than where it is merely hard: `unitIndex: { gte: 2 }` on a result that sends somebody back to where the last one started. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does.",
     ),
   grants: z
     .array(Id)

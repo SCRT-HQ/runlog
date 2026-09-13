@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-interference
-version: "0.3.0"
+version: "0.3.1"
 title: "Elden Ring: Interference"
 author: Runlog
 description: >-
@@ -1255,6 +1255,8 @@ tables:
           or on Torrent. No fast travel.
         tags: [target]
         points: 3
+        requires:
+          - { unitIndex: { gte: 2 } }
 
   boon:
     resolution: lookup

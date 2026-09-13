@@ -288,16 +288,28 @@ function obtainRoll(f: Frame, dice: string, key: string, purpose: string, label?
 /**
  * Roll on a table until the result is one this run can do.
  *
- * A pack can say a result `needs` something optional, a barbell, an oven, 
- * and a run says at the start what it lacks. A result that needs a lacked
- * thing is drawn again, up to a few times, so the dice never demand what the
- * room does not have. The rolls all land in the log; the last one counts.
+ * Two ways a result can be one it cannot. A pack can say a result
+ * `needs` something optional, a barbell, an oven, and a run says at the
+ * start what it lacks. And a result can say what must be true of the
+ * run for it to mean anything: "back to where the last stretch
+ * started" is not a hard result on the first stretch, it is an
+ * instruction with no referent.
+ *
+ * Either way the dice are thrown again, up to a few times. The rolls
+ * all land in the log; the last one counts. Note the asymmetry these
+ * games insist on and this keeps: impossibility justifies a re-roll,
+ * difficulty never does.
  */
 function drawTotal(f: Frame, tableId: string, table: Table, key: string): number {
   let total = rollForTable(f, tableId, table, key);
-  for (let again = 1; again <= 8 && f.state.lacks.length > 0; again++) {
-    const entry = selectEntry(table, total) as { id: string; needs?: string[] } | undefined;
-    if (!entry?.needs?.some((n) => f.state.lacks.includes(n))) break;
+  for (let again = 1; again <= 8; again++) {
+    const entry = selectEntry(table, total) as { id: string; needs?: string[]; requires?: Predicate[] } | undefined;
+    if (!entry) break;
+    const lacked = f.state.lacks.length > 0 && (entry.needs ?? []).some((n) => f.state.lacks.includes(n));
+    // Keyed by the entry rather than by the attempt, so a result drawn
+    // twice asks its question once.
+    const impossible = !allHold(f, entry.requires, `${key}!${entry.id}`);
+    if (!lacked && !impossible) break;
     total = rollForTable(f, tableId, table, `${key}~${again}`);
   }
   return total;
