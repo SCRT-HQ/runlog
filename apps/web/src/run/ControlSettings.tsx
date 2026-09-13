@@ -159,7 +159,9 @@ export function ControlSettings({
 
   return (
     <>
-      <h4 className="stepLabel">Control</h4>
+      <h3 className="sectionTitle">
+        Control <span className="muted">what a tool does about the dice</span>
+      </h3>
       <p className="muted small">
         Make what the dice say happen in the game, through a tool on the machine playing it. Off unless there are rules here; a {pack.vocabulary.run.one.toLowerCase()} with none
         plays exactly as it always has.
@@ -417,7 +419,7 @@ function Ops({ catalog, ops, onChange }: { catalog: ToolCatalog | null; ops: Pro
       {ops.map((op, i) => {
         const def = opDef(catalog, op.op);
         return (
-          <div className="padRow" key={i}>
+          <div className="padRow opRow" key={i}>
             <select
               className="chipAdd"
               value={op.op}
