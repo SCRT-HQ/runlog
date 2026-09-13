@@ -16,6 +16,7 @@ import {
   hasErrors,
   loadPackText,
   loadSetupText,
+  schemaUrl,
   whichKind,
   type Diagnostic,
   type Pack,
@@ -243,7 +244,7 @@ function cmdInit(args: string[]): number {
 }
 
 const SKELETON = `# A Runlog rule pack. Point your editor at the schema below for completions.
-$schema: https://runlog.dev/schema/pack-1.schema.json
+$schema: ${schemaUrl("pack")}
 schemaVersion: 1
 id: com.example.__NAME__
 version: "0.1.0"

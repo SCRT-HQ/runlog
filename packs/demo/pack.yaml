@@ -8,7 +8,7 @@
 #
 # Every construct in the schema appears somewhere below at least once.
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
-# yaml-language-server: $schema=https://runlog.dev/schema/pack-1.schema.json
+# yaml-language-server: $schema=../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.long-kiln

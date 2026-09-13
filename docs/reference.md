@@ -7,7 +7,7 @@ Every field the format accepts, taken from the schema your editor validates agai
 Point your pack at the schema and most of this becomes autocomplete:
 
 ```yaml
-# yaml-language-server: $schema=https://runlog.dev/schema/pack-1.schema.json
+# yaml-language-server: $schema=https://runlog.scrthq.com/schema/pack-1.schema.json
 ```
 
 ## The pack

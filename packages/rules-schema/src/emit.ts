@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Pack, SCHEMA_VERSION } from "./pack.ts";
 import { Setup, SETUP_SCHEMA_VERSION } from "./setup.ts";
+import { schemaUrl } from "./published.ts";
 
 /**
  * Building the published JSON Schema.
@@ -69,7 +70,7 @@ export function buildSchemaBody(): Record<string, unknown> {
 /** The complete published document. */
 export function buildSchemaDocument(): Record<string, unknown> {
   return {
-    $id: `https://runlog.dev/schema/pack-${SCHEMA_VERSION}.schema.json`,
+    $id: schemaUrl("pack"),
     title: `Runlog rule pack (schema version ${SCHEMA_VERSION})`,
     description:
       "A declarative description of a dice-driven creative-practice game: its tables, " +
@@ -96,7 +97,7 @@ export function buildSetupSchemaBody(): Record<string, unknown> {
 /** The complete published document, as `buildSchemaDocument` is for a pack. */
 export function buildSetupSchemaDocument(): Record<string, unknown> {
   return {
-    $id: `https://runlog.dev/schema/setup-${SETUP_SCHEMA_VERSION}.schema.json`,
+    $id: schemaUrl("setup"),
     title: `Runlog setup (schema version ${SETUP_SCHEMA_VERSION})`,
     description:
       "What a tool attached to the game is set to while a run lasts, and what the player is handed " +

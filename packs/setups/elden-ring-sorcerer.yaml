@@ -4,7 +4,7 @@
 # a stick, so this sets what it needs rather than handing over something
 # that will not work and calling it a gift.
 
-# yaml-language-server: $schema=https://runlog.dev/schema/setup-1.schema.json
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
 kind: setup
 schemaVersion: 1

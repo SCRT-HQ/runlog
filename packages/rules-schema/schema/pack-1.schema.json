@@ -1,5 +1,5 @@
 {
-  "$id": "https://runlog.dev/schema/pack-1.schema.json",
+  "$id": "https://runlog.scrthq.com/schema/pack-1.schema.json",
   "title": "Runlog rule pack (schema version 1)",
   "description": "A complete, self-contained description of a dice-driven creative-practice game. Packs are data, never code.",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
