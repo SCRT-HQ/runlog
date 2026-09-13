@@ -51,6 +51,21 @@ export function listsFor(tool: string | undefined): Promise<Lists> {
   return asked;
 }
 
+/**
+ * The areas a given name is found in.
+ *
+ * Most names are in one place, and for those the area is not a question
+ * anybody should be asked: the field can say so and stay empty. The
+ * handful that are in two are the whole reason the field exists, and
+ * for those this is the two.
+ */
+export function areasFor(lists: Lists, list: string | undefined, name: unknown): string[] {
+  const all = (list && lists[list]) || [];
+  const wanted = typeof name === "string" ? name.trim().toLowerCase() : "";
+  const from = wanted ? all.filter((n) => n.name.toLowerCase() === wanted) : all;
+  return [...new Set(from.map((n) => n.area).filter((a): a is string => Boolean(a)))].sort();
+}
+
 /** Whether a typed name is one the tool knows, where the list is in hand. */
 export function known(lists: Lists, list: string | undefined, name: unknown): boolean | null {
   if (!list) return null;

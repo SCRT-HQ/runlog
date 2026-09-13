@@ -13,7 +13,7 @@
  * up as a difference rather than as a mystery.
  */
 
-export type ArgKind = "number" | "flag" | "choice" | "text" | "name";
+export type ArgKind = "number" | "flag" | "choice" | "text" | "name" | "area";
 
 export interface ArgDef {
   name: string;
@@ -26,7 +26,8 @@ export interface ArgDef {
   /** For a choice: what the tool knows, by its own names. */
   options?: string[];
   /**
-   * For a name: which of the tool's own lists it is one of.
+   * For a name, or for the area that tells two of one name apart: which
+   * of the tool's own lists it is one of.
    *
    * A choice is short enough to put in a menu. A name is one of four
    * hundred, spelled exactly as the game spells it, and the panel used
@@ -223,7 +224,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
       oneWay: true,
       args: [
         { name: "name", kind: "name", list: "graces", label: "Grace", required: true, note: "Exactly as the tool spells it: Church of Elleh, Lake-Facing Cliffs." },
-        { name: "area", kind: "text", label: "Area", note: "Limgrave, Caelid, Stormveil Castle. Needed only where two graces share a name." },
+        { name: "area", kind: "area", list: "graces", label: "Area", note: "Needed only where two graces share a name, and then it is one of the two." },
       ],
     },
     {
@@ -233,7 +234,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
       oneWay: true,
       args: [
         { name: "name", kind: "name", list: "bosses", label: "Boss", required: true, note: "Godrick the Grafted, Bell Bearing Hunter, Erdtree Avatar." },
-        { name: "area", kind: "text", label: "Area", note: "Needed only where one name is used in more than one place." },
+        { name: "area", kind: "area", list: "bosses", label: "Area", note: "Needed only where one name is used in more than one place, and then it is one of them." },
       ],
     },
     {
