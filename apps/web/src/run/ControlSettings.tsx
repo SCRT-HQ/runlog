@@ -7,6 +7,7 @@ import type { StoredRun } from "../storage/db.ts";
 import { CATALOGS, catalogFor, opDef, rangeOfValue, type ArgDef, type ToolCatalog } from "../control/catalog.ts";
 import { builtins, forPack, type Builtin } from "../control/builtin.ts";
 import { areasFor, known, listsFor, type Lists } from "../control/lists.ts";
+import { rememberWatchKey, watchKeyHere } from "./watchKey.ts";
 import { complaints, describes, entriesOf, EMPTY, isEmpty, parse, selectorOf, tablesOf, tagsOf, tidy, type ControlProfile, type ProfileOp, type ProfileRow } from "../control/profile.ts";
 
 /**
@@ -43,15 +44,19 @@ export function ControlSettings({
   /** Whether the account has keys, as the server has it: never the keys. */
   const [keys, setKeys] = useState<StreamKeys>({});
   /**
-   * A watch key just minted, held only while this panel is open.
+   * The watch key, which finishes the address.
    *
-   * The server keeps a hash and nothing else, so an address with the key
-   * in it can only be shown in the moment it is made. Which is why the
-   * button is here rather than a sentence telling somebody to go and
-   * find one: making it and copying the finished address is one motion.
+   * Made without being asked for. It opens a socket that reads and never
+   * presses, over a run that is already open to watchers, so there was
+   * never anything for a person to weigh before pressing a button that
+   * said Make one: the button was a step, not a decision. The device
+   * remembers what it made, so the address is finished today and
+   * tomorrow rather than only in the moment.
    */
-  const [key, setKey] = useState<string | null>(null);
+  const [key, setKey] = useState<string | null>(() => watchKeyHere());
   const [busy, setBusy] = useState(false);
+  /** So a failed mint is not retried on every render. */
+  const asked = useRef(false);
   /** The profiles that ship with the app, and which of them fits this pack. */
   const [shipped, setShipped] = useState<Builtin[]>([]);
   /**
@@ -65,10 +70,23 @@ export function ControlSettings({
 
   useEffect(() => {
     let live = true;
-    void builtins().then((all) => live && setShipped(forPack(all, pack.id)), () => {});
+    void builtins().then((all) => {
+      if (!live) return;
+      const fits = forPack(all, pack.id);
+      setShipped(fits);
+      // A pack that ships a profile has already answered the question
+      // this panel asks. Loading it is not a decision somebody was
+      // going to make differently, and leaving it unloaded meant a run
+      // of that pack quietly did nothing to the game until they found
+      // the button. Only where the run has never had one: a profile
+      // that was emptied on purpose stays empty.
+      const its = fits.find((b) => b.pack === pack.id);
+      if (its && saved === undefined) update(its.profile);
+    }, () => {});
     return () => {
       live = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pack.id]);
 
   useEffect(() => {
@@ -95,7 +113,11 @@ export function ControlSettings({
 
   const update = (next: ControlProfile) => {
     setProfile(next);
-    void onControl?.(isEmpty(next) ? undefined : next);
+    // An emptied profile is stored as an empty one rather than as no
+    // profile at all. The difference matters exactly once: a run that
+    // has never had a profile takes the pack's, and a run whose rules
+    // somebody deleted does not get them handed back.
+    void onControl?.(next);
   };
 
   const setRow = (i: number, row: ProfileRow) => update({ ...profile, rows: (profile.rows ?? []).map((r, at) => (at === i ? row : r)) });
@@ -140,20 +162,40 @@ export function ControlSettings({
     window.setTimeout(() => setCopied(null), 1200);
   };
 
-  const makeKey = async () => {
+  const makeKey = async (quietly = false) => {
     if (!api) return;
     setBusy(true);
     try {
       const made = await api.mintStreamKey("watch");
+      rememberWatchKey(made.key);
       setKey(made.key);
       setKeys(made.keys);
       setNote(null);
     } catch {
-      setNote("Could not make a key just now.");
+      // Nothing was asked for, so nothing is reported: the panel says
+      // the address is unfinished, which it does anyway.
+      if (!quietly) setNote("Could not make a key just now.");
     } finally {
       setBusy(false);
     }
   };
+
+  /**
+   * An account with no watch key gets one when this panel opens.
+   *
+   * The one case the device cannot remember its way out of: a key the
+   * server has a hash for, made on another machine, cannot be shown
+   * here. Making a new one is the only way to finish the address, and
+   * it puts the other out, so that stays a button somebody presses.
+   */
+  useEffect(() => {
+    if (!api || key !== null || busy) return;
+    if (keys.watch === undefined && asked.current === false) {
+      asked.current = true;
+      void makeKey(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api, key, keys.watch]);
 
   const exportFile = () => {
     const text = JSON.stringify(tidy(profile), null, 2);
@@ -216,10 +258,10 @@ export function ControlSettings({
       <div className="askKey">
         <p className="muted small">
           {key
-            ? "The address the tool dials, with your key in it. Shown this once."
+            ? "The address the tool dials, finished. It reads this run and cannot press anything."
             : keys.watch
-              ? "The address the tool dials. Your key was shown once when it was made; a new one finishes this address and stops the old one working."
-              : "The address the tool dials. It needs a watch key, which is what lets a tool read this run."}
+              ? "The address the tool dials. Its key was made on another device and cannot be shown here; a new one finishes this address and stops the old one working."
+              : "The address the tool dials, once it has a key. Making one needs a connection."}
         </p>
         <code className="askAddress">{address}</code>
         <div className="padRow">
@@ -227,7 +269,12 @@ export function ControlSettings({
             {copied === "" ? "Copied" : "Copy address"}
           </button>
           {api && (
-            <button className={key ? "ghost tiny" : "primary tiny"} disabled={busy} onClick={() => void makeKey()}>
+            <button
+              className={key ? "ghost tiny" : "primary tiny"}
+              disabled={busy}
+              title={keys.watch ? "Puts the old one out, wherever it is in use" : undefined}
+              onClick={() => void makeKey()}
+            >
               {keys.watch ? "New watch key" : "Make a watch key"}
             </button>
           )}
@@ -256,8 +303,8 @@ export function ControlSettings({
       {itsOwn && isEmpty(profile) && (
         <div className="askKey">
           <p className="muted small">
-            {pack.title} ships with a profile. It maps every result this pack can draw to something the tool does, and it is a starting point rather than a
-            standard: once it is loaded, it is yours to change.
+            {pack.title} ships with a profile, which a {pack.vocabulary.run.one.toLowerCase()} of it takes by itself. There are no rules here now, so this one
+            does nothing to the game; putting the pack&apos;s back is one press, and it is yours to change from there.
           </p>
           <div className="padRow">
             <button className="primary tiny" onClick={() => use(itsOwn)}>
