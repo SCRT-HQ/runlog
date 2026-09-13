@@ -87,6 +87,9 @@ export function stopClocksEvents(state: RunState, at: string, nowMs = Date.parse
 export function unitClockStart(pack: Pack, state: RunState | null, unit: number, at: string, byHand = false): RunEvent | null {
   const config = unitClockFor(pack, state);
   if (!config || (config.auto === false && !byHand)) return null;
+  // A clock that waits for a phase does not start with the unit. It is
+  // started by whatever brings the flow to that phase; see `clockOnPhase`.
+  if (config.startsOn !== undefined && !byHand) return null;
   // A unit played again after a rewind gets a clock of its own; the first one's time still counts.
   const taken = state?.clocks.filter((c) => c.unit === unit && c.id.endsWith(":unit")).length ?? 0;
   return {
@@ -95,6 +98,43 @@ export function unitClockStart(pack: Pack, state: RunState | null, unit: number,
     clock: taken > 0 ? `u${unit}.${taken + 1}:unit` : `u${unit}:unit`,
     kind: config.kind,
     label: config.label ?? `${pack.vocabulary.unit.one} ${unit}`,
-    ...(config.kind === "timer" && config.minutes ? { seconds: Math.round(config.minutes * 60) } : {}),
+    ...(config.kind === "timer" ? secondsOf(config, state) : {}),
+  };
+}
+
+/**
+ * How long a timer runs: what the dial says, or what the pack said.
+ *
+ * Read at the moment it starts, so turning the dial changes the next
+ * one and leaves the one running alone. A dial at nothing is nothing to
+ * go on, so the pack's own number stands.
+ */
+function secondsOf(config: { minutes?: number; minutesFrom?: string }, state: RunState | null): { seconds: number } | Record<string, never> {
+  const dial = config.minutesFrom !== undefined ? state?.resources[config.minutesFrom] : undefined;
+  const minutes = dial && dial > 0 ? dial : config.minutes;
+  return minutes ? { seconds: Math.round(minutes * 60) } : {};
+}
+
+/**
+ * The event that starts a unit's clock on arriving at a phase, for a
+ * pack whose unit draws before it plays.
+ *
+ * Ten minutes of play is ten minutes of play; the two rolls in front of
+ * it are not what the clock is for, and starting it at the top of the
+ * unit meant reading four results against a timer that was already
+ * spending them. Null unless this is the phase, and unless the unit's
+ * clock has not already started.
+ */
+export function clockOnPhase(pack: Pack, state: RunState | null, phaseId: string, at: string): RunEvent | null {
+  const config = unitClockFor(pack, state);
+  if (!config || config.startsOn !== phaseId || !state || state.unit === 0) return null;
+  if (state.clocks.some((c) => c.unit === state.unit && c.id.endsWith(":unit"))) return null;
+  return {
+    t: "ClockStarted",
+    at,
+    clock: `u${state.unit}:unit`,
+    kind: config.kind,
+    label: config.label ?? `${pack.vocabulary.unit.one} ${state.unit}`,
+    ...(config.kind === "timer" ? secondsOf(config, state) : {}),
   };
 }

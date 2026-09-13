@@ -33,6 +33,7 @@ import {
   challenges,
   standings,
   awardValue,
+  clockOnPhase,
   unitClockStart,
   unitClockFor,
   stopClocksEvents,
@@ -897,6 +898,21 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
   );
   /** A viewer watches. Every move is shown; none can be made. */
   const readOnly = record?.role === "viewer";
+
+  /**
+   * A clock that waits for a phase starts when the flow gets there.
+   *
+   * Arrival happens more ways than one step finishing: a phase can be
+   * skipped past, a run can be reloaded standing in it, a rewind can
+   * bring it round again. So this watches where the flow is rather than
+   * riding on any one of those, and `clockOnPhase` returns nothing once
+   * the unit's clock exists, which makes it safe to ask on every pass.
+   */
+  useEffect(() => {
+    if (readOnly || !state || state.status !== "active" || !activeStep) return;
+    const start = clockOnPhase(pack, state, activeStep.phase.id, now());
+    if (start) commit([start]);
+  }, [pack, state, activeStep, readOnly, commit]);
 
   /**
    * A step half answered comes back with the run.

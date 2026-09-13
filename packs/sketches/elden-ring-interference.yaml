@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-interference
-version: "0.5.0"
+version: "0.6.0"
 title: "Elden Ring: Interference"
 author: Runlog
 description: >-
@@ -80,7 +80,12 @@ vocabulary:
 
 unit:
   createsSubject: true
-  clock: { kind: timer, minutes: 10 }
+  # The clock is on the playing, not on the drawing. It waits for the
+  # Play phase, so reading four interferences and naming a target is not
+  # spending the ten minutes they are read against; and how long it runs
+  # is a dial, because ten minutes is a guess about somebody else's
+  # evening.
+  clock: { kind: timer, minutes: 10, minutesFrom: minutes, startsOn: play }
   min: 3
   max: 20
 
@@ -544,6 +549,14 @@ resources:
     step: 1
     display: number
     description: How many targets a stretch draws. Turn it up when one thing to do stops being enough.
+  minutes:
+    label: Minutes a stretch
+    initial: 10
+    min: 2
+    max: 60
+    step: 1
+    display: number
+    description: How long a stretch runs once you start playing it. Read when the clock starts, so turning it changes the next stretch and not this one.
   warpEvery:
     label: Stretches before a warp
     initial: 4
