@@ -127,31 +127,26 @@ I = [
     (2, "cu-rain", "Rain, for the whole scene.", S("rain", "Rain", "RAIN", "Rain, for this scene."), press("RainyWeather")),
     (2, "cu-snow", "Snow, wherever you happen to be.", S("snow", "Snow", "SNOW", "Snow, on this scene."), press("SnowyWeather")),
     (1, "cu-clear", "Clear skies, for once. Which means everything can see you.", S("clear", "Clear", "CLR", "Clear skies on this scene, and nothing to hide behind."), press("DefaultWeather")),
-    # Vows: nothing enforces these but you.
-    (3, "vo-stay", "Do not leave this region. Whatever you meant to do elsewhere, do it here.", S("bound", "Bound", "STAY", "Do not leave this region."), None),
-    (3, "vo-alone", "Alone. No summons and no Spirit Ashes.", S("alone", "Alone", "ALON", "No summons, no Spirit Ashes."), None),
-    (3, "vo-naked", "Unequip your armor, all four slots.", S("bare", "Bare", "BARE", "No armor, all four slots."), None),
-    (3, "vo-noshield", "Nothing in the left hand but a weapon, a catalyst, or air.", S("openhanded", "Open-handed", "OPEN", "Nothing in the left hand."), None),
-    (3, "vo-noflask", "No Crimson Tears. Whatever you have, you keep.", S("thirsty", "Thirsty", "DRY", "No Crimson Tears."), None),
-    (2, "vo-notears", "No flasks at all, of either colour.", S("parched", "Parched", "NONE", "No flasks of any kind."), None),
-    (2, "vo-nolock", "No lock-on. Aim by hand.", S("unaimed", "Unaimed", "FREE", "No lock-on."), None),
-    (3, "vo-walk", "Walk. No sprinting and no Torrent.", S("afoot", "Afoot", "WALK", "No sprinting, no Torrent."), None),
-    (2, "vo-onehand", "One weapon, and no swapping it.", S("committed", "Committed", "ONE", "One weapon, no swapping."), None),
-    (2, "vo-worst", "The worst weapon you are carrying, and only that.", S("ill-armed", "Ill-armed", "WRST", "Your worst weapon, and only that."), None),
-    (2, "vo-nojump", "No jumping, and no jump attacks.", S("grounded", "Grounded", "DOWN", "No jumping."), None),
-    (2, "vo-noitem", "No consumables of any kind. Nothing from the pouch.", S("frugal", "Frugal", "POCK", "No consumables."), None),
-    (2, "vo-noblock", "No blocking. Dodge it or wear it.", S("unguarded", "Unguarded", "NOBL", "No blocking."), None),
-    (2, "vo-melee", "Nothing at range. No bows, no thrown, no spells from afar.", S("close", "Close quarters", "MELE", "Nothing at range."), None),
-    (2, "vo-nomagic", "No spells and no incantations, whatever you are built for.", S("mundane", "Mundane", "MUND", "No spells or incantations."), None),
-    (2, "vo-noskill", "No Ashes of War and no weapon skills.", S("plain", "Plain", "SKIL", "No Ashes of War or skills."), None),
-    (2, "vo-noback", "Nothing cheap. No backstabs and no ripostes.", S("honest", "Honest", "BACK", "No backstabs or ripostes."), None),
-    (2, "vo-norest", "Do not rest at a grace. Not once.", S("restless", "Restless", "REST", "No resting at graces."), None),
-    (2, "vo-nolevel", "No levelling, no upgrading, no spending anything.", S("unspent", "Unspent", "SPND", "Nothing spent, nothing upgraded."), None),
-    (2, "vo-notravel", "No fast travel. Ride or walk wherever you are going.", S("overland", "Overland", "TRVL", "No fast travel."), None),
-    (2, "vo-noloot", "Pick nothing up. Walk past all of it.", S("empty-handed", "Empty-handed", "LOOT", "Pick nothing up."), None),
-    (2, "vo-fight", "Fight what you wake. Nothing you aggro may be left behind.", S("standing", "Standing", "FGHT", "Nothing you aggro is left behind."), None),
-    (1, "vo-twohand", "Two hands on one weapon, the whole scene.", S("twohanded", "Two-handed", "BOTH", "Two hands on one weapon."), None),
-    (1, "vo-moving", "Keep moving. Never stand still for longer than it takes to swing.", S("driven", "Driven", "MOVE", "Never stand still."), None),
+    # What is left of the vows.
+    #
+    # There were twenty-four, and nothing enforced any of them: a vow is
+    # a thing a runner agrees to and then remembers, or does not, and a
+    # pack written for a tool has no business asking. One of them turned
+    # out to be enforceable after all, and it is here. The rest are gone,
+    # replaced below by things this build can actually do.
+    (3, "cu-alone", "Alone. Whatever you had in the ash slot is out of it, and stays out.", S("alone", "Alone", "ALON", "No Spirit Ash."), val("player.spiritAsh", 0)),
+
+    # The rest of what the tool can reach and the table had not asked for.
+    # Three stats the pack had left alone while curses existed for the
+    # other five, a journey nobody chose, a frame rate, and gravity.
+    (2, "cu-witless", "Witless. Your intelligence is one; whatever you were going to cast, you are not.", S("witless", "Witless", "INTL", "Intelligence is one."), val("player.intelligence", 1)),
+    (2, "cu-faithless", "Faithless. Your faith is one, and nothing is listening anyway.", S("faithless", "Faithless", "FTH", "Faith is one."), val("player.faith", 1)),
+    (2, "cu-luckless", "Luckless. Your arcane is one. Nothing bleeds, nothing drops, nothing goes your way.", S("luckless", "Luckless", "ARC", "Arcane is one."), val("player.arcane", 1)),
+    (1, "cu-journey", "A harder world. The journey goes up one for the scene; everything hits like it is somebody else's run.", S("further", "Further on", "NG+", "The journey is one higher."), val("player.newGame", 1)),
+    (2, "cu-slideshow", "Thirty frames. You will feel every one of them.", S("stutter", "Stutter", "30FPS", "Thirty frames a second."), val("game.fps", 30)),
+    (1, "cu-flicker", "Twenty frames, which is not a frame rate, it is a warning.", S("flicker", "Flicker", "20FPS", "Twenty frames a second."), val("game.fps", 20)),
+    (1, "cu-float", "Gravity lets go. Mind the ceiling, and mind the landing.", S("weightless", "Weightless", "FLOT", "No gravity."), flag("player.noGravity")),
+    (2, "cu-fixed", "Your health is pinned where it is. No healing it, no losing it slowly: whatever hits you takes it all or none.", S("pinned", "Pinned", "LOCK", "Health is locked."), flag("player.lockHp")),
     (2, "cu-calm", "Nothing at all. Ten quiet minutes; use them.", None, None),
 ]
 
