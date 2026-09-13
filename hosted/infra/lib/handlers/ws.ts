@@ -123,8 +123,40 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     return { statusCode: 200 };
   }
 
+  /**
+   * Who has a tool on the game right now, said to everyone watching.
+   *
+   * The whole set every time rather than a joining and a leaving. A table
+   * that missed one message would otherwise show a tool that went home an
+   * hour ago, or miss one that is about to be sent a curse, and there is
+   * no cheap way to notice you missed it. A list is idempotent; a delta is
+   * a thing to keep in step.
+   */
+  const tellWhoIsAttached = async (run: string): Promise<void> => {
+    const poster = deps.poster;
+    if (!poster) return;
+    const watching = await deps.live.watchers(run);
+    const tools = watching
+      .filter((w) => w.control)
+      .map((w) => ({ ...(w.seat ? { seat: w.seat } : {}), ...(w.app ? { app: w.app } : {}) }));
+    const line = JSON.stringify({ t: "gesture", id: run, kind: "tools", data: { tools, count: tools.length }, at: now() });
+    for (const w of watching) {
+      // A tool is told in operations, never in words about itself.
+      if (w.control) continue;
+      try {
+        if ((await poster.post(w.connectionId, line)) === "gone") await deps.live.disconnect(w.connectionId);
+      } catch (error) {
+        console.error("live: could not say who is attached", error);
+      }
+    }
+  };
+
   if (routeKey === "$disconnect") {
+    // Read before it goes: a tool leaving is news, and afterwards there is
+    // nothing left to say which run it was on.
+    const leaving = await deps.live.connection(connectionId);
     await deps.live.disconnect(connectionId);
+    if (leaving?.control && leaving.run) await tellWhoIsAttached(leaving.run);
     return { statusCode: 200 };
   }
 
@@ -165,6 +197,12 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
       ...(app ? { app } : {}),
       run: conn.run,
     });
+
+    // The table hears that somebody's game is on the other end of this.
+    // Said here rather than at connect, because until the hello arrives
+    // there is no seat and no name to say, and a row with neither is not
+    // worth drawing.
+    await tellWhoIsAttached(conn.run);
 
     const poster = deps.poster;
     if (!poster) return { statusCode: 200 };
