@@ -262,10 +262,19 @@ describe("telling the listeners", () => {
         ops: [{ op: "flag.set", args: { name: "player.noRoll", value: true } }],
       });
 
+      // A run with no rules says so, rather than leaving a tool
+      // connected and silent. An address names an account and the
+      // server picks the run, so the run it picked is worth naming:
+      // attaching perfectly to a run nobody is playing looks exactly
+      // like attaching to the right one.
       const bare = attached(memoryLive(), { control: { rows: [] } });
       await bare.live.connect("c1", "public:shared", "", { control: true, run: "shared" });
       await route({ requestContext: { routeKey: "$default", connectionId: "c1" }, body: JSON.stringify({ t: "hello" }) }, bare.d);
-      expect(bare.posted).toEqual([]);
+      expect(bare.posted).toHaveLength(1);
+      const said = JSON.parse(bare.posted[0]![1]);
+      expect(said.t).toBe("note");
+      expect(said.text).toContain("no rules for a tool");
+      expect(said.text).toContain("open to watchers");
     });
 
     it("takes no requests other than hello, the same as any other link", async () => {
