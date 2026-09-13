@@ -1,5 +1,5 @@
 import { hashToken, verify as verifyToken, type Caller } from "./auth.js";
-import { framesForGesture, profileOf, setupFor } from "./control.js";
+import { fits, framesForGesture, profileOf, setupFor } from "./control.js";
 import { apiGatewayPoster, type Poster } from "./live.js";
 import { dynamoLive, type LiveStore } from "./live.js";
 import { dynamoStore, type Store } from "./store.js";
@@ -153,12 +153,28 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
    * both directions.
    */
   if (conn.control && m["t"] === "hello" && conn.run) {
+    // What it calls itself is remembered, because a profile written for
+    // one program must not drive another that happens to share an
+    // operation name.
+    const app = typeof m["app"] === "string" ? m["app"].trim().slice(0, 64) : "";
+    await deps.live.watch(connectionId, conn.run, conn.sub, now(), {
+      control: true,
+      ...(conn.seat ? { seat: conn.seat } : {}),
+      ...(app ? { app } : {}),
+      run: conn.run,
+    });
+
     const poster = deps.poster;
     if (!poster) return { statusCode: 200 };
     const snapshot = await deps.store.getSnapshot(conn.run);
     const profile = snapshot ? profileOf(snapshot.snapshot) : null;
-    const terms = profile ? setupFor(profile) : null;
-    if (terms && (await poster.post(connectionId, terms)) === "gone") await deps.live.disconnect(connectionId);
+    if (!profile) return { statusCode: 200 };
+    // Told rather than left silent: a tool sitting there doing nothing
+    // is the most confusing thing this could do.
+    const line = fits(profile, app || undefined)
+      ? setupFor(profile)
+      : JSON.stringify({ t: "note", text: `This run is set up for ${profile.tool}, so nothing here will reach ${app || "a tool that did not say what it is"}.` });
+    if (line && (await poster.post(connectionId, line)) === "gone") await deps.live.disconnect(connectionId);
     return { statusCode: 200 };
   }
 
@@ -189,7 +205,7 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
       const profile = attached.length > 0 ? profileOf((await deps.store.getSnapshot(id))?.snapshot) : null;
       await Promise.all(
         watchers.map(async (w) => {
-          const lines = !w.control ? [line] : profile ? framesForGesture(profile, kind, data, w.seat) : [];
+          const lines = !w.control ? [line] : profile && fits(profile, w.app) ? framesForGesture(profile, kind, data, w.seat) : [];
           for (const out of lines) {
             try {
               if ((await poster.post(w.connectionId, out)) === "gone") {

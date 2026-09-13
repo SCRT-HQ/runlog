@@ -35,6 +35,8 @@ const expiresAfter = (at: string) => Math.floor(new Date(at).getTime() / 1000) +
 export interface Attached {
   control?: boolean;
   seat?: string;
+  /** What the tool called itself when it said hello. */
+  app?: string;
   /** The run it was opened for, settled at connect.  */
   run?: string;
 }
@@ -59,6 +61,7 @@ function marks(attached: Attached): Record<string, unknown> {
   return {
     ...(attached.control ? { control: true } : {}),
     ...(attached.seat ? { seat: attached.seat } : {}),
+    ...(attached.app ? { app: attached.app } : {}),
     ...(attached.run ? { run: attached.run } : {}),
   };
 }
@@ -67,6 +70,7 @@ function read(row: Record<string, unknown>): Attached {
   return {
     ...(row["control"] === true ? { control: true as const } : {}),
     ...(typeof row["seat"] === "string" ? { seat: row["seat"] } : {}),
+    ...(typeof row["app"] === "string" ? { app: row["app"] } : {}),
     ...(typeof row["run"] === "string" ? { run: row["run"] } : {}),
   };
 }

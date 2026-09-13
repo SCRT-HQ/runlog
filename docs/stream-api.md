@@ -484,17 +484,26 @@ Then, as the table plays, an effect per result:
 
 Several operations under one id is the ordinary case, not a batch: a
 curse is usually a status effect and a restriction together, and they
-have to land and be taken back as one thing. `for` is in seconds; without
-it the effect holds until it is taken back. The id is the result's number
-and the row it matched, so the same result arriving twice after a
+have to land and be taken back as one thing. The id is the result's
+number and the row it matched, so the same result arriving twice after a
 reconnection is the same effect rather than a second one.
 
-Taking one back names it. Taking back everything in force uses the
-reserved id, which is what the end of a run sends, since only the tool
-knows what it is still holding:
+How long it lasts is said in one of three ways. `for`, in seconds. A
+`group`, which several effects share and which comes off together when
+the run says so, and which is how an effect that lasts a unit of play
+ends. Or neither, which holds until something takes it back.
+
+```json
+{ "t": "apply", "id": "o4#0", "group": "unit:4", "ops": [ … ] }
+```
+
+Taking one back names it. Taking back a group names the group. Taking
+back everything in force uses the reserved id, which is what the end of a
+run sends, since only the tool knows what it is still holding:
 
 ```json
 { "t": "revert", "id": "o4#0" }
+{ "t": "revert", "group": "unit:4" }
 { "t": "revert", "id": "*" }
 ```
 
@@ -514,15 +523,29 @@ says what to do, for how long, and who it reaches.
 
 ```json
 {
+  "tool": "TarnishedTool",
   "setup": [{ "op": "flag.set", "args": { "name": "player.noRoll", "value": true } }],
   "rows": [
-    { "tag": "curse", "label": "A curse", "for": 90,
+    { "tag": "curse", "label": "A curse", "until": "unit",
+      "ops": [{ "op": "speffect.apply", "args": { "id": 6900 } }] },
+    { "entry": "rot", "table": "curse", "for": 90,
       "ops": [{ "op": "speffect.apply", "args": { "id": 6900 } }] },
     { "table": "relocate", "to": "all",
       "ops": [{ "op": "warp.position", "args": { "block": 60, "x": 1, "y": 2, "z": 3 } }] }
   ]
 }
 ```
+
+| Field | What it is |
+| --- | --- |
+| `tool` | The program this was written for, as that program names itself in its `hello`. Anything else listening is sent nothing and told why. Leave it out and the profile is for whatever is attached, which is how a script of your own works with no ceremony. |
+| `setup` | Operations applied when a tool attaches, held for the run, under the id `setup`. The run's terms: the level, the restrictions, the things that would otherwise be a paragraph in a description and fifteen boxes ticked by hand. |
+| `table`, `entry`, `tag` | What a row matches. An entry, with its table where two tables share an id; a tag the entry carries, which is how one row covers a table full of curses; or a whole table. A row matching none of these is ignored rather than matching everything. |
+| `label` | What a person sees in the tool's log. Without one, the line the table drew. |
+| `for` | Seconds. |
+| `until` | `unit`, for an effect that lasts the unit it landed in. Everything a unit applied comes off when that unit closes. Where a row somehow says both, the seconds win. |
+| `to` | A seat's name, or `all`, or left out, which is also everyone. Matched against what a tool said it was sitting in front of, ignoring case. A tool that never said hears only what is for everyone. |
+| `ops` | What to do, in order, as one thing. |
 
 `to` names a seat, or `all`, or is left out, which is also everyone. A
 tool that never said which player it is hears only what is for everyone.
@@ -536,6 +559,10 @@ profile names; that end refuses by name anything its build does not have,
 so a profile that gets ahead of somebody's version degrades instead of
 failing. Which also means a mapping somebody got wrong is fixed here, in
 the app, rather than in a program everyone has to download again.
+
+Names are the compatibility story between versions of one program, and
+say nothing between programs: two tools for two games could easily both
+have a `warp.position`. That is what `tool` is for.
 
 ## Politeness
 

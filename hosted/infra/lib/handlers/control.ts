@@ -38,14 +38,33 @@ export interface ControlRow {
   entry?: string;
   tag?: string;
   label?: string;
-  /** Seconds it lasts. Absent means until the run says otherwise. */
+  /** Seconds it lasts. Absent means until something takes it back. */
   for?: number;
+  /**
+   * The other way to say how long: until the unit it landed in closes.
+   *
+   * Which is what these games actually mean. A curse drawn for a Region
+   * lasts that Region, and a pack forced to say so in seconds would be
+   * guessing at how long a Region takes, and would be wrong.
+   */
+  until?: "unit";
   /** A seat's name, or absent for everyone at the table. */
   to?: string;
   ops: ControlOp[];
 }
 
 export interface ControlProfile {
+  /**
+   * The tool this was written for, as that tool names itself.
+   *
+   * Operation names are the compatibility story between versions of one
+   * program, and say nothing between programs: two tools for two games
+   * could easily both have a `warp.position`, and a profile meant for one
+   * of them matching a table id in the other would move somebody for no
+   * reason at all. So a profile says who it is for, and anything else
+   * listening is sent nothing.
+   */
+  tool?: string;
   /** Applied when a tool attaches, and held for the run. */
   setup?: ControlOp[];
   rows?: ControlRow[];
@@ -78,7 +97,8 @@ export function profileOf(snapshot: unknown): ControlProfile | null {
   const setup = opsOf(raw["setup"]);
   const rows = Array.isArray(raw["rows"]) ? raw["rows"].slice(0, MOST_ROWS).map(rowOf).filter((r): r is ControlRow => r !== null) : [];
   if (setup.length === 0 && rows.length === 0) return null;
-  return { setup, rows };
+  const tool = typeof raw["tool"] === "string" && raw["tool"].length > 0 && raw["tool"].length <= 64 ? raw["tool"] : undefined;
+  return { ...(tool ? { tool } : {}), setup, rows };
 }
 
 function opsOf(value: unknown): ControlOp[] {
@@ -114,6 +134,9 @@ function rowOf(value: unknown): ControlRow | null {
   if (label !== undefined) row.label = label;
   if (to !== undefined) row.to = to;
   if (seconds !== undefined) row.for = seconds;
+  // Seconds win where a row somehow says both, since a number is the
+  // more deliberate thing to have written down.
+  if (seconds === undefined && raw["until"] === "unit") row.until = "unit";
   // A row that names nothing to match would otherwise fire on every
   // result in the run.
   if (row.table === undefined && row.entry === undefined && row.tag === undefined) return null;
@@ -123,6 +146,7 @@ function rowOf(value: unknown): ControlRow | null {
 /** What a result said it was, in the fields a row matches on. */
 export interface Landed {
   n?: number;
+  unit?: number;
   tableId?: string;
   entryId?: string;
   tags?: string[];
@@ -138,6 +162,7 @@ export function landedOf(data: unknown): Landed | null {
   if (typeof raw["entryId"] !== "string" && typeof raw["tableId"] !== "string") return null;
   const landed: Landed = {};
   if (typeof raw["n"] === "number") landed.n = raw["n"];
+  if (typeof raw["unit"] === "number") landed.unit = raw["unit"];
   if (typeof raw["tableId"] === "string") landed.tableId = raw["tableId"];
   if (typeof raw["entryId"] === "string") landed.entryId = raw["entryId"];
   if (typeof raw["text"] === "string") landed.text = raw["text"];
@@ -188,6 +213,10 @@ export function appliesFor(profile: ControlProfile, landed: Landed, seat: string
         id: `o${landed.n ?? 0}#${index}`,
         ...(row.label ? { label: row.label } : landed.text ? { label: landed.text } : {}),
         ...(row.for ? { for: row.for } : {}),
+        // Everything a unit applied comes off together when it closes,
+        // so the tool holds a group rather than a rule about units, and
+        // this end says when.
+        ...(row.until === "unit" && typeof landed.unit === "number" ? { group: groupOf(landed.unit) } : {}),
         ops: row.ops.map((o) => ({ op: o.op, args: o.args ?? {} })),
       }),
     );
@@ -211,6 +240,29 @@ export function revert(id: string): string {
   return JSON.stringify({ t: "revert", id });
 }
 
+/** What an effect that lasts a unit is filed under. */
+export function groupOf(unit: number): string {
+  return `unit:${unit}`;
+}
+
+/** Take back everything applied under one group. */
+export function revertGroup(group: string): string {
+  return JSON.stringify({ t: "revert", group });
+}
+
+/**
+ * Whether a profile is talking to this program at all.
+ *
+ * A profile naming no tool is for whatever is listening, which is how
+ * somebody's own script works with no ceremony. One that names a tool is
+ * for that tool, and a connection that never said what it is does not get
+ * the benefit of the doubt.
+ */
+export function fits(profile: ControlProfile, app: string | undefined): boolean {
+  if (!profile.tool) return true;
+  return app !== undefined && profile.tool.toLowerCase() === app.toLowerCase();
+}
+
 /**
  * What an attached tool should be told about a gesture that is not a
  * result: a run ending takes everything off, since nothing a run applied
@@ -218,6 +270,11 @@ export function revert(id: string): string {
  */
 export function framesForGesture(profile: ControlProfile, kind: string, data: unknown, seat: string | undefined): string[] {
   if (kind === "run-ended") return [revert(EVERYTHING)];
+  if (kind === "unit-closed") {
+    const unit = data && typeof data === "object" ? (data as Record<string, unknown>)["unit"] : undefined;
+    return typeof unit === "number" ? [revertGroup(groupOf(unit))] : [];
+  }
+
   if (kind !== "outcome") return [];
   const landed = landedOf(data);
   if (!landed) return [];
