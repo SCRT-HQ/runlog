@@ -142,6 +142,17 @@ export interface GuildRun {
   seats?: Record<string, { discordId: string; name: string }>;
   /** The log's seq the thread has heard up to: the card drawn and the lines posted. A move from the app lands past it. */
   seenSeq?: number;
+  /**
+   * The live link's token, as minted when the run started.
+   *
+   * Kept because `/run link` has to hand out the same link twice. The
+   * session row keeps only a hash, so without this the only way to answer
+   * was to mint a new token, which cut off everyone already watching on
+   * the old one. It is not a secret from this channel: the opening message
+   * in the thread carries this very link, in plain text, to everybody who
+   * can read it.
+   */
+  liveToken?: string;
   createdAt: string;
   updatedAt: string;
   endedAt?: string;

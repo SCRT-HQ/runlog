@@ -424,9 +424,22 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     return ephemeral("Posted a fresh card at the bottom; the old one is out of the way.");
   }
   if (which?.name === "link") {
-    // A fresh token each time, the way the app shares again: only a hash is kept, so the old link cannot be repeated.
-    const token = table.token();
-    await table.store.updateSession(run.sessionId, deps.now(), { publicTokenHash: hashToken(token) });
+    /**
+     * The same link the thread opened with, not a new one.
+     *
+     * This used to mint a token on every call, because the session row
+     * keeps only a hash and the old token could not be read back. Asking
+     * twice therefore cut off everyone already watching, every widget in a
+     * scene, and any tool attached, without saying so. The run keeps its
+     * token now; a run started before it did gets one the first time it is
+     * asked, and keeps that.
+     */
+    let token = run.liveToken;
+    if (!token) {
+      token = table.token();
+      await table.store.updateSession(run.sessionId, deps.now(), { publicTokenHash: hashToken(token) });
+      await table.guilds.putGuildRun({ ...run, liveToken: token, updatedAt: deps.now() });
+    }
     return say(`Watch it live, no account needed: ${deps.appUrl.replace(/\/$/, "")}/r/${encodeURIComponent(run.sessionId)}?t=${encodeURIComponent(token)}`);
   }
   if (which?.name === "end") {
