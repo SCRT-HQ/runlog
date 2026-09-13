@@ -389,6 +389,7 @@ A running tally with declarative rules. This is what turns a mechanic like 'six 
 | `initial` | `integer` | - | Value at the start of a run. Default: `0`. |
 | `min` | `integer` | - | Floor. Values are clamped to it. |
 | `max` | `integer` | - | Ceiling. Values are clamped to it. |
+| `per` | `table` \| `contestant` | - | Whose tally it is. `table` is the default and is the run's. `contestant` is each racer's: in a moderated run it sits on the scoreboard beside their score, one per name, and stays off the run's own trackers, since a run-wide number for a thing being counted per person is a number nobody can act on. Where there is no roster it is the run's as usual, which is every solo run. Default: `"table"`. |
 | `hidden` | `boolean` | - | Track it without showing it, for tension the player should feel but not read. Default: `false`. |
 | `incrementOn` | `object`[] | - | Events that add one. |
 | `resetOn` | `object`[] | - | Events that return it to `initial`. |

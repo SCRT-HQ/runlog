@@ -1395,6 +1395,15 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "per": {
+            "default": "table",
+            "description": "Whose tally it is. `table` is the default and is the run's. `contestant` is each racer's: in a moderated run it sits on the scoreboard beside their score, one per name, and stays off the run's own trackers, since a run-wide number for a thing being counted per person is a number nobody can act on. Where there is no roster it is the run's as usual, which is every solo run.",
+            "type": "string",
+            "enum": [
+              "table",
+              "contestant"
+            ]
+          },
           "hidden": {
             "default": false,
             "description": "Track it without showing it, for tension the player should feel but not read.",
