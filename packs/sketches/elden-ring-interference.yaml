@@ -23,9 +23,9 @@ title: "Elden Ring: Interference"
 author: Runlog
 description: >-
   Ten minutes at a time, with the world against you. Every stretch draws
-  something wrong with the world and something to do about it: slower
-  legs, harder hits, a night that falls, the dead getting back up, and a
-  boss or a hunt or a key item to settle anyway. Settle it and the land
+  something wrong with the world and one to four things to do about it:
+  slower legs, harder hits, a night that falls, the dead getting back
+  up, and a boss or a hunt or a key item to settle anyway. Settle it and the land
   pays you. Every fourth stretch it picks you up and puts you somewhere
   else, which is occasionally the sky.
 
@@ -63,6 +63,7 @@ license:
 
 capabilities:
   - counters
+  - deferredTriggers
   - timers
   - seededRuns
   - journal
@@ -502,6 +503,16 @@ counters:
     initial: 0
     min: 0
 
+  # Not a tally of anything: a dial. The run asks for it once at the
+  # start, and after that it sits in the trackers with the rest, so a
+  # player can turn it up mid-run when one thing to do a stretch stops
+  # being enough.
+  perStretch:
+    label: Targets per stretch
+    initial: 1
+    min: 1
+    max: 4
+
   # Four stretches in one place is long enough. This is the counter that
   # moves you on, and it puts itself back to nothing each time it fires.
   wander:
@@ -525,12 +536,9 @@ tables:
     description: >-
       Drawn at the top of every stretch, and it holds until the
       stretch ends. Some of these a tool does to the game; the rest
-      are vows, which nothing enforces but you. Nothing in here is
-      good for you, which is the point of it: a kindness you rolled
-      into by accident is not a reward, and being paid is what the
-      Boon table is for. None are worth points either. An
-      interference lands on everyone, and living with it is the
-      ordinary business of a stretch.
+      are vows, which nothing enforces but you. None are worth
+      points: an interference lands on everyone, and living with it
+      is the ordinary business of a stretch.
     roll: d100
     entries:
       - id: in-slow
@@ -904,7 +912,10 @@ tables:
       know what is wrong with the world before you are told what to
       do in it. Name the target in your own words: the app cannot
       see your game, and the log should read like something that
-      happened.
+      happened. How many are drawn is up to you: the run asks at the
+      first stretch, and Targets per stretch in the trackers turns
+      it up or down at any point after. Two results here add one and
+      two more on top of whatever that says.
     roll: d100
     entries:
       - id: ta-near
@@ -1191,23 +1202,22 @@ tables:
       - id: ta-two
         range: [93, 94]
         text: >-
-          Two targets. Draw again twice, and settle both before the
-          stretch is out.
+          One more than you were going to have. Draw again, and
+          settle both before the stretch is out.
         tags: [target, hard]
         triggers:
           - on: immediately
             do:
-              - { do: rollOn, table: target }
               - { do: rollOn, table: target }
       - id: ta-three-t
         range: [95, 95]
         text: >-
-          Three targets. Draw again three times. Good luck.
+          Two more than you were going to have. Draw twice again.
+          Good luck.
         tags: [target, hard]
         triggers:
           - on: immediately
             do:
-              - { do: rollOn, table: target }
               - { do: rollOn, table: target }
               - { do: rollOn, table: target }
       - id: ta-rest
@@ -1722,6 +1732,46 @@ moves:
     do:
       - { do: modCounter, counter: deaths, by: 1 }
 
+# Turning the dial up owes the stretch more targets, one trigger a rung,
+# because what is owed is a count and the count is not known until the
+# stretch opens. `current` rather than `next`: the step has not been
+# rolled when a unit is entered, so the extra rolls land in this one.
+# They sit after the moves because everything above is generated; see
+# packs/profiles/build-interference.py.
+triggers:
+  - on: onEnterUnit
+    label: How many targets a stretch
+    when:
+      - { unitIndex: { eq: 1 } }
+    do:
+      - do: prompt
+        kind: chooseValue
+        label: How many targets a stretch? You can change it later, in the trackers.
+        options: ["1", "2", "3", "4"]
+        into: perStretchAnswer
+      - { do: modCounter, counter: perStretch, setFrom: perStretchAnswer }
+
+  - on: onEnterUnit
+    label: A second target
+    when:
+      - { counter: perStretch, is: { gte: 2 } }
+    do:
+      - { do: extraRoll, table: target, count: 1, unit: current }
+
+  - on: onEnterUnit
+    label: A third target
+    when:
+      - { counter: perStretch, is: { gte: 3 } }
+    do:
+      - { do: extraRoll, table: target, count: 1, unit: current }
+
+  - on: onEnterUnit
+    label: A fourth target
+    when:
+      - { counter: perStretch, is: { gte: 4 } }
+    do:
+      - { do: extraRoll, table: target, count: 1, unit: current }
+
 phases:
   - id: meddle
     label: Interference
@@ -1737,7 +1787,7 @@ phases:
         table: target
         label: Draw what the stretch is for
       - kind: declareSubject
-        label: Name it, in your own words. The boss, the three, the item, the place.
+        label: Name what you are going for. Where there is more than one, name them together.
 
   - id: play
     label: Play
@@ -1876,6 +1926,30 @@ fixtures:
       - { path: counters.wander, equals: 0 }
       - { path: outcomes.0.entryId, equals: dis-grace }
       - { path: firedOnce, contains: "counter:wander:0:u1" }
+
+  - name: With the dial at two, a stretch owes a second target
+    mode: solo
+    # The run asks the question at the first stretch and owes the extra
+    # rolls at every one after, both of them things the player presses,
+    # the way a counter threshold is. So this is written as the log they
+    # produce rather than as a script.
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: CounterChanged, counter: perStretch, set: 2 }
+      - { t: TriggerFired, key: "global:0:u1" }
+      - { t: ExtraRollQueued, table: target, count: 1, unit: current }
+      - { t: TriggerFired, key: "global:1:u1" }
+      - { t: OutcomeResolved, table: interference, entryId: in-calm, cause: phase }
+      - { t: OutcomeResolved, table: target, entryId: ta-near, cause: phase }
+      - { t: ExtraRollTaken, table: target }
+      - { t: OutcomeResolved, table: target, entryId: ta-three, cause: phase }
+    expect:
+      - { path: counters.perStretch, equals: 2 }
+      - { path: outcomes.length, equals: 3 }
+      - { path: outcomes.1.table, equals: target }
+      - { path: outcomes.2.table, equals: target }
+      - { path: firedOnce, contains: "global:1:u1" }
 
   - name: Settling a target pays, and the boon is drawn on the word of the player
     mode: solo

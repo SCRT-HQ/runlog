@@ -140,9 +140,9 @@ T = [
     (2, "ta-nohit", "Whatever you name, do it without being hit once.", 6, ["hard"]),
     (2, "ta-nofla", "Whatever you name, do it without drinking anything.", 5, ["hard"]),
     (1, "ta-fast", "Whatever you name, do it in the first half of the stretch.", 5, ["hard"]),
-    (2, "ta-two", "Two targets. Draw again twice, and settle both before the stretch is out.", None,
-     ["hard", "TRIGGER2"]),
-    (1, "ta-three-t", "Three targets. Draw again three times. Good luck.", None, ["hard", "TRIGGER3"]),
+    (2, "ta-two", "One more than you were going to have. Draw again, and settle both before the stretch is out.", None,
+     ["hard", "TRIGGER1"]),
+    (1, "ta-three-t", "Two more than you were going to have. Draw twice again. Good luck.", None, ["hard", "TRIGGER2"]),
     (3, "ta-rest", "Nothing is asked of you. Survive the stretch and that is enough.", None, ["mercy"]),
     (2, "ta-choose", "Your choice. Name anything that will take most of the stretch, and do it.", 3, []),
 ]
@@ -343,7 +343,7 @@ tables = table("interference", "Interference",
                "Drawn at the top of every stretch, and it holds until the stretch ends. Some of these a tool does to the game; the rest are vows, which nothing enforces but you. None are worth points: an interference lands on everyone, and living with it is the ordinary business of a stretch.",
                built_i, i_extra)
 tables += "\n" + table("target", "Target",
-                       "What the stretch is for. Drawn after the interference, so you know what is wrong with the world before you are told what to do in it. Name the target in your own words: the app cannot see your game, and the log should read like something that happened.",
+                       "What the stretch is for. Drawn after the interference, so you know what is wrong with the world before you are told what to do in it. Name the target in your own words: the app cannot see your game, and the log should read like something that happened. How many are drawn is up to you: the run asks at the first stretch, and Targets per stretch in the trackers turns it up or down at any point after. Two results here add one and two more on top of whatever that says.",
                        built_t, t_extra)
 tables += "\n" + table("boon", "Boon",
                        "What settling a target is worth. Drawn when you say you settled it, which is the only way anything here can know. Nothing in it is a punishment and nothing is worth points: the points were on the target.",
@@ -361,6 +361,12 @@ tail = s[s.index("\ncounters:"):]
 counters_and_after = tail[:tail.index("\ntables:")]
 after_tables = tail[tail.index("\nmoves:"):]
 s = head + "states:\n" + "\n".join(states) + "\n" + counters_and_after + "\ntables:\n" + tables + after_tables
+# Only the states and the tables are ours. Anything else the pack
+# declares was written by hand and must survive being regenerated, which
+# it did not the first time a triggers block was put in the wrong place.
+was = set(re.findall(r"^([a-z][a-zA-Z]*):", io.open(pack_path, encoding="utf-8").read(), re.M))
+now = set(re.findall(r"^([a-z][a-zA-Z]*):", s, re.M))
+assert not was - now, "regenerating would drop: " + ", ".join(sorted(was - now))
 io.open(pack_path, "w", encoding="utf-8", newline="").write(s)
 
 # ---- the profile, from the same source ---------------------------------
