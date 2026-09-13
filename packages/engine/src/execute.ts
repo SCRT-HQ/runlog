@@ -10,6 +10,7 @@ import {
 import type { RunEvent } from "./events.ts";
 import { resolveTargeting } from "./targeting.ts";
 import { eligibleTargets } from "./eligibility.ts";
+import { withinBound } from "./bounds.ts";
 import { currentSubject } from "./reduce.ts";
 import { clockOfUnit, elapsedMs } from "./clock.ts";
 import type { Clock, InputRequest, RunState, TriggerRef } from "./types.ts";
@@ -110,33 +111,16 @@ function need(f: Frame, request: InputRequest): AnswerValue {
  * Predicates
  * ------------------------------------------------------------------ */
 
-interface Bound {
-  eq?: number;
-  gte?: number;
-  lte?: number;
-  gteCounter?: string;
-  lteCounter?: string;
-}
-
 /**
- * Compare a value against a bound, resolving any counter references.
+ * Compare a value against a bound, resolving any counter or dial it names.
  *
  * The counter variants exist because a rule like "roll a d6 against the number
  * of consequences you have suffered" cannot be written with literals: the
- * threshold is whatever the run has accumulated.
+ * threshold is whatever the run has accumulated. The resource variants exist
+ * for the other half of that: a threshold that is the player's own answer to
+ * how often a thing should happen.
  */
-function compare(value: number, bound: Bound, state?: RunState): boolean {
-  if (bound.eq !== undefined && value !== bound.eq) return false;
-  if (bound.gte !== undefined && value < bound.gte) return false;
-  if (bound.lte !== undefined && value > bound.lte) return false;
-  if (bound.gteCounter !== undefined && value < (state?.counters[bound.gteCounter] ?? 0)) {
-    return false;
-  }
-  if (bound.lteCounter !== undefined && value > (state?.counters[bound.lteCounter] ?? 0)) {
-    return false;
-  }
-  return true;
-}
+const compare = withinBound;
 
 /**
  * The clock a `clockRan`/`clockRanOver` predicate names: the current unit's

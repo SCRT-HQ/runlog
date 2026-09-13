@@ -724,6 +724,27 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     [commit, pack],
   );
 
+  /**
+   * Turn a dial.
+   *
+   * Not a correction the way a nudged counter is. A counter is a tally
+   * of what happened, so moving it by hand says the tally was wrong; a
+   * resource is a setting, and turning it up mid-run is the run being
+   * played, not repaired. So no `Corrected` marker above it.
+   */
+  const turnResource = useCallback(
+    (resource: string, by: number) => {
+      const def = pack.resources?.[resource];
+      if (!def) return;
+      const at = now();
+      const current = state?.resources[resource] ?? def.initial;
+      const next = Math.max(def.min ?? 0, Math.min(def.max ?? Infinity, current + by));
+      if (next === current) return;
+      commit([{ t: "ResourceChanged", at, resource, by: next - current }]);
+    },
+    [commit, pack, state],
+  );
+
   /** Counter thresholds that have come due and not yet fired. */
   const thresholds = useMemo(() => (state ? pendingTriggers(pack, state) : []), [pack, state]);
 
@@ -1060,6 +1081,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     writeJournal,
     resolveObligation,
     takeMove,
+    turnResource,
     fireThreshold,
     fireGlobal,
     endRun,
