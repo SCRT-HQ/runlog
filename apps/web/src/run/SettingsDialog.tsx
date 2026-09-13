@@ -29,6 +29,7 @@ export function SettingsDialog({
   onClose,
   pack,
   record,
+  seats,
   onAsks,
   onControl,
 }: {
@@ -41,6 +42,8 @@ export function SettingsDialog({
   onAsks?: (asks: StoredRun["asks"]) => void | Promise<void>;
   /** What a tool attached to the game should do about this run. */
   onControl?: (control: unknown) => void | Promise<void>;
+  /** The roster of a moderated run, so the Control section can address one racer. */
+  seats?: string[];
   alerts: AlertSettings;
   onAlerts: (next: AlertSettings) => void;
   /** Who throws the dice in the open run, and whether the run leaves any choice. Absent outside a run. */
@@ -146,7 +149,7 @@ export function SettingsDialog({
             </h3>
             <StreamSettings runId={runId} race={race} onControls={onControls} />
             {pack && record && <ChatSettings pack={pack} record={record} onAsks={onAsks} />}
-            {pack && record && <ControlSettings pack={pack} record={record} onControl={onControl} />}
+            {pack && record && <ControlSettings pack={pack} record={record} onControl={onControl} {...(seats && seats.length > 0 ? { seats } : {})} />}
           </section>
         )}
       </section>

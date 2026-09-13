@@ -29,7 +29,8 @@ const record = (control?: unknown): StoredRun => ({
   ...(control ? { control } : {}),
 });
 
-const paint = (control?: unknown) => renderToStaticMarkup(<ControlSettings pack={kiln} record={record(control)} />);
+const paint = (control?: unknown, seats?: string[]) =>
+  renderToStaticMarkup(<ControlSettings pack={kiln} record={record(control)} {...(seats ? { seats } : {})} />);
 
 describe("the control panel", () => {
   it("says a run with no rules sends nothing", () => {
@@ -61,6 +62,26 @@ describe("the control panel", () => {
   it("says what is wrong with a rule that can never fire", () => {
     const html = paint({ tool: "TarnishedTool", rows: [{ tag: "curse", ops: [{ op: "speffect.apply", args: { id: 1 } }] }] });
     expect(html).toContain("No entry in this pack is tagged curse");
+  });
+
+  it("gives each racer their own address, and only says to type one when there is no roster", () => {
+    const html = paint(undefined, ["Ada", "Bo"]);
+    expect(html).toContain("&amp;seat=Ada");
+    expect(html).toContain("&amp;seat=Bo");
+    expect(html).not.toContain("Add &amp;seat=Name");
+    // The rule editor offers the same names, so a rule addressed to one
+    // person cannot be addressed to a name that will never connect.
+    expect(html).toContain('id="controlSeats"');
+  });
+
+  it("tells anybody playing alone to type a seat themselves, since there is no roster to take one from", () => {
+    const html = paint();
+    expect(html).toContain("Add &amp;seat=Name");
+    expect(html).not.toContain("controlSeats");
+  });
+
+  it("escapes a racer's name into the address rather than putting it there as typed", () => {
+    expect(paint(undefined, ["Bo & Co"])).toContain("&amp;seat=Bo%20%26%20Co");
   });
 
   it("uses the pack's own word for a unit when offering how long an effect lasts", () => {
