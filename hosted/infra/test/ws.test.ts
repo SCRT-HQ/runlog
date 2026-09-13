@@ -49,9 +49,12 @@ const member = (sub: string): SessionMember => ({ sub, role: "player", joinedAt:
 
 /** Every ask the socket raised, for the tests that care. */
 const asked: Ask[] = [];
+/** Every session patch the socket wrote, for the tests that care. */
+const patched: Array<[string, Record<string, unknown>]> = [];
 
 function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLive> } {
   asked.length = 0;
+  patched.length = 0;
   return {
     live,
     store: {
@@ -74,6 +77,10 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
           licenses: [],
           sessions: owned.map((id) => ({ id, role: "owner" as const, packId: "p", packVersion: "1", ownerSub: sub, updatedAt: id === "open" ? "2026-09-11T00:10:00Z" : "2026-09-11T00:00:00Z", seq: 3 })),
         };
+      },
+      async updateSession(id, _at, patch) {
+        patched.push([id, patch]);
+        return null;
       },
       async getSession(id) {
         if (id === "asking") return { meta: { ...meta(id, "user_1"), publicTokenHash: hashToken("livetok"), askPolicy: "ask" as const }, members: [member("user_1")] };
@@ -371,6 +378,31 @@ describe("telling the listeners", () => {
 
       // A tool is never told about itself; it hears operations only.
       expect(posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l) as { kind?: string }).some((g) => g.kind === "tools")).toBe(false);
+    });
+
+    /**
+     * The terms go out on every attach, because a tool that restarted is
+     * holding none of them: its restore log puts prior values back, it
+     * does not re-apply. That is right for a setting and wrong for a
+     * gift. A run whose terms hand over runes, or an item somebody
+     * already has, handed them over again on every reconnect.
+     */
+    it("gives the parts of the terms that are given once exactly once", async () => {
+      const gift = { control: { setup: [{ op: "flag.set", args: { name: "player.noRoll", value: true } }, { op: "runes.give", args: { amount: 50000 }, once: true }] } };
+      const { live, posted, d } = attached(memoryLive(), gift);
+      const hello = () => route({ requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "hello", app: "TarnishedTool" }) }, d);
+      await live.connect("tool", "public:shared", "", { control: true, seat: "Mira", run: "shared" });
+
+      await hello();
+      const ops = () => posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l) as { t: string; ops?: Array<{ op: string }> }).filter((f) => f.t === "apply");
+      expect(ops().at(-1)?.ops?.map((o) => o.op)).toEqual(["flag.set", "runes.give"]);
+      // Written down, so a reconnect knows.
+      expect(patched.at(-1)).toEqual(["shared", { termsGiven: ["Mira"] }]);
+
+      // Attaching again with that remembered: the setting, not the runes.
+      const seen = { ...d, store: { ...d.store, async getSession(id: string) { const found = await (d.store.getSession as (i: string) => Promise<{ meta: Record<string, unknown> } | null>)(id); return found ? { ...found, meta: { ...found.meta, termsGiven: ["Mira"] } } : null; } } } as typeof d;
+      await route({ requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "hello", app: "TarnishedTool" }) }, seen);
+      expect(ops().at(-1)?.ops?.map((o) => o.op)).toEqual(["flag.set"]);
     });
 
     it("says nothing where the host has not switched asks on, since attaching is not permission", async () => {
