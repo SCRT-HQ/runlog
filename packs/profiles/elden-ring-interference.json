@@ -1,86 +1,595 @@
 {
   "tool": "TarnishedTool",
-  "setup": [{ "op": "flag.set", "args": { "name": "world.noCutscenes", "value": true } }],
+  "setup": [
+    {
+      "op": "flag.set",
+      "args": {
+        "name": "world.noCutscenes",
+        "value": true
+      }
+    }
+  ],
   "rows": [
     {
       "entry": "in-slow",
       "table": "interference",
       "label": "Slowed",
       "until": "unit",
-      "ops": [{ "op": "value.set", "args": { "name": "player.speed", "value": 0.8 } }]
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.speed",
+            "value": 0.8
+          }
+        }
+      ]
     },
     {
       "entry": "in-quick",
       "table": "interference",
       "label": "Hurried",
       "until": "unit",
-      "ops": [{ "op": "value.set", "args": { "name": "game.speed", "value": 1.2 } }]
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "game.speed",
+            "value": 1.2
+          }
+        }
+      ]
     },
     {
       "entry": "in-root",
       "table": "interference",
       "label": "Rooted",
       "until": "unit",
-      "ops": [{ "op": "flag.set", "args": { "name": "player.noRoll", "value": true } }]
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.noRoll",
+            "value": true
+          }
+        }
+      ]
     },
     {
       "entry": "in-glass",
       "table": "interference",
       "label": "Glass",
       "until": "unit",
-      "ops": [{ "op": "value.set", "args": { "name": "player.incomingDamage", "value": 2 } }]
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.incomingDamage",
+            "value": 2
+          }
+        }
+      ]
     },
     {
       "entry": "in-blunt",
       "table": "interference",
       "label": "Blunted",
       "until": "unit",
-      "ops": [{ "op": "value.set", "args": { "name": "player.outgoingDamage", "value": 0.6 } }]
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.outgoingDamage",
+            "value": 0.6
+          }
+        }
+      ]
     },
     {
       "entry": "in-risen",
       "table": "interference",
       "label": "The risen",
       "until": "unit",
-      "ops": [{ "op": "flag.set", "args": { "name": "enemies.noDeath", "value": true } }]
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "enemies.noDeath",
+            "value": true
+          }
+        }
+      ]
     },
     {
       "entry": "in-poor",
       "table": "interference",
       "label": "Poor",
       "until": "unit",
-      "ops": [{ "op": "flag.set", "args": { "name": "player.noRuneGain", "value": true } }]
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.noRuneGain",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-slower",
+      "table": "interference",
+      "label": "Everything slows",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "game.speed",
+            "value": 0.8
+          }
+        }
+      ]
     },
     {
       "entry": "in-hush",
       "table": "interference",
       "label": "Unheard",
       "until": "unit",
-      "ops": [{ "op": "flag.set", "args": { "name": "player.silent", "value": true } }]
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.silent",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-swift",
+      "table": "interference",
+      "label": "Swift",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.speed",
+            "value": 1.25
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-wind",
+      "table": "interference",
+      "label": "Tireless",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infiniteStamina",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-spared",
+      "table": "interference",
+      "label": "Insured",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.noRuneLoss",
+            "value": true
+          }
+        }
+      ]
     },
     {
       "entry": "in-night",
       "table": "interference",
       "label": "Night falls",
-      "ops": [{ "op": "action.invoke", "args": { "action": "SetNight" } }]
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SetNight"
+          }
+        }
+      ]
     },
     {
       "entry": "in-fog",
       "table": "interference",
       "label": "Fog",
-      "ops": [{ "op": "action.invoke", "args": { "action": "FoggyWeather" } }]
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "FoggyWeather"
+          }
+        }
+      ]
     },
     {
       "entry": "in-rain",
       "table": "interference",
       "label": "Rain",
-      "ops": [{ "op": "action.invoke", "args": { "action": "RainyWeather" } }]
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "RainyWeather"
+          }
+        }
+      ]
     },
     {
-      "entry": "dis-grace",
+      "entry": "in-snow",
+      "table": "interference",
+      "label": "Snow",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SnowyWeather"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-elleh",
       "table": "displacement",
-      "label": "Sent back",
-      "ops": [{ "op": "action.invoke", "args": { "action": "Quitout" } }]
+      "label": "Church of Elleh",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Limgrave",
+            "name": "Church of Elleh"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-first",
+      "table": "displacement",
+      "label": "The First Step",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Limgrave",
+            "name": "The First Step"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-gatefront",
+      "table": "displacement",
+      "label": "Gatefront",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Limgrave",
+            "name": "Gatefront"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-pilgrim",
+      "table": "displacement",
+      "label": "Church of Pilgrimage",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Weeping Peninsula",
+            "name": "Church of Pilgrimage"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-cliffs",
+      "table": "displacement",
+      "label": "Lake-Facing Cliffs",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Liurnia of the Lakes",
+            "name": "Lake-Facing Cliffs"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-shore",
+      "table": "displacement",
+      "label": "Liurnia Lake Shore",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Liurnia of the Lakes",
+            "name": "Liurnia Lake Shore"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-stormveil",
+      "table": "displacement",
+      "label": "Stormveil Main Gate",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Stormveil Castle",
+            "name": "Stormveil Main Gate"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-gateside",
+      "table": "displacement",
+      "label": "Gateside Chamber",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Stormveil Castle",
+            "name": "Gateside Chamber"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-altus",
+      "table": "displacement",
+      "label": "Altus Plateau",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Altus Plateau",
+            "name": "Altus Plateau"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-erdtree",
+      "table": "displacement",
+      "label": "Erdtree-Gazing Hill",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Altus Plateau",
+            "name": "Erdtree-Gazing Hill"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-smoulder",
+      "table": "displacement",
+      "label": "Smoldering Church",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Caelid",
+            "name": "Smoldering Church"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-rotview",
+      "table": "displacement",
+      "label": "Rotview Balcony",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Caelid",
+            "name": "Rotview Balcony"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-gelmir",
+      "table": "displacement",
+      "label": "Bridge of Iniquity",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Mt. Gelmir",
+            "name": "Bridge of Iniquity"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-siofra",
+      "table": "displacement",
+      "label": "Siofra River Bank",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Siofra River",
+            "name": "Siofra River Bank"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-ainsel",
+      "table": "displacement",
+      "label": "Ainsel River Sluice Gate",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Ainsel River",
+            "name": "Ainsel River Sluice Gate"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-volcano",
+      "table": "displacement",
+      "label": "Volcano Manor",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Volcano Manor",
+            "name": "Volcano Manor"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-zamor",
+      "table": "displacement",
+      "label": "Zamor Ruins",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Mountaintops of the Giants",
+            "name": "Zamor Ruins"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-freezing",
+      "table": "displacement",
+      "label": "Freezing Lake",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Mountaintops of the Giants",
+            "name": "Freezing Lake"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-rot",
+      "table": "displacement",
+      "label": "Lake of Rot Shoreside",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Lake of Rot",
+            "name": "Lake of Rot Shoreside"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-shunning",
+      "table": "displacement",
+      "label": "Underground Roadside",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Subterranean Shunning-Grounds",
+            "name": "Underground Roadside"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-deeproot",
+      "table": "displacement",
+      "label": "Root-Facing Cliffs",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Deeproot Depths",
+            "name": "Root-Facing Cliffs"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-snowfield",
+      "table": "displacement",
+      "label": "Consecrated Snowfield",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Consecrated Snowfield",
+            "name": "Consecrated Snowfield"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-farum",
+      "table": "displacement",
+      "label": "Crumbling Beast Grave",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Crumbling Farum Azula",
+            "name": "Crumbling Beast Grave"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-table",
+      "table": "displacement",
+      "label": "Table of Lost Grace",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Roundtable Hold",
+            "name": "Table of Lost Grace"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-sky",
+      "table": "displacement",
+      "label": "The sky",
+      "ops": [
+        {
+          "op": "player.drop",
+          "args": {
+            "height": 220
+          }
+        }
+      ]
     }
   ]
 }

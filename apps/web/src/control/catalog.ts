@@ -175,6 +175,23 @@ export const TARNISHED_TOOL: ToolCatalog = {
       ],
     },
     {
+      op: "warp.grace",
+      label: "Move the player to a grace",
+      note: "By name, from the tool's own list of every grace in the game. Works for graces the player has never found, which is the point. Say the area too where a name is used twice.",
+      oneWay: true,
+      args: [
+        { name: "name", kind: "text", label: "Grace", required: true, note: "Exactly as the tool spells it: Church of Elleh, Lake-Facing Cliffs." },
+        { name: "area", kind: "text", label: "Area", note: "Limgrave, Caelid, Stormveil Castle. Needed only where two graces share a name." },
+      ],
+    },
+    {
+      op: "player.drop",
+      label: "Lift the player, and let go",
+      note: "Straight up from wherever they are, and then gravity. Usually fatal, which is generally why it is being asked for. Needs no map at all.",
+      oneWay: true,
+      args: [{ name: "height", kind: "number", label: "How far up", least: 5, most: 500, note: "Metres. Around 150 is reliably fatal; 20 hurts." }],
+    },
+    {
       op: "item.give",
       label: "Give an item",
       oneWay: true,

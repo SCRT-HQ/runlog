@@ -52,9 +52,17 @@ describe("reading a profile", () => {
     expect(p?.rows?.[1]?.for).toBe(1);
   });
 
-  it("will not let one profile flood a socket", () => {
-    const many = Array.from({ length: 50 }, (_, i) => ({ entry: `e${i}`, ops: [{ op: "x" }] }));
-    expect(profileOf({ control: { rows: many } })?.rows).toHaveLength(20);
+  it("keeps a long profile whole, since a table of a hundred places wants a row each", () => {
+    const many = Array.from({ length: 120 }, (_, i) => ({ entry: `e${i}`, ops: [{ op: "x" }] }));
+    expect(profileOf({ control: { rows: many } })?.rows).toHaveLength(120);
+  });
+
+  it("will not let one result set off more than a handful at once", () => {
+    // Every one of these matches the same result, which is the shape a
+    // runaway profile would take.
+    const all = Array.from({ length: 30 }, () => ({ tag: "curse", ops: [{ op: "x" }] }));
+    const p = profileOf({ control: { rows: all } })!;
+    expect(appliesFor(p, landedOf({ n: 1, tableId: "t", entryId: "e", tags: ["curse"] })!, undefined)).toHaveLength(10);
   });
 });
 

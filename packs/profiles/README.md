@@ -28,12 +28,16 @@ data, and nothing here ships one: an id is easy to get wrong, and a wrong
 one is a mystery rather than an error. Find one you want in the tool's own
 Advanced tab, which lists what is on the player, and add a row for it.
 
-**Places to be moved to.** `warp.position` takes a block id and three
-coordinates. Those are yours, not ours: save the position in the tool,
-read the numbers off it, and put them in a row. What the Interference
-profile does instead is send you back to where you last rested, which
-needs no coordinates and cannot strand you somewhere you have not
-opened.
+**Coordinates.** `warp.position` takes a block id and three numbers, and
+those are yours rather than ours: save the position in the tool, read
+them off it, and put them in a row.
+
+What the Interference profile uses instead is `warp.grace`, which names
+a place, and `player.drop`, which needs no map at all. The tool already
+ships every grace in the game and already updates them when the game
+patches, so a profile that says "Church of Elleh" keeps meaning that;
+three numbers written down here would not. Spell a grace exactly as the
+tool's own list does, and give the area where two of them share a name.
 
 ## Using one
 

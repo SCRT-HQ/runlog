@@ -76,9 +76,18 @@ export const SETUP_ID = "setup";
 /** Reverting this id takes back everything, whatever it was. */
 export const EVERYTHING = "*";
 
-/** No profile, however broken, makes a run send more than this at once. */
-const MOST_ROWS = 20;
+/**
+ * The bounds a profile is held to.
+ *
+ * A profile is one document and may be long: a table of a hundred
+ * destinations wants a row each, and capping the document would silently
+ * drop the second half of somebody's work. What actually needs a limit
+ * is how much one result can set off, which is `MOST_AT_ONCE` below:
+ * that is the number a runaway profile would use to flood a socket.
+ */
+const MOST_ROWS = 250;
 const MOST_OPS = 20;
+const MOST_AT_ONCE = 10;
 const LONGEST = 3600;
 
 /**
@@ -206,6 +215,7 @@ function reaches(row: ControlRow, seat: string | undefined): boolean {
 export function appliesFor(profile: ControlProfile, landed: Landed, seat: string | undefined): string[] {
   const out: string[] = [];
   (profile.rows ?? []).forEach((row, index) => {
+    if (out.length >= MOST_AT_ONCE) return;
     if (!matches(row, landed) || !reaches(row, seat)) return;
     out.push(
       JSON.stringify({
