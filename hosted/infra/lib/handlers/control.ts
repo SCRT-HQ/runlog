@@ -292,6 +292,15 @@ export function framesForGesture(profile: ControlProfile, kind: string, data: un
     return typeof unit === "number" ? [revertGroup(groupOf(unit))] : [];
   }
 
+  // A result taken back takes its effects with it. Every rule that
+  // matched filed its effect under the result's own number, so the
+  // number is enough to name all of them at once without working out
+  // again which rules matched what.
+  if (kind === "outcome-undone") {
+    const n = data && typeof data === "object" ? (data as Record<string, unknown>)["n"] : undefined;
+    return typeof n === "number" ? [revert(`o${n}#${EVERYTHING}`)] : [];
+  }
+
   if (kind !== "outcome") return [];
   const landed = landedOf(data);
   if (!landed) return [];

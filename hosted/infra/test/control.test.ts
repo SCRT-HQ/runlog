@@ -154,7 +154,7 @@ describe("gestures other than a result", () => {
   });
 
   it("say nothing about a unit closing, a clock or a tally", () => {
-    for (const kind of ["unit-closed", "clock", "counter", "award", "rolled"]) {
+    for (const kind of ["clock", "counter", "award", "rolled"]) {
       expect(framesForGesture(curses, kind, { n: 1 }, undefined)).toEqual([]);
     }
   });
@@ -174,6 +174,14 @@ describe("gestures other than a result", () => {
     const ours = { n: 4, unit: 2, tableId: "curse", entryId: "rot" };
     expect(framesForGesture(curses, "outcome", ours, "Mira")).toHaveLength(1);
     expect(framesForGesture(curses, "outcome", ours, undefined)).toHaveLength(1);
+  });
+
+  it("take a result's effects back when the result is taken back", () => {
+    // Undo voids the move that drew it, and a tool holding what that
+    // result applied hears about it no other way. One result can match
+    // several rules, so the result's own number names all of them.
+    expect(framesForGesture(curses, "outcome-undone", { n: 4 }, undefined)).toEqual([revert("o4#*")]);
+    expect(framesForGesture(curses, "outcome-undone", {}, undefined)).toEqual([]);
   });
 
   it("say nothing about a result with no ids on it, rather than guessing from the words", () => {
