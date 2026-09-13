@@ -2260,6 +2260,19 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (method === "POST") {
         const gate = await needsPlus();
         if (gate) return gate;
+        /**
+         * Sharing again does not move the link. Only the hash is kept, so a
+         * new token cannot be told from the old one here and the old one
+         * cannot be repeated: minting on every call quietly cut off every
+         * viewer, widget and tool already holding a link, and the caller
+         * had no way to know it had done that.
+         *
+         * So a run already open stays open on the link it has, and whoever
+         * asked is told the link is not theirs to be given again. Moving it
+         * is `rotate`, which is somebody deciding to.
+         */
+        const rotate = event.queryStringParameters?.["rotate"] === "1";
+        if (found.meta.publicTokenHash && !rotate) return json(200, { shared: true, already: true });
         const token = (deps.token ?? (() => randomBytes(24).toString("base64url")))();
         await store.updateSession(id, now(), { publicTokenHash: hashToken(token) });
         // The short form: a page with a preview that sends a browser on to the app.

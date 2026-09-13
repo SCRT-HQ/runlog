@@ -283,8 +283,10 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
                   void api
                     .shareRun(run.runId)
                     .then(({ link }) => {
-                      rememberLiveLink(run.runId, link);
-                      setLiveLink(link);
+                      // Already open keeps the link it has; the server cannot
+                      // repeat one, so what this device remembers is the link.
+                      if (link) rememberLiveLink(run.runId, link);
+                      setLiveLink(link ?? liveLinkOf(run.runId));
                     })
                     .catch((error: unknown) => {
                       if (error instanceof PlanError) setUpgrade(error.message);
