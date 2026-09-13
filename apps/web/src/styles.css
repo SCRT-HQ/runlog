@@ -1612,10 +1612,25 @@ button:disabled,
 .tracker:first-of-type {
   border-top: none;
 }
+/* A dial's name and the controls that turn it. The name is what gives
+   way on a narrow rail: the controls are three small things that mean
+   nothing apart, and "4 / 10" broken across two lines reads as two
+   numbers. */
 .trackerHead {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
   font-size: 0.88rem;
+}
+.trackerHead > strong {
+  min-width: 0;
+}
+.trackerHead > .nudge {
+  flex: none;
+}
+.nudge .num {
+  white-space: nowrap;
 }
 .boxes {
   display: flex;
@@ -1716,7 +1731,7 @@ button:disabled,
   padding: 0.4rem 0;
 }
 .trackerHead {
-  align-items: baseline;
+  align-items: center;
 }
 
 /* Keep the two columns from drifting apart on very wide screens. */
