@@ -603,9 +603,9 @@ describe("moves offered at a point in the flow", () => {
   const packWithMoves = {
     ...kiln,
     moves: {
-      always: { label: "Always", oncePerRun: false, when: "anytime" as const, do: [{ do: "note" as const, text: "x" }] },
-      between: { label: "Between", oncePerRun: false, when: "betweenUnits" as const, do: [{ do: "note" as const, text: "x" }] },
-      ending: { label: "Ending", oncePerRun: false, when: "beforeEnding" as const, do: [{ do: "note" as const, text: "x" }] },
+      always: { label: "Always", oncePerRun: false, per: "table" as const, when: "anytime" as const, do: [{ do: "note" as const, text: "x" }] },
+      between: { label: "Between", oncePerRun: false, per: "table" as const, when: "betweenUnits" as const, do: [{ do: "note" as const, text: "x" }] },
+      ending: { label: "Ending", oncePerRun: false, per: "table" as const, when: "beforeEnding" as const, do: [{ do: "note" as const, text: "x" }] },
     },
   };
   const state = reduce(packWithMoves, [

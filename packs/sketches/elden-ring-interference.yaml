@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-interference
-version: "0.2.0"
+version: "0.3.0"
 title: "Elden Ring: Interference"
 author: Runlog
 description: >-
@@ -1738,9 +1738,16 @@ moves:
   # The two things only the player knows. The app cannot see the game, so
   # settling a target is something you say, and saying it is what a boon
   # is drawn on.
+  #
+  # Both are one racer's. On a board with four names, "I died" is four
+  # different things and the run cannot tell which without being told,
+  # so each is offered once per name and counts against the one who
+  # pressed it. In a run with nobody on the board they are the table's,
+  # which is every solo run of this pack.
   settled:
     label: I settled it
     when: anytime
+    per: contestant
     description: The target is done. Draw what it was worth.
     available:
       - { unitIndex: { gte: 1 } }
@@ -1750,6 +1757,7 @@ moves:
   died:
     label: I died
     when: anytime
+    per: contestant
     description: Count it. Nothing else happens; dying is its own punishment.
     do:
       - { do: modCounter, counter: deaths, by: 1 }

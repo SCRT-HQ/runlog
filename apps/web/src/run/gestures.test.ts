@@ -127,7 +127,7 @@ describe("lifecycle gestures", () => {
     const entry = kiln.tables.form!.entries[0]!;
     const state: RunState = {
       ...base,
-      contestants: [{ id: "c1", name: "Mira", states: [] }],
+      contestants: [{ id: "c1", name: "Mira", states: [], counters: {} }],
       outcomes: [{ unit: 1, table: "form", entryId: entry.id, targetSubject: null, at: "2026-01-01T00:00:02Z" } as RunState["outcomes"][number]],
       awards: [{ contestant: "c1", outcome: 0, table: "form", entryId: entry.id, points: 3, at: "2026-01-01T00:00:03Z" }],
     };
