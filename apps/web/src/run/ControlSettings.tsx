@@ -378,6 +378,22 @@ export function ControlSettings({
         </div>
       )}
 
+      {/* Beside the shipped ones, because these are the same errand.
+          They were at the foot of the rules, which is a reasonable place
+          for a file button until a profile has a hundred rules in it and
+          the way to load one is below all of them. */}
+      <div className="padRow">
+        <span className="muted small">Or from a file:</span>
+        <button className="ghost tiny" onClick={() => file.current?.click()}>
+          Import
+        </button>
+        <button className="ghost tiny" onClick={exportFile} disabled={isEmpty(profile)}>
+          Export
+        </button>
+        <input ref={file} type="file" accept="application/json,.json" hidden onChange={(e) => void importFile(e.target.files?.[0])} />
+        <span className="muted small">Import replaces what is here; Export gives you this one back as a file.</span>
+      </div>
+
       <h4 className="stepLabel">The {pack.vocabulary.run.one.toLowerCase()}&apos;s terms</h4>
       <p className="muted small">Applied when a tool attaches and held until the {pack.vocabulary.run.one.toLowerCase()} ends. The settings that would otherwise be a paragraph nobody reads.</p>
       <Ops catalog={catalog} lists={lists} ops={profile.setup ?? []} onChange={(setup) => update({ ...profile, setup })} />
@@ -508,13 +524,6 @@ export function ControlSettings({
         <button className="ghost tiny" onClick={addRow}>
           Add a rule
         </button>
-        <button className="ghost tiny" onClick={exportFile} disabled={isEmpty(profile)}>
-          Export
-        </button>
-        <button className="ghost tiny" onClick={() => file.current?.click()}>
-          Import
-        </button>
-        <input ref={file} type="file" accept="application/json,.json" hidden onChange={(e) => void importFile(e.target.files?.[0])} />
       </div>
 
       {said.length > 0 && (
