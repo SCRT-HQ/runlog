@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-tarnishedtool
-version: "2.0.0"
+version: "2.1.0"
 title: "Elden Ring: TarnishedTool"
 author: Runlog
 description: >-
@@ -1019,168 +1019,191 @@ tables:
     roll: d100
     entries:
       - id: ob-near
-        range: [1, 4]
+        range: [1, 3]
         text: >-
           Whatever holds the nearest ruin, cave, catacomb or camp.
           Name it and kill it.
         tags: [objective]
         points: 3
       - id: ob-boss
-        range: [5, 7]
+        range: [4, 5]
         text: >-
           A named boss of wherever you have landed. Name it, find
           it, put it down.
         tags: [objective, hard]
         points: 5
       - id: ob-field
-        range: [8, 9]
+        range: [6, 7]
         text: >-
           A field boss out in the open. The kind with a health bar
           and no door.
         tags: [objective]
         points: 4
       - id: ob-again
-        range: [10, 11]
+        range: [8, 9]
         text: >-
           A boss you have already beaten, again, at whatever it
           costs.
         tags: [objective, hard]
         points: 4
       - id: ob-gaol
-        range: [12, 13]
+        range: [10, 11]
         text: >-
           An evergaol. Name one, open it, and finish what is inside.
         tags: [objective, hard]
         points: 4
       - id: ob-tunnel
-        range: [14, 15]
+        range: [12, 13]
         text: >-
           A mine or tunnel, all the way to whatever is at the end.
         tags: [objective, hard]
         points: 4
       - id: ob-catacomb
-        range: [16, 17]
+        range: [14, 15]
         text: >-
           A catacomb, to the bottom, including the thing at the
           bottom.
         tags: [objective, hard]
         points: 4
       - id: ob-cave
-        range: [18, 19]
+        range: [16, 17]
         text: >-
           A cave, to the bottom, including whatever lives there.
         tags: [objective]
         points: 3
       - id: ob-tunnel-boss
-        range: [20, 21]
+        range: [18, 19]
         text: >-
           A mine. Down to the bottom and through whatever is
           guarding the ore.
         tags: [objective, hard]
         points: 4
       - id: ob-knight
-        range: [22, 24]
+        range: [20, 21]
         text: >-
           A knight. Any of the big armored ones, wherever you are.
         tags: [objective]
         points: 3
       - id: ob-dragon
-        range: [25, 26]
+        range: [22, 23]
         text: >-
           Something enormous. A dragon, a giant, a troll. Name it.
         tags: [objective, hard]
         points: 5
       - id: ob-invader
-        range: [27, 28]
+        range: [24, 25]
         text: >-
           A hostile NPC. Whoever invades, or whoever you go and
           invade.
         tags: [objective]
         points: 3
       - id: ob-beast
-        range: [29, 30]
+        range: [26, 27]
         text: >-
           A great beast: a lion, a bear, a crab, a pack of wolves
           that will not come one at a time.
         tags: [objective]
         points: 3
       - id: ob-three
-        range: [31, 33]
+        range: [28, 29]
         text: >-
           Three of a kind. Pick an enemy type you can see and kill
           three.
         tags: [objective]
         points: 2
       - id: ob-five
-        range: [34, 36]
+        range: [30, 31]
         text: >-
           Five of a kind. Pick a type and count to five.
         tags: [objective]
         points: 3
       - id: ob-ten
-        range: [37, 37]
+        range: [32, 32]
         text: >-
           Ten of a kind. Yes, ten. Pick something common.
         tags: [objective, hard]
         points: 5
       - id: ob-camp
-        range: [38, 39]
+        range: [33, 34]
         text: >-
           Clear a camp. Every enemy in one encampment, to the last.
         tags: [objective, hard]
         points: 4
       - id: ob-building
-        range: [40, 41]
+        range: [35, 36]
         text: >-
           Clear a building. Everything inside one structure, top to
           bottom.
         tags: [objective]
         points: 3
       - id: ob-patrol
-        range: [42, 43]
+        range: [37, 38]
         text: >-
           A patrol. Follow it to the end of its round, then kill all
           of it where it stops.
         tags: [objective]
         points: 3
       - id: ob-night
-        range: [44, 44]
+        range: [39, 39]
         text: >-
           Something that only comes out at night. Wait for it if you
           must.
         tags: [objective, hard]
         points: 5
       - id: ob-church
-        range: [45, 47]
+        range: [40, 41]
         text: >-
           A church you have not been inside. Find one, get to the
           altar, and take what is on it.
         tags: [objective]
         points: 3
       - id: ob-key
-        range: [48, 49]
+        range: [42, 43]
         text: >-
-          A key item: a stonesword key, a whetblade, a medallion
-          half. Name one and take it.
+          A key item. A stonesword key, a whetblade, a medallion
+          half, a cipher: something a door or a map wants.
         tags: [objective]
         points: 3
       - id: ob-map
-        range: [50, 51]
+        range: [44, 45]
         text: >-
-          A map fragment. Name which one and go and get it.
+          A map fragment, so the next region stops being a rumour.
+          Name which one before you go.
         tags: [objective]
         points: 3
       - id: ob-seed
+        range: [46, 47]
+        text: >-
+          A Golden Seed or a Sacred Tear. Either will do; name which
+          before you set off.
+        tags: [objective]
+        points: 3
+      - id: ob-cookbook
+        range: [48, 49]
+        text: >-
+          A cookbook. Any of them, anywhere: the crafting is not the
+          point, the finding is.
+        tags: [objective]
+        points: 3
+      - id: ob-bearing
+        range: [50, 51]
+        text: >-
+          A Bell Bearing. Off a body, out of a chest, or off
+          whatever is holding it.
+        tags: [objective]
+        points: 3
+      - id: ob-tear
         range: [52, 53]
         text: >-
-          A Golden Seed or a Sacred Tear. Either will do; name it
-          first.
+          A Crystal Tear, from the trunk of a Minor Erdtree or
+          wherever else one is standing.
         tags: [objective]
         points: 3
       - id: ob-stone
         range: [54, 55]
         text: >-
-          Smithing stones, three of them, of any kind.
+          Smithing stones, three of them, of any kind. Count them
+          out loud.
         tags: [objective]
         points: 2
       - id: ob-talisman
@@ -1200,31 +1223,40 @@ tables:
       - id: ob-ash
         range: [60, 61]
         text: >-
-          An Ash of War, or a Spirit Ash. Name it and take it.
+          An Ash of War. Take it, and put it on something before the
+          scene ends.
         tags: [objective]
         points: 3
       - id: ob-spell
         range: [62, 63]
         text: >-
-          A spell or incantation you do not know.
+          A sorcery you do not know. Find it, and have the
+          intelligence to read it or do not bother.
+        tags: [objective]
+        points: 3
+      - id: ob-incant
+        range: [64, 65]
+        text: >-
+          An incantation you do not know. Find it, and have the
+          faith for it.
         tags: [objective]
         points: 3
       - id: ob-scarab
-        range: [64, 65]
+        range: [66, 67]
         text: >-
           A teardrop scarab. Chase one down and kill it before it
           gets away.
         tags: [objective]
         points: 3
       - id: ob-grace
-        range: [66, 68]
+        range: [68, 69]
         text: >-
           A grace you have never lit. Get to one and light it,
           however far that is.
         tags: [objective]
         points: 2
       - id: ob-erdtree
-        range: [69, 71]
+        range: [70, 71]
         text: >-
           A Minor Erdtree. Get to one and kill whatever is standing
           under it.

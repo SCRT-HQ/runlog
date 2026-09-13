@@ -331,6 +331,10 @@ export function framesForGesture(profile: ControlProfile, kind: string, data: un
  */
 const MEANS: Record<string, { move: string }> = {
   died: { move: "died" },
+  // A watch the run put on has fired: the boss the objective named is
+  // dead, or the thing it named is in the player's hands. The same shape
+  // as a death, and the same rule about who accepts it.
+  settled: { move: "settled" },
 };
 
 export function askFor(kind: string): { move: string } | null {

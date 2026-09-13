@@ -249,6 +249,56 @@ export const TARNISHED_TOOL: ToolCatalog = {
         { name: "area", kind: "area", list: "bosses", label: "Area", note: "Needed only where one name is used in more than one place, and then it is one of them." },
       ],
     },
+    /**
+     * Watching, which is the only kind of operation that does nothing.
+     *
+     * The rest of this list changes the game. These ask the tool to tell
+     * the run when something happens in it, so an objective is settled by
+     * the game saying so rather than by the player being believed. They
+     * are applied and reverted like anything else, which is the whole
+     * reason they are operations rather than a second protocol: a watch
+     * put on for a scene comes off when that scene closes, through the
+     * machinery that already takes effects back.
+     *
+     * What they can see is what the tool already ships data for: every
+     * boss and the event flags its death sets, and the items that set a
+     * flag when they are picked up. An enemy that is not a boss sets no
+     * flag, so "kill three of anything" is still the player's word, and
+     * says so in the pack.
+     */
+    {
+      op: "watch.boss",
+      label: "Say when a boss dies",
+      note: "With no name, any boss at all: the run hears which one it was. With a name, only that one. Nothing happens to the game either way.",
+      args: [
+        { name: "name", kind: "name", list: "bosses", label: "Boss", note: "Leave empty for any boss, which is what most objectives want." },
+        { name: "area", kind: "area", list: "bosses", label: "Area", note: "Only where one name is used in more than one place." },
+      ],
+    },
+    {
+      op: "watch.item",
+      label: "Say when an item is picked up",
+      note: "Only items the game raises a flag for, which is what this list is. A smithing stone off the ground raises nothing and cannot be seen.",
+      args: [
+        {
+          name: "category",
+          kind: "choice",
+          label: "Any of",
+          options: ["Key Items", "Cookbooks", "Bell Bearings", "Crystal Tears", "Ashes of War", "Sorceries", "Incantations", "Talismans"],
+          note: "One whole kind of thing. Leave it out and name one instead.",
+        },
+        { name: "name", kind: "text", label: "Named", note: "Exactly one item, spelled as the game spells it." },
+      ],
+    },
+    {
+      op: "watch.grace",
+      label: "Say when a grace is lit",
+      note: "With no name, any grace lit for the first time. A grace already found raises nothing, which is what makes this worth asking for.",
+      args: [
+        { name: "name", kind: "name", list: "graces", label: "Grace", note: "Leave empty for any grace new to this save." },
+        { name: "area", kind: "area", list: "graces", label: "Area" },
+      ],
+    },
     {
       op: "player.drop",
       label: "Lift the player, and let go",
