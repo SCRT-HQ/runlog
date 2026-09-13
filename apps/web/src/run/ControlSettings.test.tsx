@@ -100,6 +100,17 @@ describe("the control panel", () => {
     expect(html).not.toContain("never heard of");
   });
 
+  it("names a boss to warp to, rather than a block and three coordinates", () => {
+    const html = paint({ tool: "TarnishedTool", rows: [{ tag: "setback", ops: [{ op: "warp.boss", args: { name: "Godrick the Grafted" } }] }] });
+    expect(html).toContain('list="controlNames-bosses"');
+    expect(html).toContain('value="Godrick the Grafted"');
+  });
+
+  it("names an ash of war, which was the last id with a name sitting behind it", () => {
+    const html = paint({ tool: "TarnishedTool", rows: [{ tag: "boon", ops: [{ op: "item.give", args: { id: 1, ashOfWar: "Bloody Slash" } }] }] });
+    expect(html).toContain('list="controlNames-ashes"');
+  });
+
   it("carries no list for a tool that has none", () => {
     expect(paint({ rows: [{ tag: "setback", ops: [{ op: "x", args: {} }] }] })).not.toContain("controlNames-");
   });

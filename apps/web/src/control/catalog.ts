@@ -39,7 +39,7 @@ export interface ArgDef {
 }
 
 /** A list of names the tool matches against, loaded on demand. */
-export type ListName = "graces" | "items" | "weapons";
+export type ListName = "graces" | "items" | "weapons" | "ashes" | "bosses";
 
 export interface OpDef {
   op: string;
@@ -227,6 +227,16 @@ export const TARNISHED_TOOL: ToolCatalog = {
       ],
     },
     {
+      op: "warp.boss",
+      label: "Move the player to a boss",
+      note: "The other half of naming a place: the destinations worth asking for that are not places anybody rests. Say the area too, since several of these are the same fight in two places.",
+      oneWay: true,
+      args: [
+        { name: "name", kind: "name", list: "bosses", label: "Boss", required: true, note: "Godrick the Grafted, Bell Bearing Hunter, Erdtree Avatar." },
+        { name: "area", kind: "text", label: "Area", note: "Needed only where one name is used in more than one place." },
+      ],
+    },
+    {
       op: "player.drop",
       label: "Lift the player, and let go",
       note: "Straight up from wherever they are, and then gravity. Usually fatal, which is generally why it is being asked for. Needs no map at all.",
@@ -235,12 +245,13 @@ export const TARNISHED_TOOL: ToolCatalog = {
     },
     {
       op: "item.give",
-      label: "Give an item",
+      label: "Give an item, by id",
+      note: "The way in for anything the two operations above have no name for. Where a name will do, use it: an id is a number out of the game's own data and is wrong the first time the game moves.",
       oneWay: true,
       args: [
         { name: "id", kind: "number", label: "Item id", required: true, least: 0 },
         { name: "quantity", kind: "number", label: "How many", least: 1, most: 99 },
-        { name: "ashOfWar", kind: "number", label: "Ash of War id" },
+        { name: "ashOfWar", kind: "name", list: "ashes", label: "Ash of War" },
       ],
     },
     {
