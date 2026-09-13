@@ -2,6 +2,7 @@ export * from "./primitives.ts";
 export * from "./actions.ts";
 export * from "./tables.ts";
 export * from "./pack.ts";
+export * from "./setup.ts";
 export * from "./dice.ts";
 export * from "./lint.ts";
 export * from "./parse.ts";

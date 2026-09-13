@@ -1,0 +1,33 @@
+# A setup, which is its own document.
+#
+# A pack says what the dice can do. This says what the tool is set to
+# while a run lasts, and what the player starts with. It names a tool and
+# no pack, so any Elden Ring pack played through Tarnished Tool can use
+# it, and a mode can name a different one without the pack changing.
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.bare-handed
+version: "1.0.0"
+title: Bare-handed
+author: Runlog
+description: >-
+  No rolling, three fifths of the damage you should deal, and fifty
+  thousand runes to make up for neither. For a run that wants to be
+  harder than the pack already makes it.
+
+tool: TarnishedTool
+
+ops:
+  # Settings. Sent on every attach, because a tool that restarted is
+  # holding none of them, and applying a setting twice is that setting.
+  - { op: flag.set, args: { name: player.noRoll, value: true } }
+  - { op: value.set, args: { name: player.outgoingDamage, value: 0.6 } }
+
+  # A gift. Given once in the run: handed over again on every reconnect
+  # it would be a different game by the third one.
+  - { op: runes.give, args: { amount: 50000 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true
