@@ -13,6 +13,7 @@ describe("the marketplace", () => {
     expect(entries.map((e) => e.id)).toEqual([
       "com.scrthq.runlog.any-given-day",
       "com.scrthq.runlog.elden-ring-expedition",
+      "com.scrthq.runlog.elden-ring-interference",
       "com.scrthq.runlog.elden-ring-trial",
       "com.scrthq.runlog.forfeits",
       "com.scrthq.runlog.frog-first",
