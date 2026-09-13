@@ -29,7 +29,8 @@
     "test:packs": "npm run runlog -- test packs/demo/pack.yaml && npm run runlog -- test packs/demo/any-given-day.yaml && npm run runlog -- test packs/sketches/salt-and-signal.yaml && npm run runlog -- test packs/sketches/ladder-work.yaml && npm run runlog -- test packs/sketches/rocket-league-ladder.yaml && npm run runlog -- test packs/sketches/elden-ring-expedition.yaml && npm run runlog -- test packs/sketches/homefront.yaml && npm run runlog -- test packs/sketches/practice-room.yaml && npm run runlog -- test packs/sketches/pantry-roulette.yaml && npm run runlog -- test packs/sketches/elden-ring-trial.yaml && npm run runlog -- test packs/sketches/elden-ring-interference.yaml && npm run runlog -- test packs/sketches/rocket-league-showdown.yaml && npm run runlog -- test packs/sketches/twenty-five.yaml && npm run runlog -- test packs/sketches/frog-first.yaml && npm run runlog -- test packs/sketches/two-doors.yaml && npm run runlog -- test packs/sketches/word-count.yaml && npm run runlog -- test packs/sketches/the-backlog.yaml && npm run runlog -- test packs/sketches/sunday-desk.yaml && npm run runlog -- test packs/sketches/run-of-show.yaml && npm run runlog -- test packs/sketches/forfeits.yaml && npm run runlog -- test packs/testing/engine-testing.yaml",
     "test:infra": "npm test -w hosted/infra",
     "cdk": "npm run cdk -w hosted/infra --",
-    "overlay": "tsx hosted/scripts/overlay.ts"
+    "overlay": "tsx hosted/scripts/overlay.ts",
+    "dev": "npm run dev -w apps/web --"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
@@ -40,6 +41,9 @@
     "markdownlint-cli2": "^0.23.2",
     "typescript": "^5.9.0",
     "vitest": "^5.0.0"
+  },
+  "overrides": {
+    "smol-toml": "^1.7.1"
   },
   "engines": {
     "node": ">=20.11"
