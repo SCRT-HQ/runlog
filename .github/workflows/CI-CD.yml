@@ -123,6 +123,14 @@ jobs:
   # The app is built before a diff or a deploy, so the site stack's template
   # names the build it would publish; a diff without one would show the
   # publish being torn down.
+  #
+  # Which is also why a diff is only read where the hosting changed. The
+  # site stack names the build by its hash, so every pull request that
+  # touches the app at all produces a diff, and a diff produced by every
+  # pull request is one nobody reads. The job still runs and still
+  # reports; where nothing under the hosting changed it says so and stops
+  # there, rather than spending two AWS round-trips to print the same
+  # asset hash again.
   Diff:
     name: Diff ${{ matrix.env }}
     runs-on: ubuntu-latest
@@ -165,16 +173,46 @@ jobs:
     steps:
       - if: ${{ github.event_name == 'merge_group' }}
         run: echo "No diff in the merge queue; the pull request carried it. This job only reports."
-      - if: ${{ github.event_name == 'pull_request' }}
+
+      # What this pull request could change about a template: the stacks
+      # themselves, the actions that build and synthesize them, and the
+      # lockfile, which is where a CDK bump lands. Everything else is the
+      # app, and the app's only mark on a template is the hash of the
+      # build being published.
+      - id: touches
+        if: ${{ github.event_name == 'pull_request' }}
+        name: Anything the hosting would notice
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          hosting=false
+          while IFS= read -r f; do
+            case "$f" in
+              hosted/infra/* | package-lock.json | .github/workflows/CI-CD.yml | .github/actions/run-cdk/* | .github/actions/build-app/*)
+                echo "the hosting changed: $f"
+                hosting=true
+                ;;
+            esac
+          done < <(gh api "repos/$REPO/pulls/$PR/files" --paginate -q '.[].filename')
+          if [ "$hosting" = false ]; then
+            echo "Nothing under hosted/infra changed, so there is no template change to read." >> "$GITHUB_STEP_SUMMARY"
+            echo "Nothing under hosted/infra changed; no diff to read."
+          fi
+          echo "hosting=$hosting" >> "$GITHUB_OUTPUT"
+
+      - if: ${{ github.event_name == 'pull_request' && steps.touches.outputs.hosting == 'true' }}
         uses: actions/checkout@v7
-      - if: ${{ github.event_name == 'pull_request' }}
+      - if: ${{ github.event_name == 'pull_request' && steps.touches.outputs.hosting == 'true' }}
         uses: ./.github/actions/build-app
         with:
           environment: ${{ matrix.env }}
           workos-client-id: ${{ vars.WORKOS_CLIENT_ID }}
           target-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           env-config: ${{ vars[format('RUNLOG_ENV_CONFIG_{0}', matrix.env)] }}
-      - if: ${{ github.event_name == 'pull_request' }}
+      - if: ${{ github.event_name == 'pull_request' && steps.touches.outputs.hosting == 'true' }}
         name: Diff the ${{ matrix.env }} stacks
         uses: ./.github/actions/run-cdk
         with:
