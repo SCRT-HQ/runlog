@@ -29,6 +29,7 @@ const PACKS = [
   "packs/sketches/practice-room.yaml",
   "packs/sketches/pantry-roulette.yaml",
   "packs/sketches/elden-ring-trial.yaml",
+  "packs/sketches/elden-ring-interference.yaml",
   "packs/sketches/rocket-league-showdown.yaml",
   "packs/sketches/twenty-five.yaml",
   "packs/sketches/frog-first.yaml",
