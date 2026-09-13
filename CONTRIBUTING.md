@@ -202,11 +202,18 @@ preference picks between the first two.
 
 ## Checks
 
-A pull request runs the app's checks, the hosting's checks and a diff of
-both stages. The merge queue then runs the checks again on main with the
-queued pull requests merged onto it, which is what will actually land; it
-does not repeat the diffs, which are for reading. A fork's pull request gets
-the checks and no diffs, since nothing that reaches AWS runs for it.
+A pull request runs the app's checks, the hosting's checks and, where it
+touches the hosting, a diff of both stages. The merge queue then runs the
+checks again on main with the queued pull requests merged onto it, which is
+what will actually land; it does not repeat the diffs, which are for
+reading. A fork's pull request gets the checks and no diffs, since nothing
+that reaches AWS runs for it.
+
+The diff is read only where something under `hosted/infra` changed, or the
+lockfile, or the workflow itself. The site stack names the app build it
+publishes by its hash, so a pull request that only touches the app still
+produces a diff, and a diff produced by every pull request is one nobody
+reads.
 
 The ruleset requires two checks: the pull request's title, and `Checks`, a
 job that waits for every other check and passes only when they all did (a
