@@ -174,6 +174,36 @@ export function constraintLines(pack: Pack, state: RunState, tableId?: string): 
   return out;
 }
 
+/**
+ * Names a subject could be given, from what the step is constrained by.
+ *
+ * A declare step asks a player to type what they are going for, and very
+ * often they are going to type the thing they have just drawn. Where a
+ * result already says it, "Clear a building", there is no reason to make
+ * anybody copy it out: the first sentence of each result drawn from the
+ * constraining table this unit is offered as a name.
+ *
+ * The first sentence rather than the whole result, because a result is
+ * written to be read once and a subject's name is carried on a board for
+ * the rest of the run. Anything still too long is left out rather than
+ * cut mid-word into something that reads like a mistake.
+ */
+export function subjectSuggestions(pack: Pack, state: RunState, tableId?: string): string[] {
+  const out: string[] = [];
+  for (const line of constraintLines(pack, state, tableId)) {
+    const first = line.text.split(/(?<=[.!?])\s/)[0] ?? line.text;
+    // Walked off the end rather than matched: a pattern anchored to the
+    // end of a string it did not write can be made to crawl, and this one
+    // reads a result out of a pack anybody can publish.
+    let name = first.trim();
+    while (name.endsWith(".")) name = name.slice(0, -1).trimEnd();
+    if (name.length === 0 || name.length > 60) continue;
+    if (!out.includes(name)) out.push(name);
+  }
+
+  return out;
+}
+
 export function constraintsFor(pack: Pack, state: RunState, tableId?: string): string[] {
   return constraintLines(pack, state, tableId).map((line) => line.text);
 }

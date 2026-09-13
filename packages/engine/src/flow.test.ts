@@ -4,8 +4,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
-import { activePhases, constrainedByOf, constraintsFor, entryWords, nextStep, stepCompletionEvents } from "./flow.ts";
+import { activePhases, constrainedByOf, constraintsFor, entryWords, nextStep, stepCompletionEvents, subjectSuggestions } from "./flow.ts";
 import type { RunEvent } from "./events.ts";
+import type { RunState } from "./types.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 function loadPack(rel: string): Pack {
@@ -220,5 +221,39 @@ describe("which phases a mode plays", () => {
       ev("UnitEntered"),
     ]);
     expect(activePhases(kiln, short).map((p) => p.id)).not.toContain("check");
+  });
+});
+
+/**
+ * Naming a subject from what was drawn.
+ *
+ * The point is that a player who has just read "Clear a building" does
+ * not then type "Clear a building", so what matters is that the name
+ * offered is short enough to live on a board and is the words they read.
+ */
+describe("subjectSuggestions", () => {
+  it("offers the first sentence of each result drawn from the table this unit", () => {
+    const state = {
+      ...reduce(kiln, [...start, ev("UnitEntered")]),
+      unit: 1,
+      outcomes: [
+        { unit: 1, table: "form", entryId: "form-bowl", targetSubject: null, at: "" },
+        { unit: 1, table: "form", entryId: "form-vase", targetSubject: null, at: "" },
+      ],
+    } as unknown as RunState;
+    expect(subjectSuggestions(kiln, state, "form")).toEqual(["A bowl", "A vase"]);
+  });
+
+  it("offers nothing off a step that names no table, and nothing drawn elsewhere", () => {
+    const state = reduce(kiln, [...start, ev("UnitEntered")]);
+    expect(subjectSuggestions(kiln, state, undefined)).toEqual([]);
+    expect(subjectSuggestions(kiln, state, "form")).toEqual([]);
+  });
+
+  it("leaves out a result too long to be a name rather than cutting it short", () => {
+    const long = "x".repeat(80);
+    const pack = { ...kiln, tables: { ...kiln.tables, form: { ...kiln.tables.form!, entries: [{ id: "e", range: [1, 1], text: long }] } } } as unknown as typeof kiln;
+    const state = { ...reduce(kiln, [...start, ev("UnitEntered")]), unit: 1, outcomes: [{ unit: 1, table: "form", entryId: "e", targetSubject: null, at: "" }] } as unknown as RunState;
+    expect(subjectSuggestions(pack, state, "form")).toEqual([]);
   });
 });

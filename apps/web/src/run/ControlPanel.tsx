@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Pack } from "@runlog/rules-schema";
-import { closesUnit, constraintLines, entryWords, type RunState } from "@runlog/engine";
+import { closesUnit, constraintLines, entryWords, subjectSuggestions, type RunState } from "@runlog/engine";
 import type { RolledDie } from "../rolling.ts";
 import type { RollReceipt } from "./Receipt.tsx";
 import { Checklist, checklistDone } from "./Checklist.tsx";
@@ -329,9 +329,19 @@ function RemoteStep({
 
     case "declareSubject": {
       const constraints = constraintLines(pack, state, step.constrainedBy);
+      const suggested = subjectSuggestions(pack, state, step.constrainedBy);
       return (
         <PipSection title={step.label ?? `Declare the ${pack.vocabulary.subject.one}`}>
           <Constraints lines={constraints} />
+          {suggested.length > 0 && (
+            <div className="padRow">
+              {suggested.map((name) => (
+                <button key={name} className="ghost tiny" onClick={() => run.declareSubject(phase, index, name)}>
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="padRow">
             <input
               className="textInput"
