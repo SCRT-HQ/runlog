@@ -170,12 +170,21 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     if (!poster) return { statusCode: 200 };
     const snapshot = await deps.store.getSnapshot(conn.run);
     const profile = snapshot ? profileOf(snapshot.snapshot) : null;
-    if (!profile) return { statusCode: 200 };
     // Told rather than left silent: a tool sitting there doing nothing
-    // is the most confusing thing this could do.
-    const line = fits(profile, app || undefined)
-      ? setupFor(profile)
-      : JSON.stringify({ t: "note", text: `This run is set up for ${profile.tool}, so nothing here will reach ${app || "a tool that did not say what it is"}.` });
+    // is the most confusing thing this could do. Which is what it did
+    // until now in the one case that matters most, the run it found
+    // having no rules at all: an address names an account and the
+    // server picks the run, so a tool can attach perfectly to a run
+    // nobody is playing and report itself connected for ever.
+    const which = (await deps.store.getSession(conn.run))?.meta.packTitle ?? "a run";
+    const line = !profile
+      ? JSON.stringify({
+          t: "note",
+          text: `Attached to ${which}, which has no rules for a tool. An address finds the most recently played run that is open to watchers; if that is not the one you are playing, open that one to watchers and connect again.`,
+        })
+      : fits(profile, app || undefined)
+        ? setupFor(profile)
+        : JSON.stringify({ t: "note", text: `${which} is set up for ${profile.tool}, so nothing here will reach ${app || "a tool that did not say what it is"}.` });
     if (line && (await poster.post(connectionId, line)) === "gone") await deps.live.disconnect(connectionId);
     return { statusCode: 200 };
   }
