@@ -3441,11 +3441,27 @@ select.textInput {
 .matrix th, .matrix td { padding: 0.3rem 0.35rem; border-bottom: 1px solid var(--line-2); text-align: center; vertical-align: middle; }
 .matrix thead th { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .matrix .rowHead { text-align: left; font-weight: 400; display: table-cell; }
-.matrix tbody .rowHead { display: grid; gap: 0.1rem; }
-.matrix .cell { width: 2.6rem; height: 1.9rem; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
+/* The label stacks its two or three lines, and the cell it stacks them
+   in stays a cell. Laying it out as a grid took the header out of the
+   table: a row whose cells are not all table-cells is not one row box,
+   so each column found its own height and the buttons drifted apart
+   from the line they belong to. */
+.matrix tbody .rowHead > span { display: block; }
+.matrix tbody .rowHead > span + span { margin-top: 0.1rem; }
+/* Centred on the row rather than sitting on its own baseline. An
+   inline-block's baseline is its last line of text, so the button that
+   won a challenge first, and carries a star for it, sat ten pixels
+   below the one beside it that did not: same row, same height, two
+   different baselines. The column that had the star drifted the whole
+   way down the table. */
+.matrix .cell { position: relative; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; width: 2.6rem; height: 1.9rem; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
 .matrix .cell:hover:not(:disabled), .matrix .cell:focus-visible { border-color: var(--accent); color: var(--text); }
 .matrix .cell.won { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
 .matrix .cell:disabled { cursor: default; opacity: 0.55; }
+/* Who got there first, out of the run of the cell: in it, the score and
+   the mark together came to more than the button and wrapped, which is
+   what tipped one column of buttons off the line of the other. */
+.matrix .cell .firstMark { position: absolute; top: 0.05rem; right: 0.2rem; font-size: 0.55rem; line-height: 1; }
 .matrix .cell.won:disabled { opacity: 1; }
 
 /* ---- the catalog as a market: a sidebar to narrow, cards to browse ---- */
