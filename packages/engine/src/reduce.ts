@@ -268,9 +268,19 @@ export function reduce(pack: Pack, log: readonly RunEvent[]): RunState {
 
       case "CounterChanged": {
         const def = pack.counters?.[event.counter];
-        const current = state.counters[event.counter] ?? def?.initial ?? 0;
+        // A move that belongs to one racer moves that racer's tally. The
+        // same counter is the run's for everybody else, and both can be
+        // true at once: a pack may count the table's stretches and each
+        // racer's deaths under one set of definitions.
+        const who = event.contestant ? state.contestants.find((c) => c.id === event.contestant) : undefined;
+        // Addressed to somebody who has since been taken off the
+        // roster: their tally is gone with them, and falling back to
+        // the run's would put their deaths on everybody.
+        if (event.contestant && !who) break;
+        const held = who ? who.counters : state.counters;
+        const current = held[event.counter] ?? def?.initial ?? 0;
         const next = event.set !== undefined ? event.set : current + (event.by ?? 0);
-        state.counters[event.counter] = clamp(next, def?.min, def?.max);
+        held[event.counter] = clamp(next, def?.min, def?.max);
         break;
       }
 
@@ -424,7 +434,7 @@ export function reduce(pack: Pack, log: readonly RunEvent[]): RunState {
 
       case "ContestantAdded":
         if (!state.contestants.some((c) => c.id === event.contestant)) {
-          state.contestants.push({ id: event.contestant, name: event.name, states: [] });
+          state.contestants.push({ id: event.contestant, name: event.name, states: [], counters: {} });
         }
         break;
 

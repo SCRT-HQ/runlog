@@ -132,6 +132,12 @@ export interface Contestant {
   name: string;
   /** Contestant-scoped states the moderator has put on them. */
   states: string[];
+  /**
+   * What this racer's own moves have tallied: their deaths, not the
+   * table's. Only the counters a per-contestant move has touched appear
+   * here; the rest of a pack's counters stay the run's.
+   */
+  counters: Record<string, number>;
 }
 
 /** A challenge won: which result, by whom, for how much. */

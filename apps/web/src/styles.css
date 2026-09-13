@@ -1451,6 +1451,10 @@ button:disabled,
 .opRow > button {
   flex: none;
 }
+/* A move that belongs to one racer: the move reads as one thing, and
+   the names under it are the press. */
+.choice.perRacer { display: grid; gap: 0.15rem; cursor: default; }
+.choice.perRacer > .padRow { margin-top: 0.35rem; }
 /* A name the tool has no entry for. Said quietly while it is still
    being typed, since half a name is not a mistake yet. */
 .wrongName {

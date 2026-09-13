@@ -63,6 +63,18 @@ const ATTRIBUTIONS = [
   "from the rules,",
 ];
 
+/**
+ * Data lifted wholesale out of somebody else's game.
+ *
+ * `apps/web/src/control/lists/` is generated from a tool's own
+ * resources: four hundred place names and nine hundred item names, none
+ * of them written here and none of them capable of naming a pack that
+ * is not in this repository. A reserved word is a common enough English
+ * noun that some of them collide, and the collision says nothing. The
+ * generator is the thing to read if the contents are ever in doubt.
+ */
+const GENERATED = [/^apps\/web\/src\/control\/lists\//];
+
 /** Every file git would publish, minus the binary-ish ones and this test. */
 function trackedTextFiles(): string[] {
   const listed = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" });
@@ -72,7 +84,8 @@ function trackedTextFiles(): string[] {
     .filter(Boolean)
     .filter((file) => file !== selfPath)
     .filter((file) => !/\.(png|jpe?g|gif|webp|ico|woff2?|ttf|pdf|zip)$/i.test(file))
-    .filter((file) => !file.startsWith("package-lock"));
+    .filter((file) => !file.startsWith("package-lock"))
+    .filter((file) => !GENERATED.some((skip) => skip.test(file)));
 }
 
 interface Hit {
