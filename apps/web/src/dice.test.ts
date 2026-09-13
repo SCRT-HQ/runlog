@@ -13,7 +13,7 @@ function loadPack(rel: string): Pack {
   return r.pack;
 }
 const kiln = loadPack("packs/demo/pack.yaml");
-const signal = loadPack("packs/sketches/salt-and-signal.yaml");
+const signal = loadPack("packs/testing/salt-and-signal.yaml");
 
 describe("presenting a roll as physical dice", () => {
   describe("percentile dice", () => {

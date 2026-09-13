@@ -24,7 +24,7 @@ const profiles = join(repoRoot, "packs", "profiles");
 
 /** Where each pack lives, by the id a profile names. */
 const PACKS: Record<string, string> = {
-  "com.scrthq.runlog.elden-ring-interference": "packs/sketches/elden-ring-interference.yaml",
+  "com.scrthq.runlog.elden-ring-tarnishedtool": "packs/sketches/elden-ring-tarnishedtool.yaml",
 };
 
 const load = (relative: string) => {

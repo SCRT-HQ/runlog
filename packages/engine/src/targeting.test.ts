@@ -22,7 +22,7 @@ function loadPack(rel: string): Pack {
  */
 const kiln = loadPack("packs/demo/pack.yaml");
 const ladder = loadPack("packs/sketches/ladder-work.yaml");
-const signal = loadPack("packs/sketches/salt-and-signal.yaml");
+const signal = loadPack("packs/testing/salt-and-signal.yaml");
 
 interface Options {
   untargetable?: number[];

@@ -287,7 +287,7 @@ What that key may draw: the account's runs that are open to watch, newest first,
 ```json
 {
   "ok": true,
-  "runs": [{ "id": "01RUN", "name": "Thursday", "packTitle": "Any Given Day", "updatedAt": "2026-09-10T23:04:11.02Z" }],
+  "runs": [{ "id": "01RUN", "name": "Thursday", "packTitle": "Forfeits", "updatedAt": "2026-09-10T23:04:11.02Z" }],
   "inPlay": "01RUN",
   "say": "One run to watch."
 }

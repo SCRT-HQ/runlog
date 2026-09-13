@@ -61,14 +61,15 @@ export interface MarketplaceEntry {
 
 /**
  * The pack a fresh device gets, once, so Play works before anyone has read
- * anything. The most general one: a day of things to do, for anyone.
+ * anything. A penalty wheel asks least of whoever opens it: no particular
+ * game, no tool, nothing installed, and it is the shape the app is for.
  */
-export const STARTER_PACK = "com.scrthq.runlog.any-given-day";
+export const STARTER_PACK = "com.scrthq.runlog.forfeits";
 
 /** In the order the marketplace shows them: the starter first, then by title. */
 const ORDER = [STARTER_PACK];
 
-const files = import.meta.glob("../../../../packs/{demo,sketches}/*.yaml", { query: "?raw", import: "default" }) as Record<
+const files = import.meta.glob("../../../../packs/sketches/*.yaml", { query: "?raw", import: "default" }) as Record<
   string,
   () => Promise<string>
 >;
@@ -406,6 +407,10 @@ export const RENAMED_IDS: Record<string, string> = Object.fromEntries(
 );
 
 export const LEGACY_IDS: Record<string, string> = {
+  // Renamed for the tool it is written against, when its vocabulary went
+  // from interferences and stretches to curses and scenes. A library that
+  // holds a run of it follows to the new id rather than losing the run.
+  "com.scrthq.runlog.elden-ring-interference": "com.scrthq.runlog.elden-ring-tarnishedtool",
   kiln: "com.scrthq.runlog.long-kiln",
   signal: "com.scrthq.runlog.salt-and-signal",
   ladder: "com.scrthq.runlog.ladder-work",

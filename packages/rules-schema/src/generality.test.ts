@@ -35,7 +35,7 @@ function load(relative: string): Pack {
  */
 describe("one schema, three unrelated games", () => {
   const kiln = load("packs/demo/pack.yaml");
-  const signal = load("packs/sketches/salt-and-signal.yaml");
+  const signal = load("packs/testing/salt-and-signal.yaml");
   const ladder = load("packs/sketches/ladder-work.yaml");
   const all = [kiln, signal, ladder];
 
