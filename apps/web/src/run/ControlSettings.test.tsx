@@ -125,6 +125,22 @@ describe("the control panel", () => {
     expect(paint({ rows: [{ tag: "setback", ops: [{ op: "x", args: {} }] }] })).not.toContain("controlNames-");
   });
 
+  it("puts loading a profile from a file above the rules, not below all of them", () => {
+    // Reported from play: with a hundred and eleven rules loaded, the
+    // Import button was under every one of them and nobody found it.
+    const rows = Array.from({ length: 30 }, () => ({ tag: "setback", ops: [{ op: "x", args: {} }] }));
+    const html = paint({ tool: "TarnishedTool", rows });
+    const importAt = html.indexOf(">Import<");
+    const firstRule = html.indexOf("What this rule matches");
+    expect(importAt).toBeGreaterThan(-1);
+    expect(firstRule).toBeGreaterThan(-1);
+    expect(importAt).toBeLessThan(firstRule);
+  });
+
+  it("offers the file buttons even where no profile ships for this pack", () => {
+    expect(paint()).toContain(">Import<");
+  });
+
   it("uses the pack's own word for a unit when offering how long an effect lasts", () => {
     expect(paint({ rows: [{ tag: "setback", ops: [{ op: "x", args: {} }] }] })).toContain(`Until this ${kiln.vocabulary.unit.one.toLowerCase()} closes`);
   });
