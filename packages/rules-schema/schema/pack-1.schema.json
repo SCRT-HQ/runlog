@@ -2855,6 +2855,17 @@
                   "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
                   "description": "A stable identifier, unique within its collection. Letters, digits, dot, dash and underscore; must start with a letter or digit. Ids appear in saved runs, so renaming one breaks existing logs."
                 }
+              },
+              "moves": {
+                "description": "Moves not offered in this mode. For a move another part of the mode already does: a race awards a challenge to say somebody finished it, so the move that said the same thing is a second way to do one thing.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                  "description": "A stable identifier, unique within its collection. Letters, digits, dot, dash and underscore; must start with a letter or digit. Ids appear in saved runs, so renaming one breaks existing logs."
+                }
               }
             },
             "additionalProperties": false
@@ -3237,6 +3248,13 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991
+              },
+              "onAward": {
+                "description": "What happens when the moderator awards a challenge, run for the contestant who won it: their draw, their counter. In a race the award *is* the declaration that somebody finished, so a pack that would otherwise offer a move saying so can put what that move did here instead and be rid of the second press.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/Action"
+                }
               }
             },
             "additionalProperties": false
