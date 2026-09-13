@@ -14,6 +14,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { SCHEMA_VERSION } from "../src/pack.ts";
+import { schemaLine } from "../src/published.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const schemaFile = join(here, "..", "schema", `pack-${SCHEMA_VERSION}.schema.json`);
@@ -247,7 +248,7 @@ out.push("");
 out.push("Point your pack at the schema and most of this becomes autocomplete:");
 out.push("");
 out.push("```yaml");
-out.push(`# yaml-language-server: $schema=https://runlog.dev/schema/pack-${SCHEMA_VERSION}.schema.json`);
+out.push(schemaLine("pack"));
 out.push("```");
 out.push("");
 

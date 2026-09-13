@@ -12,7 +12,7 @@
 # a moderated mode as the default.
 
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
-# yaml-language-server: $schema=https://runlog.dev/schema/pack-1.schema.json
+# yaml-language-server: $schema=../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.run-of-show

@@ -4,7 +4,7 @@
 # `weapon.named` like a sword. Finger Seal is the ordinary one and takes
 # twenty-five; Erdtree Seal scales harder and caps at ten.
 
-# yaml-language-server: $schema=https://runlog.dev/schema/setup-1.schema.json
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
 kind: setup
 schemaVersion: 1

@@ -11,7 +11,7 @@
 # Bronze ones. The moderator's word is the only record.
 
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
-# yaml-language-server: $schema=https://runlog.dev/schema/pack-1.schema.json
+# yaml-language-server: $schema=../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.rocket-league-showdown

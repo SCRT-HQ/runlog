@@ -6,10 +6,9 @@ import type { Plugin } from "vite";
 /**
  * Serving the published JSON Schemas.
  *
- * `pack-1.schema.json` says its own `$id` is
- * `https://runlog.dev/schema/pack-1.schema.json`, the authoring guide tells
- * every author to put that address at the top of their file, and nothing
- * had ever put the file at that address. What came back was the app's own
+ * `pack-1.schema.json` declares an `$id` under this site, the authoring
+ * guide tells every author to put that address at the top of their file,
+ * and nothing had ever put the file at that address. What came back was the app's own
  * index page with a 200 on it, which an editor reads as a schema that is
  * not one and then says nothing at all about the file being edited. The
  * advice was good and the address was furniture.

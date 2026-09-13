@@ -7,6 +7,7 @@ import addFormats from "ajv-formats";
 import { Pack, SCHEMA_VERSION } from "./pack.ts";
 import { SETUP_SCHEMA_VERSION } from "./setup.ts";
 import { buildSchemaBody, buildSetupSchemaBody } from "./emit.ts";
+import { SCHEMA_IN_REPO, schemaLine, schemaUrl } from "./published.ts";
 import { loadPackText, loadSetupText } from "./load.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -191,7 +192,7 @@ describe("the emitted JSON Schema", () => {
 describe("the emitted setup schema", () => {
   it("is not stale: regenerating it produces the committed file", () => {
     const { $id, title, ...body } = setupEmitted;
-    expect($id).toBe(`https://runlog.dev/schema/setup-${SETUP_SCHEMA_VERSION}.schema.json`);
+    expect($id).toBe(schemaUrl("setup"));
     expect(title).toBeTypeOf("string");
     expect(body).toEqual(buildSetupSchemaBody());
   });
@@ -242,7 +243,14 @@ describe("the emitted setup schema", () => {
  * opposite of what they say.
  */
 describe("the files an author would copy", () => {
-  const line = (kind: string, version: number) => `# yaml-language-server: $schema=https://runlog.dev/schema/${kind}-${version}.schema.json`;
+  /*
+   * The relative form, not the address. These files sit two directories
+   * above the schema on disk, so they need no network, no deploy and no
+   * domain to be right, and the address they would otherwise carry is one
+   * more place for it to be typed wrong. Authors outside this repository
+   * get the address, from the docs and from `runlog init`.
+   */
+  const line = (kind: "pack" | "setup") => schemaLine(kind, SCHEMA_IN_REPO);
 
   /** Every authored document in the repository, and which schema it is. */
   const authored = (dir: string, into: Array<[string, "pack" | "setup"]> = []): Array<[string, "pack" | "setup"]> => {
@@ -264,7 +272,7 @@ describe("the files an author would copy", () => {
 
   for (const [file, kind] of files) {
     it(`${relative(repoRoot, file).split("\\").join("/")} points an editor at the ${kind} schema`, () => {
-      expect(readFileSync(file, "utf8")).toContain(line(kind, kind === "pack" ? SCHEMA_VERSION : SETUP_SCHEMA_VERSION));
+      expect(readFileSync(file, "utf8")).toContain(line(kind));
     });
   }
 });
