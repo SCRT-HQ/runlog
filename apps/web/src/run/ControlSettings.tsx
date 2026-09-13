@@ -8,6 +8,7 @@ import { CATALOGS, catalogFor, opDef, rangeOfValue, type ArgDef, type ToolCatalo
 import { builtins, forPack, type Builtin } from "../control/builtin.ts";
 import { areasFor, known, listsFor, type Lists } from "../control/lists.ts";
 import { rememberWatchKey, watchKeyHere } from "./watchKey.ts";
+import { liveLinkOf, rememberLiveLink } from "../live/route.ts";
 import { complaints, describes, entriesOf, EMPTY, isEmpty, parse, selectorOf, tablesOf, tagsOf, tidy, type ControlProfile, type ProfileOp, type ProfileRow } from "../control/profile.ts";
 
 /**
@@ -57,6 +58,18 @@ export function ControlSettings({
   const [busy, setBusy] = useState(false);
   /** So a failed mint is not retried on every render. */
   const asked = useRef(false);
+  /**
+   * Whether this run is one a tool can reach at all.
+   *
+   * The address names the account and the server finds the run: of the
+   * runs open to watchers, the one played most recently. A run that is
+   * not open to watchers is not in that list, so the socket either
+   * refuses or, worse, connects to some older run that is, and reports
+   * itself connected while nothing ever arrives. The profile travels the
+   * same way, in the snapshot only a shared run publishes.
+   */
+  const [live, setLive] = useState<string | null>(() => (record ? liveLinkOf(record.runId) : null));
+  const reachable = Boolean(live) || record?.shared === true;
   /** The profiles that ship with the app, and which of them fits this pack. */
   const [shipped, setShipped] = useState<Builtin[]>([]);
   /**
@@ -155,6 +168,21 @@ export function ControlSettings({
 
   /** The roster, without the blanks and without anybody twice. */
   const roster = useMemo(() => [...new Set((seats ?? []).map((n) => n.trim()).filter(Boolean))], [seats]);
+
+  const openToWatchers = async () => {
+    if (!api || !record) return;
+    setBusy(true);
+    try {
+      const { link } = await api.shareRun(record.runId);
+      rememberLiveLink(record.runId, link);
+      setLive(link);
+      setNote(null);
+    } catch {
+      setNote("Could not open this run to watchers just now. A hosted run is needed, and a live link is part of Plus.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const copy = (text: string, which: string) => {
     void navigator.clipboard?.writeText(text);
@@ -264,6 +292,13 @@ export function ControlSettings({
               : "The address the tool dials, once it has a key. Making one needs a connection."}
         </p>
         <code className="askAddress">{address}</code>
+        {!reachable && (
+          <p className="muted small">
+            <strong>Nothing will arrive yet.</strong> The address names your account and the server finds the run: of the {pack.vocabulary.run.many.toLowerCase()} open to
+            watchers, the one played most recently. This one is not open to watchers, so a tool either cannot connect or connects to an older one that is, and sits there
+            saying it is connected while nothing happens. The rules below travel the same way, so they do not reach a tool either.
+          </p>
+        )}
         <div className="padRow">
           <button className="ghost tiny" onClick={() => copy(address, "")}>
             {copied === "" ? "Copied" : "Copy address"}
@@ -276,6 +311,11 @@ export function ControlSettings({
               onClick={() => void makeKey()}
             >
               {keys.watch ? "New watch key" : "Make a watch key"}
+            </button>
+          )}
+          {api && record && !reachable && (
+            <button className="primary tiny" disabled={busy} onClick={() => void openToWatchers()}>
+              Open this {pack.vocabulary.run.one.toLowerCase()} to watchers
             </button>
           )}
           {roster.length === 0 && <span className="muted small">Add &amp;seat=Name where more than one person is playing.</span>}
