@@ -93,6 +93,16 @@ describe("the control panel", () => {
     expect(html).toContain('id="controlNames-graces"');
   });
 
+  it("offers a weapon with an ash on it, which is the one gift that is three things at once", () => {
+    const html = paint({
+      tool: "TarnishedTool",
+      rows: [{ tag: "boon", ops: [{ op: "weapon.named", args: { name: "Godskin Peeler", upgrade: 25, ash: "Bloody Slash", affinity: "Blood", count: 2 } }] }],
+    });
+    expect(html).toContain('list="controlNames-ashes"');
+    expect(html).toContain('value="Godskin Peeler"');
+    expect(html).toContain('value="Bloody Slash"');
+  });
+
   it("offers a weapon at a level, which an item with a count could never be", () => {
     const html = paint({ tool: "TarnishedTool", rows: [{ tag: "boon", ops: [{ op: "weapon.named", args: { name: "Wing of Astel", upgrade: 10 } }] }] });
     expect(html).toContain('list="controlNames-weapons"');

@@ -63,6 +63,9 @@ export interface ToolCatalog {
   ops: OpDef[];
 }
 
+/** The affinities a weapon can carry, in the game's own order. */
+const AFFINITIES = ["Standard", "Heavy", "Keen", "Quality", "Fire", "Flame Art", "Lightning", "Sacred", "Magic", "Cold", "Poison", "Blood", "Occult"];
+
 /** Every toggle Tarnished Tool exposes to a source, by its own name. */
 const FLAGS = [
   "player.noDeath",
@@ -191,7 +194,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
     {
       op: "item.named",
       label: "Give an item, by name",
-      note: "From the tool's own lists: consumables, upgrade and crafting materials, crystal tears, talismans, arrows, spells, and the key items that are simply given. Spell it as the game does.",
+      note: "From the tool's own lists: consumables, upgrade and crafting materials, crystal tears, talismans, armor, arrows, spells, and the key items that are simply given. Spell it as the game does. A weapon is not one of these; it has an operation of its own, because its level is part of naming it.",
       oneWay: true,
       args: [
         { name: "name", kind: "name", list: "items", label: "Item", required: true, note: "Golden Seed, Rune Arc, Smithing Stone [3]." },
@@ -206,6 +209,9 @@ export const TARNISHED_TOOL: ToolCatalog = {
       args: [
         { name: "name", kind: "name", list: "weapons", label: "Weapon", required: true, note: "Wing of Astel, Blasphemous Blade, Uchigatana." },
         { name: "upgrade", kind: "number", label: "Level", least: 0, most: 25, note: "0 is the weapon as found. Leave it empty for the same thing." },
+        { name: "ash", kind: "name", list: "ashes", label: "Ash of War", note: "Only where the weapon takes one, and only an ash that goes on that kind of weapon. Refused by name rather than quietly dropped." },
+        { name: "affinity", kind: "choice", label: "Affinity", options: AFFINITIES, note: "Part of the weapon rather than the ash. Left empty it is the ordinary one, or the ash's own first choice where the ash does not allow ordinary." },
+        { name: "count", kind: "number", label: "How many", least: 1, most: 8, note: "A weapon does not stack, so two of them is two of them: this is how a run hands somebody a pair to dual wield." },
       ],
     },
     {
