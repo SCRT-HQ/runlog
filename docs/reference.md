@@ -46,6 +46,7 @@ A complete, self-contained description of a dice-driven creative-practice game. 
 | `triggers` | `object`[] | - | Global triggers not owned by any table entry, e.g. something that fires every unit. |
 | `modes` | map of `object` | yes | Ways to play, keyed by id. At least one is required. |
 | `defaultMode` | `string` | yes | Which mode is offered first. Must be a key of `modes`. |
+| `asks` | `object` | - | What this pack would do with an ask from outside, where the host switches asks on and says nothing else. A pack whose results a tool performs wants `auto`, because a tray tapped between every death is the bookkeeping that pack exists to remove; one played around a table wants `ask`, because there the interruption is the point. Advisory: it sets what the run starts with, and the host may change it whenever they like. |
 | `hierarchy` | `string`[] | - | Precedence for contradictory instructions, most specific first. Advisory only: the app shows it and lets the player rule, because these games want human judgment here. |
 | `fixtures` | `object`[] | - | Self-tests shipped with the pack. |
 | `issue` | `object` | - | Marks this copy as issued to one person. Covered by the signature, so removing it invalidates that. |
@@ -873,6 +874,14 @@ How many people race. The moderator is not one of them.
 | --- | --- | --- | --- |
 | `min` | `integer` | - | Fewest contestants. Default: `2`. |
 | `max` | `integer` | - | Most contestants. Default: `10`. |
+
+## `pack.asks`
+
+What this pack would do with an ask from outside, where the host switches asks on and says nothing else. A pack whose results a tool performs wants `auto`, because a tray tapped between every death is the bookkeeping that pack exists to remove; one played around a table wants `ask`, because there the interruption is the point. Advisory: it sets what the run starts with, and the host may change it whenever they like.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `policy` | `ask` \| `auto` | yes | `ask` puts one in front of the table to accept; `auto` takes it as it lands. |
 
 ## `pack.fixtures[] (0)`
 

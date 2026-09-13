@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-tarnishedtool
-version: "3.0.0"
+version: "3.1.0"
 title: "Elden Ring: TarnishedTool"
 author: Runlog
 description: >-
@@ -1828,6 +1828,16 @@ modes:
         - { do: rollOn, table: blessing }
 
 defaultMode: solo
+
+# Taken as it lands, not put in a tray.
+#
+# This pack is played with a tool attached, and the tool says two things:
+# that you died, and that the objective it was watching is settled. Both
+# are facts about the game rather than anybody's opinion of it, and both
+# arrive mid-fight, which is the one moment nobody is going to tap accept.
+# The host can still change it; this is what the run starts with.
+asks:
+  policy: auto
 
 hierarchy:
   - Blessing
