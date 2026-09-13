@@ -41,10 +41,22 @@ describe("the control panel", () => {
 
   it("leaves a placeholder in the address until there is a key to put there", () => {
     const html = paint();
-    expect(html).toContain("/ws?k=REPLACE-WITH-YOUR-WATCH-KEY&amp;as=control");
+    expect(html).toContain("/ws?k=REPLACE-WITH-YOUR-WATCH-KEY&amp;run=r1&amp;as=control");
     // Whatever the origin turns out to be, it is never spoken as http:
     // the socket's scheme is the one thing a copied address must get right.
     expect(html).not.toContain("http");
+  });
+
+  it("names the run, so a tool cannot be moved to a different one behind its back", () => {
+    // A watch key on its own reaches whichever run moved most recently and
+    // is open to watchers. For a browser source that is the point; for a
+    // tool reaching into a game it means a run ending quietly hands the
+    // tool to another run, whose pack has nothing to say to it.
+    expect(paint()).toContain("run=r1");
+    // Every seat's line carries it too, or a race moves one runner and not
+    // the rest the first time somebody's run ends.
+    const withRoster = paint(undefined, ["Mira", "Kel"]);
+    for (const seat of ["Mira", "Kel"]) expect(withRoster).toContain(`run=r1&amp;as=control&amp;seat=${seat}`);
   });
 
   it("offers to make the key, rather than sending anybody to another panel for it", () => {
