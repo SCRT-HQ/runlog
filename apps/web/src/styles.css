@@ -1427,6 +1427,30 @@ button:disabled,
 .padRow.spread {
   justify-content: space-between;
 }
+/* One operation: what to do, its arguments, and the button that removes
+   it. A row holding two menus and a number came to a few pixels more
+   than the sheet, and a wrapping row puts the remove button on a line of
+   its own, under the thing it removes.
+
+   Wrapping is the wrong answer here rather than a mistuned one: a flex
+   line is broken on each item's hypothetical size, before any of them
+   shrink, so no amount of give in the menus would have kept the button
+   up. The row does not wrap at all; the menus and fields shrink, down to
+   where they are still readable, and past that the row scrolls sideways
+   on its own. The button is never the thing that gives. */
+.opRow {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.opRow > select {
+  min-width: 5rem;
+}
+.opRow > input {
+  min-width: 3.5rem;
+}
+.opRow > button {
+  flex: none;
+}
 .textInput,
 .rollInput {
   font-family: var(--serif);
@@ -3701,7 +3725,8 @@ a.plan { text-decoration: none; }
 .settingsDialog .dialogBar { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin: -0.25rem 0 0; padding: 0.25rem 0 0.6rem; background: var(--panel); border-bottom: 1px solid var(--line); }
 .settingsDialog .dialogBar h2 { margin: 0; }
 .settingsDialog .dialogHead { display: grid; gap: 0.5rem; }
-.settingsDialog .dialogTabs { display: flex; gap: 0.3rem; }
+/* Four of them now, so they wrap rather than pushing Close off the edge. */
+.settingsDialog .dialogTabs { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 .settingsDialog .dialogClose { display: flex; align-items: center; gap: 0.5rem; }
 .settingsDialog .themeMenu { display: flex; align-items: center; gap: 0.6rem; }
 /* The widget rows: a fixed column for the two buttons, so the last row lines up with the rest. */

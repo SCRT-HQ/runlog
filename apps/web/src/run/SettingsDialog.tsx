@@ -19,6 +19,8 @@ import type { StoredRun } from "../storage/db.ts";
  * never stream. Reachable from the account menu outside a run as well,
  * since nothing on the first tab needs one.
  */
+type Tab = "device" | "widgets" | "chat" | "control";
+
 export function SettingsDialog({
   runId,
   race,
@@ -53,7 +55,7 @@ export function SettingsDialog({
   onClose: () => void;
 }) {
   const close = useRef<HTMLButtonElement>(null);
-  const [tab, setTab] = useState<"device" | "streaming">("device");
+  const [tab, setTab] = useState<Tab>("device");
   const [carryOn, setCarryOn] = useState(carriesOnByItself);
   const [rollForMe, setRollForMe] = useState(rollsForMeByDefault);
   useEffect(() => {
@@ -63,7 +65,24 @@ export function SettingsDialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const streaming = runId !== null;
+  /**
+   * The tabs there are, which is a question about what this dialog was
+   * opened over. Outside a run there is only the device; inside one the
+   * widgets follow the run, and chat and control need the pack to say
+   * what may be asked for and what a result means.
+   *
+   * They were one Streaming tab until three panels had grown under it and
+   * finding the rule you wanted meant scrolling past two setups you were
+   * not there for.
+   */
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "device", label: "This device" },
+    ...(runId !== null ? [{ id: "widgets" as const, label: "Widgets" }] : []),
+    ...(pack && record ? [{ id: "chat" as const, label: "Chat" }, { id: "control" as const, label: "Control" }] : []),
+  ];
+  // A tab that is no longer there, because the run closed under it, must
+  // not leave the sheet blank.
+  const at = tabs.some((t) => t.id === tab) ? tab : "device";
   const rollSwitch = rolling ? rolling.auto : rollForMe;
   const setRoll = (on: boolean) => {
     // The device remembers the choice for the next run; the open run takes it now.
@@ -78,14 +97,13 @@ export function SettingsDialog({
         <div className="dialogBar">
           <div className="dialogHead">
             <h2 id="settingsTitle">Settings</h2>
-            {streaming && (
+            {tabs.length > 1 && (
               <div className="dialogTabs" role="tablist" aria-label="Settings">
-                <button role="tab" aria-selected={tab === "device"} className={`chip pick ${tab === "device" ? "on" : ""}`} onClick={() => setTab("device")}>
-                  This device
-                </button>
-                <button role="tab" aria-selected={tab === "streaming"} className={`chip pick ${tab === "streaming" ? "on" : ""}`} onClick={() => setTab("streaming")}>
-                  Streaming
-                </button>
+                {tabs.map((t) => (
+                  <button key={t.id} role="tab" aria-selected={at === t.id} className={`chip pick ${at === t.id ? "on" : ""}`} onClick={() => setTab(t.id)}>
+                    {t.label}
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -97,7 +115,7 @@ export function SettingsDialog({
           </div>
         </div>
 
-        {tab === "device" && (
+        {at === "device" && (
           <>
             <section>
               <h3 className="sectionTitle">
@@ -142,14 +160,24 @@ export function SettingsDialog({
           </>
         )}
 
-        {tab === "streaming" && streaming && (
+        {at === "widgets" && runId !== null && (
           <section>
             <h3 className="sectionTitle">
-              Stream <span className="muted">pop-out widgets</span>
+              Widgets <span className="muted">what a stream shows</span>
             </h3>
             <StreamSettings runId={runId} race={race} onControls={onControls} />
-            {pack && record && <ChatSettings pack={pack} record={record} onAsks={onAsks} />}
-            {pack && record && <ControlSettings pack={pack} record={record} onControl={onControl} {...(seats && seats.length > 0 ? { seats } : {})} />}
+          </section>
+        )}
+
+        {at === "chat" && pack && record && (
+          <section>
+            <ChatSettings pack={pack} record={record} onAsks={onAsks} />
+          </section>
+        )}
+
+        {at === "control" && pack && record && (
+          <section>
+            <ControlSettings pack={pack} record={record} onControl={onControl} {...(seats && seats.length > 0 ? { seats } : {})} />
           </section>
         )}
       </section>
