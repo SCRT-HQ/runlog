@@ -474,7 +474,8 @@ export interface Api {
   /** Turn one down: it leaves both lists and its link goes dead. */
   declineInvite(token: string): Promise<void>;
   /** Open a run to anyone with its link (the owner; Plus where plans are on); the link comes back. */
-  shareRun(sessionId: string): Promise<{ link: string }>;
+  /** The link, or `already` where the run is open and keeping the link it has. */
+  shareRun(sessionId: string): Promise<{ link: string; already?: undefined } | { link?: undefined; already: true }>;
   unshareRun(sessionId: string): Promise<void>;
   /** Take a seat as a watcher of a run shared by link, on this account. */
   watchPublicRun(sessionId: string, token: string): Promise<{ sessionId: string; role: "owner" | "player" | "viewer" }>;
@@ -928,8 +929,13 @@ export function createApi(
       await request("DELETE", `/sessions/${sessionId}/invites/${encodeURIComponent(token)}`);
     },
     shareRun: async (sessionId) => {
-      const { status, body } = await request<{ link?: string; error?: string; plan?: string }>("POST", `/sessions/${encodeURIComponent(sessionId)}/public`);
+      const { status, body } = await request<{ link?: string; already?: boolean; error?: string; plan?: string }>("POST", `/sessions/${encodeURIComponent(sessionId)}/public`);
       if (status === 402 && body.plan) throw new PlanError(body.plan, body.error ?? "that is part of a plan this account does not have");
+      // A run already open keeps the link it has, and the server cannot
+      // repeat it: it keeps a hash. So there is no link to hand back, and
+      // saying so is not an error. Whoever wants one has it already, or
+      // wants a different one, which is `rotate`.
+      if (status === 200 && body.already) return { already: true as const };
       if (status !== 200 || !body.link) throw new SyncError("error", undefined, body.error ?? "the run could not be shared");
       return { link: body.link };
     },

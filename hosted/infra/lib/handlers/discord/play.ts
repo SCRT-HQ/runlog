@@ -162,6 +162,9 @@ export async function openRun(
     ...(seatsWanted > 1 ? { seats: { "1": { discordId: input.host.discordId, name: input.host.name } } } : {}),
     ...(input.cardMode ? { cardMode: input.cardMode } : {}),
     seenSeq: created.meta.seq,
+    // Kept so `/run link` can hand out this link again rather than minting
+    // a second one and cutting off whoever is already watching on this.
+    liveToken: token,
     createdAt: at,
     updatedAt: at,
   };

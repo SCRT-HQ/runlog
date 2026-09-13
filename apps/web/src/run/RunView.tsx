@@ -38,6 +38,7 @@ import { RunRow, onDay } from "./RunRow.tsx";
 import { bestOf, placeOf, scoresOf, type ScoredRun } from "./scores.ts";
 import { RacePanel } from "./RacePanel.tsx";
 import { useApi } from "../sync/useApi.ts";
+import { useReachable } from "./useReachable.ts";
 import { ulid } from "../storage/ids.ts";
 import { clearPendingRaceCode, pendingRaceCode } from "../share/IncomingRace.tsx";
 import { PlanError } from "../sync/client.ts";
@@ -186,6 +187,9 @@ export function RunView({
    */
   const [receipts, setReceipts] = useState<RollReceipt[]>([]);
   const sync = useSync();
+  // A hosted run opens itself to watchers and sees to a watch key, so an
+  // address copied from this run works when it is pasted somewhere.
+  useReachable(api, run.record ?? null);
   // The roller is fetched while the run opens, not when the first die is thrown.
   useEffect(() => preloadDice3d(), []);
   // Someone else's throw at this table, played here for whoever is not throwing.

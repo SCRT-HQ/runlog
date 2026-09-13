@@ -1283,6 +1283,9 @@ describe("who is asking", () => {
     expect((await call(request("POST", "/api/sessions/01RUN/public"), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) })).body).toEqual({ found: false });
     const shared = await call(request("POST", "/api/sessions/01RUN/public"), d);
     expect(shared.body).toEqual({ shared: true, token: "livetok", link: "https://runlog.example/r/01RUN?t=livetok" });
+    // Sharing again leaves the link where it is; see the test below.
+    const again = await call(request("POST", "/api/sessions/01RUN/public"), { ...d, token: () => "second" });
+    expect(again.body).toEqual({ shared: true, already: true });
     // The short link is a page a chat can preview, which sends a browser on to the app; a wrong token gets a page that says nothing.
     const page = await route(request("GET", "/r/01RUN?t=livetok", { token: null }), d);
     const html = typeof page === "string" ? page : (page.body ?? "");
@@ -1346,6 +1349,28 @@ describe("who is asking", () => {
     // Revoked: the link is dead.
     expect((await call(request("DELETE", "/api/sessions/01RUN/public"), d)).body).toEqual({ shared: false });
     expect((await call(request("GET", "/api/public/runs/01RUN?t=livetok", { token: null }), d)).body).toEqual({ found: false });
+  });
+
+  /**
+   * The bug: sharing minted a token every time it was called, and only the
+   * hash is kept, so the old link could not be repeated and everyone
+   * already watching on it was cut off without a word. A run open stays
+   * open on the link it has; moving it is somebody deciding to.
+   */
+  it("shares again without moving the link, and moves it only when asked to", async () => {
+    const d = deps(memoryStore(), { appUrl: "https://runlog.example/", token: () => "first" });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    const first = await call(request("POST", "/api/sessions/01RUN/public"), d);
+    expect(first.body).toMatchObject({ token: "first" });
+
+    const again = await call(request("POST", "/api/sessions/01RUN/public"), { ...d, token: () => "second" });
+    expect(again.body).toEqual({ shared: true, already: true });
+    expect((await call(request("GET", "/api/public/runs/01RUN?t=first", { token: null }), d)).body["found"]).not.toBe(false);
+
+    const moved = await call(request("POST", "/api/sessions/01RUN/public?rotate=1"), { ...d, token: () => "second" });
+    expect(moved.body).toEqual({ shared: true, token: "second", link: "https://runlog.example/r/01RUN?t=second" });
+    // And the one it replaced stops working, which is the point of asking.
+    expect((await call(request("GET", "/api/public/runs/01RUN?t=first", { token: null }), d)).body).toEqual({ found: false });
   });
 
   it("takes asks from outside by an ask key of its own: minted by the host, answered by the host, never the live token", async () => {
@@ -2457,6 +2482,30 @@ describe("a run hosted in discord", () => {
     expect((await call(signed(ask("mode", "", [{ name: "pack", type: 3, value: PACK }])), d)).body).toEqual({ type: 8, data: { choices: [{ name: "Standard", value: "standard" }] } });
     expect((await call(signed(ask("pack", "zzz")), d)).body).toEqual({ type: 8, data: { choices: [] } });
   });
+  /**
+   * `/run link` used to mint a token every time, because the session row
+   * keeps only a hash and the old one could not be read back. Asking twice
+   * therefore cut off everyone already watching, every widget in a scene
+   * and any tool attached, and said nothing about it. The run keeps its
+   * token now, so the answer is the link the thread opened with.
+   */
+  it("answers /run link with the link the thread already has, twice", async () => {
+    const { bot, d } = await table();
+    const id = "01000000000000000000000001";
+    await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), d);
+    const opening = String(bot.posts[0]!.message.content);
+
+    const first = content(await call(signed(command({ name: "link", type: 1 }, mira, "thread_1")), d));
+    const second = content(await call(signed(command({ name: "link", type: 1 }, mira, "thread_1")), d));
+    expect(first).toBe(second);
+    // And it is the one already posted, not a third link nobody has.
+    const token = /\?t=([^\s)]+)/.exec(first)?.[1];
+    expect(token).toBeTruthy();
+    expect(opening).toContain(`?t=${token}`);
+    // Which still reads the run, the whole point of not having moved it.
+    expect((await call(request("GET", `/api/public/runs/${id}/metrics?t=${token}`, { token: null }), d)).body).toMatchObject({ found: true });
+  });
+
   it("takes a move back, writes the journal, and takes a wave from anyone, from the thread", async () => {
     const { bot, store, d } = await table();
     const id = "01000000000000000000000001";

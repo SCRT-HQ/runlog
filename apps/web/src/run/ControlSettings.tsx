@@ -36,6 +36,8 @@ export function ControlSettings({
   onControl?: (control: unknown) => void | Promise<void>;
 }) {
   const saved = (record?.control as ControlProfile | undefined) ?? undefined;
+  /** What this pack calls a run, for the sentences below. */
+  const noun = pack.vocabulary.run.one.toLowerCase();
   const [profile, setProfile] = useState<ControlProfile>(saved && !isEmpty(saved) ? saved : EMPTY);
   const [note, setNote] = useState<string | null>(null);
   /** Which address was last copied: the empty string for the table's own. */
@@ -183,8 +185,15 @@ export function ControlSettings({
     setBusy(true);
     try {
       const { link } = await api.shareRun(record.runId);
-      rememberLiveLink(record.runId, link);
-      setLive(link);
+      // Already open: it keeps the link it has, which this device may or
+      // may not still hold. Either way the address now works, which is
+      // what was asked for.
+      if (link) {
+        rememberLiveLink(record.runId, link);
+        setLive(link);
+      } else {
+        setLive(liveLinkOf(record.runId) ?? "");
+      }
       setNote(null);
     } catch {
       setNote("Could not open this run to watchers just now. A hosted run is needed, and a live link is part of Plus.");
@@ -303,13 +312,18 @@ export function ControlSettings({
         <code className="askAddress">{address}</code>
         {!reachable && (
           <p className="muted small">
-            <strong>Nothing will arrive yet.</strong> The address names your account and the server finds the run: of the {pack.vocabulary.run.many.toLowerCase()} open to
-            watchers, the one played most recently. This one is not open to watchers, so a tool either cannot connect or connects to an older one that is, and sits there
-            saying it is connected while nothing happens. The rules below travel the same way, so they do not reach a tool either.
+            <strong>This address cannot work yet.</strong> It names this {noun}, and only a {noun} open to watchers can be reached. A tool given it now is refused at the
+            door, and what it says about that is its own business: the one we know of reports only that it could not reach the server. Open this {noun} to watchers and the
+            same address starts working, with no need to copy it again.
           </p>
         )}
         <div className="padRow">
-          <button className="ghost tiny" onClick={() => copy(address, "")}>
+          <button
+            className="ghost tiny"
+            disabled={!reachable}
+            title={reachable ? undefined : `This ${noun} is not open to watchers yet, so the address would be refused`}
+            onClick={() => copy(address, "")}
+          >
             {copied === "" ? "Copied" : "Copy address"}
           </button>
           {api && (
@@ -340,7 +354,12 @@ export function ControlSettings({
               <div className="padRow" key={name}>
                 <strong className="small">{name}</strong>
                 <code className="askAddress">{addressFor(name)}</code>
-                <button className="ghost tiny" onClick={() => copy(addressFor(name), name)}>
+                <button
+                  className="ghost tiny"
+                  disabled={!reachable}
+                  title={reachable ? undefined : `This ${noun} is not open to watchers yet, so the address would be refused`}
+                  onClick={() => copy(addressFor(name), name)}
+                >
                   {copied === name ? "Copied" : "Copy"}
                 </button>
               </div>
