@@ -1128,6 +1128,264 @@
       ]
     },
     {
+      "entry": "ob-near",
+      "table": "objective",
+      "label": "Near",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.boss",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "entry": "ob-boss",
+      "table": "objective",
+      "label": "Boss",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.boss",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "entry": "ob-field",
+      "table": "objective",
+      "label": "Field",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.boss",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "entry": "ob-gaol",
+      "table": "objective",
+      "label": "Gaol",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.boss",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "entry": "ob-tunnel",
+      "table": "objective",
+      "label": "Tunnel",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.boss",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "entry": "ob-catacomb",
+      "table": "objective",
+      "label": "Catacomb",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.boss",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "entry": "ob-cave",
+      "table": "objective",
+      "label": "Cave",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.boss",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "entry": "ob-tunnel-boss",
+      "table": "objective",
+      "label": "Tunnel-boss",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.boss",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "entry": "ob-dragon",
+      "table": "objective",
+      "label": "Dragon",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.boss",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "entry": "ob-key",
+      "table": "objective",
+      "label": "Key",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.item",
+          "args": {
+            "category": "Key Items"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ob-map",
+      "table": "objective",
+      "label": "Map",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.item",
+          "args": {
+            "category": "Key Items"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ob-cookbook",
+      "table": "objective",
+      "label": "Cookbook",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.item",
+          "args": {
+            "category": "Cookbooks"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ob-bearing",
+      "table": "objective",
+      "label": "Bearing",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.item",
+          "args": {
+            "category": "Bell Bearings"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ob-tear",
+      "table": "objective",
+      "label": "Tear",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.item",
+          "args": {
+            "category": "Crystal Tears"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ob-talisman",
+      "table": "objective",
+      "label": "Talisman",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.item",
+          "args": {
+            "category": "Talismans"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ob-ash",
+      "table": "objective",
+      "label": "Ash",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.item",
+          "args": {
+            "category": "Ashes of War"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ob-spell",
+      "table": "objective",
+      "label": "Spell",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.item",
+          "args": {
+            "category": "Sorceries"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ob-incant",
+      "table": "objective",
+      "label": "Incant",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.item",
+          "args": {
+            "category": "Incantations"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ob-grace",
+      "table": "objective",
+      "label": "Grace",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.grace",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "entry": "ob-erdtree",
+      "table": "objective",
+      "label": "Erdtree",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "watch.boss",
+          "args": {}
+        }
+      ]
+    },
+    {
       "entry": "dis-elleh",
       "table": "displacement",
       "label": "Church of Elleh",
