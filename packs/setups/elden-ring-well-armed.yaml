@@ -1,0 +1,32 @@
+# Somebody who has done this before.
+#
+# The other half of what a setup is for. Bare-handed takes things away;
+# this hands them over, which is the run where the interest is in what
+# the dice do rather than in whether you can survive the first scene.
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.well-armed
+version: "1.0.0"
+title: Well armed
+author: Runlog
+description: >-
+  A katana at twenty-five with blood on it, a staff for the other kind of
+  answer, and enough to buy what neither covers. For a run where the point
+  is the twists, not the first hour of scraping.
+
+tool: TarnishedTool
+
+ops:
+  # Somber weapons cap at ten and take no affinity; these two are the
+  # ordinary kind, which is why they can carry both.
+  - { op: weapon.named, args: { name: Uchigatana, upgrade: 25, affinity: Blood, ash: Seppuku } }
+  - { op: weapon.named, args: { name: Academy Glintstone Staff, upgrade: 25 } }
+  - { op: runes.give, args: { amount: 120000 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Rune Arc, quantity: 5 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true
