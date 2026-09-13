@@ -25,8 +25,6 @@ The packs that ship with it are free, in the marketplace:
 | Elden Ring: TarnishedTool | a challenge run a tool plays for you | ten-minute scenes, curses applied to the game itself, a hidden counter that picks you up and puts you elsewhere |
 | Rocket League: Mechanics Ladder | a challenge pack for a game | ladder, quick, endless and shared modes |
 | Rocket League: Showdown | a moderated race | one person moderates, a roster races the drawn mechanics, points by rank |
-| Homefront | housework as a dungeon crawl | the subject drawn from a table, patience as a resource, timed rooms |
-| Pantry Roulette | cooking under constraint | two draws per course, a cook-and-critic pair, forced extra courses |
 | Practice Room | deliberate practice for any skill | timers as the spine, a required journal line, a run-end `bands` roll |
 | Run of Show | a rehearsal, segment by segment | a card per segment, time you set yourself, running over as a cost |
 | Ladder Work | training log | no targeting at all, runs spanning days, timers |

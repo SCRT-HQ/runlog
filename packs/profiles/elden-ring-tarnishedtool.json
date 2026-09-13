@@ -512,8 +512,8 @@
       ]
     },
     {
-      "entry": "bo-runes",
-      "table": "boon",
+      "entry": "bl-runes",
+      "table": "blessing",
       "label": "Runes",
       "ops": [
         {
@@ -525,8 +525,8 @@
       ]
     },
     {
-      "entry": "bo-runes2",
-      "table": "boon",
+      "entry": "bl-runes2",
+      "table": "blessing",
       "label": "Runes2",
       "ops": [
         {
@@ -538,8 +538,8 @@
       ]
     },
     {
-      "entry": "bo-seed",
-      "table": "boon",
+      "entry": "bl-seed",
+      "table": "blessing",
       "label": "Seed",
       "ops": [
         {
@@ -552,8 +552,8 @@
       ]
     },
     {
-      "entry": "bo-tear",
-      "table": "boon",
+      "entry": "bl-tear",
+      "table": "blessing",
       "label": "Tear",
       "ops": [
         {
@@ -566,8 +566,8 @@
       ]
     },
     {
-      "entry": "bo-arc",
-      "table": "boon",
+      "entry": "bl-arc",
+      "table": "blessing",
       "label": "Arc",
       "ops": [
         {
@@ -580,8 +580,8 @@
       ]
     },
     {
-      "entry": "bo-stone",
-      "table": "boon",
+      "entry": "bl-stone",
+      "table": "blessing",
       "label": "Stone",
       "ops": [
         {
@@ -594,8 +594,8 @@
       ]
     },
     {
-      "entry": "bo-somber",
-      "table": "boon",
+      "entry": "bl-somber",
+      "table": "blessing",
       "label": "Somber",
       "ops": [
         {
@@ -608,8 +608,8 @@
       ]
     },
     {
-      "entry": "bo-key",
-      "table": "boon",
+      "entry": "bl-key",
+      "table": "blessing",
       "label": "Key",
       "ops": [
         {
@@ -622,8 +622,8 @@
       ]
     },
     {
-      "entry": "bo-gold",
-      "table": "boon",
+      "entry": "bl-gold",
+      "table": "blessing",
       "label": "Gold",
       "ops": [
         {
@@ -636,8 +636,8 @@
       ]
     },
     {
-      "entry": "bo-flesh",
-      "table": "boon",
+      "entry": "bl-flesh",
+      "table": "blessing",
       "label": "Flesh",
       "ops": [
         {
@@ -650,8 +650,8 @@
       ]
     },
     {
-      "entry": "bo-blessing",
-      "table": "boon",
+      "entry": "bl-blessing",
+      "table": "blessing",
       "label": "Blessing",
       "ops": [
         {
@@ -664,8 +664,8 @@
       ]
     },
     {
-      "entry": "bo-baldachin",
-      "table": "boon",
+      "entry": "bl-baldachin",
+      "table": "blessing",
       "label": "Baldachin",
       "ops": [
         {
@@ -678,8 +678,8 @@
       ]
     },
     {
-      "entry": "bo-dragon",
-      "table": "boon",
+      "entry": "bl-dragon",
+      "table": "blessing",
       "label": "Dragon",
       "ops": [
         {
@@ -692,8 +692,8 @@
       ]
     },
     {
-      "entry": "bo-fowl",
-      "table": "boon",
+      "entry": "bl-fowl",
+      "table": "blessing",
       "label": "Fowl",
       "ops": [
         {
@@ -706,8 +706,8 @@
       ]
     },
     {
-      "entry": "bo-boluses",
-      "table": "boon",
+      "entry": "bl-boluses",
+      "table": "blessing",
       "label": "Boluses",
       "ops": [
         {
@@ -720,8 +720,8 @@
       ]
     },
     {
-      "entry": "bo-branch",
-      "table": "boon",
+      "entry": "bl-branch",
+      "table": "blessing",
       "label": "Branch",
       "ops": [
         {
@@ -734,8 +734,8 @@
       ]
     },
     {
-      "entry": "bo-shards",
-      "table": "boon",
+      "entry": "bl-shards",
+      "table": "blessing",
       "label": "Shards",
       "ops": [
         {
@@ -748,8 +748,8 @@
       ]
     },
     {
-      "entry": "bo-grease",
-      "table": "boon",
+      "entry": "bl-grease",
+      "table": "blessing",
       "label": "Grease",
       "ops": [
         {
@@ -762,8 +762,8 @@
       ]
     },
     {
-      "entry": "bo-prawn",
-      "table": "boon",
+      "entry": "bl-prawn",
+      "table": "blessing",
       "label": "Prawn",
       "ops": [
         {
@@ -776,8 +776,8 @@
       ]
     },
     {
-      "entry": "bo-warming",
-      "table": "boon",
+      "entry": "bl-warming",
+      "table": "blessing",
       "label": "Warming",
       "ops": [
         {
@@ -790,8 +790,8 @@
       ]
     },
     {
-      "entry": "bo-medallion",
-      "table": "boon",
+      "entry": "bl-medallion",
+      "table": "blessing",
       "label": "Medallion",
       "ops": [
         {
@@ -804,8 +804,8 @@
       ]
     },
     {
-      "entry": "bo-cerulean",
-      "table": "boon",
+      "entry": "bl-cerulean",
+      "table": "blessing",
       "label": "Cerulean",
       "ops": [
         {
@@ -818,8 +818,8 @@
       ]
     },
     {
-      "entry": "bo-opaline",
-      "table": "boon",
+      "entry": "bl-opaline",
+      "table": "blessing",
       "label": "Opaline",
       "ops": [
         {
@@ -832,8 +832,8 @@
       ]
     },
     {
-      "entry": "bo-mend",
-      "table": "boon",
+      "entry": "bl-mend",
+      "table": "blessing",
       "label": "Mend",
       "ops": [
         {
@@ -845,8 +845,8 @@
       ]
     },
     {
-      "entry": "bo-heal",
-      "table": "boon",
+      "entry": "bl-heal",
+      "table": "blessing",
       "label": "Heal",
       "ops": [
         {
@@ -858,8 +858,8 @@
       ]
     },
     {
-      "entry": "bo-wind",
-      "table": "boon",
+      "entry": "bl-wind",
+      "table": "blessing",
       "label": "Second wind",
       "until": "unit",
       "ops": [
@@ -873,8 +873,8 @@
       ]
     },
     {
-      "entry": "bo-focus",
-      "table": "boon",
+      "entry": "bl-focus",
+      "table": "blessing",
       "label": "Clear head",
       "until": "unit",
       "ops": [
@@ -888,8 +888,8 @@
       ]
     },
     {
-      "entry": "bo-sharp",
-      "table": "boon",
+      "entry": "bl-sharp",
+      "table": "blessing",
       "label": "Whetted",
       "until": "unit",
       "ops": [
@@ -903,8 +903,8 @@
       ]
     },
     {
-      "entry": "bo-tough",
-      "table": "boon",
+      "entry": "bl-tough",
+      "table": "blessing",
       "label": "Warded",
       "until": "unit",
       "ops": [
@@ -918,8 +918,8 @@
       ]
     },
     {
-      "entry": "bo-luck",
-      "table": "boon",
+      "entry": "bl-luck",
+      "table": "blessing",
       "label": "Fortunate",
       "until": "unit",
       "ops": [
@@ -933,8 +933,8 @@
       ]
     },
     {
-      "entry": "bo-quiet",
-      "table": "boon",
+      "entry": "bl-quiet",
+      "table": "blessing",
       "label": "Quiet",
       "until": "unit",
       "ops": [
@@ -948,8 +948,8 @@
       ]
     },
     {
-      "entry": "bo-mending",
-      "table": "boon",
+      "entry": "bl-mending",
+      "table": "blessing",
       "label": "Mending",
       "until": "unit",
       "ops": [
@@ -963,8 +963,8 @@
       ]
     },
     {
-      "entry": "bo-keep",
-      "table": "boon",
+      "entry": "bl-keep",
+      "table": "blessing",
       "label": "Held",
       "until": "unit",
       "ops": [
@@ -978,8 +978,8 @@
       ]
     },
     {
-      "entry": "bo-horse",
-      "table": "boon",
+      "entry": "bl-horse",
+      "table": "blessing",
       "label": "Mounted",
       "until": "unit",
       "ops": [
@@ -993,8 +993,8 @@
       ]
     },
     {
-      "entry": "bo-swift",
-      "table": "boon",
+      "entry": "bl-swift",
+      "table": "blessing",
       "label": "Swift",
       "until": "unit",
       "ops": [
@@ -1008,8 +1008,8 @@
       ]
     },
     {
-      "entry": "bo-peace",
-      "table": "boon",
+      "entry": "bl-peace",
+      "table": "blessing",
       "label": "Peace",
       "until": "unit",
       "ops": [
@@ -1023,8 +1023,8 @@
       ]
     },
     {
-      "entry": "bo-still",
-      "table": "boon",
+      "entry": "bl-still",
+      "table": "blessing",
       "label": "Stillness",
       "until": "unit",
       "ops": [
@@ -1038,8 +1038,8 @@
       ]
     },
     {
-      "entry": "bo-asleep",
-      "table": "boon",
+      "entry": "bl-asleep",
+      "table": "blessing",
       "label": "Asleep",
       "until": "unit",
       "ops": [
@@ -1053,8 +1053,8 @@
       ]
     },
     {
-      "entry": "bo-stocked",
-      "table": "boon",
+      "entry": "bl-stocked",
+      "table": "blessing",
       "label": "Stocked",
       "until": "unit",
       "ops": [
@@ -1068,8 +1068,8 @@
       ]
     },
     {
-      "entry": "bo-quiver",
-      "table": "boon",
+      "entry": "bl-quiver",
+      "table": "blessing",
       "label": "Quivered",
       "until": "unit",
       "ops": [
@@ -1083,8 +1083,8 @@
       ]
     },
     {
-      "entry": "bo-anchored",
-      "table": "boon",
+      "entry": "bl-anchored",
+      "table": "blessing",
       "label": "Anchored",
       "until": "unit",
       "ops": [
@@ -1098,8 +1098,8 @@
       ]
     },
     {
-      "entry": "bo-unseen",
-      "table": "boon",
+      "entry": "bl-unseen",
+      "table": "blessing",
       "label": "Unseen",
       "until": "unit",
       "ops": [
@@ -1113,8 +1113,8 @@
       ]
     },
     {
-      "entry": "bo-lethal",
-      "table": "boon",
+      "entry": "bl-lethal",
+      "table": "blessing",
       "label": "Dreadful",
       "until": "unit",
       "ops": [

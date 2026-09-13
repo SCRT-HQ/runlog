@@ -46,8 +46,8 @@ describe("the personas", () => {
   it("are remembered on the device, and forgotten gracefully", () => {
     const store = new Map<string, string>();
     const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
-    savePersona(storage, personaById("chef"));
-    expect(savedPersona(storage).id).toBe("chef");
+    savePersona(storage, personaById("learner"));
+    expect(savedPersona(storage).id).toBe("learner");
     expect(savedPersona(null)).toBe(DEFAULT_PERSONA);
     const broken = {
       getItem: () => {

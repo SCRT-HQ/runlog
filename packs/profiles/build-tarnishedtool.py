@@ -31,7 +31,7 @@ S = lambda i, l, sh, d: (i, l, sh, d)
 # ---- curse: what is wrong with the world for one scene --------
 # Everything here is adverse, or at worst weather. There is nothing good
 # in this table: a reward you rolled into by accident is not a reward,
-# and the boon table below is where being paid belongs.
+# and the blessing table below is where being paid belongs.
 I = [
     # Slower, faster, frailer, feebler.
     (3, "cu-slow", "Your legs are heavy. You move at four fifths.", S("slowed", "Slowed", "SLOW", "You move at four fifths."), val("player.speed", 0.8)),
@@ -197,54 +197,54 @@ PLACES = [
 def item(name, quantity=1):
     return [{"op": "item.named", "args": {"name": name, "quantity": quantity}}]
 
-# ---- boon: what settling an objective is worth -----------------------------
+# ---- blessing: what settling an objective is worth -----------------------------
 # Drawn when the player says they settled it, which is the only way
-# anything here can know. A boon is a reward, so nothing in it is a
+# anything here can know. A blessing is a reward, so nothing in it is a
 # punishment and nothing is worth points.
 B = [
-    (3, "bo-runes", "Runes, five thousand of them, for nothing but doing as you were told.", None, runes(5000)),
-    (2, "bo-runes2", "Runes, twenty thousand. Spend them before something takes them.", None, runes(20000)),
-    (3, "bo-seed", "A Golden Seed. One more swallow, for the rest of the run.", None, item("Golden Seed")),
-    (2, "bo-tear", "A Sacred Tear. What you have goes further now.", None, item("Sacred Tear")),
-    (3, "bo-arc", "A Rune Arc, and the great rune to go with it.", None, item("Rune Arc")),
-    (3, "bo-stone", "Smithing Stones, three of them, for whatever you are carrying.", None, item("Smithing Stone [3]", 3)),
-    (2, "bo-somber", "A Somber Smithing Stone, for the thing you actually use.", None, item("Somber Smithing Stone [3]")),
-    (2, "bo-key", "Two Stonesword Keys. Something behind an imp statue is yours.", None, item("Stonesword Key", 2)),
-    (2, "bo-gold", "Golden Runes, ten of them, held for when you need them.", None, item("Golden Rune [10]", 10)),
-    (2, "bo-flesh", "Exalted Flesh. Hit harder for a while; it is up to you when.", None, item("Exalted Flesh", 3)),
-    (2, "bo-blessing", "Blessings of Marika, three. Healing you did not have to earn.", None, item("Blessing of Marika", 3)),
-    (2, "bo-baldachin", "Baldachin's Blessing. Somebody is looking out for you.", None, item("Baldachin's Blessing", 2)),
-    (2, "bo-dragon", "An Ancient Dragon's Blessing. Save it for something enormous.", None, item("Ancient Dragon's Blessing")),
-    (2, "bo-fowl", "Silver-Pickled Fowl Feet. Everything is worth more for a while.", None, item("Silver-Pickled Fowl Foot", 3)),
-    (2, "bo-boluses", "Neutralizing Boluses, against whatever is about to poison you.", None, item("Neutralizing Boluses", 3)),
-    (2, "bo-branch", "Bewitching Branches. Make a friend of something that was not one.", None, item("Bewitching Branch", 2)),
-    (2, "bo-shards", "Starlight Shards, for anyone who casts.", None, item("Starlight Shards", 3)),
-    (2, "bo-grease", "Fire Grease. Put it on something and go and use it.", None, item("Fire Grease", 3)),
-    (1, "bo-prawn", "Boiled Prawn. Small, and it has saved better runners than you.", None, item("Boiled Prawn", 3)),
-    (1, "bo-warming", "A Warming Stone, for whatever the next scene does to you.", None, item("Warming Stone", 2)),
-    (1, "bo-medallion", "A Crimson Amber Medallion. Wear it or sell it.", None, item("Crimson Amber Medallion")),
-    (1, "bo-cerulean", "A Cerulean Crystal Tear, for the flask you keep forgetting.", None, item("Cerulean Crystal Tear")),
-    (1, "bo-opaline", "An Opaline Bubbletear. One hit that will not land.", None, item("Opaline Bubbletear")),
-    (3, "bo-mend", "You are made whole. Health, focus and flasks, all back.", None, press("SetRfbs")),
-    (3, "bo-heal", "Healed to full, where you stand.", None, press("SetMaxHp")),
-    (3, "bo-wind", "The next scene costs you no stamina.", S("blessed-wind", "Second wind", "WIND+", "A boon. Stamina does not run out."), flag("player.infiniteStamina")),
-    (2, "bo-focus", "The next scene costs you no focus.", S("blessed-focus", "Clear head", "FOCS+", "A boon. FP does not run out."), flag("player.infiniteFp")),
-    (3, "bo-sharp", "Your weapons bite. Double damage until the scene is out.", S("blessed-sharp", "Whetted", "SHRP+", "A boon. Double damage."), val("player.outgoingDamage", 2)),
-    (2, "bo-tough", "Nothing hurts as much. Half damage until the scene is out.", S("blessed-tough", "Warded", "WARD", "A boon. Half damage taken."), val("player.incomingDamage", 0.5)),
-    (2, "bo-luck", "Everything drops what it is carrying, for a while.", S("blessed-luck", "Fortunate", "DROP+", "A boon. Drops are guaranteed."), flag("world.guaranteedDrop")),
-    (2, "bo-quiet", "Nothing hears you for the rest of the scene.", S("blessed-quiet", "Quiet", "HUSH+", "A boon. Nothing hears you."), flag("player.silent")),
-    (2, "bo-mending", "You mend as you walk, for the rest of the scene.", S("blessed-mend", "Mending", "MEND+", "A boon. You heal over time."), flag("player.healOverTime")),
-    (1, "bo-keep", "Whatever happens next, it will not cost you runes.", S("blessed-keep", "Held", "KEEP+", "A boon. Death costs no runes."), flag("player.noRuneLoss")),
-    (1, "bo-horse", "Torrent comes when called, anywhere, for the rest of the scene.", S("blessed-horse", "Mounted", "HORS+", "A boon. Torrent anywhere."), flag("player.torrentAnywhere")),
-    (2, "bo-swift", "You are quick. A quarter faster for the rest of the scene.", S("blessed-swift", "Swift", "SWFT", "A boon. You move a quarter faster."), val("player.speed", 1.25)),
-    (2, "bo-peace", "Nothing will raise a hand to you for the rest of the scene.", S("blessed-peace", "Peace", "PEAC", "A boon. Nothing attacks."), flag("enemies.noAttack")),
-    (2, "bo-still", "Nothing moves from where it stands, for the rest of the scene.", S("blessed-still", "Stillness", "STIL", "A boon. Nothing moves."), flag("enemies.noMove")),
-    (1, "bo-asleep", "Nothing is thinking about you at all any more.", S("blessed-sleep", "Asleep", "SLEP", "A boon. Nothing is paying attention."), flag("enemies.noAi")),
-    (2, "bo-stocked", "Your pouch does not empty for the rest of the scene.", S("blessed-stock", "Stocked", "FULL", "A boon. Consumables are not used up."), flag("player.infiniteConsumables")),
-    (1, "bo-quiver", "Your quiver does not empty for the rest of the scene.", S("blessed-ammo", "Quivered", "AMMO", "A boon. Arrows are not used up."), flag("player.infiniteArrows")),
-    (2, "bo-anchored", "Nothing staggers you for the rest of the scene.", S("blessed-poise", "Anchored", "POIS", "A boon. You cannot be staggered."), flag("player.infinitePoise")),
-    (1, "bo-unseen", "Nothing sees you for the rest of the scene.", S("blessed-unseen", "Unseen", "DARK", "A boon. Nothing sees you."), flag("player.hidden")),
-    (1, "bo-lethal", "For the rest of this scene, anything you hit dies.", S("blessed-lethal", "Dreadful", "KILL+", "A boon. Anything you hit dies."), flag("player.oneShot")),
+    (3, "bl-runes", "Runes, five thousand of them, for nothing but doing as you were told.", None, runes(5000)),
+    (2, "bl-runes2", "Runes, twenty thousand. Spend them before something takes them.", None, runes(20000)),
+    (3, "bl-seed", "A Golden Seed. One more swallow, for the rest of the run.", None, item("Golden Seed")),
+    (2, "bl-tear", "A Sacred Tear. What you have goes further now.", None, item("Sacred Tear")),
+    (3, "bl-arc", "A Rune Arc, and the great rune to go with it.", None, item("Rune Arc")),
+    (3, "bl-stone", "Smithing Stones, three of them, for whatever you are carrying.", None, item("Smithing Stone [3]", 3)),
+    (2, "bl-somber", "A Somber Smithing Stone, for the thing you actually use.", None, item("Somber Smithing Stone [3]")),
+    (2, "bl-key", "Two Stonesword Keys. Something behind an imp statue is yours.", None, item("Stonesword Key", 2)),
+    (2, "bl-gold", "Golden Runes, ten of them, held for when you need them.", None, item("Golden Rune [10]", 10)),
+    (2, "bl-flesh", "Exalted Flesh. Hit harder for a while; it is up to you when.", None, item("Exalted Flesh", 3)),
+    (2, "bl-blessing", "Blessings of Marika, three. Healing you did not have to earn.", None, item("Blessing of Marika", 3)),
+    (2, "bl-baldachin", "Baldachin's Blessing. Somebody is looking out for you.", None, item("Baldachin's Blessing", 2)),
+    (2, "bl-dragon", "An Ancient Dragon's Blessing. Save it for something enormous.", None, item("Ancient Dragon's Blessing")),
+    (2, "bl-fowl", "Silver-Pickled Fowl Feet. Everything is worth more for a while.", None, item("Silver-Pickled Fowl Foot", 3)),
+    (2, "bl-boluses", "Neutralizing Boluses, against whatever is about to poison you.", None, item("Neutralizing Boluses", 3)),
+    (2, "bl-branch", "Bewitching Branches. Make a friend of something that was not one.", None, item("Bewitching Branch", 2)),
+    (2, "bl-shards", "Starlight Shards, for anyone who casts.", None, item("Starlight Shards", 3)),
+    (2, "bl-grease", "Fire Grease. Put it on something and go and use it.", None, item("Fire Grease", 3)),
+    (1, "bl-prawn", "Boiled Prawn. Small, and it has saved better runners than you.", None, item("Boiled Prawn", 3)),
+    (1, "bl-warming", "A Warming Stone, for whatever the next scene does to you.", None, item("Warming Stone", 2)),
+    (1, "bl-medallion", "A Crimson Amber Medallion. Wear it or sell it.", None, item("Crimson Amber Medallion")),
+    (1, "bl-cerulean", "A Cerulean Crystal Tear, for the flask you keep forgetting.", None, item("Cerulean Crystal Tear")),
+    (1, "bl-opaline", "An Opaline Bubbletear. One hit that will not land.", None, item("Opaline Bubbletear")),
+    (3, "bl-mend", "You are made whole. Health, focus and flasks, all back.", None, press("SetRfbs")),
+    (3, "bl-heal", "Healed to full, where you stand.", None, press("SetMaxHp")),
+    (3, "bl-wind", "The next scene costs you no stamina.", S("blessed-wind", "Second wind", "WIND+", "A blessing. Stamina does not run out."), flag("player.infiniteStamina")),
+    (2, "bl-focus", "The next scene costs you no focus.", S("blessed-focus", "Clear head", "FOCS+", "A blessing. FP does not run out."), flag("player.infiniteFp")),
+    (3, "bl-sharp", "Your weapons bite. Double damage until the scene is out.", S("blessed-sharp", "Whetted", "SHRP+", "A blessing. Double damage."), val("player.outgoingDamage", 2)),
+    (2, "bl-tough", "Nothing hurts as much. Half damage until the scene is out.", S("blessed-tough", "Warded", "WARD", "A blessing. Half damage taken."), val("player.incomingDamage", 0.5)),
+    (2, "bl-luck", "Everything drops what it is carrying, for a while.", S("blessed-luck", "Fortunate", "DROP+", "A blessing. Drops are guaranteed."), flag("world.guaranteedDrop")),
+    (2, "bl-quiet", "Nothing hears you for the rest of the scene.", S("blessed-quiet", "Quiet", "HUSH+", "A blessing. Nothing hears you."), flag("player.silent")),
+    (2, "bl-mending", "You mend as you walk, for the rest of the scene.", S("blessed-mend", "Mending", "MEND+", "A blessing. You heal over time."), flag("player.healOverTime")),
+    (1, "bl-keep", "Whatever happens next, it will not cost you runes.", S("blessed-keep", "Held", "KEEP+", "A blessing. Death costs no runes."), flag("player.noRuneLoss")),
+    (1, "bl-horse", "Torrent comes when called, anywhere, for the rest of the scene.", S("blessed-horse", "Mounted", "HORS+", "A blessing. Torrent anywhere."), flag("player.torrentAnywhere")),
+    (2, "bl-swift", "You are quick. A quarter faster for the rest of the scene.", S("blessed-swift", "Swift", "SWFT", "A blessing. You move a quarter faster."), val("player.speed", 1.25)),
+    (2, "bl-peace", "Nothing will raise a hand to you for the rest of the scene.", S("blessed-peace", "Peace", "PEAC", "A blessing. Nothing attacks."), flag("enemies.noAttack")),
+    (2, "bl-still", "Nothing moves from where it stands, for the rest of the scene.", S("blessed-still", "Stillness", "STIL", "A blessing. Nothing moves."), flag("enemies.noMove")),
+    (1, "bl-asleep", "Nothing is thinking about you at all any more.", S("blessed-sleep", "Asleep", "SLEP", "A blessing. Nothing is paying attention."), flag("enemies.noAi")),
+    (2, "bl-stocked", "Your pouch does not empty for the rest of the scene.", S("blessed-stock", "Stocked", "FULL", "A blessing. Consumables are not used up."), flag("player.infiniteConsumables")),
+    (1, "bl-quiver", "Your quiver does not empty for the rest of the scene.", S("blessed-ammo", "Quivered", "AMMO", "A blessing. Arrows are not used up."), flag("player.infiniteArrows")),
+    (2, "bl-anchored", "Nothing staggers you for the rest of the scene.", S("blessed-poise", "Anchored", "POIS", "A blessing. You cannot be staggered."), flag("player.infinitePoise")),
+    (1, "bl-unseen", "Nothing sees you for the rest of the scene.", S("blessed-unseen", "Unseen", "DARK", "A blessing. Nothing sees you."), flag("player.hidden")),
+    (1, "bl-lethal", "For the rest of this scene, anything you hit dies.", S("blessed-lethal", "Dreadful", "KILL+", "A blessing. Anything you hit dies."), flag("player.oneShot")),
 ]
 
 # ---- emit ---------------------------------------------------------------
@@ -308,10 +308,10 @@ def i_extra(row):
     return lines
 
 def b_extra(row):
-    """A boon: a thing handed over, or a blessing that holds a while."""
+    """A blessing: a thing handed over, or a blessing that holds a while."""
     state, ops = row[3], row[4]
-    kind = "item" if ops and ops[0]["op"] == "item.named" else "blessing"
-    lines = ["tags: [" + ", ".join(["boon", kind]) + "]"]
+    kind = "item" if ops and ops[0]["op"] == "item.named" else "lasting"
+    lines = ["tags: [" + ", ".join(["blessing", kind]) + "]"]
     if state:
         lines.append("grants: [" + state[0] + "]")
     return lines
@@ -357,12 +357,12 @@ for row in I + B:
     states.append(f"  {sid}:\n    label: {label}\n    short: {short}\n    scope: run\n    until: unitEnd\n    description: {desc}")
 
 tables = table("curse", "Curse",
-               "Drawn at the top of every scene, and it holds until the scene ends. Some of these a tool does to the game; the rest are vows, which nothing enforces but you. How many are drawn is Curses per scene, a dial in the trackers: one is a game, two is unpleasant, four is a different game. Nothing in here is good for you, which is the point of it. A kindness you rolled into by accident is not a reward, and being paid is what the Boon table is for. None are worth points either, since a curse lands on everyone.",
+               "Drawn at the top of every scene, and it holds until the scene ends. Some of these a tool does to the game; the rest are vows, which nothing enforces but you. How many are drawn is Curses per scene, a dial in the trackers: one is a game, two is unpleasant, four is a different game. Nothing in here is good for you, which is the point of it. A kindness you rolled into by accident is not a reward, and being paid is what the Blessing table is for. None are worth points either, since a curse lands on everyone.",
                built_i, i_extra)
 tables += "\n" + table("objective", "Objective",
                        "What the scene is for. Drawn after the curse, so you know what is wrong with the world before you are told what to do in it. Name the objective in your own words: the app cannot see your game, and the log should read like something that happened. How many are drawn is Objectives per scene, the other dial in the trackers. Two results in here add one and two more on top of whatever it says.",
                        built_t, t_extra)
-tables += "\n" + table("boon", "Boon",
+tables += "\n" + table("blessing", "Blessing",
                        "What settling an objective is worth. Drawn when you say you settled it, which is the only way anything here can know. Nothing in it is a punishment and nothing is worth points: the points were on the objective.",
                        built_b, b_extra)
 tables += "\n" + table("displacement", "Displacement",
@@ -402,7 +402,7 @@ for row in I:
 
 for row in B:
     eid, state, ops = row[1], row[3], row[4]
-    r = {"entry": eid, "table": "boon", "label": state[1] if state else eid.replace("bo-", "").capitalize()}
+    r = {"entry": eid, "table": "blessing", "label": state[1] if state else eid.replace("bl-", "").capitalize()}
     # A buff lasts the scene; an item or a heal is simply given.
     if ops[0]["op"] in ("flag.set", "value.set"):
         r["until"] = "unit"
@@ -414,6 +414,13 @@ for row in B:
 # pays: fifty thousand is a weapon upgrade or a level or two, which is
 # the difference between a scene and a death sentence. One way, like
 # every grant, and paid whether or not the place turns out to be kind.
+#
+# It arrives even under Poor or Robbed, which was worth checking, since
+# a displacement is drawn as a scene closes and those hold until it has.
+# `player.noRuneGain` patches the site where an enemy pays out, named
+# `Patches.NoRunesFromEnemies` in the tool; `runes.give` calls the game's
+# own GiveRunes against player data. Two paths, and the flag is not on
+# this one.
 FARE = 50000
 
 for w, eid, name, area, text in PLACES:
@@ -429,5 +436,5 @@ profile = {"tool": "TarnishedTool",
            "rows": rows}
 io.open(os.path.join(here, "elden-ring-tarnishedtool.json"), "w", encoding="utf-8", newline="").write(json.dumps(profile, indent=2) + "\n")
 
-print("curse %d (%d driven), objective %d, boon %d, displacement %d, states %d, profile rows %d"
+print("curse %d (%d driven), objective %d, blessing %d, displacement %d, states %d, profile rows %d"
       % (len(I), sum(1 for r in I if r[4]), len(T), len(B), len(displacement), len(states), len(rows)))
