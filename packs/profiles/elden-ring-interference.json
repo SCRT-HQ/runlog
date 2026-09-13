@@ -26,6 +26,36 @@
       ]
     },
     {
+      "entry": "in-wade",
+      "table": "interference",
+      "label": "Wading",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.speed",
+            "value": 0.66
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-swift",
+      "table": "interference",
+      "label": "Swift",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.speed",
+            "value": 1.25
+          }
+        }
+      ]
+    },
+    {
       "entry": "in-quick",
       "table": "interference",
       "label": "Hurried",
@@ -41,16 +71,31 @@
       ]
     },
     {
-      "entry": "in-root",
+      "entry": "in-frantic",
       "table": "interference",
-      "label": "Rooted",
+      "label": "Frantic",
       "until": "unit",
       "ops": [
         {
-          "op": "flag.set",
+          "op": "value.set",
           "args": {
-            "name": "player.noRoll",
-            "value": true
+            "name": "game.speed",
+            "value": 1.5
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-slower",
+      "table": "interference",
+      "label": "Sluggish",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "game.speed",
+            "value": 0.8
           }
         }
       ]
@@ -71,6 +116,21 @@
       ]
     },
     {
+      "entry": "in-paper",
+      "table": "interference",
+      "label": "Paper",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.incomingDamage",
+            "value": 3
+          }
+        }
+      ]
+    },
+    {
       "entry": "in-blunt",
       "table": "interference",
       "label": "Blunted",
@@ -86,6 +146,51 @@
       ]
     },
     {
+      "entry": "in-dull",
+      "table": "interference",
+      "label": "Dulled",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.outgoingDamage",
+            "value": 0.4
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-sharp",
+      "table": "interference",
+      "label": "Sharpened",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.outgoingDamage",
+            "value": 2
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-oneshot",
+      "table": "interference",
+      "label": "Lethal",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.oneShot",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
       "entry": "in-risen",
       "table": "interference",
       "label": "The risen",
@@ -95,6 +200,81 @@
           "op": "flag.set",
           "args": {
             "name": "enemies.noDeath",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-stone",
+      "table": "interference",
+      "label": "Unkillable",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "enemies.noDamage",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-peace",
+      "table": "interference",
+      "label": "Peace",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "enemies.noAttack",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-still",
+      "table": "interference",
+      "label": "Stillness",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "enemies.noMove",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-asleep",
+      "table": "interference",
+      "label": "Asleep",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "enemies.noAi",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-root",
+      "table": "interference",
+      "label": "Rooted",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.noRoll",
             "value": true
           }
         }
@@ -116,46 +296,16 @@
       ]
     },
     {
-      "entry": "in-slower",
+      "entry": "in-spared",
       "table": "interference",
-      "label": "Everything slows",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "value.set",
-          "args": {
-            "name": "game.speed",
-            "value": 0.8
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-hush",
-      "table": "interference",
-      "label": "Unheard",
+      "label": "Insured",
       "until": "unit",
       "ops": [
         {
           "op": "flag.set",
           "args": {
-            "name": "player.silent",
+            "name": "player.noRuneLoss",
             "value": true
-          }
-        }
-      ]
-    },
-    {
-      "entry": "in-swift",
-      "table": "interference",
-      "label": "Swift",
-      "until": "unit",
-      "ops": [
-        {
-          "op": "value.set",
-          "args": {
-            "name": "player.speed",
-            "value": 1.25
           }
         }
       ]
@@ -176,15 +326,150 @@
       ]
     },
     {
-      "entry": "in-spared",
+      "entry": "in-well",
       "table": "interference",
-      "label": "Insured",
+      "label": "Focused",
       "until": "unit",
       "ops": [
         {
           "op": "flag.set",
           "args": {
-            "name": "player.noRuneLoss",
+            "name": "player.infiniteFp",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-full",
+      "table": "interference",
+      "label": "Stocked",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infiniteConsumables",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-quiver",
+      "table": "interference",
+      "label": "Quivered",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infiniteArrows",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-mend",
+      "table": "interference",
+      "label": "Mending",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.healOverTime",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-anchored",
+      "table": "interference",
+      "label": "Anchored",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infinitePoise",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-hush",
+      "table": "interference",
+      "label": "Unheard",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.silent",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-unseen",
+      "table": "interference",
+      "label": "Unseen",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.hidden",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-lucky",
+      "table": "interference",
+      "label": "Lucky",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "world.guaranteedDrop",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-horse",
+      "table": "interference",
+      "label": "Mounted",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.torrentAnywhere",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-lost",
+      "table": "interference",
+      "label": "Mapless",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "world.hideMap",
             "value": true
           }
         }
@@ -193,12 +478,51 @@
     {
       "entry": "in-night",
       "table": "interference",
-      "label": "Night falls",
+      "label": "Night",
       "ops": [
         {
           "op": "action.invoke",
           "args": {
             "action": "SetNight"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-dusk",
+      "table": "interference",
+      "label": "Dusk",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SetDusk"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-noon",
+      "table": "interference",
+      "label": "Noon",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SetNoon"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-morning",
+      "table": "interference",
+      "label": "Morning",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SetMorning"
           }
         }
       ]
@@ -238,6 +562,19 @@
           "op": "action.invoke",
           "args": {
             "action": "SnowyWeather"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "in-clear",
+      "table": "interference",
+      "label": "Clear",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "DefaultWeather"
           }
         }
       ]
@@ -285,6 +622,20 @@
       ]
     },
     {
+      "entry": "dis-artist",
+      "table": "displacement",
+      "label": "Artist's Shack",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Limgrave",
+            "name": "Artist's Shack"
+          }
+        }
+      ]
+    },
+    {
       "entry": "dis-pilgrim",
       "table": "displacement",
       "label": "Church of Pilgrimage",
@@ -294,6 +645,20 @@
           "args": {
             "area": "Weeping Peninsula",
             "name": "Church of Pilgrimage"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-morne",
+      "table": "displacement",
+      "label": "Castle Morne Rampart",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Weeping Peninsula",
+            "name": "Castle Morne Rampart"
           }
         }
       ]
@@ -322,6 +687,20 @@
           "args": {
             "area": "Liurnia of the Lakes",
             "name": "Liurnia Lake Shore"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-scenic",
+      "table": "displacement",
+      "label": "Scenic Isle",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Liurnia of the Lakes",
+            "name": "Scenic Isle"
           }
         }
       ]
@@ -383,6 +762,20 @@
       ]
     },
     {
+      "entry": "dis-windmill",
+      "table": "displacement",
+      "label": "Windmill Village",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Altus Plateau",
+            "name": "Windmill Village"
+          }
+        }
+      ]
+    },
+    {
       "entry": "dis-smoulder",
       "table": "displacement",
       "label": "Smoldering Church",
@@ -411,6 +804,20 @@
       ]
     },
     {
+      "entry": "dis-dragon",
+      "table": "displacement",
+      "label": "Cathedral of Dragon Communion",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Caelid",
+            "name": "Cathedral of Dragon Communion"
+          }
+        }
+      ]
+    },
+    {
       "entry": "dis-gelmir",
       "table": "displacement",
       "label": "Bridge of Iniquity",
@@ -425,6 +832,20 @@
       ]
     },
     {
+      "entry": "dis-seethe",
+      "table": "displacement",
+      "label": "Seethewater River",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Mt. Gelmir",
+            "name": "Seethewater River"
+          }
+        }
+      ]
+    },
+    {
       "entry": "dis-siofra",
       "table": "displacement",
       "label": "Siofra River Bank",
@@ -434,6 +855,20 @@
           "args": {
             "area": "Siofra River",
             "name": "Siofra River Bank"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-worship",
+      "table": "displacement",
+      "label": "Worshippers' Woods",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Siofra River",
+            "name": "Worshippers' Woods"
           }
         }
       ]
@@ -462,6 +897,20 @@
           "args": {
             "area": "Volcano Manor",
             "name": "Volcano Manor"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-eiglay",
+      "table": "displacement",
+      "label": "Temple of Eiglay",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Volcano Manor",
+            "name": "Temple of Eiglay"
           }
         }
       ]
@@ -546,6 +995,20 @@
           "args": {
             "area": "Consecrated Snowfield",
             "name": "Consecrated Snowfield"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "dis-ordina",
+      "table": "displacement",
+      "label": "Ordina- Liturgical Town",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "area": "Consecrated Snowfield",
+            "name": "Ordina- Liturgical Town"
           }
         }
       ]
