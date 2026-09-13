@@ -199,19 +199,52 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
    * when they have not.
    */
   if (conn.control && m["t"] === "event" && conn.run) {
+    /**
+     * Something the game said. Dropped for several good reasons, and it
+     * used to be dropped in silence: every one of these answered 200, the
+     * tool logged that it had said so, and a death counted nowhere. The
+     * tool is told now, because "it went nowhere and here is why" is the
+     * one thing it cannot work out from its end.
+     */
+    const drop = async (why: string): Promise<WsResult> => {
+      const poster = deps.poster;
+      if (poster) {
+        try {
+          await poster.post(connectionId, JSON.stringify({ t: "note", text: why }));
+        } catch (error) {
+          console.error("live: could not say why an event went nowhere", error);
+        }
+      }
+      return { statusCode: 200 };
+    };
     const meant = askFor(String(m["kind"] ?? ""));
-    if (!meant) return { statusCode: 200 };
+    if (!meant) return drop(`This run has nothing it calls "${String(m["kind"] ?? "")}", so nothing was counted.`);
     const session = await deps.store.getSession(conn.run);
-    if (!session || session.meta.deletedAt || session.meta.endedAt) return { statusCode: 200 };
+    if (!session || session.meta.deletedAt || session.meta.endedAt) return drop("That run has ended, so nothing was counted.");
     // Taking asks stays the host's word, per run, the same as it is for
     // chat. A tool cannot switch it on by being attached.
-    if (!session.meta.askPolicy) return { statusCode: 200 };
+    if (!session.meta.askPolicy)
+      return drop("This run is not taking asks, so nothing was counted. Switch it on under Settings, Stream, Chat, and the game's word counts from then on.");
     const who = conn.seat || "the game";
     const at = now();
-    if (!askAllowed(conn.run, who, Date.parse(at)).ok) return { statusCode: 200 };
+    if (!askAllowed(conn.run, who, Date.parse(at)).ok) return drop("Too many, too quickly: this one was not counted.");
     const ask: Ask = { id: randomBytes(6).toString("hex"), kind: "move", move: meant.move, name: who, via: "the game", at };
     await deps.store.addAsk(conn.run, ask);
     const poster = deps.poster;
+    // And when it did land, which of the two landings it was: taken, or
+    // put in front of somebody. A tool that cannot tell those apart from
+    // having been ignored is a tool nobody believes.
+    if (poster) {
+      const heard =
+        session.meta.askPolicy === "auto"
+          ? "Counted."
+          : "Said. It is in the run's asks, waiting for whoever is at the table to take it.";
+      try {
+        await poster.post(connectionId, JSON.stringify({ t: "note", text: heard }));
+      } catch (error) {
+        console.error("live: could not say an event landed", error);
+      }
+    }
     if (poster) {
       const line = JSON.stringify({ t: "gesture", id: conn.run, kind: "ask", data: { ask: ask.id, kind: ask.kind, move: ask.move, name: who, via: ask.via, policy: session.meta.askPolicy }, at });
       for (const w of await deps.live.watchers(conn.run)) {
