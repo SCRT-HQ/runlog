@@ -128,13 +128,19 @@ describe("who an effect reaches", () => {
 });
 
 describe("the run's own terms", () => {
-  it("are one effect, under an id the run can take back", () => {
+  it("are a list of separate things, under an id the run can take back", () => {
     expect(JSON.parse(setupFor(curses)!)).toEqual({
       t: "apply",
       id: "setup",
       label: "The run's terms",
+      each: true,
       ops: [{ op: "flag.set", args: { name: "player.noRoll", value: true } }],
     });
+  });
+
+  it("are the only thing that says so: a rule's operations stand or fall together", () => {
+    const frames = appliesFor(curses, landed({ tags: ["curse"] }), undefined);
+    for (const f of frames) expect(JSON.parse(f).each).toBeUndefined();
   });
 
   it("are nothing where a profile sets none", () => {

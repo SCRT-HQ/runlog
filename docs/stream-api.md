@@ -493,6 +493,12 @@ How long it lasts is said in one of three ways. `for`, in seconds. A
 the run says so, and which is how an effect that lasts a unit of play
 ends. Or neither, which holds until something takes it back.
 
+`each` says the operations stand or fall separately. Absent, they are
+one effect and all of them land or none of them do, which is what a
+rule wants. The run's terms are sent with it, because they are a list
+of settings and gifts rather than one thing: an operation a tool has no
+name for should take itself out and leave the other seven standing.
+
 ```json
 { "t": "apply", "id": "o4#0", "group": "unit:4", "ops": [ … ] }
 ```

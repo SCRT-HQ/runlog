@@ -259,6 +259,9 @@ describe("telling the listeners", () => {
         t: "apply",
         id: "setup",
         label: "The run's terms",
+        // A list of separate things: a term the tool has no name for
+        // takes itself out rather than the other seven.
+        each: true,
         ops: [{ op: "flag.set", args: { name: "player.noRoll", value: true } }],
       });
 
