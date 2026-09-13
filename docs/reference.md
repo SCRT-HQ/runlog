@@ -88,6 +88,7 @@ The words this game uses. The interface speaks these rather than any built-in no
 | `unit` | `object` | yes | What one round of play is called. |
 | `subject` | `object` | yes | What the thing produced in a unit is called. |
 | `finalize` | `string` | - | Verb for closing a unit, e.g. Finalize, Fire, Commit. Default: `"Finalize"`. |
+| `setup` | `object` | - | What a bundle of tool operations is called, where this game has a better word than Setup. Default: `{"one":"Setup","many":"Setups"}`. |
 | `terms` | map of `string` | - | Overrides for other UI strings, keyed by the string's name. |
 
 ## `pack.vocabulary.run`
@@ -115,6 +116,15 @@ What the thing produced in a unit is called.
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
 | `one` | `string` | yes | Singular, e.g. Piece, Scene, Set, Track. |
+| `many` | `string` | yes | Plural form. |
+
+## `pack.vocabulary.setup`
+
+What a bundle of tool operations is called, where this game has a better word than Setup.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `one` | `string` | yes | Singular, e.g. Setup, Loadout, Terms, Handicap. |
 | `many` | `string` | yes | Plural form. |
 
 ## `pack.unit`

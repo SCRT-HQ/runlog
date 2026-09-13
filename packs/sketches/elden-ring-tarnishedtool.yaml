@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-tarnishedtool
-version: "3.1.0"
+version: "3.2.0"
 title: "Elden Ring: TarnishedTool"
 author: Runlog
 description: >-
@@ -75,6 +75,10 @@ vocabulary:
   unit: { one: Scene, many: Scenes }
   subject: { one: Objective, many: Objectives }
   finalize: End the scene
+  # A bundle of things a tool is set to is a loadout here, because that is
+  # what somebody playing this game would call it. The file, the document
+  # and the marketplace go on saying setup.
+  setup: { one: Loadout, many: Loadouts }
   terms:
     roll: Draw
 

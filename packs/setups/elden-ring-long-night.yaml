@@ -1,0 +1,29 @@
+# Neither a kindness nor a cruelty.
+#
+# The third thing a setup can be: not harder, not easier, different. The
+# run plays the same and looks nothing like it, which on a stream is most
+# of the point.
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.long-night
+version: "1.0.0"
+title: The long night
+author: Runlog
+description: >-
+  Night falls before the first roll and the fog comes in with it. Nothing
+  is harder except seeing, which turns out to be most of it.
+
+tool: TarnishedTool
+
+ops:
+  # Presses, not settings: the game has no "it is night" to read back, so
+  # nothing here comes off at the end of the run. The dark outlives the
+  # run the way it outlives a scene, which the pack already says of weather.
+  - { op: action.invoke, args: { action: SetNight } }
+  - { op: action.invoke, args: { action: FoggyWeather } }
+  - { op: flag.set, args: { name: world.noCutscenes, value: true } }
+
+license:
+  id: MIT
+  redistributable: true

@@ -1,0 +1,29 @@
+# Everything kills you.
+#
+# A setup with no gifts in it at all: nothing here is given once, because
+# nothing here is given. It is all settings, which is why a reconnect can
+# be sent the whole thing again and nothing about the run changes.
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.glass
+version: "1.0.0"
+title: Glass
+author: Runlog
+description: >-
+  Twice the damage in, three fifths out, no summons and no rolling. The
+  scene is survivable; you will not enjoy it.
+
+tool: TarnishedTool
+
+ops:
+  - { op: value.set, args: { name: player.incomingDamage, value: 2 } }
+  - { op: value.set, args: { name: player.outgoingDamage, value: 0.6 } }
+  - { op: flag.set, args: { name: player.noRoll, value: true } }
+  # Nought is no ash in the slot, and the tool reads what was there first,
+  # so what this borrows for a run it gives back at the end of one.
+  - { op: value.set, args: { name: player.spiritAsh, value: 0 } }
+
+license:
+  id: MIT
+  redistributable: true
