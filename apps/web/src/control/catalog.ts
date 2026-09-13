@@ -88,6 +88,9 @@ const FLAGS = [
   "player.torrentAnywhere",
   "player.noRuneGain",
   "player.noRuneLoss",
+  // Weightless. Set and read back through the tool rather than a view
+  // model, since nothing in the tool holds it otherwise.
+  "player.noGravity",
   "enemies.noDeath",
   "enemies.noDamage",
   "enemies.noAttack",
@@ -120,6 +123,9 @@ const VALUES: Array<{ name: string; least: number; most: number }> = [
   { name: "player.arcane", least: 1, most: 99 },
   { name: "player.incomingDamage", least: 0, most: 100 },
   { name: "player.outgoingDamage", least: 0, most: 100 },
+  // Which Spirit Ash is in the slot, and nought for none: the one way a
+  // run can say "no summons" and have it be true rather than promised.
+  { name: "player.spiritAsh", least: 0, most: 255 },
 ];
 
 /** The one-shot presses it will take, which are deliberately few. */

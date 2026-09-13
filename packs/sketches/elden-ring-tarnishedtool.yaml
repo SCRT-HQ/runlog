@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-tarnishedtool
-version: "2.1.0"
+version: "3.0.0"
 title: "Elden Ring: TarnishedTool"
 author: Runlog
 description: >-
@@ -291,150 +291,60 @@ states:
     scope: run
     until: unitEnd
     description: Clear skies on this scene, and nothing to hide behind.
-  bound:
-    label: Bound
-    short: STAY
-    scope: run
-    until: unitEnd
-    description: Do not leave this region.
   alone:
     label: Alone
     short: ALON
     scope: run
     until: unitEnd
-    description: No summons, no Spirit Ashes.
-  bare:
-    label: Bare
-    short: BARE
+    description: No Spirit Ash.
+  witless:
+    label: Witless
+    short: INTL
     scope: run
     until: unitEnd
-    description: No armor, all four slots.
-  openhanded:
-    label: Open-handed
-    short: OPEN
+    description: Intelligence is one.
+  faithless:
+    label: Faithless
+    short: FTH
     scope: run
     until: unitEnd
-    description: Nothing in the left hand.
-  thirsty:
-    label: Thirsty
-    short: DRY
+    description: Faith is one.
+  luckless:
+    label: Luckless
+    short: ARC
     scope: run
     until: unitEnd
-    description: No Crimson Tears.
-  parched:
-    label: Parched
-    short: NONE
+    description: Arcane is one.
+  further:
+    label: Further on
+    short: NG+
     scope: run
     until: unitEnd
-    description: No flasks of any kind.
-  unaimed:
-    label: Unaimed
-    short: FREE
+    description: The journey is one higher.
+  stutter:
+    label: Stutter
+    short: 30FPS
     scope: run
     until: unitEnd
-    description: No lock-on.
-  afoot:
-    label: Afoot
-    short: WALK
+    description: Thirty frames a second.
+  flicker:
+    label: Flicker
+    short: 20FPS
     scope: run
     until: unitEnd
-    description: No sprinting, no Torrent.
-  committed:
-    label: Committed
-    short: ONE
+    description: Twenty frames a second.
+  weightless:
+    label: Weightless
+    short: FLOT
     scope: run
     until: unitEnd
-    description: One weapon, no swapping.
-  ill-armed:
-    label: Ill-armed
-    short: WRST
+    description: No gravity.
+  pinned:
+    label: Pinned
+    short: LOCK
     scope: run
     until: unitEnd
-    description: Your worst weapon, and only that.
-  grounded:
-    label: Grounded
-    short: DOWN
-    scope: run
-    until: unitEnd
-    description: No jumping.
-  frugal:
-    label: Frugal
-    short: POCK
-    scope: run
-    until: unitEnd
-    description: No consumables.
-  unguarded:
-    label: Unguarded
-    short: NOBL
-    scope: run
-    until: unitEnd
-    description: No blocking.
-  close:
-    label: Close quarters
-    short: MELE
-    scope: run
-    until: unitEnd
-    description: Nothing at range.
-  mundane:
-    label: Mundane
-    short: MUND
-    scope: run
-    until: unitEnd
-    description: No spells or incantations.
-  plain:
-    label: Plain
-    short: SKIL
-    scope: run
-    until: unitEnd
-    description: No Ashes of War or skills.
-  honest:
-    label: Honest
-    short: BACK
-    scope: run
-    until: unitEnd
-    description: No backstabs or ripostes.
-  restless:
-    label: Restless
-    short: REST
-    scope: run
-    until: unitEnd
-    description: No resting at graces.
-  unspent:
-    label: Unspent
-    short: SPND
-    scope: run
-    until: unitEnd
-    description: Nothing spent, nothing upgraded.
-  overland:
-    label: Overland
-    short: TRVL
-    scope: run
-    until: unitEnd
-    description: No fast travel.
-  empty-handed:
-    label: Empty-handed
-    short: LOOT
-    scope: run
-    until: unitEnd
-    description: Pick nothing up.
-  standing:
-    label: Standing
-    short: FGHT
-    scope: run
-    until: unitEnd
-    description: Nothing you aggro is left behind.
-  twohanded:
-    label: Two-handed
-    short: BOTH
-    scope: run
-    until: unitEnd
-    description: Two hands on one weapon.
-  driven:
-    label: Driven
-    short: MOVE
-    scope: run
-    until: unitEnd
-    description: Never stand still.
+    description: Health is locked.
   blessed-wind:
     label: Second wind
     short: WIND+
@@ -635,370 +545,284 @@ tables:
     roll: d100
     entries:
       - id: cu-slow
-        range: [1, 1]
+        range: [1, 5]
         text: >-
           Your legs are heavy. You move at four fifths.
         tags: [curse, effect]
         grants: [slowed]
       - id: cu-wade
-        range: [2, 3]
+        range: [6, 7]
         text: >-
           You are wading. Two thirds speed, everywhere, all scene.
         tags: [curse, effect]
         grants: [wading]
       - id: cu-mired
-        range: [4, 4]
+        range: [8, 8]
         text: >-
           Mired. Half speed, and everything in this game is faster
           than you.
         tags: [curse, effect]
         grants: [mired]
       - id: cu-quick
-        range: [5, 5]
+        range: [9, 13]
         text: >-
           The world is hurried. Everything but you runs a fifth
           faster.
         tags: [curse, effect]
         grants: [hurried]
       - id: cu-frantic
-        range: [6, 7]
+        range: [14, 15]
         text: >-
           The world is frantic. Half again as fast as it should be.
         tags: [curse, effect]
         grants: [frantic]
       - id: cu-berserk
-        range: [8, 8]
+        range: [16, 16]
         text: >-
           The world has lost its mind. Everything at nearly double
           speed.
         tags: [curse, effect]
         grants: [berserk]
       - id: cu-slower
-        range: [9, 10]
+        range: [17, 18]
         text: >-
           Everything slows, you included. The world at four fifths.
         tags: [curse, effect]
         grants: [sluggish]
       - id: cu-tender
-        range: [11, 11]
+        range: [19, 23]
         text: >-
           You bruise. Half again the damage from everything.
         tags: [curse, effect]
         grants: [tender]
       - id: cu-glass
-        range: [12, 12]
+        range: [24, 28]
         text: >-
           You are glass. Everything that touches you hits twice as
           hard.
         tags: [curse, effect]
         grants: [glass]
       - id: cu-paper
-        range: [13, 13]
+        range: [29, 29]
         text: >-
           You are paper. Three times damage, and you will feel all
           of it.
         tags: [curse, effect]
         grants: [paper]
       - id: cu-blunt
-        range: [14, 14]
+        range: [30, 34]
         text: >-
           Your weapons are blunt. A little over half of what you
           should deal.
         tags: [curse, effect]
         grants: [blunted]
       - id: cu-dull
-        range: [15, 16]
+        range: [35, 36]
         text: >-
           Your weapons are dull. Two fifths, and everything takes
           twice as long.
         tags: [curse, effect]
         grants: [dulled]
       - id: cu-useless
-        range: [17, 17]
+        range: [37, 37]
         text: >-
           Your weapons are useless. A quarter damage. Consider
           running.
         tags: [curse, effect]
         grants: [useless]
       - id: cu-hollow
-        range: [18, 19]
+        range: [38, 39]
         text: >-
           Hollow. Your vigor is one for the scene; everything kills
           you.
         tags: [curse, effect]
         grants: [hollow]
       - id: cu-feeble
-        range: [20, 21]
+        range: [40, 41]
         text: >-
           Feeble. Your strength is one, and half of what you carry
           is unusable.
         tags: [curse, effect]
         grants: [feeble]
       - id: cu-clumsy
-        range: [22, 23]
+        range: [42, 43]
         text: >-
           Clumsy. Your dexterity is one; hope you were not built for
           it.
         tags: [curse, effect]
         grants: [clumsy]
       - id: cu-winded
-        range: [24, 25]
+        range: [44, 45]
         text: >-
           Winded. Your endurance is one. Two swings and a roll, if
           that.
         tags: [curse, effect]
         grants: [winded]
       - id: cu-empty
-        range: [26, 26]
+        range: [46, 46]
         text: >-
           Empty. Your mind is one. Whatever you cast, you do not,
           now.
         tags: [curse, effect]
         grants: [empty]
       - id: cu-poor
-        range: [27, 27]
+        range: [47, 51]
         text: >-
           Nothing is owed to you. No runes from anything that dies.
         tags: [curse, effect]
         grants: [poor]
       - id: cu-robbed
-        range: [28, 29]
+        range: [52, 53]
         text: >-
           Robbed. Ten thousand gone now, and nothing earned this
           scene is yours either.
         tags: [curse, effect]
         grants: [robbed]
       - id: cu-toll
-        range: [30, 31]
+        range: [54, 55]
         text: >-
           A toll. Ten thousand runes, taken, whether you had them or
           not.
         tags: [curse, effect]
       - id: cu-lost
-        range: [32, 33]
+        range: [56, 57]
         text: >-
           No map. You cannot open it this scene; go by landmark.
         tags: [curse, effect]
         grants: [mapless]
       - id: cu-unseen-world
-        range: [34, 34]
+        range: [58, 58]
         text: >-
           Nothing renders. You can see the world and nothing living
           in it.
         tags: [curse, effect]
         grants: [blind]
       - id: cu-risen
-        range: [35, 35]
+        range: [59, 62]
         text: >-
           The dead get up. Nothing you kill this scene stays down.
         tags: [curse, effect]
         grants: [risen]
       - id: cu-stone
-        range: [36, 37]
+        range: [63, 64]
         text: >-
           Nothing here can be hurt. Kill nothing; go around.
         tags: [curse, effect]
         grants: [stone]
       - id: cu-root
-        range: [38, 39]
+        range: [65, 68]
         text: >-
           You cannot dodge. No rolling this scene, at all.
         tags: [curse, effect]
         grants: [rooted]
       - id: cu-night
-        range: [40, 41]
+        range: [69, 70]
         text: >-
           Night falls, now, wherever you are.
         tags: [curse, effect]
         grants: [nightfall]
       - id: cu-dusk
-        range: [42, 43]
+        range: [71, 72]
         text: >-
           Dusk, and the light going.
         tags: [curse, effect]
         grants: [dusk]
       - id: cu-noon
-        range: [44, 44]
+        range: [73, 73]
         text: >-
           Noon, whether it suits you or not.
         tags: [curse, effect]
         grants: [noon]
       - id: cu-morning
-        range: [45, 45]
+        range: [74, 74]
         text: >-
           Morning. The light comes back, for what it is worth.
         tags: [curse, effect]
         grants: [morning]
       - id: cu-fog
-        range: [46, 47]
+        range: [75, 76]
         text: >-
           Fog rolls in and stays.
         tags: [curse, effect]
         grants: [fog]
       - id: cu-rain
-        range: [48, 49]
+        range: [77, 78]
         text: >-
           Rain, for the whole scene.
         tags: [curse, effect]
         grants: [rain]
       - id: cu-snow
-        range: [50, 51]
+        range: [79, 80]
         text: >-
           Snow, wherever you happen to be.
         tags: [curse, effect]
         grants: [snow]
       - id: cu-clear
-        range: [52, 52]
+        range: [81, 81]
         text: >-
           Clear skies, for once. Which means everything can see you.
         tags: [curse, effect]
         grants: [clear]
-      - id: vo-stay
-        range: [53, 54]
+      - id: cu-alone
+        range: [82, 85]
         text: >-
-          Do not leave this region. Whatever you meant to do
-          elsewhere, do it here.
-        tags: [curse, vow]
-        grants: [bound]
-      - id: vo-alone
-        range: [55, 56]
-        text: >-
-          Alone. No summons and no Spirit Ashes.
-        tags: [curse, vow]
+          Alone. Whatever you had in the ash slot is out of it, and
+          stays out.
+        tags: [curse, effect]
         grants: [alone]
-      - id: vo-naked
-        range: [57, 58]
+      - id: cu-witless
+        range: [86, 87]
         text: >-
-          Unequip your armor, all four slots.
-        tags: [curse, vow]
-        grants: [bare]
-      - id: vo-noshield
-        range: [59, 60]
+          Witless. Your intelligence is one; whatever you were going
+          to cast, you are not.
+        tags: [curse, effect]
+        grants: [witless]
+      - id: cu-faithless
+        range: [88, 89]
         text: >-
-          Nothing in the left hand but a weapon, a catalyst, or air.
-        tags: [curse, vow]
-        grants: [openhanded]
-      - id: vo-noflask
-        range: [61, 62]
+          Faithless. Your faith is one, and nothing is listening
+          anyway.
+        tags: [curse, effect]
+        grants: [faithless]
+      - id: cu-luckless
+        range: [90, 91]
         text: >-
-          No Crimson Tears. Whatever you have, you keep.
-        tags: [curse, vow]
-        grants: [thirsty]
-      - id: vo-notears
-        range: [63, 64]
+          Luckless. Your arcane is one. Nothing bleeds, nothing
+          drops, nothing goes your way.
+        tags: [curse, effect]
+        grants: [luckless]
+      - id: cu-journey
+        range: [92, 92]
         text: >-
-          No flasks at all, of either colour.
-        tags: [curse, vow]
-        grants: [parched]
-      - id: vo-nolock
-        range: [65, 66]
-        text: >-
-          No lock-on. Aim by hand.
-        tags: [curse, vow]
-        grants: [unaimed]
-      - id: vo-walk
-        range: [67, 68]
-        text: >-
-          Walk. No sprinting and no Torrent.
-        tags: [curse, vow]
-        grants: [afoot]
-      - id: vo-onehand
-        range: [69, 70]
-        text: >-
-          One weapon, and no swapping it.
-        tags: [curse, vow]
-        grants: [committed]
-      - id: vo-worst
-        range: [71, 72]
-        text: >-
-          The worst weapon you are carrying, and only that.
-        tags: [curse, vow]
-        grants: [ill-armed]
-      - id: vo-nojump
-        range: [73, 74]
-        text: >-
-          No jumping, and no jump attacks.
-        tags: [curse, vow]
-        grants: [grounded]
-      - id: vo-noitem
-        range: [75, 76]
-        text: >-
-          No consumables of any kind. Nothing from the pouch.
-        tags: [curse, vow]
-        grants: [frugal]
-      - id: vo-noblock
-        range: [77, 78]
-        text: >-
-          No blocking. Dodge it or wear it.
-        tags: [curse, vow]
-        grants: [unguarded]
-      - id: vo-melee
-        range: [79, 80]
-        text: >-
-          Nothing at range. No bows, no thrown, no spells from afar.
-        tags: [curse, vow]
-        grants: [close]
-      - id: vo-nomagic
-        range: [81, 82]
-        text: >-
-          No spells and no incantations, whatever you are built for.
-        tags: [curse, vow]
-        grants: [mundane]
-      - id: vo-noskill
-        range: [83, 84]
-        text: >-
-          No Ashes of War and no weapon skills.
-        tags: [curse, vow]
-        grants: [plain]
-      - id: vo-noback
-        range: [85, 86]
-        text: >-
-          Nothing cheap. No backstabs and no ripostes.
-        tags: [curse, vow]
-        grants: [honest]
-      - id: vo-norest
-        range: [87, 88]
-        text: >-
-          Do not rest at a grace. Not once.
-        tags: [curse, vow]
-        grants: [restless]
-      - id: vo-nolevel
-        range: [89, 90]
-        text: >-
-          No levelling, no upgrading, no spending anything.
-        tags: [curse, vow]
-        grants: [unspent]
-      - id: vo-notravel
-        range: [91, 92]
-        text: >-
-          No fast travel. Ride or walk wherever you are going.
-        tags: [curse, vow]
-        grants: [overland]
-      - id: vo-noloot
+          A harder world. The journey goes up one for the scene;
+          everything hits like it is somebody else's run.
+        tags: [curse, effect]
+        grants: [further]
+      - id: cu-slideshow
         range: [93, 94]
         text: >-
-          Pick nothing up. Walk past all of it.
-        tags: [curse, vow]
-        grants: [empty-handed]
-      - id: vo-fight
-        range: [95, 96]
+          Thirty frames. You will feel every one of them.
+        tags: [curse, effect]
+        grants: [stutter]
+      - id: cu-flicker
+        range: [95, 95]
         text: >-
-          Fight what you wake. Nothing you aggro may be left behind.
-        tags: [curse, vow]
-        grants: [standing]
-      - id: vo-twohand
-        range: [97, 97]
+          Twenty frames, which is not a frame rate, it is a warning.
+        tags: [curse, effect]
+        grants: [flicker]
+      - id: cu-float
+        range: [96, 96]
         text: >-
-          Two hands on one weapon, the whole scene.
-        tags: [curse, vow]
-        grants: [twohanded]
-      - id: vo-moving
-        range: [98, 98]
+          Gravity lets go. Mind the ceiling, and mind the landing.
+        tags: [curse, effect]
+        grants: [weightless]
+      - id: cu-fixed
+        range: [97, 98]
         text: >-
-          Keep moving. Never stand still for longer than it takes to
-          swing.
-        tags: [curse, vow]
-        grants: [driven]
+          Your health is pinned where it is. No healing it, no
+          losing it slowly: whatever hits you takes it all or none.
+        tags: [curse, effect]
+        grants: [pinned]
       - id: cu-calm
         range: [99, 100]
         text: >-
