@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-interference
-version: "0.7.0"
+version: "0.8.0"
 title: "Elden Ring: Interference"
 author: Runlog
 description: >-
@@ -212,7 +212,7 @@ states:
     short: ROBD
     scope: run
     until: unitEnd
-    description: Your runes are gone for the stretch.
+    description: Ten thousand taken, and no runes earned.
   mapless:
     label: Mapless
     short: LOST
@@ -716,8 +716,8 @@ tables:
       - id: in-robbed
         range: [28, 29]
         text: >-
-          Robbed. Whatever you were carrying is gone until the
-          stretch ends.
+          Robbed. Ten thousand gone now, and nothing earned this
+          stretch is yours either.
         tags: [interference, effect]
         grants: [robbed]
       - id: in-toll

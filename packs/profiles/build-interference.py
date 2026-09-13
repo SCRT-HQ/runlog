@@ -18,6 +18,10 @@ def flag(name, value=True):
 def val(name, v):
     return [{"op": "value.set", "args": {"name": name, "value": v}}]
 
+def runes(amount):
+    """Runes given or taken. Not a number anything can read, so it adds."""
+    return [{"op": "runes.give", "args": {"amount": amount}}]
+
 def press(action):
     return [{"op": "action.invoke", "args": {"action": action}}]
 
@@ -50,8 +54,8 @@ I = [
     (1, "in-empty", "Empty. Your mind is one. Whatever you cast, you do not, now.", S("empty", "Empty", "MIND", "Mind is one."), val("player.mind", 1)),
     # Money and sight.
     (3, "in-poor", "Nothing is owed to you. No runes from anything that dies.", S("poor", "Poor", "POOR", "No runes from anything."), flag("player.noRuneGain")),
-    (2, "in-robbed", "Robbed. Whatever you were carrying is gone until the stretch ends.", S("robbed", "Robbed", "ROBD", "Your runes are gone for the stretch."), val("player.runes", 0)),
-    (2, "in-toll", "A toll. Ten thousand runes, taken, whether you had them or not.", None, [{"op": "value.add", "args": {"name": "player.runes", "by": -10000}}]),
+    (2, "in-robbed", "Robbed. Ten thousand gone now, and nothing earned this stretch is yours either.", S("robbed", "Robbed", "ROBD", "Ten thousand taken, and no runes earned."), runes(-10000) + flag("player.noRuneGain")),
+    (2, "in-toll", "A toll. Ten thousand runes, taken, whether you had them or not.", None, runes(-10000)),
     (2, "in-lost", "No map. You cannot open it this stretch; go by landmark.", S("mapless", "Mapless", "LOST", "The map cannot be opened."), flag("world.hideMap")),
     (1, "in-unseen-world", "Nothing renders. You can see the world and nothing living in it.", S("blind", "Blind", "BLND", "Characters are not drawn."), flag("world.hideCharacters")),
     # What the dead do.
@@ -194,8 +198,8 @@ def item(name, quantity=1):
 # anything here can know. A boon is a reward, so nothing in it is a
 # punishment and nothing is worth points.
 B = [
-    (3, "bo-runes", "Runes, five thousand of them, for nothing but doing as you were told.", None, [{"op": "value.add", "args": {"name": "player.runes", "by": 5000}}]),
-    (2, "bo-runes2", "Runes, twenty thousand. Spend them before something takes them.", None, [{"op": "value.add", "args": {"name": "player.runes", "by": 20000}}]),
+    (3, "bo-runes", "Runes, five thousand of them, for nothing but doing as you were told.", None, runes(5000)),
+    (2, "bo-runes2", "Runes, twenty thousand. Spend them before something takes them.", None, runes(20000)),
     (3, "bo-seed", "A Golden Seed. One more swallow, for the rest of the run.", None, item("Golden Seed")),
     (2, "bo-tear", "A Sacred Tear. What you have goes further now.", None, item("Sacred Tear")),
     (3, "bo-arc", "A Rune Arc, and the great rune to go with it.", None, item("Rune Arc")),

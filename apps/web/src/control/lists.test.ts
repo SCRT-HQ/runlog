@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { areasFor, known, type Lists } from "./lists.ts";
+import { catalogFor, opDef } from "./catalog.ts";
 
 /**
  * The lists behind the name fields, and the one question they are there
@@ -67,5 +68,32 @@ describe("the tool's own names", () => {
     // Nothing to say yet, rather than a complaint about an empty box.
     expect(known(lists, "graces", "")).toBe(null);
     expect(known({}, "graces", "Church of Elleh")).toBe(null);
+  });
+});
+
+/**
+ * Runes are given, not set.
+ *
+ * `player.runes` was in the list of numbers a rule could read and
+ * write, and it was neither: the tool's own field of that name is the
+ * box holding how many somebody is about to give themselves, and a
+ * button does the giving. A rule that added twelve million runes moved
+ * the number in that box and nothing else.
+ */
+describe("the numbers a rule can set", () => {
+  const tool = catalogFor("TarnishedTool")!;
+  const values = opDef(tool, "value.set")?.args.find((a) => a.name === "name")?.options ?? [];
+
+  it("does not offer runes, which nothing can read", () => {
+    expect(values.length).toBeGreaterThan(10);
+    expect(values).not.toContain("player.runes");
+  });
+
+  it("gives them instead, one way and by an amount", () => {
+    const give = opDef(tool, "runes.give");
+    expect(give?.oneWay).toBe(true);
+    expect(give?.args.map((a) => a.name)).toEqual(["amount"]);
+    // A toll is the same operation with the sign turned round.
+    expect(give?.args[0]?.least).toBeLessThan(0);
   });
 });

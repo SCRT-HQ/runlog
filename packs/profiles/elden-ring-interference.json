@@ -304,10 +304,16 @@
       "until": "unit",
       "ops": [
         {
-          "op": "value.set",
+          "op": "runes.give",
           "args": {
-            "name": "player.runes",
-            "value": 0
+            "amount": -10000
+          }
+        },
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.noRuneGain",
+            "value": true
           }
         }
       ]
@@ -319,10 +325,9 @@
       "until": "unit",
       "ops": [
         {
-          "op": "value.add",
+          "op": "runes.give",
           "args": {
-            "name": "player.runes",
-            "by": -10000
+            "amount": -10000
           }
         }
       ]
@@ -512,10 +517,9 @@
       "label": "Runes",
       "ops": [
         {
-          "op": "value.add",
+          "op": "runes.give",
           "args": {
-            "name": "player.runes",
-            "by": 5000
+            "amount": 5000
           }
         }
       ]
@@ -526,10 +530,9 @@
       "label": "Runes2",
       "ops": [
         {
-          "op": "value.add",
+          "op": "runes.give",
           "args": {
-            "name": "player.runes",
-            "by": 20000
+            "amount": 20000
           }
         }
       ]
