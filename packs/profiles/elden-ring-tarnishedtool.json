@@ -512,6 +512,141 @@
       ]
     },
     {
+      "entry": "cu-alone",
+      "table": "curse",
+      "label": "Alone",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.spiritAsh",
+            "value": 0
+          }
+        }
+      ]
+    },
+    {
+      "entry": "cu-witless",
+      "table": "curse",
+      "label": "Witless",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "cu-faithless",
+      "table": "curse",
+      "label": "Faithless",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "cu-luckless",
+      "table": "curse",
+      "label": "Luckless",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "cu-journey",
+      "table": "curse",
+      "label": "Further on",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.newGame",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "cu-slideshow",
+      "table": "curse",
+      "label": "Stutter",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "game.fps",
+            "value": 30
+          }
+        }
+      ]
+    },
+    {
+      "entry": "cu-flicker",
+      "table": "curse",
+      "label": "Flicker",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "game.fps",
+            "value": 20
+          }
+        }
+      ]
+    },
+    {
+      "entry": "cu-float",
+      "table": "curse",
+      "label": "Weightless",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.noGravity",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "cu-fixed",
+      "table": "curse",
+      "label": "Pinned",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.lockHp",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
       "entry": "bl-runes",
       "table": "blessing",
       "label": "Runes",
