@@ -825,6 +825,24 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     },
     [refreshList, store],
   );
+  /**
+   * Keep what a tool attached to the game should do about this run.
+   *
+   * The same shape of thing as the asks policy above, and kept the same
+   * way: nothing about it is in the log, so no sync pass would ever
+   * notice it had changed.
+   */
+  const setControl = useCallback(
+    async (control: unknown) => {
+      const id = runIdRef.current;
+      if (!id) return;
+      const saved = await store.loadRun(id);
+      if (!saved) return;
+      await store.saveRun({ ...saved, control });
+      await refreshList();
+    },
+    [refreshList, store],
+  );
   /** A viewer watches. Every move is shown; none can be made. */
   const readOnly = record?.role === "viewer";
 
@@ -1041,6 +1059,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     runList,
     record,
     setAsks,
+    setControl,
     readOnly,
     switchRun,
     beginAnother,

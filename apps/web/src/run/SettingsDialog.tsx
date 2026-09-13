@@ -6,6 +6,7 @@ import { ThemeMenu } from "../theme/ThemeMenu.tsx";
 import { carriesOnByItself, rollsForMeByDefault, setCarriesOnByItself, setRollsForMeByDefault } from "./pace.ts";
 import { StreamSettings } from "./StreamPanel.tsx";
 import { ChatSettings } from "./ChatPanel.tsx";
+import { ControlSettings } from "./ControlSettings.tsx";
 import type { Pack } from "@runlog/rules-schema";
 import type { StoredRun } from "../storage/db.ts";
 
@@ -29,6 +30,7 @@ export function SettingsDialog({
   pack,
   record,
   onAsks,
+  onControl,
 }: {
   runId: string | null;
   race: boolean;
@@ -37,6 +39,8 @@ export function SettingsDialog({
   record?: StoredRun | null;
   /** Remember what the server said about taking asks, so the tray and this panel agree at once. */
   onAsks?: (asks: StoredRun["asks"]) => void | Promise<void>;
+  /** What a tool attached to the game should do about this run. */
+  onControl?: (control: unknown) => void | Promise<void>;
   alerts: AlertSettings;
   onAlerts: (next: AlertSettings) => void;
   /** Who throws the dice in the open run, and whether the run leaves any choice. Absent outside a run. */
@@ -142,6 +146,7 @@ export function SettingsDialog({
             </h3>
             <StreamSettings runId={runId} race={race} onControls={onControls} />
             {pack && record && <ChatSettings pack={pack} record={record} onAsks={onAsks} />}
+            {pack && record && <ControlSettings pack={pack} record={record} onControl={onControl} />}
           </section>
         )}
       </section>

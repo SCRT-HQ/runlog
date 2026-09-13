@@ -1,0 +1,217 @@
+/**
+ * What the tools we know about can be asked to do.
+ *
+ * A profile is written in a browser, usually with nothing attached: at
+ * the desk, the night before, on a laptop that has never seen the game.
+ * So the editor cannot ask a tool what it can do and has to carry a list,
+ * and this is that list.
+ *
+ * It is a convenience and never an authority. The wire stays free-form,
+ * this end sends whatever a profile names, and the tool refuses by name
+ * anything its build does not have. Where a tool *is* attached, the panel
+ * shows what that build actually reported, so a catalog gone stale shows
+ * up as a difference rather than as a mystery.
+ */
+
+export type ArgKind = "number" | "flag" | "choice" | "text";
+
+export interface ArgDef {
+  name: string;
+  kind: ArgKind;
+  label: string;
+  required?: boolean;
+  /** For a number: what the tool will accept. It refuses anything else. */
+  least?: number;
+  most?: number;
+  /** For a choice: what the tool knows, by its own names. */
+  options?: string[];
+  note?: string;
+}
+
+export interface OpDef {
+  op: string;
+  label: string;
+  /** What a person needs to know before choosing it, in one line. */
+  note?: string;
+  /** True where the tool cannot undo it: an item given, a player moved. */
+  oneWay?: boolean;
+  args: ArgDef[];
+}
+
+export interface ToolCatalog {
+  /** What the tool calls itself in its hello, and what a profile names. */
+  tool: string;
+  label: string;
+  /** The game it drives, for a person choosing between catalogs. */
+  game: string;
+  /** The build this list was written against. */
+  against: string;
+  ops: OpDef[];
+}
+
+/** Every toggle Tarnished Tool exposes to a source, by its own name. */
+const FLAGS = [
+  "player.noDeath",
+  "player.noDamage",
+  "player.noHit",
+  "player.oneShot",
+  "player.noRoll",
+  "player.infiniteStamina",
+  "player.infiniteFp",
+  "player.infiniteArrows",
+  "player.infiniteConsumables",
+  "player.infinitePoise",
+  "player.lockHp",
+  "player.healOverTime",
+  "player.fpRegen",
+  "player.silent",
+  "player.hidden",
+  "player.speedBuff",
+  "player.torrentNoDeath",
+  "player.torrentAnywhere",
+  "player.noRuneGain",
+  "player.noRuneLoss",
+  "enemies.noDeath",
+  "enemies.noDamage",
+  "enemies.noAttack",
+  "enemies.noMove",
+  "enemies.noAi",
+  "world.freeze",
+  "world.noCutscenes",
+  "world.guaranteedDrop",
+  "world.mapInCombat",
+  "world.warpInDungeons",
+  "world.hideCharacters",
+  "world.hideMap",
+  "travel.restOnWarp",
+  "travel.showAllGraces",
+];
+
+/** Every number it will set, with what it will accept. */
+const VALUES: Array<{ name: string; least: number; most: number }> = [
+  { name: "player.speed", least: 0.1, most: 10 },
+  { name: "game.speed", least: 0.1, most: 10 },
+  { name: "game.fps", least: 20, most: 240 },
+  { name: "player.runes", least: 0, most: 999999999 },
+  { name: "player.newGame", least: 0, most: 7 },
+  { name: "player.vigor", least: 1, most: 99 },
+  { name: "player.mind", least: 1, most: 99 },
+  { name: "player.endurance", least: 1, most: 99 },
+  { name: "player.strength", least: 1, most: 99 },
+  { name: "player.dexterity", least: 1, most: 99 },
+  { name: "player.intelligence", least: 1, most: 99 },
+  { name: "player.faith", least: 1, most: 99 },
+  { name: "player.arcane", least: 1, most: 99 },
+  { name: "player.incomingDamage", least: 0, most: 100 },
+  { name: "player.outgoingDamage", least: 0, most: 100 },
+];
+
+/** The one-shot presses it will take, which are deliberately few. */
+const PRESSES = [
+  "Quitout",
+  "ForceSave",
+  "Rest",
+  "RuneArc",
+  "SetMaxHp",
+  "SetRfbs",
+  "KillTarget",
+  "SetMorning",
+  "SetNoon",
+  "SetDusk",
+  "SetNight",
+  "DefaultWeather",
+  "RainyWeather",
+  "SnowyWeather",
+  "FoggyWeather",
+];
+
+export const TARNISHED_TOOL: ToolCatalog = {
+  tool: "TarnishedTool",
+  label: "Tarnished Tool",
+  game: "Elden Ring",
+  against: "the control tab, September 2026",
+  ops: [
+    {
+      op: "flag.set",
+      label: "Switch something on or off",
+      note: "Put back to whatever it was when the effect ends.",
+      args: [
+        { name: "name", kind: "choice", label: "What", required: true, options: FLAGS },
+        { name: "value", kind: "flag", label: "On", required: true },
+      ],
+    },
+    {
+      op: "value.set",
+      label: "Set a number",
+      note: "Put back to whatever it was when the effect ends.",
+      args: [
+        { name: "name", kind: "choice", label: "What", required: true, options: VALUES.map((v) => v.name) },
+        { name: "value", kind: "number", label: "To", required: true, note: "Each has its own range; the tool refuses anything outside it." },
+      ],
+    },
+    {
+      op: "speffect.apply",
+      label: "Apply a special effect",
+      note: "By the game's own id. This is how a curse becomes the real thing rather than something a player acts out.",
+      args: [{ name: "id", kind: "number", label: "Effect id", required: true, least: 0 }],
+    },
+    {
+      op: "speffect.remove",
+      label: "Take a special effect off",
+      oneWay: true,
+      args: [{ name: "id", kind: "number", label: "Effect id", required: true, least: 0 }],
+    },
+    {
+      op: "warp.position",
+      label: "Move the player somewhere",
+      note: "Refused rather than queued while the game is loading. The most disruptive thing on this list, and off by default in the tool.",
+      oneWay: true,
+      args: [
+        { name: "block", kind: "number", label: "Block id", required: true, least: 0 },
+        { name: "x", kind: "number", label: "X", required: true },
+        { name: "y", kind: "number", label: "Y", required: true },
+        { name: "z", kind: "number", label: "Z", required: true },
+        { name: "angle", kind: "number", label: "Facing", least: -360, most: 360 },
+      ],
+    },
+    {
+      op: "item.give",
+      label: "Give an item",
+      oneWay: true,
+      args: [
+        { name: "id", kind: "number", label: "Item id", required: true, least: 0 },
+        { name: "quantity", kind: "number", label: "How many", least: 1, most: 99 },
+        { name: "ashOfWar", kind: "number", label: "Ash of War id" },
+      ],
+    },
+    {
+      op: "action.invoke",
+      label: "Press a button in the tool",
+      oneWay: true,
+      args: [{ name: "action", kind: "choice", label: "Which", required: true, options: PRESSES }],
+    },
+  ],
+};
+
+export const CATALOGS: ToolCatalog[] = [TARNISHED_TOOL];
+
+export function catalogFor(tool: string | undefined): ToolCatalog | null {
+  if (!tool) return null;
+  return CATALOGS.find((c) => c.tool.toLowerCase() === tool.toLowerCase()) ?? null;
+}
+
+export function opDef(catalog: ToolCatalog | null, op: string): OpDef | null {
+  return catalog?.ops.find((o) => o.op === op) ?? null;
+}
+
+/** What the tool will accept for a number, where the catalog knows. */
+export function boundsOf(catalog: ToolCatalog | null, op: string, arg: string): { least?: number; most?: number } {
+  if (op === "value.set" && arg === "value") return {};
+  const def = opDef(catalog, op)?.args.find((a) => a.name === arg);
+  return { ...(def?.least !== undefined ? { least: def.least } : {}), ...(def?.most !== undefined ? { most: def.most } : {}) };
+}
+
+/** What a named number will accept, which the editor shows beside the box. */
+export function rangeOfValue(name: string): { least: number; most: number } | null {
+  return VALUES.find((v) => v.name === name) ?? null;
+}
