@@ -220,8 +220,9 @@ export function WelcomeView() {
             </li>
           </ol>
           <p className="muted small">
-            A wheel forgets the spin. A virtual tabletop wants a map, tokens and an evening of setup before anyone rolls. Runlog is
-            neither: <a href={linkTo("#guide/stream-why", play)}>what it is for on a stream, what it needs, and what to compare</a>.
+            A wheel forgets the spin. A virtual tabletop wants a map, tokens and an evening of setup before anyone rolls. A chaos
+            platform hands the controls to chat. Runlog is the referee, and anything can be the hand that acts:{" "}
+            <a href={linkTo("#guide/stream-why", play)}>what it is for on a stream, what it needs, and what to compare</a>.
           </p>
         </section>
 

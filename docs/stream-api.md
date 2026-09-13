@@ -1,32 +1,18 @@
 # The stream API
 
-A run shared by live link is readable by anything that can fetch a URL:
-a streaming plugin, a stream deck button, a chat bot, a second screen of
-your own. The live link's token is the key; there is no account, no
-sign-in and no rate of your own to manage beyond politeness.
+A run shared by live link is readable by anything that can fetch a URL: a streaming plugin, a stream deck button, a chat bot, a second screen of your own. The live link's token is the key; there is no account, no sign-in and no rate of your own to manage beyond politeness.
 
-Everything here is on the hosted address, `https://runlog.scrthq.com`. A
-copy of Runlog you run yourself as a static site has no server, so nothing
-here applies to it; a copy run with its own hosting answers the same way
-at its own address.
+Everything here is on the hosted address, `https://runlog.scrthq.com`. A copy of Runlog you run yourself as a static site has no server, so nothing here applies to it; a copy run with its own hosting answers the same way at its own address.
 
-For the widgets that draw these numbers, and how to put them in OBS,
-Streamlabs, StreamElements and Streamer.bot, see the guide, from
-[Streaming a run](https://runlog.scrthq.com/guide/streaming) on.
+For the widgets that draw these numbers, and how to put them in OBS, Streamlabs, StreamElements and Streamer.bot, see the guide, from [Streaming a run](https://runlog.scrthq.com/guide/streaming) on.
 
 ## Getting a link
 
-In the run, under **People at the table**, **Share a live link** (part of
-Plus where plans are on). The link is `https://runlog.scrthq.com/r/<runId>?t=<token>`.
-Take `<runId>` and `<token>` from it. **Stop sharing** kills the token;
-share again and a new one is minted.
+In the run, under **People at the table**, **Share a live link** (part of Plus where plans are on). The link is `https://runlog.scrthq.com/r/<runId>?t=<token>`. Take `<runId>` and `<token>` from it. **Stop sharing** kills the token; share again and a new one is minted.
 
 ## The numbers: `GET /api/public/runs/<runId>/metrics?t=<token>`
 
-One flat JSON document: the run's state as the owner's device last wrote
-it, with the log left out. Any origin may read it (`access-control-allow-origin: *`),
-and it is never cached. Poll it every few seconds, or open the socket
-below and fetch it when the socket rings.
+One flat JSON document: the run's state as the owner's device last wrote it, with the log left out. Any origin may read it (`access-control-allow-origin: *`), and it is never cached. Poll it every few seconds, or open the socket below and fetch it when the socket rings.
 
 ```json
 {
@@ -93,19 +79,13 @@ What the fields mean:
 | `race` | The race this run is in, if any: name, whether it has ended, how many are racing, and standings with a line each. Absent outside a race. |
 | `paper` | The pack's summary and the mode's page as document trees, where the pack may be quoted. Large, and only a page that renders it wants it; a plugin ignores it. |
 
-Everything the widgets draw is here. The one thing left out is `log`, the
-run's last sixty lines, which the whole-run route below carries.
+Everything the widgets draw is here. The one thing left out is `log`, the run's last sixty lines, which the whole-run route below carries.
 
-A wrong or missing token answers `{ "found": false }` with status 200; a
-run its owner deleted answers 410.
+A wrong or missing token answers `{ "found": false }` with status 200; a run its owner deleted answers 410.
 
 ### Chat commands from the numbers
 
-A `!score` command wants one line; the document already has it. `score.text`
-is the run's score in the pack's words ("3 days", "14 points"), `words.unit`
-and `unit` say where the run is ("Day 4"), `latest.text` is the last result
-rolled, and `standings[0].name` leads a moderated run. Fetch, pick, post;
-no reducing needed.
+A `!score` command wants one line; the document already has it. `score.text` is the run's score in the pack's words ("3 days", "14 points"), `words.unit` and `unit` say where the run is ("Day 4"), `latest.text` is the last result rolled, and `standings[0].name` leads a moderated run. Fetch, pick, post; no reducing needed.
 
 ### Ticking a clock
 
@@ -117,25 +97,19 @@ const elapsed = clock.elapsedMs + since;
 const shown = clock.seconds === null ? elapsed : Math.max(0, clock.seconds * 1000 - elapsed);
 ```
 
-A `timer` counts down from `seconds`; a `stopwatch` (`seconds: null`)
-counts up. `expired` is true once a timer has run out. This is what the
-app's own Clock widget does, so a plugin agrees with it.
+A `timer` counts down from `seconds`; a `stopwatch` (`seconds: null`) counts up. `expired` is true once a timer has run out. This is what the app's own Clock widget does, so a plugin agrees with it.
 
 ## The bell: `wss://runlog.scrthq.com/ws?run=<runId>&t=<token>`
 
-A WebSocket that says when the run moves, so a plugin need not poll
-hard. It accepts the same token and watches that one run. Each message is
-JSON:
+A WebSocket that says when the run moves, so a plugin need not poll hard. It accepts the same token and watches that one run. Each message is JSON:
 
 ```json
 { "t": "changed", "id": "01J…", "seq": 42 }
 ```
 
-`seq` climbs with every move. On a message, fetch the metrics again. The
-socket carries no state of its own; it only rings.
+`seq` climbs with every move. On a message, fetch the metrics again. The socket carries no state of its own; it only rings.
 
-The socket also carries **gestures**: things happening at the table that
-are not moves, passed straight through and stored nowhere:
+The socket also carries **gestures**: things happening at the table that are not moves, passed straight through and stored nowhere:
 
 ```json
 { "t": "gesture", "id": "01J…", "kind": "rolled", "from": "Mira", "at": "2026-09-07T20:14:03.120Z",
@@ -156,68 +130,34 @@ The kinds:
 | `ask` | Something outside asked the run for a move or a roll (see Asks below). Sent by the server. | `ask`, its id; `kind`, `move` or `roll`; `move`, the move's id; `name` and `via` as given; `policy`, `ask` or `auto`. |
 | `asked` | The host answered an ask. Sent by the server. | The same fields, plus `accepted`, true or false, and `reason` when declined. |
 
-`rolled` is sent by whichever device threw, so a plugin can play the same
-throw. The rest are sent by the run's owner's device after each move,
-whichever device made it, so a table speaks with one voice; they say what
-happened in words a listener without the pack can use, and a result's `n`
-lets a listener drop one it has already shown. Words are for showing: match
-on `tableId` and `entryId`, or on a tag, for anything that acts on a result,
-since the text changes whenever its author edits it. An undo says nothing: what
-it unmade is not there when the state is next read. Others may
-follow the same shape; ignore kinds you do not know. A gesture is not a
-move, so a `changed` message does not follow it; the move it belongs to
-rings on its own once the result is written. The socket closes when the
-link is revoked, and after a while idle; reconnect with a small backoff.
-Nothing may be sent on it; a message from a plugin is dropped.
+`rolled` is sent by whichever device threw, so a plugin can play the same throw. The rest are sent by the run's owner's device after each move, whichever device made it, so a table speaks with one voice; they say what happened in words a listener without the pack can use, and a result's `n` lets a listener drop one it has already shown. Words are for showing: match on `tableId` and `entryId`, or on a tag, for anything that acts on a result, since the text changes whenever its author edits it. An undo says nothing: what it unmade is not there when the state is next read. Others may follow the same shape; ignore kinds you do not know. A gesture is not a move, so a `changed` message does not follow it; the move it belongs to rings on its own once the result is written. The socket closes when the link is revoked, and after a while idle; reconnect with a small backoff. Nothing may be sent on it; a message from a plugin is dropped.
 
 ## The whole run: `GET /api/public/runs/<runId>?t=<token>`
 
-What the live page itself reads. Where the pack's license lets its text
-travel (a free marketplace listing, or a pack marked redistributable), the
-answer is `access: "full"` with the pack's source and the run's whole
-event log, and you reduce it yourself with the engine from this
-repository. Where it may not, the answer is `access: "snapshot"` with the
-same snapshot the metrics route flattens, plus its last sixty log lines
-in words where the pack allows quoting and by reference where it does
-not. This route has no CORS header; it is for the app and for servers.
+What the live page itself reads. Where the pack's license lets its text travel (a free marketplace listing, or a pack marked redistributable), the answer is `access: "full"` with the pack's source and the run's whole event log, and you reduce it yourself with the engine from this repository. Where it may not, the answer is `access: "snapshot"` with the same snapshot the metrics route flattens, plus its last sixty log lines in words where the pack allows quoting and by reference where it does not. This route has no CORS header; it is for the app and for servers.
 
 ## Reactions: `POST /api/public/runs/<runId>/reactions?t=<token>`
 
-Anyone with the link may wave at the table. The body is JSON, `{ "emoji": "🔥", "name": "Mira" }`;
-the emoji is one of 👏 🔥 😮 😂 💀 ❤️ and the name is optional. The
-answer is the run's last thirty reactions, oldest first, which the run
-route above also carries as `reactions`. The socket rings on each one.
-An ended run answers 410.
+Anyone with the link may wave at the table. The body is JSON, `{ "emoji": "🔥", "name": "Mira" }`; the emoji is one of 👏 🔥 😮 😂 💀 ❤️ and the name is optional. The answer is the run's last thirty reactions, oldest first, which the run route above also carries as `reactions`. The socket rings on each one. An ended run answers 410.
 
 ## Asks: `POST` or `GET /api/public/runs/<runId>/asks?k=<askKey>`
 
-The one thing outside the table that may move the run, and it may only
-ask. A chat command, a channel-point redeem, a button on a stream deck
-sends the ask and the run's host answers it: it lands in a tray at the
-table, where the host presses Accept or Decline, or, where the host has
-said so, the table takes it the moment it lands. Accepted, it becomes an
-ordinary move in the log, stamped with who asked and how.
+The one thing outside the table that may move the run, and it may only ask. A chat command, a channel-point redeem, a button on a stream deck sends the ask and the run's host answers it: it lands in a tray at the table, where the host presses Accept or Decline, or, where the host has said so, the table takes it the moment it lands. Accepted, it becomes an ordinary move in the log, stamped with who asked and how.
 
 ```json
 { "kind": "move", "move": "died", "name": "viewer_42", "via": "channel-points" }
 { "kind": "roll", "name": "viewer_42", "via": "bits" }
 ```
 
-`kind: "move"` takes a move the pack offers at any time, by its id in the
-pack; `kind: "roll"` rolls the table the run is waiting on, if it is
-waiting on one. `name` (40 characters) and `via` (32) are for the log and
-the tray, as given.
+`kind: "move"` takes a move the pack offers at any time, by its id in the pack; `kind: "roll"` rolls the table the run is waiting on, if it is waiting on one. `name` (40 characters) and `via` (32) are for the log and the tray, as given.
 
-The same four fields may travel as query parameters instead, for a tool
-that cannot post a body. Streamer.bot's Fetch URL is the case this exists
-for: it sends a `GET` and nothing else.
+The same four fields may travel as query parameters instead, for a tool that cannot post a body. Streamer.bot's Fetch URL is the case this exists for: it sends a `GET` and nothing else.
 
-```
+```http
 GET /api/public/runs/<runId>/asks?k=<askKey>&kind=move&move=died&name=viewer_42&via=channel-points
 ```
 
-The answer carries `ok`, one sentence in `say` written for a chat line,
-the new ask's `id`, and the run's open asks, oldest first:
+The answer carries `ok`, one sentence in `say` written for a chat line, the new ask's `id`, and the run's open asks, oldest first:
 
 ```json
 {
@@ -228,40 +168,27 @@ the new ask's `id`, and the run's open asks, oldest first:
 }
 ```
 
-`say` is the whole of what a bot needs to put in chat, refusals included,
-so nothing has to branch on a status to be useful. It says what happened,
-never why the rule exists: a rate-limited press answers "Too quick.
-viewer_42 can ask again in 11 seconds."
+`say` is the whole of what a bot needs to put in chat, refusals included, so nothing has to branch on a status to be useful. It says what happened, never why the rule exists: a rate-limited press answers "Too quick. viewer_42 can ask again in 11 seconds."
 
 ### Naming the whole ask in one field
 
-A tool often has exactly one thing worth sending. A channel-point reward
-carries its own name and little else, so `ask` takes the place of `kind`
-and `move` together:
+A tool often has exactly one thing worth sending. A channel-point reward carries its own name and little else, so `ask` takes the place of `kind` and `move` together:
 
-```
+```http
 GET /api/public/runs/<runId>/asks?k=<askKey>&ask=Salvage%20a%20Piece&name=viewer_42
 ```
 
-The word `roll`, in any case, is a roll. Anything else is a move, matched
-against what the table is offering: by id first, then by the label the
-pack gives it, ignoring case. A name matching more than one move is
-refused and asks for the id. A name matching nothing is refused with the
-menu below, so chat is told what there is rather than only what there is
-not.
+The word `roll`, in any case, is a roll. Anything else is a move, matched against what the table is offering: by id first, then by the label the pack gives it, ignoring case. A name matching more than one move is refused and asks for the id. A name matching nothing is refused with the menu below, so chat is told what there is rather than only what there is not.
 
-An id that matches nothing on offer is still sent on. The menu is only as
-fresh as the last snapshot, and the table is the one that knows, so a
-stale list must never refuse a move that is really there.
+An id that matches nothing on offer is still sent on. The menu is only as fresh as the last snapshot, and the table is the one that knows, so a stale list must never refuse a move that is really there.
 
-This is what lets one action serve every reward: name the reward after the
-move, and send `ask=%rewardName%`.
+This is what lets one action serve every reward: name the reward after the move, and send `ask=%rewardName%`.
 
 ### What may be asked for
 
 The same address with **no `kind`** is a question rather than a press:
 
-```
+```http
 GET /api/public/runs/<runId>/asks?k=<askKey>
 ```
 
@@ -274,23 +201,15 @@ GET /api/public/runs/<runId>/asks?k=<askKey>
 }
 ```
 
-`roll` says whether a table is waiting; `moves` are the moves on offer at
-this moment, by id and label. Offered, not declared: whether a move is
-available depends on the pack's conditions and on what the run has already
-spent once, so the run's own device works it out and publishes it with the
-rest of its snapshot. A run whose device has not published since this
-existed names nothing, which reads as a run with nothing to ask for.
+`roll` says whether a table is waiting; `moves` are the moves on offer at this moment, by id and label. Offered, not declared: whether a move is available depends on the pack's conditions and on what the run has already spent once, so the run's own device works it out and publishes it with the rest of its snapshot. A run whose device has not published since this existed names nothing, which reads as a run with nothing to ask for.
 
-This is what a `!moves` command reads. It is also why a bare address is
-harmless: pressed with nothing after the key, it answers a question.
+This is what a `!moves` command reads. It is also why a bare address is harmless: pressed with nothing after the key, it answers a question.
 
 ### What became of one ask
 
-The verdict is never known when a press is answered: under either policy
-the table's own device decides, a moment later or a minute later. A press
-answers with the new ask's `id`, and that id reads back:
+The verdict is never known when a press is answered: under either policy the table's own device decides, a moment later or a minute later. A press answers with the new ask's `id`, and that id reads back:
 
-```
+```http
 GET /api/public/runs/<runId>/asks?k=<askKey>&of=<askId>
 ```
 
@@ -299,31 +218,17 @@ GET /api/public/runs/<runId>/asks?k=<askKey>&of=<askId>
   "say": "viewer_42 asked for a roll. The table said no: nothing to roll right now." }
 ```
 
-`answer` is `accepted`, `declined`, or `waiting`. A move is named by its
-label rather than its id, since the sentence is for chat. An id this run
-no longer remembers answers `ok: false`, since a run keeps only its last
-few asks.
+`answer` is `accepted`, `declined`, or `waiting`. A move is named by its label rather than its id, since the sentence is for chat. An id this run no longer remembers answers `ok: false`, since a run keeps only its last few asks.
 
-A press, a short wait and one of these is the whole round trip for a tool
-that can only fetch a URL. Under the act-as-it-lands policy the table
-answers within a second or two, so a brief delay is enough. Where the host
-accepts by hand a verdict may be minutes away, and the socket's `asked`
-gesture is the right way to hear it.
+A press, a short wait and one of these is the whole round trip for a tool that can only fetch a URL. Under the act-as-it-lands policy the table answers within a second or two, so a brief delay is enough. Where the host accepts by hand a verdict may be minutes away, and the socket's `asked` gesture is the right way to hear it.
 
 Reading a verdict is not a press and does not count against the limit.
 
 ### The same press twice
 
-A press may carry a `ref` of the caller's own: a redemption id, a message
-id, anything stable for that one press. A press whose `ref` has been seen
-before on this run answers with the first press's `ask` id and the same
-sentence, marked `"repeat": true`, and queues nothing. A retry after a
-reply that never arrived looks exactly like the press that was lost.
+A press may carry a `ref` of the caller's own: a redemption id, a message id, anything stable for that one press. A press whose `ref` has been seen before on this run answers with the first press's `ask` id and the same sentence, marked `"repeat": true`, and queues nothing. A retry after a reply that never arrived looks exactly like the press that was lost.
 
-With no `ref`, two presses alike in name, kind and move within three
-seconds are read the same way, which is what a double-click is. Anything
-beyond that is a person pressing again on purpose, and meets the limit
-below.
+With no `ref`, two presses alike in name, kind and move within three seconds are read the same way, which is what a double-click is. Anything beyond that is a person pressing again on purpose, and meets the limit below.
 
 | Status | Meaning |
 | --- | --- |
@@ -332,88 +237,52 @@ below.
 | 422 | `kind` is not `move` or `roll`, or a `move` has no id. |
 | 429 | Too many: one ask a name every twenty seconds, thirty a minute for the run. |
 
-Those are the `POST` form's codes. **The `GET` form always answers 200**,
-refusals included, with the verdict in `ok` and the reason in `say`. A
-tool that can only fetch a URL tends to treat any other status as a failed
-action and stop, which would lose the one sentence worth having; the
-codes are kept where a client can read them.
+Those are the `POST` form's codes. **The `GET` form always answers 200**, refusals included, with the verdict in `ok` and the reason in `say`. A tool that can only fetch a URL tends to treat any other status as a failed action and stop, which would lose the one sentence worth having; the codes are kept where a client can read them.
 
-**The key is not the live token.** The token is in every widget address
-and so in a streaming scene; a leaked address must let strangers watch,
-never press. The key is minted by the host under **Settings → Stream →
-Chat**, shown once with the full address to post to, and revoked on its
-own; the live link stays. Where plans are on, asks are part of Plus, like
-the link they ride beside.
+**The key is not the live token.** The token is in every widget address and so in a streaming scene; a leaked address must let strangers watch, never press. The key is minted by the host under **Settings → Stream → Chat**, shown once with the full address to post to, and revoked on its own; the live link stays. Where plans are on, asks are part of Plus, like the link they ride beside.
 
-Whether an ask was *taken* is a later question than whether it was
-accepted here, under either policy: the host's device does the acting.
-`say` reports that the ask is in, and the verdict arrives on the socket as
-the `asked` gesture above, so a bot can tell the channel "the forfeit is
-in" or "no such move right now". A declined ask carries a `reason` in a
-few words.
+Whether an ask was *taken* is a later question than whether it was accepted here, under either policy: the host's device does the acting. `say` reports that the ask is in, and the verdict arrives on the socket as the `asked` gesture above, so a bot can tell the channel "the forfeit is in" or "no such move right now". A declined ask carries a `reason` in a few words.
 
 ## Stream keys: the account's own, not the run's
 
-Every address above names one run and carries a secret that dies with it,
-so a scene wired for tonight's run is wrong for tomorrow's. An account can
-instead hold two keys of its own, minted under **Settings → Stream →
-Chat**, shown once and kept only as hashes.
+Every address above names one run and carries a secret that dies with it, so a scene wired for tonight's run is wrong for tomorrow's. An account can instead hold two keys of its own, minted under **Settings → Stream → Chat**, shown once and kept only as hashes.
 
 | Key | For |
 | --- | --- |
 | watch | Widgets, the numbers, the socket. |
 | press | Asks. |
 
-They are separate on purpose. A watch key is in every widget address and
-so in a streaming scene; an address that gets out should let strangers
-watch and never press.
+They are separate on purpose. A watch key is in every widget address and so in a streaming scene; an address that gets out should let strangers watch and never press.
 
 ### `POST` or `GET /api/public/stream/asks?k=<pressKey>`
 
-The ask address that outlives a run. Every field above travels the same
-way; what changes is that no run is named:
+The ask address that outlives a run. Every field above travels the same way; what changes is that no run is named:
 
-```
+```http
 GET /api/public/stream/asks?k=<pressKey>&ask=%rewardName%&name=%userName%&ref=%redemptionId%
 ```
 
-It reaches the run in play: of the runs that account is taking asks on,
-the one moved most recently. `run=<runId>` names another, for anyone
-keeping two going at once. The answer carries `runId`, so a bot can say
-which one it reached.
+It reaches the run in play: of the runs that account is taking asks on, the one moved most recently. `run=<runId>` names another, for anyone keeping two going at once. The answer carries `runId`, so a bot can say which one it reached.
 
-Taking asks stays the host's word, per run, under **Settings → Stream →
-Chat**. A press key makes the wiring outlive a run; it does not switch
-anything on. A run that is not taking asks is passed over, and an account
-with none answers `No run is taking asks right now.`
+Taking asks stays the host's word, per run, under **Settings → Stream → Chat**. A press key makes the wiring outlive a run; it does not switch anything on. A run that is not taking asks is passed over, and an account with none answers `No run is taking asks right now.`
 
 A watch key is refused here. What watches must never also press.
 
 ### `GET /api/public/stream/metrics?k=<watchKey>`
 
-The same document the per-run metrics address answers with, reached
-without a run id or a link's token. A `!score` command should not ask
-anyone to pick a live link apart for the pieces inside it.
+The same document the per-run metrics address answers with, reached without a run id or a link's token. A `!score` command should not ask anyone to pick a live link apart for the pieces inside it.
 
-It answers for the run in play, or for `run=<runId>`, and carries `runId`
-alongside. Only a run open to watchers; an account with none answers
-`ok: false`.
+It answers for the run in play, or for `run=<runId>`, and carries `runId` alongside. Only a run open to watchers; an account with none answers `ok: false`.
 
 ### The socket on a watch key: `wss://…/ws?k=<watchKey>`
 
-The same doorbell, opened without naming a run. It watches the run in
-play, or `run=<runId>`, and carries the gestures above exactly as the
-per-run socket does.
+The same doorbell, opened without naming a run. It watches the run in play, or `run=<runId>`, and carries the gestures above exactly as the per-run socket does.
 
-Which run it watches is settled when it connects. A socket open across the
-start of a new run goes on watching the old one; `run-ended` on the old
-run is the moment to open it again. A press key is refused here, as it is
-by every address that reads.
+Which run it watches is settled when it connects. A socket open across the start of a new run goes on watching the old one; `run-ended` on the old run is the moment to open it again. A press key is refused here, as it is by every address that reads.
 
 ### `GET /api/public/stream/runs?k=<watchKey>`
 
-What that key may draw: the account's runs that are open to watch, newest
-first, and which is in play.
+What that key may draw: the account's runs that are open to watch, newest first, and which is in play.
 
 ```json
 {
@@ -424,46 +293,28 @@ first, and which is in play.
 }
 ```
 
-`inPlay` is the run moved most recently, which is the one being played
-without anyone having to say so. It is what a widget draws when nobody has
-chosen; choosing is done at the widget's end and remembered there, since
-one answer here could never serve two sources pointed at two runs.
+`inPlay` is the run moved most recently, which is the one being played without anyone having to say so. It is what a widget draws when nobody has chosen; choosing is done at the widget's end and remembered there, since one answer here could never serve two sources pointed at two runs.
 
-Only runs their host has opened to watchers appear. A key for a scene does
-not quietly make the rest of an account readable, and a run that ends
-leaves the list rather than being drawn all night.
+Only runs their host has opened to watchers appear. A key for a scene does not quietly make the rest of an account readable, and a run that ends leaves the list rather than being drawn all night.
 
-Minting a key again replaces it, and the one it replaces stops working at
-once. That is how a key is rotated: there is no reading one back, because
-the server keeps only the hash.
+Minting a key again replaces it, and the one it replaces stops working at once. That is how a key is rotated: there is no reading one back, because the server keeps only the hash.
 
 ## Driving a game: `wss://…/ws?…&as=control`
 
-Everything above tells somebody what happened. This one tells a program
-what to do about it: a status effect applied, a restriction switched on,
-a player moved, in whatever game a tool on their machine can reach. The
-result a table read out loud becomes the thing it describes.
+Everything above tells somebody what happened. This one tells a program what to do about it: a status effect applied, a restriction switched on, a player moved, in whatever game a tool on their machine can reach. The result a table read out loud becomes the thing it describes.
 
-It is the same socket, on the same keys, with `as=control` added. A host
-attaches on their watch key; anyone else at the table attaches on the
-run's live link, which is what lets one result land on four people at
-once. `seat=<name>` says which player this is, for effects meant for one
-of them.
+It is the same socket, on the same keys, with `as=control` added. A host attaches on their watch key; anyone else at the table attaches on the run's live link, which is what lets one result land on four people at once. `seat=<name>` says which player this is, for effects meant for one of them.
 
-```
+```text
 wss://runlog.scrthq.com/ws?k=<watchKey>&as=control&seat=Mira
 wss://runlog.scrthq.com/ws?run=<runId>&t=<token>&as=control&seat=Kel
 ```
 
-An attached tool is a watcher and nothing more: it may read what a
-watcher reads and it may not press anything, which is why a watch key is
-enough and a press key is refused here as everywhere else. Effects come
-from the run. No tool can reach another tool.
+An attached tool is a watcher and nothing more: it may read what a watcher reads and it may not press anything, which is why a watch key is enough and a press key is refused here as everywhere else. Effects come from the run. No tool can reach another tool.
 
 ### What travels
 
-The tool speaks first, saying what it is and which operations it can
-perform:
+The tool speaks first, saying what it is and which operations it can perform:
 
 ```json
 { "t": "hello", "protocol": 1, "app": "TarnishedTool", "version": "1.4.2",
@@ -471,9 +322,7 @@ perform:
   "ops": ["speffect.apply", "flag.set", "value.set", "warp.position"] }
 ```
 
-The answer, where the run has terms of its own, is the settings it wants
-in force before anything is rolled: an ordinary effect with no lifetime,
-under the id `setup`.
+The answer, where the run has terms of its own, is the settings it wants in force before anything is rolled: an ordinary effect with no lifetime, under the id `setup`.
 
 Then, as the table plays, an effect per result:
 
@@ -482,39 +331,23 @@ Then, as the table plays, an effect per result:
   "ops": [{ "op": "speffect.apply", "args": { "id": 6900 } }] }
 ```
 
-Several operations under one id is the ordinary case, not a batch: a
-curse is usually a status effect and a restriction together, and they
-have to land and be taken back as one thing. The id is the result's
-number and the row it matched, so the same result arriving twice after a
-reconnection is the same effect rather than a second one.
+Several operations under one id is the ordinary case, not a batch: a curse is usually a status effect and a restriction together, and they have to land and be taken back as one thing. The id is the result's number and the row it matched, so the same result arriving twice after a reconnection is the same effect rather than a second one.
 
-How long it lasts is said in one of three ways. `for`, in seconds. A
-`group`, which several effects share and which comes off together when
-the run says so, and which is how an effect that lasts a unit of play
-ends. Or neither, which holds until something takes it back.
+How long it lasts is said in one of three ways. `for`, in seconds. A `group`, which several effects share and which comes off together when the run says so, and which is how an effect that lasts a unit of play ends. Or neither, which holds until something takes it back.
 
-`each` says the operations stand or fall separately. Absent, they are
-one effect and all of them land or none of them do, which is what a
-rule wants. The run's terms are sent with it, because they are a list
-of settings and gifts rather than one thing: an operation a tool has no
-name for should take itself out and leave the other seven standing.
+`each` says the operations stand or fall separately. Absent, they are one effect and all of them land or none of them do, which is what a rule wants. The run's terms are sent with it, because they are a list of settings and gifts rather than one thing: an operation a tool has no name for should take itself out and leave the other seven standing.
 
 ```json
 { "t": "apply", "id": "o4#0", "group": "unit:4", "ops": [ … ] }
 ```
 
-A result undone takes its effects with it: undo voids the move that
-drew it, and a tool holding what that result applied hears about it no
-other way. Every rule that matched filed its effect under the result's
-own number, so the number names all of them at once.
+A result undone takes its effects with it: undo voids the move that drew it, and a tool holding what that result applied hears about it no other way. Every rule that matched filed its effect under the result's own number, so the number names all of them at once.
 
 ```json
 { "t": "revert", "id": "o4#*" }
 ```
 
-Taking one back names it. Taking back a group names the group. Taking
-back everything in force uses the reserved id, which is what the end of a
-run sends, since only the tool knows what it is still holding:
+Taking one back names it. Taking back a group names the group. Taking back everything in force uses the reserved id, which is what the end of a run sends, since only the tool knows what it is still holding:
 
 ```json
 { "t": "revert", "id": "o4#0" }
@@ -522,8 +355,7 @@ run sends, since only the tool knows what it is still holding:
 { "t": "revert", "id": "*" }
 ```
 
-The tool answers each apply with `{ "t": "applied", "id": "o4#0", "ok": true, "until": "…" }`,
-or `ok: false` with an `error` naming what it could not do.
+The tool answers each apply with `{ "t": "applied", "id": "o4#0", "ok": true, "until": "…" }`, or `ok: false` with an `error` naming what it could not do.
 
 ### What the game says back
 
@@ -533,22 +365,13 @@ A tool may say what happened to it, on the same socket:
 { "t": "event", "kind": "died" }
 ```
 
-It is a mention rather than a command. Here it becomes an ask, exactly as
-a viewer pressing a button does, and the table still accepts it: the run
-has to be taking asks, and the same rate holds as for anything else
-asking. A kind this end does not know is ignored, so a tool that says
-more than `died` does not break against an older server.
+It is a mention rather than a command. Here it becomes an ask, exactly as a viewer pressing a button does, and the table still accepts it: the run has to be taking asks, and the same rate holds as for anything else asking. A kind this end does not know is ignored, so a tool that says more than `died` does not break against an older server.
 
 ### The profile
 
-Which operation a result means is a **control profile**, kept with the
-run and edited in the app, never in the pack. A pack that only worked
-with one program attached to one game would not be a pack, and every
-pack here still plays with nothing attached at all.
+Which operation a result means is a **control profile**, kept with the run and edited in the app, never in the pack. A pack that only worked with one program attached to one game would not be a pack, and every pack here still plays with nothing attached at all.
 
-A profile is a setup set and a list of rows. A row selects by the entry a
-result landed on, by a tag the entry carries, or by a whole table, and
-says what to do, for how long, and who it reaches.
+A profile is a setup set and a list of rows. A row selects by the entry a result landed on, by a tag the entry carries, or by a whole table, and says what to do, for how long, and who it reaches.
 
 ```json
 {
@@ -576,36 +399,16 @@ says what to do, for how long, and who it reaches.
 | `to` | A seat's name, or `all`, or left out, which is also everyone. Matched against what a tool said it was sitting in front of, ignoring case. A tool that never said hears only what is for everyone. |
 | `ops` | What to do, in order, as one thing. |
 
-`to` names a seat, or `all`, or is left out, which is also everyone. A
-tool that never said which player it is hears only what is for everyone.
-Every matching row lands as its own effect, so a tag row covering eleven
-curses and an entry row for the twelfth both apply without either knowing
-about the other. A row selecting nothing at all is ignored rather than
-matching everything.
+`to` names a seat, or `all`, or is left out, which is also everyone. A tool that never said which player it is hears only what is for everyone. Every matching row lands as its own effect, so a tag row covering eleven curses and an entry row for the twelfth both apply without either knowing about the other. A row selecting nothing at all is ignored rather than matching everything.
 
-The operation names are the tool's, not ours. This end sends only what a
-profile names; that end refuses by name anything its build does not have,
-so a profile that gets ahead of somebody's version degrades instead of
-failing. Which also means a mapping somebody got wrong is fixed here, in
-the app, rather than in a program everyone has to download again.
+The operation names are the tool's, not ours. This end sends only what a profile names; that end refuses by name anything its build does not have, so a profile that gets ahead of somebody's version degrades instead of failing. Which also means a mapping somebody got wrong is fixed here, in the app, rather than in a program everyone has to download again.
 
-Names are the compatibility story between versions of one program, and
-say nothing between programs: two tools for two games could easily both
-have a `warp.position`. That is what `tool` is for.
+Names are the compatibility story between versions of one program, and say nothing between programs: two tools for two games could easily both have a `warp.position`. That is what `tool` is for.
 
 ## Politeness
 
-Poll no faster than every five seconds; the socket exists so you need
-not, and a widget is one reader on one machine, never one per viewer.
-Keep the token out of anything you publish: whoever has it can watch,
-and a widget pasted into a shared overlay carries it. If it gets out,
-**Stop sharing** and share again; the old token is dead the moment you
-do. Nothing here writes to the run except an ask, and an ask only asks.
+Poll no faster than every five seconds; the socket exists so you need not, and a widget is one reader on one machine, never one per viewer. Keep the token out of anything you publish: whoever has it can watch, and a widget pasted into a shared overlay carries it. If it gets out, **Stop sharing** and share again; the old token is dead the moment you do. Nothing here writes to the run except an ask, and an ask only asks.
 
 ## From the app
 
-The widgets under **Stream** in the run's side column draw the same
-snapshot, on pages of their own, and **Everything, stacked** puts them in
-one column for a single browser source. See the guide's
-[Streaming a run](https://runlog.scrthq.com/guide/streaming) for those,
-and the pages after it for the apps.
+The widgets under **Stream** in the run's side column draw the same snapshot, on pages of their own, and **Everything, stacked** puts them in one column for a single browser source. See the guide's [Streaming a run](https://runlog.scrthq.com/guide/streaming) for those, and the pages after it for the apps.

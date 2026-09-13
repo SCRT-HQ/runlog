@@ -1,17 +1,12 @@
 # The documentation, by who you are
 
-Runlog has two kinds of writing. The **guide** is in the app, under Menu
-or at `/play/guide` on the hosted address, for people playing, making,
-and running a copy: it needs no account, and each page is one subject. The **documents here** are the contracts and the
-walkthroughs that outlive a screen: what a pack file is, what an API
-answers, how an operator sets something up. When a page in the guide
-runs out of room, it links here.
+Runlog has two kinds of writing. The **guide** is in the app, under Menu or at `/play/guide` on the hosted address, for people playing, making, and running a copy: it needs no account, and each page is one subject. The **documents here** are the contracts and the walkthroughs that outlive a screen: what a pack file is, what an API answers, how an operator sets something up. When a page in the guide runs out of room, it links here.
 
 ## Playing, watching, streaming
 
 | Read | When |
 | --- | --- |
-| The guide's [A stream run by dice](https://runlog.scrthq.com/guide/stream-why) | You stream, and want the dice to decide the next thing on screen. What Runlog does for a stream, what it needs, and how it compares with a tabletop or a wheel. |
+| The guide's [A stream run by dice](https://runlog.scrthq.com/guide/stream-why) | You stream, and want the dice to decide the next thing on screen. What Runlog does for a stream, what it needs, and where it sits beside a tabletop, a wheel or a chaos platform. |
 | The guide's [Streaming a run](https://runlog.scrthq.com/guide/streaming) | You want a widget on your stream. Start here; the pages after it take OBS, Streamlabs, StreamElements, Streamer.bot, TikTok Live and Kick one at a time, field by field. |
 | [stream-api.md](stream-api.md) | You are writing a plugin, a chat command or a second screen: the numbers, the bell, the gestures. |
 | The guide's [Runlog in Discord](https://runlog.scrthq.com/guide/discord) | Runlog in a Discord server: adding the bot, claiming a server, hosting and watching runs, one page each; `discord.md` points there. |
@@ -43,11 +38,4 @@ runs out of room, it links here.
 
 ## Conventions
 
-A document here is a contract someone outside the repository builds
-against (`stream-api.md`, `reference.md`, the pack format in
-`authoring.md`, the sealed container in `selling.md`). A walkthrough,
-even one that names real fields in someone else's software, belongs in
-the guide, one page per subject; the files that used to hold one point
-there. Anything else belongs in a README beside the code it describes. Titles say what the reader is doing, not what the
-thing is called; American English throughout; the demo pack, The Long
-Kiln, is the example everywhere.
+A document here is a contract someone outside the repository builds against (`stream-api.md`, `reference.md`, the pack format in `authoring.md`, the sealed container in `selling.md`). A walkthrough, even one that names real fields in someone else's software, belongs in the guide, one page per subject; the files that used to hold one point there. Anything else belongs in a README beside the code it describes. Titles say what the reader is doing, not what the thing is called; American English throughout; the demo pack, The Long Kiln, is the example everywhere.
