@@ -102,6 +102,14 @@ export interface ResolvedOutcome {
   entryId: string;
   /** Which subject it landed on, when it reached backwards. */
   targetSubject: number | null;
+  /**
+   * The racer this was drawn for, where it was drawn for one.
+   *
+   * An interference lands on everybody and belongs to nobody. A boon
+   * earned by settling a target is one person's, and a run that could
+   * not say whose put half damage on four games at once.
+   */
+  contestant?: string;
   at: string;
 }
 

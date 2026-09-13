@@ -2342,6 +2342,9 @@ function Timeline({ pack, state }: { pack: Pack; state: RunState }) {
                 <span className="where">
                   {pack.vocabulary.unit.one} {o.unit}, {table?.title ?? o.table}
                   {hit && ` - ${hitLabel(pack, state, o.targetSubject!)}`}
+                  {/* Whose, where it was drawn for one of them: without
+                      it the log reads as though the whole table got it. */}
+                  {o.contestant && ` - ${state.contestants.find((c) => c.id === o.contestant)?.name ?? o.contestant}`}
                 </span>
                 <p>{entry?.title ?? entry?.text ?? o.entryId}</p>
               </div>

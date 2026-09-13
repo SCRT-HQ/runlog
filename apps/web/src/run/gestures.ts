@@ -80,6 +80,10 @@ export function lifecycleGestures(pack: Pack, state: RunState, events: readonly 
         ...(tags && tags.length > 0 ? { tags } : {}),
         text: entryTextOf(pack, o),
         ...(subject ? { subject: subjectName(pack, subject) } : {}),
+        // Whose it is, where it is somebody's. A tool attached as that
+        // seat applies it and the others do not, which is the whole
+        // point of a boon one racer earned.
+        ...(o.contestant ? { seat: state.contestants.find((c) => c.id === o.contestant)?.name ?? o.contestant } : {}),
       },
     });
   }

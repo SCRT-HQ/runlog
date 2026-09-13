@@ -220,6 +220,10 @@ export function reduce(pack: Pack, log: readonly RunEvent[]): RunState {
           table: event.table,
           entryId: event.entryId,
           targetSubject: event.targetSubject ?? null,
+          // Only where the roster still has them: an outcome drawn for
+          // somebody since taken off the board is the run's again
+          // rather than nobody's.
+          ...(event.contestant && state.contestants.some((c) => c.id === event.contestant) ? { contestant: event.contestant } : {}),
           at: event.at,
         });
         break;

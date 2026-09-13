@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
 import { awardValue, challenges, moderation, standings } from "./moderated.ts";
+import { availableMoves } from "./execute.ts";
 import type { RunEvent } from "./events.ts";
 
 /**
@@ -49,10 +50,20 @@ phases:
       - kind: finalizeUnit
 endings:
   - { id: done, label: Done }
+moves:
+  settled:
+    label: I settled it
+    when: anytime
+    do:
+      - { do: rollOn, table: curse }
 modes:
   first:
     label: First wins
-    moderated: { contestants: { min: 2, max: 4 } }
+    disable: { moves: [settled] }
+    moderated:
+      contestants: { min: 2, max: 4 }
+      onAward:
+        - { do: rollOn, table: curse }
   everyone:
     label: Everyone scores
     moderated: { award: everyone, firstBonus: 2 }
@@ -227,5 +238,63 @@ describe("a counter moved for one racer", () => {
     expect(state.contestants).toHaveLength(3);
     expect(state.contestants.every((c) => c.counters["deaths"] === undefined)).toBe(true);
     expect(state.counters["deaths"] ?? 0).toBe(0);
+  });
+});
+
+/**
+ * One declaration, not two.
+ *
+ * A race says somebody finished a challenge by awarding it. A move
+ * saying the same thing is a second way to do one thing, and the one
+ * that gets pressed is whichever the moderator happens to see first.
+ */
+describe("settling, where there is a board", () => {
+  it("drops the move in a mode that awards instead", () => {
+    const p = pack();
+    const race = reduce(p, opened(p, "first"));
+    expect(availableMoves(p, race, "anytime").map((m) => m.id)).toEqual([]);
+  });
+
+  it("keeps it where the mode has no board to award on", () => {
+    const p = pack();
+    const alone = reduce(p, [ev("RunStarted", { packId: p.id, packVersion: p.version, mode: "solo" }), ev("UnitEntered")]);
+    expect(availableMoves(p, alone, "anytime").map((m) => m.id)).toEqual(["settled"]);
+  });
+
+  it("says what an award pays, where the mode says it pays anything", () => {
+    const p = pack();
+    expect(moderation(p, reduce(p, opened(p, "first")))?.onAward).toHaveLength(1);
+    expect(moderation(p, reduce(p, opened(p, "everyone")))?.onAward).toBeUndefined();
+  });
+});
+
+/**
+ * A result drawn for one racer.
+ *
+ * The stamp was on the event and nothing read it but the counters, so
+ * a boon one person earned was recorded as the run's and reached every
+ * attached game.
+ */
+describe("an outcome drawn for one racer", () => {
+  it("is theirs on the board, where the run's own results are nobody's", () => {
+    const p = pack();
+    const state = reduce(p, [
+      ...opened(p, "first"),
+      ev("OutcomeResolved", { table: "curse", entryId: "c1", cause: "action", contestant: "c2" }),
+    ]);
+    expect(state.outcomes.at(-1)?.contestant).toBe("c2");
+    expect(state.outcomes[0]?.contestant).toBeUndefined();
+  });
+
+  it("goes back to the run's where that racer has left the board", () => {
+    const p = pack();
+    const state = reduce(p, [
+      ...opened(p, "first"),
+      ev("ContestantRemoved", { contestant: "c2" }),
+      ev("OutcomeResolved", { table: "curse", entryId: "c1", cause: "action", contestant: "c2" }),
+    ]);
+    // Nobody's rather than a name the board no longer has: an outcome
+    // addressed to a ghost would never reach a game.
+    expect(state.outcomes.at(-1)?.contestant).toBeUndefined();
   });
 });

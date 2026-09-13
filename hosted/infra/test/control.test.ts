@@ -153,6 +153,23 @@ describe("gestures other than a result", () => {
     }
   });
 
+  it("send a result drawn for one racer to that racer's game and to no other", () => {
+    const mine = { n: 4, unit: 2, tableId: "curse", entryId: "rot", seat: "Mira" };
+    // The rule names nobody, so without the seat on the result it would
+    // reach every attached game. It is Mira's, so it reaches hers.
+    expect(framesForGesture(curses, "outcome", mine, "Mira")).toHaveLength(1);
+    expect(framesForGesture(curses, "outcome", mine, "mira")).toHaveLength(1);
+    expect(framesForGesture(curses, "outcome", mine, "Kel")).toEqual([]);
+    // A tool that never said which seat it is cannot be the one.
+    expect(framesForGesture(curses, "outcome", mine, undefined)).toEqual([]);
+  });
+
+  it("send a result drawn for nobody to everyone, as they always did", () => {
+    const ours = { n: 4, unit: 2, tableId: "curse", entryId: "rot" };
+    expect(framesForGesture(curses, "outcome", ours, "Mira")).toHaveLength(1);
+    expect(framesForGesture(curses, "outcome", ours, undefined)).toHaveLength(1);
+  });
+
   it("say nothing about a result with no ids on it, rather than guessing from the words", () => {
     expect(landedOf({ n: 1, table: "Curse", text: "Scarlet rot." })).toBeNull();
     expect(framesForGesture(curses, "outcome", { n: 1, table: "Curse", text: "Scarlet rot." }, undefined)).toEqual([]);

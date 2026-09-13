@@ -834,8 +834,13 @@ export function availableMoves(
 ): Array<{ id: string; move: NonNullable<Pack["moves"]>[string] }> {
   const places = new Set<Placement>(typeof where === "string" ? [where] : where);
   const out: Array<{ id: string; move: NonNullable<Pack["moves"]>[string] }> = [];
+  // A mode can drop a move the rest of the mode already does. A race
+  // awards a challenge to say somebody finished it, and a move saying
+  // the same thing is a second way to do one thing.
+  const dropped = new Set(pack.modes[state.mode]?.disable?.moves ?? []);
 
   for (const [id, move] of Object.entries(pack.moves ?? {})) {
+    if (dropped.has(id)) continue;
     if (move.when !== "anytime" && !places.has(move.when)) continue;
     if (move.oncePerRun && state.firedOnce.includes(`move:${id}`)) continue;
     const frame: Frame = {
