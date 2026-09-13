@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-interference
-version: "0.6.0"
+version: "0.7.0"
 title: "Elden Ring: Interference"
 author: Runlog
 description: >-
@@ -504,10 +504,14 @@ counters:
     incrementOn:
       - { on: unitFinalized }
 
+  # Each racer's own. On a board with names it sits beside their score
+  # and off the run's trackers: one number for four people's deaths is a
+  # number nobody can do anything with. Alone, it is the run's as usual.
   deaths:
     label: Deaths
     initial: 0
     min: 0
+    per: contestant
 
 
   # Long enough in one place, and the Lands Between are done with you.
