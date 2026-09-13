@@ -22,10 +22,12 @@ version: "0.1.0"
 title: "Elden Ring: Interference"
 author: Runlog
 description: >-
-  Ten minutes at a time, with the world against you. Every stretch draws an
-  interference, slower legs, harder hits, a night that falls, the dead
-  getting back up, and it lasts until the stretch is over. Play by hand on
-  your honor, or attach a tool and let the dice do it to you.
+  Ten minutes at a time, with the world against you. Every stretch draws
+  something wrong with the world and one to four things to do about it:
+  slower legs, harder hits, a night that falls, the dead getting back
+  up, and a boss or a hunt or a key item to settle anyway. Settle it and the land
+  pays you. Every fourth stretch it picks you up and puts you somewhere
+  else, which is occasionally the sky.
 
 category: games
 tags: [Elden Ring, souls, solo, timed, effects]
@@ -44,14 +46,14 @@ requires:
   # a thing you do on your honor and the game is the same game; with it,
   # nobody has to be trusted.
   - id: tool
-    label: A tool that can drive the game
+    label: Tarnished Tool, with a Control tab
     kind: software
-    optional: true
     note: >-
-      Not needed. With one attached, every draw is done to the game
-      instead of being acted out: you really are slower, the dead really
-      do get up. Tarnished Tool with a Control tab is the one this was
-      written for, and the profile beside this pack maps the draws to it.
+      Needed, not optional. Displacement names real graces and moves you
+      to them, including ones you have never found and could not travel
+      to by hand, and the interferences are done to the game rather than
+      acted out. Run the fork below, attach it, and load the profile
+      beside this pack under Settings, Stream, Control.
     url: https://github.com/SCRT-HQ/TarnishedTool-runlog-integration
 
 license:
@@ -61,6 +63,7 @@ license:
 
 capabilities:
   - counters
+  - deferredTriggers
   - timers
   - seededRuns
   - journal
@@ -69,14 +72,13 @@ capabilities:
 vocabulary:
   run: { one: Interference, many: Interferences }
   unit: { one: Stretch, many: Stretches }
-  # Nothing is tracked one by one here: a stretch is the thing, and it
-  # leaves nothing behind but a count.
-  subject: { one: Stretch, many: Stretches }
+  subject: { one: Target, many: Targets }
   finalize: End the stretch
   terms:
     roll: Draw
 
 unit:
+  createsSubject: true
   clock: { kind: timer, minutes: 10 }
   min: 3
   max: 20
@@ -90,49 +92,403 @@ states:
     short: SLOW
     scope: run
     until: unitEnd
-    description: You move at four fifths. Walk it off.
+    description: You move at four fifths.
+  wading:
+    label: Wading
+    short: WADE
+    scope: run
+    until: unitEnd
+    description: You move at two thirds.
+  mired:
+    label: Mired
+    short: MIRE
+    scope: run
+    until: unitEnd
+    description: You move at half speed.
   hurried:
     label: Hurried
     short: FAST
     scope: run
     until: unitEnd
-    description: The world runs quicker than you do.
-  rooted:
-    label: Rooted
-    short: ROOT
+    description: The world runs a fifth faster.
+  frantic:
+    label: Frantic
+    short: MANC
     scope: run
     until: unitEnd
-    description: No dodging. Block, step, or take it.
+    description: The world runs half again as fast.
+  berserk:
+    label: Berserk
+    short: BSRK
+    scope: run
+    until: unitEnd
+    description: The world runs at nearly double speed.
+  sluggish:
+    label: Sluggish
+    short: DRAG
+    scope: run
+    until: unitEnd
+    description: The whole world at four fifths.
+  tender:
+    label: Tender
+    short: TEND
+    scope: run
+    until: unitEnd
+    description: You take half again the damage.
   glass:
     label: Glass
     short: GLAS
     scope: run
     until: unitEnd
     description: Everything hits twice as hard.
+  paper:
+    label: Paper
+    short: PAPR
+    scope: run
+    until: unitEnd
+    description: Everything hits three times as hard.
   blunted:
     label: Blunted
     short: BLNT
     scope: run
     until: unitEnd
-    description: Your own hits land soft.
-  risen:
-    label: The risen
-    short: RISE
+    description: You deal three fifths damage.
+  dulled:
+    label: Dulled
+    short: DULL
     scope: run
     until: unitEnd
-    description: Nothing here stays dead.
+    description: You deal two fifths damage.
+  useless:
+    label: Useless
+    short: USLS
+    scope: run
+    until: unitEnd
+    description: You deal a quarter damage.
+  hollow:
+    label: Hollow
+    short: HOLW
+    scope: run
+    until: unitEnd
+    description: Vigor is one.
+  feeble:
+    label: Feeble
+    short: FEEB
+    scope: run
+    until: unitEnd
+    description: Strength is one.
+  clumsy:
+    label: Clumsy
+    short: CLMS
+    scope: run
+    until: unitEnd
+    description: Dexterity is one.
+  winded:
+    label: Winded
+    short: ENDR
+    scope: run
+    until: unitEnd
+    description: Endurance is one.
+  empty:
+    label: Empty
+    short: MIND
+    scope: run
+    until: unitEnd
+    description: Mind is one.
   poor:
     label: Poor
     short: POOR
     scope: run
     until: unitEnd
-    description: Nothing you kill is worth anything.
-  unheard:
-    label: Unheard
-    short: HUSH
+    description: No runes from anything.
+  robbed:
+    label: Robbed
+    short: ROBD
     scope: run
     until: unitEnd
-    description: A mercy. Nothing hears you coming.
+    description: Your runes are gone for the stretch.
+  mapless:
+    label: Mapless
+    short: LOST
+    scope: run
+    until: unitEnd
+    description: The map cannot be opened.
+  blind:
+    label: Blind
+    short: BLND
+    scope: run
+    until: unitEnd
+    description: Characters are not drawn.
+  risen:
+    label: The risen
+    short: RISE
+    scope: run
+    until: unitEnd
+    description: Nothing you kill stays dead.
+  stone:
+    label: Unkillable
+    short: STON
+    scope: run
+    until: unitEnd
+    description: Nothing can be damaged.
+  rooted:
+    label: Rooted
+    short: ROOT
+    scope: run
+    until: unitEnd
+    description: No rolling.
+  bound:
+    label: Bound
+    short: STAY
+    scope: run
+    until: unitEnd
+    description: Do not leave this region.
+  alone:
+    label: Alone
+    short: ALON
+    scope: run
+    until: unitEnd
+    description: No summons, no Spirit Ashes.
+  bare:
+    label: Bare
+    short: BARE
+    scope: run
+    until: unitEnd
+    description: No armor, all four slots.
+  openhanded:
+    label: Open-handed
+    short: OPEN
+    scope: run
+    until: unitEnd
+    description: Nothing in the left hand.
+  thirsty:
+    label: Thirsty
+    short: DRY
+    scope: run
+    until: unitEnd
+    description: No Crimson Tears.
+  parched:
+    label: Parched
+    short: NONE
+    scope: run
+    until: unitEnd
+    description: No flasks of any kind.
+  unaimed:
+    label: Unaimed
+    short: FREE
+    scope: run
+    until: unitEnd
+    description: No lock-on.
+  afoot:
+    label: Afoot
+    short: WALK
+    scope: run
+    until: unitEnd
+    description: No sprinting, no Torrent.
+  committed:
+    label: Committed
+    short: ONE
+    scope: run
+    until: unitEnd
+    description: One weapon, no swapping.
+  ill-armed:
+    label: Ill-armed
+    short: WRST
+    scope: run
+    until: unitEnd
+    description: Your worst weapon, and only that.
+  grounded:
+    label: Grounded
+    short: DOWN
+    scope: run
+    until: unitEnd
+    description: No jumping.
+  frugal:
+    label: Frugal
+    short: POCK
+    scope: run
+    until: unitEnd
+    description: No consumables.
+  unguarded:
+    label: Unguarded
+    short: NOBL
+    scope: run
+    until: unitEnd
+    description: No blocking.
+  close:
+    label: Close quarters
+    short: MELE
+    scope: run
+    until: unitEnd
+    description: Nothing at range.
+  mundane:
+    label: Mundane
+    short: MUND
+    scope: run
+    until: unitEnd
+    description: No spells or incantations.
+  plain:
+    label: Plain
+    short: SKIL
+    scope: run
+    until: unitEnd
+    description: No Ashes of War or skills.
+  honest:
+    label: Honest
+    short: BACK
+    scope: run
+    until: unitEnd
+    description: No backstabs or ripostes.
+  restless:
+    label: Restless
+    short: REST
+    scope: run
+    until: unitEnd
+    description: No resting at graces.
+  unspent:
+    label: Unspent
+    short: SPND
+    scope: run
+    until: unitEnd
+    description: Nothing spent, nothing upgraded.
+  overland:
+    label: Overland
+    short: TRVL
+    scope: run
+    until: unitEnd
+    description: No fast travel.
+  empty-handed:
+    label: Empty-handed
+    short: LOOT
+    scope: run
+    until: unitEnd
+    description: Pick nothing up.
+  standing:
+    label: Standing
+    short: FGHT
+    scope: run
+    until: unitEnd
+    description: Nothing you aggro is left behind.
+  twohanded:
+    label: Two-handed
+    short: BOTH
+    scope: run
+    until: unitEnd
+    description: Two hands on one weapon.
+  driven:
+    label: Driven
+    short: MOVE
+    scope: run
+    until: unitEnd
+    description: Never stand still.
+  blessed-wind:
+    label: Second wind
+    short: WIND+
+    scope: run
+    until: unitEnd
+    description: A boon. Stamina does not run out.
+  blessed-focus:
+    label: Clear head
+    short: FOCS+
+    scope: run
+    until: unitEnd
+    description: A boon. FP does not run out.
+  blessed-sharp:
+    label: Whetted
+    short: SHRP+
+    scope: run
+    until: unitEnd
+    description: A boon. Double damage.
+  blessed-tough:
+    label: Warded
+    short: WARD
+    scope: run
+    until: unitEnd
+    description: A boon. Half damage taken.
+  blessed-luck:
+    label: Fortunate
+    short: DROP+
+    scope: run
+    until: unitEnd
+    description: A boon. Drops are guaranteed.
+  blessed-quiet:
+    label: Quiet
+    short: HUSH+
+    scope: run
+    until: unitEnd
+    description: A boon. Nothing hears you.
+  blessed-mend:
+    label: Mending
+    short: MEND+
+    scope: run
+    until: unitEnd
+    description: A boon. You heal over time.
+  blessed-keep:
+    label: Held
+    short: KEEP+
+    scope: run
+    until: unitEnd
+    description: A boon. Death costs no runes.
+  blessed-horse:
+    label: Mounted
+    short: HORS+
+    scope: run
+    until: unitEnd
+    description: A boon. Torrent anywhere.
+  blessed-swift:
+    label: Swift
+    short: SWFT
+    scope: run
+    until: unitEnd
+    description: A boon. You move a quarter faster.
+  blessed-peace:
+    label: Peace
+    short: PEAC
+    scope: run
+    until: unitEnd
+    description: A boon. Nothing attacks.
+  blessed-still:
+    label: Stillness
+    short: STIL
+    scope: run
+    until: unitEnd
+    description: A boon. Nothing moves.
+  blessed-sleep:
+    label: Asleep
+    short: SLEP
+    scope: run
+    until: unitEnd
+    description: A boon. Nothing is paying attention.
+  blessed-stock:
+    label: Stocked
+    short: FULL
+    scope: run
+    until: unitEnd
+    description: A boon. Consumables are not used up.
+  blessed-ammo:
+    label: Quivered
+    short: AMMO
+    scope: run
+    until: unitEnd
+    description: A boon. Arrows are not used up.
+  blessed-poise:
+    label: Anchored
+    short: POIS
+    scope: run
+    until: unitEnd
+    description: A boon. You cannot be staggered.
+  blessed-unseen:
+    label: Unseen
+    short: DARK
+    scope: run
+    until: unitEnd
+    description: A boon. Nothing sees you.
+  blessed-lethal:
+    label: Dreadful
+    short: KILL+
+    scope: run
+    until: unitEnd
+    description: A boon. Anything you hit dies.
 
 counters:
   stretches:
@@ -146,6 +502,16 @@ counters:
     label: Deaths
     initial: 0
     min: 0
+
+  # Not a tally of anything: a dial. The run asks for it once at the
+  # start, and after that it sits in the trackers with the rest, so a
+  # player can turn it up mid-run when one thing to do a stretch stops
+  # being enough.
+  perStretch:
+    label: Targets per stretch
+    initial: 1
+    min: 1
+    max: 4
 
   # Four stretches in one place is long enough. This is the counter that
   # moves you on, and it puts itself back to nothing each time it fires.
@@ -168,104 +534,1197 @@ tables:
     resolution: lookup
     title: Interference
     description: >-
-      Drawn at the top of every stretch, and it holds until the stretch
-      ends. With a tool attached it is done to the game; without one it is
-      done on your honor, which works exactly as well and is less fun.
-    roll: d12
+      Drawn at the top of every stretch, and it holds until the
+      stretch ends. Some of these a tool does to the game; the rest
+      are vows, which nothing enforces but you. None are worth
+      points: an interference lands on everyone, and living with it
+      is the ordinary business of a stretch.
+    roll: d100
     entries:
       - id: in-slow
         range: [1, 1]
-        text: Your legs are heavy. You move at four fifths for this stretch.
-        tags: [interference]
-        points: 1
+        text: >-
+          Your legs are heavy. You move at four fifths.
+        tags: [interference, effect]
         grants: [slowed]
-      - id: in-quick
-        range: [2, 2]
-        text: The world is hurried. Everything but you runs a fifth faster.
-        tags: [interference]
-        points: 2
-        grants: [hurried]
-      - id: in-root
-        range: [3, 3]
-        text: You cannot dodge. No rolling this stretch, at all.
-        tags: [interference]
-        points: 3
-        grants: [rooted]
-      - id: in-glass
+      - id: in-wade
+        range: [2, 3]
+        text: >-
+          You are wading. Two thirds speed, everywhere, all stretch.
+        tags: [interference, effect]
+        grants: [wading]
+      - id: in-mired
         range: [4, 4]
-        text: You are glass. Everything that touches you hits twice as hard.
-        tags: [interference]
-        points: 3
-        grants: [glass]
-      - id: in-blunt
+        text: >-
+          Mired. Half speed, and everything in this game is faster
+          than you.
+        tags: [interference, effect]
+        grants: [mired]
+      - id: in-quick
         range: [5, 5]
-        text: Your weapons are blunt. You deal a little over half of what you should.
-        tags: [interference]
-        points: 2
-        grants: [blunted]
-      - id: in-risen
-        range: [6, 6]
-        text: The dead get up. Nothing you kill this stretch stays down.
-        tags: [interference]
-        points: 3
-        grants: [risen]
-      - id: in-poor
-        range: [7, 7]
-        text: Nothing is owed to you. No runes from anything that dies this stretch.
-        tags: [interference]
-        points: 1
-        grants: [poor]
-      - id: in-night
+        text: >-
+          The world is hurried. Everything but you runs a fifth
+          faster.
+        tags: [interference, effect]
+        grants: [hurried]
+      - id: in-frantic
+        range: [6, 7]
+        text: >-
+          The world is frantic. Half again as fast as it should be.
+        tags: [interference, effect]
+        grants: [frantic]
+      - id: in-berserk
         range: [8, 8]
-        text: Night falls, now, wherever you are.
-        tags: [interference, weather]
-        points: 1
-      - id: in-fog
-        range: [9, 9]
-        text: Fog rolls in and stays for the stretch.
-        tags: [interference, weather]
-        points: 1
-      - id: in-rain
-        range: [10, 10]
-        text: Rain, for the whole stretch.
-        tags: [interference, weather]
-        points: 1
-      - id: in-hush
+        text: >-
+          The world has lost its mind. Everything at nearly double
+          speed.
+        tags: [interference, effect]
+        grants: [berserk]
+      - id: in-slower
+        range: [9, 10]
+        text: >-
+          Everything slows, you included. The world at four fifths.
+        tags: [interference, effect]
+        grants: [sluggish]
+      - id: in-tender
         range: [11, 11]
-        text: A mercy. Nothing hears you coming this stretch.
-        tags: [interference, mercy]
-        grants: [unheard]
-      - id: in-calm
+        text: >-
+          You bruise. Half again the damage from everything.
+        tags: [interference, effect]
+        grants: [tender]
+      - id: in-glass
         range: [12, 12]
-        text: Nothing at all. Ten quiet minutes; use them.
-        tags: [mercy]
+        text: >-
+          You are glass. Everything that touches you hits twice as
+          hard.
+        tags: [interference, effect]
+        grants: [glass]
+      - id: in-paper
+        range: [13, 13]
+        text: >-
+          You are paper. Three times damage, and you will feel all
+          of it.
+        tags: [interference, effect]
+        grants: [paper]
+      - id: in-blunt
+        range: [14, 14]
+        text: >-
+          Your weapons are blunt. A little over half of what you
+          should deal.
+        tags: [interference, effect]
+        grants: [blunted]
+      - id: in-dull
+        range: [15, 16]
+        text: >-
+          Your weapons are dull. Two fifths, and everything takes
+          twice as long.
+        tags: [interference, effect]
+        grants: [dulled]
+      - id: in-useless
+        range: [17, 17]
+        text: >-
+          Your weapons are useless. A quarter damage. Consider
+          running.
+        tags: [interference, effect]
+        grants: [useless]
+      - id: in-hollow
+        range: [18, 19]
+        text: >-
+          Hollow. Your vigor is one for the stretch; everything
+          kills you.
+        tags: [interference, effect]
+        grants: [hollow]
+      - id: in-feeble
+        range: [20, 21]
+        text: >-
+          Feeble. Your strength is one, and half of what you carry
+          is unusable.
+        tags: [interference, effect]
+        grants: [feeble]
+      - id: in-clumsy
+        range: [22, 23]
+        text: >-
+          Clumsy. Your dexterity is one; hope you were not built for
+          it.
+        tags: [interference, effect]
+        grants: [clumsy]
+      - id: in-winded
+        range: [24, 25]
+        text: >-
+          Winded. Your endurance is one. Two swings and a roll, if
+          that.
+        tags: [interference, effect]
+        grants: [winded]
+      - id: in-empty
+        range: [26, 26]
+        text: >-
+          Empty. Your mind is one. Whatever you cast, you do not,
+          now.
+        tags: [interference, effect]
+        grants: [empty]
+      - id: in-poor
+        range: [27, 27]
+        text: >-
+          Nothing is owed to you. No runes from anything that dies.
+        tags: [interference, effect]
+        grants: [poor]
+      - id: in-robbed
+        range: [28, 29]
+        text: >-
+          Robbed. Whatever you were carrying is gone until the
+          stretch ends.
+        tags: [interference, effect]
+        grants: [robbed]
+      - id: in-toll
+        range: [30, 31]
+        text: >-
+          A toll. Ten thousand runes, taken, whether you had them or
+          not.
+        tags: [interference, effect]
+      - id: in-lost
+        range: [32, 33]
+        text: >-
+          No map. You cannot open it this stretch; go by landmark.
+        tags: [interference, effect]
+        grants: [mapless]
+      - id: in-unseen-world
+        range: [34, 34]
+        text: >-
+          Nothing renders. You can see the world and nothing living
+          in it.
+        tags: [interference, effect]
+        grants: [blind]
+      - id: in-risen
+        range: [35, 35]
+        text: >-
+          The dead get up. Nothing you kill this stretch stays down.
+        tags: [interference, effect]
+        grants: [risen]
+      - id: in-stone
+        range: [36, 37]
+        text: >-
+          Nothing here can be hurt. Kill nothing; go around.
+        tags: [interference, effect]
+        grants: [stone]
+      - id: in-root
+        range: [38, 39]
+        text: >-
+          You cannot dodge. No rolling this stretch, at all.
+        tags: [interference, effect]
+        grants: [rooted]
+      - id: in-night
+        range: [40, 41]
+        text: >-
+          Night falls, now, wherever you are.
+        tags: [interference, effect]
+      - id: in-dusk
+        range: [42, 43]
+        text: >-
+          Dusk, and the light going.
+        tags: [interference, effect]
+      - id: in-noon
+        range: [44, 44]
+        text: >-
+          Noon, whether it suits you or not.
+        tags: [interference, effect]
+      - id: in-morning
+        range: [45, 45]
+        text: >-
+          Morning. The light comes back, for what it is worth.
+        tags: [interference, effect]
+      - id: in-fog
+        range: [46, 47]
+        text: >-
+          Fog rolls in and stays.
+        tags: [interference, effect]
+      - id: in-rain
+        range: [48, 49]
+        text: >-
+          Rain, for the whole stretch.
+        tags: [interference, effect]
+      - id: in-snow
+        range: [50, 51]
+        text: >-
+          Snow, wherever you happen to be.
+        tags: [interference, effect]
+      - id: in-clear
+        range: [52, 52]
+        text: >-
+          Clear skies, for once. Which means everything can see you.
+        tags: [interference, effect]
+      - id: vo-stay
+        range: [53, 54]
+        text: >-
+          Do not leave this region. Whatever you meant to do
+          elsewhere, do it here.
+        tags: [interference, vow]
+        grants: [bound]
+      - id: vo-alone
+        range: [55, 56]
+        text: >-
+          Alone. No summons and no Spirit Ashes.
+        tags: [interference, vow]
+        grants: [alone]
+      - id: vo-naked
+        range: [57, 58]
+        text: >-
+          Unequip your armor, all four slots.
+        tags: [interference, vow]
+        grants: [bare]
+      - id: vo-noshield
+        range: [59, 60]
+        text: >-
+          Nothing in the left hand but a weapon, a catalyst, or air.
+        tags: [interference, vow]
+        grants: [openhanded]
+      - id: vo-noflask
+        range: [61, 62]
+        text: >-
+          No Crimson Tears. Whatever you have, you keep.
+        tags: [interference, vow]
+        grants: [thirsty]
+      - id: vo-notears
+        range: [63, 64]
+        text: >-
+          No flasks at all, of either colour.
+        tags: [interference, vow]
+        grants: [parched]
+      - id: vo-nolock
+        range: [65, 66]
+        text: >-
+          No lock-on. Aim by hand.
+        tags: [interference, vow]
+        grants: [unaimed]
+      - id: vo-walk
+        range: [67, 68]
+        text: >-
+          Walk. No sprinting and no Torrent.
+        tags: [interference, vow]
+        grants: [afoot]
+      - id: vo-onehand
+        range: [69, 70]
+        text: >-
+          One weapon, and no swapping it.
+        tags: [interference, vow]
+        grants: [committed]
+      - id: vo-worst
+        range: [71, 72]
+        text: >-
+          The worst weapon you are carrying, and only that.
+        tags: [interference, vow]
+        grants: [ill-armed]
+      - id: vo-nojump
+        range: [73, 74]
+        text: >-
+          No jumping, and no jump attacks.
+        tags: [interference, vow]
+        grants: [grounded]
+      - id: vo-noitem
+        range: [75, 76]
+        text: >-
+          No consumables of any kind. Nothing from the pouch.
+        tags: [interference, vow]
+        grants: [frugal]
+      - id: vo-noblock
+        range: [77, 78]
+        text: >-
+          No blocking. Dodge it or wear it.
+        tags: [interference, vow]
+        grants: [unguarded]
+      - id: vo-melee
+        range: [79, 80]
+        text: >-
+          Nothing at range. No bows, no thrown, no spells from afar.
+        tags: [interference, vow]
+        grants: [close]
+      - id: vo-nomagic
+        range: [81, 82]
+        text: >-
+          No spells and no incantations, whatever you are built for.
+        tags: [interference, vow]
+        grants: [mundane]
+      - id: vo-noskill
+        range: [83, 84]
+        text: >-
+          No Ashes of War and no weapon skills.
+        tags: [interference, vow]
+        grants: [plain]
+      - id: vo-noback
+        range: [85, 86]
+        text: >-
+          Nothing cheap. No backstabs and no ripostes.
+        tags: [interference, vow]
+        grants: [honest]
+      - id: vo-norest
+        range: [87, 88]
+        text: >-
+          Do not rest at a grace. Not once.
+        tags: [interference, vow]
+        grants: [restless]
+      - id: vo-nolevel
+        range: [89, 90]
+        text: >-
+          No levelling, no upgrading, no spending anything.
+        tags: [interference, vow]
+        grants: [unspent]
+      - id: vo-notravel
+        range: [91, 92]
+        text: >-
+          No fast travel. Ride or walk wherever you are going.
+        tags: [interference, vow]
+        grants: [overland]
+      - id: vo-noloot
+        range: [93, 94]
+        text: >-
+          Pick nothing up. Walk past all of it.
+        tags: [interference, vow]
+        grants: [empty-handed]
+      - id: vo-fight
+        range: [95, 96]
+        text: >-
+          Fight what you wake. Nothing you aggro may be left behind.
+        tags: [interference, vow]
+        grants: [standing]
+      - id: vo-twohand
+        range: [97, 97]
+        text: >-
+          Two hands on one weapon, the whole stretch.
+        tags: [interference, vow]
+        grants: [twohanded]
+      - id: vo-moving
+        range: [98, 98]
+        text: >-
+          Keep moving. Never stand still for longer than it takes to
+          swing.
+        tags: [interference, vow]
+        grants: [driven]
+      - id: in-calm
+        range: [99, 100]
+        text: >-
+          Nothing at all. Ten quiet minutes; use them.
+        tags: [interference, quiet]
+
+  target:
+    resolution: lookup
+    title: Target
+    description: >-
+      What the stretch is for. Drawn after the interference, so you
+      know what is wrong with the world before you are told what to
+      do in it. Name the target in your own words: the app cannot
+      see your game, and the log should read like something that
+      happened. How many are drawn is up to you: the run asks at the
+      first stretch, and Targets per stretch in the trackers turns
+      it up or down at any point after. Two results here add one and
+      two more on top of whatever that says.
+    roll: d100
+    entries:
+      - id: ta-near
+        range: [1, 5]
+        text: >-
+          Whatever holds the nearest ruin, cave, catacomb or camp.
+          Name it and kill it.
+        tags: [target]
+        points: 3
+      - id: ta-boss
+        range: [6, 9]
+        text: >-
+          A named boss of wherever you have landed. Name it, find
+          it, put it down.
+        tags: [target, hard]
+        points: 5
+      - id: ta-field
+        range: [10, 11]
+        text: >-
+          A field boss out in the open. The kind with a health bar
+          and no door.
+        tags: [target]
+        points: 4
+      - id: ta-again
+        range: [12, 13]
+        text: >-
+          A boss you have already beaten, again, at whatever it
+          costs.
+        tags: [target, hard]
+        points: 4
+      - id: ta-gaol
+        range: [14, 15]
+        text: >-
+          An evergaol. Name one, open it, and finish what is inside.
+        tags: [target, hard]
+        points: 4
+      - id: ta-tunnel
+        range: [16, 17]
+        text: >-
+          A mine or tunnel, all the way to whatever is at the end.
+        tags: [target, hard]
+        points: 4
+      - id: ta-catacomb
+        range: [18, 19]
+        text: >-
+          A catacomb, to the bottom, including the thing at the
+          bottom.
+        tags: [target, hard]
+        points: 4
+      - id: ta-cave
+        range: [20, 21]
+        text: >-
+          A cave, to the bottom, including whatever lives there.
+        tags: [target]
+        points: 3
+      - id: ta-tower
+        range: [22, 23]
+        text: >-
+          A tower. Get to the top of it and take what is there.
+        tags: [target]
+        points: 3
+      - id: ta-knight
+        range: [24, 27]
+        text: >-
+          A knight. Any of the big armored ones, wherever you are.
+        tags: [target]
+        points: 3
+      - id: ta-dragon
+        range: [28, 29]
+        text: >-
+          Something enormous. A dragon, a giant, a troll. Name it.
+        tags: [target, hard]
+        points: 5
+      - id: ta-invader
+        range: [30, 31]
+        text: >-
+          A hostile NPC. Whoever invades, or whoever you go and
+          invade.
+        tags: [target]
+        points: 3
+      - id: ta-beast
+        range: [32, 33]
+        text: >-
+          Something bestial. A bear, a lion, a wolf pack, a crab.
+        tags: [target]
+        points: 3
+      - id: ta-three
+        range: [34, 37]
+        text: >-
+          Three of a kind. Pick an enemy type you can see and kill
+          three.
+        tags: [target]
+        points: 2
+      - id: ta-five
+        range: [38, 40]
+        text: >-
+          Five of a kind. Pick a type and count to five.
+        tags: [target]
+        points: 3
+      - id: ta-ten
+        range: [41, 41]
+        text: >-
+          Ten of a kind. Yes, ten. Pick something common.
+        tags: [target, hard]
+        points: 5
+      - id: ta-camp
+        range: [42, 43]
+        text: >-
+          Clear a camp. Every enemy in one encampment, to the last.
+        tags: [target, hard]
+        points: 4
+      - id: ta-building
+        range: [44, 45]
+        text: >-
+          Clear a building. Everything inside one structure, top to
+          bottom.
+        tags: [target]
+        points: 3
+      - id: ta-patrol
+        range: [46, 47]
+        text: >-
+          A patrol. Follow it to wherever it is going, then end it.
+        tags: [target]
+        points: 3
+      - id: ta-night
+        range: [48, 48]
+        text: >-
+          Something that only comes out at night. Wait for it if you
+          must.
+        tags: [target, hard]
+        points: 5
+      - id: ta-item
+        range: [49, 51]
+        text: >-
+          Something worth having. Name an item you can see on the
+          map or in the world, and come away with it.
+        tags: [target]
+        points: 2
+      - id: ta-key
+        range: [52, 53]
+        text: >-
+          A key item: a stonesword key, a whetblade, a medallion
+          half. Name one and take it.
+        tags: [target]
+        points: 3
+      - id: ta-map
+        range: [54, 55]
+        text: >-
+          A map fragment. Name which one and go and get it.
+        tags: [target]
+        points: 3
+      - id: ta-seed
+        range: [56, 57]
+        text: >-
+          A Golden Seed or a Sacred Tear. Either will do; name it
+          first.
+        tags: [target]
+        points: 3
+      - id: ta-stone
+        range: [58, 59]
+        text: >-
+          Smithing stones, three of them, of any kind.
+        tags: [target]
+        points: 2
+      - id: ta-talisman
+        range: [60, 61]
+        text: >-
+          A talisman you do not own. Name it and wear it out of
+          there.
+        tags: [target]
+        points: 3
+      - id: ta-weapon
+        range: [62, 63]
+        text: >-
+          A weapon you do not own, and swing it once before the
+          stretch ends.
+        tags: [target]
+        points: 3
+      - id: ta-ash
+        range: [64, 65]
+        text: >-
+          An Ash of War, or a Spirit Ash. Name it and take it.
+        tags: [target]
+        points: 3
+      - id: ta-spell
+        range: [66, 67]
+        text: >-
+          A spell or incantation you do not know.
+        tags: [target]
+        points: 3
+      - id: ta-cookbook
+        range: [68, 68]
+        text: >-
+          A cookbook. Any cookbook. Somebody wrote it down for a
+          reason.
+        tags: [target]
+        points: 2
+      - id: ta-grace
+        range: [69, 71]
+        text: >-
+          A grace you do not have. Name it and light it.
+        tags: [target]
+        points: 2
+      - id: ta-far
+        range: [72, 73]
+        text: >-
+          A landmark you can see from where you stand. Name it and
+          stand on it.
+        tags: [target]
+        points: 2
+      - id: ta-cross
+        range: [74, 75]
+        text: >-
+          Cross something: a bridge, a lake, a chasm, a border into
+          the next region.
+        tags: [target]
+        points: 2
+      - id: ta-high
+        range: [76, 77]
+        text: >-
+          The highest thing you can see. Get on top of it.
+        tags: [target]
+        points: 3
+      - id: ta-deep
+        range: [78, 79]
+        text: >-
+          Go underground. Name a cave, tomb or tunnel and reach the
+          bottom.
+        tags: [target, hard]
+        points: 4
+      - id: ta-door
+        range: [80, 81]
+        text: >-
+          An event. A sealed door opened, a lift ridden, a seal
+          broken, a brazier lit.
+        tags: [target]
+        points: 3
+      - id: ta-merchant
+        range: [82, 83]
+        text: >-
+          Find somebody to talk to. A merchant, an NPC, anyone alive
+          and willing.
+        tags: [target]
+        points: 2
+      - id: ta-summon
+        range: [84, 85]
+        text: >-
+          A summon sign on the ground, or a hostile one. Use it
+          either way.
+        tags: [target]
+        points: 3
+      - id: ta-message
+        range: [86, 86]
+        text: >-
+          Leave a message on the ground somewhere it will actually
+          help.
+        tags: [target]
+        points: 1
+      - id: ta-gesture
+        range: [87, 87]
+        text: >-
+          Use a gesture at a statue, a grave, or a corpse that seems
+          to deserve it.
+        tags: [target]
+        points: 1
+      - id: ta-nohit
+        range: [88, 89]
+        text: >-
+          Whatever you name, do it without being hit once.
+        tags: [target, hard]
+        points: 6
+      - id: ta-nofla
+        range: [90, 91]
+        text: >-
+          Whatever you name, do it without drinking anything.
+        tags: [target, hard]
+        points: 5
+      - id: ta-fast
+        range: [92, 92]
+        text: >-
+          Whatever you name, do it in the first half of the stretch.
+        tags: [target, hard]
+        points: 5
+      - id: ta-two
+        range: [93, 94]
+        text: >-
+          One more than you were going to have. Draw again, and
+          settle both before the stretch is out.
+        tags: [target, hard]
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: target }
+      - id: ta-three-t
+        range: [95, 95]
+        text: >-
+          Two more than you were going to have. Draw twice again.
+          Good luck.
+        tags: [target, hard]
+        triggers:
+          - on: immediately
+            do:
+              - { do: rollOn, table: target }
+              - { do: rollOn, table: target }
+      - id: ta-rest
+        range: [96, 98]
+        text: >-
+          Nothing is asked of you. Survive the stretch and that is
+          enough.
+        tags: [target, mercy]
+      - id: ta-choose
+        range: [99, 100]
+        text: >-
+          Your choice. Name anything that will take most of the
+          stretch, and do it.
+        tags: [target]
+        points: 3
+
+  boon:
+    resolution: lookup
+    title: Boon
+    description: >-
+      What settling a target is worth. Drawn when you say you
+      settled it, which is the only way anything here can know.
+      Nothing in it is a punishment and nothing is worth points: the
+      points were on the target.
+    roll: d100
+    entries:
+      - id: bo-runes
+        range: [1, 5]
+        text: >-
+          Runes, five thousand of them, for nothing but doing as you
+          were told.
+        tags: [boon, blessing]
+      - id: bo-runes2
+        range: [6, 8]
+        text: >-
+          Runes, twenty thousand. Spend them before something takes
+          them.
+        tags: [boon, blessing]
+      - id: bo-seed
+        range: [9, 13]
+        text: >-
+          A Golden Seed. One more swallow, for the rest of the run.
+        tags: [boon, item]
+      - id: bo-tear
+        range: [14, 15]
+        text: >-
+          A Sacred Tear. What you have goes further now.
+        tags: [boon, item]
+      - id: bo-arc
+        range: [16, 20]
+        text: >-
+          A Rune Arc, and the great rune to go with it.
+        tags: [boon, item]
+      - id: bo-stone
+        range: [21, 25]
+        text: >-
+          Smithing Stones, three of them, for whatever you are
+          carrying.
+        tags: [boon, item]
+      - id: bo-somber
+        range: [26, 27]
+        text: >-
+          A Somber Smithing Stone, for the thing you actually use.
+        tags: [boon, item]
+      - id: bo-key
+        range: [28, 29]
+        text: >-
+          Two Stonesword Keys. Something behind an imp statue is
+          yours.
+        tags: [boon, item]
+      - id: bo-gold
+        range: [30, 31]
+        text: >-
+          Golden Runes, ten of them, held for when you need them.
+        tags: [boon, item]
+      - id: bo-flesh
+        range: [32, 33]
+        text: >-
+          Exalted Flesh. Hit harder for a while; it is up to you
+          when.
+        tags: [boon, item]
+      - id: bo-blessing
+        range: [34, 35]
+        text: >-
+          Blessings of Marika, three. Healing you did not have to
+          earn.
+        tags: [boon, item]
+      - id: bo-baldachin
+        range: [36, 37]
+        text: >-
+          Baldachin's Blessing. Somebody is looking out for you.
+        tags: [boon, item]
+      - id: bo-dragon
+        range: [38, 39]
+        text: >-
+          An Ancient Dragon's Blessing. Save it for something
+          enormous.
+        tags: [boon, item]
+      - id: bo-fowl
+        range: [40, 41]
+        text: >-
+          Silver-Pickled Fowl Feet. Everything is worth more for a
+          while.
+        tags: [boon, item]
+      - id: bo-boluses
+        range: [42, 43]
+        text: >-
+          Neutralizing Boluses, against whatever is about to poison
+          you.
+        tags: [boon, item]
+      - id: bo-branch
+        range: [44, 45]
+        text: >-
+          Bewitching Branches. Make a friend of something that was
+          not one.
+        tags: [boon, item]
+      - id: bo-shards
+        range: [46, 47]
+        text: >-
+          Starlight Shards, for anyone who casts.
+        tags: [boon, item]
+      - id: bo-grease
+        range: [48, 49]
+        text: >-
+          Fire Grease. Put it on something and go and use it.
+        tags: [boon, item]
+      - id: bo-prawn
+        range: [50, 50]
+        text: >-
+          Boiled Prawn. Small, and it has saved better runners than
+          you.
+        tags: [boon, item]
+      - id: bo-warming
+        range: [51, 51]
+        text: >-
+          A Warming Stone, for whatever the next stretch does to
+          you.
+        tags: [boon, item]
+      - id: bo-medallion
+        range: [52, 52]
+        text: >-
+          A Crimson Amber Medallion. Wear it or sell it.
+        tags: [boon, item]
+      - id: bo-cerulean
+        range: [53, 53]
+        text: >-
+          A Cerulean Crystal Tear, for the flask you keep
+          forgetting.
+        tags: [boon, item]
+      - id: bo-opaline
+        range: [54, 54]
+        text: >-
+          An Opaline Bubbletear. One hit that will not land.
+        tags: [boon, item]
+      - id: bo-mend
+        range: [55, 59]
+        text: >-
+          You are made whole. Health, focus and flasks, all back.
+        tags: [boon, blessing]
+      - id: bo-heal
+        range: [60, 64]
+        text: >-
+          Healed to full, where you stand.
+        tags: [boon, blessing]
+      - id: bo-wind
+        range: [65, 69]
+        text: >-
+          The next stretch costs you no stamina.
+        tags: [boon, blessing]
+        grants: [blessed-wind]
+      - id: bo-focus
+        range: [70, 71]
+        text: >-
+          The next stretch costs you no focus.
+        tags: [boon, blessing]
+        grants: [blessed-focus]
+      - id: bo-sharp
+        range: [72, 76]
+        text: >-
+          Your weapons bite. Double damage until the stretch is out.
+        tags: [boon, blessing]
+        grants: [blessed-sharp]
+      - id: bo-tough
+        range: [77, 78]
+        text: >-
+          Nothing hurts as much. Half damage until the stretch is
+          out.
+        tags: [boon, blessing]
+        grants: [blessed-tough]
+      - id: bo-luck
+        range: [79, 80]
+        text: >-
+          Everything drops what it is carrying, for a while.
+        tags: [boon, blessing]
+        grants: [blessed-luck]
+      - id: bo-quiet
+        range: [81, 82]
+        text: >-
+          Nothing hears you for the rest of the stretch.
+        tags: [boon, blessing]
+        grants: [blessed-quiet]
+      - id: bo-mending
+        range: [83, 84]
+        text: >-
+          You mend as you walk, for the rest of the stretch.
+        tags: [boon, blessing]
+        grants: [blessed-mend]
+      - id: bo-keep
+        range: [85, 85]
+        text: >-
+          Whatever happens next, it will not cost you runes.
+        tags: [boon, blessing]
+        grants: [blessed-keep]
+      - id: bo-horse
+        range: [86, 86]
+        text: >-
+          Torrent comes when called, anywhere, for the rest of the
+          stretch.
+        tags: [boon, blessing]
+        grants: [blessed-horse]
+      - id: bo-swift
+        range: [87, 88]
+        text: >-
+          You are quick. A quarter faster for the rest of the
+          stretch.
+        tags: [boon, blessing]
+        grants: [blessed-swift]
+      - id: bo-peace
+        range: [89, 90]
+        text: >-
+          Nothing will raise a hand to you for the rest of the
+          stretch.
+        tags: [boon, blessing]
+        grants: [blessed-peace]
+      - id: bo-still
+        range: [91, 92]
+        text: >-
+          Nothing moves from where it stands, for the rest of the
+          stretch.
+        tags: [boon, blessing]
+        grants: [blessed-still]
+      - id: bo-asleep
+        range: [93, 93]
+        text: >-
+          Nothing is thinking about you at all any more.
+        tags: [boon, blessing]
+        grants: [blessed-sleep]
+      - id: bo-stocked
+        range: [94, 95]
+        text: >-
+          Your pouch does not empty for the rest of the stretch.
+        tags: [boon, blessing]
+        grants: [blessed-stock]
+      - id: bo-quiver
+        range: [96, 96]
+        text: >-
+          Your quiver does not empty for the rest of the stretch.
+        tags: [boon, blessing]
+        grants: [blessed-ammo]
+      - id: bo-anchored
+        range: [97, 98]
+        text: >-
+          Nothing staggers you for the rest of the stretch.
+        tags: [boon, blessing]
+        grants: [blessed-poise]
+      - id: bo-unseen
+        range: [99, 99]
+        text: >-
+          Nothing sees you for the rest of the stretch.
+        tags: [boon, blessing]
+        grants: [blessed-unseen]
+      - id: bo-lethal
+        range: [100, 100]
+        text: >-
+          For the rest of this stretch, anything you hit dies.
+        tags: [boon, blessing]
+        grants: [blessed-lethal]
 
   displacement:
     resolution: lookup
     title: Displacement
     description: >-
-      Every fourth stretch the Lands Between are done with you where you
-      are. Drawn as a stretch closes, and taken before the next one opens.
-    roll: d4
+      Every fourth stretch the Lands Between are done with you where
+      you are. Drawn as a stretch closes and taken before the next
+      one opens. A tool does the moving: these are real places by
+      name, and most of them are somewhere you would not have
+      chosen.
+    roll: d100
     entries:
-      - id: dis-grace
-        range: [1, 1]
-        text: You wake where you last rested. Whatever you were in the middle of, you are not any more.
+      - id: dis-elleh
+        range: [1, 5]
+        text: >-
+          Church of Elleh, Limgrave. The ruined church at the
+          crossroads. A gentle place to be dropped.
         tags: [displacement]
-      - id: dis-ride
-        range: [2, 2]
-        text: Ride. Leave this region by the nearest road and do not come back this stretch.
+      - id: dis-first
+        range: [6, 10]
+        text: >-
+          The First Step, Limgrave. The cliff you started on. Begin
+          again from here.
         tags: [displacement]
-      - id: dis-down
-        range: [3, 3]
-        text: Go down. The nearest cave, tomb, well or tunnel, and into it.
+      - id: dis-gatefront
+        range: [11, 15]
+        text: >-
+          Gatefront, Limgrave. The ruins at the gate, and the road
+          north.
         tags: [displacement]
-      - id: dis-stay
-        range: [4, 4]
-        text: You may stay. The land has not noticed you yet.
+      - id: dis-artist
+        range: [16, 19]
+        text: >-
+          Artist's Shack, Limgrave. A hut, a view, and something
+          unpleasant nearby.
         tags: [displacement]
+      - id: dis-pilgrim
+        range: [20, 23]
+        text: >-
+          Church of Pilgrimage, Weeping Peninsula. South, past the
+          bridge, in the rain.
+        tags: [displacement]
+      - id: dis-morne
+        range: [24, 26]
+        text: >-
+          Castle Morne Rampart, Weeping Peninsula. The castle on the
+          cliff, and the sea below it.
+        tags: [displacement]
+      - id: dis-cliffs
+        range: [27, 31]
+        text: >-
+          Lake-Facing Cliffs, Liurnia of the Lakes. The long lift
+          down, and the lake in front of you.
+        tags: [displacement]
+      - id: dis-shore
+        range: [32, 35]
+        text: >-
+          Liurnia Lake Shore, Liurnia of the Lakes. Ankle deep, a
+          long way from anywhere.
+        tags: [displacement]
+      - id: dis-scenic
+        range: [36, 38]
+        text: >-
+          Scenic Isle, Liurnia of the Lakes. A small island. It is
+          not as safe as it looks.
+        tags: [displacement]
+      - id: dis-stormveil
+        range: [39, 42]
+        text: >-
+          Stormveil Main Gate, Stormveil Castle. At the gate of the
+          castle, ready or not.
+        tags: [displacement]
+      - id: dis-gateside
+        range: [43, 45]
+        text: >-
+          Gateside Chamber, Stormveil Castle. Inside the walls. Do
+          not be seen.
+        tags: [displacement]
+      - id: dis-altus
+        range: [46, 49]
+        text: >-
+          Altus Plateau, Altus Plateau. Up on the golden plateau, in
+          the open.
+        tags: [displacement]
+      - id: dis-erdtree
+        range: [50, 52]
+        text: >-
+          Erdtree-Gazing Hill, Altus Plateau. The hill with the
+          view. Everything can see you too.
+        tags: [displacement]
+      - id: dis-windmill
+        range: [53, 55]
+        text: >-
+          Windmill Village, Altus Plateau. The village with the
+          dancing. Keep walking.
+        tags: [displacement]
+      - id: dis-smoulder
+        range: [56, 59]
+        text: >-
+          Smoldering Church, Caelid. Caelid. It is red, and
+          something is already coming.
+        tags: [displacement]
+      - id: dis-rotview
+        range: [60, 62]
+        text: >-
+          Rotview Balcony, Caelid. Looking out over the rot, close
+          enough to smell.
+        tags: [displacement]
+      - id: dis-dragon
+        range: [63, 64]
+        text: >-
+          Cathedral of Dragon Communion, Caelid. The cathedral on
+          the beach, and the hearts in it.
+        tags: [displacement]
+      - id: dis-gelmir
+        range: [65, 67]
+        text: >-
+          Bridge of Iniquity, Mt. Gelmir. The mountain road, and the
+          drop beside it.
+        tags: [displacement]
+      - id: dis-seethe
+        range: [68, 69]
+        text: >-
+          Seethewater River, Mt. Gelmir. Magma, and things that live
+          in magma.
+        tags: [displacement]
+      - id: dis-siofra
+        range: [70, 72]
+        text: >-
+          Siofra River Bank, Siofra River. Underground, under the
+          false stars.
+        tags: [displacement]
+      - id: dis-worship
+        range: [73, 74]
+        text: >-
+          Worshippers' Woods, Siofra River. The woods below, where
+          the drums are.
+        tags: [displacement]
+      - id: dis-ainsel
+        range: [75, 77]
+        text: >-
+          Ainsel River Sluice Gate, Ainsel River. Deeper
+          underground, where the ants are.
+        tags: [displacement]
+      - id: dis-volcano
+        range: [78, 79]
+        text: >-
+          Volcano Manor, Volcano Manor. Inside the manor. They are
+          polite until they are not.
+        tags: [displacement]
+      - id: dis-eiglay
+        range: [80, 81]
+        text: >-
+          Temple of Eiglay, Volcano Manor. Deep in the manor, above
+          the lava.
+        tags: [displacement]
+      - id: dis-zamor
+        range: [82, 84]
+        text: >-
+          Zamor Ruins, Mountaintops of the Giants. Snow, and the
+          ruins, and the cold.
+        tags: [displacement]
+      - id: dis-freezing
+        range: [85, 86]
+        text: >-
+          Freezing Lake, Mountaintops of the Giants. The ice.
+          Something large lives on it.
+        tags: [displacement]
+      - id: dis-rot
+        range: [87, 88]
+        text: >-
+          Lake of Rot Shoreside, Lake of Rot. The worst lake there
+          is. Move fast.
+        tags: [displacement]
+      - id: dis-shunning
+        range: [89, 90]
+        text: >-
+          Underground Roadside, Subterranean Shunning-Grounds. Under
+          the capital, in the sewer.
+        tags: [displacement]
+      - id: dis-deeproot
+        range: [91, 92]
+        text: >-
+          Root-Facing Cliffs, Deeproot Depths. The roots, a very
+          long way down.
+        tags: [displacement]
+      - id: dis-snowfield
+        range: [93, 94]
+        text: >-
+          Consecrated Snowfield, Consecrated Snowfield. A whiteout.
+          You cannot see what is walking towards you.
+        tags: [displacement]
+      - id: dis-ordina
+        range: [95, 96]
+        text: >-
+          Ordina- Liturgical Town, Consecrated Snowfield. The empty
+          town with the lights, which is not empty.
+        tags: [displacement]
+      - id: dis-farum
+        range: [97, 97]
+        text: >-
+          Crumbling Beast Grave, Crumbling Farum Azula. The end of
+          the world, falling upward.
+        tags: [displacement]
+      - id: dis-table
+        range: [98, 98]
+        text: >-
+          Table of Lost Grace, Roundtable Hold. A mercy. The
+          Roundtable, and a moment to breathe.
+        tags: [displacement]
+      - id: dis-sky
+        range: [99, 100]
+        text: >-
+          The sky. You are lifted a few hundred feet above wherever
+          you were standing, and then you are not lifted any more.
+        tags: [displacement, fall]
 
 moves:
+  # The two things only the player knows. The app cannot see the game, so
+  # settling a target is something you say, and saying it is what a boon
+  # is drawn on.
+  settled:
+    label: I settled it
+    when: anytime
+    description: The target is done. Draw what it was worth.
+    available:
+      - { unitIndex: { gte: 1 } }
+    do:
+      - { do: rollOn, table: boon }
+
   died:
     label: I died
     when: anytime
@@ -273,13 +1732,62 @@ moves:
     do:
       - { do: modCounter, counter: deaths, by: 1 }
 
+# Turning the dial up owes the stretch more targets, one trigger a rung,
+# because what is owed is a count and the count is not known until the
+# stretch opens. `current` rather than `next`: the step has not been
+# rolled when a unit is entered, so the extra rolls land in this one.
+# They sit after the moves because everything above is generated; see
+# packs/profiles/build-interference.py.
+triggers:
+  - on: onEnterUnit
+    label: How many targets a stretch
+    when:
+      - { unitIndex: { eq: 1 } }
+    do:
+      - do: prompt
+        kind: chooseValue
+        label: How many targets a stretch? You can change it later, in the trackers.
+        options: ["1", "2", "3", "4"]
+        into: perStretchAnswer
+      - { do: modCounter, counter: perStretch, setFrom: perStretchAnswer }
+
+  - on: onEnterUnit
+    label: A second target
+    when:
+      - { counter: perStretch, is: { gte: 2 } }
+    do:
+      - { do: extraRoll, table: target, count: 1, unit: current }
+
+  - on: onEnterUnit
+    label: A third target
+    when:
+      - { counter: perStretch, is: { gte: 3 } }
+    do:
+      - { do: extraRoll, table: target, count: 1, unit: current }
+
+  - on: onEnterUnit
+    label: A fourth target
+    when:
+      - { counter: perStretch, is: { gte: 4 } }
+    do:
+      - { do: extraRoll, table: target, count: 1, unit: current }
+
 phases:
   - id: meddle
     label: Interference
     steps:
       - kind: rollTable
         table: interference
-        label: Draw this stretch's interference
+        label: Draw what is wrong with the world
+
+  - id: charge
+    label: Target
+    steps:
+      - kind: rollTable
+        table: target
+        label: Draw what the stretch is for
+      - kind: declareSubject
+        label: Name what you are going for. Where there is more than one, name them together.
 
   - id: play
     label: Play
@@ -287,11 +1795,17 @@ phases:
       - kind: manual
         label: Play the stretch. Stop when the clock does.
         description: >-
-          Ten minutes. Go where you like and do what you like; the
-          interference is the rule. If you die, say so, it is only counted.
+          Ten minutes. The interference is the rule and the target is the
+          point; getting neither done is an ordinary outcome. Settle the
+          target and say so, and the land pays you for it. If you die,
+          say that too; it is only counted.
         checklist:
           - text: The interference is in force.
             shows: { table: interference, scope: unit }
+          - text: The target was named, and settled or not.
+            shows: { table: target, scope: unit }
+          - text: If you settled it, you said so and took the boon.
+            shows: { table: boon, scope: unit }
           - text: You were moved, if the land said so.
             shows: { table: displacement, scope: unit }
 
@@ -343,6 +1857,7 @@ modes:
 defaultMode: solo
 
 hierarchy:
+  - Boon
   - Displacement
   - Interference
   - General rules
@@ -367,19 +1882,27 @@ fixtures:
     mode: solo
     play:
       - { enter: 1 }
-      - { step: "meddle#0", answers: { d12: 12 } }
+      - { step: "meddle#0", answers: { d100: 100 } }
+      - { step: "charge#0", answers: { d100: 98 } }
+      - { declare: A quiet corner }
       - { step: "play#0" }
       - { finalize: {} }
       - { enter: 2 }
-      - { step: "meddle#0", answers: { d12: 12 } }
+      - { step: "meddle#0", answers: { d100: 100 } }
+      - { step: "charge#0", answers: { d100: 98 } }
+      - { declare: A quiet corner }
       - { step: "play#0" }
       - { finalize: {} }
       - { enter: 3 }
-      - { step: "meddle#0", answers: { d12: 12 } }
+      - { step: "meddle#0", answers: { d100: 100 } }
+      - { step: "charge#0", answers: { d100: 98 } }
+      - { declare: A quiet corner }
       - { step: "play#0" }
       - { finalize: {} }
       - { enter: 4 }
-      - { step: "meddle#0", answers: { d12: 12 } }
+      - { step: "meddle#0", answers: { d100: 100 } }
+      - { step: "charge#0", answers: { d100: 98 } }
+      - { declare: A quiet corner }
       - { step: "play#0" }
       - { finalize: {} }
     expect:
@@ -387,7 +1910,7 @@ fixtures:
       # Owed, not taken: a threshold is put in front of the player, since
       # firing it means rolling, and the reducer cannot roll.
       - { path: counters.wander, equals: 4 }
-      - { path: outcomes.length, equals: 4 }
+      - { path: outcomes.length, equals: 8 }
       - { requests: answered }
 
   - name: Taking the displacement moves you on and starts the count again
@@ -404,11 +1927,50 @@ fixtures:
       - { path: outcomes.0.entryId, equals: dis-grace }
       - { path: firedOnce, contains: "counter:wander:0:u1" }
 
+  - name: With the dial at two, a stretch owes a second target
+    mode: solo
+    # The run asks the question at the first stretch and owes the extra
+    # rolls at every one after, both of them things the player presses,
+    # the way a counter threshold is. So this is written as the log they
+    # produce rather than as a script.
+    events:
+      - { t: RunStarted, mode: solo }
+      - { t: UnitEntered }
+      - { t: CounterChanged, counter: perStretch, set: 2 }
+      - { t: TriggerFired, key: "global:0:u1" }
+      - { t: ExtraRollQueued, table: target, count: 1, unit: current }
+      - { t: TriggerFired, key: "global:1:u1" }
+      - { t: OutcomeResolved, table: interference, entryId: in-calm, cause: phase }
+      - { t: OutcomeResolved, table: target, entryId: ta-near, cause: phase }
+      - { t: ExtraRollTaken, table: target }
+      - { t: OutcomeResolved, table: target, entryId: ta-three, cause: phase }
+    expect:
+      - { path: counters.perStretch, equals: 2 }
+      - { path: outcomes.length, equals: 3 }
+      - { path: outcomes.1.table, equals: target }
+      - { path: outcomes.2.table, equals: target }
+      - { path: firedOnce, contains: "global:1:u1" }
+
+  - name: Settling a target pays, and the boon is drawn on the word of the player
+    mode: solo
+    play:
+      - { enter: 1 }
+      - { step: "meddle#0", answers: { d100: 100 } }
+      - { step: "charge#0", answers: { d100: 98 } }
+      - { declare: The camp on the ridge }
+      - { move: settled, answers: { d100: 1 } }
+    expect:
+      # Two draws for the stretch, and a third because the target was
+      # settled: nothing but the player could have told it that.
+      - { path: outcomes.length, equals: 3 }
+      - { path: outcomes.2.table, equals: boon }
+      - { requests: answered }
+
   - name: A death is counted and nothing else happens
     mode: solo
     play:
       - { enter: 1 }
-      - { step: "meddle#0", answers: { d12: 12 } }
+      - { step: "meddle#0", answers: { d100: 100 } }
       - { move: died }
       - { move: died }
     expect:

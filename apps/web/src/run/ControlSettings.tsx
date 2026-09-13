@@ -1,8 +1,11 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Pack } from "@runlog/rules-schema";
 import { apiBase } from "../sync/config.ts";
+import { useApi } from "../sync/useApi.ts";
+import type { StreamKeys } from "../sync/client.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { CATALOGS, catalogFor, opDef, rangeOfValue, type ArgDef, type ToolCatalog } from "../control/catalog.ts";
+import { builtins, forPack, type Builtin } from "../control/builtin.ts";
 import { complaints, describes, entriesOf, EMPTY, isEmpty, parse, selectorOf, tablesOf, tagsOf, tidy, type ControlProfile, type ProfileOp, type ProfileRow } from "../control/profile.ts";
 
 /**
@@ -23,6 +26,38 @@ export function ControlSettings({ pack, record, onControl }: { pack: Pack; recor
   const [note, setNote] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const file = useRef<HTMLInputElement | null>(null);
+  const api = useApi();
+  /** Whether the account has keys, as the server has it: never the keys. */
+  const [keys, setKeys] = useState<StreamKeys>({});
+  /**
+   * A watch key just minted, held only while this panel is open.
+   *
+   * The server keeps a hash and nothing else, so an address with the key
+   * in it can only be shown in the moment it is made. Which is why the
+   * button is here rather than a sentence telling somebody to go and
+   * find one: making it and copying the finished address is one motion.
+   */
+  const [key, setKey] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  /** The profiles that ship with the app, and which of them fits this pack. */
+  const [shipped, setShipped] = useState<Builtin[]>([]);
+
+  useEffect(() => {
+    let live = true;
+    void builtins().then((all) => live && setShipped(forPack(all, pack.id)), () => {});
+    return () => {
+      live = false;
+    };
+  }, [pack.id]);
+
+  useEffect(() => {
+    if (!api) return;
+    let live = true;
+    void api.streamKeys().then((k) => live && setKeys(k), () => {});
+    return () => {
+      live = false;
+    };
+  }, [api]);
 
   const catalog = catalogFor(profile.tool);
   const tags = useMemo(() => tagsOf(pack), [pack]);
@@ -38,12 +73,28 @@ export function ControlSettings({ pack, record, onControl }: { pack: Pack; recor
   const dropRow = (i: number) => update({ ...profile, rows: (profile.rows ?? []).filter((_, at) => at !== i) });
   const addRow = () => update({ ...profile, rows: [...(profile.rows ?? []), { tag: tags[0] ?? "", ops: [] }] });
 
-  /** The address the tool dials, with the key left for its owner to paste. */
+  /** The address the tool dials, finished where the key is in hand. */
   const address = (() => {
     const b = (apiBase() ?? "/api").replace(/\/$/, "");
     const origin = /^https?:/.test(b) ? new URL(b).origin : typeof location !== "undefined" ? location.origin : "";
-    return `${origin.replace(/^http/, "ws")}/ws?k=REPLACE-WITH-YOUR-WATCH-KEY&as=control`;
+    const k = key ? encodeURIComponent(key) : "REPLACE-WITH-YOUR-WATCH-KEY";
+    return `${origin.replace(/^http/, "ws")}/ws?k=${k}&as=control`;
   })();
+
+  const makeKey = async () => {
+    if (!api) return;
+    setBusy(true);
+    try {
+      const made = await api.mintStreamKey("watch");
+      setKey(made.key);
+      setKeys(made.keys);
+      setNote(null);
+    } catch {
+      setNote("Could not make a key just now.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const exportFile = () => {
     const text = JSON.stringify(tidy(profile), null, 2);
@@ -54,6 +105,14 @@ export function ControlSettings({ pack, record, onControl }: { pack: Pack; recor
     a.download = `${pack.id}.control.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  /** The one written for this pack, where there is one. */
+  const itsOwn = shipped.find((b) => b.pack === pack.id) ?? null;
+
+  const use = (b: Builtin) => {
+    update(b.profile);
+    setNote(`Loaded ${b.title}. It is yours now: edit it, and Export gives you the file back.`);
   };
 
   const importFile = async (chosen: File | undefined) => {
@@ -94,7 +153,13 @@ export function ControlSettings({ pack, record, onControl }: { pack: Pack; recor
       </p>
 
       <div className="askKey">
-        <p className="muted small">The address the tool dials. Your watch key goes where it says so; make one under Chat, above.</p>
+        <p className="muted small">
+          {key
+            ? "The address the tool dials, with your key in it. Shown this once."
+            : keys.watch
+              ? "The address the tool dials. Your key was shown once when it was made; a new one finishes this address and stops the old one working."
+              : "The address the tool dials. It needs a watch key, which is what lets a tool read this run."}
+        </p>
         <code className="askAddress">{address}</code>
         <div className="padRow">
           <button
@@ -107,9 +172,52 @@ export function ControlSettings({ pack, record, onControl }: { pack: Pack; recor
           >
             {copied ? "Copied" : "Copy address"}
           </button>
+          {api && (
+            <button className={key ? "ghost tiny" : "primary tiny"} disabled={busy} onClick={() => void makeKey()}>
+              {keys.watch ? "New watch key" : "Make a watch key"}
+            </button>
+          )}
           <span className="muted small">Add &amp;seat=Name where more than one person is playing.</span>
         </div>
       </div>
+
+      {itsOwn && isEmpty(profile) && (
+        <div className="askKey">
+          <p className="muted small">
+            {pack.title} ships with a profile. It maps every result this pack can draw to something the tool does, and it is a starting point rather than a
+            standard: once it is loaded, it is yours to change.
+          </p>
+          <div className="padRow">
+            <button className="primary tiny" onClick={() => use(itsOwn)}>
+              Use the one that ships with {pack.title}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {shipped.length > 0 && !(itsOwn && isEmpty(profile)) && (
+        <div className="padRow">
+          <span className="muted small">Start from one that ships:</span>
+          <select
+            className="chipAdd"
+            value=""
+            aria-label="A profile that ships with the app"
+            onChange={(e) => {
+              const found = shipped.find((b) => b.id === e.target.value);
+              if (found) use(found);
+            }}
+          >
+            <option value="">choose…</option>
+            {shipped.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.title}
+                {b.pack === pack.id ? " · for this pack" : ""}
+              </option>
+            ))}
+          </select>
+          <span className="muted small">Replaces what is here.</span>
+        </div>
+      )}
 
       <h4 className="stepLabel">The {pack.vocabulary.run.one.toLowerCase()}&apos;s terms</h4>
       <p className="muted small">Applied when a tool attaches and held until the {pack.vocabulary.run.one.toLowerCase()} ends. The settings that would otherwise be a paragraph nobody reads.</p>

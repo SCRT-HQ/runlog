@@ -22,9 +22,9 @@ import { complaints, parse, tidy } from "./profile.ts";
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const profiles = join(repoRoot, "packs", "profiles");
 
-/** Which pack each profile is for. Named, rather than guessed from a filename. */
-const FOR: Record<string, string> = {
-  "elden-ring-interference.json": "packs/sketches/elden-ring-interference.yaml",
+/** Where each pack lives, by the id a profile names. */
+const PACKS: Record<string, string> = {
+  "com.scrthq.runlog.elden-ring-interference": "packs/sketches/elden-ring-interference.yaml",
 };
 
 const load = (relative: string) => {
@@ -36,14 +36,18 @@ const load = (relative: string) => {
 describe("the profiles we ship", () => {
   const files = readdirSync(profiles).filter((f) => f.endsWith(".json"));
 
-  it("are all spoken for, so a new one cannot arrive unchecked", () => {
-    expect(files.sort()).toEqual(Object.keys(FOR).sort());
+  it("each name the pack they are for, so the app can offer the right one", () => {
+    for (const file of files) {
+      const profile = parse(readFileSync(join(profiles, file), "utf8"));
+      expect(profile?.pack, `${file} should name its pack`).toBeTruthy();
+      expect(Object.keys(PACKS), `${file} names a pack this test does not know`).toContain(profile!.pack);
+    }
   });
 
   for (const file of files) {
     describe(file, () => {
       const profile = parse(readFileSync(join(profiles, file), "utf8"));
-      const pack = load(FOR[file]!);
+      const pack = load(PACKS[profile?.pack ?? ""]!);
 
       it("is a profile at all", () => {
         expect(profile).not.toBeNull();
@@ -55,6 +59,10 @@ describe("the profiles we ship", () => {
 
       it("names the tool it is for, since a shipped one reaches strangers", () => {
         expect(profile!.tool).toBeTruthy();
+      });
+
+      it("has a title, since it is offered by name in a list", () => {
+        expect(profile!.title).toBeTruthy();
       });
 
       it("says nothing that would be dropped on the way out", () => {

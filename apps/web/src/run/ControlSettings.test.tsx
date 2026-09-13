@@ -38,12 +38,18 @@ describe("the control panel", () => {
     expect(html).toContain("plays exactly as it always has");
   });
 
-  it("hands over an address with a placeholder where the key goes, never a key", () => {
+  it("leaves a placeholder in the address until there is a key to put there", () => {
     const html = paint();
     expect(html).toContain("/ws?k=REPLACE-WITH-YOUR-WATCH-KEY&amp;as=control");
     // Whatever the origin turns out to be, it is never spoken as http:
     // the socket's scheme is the one thing a copied address must get right.
     expect(html).not.toContain("http");
+  });
+
+  it("offers to make the key, rather than sending anybody to another panel for it", () => {
+    // No API in a static render, so the button is absent here; what is
+    // under test is that the copy no longer tells anyone to go to Chat.
+    expect(paint()).not.toContain("under Chat");
   });
 
   it("draws a saved rule in the pack's own words", () => {
