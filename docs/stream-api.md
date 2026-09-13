@@ -306,9 +306,11 @@ Everything above tells somebody what happened. This one tells a program what to 
 It is the same socket, on the same keys, with `as=control` added. A host attaches on their watch key; anyone else at the table attaches on the run's live link, which is what lets one result land on four people at once. `seat=<name>` says which player this is, for effects meant for one of them.
 
 ```text
-wss://runlog.scrthq.com/ws?k=<watchKey>&as=control&seat=Mira
+wss://runlog.scrthq.com/ws?k=<watchKey>&run=<runId>&as=control&seat=Mira
 wss://runlog.scrthq.com/ws?run=<runId>&t=<token>&as=control&seat=Kel
 ```
+
+**Name the run.** A watch key without `run=` reaches whichever of that account's runs moved most recently and is open to watchers, which is right for a widget that sits in a scene for months and wrong here: a run that ends, or a newer one somewhere else, moves an attached tool to a run whose pack has nothing to say to it, and the tool has no way to know it happened. With `run=` the address finds that run or is refused, and refused is the better of the two. The panel writes it in for you; anyone building an address by hand should too.
 
 An attached tool is a watcher and nothing more: it may read what a watcher reads and it may not press anything, which is why a watch key is enough and a press key is refused here as everywhere else. Effects come from the run. No tool can reach another tool.
 
