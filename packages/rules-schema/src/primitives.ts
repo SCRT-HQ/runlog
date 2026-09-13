@@ -101,6 +101,12 @@ export const NumericBound = z
     lteCounter: Id.optional().describe(
       "Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number.",
     ),
+    gteResource: Id.optional().describe(
+      "Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen.",
+    ),
+    lteResource: Id.optional().describe(
+      "Matches values less than or equal to this resource's current value.",
+    ),
   })
   .strict()
   .refine(
@@ -109,7 +115,9 @@ export const NumericBound = z
       v.gte !== undefined ||
       v.lte !== undefined ||
       v.gteCounter !== undefined ||
-      v.lteCounter !== undefined,
+      v.lteCounter !== undefined ||
+      v.gteResource !== undefined ||
+      v.lteResource !== undefined,
     "a numeric bound needs at least one bound",
   )
   .describe(
