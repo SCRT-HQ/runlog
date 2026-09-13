@@ -196,8 +196,22 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
         }
 
         const merged = merge(stamped, incoming as unknown as RunEvent[]);
-        const changed =
-          merged.length !== local.events.length || tailSeq(merged) !== before || stamped !== local.events || members !== local.members || role !== local.role || shared !== local.shared || JSON.stringify(asks ?? null) !== JSON.stringify(local.asks ?? null);
+        /**
+         * What the record carries besides its log, and which only the
+         * server can say: who this account is in the run, who else is in
+         * it, whether it is shared, what its ask key is.
+         *
+         * Kept apart from the log because the app has to hear about these
+         * and must not hear about its own moves coming back numbered. A
+         * run started here is pushed, answered with a role, and every
+         * event that comes back is this device's own: nothing arrived, so
+         * the run was left out of the news, and news with nothing in it is
+         * dropped. Storage said `owner` while the screen still said
+         * nothing, and the panel that waits on a role waited for a reload.
+         */
+        const aboutTheRun =
+          members !== local.members || role !== local.role || shared !== local.shared || JSON.stringify(asks ?? null) !== JSON.stringify(local.asks ?? null);
+        const changed = aboutTheRun || merged.length !== local.events.length || tailSeq(merged) !== before || stamped !== local.events;
         if (changed) {
           await db.saveRun({
             ...local,
@@ -210,10 +224,12 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
             updatedAt: theirs && theirs.updatedAt > local.updatedAt ? theirs.updatedAt : local.updatedAt,
           });
           const mine = new Set(pending.map((e) => e.id));
-          if (incoming.some((e) => e.seq > before && !mine.has(e.id))) {
-            pulledRuns.push(local.runId);
-            pulled += 1;
-          }
+          const fromElsewhere = incoming.some((e) => e.seq > before && !mine.has(e.id));
+          // The count is about events arriving; the news is about a record
+          // the app is holding going stale. They are not the same question,
+          // and answering both with the first one is what hid the role.
+          if (fromElsewhere) pulled += 1;
+          if (fromElsewhere || aboutTheRun) pulledRuns.push(local.runId);
         }
         } catch (error) {
           if (error instanceof SyncError && (error.kind === "offline" || error.kind === "unauthorized")) throw error;

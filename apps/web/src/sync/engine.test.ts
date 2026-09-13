@@ -394,8 +394,32 @@ describe("the sync engine", () => {
     const local = fakeDb();
     const server = fakeApi();
     local.runs.set("r1", run("r1", "2026-01-02", [started("r1"), move("m1")]));
-    await createEngine(server.api, local.db).sync();
+    const engine = createEngine(server.api, local.db);
+    // The first pass says something: it is where the role arrives. What is
+    // under test is the second, where nothing about the run is new except
+    // the numbers on moves this device already had.
+    await engine.sync();
+    news.length = 0;
+    local.runs.set("r1", { ...local.runs.get("r1")!, events: [...local.runs.get("r1")!.events, move("m2")] });
+    await engine.sync();
     expect(news.filter((n) => n.t === "pulled" && n.kind === "run")).toEqual([]);
+  });
+
+  /**
+   * The bug this guards: a run started here is pushed, the server answers
+   * with a role, the engine writes it, and nothing told the app. Every
+   * event that came back was this device's own, so the run was left out of
+   * the news and the bus drops news with nothing in it. The record in
+   * storage said `owner` while the one on screen still said nothing, and
+   * "People at the table" sat on "Reaching your account" until a reload.
+   */
+  it("tells the app when a run it pushed comes back knowing who owns it", async () => {
+    const local = fakeDb();
+    const server = fakeApi();
+    local.runs.set("r1", run("r1", "2026-01-02", [started("r1"), move("m1")]));
+    await createEngine(server.api, local.db).sync();
+    expect(local.runs.get("r1")?.role).toBe("owner");
+    expect(news).toContainEqual({ t: "pulled", kind: "run", ids: ["r1"] });
   });
 
   it("gives an old log ids the same way twice, so a second device adds nothing twice", async () => {
