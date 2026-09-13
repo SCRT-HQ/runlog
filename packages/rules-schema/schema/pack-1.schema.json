@@ -3319,6 +3319,24 @@
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
       "description": "Which mode is offered first. Must be a key of `modes`."
     },
+    "asks": {
+      "description": "What this pack would do with an ask from outside, where the host switches asks on and says nothing else. A pack whose results a tool performs wants `auto`, because a tray tapped between every death is the bookkeeping that pack exists to remove; one played around a table wants `ask`, because there the interruption is the point. Advisory: it sets what the run starts with, and the host may change it whenever they like.",
+      "type": "object",
+      "properties": {
+        "policy": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "auto"
+          ],
+          "description": "`ask` puts one in front of the table to accept; `auto` takes it as it lands."
+        }
+      },
+      "required": [
+        "policy"
+      ],
+      "additionalProperties": false
+    },
     "hierarchy": {
       "description": "Precedence for contradictory instructions, most specific first. Advisory only: the app shows it and lets the player rule, because these games want human judgment here.",
       "type": "array",
