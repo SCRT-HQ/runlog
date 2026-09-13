@@ -26,6 +26,58 @@ def runes(amount):
 def press(action):
     return [{"op": "action.invoke", "args": {"action": action}}]
 
+def watch_boss(name=None, area=None):
+    """Say when a boss dies. No name means any of them."""
+    args = {}
+    if name: args["name"] = name
+    if area: args["area"] = area
+    return [{"op": "watch.boss", "args": args}]
+
+def watch_item(category=None, name=None):
+    """Say when something that raises a flag is picked up."""
+    args = {}
+    if category: args["category"] = category
+    if name: args["name"] = name
+    return [{"op": "watch.item", "args": args}]
+
+def watch_grace():
+    """Say when a grace new to this save is lit."""
+    return [{"op": "watch.grace", "args": {}}]
+
+# ---- which objectives the game itself can settle ---------------------
+#
+# An objective the tool can watch is settled by the game saying so rather
+# than by the player being believed, which is the difference between a
+# score and a claim. What can be watched is what raises an event flag:
+# every boss death, and the items the game files as events. An ordinary
+# enemy raises nothing, so "three of a kind" stays the player's word and
+# the entry says as much.
+#
+# Keyed by entry id. Anything absent is honestly unwatchable, not
+# forgotten; the list below is checked against the table when this runs.
+WATCH = {
+    "ob-near": watch_boss(),
+    "ob-boss": watch_boss(),
+    "ob-field": watch_boss(),
+    "ob-gaol": watch_boss(),
+    "ob-tunnel": watch_boss(),
+    "ob-catacomb": watch_boss(),
+    "ob-cave": watch_boss(),
+    "ob-tunnel-boss": watch_boss(),
+    "ob-dragon": watch_boss(),
+    "ob-erdtree": watch_boss(),
+    "ob-key": watch_item(category="Key Items"),
+    "ob-map": watch_item(category="Key Items"),
+    "ob-cookbook": watch_item(category="Cookbooks"),
+    "ob-bearing": watch_item(category="Bell Bearings"),
+    "ob-tear": watch_item(category="Crystal Tears"),
+    "ob-ash": watch_item(category="Ashes of War"),
+    "ob-spell": watch_item(category="Sorceries"),
+    "ob-incant": watch_item(category="Incantations"),
+    "ob-talisman": watch_item(category="Talismans"),
+    "ob-grace": watch_grace(),
+}
+
 S = lambda i, l, sh, d: (i, l, sh, d)
 
 # ---- curse: what is wrong with the world for one scene --------
@@ -126,14 +178,21 @@ T = [
     (2, "ob-patrol", "A patrol. Follow it to the end of its round, then kill all of it where it stops.", 3, []),
     (1, "ob-night", "Something that only comes out at night. Wait for it if you must.", 5, ["hard"]),
     (3, "ob-church", "A church you have not been inside. Find one, get to the altar, and take what is on it.", 3, []),
-    (2, "ob-key", "A key item: a stonesword key, a whetblade, a medallion half. Name one and take it.", 3, []),
-    (2, "ob-map", "A map fragment. Name which one and go and get it.", 3, []),
-    (2, "ob-seed", "A Golden Seed or a Sacred Tear. Either will do; name it first.", 3, []),
-    (2, "ob-stone", "Smithing stones, three of them, of any kind.", 2, []),
+    # Each of these names one kind of thing, because a kind is what the
+    # game files as an event and so what can be settled without being
+    # asked. "Something useful" is not an objective; a Bell Bearing is.
+    (2, "ob-key", "A key item. A stonesword key, a whetblade, a medallion half, a cipher: something a door or a map wants.", 3, []),
+    (2, "ob-map", "A map fragment, so the next region stops being a rumour. Name which one before you go.", 3, []),
+    (2, "ob-seed", "A Golden Seed or a Sacred Tear. Either will do; name which before you set off.", 3, []),
+    (2, "ob-cookbook", "A cookbook. Any of them, anywhere: the crafting is not the point, the finding is.", 3, []),
+    (2, "ob-bearing", "A Bell Bearing. Off a body, out of a chest, or off whatever is holding it.", 3, []),
+    (2, "ob-tear", "A Crystal Tear, from the trunk of a Minor Erdtree or wherever else one is standing.", 3, []),
+    (2, "ob-stone", "Smithing stones, three of them, of any kind. Count them out loud.", 2, []),
     (2, "ob-talisman", "A talisman you do not own. Name it and wear it out of there.", 3, []),
     (2, "ob-weapon", "A weapon you do not own, and swing it once before the scene ends.", 3, []),
-    (2, "ob-ash", "An Ash of War, or a Spirit Ash. Name it and take it.", 3, []),
-    (2, "ob-spell", "A spell or incantation you do not know.", 3, []),
+    (2, "ob-ash", "An Ash of War. Take it, and put it on something before the scene ends.", 3, []),
+    (2, "ob-spell", "A sorcery you do not know. Find it, and have the intelligence to read it or do not bother.", 3, []),
+    (2, "ob-incant", "An incantation you do not know. Find it, and have the faith for it.", 3, []),
     (2, "ob-scarab", "A teardrop scarab. Chase one down and kill it before it gets away.", 3, []),
     (3, "ob-grace", "A grace you have never lit. Get to one and light it, however far that is.", 2, []),
     (3, "ob-erdtree", "A Minor Erdtree. Get to one and kill whatever is standing under it.", 4, ["hard"]),
@@ -408,6 +467,22 @@ for row in B:
         r["until"] = "unit"
     r["ops"] = ops
     rows.append(r)
+
+# ---- the objectives the game can settle by itself ----------------------
+#
+# A watch is put on when the objective is drawn and comes off when the
+# scene closes, which is why it carries `until: unit` like anything else
+# that lasts a scene: an objective nobody got to stops being watched
+# without anybody saying so, and the next scene's does not inherit it.
+known = {row[1] for row in T}
+missing = sorted(set(WATCH) - known)
+assert not missing, "WATCH names objectives that are not in the table: " + ", ".join(missing)
+for row in T:
+    eid = row[1]
+    ops = WATCH.get(eid)
+    if not ops:
+        continue
+    rows.append({"entry": eid, "table": "objective", "label": eid.replace("ob-", "").capitalize(), "until": "unit", "ops": ops})
 
 # Fare for the journey. A displacement can put somebody twenty levels
 # out of their depth with no way back but the walk, so every landing
