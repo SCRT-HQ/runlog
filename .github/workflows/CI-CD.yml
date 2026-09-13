@@ -59,6 +59,10 @@ jobs:
 
       - run: npm run typecheck
 
+      # Style for the docs, from .markdownlint-cli2.jsonc, so the prose
+      # stays consistent without anybody holding the rules in their head.
+      - run: npm run lint:docs
+
       # The same shape the hosting's job has: the run writes JUnit beside
       # its console output, and the step below turns it into a check with
       # every test named, so a failure here reads the way a failure there
