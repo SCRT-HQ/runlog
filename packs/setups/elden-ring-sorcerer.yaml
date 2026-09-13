@@ -1,0 +1,43 @@
+# A caster, which the game will not let you be by accident.
+#
+# The stats are the point. A staff without the intelligence to hold it is
+# a stick, so this sets what it needs rather than handing over something
+# that will not work and calling it a gift.
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.sorcerer
+version: "1.0.0"
+title: Sorcerer
+author: Runlog
+description: >-
+  Intelligence to cast with, a staff to cast from, robes that weigh
+  nothing and three talismans that make the casting worth it.
+
+tool: TarnishedTool
+
+ops:
+  # Settings, so a reconnect can be told them again: the stats a staff
+  # needs before it does anything at all.
+  - { op: value.set, args: { name: player.intelligence, value: 60 } }
+  - { op: value.set, args: { name: player.mind, value: 40 } }
+
+  # Ordinary staff, so twenty-five. Lusat's hits harder and caps at ten,
+  # which is the trade; this one is the reliable half of it.
+  - { op: weapon.named, args: { name: Academy Glintstone Staff, upgrade: 25 } }
+
+  - { op: item.named, args: { name: Lazuli Glintstone Crown, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Snow Witch Robe, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Snow Witch Skirt, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Graven-School Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Radagon Icon, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Erdtree's Favor, quantity: 1 }, once: true }
+
+  - { op: runes.give, args: { amount: 120000 }, once: true }
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true
