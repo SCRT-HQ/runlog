@@ -376,6 +376,11 @@ p {
 .chip.cap {
   color: var(--muted);
 }
+/* A tool is on this player's game: the celadon the app uses for "fine". */
+.chip.tool {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
 .chip.kind {
   border-color: var(--accent-dim);
   color: var(--accent);

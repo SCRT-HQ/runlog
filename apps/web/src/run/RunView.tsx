@@ -39,6 +39,7 @@ import { bestOf, placeOf, scoresOf, type ScoredRun } from "./scores.ts";
 import { RacePanel } from "./RacePanel.tsx";
 import { useApi } from "../sync/useApi.ts";
 import { useReachable } from "./useReachable.ts";
+import { useAttachedTools, toolFor, type AttachedTool } from "./useAttachedTools.ts";
 import { ulid } from "../storage/ids.ts";
 import { clearPendingRaceCode, pendingRaceCode } from "../share/IncomingRace.tsx";
 import { PlanError } from "../sync/client.ts";
@@ -190,6 +191,8 @@ export function RunView({
   // A hosted run opens itself to watchers and sees to a watch key, so an
   // address copied from this run works when it is pasted somewhere.
   useReachable(api, run.record ?? null);
+  // Whose games this run is holding the other end of, for the badge below.
+  const tools = useAttachedTools(run.record?.runId ?? null);
   // The roller is fetched while the run opens, not when the first die is thrown.
   useEffect(() => preloadDice3d(), []);
   // Someone else's throw at this table, played here for whoever is not throwing.
@@ -532,7 +535,8 @@ export function RunView({
 
         <div className="col side">
           {state.status === "ended" && <Scores pack={pack} run={run} state={state} />}
-          {run.moderated && <Scoreboard run={run} state={state} pack={pack} />}
+          {run.moderated && <Scoreboard run={run} state={state} pack={pack} tools={tools} />}
+          {!run.moderated && tools.length > 0 && <Attached tools={tools} />}
           {run.roles.length > 0 && <Roles pack={pack} run={run} state={state} />}
           <Board pack={pack} state={state} onRename={run.renameSubject} onCorrect={run.readOnly ? undefined : run.correctState} />
           <Trackers pack={pack} state={state} onNudge={run.readOnly ? undefined : run.nudgeCounter} onTurn={run.readOnly ? undefined : run.turnResource} />
@@ -1734,7 +1738,39 @@ export function Scores({ pack, run, state }: { pack: Pack; run: ReturnType<typeo
 }
 
 /** Standings, most points first. The moderator can add a late arrival or drop someone. */
-function Scoreboard({ run, state, pack }: { run: ReturnType<typeof useRun>; state: RunState; pack: Pack }) {
+/**
+ * A tool is on the game.
+ *
+ * Shown where there is no roster to hang it on, which is every solo run:
+ * the one thing a player wants to know before the dice are thrown is
+ * whether what they say will actually happen, and the alternative is
+ * finding out when it does not.
+ */
+function Attached({ tools }: { tools: AttachedTool[] }) {
+  const named = tools.map((t) => t.app).filter((a): a is string => Boolean(a));
+  return (
+    <section className="panel">
+      <h3 className="sectionTitle">
+        On the game <span className="muted">{tools.length === 1 ? "a tool is attached" : `${tools.length} tools are attached`}</span>
+      </h3>
+      <p className="muted small">
+        {named.length > 0 ? named.join(", ") : "A tool"} is listening, so what the dice say happens in the game. Results still read the same with nothing
+        attached.
+      </p>
+    </section>
+  );
+}
+
+/** The badge a racer carries while their own game is on the other end. */
+function ToolChip({ tool }: { tool: AttachedTool }) {
+  return (
+    <span className="chip tool" title={tool.app ? `${tool.app} is on this player's game` : "A tool is on this player's game"}>
+      tool
+    </span>
+  );
+}
+
+function Scoreboard({ run, state, pack, tools }: { run: ReturnType<typeof useRun>; state: RunState; pack: Pack; tools: AttachedTool[] }) {
   const editable = !run.readOnly;
   const [name, setName] = useState("");
   const add = () => {
@@ -1755,6 +1791,7 @@ function Scoreboard({ run, state, pack }: { run: ReturnType<typeof useRun>; stat
         <div key={s.contestant.id} className="row spread">
           <span className="contestant">
             <span className="idx">#{s.place}</span> {s.contestant.name}
+            {toolFor(tools, s.contestant.name) && <ToolChip tool={toolFor(tools, s.contestant.name)!} />}
             {s.contestant.states.map((id) => (
               <span key={id} className="chip state" title={pack.states?.[id]?.description}>
                 {pack.states?.[id]?.short ?? pack.states?.[id]?.label ?? id}

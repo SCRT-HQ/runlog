@@ -347,6 +347,32 @@ describe("telling the listeners", () => {
       expect(asked).toEqual([]);
     });
 
+    /**
+     * A run with rules for a tool looks exactly like a run without one
+     * until something is drawn, and then it either happens in the game or
+     * it does not. So the table is told who is attached while nothing is
+     * happening, which is the only time it is useful to know.
+     */
+    it("tells the table whose games are on the other end, and again when one goes", async () => {
+      const { live, posted, d } = attached();
+      await live.connect("watcher", "public:open", "");
+      await live.watch("watcher", "open", "public:open", "");
+      await route({ requestContext: { routeKey: "$connect", connectionId: "tool" }, queryStringParameters: { k: "watchkey", as: "control", seat: "Mira" } }, d);
+      await route({ requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "hello", app: "TarnishedTool" }) }, d);
+
+      const toWatcher = () => posted.filter(([c]) => c === "watcher").map(([, l]) => JSON.parse(l) as { kind?: string; data?: { tools?: unknown[]; count?: number } });
+      const said = toWatcher().filter((g) => g.kind === "tools");
+      expect(said.at(-1)?.data?.count).toBe(1);
+      expect(said.at(-1)?.data?.tools).toEqual([{ seat: "Mira", app: "TarnishedTool" }]);
+
+      // And when it goes, so the badge does not outlive the tool.
+      await route({ requestContext: { routeKey: "$disconnect", connectionId: "tool" } }, d);
+      expect(toWatcher().filter((g) => g.kind === "tools").at(-1)?.data?.count).toBe(0);
+
+      // A tool is never told about itself; it hears operations only.
+      expect(posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l) as { kind?: string }).some((g) => g.kind === "tools")).toBe(false);
+    });
+
     it("says nothing where the host has not switched asks on, since attaching is not permission", async () => {
       const { live, posted, d } = attached();
       await live.connect("tool", "public:open", "", { control: true, run: "open" });

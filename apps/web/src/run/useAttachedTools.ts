@@ -1,0 +1,60 @@
+import { useEffect, useState } from "react";
+import { syncBus } from "../sync/bus.ts";
+
+/** One tool on one game: the seat it says it is playing, and what it calls itself. */
+export interface AttachedTool {
+  seat?: string;
+  app?: string;
+}
+
+/**
+ * Which games a run is holding the other end of.
+ *
+ * A run with rules for a tool looks exactly like a run without one until
+ * something is drawn, and then it either happens in the game or it does
+ * not. That is a bad moment to find out. So the table is told who is
+ * attached while nothing is happening, which is the only time it is
+ * useful to know.
+ *
+ * The server sends the whole list every time it changes rather than a
+ * joining and a leaving, so this holds what it last heard and never has
+ * to keep a tally in step. A run that nobody has attached to sends
+ * nothing at all and this stays empty, which is the right answer for the
+ * many runs that will never have a tool near them.
+ */
+export function useAttachedTools(runId: string | null): AttachedTool[] {
+  const [tools, setTools] = useState<AttachedTool[]>([]);
+
+  useEffect(() => {
+    setTools([]);
+    if (!runId) return;
+    return syncBus.subscribe((news) => {
+      if (news.t !== "gesture" || news.id !== runId || news.kind !== "tools") return;
+      const list = (news.data as { tools?: unknown }).tools;
+      if (!Array.isArray(list)) return;
+      setTools(
+        list
+          .filter((t): t is Record<string, unknown> => typeof t === "object" && t !== null)
+          .map((t) => ({
+            ...(typeof t["seat"] === "string" && t["seat"] ? { seat: t["seat"] } : {}),
+            ...(typeof t["app"] === "string" && t["app"] ? { app: t["app"] } : {}),
+          })),
+      );
+    });
+  }, [runId]);
+
+  return tools;
+}
+
+/**
+ * Whether this named racer has a tool on their game.
+ *
+ * A tool says which seat it is playing when it attaches, so a race can
+ * show it per person. One that says nothing is still attached to
+ * something, and on a board with names that is worth showing as a tool
+ * without a name rather than not at all.
+ */
+export function toolFor(tools: AttachedTool[], seat: string): AttachedTool | undefined {
+  const wanted = seat.trim().toLowerCase();
+  return tools.find((t) => (t.seat ?? "").trim().toLowerCase() === wanted);
+}
