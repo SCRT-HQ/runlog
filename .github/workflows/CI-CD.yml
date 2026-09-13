@@ -75,6 +75,19 @@ jobs:
           reporter: java-junit
           fail-on-error: true
 
+      # A pack reaches a library by id and version, and an update is
+      # offered only where the version is newer, so a pack edited in
+      # place at the version it already had is a pack nobody receives.
+      # Asked of the pull request, where there is a before to compare
+      # against; the merge queue has already asked it of each one.
+      - name: A changed pack says so in its version
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE"
+          npm run check:pack-versions -- "$BASE"
+
       # The packs that ship are held to the same standard a contributor's is:
       # --strict fails on warnings, and each pack's own fixtures are replayed
       # against the engine that plays them.
