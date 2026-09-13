@@ -95,6 +95,25 @@ describe("lifecycle gestures", () => {
     expect(told[1]!.data).toEqual({ ending: "Cooled", unitsDone: 1 });
   });
 
+  it("name the unit that closed, not the one opened in the same press", () => {
+    // Reported from play: an effect that should last a stretch lasted
+    // for ever. Next closes a unit and opens the next together, so the
+    // run has moved on by the time this is read, and a taking-back
+    // named after the wrong unit takes nothing back.
+    const base = reduce(kiln, opening);
+    const before = marksOf(base, opening, NOW);
+    const onward: RunEvent[] = [
+      ...opening,
+      { t: "UnitFinalized", at: "2026-01-01T00:05:00Z", id: "e3" } as unknown as RunEvent,
+      { t: "UnitEntered", at: "2026-01-01T00:05:00Z", id: "e4" } as unknown as RunEvent,
+    ];
+    const state = reduce(kiln, onward);
+    expect(state.unit).toBe(2);
+    const told = lifecycleGestures(kiln, state, onward, before, NOW);
+    const closed = told.find((g) => g.kind === "unit-closed");
+    expect(closed?.data).toEqual({ unit: 1, unitsDone: 1 });
+  });
+
   it("tell a clock starting, pausing, resuming and stopping, once each", () => {
     const base = reduce(kiln, opening);
     const clock = (status: "running" | "paused" | "done", expired = false) =>

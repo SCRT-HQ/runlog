@@ -22,6 +22,16 @@ import { entryTextOf } from "../live/snapshot.ts";
  */
 export interface LifecycleMarks {
   outcomes: number;
+  /**
+   * The unit the run was in at this reading.
+   *
+   * Which is how the next reading knows which unit closed. Asking the
+   * state at the time of the gesture gives the wrong answer whenever a
+   * unit closes and the next one opens in one press, and that is the
+   * ordinary way to play: the effects are filed under the unit that
+   * drew them and the taking-back would name the one after it.
+   */
+  unit: number;
   unitsDone: number;
   ended: boolean;
   awards: number;
@@ -40,6 +50,7 @@ export interface LifecycleGesture {
 export function marksOf(state: RunState, events: readonly RunEvent[], nowMs: number = Date.now()): LifecycleMarks {
   return {
     outcomes: state.outcomes.length,
+    unit: state.unit,
     unitsDone: progressOf(state, events, nowMs).unitsDone,
     ended: state.status === "ended",
     awards: state.awards.length,
@@ -115,7 +126,12 @@ export function lifecycleGestures(pack: Pack, state: RunState, events: readonly 
   }
 
   if (now.unitsDone > before.unitsDone) {
-    out.push({ kind: "unit-closed", data: { unit: state.unit, unitsDone: now.unitsDone } });
+    // The unit that closed, which is the one the run was in before this
+    // reading and not the one it is in now. Next closes a unit and opens
+    // the following one together, so by the time this is read the run
+    // has moved on and the effects that should be lifting are filed
+    // under the number behind it.
+    out.push({ kind: "unit-closed", data: { unit: before.unit, unitsDone: now.unitsDone } });
   }
 
   if (now.ended && !before.ended) {

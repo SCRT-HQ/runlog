@@ -18,7 +18,7 @@
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-interference
-version: "0.8.0"
+version: "0.9.0"
 title: "Elden Ring: Interference"
 author: Runlog
 description: >-
@@ -243,6 +243,54 @@ states:
     scope: run
     until: unitEnd
     description: No rolling.
+  nightfall:
+    label: Night
+    short: NGHT
+    scope: run
+    until: unitEnd
+    description: Night fell on this stretch. The dark outlives it; the badge does not.
+  dusk:
+    label: Dusk
+    short: DUSK
+    scope: run
+    until: unitEnd
+    description: Dusk came on this stretch.
+  noon:
+    label: Noon
+    short: NOON
+    scope: run
+    until: unitEnd
+    description: Noon, on this stretch.
+  morning:
+    label: Morning
+    short: MORN
+    scope: run
+    until: unitEnd
+    description: Morning came on this stretch.
+  fog:
+    label: Fog
+    short: FOG
+    scope: run
+    until: unitEnd
+    description: Fog came in on this stretch.
+  rain:
+    label: Rain
+    short: RAIN
+    scope: run
+    until: unitEnd
+    description: Rain, for this stretch.
+  snow:
+    label: Snow
+    short: SNOW
+    scope: run
+    until: unitEnd
+    description: Snow, on this stretch.
+  clear:
+    label: Clear
+    short: CLR
+    scope: run
+    until: unitEnd
+    description: Clear skies on this stretch, and nothing to hide behind.
   bound:
     label: Bound
     short: STAY
@@ -762,41 +810,49 @@ tables:
         text: >-
           Night falls, now, wherever you are.
         tags: [interference, effect]
+        grants: [nightfall]
       - id: in-dusk
         range: [42, 43]
         text: >-
           Dusk, and the light going.
         tags: [interference, effect]
+        grants: [dusk]
       - id: in-noon
         range: [44, 44]
         text: >-
           Noon, whether it suits you or not.
         tags: [interference, effect]
+        grants: [noon]
       - id: in-morning
         range: [45, 45]
         text: >-
           Morning. The light comes back, for what it is worth.
         tags: [interference, effect]
+        grants: [morning]
       - id: in-fog
         range: [46, 47]
         text: >-
           Fog rolls in and stays.
         tags: [interference, effect]
+        grants: [fog]
       - id: in-rain
         range: [48, 49]
         text: >-
           Rain, for the whole stretch.
         tags: [interference, effect]
+        grants: [rain]
       - id: in-snow
         range: [50, 51]
         text: >-
           Snow, wherever you happen to be.
         tags: [interference, effect]
+        grants: [snow]
       - id: in-clear
         range: [52, 52]
         text: >-
           Clear skies, for once. Which means everything can see you.
         tags: [interference, effect]
+        grants: [clear]
       - id: vo-stay
         range: [53, 54]
         text: >-
