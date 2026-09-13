@@ -6,7 +6,7 @@ The format is in [docs/stream-api.md](../../docs/stream-api.md), under "Driving 
 
 | Profile | Pack | What it needs |
 | --- | --- | --- |
-| `elden-ring-interference.json` | Elden Ring: Interference | Tarnished Tool with a control tab |
+| `elden-ring-tarnishedtool.json` | Elden Ring: TarnishedTool | Tarnished Tool with a control tab |
 
 ## What these carry, and what they leave out
 
@@ -18,17 +18,17 @@ Two kinds of thing are deliberately absent, because they are not.
 
 **Coordinates.** `warp.position` takes a block id and three numbers, and those are yours rather than ours: save the position in the tool, read them off it, and put them in a row.
 
-What the Interference profile uses instead is `warp.grace`, which names a place, and `player.drop`, which needs no map at all. The tool already ships every grace in the game and already updates them when the game patches, so a profile that says "Church of Elleh" keeps meaning that; three numbers written down here would not. Spell a grace exactly as the tool's own list does, and give the area where two of them share a name.
+What this profile uses instead is `warp.grace`, which names a place, and `player.drop`, which needs no map at all. The tool already ships every grace in the game and already updates them when the game patches, so a profile that says "Church of Elleh" keeps meaning that; three numbers written down here would not. Spell a grace exactly as the tool's own list does, and give the area where two of them share a name.
 
-## Interference is generated
+## The profile is generated
 
-`elden-ring-interference.json` is not written by hand, and neither are the pack's states and tables. One file holds the whole of it, and the three outputs are built from it:
+`elden-ring-tarnishedtool.json` is not written by hand, and neither are the pack's states and tables. One file holds the whole of it, and the three outputs are built from it:
 
 ```bash
-python packs/profiles/build-interference.py
+python packs/profiles/build-tarnishedtool.py
 ```
 
-A row's states, its words, its weight and what a tool does about it sit on one line together, which is the only way sixty interferences stay agreeing with fifty-one states and seventy-three profile rows. The weights are relative; the script fits them to a d100 exactly, so adding an entry does not mean re-tuning a hundred numbers by hand and leaving a gap nobody notices.
+A row's states, its words, its weight and what a tool does about it sit on one line together, which is the only way fifty-nine curses stay agreeing with seventy-five states and a hundred and eleven profile rows. The weights are relative; the script fits them to a d100 exactly, so adding an entry does not mean re-tuning a hundred numbers by hand and leaving a gap nobody notices.
 
 Edit the script, run it, and commit what it produced.
 

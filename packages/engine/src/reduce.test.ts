@@ -17,7 +17,7 @@ function loadPack(rel: string): Pack {
 }
 
 const kiln = loadPack("packs/demo/pack.yaml");
-const signal = loadPack("packs/sketches/salt-and-signal.yaml");
+const signal = loadPack("packs/testing/salt-and-signal.yaml");
 
 let clock = 0;
 /** Build an event with a monotonically increasing timestamp. */

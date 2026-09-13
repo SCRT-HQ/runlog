@@ -19,29 +19,20 @@ import { listingPayload } from "../packages/rules-schema/src/index.ts";
  */
 
 const PACKS = [
-  "packs/demo/any-given-day.yaml",
-  "packs/demo/pack.yaml",
-  "packs/sketches/salt-and-signal.yaml",
   "packs/sketches/ladder-work.yaml",
   "packs/sketches/rocket-league-ladder.yaml",
-  "packs/sketches/elden-ring-expedition.yaml",
   "packs/sketches/homefront.yaml",
   "packs/sketches/practice-room.yaml",
   "packs/sketches/pantry-roulette.yaml",
-  "packs/sketches/elden-ring-trial.yaml",
-  "packs/sketches/elden-ring-interference.yaml",
+  "packs/sketches/elden-ring-tarnishedtool.yaml",
   "packs/sketches/rocket-league-showdown.yaml",
   "packs/sketches/twenty-five.yaml",
-  "packs/sketches/frog-first.yaml",
-  "packs/sketches/two-doors.yaml",
-  "packs/sketches/word-count.yaml",
-  "packs/sketches/the-backlog.yaml",
-  "packs/sketches/sunday-desk.yaml",
   "packs/sketches/run-of-show.yaml",
   "packs/sketches/forfeits.yaml",
-  // packs/testing/engine-testing.yaml is deliberately absent from this list:
-  // a test bench belongs in the bundle a dev copy ships, never in a
-  // publisher's listing.
+  // packs/demo and packs/testing are deliberately absent from this list.
+  // The bench is a bench; the demo pack is the worked example the guide
+  // and the suite are written against. Both keep loading and neither is
+  // something to offer a player.
 ];
 
 const api = (process.env["RUNLOG_API"] ?? "").replace(/\/$/, "");

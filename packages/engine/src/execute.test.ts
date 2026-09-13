@@ -27,7 +27,7 @@ function loadPack(rel: string): Pack {
   return r.pack;
 }
 const kiln = loadPack("packs/demo/pack.yaml");
-const signal = loadPack("packs/sketches/salt-and-signal.yaml");
+const signal = loadPack("packs/testing/salt-and-signal.yaml");
 
 const NOW = "2026-01-01T00:00:00.000Z";
 const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent =>

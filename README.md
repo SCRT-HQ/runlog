@@ -17,22 +17,20 @@ npm install
 npm run dev
 ```
 
-The packs that ship with it are free, in the marketplace; a few of them:
+The packs that ship with it are free, in the marketplace:
 
 | Pack | Shape | What it exercises |
 | --- | --- | --- |
-| Any Given Day | a day of things to do; the pack a new device gets | weather that reaches back, a streak, energy, favors, a two-to-four-player mode |
-| Homefront | housework as a dungeon crawl | the subject drawn from a table, patience as a resource, timed rooms |
-| Practice Room | deliberate practice for any skill | timers as the spine, a required journal line, a run-end `bands` roll |
-| Pantry Roulette | cooking under constraint | two draws per course, a cook-and-critic pair, forced extra courses |
-| The Long Kiln | ceramics, dungeon-shaped | backwards targeting, decks, counters, co-op, seeded runs |
-| Salt & Signal | solo journaling | `bands` resolution, progress tracks, free-text journal |
-| Ladder Work | training log | no targeting at all, runs spanning days, timers |
+| Forfeits | a penalty wheel for any stream; the pack a new device gets | a counter with a threshold trigger, a move from outside the flow, states that lift when the round is left, moderated and seeded modes |
+| Elden Ring: TarnishedTool | a challenge run a tool plays for you | ten-minute scenes, curses applied to the game itself, a hidden counter that picks you up and puts you elsewhere |
 | Rocket League: Mechanics Ladder | a challenge pack for a game | ladder, quick, endless and shared modes |
-| Elden Ring: Expedition | a challenge pack for a game | draws that draw again, vows, up to ten players |
 | Rocket League: Showdown | a moderated race | one person moderates, a roster races the drawn mechanics, points by rank |
-| Elden Ring: Trial | a moderated race | curses that land on everyone with a cure drawn beside them, targets worth points |
-| Forfeits | a penalty wheel for any stream | a counter with a threshold trigger, a move from outside the flow, states that lift when the round is left, moderated and seeded modes |
+| Homefront | housework as a dungeon crawl | the subject drawn from a table, patience as a resource, timed rooms |
+| Pantry Roulette | cooking under constraint | two draws per course, a cook-and-critic pair, forced extra courses |
+| Practice Room | deliberate practice for any skill | timers as the spine, a required journal line, a run-end `bands` roll |
+| Run of Show | a rehearsal, segment by segment | a card per segment, time you set yourself, running over as a cost |
+| Ladder Work | training log | no targeting at all, runs spanning days, timers |
+| Twenty-five | one task per twenty-five minutes | a bell that means stop, a break card, debt for running over |
 
 ## Not a tabletop, not a wheel
 

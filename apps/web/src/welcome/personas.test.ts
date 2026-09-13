@@ -23,8 +23,8 @@ describe("the personas", () => {
     }
   });
 
-  it("read as a sentence: a potter, an Elden Lord, an RLCS champion", () => {
-    expect(article("potter")).toBe("a");
+  it("read as a sentence: a streamer, an Elden Lord, an RLCS champion", () => {
+    expect(article("streamer")).toBe("a");
     expect(article("Elden Lord")).toBe("an");
     expect(article("RLCS champion")).toBe("an");
     expect(article("human")).toBe("a");
@@ -33,14 +33,14 @@ describe("the personas", () => {
   it("fall back to the first for an unknown or missing choice", () => {
     expect(personaById("nobody")).toBe(DEFAULT_PERSONA);
     expect(personaById(undefined)).toBe(DEFAULT_PERSONA);
-    expect(personaById("potter").packTitle).toBe("The Long Kiln");
+    expect(personaById("elden-lord").packTitle).toBe("Elden Ring: TarnishedTool");
   });
 
   it("list the others without repeating the one chosen", () => {
-    const potter = personaById("potter");
-    expect(otherScenes(potter, 3)).toHaveLength(3);
-    expect(otherScenes(potter, 3)).not.toContain("a day at the wheel");
-    expect(otherVocabularies(potter, 2)).not.toContain(potter.vocabulary);
+    const lord = personaById("elden-lord");
+    expect(otherScenes(lord, 3)).toHaveLength(3);
+    expect(otherScenes(lord, 3)).not.toContain("ten minutes with the world against you");
+    expect(otherVocabularies(lord, 2)).not.toContain(lord.vocabulary);
   });
 
   it("are remembered on the device, and forgotten gracefully", () => {
