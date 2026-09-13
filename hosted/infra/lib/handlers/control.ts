@@ -241,6 +241,13 @@ export function setupFor(profile: ControlProfile): string | null {
     t: "apply",
     id: SETUP_ID,
     label: "The run's terms",
+    // A list of separate things, not one effect. A rule's operations
+    // stand or fall together, because a rule that makes somebody slow
+    // and blind is one rule and half of it is a different one nobody
+    // wrote. Terms are eight settings and gifts, and a ninth written
+    // against a newer build than the one attached should not cost
+    // somebody the other eight.
+    each: true,
     ops: profile.setup.map((o) => ({ op: o.op, args: o.args ?? {} })),
   });
 }
