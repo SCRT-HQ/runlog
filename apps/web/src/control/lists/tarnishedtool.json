@@ -4552,5 +4552,1189 @@
    "name": "Zweihander",
    "max": 25
   }
+ ],
+ "ashes": [
+  {
+   "name": "Aspects of the Crucible: Wings"
+  },
+  {
+   "name": "Assassin's Gambit"
+  },
+  {
+   "name": "Barbaric Roar"
+  },
+  {
+   "name": "Barrage"
+  },
+  {
+   "name": "Barricade Shield"
+  },
+  {
+   "name": "Beast's Roar"
+  },
+  {
+   "name": "Black Flame Tornado"
+  },
+  {
+   "name": "Blind Spot"
+  },
+  {
+   "name": "Blinkbolt"
+  },
+  {
+   "name": "Blood Blade"
+  },
+  {
+   "name": "Blood Tax"
+  },
+  {
+   "name": "Bloodhound's Step"
+  },
+  {
+   "name": "Bloody Slash"
+  },
+  {
+   "name": "Braggart's Roar"
+  },
+  {
+   "name": "Carian Grandeur"
+  },
+  {
+   "name": "Carian Greatsword"
+  },
+  {
+   "name": "Carian Retaliation"
+  },
+  {
+   "name": "Carian Sovereignty"
+  },
+  {
+   "name": "Charge Forth"
+  },
+  {
+   "name": "Chilling Mist"
+  },
+  {
+   "name": "Cragblade"
+  },
+  {
+   "name": "Determination"
+  },
+  {
+   "name": "Divine Beast Frost Stomp"
+  },
+  {
+   "name": "Double Slash"
+  },
+  {
+   "name": "Dryleaf Whirlwind"
+  },
+  {
+   "name": "Earthshaker"
+  },
+  {
+   "name": "Enchanted Shot"
+  },
+  {
+   "name": "Endure"
+  },
+  {
+   "name": "Eruption"
+  },
+  {
+   "name": "Flame Skewer"
+  },
+  {
+   "name": "Flame Spear"
+  },
+  {
+   "name": "Flame of the Redmanes"
+  },
+  {
+   "name": "Flaming Strike"
+  },
+  {
+   "name": "Ghostflame Call"
+  },
+  {
+   "name": "Giant Hunt"
+  },
+  {
+   "name": "Glintblade Phalanx"
+  },
+  {
+   "name": "Glintstone Pebble"
+  },
+  {
+   "name": "Golden Land"
+  },
+  {
+   "name": "Golden Parry"
+  },
+  {
+   "name": "Golden Slam"
+  },
+  {
+   "name": "Golden Vow"
+  },
+  {
+   "name": "Gravitas"
+  },
+  {
+   "name": "Ground Slam"
+  },
+  {
+   "name": "Hoarah Loux's Earthshaker"
+  },
+  {
+   "name": "Hoarfrost Stomp"
+  },
+  {
+   "name": "Holy Ground"
+  },
+  {
+   "name": "Ice Spear"
+  },
+  {
+   "name": "Igon's Drake Hunt"
+  },
+  {
+   "name": "Impaling Thrust"
+  },
+  {
+   "name": "Kick"
+  },
+  {
+   "name": "Lifesteal Fist"
+  },
+  {
+   "name": "Lightning Ram"
+  },
+  {
+   "name": "Lightning Slash"
+  },
+  {
+   "name": "Lion's Claw"
+  },
+  {
+   "name": "Loretta's Slash"
+  },
+  {
+   "name": "Mighty Shot"
+  },
+  {
+   "name": "No Skill"
+  },
+  {
+   "name": "Overhead Stance"
+  },
+  {
+   "name": "Palm Blast"
+  },
+  {
+   "name": "Parry"
+  },
+  {
+   "name": "Phantom Slash"
+  },
+  {
+   "name": "Piercing Fang"
+  },
+  {
+   "name": "Piercing Throw"
+  },
+  {
+   "name": "Poison Moth Flight"
+  },
+  {
+   "name": "Poisonous Mist"
+  },
+  {
+   "name": "Prayerful Strike"
+  },
+  {
+   "name": "Prelate's Charge"
+  },
+  {
+   "name": "Quickstep"
+  },
+  {
+   "name": "Raging Beast"
+  },
+  {
+   "name": "Rain of Arrows"
+  },
+  {
+   "name": "Raptor of the Mists"
+  },
+  {
+   "name": "Repeating Thrust"
+  },
+  {
+   "name": "Rolling Sparks"
+  },
+  {
+   "name": "Royal Knight's Resolve"
+  },
+  {
+   "name": "Sacred Blade"
+  },
+  {
+   "name": "Sacred Order"
+  },
+  {
+   "name": "Sacred Ring of Light"
+  },
+  {
+   "name": "Savage Claws"
+  },
+  {
+   "name": "Savage Lion's Claw"
+  },
+  {
+   "name": "Scattershot Throw"
+  },
+  {
+   "name": "Seppuku"
+  },
+  {
+   "name": "Shared Order"
+  },
+  {
+   "name": "Shield Bash"
+  },
+  {
+   "name": "Shield Crash"
+  },
+  {
+   "name": "Shield Strike"
+  },
+  {
+   "name": "Shriek of Sorrow"
+  },
+  {
+   "name": "Sky Shot"
+  },
+  {
+   "name": "Spectral Lance"
+  },
+  {
+   "name": "Spinning Gravity Thrust"
+  },
+  {
+   "name": "Spinning Slash"
+  },
+  {
+   "name": "Spinning Strikes"
+  },
+  {
+   "name": "Spinning Weapon"
+  },
+  {
+   "name": "Square Off"
+  },
+  {
+   "name": "Stamp (Sweep)"
+  },
+  {
+   "name": "Stamp (Upward Cut)"
+  },
+  {
+   "name": "Storm Assault"
+  },
+  {
+   "name": "Storm Blade"
+  },
+  {
+   "name": "Storm Stomp"
+  },
+  {
+   "name": "Storm Wall"
+  },
+  {
+   "name": "Stormcaller"
+  },
+  {
+   "name": "Swift Slash"
+  },
+  {
+   "name": "Sword Dance"
+  },
+  {
+   "name": "The Poison Flower Blooms Twice"
+  },
+  {
+   "name": "Thops's Barrier"
+  },
+  {
+   "name": "Through and Through"
+  },
+  {
+   "name": "Thunderbolt"
+  },
+  {
+   "name": "Troll's Roar"
+  },
+  {
+   "name": "Unsheathe"
+  },
+  {
+   "name": "Vacuum Slice"
+  },
+  {
+   "name": "Vow of the Indomitable"
+  },
+  {
+   "name": "Wall of Sparks"
+  },
+  {
+   "name": "War Cry"
+  },
+  {
+   "name": "Waves of Darkness"
+  },
+  {
+   "name": "White Shadow's Lure"
+  },
+  {
+   "name": "Wild Strikes"
+  },
+  {
+   "name": "Wing Stance"
+  }
+ ],
+ "bosses": [
+  {
+   "name": "Abductor Virgins Duo",
+   "area": "Mt. Gelmir"
+  },
+  {
+   "name": "Adan Thief of Fire",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Alecto Black Knife Ringleader",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Ancestor Spirit",
+   "area": "Siofra River"
+  },
+  {
+   "name": "Ancient Dragon Lansseax",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Ancient Dragon Senessax",
+   "area": "Jagged Peak"
+  },
+  {
+   "name": "Ancient Dragon-Man",
+   "area": "Jagged Peak"
+  },
+  {
+   "name": "Ancient Hero of Zamor",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Ancient Hero of Zamor",
+   "area": "Mountaintops of the Giants"
+  },
+  {
+   "name": "Ancient Hero of Zamor",
+   "area": "Weeping Peninsula"
+  },
+  {
+   "name": "Astel Naturalborn of the Void",
+   "area": "Lake of Rot"
+  },
+  {
+   "name": "Astel Stars of Darkness",
+   "area": "Consecrated Snowfields"
+  },
+  {
+   "name": "Battlemage Hugues",
+   "area": "Caelid"
+  },
+  {
+   "name": "Bayle the Dread",
+   "area": "Jagged Peak"
+  },
+  {
+   "name": "Beastman of Farum Azula",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Beastman of Farum Azula Duo",
+   "area": "Greyoll's Dragonbarrow"
+  },
+  {
+   "name": "Bell Bearing Hunter",
+   "area": "Capital Outskirts"
+  },
+  {
+   "name": "Bell Bearing Hunter",
+   "area": "Greyoll's Dragonbarrow"
+  },
+  {
+   "name": "Bell Bearing Hunter",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Bell Bearing Hunter",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Black Blade Kindred",
+   "area": "Forbidden Lands"
+  },
+  {
+   "name": "Black Blade Kindred",
+   "area": "Greyoll's Dragonbarrow"
+  },
+  {
+   "name": "Black Knife Assaassin",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Black Knife Assassin",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Black Knife Assassin (Sage's Cave)",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Black Knife Assassin (Sainted Hero's Grave)",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Black Knight Edreed",
+   "area": "Scadu Atlus"
+  },
+  {
+   "name": "Black Knight Garrew",
+   "area": "Scadu Atlus"
+  },
+  {
+   "name": "Blackgaol Knight",
+   "area": "Gravesite Plain"
+  },
+  {
+   "name": "Bloodhound Knight",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Bloodhound Knight Darriwil",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Bols Carian Knight",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Borealis the Freezing Fog",
+   "area": "Mountaintops of the Giants"
+  },
+  {
+   "name": "Cemetery Shade",
+   "area": "Caelid"
+  },
+  {
+   "name": "Cemetery Shade",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Cemetery Shade",
+   "area": "Weeping Peninsula"
+  },
+  {
+   "name": "Chief Bloodfiend",
+   "area": "Gravesite Plain"
+  },
+  {
+   "name": "Cleanrot Knight",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Cleanrot Knight Duo",
+   "area": "Caelid"
+  },
+  {
+   "name": "Commander Gaius",
+   "area": "Scadu Atlus"
+  },
+  {
+   "name": "Commander Niall",
+   "area": "Mountaintops of the Giants"
+  },
+  {
+   "name": "Commander O'Neil",
+   "area": "Caelid"
+  },
+  {
+   "name": "Count Ymir Mother of Fingers",
+   "area": "Scadu Atlus"
+  },
+  {
+   "name": "Crucible Knight",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Crucible Knight & Crucible Knight Ordovis",
+   "area": "Capital Outskirts"
+  },
+  {
+   "name": "Crucible Knight & Misbegotten Warrior",
+   "area": "Caelid"
+  },
+  {
+   "name": "Crucible Knight Siluria",
+   "area": "Deeproot Depths"
+  },
+  {
+   "name": "Crystalian",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Crystalian Duo Spear & Staff",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Crystalians Duo Spear & Ringblade",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Curseblade Labirith",
+   "area": "Scadu Atlus"
+  },
+  {
+   "name": "Dancer of Ranah",
+   "area": "Cerulean Coast"
+  },
+  {
+   "name": "Death Knight (Longhaft Axe)",
+   "area": "Rauh Base"
+  },
+  {
+   "name": "Death Knight (Twin Axes)",
+   "area": "Scadu Atlus"
+  },
+  {
+   "name": "Death Rite Bird",
+   "area": "Caelid"
+  },
+  {
+   "name": "Death Rite Bird",
+   "area": "Charo's Hidden Grave"
+  },
+  {
+   "name": "Death Rite Bird",
+   "area": "Consecrated Snowfields"
+  },
+  {
+   "name": "Death Rite Bird",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Death Rite Bird",
+   "area": "Mountaintops of the Giants"
+  },
+  {
+   "name": "Deathbird",
+   "area": "Capital Outskirts"
+  },
+  {
+   "name": "Deathbird",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Deathbird",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Deathbird",
+   "area": "Weeping Peninsula"
+  },
+  {
+   "name": "Decaying Ekzykes",
+   "area": "Caelid"
+  },
+  {
+   "name": "Demi-Human Chiefs",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Demi-Human Queen Gilika",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Demi-Human Queen Maggie",
+   "area": "Mt. Gelmir"
+  },
+  {
+   "name": "Demi-Human Queen Margot",
+   "area": "Mt. Gelmir"
+  },
+  {
+   "name": "Demi-Human Queen Marigga",
+   "area": "Cerulean Coast"
+  },
+  {
+   "name": "Demi-Human Swordmaster Onze",
+   "area": "Gravesite Plain"
+  },
+  {
+   "name": "Divine Beast Dancing Lion",
+   "area": "Gravesite Plain"
+  },
+  {
+   "name": "Divine Beast Dancing Lion",
+   "area": "Rauh Base"
+  },
+  {
+   "name": "Draconic Tree Sentinel",
+   "area": "Capital Outskirts"
+  },
+  {
+   "name": "Dragonkin Soldier",
+   "area": "Lake of Rot"
+  },
+  {
+   "name": "Dragonkin Soldier",
+   "area": "Siofra River"
+  },
+  {
+   "name": "Dragonkin Soldier of Nokstella",
+   "area": "Ainsel River"
+  },
+  {
+   "name": "Dragonlord Placidusax",
+   "area": "Crumbling Farum Azula"
+  },
+  {
+   "name": "Dryleaf Dane",
+   "area": "Scadu Atlus"
+  },
+  {
+   "name": "Elemer of the Briar",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Erdtree Avatar",
+   "area": "Mountaintops of the Giants"
+  },
+  {
+   "name": "Erdtree Avatar",
+   "area": "Weeping Peninsula"
+  },
+  {
+   "name": "Erdtree Avatar (Northeast Liurnia)",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Erdtree Avatar (Southwest Liurnia)",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Erdtree Burial Watchdog",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Erdtree Burial Watchdog",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Erdtree Burial Watchdog",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Erdtree Burial Watchdog",
+   "area": "Weeping Peninsula"
+  },
+  {
+   "name": "Erdtree Burial Watchdog Duo",
+   "area": "Caelid"
+  },
+  {
+   "name": "Esgar Priest of Blood",
+   "area": "Subterranean Shunning Grounds"
+  },
+  {
+   "name": "Fallingstar Beast",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Fallingstar Beast",
+   "area": "Caelid"
+  },
+  {
+   "name": "Fallingstar Beast",
+   "area": "Scaduview"
+  },
+  {
+   "name": "Fell Twins",
+   "area": "Leyndell Royal Capital"
+  },
+  {
+   "name": "Fia's Champions",
+   "area": "Deeproot Depths"
+  },
+  {
+   "name": "Fire Giant",
+   "area": "Mountaintops of the Giants"
+  },
+  {
+   "name": "Flying Dragon Agheel",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Flying Dragon Greyll",
+   "area": "Greyoll's Dragonbarrow"
+  },
+  {
+   "name": "Frenzied Duelist",
+   "area": "Caelid"
+  },
+  {
+   "name": "Full-Grown Fallingstar Beast",
+   "area": "Mt. Gelmir"
+  },
+  {
+   "name": "Ghostflame Dragon",
+   "area": "Cerulean Coast"
+  },
+  {
+   "name": "Ghostflame Dragon",
+   "area": "Gravesite Plain"
+  },
+  {
+   "name": "Ghostflame Dragon",
+   "area": "Scadu Atlus"
+  },
+  {
+   "name": "Glintstone Dragon Adula",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Glintstone Dragon Smarag",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Godefroy the Grafted",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Godfrey the First Elden Lord",
+   "area": "Leyndell Royal Capital"
+  },
+  {
+   "name": "Godrick the Grafted",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Godskin Apostle",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Godskin Apostle",
+   "area": "Greyoll's Dragonbarrow"
+  },
+  {
+   "name": "Godskin Duo",
+   "area": "Crumbling Farum Azula"
+  },
+  {
+   "name": "Godskin Noble",
+   "area": "Volcano Manor"
+  },
+  {
+   "name": "Golden Hippopotamus",
+   "area": "Scadu Atlus"
+  },
+  {
+   "name": "Grafted Scion (First Encounter)",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Grafted Scion (Second Encounter)",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Grave Warden Duelist",
+   "area": "Capital Outskirts"
+  },
+  {
+   "name": "Grave Warden Duelist",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Great Wyrm Theodorix",
+   "area": "Consecrated Snowfields"
+  },
+  {
+   "name": "Guardian Golem",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Hoarah Loux Warrior",
+   "area": "Leyndell Ashen Capital"
+  },
+  {
+   "name": "Jagged Peak Drake",
+   "area": "Jagged Peak"
+  },
+  {
+   "name": "Jagged Peak Drake (Duo Encounter)",
+   "area": "Jagged Peak"
+  },
+  {
+   "name": "Jori Elder Inquisitor",
+   "area": "Abyssal Woods"
+  },
+  {
+   "name": "Kindred of Rot Duo",
+   "area": "Mt. Gelmir"
+  },
+  {
+   "name": "Lamenter",
+   "area": "Gravesite Plain"
+  },
+  {
+   "name": "Leda & Allies",
+   "area": "Enir-Ilim"
+  },
+  {
+   "name": "Leonine Misbegotten",
+   "area": "Weeping Peninsula"
+  },
+  {
+   "name": "Lichdragon Fortissax",
+   "area": "Deeproot Depths"
+  },
+  {
+   "name": "Loretta Knight of the Haligtree",
+   "area": "Miquella's Haligtree"
+  },
+  {
+   "name": "Mad Pumpkin Head",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Mad Pumpkin Head Duo",
+   "area": "Caelid"
+  },
+  {
+   "name": "Magma Wyrm",
+   "area": "Caelid"
+  },
+  {
+   "name": "Magma Wyrm",
+   "area": "Mt. Gelmir"
+  },
+  {
+   "name": "Magma Wyrm Makar",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Malenia Blade of Miquella",
+   "area": "Miquella's Haligtree"
+  },
+  {
+   "name": "Maliketh the Black Blade",
+   "area": "Crumbling Farum Azula"
+  },
+  {
+   "name": "Margit the Fell Omen",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Messmer The Impaler",
+   "area": "Scadu Atlus"
+  },
+  {
+   "name": "Metyr Mother of Fingers",
+   "area": "Scadu Atlus"
+  },
+  {
+   "name": "Midra Lord of Frenzied Flame",
+   "area": "Abyssal Woods"
+  },
+  {
+   "name": "Mimic Tear",
+   "area": "Nokron Eternal City"
+  },
+  {
+   "name": "Miranda Blossom",
+   "area": "Weeping Peninsula"
+  },
+  {
+   "name": "Misbegotten Crusader",
+   "area": "Consecrated Snowfields"
+  },
+  {
+   "name": "Mohg Lord of Blood",
+   "area": "Mohgwyn Palace"
+  },
+  {
+   "name": "Mohg the Omen",
+   "area": "Subterranean Shunning Grounds"
+  },
+  {
+   "name": "Morgott the Omen King",
+   "area": "Leyndell Royal Capital"
+  },
+  {
+   "name": "Necromancer Garris",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Night's Cavalry",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Night's Cavalry",
+   "area": "Caelid"
+  },
+  {
+   "name": "Night's Cavalry",
+   "area": "Forbidden Lands"
+  },
+  {
+   "name": "Night's Cavalry",
+   "area": "Greyoll's Dragonbarrow"
+  },
+  {
+   "name": "Night's Cavalry",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Night's Cavalry",
+   "area": "Weeping Peninsula"
+  },
+  {
+   "name": "Night's Cavalry (Bellum Church)",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Night's Cavalry (Southeast Liurnia)",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Night's Cavalry Duo",
+   "area": "Consecrated Snowfields"
+  },
+  {
+   "name": "Nox Swordstress & Nox Monk",
+   "area": "Caelid"
+  },
+  {
+   "name": "Omenkiller",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Omenkiller & Miranda the Blighted Bloom",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Onyx Lord",
+   "area": "Capital Outskirts"
+  },
+  {
+   "name": "Onyx Lord",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Patches",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Perfumer Tricia & Misbegotten Warrior",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Promised Consort Radahn",
+   "area": "Enir-Ilim"
+  },
+  {
+   "name": "Putrescent Knight",
+   "area": "Cerulean Coast"
+  },
+  {
+   "name": "Putrid Avatar",
+   "area": "Caelid"
+  },
+  {
+   "name": "Putrid Avatar",
+   "area": "Consecrated Snowfields"
+  },
+  {
+   "name": "Putrid Avatar",
+   "area": "Greyoll's Dragonbarrow"
+  },
+  {
+   "name": "Putrid Crystalian Trio",
+   "area": "Greyoll's Dragonbarrow"
+  },
+  {
+   "name": "Putrid Grave Warden Duelist",
+   "area": "Consecrated Snowfields"
+  },
+  {
+   "name": "Putrid Tree Spirit",
+   "area": "Greyoll's Dragonbarrow"
+  },
+  {
+   "name": "Radagon & Elden Beast",
+   "area": "Leyndell Ashen Capital"
+  },
+  {
+   "name": "Rakshasa",
+   "area": "Scadu Atlus"
+  },
+  {
+   "name": "Ralva the Great Red Bear",
+   "area": "Scadu Atlus"
+  },
+  {
+   "name": "Red Bear",
+   "area": "Gravesite Plain"
+  },
+  {
+   "name": "Red Wolf of Radagon",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Red Wolf of the Champion",
+   "area": "Mt. Gelmir"
+  },
+  {
+   "name": "Regal Ancestor Spirit",
+   "area": "Nokron Eternal City"
+  },
+  {
+   "name": "Rellana Twin Moon Knight",
+   "area": "Gravesite Plain"
+  },
+  {
+   "name": "Rennala Queen of the Full Moon",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Romina Saint of the Bud",
+   "area": "Rauh Base"
+  },
+  {
+   "name": "Roundtable Knight Vyke",
+   "area": "Mountaintops of the Giants"
+  },
+  {
+   "name": "Royal Knight Loretta",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Royal Revenant",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Rugalea the Great Red Bear",
+   "area": "Rauh Base"
+  },
+  {
+   "name": "Runebear",
+   "area": "Weeping Peninsula"
+  },
+  {
+   "name": "Rykard Lord of Blasphemy",
+   "area": "Volcano Manor"
+  },
+  {
+   "name": "Sanguine Noble",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Scadutree Avatar",
+   "area": "Scaduview"
+  },
+  {
+   "name": "Scaly Misbegotten",
+   "area": "Weeping Peninsula"
+  },
+  {
+   "name": "Sir Gideon Ofnir the All-Knowing",
+   "area": "Leyndell Ashen Capital"
+  },
+  {
+   "name": "Soldier of Godrick",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Spiritcaller Snail",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Spiritcaller Snail (Godskins)",
+   "area": "Mountaintops of the Giants"
+  },
+  {
+   "name": "Starscourge Radahn",
+   "area": "Caelid"
+  },
+  {
+   "name": "Stonedigger Troll",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Stonedigger Troll",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Stray Mimic Tear",
+   "area": "Forbidden Lands"
+  },
+  {
+   "name": "Tibia Mariner",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Tibia Mariner",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Tibia Mariner",
+   "area": "Liurnia of the Lakes"
+  },
+  {
+   "name": "Tree Sentinel",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Tree Sentinel Duo",
+   "area": "Altus Plateau"
+  },
+  {
+   "name": "Tree Sentinels (Torch and Shield)",
+   "area": "Scaduview"
+  },
+  {
+   "name": "Ulcerated Tree Spirit",
+   "area": "Limgrave"
+  },
+  {
+   "name": "Ulcerated Tree Spirit",
+   "area": "Mountaintops of the Giants"
+  },
+  {
+   "name": "Ulcerated Tree Spirit",
+   "area": "Mt. Gelmir"
+  },
+  {
+   "name": "Valiant Gargoyles",
+   "area": "Nokron Eternal City"
+  },
+  {
+   "name": "Wormface",
+   "area": "Altus Plateau"
+  }
  ]
 }

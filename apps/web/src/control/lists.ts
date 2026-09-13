@@ -37,11 +37,13 @@ export function listsFor(tool: string | undefined): Promise<Lists> {
   if (held) return held;
   const asked = import("./lists/tarnishedtool.json")
     .then((m) => {
-      const raw = (m.default ?? m) as { graces?: Named[]; items?: string[]; weapons?: Named[] };
+      const raw = (m.default ?? m) as { graces?: Named[]; items?: string[]; weapons?: Named[]; ashes?: Named[]; bosses?: Named[] };
       return {
         graces: raw.graces ?? [],
         items: (raw.items ?? []).map((name) => ({ name })),
         weapons: raw.weapons ?? [],
+        ashes: raw.ashes ?? [],
+        bosses: raw.bosses ?? [],
       } satisfies Lists;
     })
     .catch(() => ({}) as Lists);
