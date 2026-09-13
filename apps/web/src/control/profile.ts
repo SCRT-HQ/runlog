@@ -18,6 +18,16 @@ import { catalogFor, opDef, rangeOfValue } from "./catalog.ts";
 export interface ProfileOp {
   op: string;
   args: Record<string, unknown>;
+  /**
+   * Given one time in the run rather than on every attach.
+   *
+   * Settings go every time, because a tool that restarted is holding
+   * none of them and applying a setting twice is that setting. A gift is
+   * not: runes handed over on every reconnect are a different game by the
+   * third one. The server keeps the record of what has been given; this
+   * end only has to carry the flag there without dropping it.
+   */
+  once?: boolean;
 }
 
 export interface ProfileRow {
@@ -187,7 +197,7 @@ export function complaints(pack: Pack, profile: ControlProfile): Complaint[] {
 
 /** What goes over the wire and into a file: no empties, nothing extra. */
 export function tidy(profile: ControlProfile): ControlProfile {
-  const ops = (list: ProfileOp[]) => list.filter((o) => o.op).map((o) => ({ op: o.op, args: { ...o.args } }));
+  const ops = (list: ProfileOp[]) => list.filter((o) => o.op).map((o) => ({ op: o.op, args: { ...o.args }, ...(o.once ? { once: true as const } : {}) }));
   const setup = ops(profile.setup ?? []);
   const rows = (profile.rows ?? [])
     .map((row) => {
@@ -237,7 +247,12 @@ export function parse(text: string): ControlProfile | null {
             const op = (o as Record<string, unknown>)["op"];
             if (typeof op !== "string" || !op) return null;
             const args = (o as Record<string, unknown>)["args"];
-            return { op, args: args && typeof args === "object" && !Array.isArray(args) ? ({ ...args } as Record<string, unknown>) : {} };
+            const once = (o as Record<string, unknown>)["once"] === true;
+            return {
+              op,
+              args: args && typeof args === "object" && !Array.isArray(args) ? ({ ...args } as Record<string, unknown>) : {},
+              ...(once ? { once: true } : {}),
+            };
           })
           .filter((o): o is ProfileOp => o !== null)
       : [];

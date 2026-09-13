@@ -144,6 +144,18 @@ export interface StoredRun {
    * rather than through sync: see apps/web/src/control/profile.ts.
    */
   control?: unknown;
+  /**
+   * The setup this run was started under: what the player is handed and
+   * what the tool is set to, chosen where the run began.
+   *
+   * Kept beside the control profile because it reaches the tool the same
+   * way, appended to the profile's own terms when the snapshot is
+   * written. Kept as the operations themselves rather than as a pointer
+   * at a file, because a run is a record of what happened: a shipped
+   * setup that changes next month changes what a new run gets, not what
+   * this one got. See apps/web/src/control/setups.ts.
+   */
+  setup?: unknown;
   deletedAt?: string;
 }
 
