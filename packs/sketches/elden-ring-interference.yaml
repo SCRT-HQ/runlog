@@ -63,6 +63,7 @@ license:
 
 capabilities:
   - counters
+  - resources
   - deferredTriggers
   - timers
   - seededRuns
@@ -503,15 +504,6 @@ counters:
     initial: 0
     min: 0
 
-  # Not a tally of anything: a dial. The run asks for it once at the
-  # start, and after that it sits in the trackers with the rest, so a
-  # player can turn it up mid-run when one thing to do a stretch stops
-  # being enough.
-  perStretch:
-    label: Targets per stretch
-    initial: 1
-    min: 1
-    max: 4
 
   # Four stretches in one place is long enough. This is the counter that
   # moves you on, and it puts itself back to nothing each time it fires.
@@ -529,6 +521,28 @@ counters:
           - { do: rollOn, table: displacement }
           - { do: modCounter, counter: wander, set: 0 }
 
+# Not a tally of anything that happened: a dial, with plus and minus on
+# it, which the player turns whenever one thing to do in ten minutes
+# stops being enough. The Target step reads it and rolls that many
+# times; nothing has to be pressed for that to happen.
+resources:
+  interferences:
+    label: Interferences per stretch
+    initial: 1
+    min: 1
+    max: 4
+    step: 1
+    display: number
+    description: How many things are wrong with the world at once. Two is unpleasant; four is a different game.
+  targets:
+    label: Targets per stretch
+    initial: 1
+    min: 1
+    max: 4
+    step: 1
+    display: number
+    description: How many targets a stretch draws. Turn it up when one thing to do stops being enough.
+
 tables:
   interference:
     resolution: lookup
@@ -536,9 +550,13 @@ tables:
     description: >-
       Drawn at the top of every stretch, and it holds until the
       stretch ends. Some of these a tool does to the game; the rest
-      are vows, which nothing enforces but you. None are worth
-      points: an interference lands on everyone, and living with it
-      is the ordinary business of a stretch.
+      are vows, which nothing enforces but you. How many are drawn
+      is Interferences per stretch, a dial in the trackers: one is a
+      game, two is unpleasant, four is a different game. Nothing in
+      here is good for you, which is the point of it. A kindness you
+      rolled into by accident is not a reward, and being paid is
+      what the Boon table is for. None are worth points either,
+      since an interference lands on everyone.
     roll: d100
     entries:
       - id: in-slow
@@ -912,275 +930,279 @@ tables:
       know what is wrong with the world before you are told what to
       do in it. Name the target in your own words: the app cannot
       see your game, and the log should read like something that
-      happened. How many are drawn is up to you: the run asks at the
-      first stretch, and Targets per stretch in the trackers turns
-      it up or down at any point after. Two results here add one and
-      two more on top of whatever that says.
+      happened. How many are drawn is Targets per stretch, the other
+      dial in the trackers. Two results in here add one and two more
+      on top of whatever it says.
     roll: d100
     entries:
       - id: ta-near
-        range: [1, 5]
+        range: [1, 4]
         text: >-
           Whatever holds the nearest ruin, cave, catacomb or camp.
           Name it and kill it.
         tags: [target]
         points: 3
       - id: ta-boss
-        range: [6, 9]
+        range: [5, 7]
         text: >-
           A named boss of wherever you have landed. Name it, find
           it, put it down.
         tags: [target, hard]
         points: 5
       - id: ta-field
-        range: [10, 11]
+        range: [8, 9]
         text: >-
           A field boss out in the open. The kind with a health bar
           and no door.
         tags: [target]
         points: 4
       - id: ta-again
-        range: [12, 13]
+        range: [10, 11]
         text: >-
           A boss you have already beaten, again, at whatever it
           costs.
         tags: [target, hard]
         points: 4
       - id: ta-gaol
-        range: [14, 15]
+        range: [12, 13]
         text: >-
           An evergaol. Name one, open it, and finish what is inside.
         tags: [target, hard]
         points: 4
       - id: ta-tunnel
-        range: [16, 17]
+        range: [14, 15]
         text: >-
           A mine or tunnel, all the way to whatever is at the end.
         tags: [target, hard]
         points: 4
       - id: ta-catacomb
-        range: [18, 19]
+        range: [16, 17]
         text: >-
           A catacomb, to the bottom, including the thing at the
           bottom.
         tags: [target, hard]
         points: 4
       - id: ta-cave
-        range: [20, 21]
+        range: [18, 19]
         text: >-
           A cave, to the bottom, including whatever lives there.
         tags: [target]
         points: 3
-      - id: ta-tower
-        range: [22, 23]
+      - id: ta-tunnel-boss
+        range: [20, 21]
         text: >-
-          A tower. Get to the top of it and take what is there.
-        tags: [target]
-        points: 3
+          A mine. Down to the bottom and through whatever is
+          guarding the ore.
+        tags: [target, hard]
+        points: 4
       - id: ta-knight
-        range: [24, 27]
+        range: [22, 24]
         text: >-
           A knight. Any of the big armored ones, wherever you are.
         tags: [target]
         points: 3
       - id: ta-dragon
-        range: [28, 29]
+        range: [25, 26]
         text: >-
           Something enormous. A dragon, a giant, a troll. Name it.
         tags: [target, hard]
         points: 5
       - id: ta-invader
-        range: [30, 31]
+        range: [27, 28]
         text: >-
           A hostile NPC. Whoever invades, or whoever you go and
           invade.
         tags: [target]
         points: 3
       - id: ta-beast
-        range: [32, 33]
+        range: [29, 30]
         text: >-
-          Something bestial. A bear, a lion, a wolf pack, a crab.
+          A great beast: a lion, a bear, a crab, a pack of wolves
+          that will not come one at a time.
         tags: [target]
         points: 3
       - id: ta-three
-        range: [34, 37]
+        range: [31, 33]
         text: >-
           Three of a kind. Pick an enemy type you can see and kill
           three.
         tags: [target]
         points: 2
       - id: ta-five
-        range: [38, 40]
+        range: [34, 36]
         text: >-
           Five of a kind. Pick a type and count to five.
         tags: [target]
         points: 3
       - id: ta-ten
-        range: [41, 41]
+        range: [37, 37]
         text: >-
           Ten of a kind. Yes, ten. Pick something common.
         tags: [target, hard]
         points: 5
       - id: ta-camp
-        range: [42, 43]
+        range: [38, 39]
         text: >-
           Clear a camp. Every enemy in one encampment, to the last.
         tags: [target, hard]
         points: 4
       - id: ta-building
-        range: [44, 45]
+        range: [40, 41]
         text: >-
           Clear a building. Everything inside one structure, top to
           bottom.
         tags: [target]
         points: 3
       - id: ta-patrol
-        range: [46, 47]
+        range: [42, 43]
         text: >-
-          A patrol. Follow it to wherever it is going, then end it.
+          A patrol. Follow it to the end of its round, then kill all
+          of it where it stops.
         tags: [target]
         points: 3
       - id: ta-night
-        range: [48, 48]
+        range: [44, 44]
         text: >-
           Something that only comes out at night. Wait for it if you
           must.
         tags: [target, hard]
         points: 5
-      - id: ta-item
-        range: [49, 51]
+      - id: ta-church
+        range: [45, 47]
         text: >-
-          Something worth having. Name an item you can see on the
-          map or in the world, and come away with it.
+          A church you have not been inside. Find one, get to the
+          altar, and take what is on it.
         tags: [target]
-        points: 2
+        points: 3
       - id: ta-key
-        range: [52, 53]
+        range: [48, 49]
         text: >-
           A key item: a stonesword key, a whetblade, a medallion
           half. Name one and take it.
         tags: [target]
         points: 3
       - id: ta-map
-        range: [54, 55]
+        range: [50, 51]
         text: >-
           A map fragment. Name which one and go and get it.
         tags: [target]
         points: 3
       - id: ta-seed
-        range: [56, 57]
+        range: [52, 53]
         text: >-
           A Golden Seed or a Sacred Tear. Either will do; name it
           first.
         tags: [target]
         points: 3
       - id: ta-stone
-        range: [58, 59]
+        range: [54, 55]
         text: >-
           Smithing stones, three of them, of any kind.
         tags: [target]
         points: 2
       - id: ta-talisman
-        range: [60, 61]
+        range: [56, 57]
         text: >-
           A talisman you do not own. Name it and wear it out of
           there.
         tags: [target]
         points: 3
       - id: ta-weapon
-        range: [62, 63]
+        range: [58, 59]
         text: >-
           A weapon you do not own, and swing it once before the
           stretch ends.
         tags: [target]
         points: 3
       - id: ta-ash
-        range: [64, 65]
+        range: [60, 61]
         text: >-
           An Ash of War, or a Spirit Ash. Name it and take it.
         tags: [target]
         points: 3
       - id: ta-spell
-        range: [66, 67]
+        range: [62, 63]
         text: >-
           A spell or incantation you do not know.
         tags: [target]
         points: 3
-      - id: ta-cookbook
-        range: [68, 68]
+      - id: ta-scarab
+        range: [64, 65]
         text: >-
-          A cookbook. Any cookbook. Somebody wrote it down for a
-          reason.
+          A teardrop scarab. Chase one down and kill it before it
+          gets away.
+        tags: [target]
+        points: 3
+      - id: ta-grace
+        range: [66, 68]
+        text: >-
+          A grace you have never lit. Get to one and light it,
+          however far that is.
         tags: [target]
         points: 2
-      - id: ta-grace
+      - id: ta-erdtree
         range: [69, 71]
         text: >-
-          A grace you do not have. Name it and light it.
-        tags: [target]
-        points: 2
-      - id: ta-far
-        range: [72, 73]
-        text: >-
-          A landmark you can see from where you stand. Name it and
-          stand on it.
-        tags: [target]
-        points: 2
-      - id: ta-cross
-        range: [74, 75]
-        text: >-
-          Cross something: a bridge, a lake, a chasm, a border into
-          the next region.
-        tags: [target]
-        points: 2
-      - id: ta-high
-        range: [76, 77]
-        text: >-
-          The highest thing you can see. Get on top of it.
-        tags: [target]
-        points: 3
-      - id: ta-deep
-        range: [78, 79]
-        text: >-
-          Go underground. Name a cave, tomb or tunnel and reach the
-          bottom.
+          A Minor Erdtree. Get to one and kill whatever is standing
+          under it.
         tags: [target, hard]
         points: 4
+      - id: ta-cross
+        range: [72, 73]
+        text: >-
+          Into the next region, overland. No fast travel, and arrive
+          at a grace on the other side.
+        tags: [target]
+        points: 3
+      - id: ta-caravan
+        range: [74, 75]
+        text: >-
+          A caravan. Kill what is pulling it, kill what is guarding
+          it, and take what it was carrying.
+        tags: [target, hard]
+        points: 4
+      - id: ta-runebear
+        range: [76, 77]
+        text: >-
+          A Runebear. Find one, fight it, and do not leave until one
+          of you is finished.
+        tags: [target, hard]
+        points: 5
       - id: ta-door
+        range: [78, 79]
+        text: >-
+          An imp statue door. Find one, find a stonesword key, and
+          take what is behind it.
+        tags: [target]
+        points: 3
+      - id: ta-upgrade
         range: [80, 81]
         text: >-
-          An event. A sealed door opened, a lift ridden, a seal
-          broken, a brazier lit.
+          Put a weapon up a tier. Find the stones for it this
+          stretch, whatever that takes.
         tags: [target]
         points: 3
-      - id: ta-merchant
+      - id: ta-rise
         range: [82, 83]
         text: >-
-          Find somebody to talk to. A merchant, an NPC, anyone alive
-          and willing.
-        tags: [target]
-        points: 2
-      - id: ta-summon
+          A Rise. Get inside it, work out what it wants, and take
+          what is at the top.
+        tags: [target, hard]
+        points: 4
+      - id: ta-level
         range: [84, 85]
         text: >-
-          A summon sign on the ground, or a hostile one. Use it
-          either way.
+          A level. Earn the runes for it this stretch and spend them
+          before it ends.
         tags: [target]
         points: 3
-      - id: ta-message
-        range: [86, 86]
+      - id: ta-road
+        range: [86, 87]
         text: >-
-          Leave a message on the ground somewhere it will actually
-          help.
+          A road. Follow it to the next grace along it and kill
+          everything that contests the way.
         tags: [target]
-        points: 1
-      - id: ta-gesture
-        range: [87, 87]
-        text: >-
-          Use a gesture at a statue, a grave, or a corpse that seems
-          to deserve it.
-        tags: [target]
-        points: 1
+        points: 3
       - id: ta-nohit
         range: [88, 89]
         text: >-
@@ -1226,11 +1248,11 @@ tables:
           Nothing is asked of you. Survive the stretch and that is
           enough.
         tags: [target, mercy]
-      - id: ta-choose
+      - id: ta-back
         range: [99, 100]
         text: >-
-          Your choice. Name anything that will take most of the
-          stretch, and do it.
+          Back to where the last stretch started, overland, on foot
+          or on Torrent. No fast travel.
         tags: [target]
         points: 3
 
@@ -1732,46 +1754,6 @@ moves:
     do:
       - { do: modCounter, counter: deaths, by: 1 }
 
-# Turning the dial up owes the stretch more targets, one trigger a rung,
-# because what is owed is a count and the count is not known until the
-# stretch opens. `current` rather than `next`: the step has not been
-# rolled when a unit is entered, so the extra rolls land in this one.
-# They sit after the moves because everything above is generated; see
-# packs/profiles/build-interference.py.
-triggers:
-  - on: onEnterUnit
-    label: How many targets a stretch
-    when:
-      - { unitIndex: { eq: 1 } }
-    do:
-      - do: prompt
-        kind: chooseValue
-        label: How many targets a stretch? You can change it later, in the trackers.
-        options: ["1", "2", "3", "4"]
-        into: perStretchAnswer
-      - { do: modCounter, counter: perStretch, setFrom: perStretchAnswer }
-
-  - on: onEnterUnit
-    label: A second target
-    when:
-      - { counter: perStretch, is: { gte: 2 } }
-    do:
-      - { do: extraRoll, table: target, count: 1, unit: current }
-
-  - on: onEnterUnit
-    label: A third target
-    when:
-      - { counter: perStretch, is: { gte: 3 } }
-    do:
-      - { do: extraRoll, table: target, count: 1, unit: current }
-
-  - on: onEnterUnit
-    label: A fourth target
-    when:
-      - { counter: perStretch, is: { gte: 4 } }
-    do:
-      - { do: extraRoll, table: target, count: 1, unit: current }
-
 phases:
   - id: meddle
     label: Interference
@@ -1779,13 +1761,46 @@ phases:
       - kind: rollTable
         table: interference
         label: Draw what is wrong with the world
+      - kind: rollTable
+        table: interference
+        label: Draw a second interference
+        skipWhen:
+          - { resource: interferences, is: { lte: 1 } }
+      - kind: rollTable
+        table: interference
+        label: Draw a third interference
+        skipWhen:
+          - { resource: interferences, is: { lte: 2 } }
+      - kind: rollTable
+        table: interference
+        label: Draw a fourth interference
+        skipWhen:
+          - { resource: interferences, is: { lte: 3 } }
 
+  # One roll a target. A step that is not wanted skips itself on the
+  # dial rather than being queued by something the player has to press,
+  # which is what these were before and it showed.
   - id: charge
     label: Target
     steps:
       - kind: rollTable
         table: target
         label: Draw what the stretch is for
+      - kind: rollTable
+        table: target
+        label: Draw a second target
+        skipWhen:
+          - { resource: targets, is: { lte: 1 } }
+      - kind: rollTable
+        table: target
+        label: Draw a third target
+        skipWhen:
+          - { resource: targets, is: { lte: 2 } }
+      - kind: rollTable
+        table: target
+        label: Draw a fourth target
+        skipWhen:
+          - { resource: targets, is: { lte: 3 } }
       - kind: declareSubject
         label: Name what you are going for. Where there is more than one, name them together.
 
@@ -1927,29 +1942,39 @@ fixtures:
       - { path: outcomes.0.entryId, equals: dis-grace }
       - { path: firedOnce, contains: "counter:wander:0:u1" }
 
-  - name: With the dial at two, a stretch owes a second target
+  - name: At one apiece, a stretch draws one of each and asks for nothing
     mode: solo
-    # The run asks the question at the first stretch and owes the extra
-    # rolls at every one after, both of them things the player presses,
-    # the way a counter threshold is. So this is written as the log they
-    # produce rather than as a script.
-    events:
-      - { t: RunStarted, mode: solo }
-      - { t: UnitEntered }
-      - { t: CounterChanged, counter: perStretch, set: 2 }
-      - { t: TriggerFired, key: "global:0:u1" }
-      - { t: ExtraRollQueued, table: target, count: 1, unit: current }
-      - { t: TriggerFired, key: "global:1:u1" }
-      - { t: OutcomeResolved, table: interference, entryId: in-calm, cause: phase }
-      - { t: OutcomeResolved, table: target, entryId: ta-near, cause: phase }
-      - { t: ExtraRollTaken, table: target }
-      - { t: OutcomeResolved, table: target, entryId: ta-three, cause: phase }
+    # The proof that the dials work is that this script runs at all. If
+    # the second, third and fourth rolls did not skip themselves, the
+    # declare would fail: the run would be waiting on meddle#1 rather
+    # than on a name. Nothing is pressed and nothing is owed.
+    play:
+      - { enter: 1 }
+      - { step: "meddle#0", answers: { d100: 100 } }
+      - { step: "charge#0", answers: { d100: 98 } }
+      - { declare: The camp on the ridge }
     expect:
-      - { path: counters.perStretch, equals: 2 }
-      - { path: outcomes.length, equals: 3 }
+      - { path: outcomes.length, equals: 2 }
+      - { path: outcomes.0.table, equals: interference }
       - { path: outcomes.1.table, equals: target }
-      - { path: outcomes.2.table, equals: target }
-      - { path: firedOnce, contains: "global:1:u1" }
+      - { path: resources.interferences, equals: 1 }
+      - { path: resources.targets, equals: 1 }
+      - { requests: answered }
+
+  - name: A result that asks for more targets gets them without being pressed
+    mode: solo
+    # ta-two rolls the table again from its own trigger, which is not
+    # the same machinery as the dial and needs its own answer.
+    play:
+      - { enter: 1 }
+      - { step: "meddle#0", answers: { d100: 100 } }
+      - { step: "charge#0", answers: { d100: [93, 1] } }
+      - { declare: Both of them }
+    expect:
+      - { path: outcomes.0.entryId, equals: in-calm }
+      - { path: outcomes.1.entryId, equals: ta-two }
+      - { path: outcomes.length, equals: 3 }
+      - { requests: answered }
 
   - name: Settling a target pays, and the boon is drawn on the word of the player
     mode: solo
