@@ -109,7 +109,6 @@ const VALUES: Array<{ name: string; least: number; most: number }> = [
   { name: "player.speed", least: 0.1, most: 10 },
   { name: "game.speed", least: 0.1, most: 10 },
   { name: "game.fps", least: 20, most: 240 },
-  { name: "player.runes", least: 0, most: 999999999 },
   { name: "player.newGame", least: 0, most: 7 },
   { name: "player.vigor", least: 1, most: 99 },
   { name: "player.mind", least: 1, most: 99 },
@@ -213,6 +212,13 @@ export const TARNISHED_TOOL: ToolCatalog = {
         { name: "affinity", kind: "choice", label: "Affinity", options: AFFINITIES, note: "Part of the weapon rather than the ash. Left empty it is the ordinary one, or the ash's own first choice where the ash does not allow ordinary." },
         { name: "count", kind: "number", label: "How many", least: 1, most: 8, note: "A weapon does not stack, so two of them is two of them: this is how a run hands somebody a pair to dual wield." },
       ],
+    },
+    {
+      op: "runes.give",
+      label: "Give runes",
+      note: "Adds, and cannot set: nothing in the game says how many somebody is carrying, so there is no number to set one to. A negative amount is a toll. One way, and it does not come back off, because runes given are usually spent by the time anything would take them and taking away what somebody earned instead is worse than letting a gift stand.",
+      oneWay: true,
+      args: [{ name: "amount", kind: "number", label: "How many", required: true, least: -999999999, most: 999999999, note: "Negative takes them away." }],
     },
     {
       op: "value.add",
