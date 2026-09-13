@@ -1140,6 +1140,18 @@ export const Pack = z
     modes: z.record(Id, Mode).describe("Ways to play, keyed by id. At least one is required."),
     defaultMode: Id.describe("Which mode is offered first. Must be a key of `modes`."),
 
+    asks: z
+      .object({
+        policy: z
+          .enum(["ask", "auto"])
+          .describe("`ask` puts one in front of the table to accept; `auto` takes it as it lands."),
+      })
+      .strict()
+      .optional()
+      .describe(
+        "What this pack would do with an ask from outside, where the host switches asks on and says nothing else. A pack whose results a tool performs wants `auto`, because a tray tapped between every death is the bookkeeping that pack exists to remove; one played around a table wants `ask`, because there the interruption is the point. Advisory: it sets what the run starts with, and the host may change it whenever they like.",
+      ),
+
     hierarchy: z
       .array(z.string())
       .optional()

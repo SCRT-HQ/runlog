@@ -79,6 +79,29 @@ describe("taking asks from chat", () => {
     expect(screen.getByText("Salvage a Piece")).toBeTruthy();
   });
 
+  /**
+   * Only the pack knows what kind of game this is. One whose results a
+   * tool performs wants an ask taken as it lands, because it arrives
+   * mid-fight and a tray tapped between every death is the bookkeeping
+   * that pack exists to remove. One played around a table wants to be
+   * asked, because there the interruption is the point.
+   */
+  it("starts on what the pack would do with an ask, and asks where the pack says nothing", async () => {
+    const minted: string[] = [];
+    current.api = api({ mintAskKey: async (_id: string, policy: string) => { minted.push(policy); return { key: "k", policy: policy as "ask" | "auto" }; } } as Partial<Api>);
+    const opinionated = { ...pack, asks: { policy: "auto" } } as unknown as Pack;
+
+    render(<ChatSettings pack={opinionated} record={record()} />);
+    await act(async () => void screen.getByRole("button", { name: "Take asks" }).click());
+    await waitFor(() => expect(minted).toEqual(["auto"]));
+
+    cleanup();
+    minted.length = 0;
+    render(<ChatSettings pack={pack} record={record()} />);
+    await act(async () => void screen.getByRole("button", { name: "Take asks" }).click());
+    await waitFor(() => expect(minted).toEqual(["ask"]));
+  });
+
   it("says why when the key could not be made", async () => {
     current.api = api({
       mintAskKey: async () => {
