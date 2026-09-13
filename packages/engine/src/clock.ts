@@ -1,5 +1,6 @@
 import type { Pack } from "@runlog/rules-schema";
 import type { RunEvent } from "./events.ts";
+import { voidedIds } from "./log.ts";
 import type { Clock, RunState } from "./types.ts";
 
 /**
@@ -116,6 +117,21 @@ function secondsOf(config: { minutes?: number; minutesFrom?: string }, state: Ru
 }
 
 /**
+ * Whether a clock for this unit was started and then taken back.
+ *
+ * An undo does not drop events, it names them void, so the log still
+ * says what happened and what the player decided about it. Which is the
+ * only way to tell "this clock has not started yet" from "this clock
+ * was started and undone": in the folded state those look identical,
+ * and something that starts a clock whenever one is missing will put
+ * back what the player just took away, for ever.
+ */
+export function clockStartUndone(events: readonly RunEvent[], unit: number): boolean {
+  const gone = voidedIds(events);
+  return events.some((e) => e.t === "ClockStarted" && e.clock.startsWith(`u${unit}`) && e.clock.endsWith(":unit") && e.id !== undefined && gone.has(e.id));
+}
+
+/**
  * The event that starts a unit's clock on arriving at a phase, for a
  * pack whose unit draws before it plays.
  *
@@ -125,10 +141,14 @@ function secondsOf(config: { minutes?: number; minutesFrom?: string }, state: Ru
  * spending them. Null unless this is the phase, and unless the unit's
  * clock has not already started.
  */
-export function clockOnPhase(pack: Pack, state: RunState | null, phaseId: string, at: string): RunEvent | null {
+export function clockOnPhase(pack: Pack, state: RunState | null, phaseId: string, at: string, events: readonly RunEvent[] = []): RunEvent | null {
   const config = unitClockFor(pack, state);
   if (!config || config.startsOn !== phaseId || !state || state.unit === 0) return null;
   if (state.clocks.some((c) => c.unit === state.unit && c.id.endsWith(":unit"))) return null;
+  // Undone is an answer. Without this the undo that reaches the clock is
+  // the one undo that cannot land: the event goes, this puts it back,
+  // and the player never gets past it to the step before.
+  if (clockStartUndone(events, state.unit)) return null;
   return {
     t: "ClockStarted",
     at,
