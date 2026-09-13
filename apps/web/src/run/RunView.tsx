@@ -7,7 +7,7 @@ import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
 import { clockOfUnit, compareScores, formatClock, formatScore, nextUnit, scoreOf, unitPhases } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
-import { closesUnit, constrainedByOf, constraintLines, constraintsFor, describeSkip, describeSkipReason, entryWords, phaseSkipped, resultText, subjectLabel, subjectName, type PhaseResult, type RunEvent, type RunState } from "@runlog/engine";
+import { closesUnit, constrainedByOf, constraintLines, constraintsFor, describeSkip, describeSkipReason, entryWords, phaseSkipped, resultText, subjectLabel, subjectName, subjectSuggestions, type PhaseResult, type RunEvent, type RunState } from "@runlog/engine";
 import { useDocDrawer } from "../docs/DocDrawer.tsx";
 import { useRun, type ActiveStep } from "./useRun.ts";
 import type { RunStore } from "./store.ts";
@@ -1125,6 +1125,10 @@ function StepPanel({
 
     case "declareSubject": {
       const constraints = constraintLines(pack, state, step.constrainedBy);
+      // What was drawn this unit, offered as a name. Most of the time
+      // the thing the player is about to type is the thing they have
+      // just read.
+      const suggested = subjectSuggestions(pack, state, step.constrainedBy);
       return (
         <section className="panel runStep" key={key}>
           <StepHead phase={phase} label={step.label ?? `Declare the ${v.subject.one}`} />
@@ -1133,6 +1137,16 @@ function StepPanel({
             <p className="muted small">
               No longer allowed: {state.bannedTypes.join(", ")}
             </p>
+          )}
+          {suggested.length > 0 && (
+            <div className="padRow">
+              {suggested.map((name) => (
+                <button key={name} className="ghost tiny" onClick={() => run.declareSubject(phase, index, name)}>
+                  {name}
+                </button>
+              ))}
+              <span className="muted small">or say it in your own words</span>
+            </div>
           )}
           <div className="padRow stepAction">
             <input

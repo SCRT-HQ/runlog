@@ -1802,7 +1802,8 @@ phases:
         skipWhen:
           - { resource: targets, is: { lte: 3 } }
       - kind: declareSubject
-        label: Name what you are going for. Where there is more than one, name them together.
+        constrainedBy: target
+        label: Name what you are going for, or take the words the dice used.
 
   - id: play
     label: Play
