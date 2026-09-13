@@ -15,6 +15,8 @@ import {
   detectFormat,
   hasErrors,
   loadPackText,
+  loadSetupText,
+  whichKind,
   type Diagnostic,
   type Pack,
 } from "@runlog/rules-schema";
@@ -85,6 +87,30 @@ async function cmdValidate(args: string[]): Promise<number> {
   }
   let worst = 0;
   for (const file of files) {
+    /**
+     * Which kind of document this is, asked before it is read.
+     *
+     * A setup says so; a pack does not, and never has, so the absence
+     * of a `kind` is what says pack. Reading a setup as a pack would
+     * otherwise produce a page of complaints about missing modes, which
+     * is a true answer to a question nobody asked.
+     */
+    const abs = resolve(file);
+    if (existsSync(abs) && whichKind(readFileSync(abs, "utf8"), detectFormat(abs)) === "setup") {
+      const loaded = loadSetupText(readFileSync(abs, "utf8"), detectFormat(abs));
+      const code = report(file, loaded.diagnostics, strict);
+      worst = Math.max(worst, code);
+      if (loaded.setup && code === 0) {
+        const ops = loaded.setup.ops.length;
+        const gifts = loaded.setup.ops.filter((o) => o.once).length;
+        console.log(
+          `${paint(GREEN, "ok")} ${paint(BOLD, loaded.setup.title)} ${paint(DIM, `v${loaded.setup.version}`)} - ` +
+            `a setup for ${loaded.setup.tool}, ${ops} operation${ops === 1 ? "" : "s"}` +
+            (gifts ? `, ${gifts} given once` : ""),
+        );
+      }
+      continue;
+    }
     const { pack, diagnostics } = read(file);
     const code = report(file, diagnostics, strict);
     worst = Math.max(worst, code);
