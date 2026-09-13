@@ -13,7 +13,7 @@
  * up as a difference rather than as a mystery.
  */
 
-export type ArgKind = "number" | "flag" | "choice" | "text";
+export type ArgKind = "number" | "flag" | "choice" | "text" | "name";
 
 export interface ArgDef {
   name: string;
@@ -25,8 +25,21 @@ export interface ArgDef {
   most?: number;
   /** For a choice: what the tool knows, by its own names. */
   options?: string[];
+  /**
+   * For a name: which of the tool's own lists it is one of.
+   *
+   * A choice is short enough to put in a menu. A name is one of four
+   * hundred, spelled exactly as the game spells it, and the panel used
+   * to ask for it with an empty box and a note saying where to look. The
+   * list is fetched when the panel opens rather than shipped in this
+   * file, which is a page of definitions and not a copy of the game.
+   */
+  list?: ListName;
   note?: string;
 }
+
+/** A list of names the tool matches against, loaded on demand. */
+export type ListName = "graces" | "items" | "weapons";
 
 export interface OpDef {
   op: string;
@@ -180,8 +193,18 @@ export const TARNISHED_TOOL: ToolCatalog = {
       note: "From the tool's own lists: consumables, upgrade and crafting materials, crystal tears, talismans, arrows, spells, and the key items that are simply given. Spell it as the game does.",
       oneWay: true,
       args: [
-        { name: "name", kind: "text", label: "Item", required: true, note: "Golden Seed, Rune Arc, Smithing Stone [3]." },
+        { name: "name", kind: "name", list: "items", label: "Item", required: true, note: "Golden Seed, Rune Arc, Smithing Stone [3]." },
         { name: "quantity", kind: "number", label: "How many", least: 1, most: 99 },
+      ],
+    },
+    {
+      op: "weapon.named",
+      label: "Give a weapon, at a level",
+      note: "A weapon is not an item with a count: its id carries how far it has been reinforced, so the level is part of naming it. Ordinary weapons go to +25 and somber ones to +10; a level past a weapon's own ceiling is held there rather than refused.",
+      oneWay: true,
+      args: [
+        { name: "name", kind: "name", list: "weapons", label: "Weapon", required: true, note: "Wing of Astel, Blasphemous Blade, Uchigatana." },
+        { name: "upgrade", kind: "number", label: "Level", least: 0, most: 25, note: "0 is the weapon as found. Leave it empty for the same thing." },
       ],
     },
     {
@@ -199,7 +222,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
       note: "By name, from the tool's own list of every grace in the game. Works for graces the player has never found, which is the point. Say the area too where a name is used twice.",
       oneWay: true,
       args: [
-        { name: "name", kind: "text", label: "Grace", required: true, note: "Exactly as the tool spells it: Church of Elleh, Lake-Facing Cliffs." },
+        { name: "name", kind: "name", list: "graces", label: "Grace", required: true, note: "Exactly as the tool spells it: Church of Elleh, Lake-Facing Cliffs." },
         { name: "area", kind: "text", label: "Area", note: "Limgrave, Caelid, Stormveil Castle. Needed only where two graces share a name." },
       ],
     },

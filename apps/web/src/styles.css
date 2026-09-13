@@ -1451,6 +1451,11 @@ button:disabled,
 .opRow > button {
   flex: none;
 }
+/* A name the tool has no entry for. Said quietly while it is still
+   being typed, since half a name is not a mistake yet. */
+.wrongName {
+  border-color: var(--warn);
+}
 .textInput,
 .rollInput {
   font-family: var(--serif);

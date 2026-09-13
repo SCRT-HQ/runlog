@@ -84,6 +84,26 @@ describe("the control panel", () => {
     expect(paint(undefined, ["Bo & Co"])).toContain("&amp;seat=Bo%20%26%20Co");
   });
 
+  it("asks for a grace by name against the tool's own list, not an empty box", () => {
+    const html = paint({ tool: "TarnishedTool", rows: [{ tag: "setback", ops: [{ op: "warp.grace", args: { name: "Church of Elleh" } }] }] });
+    // The field points at a list; the list itself is fetched, so a
+    // static render has the one without the other, which is the state
+    // the panel is in for the moment before it arrives.
+    expect(html).toContain('list="controlNames-graces"');
+    expect(html).toContain('id="controlNames-graces"');
+  });
+
+  it("offers a weapon at a level, which an item with a count could never be", () => {
+    const html = paint({ tool: "TarnishedTool", rows: [{ tag: "boon", ops: [{ op: "weapon.named", args: { name: "Wing of Astel", upgrade: 10 } }] }] });
+    expect(html).toContain('list="controlNames-weapons"');
+    expect(html).toContain('value="Wing of Astel"');
+    expect(html).not.toContain("never heard of");
+  });
+
+  it("carries no list for a tool that has none", () => {
+    expect(paint({ rows: [{ tag: "setback", ops: [{ op: "x", args: {} }] }] })).not.toContain("controlNames-");
+  });
+
   it("uses the pack's own word for a unit when offering how long an effect lasts", () => {
     expect(paint({ rows: [{ tag: "setback", ops: [{ op: "x", args: {} }] }] })).toContain(`Until this ${kiln.vocabulary.unit.one.toLowerCase()} closes`);
   });
