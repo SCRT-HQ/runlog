@@ -22,10 +22,12 @@ version: "0.1.0"
 title: "Elden Ring: Interference"
 author: Runlog
 description: >-
-  Ten minutes at a time, with the world against you. Every stretch draws an
-  interference, slower legs, harder hits, a night that falls, the dead
-  getting back up, and it lasts until the stretch is over. Play by hand on
-  your honor, or attach a tool and let the dice do it to you.
+  Ten minutes at a time, with the world against you. Every stretch draws
+  something wrong with the world and something to do about it: slower
+  legs, harder hits, a night that falls, the dead getting back up, and a
+  boss or a hunt or a key item to settle anyway. Settle it and the land
+  pays you. Every fourth stretch it picks you up and puts you somewhere
+  else, which is occasionally the sky.
 
 category: games
 tags: [Elden Ring, souls, solo, timed, effects]
@@ -390,6 +392,66 @@ states:
     scope: run
     until: unitEnd
     description: Two hands on one weapon.
+  blessed-wind:
+    label: Second wind
+    short: WIND+
+    scope: run
+    until: unitEnd
+    description: A boon. Stamina does not run out.
+  blessed-focus:
+    label: Clear head
+    short: FOCS+
+    scope: run
+    until: unitEnd
+    description: A boon. FP does not run out.
+  blessed-sharp:
+    label: Whetted
+    short: SHRP+
+    scope: run
+    until: unitEnd
+    description: A boon. Double damage.
+  blessed-tough:
+    label: Warded
+    short: WARD
+    scope: run
+    until: unitEnd
+    description: A boon. Half damage taken.
+  blessed-luck:
+    label: Fortunate
+    short: DROP+
+    scope: run
+    until: unitEnd
+    description: A boon. Drops are guaranteed.
+  blessed-quiet:
+    label: Quiet
+    short: HUSH+
+    scope: run
+    until: unitEnd
+    description: A boon. Nothing hears you.
+  blessed-mend:
+    label: Mending
+    short: MEND+
+    scope: run
+    until: unitEnd
+    description: A boon. You heal over time.
+  blessed-keep:
+    label: Held
+    short: KEEP+
+    scope: run
+    until: unitEnd
+    description: A boon. Death costs no runes.
+  blessed-horse:
+    label: Mounted
+    short: HORS+
+    scope: run
+    until: unitEnd
+    description: A boon. Torrent anywhere.
+  blessed-lethal:
+    label: Dreadful
+    short: KILL+
+    scope: run
+    until: unitEnd
+    description: A boon. Anything you hit dies.
 
 counters:
   stretches:
@@ -1118,6 +1180,217 @@ tables:
         tags: [target]
         points: 3
 
+  boon:
+    resolution: lookup
+    title: Boon
+    description: >-
+      What settling a target is worth. Drawn when you say you
+      settled it, which is the only way anything here can know.
+      Nothing in it is a punishment and nothing is worth points: the
+      points were on the target.
+    roll: d100
+    entries:
+      - id: bo-runes
+        range: [1, 5]
+        text: >-
+          Runes, five thousand of them, for nothing but doing as you
+          were told.
+        tags: [interference, effect]
+      - id: bo-runes2
+        range: [6, 8]
+        text: >-
+          Runes, twenty thousand. Spend them before something takes
+          them.
+        tags: [interference, effect]
+      - id: bo-seed
+        range: [9, 13]
+        text: >-
+          A Golden Seed. One more swallow, for the rest of the run.
+        tags: [interference, effect]
+      - id: bo-tear
+        range: [14, 16]
+        text: >-
+          A Sacred Tear. What you have goes further now.
+        tags: [interference, effect]
+      - id: bo-arc
+        range: [17, 21]
+        text: >-
+          A Rune Arc, and the great rune to go with it.
+        tags: [interference, effect]
+      - id: bo-stone
+        range: [22, 25]
+        text: >-
+          Smithing Stones, three of them, for whatever you are
+          carrying.
+        tags: [interference, effect]
+      - id: bo-somber
+        range: [26, 28]
+        text: >-
+          A Somber Smithing Stone, for the thing you actually use.
+        tags: [interference, effect]
+      - id: bo-key
+        range: [29, 31]
+        text: >-
+          Two Stonesword Keys. Something behind an imp statue is
+          yours.
+        tags: [interference, effect]
+      - id: bo-gold
+        range: [32, 34]
+        text: >-
+          Golden Runes, ten of them, held for when you need them.
+        tags: [interference, effect]
+      - id: bo-flesh
+        range: [35, 37]
+        text: >-
+          Exalted Flesh. Hit harder for a while; it is up to you
+          when.
+        tags: [interference, effect]
+      - id: bo-blessing
+        range: [38, 40]
+        text: >-
+          Blessings of Marika, three. Healing you did not have to
+          earn.
+        tags: [interference, effect]
+      - id: bo-baldachin
+        range: [41, 43]
+        text: >-
+          Baldachin's Blessing. Somebody is looking out for you.
+        tags: [interference, effect]
+      - id: bo-dragon
+        range: [44, 46]
+        text: >-
+          An Ancient Dragon's Blessing. Save it for something
+          enormous.
+        tags: [interference, effect]
+      - id: bo-fowl
+        range: [47, 49]
+        text: >-
+          Silver-Pickled Fowl Feet. Everything is worth more for a
+          while.
+        tags: [interference, effect]
+      - id: bo-boluses
+        range: [50, 52]
+        text: >-
+          Neutralizing Boluses, against whatever is about to poison
+          you.
+        tags: [interference, effect]
+      - id: bo-branch
+        range: [53, 55]
+        text: >-
+          Bewitching Branches. Make a friend of something that was
+          not one.
+        tags: [interference, effect]
+      - id: bo-shards
+        range: [56, 58]
+        text: >-
+          Starlight Shards, for anyone who casts.
+        tags: [interference, effect]
+      - id: bo-grease
+        range: [59, 61]
+        text: >-
+          Fire Grease. Put it on something and go and use it.
+        tags: [interference, effect]
+      - id: bo-prawn
+        range: [62, 62]
+        text: >-
+          Boiled Prawn. Small, and it has saved better runners than
+          you.
+        tags: [interference, effect]
+      - id: bo-warming
+        range: [63, 63]
+        text: >-
+          A Warming Stone, for whatever the next stretch does to
+          you.
+        tags: [interference, effect]
+      - id: bo-medallion
+        range: [64, 64]
+        text: >-
+          A Crimson Amber Medallion. Wear it or sell it.
+        tags: [interference, effect]
+      - id: bo-cerulean
+        range: [65, 65]
+        text: >-
+          A Cerulean Crystal Tear, for the flask you keep
+          forgetting.
+        tags: [interference, effect]
+      - id: bo-opaline
+        range: [66, 66]
+        text: >-
+          An Opaline Bubbletear. One hit that will not land.
+        tags: [interference, effect]
+      - id: bo-mend
+        range: [67, 70]
+        text: >-
+          You are made whole. Health, focus and flasks, all back.
+        tags: [interference, effect]
+      - id: bo-heal
+        range: [71, 74]
+        text: >-
+          Healed to full, where you stand.
+        tags: [interference, effect]
+      - id: bo-wind
+        range: [75, 78]
+        text: >-
+          The next stretch costs you no stamina.
+        tags: [interference, effect]
+        grants: [blessed-wind]
+      - id: bo-focus
+        range: [79, 81]
+        text: >-
+          The next stretch costs you no focus.
+        tags: [interference, effect]
+        grants: [blessed-focus]
+      - id: bo-sharp
+        range: [82, 85]
+        text: >-
+          Your weapons bite. Double damage until the stretch is out.
+        tags: [interference, effect]
+        grants: [blessed-sharp]
+      - id: bo-tough
+        range: [86, 88]
+        text: >-
+          Nothing hurts as much. Half damage until the stretch is
+          out.
+        tags: [interference, effect]
+        grants: [blessed-tough]
+      - id: bo-luck
+        range: [89, 91]
+        text: >-
+          Everything drops what it is carrying, for a while.
+        tags: [interference, effect]
+        grants: [blessed-luck]
+      - id: bo-quiet
+        range: [92, 94]
+        text: >-
+          Nothing hears you for the rest of the stretch.
+        tags: [interference, effect]
+        grants: [blessed-quiet]
+      - id: bo-mending
+        range: [95, 97]
+        text: >-
+          You mend as you walk, for the rest of the stretch.
+        tags: [interference, effect]
+        grants: [blessed-mend]
+      - id: bo-keep
+        range: [98, 98]
+        text: >-
+          Whatever happens next, it will not cost you runes.
+        tags: [interference, effect]
+        grants: [blessed-keep]
+      - id: bo-horse
+        range: [99, 99]
+        text: >-
+          Torrent comes when called, anywhere, for the rest of the
+          stretch.
+        tags: [interference, effect]
+        grants: [blessed-horse]
+      - id: bo-lethal
+        range: [100, 100]
+        text: >-
+          For the rest of this stretch, anything you hit dies.
+        tags: [interference, effect]
+        grants: [blessed-lethal]
+
   displacement:
     resolution: lookup
     title: Displacement
@@ -1335,6 +1608,18 @@ tables:
         tags: [displacement, fall]
 
 moves:
+  # The two things only the player knows. The app cannot see the game, so
+  # settling a target is something you say, and saying it is what a boon
+  # is drawn on.
+  settled:
+    label: I settled it
+    when: anytime
+    description: The target is done. Draw what it was worth.
+    available:
+      - { unitIndex: { gte: 1 } }
+    do:
+      - { do: rollOn, table: boon }
+
   died:
     label: I died
     when: anytime
@@ -1366,13 +1651,16 @@ phases:
         label: Play the stretch. Stop when the clock does.
         description: >-
           Ten minutes. The interference is the rule and the target is the
-          point; getting neither done is an ordinary outcome. If you die,
-          say so, it is only counted.
+          point; getting neither done is an ordinary outcome. Settle the
+          target and say so, and the land pays you for it. If you die,
+          say that too; it is only counted.
         checklist:
           - text: The interference is in force.
             shows: { table: interference, scope: unit }
           - text: The target was named, and settled or not.
             shows: { table: target, scope: unit }
+          - text: If you settled it, you said so and took the boon.
+            shows: { table: boon, scope: unit }
           - text: You were moved, if the land said so.
             shows: { table: displacement, scope: unit }
 
@@ -1424,6 +1712,7 @@ modes:
 defaultMode: solo
 
 hierarchy:
+  - Boon
   - Displacement
   - Interference
   - General rules
@@ -1492,6 +1781,21 @@ fixtures:
       - { path: counters.wander, equals: 0 }
       - { path: outcomes.0.entryId, equals: dis-grace }
       - { path: firedOnce, contains: "counter:wander:0:u1" }
+
+  - name: Settling a target pays, and the boon is drawn on the word of the player
+    mode: solo
+    play:
+      - { enter: 1 }
+      - { step: "meddle#0", answers: { d100: 100 } }
+      - { step: "charge#0", answers: { d100: 98 } }
+      - { declare: The camp on the ridge }
+      - { move: settled, answers: { d100: 1 } }
+    expect:
+      # Two draws for the stretch, and a third because the target was
+      # settled: nothing but the player could have told it that.
+      - { path: outcomes.length, equals: 3 }
+      - { path: outcomes.2.table, equals: boon }
+      - { requests: answered }
 
   - name: A death is counted and nothing else happens
     mode: solo

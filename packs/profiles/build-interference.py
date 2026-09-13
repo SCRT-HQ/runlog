@@ -182,6 +182,51 @@ PLACES = [
     (1, "dis-table", "Table of Lost Grace", "Roundtable Hold", "A mercy. The Roundtable, and a moment to breathe."),
 ]
 
+def item(name, quantity=1):
+    return [{"op": "item.named", "args": {"name": name, "quantity": quantity}}]
+
+# ---- boon: what settling a target is worth -----------------------------
+# Drawn when the player says they settled it, which is the only way
+# anything here can know. A boon is a reward, so nothing in it is a
+# punishment and nothing is worth points.
+B = [
+    (3, "bo-runes", "Runes, five thousand of them, for nothing but doing as you were told.", None, [{"op": "value.add", "args": {"name": "player.runes", "by": 5000}}]),
+    (2, "bo-runes2", "Runes, twenty thousand. Spend them before something takes them.", None, [{"op": "value.add", "args": {"name": "player.runes", "by": 20000}}]),
+    (3, "bo-seed", "A Golden Seed. One more swallow, for the rest of the run.", None, item("Golden Seed")),
+    (2, "bo-tear", "A Sacred Tear. What you have goes further now.", None, item("Sacred Tear")),
+    (3, "bo-arc", "A Rune Arc, and the great rune to go with it.", None, item("Rune Arc")),
+    (3, "bo-stone", "Smithing Stones, three of them, for whatever you are carrying.", None, item("Smithing Stone [3]", 3)),
+    (2, "bo-somber", "A Somber Smithing Stone, for the thing you actually use.", None, item("Somber Smithing Stone [3]")),
+    (2, "bo-key", "Two Stonesword Keys. Something behind an imp statue is yours.", None, item("Stonesword Key", 2)),
+    (2, "bo-gold", "Golden Runes, ten of them, held for when you need them.", None, item("Golden Rune [10]", 10)),
+    (2, "bo-flesh", "Exalted Flesh. Hit harder for a while; it is up to you when.", None, item("Exalted Flesh", 3)),
+    (2, "bo-blessing", "Blessings of Marika, three. Healing you did not have to earn.", None, item("Blessing of Marika", 3)),
+    (2, "bo-baldachin", "Baldachin's Blessing. Somebody is looking out for you.", None, item("Baldachin's Blessing", 2)),
+    (2, "bo-dragon", "An Ancient Dragon's Blessing. Save it for something enormous.", None, item("Ancient Dragon's Blessing")),
+    (2, "bo-fowl", "Silver-Pickled Fowl Feet. Everything is worth more for a while.", None, item("Silver-Pickled Fowl Foot", 3)),
+    (2, "bo-boluses", "Neutralizing Boluses, against whatever is about to poison you.", None, item("Neutralizing Boluses", 3)),
+    (2, "bo-branch", "Bewitching Branches. Make a friend of something that was not one.", None, item("Bewitching Branch", 2)),
+    (2, "bo-shards", "Starlight Shards, for anyone who casts.", None, item("Starlight Shards", 3)),
+    (2, "bo-grease", "Fire Grease. Put it on something and go and use it.", None, item("Fire Grease", 3)),
+    (1, "bo-prawn", "Boiled Prawn. Small, and it has saved better runners than you.", None, item("Boiled Prawn", 3)),
+    (1, "bo-warming", "A Warming Stone, for whatever the next stretch does to you.", None, item("Warming Stone", 2)),
+    (1, "bo-medallion", "A Crimson Amber Medallion. Wear it or sell it.", None, item("Crimson Amber Medallion")),
+    (1, "bo-cerulean", "A Cerulean Crystal Tear, for the flask you keep forgetting.", None, item("Cerulean Crystal Tear")),
+    (1, "bo-opaline", "An Opaline Bubbletear. One hit that will not land.", None, item("Opaline Bubbletear")),
+    (3, "bo-mend", "You are made whole. Health, focus and flasks, all back.", None, press("SetRfbs")),
+    (3, "bo-heal", "Healed to full, where you stand.", None, press("SetMaxHp")),
+    (3, "bo-wind", "The next stretch costs you no stamina.", S("blessed-wind", "Second wind", "WIND+", "A boon. Stamina does not run out."), flag("player.infiniteStamina")),
+    (2, "bo-focus", "The next stretch costs you no focus.", S("blessed-focus", "Clear head", "FOCS+", "A boon. FP does not run out."), flag("player.infiniteFp")),
+    (3, "bo-sharp", "Your weapons bite. Double damage until the stretch is out.", S("blessed-sharp", "Whetted", "SHRP+", "A boon. Double damage."), val("player.outgoingDamage", 2)),
+    (2, "bo-tough", "Nothing hurts as much. Half damage until the stretch is out.", S("blessed-tough", "Warded", "WARD", "A boon. Half damage taken."), val("player.incomingDamage", 0.5)),
+    (2, "bo-luck", "Everything drops what it is carrying, for a while.", S("blessed-luck", "Fortunate", "DROP+", "A boon. Drops are guaranteed."), flag("world.guaranteedDrop")),
+    (2, "bo-quiet", "Nothing hears you for the rest of the stretch.", S("blessed-quiet", "Quiet", "HUSH+", "A boon. Nothing hears you."), flag("player.silent")),
+    (2, "bo-mending", "You mend as you walk, for the rest of the stretch.", S("blessed-mend", "Mending", "MEND+", "A boon. You heal over time."), flag("player.healOverTime")),
+    (1, "bo-keep", "Whatever happens next, it will not cost you runes.", S("blessed-keep", "Held", "KEEP+", "A boon. Death costs no runes."), flag("player.noRuneLoss")),
+    (1, "bo-horse", "Torrent comes when called, anywhere, for the rest of the stretch.", S("blessed-horse", "Mounted", "HORS+", "A boon. Torrent anywhere."), flag("player.torrentAnywhere")),
+    (1, "bo-lethal", "For the rest of this stretch, anything you hit dies.", S("blessed-lethal", "Dreadful", "KILL+", "A boon. Anything you hit dies."), flag("player.oneShot")),
+]
+
 # ---- emit ---------------------------------------------------------------
 def fit(rows):
     """Scale the weights to tile a d100 exactly, keeping what is rarer rarer.
@@ -264,11 +309,11 @@ def d_extra(row):
 displacement = [(w, eid, f"{name}, {area}. {text}", None, None) for w, eid, name, area, text in PLACES]
 displacement.append((2, "dis-sky", "The sky. You are lifted a few hundred feet above wherever you were standing, and then you are not lifted any more.", None, None))
 
-built_i, built_t, built_d = entries(I), entries(T), entries(displacement)
+built_i, built_t, built_d, built_b = entries(I), entries(T), entries(displacement), entries(B)
 
 states = []
 seen = set()
-for row in I:
+for row in I + B:
     st = row[3]
     if not st or st[0] in seen:
         continue
@@ -282,6 +327,9 @@ tables = table("interference", "Interference",
 tables += "\n" + table("target", "Target",
                        "What the stretch is for. Drawn after the interference, so you know what is wrong with the world before you are told what to do in it. Name the target in your own words: the app cannot see your game, and the log should read like something that happened.",
                        built_t, t_extra)
+tables += "\n" + table("boon", "Boon",
+                       "What settling a target is worth. Drawn when you say you settled it, which is the only way anything here can know. Nothing in it is a punishment and nothing is worth points: the points were on the target.",
+                       built_b, i_extra)
 tables += "\n" + table("displacement", "Displacement",
                        "Every fourth stretch the Lands Between are done with you where you are. Drawn as a stretch closes and taken before the next one opens. A tool does the moving: these are real places by name, and most of them are somewhere you would not have chosen.",
                        built_d, d_extra)
@@ -311,6 +359,15 @@ for row in I:
     r["ops"] = ops
     rows.append(r)
 
+for row in B:
+    eid, state, ops = row[1], row[3], row[4]
+    r = {"entry": eid, "table": "boon", "label": state[1] if state else eid.replace("bo-", "").capitalize()}
+    # A buff lasts the stretch; an item or a heal is simply given.
+    if ops[0]["op"] in ("flag.set", "value.set"):
+        r["until"] = "unit"
+    r["ops"] = ops
+    rows.append(r)
+
 for w, eid, name, area, text in PLACES:
     rows.append({"entry": eid, "table": "displacement", "label": name,
                  "ops": [{"op": "warp.grace", "args": {"area": area, "name": name}}]})
@@ -322,5 +379,5 @@ profile = {"tool": "TarnishedTool",
            "rows": rows}
 io.open(os.path.join(here, "elden-ring-interference.json"), "w", encoding="utf-8", newline="").write(json.dumps(profile, indent=2) + "\n")
 
-print("interference %d (%d driven), target %d, displacement %d, states %d, profile rows %d"
-      % (len(I), sum(1 for r in I if r[4]), len(T), len(displacement), len(states), len(rows)))
+print("interference %d (%d driven), target %d, boon %d, displacement %d, states %d, profile rows %d"
+      % (len(I), sum(1 for r in I if r[4]), len(T), len(B), len(displacement), len(states), len(rows)))

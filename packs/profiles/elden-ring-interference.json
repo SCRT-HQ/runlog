@@ -580,6 +580,504 @@
       ]
     },
     {
+      "entry": "bo-runes",
+      "table": "boon",
+      "label": "Runes",
+      "ops": [
+        {
+          "op": "value.add",
+          "args": {
+            "name": "player.runes",
+            "by": 5000
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-runes2",
+      "table": "boon",
+      "label": "Runes2",
+      "ops": [
+        {
+          "op": "value.add",
+          "args": {
+            "name": "player.runes",
+            "by": 20000
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-seed",
+      "table": "boon",
+      "label": "Seed",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-tear",
+      "table": "boon",
+      "label": "Tear",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-arc",
+      "table": "boon",
+      "label": "Arc",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Rune Arc",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-stone",
+      "table": "boon",
+      "label": "Stone",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Smithing Stone [3]",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-somber",
+      "table": "boon",
+      "label": "Somber",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Somber Smithing Stone [3]",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-key",
+      "table": "boon",
+      "label": "Key",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Stonesword Key",
+            "quantity": 2
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-gold",
+      "table": "boon",
+      "label": "Gold",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Rune [10]",
+            "quantity": 10
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-flesh",
+      "table": "boon",
+      "label": "Flesh",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Exalted Flesh",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-blessing",
+      "table": "boon",
+      "label": "Blessing",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blessing of Marika",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-baldachin",
+      "table": "boon",
+      "label": "Baldachin",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Baldachin's Blessing",
+            "quantity": 2
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-dragon",
+      "table": "boon",
+      "label": "Dragon",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Ancient Dragon's Blessing",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-fowl",
+      "table": "boon",
+      "label": "Fowl",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Silver-Pickled Fowl Foot",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-boluses",
+      "table": "boon",
+      "label": "Boluses",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Neutralizing Boluses",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-branch",
+      "table": "boon",
+      "label": "Branch",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bewitching Branch",
+            "quantity": 2
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-shards",
+      "table": "boon",
+      "label": "Shards",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Starlight Shards",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-grease",
+      "table": "boon",
+      "label": "Grease",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Fire Grease",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-prawn",
+      "table": "boon",
+      "label": "Prawn",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Boiled Prawn",
+            "quantity": 3
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-warming",
+      "table": "boon",
+      "label": "Warming",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Warming Stone",
+            "quantity": 2
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-medallion",
+      "table": "boon",
+      "label": "Medallion",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Crimson Amber Medallion",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-cerulean",
+      "table": "boon",
+      "label": "Cerulean",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Cerulean Crystal Tear",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-opaline",
+      "table": "boon",
+      "label": "Opaline",
+      "ops": [
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Opaline Bubbletear",
+            "quantity": 1
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-mend",
+      "table": "boon",
+      "label": "Mend",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SetRfbs"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-heal",
+      "table": "boon",
+      "label": "Heal",
+      "ops": [
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "SetMaxHp"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-wind",
+      "table": "boon",
+      "label": "Second wind",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infiniteStamina",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-focus",
+      "table": "boon",
+      "label": "Clear head",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.infiniteFp",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-sharp",
+      "table": "boon",
+      "label": "Whetted",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.outgoingDamage",
+            "value": 2
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-tough",
+      "table": "boon",
+      "label": "Warded",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.incomingDamage",
+            "value": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-luck",
+      "table": "boon",
+      "label": "Fortunate",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "world.guaranteedDrop",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-quiet",
+      "table": "boon",
+      "label": "Quiet",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.silent",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-mending",
+      "table": "boon",
+      "label": "Mending",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.healOverTime",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-keep",
+      "table": "boon",
+      "label": "Held",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.noRuneLoss",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-horse",
+      "table": "boon",
+      "label": "Mounted",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.torrentAnywhere",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "entry": "bo-lethal",
+      "table": "boon",
+      "label": "Dreadful",
+      "until": "unit",
+      "ops": [
+        {
+          "op": "flag.set",
+          "args": {
+            "name": "player.oneShot",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
       "entry": "dis-elleh",
       "table": "displacement",
       "label": "Church of Elleh",
