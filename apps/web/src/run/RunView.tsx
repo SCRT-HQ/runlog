@@ -2123,13 +2123,21 @@ function Trackers({
         const step = def.step ?? 1;
         const low = value <= (def.min ?? 0);
         const high = def.max !== undefined && value >= def.max;
+        // What the dial would read after the press, said with its own
+        // name. "Up to 11" was the honest arithmetic and the wrong
+        // sentence: it reads as a ceiling, and on a dial that goes to
+        // sixty it read as the wrong ceiling.
+        const would = (by: number) => {
+          const next = Math.max(def.min ?? 0, def.max !== undefined ? Math.min(def.max, value + by) : value + by);
+          return `${next} ${def.label.toLowerCase()}`;
+        };
         return (
           <div key={id} className="tracker">
             <div className="trackerHead">
               <strong title={def.description}>{def.label}</strong>
               <span className="nudge">
                 {onTurn && (
-                  <button className="ghost tiny" disabled={low} title={`Down to ${Math.max(def.min ?? 0, value - step)}`} onClick={() => onTurn(id, -step)}>
+                  <button className="ghost tiny" disabled={low} aria-label={would(-step)} title={would(-step)} onClick={() => onTurn(id, -step)}>
                     −
                   </button>
                 )}
@@ -2138,7 +2146,7 @@ function Trackers({
                   {def.max !== undefined && ` / ${def.max}`}
                 </span>
                 {onTurn && (
-                  <button className="ghost tiny" disabled={high} title={`Up to ${def.max !== undefined ? Math.min(def.max, value + step) : value + step}`} onClick={() => onTurn(id, step)}>
+                  <button className="ghost tiny" disabled={high} aria-label={would(step)} title={would(step)} onClick={() => onTurn(id, step)}>
                     +
                   </button>
                 )}
