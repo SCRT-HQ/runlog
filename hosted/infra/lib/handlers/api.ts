@@ -131,13 +131,18 @@ export function metricsOf(
  * refuses an unclaimed key), its own library's packs, and the publisher's
  * packs and listings. Nothing that reads play, moves money, or changes who
  * is at the table.
+ *
+ * Taking a listing down is on the list because the seeder does it: a pack
+ * that stops shipping has to stop being offered, and the only party that
+ * knows which those are is the deploy that no longer names them. Deleting
+ * the product itself is not, since that discards the master.
  */
 function releaseMayReach(method: string, path: string): boolean {
   if (method === "GET" && (path === "/api/me" || path === "/api/claims" || path === "/api/publishers/me" || path === "/api/publishers/packs")) return true;
   if (method === "POST" && path === "/api/claims/nonce") return true;
   if (path.startsWith("/api/packs/")) return method === "PUT" || method === "GET";
   if (/^\/api\/publishers\/packs\/[^/]+$/.test(path)) return method === "PUT" || method === "GET";
-  if (/^\/api\/publishers\/packs\/[^/]+\/listing$/.test(path)) return method === "POST";
+  if (/^\/api\/publishers\/packs\/[^/]+\/listing$/.test(path)) return method === "POST" || method === "DELETE";
   return false;
 }
 const MAX_KEYS = 20;
