@@ -35,7 +35,13 @@ export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: Sto
    * hands what the server said back to the run, and takes it as read here.
    */
   const [taking, setTaking] = useState<{ policy: AskPolicy; since?: string } | null>(record?.asks ?? null);
-  const policy: AskPolicy = taking?.policy ?? "ask";
+  // What this run does with an ask, until the host says otherwise. The
+  // pack has an opinion because only the pack knows what kind of game
+  // this is: one whose results a tool performs wants them taken as they
+  // land, since a tray tapped between every death is the bookkeeping it
+  // exists to remove, and one played around a table wants to be asked,
+  // since there the interruption is the point. Silent packs ask.
+  const policy: AskPolicy = taking?.policy ?? pack.asks?.policy ?? "ask";
   const moves = Object.entries(pack.moves ?? {}).filter(([, m]) => m.when === "anytime" || m.when === undefined);
 
   if (!api || !record) return null;
