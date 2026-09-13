@@ -192,7 +192,11 @@ export function subjectSuggestions(pack: Pack, state: RunState, tableId?: string
   const out: string[] = [];
   for (const line of constraintLines(pack, state, tableId)) {
     const first = line.text.split(/(?<=[.!?])\s/)[0] ?? line.text;
-    const name = first.replace(/[.]+$/, "").trim();
+    // Walked off the end rather than matched: a pattern anchored to the
+    // end of a string it did not write can be made to crawl, and this one
+    // reads a result out of a pack anybody can publish.
+    let name = first.trim();
+    while (name.endsWith(".")) name = name.slice(0, -1).trimEnd();
     if (name.length === 0 || name.length > 60) continue;
     if (!out.includes(name)) out.push(name);
   }
