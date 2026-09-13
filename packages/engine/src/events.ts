@@ -39,6 +39,15 @@ interface Base {
    * host's device took it; this only says at whose asking.
    */
   askedBy?: { name?: string; via?: string };
+  /**
+   * The racer this event was made for, in a moderated run where the move
+   * that made it belongs to one of them rather than to the table.
+   *
+   * A curse lands on everybody and is nobody's; a death is somebody's.
+   * Stamped on every event a per-contestant move commits, which is what
+   * lets one counter be four counters and the log say whose.
+   */
+  contestant?: string;
 }
 
 export type RunEvent =

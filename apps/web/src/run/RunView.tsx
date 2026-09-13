@@ -502,7 +502,7 @@ export function RunView({
           )}
 
           {run.moderated && run.challenges.length > 0 && <Winners run={run} state={state} />}
-          {run.moves.length > 0 && <Moves run={run} pack={pack} />}
+          {run.moves.length > 0 && <Moves run={run} pack={pack} state={state} />}
 
           <Timeline pack={pack} state={state} />
 
@@ -1771,6 +1771,15 @@ function Scoreboard({ run, state, pack }: { run: ReturnType<typeof useRun>; stat
             )}
           </span>
           <span className="nudge">
+            {/* Their own tallies, beside their score: a per-contestant
+                move moves this one and nobody else's, so a race with
+                four names has four death counts and the trackers below
+                keep only what belongs to the table. */}
+            {Object.entries(s.contestant.counters).map(([id, value]) => (
+              <span key={id} className="chip" title={pack.counters?.[id]?.label ?? id}>
+                {pack.counters?.[id]?.label ?? id} {value}
+              </span>
+            ))}
             <span className="muted num">{s.points}</span>
             {editable && (
               <button className="ghost tiny" title="Take them off the roster" onClick={() => run.removeContestant(s.contestant.id)}>
@@ -1792,27 +1801,63 @@ function Scoreboard({ run, state, pack }: { run: ReturnType<typeof useRun>; stat
   );
 }
 
-function Moves({ run, pack }: { run: ReturnType<typeof useRun>; pack: Pack }) {
+/**
+ * The moves on offer, and whose they are.
+ *
+ * A move is the table's unless the pack says otherwise, and in a solo
+ * or co-op run that is the end of it: one button, one press. In a race
+ * it is the wrong question. "I died" on a board with four names on it
+ * is four different things, and the run cannot know which without being
+ * told, so a move the pack marks `per: contestant` is offered once per
+ * racer and what it does is recorded against them.
+ */
+function Moves({ run, pack, state }: { run: ReturnType<typeof useRun>; pack: Pack; state: RunState }) {
   const owed = run.blockingObligations.length;
+  // No roster, no question to ask: a per-contestant move in a run with
+  // nobody on the board is the table's, the way it always was.
+  const racing = run.moderated ? state.contestants : [];
   return (
     <section className="panel">
       <h3 className="sectionTitle">
-        Your move <span className="muted">optional</span>
+        {racing.length > 0 ? "Moves" : "Your move"} <span className="muted">optional</span>
       </h3>
       <div className="choices">
-        {run.moves.map(({ id, move }) => (
-          <button
-            key={id}
-            className="choice"
-            disabled={Boolean(move.finalizes) && owed > 0}
-            title={move.finalizes && owed > 0 ? "Settle what is owed first; this move closes the unit." : undefined}
-            onClick={() => run.takeMove(id, move.label)}
-          >
-            <strong>{move.label}</strong>
-            <span className="muted small">{move.description}</span>
-            {move.finalizes && <span className="muted small">Closes the {pack.vocabulary.unit.one.toLowerCase()}.</span>}
-          </button>
-        ))}
+        {run.moves.map(({ id, move }) => {
+          const held = Boolean(move.finalizes) && owed > 0;
+          const why = held ? "Settle what is owed first; this move closes the unit." : undefined;
+          const closes = move.finalizes ? `Closes the ${pack.vocabulary.unit.one.toLowerCase()}.` : null;
+
+          if (move.per !== "contestant" || racing.length === 0) {
+            return (
+              <button key={id} className="choice" disabled={held} title={why} onClick={() => run.takeMove(id, move.label)}>
+                <strong>{move.label}</strong>
+                <span className="muted small">{move.description}</span>
+                {closes && <span className="muted small">{closes}</span>}
+              </button>
+            );
+          }
+
+          return (
+            <div className="choice perRacer" key={id}>
+              <strong>{move.label}</strong>
+              <span className="muted small">{move.description}</span>
+              {closes && <span className="muted small">{closes}</span>}
+              <div className="padRow">
+                {racing.map((c) => (
+                  <button
+                    key={c.id}
+                    className="ghost tiny"
+                    disabled={held}
+                    title={why ?? `${move.label}: ${c.name}`}
+                    onClick={() => run.takeMove(id, `${move.label} - ${c.name}`, undefined, c.id)}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

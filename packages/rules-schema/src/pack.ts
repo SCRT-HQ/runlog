@@ -695,6 +695,12 @@ export const MoveDef = z
       .describe(
         "Taking this move also closes the current unit: the rest of its flow is recorded as done and the unit is finalized. For moves that are outcomes, like landed or missed, so the player is not asked to close the unit a second time.",
       ),
+    per: z
+      .enum(["table", "contestant"])
+      .default("table")
+      .describe(
+        "Who takes it. `table` is the default and is the whole run: one press, one outcome, everybody's. `contestant` is one racer's, offered once per name on the roster, and what it does is recorded against them: their counter moves, not the run's. Only meaningful in a moderated mode, where there is a roster to offer it to; elsewhere it is the table's as usual.",
+      ),
     /** Where the move belongs in the interface. */
     when: z
       .enum(["anytime", "betweenUnits", "beforeEnding"])

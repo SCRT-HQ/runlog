@@ -23,6 +23,9 @@ vocabulary:
   subject: { one: Set, many: Sets }
   finalize: Close
 unit: { createsSubject: true, min: 1, max: 5 }
+counters:
+  deaths: { label: Deaths, initial: 0, min: 0 }
+  heats: { label: Heats, initial: 0, min: 0 }
 tables:
   trick:
     resolution: lookup
@@ -182,5 +185,47 @@ describe("the scoreboard", () => {
       ev("ContestantRemoved", { contestant: "c1" }),
     ]);
     expect(standings(state).map((s) => s.contestant.name)).toEqual(["Ben", "Cy"]);
+  });
+});
+
+/**
+ * A tally that belongs to one racer.
+ *
+ * The same counter is the table's or somebody's depending on who the
+ * event says it was for, which is what lets one definition serve a
+ * race of four without the pack declaring four of them.
+ */
+describe("a counter moved for one racer", () => {
+  it("moves that racer's tally and leaves the run's alone", () => {
+    const p = pack();
+    const state = reduce(p, [
+      ...opened(p, "first"),
+      ev("CounterChanged", { counter: "deaths", by: 1, contestant: "c1" }),
+      ev("CounterChanged", { counter: "deaths", by: 1, contestant: "c1" }),
+      ev("CounterChanged", { counter: "deaths", by: 1, contestant: "c2" }),
+    ]);
+    expect(state.contestants.map((c) => c.counters["deaths"] ?? 0)).toEqual([2, 1, 0]);
+    expect(state.counters["deaths"] ?? 0).toBe(0);
+  });
+
+  it("still moves the run's where the event names nobody", () => {
+    const p = pack();
+    const state = reduce(p, [...opened(p, "first"), ev("CounterChanged", { counter: "heats", by: 1 })]);
+    expect(state.counters["heats"]).toBe(1);
+    expect(state.contestants.every((c) => c.counters["heats"] === undefined)).toBe(true);
+  });
+
+  it("holds a racer's tally to the counter's own floor, the way the run's is held", () => {
+    const p = pack();
+    const state = reduce(p, [...opened(p, "first"), ev("CounterChanged", { counter: "deaths", by: -5, contestant: "c1" })]);
+    expect(state.contestants[0]!.counters["deaths"]).toBe(0);
+  });
+
+  it("does nothing for a racer who is not on the roster, rather than inventing one", () => {
+    const p = pack();
+    const state = reduce(p, [...opened(p, "first"), ev("CounterChanged", { counter: "deaths", by: 1, contestant: "nobody" })]);
+    expect(state.contestants).toHaveLength(3);
+    expect(state.contestants.every((c) => c.counters["deaths"] === undefined)).toBe(true);
+    expect(state.counters["deaths"] ?? 0).toBe(0);
   });
 });

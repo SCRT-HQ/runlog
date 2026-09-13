@@ -94,6 +94,8 @@ export interface Pending {
   closesUnit?: boolean;
   /** Who outside the table asked for this block, when someone did: stamped on every event it commits. */
   askedBy?: { name?: string; via?: string };
+  /** The racer this block belongs to, where the move was one of theirs: stamped the same way. */
+  contestant?: string;
 }
 
 /**
@@ -366,7 +368,9 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
         : p.closesUnit
           ? [...stopClocksEvents(state, now()), ...closeUnitEvents(pack, state, now())]
           : [];
-      const stamped = p.askedBy ? [...result.events, ...done].map((e) => ({ ...e, askedBy: p.askedBy })) : [...result.events, ...done];
+      const all = [...result.events, ...done];
+      const marks = { ...(p.askedBy ? { askedBy: p.askedBy } : {}), ...(p.contestant ? { contestant: p.contestant } : {}) };
+      const stamped = Object.keys(marks).length > 0 ? all.map((e) => ({ ...e, ...marks })) : all;
       const named = commit(stamped);
       setPending(null);
       if (p.kind === "table") {
@@ -584,15 +588,24 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     return availableMoves(pack, state, activeStep ? "anytime" : ["betweenUnits", "beforeEnding"]);
   }, [pack, state, activeStep]);
 
+  /**
+   * Take a move, for the table or for one racer.
+   *
+   * The contestant is not a fifth argument for the sake of it: a move a
+   * pack marks `per: contestant` is a different move for each name on
+   * the roster, and what it does has to be recorded against the one who
+   * took it or a race has one death counter between four people.
+   */
   const takeMove = useCallback(
-    (id: string, label: string, askedBy?: { name?: string; via?: string }) =>
+    (id: string, label: string, askedBy?: { name?: string; via?: string }, contestant?: string) =>
       begin({
         kind: "move",
         moveId: id,
-        keyPrefix: `move:${id}`,
+        keyPrefix: contestant ? `move:${id}:${contestant}` : `move:${id}`,
         label,
         ...(pack.moves?.[id]?.finalizes ? { closesUnit: true } : {}),
         ...(askedBy ? { askedBy } : {}),
+        ...(contestant ? { contestant } : {}),
       }),
     [begin, pack],
   );
