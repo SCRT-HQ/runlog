@@ -11,6 +11,7 @@
     "hosted/infra"
   ],
   "scripts": {
+    "prepare": "husky",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "tsc --noEmit -p packages/container/tsconfig.json && tsc --noEmit -p packages/rules-schema/tsconfig.json && tsc --noEmit -p packages/engine/tsconfig.json && tsc --noEmit -p packages/cli/tsconfig.json && tsc --noEmit -p apps/web/tsconfig.json && tsc --noEmit -p hosted/infra/tsconfig.json",
     "lint:docs": "markdownlint-cli2",
@@ -30,7 +31,9 @@
     "test:infra": "npm test -w hosted/infra",
     "cdk": "npm run cdk -w hosted/infra --",
     "overlay": "tsx hosted/scripts/overlay.ts",
-    "dev": "npm run dev -w apps/web --"
+    "dev": "npm run dev -w apps/web --",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
@@ -38,8 +41,11 @@
     "ajv-formats": "^3.0.1",
     "esbuild": "^0.28.2",
     "fake-indexeddb": "^6.2.5",
+    "husky": "^9.1.7",
     "jsdom": "^30.0.1",
+    "lint-staged": "^17.5.1",
     "markdownlint-cli2": "^0.23.2",
+    "prettier": "^3.9.6",
     "typescript": "^5.9.0",
     "vitest": "^5.0.0"
   },
@@ -48,5 +54,9 @@
   },
   "engines": {
     "node": ">=20.11"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mjs,cjs,js,jsx,json,css,html,yml,yaml}": "prettier --write",
+    "*.md": "markdownlint-cli2 --fix"
   }
 }

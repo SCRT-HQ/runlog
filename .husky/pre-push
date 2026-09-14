@@ -1,0 +1,22 @@
+# A pack that changed says so in its version.
+#
+# CI asks this of a pull request, where there is a base to compare
+# against. That is the right place for the gate and the wrong place to
+# find out: the answer is a one-line edit, and hearing it two minutes
+# into a workflow run is how it gets missed. So it is asked here too,
+# at the last moment it is still cheap to fix.
+#
+# Pushing is also the first moment the question is answerable. A branch
+# is many commits, and asking it of each one fails on every commit
+# between the first edit and the bump, which teaches you --no-verify.
+remote_main="$(git rev-parse --verify --quiet refs/remotes/origin/main || true)"
+if [ -z "$remote_main" ]; then
+  echo "pre-push: no origin/main to compare against; skipping the pack version check."
+  exit 0
+fi
+
+# Against the merge base rather than the tip, so a main that has moved on
+# is not mistaken for this branch having changed something.
+git fetch --no-tags --quiet origin main || echo "pre-push: could not reach origin; comparing against the origin/main already here."
+base="$(git merge-base HEAD origin/main)"
+npm run --silent check:pack-versions -- "$base"
