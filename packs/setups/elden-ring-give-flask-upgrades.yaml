@@ -1,0 +1,28 @@
+# The flask, at full.
+#
+# Golden seeds add charges and sacred tears make each charge worth
+# more. Both are the ordinary reason an early-game run cannot survive a
+# late-game fight, and neither is interesting to go and find again.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.give-flask-upgrades
+version: "1.0.0"
+title: Give Flask Upgrades
+author: Runlog
+description: >-
+  Twenty golden seeds and ten sacred tears: a great many more charges,
+  and a great deal more in each of them. Enough that the flask stops
+  being the reason a run ends early.
+
+tool: TarnishedTool
+
+ops:
+  - { op: item.named, args: { name: Golden Seed, quantity: 20 }, once: true }
+  - { op: item.named, args: { name: Sacred Tear, quantity: 10 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

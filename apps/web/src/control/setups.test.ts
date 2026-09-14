@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Setup } from "@runlog/rules-schema";
-import { chose, chosenFrom, forTool, shippedSetups, withChosen } from "./setups.ts";
+import { chose, chosenFrom, combine, creditLine, edit, forTool, shippedSetups, withChosen } from "./setups.ts";
 import type { ControlProfile } from "./profile.ts";
 
 /**
@@ -35,6 +35,39 @@ describe("the setups we ship", () => {
     }
   });
 
+  /**
+   * A name the tool does not have is a gift nobody receives.
+   *
+   * `item.named` takes a string and the format deliberately says nothing
+   * about what is in it: the shape of an operation's arguments is the
+   * tool's business, which is what lets one format serve tools nobody
+   * here has heard of. The cost is that a misspelling validates, ships,
+   * and then quietly hands over nothing, on the one screen where nobody
+   * is looking at the app to find out.
+   *
+   * The lists the tool publishes are in this repository already, for the
+   * pickers in Settings. So the setups we ship are held against them.
+   */
+  it("name only things the tool actually has", async () => {
+    const lists = (await import("./lists/tarnishedtool.json", { with: { type: "json" } })).default as {
+      items: Array<string | { name: string }>;
+      weapons: Array<string | { name: string }>;
+    };
+    const nameOf = (v: string | { name: string }) => (typeof v === "string" ? v : v.name);
+    const known = { items: new Set(lists.items.map(nameOf)), weapons: new Set(lists.weapons.map(nameOf)) };
+
+    const missing: string[] = [];
+    for (const s of forTool(await shippedSetups(), "TarnishedTool")) {
+      for (const op of s.ops) {
+        const name = (op.args as { name?: unknown } | undefined)?.name;
+        if (typeof name !== "string") continue;
+        if (op.op === "item.named" && !known.items.has(name)) missing.push(`${s.id}: no such item "${name}"`);
+        if (op.op === "weapon.named" && !known.weapons.has(name)) missing.push(`${s.id}: no such weapon "${name}"`);
+      }
+    }
+    expect(missing, missing.join("; ")).toEqual([]);
+  });
+
   it("are offered by tool rather than by pack, which is why they are their own document", async () => {
     const all = await shippedSetups();
     expect(forTool(all, "TarnishedTool").length).toBeGreaterThan(0);
@@ -53,7 +86,62 @@ describe("what a run keeps", () => {
     const kept = chose(original);
     original.ops[0]!.args = { name: "changed" };
     expect(kept.ops[0]?.args).toEqual({ name: "player.noRoll", value: true });
-    expect(kept).toMatchObject({ id: original.id, version: "1.0.0", title: "One" });
+    expect(kept.from).toEqual([{ id: original.id, version: "1.0.0", title: "One" }]);
+  });
+
+  /**
+   * Wanting two is the ordinary case: "a knight's armor" and "enough
+   * stones to use it" are two sentences, and the run has to keep both
+   * names or it cannot say afterwards what it was played under.
+   */
+  it("keeps several, in the order they were chosen, concatenated and not merged", () => {
+    const armor = setup({
+      id: "com.example.setups.armor",
+      title: "Armor",
+      ops: [{ op: "value.set", args: { name: "player.vigor", value: 40 } }],
+    });
+    const stones = setup({
+      id: "com.example.setups.stones",
+      title: "Stones",
+      ops: [{ op: "value.set", args: { name: "player.vigor", value: 60 } }],
+    });
+    const both = combine([armor, stones])!;
+    expect(both.from.map((f) => f.title)).toEqual(["Armor", "Stones"]);
+    // Nothing is resolved: both lines stand, and a tool applying them in
+    // order lands on the second. The player can see that and delete one.
+    expect(both.ops).toHaveLength(2);
+    expect(both.ops[1]?.args).toEqual({ name: "player.vigor", value: 60 });
+    expect(combine([])).toBeNull();
+  });
+
+  /**
+   * "Played under Cleric" is a fact until the operations are editable,
+   * and a claim afterwards. The flag is worked out rather than asked
+   * for, so an editor cannot forget to set it.
+   */
+  it("says whether the operations are still what the setups handed over", () => {
+    const one = setup({ title: "One" });
+    const kept = chose(one);
+    expect(creditLine(kept)).toBe("Played under One");
+
+    const untouched = edit(kept, one.ops, one.ops);
+    expect(untouched?.edited).toBeUndefined();
+    expect(creditLine(untouched)).toBe("Played under One");
+
+    const changed = edit(kept, [...one.ops, { op: "runes.give", args: { amount: 5 }, once: true }], one.ops);
+    expect(changed?.edited).toBe(true);
+    expect(creditLine(changed)).toBe("Seeded from One, then edited");
+
+    expect(creditLine(null)).toBeNull();
+    // Everything deleted, and nothing was chosen: there is no choice left to keep.
+    expect(edit(null, [], [])).toBeNull();
+  });
+
+  it("names several setups the way a sentence would", () => {
+    const named = (titles: string[]) => creditLine(combine(titles.map((t, i) => setup({ id: `com.example.setups.s${i}`, title: t })))!);
+    expect(named(["One"])).toBe("Played under One");
+    expect(named(["One", "Two"])).toBe("Played under One and Two");
+    expect(named(["One", "Two", "Three"])).toBe("Played under One, Two and Three");
   });
 
   it("reads one back off a record, and refuses what is not one", () => {
@@ -62,6 +150,26 @@ describe("what a run keeps", () => {
     expect(chosenFrom(null)).toBeNull();
     expect(chosenFrom({ id: "x", title: "X", version: "1" })).toBeNull();
     expect(chosenFrom({ ...kept, ops: [{ notAnOp: true }] })).toBeNull();
+  });
+
+  /**
+   * Runs written before this went plural are in libraries on people's
+   * devices, and one of them may be open right now. The old shape is a
+   * single setup beside its operations; it reads as a run seeded from
+   * that one setup, which is exactly what it was.
+   */
+  it("still reads a run written before this held more than one", () => {
+    const old = {
+      id: "com.scrthq.runlog.setups.cleric",
+      version: "1.0.0",
+      title: "Cleric",
+      ops: [{ op: "runes.give", args: { amount: 120000 }, once: true }],
+    };
+    const read = chosenFrom(old);
+    expect(read?.from).toEqual([{ id: old.id, version: "1.0.0", title: "Cleric" }]);
+    expect(read?.ops).toEqual(old.ops);
+    expect(read?.edited).toBeUndefined();
+    expect(creditLine(read)).toBe("Played under Cleric");
   });
 
   it("keeps `once`, which is the whole difference between a setting and a gift", () => {

@@ -1,0 +1,29 @@
+# The DLC's own leveling, which the player's level does not touch.
+#
+# Shadow of the Erdtree scales damage taken and dealt by two counts of
+# its own: scadutree fragments for the player, revered spirit ash for
+# the summons. A run that enters at level two hundred and ignores these
+# is still a run that dies in one hit.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.give-scadutree-blessings
+version: "1.0.0"
+title: Give Scadutree Blessings
+author: Runlog
+description: >-
+  Twenty scadutree fragments and fifteen revered spirit ash: the DLC's
+  own leveling for the player and for their summons, well up from
+  nothing. Worth having for any run that goes into Shadow of the Erdtree.
+
+tool: TarnishedTool
+
+ops:
+  - { op: item.named, args: { name: Scadutree Fragment, quantity: 20 }, once: true }
+  - { op: item.named, args: { name: Revered Spirit Ash, quantity: 15 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

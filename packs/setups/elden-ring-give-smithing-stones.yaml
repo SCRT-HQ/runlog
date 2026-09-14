@@ -1,0 +1,47 @@
+# Weapons, taken most of the way, without the mining.
+#
+# The amounts are a boost rather than a shopping trip: enough to stop
+# the run being about materials, not so much that nothing is worth
+# picking up. An ordinary weapon takes several stones a level and a
+# somber one takes exactly one, which is why the two tiers differ.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.give-smithing-stones
+version: "1.0.0"
+title: Give Smithing Stones
+author: Runlog
+description: >-
+  Enough of every smithing stone to take a couple of ordinary weapons to
+  the top and a handful of somber ones with them. Ordinary stones go
+  twenty to a tier because an ordinary weapon eats several a level;
+  somber ones go eight, because a somber weapon eats exactly one.
+
+tool: TarnishedTool
+
+ops:
+  - { op: item.named, args: { name: "Smithing Stone [1]", quantity: 20 }, once: true }
+  - { op: item.named, args: { name: "Smithing Stone [2]", quantity: 20 }, once: true }
+  - { op: item.named, args: { name: "Smithing Stone [3]", quantity: 20 }, once: true }
+  - { op: item.named, args: { name: "Smithing Stone [4]", quantity: 20 }, once: true }
+  - { op: item.named, args: { name: "Smithing Stone [5]", quantity: 20 }, once: true }
+  - { op: item.named, args: { name: "Smithing Stone [6]", quantity: 20 }, once: true }
+  - { op: item.named, args: { name: "Smithing Stone [7]", quantity: 20 }, once: true }
+  - { op: item.named, args: { name: "Smithing Stone [8]", quantity: 20 }, once: true }
+  - { op: item.named, args: { name: Ancient Dragon Smithing Stone, quantity: 8 }, once: true }
+  - { op: item.named, args: { name: "Somber Smithing Stone [1]", quantity: 8 }, once: true }
+  - { op: item.named, args: { name: "Somber Smithing Stone [2]", quantity: 8 }, once: true }
+  - { op: item.named, args: { name: "Somber Smithing Stone [3]", quantity: 8 }, once: true }
+  - { op: item.named, args: { name: "Somber Smithing Stone [4]", quantity: 8 }, once: true }
+  - { op: item.named, args: { name: "Somber Smithing Stone [5]", quantity: 8 }, once: true }
+  - { op: item.named, args: { name: "Somber Smithing Stone [6]", quantity: 8 }, once: true }
+  - { op: item.named, args: { name: "Somber Smithing Stone [7]", quantity: 8 }, once: true }
+  - { op: item.named, args: { name: "Somber Smithing Stone [8]", quantity: 8 }, once: true }
+  - { op: item.named, args: { name: "Somber Smithing Stone [9]", quantity: 8 }, once: true }
+  - { op: item.named, args: { name: Somber Ancient Dragon Smithing Stone, quantity: 4 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true
