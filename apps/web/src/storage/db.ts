@@ -23,8 +23,10 @@
 
 import { ulid } from "./ids.ts";
 import { migrateRuns, type LegacyRun } from "./migrate.ts";
+import { LEGACY_NAME, nameFor, onWhoChanged, whoAmI } from "./who.ts";
 
-const DB_NAME = "runlog";
+// The name is per-person now and lives in who.ts; what is left here is
+// the shape of the thing, which every one of them shares.
 /**
  * v2 added `drafts`, v3 `keys`, v4 re-keyed `runs` by run id, gave packs an
  * `updatedAt`, and added `sync`; v5 added the license store under its
@@ -169,17 +171,115 @@ export interface SyncState {
 }
 
 let dbPromise: Promise<IDBDatabase | null> | null = null;
+let openedAs: string | null = null;
 
-function open(): Promise<IDBDatabase | null> {
-  if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve) => {
+/**
+ * The database belongs to whoever is looking at it.
+ *
+ * It used to be one name for everybody, which meant signing out cleared
+ * nothing and the next person to open the app saw the last one's shelf.
+ * See storage/who.ts.
+ */
+onWhoChanged(() => {
+  // Closed rather than left open on the old name: an open handle blocks
+  // a later delete, and every reader should be asking the new database
+  // from here on anyway.
+  const closing = dbPromise;
+  dbPromise = null;
+  openedAs = null;
+  void closing?.then((db) => db?.close()).catch(() => {});
+});
+
+/**
+ * The one database that was here before there were several.
+ *
+ * A build with accounts has one only if somebody used it before this
+ * change, and what is in it is that account's: their packs, their runs,
+ * whatever sync brought down. So the account adopts it, once, and it is
+ * gone afterwards.
+ *
+ * Signed out, nothing is adopted. That is the whole point: the phone that
+ * had never signed in is exactly where this went wrong, and a stranger
+ * inheriting the shelf is the bug rather than the migration.
+ */
+async function adoptLegacy(into: string): Promise<void> {
+  if (typeof indexedDB === "undefined" || into === LEGACY_NAME) return;
+  try {
+    // `databases()` is not everywhere; where it is missing the legacy
+    // database is left alone rather than guessed at.
+    const known = await indexedDB.databases?.();
+    if (!known || !known.some((d) => d.name === LEGACY_NAME)) return;
+
+    const from = await new Promise<IDBDatabase | null>((resolve) => {
+      const request = indexedDB.open(LEGACY_NAME);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+      request.onblocked = () => resolve(null);
+      setTimeout(() => resolve(null), 4000);
+    });
+    if (!from) return;
+
+    const stores = [...from.objectStoreNames];
+    const rows = new Map<string, unknown[]>();
+    for (const store of stores) {
+      const held = await new Promise<unknown[]>((resolve) => {
+        try {
+          const request = from.transaction(store, "readonly").objectStore(store).getAll();
+          request.onsuccess = () => resolve((request.result as unknown[]) ?? []);
+          request.onerror = () => resolve([]);
+        } catch {
+          resolve([]);
+        }
+      });
+      if (held.length > 0) rows.set(store, held);
+    }
+    from.close();
+
+    if (rows.size > 0) {
+      const to = await openNamed(into);
+      if (!to) return;
+      for (const [store, held] of rows) {
+        if (!to.objectStoreNames.contains(store)) continue;
+        await new Promise<void>((resolve) => {
+          try {
+            const tx = to.transaction(store, "readwrite");
+            const s = tx.objectStore(store);
+            for (const row of held) s.put(row);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => resolve();
+          } catch {
+            resolve();
+          }
+        });
+      }
+      to.close();
+    }
+
+    // Taken away rather than left behind. Copied data that stays where it
+    // was is the same leak waiting for the next person.
+    await new Promise<void>((resolve) => {
+      const request = indexedDB.deleteDatabase(LEGACY_NAME);
+      request.onsuccess = () => resolve();
+      request.onerror = () => resolve();
+      request.onblocked = () => resolve();
+      setTimeout(() => resolve(), 4000);
+    });
+  } catch {
+    // A migration that cannot run leaves everything where it is. The new
+    // database is empty and the old one is untouched, which is safe in
+    // both directions.
+  }
+}
+
+function openNamed(name: string): Promise<IDBDatabase | null> {
+  return new Promise((resolve) => {
     if (typeof indexedDB === "undefined") {
       resolve(null);
       return;
     }
     let request: IDBOpenDBRequest;
     try {
-      request = indexedDB.open(DB_NAME, DB_VERSION);
+      request = indexedDB.open(name, DB_VERSION);
     } catch {
       resolve(null);
       return;
@@ -254,7 +354,32 @@ function open(): Promise<IDBDatabase | null> {
     // on storage is worse than a view told there is none.
     setTimeout(() => resolve(null), 4000);
   });
+}
+
+/**
+ * The database for whoever is here, opened once they are known.
+ *
+ * Waiting matters: every reader calls this lazily, and the account is
+ * settled over the network a moment after the first paint. Opening before
+ * the answer arrives would open the wrong one, and the wrong one is the
+ * whole bug.
+ */
+function open(): Promise<IDBDatabase | null> {
+  if (dbPromise) return dbPromise;
+  dbPromise = (async () => {
+    const who = await whoAmI();
+    const name = nameFor(who);
+    openedAs = name;
+    // Only an account adopts what was here before; see `adoptLegacy`.
+    if (who.kind === "account") await adoptLegacy(name);
+    return openNamed(name);
+  })();
   return dbPromise;
+}
+
+/** Which database is open, for anything that has to say. */
+export function openedDatabase(): string | null {
+  return openedAs;
 }
 
 function run<T>(
