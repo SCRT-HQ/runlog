@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2FJRARK9W1X8EZ9PA03BVWR",
+  "strategy": "manual-commit",
+  "branch": "handing-out-is-the-loadout",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "apps/web/src/control/profile.ts",
+    "apps/web/src/control/setups.ts",
+    "hosted/infra/lib/handlers/control.ts",
+    "hosted/infra/lib/handlers/store.ts",
+    "hosted/infra/lib/handlers/ws.ts",
+    "hosted/infra/test/control.test.ts",
+    "hosted/infra/test/ws.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 1790,
+    "cache_creation_tokens": 1626633,
+    "cache_read_tokens": 452928620,
+    "output_tokens": 522977,
+    "api_call_count": 895
+  }
+}
