@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Pack, Setup } from "@runlog/rules-schema";
 import { builtins } from "../control/builtin.ts";
-import { chose, chosenFrom, forTool, shippedSetups, type ChosenSetup } from "../control/setups.ts";
+import { chose, chosenFrom, forTool, setupsHere, type ChosenSetup } from "../control/setups.ts";
 
 /**
  * Handing out a setup in the middle of a run.
@@ -37,7 +37,7 @@ export function HandOut({
     let live = true;
     void (async () => {
       const tool = (await builtins()).find((b) => b.pack === pack.id)?.profile.tool;
-      const all = await shippedSetups();
+      const all = await setupsHere();
       if (live) setOffered(forTool(all, tool));
     })();
     return () => {

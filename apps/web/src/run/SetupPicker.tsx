@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Pack, Setup } from "@runlog/rules-schema";
 import { builtins } from "../control/builtin.ts";
-import { chose, forTool, shippedSetups, type ChosenSetup } from "../control/setups.ts";
+import { chose, forTool, setupsHere, type ChosenSetup } from "../control/setups.ts";
 
 /**
  * Choosing what you start with, where the run starts.
@@ -39,7 +39,7 @@ export function SetupPicker({
        * section once the run has started and they have loaded it.
        */
       const tool = (await builtins()).find((b) => b.pack === pack.id)?.profile.tool;
-      const all = await shippedSetups();
+      const all = await setupsHere();
       if (live) setOffered(forTool(all, tool));
     })();
     return () => {
