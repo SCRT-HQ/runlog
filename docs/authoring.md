@@ -410,6 +410,34 @@ The roster is names, not accounts. Results that carry `points` are the challenge
 
 A state with `scope: contestant` is a mark the moderator puts on one person from the scoreboard, and a state with `until: unitEnd` lifts by itself when the unit closes. A setting the moderator chooses once is a counter set from a prompt (`modCounter … setFrom`) and read by a draw (`rollOn … timesFrom`).
 
+### Pace: a unit that runs itself
+
+Some games are played with both hands busy. A DJ mid-transition, a lifter under a bar, anyone on camera: the game is only useful to them if it moves without being operated. `handsFree` drops the presses that only ever meant "go".
+
+```yaml
+capabilities: [handsFree]
+unit:
+  handsFree: true
+```
+
+Two presses go. A step that asks the player nothing before it runs (a table roll) starts itself the moment the unit opens, so the result is simply there. And reading that result closes the unit and opens the next, so the button under it does the work the closing step's would have.
+
+Everything that genuinely asks still stops and waits: a declaration, a checklist, a confirmation on the closing step, an obligation owed, a counter that has reached its threshold, a trigger the run has arrived at. It takes out ceremony, never a rule. That is also the design constraint on a hands-free pack: give the closing step no `confirm` points, or the unit will stop there, correctly, every time.
+
+Because the result is now the whole unit, the choice the closing step offered comes with it: reading it carries on, and beside that is the door out of the run.
+
+A mode can disagree with the pack, the same way it disagrees about phases and tables:
+
+```yaml
+modes:
+  drill:
+    label: Drill
+    handsFree: true
+  study:
+    label: Study it
+    handsFree: false
+```
+
 ## Leaving things out
 
 The most common mistake is reaching for machinery you do not need. A training log has no backwards damage, no decks and no states: omit `targeting`, `decks` and `states`.

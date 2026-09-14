@@ -332,6 +332,35 @@ describe("lintPack", () => {
       expect(codesOf(p)).not.toContain("capability/undeclared");
     });
 
+    /**
+     * Hands-free changes how a unit is pressed through, so an app that has
+     * never heard of it would play the pack correctly but at three times
+     * the presses. That is exactly the misplay the capability list exists
+     * to turn into a refusal, and a mode can ask for it on its own.
+     */
+    const handsFreeWarning = (p: ReturnType<typeof basePack>) =>
+      lintPack(Pack.parse(p)).find((d) => d.code === "capability/undeclared" && d.message.includes("handsFree"));
+
+    it("warns when the pack runs hands-free without declaring it", () => {
+      const p = basePack();
+      (p as any).unit = { ...(p as any).unit, handsFree: true };
+      expect(handsFreeWarning(p)?.level).toBe("warning");
+    });
+
+    it("warns when only a mode runs hands-free", () => {
+      const p = basePack();
+      const [first] = Object.keys((p as any).modes);
+      (p as any).modes[first!].handsFree = true;
+      expect(handsFreeWarning(p)).toBeTruthy();
+    });
+
+    it("stays quiet once hands-free is declared", () => {
+      const p = basePack();
+      (p as any).unit = { ...(p as any).unit, handsFree: true };
+      p.capabilities = ["handsFree"];
+      expect(handsFreeWarning(p)).toBeUndefined();
+    });
+
     /** Whether any `capability/undeclared` diagnostic names clockRules specifically. */
     const clockRulesWarning = (diags: ReturnType<typeof lintPack>) =>
       diags.find((d) => d.code === "capability/undeclared" && d.message.includes("clockRules"));

@@ -5,7 +5,7 @@ import { SettingsDialog } from "./SettingsDialog.tsx";
 import { ControlPanel, openControlsWindow, RemoteControls } from "./ControlPanel.tsx";
 import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
-import { clockOfUnit, compareScores, formatClock, formatScore, nextUnit, scoreOf, unitPhases } from "@runlog/engine";
+import { clockOfUnit, compareScores, formatClock, formatScore, handsFree as handsFreeIn, nextUnit, scoreOf, unitPhases } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import { closesUnit, constrainedByOf, constraintLines, constraintsFor, describeSkip, describeSkipReason, entryWords, phaseSkipped, resultText, subjectLabel, subjectName, subjectSuggestions, type PhaseResult, type RunEvent, type RunState } from "@runlog/engine";
 import { useDocDrawer } from "../docs/DocDrawer.tsx";
@@ -16,6 +16,7 @@ import { RequestPanel } from "./RequestPanel.tsx";
 import { Checklist, checklistDone } from "./Checklist.tsx";
 import { evidenceFor, pointOf } from "./evidence.ts";
 import { Receipt, type RollReceipt } from "./Receipt.tsx";
+import { closesTheUnit, startsItself } from "./handsFree.ts";
 import type { RolledDie } from "../rolling.ts";
 import { useSync } from "../sync/SyncProvider.tsx";
 import { syncBus } from "../sync/bus.ts";
@@ -305,12 +306,83 @@ export function RunView({
   // The step is done once nothing more is asked; its receipts wait to be
   // read, unless this device asked them not to.
   const settled = receipts.length > 0 && !run.pending?.request;
+  const lastReceipt = receipts[receipts.length - 1] ?? null;
+
+  /* ---------------------------------------------------------------- *
+   * Hands-free
+   *
+   * A pack whose units run themselves drops the two presses that only
+   * ever meant "go": the one that starts a roll nobody is being asked
+   * about, and the one that closes a unit with nothing left in it. What
+   * is left is the result on screen and a button to move past it, which
+   * is the whole interface for a game played with both hands busy.
+   *
+   * Everything that genuinely asks still stops. `closing` below is
+   * false the moment a confirmation, a checklist or something owed
+   * stands between the player and the end of the unit.
+   * ---------------------------------------------------------------- */
+  const handsFree = run.state ? handsFreeIn(pack, run.state) : false;
+  const live = run.state?.status === "active" && !run.readOnly;
+
+  /**
+   * A step that asks nothing, started without being asked to start it.
+   *
+   * Keyed by the unit so the same step in the next unit begins again,
+   * and remembered so a step that somehow fails to complete is not
+   * begun over and over.
+   */
+  const begun = useRef<string | null>(null);
   useEffect(() => {
-    if (!settled || !carriesOnByItself()) return;
+    const active = run.activeStep;
+    if (!handsFree || !live || !active || run.pending || receipts.length > 0) return;
+    if (!startsItself(active.step)) return;
+    if (active.step.kind !== "rollTable") return;
+    const key = `u${run.state!.unit}:${active.phase.id}#${active.index}`;
+    if (begun.current === key) return;
+    begun.current = key;
+    const table = pack.tables[active.step.table];
+    run.begin({
+      kind: "table",
+      tableId: active.step.table,
+      keyPrefix: key,
+      label: table?.title ?? active.step.table,
+      completes: { phase: active.phase, index: active.index },
+    });
+  }, [handsFree, live, run.activeStep, run.pending, receipts.length, pack, run]);
+
+  /**
+   * Whether reading this result is also what closes the unit: hands-free,
+   * settled, and the only thing standing after it is a closing step that
+   * asks for no confirmation.
+   */
+  const closingStep = run.activeStep && closesUnit(run.activeStep.step) ? run.activeStep : null;
+  const closing = closesTheUnit({
+    handsFree,
+    live: Boolean(live),
+    settled,
+    step: closingStep?.step ?? null,
+    owed: run.blockingObligations.length,
+    thresholds: run.thresholds.length,
+    globals: run.globals.length,
+  });
+
+  /**
+   * Carry on: clear the receipt, and where that is also the end of the
+   * unit, close it and enter the next in the same press.
+   */
+  const carryOn = useCallback(() => {
+    setReceipts([]);
+    if (closing && closingStep) run.closeAndEnter(closingStep.phase, closingStep.index);
+  }, [closing, closingStep, run]);
+
+  useEffect(() => {
+    // A receipt that closes the unit is never dismissed by the clock:
+    // "carry on by itself" plus hands-free would play the whole run
+    // without anybody in the room.
+    if (!settled || closing || !carriesOnByItself()) return;
     const timer = setTimeout(() => setReceipts([]), CARRY_ON_HOLD_MS);
     return () => clearTimeout(timer);
-  }, [settled]);
-  const lastReceipt = receipts[receipts.length - 1] ?? null;
+  }, [settled, closing]);
 
   /**
    * Which of the three planes a phone is showing; see RunRail. A wide
@@ -399,7 +471,7 @@ export function RunView({
   if (remote) {
     return (
       <main className="main remote">
-        <RemoteControls pack={pack} run={run} state={state} receipt={settled ? lastReceipt : null} onCarryOn={() => setReceipts([])} onAnswer={answer} {...receiptFollowUps(run, settled, lastReceipt)} />
+        <RemoteControls pack={pack} run={run} state={state} receipt={settled ? lastReceipt : null} onCarryOn={carryOn} onAnswer={answer} {...receiptFollowUps(run, settled, lastReceipt)} />
       </main>
     );
   }
@@ -485,7 +557,16 @@ export function RunView({
               nameOf={(id) => hitLabel(pack, state, id)}
               pack={pack}
               settled={settled}
-              onDismiss={() => setReceipts([])}
+              onDismiss={carryOn}
+              {...(closing && closingStep && run.canEnd.ok
+                ? {
+                    onFinish: () => {
+                      setReceipts([]);
+                      run.finish(closingStep.phase, closingStep.index);
+                    },
+                    finishWord: `Finish the ${pack.vocabulary.run.one.toLowerCase()}`,
+                  }
+                : {})}
               {...receiptFollowUps(run, settled, lastReceipt)}
             />
           )}
@@ -598,7 +679,7 @@ export function RunView({
           run={run}
           state={state}
           receipt={settled ? lastReceipt : null}
-          onCarryOn={() => setReceipts([])}
+          onCarryOn={carryOn}
           onAnswer={answer}
           {...receiptFollowUps(run, settled, lastReceipt)}
           onClose={closeControls}
@@ -1267,10 +1348,22 @@ function StepPanel({
  * The singular and plural both come from the pack, because no rule about
  * English suffixes would survive a pack written in another language.
  */
+/**
+ * What the run has to show for itself so far, in its own words.
+ *
+ * Usually the subjects, which is what a unit is for. A pack whose units
+ * make nothing has none to count and never will, so what it has done is
+ * units, and counting those is the only number on that card that means
+ * anything.
+ */
 function countMade(pack: Pack, state: RunState): string {
+  if (!pack.unit.createsSubject) {
+    const n = state.unit;
+    return `${n} ${(n === 1 ? pack.vocabulary.unit.one : pack.vocabulary.unit.many).toLowerCase()} so far`;
+  }
   const n = state.subjects.filter((s) => !s.removed).length;
   const noun = n === 1 ? pack.vocabulary.subject.one : pack.vocabulary.subject.many;
-  return `${n} ${noun.toLowerCase()}`;
+  return `${n} ${noun.toLowerCase()} made so far`;
 }
 
 function StepHead({ phase, label }: { phase: { label: string }; label: string }) {
@@ -1431,7 +1524,7 @@ function BetweenUnits({
         </button>
         <span className="muted small">
           {state.unit >= pack.unit.min
-            ? `${countMade(pack, state)} made so far`
+            ? countMade(pack, state)
             : `at least ${pack.unit.min} needed before you can stop`}
         </span>
       </div>

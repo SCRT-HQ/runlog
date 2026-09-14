@@ -840,6 +840,11 @@ export function lintPack(pack: Pack): Diagnostic[] {
   );
   requireCap("journal", !!pack.journal?.enabled, "enables the journal");
   requireCap(
+    "handsFree",
+    pack.unit.handsFree || Object.values(pack.modes).some((m) => m.handsFree),
+    "runs a unit hands-free",
+  );
+  requireCap(
     "coopRoles",
     Object.values(pack.modes).some((m) => (m.players?.max ?? 1) > 1),
     "defines a multi-player mode",
