@@ -12,14 +12,30 @@ import type { Ask, SessionMember, SessionMeta } from "../lib/handlers/store";
  * connection that has gone is cleaned up the first time it is missed.
  */
 
-function memoryLive(): LiveStore & { conns: Map<string, string>; watches: Map<string, Set<string>>; marks: Map<string, Attached> } {
+// Two rows, the way dynamoLive keeps them: `marks` is the CONN row, written
+// by connect() and read by connection() and decksOf(); `watchMarks` is the
+// per-session row, written by watch() from its own attached argument and
+// read by watchers(). A deck's watch row must carry `deck: true` on its
+// own, the same as it does in dynamo, or a deck would look like a writer
+// of the run it is watching. The watch row is dated too, as dynamo dates
+// it, because which of an account's devices takes a press turns on it.
+function memoryLive(): LiveStore & {
+  conns: Map<string, string>;
+  watches: Map<string, Set<string>>;
+  marks: Map<string, Attached>;
+  watchMarks: Map<string, Attached>;
+} {
   const conns = new Map<string, string>();
   const watches = new Map<string, Set<string>>();
   const marks = new Map<string, Attached>();
+  const watchMarks = new Map<string, Attached>();
+  const watchedAt = new Map<string, string>();
+  const watchKey = (sessionId: string, connectionId: string) => `${sessionId}|${connectionId}`;
   return {
     conns,
     watches,
     marks,
+    watchMarks,
     async connect(id, sub, _at, attached) {
       conns.set(id, sub);
       if (attached) marks.set(id, attached);
@@ -28,22 +44,38 @@ function memoryLive(): LiveStore & { conns: Map<string, string>; watches: Map<st
       const sub = conns.get(id);
       return sub ? { sub, ...(marks.get(id) ?? {}) } : null;
     },
-    async watch(id, sessionId, _sub, _at, attached) {
+    async watch(id, sessionId, _sub, at, attached) {
       if (!watches.has(sessionId)) watches.set(sessionId, new Set());
       watches.get(sessionId)!.add(id);
-      if (attached) marks.set(id, attached);
+      watchMarks.set(watchKey(sessionId, id), attached ?? {});
+      watchedAt.set(watchKey(sessionId, id), at);
     },
     async watchers(sessionId): Promise<Watcher[]> {
       return [...(watches.get(sessionId) ?? [])].map((connectionId) => ({
         connectionId,
         sub: conns.get(connectionId) ?? "",
-        ...(marks.get(connectionId) ?? {}),
+        watchedAt: watchedAt.get(watchKey(sessionId, connectionId)) ?? "",
+        ...(watchMarks.get(watchKey(sessionId, connectionId)) ?? {}),
       }));
+    },
+    async unwatch(id, sessionId) {
+      watches.get(sessionId)?.delete(id);
+      watchMarks.delete(watchKey(sessionId, id));
+      watchedAt.delete(watchKey(sessionId, id));
+    },
+    async decksOf(sub) {
+      return [...conns.entries()]
+        .filter(([id, s]) => s === sub && marks.get(id)?.deck === true)
+        .map(([connectionId]) => ({ connectionId, ...(marks.get(connectionId) ?? {}) }));
     },
     async disconnect(id) {
       conns.delete(id);
       marks.delete(id);
-      for (const set of watches.values()) set.delete(id);
+      for (const [sessionId, set] of watches) {
+        set.delete(id);
+        watchMarks.delete(watchKey(sessionId, id));
+        watchedAt.delete(watchKey(sessionId, id));
+      }
     },
   };
 }
@@ -83,7 +115,12 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
         return null;
       },
       async manifest(sub) {
-        const owned = sub === "user_1" ? ["open", "shared"] : [];
+        // s1 is named and titled, for the deck's picker; s2 has neither
+        // and stands in for a run nobody happens to have open.
+        const owned = sub === "user_1" ? ["open", "shared", "s1", "s2"] : [];
+        const extra: Record<string, { name?: string; packTitle?: string }> = {
+          s1: { name: "Thursday", packTitle: "The Long Kiln" },
+        };
         return {
           packs: [],
           licenses: [],
@@ -95,6 +132,7 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
             ownerSub: sub,
             updatedAt: id === "open" ? "2026-09-11T00:10:00Z" : "2026-09-11T00:00:00Z",
             seq: 3,
+            ...extra[id],
           })),
         };
       },
@@ -110,6 +148,10 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
           };
         if (id === "open") return { meta: { ...meta(id, "user_1"), publicTokenHash: hashToken("livetok") }, members: [member("user_1")] };
         if (id === "shared") return { meta: meta(id, "user_1"), members: [member("user_1"), member("user_2")] };
+        if (id === "s1") return { meta: { ...meta(id, "user_1"), packTitle: "The Long Kiln" }, members: [member("user_1")] };
+        // Owned and membered by somebody else entirely, for the tests
+        // that check a press is refused on a run that is not the caller's.
+        if (id === "s3") return { meta: meta(id, "user_2"), members: [member("user_2")] };
         if (id === "private") return { meta: meta(id, "user_9"), members: [member("user_9")] };
         return null;
       },
@@ -175,12 +217,73 @@ describe("opening a socket", () => {
   });
 });
 
+describe("attaching as a deck", () => {
+  it("a signed-in socket may attach as a deck", async () => {
+    const d = deps();
+    const res = await route(ev("$connect", "c1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    expect(res.statusCode).toBe(200);
+    expect(await d.live.connection("c1")).toMatchObject({ sub: "user_1", deck: true });
+  });
+
+  it("a live link may not attach as a deck", async () => {
+    const d = deps();
+    const res = await route(ev("$connect", "c9", { queryStringParameters: { t: "livetok", run: "open", as: "deck" } }), d);
+    expect(res.statusCode).toBe(200);
+    expect(await d.live.connection("c9")).not.toMatchObject({ deck: true });
+  });
+
+  it("tells a deck which runs are held the moment it attaches", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(connectionId, data) {
+        posted.push([connectionId, data]);
+        return "sent";
+      },
+    };
+    // s1 is held by a signed-in page; s2 is nobody's.
+    await live.connect("page", "user_1", "");
+    await live.watch("page", "s1", "user_1", "");
+    const d = { ...deps(live), poster };
+
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+
+    const line = JSON.parse(posted.find(([id]) => id === "deck1")![1]);
+    expect(line).toEqual({ t: "runs", runs: [{ id: "s1", name: "Thursday", packTitle: "The Long Kiln", held: true }] });
+  });
+
+  it("still attaches a deck when its run list cannot be built", async () => {
+    const base = deps();
+    const posted: Array<[string, string]> = [];
+    const d: WsDeps = {
+      ...base,
+      store: {
+        ...base.store,
+        async manifest() {
+          throw new Error("dynamo is having a day");
+        },
+      },
+      poster: {
+        async post(connectionId, data) {
+          posted.push([connectionId, data]);
+          return "sent";
+        },
+      },
+    };
+
+    const res = await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+
+    expect(res.statusCode).toBe(200);
+    expect(posted).toEqual([]);
+  });
+});
+
 describe("a socket on a stream key", () => {
   it("watches the account's run in play, so a bot holds no run id and no link token", async () => {
     const d = deps();
     expect((await route(ev("$connect", "c1", { queryStringParameters: { k: "watchkey" } }), d)).statusCode).toBe(200);
     // "open" is the one that is both shared and most recently moved.
-    expect(await d.live.watchers("open")).toEqual([{ connectionId: "c1", sub: "stream:user_1" }]);
+    expect(await d.live.watchers("open")).toMatchObject([{ connectionId: "c1", sub: "stream:user_1" }]);
   });
 
   it("refuses a press key, which belongs in a bot and never in a scene", async () => {
@@ -204,7 +307,7 @@ describe("watching", () => {
     const d = deps();
     await route(ev("$connect", "c1", { queryStringParameters: { token: "good" } }), d);
     expect((await route(ev("$default", "c1", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d)).statusCode).toBe(200);
-    expect(await d.live.watchers("shared")).toEqual([{ connectionId: "c1", sub: "user_1" }]);
+    expect(await d.live.watchers("shared")).toMatchObject([{ connectionId: "c1", sub: "user_1" }]);
     // Not a member, and not a session: the same answer.
     expect((await route(ev("$default", "c1", { body: JSON.stringify({ t: "watch", id: "private" }) }), d)).statusCode).toBe(200);
     expect((await route(ev("$default", "c1", { body: JSON.stringify({ t: "watch", id: "nope" }) }), d)).statusCode).toBe(200);
@@ -248,6 +351,126 @@ describe("watching", () => {
     await route(ev("$disconnect", "c1"), d);
     expect(d.live.conns.has("c1")).toBe(false);
     expect(await d.live.watchers("shared")).toEqual([]);
+  });
+});
+
+describe("decksOf", () => {
+  it("finds an account's deck connections and forgets them on disconnect", async () => {
+    const live = memoryLive();
+    await live.connect("c1", "user_a", "2026-09-14T00:00:00.000Z", { deck: true });
+    await live.connect("c2", "user_a", "2026-09-14T00:00:00.000Z");
+    await live.connect("c3", "user_b", "2026-09-14T00:00:00.000Z", { deck: true });
+
+    expect((await live.decksOf("user_a")).map((d) => d.connectionId)).toEqual(["c1"]);
+
+    await live.disconnect("c1");
+    expect(await live.decksOf("user_a")).toEqual([]);
+  });
+});
+
+describe("the held-run list is pushed when it changes", () => {
+  it("tells a deck when a run is opened and when the page goes", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    expect(JSON.parse(posted.at(-1)![1]).runs.map((r: { id: string }) => r.id)).toEqual(["s1"]);
+
+    posted.length = 0;
+    await route(ev("$disconnect", "page"), d);
+    expect(JSON.parse(posted.at(-1)![1]).runs).toEqual([]);
+  });
+
+  /**
+   * A deck watching a run is on it the same way an attached tool is: the
+   * row says so, and the table hears it, exactly as it hears a tool
+   * attach.
+   */
+  it("marks a deck's connection with the run it watches, and tells the table", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+
+    expect(await live.connection("deck1")).toMatchObject({ deck: true, run: "s1" });
+    const toPage = posted.filter(([id]) => id === "page").map(([, l]) => JSON.parse(l));
+    expect(toPage.find((l) => l.t === "gesture")).toMatchObject({ t: "gesture", kind: "tools", data: { decks: 1 } });
+  });
+
+  /**
+   * Review finding: the gesture fired on a tool's hello and a deck's
+   * watch, so a page that opened the run afterwards -- or came back from
+   * a reload -- never learned the deck was there, and left its presses
+   * hanging.
+   */
+  it("tells a page what is attached when it starts watching, deck and all", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    const toPage = posted.filter(([id]) => id === "page").map(([, l]) => JSON.parse(l));
+    expect(toPage.find((l) => l.kind === "tools")).toMatchObject({ data: { decks: 1 } });
+  });
+
+  /**
+   * Review finding: a deck moving to another run told only the run it
+   * arrived at, so the page it left went on drawing a deck that had gone
+   * and publishing a snapshot for it for the rest of the evening.
+   */
+  it("tells the run a deck left that it is on its own again", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    await route(ev("$connect", "first", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$default", "first", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d);
+    const toFirst = posted
+      .filter(([id]) => id === "first")
+      .map(([, l]) => JSON.parse(l))
+      .filter((l) => l.kind === "tools");
+    expect(toFirst.at(-1)).toMatchObject({ id: "s1", data: { decks: 0 } });
   });
 });
 
@@ -334,7 +557,7 @@ describe("telling the listeners", () => {
       live.marks.clear();
       await connect({ k: "watchkey", seat: "Mira" });
       expect(live.marks.get("c1")).toBeUndefined();
-      expect(await live.watchers("open")).toEqual([{ connectionId: "c1", sub: "stream:user_1" }]);
+      expect(await live.watchers("open")).toMatchObject([{ connectionId: "c1", sub: "stream:user_1" }]);
     });
 
     it("attaches on a run's own live link, which is how a player who is not the host joins", async () => {
@@ -825,7 +1048,7 @@ describe("telling the listeners", () => {
     await notifier(live, poster)("shared", 12);
     expect(posted.map(([c]) => c).sort()).toEqual(["c1", "c2"]);
     expect(JSON.parse(posted[0]![1])).toEqual({ t: "changed", id: "shared", seq: 12 });
-    expect(await live.watchers("shared")).toEqual([{ connectionId: "c1", sub: "user_1" }]);
+    expect(await live.watchers("shared")).toMatchObject([{ connectionId: "c1", sub: "user_1" }]);
   });
 
   it("never throws: a failed nudge costs a poll, not a move", async () => {
@@ -868,5 +1091,195 @@ describe("a run shared by link", () => {
     // It cannot ask to watch anything else.
     await route({ requestContext: { routeKey: "$default", connectionId: "c9" }, body: JSON.stringify({ t: "watch", id: "shared" }) }, d);
     expect(d.live.watches.get("shared")?.has("c9") ?? false).toBe(false);
+  });
+});
+
+describe("a deck's press", () => {
+  it("forwards a press to the page and the verdict back to the deck, and not to a deck watching the same run", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    // The deck watches its own run, the same as the page does: it must
+    // not end up looking like a device that could take the press.
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "s1", seq: 42, ref: "r1", press: "primary" }) }), d);
+    const drives = posted.filter(([, data]) => JSON.parse(data)["t"] === "drive");
+    expect(drives).toHaveLength(1);
+    expect(drives[0]![0]).toBe("page");
+    expect(JSON.parse(drives[0]![1])).toEqual({ t: "drive", from: "deck1", run: "s1", seq: 42, ref: "r1", press: "primary" });
+
+    posted.length = 0;
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "drove", to: "deck1", ref: "r1", ok: true }) }), d);
+    expect(JSON.parse(posted.find(([id]) => id === "deck1")![1])).toEqual({ t: "drove", ref: "r1", ok: true });
+
+    // And the run's new seq where the page sends one: the deck's next
+    // press is made against it, ahead of the doorbell that carries it.
+    posted.length = 0;
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "drove", to: "deck1", ref: "r4", ok: true, seq: 43 }) }), d);
+    expect(JSON.parse(posted.find(([id]) => id === "deck1")![1])).toEqual({ t: "drove", ref: "r4", ok: true, seq: 43 });
+  });
+
+  it("tells a deck when nothing is holding the run", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    posted.length = 0;
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "s1", seq: 1, ref: "r2", press: "primary" }) }), d);
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r2", ok: false, say: "Nothing is holding that run." });
+  });
+
+  /**
+   * Review finding: a press posted to every writing watcher is applied
+   * once per device with the run open, which is one move made twice.
+   */
+  it("posts a press to one device of the owner's, the one that opened the run last", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    let clock = "2026-09-14T00:00:00.000Z";
+    const d = { ...deps(live), poster, now: () => clock };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$connect", "laptop", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$connect", "phone", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$default", "laptop", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    clock = "2026-09-14T00:05:00.000Z";
+    await route(ev("$default", "phone", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "s1", seq: 7, ref: "r1", press: "primary" }) }), d);
+    const drives = posted.filter(([, data]) => JSON.parse(data)["t"] === "drive");
+    expect(drives.map(([id]) => id)).toEqual(["phone"]);
+  });
+
+  it("does not post a press to another member's browser", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    const at = "2026-09-14T00:00:00.000Z";
+    // The other member's page, signed in as themselves: it writes, but
+    // what it writes is authored under their name and its verdict never
+    // reaches the deck.
+    await live.connect("theirs", "user_2", at);
+    await live.watch("theirs", "shared", "user_2", at);
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "shared", seq: 3, ref: "r1", press: "primary" }) }), d);
+    expect(posted.some(([id]) => id === "theirs")).toBe(false);
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r1", ok: false, say: "Nothing is holding that run." });
+  });
+
+  /**
+   * Review finding: a read that rejected threw past this branch to the
+   * handler's 500, which posts nothing, and the deck waited on a verdict
+   * that was never coming.
+   */
+  it("says so when it cannot check a press, rather than dropping it", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const base = deps(live);
+    const d = {
+      ...base,
+      poster,
+      store: {
+        ...base.store,
+        async getSession() {
+          throw new Error("the table is not answering");
+        },
+      },
+    };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    posted.length = 0;
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "s1", seq: 1, ref: "r1", press: "primary" }) }), d);
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r1", ok: false, say: "Could not check that right now." });
+  });
+
+  it("will not forward a press for somebody else's run", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    posted.length = 0;
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "s3", seq: 1, ref: "r3", press: "primary" }) }), d);
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r3", ok: false, say: "That run is not yours to press." });
+  });
+});
+
+describe("driving is part of Plus", () => {
+  it("refuses a press without Plus, and says so", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster, entitled: async () => false };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "s1", seq: 1, ref: "r1", press: "primary" }) }), d);
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r1", ok: false, say: "Driving a run from a deck is part of Plus." });
+    expect(posted.some(([id]) => id === "page")).toBe(false);
+  });
+
+  it("lets a deck watch without Plus", async () => {
+    // The runs list still arrives: reading is not gated, and a deck that
+    // cannot press must still be able to show what is going on.
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster, entitled: async () => false };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    expect(posted.some(([, data]) => JSON.parse(data)["t"] === "runs")).toBe(true);
   });
 });

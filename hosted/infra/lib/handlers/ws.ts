@@ -5,6 +5,7 @@ import { apiGatewayPoster, type Poster } from "./live.js";
 import { dynamoLive, type LiveStore } from "./live.js";
 import { dynamoStore, type Ask, type Store } from "./store.js";
 import { dynamoRaces, type RaceStore } from "./races.js";
+import { dynamoBilling, featuresFromEnv, grantsOf } from "./billing.js";
 import { annotate } from "./xray.js";
 import { randomBytes } from "node:crypto";
 
@@ -40,6 +41,11 @@ export interface WsDeps {
   races: Pick<RaceStore, "getRace">;
   verify: (authorization: string | undefined) => Promise<Caller>;
   now?: () => string;
+  /**
+   * Whether this account may drive a run from outside it. Absent where
+   * plans are off, which is the same answer as yes.
+   */
+  entitled?: (sub: string) => Promise<boolean>;
 }
 
 interface WsResult {
@@ -62,11 +68,84 @@ function attachedOf(event: WsEvent, run: string): { control: true; seat?: string
   return { control: true, ...(raw ? { seat: raw } : {}), run };
 }
 
+/**
+ * A socket that presses rather than draws.
+ *
+ * It signs in as the account, the way the app's own devices do, because
+ * what it may do is what the owner may do. It names no run at connect: it
+ * is told which runs are being held, and picks. A link's token and a
+ * stream key are refused here, which is why this is read only on the
+ * signed-in branch below.
+ */
+function deckOf(event: WsEvent): { deck: true } | undefined {
+  return event.queryStringParameters?.["as"] === "deck" ? { deck: true } : undefined;
+}
+
+/**
+ * Whether this watcher is a device that could take a press.
+ *
+ * A link's socket and a scene's are not; an attached tool is told in
+ * operations and writes nothing; a deck is the thing asking. What is
+ * left is a signed-in device with the run open, which is the page.
+ */
+function writes(w: { sub: string; control?: boolean; deck?: boolean }): boolean {
+  return !w.control && !w.deck && !w.sub.startsWith("public:") && !w.sub.startsWith("stream:");
+}
+
 export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
   const { routeKey, connectionId } = event.requestContext;
   const now = deps.now ?? (() => new Date().toISOString());
   // The socket has no method, only which of its three moments this is.
   annotate({ method: "WS", route: routeKey });
+
+  /**
+   * The account's runs that something is holding open.
+   *
+   * Not the run that moved most recently, which is all a watch key can
+   * know: a deck presses, and a press wants a device on the other end.
+   * The newest twenty are considered, because an account's manifest is
+   * every run it has ever played and a deck's picker is a short list.
+   */
+  const heldRuns = async (sub: string) => {
+    const { sessions } = await deps.store.manifest(sub);
+    const mine = sessions
+      .filter((p) => p.role === "owner" && !p.deletedAt && !p.endedAt)
+      .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
+      .slice(0, 20);
+    const held = await Promise.all(mine.map(async (p) => ((await deps.live.watchers(p.id)).some(writes) ? p : null)));
+    return held
+      .filter((p): p is (typeof mine)[number] => p !== null)
+      .map((p) => ({
+        id: p.id,
+        ...(p.name ? { name: p.name } : {}),
+        ...(p.packTitle ? { packTitle: p.packTitle } : {}),
+        held: true as const,
+      }));
+  };
+
+  /**
+   * Said to an account's decks whenever the held set changes, and once on
+   * connect, which is the same message: a deck comes up before anything is
+   * running, so a list fetched once would stay empty all evening.
+   */
+  const tellDecks = async (sub: string, only?: string): Promise<void> => {
+    const poster = deps.poster;
+    if (!poster) return;
+    // Everything in here, one guard: a deck that cannot be given its list
+    // right now is still connected and hears the next push. A rejection
+    // out of `manifest` or `watchers` must not turn a $connect into a 500,
+    // which would refuse the deck outright.
+    try {
+      const decks = only ? [{ connectionId: only }] : await deps.live.decksOf(sub);
+      if (decks.length === 0) return;
+      const line = JSON.stringify({ t: "runs", runs: await heldRuns(sub) });
+      for (const d of decks) {
+        if ((await poster.post(d.connectionId, line)) === "gone") await deps.live.disconnect(d.connectionId);
+      }
+    } catch (error) {
+      console.error("live: could not say which runs are held", error);
+    }
+  };
 
   if (routeKey === "$connect") {
     const t = event.queryStringParameters?.["t"];
@@ -124,7 +203,9 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     } catch {
       return { statusCode: 401, body: "sign in first" };
     }
-    await deps.live.connect(connectionId, caller.sub, now());
+    const deck = deckOf(event);
+    await deps.live.connect(connectionId, caller.sub, now(), deck);
+    if (deck) await tellDecks(caller.sub, connectionId);
     return { statusCode: 200 };
   }
 
@@ -142,7 +223,8 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     if (!poster) return;
     const watching = await deps.live.watchers(run);
     const tools = watching.filter((w) => w.control).map((w) => ({ ...(w.seat ? { seat: w.seat } : {}), ...(w.app ? { app: w.app } : {}) }));
-    const line = JSON.stringify({ t: "gesture", id: run, kind: "tools", data: { tools, count: tools.length }, at: now() });
+    const decks = watching.filter((w) => w.deck).length;
+    const line = JSON.stringify({ t: "gesture", id: run, kind: "tools", data: { tools, count: tools.length, decks }, at: now() });
     for (const w of watching) {
       // A tool is told in operations, never in words about itself.
       if (w.control) continue;
@@ -160,6 +242,12 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     const leaving = await deps.live.connection(connectionId);
     await deps.live.disconnect(connectionId);
     if (leaving?.control && leaving.run) await tellWhoIsAttached(leaving.run);
+    // A deck leaving its run is news the same way a tool leaving is: the
+    // page is told, as it was told the deck came on.
+    if (leaving?.deck && leaving.run) await tellWhoIsAttached(leaving.run);
+    // A page closing may have been the last thing holding a run, and a deck
+    // whose keys still look live is worse than one that says so.
+    if (leaving && !leaving.deck && writes(leaving)) await tellDecks(leaving.sub);
     return { statusCode: 200 };
   }
 
@@ -354,6 +442,138 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     return { statusCode: 200 };
   }
 
+  /**
+   * A deck pressing something.
+   *
+   * The server checks who is asking and finds the devices that could take
+   * it; it does not read the press. What may be pressed is the run's
+   * business, and the run is the only thing holding the pack and the log.
+   *
+   * Nothing is stored. A press is worth exactly as much as the moment it
+   * was made in: `seq` names the offer it was drawn from, and the writing
+   * device refuses one it has already moved past. Durability would buy a
+   * press that lands after the reason for it has gone.
+   */
+  if (conn.deck && m["t"] === "drive") {
+    const poster = deps.poster;
+    const ref = typeof m["ref"] === "string" ? m["ref"].slice(0, 64) : "";
+    const run = typeof m["run"] === "string" ? m["run"] : "";
+    const refuse = async (say: string): Promise<WsResult> => {
+      if (poster) {
+        try {
+          await poster.post(connectionId, JSON.stringify({ t: "drove", ref, ok: false, say }));
+        } catch (error) {
+          console.error("live: could not refuse a press", error);
+        }
+      }
+      return { statusCode: 200 };
+    };
+    if (!ref || !run) return { statusCode: 400, body: "a press has a run and a ref" };
+    /**
+     * Two reads over the network before a press goes anywhere, and either
+     * can fail on its own. A rejection used to throw past this branch to
+     * the handler's 500, which posts nothing at all: the deck was left
+     * holding a press with no verdict, and no way to tell that from one
+     * still in flight. It is told, in words that say to try again.
+     */
+    let session: Awaited<ReturnType<typeof deps.store.getSession>>;
+    try {
+      session = await deps.store.getSession(run);
+    } catch (error) {
+      console.error("live: could not read the run behind a press", error);
+      return refuse("Could not check that right now.");
+    }
+    if (!session || session.meta.deletedAt || session.meta.ownerSub !== conn.sub) return refuse("That run is not yours to press.");
+    if (session.meta.endedAt) return refuse("That run has ended.");
+    if (deps.entitled) {
+      let allowed: boolean;
+      try {
+        allowed = await deps.entitled(conn.sub);
+      } catch (error) {
+        console.error("live: could not read the plan behind a press", error);
+        return refuse("Could not check that right now.");
+      }
+      if (!allowed) return refuse("Driving a run from a deck is part of Plus.");
+    }
+
+    /**
+     * The one device that takes it.
+     *
+     * A press is an ordinary move by the owner's own hand, and a move
+     * happens once. Posted to every writing watcher it happened as many
+     * times as the account had the run open: a second device of the
+     * owner's appended the same event again, and another member's browser
+     * appended it under their name, whose verdict is then dropped on the
+     * way back and never reaches the deck at all.
+     *
+     * So: the account's own devices only, and of those the one that
+     * opened the run last, which is the one in front of whoever is
+     * playing. Ties by connection id, so two watches in the same
+     * millisecond still settle on the same device every time.
+     */
+    const writers = (await deps.live.watchers(run))
+      .filter((w) => writes(w) && w.sub === conn.sub)
+      .sort((a, b) => (a.watchedAt === b.watchedAt ? (a.connectionId < b.connectionId ? -1 : 1) : a.watchedAt > b.watchedAt ? -1 : 1))
+      .slice(0, 1);
+    if (writers.length === 0) return refuse("Nothing is holding that run.");
+    if (!poster) return { statusCode: 200 };
+
+    const line = JSON.stringify({
+      t: "drive",
+      from: connectionId,
+      run,
+      seq: typeof m["seq"] === "number" ? m["seq"] : 0,
+      ref,
+      press: String(m["press"] ?? ""),
+      ...(typeof m["move"] === "string" ? { move: m["move"] } : {}),
+      ...(m["answer"] && typeof m["answer"] === "object" ? { answer: m["answer"] } : {}),
+    });
+    for (const w of writers) {
+      try {
+        if ((await poster.post(w.connectionId, line)) === "gone") await deps.live.disconnect(w.connectionId);
+      } catch (error) {
+        console.error("live: could not pass a press on", error);
+      }
+    }
+    return { statusCode: 200 };
+  }
+
+  /**
+   * The verdict, on its way back to the one deck that asked.
+   *
+   * The deck's connection id came out with the press and goes back with
+   * the answer, so the server keeps no record of who asked for what. It is
+   * checked before it is posted to: a member may only answer a deck of
+   * their own account.
+   */
+  if (m["t"] === "drove" && typeof m["to"] === "string") {
+    // A link's socket and a scene's have no account of their own to share
+    // with a deck, so no `sub` of theirs can ever match one; said outright
+    // rather than left to fall out of the comparison below.
+    if (conn.sub.startsWith("public:") || conn.sub.startsWith("stream:")) return { statusCode: 200 };
+    const poster = deps.poster;
+    if (!poster) return { statusCode: 200 };
+    const target = await deps.live.connection(m["to"]);
+    if (!target || !target.deck || target.sub !== conn.sub) return { statusCode: 200 };
+    const line = JSON.stringify({
+      t: "drove",
+      ref: typeof m["ref"] === "string" ? m["ref"] : "",
+      ok: m["ok"] === true,
+      ...(typeof m["say"] === "string" ? { say: m["say"] } : {}),
+      // What the run reads at now that the press has landed, where the
+      // page said: the doorbell that would otherwise carry it is a sync
+      // away, and a deck pressing twice inside that window named a seq
+      // the page had already moved past.
+      ...(typeof m["seq"] === "number" ? { seq: m["seq"] } : {}),
+    });
+    try {
+      if ((await poster.post(m["to"], line)) === "gone") await deps.live.disconnect(m["to"]);
+    } catch (error) {
+      console.error("live: could not pass a verdict back", error);
+    }
+    return { statusCode: 200 };
+  }
+
   // A link's socket, and a scene's, watch the one run they were opened for
   // and take no requests.
   if (conn.sub.startsWith("public:") || conn.sub.startsWith("stream:")) return { statusCode: 200 };
@@ -473,7 +693,32 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     const race = inSession ? null : await deps.races.getRace(m["id"]);
     const inRace = Boolean(race && race.entries.some((e) => e.sub === conn.sub));
     if (!inSession && !inRace) return { statusCode: 200 };
-    await deps.live.watch(connectionId, m["id"], conn.sub, now());
+    await deps.live.watch(connectionId, m["id"], conn.sub, now(), conn.deck ? { deck: true, run: m["id"] } : undefined);
+    if (conn.deck) {
+      // Which run it was on before this one, read before the row is
+      // rewritten: a deck that switches runs leaves the page it left
+      // showing a deck that is no longer there, and publishing for it.
+      const left = conn.run;
+      // A deck is told a run is on it the same way a page is told a tool
+      // is: the row says so, and the table hears it.
+      await deps.live.connect(connectionId, conn.sub, now(), { deck: true, run: m["id"] });
+      if (left && left !== m["id"]) {
+        // A deck holds one run at a time: the watch it came from goes, or
+        // the run it left goes on counting a deck that has moved house.
+        await deps.live.unwatch(connectionId, left);
+        await tellWhoIsAttached(left);
+      }
+    }
+    // Everyone watching, not only the run a deck just picked. A page that
+    // opened the run after the deck attached, or came back from a reload,
+    // otherwise never hears that a deck is on it: the gesture fires when a
+    // tool says hello and when a deck picks, and a page arriving late
+    // missed both. It is also what puts the Attached panel back after a
+    // refresh.
+    await tellWhoIsAttached(m["id"]);
+    // A run just came under a device. A deck that has been sitting on "No
+    // run open" all evening is the one thing waiting to hear it.
+    await tellDecks(conn.sub);
     return { statusCode: 200 };
   }
   return { statusCode: 400, body: "unknown message" };
@@ -488,12 +733,20 @@ export async function handler(event: WsEvent): Promise<WsResult> {
     const clientId = process.env["WORKOS_CLIENT_ID"] ?? "";
     const cliClientId = process.env["WORKOS_CLI_CLIENT_ID"] ?? "";
     const table = process.env["TABLE_NAME"] ?? "";
+    const gates = process.env["RUNLOG_GATES"] === "on";
+    const plusFeature = featuresFromEnv(process.env["STRIPE_FEATURES"]).plus;
+    const billing = dynamoBilling({ table });
     deps = {
       live: dynamoLive({ table }),
       store: dynamoStore({ table, bucket: process.env["BUCKET_NAME"] ?? "" }),
       races: dynamoRaces({ table }),
       verify: (authorization) => verifyToken(authorization, [clientId, cliClientId]),
       ...(process.env["WS_ENDPOINT"] ? { poster: apiGatewayPoster(process.env["WS_ENDPOINT"]) } : {}),
+      // No token flags are in hand at drive time, only `conn.sub`: the
+      // kept flags `billing.flags(sub)` do the work a token flag would on
+      // the API side, and `/api/me` refreshes those on every call the app
+      // makes, so a comped account is comped here too.
+      ...(gates ? { entitled: async (sub: string) => (await grantsOf(billing, sub)).includes(plusFeature) } : {}),
     };
   }
   try {

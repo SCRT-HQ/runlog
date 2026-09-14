@@ -17,6 +17,7 @@ import {
 } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import {
+  checklistOf,
   closesUnit,
   constrainedByOf,
   constraintLines,
@@ -38,7 +39,7 @@ import { useRun, type ActiveStep } from "./useRun.ts";
 import type { RunStore } from "./store.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { RequestPanel } from "./RequestPanel.tsx";
-import { Checklist, checklistDone } from "./Checklist.tsx";
+import { Checklist, checklistDone, ticksToFinish } from "./Checklist.tsx";
 import { evidenceFor, pointOf } from "./evidence.ts";
 import { Receipt, type RollReceipt } from "./Receipt.tsx";
 import { closesTheUnit, startsItself } from "./handsFree.ts";
@@ -65,12 +66,14 @@ import { bestOf, placeOf, scoresOf, type ScoredRun } from "./scores.ts";
 import { RacePanel } from "./RacePanel.tsx";
 import { useApi } from "../sync/useApi.ts";
 import { useReachable } from "./useReachable.ts";
-import { useAttachedTools, toolFor, type AttachedTool } from "./useAttachedTools.ts";
+import { useAttachedDecks, useAttachedTools, toolFor, type AttachedTool } from "./useAttachedTools.ts";
 import { ulid } from "../storage/ids.ts";
 import { clearPendingRaceCode, pendingRaceCode } from "../share/IncomingRace.tsx";
 import { PlanError } from "../sync/client.ts";
 import { liveLinkOf } from "../live/route.ts";
-import { paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
+import { entryTextOf, paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
+import { offerOf } from "./offer.ts";
+import { takePress, type Verdict } from "./takePress.ts";
 import { isEmpty, tidy, type ControlProfile } from "../control/profile.ts";
 import { chosenFrom, withChosen, type ChosenSetup } from "../control/setups.ts";
 import { SetupPicker } from "./SetupPicker.tsx";
@@ -79,6 +82,106 @@ import { useRace } from "./useRace.ts";
 import { RunRail, type Pane } from "./RunRail.tsx";
 import { useEnterMoves } from "../ui/useEnterMoves.ts";
 import { useConfirm } from "../ui/useConfirm.tsx";
+import { useToast } from "../ui/Toast.tsx";
+
+/**
+ * The active step's own heading, the same word the page shows above it.
+ *
+ * Each step kind picks its own fallback where the pack left the label
+ * blank -- a table's title, the phase's own label, the finalize verb --
+ * and this is the one place that mirrors all of them, for the offer that
+ * rides beside the snapshot.
+ */
+function activeStepLabel(pack: Pack, active: ActiveStep | null): string | null {
+  if (!active) return null;
+  const { phase, step } = active;
+  switch (step.kind) {
+    case "rollTable":
+      return step.label ?? pack.tables[step.table]?.title ?? step.table;
+    case "declareSubject":
+      return step.label ?? `Declare the ${pack.vocabulary.subject.one}`;
+    case "actions":
+      return phase.label;
+    case "manual":
+      return step.closesUnit ? (step.label ?? pack.vocabulary.finalize) : step.label;
+    case "finalizeUnit":
+      return step.label ?? pack.vocabulary.finalize;
+  }
+}
+
+/**
+ * One press for a whole list: every box the step waits on, then the button
+ * the card's own finish sits on.
+ *
+ * The same rules as a click, read from the same place: `ticksToFinish`
+ * says which keys, `check` writes them, and `closesUnit` picks which of
+ * the two finish functions the card would have called.
+ *
+ * Whether the list is done is decided over the boxes this is about to
+ * write rather than over the log, because `commit` has not re-rendered
+ * this effect yet and reading the state back here would read the state
+ * before the ticks. A box a deck cannot reach -- a row the game still owes
+ * -- leaves the list short, and then nothing is written at all: the press
+ * says so and the page finishes the step.
+ */
+function tickEverythingAndFinish(pack: Pack, run: ReturnType<typeof useRun>, active: ActiveStep) {
+  const state = run.state;
+  if (!state) return;
+  const { phase, step, index } = active;
+  const key = `${phase.id}#${index}`;
+  const list = checklistOf(step);
+  const ticked = ticksFor(state, key);
+  // A closing card settles some of its rows by the game rather than by
+  // the player, and its own boxes know it; the deck's press is held to
+  // the same reading of the list the card in front of them shows.
+  const settling = closesUnit(step)
+    ? settlingFor(pack, state, step.kind === "manual" ? constraintLines(pack, state, step.constrainedBy) : [], list)
+    : undefined;
+  const groups = ticksToFinish(list, pack, state, ticked, settling);
+  const predicted = new Set([...ticked, ...groups.flatMap((g) => g.items)]);
+  if (!checklistDone(list, pack, state, predicted, settling)) throw new Error("Something on the list needs the page.");
+  for (const group of groups) run.check(key, group.items, true, group.tally);
+  if (closesUnit(step)) run.closeAndEnter(phase, index);
+  else run.completeStep(phase, index);
+}
+
+/**
+ * What a step's own finish button says once every box on it is ticked.
+ *
+ * The closing card goes on to the next unit, the manual card is simply
+ * done. One place, because a deck is offered these words and then presses
+ * the button they are on: if they drifted apart the key would promise one
+ * thing and do another.
+ */
+function finishWords(pack: Pack, step: ActiveStep["step"]): string {
+  return closesUnit(step) ? `Next ${pack.vocabulary.unit.one.toLowerCase()}` : "Done";
+}
+
+/**
+ * Whether a move may not be pressed: it closes the unit, and something is
+ * still owed. The one rule behind `Moves`' own disabled button and the
+ * offer a deck reads, so a deck can never press what the page would not.
+ */
+export function heldMove(move: { finalizes?: boolean }, owed: number): boolean {
+  return Boolean(move.finalizes) && owed > 0;
+}
+
+/**
+ * How long an accepted verdict waits for this device's log to grow before
+ * it is sent with whatever the run reads at anyway.
+ */
+const HELD_VERDICT_MS = 1500;
+
+/**
+ * Whether a move is asked of each racer rather than of the table: the pack
+ * marks it `per: contestant` and there is a roster to ask. The one rule
+ * behind `Moves`' split into a button per name, read by the offer as well,
+ * because a press with no name on it would record against the table what
+ * the page can only record against somebody.
+ */
+export function perRacer(move: { per?: string }, racing: { length: number }): boolean {
+  return move.per === "contestant" && racing.length > 0;
+}
 
 /**
  * Playing a run.
@@ -138,14 +241,122 @@ export function RunView({
 
   /**
    * A run shared by link keeps a snapshot on the server for anyone whose
-   * device may not hold the pack: written from here after each move,
-   * redacted here, where the pack and its license are.
+   * device may not hold the pack. A run with a deck on it keeps one for a
+   * different reason: the deck has no engine and reads the offer from
+   * here. Neither is the other's business, so either is enough.
    */
+  const decks = useAttachedDecks(run.record?.runId ?? null);
   const shared = Boolean(!remote && run.record && run.record.role !== "viewer" && (run.record.shared || liveLinkOf(run.record.runId)));
+  const publishing = shared || decks > 0;
+
+  /**
+   * The table is told when a deck arrives, since nothing else on screen
+   * says so. `hadDecks` fires the note only on the way up: a deck leaving
+   * is not worth interrupting for, and the Attached panel already says
+   * how many are on at rest.
+   */
+  const toast = useToast();
+  const hadDecks = useRef(0);
+  useEffect(() => {
+    if (decks > hadDecks.current) toast.show(decks === 1 ? "A Stream Deck is on this run." : `${decks} Stream Decks are on this run.`);
+    hadDecks.current = decks;
+  }, [decks, toast.show]);
   // The race this run is in, if any: the side column's panel and the snapshot both read it.
   const raceView = useRace(run.record, run.state, run.events);
+
+  /**
+   * The receipts: what each throw of the step did, kept until the step has
+   * been read.
+   *
+   * The engine moves on the instant a roll is answered, so the dice and the
+   * result would otherwise vanish together. The answer is still committed
+   * as the engine sees fit, a receipt is a record, not a hold on the game,
+   * but the step's rolls stay on screen, in order, with the next roll's
+   * keypad beneath them, until "Carry on" closes the step.
+   *
+   * Outcomes are the signal: whatever the run had not resolved before an
+   * answer, and has now, is what that answer did. Measured from the count
+   * rather than the request, so a machine roll with auto-roll on, or a move
+   * that resolves a table, gets a receipt too, just one without dice.
+   */
+  const [receipts, setReceipts] = useState<RollReceipt[]>([]);
+
+  // Who is on the board, read here as `Moves` reads it: the offer has to
+  // split a move the same way the panel does. Held by a memo because the
+  // offer is, and an empty roster built afresh on every render would
+  // rebuild the offer with it and keep restarting the publish timer.
+  const racing = useMemo(() => (run.moderated ? (run.state?.contestants ?? []) : []), [run.moderated, run.state]);
+
+  /**
+   * What a deck may press, right now: one value for the snapshot this
+   * device publishes and for the drive this device takes, so a press is
+   * always checked against the same offer it was shown.
+   */
+  const currentOffer = useMemo(
+    () =>
+      offerOf({
+        seq: run.events.length,
+        live: Boolean(run.started) && !run.readOnly && run.state?.status !== "ended",
+        settled: run.pending === null,
+        step: run.activeStep?.step ?? null,
+        stepLabel: run.state ? activeStepLabel(pack, run.activeStep) : null,
+        // A held move -- finalizing, with something still owed -- is the
+        // page's own button disabled; a deck sees the same offer the page
+        // would show, so it is left off rather than pressed and refused.
+        // A move the page splits into a button per racer is left off for
+        // the same reason: it is not one press on the page either.
+        moves: run.moves
+          .filter((m) => !heldMove(m.move, run.blockingObligations.length) && !perRacer(m.move, racing))
+          .map((m) => ({ id: m.id, label: m.move.label })),
+        canUndo: run.canUndo,
+        lastResult: run.state?.outcomes.at(-1) ? entryTextOf(pack, run.state.outcomes.at(-1)!) : null,
+        owed: run.blockingObligations.length,
+        // Held to the step's own table, the way the card holds them: a
+        // step that constrains what may be named suggests only from there.
+        suggestions: run.state
+          ? subjectSuggestions(pack, run.state, run.activeStep ? constrainedByOf(run.activeStep.step) : undefined).slice(0, 8)
+          : [],
+        // The same button the page itself would show between units: nothing
+        // else is waiting to be read or answered first, and there is
+        // nowhere left to go but the unit ahead. Ended, unstarted, watching,
+        // still asked something, or a receipt still on screen -- none of
+        // those has a between-units button on the page, so none of them has
+        // one here.
+        between:
+          run.state &&
+          Boolean(run.started) &&
+          !run.readOnly &&
+          run.state.status !== "ended" &&
+          run.pending === null &&
+          receipts.length === 0 &&
+          !run.activeStep
+            ? run.state.unit === 0
+              ? `Enter ${pack.vocabulary.unit.one} 1`
+              : `Enter ${pack.vocabulary.unit.one} ${run.state.unit + 1}`
+            : null,
+        // What the step's own button says with every box ticked, in the
+        // card's words: the closing card's Next, or the manual card's
+        // Done. Nothing where the step has no list, because there is then
+        // no list to tick and the primary is the press.
+        finishLabel: run.activeStep && checklistOf(run.activeStep.step).length > 0 ? finishWords(pack, run.activeStep.step) : null,
+      }),
+    [
+      run.events.length,
+      run.started,
+      run.readOnly,
+      run.state,
+      run.pending,
+      run.activeStep,
+      run.moves,
+      racing,
+      run.canUndo,
+      run.blockingObligations.length,
+      receipts.length,
+      pack,
+    ],
+  );
   useEffect(() => {
-    if (!api || !shared || !run.record || !run.state) return;
+    if (!api || !publishing || !run.record || !run.state) return;
     const record = run.record;
     const state = run.state;
     const events = run.events;
@@ -167,13 +378,14 @@ export function RunView({
         .putSnapshot(record.runId, {
           ...snapshotOf(pack, state, events, undefined, { race }),
           paper: paperOf(pack, state.mode),
+          offer: currentOffer,
           ...control,
         })
         .catch(() => {});
     }, 800);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, shared, run.events, pack, raceView.race, run.record?.control, run.record?.setup]);
+  }, [api, publishing, decks, run.events, pack, raceView.race, run.record?.control, run.record?.setup, currentOffer]);
 
   /**
    * Starting a race, or joining one: an ordinary run of this pack with the
@@ -228,22 +440,6 @@ export function RunView({
   };
   useAlerts(run.events, run.runId, me, alerts);
 
-  /**
-   * The receipts: what each throw of the step did, kept until the step has
-   * been read.
-   *
-   * The engine moves on the instant a roll is answered, so the dice and the
-   * result would otherwise vanish together. The answer is still committed
-   * as the engine sees fit, a receipt is a record, not a hold on the game,
-   * but the step's rolls stay on screen, in order, with the next roll's
-   * keypad beneath them, until "Carry on" closes the step.
-   *
-   * Outcomes are the signal: whatever the run had not resolved before an
-   * answer, and has now, is what that answer did. Measured from the count
-   * rather than the request, so a machine roll with auto-roll on, or a move
-   * that resolves a table, gets a receipt too, just one without dice.
-   */
-  const [receipts, setReceipts] = useState<RollReceipt[]>([]);
   const sync = useSync();
   // A hosted run opens itself to watchers and sees to a watch key, so an
   // address copied from this run works when it is pasted somewhere.
@@ -263,6 +459,132 @@ export function RunView({
       if (rolled) setOthersRoll(rolled);
     });
   }, [run.record?.runId]);
+
+  /**
+   * A deck's own presses, kept only long enough to answer a retry with
+   * the same verdict; a run underneath it changing makes a ref from
+   * before mean nothing, so it is emptied along with the run id.
+   */
+  const driveSeen = useRef(new Map<string, Verdict>());
+  useEffect(() => {
+    driveSeen.current = new Map();
+  }, [run.record?.runId]);
+
+  /**
+   * A verdict waiting on the run to catch up.
+   *
+   * A deck presses against a `seq`, and the next `seq` it knows about
+   * arrives with the doorbell, a sync settle away. Pressed twice inside
+   * that window, the second press named the old one and was refused
+   * "That moved on." for no reason anybody at the table could see. So an
+   * accepted verdict waits here until this device's own log has grown,
+   * and goes out naming what it grew to. A refusal changed nothing and
+   * goes at once.
+   *
+   * The timer is the promise that nothing hangs: a press that somehow
+   * appended no event is answered anyway, with whatever the run reads at
+   * by then.
+   */
+  const heldVerdict = useRef<{ to: string; ref: string; was: number; timer: number } | null>(null);
+  const eventCount = useRef(run.events.length);
+  const settleVerdict = useCallback(
+    (seq: number) => {
+      const held = heldVerdict.current;
+      if (!held) return;
+      heldVerdict.current = null;
+      window.clearTimeout(held.timer);
+      sync.drove(held.to, held.ref, true, undefined, seq);
+    },
+    [sync],
+  );
+  useEffect(() => {
+    eventCount.current = run.events.length;
+    if (heldVerdict.current && heldVerdict.current.was !== run.events.length) settleVerdict(run.events.length);
+  }, [run.events.length, settleVerdict]);
+  // Nothing outlives the screen: a timer left running would answer a deck
+  // from a run this device no longer has open.
+  useEffect(
+    () => () => {
+      if (heldVerdict.current) window.clearTimeout(heldVerdict.current.timer);
+      heldVerdict.current = null;
+    },
+    [],
+  );
+
+  /**
+   * A press from a deck, taken here because this is the device holding the
+   * run. What the deck may press is the offer this device published; what
+   * happens when it does is the same function the page's own button calls.
+   */
+  useEffect(() => {
+    // Not gated on publishing. A press only ever reaches a device the
+    // server picked as the one holding the run, and `currentOffer` is
+    // computed whether or not this device is publishing, so the answer to
+    // one is always at hand -- `needsPage` included. Gated, a page that
+    // opened the run before it heard about the deck, or came back from a
+    // reload with `decks` at nought, left every press hanging.
+    if (!run.record || !run.state) return;
+    const runId = run.record.runId;
+    const active = run.activeStep;
+    return syncBus.subscribe((news) => {
+      if (news.t !== "drive" || news.run !== runId) return;
+      const verdict = takePress(
+        news,
+        { seq: run.events.length, offer: currentOffer, seen: driveSeen.current },
+        {
+          primary: () => {
+            const id = currentOffer.primary?.id;
+            if (id === "enter") {
+              run.enterUnit();
+              return;
+            }
+            if (!active) return;
+            if (id === "roll" && active.step.kind === "rollTable") {
+              const table = pack.tables[active.step.table];
+              run.begin({
+                kind: "table",
+                tableId: active.step.table,
+                keyPrefix: `u${run.state?.unit ?? 0}:${active.phase.id}#${active.index}`,
+                label: table?.title ?? active.step.table,
+                completes: { phase: active.phase, index: active.index },
+              });
+            } else if (id === "carry-on") {
+              run.completeStep(active.phase, active.index);
+            } else if (id === "close") {
+              run.closeAndEnter(active.phase, active.index);
+            }
+          },
+          move: (id) => {
+            const m = currentOffer.moves.find((mv) => mv.id === id);
+            if (m) run.takeMove(m.id, m.label);
+          },
+          undo: () => run.undo(),
+          answer: (a) => {
+            if (!active) return;
+            if (a["ticks"] === "all") {
+              tickEverythingAndFinish(pack, run, active);
+              return;
+            }
+            run.declareSubject(active.phase, active.index, String(a["subject"] ?? ""));
+          },
+        },
+      );
+      if (!verdict.ok) {
+        sync.drove(news.from, news.ref, false, verdict.say, run.events.length);
+        return;
+      }
+      // One press at a time: a verdict still waiting when the next press
+      // lands is answered with where the run has got to, and the new one
+      // takes the seat.
+      settleVerdict(eventCount.current);
+      heldVerdict.current = {
+        to: news.from,
+        ref: news.ref,
+        was: run.events.length,
+        timer: window.setTimeout(() => settleVerdict(eventCount.current), HELD_VERDICT_MS),
+      };
+    });
+  }, [run, currentOffer, sync, pack, settleVerdict]);
   const seen = useRef<number | null>(null);
   const awaiting = useRef<Omit<RollReceipt, "outcomes"> | null>(null);
   // How many answers this view has given, and how many it had given when
@@ -674,7 +996,7 @@ export function RunView({
         <div className="col side">
           {state.status === "ended" && <Scores pack={pack} run={run} state={state} />}
           {run.moderated && <Scoreboard run={run} state={state} pack={pack} tools={tools} />}
-          {!run.moderated && tools.length > 0 && <Attached tools={tools} />}
+          {!run.moderated && (tools.length > 0 || decks > 0) && <Attached tools={tools} decks={decks} />}
           {run.roles.length > 0 && <Roles pack={pack} run={run} state={state} />}
           {/* A pack whose units make nothing has no board; the panel would
               say "nothing made yet" for the whole run. */}
@@ -692,6 +1014,7 @@ export function RunView({
           {run.record && !bench && <Members pack={pack} run={run.record} />}
         </div>
       </div>
+      {toast.node}
       <RunRail
         pane={pane}
         onPane={setPane}
@@ -1362,7 +1685,7 @@ function StepPanel({ pack, run, state, active }: { pack: Pack; run: ReturnType<t
               className="primary big"
               onClick={(e) => (allTicked ? run.completeStep(phase, index) : nudgeFirstUnticked(e.currentTarget))}
             >
-              {allTicked ? "Done" : "Tick what you honored"}
+              {allTicked ? finishWords(pack, step) : "Tick what you honored"}
             </button>
           </div>
         </section>
@@ -1471,7 +1794,6 @@ function ClosingStep({
   const settling = settlingFor(pack, state, constraints, points);
   const boxesFor = settling.boxes;
   const allTicked = checklistDone(points, pack, state, ticked, settling);
-  const unit = v.unit.one.toLowerCase();
   const label = (step.kind === "manual" || step.kind === "finalizeUnit" ? step.label : undefined) ?? v.finalize;
   return (
     <section className="panel runStep finalize">
@@ -1519,7 +1841,7 @@ function ClosingStep({
                 : nudgeFirstUnticked(e.currentTarget)
           }
         >
-          {blocked.length > 0 ? "Settle what is owed first" : allTicked ? `Next ${unit}` : "Tick what you honored"}
+          {blocked.length > 0 ? "Settle what is owed first" : allTicked ? finishWords(pack, step) : "Tick what you honored"}
         </button>
         <button
           className="ghost big"
@@ -1935,17 +2257,29 @@ export function Scores({ pack, run, state }: { pack: Pack; run: ReturnType<typeo
  * that matters most exactly the same thing. A tool that says which seat
  * it is playing is a tool somebody can be told about by name.
  */
-function Attached({ tools }: { tools: AttachedTool[] }) {
+function Attached({ tools, decks }: { tools: AttachedTool[]; decks: number }) {
   const named = tools.map((t) => t.app).filter((a): a is string => Boolean(a));
   const seated = tools.map((t) => t.seat).filter((s): s is string => Boolean(s));
   const whose = seated.length > 0 ? seated.join(", ") : tools.length === 1 ? "your game" : `${tools.length} games`;
   return (
     <section className="panel">
-      <h3 className="sectionTitle">
-        On {whose}{" "}
-        <span className="muted">{named.length > 0 ? named.join(", ") : tools.length === 1 ? "a tool" : `${tools.length} tools`}</span>
-      </h3>
-      <p className="muted small">Listening, so what the dice say happens in the game. Results still read the same with nothing attached.</p>
+      {tools.length > 0 && (
+        <h3 className="sectionTitle">
+          On {whose}{" "}
+          <span className="muted">{named.length > 0 ? named.join(", ") : tools.length === 1 ? "a tool" : `${tools.length} tools`}</span>
+        </h3>
+      )}
+      {/* A deck signs in rather than taking a line to paste, so it gets no
+          address beside it -- just its own count, the way a tool gets its
+          own line. */}
+      {decks > 0 && <h3 className="sectionTitle">{decks === 1 ? "Stream Deck" : `Stream Deck × ${decks}`}</h3>}
+      {/* About a tool on somebody's game, so it is said only where there
+          is one: a deck presses buttons, it does not hear the dice. */}
+      {tools.length > 0 && (
+        <p className="muted small">
+          Listening, so what the dice say happens in the game. Results still read the same with nothing attached.
+        </p>
+      )}
     </section>
   );
 }
@@ -2087,11 +2421,11 @@ function Moves({ run, pack, state }: { run: ReturnType<typeof useRun>; pack: Pac
       </h3>
       <div className="choices">
         {run.moves.map(({ id, move }) => {
-          const held = Boolean(move.finalizes) && owed > 0;
+          const held = heldMove(move, owed);
           const why = held ? "Settle what is owed first; this move closes the unit." : undefined;
           const closes = move.finalizes ? `Closes the ${pack.vocabulary.unit.one.toLowerCase()}.` : null;
 
-          if (move.per !== "contestant" || racing.length === 0) {
+          if (!perRacer(move, racing)) {
             return (
               <button key={id} className="choice" disabled={held} title={why} onClick={() => run.takeMove(id, move.label)}>
                 <strong>{move.label}</strong>

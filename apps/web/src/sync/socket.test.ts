@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { backoffMs, openLive, parseChanged, parseGesture, socketUrl, type Changed, type Gesture } from "./socket.ts";
+import {
+  backoffMs,
+  openLive,
+  parseChanged,
+  parseDrive,
+  parseGesture,
+  socketUrl,
+  type Changed,
+  type Drive,
+  type Gesture,
+} from "./socket.ts";
 
 /**
  * A pretend socket: opened, closed and spoken to by the test, so the
@@ -84,6 +94,33 @@ describe("what comes down", () => {
     expect(parseChanged("not json")).toBeNull();
     expect(parseChanged(new ArrayBuffer(2))).toBeNull();
   });
+
+  it("shapes a drive and refuses what is not one", () => {
+    expect(parseDrive(JSON.stringify({ t: "drive", from: "d1", run: "s1", seq: 3, ref: "r1", press: "primary" }))).toEqual({
+      t: "drive",
+      from: "d1",
+      run: "s1",
+      seq: 3,
+      ref: "r1",
+      press: "primary",
+    });
+    expect(parseDrive(JSON.stringify({ t: "drive", from: "d1", run: "s1", seq: 3, ref: "r1", press: "move", move: "salvage" }))).toEqual({
+      t: "drive",
+      from: "d1",
+      run: "s1",
+      seq: 3,
+      ref: "r1",
+      press: "move",
+      move: "salvage",
+    });
+    expect(
+      parseDrive(JSON.stringify({ t: "drive", from: "d1", run: "s1", seq: 3, ref: "r1", press: "answer", answer: { subject: "bowl" } })),
+    ).toEqual({ t: "drive", from: "d1", run: "s1", seq: 3, ref: "r1", press: "answer", answer: { subject: "bowl" } });
+    expect(parseDrive(JSON.stringify({ t: "drive", from: "d1", run: "s1", ref: "r1", press: "primary" }))).toBeNull();
+    expect(parseDrive(JSON.stringify({ t: "gesture", id: "s1", kind: "rolled", at: "x" }))).toBeNull();
+    expect(parseDrive("not json")).toBeNull();
+    expect(parseDrive(new ArrayBuffer(2))).toBeNull();
+  });
 });
 
 describe("the live socket", () => {
@@ -143,6 +180,36 @@ describe("the live socket", () => {
     expect(second.closed).toBe(true);
     expect(clock.pending).toHaveLength(0);
     expect(live.open).toBe(false);
+  });
+
+  it("hands over a drive from a deck, and answers it back to the one that asked", async () => {
+    FakeSocket.all = [];
+    const clock = manualClock();
+    const drives: Drive[] = [];
+    const live = openLive({
+      url: async () => socketUrl("https://runlog.example/api", "t1"),
+      onChanged: () => {},
+      onDrive: (d) => drives.push(d),
+      WebSocketImpl: FakeSocket as unknown as typeof WebSocket,
+      wait: clock.wait,
+    });
+    live.watch("s1");
+    await tick();
+    const socket = FakeSocket.all[0]!;
+    socket.onopen?.();
+    socket.onmessage?.({
+      data: JSON.stringify({ t: "drive", from: "d1", run: "s1", seq: 3, ref: "r1", press: "primary" }),
+    });
+    expect(drives).toEqual([{ t: "drive", from: "d1", run: "s1", seq: 3, ref: "r1", press: "primary" }]);
+
+    live.drove("d1", "r1", true);
+    expect(socket.sent.at(-1)).toBe(JSON.stringify({ t: "drove", to: "d1", ref: "r1", ok: true }));
+    live.drove("d1", "r2", false, "That moved on.");
+    expect(socket.sent.at(-1)).toBe(JSON.stringify({ t: "drove", to: "d1", ref: "r2", ok: false, say: "That moved on." }));
+    // The run's new seq rides back with the verdict, so a deck pressing
+    // again need not wait for the doorbell to tell it where the run got to.
+    live.drove("d1", "r3", true, undefined, 12);
+    expect(socket.sent.at(-1)).toBe(JSON.stringify({ t: "drove", to: "d1", ref: "r3", ok: true, seq: 12 }));
   });
 
   it("waits and tries again when there is no token to connect with", async () => {

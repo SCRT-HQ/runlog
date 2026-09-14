@@ -20,7 +20,7 @@ import {
   type StoredEvent,
 } from "../lib/handlers/store";
 import type { Race, RaceEntry, RaceMeta, RaceStore } from "../lib/handlers/races";
-import type { BillingStore } from "../lib/handlers/billing";
+import { grantsOf, type BillingStore } from "../lib/handlers/billing";
 import type { StripeLike } from "../lib/handlers/stripe";
 import type { Publisher, PublisherStore } from "../lib/handlers/publishers";
 import type { WorkOSLike } from "../lib/handlers/workos";
@@ -828,6 +828,16 @@ const packBody = {
   hash: "h1",
   source: "id: p",
 };
+
+describe("grantsOf", () => {
+  it("unions what was bought, what was kept, and what the token carries, once each", async () => {
+    const billing = memoryBilling();
+    await billing.putEntitlements("user_1", ["plus"], "");
+    await billing.putFlags("user_1", ["hosted-licensing"], "");
+    expect(await grantsOf(billing, "user_1", ["plus", "server"])).toEqual(expect.arrayContaining(["plus", "hosted-licensing", "server"]));
+    expect(await grantsOf(billing, "user_1", ["plus", "server"])).toHaveLength(3);
+  });
+});
 
 describe("who is asking", () => {
   it("refuses without a token, with a 401 and not a 403", async () => {

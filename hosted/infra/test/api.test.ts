@@ -108,6 +108,19 @@ describe("the API", () => {
     template.hasResourceProperties("AWS::CloudWatch::Alarm", { MetricName: "Errors", Namespace: "AWS/Lambda", Threshold: 5 });
   });
 
+  it("tells the live function whether plans gate too, so a press from a deck knows the same answer", () => {
+    // The function itself, found by its construct id, rather than any
+    // function in the template whose environment happens to match: the
+    // HTTP handler carries the same three keys, so the check passed
+    // without the socket's own function carrying anything at all.
+    const [, live] = Object.entries(template.findResources("AWS::Lambda::Function")).find(([id]) => id.startsWith("LiveHandler")) ?? [];
+    expect(live).toBeDefined();
+    expect(live!.Properties.Environment.Variables).toMatchObject({
+      RUNLOG_GATES: "off",
+      STRIPE_FEATURES: expect.stringContaining("plus"),
+    });
+  });
+
   it("offers no CORS, because nothing but the app's own origin calls it", () => {
     const api = JSON.stringify(Object.values(template.findResources("AWS::ApiGatewayV2::Api")));
     expect(api).not.toContain("CorsConfiguration");
