@@ -75,55 +75,160 @@ export function forTool(all: Setup[], tool: string | undefined): Setup[] {
   return all.filter((s) => s.tool.toLowerCase() === tool.toLowerCase());
 }
 
-/** What a run keeps of the setup it chose. */
-export interface ChosenSetup {
+/** One setup a run's terms were seeded from, for a screen that says where they came from. */
+export interface SetupCredit {
   id: string;
   version: string;
   title: string;
-  /** Copied rather than referenced: see `chose`. */
-  ops: Setup["ops"];
 }
 
 /**
- * A setup, as a run will keep it.
+ * What a run keeps of the setups it chose, and of what was done to them.
+ *
+ * Three things, and they answer three different questions. `ops` is what
+ * will actually be sent, which is the only one the tool cares about.
+ * `from` is where those operations came from, so a screen can still name
+ * the setups. `edited` is whether they are still what those setups said.
+ *
+ * That last one earns its place. Once the list is editable, "played
+ * under Cleric" stops being a fact and becomes a claim, and a log that
+ * sells itself on being an honest record should not be making claims it
+ * cannot check. So the flag is set the moment the operations stop
+ * matching what the setups handed over, and the screen says "seeded
+ * from" rather than "played under" when it is.
+ */
+export interface ChosenSetup {
+  /** The setups this was seeded from, in the order they were applied. */
+  from: SetupCredit[];
+  ops: Setup["ops"];
+  /** True once the operations are no longer what `from` handed over. */
+  edited?: boolean;
+}
+
+const copyOps = (ops: Setup["ops"]): Setup["ops"] => ops.map((o) => ({ ...o, ...(o.args ? { args: { ...o.args } } : {}) }));
+
+const creditOf = (setup: Setup): SetupCredit => ({ id: setup.id, version: setup.version, title: setup.title });
+
+/**
+ * Several setups, as a run will keep them.
  *
  * The operations are copied in rather than looked up later. A run is a
  * record of what happened, and what happened is that this player was
  * handed these things; a shipped file that changes next month changes
- * what a new run gets, not what an old one got. The id and version are
- * kept beside them so a screen can still say which one it was.
+ * what a new run gets, not what an old one got.
+ *
+ * They are concatenated in the order chosen, and nothing is merged or
+ * de-duplicated. Two setups that both set the same value leave both
+ * operations in the list and the last one wins, which is what a tool
+ * would do with them anyway; two that both hand over runes hand over
+ * both lots. Resolving that quietly would be the wrong favor, because
+ * the list is in front of the player and a line they did not want is a
+ * line they can delete.
  */
-export function chose(setup: Setup): ChosenSetup {
-  return { id: setup.id, version: setup.version, title: setup.title, ops: setup.ops.map((o) => ({ ...o })) };
+export function combine(setups: Setup[]): ChosenSetup | null {
+  if (setups.length === 0) return null;
+  return { from: setups.map(creditOf), ops: setups.flatMap((s) => copyOps(s.ops)) };
 }
 
-/** A chosen setup read back off a stored run, which came from a device and is not to be trusted. */
+/** One setup, as a run will keep it. */
+export function chose(setup: Setup): ChosenSetup {
+  return combine([setup])!;
+}
+
+/**
+ * The same choice, with the operations the player left in it.
+ *
+ * `edited` is worked out rather than asked for: an editor that had to
+ * remember to set it is an editor that will one day forget, and the
+ * whole value of the flag is that it cannot be wrong.
+ */
+export function edit(chosen: ChosenSetup | null, ops: Setup["ops"], seeded: Setup["ops"]): ChosenSetup | null {
+  if (ops.length === 0 && (!chosen || chosen.from.length === 0)) return null;
+  const from = chosen?.from ?? [];
+  // Nothing to have deviated from: a list written by hand is not an
+  // edited loadout, it is somebody's own terms.
+  const same = from.length === 0 || JSON.stringify(ops) === JSON.stringify(seeded);
+  return { from, ops: copyOps(ops), ...(same ? {} : { edited: true }) };
+}
+
+/**
+ * The same operations, in the shape a profile holds them.
+ *
+ * A setup's `args` are optional and a profile's are not, which is the
+ * whole of the difference. Both directions live here so the editor on
+ * the start page and the frame a tool is sent agree about it, rather
+ * than each doing the conversion its own way.
+ */
+export function asProfileOps(ops: Setup["ops"]): ProfileOp[] {
+  return ops.map((o) => ({ op: o.op, args: { ...(o.args ?? {}) }, ...(o.once ? { once: true as const } : {}) }));
+}
+
+/** And back, for an editor that hands a profile's shape to something that keeps a setup's. */
+export function asSetupOps(ops: ProfileOp[]): Setup["ops"] {
+  return ops.map((o) => ({ op: o.op, args: { ...o.args }, ...(o.once ? { once: true } : {}) }));
+}
+
+/** How a screen should describe where a run's terms came from. */
+export function creditLine(chosen: ChosenSetup | null): string | null {
+  if (!chosen || chosen.ops.length === 0) return null;
+  // Operations with no loadout behind them: written here, by hand.
+  if (chosen.from.length === 0) return "Your own terms";
+  const names = chosen.from.map((f) => f.title);
+  const list = names.length === 1 ? names[0]! : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return chosen.edited ? `Seeded from ${list}, then edited` : `Played under ${list}`;
+}
+
+/** One operation off a stored record, which came from a device and is not to be trusted. */
+function opFrom(value: unknown): Setup["ops"][number] | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Record<string, unknown>;
+  const op = raw["op"];
+  if (typeof op !== "string" || !op) return null;
+  const args = raw["args"];
+  return {
+    op,
+    ...(args && typeof args === "object" && !Array.isArray(args) ? { args: { ...(args as Record<string, unknown>) } } : {}),
+    ...(raw["once"] === true ? { once: true } : {}),
+  };
+}
+
+/**
+ * A chosen setup read back off a stored run.
+ *
+ * Two shapes, because runs written before this was plural are sitting in
+ * libraries on people's devices and one of them may be open right now.
+ * The old one is a single `{ id, version, title, ops }`; it is read as a
+ * run seeded from that one setup, which is exactly what it was.
+ */
 export function chosenFrom(value: unknown): ChosenSetup | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
-  const text = (name: string) => (typeof raw[name] === "string" && raw[name] ? (raw[name] as string) : null);
-  const id = text("id");
-  const title = text("title");
-  const version = text("version");
-  if (!id || !title || !version) return null;
-  const ops = Array.isArray(raw["ops"])
-    ? raw["ops"]
-        .map((o) => {
-          if (!o || typeof o !== "object") return null;
-          const op = (o as Record<string, unknown>)["op"];
-          if (typeof op !== "string" || !op) return null;
-          const args = (o as Record<string, unknown>)["args"];
-          const once = (o as Record<string, unknown>)["once"] === true;
-          return {
-            op,
-            ...(args && typeof args === "object" && !Array.isArray(args) ? { args: { ...(args as Record<string, unknown>) } } : {}),
-            ...(once ? { once: true } : {}),
-          };
-        })
-        .filter((o): o is Setup["ops"][number] => o !== null)
-    : [];
+  const ops = Array.isArray(raw["ops"]) ? raw["ops"].map(opFrom).filter((o): o is Setup["ops"][number] => o !== null) : [];
   if (ops.length === 0) return null;
-  return { id, version, title, ops };
+
+  const text = (from: Record<string, unknown>, name: string) =>
+    typeof from[name] === "string" && from[name] ? (from[name] as string) : null;
+
+  // The shape this build writes.
+  if (Array.isArray(raw["from"])) {
+    const from: SetupCredit[] = [];
+    for (const entry of raw["from"]) {
+      if (!entry || typeof entry !== "object") continue;
+      const e = entry as Record<string, unknown>;
+      const id = text(e, "id");
+      const title = text(e, "title");
+      const version = text(e, "version");
+      if (id && title && version) from.push({ id, version, title });
+    }
+    return { from, ops, ...(raw["edited"] === true ? { edited: true } : {}) };
+  }
+
+  // The shape a run written before this was plural carries.
+  const id = text(raw, "id");
+  const title = text(raw, "title");
+  const version = text(raw, "version");
+  if (!id || !title || !version) return null;
+  return { from: [{ id, version, title }], ops };
 }
 
 /**
@@ -141,6 +246,5 @@ export function chosenFrom(value: unknown): ChosenSetup | null {
  */
 export function withChosen(profile: ControlProfile, chosen: ChosenSetup | null): ControlProfile {
   if (!chosen || chosen.ops.length === 0) return profile;
-  const ops: ProfileOp[] = chosen.ops.map((o) => ({ op: o.op, args: { ...(o.args ?? {}) }, ...(o.once ? { once: true as const } : {}) }));
-  return { ...profile, setup: [...(profile.setup ?? []), ...ops] };
+  return { ...profile, setup: [...(profile.setup ?? []), ...asProfileOps(chosen.ops)] };
 }

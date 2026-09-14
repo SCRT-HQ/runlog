@@ -13,7 +13,7 @@ import { useConfirm, type Question } from "./useConfirm.tsx";
  * with the right answer, whichever way the question was closed.
  *
  * A dialog that only *looks* right and answers `undefined` would leave a
- * run undiscarded and say nothing, which is worse than the grey box.
+ * run undiscarded and say nothing, which is worse than the gray box.
  */
 
 function Harness({ question }: { question: Question | string }) {
