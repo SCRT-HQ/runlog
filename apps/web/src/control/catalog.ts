@@ -167,6 +167,7 @@ const PRESSES = [
   // tool's spelling.
   "UnlockAffinites",
   "GiveStartingFlasks",
+  "GiveTalismanPouches",
   "UnlockGestures",
   "UnlockMetyr",
   "FightFortissax",
