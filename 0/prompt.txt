@@ -185,3 +185,13 @@ we should be pulling all work on the fork into the `integration` branch, not cre
 ---
 
 I need to be able to build a combined version
+
+---
+
+testing the setups with the actual game:
+
+- [Image #114] event and flags for the talisman pouches (only the events were needed)
+- Doesn't seem like I'm able to get the starting flasks [Image #116]
+- open the map doesn't seem to work [Image #115] 
+- we should add a setup to unlock all gestures
+- why did the give-whetstones setup get reverted back to unlock-affinities?
