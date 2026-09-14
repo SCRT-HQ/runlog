@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Api } from "../sync/client.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { liveLinkOf, rememberLiveLink } from "../live/route.ts";
+import { rememberWatchKey, watchKeyHere } from "./watchKey.ts";
 
 /**
  * A run makes itself reachable, so an address copied from it works.
@@ -31,10 +32,39 @@ import { liveLinkOf, rememberLiveLink } from "../live/route.ts";
  * Where plans gate a live link, the share is refused and nothing here says
  * so: the panels already carry that conversation, with the button and the
  * prompt. This is the quiet path for the accounts that have it.
+ *
+ * It answers with what it has, because doing this quietly and telling
+ * nobody was most of the trouble. The link was written to the device and
+ * the panel that draws it had already drawn: it appeared on the next
+ * reload and not before. And the key it minted was thrown away, which
+ * was worse -- the account then had a watch key whose value nothing
+ * knew, so the panel would not mint one (the server says there is one)
+ * and could not finish the address (this device does not have it). The
+ * only way out was the button that makes a new one, which puts out the
+ * key in every scene and every attached tool.
  */
-export function useReachable(api: Api | null, record: StoredRun | null): void {
+export interface Reachable {
+  /** The live link, once the run has one. */
+  link: string | null;
+  /** The account's watch key, as this device knows it. */
+  key: string | null;
+  /** Still asking the server, so an address is not unfinished, it is unfinished *yet*. */
+  working: boolean;
+}
+
+export function useReachable(api: Api | null, record: StoredRun | null): Reachable {
   /** Runs this tab has already done this for, so a re-render does not ask twice. */
   const done = useRef<Set<string>>(new Set());
+  const [link, setLink] = useState<string | null>(() => (record ? liveLinkOf(record.runId) : null));
+  const [key, setKey] = useState<string | null>(() => watchKeyHere());
+  const [working, setWorking] = useState(false);
+
+  useEffect(() => {
+    if (!record) return;
+    // A different run, or one opened again: say what is known of it now
+    // rather than what was known of the last one.
+    setLink(liveLinkOf(record.runId));
+  }, [record?.runId]);
 
   useEffect(() => {
     if (!api || !record) return;
@@ -45,10 +75,14 @@ export function useReachable(api: Api | null, record: StoredRun | null): void {
     done.current.add(runId);
 
     void (async () => {
+      setWorking(true);
       try {
         if (record.shared !== true && !liveLinkOf(runId)) {
-          const { link } = await api.shareRun(runId);
-          if (link) rememberLiveLink(runId, link);
+          const { link: made } = await api.shareRun(runId);
+          if (made) {
+            rememberLiveLink(runId, made);
+            setLink(made);
+          }
         }
       } catch {
         // Refused, gated, or offline. The panels say what to do about it.
@@ -57,10 +91,20 @@ export function useReachable(api: Api | null, record: StoredRun | null): void {
         const keys = await api.streamKeys();
         // Only where there is none. A second mint puts the first one out,
         // wherever it is in use, and nobody asked for that.
-        if (!keys.watch) await api.mintStreamKey("watch");
+        if (!keys.watch) {
+          const made = await api.mintStreamKey("watch");
+          // Remembered, which is the whole point of minting it. Without
+          // this the account has a key nothing can name.
+          rememberWatchKey(made.key);
+          setKey(made.key);
+        }
       } catch {
         // As above: the panel still offers to make one.
+      } finally {
+        setWorking(false);
       }
     })();
   }, [api, record]);
+
+  return { link, key, working };
 }

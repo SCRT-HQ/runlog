@@ -3121,6 +3121,29 @@ select.textInput {
   background: var(--panel);
   font-size: 0.85rem;
 }
+/*
+ * The same box, before there is an address to put in it.
+ *
+ * A box of the right size that says what is happening, rather than a
+ * finished-looking address with a placeholder where the key goes. It
+ * breathes so it reads as work in progress rather than as a result.
+ */
+.askAddress.waiting {
+  color: var(--muted);
+  font-style: italic;
+  animation: addressWaiting 1.6s ease-in-out infinite;
+}
+@keyframes addressWaiting {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .askAddress.waiting {
+    animation: none;
+  }
+}
+
 .askMoves {
   margin: 0.25rem 0 0.75rem;
   padding-left: 1.2rem;

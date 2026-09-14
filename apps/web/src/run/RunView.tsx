@@ -201,7 +201,7 @@ export function RunView({
   const sync = useSync();
   // A hosted run opens itself to watchers and sees to a watch key, so an
   // address copied from this run works when it is pasted somewhere.
-  useReachable(api, run.record ?? null);
+  const reachable = useReachable(api, run.record ?? null);
   // Whose games this run is holding the other end of, for the badge below.
   const tools = useAttachedTools(run.record?.runId ?? null);
   // The roller is fetched while the run opens, not when the first die is thrown.
@@ -575,6 +575,7 @@ export function RunView({
           record={run.record ?? null}
           onAsks={run.setAsks}
           onControl={run.setControl}
+          reachable={reachable}
           onSetup={run.setSetup}
           onHandOut={() => (run.record ? sync.gesture(run.record.runId, "setup") : false)}
           seats={(run.state?.contestants ?? []).map((c) => c.name)}
