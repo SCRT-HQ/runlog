@@ -24,7 +24,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.start-of-the-dlc
-version: "1.1.0"
+version: "1.2.0"
 title: Start of the DLC
 author: Runlog
 description: >-
@@ -42,6 +42,8 @@ ops:
   # A character made for this run is carrying nothing, and the first
   # enemy past the grace does not care.
   - { op: action.invoke, args: { action: GiveStartingFlasks }, once: true }
+  # And a horse. Gravesite Plain is a long walk otherwise.
+  - { op: action.invoke, args: { action: GiveStartingGifts }, once: true }
   - { op: warp.grace, args: { name: Gravesite Plain, area: Gravesite Plain }, once: true }
 
 license:
