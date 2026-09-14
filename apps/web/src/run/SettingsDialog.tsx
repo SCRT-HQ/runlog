@@ -34,6 +34,8 @@ export function SettingsDialog({
   seats,
   onAsks,
   onControl,
+  onSetup,
+  onHandOut,
 }: {
   runId: string | null;
   race: boolean;
@@ -44,6 +46,9 @@ export function SettingsDialog({
   onAsks?: (asks: StoredRun["asks"]) => void | Promise<void>;
   /** What a tool attached to the game should do about this run. */
   onControl?: (control: unknown) => void | Promise<void>;
+  /** Change which setup the open run is played under, and hand it out. */
+  onSetup?: (setup: unknown) => void | Promise<void>;
+  onHandOut?: () => boolean;
   /** The roster of a moderated run, so the Control section can address one racer. */
   seats?: string[];
   alerts: AlertSettings;
@@ -177,7 +182,7 @@ export function SettingsDialog({
 
         {at === "control" && pack && record && (
           <section>
-            <ControlSettings pack={pack} record={record} onControl={onControl} {...(seats && seats.length > 0 ? { seats } : {})} />
+            <ControlSettings pack={pack} record={record} onControl={onControl} {...(onSetup ? { onSetup } : {})} {...(onHandOut ? { onHandOut } : {})} {...(seats && seats.length > 0 ? { seats } : {})} />
           </section>
         )}
       </section>
