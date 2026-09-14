@@ -7,7 +7,7 @@ import addFormats from "ajv-formats";
 import { Pack, SCHEMA_VERSION } from "./pack.ts";
 import { SETUP_SCHEMA_VERSION } from "./setup.ts";
 import { buildSchemaBody, buildSetupSchemaBody } from "./emit.ts";
-import { SCHEMA_IN_REPO, schemaLine, schemaUrl } from "./published.ts";
+import { SCHEMA_IN_REPO, schemaLine, schemaUrl, type SchemaKind } from "./published.ts";
 import { loadPackText, loadSetupText } from "./load.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -250,16 +250,21 @@ describe("the files an author would copy", () => {
    * more place for it to be typed wrong. Authors outside this repository
    * get the address, from the docs and from `runlog init`.
    */
-  const line = (kind: "pack" | "setup") => schemaLine(kind, SCHEMA_IN_REPO);
+  const line = (kind: SchemaKind) => schemaLine(kind, SCHEMA_IN_REPO);
 
   /** Every authored document in the repository, and which schema it is. */
-  const authored = (dir: string, into: Array<[string, "pack" | "setup"]> = []): Array<[string, "pack" | "setup"]> => {
+  const authored = (dir: string, into: Array<[string, SchemaKind]> = []): Array<[string, SchemaKind]> => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const full = join(dir, entry.name);
       // Not in the repository; a working copy may still hold one, and it
       // is nobody's business here either way.
       if (entry.isDirectory() && entry.name !== "private") authored(full, into);
-      else if (entry.isFile() && entry.name.endsWith(".yaml")) into.push([full, basename(dir) === "setups" ? "setup" : "pack"]);
+      // The folder says which, which is also how somebody reading the
+      // repository tells them apart.
+      else if (entry.isFile() && entry.name.endsWith(".yaml")) {
+        const kind: SchemaKind = basename(dir) === "setups" ? "setup" : basename(dir) === "mappings" ? "mapping" : "pack";
+        into.push([full, kind]);
+      }
     }
     return into;
   };

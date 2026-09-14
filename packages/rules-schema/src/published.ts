@@ -1,5 +1,6 @@
 import { SCHEMA_VERSION } from "./pack.ts";
 import { SETUP_SCHEMA_VERSION } from "./setup.ts";
+import { MAPPING_SCHEMA_VERSION } from "./mapping.ts";
 
 /**
  * Where the published JSON Schemas live.
@@ -17,9 +18,14 @@ import { SETUP_SCHEMA_VERSION } from "./setup.ts";
  */
 const HOME = "https://runlog.scrthq.com/schema";
 
+/** Which major version of each format this build reads. */
+const VERSIONS = { pack: SCHEMA_VERSION, setup: SETUP_SCHEMA_VERSION, mapping: MAPPING_SCHEMA_VERSION } as const;
+
+export type SchemaKind = keyof typeof VERSIONS;
+
 /** The published address of a schema, which is also its `$id`. */
-export function schemaUrl(kind: "pack" | "setup"): string {
-  return `${HOME}/${kind}-${kind === "pack" ? SCHEMA_VERSION : SETUP_SCHEMA_VERSION}.schema.json`;
+export function schemaUrl(kind: SchemaKind): string {
+  return `${HOME}/${kind}-${VERSIONS[kind]}.schema.json`;
 }
 
 /**
@@ -29,8 +35,8 @@ export function schemaUrl(kind: "pack" | "setup"): string {
  * on disk two directories up and does not need the network, a deploy or a
  * domain to be right. Everyone else gets the address.
  */
-export function schemaLine(kind: "pack" | "setup", relativeTo?: string): string {
-  return `# yaml-language-server: $schema=${relativeTo ? `${relativeTo}/${kind}-${kind === "pack" ? SCHEMA_VERSION : SETUP_SCHEMA_VERSION}.schema.json` : schemaUrl(kind)}`;
+export function schemaLine(kind: SchemaKind, relativeTo?: string): string {
+  return `# yaml-language-server: $schema=${relativeTo ? `${relativeTo}/${kind}-${VERSIONS[kind]}.schema.json` : schemaUrl(kind)}`;
 }
 
 /** Where a pack or setup in this repository finds the schema, from its own directory. */

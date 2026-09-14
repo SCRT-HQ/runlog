@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Pack, SCHEMA_VERSION } from "./pack.ts";
 import { Setup, SETUP_SCHEMA_VERSION } from "./setup.ts";
+import { Mapping, MAPPING_SCHEMA_VERSION } from "./mapping.ts";
 import { schemaUrl } from "./published.ts";
 
 /**
@@ -103,5 +104,18 @@ export function buildSetupSchemaDocument(): Record<string, unknown> {
       "What a tool attached to the game is set to while a run lasts, and what the player is handed " +
       "to start with. Written for a tool rather than for a pack, so one fits every pack for the same game.",
     ...buildSetupSchemaBody(),
+  };
+}
+
+/** The same again, for a mapping. Nothing in one recurses either. */
+export function buildMappingSchemaBody(): Record<string, unknown> {
+  return z.toJSONSchema(Mapping, { target: "draft-2020-12", io: "input", unrepresentable: "any" }) as Record<string, unknown>;
+}
+
+export function buildMappingSchemaDocument(): Record<string, unknown> {
+  return {
+    $id: schemaUrl("mapping"),
+    title: `Runlog mapping (schema version ${MAPPING_SCHEMA_VERSION})`,
+    ...buildMappingSchemaBody(),
   };
 }
