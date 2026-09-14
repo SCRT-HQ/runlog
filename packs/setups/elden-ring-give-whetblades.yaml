@@ -24,9 +24,9 @@
 
 kind: setup
 schemaVersion: 1
-id: com.scrthq.runlog.setups.unlock-affinities
+id: com.scrthq.runlog.setups.give-whetblades
 version: "1.0.0"
-title: Unlock Affinities
+title: Give Whetblades
 author: Runlog
 description: >-
   All five whetblades and the whetstone knife, so every affinity is on
