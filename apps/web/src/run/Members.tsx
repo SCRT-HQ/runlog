@@ -144,7 +144,7 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
          * difference between waiting and something being wrong.
          */
         <p className="muted small" aria-live="polite">
-          This {noun} is still on its way to your account. Inviting opens once it has arrived.
+          This {noun} has not reached your account yet. Inviting opens when it has.
         </p>
       )}
       {members.length > 0 && (

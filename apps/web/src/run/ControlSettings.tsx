@@ -333,11 +333,12 @@ export function ControlSettings({
         {key ? (
           <code className="askAddress">{address}</code>
         ) : reach?.working ? (
-          /* Being set up right now. Not an address yet, and saying so
-             beats printing one with REPLACE-WITH-YOUR-WATCH-KEY in it,
-             which looks copyable and is not. */
+          /* Not an address yet. Plainly that, rather than one with
+             REPLACE-WITH-YOUR-WATCH-KEY in it, which looks copyable and
+             is not. The heading and the line above already say what this
+             box is for, so it only has to say it is not ready. */
           <p className="askAddress waiting" aria-live="polite">
-            Setting this {noun} up to be reached…
+            Loading…
           </p>
         ) : null}
         {!reachable && (
