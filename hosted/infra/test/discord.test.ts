@@ -203,7 +203,9 @@ describe("setting up a server", () => {
     expect(open.data?.content).toContain("Claimed by Mira");
     expect(open.data?.content).toContain("plans are open");
     expect(open.data?.content).toContain("<@&r1>");
-    expect(open.data?.content).toContain("The Long Kiln (Standard, Short)");
+    // The same line /packs gives, on a line of its own. As a sentence of
+    // semicolons a server with twenty packs buried everything above it.
+    expect(open.data?.content).toContain(["Packs:", "**The Long Kiln** - Standard, Short"].join("\n"));
     const gated = await handleInteraction(setup("status"), { guilds, appUrl: "https://runlog.test/", now: () => NOW, gates: true, serverFeature: "server", grants: async () => [] });
     expect(gated.data?.content).toContain("no server plan yet");
     const paid = await handleInteraction(setup("status"), { guilds, appUrl: "https://runlog.test/", now: () => NOW, gates: true, serverFeature: "server", grants: async () => ["server"] });
