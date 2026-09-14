@@ -41,6 +41,21 @@ describe("offerOf", () => {
     expect(offer.needsPage).toBe("Open the run on the page");
   });
 
+  // Review finding: moves and undo escaped the live gate, and they are
+  // the two a press can take without consulting the primary at all.
+  it("offers no move and no undo on a run that is not live", () => {
+    const offer = offerOf({
+      ...base,
+      live: false,
+      moves: [{ id: "died", label: "Died" }],
+      canUndo: true,
+      lastResult: "A dry wind from the east.",
+    });
+    expect(offer.moves).toEqual([]);
+    expect(offer.undo).toBeNull();
+    expect(offer.needsPage).toBe("Open the run on the page");
+  });
+
   it("will not close a unit with something owed", () => {
     const offer = offerOf({ ...base, step: { kind: "finalizeUnit" } as never, stepLabel: "Close Day 4", owed: 1 });
     expect(offer.primary).toBeNull();

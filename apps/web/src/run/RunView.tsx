@@ -167,6 +167,17 @@ export function heldMove(move: { finalizes?: boolean }, owed: number): boolean {
 }
 
 /**
+ * Whether a move is asked of each racer rather than of the table: the pack
+ * marks it `per: contestant` and there is a roster to ask. The one rule
+ * behind `Moves`' split into a button per name, read by the offer as well,
+ * because a press with no name on it would record against the table what
+ * the page can only record against somebody.
+ */
+export function perRacer(move: { per?: string }, racing: { length: number }): boolean {
+  return move.per === "contestant" && racing.length > 0;
+}
+
+/**
  * Playing a run.
  *
  * Every noun on screen comes from the pack's vocabulary, and every step comes
@@ -264,6 +275,10 @@ export function RunView({
    */
   const [receipts, setReceipts] = useState<RollReceipt[]>([]);
 
+  // Who is on the board, read here as `Moves` reads it: the offer has to
+  // split a move the same way the panel does.
+  const racing = run.moderated ? (run.state?.contestants ?? []) : [];
+
   /**
    * What a deck may press, right now: one value for the snapshot this
    * device publishes and for the drive this device takes, so a press is
@@ -280,11 +295,19 @@ export function RunView({
         // A held move -- finalizing, with something still owed -- is the
         // page's own button disabled; a deck sees the same offer the page
         // would show, so it is left off rather than pressed and refused.
-        moves: run.moves.filter((m) => !heldMove(m.move, run.blockingObligations.length)).map((m) => ({ id: m.id, label: m.move.label })),
+        // A move the page splits into a button per racer is left off for
+        // the same reason: it is not one press on the page either.
+        moves: run.moves
+          .filter((m) => !heldMove(m.move, run.blockingObligations.length) && !perRacer(m.move, racing))
+          .map((m) => ({ id: m.id, label: m.move.label })),
         canUndo: run.canUndo,
         lastResult: run.state?.outcomes.at(-1) ? entryTextOf(pack, run.state.outcomes.at(-1)!) : null,
         owed: run.blockingObligations.length,
-        suggestions: run.state ? subjectSuggestions(pack, run.state).slice(0, 8) : [],
+        // Held to the step's own table, the way the card holds them: a
+        // step that constrains what may be named suggests only from there.
+        suggestions: run.state
+          ? subjectSuggestions(pack, run.state, run.activeStep ? constrainedByOf(run.activeStep.step) : undefined).slice(0, 8)
+          : [],
         // The same button the page itself would show between units: nothing
         // else is waiting to be read or answered first, and there is
         // nowhere left to go but the unit ahead. Ended, unstarted, watching,
@@ -317,6 +340,7 @@ export function RunView({
       run.pending,
       run.activeStep,
       run.moves,
+      racing,
       run.canUndo,
       run.blockingObligations.length,
       receipts.length,
@@ -2181,7 +2205,13 @@ function Attached({ tools, decks }: { tools: AttachedTool[]; decks: number }) {
           address beside it -- just its own count, the way a tool gets its
           own line. */}
       {decks > 0 && <h3 className="sectionTitle">{decks === 1 ? "Stream Deck" : `Stream Deck × ${decks}`}</h3>}
-      <p className="muted small">Listening, so what the dice say happens in the game. Results still read the same with nothing attached.</p>
+      {/* About a tool on somebody's game, so it is said only where there
+          is one: a deck presses buttons, it does not hear the dice. */}
+      {tools.length > 0 && (
+        <p className="muted small">
+          Listening, so what the dice say happens in the game. Results still read the same with nothing attached.
+        </p>
+      )}
     </section>
   );
 }
@@ -2327,7 +2357,7 @@ function Moves({ run, pack, state }: { run: ReturnType<typeof useRun>; pack: Pac
           const why = held ? "Settle what is owed first; this move closes the unit." : undefined;
           const closes = move.finalizes ? `Closes the ${pack.vocabulary.unit.one.toLowerCase()}.` : null;
 
-          if (move.per !== "contestant" || racing.length === 0) {
+          if (!perRacer(move, racing)) {
             return (
               <button key={id} className="choice" disabled={held} title={why} onClick={() => run.takeMove(id, move.label)}>
                 <strong>{move.label}</strong>

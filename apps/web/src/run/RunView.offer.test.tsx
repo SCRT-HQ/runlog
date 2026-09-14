@@ -7,7 +7,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { loadPackText } from "@runlog/rules-schema";
 import type { RunEvent } from "@runlog/engine";
 import type { Api } from "../sync/client.ts";
-import { heldMove, RunView } from "./RunView.tsx";
+import { heldMove, perRacer, RunView } from "./RunView.tsx";
 import { memoryRunStore } from "./store.ts";
 import { syncBus } from "../sync/bus.ts";
 
@@ -210,5 +210,22 @@ describe("heldMove", () => {
     expect(heldMove({ finalizes: true }, 0)).toBe(false);
     expect(heldMove({ finalizes: false }, 1)).toBe(false);
     expect(heldMove({}, 1)).toBe(false);
+  });
+});
+
+/**
+ * Review finding: a move the pack asks of each racer was offered to a
+ * deck as one press and taken against the table, though the page draws a
+ * button per name and records what it does against whoever was named.
+ * `perRacer` is the one rule behind both, tested as a rule: the demo pack
+ * this file renders has no moderated mode and no per-contestant move, so
+ * a roster cannot be got onto its board without authoring both.
+ */
+describe("perRacer", () => {
+  it("splits a per-contestant move only where there is a roster to split it over", () => {
+    expect(perRacer({ per: "contestant" }, [1, 2])).toBe(true);
+    expect(perRacer({ per: "contestant" }, [])).toBe(false);
+    expect(perRacer({ per: "table" }, [1, 2])).toBe(false);
+    expect(perRacer({}, [1, 2])).toBe(false);
   });
 });

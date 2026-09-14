@@ -69,7 +69,12 @@ export function offerOf(input: OfferInput): Offer {
   const undo = input.canUndo && input.lastResult ? { what: input.lastResult } : null;
   const bare = { seq: input.seq, moves, undo, presets: [] as Offer["presets"] };
 
-  if (!input.live) return { ...bare, primary: null, needsPage: "Open the run on the page" };
+  // A run nobody is playing -- not started, read-only, ended -- offers
+  // nothing at all, moves and undo included. They used to ride out on
+  // `bare`, and `takePress` reads only those two fields when it takes a
+  // move or an undo, so a deck could move a run the page itself would not
+  // let anyone touch.
+  if (!input.live) return { ...bare, moves: [], undo: null, primary: null, needsPage: "Open the run on the page" };
   if (!input.step) {
     if (input.between) return { ...bare, primary: { id: "enter", label: input.between, kind: "between" }, needsPage: null };
     return { ...bare, primary: null, needsPage: null };
