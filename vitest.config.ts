@@ -32,5 +32,7 @@ export default defineConfig({
       "tests/**/*.test.ts",
     ],
     environment: "node",
+    // Tells storage that a test run has nobody signed in; see tests/setup.ts.
+    setupFiles: ["./tests/setup.ts"],
   },
 });

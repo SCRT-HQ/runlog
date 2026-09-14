@@ -1,3 +1,5 @@
+import { onWhoChanged } from "../storage/who.ts";
+
 /**
  * The watch key, kept on the device that made it.
  *
@@ -18,6 +20,16 @@
  * own, and making one puts the other out.
  */
 const KEY = "runlog:watchKey";
+
+/**
+ * It goes when the account does.
+ *
+ * This key opens a socket on one account's runs, so it is that account's
+ * and not this browser's. It used to outlive a sign-out, sitting in
+ * localStorage for whoever opened the app next; `forgetWatchKey` existed
+ * for exactly this and nothing ever called it.
+ */
+onWhoChanged(() => forgetWatchKey());
 
 export function watchKeyHere(): string | null {
   try {
