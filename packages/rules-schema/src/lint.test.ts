@@ -417,3 +417,60 @@ describe("parsePack gates", () => {
     expect(parsePack(null).ok).toBe(false);
   });
 });
+
+/**
+ * Marks: the tags a pack promises will not move.
+ *
+ * An entry tag is a free string and nothing ever checked it, which is
+ * fine while the only reader is the pack itself. It stops being fine the
+ * moment something outside matches on one: a mapping that fires on
+ * `curse` goes quiet for ever when an author types `curses`, and the run
+ * simply stops doing anything.
+ */
+describe("declared marks", () => {
+  // Through the schema, as every other test here does: the linter reads
+  // defaults the raw object does not carry.
+  const withTags = (tags: string[], marks?: Record<string, Record<string, never>>) =>
+    Pack.parse({
+      ...basePack(),
+      ...(marks ? { marks } : {}),
+      // The base pack's own table, with tags added to one entry: a
+      // half-built table makes the linter fall over on something else.
+      tables: {
+        simple: {
+          resolution: "lookup",
+          title: "Simple",
+          roll: "d6",
+          entries: [
+            { id: "a", range: [1, 3], text: "low", tags },
+            { id: "b", range: [4, 6], text: "high" },
+          ],
+        },
+      },
+    });
+
+  it("says nothing at all when a pack declares none, which is every pack so far", () => {
+    const d = lintPack(withTags(["curse", "anything", "at all"]));
+    expect(d.filter((x) => x.code.startsWith("mark/"))).toEqual([]);
+  });
+
+  it("catches a tag the pack never declared", () => {
+    const d = lintPack(withTags(["curse", "typo"], { curse: {} }));
+    const said = d.filter((x) => x.code === "mark/undeclared");
+    expect(said).toHaveLength(1);
+    expect(said[0]?.message).toContain("typo");
+  });
+
+  it("catches the rename, which is the one that goes quiet", () => {
+    // The author renamed curse to curses on the entry and forgot the
+    // declaration. Both halves fire, and between them they say exactly
+    // what happened.
+    const d = lintPack(withTags(["curses"], { curse: {} }));
+    expect(d.find((x) => x.code === "mark/undeclared")?.message).toContain("curses");
+    expect(d.find((x) => x.code === "mark/uncarried")?.message).toContain("will never fire");
+  });
+
+  it("is a warning, not an error: a pack with a loose tag still plays", () => {
+    expect(lintPack(withTags(["typo"], { curse: {} })).filter((x) => x.code.startsWith("mark/")).every((x) => x.level === "warning")).toBe(true);
+  });
+});

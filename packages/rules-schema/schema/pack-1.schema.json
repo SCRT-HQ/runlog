@@ -60,6 +60,32 @@
         "maxLength": 40
       }
     },
+    "marks": {
+      "description": "The tags this pack's entries carry that anything outside the pack may match on, declared so they can be relied upon. Entry tags are free strings; a pack that declares its marks is promising these ones will not quietly be renamed, and the linter says so when an entry carries a tag that was never declared. Absent, tags go on being free and nothing checks them.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 40
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "description": "What to call it on screen where something has to name it; the tag itself, otherwise.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "note": {
+            "description": "What carrying this mark means, for whoever is writing something that matches on it.",
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "requires": {
       "description": "What a person needs before playing, shown in the marketplace and the rulebook: the game and a system that runs it, mods or training packs, a wheel, a kitchen, supplies. Mark the ones that are nice to have `optional`; results can `need` those and be drawn again for a player who lacks them.",
       "maxItems": 20,
