@@ -32,9 +32,18 @@ export function ControlSettings({
   onControl,
   onSetup,
   onHandOut,
+  reachable: reach,
 }: {
   pack: Pack;
   record: StoredRun | null;
+  /**
+   * What the run already found out about being reachable.
+   *
+   * The run asks on open; this panel asked again on mount and kept its
+   * own answer, so the two could disagree and the panel's was the one on
+   * screen. Absent outside a run, where the panel has no run to be about.
+   */
+  reachable?: { link: string | null; key: string | null; working: boolean } | undefined;
   /** The roster of a moderated run, so each racer can be given their own address. */
   seats?: string[];
   onControl?: (control: unknown) => void | Promise<void>;
@@ -66,7 +75,9 @@ export function ControlSettings({
    * remembers what it made, so the address is finished today and
    * tomorrow rather than only in the moment.
    */
-  const [key, setKey] = useState<string | null>(() => watchKeyHere());
+  const [made, setKey] = useState<string | null>(() => watchKeyHere());
+  // Whichever knows: this panel if it minted one, else the run.
+  const key = made ?? reach?.key ?? null;
   const [busy, setBusy] = useState(false);
   /** So a failed mint is not retried on every render. */
   const asked = useRef(false);
@@ -319,7 +330,16 @@ export function ControlSettings({
               ? "The address the tool dials. Its key was made on another device and cannot be shown here; a new one finishes this address and stops the old one working."
               : "The address the tool dials, once it has a key. Making one needs a connection."}
         </p>
-        <code className="askAddress">{address}</code>
+        {key ? (
+          <code className="askAddress">{address}</code>
+        ) : reach?.working ? (
+          /* Being set up right now. Not an address yet, and saying so
+             beats printing one with REPLACE-WITH-YOUR-WATCH-KEY in it,
+             which looks copyable and is not. */
+          <p className="askAddress waiting" aria-live="polite">
+            Setting this {noun} up to be reached…
+          </p>
+        ) : null}
         {!reachable && (
           <p className="muted small">
             <strong>This address cannot work yet.</strong> It names this {noun}, and only a {noun} open to watchers can be reached. A tool given it now is refused at the
