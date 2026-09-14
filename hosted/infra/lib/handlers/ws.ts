@@ -334,6 +334,67 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     if (!member) return { statusCode: 200 };
     const line = JSON.stringify({ t: "gesture", id, kind, data, ...(member.name ? { from: member.name } : {}), at: now() });
     const poster = deps.poster;
+
+    /**
+     * The setup, handed out again on purpose.
+     *
+     * Every other gesture is passed on. This one means something to the
+     * server, because the thing standing in the way of handing a setup
+     * out twice is a record the server keeps.
+     *
+     * `termsGiven` exists so that a tool which dropped and reconnected is
+     * not given the runes again, and it has to go on doing that. But a
+     * run whose host has picked a different setup and pressed the button
+     * is not a reconnect; it is somebody deciding that this table is
+     * playing with different gear from now on. So the record is cleared
+     * here and rebuilt from what actually goes out, and a reconnect a
+     * second later is short of the gifts exactly as before.
+     *
+     * The owner only. Every member can send a gesture, and that is right
+     * for dice in the air and a step opening; handing somebody a hundred
+     * and twenty thousand runes is not something one player at the table
+     * should be able to do to the others.
+     *
+     * Asked of the run rather than of the member row. Both say the same
+     * thing today, and the run is the one that says it first: a member
+     * row carries whatever was written into it when somebody joined.
+     */
+    if (kind === "setup") {
+      if (session?.meta.ownerSub !== conn.sub) return { statusCode: 200 };
+      if (!poster) return { statusCode: 200 };
+      const watchers = await deps.live.watchers(id);
+      const attached = watchers.filter((w) => w.control);
+      const profile = attached.length > 0 ? profileOf((await deps.store.getSnapshot(id))?.snapshot) : null;
+      const gave: string[] = [];
+      await Promise.all(
+        watchers.map(async (w) => {
+          // The table is told in words that it happened; a tool is told
+          // in operations, which is the same split as everywhere else.
+          let out = w.connectionId === connectionId ? null : line;
+          if (w.control) {
+            if (!profile || !fits(profile, w.app)) return;
+            // `false`, because being handed one is the whole point: the
+            // record that would hold the gifts back has just been dropped.
+            const setup = setupFor(profile, false);
+            if (!setup) return;
+            out = setup.frame;
+            if (setup.gave) gave.push(w.seat || "the table");
+          }
+          if (!out) return;
+          try {
+            if ((await poster.post(w.connectionId, out)) === "gone") await deps.live.disconnect(w.connectionId);
+          } catch (error) {
+            console.error("live: could not hand out the setup", error);
+          }
+        }),
+      );
+      // Written after the fact, from what went out rather than from what
+      // was meant to: a tool that was not reachable did not get its
+      // setup, and saying it did would leave it short on the next attach.
+      await deps.store.updateSession(id, now(), { termsGiven: [...new Set(gave)] });
+      return { statusCode: 200 };
+    }
+
     if (poster) {
       const watchers = (await deps.live.watchers(id)).filter((w) => w.connectionId !== connectionId);
       // A tool attached to somebody's game is told in operations rather

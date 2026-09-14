@@ -575,6 +575,8 @@ export function RunView({
           record={run.record ?? null}
           onAsks={run.setAsks}
           onControl={run.setControl}
+          onSetup={run.setSetup}
+          onHandOut={() => (run.record ? sync.gesture(run.record.runId, "setup") : false)}
           seats={(run.state?.contestants ?? []).map((c) => c.name)}
           onControls={() => {
             setSettingsOpen(false);

@@ -405,6 +405,52 @@ describe("telling the listeners", () => {
       expect(ops().at(-1)?.ops?.map((o) => o.op)).toEqual(["flag.set"]);
     });
 
+    /**
+     * Handing the setup out again, on purpose.
+     *
+     * The record that stops a gift going twice exists for a reconnect. A
+     * host who has picked a different setup and pressed the button is not
+     * reconnecting, so the record is dropped and rebuilt from what
+     * actually went out.
+     */
+    it("hands the setup out again when the owner asks, gifts and all", async () => {
+      const gift = { control: { setup: [{ op: "flag.set", args: { name: "player.noRoll", value: true } }, { op: "runes.give", args: { amount: 50000 }, once: true }] } };
+      const { live, posted, d } = attached(memoryLive(), gift);
+      await live.connect("tool", "public:shared", "", { control: true, seat: "Mira", run: "shared" });
+      await live.watch("tool", "shared", "public:shared", "", { control: true, seat: "Mira", run: "shared" });
+      await route({ requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "hello", app: "TarnishedTool" }) }, d);
+      const ops = () => posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l) as { t: string; ops?: Array<{ op: string }> }).filter((f) => f.t === "apply");
+      expect(ops().at(-1)?.ops?.map((o) => o.op)).toEqual(["flag.set", "runes.give"]);
+      expect(patched.at(-1)).toEqual(["shared", { termsGiven: ["Mira"] }]);
+
+      // The owner's socket, saying hand it out.
+      await live.connect("host", "user_1", "");
+      await live.watch("host", "shared", "", "");
+      posted.length = 0;
+      await route({ requestContext: { routeKey: "$default", connectionId: "host" }, body: JSON.stringify({ t: "gesture", id: "shared", kind: "setup" }) }, d);
+
+      // The runes again: that is the entire point of the button.
+      expect(ops().at(-1)?.ops?.map((o) => o.op)).toEqual(["flag.set", "runes.give"]);
+      // And written down again, so the next reconnect is short of them.
+      expect(patched.at(-1)).toEqual(["shared", { termsGiven: ["Mira"] }]);
+    });
+
+    it("refuses to hand the setup out for anybody but the owner", async () => {
+      const gift = { control: { setup: [{ op: "runes.give", args: { amount: 50000 }, once: true }] } };
+      const { live, posted, d } = attached(memoryLive(), gift);
+      await live.connect("tool", "public:shared", "", { control: true, seat: "Mira", run: "shared" });
+      await live.watch("tool", "shared", "public:shared", "", { control: true, seat: "Mira", run: "shared" });
+      // user_2 is at the table and is not whose run it is.
+      await live.connect("other", "user_2", "");
+      await live.watch("other", "shared", "", "");
+      posted.length = 0;
+      const r = await route({ requestContext: { routeKey: "$default", connectionId: "other" }, body: JSON.stringify({ t: "gesture", id: "shared", kind: "setup" }) }, d);
+      expect(r.statusCode).toBe(200);
+      // Nothing reached the tool, and nothing was passed on as a gesture
+      // either: one player cannot re-equip the table.
+      expect(posted).toEqual([]);
+    });
+
     it("says nothing where the host has not switched asks on, since attaching is not permission", async () => {
       const { live, posted, d } = attached();
       await live.connect("tool", "public:open", "", { control: true, run: "open" });
