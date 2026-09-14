@@ -27,6 +27,8 @@ export interface LiveSocket {
   watch(id: string | null): void;
   /** Pass a gesture to everyone watching a run; false when the line is down (a gesture is not worth queueing). */
   gesture(id: string, kind: string, data?: Record<string, unknown>): boolean;
+  /** The verdict on one press, to the deck that made it. */
+  drove(to: string, ref: string, ok: boolean, say?: string): void;
   close(): void;
   readonly open: boolean;
 }
@@ -66,12 +68,48 @@ export function parseGesture(data: unknown): Gesture | null {
   return null;
 }
 
+export interface Drive {
+  t: "drive";
+  from: string;
+  run: string;
+  seq: number;
+  ref: string;
+  press: string;
+  move?: string;
+  answer?: Record<string, unknown>;
+}
+
+/** A press from a deck of this account's own. */
+export function parseDrive(data: unknown): Drive | null {
+  if (typeof data !== "string") return null;
+  try {
+    const m = JSON.parse(data) as Record<string, unknown>;
+    if (!m || m["t"] !== "drive") return null;
+    if (typeof m["from"] !== "string" || typeof m["run"] !== "string" || typeof m["ref"] !== "string") return null;
+    if (typeof m["seq"] !== "number" || typeof m["press"] !== "string") return null;
+    return {
+      t: "drive",
+      from: m["from"],
+      run: m["run"],
+      seq: m["seq"],
+      ref: m["ref"],
+      press: m["press"],
+      ...(typeof m["move"] === "string" ? { move: m["move"] } : {}),
+      ...(m["answer"] && typeof m["answer"] === "object" ? { answer: m["answer"] as Record<string, unknown> } : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export interface LiveOptions {
   /** Where to connect, with a fresh token each time. */
   url: () => Promise<string>;
   onChanged: (changed: Changed) => void;
   /** A gesture from someone at the table of a watched run. */
   onGesture?: (gesture: Gesture) => void;
+  /** A press from a deck of this account's own, at a run this device is holding. */
+  onDrive?: (drive: Drive) => void;
   /** Called with true on open and false on close, for the poll to adjust. */
   onState?: (open: boolean) => void;
   /** The constructor, so a test can hand in a pretend socket. */
@@ -164,6 +202,11 @@ export function openLive(opts: LiveOptions): LiveSocket {
         opts.onChanged(changed);
         return;
       }
+      const drive = parseDrive(data);
+      if (drive) {
+        opts.onDrive?.(drive);
+        return;
+      }
       const gesture = parseGesture(data);
       if (gesture) opts.onGesture?.(gesture);
     };
@@ -195,6 +238,9 @@ export function openLive(opts: LiveOptions): LiveSocket {
       if (!open || !socket) return false;
       socket.send(JSON.stringify({ t: "gesture", id, kind, data }));
       return true;
+    },
+    drove(to, ref, ok, say) {
+      if (open && socket) socket.send(JSON.stringify({ t: "drove", to, ref, ok, ...(say ? { say } : {}) }));
     },
     watch(id) {
       if (watching === id) return;

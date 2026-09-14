@@ -95,7 +95,7 @@ export function LibraryView({
   useEffect(() => {
     reload();
     return syncBus.subscribe((news) => {
-      if (news.kind === "run") reload();
+      if ((news.t === "localChange" || news.t === "pulled") && news.kind === "run") reload();
     });
   }, []);
 

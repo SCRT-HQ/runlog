@@ -72,6 +72,7 @@ import { PlanError } from "../sync/client.ts";
 import { liveLinkOf } from "../live/route.ts";
 import { entryTextOf, paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
 import { offerOf } from "./offer.ts";
+import { takePress, type Verdict } from "./takePress.ts";
 import { isEmpty, tidy, type ControlProfile } from "../control/profile.ts";
 import { chosenFrom, withChosen, type ChosenSetup } from "../control/setups.ts";
 import { SetupPicker } from "./SetupPicker.tsx";
@@ -173,6 +174,38 @@ export function RunView({
   const publishing = shared || decks > 0;
   // The race this run is in, if any: the side column's panel and the snapshot both read it.
   const raceView = useRace(run.record, run.state, run.events);
+  /**
+   * What a deck may press, right now: one value for the snapshot this
+   * device publishes and for the drive this device takes, so a press is
+   * always checked against the same offer it was shown.
+   */
+  const currentOffer = useMemo(
+    () =>
+      offerOf({
+        seq: run.events.length,
+        live: Boolean(run.started) && !run.readOnly && run.state?.status !== "ended",
+        settled: run.pending === null,
+        step: run.activeStep?.step ?? null,
+        stepLabel: run.state ? activeStepLabel(pack, run.activeStep) : null,
+        moves: run.moves.map((m) => ({ id: m.id, label: m.move.label })),
+        canUndo: run.canUndo,
+        lastResult: run.state?.outcomes.at(-1) ? entryTextOf(pack, run.state.outcomes.at(-1)!) : null,
+        owed: run.blockingObligations.length,
+        suggestions: run.state ? subjectSuggestions(pack, run.state).slice(0, 8) : [],
+      }),
+    [
+      run.events.length,
+      run.started,
+      run.readOnly,
+      run.state,
+      run.pending,
+      run.activeStep,
+      run.moves,
+      run.canUndo,
+      run.blockingObligations.length,
+      pack,
+    ],
+  );
   useEffect(() => {
     if (!api || !publishing || !run.record || !run.state) return;
     const record = run.record;
@@ -196,25 +229,14 @@ export function RunView({
         .putSnapshot(record.runId, {
           ...snapshotOf(pack, state, events, undefined, { race }),
           paper: paperOf(pack, state.mode),
-          offer: offerOf({
-            seq: events.length,
-            live: Boolean(run.started) && !run.readOnly && state.status !== "ended",
-            settled: run.pending === null,
-            step: run.activeStep?.step ?? null,
-            stepLabel: activeStepLabel(pack, run.activeStep),
-            moves: run.moves.map((m) => ({ id: m.id, label: m.move.label })),
-            canUndo: run.canUndo,
-            lastResult: state.outcomes.at(-1) ? entryTextOf(pack, state.outcomes.at(-1)!) : null,
-            owed: run.blockingObligations.length,
-            suggestions: subjectSuggestions(pack, state).slice(0, 8),
-          }),
+          offer: currentOffer,
           ...control,
         })
         .catch(() => {});
     }, 800);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, publishing, decks, run.events, pack, raceView.race, run.record?.control, run.record?.setup]);
+  }, [api, publishing, decks, run.events, pack, raceView.race, run.record?.control, run.record?.setup, currentOffer]);
 
   /**
    * Starting a race, or joining one: an ordinary run of this pack with the
@@ -304,6 +326,68 @@ export function RunView({
       if (rolled) setOthersRoll(rolled);
     });
   }, [run.record?.runId]);
+
+  /**
+   * A deck's own presses, kept only long enough to answer a retry with
+   * the same verdict; a run underneath it changing makes a ref from
+   * before mean nothing, so it is emptied along with the run id.
+   */
+  const driveSeen = useRef(new Map<string, Verdict>());
+  useEffect(() => {
+    driveSeen.current = new Map();
+  }, [run.record?.runId]);
+
+  /**
+   * A press from a deck, taken here because this is the device holding the
+   * run. What the deck may press is the offer this device published; what
+   * happens when it does is the same function the page's own button calls.
+   */
+  useEffect(() => {
+    if (!publishing || !run.record || !run.state) return;
+    const runId = run.record.runId;
+    const active = run.activeStep;
+    return syncBus.subscribe((news) => {
+      if (news.t !== "drive" || news.run !== runId) return;
+      const verdict = takePress(
+        news,
+        { seq: run.events.length, offer: currentOffer, seen: driveSeen.current },
+        {
+          primary: () => {
+            const id = currentOffer.primary?.id;
+            if (id === "enter") {
+              run.enterUnit();
+              return;
+            }
+            if (!active) return;
+            if (id === "roll" && active.step.kind === "rollTable") {
+              const table = pack.tables[active.step.table];
+              run.begin({
+                kind: "table",
+                tableId: active.step.table,
+                keyPrefix: `u${run.state?.unit ?? 0}:${active.phase.id}#${active.index}`,
+                label: table?.title ?? active.step.table,
+                completes: { phase: active.phase, index: active.index },
+              });
+            } else if (id === "carry-on") {
+              run.completeStep(active.phase, active.index);
+            } else if (id === "close") {
+              run.closeAndEnter(active.phase, active.index);
+            }
+          },
+          move: (id) => {
+            const m = currentOffer.moves.find((mv) => mv.id === id);
+            if (m) run.takeMove(m.id, m.label);
+          },
+          undo: () => run.undo(),
+          answer: (a) => {
+            if (!active) return;
+            run.declareSubject(active.phase, active.index, String(a["subject"] ?? ""));
+          },
+        },
+      );
+      sync.drove(news.from, news.ref, verdict.ok, verdict.say);
+    });
+  }, [publishing, run, currentOffer, sync, pack]);
   const seen = useRef<number | null>(null);
   const awaiting = useRef<Omit<RollReceipt, "outcomes"> | null>(null);
   // How many answers this view has given, and how many it had given when
