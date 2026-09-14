@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Pack, Setup } from "@runlog/rules-schema";
 import { builtins } from "../control/builtin.ts";
-import { chose, forTool, setupsHere, type ChosenSetup } from "../control/setups.ts";
+import { catalogFor, type ToolCatalog } from "../control/catalog.ts";
+import { listsFor, type Lists } from "../control/lists.ts";
+import { asProfileOps, asSetupOps, combine, creditLine, edit, forTool, setupsHere, type ChosenSetup } from "../control/setups.ts";
+import { Ops } from "./Ops.tsx";
 
 /**
  * Choosing what you start with, where the run starts.
@@ -11,6 +14,15 @@ import { chose, forTool, setupsHere, type ChosenSetup } from "../control/setups.
  * the dice do exactly the same things to both. That is a choice about
  * this run, so it is made where the run is made, beside the mode, and
  * not somewhere in a settings dialog behind it.
+ *
+ * Three things happen here, in the order somebody does them. Several
+ * setups can be chosen rather than one, because "a knight's armor" and
+ * "enough smithing stones to use it" are two different sentences and
+ * wanting both is the ordinary case. What they hand over is then shown
+ * as a list, which is the same editor the settings dialog uses for a
+ * run's terms. And the list can be changed, because a setup that is
+ * almost right is more common than one that is exactly right, and the
+ * alternative is starting the run and then fixing it.
  *
  * Nothing here is shown unless there is something to show. A pack whose
  * game has no tool attached to it, or a tool nobody has written a setup
@@ -26,6 +38,9 @@ export function SetupPicker({
   onChoose: (chosen: ChosenSetup | null) => void;
 }) {
   const [offered, setOffered] = useState<Setup[]>([]);
+  const [tool, setTool] = useState<string | undefined>(undefined);
+  const [lists, setLists] = useState<Lists>({});
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -38,19 +53,49 @@ export function SetupPicker({
        * imported their own profile for some other tool will see this
        * section once the run has started and they have loaded it.
        */
-      const tool = (await builtins()).find((b) => b.pack === pack.id)?.profile.tool;
+      const named = (await builtins()).find((b) => b.pack === pack.id)?.profile.tool;
       const all = await setupsHere();
-      if (live) setOffered(forTool(all, tool));
+      if (!live) return;
+      setTool(named);
+      setOffered(forTool(all, named));
+      if (named) setLists(await listsFor(named));
     })();
     return () => {
       live = false;
     };
   }, [pack.id]);
 
+  /** Which setups are ticked, by id, in the order they were ticked. */
+  const picked = useMemo(() => (chosen?.from ?? []).map((f) => f.id), [chosen]);
+
+  /**
+   * What the ticked setups hand over, before anything was done to it.
+   *
+   * Recomputed from the setups rather than remembered, so it is the
+   * thing `edit` compares against to work out whether the list in front
+   * of the player is still theirs or has been changed.
+   */
+  const seeded = useMemo(
+    () => combine(picked.map((id) => offered.find((s) => s.id === id)).filter((s): s is Setup => s !== undefined))?.ops ?? [],
+    [picked, offered],
+  );
+
+  const catalog: ToolCatalog | null = tool ? catalogFor(tool) : null;
+
   if (offered.length === 0) return null;
 
   const v = pack.vocabulary.setup;
   const word = v.one.toLowerCase();
+  const run = pack.vocabulary.run.one.toLowerCase();
+
+  /** Tick or untick one, keeping whatever the player had already edited. */
+  const toggle = (setup: Setup) => {
+    const next = picked.includes(setup.id) ? picked.filter((id) => id !== setup.id) : [...picked, setup.id];
+    const setups = next.map((id) => offered.find((s) => s.id === id)).filter((s): s is Setup => s !== undefined);
+    onChoose(combine(setups));
+  };
+
+  const credit = creditLine(chosen);
 
   return (
     <>
@@ -58,25 +103,60 @@ export function SetupPicker({
         {v.one} <span className="muted">optional</span>
       </h3>
       <p className="muted small">
-        What the game is set to, and what you start holding, once a tool is attached. It changes what this{" "}
-        {pack.vocabulary.run.one.toLowerCase()} is like to play without changing a thing about what the dice can do.
+        What the game is set to, and what you start holding, once a tool is attached. It changes what this {run} is like to play without
+        changing a thing about what the dice can do.
       </p>
-      <div className="choices">
-        <button className={`choice ${chosen ? "" : "on"}`} onClick={() => onChoose(null)}>
-          <strong>None</strong>
-          <span className="muted small">Start as the game would have you start.</span>
-        </button>
-        {offered.map((setup) => (
-          <button key={setup.id} className={`choice ${chosen?.id === setup.id ? "on" : ""}`} onClick={() => onChoose(chose(setup))}>
-            <strong>{setup.title}</strong>
-            <span className="muted small">{setup.description}</span>
+
+      <button className="chipAdd setupSummary" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {credit ?? `Choose ${aOr(v.one)}`}
+        <span className="muted"> {open ? "▴" : "▾"}</span>
+      </button>
+
+      {open && (
+        <div className="choices">
+          <button className={`choice ${picked.length === 0 ? "on" : ""}`} onClick={() => onChoose(null)}>
+            <strong>None</strong>
+            <span className="muted small">Start as the game would have you start.</span>
           </button>
-        ))}
-      </div>
+          {offered.map((setup) => (
+            <button
+              key={setup.id}
+              className={`choice ${picked.includes(setup.id) ? "on" : ""}`}
+              aria-pressed={picked.includes(setup.id)}
+              onClick={() => toggle(setup)}
+            >
+              <strong>{setup.title}</strong>
+              <span className="muted small">{setup.description}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {(chosen?.ops.length ?? 0) > 0 || picked.length > 0 ? (
+        <>
+          <h4 className="stepLabel">What that hands over</h4>
+          <p className="muted small">
+            {picked.length > 1
+              ? `In the order you picked them. Nothing is merged: where two say the same thing, the last one wins, and a line you do not want is a line you can remove.`
+              : `Change any of it. What is here is what goes out when a tool attaches.`}
+          </p>
+          <Ops
+            catalog={catalog}
+            lists={lists}
+            ops={asProfileOps(chosen?.ops ?? [])}
+            onChange={(ops) => onChoose(edit(chosen, asSetupOps(ops), seeded))}
+          />
+        </>
+      ) : null}
+
       <p className="muted small">
-        A {word} needs a tool attached to do anything. With none attached it is simply not applied, and the{" "}
-        {pack.vocabulary.run.one.toLowerCase()} plays as it always has.
+        A {word} needs a tool attached to do anything. With none attached it is simply not applied, and the {run} plays as it always has.
       </p>
     </>
   );
+}
+
+/** "a Loadout" or "an Outfit", for a label that could be either. */
+function aOr(word: string): string {
+  return `${/^[aeiou]/i.test(word) ? "an" : "a"} ${word}`;
 }
