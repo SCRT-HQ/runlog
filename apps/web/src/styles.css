@@ -1481,9 +1481,14 @@ button:disabled,
    up. The row does not wrap at all; the menus and fields shrink, down to
    where they are still readable, and past that the row scrolls sideways
    on its own. The button is never the thing that gives. */
+/* Wraps rather than scrolls sideways.
+   Most rows are an operation, a name and a number, and fit. A weapon is
+   five controls -- name, level, ash of war, affinity, count -- and two
+   of its names are long enough that something has to give. A row that
+   wraps puts the overflow on a second line where it can be read; a row
+   that scrolls hides it behind a gesture nobody makes on a form. */
 .opRow {
-  flex-wrap: nowrap;
-  overflow-x: auto;
+  flex-wrap: wrap;
 }
 .opRow > select {
   min-width: 5rem;
@@ -1491,16 +1496,40 @@ button:disabled,
 .opRow > input {
   min-width: 3.5rem;
 }
+/* Always at the right edge, however few fields the row has before it.
+   "Give runes" is an operation and an amount, and without this its
+   remove button lands halfway along a column of rows whose buttons all
+   sit at the end. */
 .opRow > button {
   flex: none;
+  margin-left: auto;
 }
 /* The name is the long argument and the only one whose length is not
    known: "Somber Ancient Dragon Smithing Stone" is three times an
    amount. So it takes the row's spare width instead of being cut off at
    a guess, and the row stops needing to be scrolled sideways to read. */
+/* The op select is the same width on every row and the widest fixed
+   thing in it, so it is capped: what it was taking came out of the
+   names beside it. */
+/* A select sizes itself to its widest option, so this one was as wide
+   as "Say when an item is picked up" on every row, whatever it said.
+   Capped at what the common labels need, and the rest of the row gets
+   the difference. */
+.opRow > select:first-child {
+  flex: 0 0 12rem;
+}
+/* The name takes the row's spare width. The floor is what keeps a
+   weapon row -- five controls, two of them names -- on one line rather
+   than wrapping its affinity and count onto a second. */
 .opRow > input.opName {
-  flex: 1 1 10rem;
-  min-width: 8rem;
+  flex: 1 1 10.5rem;
+  min-width: 0;
+}
+/* Sized to the largest number it can hold, by the field itself, and not
+   allowed to grow past it: whatever these take comes out of the name. */
+.opRow > input.opNum {
+  flex: 0 0 auto;
+  min-width: 0;
 }
 /* A move that belongs to one racer: the move reads as one thing, and
    the names under it are the press. */

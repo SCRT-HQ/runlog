@@ -191,6 +191,16 @@ function Arg({ arg, op, lists, onChange }: { arg: ArgDef; op: ProfileOp; lists: 
   // A number, where the range depends on which one is being set.
   const range =
     op.op === "value.set" && arg.name === "value" ? rangeOfValue(String(op.args["name"] ?? "")) : { least: arg.least, most: arg.most };
+  /*
+   * Wide enough for the largest number it will hold, and no wider.
+   *
+   * Every one of these was seven rem, which is right for the rune
+   * amount and absurd for a weapon's level: that one is nought to
+   * twenty-five and can never be three characters. The width they were
+   * all taking came out of the name beside them, which is the field
+   * whose length actually varies.
+   */
+  const digits = Math.max(String(range?.most ?? 999999).replace("-", "").length, String(range?.least ?? 0).replace("-", "").length);
   return (
     <input
       type="number"
@@ -200,8 +210,9 @@ function Arg({ arg, op, lists, onChange }: { arg: ArgDef; op: ProfileOp; lists: 
       title={range && range.least !== undefined ? `${range.least} to ${range.most}` : arg.note}
       {...(range?.least !== undefined ? { min: range.least } : {})}
       {...(range?.most !== undefined ? { max: range.most } : {})}
+      className="opNum"
       onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
-      style={{ width: "7rem" }}
+      style={{ width: `calc(${digits}ch + 3rem)` }}
     />
   );
 }

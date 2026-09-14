@@ -125,8 +125,7 @@ export function SetupPicker({
         {v.one} <span className="muted">optional</span>
       </h3>
       <p className="muted small">
-        What the game is set to, and what you start holding, once a tool is attached. It changes what this {run} is like to play without
-        changing a thing about what the dice can do.
+        What the game is set to, and what you start holding, once a tool is attached. The dice do the same either way.
       </p>
 
       <div className="setupMenu" ref={menu}>
@@ -164,13 +163,8 @@ export function SetupPicker({
       </div>
 
       <h4 className="stepLabel">What that hands over</h4>
-      <p className="muted small">
-        {picked.length > 1
-          ? `In the order you picked them. Nothing is merged: where two say the same thing, the last one wins, and a line you do not want is a line you can remove.`
-          : picked.length === 1
-            ? `Change any of it. What is here is what goes out when a tool attaches.`
-            : `Nothing chosen, so nothing goes out. Add something below to write your own without starting from ${aOr(word)}.`}
-      </p>
+      {picked.length > 1 && <p className="muted small">In the order you picked them. Where two say the same thing, the last one wins.</p>}
+      {picked.length === 0 && <p className="muted small">Nothing yet. Pick one above, or add a line of your own.</p>}
       <Ops
         catalog={catalog}
         lists={lists}
@@ -179,9 +173,7 @@ export function SetupPicker({
         addLabel={`Add custom ${word}`}
       />
 
-      <p className="muted small">
-        A {word} needs a tool attached to do anything. With none attached it is simply not applied, and the {run} plays as it always has.
-      </p>
+      <p className="muted small">With no tool attached, none of it is applied and the {run} plays as it always has.</p>
     </>
   );
 }
