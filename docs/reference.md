@@ -26,6 +26,7 @@ A complete, self-contained description of a dice-driven creative-practice game. 
 | `homepage` | `string` | - | Where to find out more. |
 | `category` | `string` | - | What kind of thing this is, in a word or two, for a marketplace to group by: everyday, games, craft, fitness, cooking, writing… |
 | `tags` | `string`[] | - | Free tags for a marketplace to filter by: the game it is for, the hobby, the shape of play. Short, and in the words a person would search for. |
+| `marks` | map of `object` | - | The tags this pack's entries carry that anything outside the pack may match on, declared so they can be relied upon. Entry tags are free strings; a pack that declares its marks is promising these ones will not quietly be renamed, and the linter says so when an entry carries a tag that was never declared. Absent, tags go on being free and nothing checks them. |
 | `requires` | `object`[] | - | What a person needs before playing, shown in the marketplace and the rulebook: the game and a system that runs it, mods or training packs, a wheel, a kitchen, supplies. Mark the ones that are nice to have `optional`; results can `need` those and be drawn again for a player who lacks them. |
 | `license` | `object` | yes | Licensing, and whether the app may share this pack's text. |
 | `capabilities` | `deferredTriggers` \| `seededRuns` \| `decks` \| `standardDeck` \| `resources` \| `counters` \| `coopRoles` \| `backwardTargeting` \| `timers` \| `journal` \| `bandsResolution` \| `opposedResolution` \| `keyedResolution` \| `moderated` \| `clockRules`[] | - | Engine features this pack needs. Declaring them lets an older app refuse the pack with a clear message instead of misplaying it. Default: `[]`. |
@@ -51,6 +52,13 @@ A complete, self-contained description of a dice-driven creative-practice game. 
 | `fixtures` | `object`[] | - | Self-tests shipped with the pack. |
 | `issue` | `object` | - | Marks this copy as issued to one person. Covered by the signature, so removing it invalidates that. |
 | `signature` | `object` | - | Evidence of who produced this pack. Does not restrict copying, nothing can, since the app must read every word to play it, but proves the contents are unaltered since the author signed them. |
+
+## `pack.marks.*`
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `label` | `string` | - | What to call it on screen where something has to name it; the tag itself, otherwise. |
+| `note` | `string` | - | What carrying this mark means, for whoever is writing something that matches on it. |
 
 ## `pack.requires[]`
 

@@ -1086,6 +1086,20 @@ export const Pack = z
       .max(12)
       .optional()
       .describe("Free tags for a marketplace to filter by: the game it is for, the hobby, the shape of play. Short, and in the words a person would search for."),
+    marks: z
+      .record(
+        z.string().min(1).max(40),
+        z
+          .object({
+            label: z.string().min(1).max(80).optional().describe("What to call it on screen where something has to name it; the tag itself, otherwise."),
+            note: z.string().max(200).optional().describe("What carrying this mark means, for whoever is writing something that matches on it."),
+          })
+          .strict(),
+      )
+      .optional()
+      .describe(
+        "The tags this pack's entries carry that anything outside the pack may match on, declared so they can be relied upon. Entry tags are free strings; a pack that declares its marks is promising these ones will not quietly be renamed, and the linter says so when an entry carries a tag that was never declared. Absent, tags go on being free and nothing checks them.",
+      ),
     requires: z
       .array(Requirement)
       .max(20)

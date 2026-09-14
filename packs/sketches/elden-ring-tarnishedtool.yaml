@@ -20,7 +20,7 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-tarnishedtool
-version: "3.2.0"
+version: "3.3.0"
 title: "Elden Ring: TarnishedTool"
 author: Runlog
 description: >-
@@ -33,6 +33,44 @@ description: >-
 
 category: games
 tags: [Elden Ring, souls, solo, timed, effects]
+
+# The tags anything outside this pack may match on.
+#
+# An entry tag is a free string and nothing ever checked it, which is fine
+# while the only reader is the pack itself. It stops being fine the moment
+# a mapping fires on `curse` and somebody types `curses`: the rule goes
+# quiet for ever and nothing anywhere says so.
+#
+# Declaring them is this pack promising these particular words will not
+# move. The linter holds it to the promise in both directions: an entry
+# carrying a tag that is not here, and a tag here that no entry carries.
+marks:
+  curse:
+    label: Curse
+    note: Something the world does to the run.
+  blessing:
+    label: Blessing
+    note: Something the world does for it.
+  objective:
+    label: Objective
+    note: A thing to go and do, checked by the tool where it can be.
+  displacement:
+    label: Displacement
+    note: Moved somewhere else, and paid for in runes.
+  effect:
+    note: Changes the game through the tool rather than by agreement.
+  lasting:
+    note: Holds until the scene closes rather than resolving at once.
+  item:
+    note: Involves something in the inventory.
+  hard:
+    note: Meant to hurt; a mode may thin these out.
+  quiet:
+    note: A note to the author rather than a promise to anybody.
+  mercy:
+    note: A note to the author rather than a promise to anybody.
+  fall:
+    note: A note to the author rather than a promise to anybody.
 
 requires:
   - id: game
