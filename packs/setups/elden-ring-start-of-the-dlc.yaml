@@ -10,8 +10,11 @@
 # you. It happens when the tool attaches, so attach it where you are
 # willing to be moved from.
 #
-# Deliberately only the two. What to take in is a separate sentence, and
-# there is a separate loadout for it: pick this and Give Scadutree
+# The flasks are here and the rest is not. A setup that moves somebody
+# has to leave them able to survive where it put them: a character made
+# for this run arrives carrying nothing, and a run that ends at the
+# first enemy is not a run. What to take in beyond that is a separate
+# sentence with a separate loadout -- pick this and Give Scadutree
 # Blessings together and you arrive levelled for the place.
 #
 # Without the DLC the tool refuses both rather than failing the run.
@@ -21,13 +24,14 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.start-of-the-dlc
-version: "1.0.0"
+version: "1.1.0"
 title: Start of the DLC
 author: Runlog
 description: >-
   Shadow of the Erdtree from its first grace. The DLC's maps are
-  unlocked and the player is put at Gravesite Plain, so a run can begin
-  there instead of earning its way to the cocoon.
+  unlocked, the flask is filled and the player is put at Gravesite
+  Plain, so a run can begin there instead of earning its way to the
+  cocoon.
 
 tool: TarnishedTool
 
@@ -35,6 +39,9 @@ ops:
   - { op: action.invoke, args: { action: UnlockMainGameMaps }, once: true }
   - { op: action.invoke, args: { action: UnlockAllMainGameGraces }, once: true }
   - { op: action.invoke, args: { action: UnlockDlcMaps }, once: true }
+  # A character made for this run is carrying nothing, and the first
+  # enemy past the grace does not care.
+  - { op: action.invoke, args: { action: GiveStartingFlasks }, once: true }
   - { op: warp.grace, args: { name: Gravesite Plain, area: Gravesite Plain }, once: true }
 
 license:

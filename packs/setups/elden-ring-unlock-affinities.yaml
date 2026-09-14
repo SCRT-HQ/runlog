@@ -1,0 +1,43 @@
+# Every affinity at the table, and the knife to apply one.
+#
+# The five whetblades decide which affinities a smithing table offers,
+# and the whetstone knife is what lets a run apply an ash of war at all.
+# Found, they are six detours across five regions; a run about what you
+# build should not have to make them.
+#
+# One press, because the tool already does this properly.
+#
+# The first version of this handed over the six items by id, which was
+# wrong in a way that would have said nothing: an affinity is unlocked
+# by an event flag, not by carrying the whetblade. The tool's own
+# UnlockWhetblades sets the five flags (65610, 65640, 65660, 65680,
+# 65720) and spawns only the knife, which is why it works and why a bag
+# full of whetblades would not have.
+#
+# So this presses that, and the flags stay the tool's business. There is
+# no list of event flags in this repository and there should not need to
+# be one: `UnlockAffinites` is a name, and a name can be checked.
+#
+# `UnlockAffinites` is the tool's spelling.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.unlock-affinities
+version: "2.0.0"
+title: Unlock Affinities
+author: Runlog
+description: >-
+  Every affinity on offer at a smithing table, and the whetstone knife
+  to apply an ash of war with. For a run that is about what you build
+  rather than about finding the tools to build it.
+
+tool: TarnishedTool
+
+ops:
+  - { op: action.invoke, args: { action: UnlockAffinites }, once: true }
+
+license:
+  id: MIT
+  redistributable: true
