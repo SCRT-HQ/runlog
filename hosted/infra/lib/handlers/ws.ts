@@ -125,15 +125,19 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
   const tellDecks = async (sub: string, only?: string): Promise<void> => {
     const poster = deps.poster;
     if (!poster) return;
-    const decks = only ? [{ connectionId: only }] : await deps.live.decksOf(sub);
-    if (decks.length === 0) return;
-    const line = JSON.stringify({ t: "runs", runs: await heldRuns(sub) });
-    for (const d of decks) {
-      try {
+    // Everything in here, one guard: a deck that cannot be given its list
+    // right now is still connected and hears the next push. A rejection
+    // out of `manifest` or `watchers` must not turn a $connect into a 500,
+    // which would refuse the deck outright.
+    try {
+      const decks = only ? [{ connectionId: only }] : await deps.live.decksOf(sub);
+      if (decks.length === 0) return;
+      const line = JSON.stringify({ t: "runs", runs: await heldRuns(sub) });
+      for (const d of decks) {
         if ((await poster.post(d.connectionId, line)) === "gone") await deps.live.disconnect(d.connectionId);
-      } catch (error) {
-        console.error("live: could not say which runs are held", error);
       }
+    } catch (error) {
+      console.error("live: could not say which runs are held", error);
     }
   };
 

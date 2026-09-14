@@ -220,6 +220,31 @@ describe("attaching as a deck", () => {
     const line = JSON.parse(posted.find(([id]) => id === "deck1")![1]);
     expect(line).toEqual({ t: "runs", runs: [{ id: "s1", name: "Thursday", packTitle: "The Long Kiln", held: true }] });
   });
+
+  it("still attaches a deck when its run list cannot be built", async () => {
+    const base = deps();
+    const posted: Array<[string, string]> = [];
+    const d: WsDeps = {
+      ...base,
+      store: {
+        ...base.store,
+        async manifest() {
+          throw new Error("dynamo is having a day");
+        },
+      },
+      poster: {
+        async post(connectionId, data) {
+          posted.push([connectionId, data]);
+          return "sent";
+        },
+      },
+    };
+
+    const res = await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+
+    expect(res.statusCode).toBe(200);
+    expect(posted).toEqual([]);
+  });
 });
 
 describe("a socket on a stream key", () => {
