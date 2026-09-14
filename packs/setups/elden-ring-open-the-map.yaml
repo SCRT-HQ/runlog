@@ -11,19 +11,39 @@
 #
 # The DLC lines are harmless without the DLC: the tool refuses a press it
 # cannot make rather than failing the run.
+#
+# The medallions, and why one of them is a number.
+#
+# `item.named` will not hand over a key item tied to an event flag,
+# because giving the item without the event behind it is how a quest
+# breaks. The Dectus halves have no event and arrive by name like
+# anything else.
+#
+# Rold is marked as needing an event and its event id is -1, which is
+# the data saying there is no flag: spawning the item is the whole of
+# it. The name list is built from the same flag, so the name is not on
+# offer and the id is the way in. An id is a number out of the game's
+# own data and is wrong the first time the game moves, which is the
+# price of this one line.
+#
+# The two Haligtree halves are left out. They have real event flags
+# (400280 and 400130), so handing them over is the case the rule is
+# about. Nothing is lost: every grace is unlocked, and a medallion opens
+# a lift to somewhere you can already warp.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.open-the-map
-version: "1.0.0"
+version: "1.1.0"
 title: Open the Map
 author: Runlog
 description: >-
-  Every map fragment and every site of grace, unlocked. The world is
-  drawn and everywhere is one warp away, so a run can start wherever it
-  means to start instead of walking there first.
+  Every map fragment and every site of grace, unlocked, with the Dectus
+  halves and the Rold medallion. The world is drawn, the lifts run and
+  everywhere is one warp away, so a run can start where it means to
+  start rather than walking there first.
 
 tool: TarnishedTool
 
@@ -32,6 +52,11 @@ ops:
   - { op: action.invoke, args: { action: UnlockDlcMaps }, once: true }
   - { op: action.invoke, args: { action: UnlockAllMainGameGraces }, once: true }
   - { op: action.invoke, args: { action: UnlockAllDlcGraces }, once: true }
+
+  - { op: item.named, args: { name: "Dectus Medallion (Left)", quantity: 1 }, once: true }
+  - { op: item.named, args: { name: "Dectus Medallion (Right)", quantity: 1 }, once: true }
+  # Rold Medallion, 0x40001FAB. By id: see above.
+  - { op: item.give, args: { id: 1073749931, quantity: 1 }, once: true }
 
 license:
   id: MIT
