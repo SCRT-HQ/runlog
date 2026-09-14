@@ -88,7 +88,12 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
         return null;
       },
       async manifest(sub) {
-        const owned = sub === "user_1" ? ["open", "shared"] : [];
+        // s1 is named and titled, for the deck's picker; s2 has neither
+        // and stands in for a run nobody happens to have open.
+        const owned = sub === "user_1" ? ["open", "shared", "s1", "s2"] : [];
+        const extra: Record<string, { name?: string; packTitle?: string }> = {
+          s1: { name: "Thursday", packTitle: "The Long Kiln" },
+        };
         return {
           packs: [],
           licenses: [],
@@ -100,6 +105,7 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
             ownerSub: sub,
             updatedAt: id === "open" ? "2026-09-11T00:10:00Z" : "2026-09-11T00:00:00Z",
             seq: 3,
+            ...extra[id],
           })),
         };
       },
@@ -193,6 +199,26 @@ describe("attaching as a deck", () => {
     const res = await route(ev("$connect", "c9", { queryStringParameters: { t: "livetok", run: "open", as: "deck" } }), d);
     expect(res.statusCode).toBe(200);
     expect(await d.live.connection("c9")).not.toMatchObject({ deck: true });
+  });
+
+  it("tells a deck which runs are held the moment it attaches", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(connectionId, data) {
+        posted.push([connectionId, data]);
+        return "sent";
+      },
+    };
+    // s1 is held by a signed-in page; s2 is nobody's.
+    await live.connect("page", "user_1", "");
+    await live.watch("page", "s1", "user_1", "");
+    const d = { ...deps(live), poster };
+
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+
+    const line = JSON.parse(posted.find(([id]) => id === "deck1")![1]);
+    expect(line).toEqual({ t: "runs", runs: [{ id: "s1", name: "Thursday", packTitle: "The Long Kiln", held: true }] });
   });
 });
 

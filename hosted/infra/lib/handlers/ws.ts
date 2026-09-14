@@ -75,11 +75,67 @@ function deckOf(event: WsEvent): { deck: true } | undefined {
   return event.queryStringParameters?.["as"] === "deck" ? { deck: true } : undefined;
 }
 
+/**
+ * Whether this watcher is a device that could take a press.
+ *
+ * A link's socket and a scene's are not; an attached tool is told in
+ * operations and writes nothing; a deck is the thing asking. What is
+ * left is a signed-in device with the run open, which is the page.
+ */
+function writes(w: { sub: string; control?: boolean; deck?: boolean }): boolean {
+  return !w.control && !w.deck && !w.sub.startsWith("public:") && !w.sub.startsWith("stream:");
+}
+
 export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
   const { routeKey, connectionId } = event.requestContext;
   const now = deps.now ?? (() => new Date().toISOString());
   // The socket has no method, only which of its three moments this is.
   annotate({ method: "WS", route: routeKey });
+
+  /**
+   * The account's runs that something is holding open.
+   *
+   * Not the run that moved most recently, which is all a watch key can
+   * know: a deck presses, and a press wants a device on the other end.
+   * The newest twenty are considered, because an account's manifest is
+   * every run it has ever played and a deck's picker is a short list.
+   */
+  const heldRuns = async (sub: string) => {
+    const { sessions } = await deps.store.manifest(sub);
+    const mine = sessions
+      .filter((p) => p.role === "owner" && !p.deletedAt && !p.endedAt)
+      .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
+      .slice(0, 20);
+    const held = await Promise.all(mine.map(async (p) => ((await deps.live.watchers(p.id)).some(writes) ? p : null)));
+    return held
+      .filter((p): p is (typeof mine)[number] => p !== null)
+      .map((p) => ({
+        id: p.id,
+        ...(p.name ? { name: p.name } : {}),
+        ...(p.packTitle ? { packTitle: p.packTitle } : {}),
+        held: true as const,
+      }));
+  };
+
+  /**
+   * Said to an account's decks whenever the held set changes, and once on
+   * connect, which is the same message: a deck comes up before anything is
+   * running, so a list fetched once would stay empty all evening.
+   */
+  const tellDecks = async (sub: string, only?: string): Promise<void> => {
+    const poster = deps.poster;
+    if (!poster) return;
+    const decks = only ? [{ connectionId: only }] : await deps.live.decksOf(sub);
+    if (decks.length === 0) return;
+    const line = JSON.stringify({ t: "runs", runs: await heldRuns(sub) });
+    for (const d of decks) {
+      try {
+        if ((await poster.post(d.connectionId, line)) === "gone") await deps.live.disconnect(d.connectionId);
+      } catch (error) {
+        console.error("live: could not say which runs are held", error);
+      }
+    }
+  };
 
   if (routeKey === "$connect") {
     const t = event.queryStringParameters?.["t"];
@@ -139,6 +195,7 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     }
     const deck = deckOf(event);
     await deps.live.connect(connectionId, caller.sub, now(), deck);
+    if (deck) await tellDecks(caller.sub, connectionId);
     return { statusCode: 200 };
   }
 
