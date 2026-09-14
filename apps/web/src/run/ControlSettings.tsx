@@ -4,7 +4,7 @@ import { apiBase } from "../sync/config.ts";
 import { useApi } from "../sync/useApi.ts";
 import type { StreamKeys } from "../sync/client.ts";
 import type { StoredRun } from "../storage/db.ts";
-import { CATALOGS, catalogFor, opDef, type ToolCatalog } from "../control/catalog.ts";
+import { CATALOGS, catalogFor, type ToolCatalog } from "../control/catalog.ts";
 import { builtins, forPack, type Builtin } from "../control/builtin.ts";
 import { chosenFrom, creditLine } from "../control/setups.ts";
 import { HandOut } from "./HandOut.tsx";
@@ -210,18 +210,6 @@ export function ControlSettings({
     return `${origin.replace(/^http/, "ws")}/ws?k=${k}${run}&as=control${tail}`;
   };
   const address = addressFor();
-  /**
-   * The lists this profile has a field for, so the sheet carries those
-   * options and not eighteen hundred of them.
-   */
-  const inUse = useMemo(() => {
-    const out = new Set<string>();
-    for (const op of [...(profile.setup ?? []), ...(profile.rows ?? []).flatMap((r) => r.ops)]) {
-      for (const arg of opDef(catalog, op.op)?.args ?? []) if (arg.list) out.add(arg.list);
-    }
-    return [...out];
-  }, [catalog, profile]);
-
   /** The roster, without the blanks and without anybody twice. */
   const roster = useMemo(() => [...new Set((seats ?? []).map((n) => n.trim()).filter(Boolean))], [seats]);
 
@@ -498,15 +486,6 @@ export function ControlSettings({
       {onSetup && <HandOut pack={pack} record={record} onChoose={(chosen) => onSetup(chosen)} {...(onHandOut ? { onHandOut } : {})} />}
 
       <h4 className="stepLabel">Rules</h4>
-      {inUse.map((list) => (
-        <datalist id={`controlNames-${list}`} key={list}>
-          {(lists[list] ?? []).map((n) => (
-            <option key={`${n.name}·${n.area ?? ""}`} value={n.name}>
-              {n.area ?? (n.max !== undefined ? `to +${n.max}` : "")}
-            </option>
-          ))}
-        </datalist>
-      ))}
       {roster.length > 0 && (
         <datalist id="controlSeats">
           {roster.map((name) => (

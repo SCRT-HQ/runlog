@@ -38,8 +38,41 @@ export function Ops({
   const set = (i: number, op: ProfileOp) => onChange(ops.map((o, at) => (at === i ? op : o)));
   const add = () => onChange([...ops, { op: catalog?.ops[0]?.op ?? "", args: {} }]);
 
+  /**
+   * The lists these rows have a field for, so the editor carries those
+   * options and not eighteen hundred of them.
+   *
+   * Rendered here rather than by whoever draws the editor. A `name`
+   * field is a text box with `list` pointing at a `<datalist>` by id,
+   * and an id pointing at nothing is not an error: the box simply
+   * stops suggesting, silently, which is how this worked on the page
+   * where a run starts while working in Settings. The component that
+   * names the id is the one that should provide it.
+   *
+   * The id is this editor's own rather than a name shared across the
+   * page, because Settings draws one of these for the terms and one
+   * more for every rule. A fixed name would put the same id on the
+   * document a dozen times and leave every field but the first bound
+   * to somebody else's list.
+   */
+  const listId = useId();
+  const inUse = useMemo(() => {
+    const out = new Set<string>();
+    for (const op of ops) for (const arg of opDef(catalog, op.op)?.args ?? []) if (arg.list) out.add(arg.list);
+    return [...out];
+  }, [catalog, ops]);
+
   return (
     <>
+      {inUse.map((list) => (
+        <datalist id={`${listId}-${list}`} key={list}>
+          {(lists[list] ?? []).map((n) => (
+            <option key={`${n.name}·${n.area ?? ""}`} value={n.name}>
+              {n.area ?? (n.max !== undefined ? `to +${n.max}` : "")}
+            </option>
+          ))}
+        </datalist>
+      ))}
       {ops.map((op, i) => {
         const def = opDef(catalog, op.op);
         return (
@@ -69,6 +102,7 @@ export function Ops({
                 arg={arg}
                 op={op}
                 lists={lists}
+                listId={listId}
                 onChange={(value) => set(i, { ...op, args: { ...op.args, [arg.name]: value } })}
               />
             ))}
@@ -91,11 +125,24 @@ export function Ops({
   );
 }
 
-function Arg({ arg, op, lists, onChange }: { arg: ArgDef; op: ProfileOp; lists: Lists; onChange: (value: unknown) => void }) {
+function Arg({
+  arg,
+  op,
+  lists,
+  listId,
+  onChange,
+}: {
+  arg: ArgDef;
+  op: ProfileOp;
+  lists: Lists;
+  /** The editor's own id for its datalists; see `Ops`. */
+  listId: string;
+  onChange: (value: unknown) => void;
+}) {
   const value = op.args[arg.name];
   // The areas offered depend on the name beside them, so this list is
   // this field's own rather than one of the sheet's shared ones.
-  const listId = useId();
+  const areaListId = useId();
 
   if (arg.kind === "flag") {
     return (
@@ -122,7 +169,7 @@ function Arg({ arg, op, lists, onChange }: { arg: ArgDef; op: ProfileOp; lists: 
       <input
         type="text"
         value={typed}
-        list={arg.list ? `controlNames-${arg.list}` : undefined}
+        list={arg.list ? `${listId}-${arg.list}` : undefined}
         placeholder={arg.label}
         aria-label={arg.label}
         aria-invalid={fits === false}
@@ -150,7 +197,7 @@ function Arg({ arg, op, lists, onChange }: { arg: ArgDef; op: ProfileOp; lists: 
         <input
           type="text"
           value={typed}
-          list={areas.length > 1 ? listId : undefined}
+          list={areas.length > 1 ? areaListId : undefined}
           placeholder={settled ? areas[0] : arg.label}
           aria-label={arg.label}
           disabled={settled}
@@ -159,7 +206,7 @@ function Arg({ arg, op, lists, onChange }: { arg: ArgDef; op: ProfileOp; lists: 
           style={{ width: "9rem" }}
         />
         {areas.length > 1 && (
-          <datalist id={listId}>
+          <datalist id={areaListId}>
             {areas.map((a) => (
               <option key={a} value={a} />
             ))}
