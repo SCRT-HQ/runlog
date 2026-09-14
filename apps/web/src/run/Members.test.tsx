@@ -20,8 +20,9 @@ import { Members } from "./Members.tsx";
  * account menu that said "Synced just now".
  */
 
-const current: { api: Api | null } = { api: null };
+const current: { api: Api | null; decks: number } = { api: null, decks: 0 };
 vi.mock("../sync/useApi.ts", () => ({ useApi: () => current.api }));
+vi.mock("./useAttachedTools.ts", () => ({ useAttachedDecks: () => current.decks }));
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const loaded = loadPackText(readFileSync(join(repoRoot, "packs/demo/pack.yaml"), "utf8"), "yaml");
@@ -68,8 +69,9 @@ const runOf = (extra: Partial<StoredRun> = {}): StoredRun => ({
   ...extra,
 });
 
-const panel = (run: StoredRun, sync: Sync, api: Api | null = {} as Api) => {
+const panel = (run: StoredRun, sync: Sync, api: Api | null = {} as Api, decks = 0) => {
   current.api = api;
+  current.decks = decks;
   return renderToStaticMarkup(
     <AccountContext.Provider value={signedIn}>
       <SyncContext.Provider value={sync}>
@@ -162,5 +164,21 @@ describe("people at the table", () => {
     );
     expect(company).toMatch(/<details[^>]*\sopen/);
     expect(company).toContain("Jo");
+  });
+
+  /**
+   * A deck signs in rather than taking a line to paste, so it gets no
+   * address to copy -- only a count, at rest as well as when it arrives.
+   */
+  it("lists a deck when one is on the run, and says nothing when none is", () => {
+    const none = panel(runOf({ role: "owner" }), syncOf(true, true), {} as Api, 0);
+    expect(none).not.toContain("Stream Deck");
+
+    const one = panel(runOf({ role: "owner" }), syncOf(true, true), {} as Api, 1);
+    expect(one).toContain("Stream Deck</strong>");
+    expect(one).not.toContain("Stream Deck ×");
+
+    const many = panel(runOf({ role: "owner" }), syncOf(true, true), {} as Api, 3);
+    expect(many).toContain("Stream Deck × 3</strong>");
   });
 });

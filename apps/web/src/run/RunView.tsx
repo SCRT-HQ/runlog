@@ -81,6 +81,7 @@ import { useRace } from "./useRace.ts";
 import { RunRail, type Pane } from "./RunRail.tsx";
 import { useEnterMoves } from "../ui/useEnterMoves.ts";
 import { useConfirm } from "../ui/useConfirm.tsx";
+import { useToast } from "../ui/Toast.tsx";
 
 /**
  * The active step's own heading, the same word the page shows above it.
@@ -181,6 +182,19 @@ export function RunView({
   const decks = useAttachedDecks(run.record?.runId ?? null);
   const shared = Boolean(!remote && run.record && run.record.role !== "viewer" && (run.record.shared || liveLinkOf(run.record.runId)));
   const publishing = shared || decks > 0;
+
+  /**
+   * The table is told when a deck arrives, since nothing else on screen
+   * says so. `hadDecks` fires the note only on the way up: a deck leaving
+   * is not worth interrupting for, and the Attached panel already says
+   * how many are on at rest.
+   */
+  const toast = useToast();
+  const hadDecks = useRef(0);
+  useEffect(() => {
+    if (decks > hadDecks.current) toast.show(decks === 1 ? "A Stream Deck is on this run." : `${decks} Stream Decks are on this run.`);
+    hadDecks.current = decks;
+  }, [decks, toast.show]);
   // The race this run is in, if any: the side column's panel and the snapshot both read it.
   const raceView = useRace(run.record, run.state, run.events);
 
@@ -850,6 +864,7 @@ export function RunView({
           {run.record && !bench && <Members pack={pack} run={run.record} />}
         </div>
       </div>
+      {toast.node}
       <RunRail
         pane={pane}
         onPane={setPane}
