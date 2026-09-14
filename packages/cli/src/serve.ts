@@ -125,7 +125,12 @@ function flag(args: string[], name: string): string | undefined {
 
 /** Open the address in the machine's browser; quietly, since a failure here is a URL to paste. */
 function openInBrowser(url: string): void {
-  const [cmd, argv] = process.platform === "win32" ? ["cmd", ["/c", "start", "", url]] : process.platform === "darwin" ? ["open", [url]] : ["xdg-open", [url]];
+  const [cmd, argv] =
+    process.platform === "win32"
+      ? ["cmd", ["/c", "start", "", url]]
+      : process.platform === "darwin"
+        ? ["open", [url]]
+        : ["xdg-open", [url]];
   try {
     spawn(cmd, argv, { stdio: "ignore", detached: true }).unref();
   } catch {
@@ -159,7 +164,9 @@ export async function cmdServe(args: string[]): Promise<number> {
     return 0;
   } catch (error) {
     const code = (error as { code?: string }).code;
-    console.error(code === "EADDRINUSE" ? `port ${port} is taken; pass --port with another` : error instanceof Error ? error.message : String(error));
+    console.error(
+      code === "EADDRINUSE" ? `port ${port} is taken; pass --port with another` : error instanceof Error ? error.message : String(error),
+    );
     return 1;
   }
 }

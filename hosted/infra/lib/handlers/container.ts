@@ -50,11 +50,18 @@ export function generateLicenseKey(): string {
   return (chars.match(/.{5}/g) ?? []).join("-");
 }
 
-const normalizeKey = (key: string) => key.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+const normalizeKey = (key: string) =>
+  key
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
 
 async function deriveKey(licenseKey: string, salt: Uint8Array<ArrayBuffer>, iterations: number) {
   const material = await crypto.subtle.importKey("raw", encoder.encode(normalizeKey(licenseKey)), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations, hash: "SHA-256" }, material, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations, hash: "SHA-256" }, material, { name: "AES-GCM", length: 256 }, false, [
+    "encrypt",
+    "decrypt",
+  ]);
 }
 
 /** Seal a document: the whole thing, signature included, under a key. */

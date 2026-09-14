@@ -53,8 +53,26 @@ describe("the effective log", () => {
     // together. The older rule of thumb cut at the last boundary, which was
     // the completion, and left the roll and the outcome standing: the step
     // was offered again and the log grew a second outcome.
-    const rolled: RunEvent = { t: "Rolled", at, id: "e2", move: "m1", purpose: "check", dice: "d100", total: 30, values: [30], source: "typed" } as unknown as RunEvent;
-    const drawn: RunEvent = { t: "OutcomeDrawn", at, id: "e3", move: "m1", table: "check", entryId: "check-kind", total: 30 } as unknown as RunEvent;
+    const rolled: RunEvent = {
+      t: "Rolled",
+      at,
+      id: "e2",
+      move: "m1",
+      purpose: "check",
+      dice: "d100",
+      total: 30,
+      values: [30],
+      source: "typed",
+    } as unknown as RunEvent;
+    const drawn: RunEvent = {
+      t: "OutcomeDrawn",
+      at,
+      id: "e3",
+      move: "m1",
+      table: "check",
+      entryId: "check-kind",
+      total: 30,
+    } as unknown as RunEvent;
     const done: RunEvent = { t: "StepCompleted", at, id: "e4", move: "m1", phase: "check", step: 0 } as unknown as RunEvent;
     const log = [started, enter("e1"), rolled, drawn, done];
     expect(undoableIds(log, boundary)).toEqual(["e2", "e3", "e4"]);
@@ -74,12 +92,24 @@ describe("the effective log", () => {
   it("leaves another player's later move standing when mine is undone", () => {
     // Two people appended; the server ordered them. Undoing mine names
     // only mine, so theirs is untouched wherever it landed.
-    const log = [started, enter("e1"), journal("mine", 1, "mine"), journal("theirs", 1, "theirs"), { t: "Undone", at, id: "u1", ids: ["mine"] } as RunEvent];
+    const log = [
+      started,
+      enter("e1"),
+      journal("mine", 1, "mine"),
+      journal("theirs", 1, "theirs"),
+      { t: "Undone", at, id: "u1", ids: ["mine"] } as RunEvent,
+    ];
     expect(reduce(kiln, log).journal[1]).toBe("theirs");
   });
 
   it("exports what counts, not what was said", () => {
-    const log = [started, enter("e1"), journal("e2", 1, "a cup"), { t: "Undone", at, id: "u1", ids: ["e2"] } as RunEvent, journal("e3", 1, "a bowl")];
+    const log = [
+      started,
+      enter("e1"),
+      journal("e2", 1, "a cup"),
+      { t: "Undone", at, id: "u1", ids: ["e2"] } as RunEvent,
+      journal("e3", 1, "a bowl"),
+    ];
     const md = renderLog(kiln, log, { audience: "self" });
     expect(md).toContain("a bowl");
     expect(md).not.toContain("a cup");

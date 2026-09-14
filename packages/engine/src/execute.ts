@@ -1,12 +1,4 @@
-import {
-  rollDice,
-  type Action,
-  type Pack,
-  type Predicate,
-  type Table,
-  type TargetRef,
-  type Trigger,
-} from "@runlog/rules-schema";
+import { rollDice, type Action, type Pack, type Predicate, type Table, type TargetRef, type Trigger } from "@runlog/rules-schema";
 import type { RunEvent } from "./events.ts";
 import { resolveTargeting } from "./targeting.ts";
 import { eligibleTargets } from "./eligibility.ts";
@@ -144,9 +136,7 @@ function resolveSubjectRef(f: Frame, ref: TargetRef | undefined): number[] {
     case "allSubjects":
       return f.state.subjects.filter((s) => !s.removed).map((s) => s.id);
     case "allPriorSubjects":
-      return f.state.subjects
-        .filter((s) => !s.removed && s.id !== current?.id)
-        .map((s) => s.id);
+      return f.state.subjects.filter((s) => !s.removed && s.id !== current?.id).map((s) => s.id);
     case "run":
       return [];
     default: {
@@ -205,9 +195,7 @@ export function evaluatePredicate(f: Frame, p: Predicate, key: string): boolean 
       return f.state.runStates.includes(p.subjectHasState);
     }
     const ids = resolveSubjectRef(f, p.of);
-    return f.state.subjects.some(
-      (s) => ids.includes(s.id) && s.states.includes(p.subjectHasState),
-    );
+    return f.state.subjects.some((s) => ids.includes(s.id) && s.states.includes(p.subjectHasState));
   }
   if ("priorSubjectTagged" in p) {
     return f.state.outcomes.some((o) => {
@@ -304,9 +292,7 @@ export function selectEntry(table: Table, total: number): { id: string } | undef
     case "lookup":
       return table.entries.find((e) => total >= e.range[0] && total <= e.range[1]);
     case "bands":
-      return table.entries.find(
-        (e) => (e.gte ?? -Infinity) <= total && total <= (e.lte ?? Infinity),
-      );
+      return table.entries.find((e) => (e.gte ?? -Infinity) <= total && total <= (e.lte ?? Infinity));
     case "opposed":
       return table.entries.find((e) => e.beats === total);
     case "keyed":
@@ -322,14 +308,7 @@ function tableRollExpression(table: Table): string {
  * Resolve one entry: record it, run whatever fires now, and queue whatever
  * fires later.
  */
-function resolveEntry(
-  f: Frame,
-  tableId: string,
-  table: Table,
-  entryId: string,
-  cause: "phase" | "action" | "manual",
-  key: string,
-): void {
+function resolveEntry(f: Frame, tableId: string, table: Table, entryId: string, cause: "phase" | "action" | "manual", key: string): void {
   const entry = table.entries.find((e) => e.id === entryId);
   if (!entry) return;
 
@@ -433,7 +412,7 @@ function runAction(f: Frame, action: Action, key: string): void {
     case "rollOn": {
       const table = f.pack.tables[action.table];
       if (!table) break;
-      // "Roll for how many to roll": a total bound earlier says the count, 
+      // "Roll for how many to roll": a total bound earlier says the count,
       // or a counter does, which is how a run keeps a setting the moderator
       // chose once and can nudge later.
       const named = action.timesFrom;
@@ -466,9 +445,7 @@ function runAction(f: Frame, action: Action, key: string): void {
 
     case "branch": {
       const value = Number(f.vars.get(action.on) ?? 0);
-      const hit = action.cases.find(
-        (c) => (c.in?.includes(value) ?? false) || (c.is ? compare(value, c.is, f.state) : false),
-      );
+      const hit = action.cases.find((c) => (c.in?.includes(value) ?? false) || (c.is ? compare(value, c.is, f.state) : false));
       if (hit) runActions(f, hit.then, `${key}>`);
       else if (action.else) runActions(f, action.else, `${key}<`);
       break;
@@ -717,13 +694,7 @@ function rollForTable(f: Frame, tableId: string, table: Table, key: string): num
     const score = action + bonus;
     let beaten = 0;
     for (let n = 0; n < table.challenge.count; n++) {
-      const c = obtainRoll(
-        f,
-        table.challenge.dice,
-        `${key}c${n}`,
-        tableId,
-        `${table.title}: challenge ${n + 1}`,
-      );
+      const c = obtainRoll(f, table.challenge.dice, `${key}c${n}`, tableId, `${table.title}: challenge ${n + 1}`);
       // Ties go to the challenge, which is what gives these games their edge.
       if (score > c) beaten += 1;
     }
@@ -737,12 +708,7 @@ function rollForTable(f: Frame, tableId: string, table: Table, key: string): num
  * Public entry points
  * ------------------------------------------------------------------ */
 
-export function executeActions(
-  pack: Pack,
-  state: RunState,
-  actions: Action[],
-  ctx: ExecContext,
-): ExecResult {
+export function executeActions(pack: Pack, state: RunState, actions: Action[], ctx: ExecContext): ExecResult {
   const frame: Frame = { pack, state, ctx, events: [], vars: new Map(), target: null };
   try {
     runActions(frame, actions, ctx.keyPrefix ?? "");
@@ -864,12 +830,7 @@ export function availableMoves(
 }
 
 /** Take a move, recording that it was used so a once-per-run one is spent. */
-export function executeMove(
-  pack: Pack,
-  state: RunState,
-  moveId: string,
-  ctx: ExecContext,
-): ExecResult {
+export function executeMove(pack: Pack, state: RunState, moveId: string, ctx: ExecContext): ExecResult {
   const move = pack.moves?.[moveId];
   if (!move) return { status: "done", events: [] };
   const frame: Frame = { pack, state, ctx, events: [], vars: new Map(), target: null };
@@ -888,7 +849,7 @@ export function executeMove(
 /**
  * Fire a counter's threshold trigger and record that it did.
  *
- * The record is what stops it firing again while the threshold still holds: 
+ * The record is what stops it firing again while the threshold still holds:
  * a counter that stays over its limit would otherwise trip on every read.
  */
 export function executeCounterTrigger(
@@ -1019,12 +980,7 @@ function firstAsk(pack: Pack, actions: readonly Action[], depth: number): Obliga
  * The resolution event is appended only on completion, so an interrupted
  * trigger stays owed rather than half-paid.
  */
-export function executeObligation(
-  pack: Pack,
-  state: RunState,
-  obligationId: string,
-  ctx: ExecContext,
-): ExecResult {
+export function executeObligation(pack: Pack, state: RunState, obligationId: string, ctx: ExecContext): ExecResult {
   const obligation = state.obligations.find((o) => o.id === obligationId);
   if (!obligation) return { status: "done", events: [] };
 
@@ -1063,13 +1019,7 @@ export function executeObligation(
  * Recorded once fired, which is what stops the end-of-run roll from being
  * offered again every time the finished run is reopened.
  */
-export function executeGlobalTrigger(
-  pack: Pack,
-  state: RunState,
-  index: number,
-  key: string,
-  ctx: ExecContext,
-): ExecResult {
+export function executeGlobalTrigger(pack: Pack, state: RunState, index: number, key: string, ctx: ExecContext): ExecResult {
   const trigger = pack.triggers?.[index];
   if (!trigger) return { status: "done", events: [] };
 

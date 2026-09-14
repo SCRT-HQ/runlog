@@ -90,7 +90,7 @@ describe("reading a file somebody handed you", () => {
   });
 
   it("says where the trouble is, rather than that there was some", () => {
-    const parsed = loadSetupText("kind: setup\nschemaVersion: 1\nid: com.example.s\nversion: \"1.0.0\"\ntitle: T\nops: []", "yaml");
+    const parsed = loadSetupText('kind: setup\nschemaVersion: 1\nid: com.example.s\nversion: "1.0.0"\ntitle: T\nops: []', "yaml");
     expect(parsed.ok).toBe(false);
     // A missing tool and an empty ops list are two complaints, each naming
     // its own field, because "invalid" is not something anybody can fix.

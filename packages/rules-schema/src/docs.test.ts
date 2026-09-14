@@ -70,7 +70,10 @@ describe("the full documents", () => {
   it("the rulebook prints what the pack says on entering a unit, where it says anything", () => {
     const quiet = textOf(generateDoc(starter(), "rulebook").blocks);
     expect(quiet).not.toContain("On entering");
-    const talking = { ...starter(), unit: { ...starter().unit, intro: "Welcome to the kiln yard.", onEnter: "Stage {n} begins at the wheel." } } as Pack;
+    const talking = {
+      ...starter(),
+      unit: { ...starter().unit, intro: "Welcome to the kiln yard.", onEnter: "Stage {n} begins at the wheel." },
+    } as Pack;
     const said = textOf(generateDoc(talking, "rulebook").blocks);
     expect(said).toContain("On entering the first Stage: “Welcome to the kiln yard.”");
     expect(said).toContain("On entering a Stage: “Stage … begins at the wheel.”");
@@ -119,7 +122,6 @@ describe("the full documents", () => {
       expect(html).toContain(`class="layout-${docs[kind].layout}"`);
       expect(html).not.toContain("<script");
     }
-
   });
 });
 
@@ -128,11 +130,17 @@ describe("a pack in words", () => {
   it("turns actions, predicates and triggers into sentences in the pack's nouns", () => {
     expect(actionInWords(pack, { do: "modCounter", counter: "calm", by: 1 })).toMatch(/\+1$/);
     expect(actionInWords(pack, { do: "modCounter", counter: "calm", by: -2 })).toMatch(/−2$/);
-    expect(actionInWords(pack, { do: "forceUnit", count: 2 })).toBe(`add 2 more ${pack.vocabulary.unit.many} before the ${pack.vocabulary.run.one} may end`);
-    expect(actionInWords(pack, { do: "rewind" })).toBe(`go back 1 ${pack.vocabulary.unit.one} when this ${pack.vocabulary.unit.one} closes`);
+    expect(actionInWords(pack, { do: "forceUnit", count: 2 })).toBe(
+      `add 2 more ${pack.vocabulary.unit.many} before the ${pack.vocabulary.run.one} may end`,
+    );
+    expect(actionInWords(pack, { do: "rewind" })).toBe(
+      `go back 1 ${pack.vocabulary.unit.one} when this ${pack.vocabulary.unit.one} closes`,
+    );
     expect(predicateInWords(pack, { unitIndex: { gte: 4 } })).toBe(`the ${pack.vocabulary.unit.one} number is 4 or more`);
     expect(predicateInWords(pack, { ask: "Is it done?" })).toContain("Is it done?");
-    expect(triggerInWords(pack, { on: "onFinalize", do: [{ do: "note", text: "Stop." }] })).toBe(`When you ${pack.vocabulary.finalize}: Stop`);
+    expect(triggerInWords(pack, { on: "onFinalize", do: [{ do: "note", text: "Stop." }] })).toBe(
+      `When you ${pack.vocabulary.finalize}: Stop`,
+    );
   });
 
   it("finds every die the pack rolls", () => {

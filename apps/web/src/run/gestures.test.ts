@@ -19,7 +19,16 @@ if (!r.ok) throw new Error("could not load the demo pack");
 const kiln = r.pack;
 
 const opening: RunEvent[] = [
-  { t: "RunStarted", at: "2026-01-01T00:00:00Z", id: "e1", runId: "r1", packId: kiln.id, packVersion: kiln.version, mode: "standard", players: 1 } as unknown as RunEvent,
+  {
+    t: "RunStarted",
+    at: "2026-01-01T00:00:00Z",
+    id: "e1",
+    runId: "r1",
+    packId: kiln.id,
+    packVersion: kiln.version,
+    mode: "standard",
+    players: 1,
+  } as unknown as RunEvent,
   { t: "UnitEntered", at: "2026-01-01T00:00:01Z", id: "e2" } as unknown as RunEvent,
 ];
 const NOW = Date.parse("2026-01-01T00:10:00Z");
@@ -37,14 +46,26 @@ describe("lifecycle gestures", () => {
     const entry = kiln.tables.form!.entries[0]!;
     const state: RunState = {
       ...base,
-      subjects: [{ id: 1, name: "The tall one", type: "vase", states: [], unit: 1, finalized: false } as unknown as RunState["subjects"][number]],
-      outcomes: [{ unit: 1, table: "form", entryId: entry.id, targetSubject: 1, at: "2026-01-01T00:00:02Z" } as RunState["outcomes"][number]],
+      subjects: [
+        { id: 1, name: "The tall one", type: "vase", states: [], unit: 1, finalized: false } as unknown as RunState["subjects"][number],
+      ],
+      outcomes: [
+        { unit: 1, table: "form", entryId: entry.id, targetSubject: 1, at: "2026-01-01T00:00:02Z" } as RunState["outcomes"][number],
+      ],
     };
     const told = lifecycleGestures(kiln, state, opening, before, NOW);
     expect(told).toHaveLength(1);
     expect(told[0]).toEqual({
       kind: "outcome",
-      data: { n: 1, unit: 1, table: kiln.tables.form!.title, tableId: "form", entryId: entry.id, text: entry.title ?? entry.text, subject: "The tall one" },
+      data: {
+        n: 1,
+        unit: 1,
+        table: kiln.tables.form!.title,
+        tableId: "form",
+        entryId: entry.id,
+        text: entry.title ?? entry.text,
+        subject: "The tall one",
+      },
     });
     // The next reading starts from here: the same result is not told twice.
     expect(lifecycleGestures(kiln, state, opening, marksOf(state, opening, NOW), NOW)).toEqual([]);
@@ -55,7 +76,15 @@ describe("lifecycle gestures", () => {
     const before = marksOf(base, opening, NOW);
     const state: RunState = {
       ...base,
-      outcomes: [{ unit: 1, table: "check", entryId: "check-recent", targetSubject: null, at: "2026-01-01T00:00:02Z" } as RunState["outcomes"][number]],
+      outcomes: [
+        {
+          unit: 1,
+          table: "check",
+          entryId: "check-recent",
+          targetSubject: null,
+          at: "2026-01-01T00:00:02Z",
+        } as RunState["outcomes"][number],
+      ],
     };
     const [told] = lifecycleGestures(kiln, state, opening, before, NOW);
     expect(told!.data).toMatchObject({ tableId: "check", entryId: "check-recent", tags: ["setback"] });
@@ -66,7 +95,9 @@ describe("lifecycle gestures", () => {
     const before = marksOf(base, opening, NOW);
     const state: RunState = {
       ...base,
-      outcomes: [{ unit: 1, table: "form", entryId: "form-bowl", targetSubject: null, at: "2026-01-01T00:00:02Z" } as RunState["outcomes"][number]],
+      outcomes: [
+        { unit: 1, table: "form", entryId: "form-bowl", targetSubject: null, at: "2026-01-01T00:00:02Z" } as RunState["outcomes"][number],
+      ],
     };
     const [told] = lifecycleGestures(kiln, state, opening, before, NOW);
     expect(told!.data).not.toHaveProperty("tags");
@@ -79,7 +110,12 @@ describe("lifecycle gestures", () => {
     // applied is in a different program that was never told.
     const base = reduce(kiln, opening);
     const entry = kiln.tables.form!.entries[0]!;
-    const withOne: RunState = { ...base, outcomes: [{ unit: 1, table: "form", entryId: entry.id, targetSubject: null, at: "2026-01-01T00:00:02Z" } as RunState["outcomes"][number]] };
+    const withOne: RunState = {
+      ...base,
+      outcomes: [
+        { unit: 1, table: "form", entryId: entry.id, targetSubject: null, at: "2026-01-01T00:00:02Z" } as RunState["outcomes"][number],
+      ],
+    };
     const before = marksOf(withOne, opening, NOW);
     expect(lifecycleGestures(kiln, base, opening, before, NOW)).toEqual([{ kind: "outcome-undone", data: { n: 1 } }]);
   });
@@ -139,13 +175,31 @@ describe("lifecycle gestures", () => {
   it("tell a clock starting, pausing, resuming and stopping, once each", () => {
     const base = reduce(kiln, opening);
     const clock = (status: "running" | "paused" | "done", expired = false) =>
-      ({ id: "u1:unit", kind: "timer", label: "Day 1", seconds: 600, unit: 1, status, startedAt: "2026-01-01T00:00:01Z", runningSince: status === "running" ? "2026-01-01T00:00:01Z" : null, elapsedMs: 0, expired }) as unknown as RunState["clocks"][number];
+      ({
+        id: "u1:unit",
+        kind: "timer",
+        label: "Day 1",
+        seconds: 600,
+        unit: 1,
+        status,
+        startedAt: "2026-01-01T00:00:01Z",
+        runningSince: status === "running" ? "2026-01-01T00:00:01Z" : null,
+        elapsedMs: 0,
+        expired,
+      }) as unknown as RunState["clocks"][number];
     const at = (...clocks: RunState["clocks"]) => ({ ...base, clocks }) as RunState;
-    const said = (from: RunState, to: RunState) => lifecycleGestures(kiln, to, opening, marksOf(from, opening, NOW), NOW).map((g) => g.data);
+    const said = (from: RunState, to: RunState) =>
+      lifecycleGestures(kiln, to, opening, marksOf(from, opening, NOW), NOW).map((g) => g.data);
     expect(said(base, at(clock("running")))).toEqual([{ clock: "u1:unit", label: "Day 1", kind: "timer", status: "started" }]);
-    expect(said(at(clock("running")), at(clock("paused")))).toEqual([{ clock: "u1:unit", label: "Day 1", kind: "timer", status: "paused" }]);
-    expect(said(at(clock("paused")), at(clock("running")))).toEqual([{ clock: "u1:unit", label: "Day 1", kind: "timer", status: "resumed" }]);
-    expect(said(at(clock("running")), at(clock("done", true)))).toEqual([{ clock: "u1:unit", label: "Day 1", kind: "timer", status: "stopped", expired: true }]);
+    expect(said(at(clock("running")), at(clock("paused")))).toEqual([
+      { clock: "u1:unit", label: "Day 1", kind: "timer", status: "paused" },
+    ]);
+    expect(said(at(clock("paused")), at(clock("running")))).toEqual([
+      { clock: "u1:unit", label: "Day 1", kind: "timer", status: "resumed" },
+    ]);
+    expect(said(at(clock("running")), at(clock("done", true)))).toEqual([
+      { clock: "u1:unit", label: "Day 1", kind: "timer", status: "stopped", expired: true },
+    ]);
     // Still running, still paused, still done: nothing to say.
     expect(said(at(clock("running")), at(clock("running")))).toEqual([]);
     expect(said(at(clock("done")), at(clock("done")))).toEqual([]);
@@ -156,9 +210,13 @@ describe("lifecycle gestures", () => {
     const before = marksOf(base, opening, NOW);
     const calm = kiln.counters!.calm!;
     const moved: RunState = { ...base, counters: { ...base.counters, calm: 3 } };
-    expect(lifecycleGestures(kiln, moved, opening, before, NOW)).toEqual([{ kind: "counter", data: { counter: "calm", label: calm.label, value: 3, was: 0 } }]);
+    expect(lifecycleGestures(kiln, moved, opening, before, NOW)).toEqual([
+      { kind: "counter", data: { counter: "calm", label: calm.label, value: 3, was: 0 } },
+    ]);
     // Sent back to zero: the fall is told too, since a reset is the news.
-    expect(lifecycleGestures(kiln, base, opening, marksOf(moved, opening, NOW), NOW)).toEqual([{ kind: "counter", data: { counter: "calm", label: calm.label, value: 0, was: 3 } }]);
+    expect(lifecycleGestures(kiln, base, opening, marksOf(moved, opening, NOW), NOW)).toEqual([
+      { kind: "counter", data: { counter: "calm", label: calm.label, value: 0, was: 3 } },
+    ]);
     const shy = { ...kiln, counters: { ...kiln.counters, calm: { ...calm, hidden: true } } };
     expect(lifecycleGestures(shy, moved, opening, before, NOW)).toEqual([]);
   });
@@ -169,11 +227,15 @@ describe("lifecycle gestures", () => {
     const state: RunState = {
       ...base,
       contestants: [{ id: "c1", name: "Mira", states: [], counters: {} }],
-      outcomes: [{ unit: 1, table: "form", entryId: entry.id, targetSubject: null, at: "2026-01-01T00:00:02Z" } as RunState["outcomes"][number]],
+      outcomes: [
+        { unit: 1, table: "form", entryId: entry.id, targetSubject: null, at: "2026-01-01T00:00:02Z" } as RunState["outcomes"][number],
+      ],
       awards: [{ contestant: "c1", outcome: 0, table: "form", entryId: entry.id, points: 3, at: "2026-01-01T00:00:03Z" }],
     };
     const before = { ...marksOf(state, opening, NOW), awards: 0 };
     const told = lifecycleGestures(kiln, state, opening, before, NOW);
-    expect(told).toEqual([{ kind: "award", data: { n: 1, contestant: "Mira", points: 3, table: kiln.tables.form!.title, text: entry.title ?? entry.text } }]);
+    expect(told).toEqual([
+      { kind: "award", data: { n: 1, contestant: "Mira", points: 3, table: kiln.tables.form!.title, text: entry.title ?? entry.text } },
+    ]);
   });
 });

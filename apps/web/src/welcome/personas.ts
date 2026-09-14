@@ -58,7 +58,12 @@ export const PERSONAS: Persona[] = [
     log: [
       { where: "Round 1, Stakes", roll: "d6 → 4", text: "A fair round. Two points." },
       { where: "Round 1, Race", roll: "award · Vex", text: "Vex settled it first. 2 points; the streak holds." },
-      { where: "Round 2, Forfeit", roll: "d12 → 5 · on everyone", text: "Inverted controls, or the nearest thing: the camera flipped, until the round is called.", heat: true },
+      {
+        where: "Round 2, Forfeit",
+        roll: "d12 → 5 · on everyone",
+        text: "Inverted controls, or the nearest thing: the camera flipped, until the round is called.",
+        heat: true,
+      },
       { where: "Round 3, Stakes", roll: "d6 → 6", text: "Chat's round. Five points, and chat says what settling it takes." },
     ],
     state: [
@@ -83,9 +88,22 @@ export const PERSONAS: Persona[] = [
     unit: "round",
     log: [
       { where: "Round 1, Call the Round", roll: "d20 → 1", text: "Double-drop. Land both drops on the same one." },
-      { where: "Round 2, Call the Round", roll: "d20 → 3", text: "The next track is at least 20 BPM off this one. Get there however you like." },
-      { where: "Round 3, Call the Round", roll: "d20 → 16", text: "Cut the bass on both channels for 8 beats, then bring the new one's back alone." },
-      { where: "Round 4, Call the Round", roll: "d20 → 7", text: "From the moment you touch the crossfader, you have 90 seconds.", heat: true },
+      {
+        where: "Round 2, Call the Round",
+        roll: "d20 → 3",
+        text: "The next track is at least 20 BPM off this one. Get there however you like.",
+      },
+      {
+        where: "Round 3, Call the Round",
+        roll: "d20 → 16",
+        text: "Cut the bass on both channels for 8 beats, then bring the new one's back alone.",
+      },
+      {
+        where: "Round 4, Call the Round",
+        roll: "d20 → 7",
+        text: "From the moment you touch the crossfader, you have 90 seconds.",
+        heat: true,
+      },
     ],
     state: [
       { label: "Rounds mixed", value: "3" },
@@ -107,9 +125,18 @@ export const PERSONAS: Persona[] = [
     unit: "drill",
     log: [
       { where: "Drill 1, Curveball", roll: "d10 → 1", text: "Nothing. Carry on." },
-      { where: "Drill 1, Focus", roll: "d10 → 3", text: "The hard bar. Isolate the two seconds that break, loop only that. Eight minutes." },
+      {
+        where: "Drill 1, Focus",
+        roll: "d10 → 3",
+        text: "The hard bar. Isolate the two seconds that break, loop only that. Eight minutes.",
+      },
       { where: "Drill 2, Focus", roll: "d10 → 1", text: "Slow. Half speed or slower, every repetition perfect. Ten minutes." },
-      { where: "Drill 3, Curveball", roll: "d10 → 2", text: "The last Exercise did not stick. Mark it Shaky; it comes back later this Session.", heat: true },
+      {
+        where: "Drill 3, Curveball",
+        roll: "d10 → 2",
+        text: "The last Exercise did not stick. Mark it Shaky; it comes back later this Session.",
+        heat: true,
+      },
     ],
     state: [
       { label: "Drills done", value: "2" },
@@ -131,9 +158,14 @@ export const PERSONAS: Persona[] = [
     unit: "scene",
     log: [
       { where: "Scene 3, Curse", roll: "d100 → 4", text: "Mired. Half speed, and everything in this game is faster than you." },
-      { where: "Scene 3, Objective", roll: "d100 → 6", text: "A named boss of wherever you have landed. Name it, find it, put it down.", },
+      { where: "Scene 3, Objective", roll: "d100 → 6", text: "A named boss of wherever you have landed. Name it, find it, put it down." },
       { where: "Scene 3, Blessing", roll: "d100 → 7", text: "Runes, twenty thousand. Spend them before something takes them." },
-      { where: "Scene 4, Displacement", roll: "d100 → 99 · four scenes in one place", text: "The sky. You are lifted a few hundred feet above wherever you were standing, and then you are not lifted any more.", heat: true },
+      {
+        where: "Scene 4, Displacement",
+        roll: "d100 → 99 · four scenes in one place",
+        text: "The sky. You are lifted a few hundred feet above wherever you were standing, and then you are not lifted any more.",
+        heat: true,
+      },
     ],
     state: [
       { label: "Scenes survived", value: "3" },
@@ -157,7 +189,12 @@ export const PERSONAS: Persona[] = [
       { where: "Match 1, Draw the set · Gold", roll: "d6 → 2", text: "Speed flip a kickoff." },
       { where: "Match 1, Draw the set · Gold", roll: "d6 → 4", text: "Shadow defend a whole possession without committing." },
       { where: "Match 1, Log the match", roll: "landed 1 of 2", text: "One down. Mechanics landed +1; the other comes back next Match." },
-      { where: "Match 2, Draw the set · Platinum", roll: "d6 → 1", text: "Air roll into a shot, so the ball goes where you meant.", heat: true },
+      {
+        where: "Match 2, Draw the set · Platinum",
+        roll: "d6 → 1",
+        text: "Air roll into a shot, so the ball goes where you meant.",
+        heat: true,
+      },
     ],
     state: [
       { label: "Mechanics landed", value: "1" },

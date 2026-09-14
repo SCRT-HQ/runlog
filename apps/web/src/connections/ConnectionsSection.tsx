@@ -29,7 +29,10 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
   useEffect(() => {
     if (!api) return;
     let live = true;
-    api.connections().then((c) => live && setKnown(c), () => live && setKnown({ available: false, connections: [], discord: null }));
+    api.connections().then(
+      (c) => live && setKnown(c),
+      () => live && setKnown({ available: false, connections: [], discord: null }),
+    );
     return () => {
       live = false;
     };
@@ -66,7 +69,9 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
       }));
       clearPendingLink();
       setPending(null);
-      setNote(`Linked. In Discord you are ${discord.name}; the bot knows you now.${known?.verify ? " For a server whose role asks for a linked account, press Verify for linked roles." : ""}`);
+      setNote(
+        `Linked. In Discord you are ${discord.name}; the bot knows you now.${known?.verify ? " For a server whose role asks for a linked account, press Verify for linked roles." : ""}`,
+      );
     } catch (error) {
       setNote(error instanceof Error && error.message ? error.message : "That code could not be linked.");
     } finally {
@@ -110,7 +115,8 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
           <div className="incomingWhat">
             <strong>A server asked Discord to verify your Runlog account.</strong>
             <div className="muted small">
-              A role there is for members with a Runlog account linked. Verifying sends you to Discord to say which account is yours, links it here, and writes that on your Discord profile for the server to read.
+              A role there is for members with a Runlog account linked. Verifying sends you to Discord to say which account is yours, links
+              it here, and writes that on your Discord profile for the server to read.
               {account.status === "signed-in" ? ` You are signed in as ${account.user.email}.` : " Sign in first, and the request waits."}
             </div>
           </div>
@@ -137,7 +143,9 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
       )}
       {pending?.kind === "verify" && pending.result !== "asked" && (
         <p className="muted small" role="status">
-          {pending.result === "done" ? "Verified. Discord knows this account is linked; a role that asks for it is yours to take in the server." : "Discord did not finish the verification. Try again from the server's role, or from the button here."}{" "}
+          {pending.result === "done"
+            ? "Verified. Discord knows this account is linked; a role that asks for it is yours to take in the server."
+            : "Discord did not finish the verification. Try again from the server's role, or from the button here."}{" "}
           <button className="ghost tiny" onClick={dismiss}>
             OK
           </button>
@@ -180,7 +188,12 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
       ) : !known.available && known.connections.length === 0 ? (
         <p className="muted small">This copy of Runlog has no Discord bot to link with.</p>
       ) : (
-        <DiscordLinks connections={known.connections} busy={busy} onUnlink={(id) => void unlink(id)} onVerify={known.verify ? () => void verify() : undefined} />
+        <DiscordLinks
+          connections={known.connections}
+          busy={busy}
+          onUnlink={(id) => void unlink(id)}
+          onVerify={known.verify ? () => void verify() : undefined}
+        />
       )}
       {note && (
         <p className="muted small" role="status">
@@ -220,7 +233,12 @@ function DiscordLinks({
             <span className="muted small"> · linked as {c.name}</span>
           </span>
           <span className="row">
-            <button className="ghost tiny danger" disabled={busy} onClick={() => onUnlink(c.accountId)} title={`The bot stops knowing that ${c.name} is you`}>
+            <button
+              className="ghost tiny danger"
+              disabled={busy}
+              onClick={() => onUnlink(c.accountId)}
+              title={`The bot stops knowing that ${c.name} is you`}
+            >
               Unlink
             </button>
           </span>

@@ -26,7 +26,16 @@ export interface TickerLine {
   text: string;
 }
 
-const MARKS: Record<TickerKind, string> = { rolled: "Rolled", outcome: "Result", award: "Award", clock: "Clock", counter: "Tally", "unit-closed": "Closed", "run-ended": "Ended", asked: "Chat" };
+const MARKS: Record<TickerKind, string> = {
+  rolled: "Rolled",
+  outcome: "Result",
+  award: "Award",
+  clock: "Clock",
+  counter: "Tally",
+  "unit-closed": "Closed",
+  "run-ended": "Ended",
+  asked: "Chat",
+};
 
 const line = (kind: TickerKind, id: string, text: string): TickerLine => ({ id, kind, mark: MARKS[kind], text });
 
@@ -56,7 +65,20 @@ export function tickerLines(prev: LiveSnapshot | null, next: LiveSnapshot): Tick
   }
   for (const c of next.clocks) {
     const was = prev.clocks.find((p) => p.id === c.id);
-    const status = c.status === "done" ? (was?.status === "done" ? null : "stopped") : c.status === "paused" ? (was?.status === "paused" ? null : "paused") : !was ? "started" : was.status === "paused" ? "resumed" : null;
+    const status =
+      c.status === "done"
+        ? was?.status === "done"
+          ? null
+          : "stopped"
+        : c.status === "paused"
+          ? was?.status === "paused"
+            ? null
+            : "paused"
+          : !was
+            ? "started"
+            : was.status === "paused"
+              ? "resumed"
+              : null;
     if (!status) continue;
     out.push(line("clock", `c${c.id}:${status}`, `${c.label} ${status}${status === "stopped" && c.expired ? " · time ran out" : ""}`));
   }
@@ -66,7 +88,13 @@ export function tickerLines(prev: LiveSnapshot | null, next: LiveSnapshot): Tick
     out.push(counterLine(c.id, c.label, was.value, c.value));
   }
   if (next.progress.unitsDone > prev.progress.unitsDone) {
-    out.push(line("unit-closed", `u${next.progress.unitsDone}`, `${next.words.unit} ${prev.unit} closed · ${next.progress.unitsDone} ${next.progress.unitsDone === 1 ? next.words.unit.toLowerCase() : next.words.units.toLowerCase()} done`));
+    out.push(
+      line(
+        "unit-closed",
+        `u${next.progress.unitsDone}`,
+        `${next.words.unit} ${prev.unit} closed · ${next.progress.unitsDone} ${next.progress.unitsDone === 1 ? next.words.unit.toLowerCase() : next.words.units.toLowerCase()} done`,
+      ),
+    );
   }
   if (next.status === "ended" && prev.status !== "ended") {
     out.push(line("run-ended", "end", next.ending ? `${next.ending}` : `The ${next.words.run.toLowerCase()} is over`));
@@ -106,7 +134,11 @@ export function lineOfGesture(g: Pick<Gesture, "kind" | "data" | "from" | "at">)
       const status = str(d["status"]);
       const id = str(d["clock"]);
       if (!label || !status || !id) return null;
-      return line("clock", `c${id}:${status}`, `${label} ${status}${status === "stopped" && d["expired"] === true ? " · time ran out" : ""}`);
+      return line(
+        "clock",
+        `c${id}:${status}`,
+        `${label} ${status}${status === "stopped" && d["expired"] === true ? " · time ran out" : ""}`,
+      );
     }
     case "counter": {
       const id = str(d["counter"]);
@@ -132,7 +164,11 @@ export function lineOfGesture(g: Pick<Gesture, "kind" | "data" | "from" | "at">)
       const who = str(d["name"]) ?? "Someone";
       const what = str(d["move"]) ?? (str(d["kind"]) === "roll" ? "a roll" : null);
       const via = str(d["via"]);
-      return line("asked", `a${id}`, `${who} asked${what ? ` for ${what}` : ""}${via ? ` via ${via}` : ""} · ${d["accepted"] === true ? "taken" : "declined"}`);
+      return line(
+        "asked",
+        `a${id}`,
+        `${who} asked${what ? ` for ${what}` : ""}${via ? ` via ${via}` : ""} · ${d["accepted"] === true ? "taken" : "declined"}`,
+      );
     }
     default:
       return null;

@@ -22,7 +22,16 @@ describe("the hosting and the engine", () => {
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     const events: RunEvent[] = [
-      { t: "RunStarted", at: "2026-01-01T00:00:00Z", id: "e1", runId: "r1", packId: loaded.pack.id, packVersion: loaded.pack.version, mode: "standard", players: 1 } as unknown as RunEvent,
+      {
+        t: "RunStarted",
+        at: "2026-01-01T00:00:00Z",
+        id: "e1",
+        runId: "r1",
+        packId: loaded.pack.id,
+        packVersion: loaded.pack.version,
+        mode: "standard",
+        players: 1,
+      } as unknown as RunEvent,
       { t: "UnitEntered", at: "2026-01-01T00:00:01Z", id: "e2" } as unknown as RunEvent,
     ];
     const state = reduce(loaded.pack, events);

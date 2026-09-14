@@ -62,10 +62,26 @@ export function dynamoSales({ table, bucket }: { table: string; bucket: string }
   };
   return {
     async putSale(sale) {
-      await ddb.send(new PutCommand({ TableName: table, Item: { ...sale, pk: `ORG#${sale.orgId}`, sk: `SALE#${sale.ref}`, kind: "sale" } }));
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: `SALE#${sale.ref}`, sk: "SALE", kind: "salepointer", orgId: sale.orgId } }));
+      await ddb.send(
+        new PutCommand({ TableName: table, Item: { ...sale, pk: `ORG#${sale.orgId}`, sk: `SALE#${sale.ref}`, kind: "sale" } }),
+      );
+      await ddb.send(
+        new PutCommand({ TableName: table, Item: { pk: `SALE#${sale.ref}`, sk: "SALE", kind: "salepointer", orgId: sale.orgId } }),
+      );
       if (sale.buyerSub) {
-        await ddb.send(new PutCommand({ TableName: table, Item: { pk: `USER#${sale.buyerSub}`, sk: `PURCHASE#${sale.ref}`, kind: "purchase", ref: sale.ref, orgId: sale.orgId, createdAt: sale.createdAt } }));
+        await ddb.send(
+          new PutCommand({
+            TableName: table,
+            Item: {
+              pk: `USER#${sale.buyerSub}`,
+              sk: `PURCHASE#${sale.ref}`,
+              kind: "purchase",
+              ref: sale.ref,
+              orgId: sale.orgId,
+              createdAt: sale.createdAt,
+            },
+          }),
+        );
       }
     },
     async getSale(ref) {
@@ -76,11 +92,25 @@ export function dynamoSales({ table, bucket }: { table: string; bucket: string }
       return out.Item ? strip(out.Item) : null;
     },
     async listSales(orgId) {
-      const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `ORG#${orgId}`, ":sk": "SALE#" }, ScanIndexForward: false }));
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+          ExpressionAttributeValues: { ":pk": `ORG#${orgId}`, ":sk": "SALE#" },
+          ScanIndexForward: false,
+        }),
+      );
       return (out.Items ?? []).map(strip);
     },
     async listPurchases(sub) {
-      const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `USER#${sub}`, ":sk": "PURCHASE#" }, ScanIndexForward: false }));
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+          ExpressionAttributeValues: { ":pk": `USER#${sub}`, ":sk": "PURCHASE#" },
+          ScanIndexForward: false,
+        }),
+      );
       const sales = await Promise.all((out.Items ?? []).map((r) => this.getSale(String(r["ref"]))));
       return sales.filter((s): s is Sale => s !== null);
     },

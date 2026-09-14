@@ -66,7 +66,9 @@ describe("the live page", () => {
 
   it("says why a phase is out of play this unit, not just that it is", () => {
     const html = renderToStaticMarkup(
-      <LiveView snapshot={{ ...base, phases: [...base.phases, { id: "wedge", label: "Wedging", state: "skipped", why: "after the first stage" }] }} />,
+      <LiveView
+        snapshot={{ ...base, phases: [...base.phases, { id: "wedge", label: "Wedging", state: "skipped", why: "after the first stage" }] }}
+      />,
     );
     expect(html).toContain('class="skipped"');
     expect(html).toContain('<span class="why">after the first stage</span>');
@@ -110,7 +112,9 @@ describe("the live page", () => {
     expect(timed).toContain(">Time<");
     expect(timed.indexOf('class="panel react"')).toBeLessThan(timed.indexOf("So far"));
     // A run without unit clocks has only wall time since it started, which says nothing for one played across days.
-    const untimed = renderToStaticMarkup(<LiveView snapshot={{ ...base, progress: { unitsDone: 1, elapsedMs: 9_000_000, timed: false } }} />);
+    const untimed = renderToStaticMarkup(
+      <LiveView snapshot={{ ...base, progress: { unitsDone: 1, elapsedMs: 9_000_000, timed: false } }} />,
+    );
     expect(untimed).not.toContain(">Time<");
     expect(untimed).toContain("Stages done");
   });
@@ -121,7 +125,9 @@ describe("the live page", () => {
       <LiveView
         snapshot={{
           ...base,
-          phases: base.phases.map((p) => (p.id === "shape" ? { ...p, results: ["A wide bowl", setback, { text: "Tall vase", declared: true }] } : p)),
+          phases: base.phases.map((p) =>
+            p.id === "shape" ? { ...p, results: ["A wide bowl", setback, { text: "Tall vase", declared: true }] } : p,
+          ),
           units: [{ unit: 1, phases: [{ id: "shape", label: "Shape", results: [{ text: "A chip", table: "Setback", hit: 2 }] }] }],
         }}
         rooms="all"
@@ -159,7 +165,13 @@ describe("the live page", () => {
       phases: base.phases.map((p) => (p.id === "shape" ? { ...p, results: ["A wide bowl", "Setback - hit #1: A crack"] } : p)),
       units: [
         { unit: 1, phases: [{ id: "form", label: "Shape", results: ["A cup"] }] },
-        { unit: 2, phases: [{ id: "form", label: "Shape", results: ["A wide bowl"] }, { id: "constrain", label: "Constraint", results: ["Thin walls", "Setback - hit #1: A crack"] }] },
+        {
+          unit: 2,
+          phases: [
+            { id: "form", label: "Shape", results: ["A wide bowl"] },
+            { id: "constrain", label: "Constraint", results: ["Thin walls", "Setback - hit #1: A crack"] },
+          ],
+        },
       ],
     };
     const all = renderToStaticMarkup(<LiveView snapshot={snapshot} rooms="all" />);

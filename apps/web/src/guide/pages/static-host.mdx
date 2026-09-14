@@ -13,8 +13,16 @@ ls package/app
 ## What a host needs to know
 
 <Steps>
-  <li>**The app's page answers for paths that are not files.** The bare address is the welcome page, the app is at `/play`, and a deep link (a live link, a guide page) is a path under it. Serve `index.html` for any path that is not a file: nginx, `try_files $uri $uri/ /index.html;`; Netlify and Cloudflare Pages, a `_redirects` file with `/* /index.html 200`; S3 behind CloudFront, a custom error response turning 403 and 404 into `/index.html` with status 200; GitHub Pages, copy `index.html` to `404.html`.</li>
-  <li>**Cache `assets/` forever and nothing else.** A name under `assets/` means one file, so `Cache-Control: public, max-age=31536000, immutable` there; `no-cache, must-revalidate` for `index.html`, `sw.js` and `manifest.webmanifest`, or a new release reaches nobody.</li>
+  <li>
+    **The app's page answers for paths that are not files.** The bare address is the welcome page, the app is at `/play`, and a deep link (a
+    live link, a guide page) is a path under it. Serve `index.html` for any path that is not a file: nginx, `try_files $uri $uri/
+    /index.html;`; Netlify and Cloudflare Pages, a `_redirects` file with `/* /index.html 200`; S3 behind CloudFront, a custom error
+    response turning 403 and 404 into `/index.html` with status 200; GitHub Pages, copy `index.html` to `404.html`.
+  </li>
+  <li>
+    **Cache `assets/` forever and nothing else.** A name under `assets/` means one file, so `Cache-Control: public, max-age=31536000,
+    immutable` there; `no-cache, must-revalidate` for `index.html`, `sw.js` and `manifest.webmanifest`, or a new release reaches nobody.
+  </li>
   <li>**Serve over HTTPS** if you want the service worker and offline use; browsers allow both on `localhost` only otherwise.</li>
 </Steps>
 

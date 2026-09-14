@@ -18,9 +18,7 @@ export interface LicenseLike {
   notice?: unknown;
 }
 
-export type Remixability =
-  | { ok: true; attribution: boolean; shareAlike: boolean }
-  | { ok: false; reason: string };
+export type Remixability = { ok: true; attribution: boolean; shareAlike: boolean } | { ok: false; reason: string };
 
 export function remixable(license: LicenseLike | undefined): Remixability {
   if (!license || typeof license !== "object") return { ok: false, reason: "it carries no license" };
@@ -50,7 +48,9 @@ export function remixOf(document: Record<string, unknown>): Record<string, unkno
   const title = String(document["title"] ?? id);
   const author = typeof document["author"] === "string" ? document["author"] : undefined;
   const version = String(document["version"] ?? "");
-  const license = (typeof document["license"] === "object" && document["license"] !== null ? { ...(document["license"] as Record<string, unknown>) } : {}) as Record<string, unknown>;
+  const license = (
+    typeof document["license"] === "object" && document["license"] !== null ? { ...(document["license"] as Record<string, unknown>) } : {}
+  ) as Record<string, unknown>;
   const basedOn = `Based on “${title}”${author ? ` by ${author}` : ""} (${id}${version ? ` v${version}` : ""}).`;
   license["notice"] = typeof license["notice"] === "string" && license["notice"] ? `${license["notice"]} ${basedOn}` : basedOn;
   return {

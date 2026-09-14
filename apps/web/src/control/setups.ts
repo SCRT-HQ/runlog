@@ -16,7 +16,10 @@ import type { ControlProfile, ProfileOp } from "./profile.ts";
  * somebody writes, which is the whole point of the document being its
  * own document.
  */
-const files = import.meta.glob("../../../../packs/setups/*.yaml", { query: "?raw", import: "default" }) as Record<string, () => Promise<string>>;
+const files = import.meta.glob("../../../../packs/setups/*.yaml", { query: "?raw", import: "default" }) as Record<
+  string,
+  () => Promise<string>
+>;
 
 let loaded: Setup[] | null = null;
 

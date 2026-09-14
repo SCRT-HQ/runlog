@@ -13,7 +13,10 @@ import type { TimerJob } from "./play.js";
  * early, is the one schedule, and a conflict is nothing to report. A
  * schedule deletes itself once it has run.
  */
-export function scheduledTimers(config: { group: string; roleArn: string; jobArn: string }, client = new SchedulerClient({})): (job: TimerJob) => Promise<void> {
+export function scheduledTimers(
+  config: { group: string; roleArn: string; jobArn: string },
+  client = new SchedulerClient({}),
+): (job: TimerJob) => Promise<void> {
   return async (job) => {
     const name = `rl-${createHash("sha256").update(`${job.sessionId}:${job.clock}:${job.at}`).digest("hex").slice(0, 40)}`;
     try {

@@ -42,14 +42,28 @@ function fakeWorkos(answers: Array<Record<string, unknown>>) {
 
 describe("signing in from a terminal", () => {
   it("shows the code, opens the browser, polls until confirmed, and keeps what came back", async () => {
-    const w = fakeWorkos([{ error: "authorization_pending" }, { error: "authorization_pending" }, { access_token: jwt(2_000), refresh_token: "r1" }]);
+    const w = fakeWorkos([
+      { error: "authorization_pending" },
+      { error: "authorization_pending" },
+      { access_token: jwt(2_000), refresh_token: "r1" },
+    ]);
     const session = await deviceFlow("client_cli", "https://api.workos.test", w.deps);
-    expect(session).toEqual({ clientId: "client_cli", issuer: "https://api.workos.test", accessToken: jwt(2_000), refreshToken: "r1", expiresAt: "1970-01-01T00:33:20.000Z" });
+    expect(session).toEqual({
+      clientId: "client_cli",
+      issuer: "https://api.workos.test",
+      accessToken: jwt(2_000),
+      refreshToken: "r1",
+      expiresAt: "1970-01-01T00:33:20.000Z",
+    });
     expect(w.said.join("\n")).toContain("RRGQ-BJVS");
     expect(w.said.join("\n")).toContain("https://auth.example/device");
     expect(w.opened).toEqual(["https://auth.example/device?user_code=RRGQ-BJVS"]);
     expect(w.calls[0]).toEqual({ url: "https://api.workos.test/user_management/authorize/device", form: { client_id: "client_cli" } });
-    expect(w.calls[1]?.form).toEqual({ grant_type: "urn:ietf:params:oauth:grant-type:device_code", device_code: "dev_secret", client_id: "client_cli" });
+    expect(w.calls[1]?.form).toEqual({
+      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+      device_code: "dev_secret",
+      client_id: "client_cli",
+    });
     expect(w.calls).toHaveLength(4);
   });
 
@@ -64,7 +78,9 @@ describe("signing in from a terminal", () => {
   it("gives up when the person refuses or the code dies", async () => {
     await expect(deviceFlow("c", "https://api.workos.test", fakeWorkos([{ error: "access_denied" }]).deps)).rejects.toThrow("refused");
     await expect(deviceFlow("c", "https://api.workos.test", fakeWorkos([{ error: "expired_token" }]).deps)).rejects.toThrow("expired");
-    await expect(deviceFlow("c", "https://api.workos.test", fakeWorkos([{ error: "invalid_client", error_description: "no such client" }]).deps)).rejects.toThrow("no such client");
+    await expect(
+      deviceFlow("c", "https://api.workos.test", fakeWorkos([{ error: "invalid_client", error_description: "no such client" }]).deps),
+    ).rejects.toThrow("no such client");
   });
 
   it("stops polling at the deadline even if WorkOS keeps saying pending", async () => {
@@ -78,7 +94,10 @@ describe("signing in from a terminal", () => {
 describe("renewing a session", () => {
   it("swaps the refresh token for a new pair and reads the new expiry", async () => {
     const w = fakeWorkos([{ access_token: jwt(3_600), refresh_token: "r2" }]);
-    const session = await renew({ clientId: "c", issuer: "https://api.workos.test", accessToken: "old", refreshToken: "r1", expiresAt: "" }, w.deps);
+    const session = await renew(
+      { clientId: "c", issuer: "https://api.workos.test", accessToken: "old", refreshToken: "r1", expiresAt: "" },
+      w.deps,
+    );
     expect(session.refreshToken).toBe("r2");
     expect(session.expiresAt).toBe("1970-01-01T01:00:00.000Z");
     expect(w.calls[0]?.form).toEqual({ grant_type: "refresh_token", refresh_token: "r1", client_id: "c" });
@@ -86,6 +105,8 @@ describe("renewing a session", () => {
 
   it("says the sign-in has lapsed when WorkOS will not renew it", async () => {
     const w = fakeWorkos([{ error: "invalid_grant" }]);
-    await expect(renew({ clientId: "c", issuer: "https://api.workos.test", accessToken: "old", refreshToken: "r1", expiresAt: "" }, w.deps)).rejects.toThrow("lapsed");
+    await expect(
+      renew({ clientId: "c", issuer: "https://api.workos.test", accessToken: "old", refreshToken: "r1", expiresAt: "" }, w.deps),
+    ).rejects.toThrow("lapsed");
   });
 });

@@ -92,7 +92,18 @@ export function dynamoListings({ table, bucket }: { table: string; bucket: strin
   };
   return {
     async putProduct(product) {
-      await ddb.send(new PutCommand({ TableName: table, Item: { ...product, summary: JSON.stringify(product.summary), pk: opk(product.orgId), sk: `PRODUCT#${product.packId}`, kind: "product" } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: {
+            ...product,
+            summary: JSON.stringify(product.summary),
+            pk: opk(product.orgId),
+            sk: `PRODUCT#${product.packId}`,
+            kind: "product",
+          },
+        }),
+      );
     },
     async getProduct(orgId, packId) {
       const out = await ddb.send(new GetCommand({ TableName: table, Key: { pk: opk(orgId), sk: `PRODUCT#${packId}` } }));
@@ -101,7 +112,13 @@ export function dynamoListings({ table, bucket }: { table: string; bucket: strin
       return { ...p, summary: typeof p.summary === "string" ? JSON.parse(p.summary) : p.summary };
     },
     async listProducts(orgId) {
-      const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": opk(orgId), ":sk": "PRODUCT#" } }));
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+          ExpressionAttributeValues: { ":pk": opk(orgId), ":sk": "PRODUCT#" },
+        }),
+      );
       return (out.Items ?? []).map((r) => {
         const p = strip<Product>(r);
         return { ...p, summary: typeof p.summary === "string" ? JSON.parse(p.summary) : p.summary };
@@ -124,7 +141,14 @@ export function dynamoListings({ table, bucket }: { table: string; bucket: strin
       const out: ListingCard[] = [];
       let start: Record<string, unknown> | undefined;
       do {
-        const page = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk", ExpressionAttributeValues: { ":pk": CARDS }, ExclusiveStartKey: start }));
+        const page = await ddb.send(
+          new QueryCommand({
+            TableName: table,
+            KeyConditionExpression: "pk = :pk",
+            ExpressionAttributeValues: { ":pk": CARDS },
+            ExclusiveStartKey: start,
+          }),
+        );
         for (const r of page.Items ?? []) out.push(strip<ListingCard>(r));
         start = page.LastEvaluatedKey;
       } while (start);
@@ -148,13 +172,18 @@ export function headOf(v: unknown): ListingHead | null {
   const r = v as Record<string, unknown>;
   const s = (x: unknown, max = 200): x is string => typeof x === "string" && x.length > 0 && x.length <= max;
   if (!s(r["title"]) || !s(r["version"], 50) || !s(r["category"], 60)) return null;
-  const strs = (x: unknown, max: number) => (Array.isArray(x) ? x.filter((t): t is string => typeof t === "string" && t.length > 0 && t.length <= 60).slice(0, max) : []);
+  const strs = (x: unknown, max: number) =>
+    Array.isArray(x) ? x.filter((t): t is string => typeof t === "string" && t.length > 0 && t.length <= 60).slice(0, max) : [];
   const license = r["license"];
   if (!license || typeof license !== "object" || !s((license as Record<string, unknown>)["id"], 40)) return null;
   const requires = Array.isArray(r["requires"])
     ? r["requires"]
         .filter((q): q is Record<string, unknown> => Boolean(q) && typeof q === "object")
-        .map((q) => ({ label: String(q["label"] ?? "").slice(0, 120), kind: String(q["kind"] ?? "other").slice(0, 20), optional: q["optional"] === true }))
+        .map((q) => ({
+          label: String(q["label"] ?? "").slice(0, 120),
+          kind: String(q["kind"] ?? "other").slice(0, 20),
+          optional: q["optional"] === true,
+        }))
         .filter((q) => q.label)
         .slice(0, 30)
     : [];
@@ -172,7 +201,10 @@ export function headOf(v: unknown): ListingHead | null {
     features: strs(r["features"], 20),
     requires,
     players: Number.isInteger(players) && players > 0 && players < 100 ? players : 1,
-    license: { id: (license as Record<string, string>)["id"]!, redistributable: (license as Record<string, unknown>)["redistributable"] === true },
+    license: {
+      id: (license as Record<string, string>)["id"]!,
+      redistributable: (license as Record<string, unknown>)["redistributable"] === true,
+    },
   };
 }
 

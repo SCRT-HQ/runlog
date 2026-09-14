@@ -97,8 +97,7 @@ export function Receipt({
   const v = pack.vocabulary;
   const [why, setWhy] = useState<string | null>(null);
   const first = receipts[0];
-  const title =
-    receipts.length === 1 ? (first?.label ?? "What the dice did") : settled ? "What the dice did" : "What the dice did, so far";
+  const title = receipts.length === 1 ? (first?.label ?? "What the dice did") : settled ? "What the dice did" : "What the dice did, so far";
   return (
     <section className={`panel runStep receipt${settled ? "" : " open"}`} aria-live="polite">
       <h3 className="sectionTitle">{title}</h3>
@@ -173,7 +172,11 @@ export function Receipt({
               </button>
             )}
             {onKeepRolling && (
-              <button className="ghost" onClick={onKeepRolling} title="Roll for you from here on; the log still says which rolls were the machine's">
+              <button
+                className="ghost"
+                onClick={onKeepRolling}
+                title="Roll for you from here on; the log still says which rolls were the machine's"
+              >
                 Keep rolling for me
               </button>
             )}

@@ -62,8 +62,8 @@ export function NameGate() {
       <section className="panel termsGate nameGate" role="dialog" aria-modal="true" aria-labelledby="nameTitle">
         <h2 id="nameTitle">How should people see you?</h2>
         <p>
-          The people you play with, race, or who watch a live link see this name. Your email address is never shown to
-          anyone. You can change it later on your profile.
+          The people you play with, race, or who watch a live link see this name. Your email address is never shown to anyone. You can
+          change it later on your profile.
         </p>
         <label className="inviteForm">
           <span className="muted small">Shown as</span>

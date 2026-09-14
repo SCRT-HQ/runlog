@@ -1,7 +1,23 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { askAllowed } from "./asking.js";
 import { hashToken, verify as verifyToken, type Caller } from "./auth.js";
-import { dynamoStore, PACK_ORIGINS, shownName, type ApiKey, type Ask, type AskPolicy, type LicenseMeta, type Reaction, type PackMeta, type PackOrigin, type Role, type SessionMember, type SessionMeta, type StreamKeyKind, type Store } from "./store.js";
+import {
+  dynamoStore,
+  PACK_ORIGINS,
+  shownName,
+  type ApiKey,
+  type Ask,
+  type AskPolicy,
+  type LicenseMeta,
+  type Reaction,
+  type PackMeta,
+  type PackOrigin,
+  type Role,
+  type SessionMember,
+  type SessionMeta,
+  type StreamKeyKind,
+  type Store,
+} from "./store.js";
 import { sesMailer, type Mailer } from "./email.js";
 import { fingerprintOf, verifyProof } from "./proof.js";
 import { apiGatewayPoster, dynamoLive, notifier, teller, type Notify, type Tell } from "./live.js";
@@ -13,7 +29,16 @@ import { handleInteraction, kindOf, threadHears, timerRanOut, type InteractionDe
 import type { TimerJob } from "./discord/play.js";
 import { scheduledTimers } from "./discord/timers.js";
 import { authorizeUrl, metadataFor, verifyRedirectUri, VERIFY_MINUTES } from "./discord/linked-roles.js";
-import { discordRest, guildNameFrom, PATIENT_ROPE_MS, ROPE_MS, type DiscordRest, guildEntitledFrom, discordOAuth, type DiscordOAuth } from "./discord/rest.js";
+import {
+  discordRest,
+  guildNameFrom,
+  PATIENT_ROPE_MS,
+  ROPE_MS,
+  type DiscordRest,
+  guildEntitledFrom,
+  discordOAuth,
+  type DiscordOAuth,
+} from "./discord/rest.js";
 import { ulid } from "./ids.js";
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { isInteraction, type Interaction } from "./discord/types.js";
@@ -56,7 +81,6 @@ const MAX_EVENTS = 500;
 const MAX_NAME = 200;
 /** A command-line key: the prefix says what it is at a glance, the rest is 32 random bytes. */
 const KEY_PREFIX = "rl_";
-
 
 /** A wait, in the words a chat line would use. */
 const inSeconds = (ms: number): string => {
@@ -138,7 +162,11 @@ export function metricsOf(
  * the product itself is not, since that discards the master.
  */
 function releaseMayReach(method: string, path: string): boolean {
-  if (method === "GET" && (path === "/api/me" || path === "/api/claims" || path === "/api/publishers/me" || path === "/api/publishers/packs")) return true;
+  if (
+    method === "GET" &&
+    (path === "/api/me" || path === "/api/claims" || path === "/api/publishers/me" || path === "/api/publishers/packs")
+  )
+    return true;
   if (method === "POST" && path === "/api/claims/nonce") return true;
   if (path.startsWith("/api/packs/")) return method === "PUT" || method === "GET";
   if (/^\/api\/publishers\/packs\/[^/]+$/.test(path)) return method === "PUT" || method === "GET";
@@ -170,7 +198,9 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
  * since the edge's policy allows none inline; nothing of the run but its
  * name and its pack's title, and those only with the token.
  */
-function livePage(input: { appUrl: string; id: string; token: string; title: string | null; pack: string | null } | { appUrl: string; closed: true }): Result {
+function livePage(
+  input: { appUrl: string; id: string; token: string; title: string | null; pack: string | null } | { appUrl: string; closed: true },
+): Result {
   const home = input.appUrl.replace(/\/$/, "");
   const body =
     "closed" in input
@@ -510,7 +540,13 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (deps.mailer && fulfilled.buyerEmail) {
       const publisher = await deps.publishers.getPublisher(sale.orgId);
       const link = `${(deps.appUrl ?? "/").replace(/\/$/, "")}/?purchase=${encodeURIComponent(sale.ref)}&t=${encodeURIComponent(token)}`;
-      await deps.mailer.purchase(fulfilled.buyerEmail, { pack: sale.title, publisher: publisher?.name ?? "the publisher", link, key, ref: sale.ref });
+      await deps.mailer.purchase(fulfilled.buyerEmail, {
+        pack: sale.title,
+        publisher: publisher?.name ?? "the publisher",
+        link,
+        key,
+        ref: sale.ref,
+      });
     }
     return fulfilled;
   }
@@ -537,7 +573,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const data = await deps.sales.getSealed(sealedKey);
     return {
       statusCode: 200,
-      headers: { "content-type": "application/octet-stream", "content-disposition": `attachment; filename="${sale.packId}.rlpack"`, "cache-control": "no-store" },
+      headers: {
+        "content-type": "application/octet-stream",
+        "content-disposition": `attachment; filename="${sale.packId}.rlpack"`,
+        "cache-control": "no-store",
+      },
       body: Buffer.from(data).toString("base64"),
       isBase64Encoded: true,
     };
@@ -570,7 +610,13 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     return {
       statusCode: 200,
       headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60" },
-      body: JSON.stringify({ gates: deps.gates, billing: Boolean(deps.stripe), servers, serversOpen: servers && open.servers, publishersOpen: open.publishers }),
+      body: JSON.stringify({
+        gates: deps.gates,
+        billing: Boolean(deps.stripe),
+        servers,
+        serversOpen: servers && open.servers,
+        publishersOpen: open.publishers,
+      }),
     };
   }
 
@@ -613,8 +659,13 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // three seconds for the answer, so the handler answers in one turn.
   if (method === "POST" && path === "/api/discord/interactions") {
     if (!deps.discord || !deps.guilds) return json(401, { error: "discord is not configured here" });
-    const raw = event.body ? (event.isBase64Encoded ? Buffer.from(event.body, "base64") : Buffer.from(event.body, "utf8")) : Buffer.alloc(0);
-    if (!verifyInteraction(deps.discord.publicKey, header(event, "x-signature-ed25519"), header(event, "x-signature-timestamp"), raw)) return json(401, { error: "bad signature" });
+    const raw = event.body
+      ? event.isBase64Encoded
+        ? Buffer.from(event.body, "base64")
+        : Buffer.from(event.body, "utf8")
+      : Buffer.alloc(0);
+    if (!verifyInteraction(deps.discord.publicKey, header(event, "x-signature-ed25519"), header(event, "x-signature-timestamp"), raw))
+      return json(401, { error: "bad signature" });
     let interaction: unknown;
     try {
       interaction = JSON.parse(raw.toString("utf8"));
@@ -655,7 +706,9 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const id = typeof account["id"] === "string" ? account["id"] : "";
       const orgId = id ? await deps.publishers.publisherForAccount(id) : null;
       if (orgId) {
-        await deps.publishers.setConnect(orgId, now(), { connectReady: account["charges_enabled"] === true && account["details_submitted"] === true });
+        await deps.publishers.setConnect(orgId, now(), {
+          connectReady: account["charges_enabled"] === true && account["details_submitted"] === true,
+        });
         return json(200, { applied: true });
       }
       return json(200, { applied: false });
@@ -737,7 +790,16 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!claim) return json(200, { found: false });
     // A claimant who publishes is named as their publisher too.
     const publisher = await deps.publishers.publisherOf(claim.sub);
-    return json(200, { found: true, claim: { fingerprint: claim.fingerprint, publicKey: claim.publicKey, name: claim.name ?? null, claimedAt: claim.claimedAt, ...(publisher ? { publisher: { id: publisher.id, name: publisher.name } } : {}) } });
+    return json(200, {
+      found: true,
+      claim: {
+        fingerprint: claim.fingerprint,
+        publicKey: claim.publicKey,
+        name: claim.name ?? null,
+        claimedAt: claim.claimedAt,
+        ...(publisher ? { publisher: { id: publisher.id, name: publisher.name } } : {}),
+      },
+    });
   }
 
   // Stripe calling back from a connected account: a sale was paid. The
@@ -758,13 +820,21 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (hook.type === "checkout.session.completed") {
       const session = hook.data.object;
       const metadata = isRecord(session["metadata"]) ? session["metadata"] : {};
-      const ref = typeof metadata["sale_ref"] === "string" ? metadata["sale_ref"] : typeof session["client_reference_id"] === "string" ? session["client_reference_id"] : "";
+      const ref =
+        typeof metadata["sale_ref"] === "string"
+          ? metadata["sale_ref"]
+          : typeof session["client_reference_id"] === "string"
+            ? session["client_reference_id"]
+            : "";
       const sale = ref ? await deps.sales.getSale(ref) : null;
       if (!sale) return json(200, { applied: false });
       if (sale.status !== "pending") return json(200, { applied: false, already: sale.status });
       const details = isRecord(session["customer_details"]) ? session["customer_details"] : {};
       const email = sale.buyerEmail ?? (typeof details["email"] === "string" ? details["email"].toLowerCase() : undefined);
-      const fulfilled = await fulfill(sale, { ...(email ? { email } : {}), ...(typeof session["id"] === "string" ? { sessionId: session["id"] } : {}) });
+      const fulfilled = await fulfill(sale, {
+        ...(email ? { email } : {}),
+        ...(typeof session["id"] === "string" ? { sessionId: session["id"] } : {}),
+      });
       return json(200, { applied: true, ref: fulfilled.ref });
     }
     return json(200, { ignored: hook.type });
@@ -796,7 +866,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       // A free listing's text is public. A priced one is delivered sealed,
       // to its buyer, by the checkout that follows.
       if (card.price !== "free" || !product) return json(410, { error: "this pack is sold, not given; buy it from the marketplace" });
-      return withCache({ statusCode: 200, headers: { "content-type": "text/yaml; charset=utf-8" }, body: await deps.listings.getMaster(product.masterKey) });
+      return withCache({
+        statusCode: 200,
+        headers: { "content-type": "text/yaml; charset=utf-8" },
+        body: await deps.listings.getMaster(product.masterKey),
+      });
     }
     return withCache(json(200, { found: true, listing: card, summary: product?.summary ?? null }));
   }
@@ -808,7 +882,8 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const t = event.queryStringParameters?.["t"] ?? "";
     const appUrl = deps.appUrl ?? "/";
     const found = await store.getSession(id);
-    if (!found || !t || found.meta.deletedAt || !found.meta.publicTokenHash || hashToken(t) !== found.meta.publicTokenHash) return livePage({ appUrl, closed: true });
+    if (!found || !t || found.meta.deletedAt || !found.meta.publicTokenHash || hashToken(t) !== found.meta.publicTokenHash)
+      return livePage({ appUrl, closed: true });
     return livePage({ appUrl, id, token: t, title: found.meta.name ?? null, pack: found.meta.packTitle ?? null });
   }
 
@@ -842,9 +917,19 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (streamAsk) {
       const owner = k ? await store.streamKeyOwner(hashToken(k)) : null;
       // A watch key belongs in a scene; what watches must never also press.
-      if (!owner || owner.kind !== "press") return json(method === "GET" ? 200 : 403, { ok: false, say: "That is not a key for pressing.", error: "That is not a key for pressing." });
+      if (!owner || owner.kind !== "press")
+        return json(method === "GET" ? 200 : 403, {
+          ok: false,
+          say: "That is not a key for pressing.",
+          error: "That is not a key for pressing.",
+        });
       const found = await inPlayFor(owner.sub, (q["run"] ?? "").trim());
-      if (!found) return json(method === "GET" ? 200 : 404, { ok: false, say: "No run is taking asks right now.", error: "No run is taking asks right now." });
+      if (!found)
+        return json(method === "GET" ? 200 : 404, {
+          ok: false,
+          say: "No run is taking asks right now.",
+          error: "No run is taking asks right now.",
+        });
       id = found;
     }
     // A GET is the door for a tool that cannot POST: Streamer.bot's Fetch URL
@@ -866,7 +951,8 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     // The key is not the live token on purpose: whoever has a widget address
     // may watch, never press. A press key was checked above, against the
     // account rather than the run.
-    if (!found || (!streamAsk && (!k || !found.meta.askKeyHash || hashToken(k) !== found.meta.askKeyHash))) return said(403, "This run is not taking asks, or that is not its key.");
+    if (!found || (!streamAsk && (!k || !found.meta.askKeyHash || hashToken(k) !== found.meta.askKeyHash)))
+      return said(403, "This run is not taking asks, or that is not its key.");
     if (found.meta.deletedAt || found.meta.endedAt) return said(410, "This run is over.");
     /**
      * What became of one ask, by the id its press answered with.
@@ -911,10 +997,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     // what the run's own Chat settings list from, and what makes a bare
     // address harmless.
     const held = kind === "move" || !kind ? await store.getSnapshot(id) : null;
-    if (!kind) return (() => {
-      const menu = askMenuOf(held?.snapshot);
-      return said(200, sayMenu(menu), { roll: menu.roll, moves: menu.moves });
-    })();
+    if (!kind)
+      return (() => {
+        const menu = askMenuOf(held?.snapshot);
+        return said(200, sayMenu(menu), { roll: menu.roll, moves: menu.moves });
+      })();
     if (!ASK_KINDS.has(kind)) return said(422, "Say what to ask for: a roll, or a move by its id.");
     // A named move is matched against what the table is offering, by id
     // first and then by label, which is what a reward is named after. An
@@ -932,7 +1019,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (kind === "move" && !ASK_ID.test(move)) {
       // Named after nothing the run has: the refusal is the menu, so chat
       // learns what there is rather than only what there is not.
-      return said(422, asked ? `Nothing here is called ${asked}. ${sayMenu(menu)}` : "That move needs an id, the one the run's Chat settings list.");
+      return said(
+        422,
+        asked ? `Nothing here is called ${asked}. ${sayMenu(menu)}` : "That move needs an id, the one the run's Chat settings list.",
+      );
     }
     const name = field("name").trim().slice(0, 40);
     const via = field("via").trim().slice(0, 32);
@@ -945,14 +1035,39 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     // second, should hear what the first one heard rather than be told off
     // by a limit meant for someone pressing again on purpose.
     const already = (await store.listAsks(id)).find((a) =>
-      ref ? a.ref === ref : (a.name ?? "") === name && a.kind === kind && (a.move ?? "") === (kind === "move" ? move : "") && atMs - Date.parse(a.at) < ASK_REPEAT_MS,
+      ref
+        ? a.ref === ref
+        : (a.name ?? "") === name &&
+          a.kind === kind &&
+          (a.move ?? "") === (kind === "move" ? move : "") &&
+          atMs - Date.parse(a.at) < ASK_REPEAT_MS,
     );
     if (already) return said(200, taken, { ask: already.id, repeat: true });
     const allowed = askAllowed(id, name || "-", atMs);
     if (!allowed.ok) return said(429, `Too quick. ${name || "Someone"} can ask again in ${inSeconds(allowed.waitMs)}.`);
-    const ask: Ask = { id: randomBytes(6).toString("hex"), kind: kind as Ask["kind"], ...(kind === "move" ? { move } : {}), ...(name ? { name } : {}), ...(via ? { via } : {}), ...(ref ? { ref } : {}), at };
+    const ask: Ask = {
+      id: randomBytes(6).toString("hex"),
+      kind: kind as Ask["kind"],
+      ...(kind === "move" ? { move } : {}),
+      ...(name ? { name } : {}),
+      ...(via ? { via } : {}),
+      ...(ref ? { ref } : {}),
+      at,
+    };
     const asks = await store.addAsk(id, ask);
-    await deps.tell?.(id, "ask", { ask: ask.id, kind: ask.kind, ...(ask.move ? { move: ask.move } : {}), ...(name ? { name } : {}), ...(via ? { via } : {}), policy: found.meta.askPolicy ?? "ask" }, at);
+    await deps.tell?.(
+      id,
+      "ask",
+      {
+        ask: ask.id,
+        kind: ask.kind,
+        ...(ask.move ? { move: ask.move } : {}),
+        ...(name ? { name } : {}),
+        ...(via ? { via } : {}),
+        policy: found.meta.askPolicy ?? "ask",
+      },
+      at,
+    );
     await deps.notify?.(id, found.meta.seq);
     // What the table decides is not known here, under either policy: the
     // host's device does the acting and says so on the socket afterwards.
@@ -984,12 +1099,23 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const t = event.queryStringParameters?.["t"] ?? "";
     const found = await store.getSession(id);
     // A plugin's page is anywhere, so the answer says any origin may read it: the token is the key.
-    const open = (status: number, body: unknown): Result => ({ statusCode: status, headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", "cache-control": "no-store" }, body: JSON.stringify(body) });
+    const open = (status: number, body: unknown): Result => ({
+      statusCode: status,
+      headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", "cache-control": "no-store" },
+      body: JSON.stringify(body),
+    });
     if (!found || !t || !found.meta.publicTokenHash || hashToken(t) !== found.meta.publicTokenHash) return open(200, { found: false });
     if (found.meta.deletedAt) return open(410, { found: false, deletedAt: found.meta.deletedAt });
     const m = found.meta;
     const snap = await store.getSnapshot(id);
-    return open(200, { found: true, ...metricsOf({ id: m.id, packId: m.packId, packTitle: m.packTitle ?? null, name: m.name ?? null, endedAt: m.endedAt ?? null }, snap, now()) });
+    return open(200, {
+      found: true,
+      ...metricsOf(
+        { id: m.id, packId: m.packId, packTitle: m.packTitle ?? null, name: m.name ?? null, endedAt: m.endedAt ?? null },
+        snap,
+        now(),
+      ),
+    });
   }
 
   /**
@@ -1015,7 +1141,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   const streamMetrics = path === "/api/public/stream/metrics";
   if (streamMetrics && method === "GET") {
     const k = event.queryStringParameters?.["k"] ?? "";
-    const open = (status: number, body: unknown): Result => ({ statusCode: status, headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", "cache-control": "no-store" }, body: JSON.stringify(body) });
+    const open = (status: number, body: unknown): Result => ({
+      statusCode: status,
+      headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", "cache-control": "no-store" },
+      body: JSON.stringify(body),
+    });
     const owner = k ? await store.streamKeyOwner(hashToken(k)) : null;
     if (!owner || owner.kind !== "watch") return open(200, { ok: false, say: "That is not a key for watching a run." });
     const named = (event.queryStringParameters?.["run"] ?? "").trim();
@@ -1029,7 +1159,15 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (!found?.meta.publicTokenHash) continue;
       const m = found.meta;
       const snap = await store.getSnapshot(p.id);
-      return open(200, { ok: true, runId: p.id, ...metricsOf({ id: m.id, packId: m.packId, packTitle: m.packTitle ?? null, name: m.name ?? null, endedAt: m.endedAt ?? null }, snap, now()) });
+      return open(200, {
+        ok: true,
+        runId: p.id,
+        ...metricsOf(
+          { id: m.id, packId: m.packId, packTitle: m.packTitle ?? null, name: m.name ?? null, endedAt: m.endedAt ?? null },
+          snap,
+          now(),
+        ),
+      });
     }
     return open(200, { ok: false, say: "No run is open to watch right now." });
   }
@@ -1037,7 +1175,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   const streamRuns = path === "/api/public/stream/runs";
   if (streamRuns && method === "GET") {
     const k = event.queryStringParameters?.["k"] ?? "";
-    const open = (status: number, body: unknown): Result => ({ statusCode: status, headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", "cache-control": "no-store" }, body: JSON.stringify(body) });
+    const open = (status: number, body: unknown): Result => ({
+      statusCode: status,
+      headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", "cache-control": "no-store" },
+      body: JSON.stringify(body),
+    });
     const owner = k ? await store.streamKeyOwner(hashToken(k)) : null;
     // A press key is not a watch key: what presses must never also read.
     if (!owner || owner.kind !== "watch") return open(200, { ok: false, say: "That is not a key for watching a run." });
@@ -1072,13 +1214,23 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!found || !t || !found.meta.publicTokenHash || hashToken(t) !== found.meta.publicTokenHash) return json(200, { found: false });
     if (found.meta.deletedAt) return json(410, { deletedAt: found.meta.deletedAt });
     const m = found.meta;
-    const run = { id: m.id, packId: m.packId, packVersion: m.packVersion, packTitle: m.packTitle ?? null, name: m.name ?? null, seq: m.seq, updatedAt: m.updatedAt, endedAt: m.endedAt ?? null };
+    const run = {
+      id: m.id,
+      packId: m.packId,
+      packVersion: m.packVersion,
+      packTitle: m.packTitle ?? null,
+      name: m.name ?? null,
+      seq: m.seq,
+      updatedAt: m.updatedAt,
+      endedAt: m.endedAt ?? null,
+    };
     // The pack, where a stranger may hold it: the owner's copy when its
     // license says so, or a free listing's master. Otherwise the snapshot
     // the owner's device keeps, which carries the state and never the text.
     let source: { format: "yaml" | "json"; source: string } | null = null;
     const owned = await store.getPack(m.ownerSub, m.packId);
-    if (owned && !owned.meta.deletedAt && owned.meta.shareable === true && owned.source) source = { format: owned.meta.format, source: owned.source };
+    if (owned && !owned.meta.deletedAt && owned.meta.shareable === true && owned.source)
+      source = { format: owned.meta.format, source: owned.source };
     let listing: { id: string; price: unknown } | null = null;
     if (!source) {
       const card = await deps.listings.getCard(m.packId);
@@ -1110,7 +1262,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!found) return json(401, { error: "that key is not known here; make a new one on your profile" });
     caller = { sub: found.sub, sid: `key:${found.id}`, ...(found.scope ? { scope: found.scope } : {}) };
     // Not 403: CloudFront turns a 403 into the app's index page with a 200 on the front.
-    if (found.scope === "release" && !releaseMayReach(method, path)) return json(422, { error: "this key only checks, signs, publishes and releases packs; make a full key on your profile for the rest", scope: "release" });
+    if (found.scope === "release" && !releaseMayReach(method, path))
+      return json(422, {
+        error: "this key only checks, signs, publishes and releases packs; make a full key on your profile for the rest",
+        scope: "release",
+      });
   } else {
     try {
       caller = await deps.verify(header(event, "authorization"));
@@ -1188,9 +1344,21 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const at = now();
     const flags = caller.flags ?? [];
     const [profile, kept] = await Promise.all([store.touchProfile(caller.sub, at), deps.billing.flags(caller.sub)]);
-    if (!caller.sid.startsWith("key:") && (flags.length !== kept.length || flags.some((f) => !kept.includes(f)))) await deps.billing.putFlags(caller.sub, flags, at);
+    if (!caller.sid.startsWith("key:") && (flags.length !== kept.length || flags.some((f) => !kept.includes(f))))
+      await deps.billing.putFlags(caller.sub, flags, at);
     const entitlements = await grantsOf(caller.sub, flags);
-    return json(200, { sub: caller.sub, sid: caller.sid, ...(caller.scope ? { scope: caller.scope } : {}), env: deps.env, profile, entitlements, gates: deps.gates, servers, serversOpen: await serversOpen(), publishersOpen: await publishersOpen() });
+    return json(200, {
+      sub: caller.sub,
+      sid: caller.sid,
+      ...(caller.scope ? { scope: caller.scope } : {}),
+      env: deps.env,
+      profile,
+      entitlements,
+      gates: deps.gates,
+      servers,
+      serversOpen: await serversOpen(),
+      publishersOpen: await publishersOpen(),
+    });
   }
 
   /**
@@ -1215,7 +1383,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const existing = await deps.billing.customerOf(caller.sub);
       if (existing) return existing;
       const profile = await store.touchProfile(caller.sub, now());
-      const made = await stripe.createCustomer({ ...(profile.email ? { email: profile.email } : {}), ...(profile.name ? { name: profile.name } : {}), metadata: { workos_user_id: caller.sub } });
+      const made = await stripe.createCustomer({
+        ...(profile.email ? { email: profile.email } : {}),
+        ...(profile.name ? { name: profile.name } : {}),
+        metadata: { workos_user_id: caller.sub },
+      });
       await deps.billing.setCustomer(caller.sub, made.id, now());
       return made.id;
     };
@@ -1225,9 +1397,19 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const price = deps.prices?.[key];
       if (!price) return json(422, { error: "price: one of the plans on sale here" });
       // A tier's gate is about new sales: a price behind a closed gate is not for sale yet.
-      if (key.startsWith("server-") && !(await serversOpen())) return json(403, { error: "Runlog for servers is not on sale yet", open: false });
-      if (key.startsWith("hosted-") && !(await publishersOpen())) return json(403, { error: "hosted licensing is not on sale yet", open: false });
-      const url = (await stripe.checkout({ customer: await customer(), price, successUrl: `${appUrl}/?billing=done`, cancelUrl: `${appUrl}/?billing=canceled`, clientReferenceId: caller.sub })).url;
+      if (key.startsWith("server-") && !(await serversOpen()))
+        return json(403, { error: "Runlog for servers is not on sale yet", open: false });
+      if (key.startsWith("hosted-") && !(await publishersOpen()))
+        return json(403, { error: "hosted licensing is not on sale yet", open: false });
+      const url = (
+        await stripe.checkout({
+          customer: await customer(),
+          price,
+          successUrl: `${appUrl}/?billing=done`,
+          cancelUrl: `${appUrl}/?billing=canceled`,
+          clientReferenceId: caller.sub,
+        })
+      ).url;
       return json(200, { url });
     }
     if (path === "/api/billing/portal") {
@@ -1286,7 +1468,12 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const body = parse(event);
     if (!isRecord(body)) return json(422, { error: "a profile, as JSON" });
     const { name, handle, email, termsVersion } = body;
-    if ((name !== undefined && !str(name)) || (handle !== undefined && !str(handle)) || (email !== undefined && !str(email)) || (termsVersion !== undefined && !str(termsVersion))) {
+    if (
+      (name !== undefined && !str(name)) ||
+      (handle !== undefined && !str(handle)) ||
+      (email !== undefined && !str(email)) ||
+      (termsVersion !== undefined && !str(termsVersion))
+    ) {
       return json(422, { error: "name, handle, email and termsVersion are strings when given" });
     }
     // The chosen name is what others see, so it is a name: letters, digits,
@@ -1294,7 +1481,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (handle !== undefined && handle.trim() !== "" && !/^[\p{L}\p{N}][\p{L}\p{N} ._'-]{1,23}$/u.test(handle.trim())) {
       return json(422, { error: "a shown name is 2 to 24 letters, digits, spaces, dots, dashes or underscores" });
     }
-    if ((name ?? "").length > MAX_SNAPSHOT_CHARS || (email ?? "").length > MAX_SNAPSHOT_CHARS || (termsVersion ?? "").length > MAX_SNAPSHOT_CHARS) {
+    if (
+      (name ?? "").length > MAX_SNAPSHOT_CHARS ||
+      (email ?? "").length > MAX_SNAPSHOT_CHARS ||
+      (termsVersion ?? "").length > MAX_SNAPSHOT_CHARS
+    ) {
       return json(413, { error: "that is not a name" });
     }
     // Accepting the terms is the one thing here that is a decision rather
@@ -1393,7 +1584,12 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!deps.discord?.oauth || !deps.guilds || !(await deps.discord.oauth())) return json(200, { available: false });
     const state = (deps.token ?? (() => randomBytes(24).toString("base64url")))();
     const at = now();
-    await deps.guilds.putVerifyState({ state, sub: caller.sub, createdAt: at, expiresAt: new Date(Date.parse(at) + VERIFY_MINUTES * 60_000).toISOString() });
+    await deps.guilds.putVerifyState({
+      state,
+      sub: caller.sub,
+      createdAt: at,
+      expiresAt: new Date(Date.parse(at) + VERIFY_MINUTES * 60_000).toISOString(),
+    });
     return json(200, { available: true, url: authorizeUrl(deps.discord.applicationId, verifyRedirectUri(deps.appUrl ?? "/"), state) });
   }
   if (path === "/api/connections/discord") {
@@ -1406,7 +1602,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (!link) return json(422, { error: "that code is not known here, or its ten minutes are up; run /link in Discord again" });
       const connection = { service: "discord" as const, accountId: link.discordUserId, name: link.name, linkedAt: now() };
       await deps.guilds.connect(caller.sub, connection);
-      return json(200, { linked: true, discord: { discordUserId: connection.accountId, name: connection.name, linkedAt: connection.linkedAt }, connection });
+      return json(200, {
+        linked: true,
+        discord: { discordUserId: connection.accountId, name: connection.name, linkedAt: connection.linkedAt },
+        connection,
+      });
     }
     if (method === "DELETE") return json(200, { unlinked: await deps.guilds.disconnect(caller.sub) });
   }
@@ -1450,7 +1650,9 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       // A server whose members bought the plan through Discord's store says so, per server.
       const mine = await guilds.guildsOf(caller.sub);
       const entitled = deps.discord?.entitled;
-      const listed = entitled ? await Promise.all(mine.map(async (g) => ((await entitled(g.guildId)) ? { ...g, discord: true } : g))) : mine;
+      const listed = entitled
+        ? await Promise.all(mine.map(async (g) => ((await entitled(g.guildId)) ? { ...g, discord: true } : g)))
+        : mine;
       const plan = await hasServerPlan();
       const onSale = await serversOpen();
       return json(200, { guilds: listed, server: plan, plan: serverFeature, open: onSale, allowed: guildsAllowed({ plan, onSale }) });
@@ -1471,12 +1673,35 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         const body = parse(event);
         if (!isRecord(body)) return json(422, { error: "a pack, as JSON" });
         const { title, version, format, hash, source, modes } = body;
-        if (!str(title) || !title.trim() || title.length > MAX_NAME || !str(version) || !str(hash) || (format !== "yaml" && format !== "json") || !str(source)) {
+        if (
+          !str(title) ||
+          !title.trim() ||
+          title.length > MAX_NAME ||
+          !str(version) ||
+          !str(hash) ||
+          (format !== "yaml" && format !== "json") ||
+          !str(source)
+        ) {
           return json(422, { error: "title, version, hash, format (yaml or json) and source are strings" });
         }
         if (Buffer.byteLength(source) > MAX_BYTES) return json(413, { error: "this pack is too large for a vault" });
-        const modeList = Array.isArray(modes) ? modes.filter((m): m is { id: string; label: string } => isRecord(m) && str(m["id"]) && str(m["label"])).map((m) => ({ id: m.id, label: m.label })).slice(0, 50) : [];
-        const meta = { id: packId, title: title.trim(), version, format: format === "json" ? ("json" as const) : ("yaml" as const), hash, bytes: Buffer.byteLength(source), modes: modeList, updatedAt: now(), delegatedBy: caller.sub };
+        const modeList = Array.isArray(modes)
+          ? modes
+              .filter((m): m is { id: string; label: string } => isRecord(m) && str(m["id"]) && str(m["label"]))
+              .map((m) => ({ id: m.id, label: m.label }))
+              .slice(0, 50)
+          : [];
+        const meta = {
+          id: packId,
+          title: title.trim(),
+          version,
+          format: format === "json" ? ("json" as const) : ("yaml" as const),
+          hash,
+          bytes: Buffer.byteLength(source),
+          modes: modeList,
+          updatedAt: now(),
+          delegatedBy: caller.sub,
+        };
         await guilds.putGuildPack(guild.guildId, meta, source);
         return json(200, { kept: true, pack: meta });
       }
@@ -1506,11 +1731,15 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         return json(422, { error: "title, version, filename, importedAt, updatedAt, hash and source are all required" });
       }
       if (format !== "yaml" && format !== "json") return json(422, { error: "format is yaml or json" });
-      if (origin !== undefined && !(PACK_ORIGINS as readonly unknown[]).includes(origin)) return json(422, { error: `origin is one of ${PACK_ORIGINS.join(", ")}` });
+      if (origin !== undefined && !(PACK_ORIGINS as readonly unknown[]).includes(origin))
+        return json(422, { error: `origin is one of ${PACK_ORIGINS.join(", ")}` });
       // Either spelling: a client of any age is understood, and what it
       // sent is what is kept.
       const from = marketplace ?? catalog;
-      if (from !== undefined && !(isRecord(from) && str(from["id"]) && str(from["version"]) && from["id"].length <= MAX_NAME && from["version"].length <= MAX_NAME)) {
+      if (
+        from !== undefined &&
+        !(isRecord(from) && str(from["id"]) && str(from["version"]) && from["id"].length <= MAX_NAME && from["version"].length <= MAX_NAME)
+      ) {
         return json(422, { error: "marketplace is {id, version}" });
       }
       if (Buffer.byteLength(source) > MAX_BYTES) return json(413, { error: "this pack is too large to sync" });
@@ -1528,7 +1757,9 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         bytes: Buffer.byteLength(source),
         ...(origin !== undefined ? { origin: origin as PackOrigin } : {}),
         // Kept under the name it has now, whichever name it arrived under.
-        ...(from !== undefined ? { marketplace: { id: (from as Record<string, string>)["id"]!, version: (from as Record<string, string>)["version"]! } } : {}),
+        ...(from !== undefined
+          ? { marketplace: { id: (from as Record<string, string>)["id"]!, version: (from as Record<string, string>)["version"]! } }
+          : {}),
         ...(typeof shareable === "boolean" ? { shareable } : {}),
       };
       await store.putPack(caller.sub, meta, source);
@@ -1573,7 +1804,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       known = carried;
     }
     if (known.toLowerCase() !== invite.email) {
-      return json(422, { error: `this invitation was sent to ${maskEmail(invite.email)}; sign in with that address to join`, sentTo: maskEmail(invite.email) });
+      return json(422, {
+        error: `this invitation was sent to ${maskEmail(invite.email)}; sign in with that address to join`,
+        sentTo: maskEmail(invite.email),
+      });
     }
     const joined = await store.acceptInvite(token, caller.sub, shownName(profile), known, now());
     if (!joined) return json(410, { error: "that invitation was already used by somebody else" });
@@ -1612,7 +1846,13 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if ((await store.listApiKeys(caller.sub)).length >= MAX_KEYS) return json(422, { error: "that is enough keys; revoke one first" });
       const secret = KEY_PREFIX + randomBytes(32).toString("base64url");
       const id = randomBytes(8).toString("hex");
-      const key: ApiKey = { id, name, prefix: secret.slice(0, KEY_PREFIX.length + 6), createdAt: now(), ...(scope === "release" ? { scope: "release" as const } : {}) };
+      const key: ApiKey = {
+        id,
+        name,
+        prefix: secret.slice(0, KEY_PREFIX.length + 6),
+        createdAt: now(),
+        ...(scope === "release" ? { scope: "release" as const } : {}),
+      };
       await store.createApiKey(caller.sub, key, hashKey(secret));
       // The one time the secret is shown.
       return json(200, { key, secret });
@@ -1630,19 +1870,34 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     return json(200, { nonce, expiresInSeconds: 600 });
   }
   if (path === "/api/claims") {
-    if (method === "GET") return json(200, { claims: (await store.listClaims(caller.sub)).map(({ fingerprint, publicKey, name, claimedAt }) => ({ fingerprint, publicKey, name: name ?? null, claimedAt })) });
+    if (method === "GET")
+      return json(200, {
+        claims: (await store.listClaims(caller.sub)).map(({ fingerprint, publicKey, name, claimedAt }) => ({
+          fingerprint,
+          publicKey,
+          name: name ?? null,
+          claimedAt,
+        })),
+      });
     if (method === "POST") {
       const body = parse(event);
       if (!isRecord(body)) return json(422, { error: "a claim, as JSON" });
       const { publicKey, nonce, signature } = body;
       if (!str(publicKey) || !str(nonce) || !str(signature)) return json(422, { error: "publicKey, nonce and signature are all required" });
-      if (!(await store.takeNonce(caller.sub, nonce))) return json(422, { error: "that nonce is not yours, or was used, or expired; ask for another" });
+      if (!(await store.takeNonce(caller.sub, nonce)))
+        return json(422, { error: "that nonce is not yours, or was used, or expired; ask for another" });
       if (!(await verifyProof(publicKey, nonce, signature))) return json(422, { error: "the signature does not verify under that key" });
       const fingerprint = await fingerprintOf(publicKey);
       const existing = await store.getClaim(fingerprint);
       if (existing && existing.sub !== caller.sub) return json(409, { error: "that key is claimed by another account" });
       const profile = await store.touchProfile(caller.sub, now());
-      const claim = { fingerprint, publicKey, sub: caller.sub, ...(shownName(profile) ? { name: shownName(profile) } : {}), claimedAt: existing?.claimedAt ?? now() };
+      const claim = {
+        fingerprint,
+        publicKey,
+        sub: caller.sub,
+        ...(shownName(profile) ? { name: shownName(profile) } : {}),
+        claimedAt: existing?.claimedAt ?? now(),
+      };
       await store.claim(claim);
       return json(200, { claim: { fingerprint, publicKey, name: claim.name ?? null, claimedAt: claim.claimedAt } });
     }
@@ -1664,8 +1919,12 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!card || card.price === "free") return json(200, { found: false });
     const stripe = deps.stripe ? await deps.stripe() : null;
     if (!stripe) return json(200, { available: false });
-    const [publisher, product] = await Promise.all([deps.publishers.getPublisher(card.orgId), deps.listings.getProduct(card.orgId, packId)]);
-    if (!publisher?.connectReady || !publisher.connectAccountId || !product?.stripePriceId) return json(422, { error: "this pack cannot be sold just now; its publisher's payouts are not set up" });
+    const [publisher, product] = await Promise.all([
+      deps.publishers.getPublisher(card.orgId),
+      deps.listings.getProduct(card.orgId, packId),
+    ]);
+    if (!publisher?.connectReady || !publisher.connectAccountId || !product?.stripePriceId)
+      return json(422, { error: "this pack cannot be sold just now; its publisher's payouts are not set up" });
     // Bought already: the copy is theirs, on their profile and on every device they sign in on.
     const owned = (await deps.sales.listPurchases(caller.sub)).some((s) => s.packId === packId && s.status === "fulfilled");
     if (owned) return json(409, { error: "you already own this pack; it is on your profile under Purchases", owned: true });
@@ -1706,7 +1965,18 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   }
   if (path === "/api/me/purchases" && method === "GET") {
     const purchases = await deps.sales.listPurchases(caller.sub);
-    return json(200, { purchases: purchases.map((s) => ({ ref: s.ref, packId: s.packId, title: s.title, status: s.status, amount: s.amount, currency: s.currency, createdAt: s.createdAt, ...(s.status === "fulfilled" ? { key: s.key } : {}) })) });
+    return json(200, {
+      purchases: purchases.map((s) => ({
+        ref: s.ref,
+        packId: s.packId,
+        title: s.title,
+        status: s.status,
+        amount: s.amount,
+        currency: s.currency,
+        createdAt: s.createdAt,
+        ...(s.status === "fulfilled" ? { key: s.key } : {}),
+      })),
+    });
   }
   const purchase = path.match(/^\/api\/purchases\/([^/]+)(\/file)?$/);
   if (purchase && method === "GET") {
@@ -1714,7 +1984,16 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     // Not the buyer reads what a stranger would.
     if (!sale || sale.buyerSub !== caller.sub) return json(200, { found: false });
     if (purchase[2]) return deliver(sale);
-    return json(200, { found: true, purchase: { ref: sale.ref, packId: sale.packId, title: sale.title, status: sale.status, ...(sale.status === "fulfilled" ? { key: sale.key } : {}) } });
+    return json(200, {
+      found: true,
+      purchase: {
+        ref: sale.ref,
+        packId: sale.packId,
+        title: sale.title,
+        status: sale.status,
+        ...(sale.status === "fulfilled" ? { key: sale.key } : {}),
+      },
+    });
   }
 
   // ---- an invitation to the platform itself: one address, WorkOS's mail ----
@@ -1764,14 +2043,26 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         }
       }
     }
-    const myRole = mine ? (mine.ownerSub === caller.sub ? "admin" : ((await deps.publishers.roleOf(mine.id, caller.sub)) ?? "member")) : null;
+    const myRole = mine
+      ? mine.ownerSub === caller.sub
+        ? "admin"
+        : ((await deps.publishers.roleOf(mine.id, caller.sub)) ?? "member")
+      : null;
     const admin = myRole === "admin";
 
     // ---- their packs: uploaded masters, and what is listed ----
     const packRoute = path.match(/^\/api\/publishers\/packs(?:\/([^/]+)(\/listing)?)?$/);
     if (packRoute) {
       if (!mine) return json(200, { publisher: null });
-      const productView = (p: Product) => ({ packId: p.packId, head: p.head, price: p.price ?? null, status: p.status, bytes: p.masterBytes, createdAt: p.createdAt, updatedAt: p.updatedAt });
+      const productView = (p: Product) => ({
+        packId: p.packId,
+        head: p.head,
+        price: p.price ?? null,
+        status: p.status,
+        bytes: p.masterBytes,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      });
       const packId = packRoute[1] ? decodeURIComponent(packRoute[1]) : null;
       if (!packId) {
         if (method !== "GET") return json(410, { error: ROUTE_GONE });
@@ -1785,9 +2076,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
           if (!isRecord(body)) return json(422, { error: "a pack, as JSON" });
           const { source, head, summary } = body;
           const h = headOf(head);
-          if (!str(source) || !source.trim() || !h) return json(422, { error: "source, and a head with title, version, category and license, are all required" });
+          if (!str(source) || !source.trim() || !h)
+            return json(422, { error: "source, and a head with title, version, category and license, are all required" });
           if (Buffer.byteLength(source) > MAX_BYTES) return json(413, { error: "this pack is too large to list" });
-          if (summary !== undefined && Buffer.byteLength(JSON.stringify(summary)) > 200_000) return json(413, { error: "the summary is too large" });
+          if (summary !== undefined && Buffer.byteLength(JSON.stringify(summary)) > 200_000)
+            return json(413, { error: "the summary is too large" });
           const at = now();
           const master = await deps.listings.putMaster(mine.id, packId, source);
           const product: Product = {
@@ -1801,7 +2094,14 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
           await deps.listings.putProduct(product);
           // A listed pack's card follows the new head at once.
           if (product.status === "listed") {
-            await deps.listings.putCard({ packId, orgId: mine.id, publisherName: mine.name, head: h, price: product.price ?? "free", updatedAt: at });
+            await deps.listings.putCard({
+              packId,
+              orgId: mine.id,
+              publisherName: mine.name,
+              head: h,
+              price: product.price ?? "free",
+              updatedAt: at,
+            });
           }
           return json(200, { pack: productView(product) });
         }
@@ -1831,10 +2131,18 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
           const stripe = deps.stripe ? await deps.stripe() : null;
           if (!stripe) return json(200, { available: false, error: "selling is not switched on here yet; a free listing works" });
           if (!mine.connectReady || !mine.connectAccountId) return json(422, { error: "set up payouts before listing a pack for sale" });
-          const same = existing.price && existing.price.amount === price.amount && existing.price.currency === price.currency && stripePriceId;
+          const same =
+            existing.price && existing.price.amount === price.amount && existing.price.currency === price.currency && stripePriceId;
           if (!same) {
             if (stripePriceId) await stripe.retirePrice({ account: mine.connectAccountId, priceId: stripePriceId });
-            const made = await stripe.createListing({ account: mine.connectAccountId, name: existing.head.title, packId, amount: price.amount, currency: price.currency, ...(stripeProductId ? { productId: stripeProductId } : {}) });
+            const made = await stripe.createListing({
+              account: mine.connectAccountId,
+              name: existing.head.title,
+              packId,
+              amount: price.amount,
+              currency: price.currency,
+              ...(stripeProductId ? { productId: stripeProductId } : {}),
+            });
             stripeProductId = made.productId;
             stripePriceId = made.priceId;
           }
@@ -1860,7 +2168,18 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       return json(410, { error: ROUTE_GONE });
     }
 
-    const view = (p: typeof mine) => (p ? { id: p.id, name: p.name, owner: p.ownerSub === caller.sub, role: p.ownerSub === caller.sub ? "admin" : (myRole ?? "member"), connectStarted: Boolean(p.connectAccountId), connectReady: p.connectReady, createdAt: p.createdAt } : null);
+    const view = (p: typeof mine) =>
+      p
+        ? {
+            id: p.id,
+            name: p.name,
+            owner: p.ownerSub === caller.sub,
+            role: p.ownerSub === caller.sub ? "admin" : (myRole ?? "member"),
+            connectStarted: Boolean(p.connectAccountId),
+            connectReady: p.connectReady,
+            createdAt: p.createdAt,
+          }
+        : null;
     if (path === "/api/publishers/me" && method === "GET") return json(200, { publisher: view(mine) });
     if (path === "/api/publishers" && method === "POST") {
       if (mine) return json(409, { error: "you already publish as " + mine.name, publisher: view(mine) });
@@ -1925,11 +2244,23 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     // ---- the people in it: members by WorkOS's book, invitations pending ----
     if (path === "/api/publishers/members" && method === "GET") {
       const workos = deps.workos ? await deps.workos() : null;
-      if (!workos) return json(200, { available: false, members: [{ userId: mine.ownerSub, role: "admin", me: mine.ownerSub === caller.sub }], invitations: [] });
+      if (!workos)
+        return json(200, {
+          available: false,
+          members: [{ userId: mine.ownerSub, role: "admin", me: mine.ownerSub === caller.sub }],
+          invitations: [],
+        });
       const [members, invitations] = await Promise.all([workos.listMembers(mine.id), workos.listInvitations(mine.id)]);
       const owner = mine.ownerSub;
       return json(200, {
-        members: members.map((m) => ({ userId: m.userId, role: m.userId === owner ? "admin" : m.role, owner: m.userId === owner, me: m.userId === caller.sub, ...(m.email ? { email: m.email } : {}), ...(m.name ? { name: m.name } : {}) })),
+        members: members.map((m) => ({
+          userId: m.userId,
+          role: m.userId === owner ? "admin" : m.role,
+          owner: m.userId === owner,
+          me: m.userId === caller.sub,
+          ...(m.email ? { email: m.email } : {}),
+          ...(m.name ? { name: m.name } : {}),
+        })),
         invitations,
       });
     }
@@ -1969,7 +2300,20 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     // ---- the ledger: what sold, reissue a lost key, revoke one ----
     const ledger = path.match(/^\/api\/publishers\/sales(?:\/([^/]+)\/(reissue|revoke))?$/);
     if (ledger) {
-      const saleView = (s: Sale) => ({ ref: s.ref, packId: s.packId, title: s.title, buyerEmail: s.buyerEmail ?? null, amount: s.amount, currency: s.currency, fee: s.fee, status: s.status, createdAt: s.createdAt, fulfilledAt: s.fulfilledAt ?? null, revokedAt: s.revokedAt ?? null, ...(s.status !== "pending" ? { key: s.key ?? null } : {}) });
+      const saleView = (s: Sale) => ({
+        ref: s.ref,
+        packId: s.packId,
+        title: s.title,
+        buyerEmail: s.buyerEmail ?? null,
+        amount: s.amount,
+        currency: s.currency,
+        fee: s.fee,
+        status: s.status,
+        createdAt: s.createdAt,
+        fulfilledAt: s.fulfilledAt ?? null,
+        revokedAt: s.revokedAt ?? null,
+        ...(s.status !== "pending" ? { key: s.key ?? null } : {}),
+      });
       if (!ledger[1]) {
         if (method !== "GET") return json(410, { error: ROUTE_GONE });
         return json(200, { sales: (await deps.sales.listSales(mine.id)).map(saleView) });
@@ -1988,7 +2332,8 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const reissued: Sale = { ...sale, tokenHash: hashKey(token) };
       await deps.sales.putSale(reissued);
       const link = `${appUrl}/?purchase=${encodeURIComponent(sale.ref)}&t=${encodeURIComponent(token)}`;
-      if (deps.mailer && sale.buyerEmail) await deps.mailer.purchase(sale.buyerEmail, { pack: sale.title, publisher: mine.name, link, key: sale.key, ref: sale.ref });
+      if (deps.mailer && sale.buyerEmail)
+        await deps.mailer.purchase(sale.buyerEmail, { pack: sale.title, publisher: mine.name, link, key: sale.key, ref: sale.ref });
       return json(200, { sale: saleView(reissued), link });
     }
 
@@ -2003,13 +2348,25 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         let account = mine.connectAccountId;
         if (!account) {
           const profile = await store.touchProfile(caller.sub, now());
-          account = (await stripe.createConnectedAccount({ ...(profile.email ? { email: profile.email } : {}), metadata: { runlog_publisher: mine.id } })).id;
+          account = (
+            await stripe.createConnectedAccount({
+              ...(profile.email ? { email: profile.email } : {}),
+              metadata: { runlog_publisher: mine.id },
+            })
+          ).id;
           await deps.publishers.setConnect(mine.id, now(), { connectAccountId: account });
         }
-        const link = await stripe.onboardingLink({ account, returnUrl: `${appUrl}/?publisher=connected`, refreshUrl: `${appUrl}/?publisher=connect-again` });
+        const link = await stripe.onboardingLink({
+          account,
+          returnUrl: `${appUrl}/?publisher=connected`,
+          refreshUrl: `${appUrl}/?publisher=connect-again`,
+        });
         return json(200, { url: link.url });
       } catch (error) {
-        const said = (error as { type?: string; message?: string }).type === "StripeInvalidRequestError" ? (error as { message?: string }).message : undefined;
+        const said =
+          (error as { type?: string; message?: string }).type === "StripeInvalidRequestError"
+            ? (error as { message?: string }).message
+            : undefined;
         if (!said) throw error;
         return json(422, { error: `Stripe said: ${said}` });
       }
@@ -2035,7 +2392,14 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!int(unit) || !int(unitsDone) || (status !== "active" && status !== "ended")) return null;
     if (typeof elapsedMs !== "number" || !Number.isFinite(elapsedMs) || elapsedMs < 0) return null;
     if (ending !== undefined && (!str(ending) || ending.length > MAX_NAME)) return null;
-    return { unit: unit as number, unitsDone: unitsDone as number, status, elapsedMs: Math.round(elapsedMs), updatedAt: now(), ...(str(ending) ? { ending } : {}) };
+    return {
+      unit: unit as number,
+      unitsDone: unitsDone as number,
+      status,
+      elapsedMs: Math.round(elapsedMs),
+      updatedAt: now(),
+      ...(str(ending) ? { ending } : {}),
+    };
   };
 
   if (path === "/api/races") {
@@ -2050,7 +2414,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         return json(422, { error: "id, packId, packVersion, mode and a seed are all required" });
       }
       if ([id, packId, packVersion, mode, seed, name, packTitle, sessionId].some(tooLong)) return json(422, { error: "that is too long" });
-      if ((name !== undefined && !str(name)) || (packTitle !== undefined && !str(packTitle)) || (sessionId !== undefined && !str(sessionId))) {
+      if (
+        (name !== undefined && !str(name)) ||
+        (packTitle !== undefined && !str(packTitle)) ||
+        (sessionId !== undefined && !str(sessionId))
+      ) {
         return json(422, { error: "name, packTitle and sessionId are strings when given" });
       }
       const at = now();
@@ -2067,7 +2435,17 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       }
       if (!code) return json(500, { error: "could not find a free code; try again" });
       const created = await deps.races.createRace(
-        { id, code, packId, packVersion, mode, seed: seed.trim(), ownerSub: caller.sub, ...(str(name) && name.trim() ? { name: name.trim() } : {}), ...(str(packTitle) ? { packTitle } : {}) },
+        {
+          id,
+          code,
+          packId,
+          packVersion,
+          mode,
+          seed: seed.trim(),
+          ownerSub: caller.sub,
+          ...(str(name) && name.trim() ? { name: name.trim() } : {}),
+          ...(str(packTitle) ? { packTitle } : {}),
+        },
         at,
         { ...(shownName(profile) ? { name: shownName(profile) } : {}), ...(str(sessionId) ? { sessionId } : {}) },
       );
@@ -2143,7 +2521,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (!isRecord(body)) return json(422, { error: "a patch, as JSON" });
       const { name, ended } = body;
       if ((name !== undefined && !str(name)) || tooLong(name)) return json(422, { error: "name is a short string when given" });
-      const updated = await deps.races.updateRace(id, now(), { ...(name !== undefined ? { name: name.trim() } : {}), ...(ended === true ? { endedAt: now() } : {}) });
+      const updated = await deps.races.updateRace(id, now(), {
+        ...(name !== undefined ? { name: name.trim() } : {}),
+        ...(ended === true ? { endedAt: now() } : {}),
+      });
       if (!updated) return json(200, { found: false });
       await deps.notify?.(id, updated.meta.seq);
       return json(200, { race: updated.meta, entries: updated.entries });
@@ -2166,7 +2547,8 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         return json(422, { error: "a log starts with RunStarted, and names this session if it names any" });
       }
       if ((name !== undefined && !str(name)) || tooLong(name)) return json(422, { error: "name is a short string when given" });
-      if ((packTitle !== undefined && !str(packTitle)) || tooLong(packTitle)) return json(422, { error: "packTitle is a short string when given" });
+      if ((packTitle !== undefined && !str(packTitle)) || tooLong(packTitle))
+        return json(422, { error: "packTitle is a short string when given" });
       const created = await store.createSession(
         { id, packId, packVersion, ownerSub: caller.sub, ...(name ? { name } : {}), ...(packTitle ? { packTitle } : {}) },
         now(),
@@ -2178,7 +2560,9 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     }
   }
 
-  const session = path.match(/^\/api\/sessions\/([^/]+)(\/events|\/invites|\/invites\/[^/]+|\/members\/[^/]+|\/public|\/snapshot|\/reactions|\/asks|\/asks\/[^/]+|\/ask-key)?$/);
+  const session = path.match(
+    /^\/api\/sessions\/([^/]+)(\/events|\/invites|\/invites\/[^/]+|\/members\/[^/]+|\/public|\/snapshot|\/reactions|\/asks|\/asks\/[^/]+|\/ask-key)?$/,
+  );
   if (session) {
     const id = decodeURIComponent(session[1]!);
     const found = await store.getSession(id);
@@ -2211,7 +2595,20 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const asks = await store.answerAsk(id, askId, answer, at, reason || undefined);
       if (!asks) return json(200, { found: false });
       const answered = asks.find((a) => a.id === askId)!;
-      await deps.tell?.(id, "asked", { ask: answered.id, kind: answered.kind, ...(answered.move ? { move: answered.move } : {}), ...(answered.name ? { name: answered.name } : {}), ...(answered.via ? { via: answered.via } : {}), accepted: answer === "accepted", ...(reason ? { reason } : {}) }, at);
+      await deps.tell?.(
+        id,
+        "asked",
+        {
+          ask: answered.id,
+          kind: answered.kind,
+          ...(answered.move ? { move: answered.move } : {}),
+          ...(answered.name ? { name: answered.name } : {}),
+          ...(answered.via ? { via: answered.via } : {}),
+          accepted: answer === "accepted",
+          ...(reason ? { reason } : {}),
+        },
+        at,
+      );
       return json(200, { asks });
     }
     // ---- the ask key: minted by the host, shown once, revoked on its own ----
@@ -2223,7 +2620,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         const gate = await needsPlus();
         if (gate) return gate;
         const key = (deps.token ?? (() => randomBytes(24).toString("base64url")))();
-        const meta = await store.updateSession(id, now(), { askKeyHash: hashToken(key), askPolicy: policy ?? found.meta.askPolicy ?? "ask" });
+        const meta = await store.updateSession(id, now(), {
+          askKeyHash: hashToken(key),
+          askPolicy: policy ?? found.meta.askPolicy ?? "ask",
+        });
         await deps.notify?.(id, found.meta.seq);
         return json(200, { key, asks: { policy: meta?.askPolicy ?? "ask" } });
       }
@@ -2300,7 +2700,17 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (method === "GET") {
         if (me.role !== "owner") return json(422, { error: "only the owner sees the invitations" });
         const invites = (await store.listInvites(id)).filter((i) => i.expiresAt >= now());
-        return json(200, { invites: invites.map(({ token, email, role, createdAt, expiresAt, acceptedBy, acceptedAt }) => ({ token, email, role, createdAt, expiresAt, accepted: Boolean(acceptedBy), ...(acceptedAt ? { acceptedAt } : {}) })) });
+        return json(200, {
+          invites: invites.map(({ token, email, role, createdAt, expiresAt, acceptedBy, acceptedAt }) => ({
+            token,
+            email,
+            role,
+            createdAt,
+            expiresAt,
+            accepted: Boolean(acceptedBy),
+            ...(acceptedAt ? { acceptedAt } : {}),
+          })),
+        });
       }
       if (method === "POST") {
         if (me.role !== "owner") return json(422, { error: "only the owner invites" });
@@ -2318,7 +2728,16 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         const profile = await store.touchProfile(caller.sub, at);
         const token = (deps.token ?? (() => randomBytes(24).toString("base64url")))();
         const expiresAt = new Date(Date.parse(at) + INVITE_DAYS * 86400_000).toISOString();
-        await store.createInvite({ token, sessionId: id, email, role, invitedBy: caller.sub, ...(shownName(profile) ? { invitedByName: shownName(profile) } : {}), createdAt: at, expiresAt });
+        await store.createInvite({
+          token,
+          sessionId: id,
+          email,
+          role,
+          invitedBy: caller.sub,
+          ...(shownName(profile) ? { invitedByName: shownName(profile) } : {}),
+          createdAt: at,
+          expiresAt,
+        });
         const link = `${(deps.appUrl ?? "/").replace(/\/$/, "")}/?join=${encodeURIComponent(token)}`;
         if (deps.mailer) {
           await deps.mailer.invite(email, {
@@ -2452,7 +2871,14 @@ export function pricesFromEnv(raw: string | undefined): Record<string, string> {
   try {
     const parsed = JSON.parse(raw ?? "{}") as Record<string, unknown>;
     const out: Record<string, string> = {};
-    const keys: Record<string, string> = { plusMonthly: "plus-monthly", plusYearly: "plus-yearly", hostedMonthly: "hosted-monthly", hostedYearly: "hosted-yearly", serverMonthly: "server-monthly", serverYearly: "server-yearly" };
+    const keys: Record<string, string> = {
+      plusMonthly: "plus-monthly",
+      plusYearly: "plus-yearly",
+      hostedMonthly: "hosted-monthly",
+      hostedYearly: "hosted-yearly",
+      serverMonthly: "server-monthly",
+      serverYearly: "server-yearly",
+    };
     for (const [field, key] of Object.entries(keys)) {
       const id = parsed[field];
       if (typeof id === "string" && id) out[key] = id;
@@ -2486,165 +2912,181 @@ export function featuresFromEnv(raw: string | undefined): { plus: string; hosted
 /** The API's dependencies, from the function's environment; made once per container. */
 function depsFromEnv(selfArn?: string): Deps {
   const jobArn = process.env["DISCORD_JOB_ARN"] ?? selfArn;
-    const clientId = process.env["WORKOS_CLIENT_ID"] ?? "";
-    const cliClientId = process.env["WORKOS_CLI_CLIENT_ID"] ?? "";
-    return {
-      store: dynamoStore({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
-      races: dynamoRaces({ table: process.env["TABLE_NAME"] ?? "" }),
-      billing: dynamoBilling({ table: process.env["TABLE_NAME"] ?? "" }),
-      publishers: dynamoPublishers({ table: process.env["TABLE_NAME"] ?? "" }),
-      listings: dynamoListings({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
-      sales: dynamoSales({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
-      connectWebhookSecret: async () => {
-        const value = await secrets(process.env["STRIPE_CONNECT_WEBHOOK_SECRET_SECRET"] ?? "");
-        return looksLike("webhook-secret", value) ? value : null;
-      },
-      fees: feesFromEnv(process.env["STRIPE_FEE_BPS"]),
-      workos: async () => {
-        const key = await secrets(process.env["WORKOS_API_KEY_SECRET"] ?? "");
-        return looksLike("workos-key", key) ? (workosClient ??= realWorkOS(key)) : null;
-      },
-      releaseGates: (gates ??= gateReader(async () => {
-        const key = await secrets(process.env["WORKOS_API_KEY_SECRET"] ?? "");
-        return looksLike("workos-key", key) ? (workosClient ??= realWorkOS(key)) : null;
-      })),
-      gates: process.env["RUNLOG_GATES"] === "on",
-      // The function with time, where the stack made one: a slow interaction
-      // goes to it as an event, and the route answers Discord at once.
-      ...(process.env["DISCORD_JOB_FUNCTION"]
-        ? {
-            defer: async (interaction: Interaction) => {
-              await (lambdaClient ??= new LambdaClient({})).send(
-                new InvokeCommand({ FunctionName: process.env["DISCORD_JOB_FUNCTION"], InvocationType: "Event", Payload: Buffer.from(JSON.stringify({ kind: "discord-interaction", interaction })) }),
-              );
-            },
-            later: async (job: MovedJob) => {
-              await (lambdaClient ??= new LambdaClient({})).send(
-                new InvokeCommand({ FunctionName: process.env["DISCORD_JOB_FUNCTION"], InvocationType: "Event", Payload: Buffer.from(JSON.stringify({ kind: "moved", ...job })) }),
-              );
-            },
-          }
-        : {}),
-      guilds: dynamoGuilds({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
-      ...(process.env["DISCORD_APPLICATION_ID"] && process.env["DISCORD_PUBLIC_KEY"]
-        ? (() => {
-            const token = async () => {
-              const value = await secrets(process.env["DISCORD_BOT_TOKEN_SECRET"] ?? "");
-              return looksLike("discord-token", value) ? value : null;
-            };
-            return {
-              discord: {
-                applicationId: process.env["DISCORD_APPLICATION_ID"],
-                publicKey: process.env["DISCORD_PUBLIC_KEY"],
-                token,
-                guildName: async (guildId: string) => {
-                  const t = await token();
-                  return t ? guildNameFrom(t, guildId) : null;
-                },
-                rest: async (patient?: boolean) => {
-                  const t = await token();
-                  return t ? discordRest(t, fetch, patient ? PATIENT_ROPE_MS : ROPE_MS) : null;
-                },
-                oauth: async () => {
-                  const s = await secrets(process.env["DISCORD_CLIENT_SECRET_SECRET"] ?? "");
-                  return looksLike("discord-secret", s) ? discordOAuth(process.env["DISCORD_APPLICATION_ID"] ?? "", s, fetch) : null;
-                },
-                ...(process.env["DISCORD_SERVER_SKU"]
-                  ? {
-                      entitled: async (guildId: string) => {
-                        const t = await token();
-                        return t ? guildEntitledFrom(t, process.env["DISCORD_APPLICATION_ID"] ?? "", guildId, process.env["DISCORD_SERVER_SKU"] ?? "", fetch) : false;
-                      },
-                    }
-                  : {}),
+  const clientId = process.env["WORKOS_CLIENT_ID"] ?? "";
+  const cliClientId = process.env["WORKOS_CLI_CLIENT_ID"] ?? "";
+  return {
+    store: dynamoStore({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
+    races: dynamoRaces({ table: process.env["TABLE_NAME"] ?? "" }),
+    billing: dynamoBilling({ table: process.env["TABLE_NAME"] ?? "" }),
+    publishers: dynamoPublishers({ table: process.env["TABLE_NAME"] ?? "" }),
+    listings: dynamoListings({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
+    sales: dynamoSales({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
+    connectWebhookSecret: async () => {
+      const value = await secrets(process.env["STRIPE_CONNECT_WEBHOOK_SECRET_SECRET"] ?? "");
+      return looksLike("webhook-secret", value) ? value : null;
+    },
+    fees: feesFromEnv(process.env["STRIPE_FEE_BPS"]),
+    workos: async () => {
+      const key = await secrets(process.env["WORKOS_API_KEY_SECRET"] ?? "");
+      return looksLike("workos-key", key) ? (workosClient ??= realWorkOS(key)) : null;
+    },
+    releaseGates: (gates ??= gateReader(async () => {
+      const key = await secrets(process.env["WORKOS_API_KEY_SECRET"] ?? "");
+      return looksLike("workos-key", key) ? (workosClient ??= realWorkOS(key)) : null;
+    })),
+    gates: process.env["RUNLOG_GATES"] === "on",
+    // The function with time, where the stack made one: a slow interaction
+    // goes to it as an event, and the route answers Discord at once.
+    ...(process.env["DISCORD_JOB_FUNCTION"]
+      ? {
+          defer: async (interaction: Interaction) => {
+            await (lambdaClient ??= new LambdaClient({})).send(
+              new InvokeCommand({
+                FunctionName: process.env["DISCORD_JOB_FUNCTION"],
+                InvocationType: "Event",
+                Payload: Buffer.from(JSON.stringify({ kind: "discord-interaction", interaction })),
+              }),
+            );
+          },
+          later: async (job: MovedJob) => {
+            await (lambdaClient ??= new LambdaClient({})).send(
+              new InvokeCommand({
+                FunctionName: process.env["DISCORD_JOB_FUNCTION"],
+                InvocationType: "Event",
+                Payload: Buffer.from(JSON.stringify({ kind: "moved", ...job })),
+              }),
+            );
+          },
+        }
+      : {}),
+    guilds: dynamoGuilds({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
+    ...(process.env["DISCORD_APPLICATION_ID"] && process.env["DISCORD_PUBLIC_KEY"]
+      ? (() => {
+          const token = async () => {
+            const value = await secrets(process.env["DISCORD_BOT_TOKEN_SECRET"] ?? "");
+            return looksLike("discord-token", value) ? value : null;
+          };
+          return {
+            discord: {
+              applicationId: process.env["DISCORD_APPLICATION_ID"],
+              publicKey: process.env["DISCORD_PUBLIC_KEY"],
+              token,
+              guildName: async (guildId: string) => {
+                const t = await token();
+                return t ? guildNameFrom(t, guildId) : null;
               },
-            };
-          })()
-        : {}),
-      prices: pricesFromEnv(process.env["STRIPE_PRICES"]),
-      features: featuresFromEnv(process.env["STRIPE_FEATURES"]),
-      stripe: async () => {
-        const key = await secrets(process.env["STRIPE_SECRET_KEY_SECRET"] ?? "");
-        return looksLike("stripe-key", key) ? (stripeClient ??= realStripe(key)) : null;
-      },
-      webhookSecret: async () => {
-        const value = await secrets(process.env["STRIPE_WEBHOOK_SECRET_SECRET"] ?? "");
-        return looksLike("webhook-secret", value) ? value : null;
-      },
-      // Tokens from the browser's client and the command line's are both ours.
-      verify: (authorization) => verifyToken(authorization, [clientId, cliClientId]),
-      env: process.env["RUNLOG_ENV"] ?? "",
-      // A view becomes a CloudWatch metric by way of the embedded metric
-      // format: one log line that CloudWatch reads as a count, under the
-      // Runlog namespace, by screen, by country and by version. No table,
-      // no row, nothing to delete.
-      count: (view) =>
-        console.log(
-          JSON.stringify({
-            _aws: {
-              Timestamp: Date.now(),
-              CloudWatchMetrics: [
-                {
-                  Namespace: "Runlog",
-                  Dimensions: [
-                    ["env", "screen"],
-                    ["env", "country"],
-                    ["env", "version"],
-                  ],
-                  Metrics: [{ Name: "views", Unit: "Count" }],
-                },
-              ],
+              rest: async (patient?: boolean) => {
+                const t = await token();
+                return t ? discordRest(t, fetch, patient ? PATIENT_ROPE_MS : ROPE_MS) : null;
+              },
+              oauth: async () => {
+                const s = await secrets(process.env["DISCORD_CLIENT_SECRET_SECRET"] ?? "");
+                return looksLike("discord-secret", s) ? discordOAuth(process.env["DISCORD_APPLICATION_ID"] ?? "", s, fetch) : null;
+              },
+              ...(process.env["DISCORD_SERVER_SKU"]
+                ? {
+                    entitled: async (guildId: string) => {
+                      const t = await token();
+                      return t
+                        ? guildEntitledFrom(
+                            t,
+                            process.env["DISCORD_APPLICATION_ID"] ?? "",
+                            guildId,
+                            process.env["DISCORD_SERVER_SKU"] ?? "",
+                            fetch,
+                          )
+                        : false;
+                    },
+                  }
+                : {}),
             },
-            env: process.env["RUNLOG_ENV"] ?? "",
-            screen: view.screen,
-            country: view.country,
-            version: view.version,
-            views: 1,
-          }),
-        ),
-      // An interaction becomes two metrics the same way: how many, by kind,
-      // and how long the answer took, under the same Runlog namespace,
-      // with a rollup by stage alone so an alarm can watch the failures.
-      measure: (sample) =>
-        console.log(
-          JSON.stringify({
-            _aws: {
-              Timestamp: Date.now(),
-              CloudWatchMetrics: [
-                {
-                  Namespace: "Runlog",
-                  Dimensions: [["env", "kind"], ["env"]],
-                  Metrics: [
-                    { Name: "interactions", Unit: "Count" },
-                    { Name: "answerMs", Unit: "Milliseconds" },
-                    { Name: "failures", Unit: "Count" },
-                  ],
-                },
-              ],
-            },
-            env: process.env["RUNLOG_ENV"] ?? "",
-            kind: sample.kind,
-            interactions: 1,
-            answerMs: sample.ms,
-            failures: sample.ok ? 0 : 1,
-          }),
-        ),
-      ...(cliClientId ? { cliClientId } : {}),
-      // A timer's deadline is kept by EventBridge Scheduler, which invokes
-      // the job function at the moment; without a group and a role to
-      // invoke it, a timer that ran out waits for the next press.
-      ...(process.env["TIMER_SCHEDULE_GROUP"] && process.env["TIMER_ROLE_ARN"] && jobArn
-        ? { schedule: scheduledTimers({ group: process.env["TIMER_SCHEDULE_GROUP"], roleArn: process.env["TIMER_ROLE_ARN"], jobArn }) }
-        : {}),
-      mailer: sesMailer({ from: process.env["EMAIL_FROM"] ?? "", region: process.env["EMAIL_REGION"] ?? "us-west-2" }),
-      appUrl: process.env["APP_URL"] ?? "/",
-      ...(process.env["WS_ENDPOINT"]
-        ? {
-            notify: notifier(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
-            tell: teller(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
-          }
-        : {}),
-    };
+          };
+        })()
+      : {}),
+    prices: pricesFromEnv(process.env["STRIPE_PRICES"]),
+    features: featuresFromEnv(process.env["STRIPE_FEATURES"]),
+    stripe: async () => {
+      const key = await secrets(process.env["STRIPE_SECRET_KEY_SECRET"] ?? "");
+      return looksLike("stripe-key", key) ? (stripeClient ??= realStripe(key)) : null;
+    },
+    webhookSecret: async () => {
+      const value = await secrets(process.env["STRIPE_WEBHOOK_SECRET_SECRET"] ?? "");
+      return looksLike("webhook-secret", value) ? value : null;
+    },
+    // Tokens from the browser's client and the command line's are both ours.
+    verify: (authorization) => verifyToken(authorization, [clientId, cliClientId]),
+    env: process.env["RUNLOG_ENV"] ?? "",
+    // A view becomes a CloudWatch metric by way of the embedded metric
+    // format: one log line that CloudWatch reads as a count, under the
+    // Runlog namespace, by screen, by country and by version. No table,
+    // no row, nothing to delete.
+    count: (view) =>
+      console.log(
+        JSON.stringify({
+          _aws: {
+            Timestamp: Date.now(),
+            CloudWatchMetrics: [
+              {
+                Namespace: "Runlog",
+                Dimensions: [
+                  ["env", "screen"],
+                  ["env", "country"],
+                  ["env", "version"],
+                ],
+                Metrics: [{ Name: "views", Unit: "Count" }],
+              },
+            ],
+          },
+          env: process.env["RUNLOG_ENV"] ?? "",
+          screen: view.screen,
+          country: view.country,
+          version: view.version,
+          views: 1,
+        }),
+      ),
+    // An interaction becomes two metrics the same way: how many, by kind,
+    // and how long the answer took, under the same Runlog namespace,
+    // with a rollup by stage alone so an alarm can watch the failures.
+    measure: (sample) =>
+      console.log(
+        JSON.stringify({
+          _aws: {
+            Timestamp: Date.now(),
+            CloudWatchMetrics: [
+              {
+                Namespace: "Runlog",
+                Dimensions: [["env", "kind"], ["env"]],
+                Metrics: [
+                  { Name: "interactions", Unit: "Count" },
+                  { Name: "answerMs", Unit: "Milliseconds" },
+                  { Name: "failures", Unit: "Count" },
+                ],
+              },
+            ],
+          },
+          env: process.env["RUNLOG_ENV"] ?? "",
+          kind: sample.kind,
+          interactions: 1,
+          answerMs: sample.ms,
+          failures: sample.ok ? 0 : 1,
+        }),
+      ),
+    ...(cliClientId ? { cliClientId } : {}),
+    // A timer's deadline is kept by EventBridge Scheduler, which invokes
+    // the job function at the moment; without a group and a role to
+    // invoke it, a timer that ran out waits for the next press.
+    ...(process.env["TIMER_SCHEDULE_GROUP"] && process.env["TIMER_ROLE_ARN"] && jobArn
+      ? { schedule: scheduledTimers({ group: process.env["TIMER_SCHEDULE_GROUP"], roleArn: process.env["TIMER_ROLE_ARN"], jobArn }) }
+      : {}),
+    mailer: sesMailer({ from: process.env["EMAIL_FROM"] ?? "", region: process.env["EMAIL_REGION"] ?? "us-west-2" }),
+    appUrl: process.env["APP_URL"] ?? "/",
+    ...(process.env["WS_ENDPOINT"]
+      ? {
+          notify: notifier(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
+          tell: teller(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
+        }
+      : {}),
+  };
 }
 
 export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
@@ -2669,7 +3111,13 @@ export async function job(event: unknown, context?: { invokedFunctionArn?: strin
   try {
     if (isRecord(event) && event["kind"] === "discord-interaction" && isInteraction(event["interaction"])) {
       await finishDeferred(event["interaction"], deps);
-    } else if (isRecord(event) && event["kind"] === "timer" && typeof event["sessionId"] === "string" && typeof event["clock"] === "string" && typeof event["at"] === "string") {
+    } else if (
+      isRecord(event) &&
+      event["kind"] === "timer" &&
+      typeof event["sessionId"] === "string" &&
+      typeof event["clock"] === "string" &&
+      typeof event["at"] === "string"
+    ) {
       await finishTimer({ sessionId: event["sessionId"], clock: event["clock"], at: event["at"] }, deps);
     } else if (isRecord(event) && event["kind"] === "moved" && typeof event["sessionId"] === "string" && typeof event["seq"] === "number") {
       await finishMoved({ sessionId: event["sessionId"], seq: event["seq"] }, deps);

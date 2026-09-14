@@ -59,7 +59,9 @@ export function ClockPanel({ pack, run, state }: { pack: Pack; run: ReturnType<t
   const live = liveClocks(state);
   const config = unitClockFor(pack, state);
   const unitClock = state.clocks.find((c) => c.unit === state.unit && c.id === `u${state.unit}:unit`);
-  const canStartUnit = Boolean(config && config.auto === false && !unitClock && state.unit > 0 && state.status === "active" && !run.readOnly);
+  const canStartUnit = Boolean(
+    config && config.auto === false && !unitClock && state.unit > 0 && state.status === "active" && !run.readOnly,
+  );
   const now = useNow(live.some((c) => c.status === "running"));
   const expired = useRef<Set<string>>(new Set());
 

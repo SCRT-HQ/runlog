@@ -17,17 +17,14 @@ function loadPack(rel: string): Pack {
 const kiln = loadPack("packs/demo/pack.yaml");
 
 const NOW = "2026-01-01T00:00:00.000Z";
-const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent =>
-  ({ t, at: NOW, ...props }) as RunEvent;
+const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent => ({ t, at: NOW, ...props }) as RunEvent;
 
 /**
  * A run in the shared mode which has entered `units` units, with `noise`
  * arbitrary extra events mixed in to stand for one player's own choices.
  */
 function shared(seed: string, units: number, noise: RunEvent[] = []) {
-  const log: RunEvent[] = [
-    ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "shared", seed }),
-  ];
+  const log: RunEvent[] = [ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "shared", seed })];
   for (let i = 0; i < units; i++) {
     log.push(ev("UnitEntered"));
     log.push(...noise);

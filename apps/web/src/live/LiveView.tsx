@@ -14,7 +14,21 @@ import { LOG_LIMITS, logLimit, logLines, logOrder, setLogLimit, setLogOrder, typ
  * classes for that are computed against the snapshot before, and worn
  * for one render.
  */
-export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst = "this", order: orderAtFirst }: { snapshot: LiveSnapshot; stale?: boolean; children?: React.ReactNode; side?: React.ReactNode; rooms?: "this" | "all"; order?: "newest" | "oldest" }) {
+export function LiveView({
+  snapshot,
+  stale,
+  children,
+  side,
+  rooms: roomsAtFirst = "this",
+  order: orderAtFirst,
+}: {
+  snapshot: LiveSnapshot;
+  stale?: boolean;
+  children?: React.ReactNode;
+  side?: React.ReactNode;
+  rooms?: "this" | "all";
+  order?: "newest" | "oldest";
+}) {
   const now = useNow(snapshot.clocks.some((c) => c.status === "running"));
   const s = snapshot;
   const before = useRef<LiveSnapshot | null>(null);
@@ -41,7 +55,7 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
   // This room, as the flow with where each phase stands; or every room so
   // far as what its phases produced, newest first, which stands in for the
   // log below. The run's story told either way, kept on this device.
-  const [rooms, setRooms] = useState<"this" | "all">(() => roomsAtFirst === "all" ? "all" : roomsKept());
+  const [rooms, setRooms] = useState<"this" | "all">(() => (roomsAtFirst === "all" ? "all" : roomsKept()));
   // The rooms read newest first, the way the log does, unless turned round; the room in play is the newest.
   const [roomsOrder, setRoomsOrder] = useState<"newest" | "oldest">(() => orderAtFirst ?? roomsOrderKept());
   const past = useMemo(() => {
@@ -101,18 +115,37 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
             <section className={`stageFlow liveFlow${moved.turned ? " turned" : ""}`}>
               <div className="logHead">
                 <h3 className="sectionTitle">
-                  {rooms === "all" ? `All ${s.words.units.toLowerCase()}` : `This ${s.words.unit.toLowerCase()}`} <span className="muted">{s.words.unit} {s.unit}</span>
+                  {rooms === "all" ? `All ${s.words.units.toLowerCase()}` : `This ${s.words.unit.toLowerCase()}`}{" "}
+                  <span className="muted">
+                    {s.words.unit} {s.unit}
+                  </span>
                 </h3>
                 {(s.units ?? []).length > 0 && (
-                  <div className="logTools" role="group" aria-label={`This ${s.words.unit.toLowerCase()}, or every ${s.words.unit.toLowerCase()} so far`}>
-                    <button className={`ghost tiny${rooms === "this" ? " on" : ""}`} aria-pressed={rooms === "this"} onClick={() => chooseRooms("this")}>
+                  <div
+                    className="logTools"
+                    role="group"
+                    aria-label={`This ${s.words.unit.toLowerCase()}, or every ${s.words.unit.toLowerCase()} so far`}
+                  >
+                    <button
+                      className={`ghost tiny${rooms === "this" ? " on" : ""}`}
+                      aria-pressed={rooms === "this"}
+                      onClick={() => chooseRooms("this")}
+                    >
                       This {s.words.unit.toLowerCase()}
                     </button>
-                    <button className={`ghost tiny${rooms === "all" ? " on" : ""}`} aria-pressed={rooms === "all"} onClick={() => chooseRooms("all")}>
+                    <button
+                      className={`ghost tiny${rooms === "all" ? " on" : ""}`}
+                      aria-pressed={rooms === "all"}
+                      onClick={() => chooseRooms("all")}
+                    >
                       All {s.words.units.toLowerCase()}
                     </button>
                     {rooms === "all" && (
-                      <button className="ghost tiny" onClick={turnRooms} title={`Read the ${s.words.units.toLowerCase()} from the other end`}>
+                      <button
+                        className="ghost tiny"
+                        onClick={turnRooms}
+                        title={`Read the ${s.words.units.toLowerCase()} from the other end`}
+                      >
                         {roomsOrder === "newest" ? "Newest first" : "Oldest first"}
                       </button>
                     )}
@@ -123,7 +156,11 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
                 const current = (
                   <ol className="flow" key="current">
                     {s.phases.map((phase, i) => (
-                      <li key={phase.id} className={phase.state === "todo" ? "" : phase.state} aria-current={phase.state === "current" ? "step" : undefined}>
+                      <li
+                        key={phase.id}
+                        className={phase.state === "todo" ? "" : phase.state}
+                        aria-current={phase.state === "current" ? "step" : undefined}
+                      >
                         <span className="idx">{phase.state === "current" ? "▸" : phase.state === "skipped" ? "-" : i + 1}</span>
                         <span>
                           {phase.label}
@@ -165,7 +202,17 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
                       ))
                     : [];
                 // Newest first puts the room in play at the top; oldest first, at the end, where it belongs in time.
-                return roomsOrder === "newest" || rooms !== "all" ? [current, ...rest] : [...rest, <div key="current" className="pastRoom"><h4 className="sectionTitle"><span className="muted">{s.words.unit}</span> {s.unit}</h4>{current}</div>];
+                return roomsOrder === "newest" || rooms !== "all"
+                  ? [current, ...rest]
+                  : [
+                      ...rest,
+                      <div key="current" className="pastRoom">
+                        <h4 className="sectionTitle">
+                          <span className="muted">{s.words.unit}</span> {s.unit}
+                        </h4>
+                        {current}
+                      </div>,
+                    ];
               })()}
             </section>
           )}
@@ -174,13 +221,23 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
               <div className="logHead">
                 <h3 className="sectionTitle">
                   The log
-                  {lines.length < s.log.length && <span className="muted"> · the last {lines.length} of {s.log.length}</span>}
+                  {lines.length < s.log.length && (
+                    <span className="muted">
+                      {" "}
+                      · the last {lines.length} of {s.log.length}
+                    </span>
+                  )}
                 </h3>
                 <div className="logTools">
                   <button className="ghost tiny" onClick={flip} title="Read the log from the other end">
                     {order === "newest" ? "Newest first" : "Oldest first"}
                   </button>
-                  <select className="tiny" value={limit} onChange={(e) => cap(Number(e.target.value))} aria-label="How much of the log to show">
+                  <select
+                    className="tiny"
+                    value={limit}
+                    onChange={(e) => cap(Number(e.target.value))}
+                    aria-label="How much of the log to show"
+                  >
                     {LOG_LIMITS.map((n) => (
                       <option key={n} value={n}>
                         {n === 0 ? "All" : "Last " + n}
@@ -208,7 +265,9 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
                   </li>
                 ))}
               </ol>
-              {!s.quoted && <p className="muted small">The pack's text is not for redistribution; the log shows what the dice drew, not the tables.</p>}
+              {!s.quoted && (
+                <p className="muted small">The pack's text is not for redistribution; the log shows what the dice drew, not the tables.</p>
+              )}
             </section>
           ) : (
             <p className="muted">Nothing rolled yet; the log fills in with the first roll.</p>
@@ -221,12 +280,29 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
             <section className="panel clocks">
               {s.clocks.map((c) => {
                 const face = clockNow(c, s.at, now);
-                const tone = c.status === "done" ? "done" : c.status === "paused" ? "paused" : face.fraction !== null && face.fraction <= 0.1 ? "warn" : "";
+                const tone =
+                  c.status === "done"
+                    ? "done"
+                    : c.status === "paused"
+                      ? "paused"
+                      : face.fraction !== null && face.fraction <= 0.1
+                        ? "warn"
+                        : "";
                 return (
                   <div key={c.id} className={`clock ${c.status} ${tone}`}>
                     <div className="clockHead">
                       <span className="clockLabel">{c.label}</span>
-                      <span className="chip state">{c.status === "done" ? (c.expired ? "time" : "stopped") : c.status === "paused" ? "paused" : c.kind === "timer" ? "left" : "elapsed"}</span>
+                      <span className="chip state">
+                        {c.status === "done"
+                          ? c.expired
+                            ? "time"
+                            : "stopped"
+                          : c.status === "paused"
+                            ? "paused"
+                            : c.kind === "timer"
+                              ? "left"
+                              : "elapsed"}
+                      </span>
                     </div>
                     <div className="clockDigits">{formatClock(face.shown)}</div>
                   </div>
@@ -238,7 +314,8 @@ export function LiveView({ snapshot, stale, children, side, rooms: roomsAtFirst 
           {s.race && (
             <section className="panel">
               <h3 className="sectionTitle">
-                Race{s.race.name ? ` · ${s.race.name}` : ""} <span className="muted">{s.race.ended ? "ended" : `${s.race.racing} racing`}</span>
+                Race{s.race.name ? ` · ${s.race.name}` : ""}{" "}
+                <span className="muted">{s.race.ended ? "ended" : `${s.race.racing} racing`}</span>
               </h3>
               <RaceBoard race={s.race} />
             </section>
@@ -396,7 +473,9 @@ function Result({ r, constrains }: { r: PhaseResult; constrains?: Set<string> })
   const hit = from?.hit !== null && from?.hit !== undefined;
   // The piece by name where the snapshot carries one; older ones have only its number.
   const reached = hit ? (from?.hitName ?? `#${from!.hit}`) : null;
-  const cls = ["result", held ? "constrains" : "", hit ? "heat" : "", from?.table ? "chained" : "", from?.declared ? "declared" : ""].filter(Boolean).join(" ");
+  const cls = ["result", held ? "constrains" : "", hit ? "heat" : "", from?.table ? "chained" : "", from?.declared ? "declared" : ""]
+    .filter(Boolean)
+    .join(" ");
   return (
     <span className={cls} title={held ? "The game has already had its say: this holds over the step in hand" : undefined}>
       {from?.table && (
@@ -428,4 +507,3 @@ function keepRoomsOrder(order: "newest" | "oldest"): void {
     /* the choice lasts the tab */
   }
 }
-

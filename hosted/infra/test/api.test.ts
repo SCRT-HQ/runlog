@@ -26,8 +26,27 @@ const config = (over: Partial<EnvConfig> = {}): EnvConfig => ({
   workosCliClientId: "client_cli_test",
   email: { from: "Runlog <noreply@example.com>", region: "us-west-2", identity: "example.com" },
   gates: false,
-  stripe: { prices: { plusMonthly: "price_pm", plusYearly: "price_py", hostedMonthly: "price_hm", hostedYearly: "price_hy", serverMonthly: "price_sm", serverYearly: "price_sy" }, features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" }, applicationFeeBps: { subscribed: 0, unsubscribed: 500 } },
-  hosted: { operator: "Example Co, LLC", operatorShort: "Example Co", support: "help@example.com", termsVersion: "2026-01-01", termsDate: "2026-01-01", billing: false, testing: false },
+  stripe: {
+    prices: {
+      plusMonthly: "price_pm",
+      plusYearly: "price_py",
+      hostedMonthly: "price_hm",
+      hostedYearly: "price_hy",
+      serverMonthly: "price_sm",
+      serverYearly: "price_sy",
+    },
+    features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" },
+    applicationFeeBps: { subscribed: 0, unsubscribed: 500 },
+  },
+  hosted: {
+    operator: "Example Co, LLC",
+    operatorShort: "Example Co",
+    support: "help@example.com",
+    termsVersion: "2026-01-01",
+    termsDate: "2026-01-01",
+    billing: false,
+    testing: false,
+  },
   ...over,
 });
 
@@ -50,12 +69,16 @@ describe("the API", () => {
   it("sends every HTTP route to the one handler", () => {
     const apis = template.findResources("AWS::ApiGatewayV2::Api", { Properties: { ProtocolType: "HTTP" } });
     const [httpApiId] = Object.keys(apis);
-    const routes = Object.values(template.findResources("AWS::ApiGatewayV2::Route")).filter((r) => JSON.stringify(r.Properties.ApiId).includes(httpApiId!));
+    const routes = Object.values(template.findResources("AWS::ApiGatewayV2::Route")).filter((r) =>
+      JSON.stringify(r.Properties.ApiId).includes(httpApiId!),
+    );
     const keys = routes.map((r) => r.Properties.RouteKey).sort();
     expect(keys).toEqual(["$default", "ANY /api/{proxy+}"]);
     // One integration behind both: a second one would be a second place to
     // forget the token check.
-    const integrations = Object.values(template.findResources("AWS::ApiGatewayV2::Integration")).filter((i) => JSON.stringify(i.Properties.ApiId).includes(httpApiId!));
+    const integrations = Object.values(template.findResources("AWS::ApiGatewayV2::Integration")).filter((i) =>
+      JSON.stringify(i.Properties.ApiId).includes(httpApiId!),
+    );
     expect(integrations).toHaveLength(1);
   });
 
@@ -64,7 +87,9 @@ describe("the API", () => {
     const sockets = Object.values(template.findResources("AWS::ApiGatewayV2::Api", { Properties: { ProtocolType: "WEBSOCKET" } }));
     expect(sockets).toHaveLength(1);
     template.hasResourceProperties("AWS::ApiGatewayV2::Stage", { StageName: "ws", AutoDeploy: true });
-    const routes = Object.values(template.findResources("AWS::ApiGatewayV2::Route")).map((r) => r.Properties.RouteKey).sort();
+    const routes = Object.values(template.findResources("AWS::ApiGatewayV2::Route"))
+      .map((r) => r.Properties.RouteKey)
+      .sort();
     expect(routes).toEqual(["$connect", "$default", "$default", "$disconnect", "ANY /api/{proxy+}"]);
     // Two functions: the HTTP handler and the socket's. The HTTP one may
     // post to connections; it knows where through its environment.
@@ -126,7 +151,14 @@ describe("the API", () => {
     // Bare, without an account to report to: New Relic's wrapper is absent,
     // but Lambda Insights' layer is there regardless, it needs no account.
     template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike({ Handler: "index.handler" }));
-    for (const name of ["stripe/secret-key", "stripe/webhook-secret", "stripe/connect-webhook-secret", "workos/api-key", "discord/bot-token", "discord/client-secret"]) {
+    for (const name of [
+      "stripe/secret-key",
+      "stripe/webhook-secret",
+      "stripe/connect-webhook-secret",
+      "workos/api-key",
+      "discord/bot-token",
+      "discord/client-secret",
+    ]) {
       template.hasResourceProperties("AWS::SecretsManager::Secret", { Name: `runlog/${name}` });
     }
     template.hasResourceProperties("AWS::Lambda::Function", {
@@ -146,18 +178,30 @@ describe("the API", () => {
     const functions = template.findResources("AWS::Lambda::Function");
     const job = Object.entries(functions).find(([id]) => id.startsWith("DiscordJob"));
     expect(job).toBeDefined();
-    expect((job![1] as { Properties: { Handler: string; Timeout: number } }).Properties).toMatchObject({ Handler: "index.job", Timeout: 30 });
+    expect((job![1] as { Properties: { Handler: string; Timeout: number } }).Properties).toMatchObject({
+      Handler: "index.job",
+      Timeout: 30,
+    });
     // The same environment as the handler, so the same code finds the same table, bucket and secrets.
-    const handler = Object.entries(functions).find(([id]) => id.startsWith("Handler"))![1] as { Properties: { Environment: { Variables: Record<string, unknown> } } };
+    const handler = Object.entries(functions).find(([id]) => id.startsWith("Handler"))![1] as {
+      Properties: { Environment: { Variables: Record<string, unknown> } };
+    };
     expect(handler.Properties.Environment.Variables).toHaveProperty("DISCORD_JOB_FUNCTION");
-    expect(JSON.stringify(handler.Properties.Environment.Variables.TABLE_NAME)).toBe(JSON.stringify((job![1] as { Properties: { Environment: { Variables: Record<string, unknown> } } }).Properties.Environment.Variables.TABLE_NAME));
+    expect(JSON.stringify(handler.Properties.Environment.Variables.TABLE_NAME)).toBe(
+      JSON.stringify(
+        (job![1] as { Properties: { Environment: { Variables: Record<string, unknown> } } }).Properties.Environment.Variables.TABLE_NAME,
+      ),
+    );
     template.hasResourceProperties("AWS::IAM::Policy", {
       PolicyDocument: { Statement: Match.arrayWith([Match.objectLike({ Action: "lambda:InvokeFunction" })]) },
     });
   });
 
   it("names the store's SKU to the handler only where the stage sells the plan through Discord", () => {
-    const handlerOf = (t: Template) => Object.entries(t.findResources("AWS::Lambda::Function")).find(([id]) => id.startsWith("Handler"))![1] as { Properties: { Environment: { Variables: Record<string, unknown> } } };
+    const handlerOf = (t: Template) =>
+      Object.entries(t.findResources("AWS::Lambda::Function")).find(([id]) => id.startsWith("Handler"))![1] as {
+        Properties: { Environment: { Variables: Record<string, unknown> } };
+      };
     const selling = templateFor({ discord: { applicationId: "123", publicKey: "ab".repeat(32), serverSku: "1234567890123456789" } });
     expect(handlerOf(selling).Properties.Environment.Variables).toHaveProperty("DISCORD_SERVER_SKU", "1234567890123456789");
     const notSelling = templateFor({ discord: { applicationId: "123", publicKey: "ab".repeat(32) } });
@@ -171,9 +215,13 @@ describe("the API", () => {
     });
     // The job keeps the name CDK gave it: the dashboard stack imports that name, and an export in use cannot change.
     const functions = template.findResources("AWS::Lambda::Function");
-    const job = Object.entries(functions).find(([id]) => id.startsWith("DiscordJob"))![1] as { Properties: { FunctionName?: string; Environment: { Variables: Record<string, unknown> } } };
+    const job = Object.entries(functions).find(([id]) => id.startsWith("DiscordJob"))![1] as {
+      Properties: { FunctionName?: string; Environment: { Variables: Record<string, unknown> } };
+    };
     expect(job.Properties.FunctionName).toBeUndefined();
-    const handler = Object.entries(functions).find(([id]) => id.startsWith("Handler"))![1] as { Properties: { Environment: { Variables: Record<string, unknown> } } };
+    const handler = Object.entries(functions).find(([id]) => id.startsWith("Handler"))![1] as {
+      Properties: { Environment: { Variables: Record<string, unknown> } };
+    };
     for (const fn of [handler, job]) {
       expect(fn.Properties.Environment.Variables).toHaveProperty("TIMER_SCHEDULE_GROUP", "runlog-prd-timers");
       expect(fn.Properties.Environment.Variables).toHaveProperty("TIMER_ROLE_ARN");
@@ -194,7 +242,13 @@ describe("the API", () => {
     expect(bare).not.toContain("DISCORD_APPLICATION_ID");
     const withBot = templateFor({ discord: { applicationId: "123456789012345678", publicKey: "ab".repeat(32) } });
     withBot.hasResourceProperties("AWS::Lambda::Function", {
-      Environment: { Variables: Match.objectLike({ DISCORD_APPLICATION_ID: "123456789012345678", DISCORD_PUBLIC_KEY: "ab".repeat(32), DISCORD_BOT_TOKEN_SECRET: "runlog/discord/bot-token" }) },
+      Environment: {
+        Variables: Match.objectLike({
+          DISCORD_APPLICATION_ID: "123456789012345678",
+          DISCORD_PUBLIC_KEY: "ab".repeat(32),
+          DISCORD_BOT_TOKEN_SECRET: "runlog/discord/bot-token",
+        }),
+      },
     });
     // Whether the plan is on sale is a WorkOS flag the handler reads, not a line here.
     expect(JSON.stringify(withBot.findResources("AWS::Lambda::Function"))).not.toContain("DISCORD_OPEN");
@@ -202,9 +256,7 @@ describe("the API", () => {
     withBot.resourceCountIs("AWS::SecretsManager::Secret", 6);
     template.hasResourceProperties("AWS::IAM::Policy", {
       PolicyDocument: {
-        Statement: Match.arrayWith([
-          Match.objectLike({ Action: ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"] }),
-        ]),
+        Statement: Match.arrayWith([Match.objectLike({ Action: ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"] })]),
       },
     });
   });
@@ -213,7 +265,9 @@ describe("the API", () => {
     const monitored = templateFor({ apm: { newRelic: { accountId: "1234567", layerVersion: 52 } } });
     monitored.resourceCountIs("AWS::SecretsManager::Secret", 7);
     monitored.hasResourceProperties("AWS::SecretsManager::Secret", { Name: "runlog/newrelic/license-key" });
-    const wrapped = Object.values(monitored.findResources("AWS::Lambda::Function", { Properties: { Handler: "newrelic-lambda-wrapper.handler" } }));
+    const wrapped = Object.values(
+      monitored.findResources("AWS::Lambda::Function", { Properties: { Handler: "newrelic-lambda-wrapper.handler" } }),
+    );
     expect(wrapped).toHaveLength(3);
     for (const fn of wrapped) {
       const props = fn["Properties"] as { Layers: unknown; Environment: { Variables: Record<string, string> } };
@@ -236,7 +290,10 @@ describe("the API", () => {
         Statement: Match.arrayWith([
           Match.objectLike({
             Action: "ses:SendEmail",
-            Resource: ["arn:aws:ses:us-west-2:111122223333:identity/example.com", "arn:aws:ses:us-west-2:111122223333:identity/noreply@example.com"],
+            Resource: [
+              "arn:aws:ses:us-west-2:111122223333:identity/example.com",
+              "arn:aws:ses:us-west-2:111122223333:identity/noreply@example.com",
+            ],
           }),
         ]),
       },

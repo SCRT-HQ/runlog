@@ -13,7 +13,10 @@ export function PurchasesSection({ api }: { api: Api | null }) {
   useEffect(() => {
     if (!api) return;
     let live = true;
-    void api.myPurchases().then((p) => live && setPurchases(p), () => live && setPurchases([]));
+    void api.myPurchases().then(
+      (p) => live && setPurchases(p),
+      () => live && setPurchases([]),
+    );
     return () => {
       live = false;
     };

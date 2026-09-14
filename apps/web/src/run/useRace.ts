@@ -108,7 +108,7 @@ export function useRace(record: StoredRun | null, state: RunState | null, events
   );
 
   const owner = Boolean(race && me && race.meta.ownerSub === me);
-  const withBusy = async <T,>(fn: () => Promise<T>): Promise<T> => {
+  const withBusy = async <T>(fn: () => Promise<T>): Promise<T> => {
     setBusy(true);
     try {
       return await fn();

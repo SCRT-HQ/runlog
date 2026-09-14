@@ -55,7 +55,9 @@ describe("a mapping", () => {
   });
 
   it("will not let a rule last two ways at once", () => {
-    expect(parseMapping({ ...good, rules: [{ mark: "curse", for: 30, until: "unit", ops: [{ op: "flag.set", args: {} }] }] }).ok).toBe(false);
+    expect(parseMapping({ ...good, rules: [{ mark: "curse", for: 30, until: "unit", ops: [{ op: "flag.set", args: {} }] }] }).ok).toBe(
+      false,
+    );
   });
 
   it("wants at least one rule, since a mapping that does nothing is not one", () => {
@@ -65,7 +67,16 @@ describe("a mapping", () => {
 
 describe("telling the three documents apart", () => {
   it("says which kind a file is, so nothing has to try all three", () => {
-    const yaml = ["kind: mapping", `schemaVersion: ${MAPPING_SCHEMA_VERSION}`, "id: com.example.m", 'version: "1.0.0"', "title: M", "tool: T", "rules:", "  - { mark: curse, ops: [{ op: x }] }"].join("\n");
+    const yaml = [
+      "kind: mapping",
+      `schemaVersion: ${MAPPING_SCHEMA_VERSION}`,
+      "id: com.example.m",
+      'version: "1.0.0"',
+      "title: M",
+      "tool: T",
+      "rules:",
+      "  - { mark: curse, ops: [{ op: x }] }",
+    ].join("\n");
     expect(whichKind(yaml, "yaml")).toBe("mapping");
     expect(whichKind("kind: setup\nid: com.example.s", "yaml")).toBe("setup");
     // A pack still declares nothing, and still does not have to.
@@ -76,7 +87,14 @@ describe("telling the three documents apart", () => {
 
 describe("holding a mapping against a pack", () => {
   it("says which of its marks that pack declares, and which will do nothing", () => {
-    const m = parseMapping({ ...good, rules: [{ mark: "curse", ops: [{ op: "a" }] }, { mark: "blessing", ops: [{ op: "b" }] }, { mark: "nonesuch", ops: [{ op: "c" }] }] });
+    const m = parseMapping({
+      ...good,
+      rules: [
+        { mark: "curse", ops: [{ op: "a" }] },
+        { mark: "blessing", ops: [{ op: "b" }] },
+        { mark: "nonesuch", ops: [{ op: "c" }] },
+      ],
+    });
     expect(m.ok).toBe(true);
     expect(marksUsed(m.mapping!)).toEqual(["blessing", "curse", "nonesuch"]);
     const { fires, idle } = against(m.mapping!, ["curse", "blessing", "objective"]);

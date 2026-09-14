@@ -123,7 +123,16 @@ export function ControlPanel({
 
   if (!host) return null;
   return createPortal(
-    <RemoteControls pack={pack} run={run} state={state} receipt={receipt} onCarryOn={onCarryOn} onAnswer={onAnswer} onDrawAgain={onDrawAgain} onKeepRolling={onKeepRolling} />,
+    <RemoteControls
+      pack={pack}
+      run={run}
+      state={state}
+      receipt={receipt}
+      onCarryOn={onCarryOn}
+      onAnswer={onAnswer}
+      onDrawAgain={onDrawAgain}
+      onKeepRolling={onKeepRolling}
+    />,
     host,
   );
 }
@@ -185,11 +194,13 @@ export function RemoteControls({
       )}
 
       {/* 1. The step: what the page's current card offers. */}
-      {showStep && active && entryWords(pack, state).map((w, i) => (
-        <p key={`entry-${i}`} className="pipEntry">
-          {w}
-        </p>
-      ))}
+      {showStep &&
+        active &&
+        entryWords(pack, state).map((w, i) => (
+          <p key={`entry-${i}`} className="pipEntry">
+            {w}
+          </p>
+        ))}
       {showStep && active && <RemoteStep pack={pack} run={run} state={state} active={active} />}
 
       {/* 2. What the game is waiting on. */}
@@ -293,17 +304,7 @@ function PipSection({ title, children }: { title: string; children: ReactNode })
  * is then waiting on, covered by reusing `RequestPanel` rather than a second
  * copy of it.
  */
-function RemoteStep({
-  pack,
-  run,
-  state,
-  active,
-}: {
-  pack: Pack;
-  run: ReturnType<typeof useRun>;
-  state: RunState;
-  active: ActiveStep;
-}) {
+function RemoteStep({ pack, run, state, active }: { pack: Pack; run: ReturnType<typeof useRun>; state: RunState; active: ActiveStep }) {
   const { phase, step, index } = active;
   const [declared, setDeclared] = useState("");
   const key = `${phase.id}#${index}`;
@@ -318,7 +319,13 @@ function RemoteStep({
           <button
             className="primary big"
             onClick={() =>
-              run.begin({ kind: "table", tableId: step.table, keyPrefix: `u${state.unit}:${key}`, label: table?.title ?? step.table, completes: { phase, index } })
+              run.begin({
+                kind: "table",
+                tableId: step.table,
+                keyPrefix: `u${state.unit}:${key}`,
+                label: table?.title ?? step.table,
+                completes: { phase, index },
+              })
             }
           >
             {table?.title ?? "Roll"}
@@ -380,7 +387,13 @@ function RemoteStep({
           <button
             className="primary big"
             onClick={() =>
-              run.begin({ kind: "actions", actions: step.do, keyPrefix: `u${state.unit}:${key}`, label: phase.label, completes: { phase, index } })
+              run.begin({
+                kind: "actions",
+                actions: step.do,
+                keyPrefix: `u${state.unit}:${key}`,
+                label: phase.label,
+                completes: { phase, index },
+              })
             }
           >
             Continue
@@ -421,10 +434,19 @@ function RemoteClosing({
       {constraints.length > 0 && <Constraints lines={constraints} />}
       {blocked.length > 0 && <p className="muted small">Settle what is owed first.</p>}
       {points.length > 0 && <Checklist items={points} pack={pack} state={state} ticked={ticked} onToggle={tick} />}
-      <button className="primary big" disabled={blocked.length > 0} onClick={(e) => (done ? run.closeAndEnter(phase, index) : nudgeFirstUnticked(e.currentTarget))}>
+      <button
+        className="primary big"
+        disabled={blocked.length > 0}
+        onClick={(e) => (done ? run.closeAndEnter(phase, index) : nudgeFirstUnticked(e.currentTarget))}
+      >
         {blocked.length > 0 ? "Settle first" : done ? `Next ${unit}` : "Tick what you honored"}
       </button>
-      <button className="ghost" disabled={blocked.length > 0 || !run.canEnd.ok} title={!run.canEnd.ok ? `Cannot finish yet: ${run.canEnd.reason}` : undefined} onClick={(e) => (done ? run.finish(phase, index) : nudgeFirstUnticked(e.currentTarget))}>
+      <button
+        className="ghost"
+        disabled={blocked.length > 0 || !run.canEnd.ok}
+        title={!run.canEnd.ok ? `Cannot finish yet: ${run.canEnd.reason}` : undefined}
+        onClick={(e) => (done ? run.finish(phase, index) : nudgeFirstUnticked(e.currentTarget))}
+      >
         Finish
       </button>
     </PipSection>

@@ -73,7 +73,13 @@ export function RacePanel({ pack, race }: { pack: Pack; race: RaceView }) {
               );
             }}
           >
-            <input className="textInput" type="email" value={email} placeholder="send the code to an address" onChange={(e) => setEmail(e.target.value)} />
+            <input
+              className="textInput"
+              type="email"
+              value={email}
+              placeholder="send the code to an address"
+              onChange={(e) => setEmail(e.target.value)}
+            />
             <button className="ghost" type="submit" disabled={race.busy || !email.trim()}>
               Send
             </button>

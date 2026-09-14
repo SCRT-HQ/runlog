@@ -86,8 +86,17 @@ export class ObservabilityStack extends Stack {
     });
 
     // ---- the API ----
-    const httpHeading = new cloudwatch.TextWidget({ markdown: "## The API\nRequests, errors and latency at the edge of `/api`.", width: 24, height: 1 });
-    const httpRequests = new cloudwatch.GraphWidget({ title: "HTTP requests", left: [api.api.metricCount({ period: Duration.minutes(5) })], width: 8, height: 6 });
+    const httpHeading = new cloudwatch.TextWidget({
+      markdown: "## The API\nRequests, errors and latency at the edge of `/api`.",
+      width: 24,
+      height: 1,
+    });
+    const httpRequests = new cloudwatch.GraphWidget({
+      title: "HTTP requests",
+      left: [api.api.metricCount({ period: Duration.minutes(5) })],
+      width: 8,
+      height: 6,
+    });
     const httpErrors = new cloudwatch.GraphWidget({
       title: "HTTP 4xx / 5xx",
       left: [
@@ -128,7 +137,11 @@ export class ObservabilityStack extends Stack {
     });
 
     // ---- the handler ----
-    const handlerHeading = new cloudwatch.TextWidget({ markdown: "## The handler\nThe function behind every `/api` route.", width: 24, height: 1 });
+    const handlerHeading = new cloudwatch.TextWidget({
+      markdown: "## The handler\nThe function behind every `/api` route.",
+      width: 24,
+      height: 1,
+    });
     const handlerThroughput = new cloudwatch.GraphWidget({
       title: "Invocations, errors, throttles",
       left: [
@@ -161,10 +174,24 @@ export class ObservabilityStack extends Stack {
     const handlerInsights = new cloudwatch.GraphWidget({
       title: "Lambda Insights: memory / cold start",
       left: [
-        new cloudwatch.Metric({ namespace: "LambdaInsights", metricName: "memory_utilization", dimensionsMap: { function_name: api.handler.functionName }, statistic: "Average", period: Duration.minutes(5), label: "memory utilization (%)" }),
+        new cloudwatch.Metric({
+          namespace: "LambdaInsights",
+          metricName: "memory_utilization",
+          dimensionsMap: { function_name: api.handler.functionName },
+          statistic: "Average",
+          period: Duration.minutes(5),
+          label: "memory utilization (%)",
+        }),
       ],
       right: [
-        new cloudwatch.Metric({ namespace: "LambdaInsights", metricName: "init_duration", dimensionsMap: { function_name: api.handler.functionName }, statistic: "Average", period: Duration.minutes(5), label: "init duration (ms)" }),
+        new cloudwatch.Metric({
+          namespace: "LambdaInsights",
+          metricName: "init_duration",
+          dimensionsMap: { function_name: api.handler.functionName },
+          statistic: "Average",
+          period: Duration.minutes(5),
+          label: "init duration (ms)",
+        }),
       ],
       width: 6,
       height: 6,
@@ -192,8 +219,19 @@ export class ObservabilityStack extends Stack {
         label,
         period: Duration.minutes(5),
       });
-    const interactionFailures = new cloudwatch.Metric({ namespace: "Runlog", metricName: "failures", dimensionsMap: { env }, statistic: "sum", period: Duration.minutes(5), label: "failures" });
-    const botHeading = new cloudwatch.TextWidget({ markdown: "## The bot\nDiscord interactions, and the function with time that finishes a deferred one.", width: 24, height: 1 });
+    const interactionFailures = new cloudwatch.Metric({
+      namespace: "Runlog",
+      metricName: "failures",
+      dimensionsMap: { env },
+      statistic: "sum",
+      period: Duration.minutes(5),
+      label: "failures",
+    });
+    const botHeading = new cloudwatch.TextWidget({
+      markdown: "## The bot\nDiscord interactions, and the function with time that finishes a deferred one.",
+      width: 24,
+      height: 1,
+    });
     const interactionsByKind = new cloudwatch.GraphWidget({
       title: "Interactions by kind",
       left: [interactionsSearch("interactions", "Sum", "")],
@@ -221,7 +259,14 @@ export class ObservabilityStack extends Stack {
       title: "Job: duration p95 / cold start (ms)",
       left: [api.discordJob.metricDuration({ period: Duration.minutes(5), statistic: "p95", label: "p95" })],
       right: [
-        new cloudwatch.Metric({ namespace: "LambdaInsights", metricName: "init_duration", dimensionsMap: { function_name: api.discordJob.functionName }, statistic: "Average", period: Duration.minutes(5), label: "init duration (ms)" }),
+        new cloudwatch.Metric({
+          namespace: "LambdaInsights",
+          metricName: "init_duration",
+          dimensionsMap: { function_name: api.discordJob.functionName },
+          statistic: "Average",
+          period: Duration.minutes(5),
+          label: "init duration (ms)",
+        }),
       ],
       width: 6,
       height: 6,
@@ -232,8 +277,20 @@ export class ObservabilityStack extends Stack {
     // has: these are the ones handlers/store.ts actually issues, and an
     // alarm on a math expression is capped at ten individual metrics, the
     // full operation list (fourteen) trips that cap.
-    const tableOperations = [Operation.GET_ITEM, Operation.PUT_ITEM, Operation.UPDATE_ITEM, Operation.DELETE_ITEM, Operation.QUERY, Operation.BATCH_WRITE_ITEM, Operation.TRANSACT_WRITE_ITEMS];
-    const storeHeading = new cloudwatch.TextWidget({ markdown: "## The store\nDynamoDB, and the sync bucket (S3's own metrics are daily).", width: 24, height: 1 });
+    const tableOperations = [
+      Operation.GET_ITEM,
+      Operation.PUT_ITEM,
+      Operation.UPDATE_ITEM,
+      Operation.DELETE_ITEM,
+      Operation.QUERY,
+      Operation.BATCH_WRITE_ITEM,
+      Operation.TRANSACT_WRITE_ITEMS,
+    ];
+    const storeHeading = new cloudwatch.TextWidget({
+      markdown: "## The store\nDynamoDB, and the sync bucket (S3's own metrics are daily).",
+      width: 24,
+      height: 1,
+    });
     const tableCapacity = new cloudwatch.GraphWidget({
       title: "DynamoDB consumed capacity",
       left: [
@@ -248,7 +305,10 @@ export class ObservabilityStack extends Stack {
     // one sub-metric per operation, auto-named after the operation
     // ("getitem", "putitem", ...). Two such expressions in the same widget
     // collide on those names even though the underlying metrics differ.
-    const tableThrottledMetric = api.table.metricThrottledRequestsForOperations({ period: Duration.minutes(5), operations: tableOperations });
+    const tableThrottledMetric = api.table.metricThrottledRequestsForOperations({
+      period: Duration.minutes(5),
+      operations: tableOperations,
+    });
     const tableSystemErrorsMetric = api.table.metricSystemErrorsForOperations({ period: Duration.minutes(5), operations: tableOperations });
     const tableThrottles = new cloudwatch.GraphWidget({
       title: "DynamoDB throttled requests",
@@ -264,8 +324,24 @@ export class ObservabilityStack extends Stack {
     });
     const bucketSize = new cloudwatch.GraphWidget({
       title: "Sync bucket size and object count (daily)",
-      left: [new cloudwatch.Metric({ namespace: "AWS/S3", metricName: "BucketSizeBytes", dimensionsMap: { BucketName: api.bucket.bucketName, StorageType: "StandardStorage" }, statistic: "Average", period: Duration.days(1) })],
-      right: [new cloudwatch.Metric({ namespace: "AWS/S3", metricName: "NumberOfObjects", dimensionsMap: { BucketName: api.bucket.bucketName, StorageType: "AllStorageTypes" }, statistic: "Average", period: Duration.days(1) })],
+      left: [
+        new cloudwatch.Metric({
+          namespace: "AWS/S3",
+          metricName: "BucketSizeBytes",
+          dimensionsMap: { BucketName: api.bucket.bucketName, StorageType: "StandardStorage" },
+          statistic: "Average",
+          period: Duration.days(1),
+        }),
+      ],
+      right: [
+        new cloudwatch.Metric({
+          namespace: "AWS/S3",
+          metricName: "NumberOfObjects",
+          dimensionsMap: { BucketName: api.bucket.bucketName, StorageType: "AllStorageTypes" },
+          statistic: "Average",
+          period: Duration.days(1),
+        }),
+      ],
       width: 6,
       height: 6,
     });
@@ -275,9 +351,23 @@ export class ObservabilityStack extends Stack {
     // distribution's origins are; that is also where this stack (and every
     // Runlog stack) deploys, so the distribution's own metric methods need
     // no region override here. A copy deployed elsewhere would need one.
-    const edgeHeading = new cloudwatch.TextWidget({ markdown: "## The edge\nCloudFront, in front of the site and the API.", width: 24, height: 1 });
-    const edgeRequests = new cloudwatch.GraphWidget({ title: "Requests", left: [site.distribution.metricRequests({ period: Duration.minutes(5) })], width: 6, height: 6 });
-    const edgeBytes = new cloudwatch.GraphWidget({ title: "Bytes downloaded", left: [site.distribution.metricBytesDownloaded({ period: Duration.minutes(5) })], width: 6, height: 6 });
+    const edgeHeading = new cloudwatch.TextWidget({
+      markdown: "## The edge\nCloudFront, in front of the site and the API.",
+      width: 24,
+      height: 1,
+    });
+    const edgeRequests = new cloudwatch.GraphWidget({
+      title: "Requests",
+      left: [site.distribution.metricRequests({ period: Duration.minutes(5) })],
+      width: 6,
+      height: 6,
+    });
+    const edgeBytes = new cloudwatch.GraphWidget({
+      title: "Bytes downloaded",
+      left: [site.distribution.metricBytesDownloaded({ period: Duration.minutes(5) })],
+      width: 6,
+      height: 6,
+    });
     const edgeErrors = new cloudwatch.GraphWidget({
       title: "4xx / 5xx error rate",
       left: [
@@ -300,7 +390,11 @@ export class ObservabilityStack extends Stack {
     const alarmsHeading = new cloudwatch.TextWidget({ markdown: "## Alarms", width: 24, height: 1 });
 
     const alarm = (id: string, options: cloudwatch.AlarmProps, description: string) => {
-      const made = new cloudwatch.Alarm(this, id, { treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING, alarmDescription: description, ...options });
+      const made = new cloudwatch.Alarm(this, id, {
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+        alarmDescription: description,
+        ...options,
+      });
       made.addAlarmAction(new cloudwatchActions.SnsAction(api.alarmTopic));
       return made;
     };
@@ -386,12 +480,21 @@ export class ObservabilityStack extends Stack {
         threshold: 1,
         evaluationPeriods: 1,
       },
-      "The bot's job function failed outright, most likely it timed out before the deferred reply was filled in, and a member is still looking at \"thinking\". It is invoked once per press, with no retry, so the press is lost; check its duration and the recent handler errors.",
+      'The bot\'s job function failed outright, most likely it timed out before the deferred reply was filled in, and a member is still looking at "thinking". It is invoked once per press, with no retry, so the press is lost; check its duration and the recent handler errors.',
     );
 
     const alarmStatus = new cloudwatch.AlarmStatusWidget({
       title: "Every alarm this stage owns",
-      alarms: [api.handlerErrorsAlarm, apiServerErrors, handlerSlow, handlerThrottled, tableThrottled, edgeServerErrors, interactionFailed, jobErrors],
+      alarms: [
+        api.handlerErrorsAlarm,
+        apiServerErrors,
+        handlerSlow,
+        handlerThrottled,
+        tableThrottled,
+        edgeServerErrors,
+        interactionFailed,
+        jobErrors,
+      ],
       width: 24,
       height: 4,
     });

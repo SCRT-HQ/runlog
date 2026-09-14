@@ -7,9 +7,7 @@ import { open, seal } from "@runlog/container";
 import { generateKeyPair, signPack, verifyPack } from "./signing.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-const kiln = YAML.parse(
-  readFileSync(join(repoRoot, "packs", "demo", "pack.yaml"), "utf8"),
-) as Record<string, unknown>;
+const kiln = YAML.parse(readFileSync(join(repoRoot, "packs", "demo", "pack.yaml"), "utf8")) as Record<string, unknown>;
 
 const KEY = "ABCDE-FGHJK-LMNPQ-RSTUV";
 

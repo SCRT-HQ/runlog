@@ -140,7 +140,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         client = c;
         const user = c.getUser();
         if (returning) {
-          const honest = honestAddress({ protocol: location.protocol, pathname: location.pathname, base: appBase(location.href), hash: location.hash, search: location.search });
+          const honest = honestAddress({
+            protocol: location.protocol,
+            pathname: location.pathname,
+            base: appBase(location.href),
+            hash: location.hash,
+            search: location.search,
+          });
           if (honest) history.replaceState(null, "", honest);
         }
         if (user) {
@@ -167,4 +173,3 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   return <AccountContext.Provider value={account}>{children}</AccountContext.Provider>;
 }
-

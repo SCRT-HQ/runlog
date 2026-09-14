@@ -59,7 +59,12 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
   const licenses = new Map<string, RemoteLicense>();
   const calls: string[] = [];
   const me = opts.sub ?? "user";
-  const entryOf = (x: { updatedAt: string; hash: string; deletedAt?: string }, id: string): Entry => ({ id, updatedAt: x.updatedAt, hash: x.hash, ...(x.deletedAt ? { deletedAt: x.deletedAt } : {}) });
+  const entryOf = (x: { updatedAt: string; hash: string; deletedAt?: string }, id: string): Entry => ({
+    id,
+    updatedAt: x.updatedAt,
+    hash: x.hash,
+    ...(x.deletedAt ? { deletedAt: x.deletedAt } : {}),
+  });
 
   /** Number a batch the way the server does, dropping ids already held. */
   const append = (s: FakeSession, author: string, events: unknown[], at: string): SessionEvent[] => {
@@ -77,8 +82,7 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
     return added;
   };
   /** What another device did behind this one's back. */
-  const othersMove = (id: string, author: string, events: unknown[], at = "2026-01-09") =>
-    append(sessions.get(id)!, author, events, at);
+  const othersMove = (id: string, author: string, events: unknown[], at = "2026-01-09") => append(sessions.get(id)!, author, events, at);
 
   const api: Api = {
     me: async () => ({ sub: me, sid: "", env: "test", profile: { createdAt: "", lastSeenAt: "" }, entitlements: [] }),
@@ -89,18 +93,16 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
       calls.push("manifest");
       if (opts.offline) throw new SyncError("offline");
       return {
-        sessions: [...sessions.values()].map(
-          (s): SessionPointer => ({
-            id: s.meta.id,
-            role: s.meta.ownerSub === me ? "owner" : "player",
-            packId: s.meta.packId,
-            packVersion: s.meta.packVersion,
-            ownerSub: s.meta.ownerSub,
-            updatedAt: s.meta.updatedAt,
-            seq: s.meta.seq,
-            ...(s.meta.deletedAt ? { deletedAt: s.meta.deletedAt } : {}),
-          }),
-        ),
+        sessions: [...sessions.values()].map((s): SessionPointer => ({
+          id: s.meta.id,
+          role: s.meta.ownerSub === me ? "owner" : "player",
+          packId: s.meta.packId,
+          packVersion: s.meta.packVersion,
+          ownerSub: s.meta.ownerSub,
+          updatedAt: s.meta.updatedAt,
+          seq: s.meta.seq,
+          ...(s.meta.deletedAt ? { deletedAt: s.meta.deletedAt } : {}),
+        })),
         packs: [...packs.values()].map((p) => entryOf(p, p.id)),
         // A server from before licenses leaves the field out altogether.
         ...(opts.beforeLicenses ? {} : { licenses: [...licenses.values()].map((l) => entryOf(l, l.id)) }),
@@ -279,7 +281,15 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
   return { api, sessions, packs, licenses, calls, othersMove };
 }
 
-const started = (runId: string) => ({ t: "RunStarted", at: "2026-01-01", id: `${runId}-0`, packId: "kiln", packVersion: "1", mode: "std", runId });
+const started = (runId: string) => ({
+  t: "RunStarted",
+  at: "2026-01-01",
+  id: `${runId}-0`,
+  packId: "kiln",
+  packVersion: "1",
+  mode: "std",
+  runId,
+});
 const move = (id: string) => ({ t: "UnitEntered", at: "2026-01-01", id });
 const run = (runId: string, updatedAt: string, events: unknown[] = [started(runId)], extra: Partial<StoredRun> = {}): StoredRun => ({
   runId,
@@ -332,7 +342,10 @@ describe("the sync engine", () => {
     const local = fakeDb();
     const server = fakeApi();
     // r1 was numbered by a server that has since lost it (another account, a wipe): its log has numbers, the manifest has no r1.
-    local.runs.set("r1", run("r1", "2026-01-02", [{ ...started("r1"), seq: 1 }, { ...move("m1"), seq: 2 }, move("m2")], { seq: 2, role: "owner" }));
+    local.runs.set(
+      "r1",
+      run("r1", "2026-01-02", [{ ...started("r1"), seq: 1 }, { ...move("m1"), seq: 2 }, move("m2")], { seq: 2, role: "owner" }),
+    );
     local.runs.set("r2", run("r2", "2026-01-03", [started("r2"), move("n1")]));
     const engine = createEngine(server.api, local.db);
     const report = await engine.sync();
@@ -350,7 +363,13 @@ describe("the sync engine", () => {
     await createEngine(flaky.api, troubled.db).sync();
     troubled.runs.set("a1", run("a1", "2026-01-04", [...troubled.runs.get("a1")!.events, move("x2")], { seq: 2, role: "owner" }));
     troubled.runs.set("a2", run("a2", "2026-01-04", [...troubled.runs.get("a2")!.events, move("y2")], { seq: 2, role: "owner" }));
-    const broken = { ...flaky.api, appendEvents: async (id: string, events: SessionEvent[]) => { if (id === "a1") throw new Error("boom"); return flaky.api.appendEvents(id, events); } };
+    const broken = {
+      ...flaky.api,
+      appendEvents: async (id: string, events: SessionEvent[]) => {
+        if (id === "a1") throw new Error("boom");
+        return flaky.api.appendEvents(id, events);
+      },
+    };
     const again = await createEngine(broken, troubled.db).sync();
     expect(again.status).toBe("error");
     expect(seqs(troubled.runs.get("a2")!.events)).toEqual([1, 2, 3]);
@@ -508,11 +527,32 @@ describe("the sync engine", () => {
     const server = fakeApi();
     local.packs.set("kiln", pack("kiln", { sealed: true, origin: "listing", source: "sealed text" }));
     local.runs.set("r1", run("r1", "2026-01-02"));
-    server.packs.set("kiln", { id: "kiln", title: "Kiln", version: "1", format: "yaml", filename: "kiln.yaml", importedAt: "2026-01-01", updatedAt: "2026-01-03", hash: "h", source: "", deletedAt: "2026-01-03" } as RemotePack);
+    server.packs.set("kiln", {
+      id: "kiln",
+      title: "Kiln",
+      version: "1",
+      format: "yaml",
+      filename: "kiln.yaml",
+      importedAt: "2026-01-01",
+      updatedAt: "2026-01-03",
+      hash: "h",
+      source: "",
+      deletedAt: "2026-01-03",
+    } as RemotePack);
     await createEngine(server.api, local.db).sync();
     expect(local.packs.get("kiln")).toMatchObject({ sealed: true, source: "sealed text" });
     // A live free copy on the server does not overwrite the bought one either.
-    server.packs.set("kiln", { id: "kiln", title: "Kiln", version: "1", format: "yaml", filename: "kiln.yaml", importedAt: "2026-01-01", updatedAt: "2026-01-04", hash: "h2", source: "free text" });
+    server.packs.set("kiln", {
+      id: "kiln",
+      title: "Kiln",
+      version: "1",
+      format: "yaml",
+      filename: "kiln.yaml",
+      importedAt: "2026-01-01",
+      updatedAt: "2026-01-04",
+      hash: "h2",
+      source: "free text",
+    });
     await createEngine(server.api, local.db).sync();
     expect(local.packs.get("kiln")).toMatchObject({ sealed: true, source: "sealed text" });
     expect(server.calls.filter((c) => c.includes("kiln"))).toEqual([]);

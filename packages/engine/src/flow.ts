@@ -150,7 +150,7 @@ export function shownFor(pack: Pack, state: RunState, item: ChecklistItem): RunS
 
 /**
  * Whether a checklist point is asked at all: a point that shows a table's
- * results has nothing to promise when the table produced none in scope, 
+ * results has nothing to promise when the table produced none in scope,
  * "every constraint was honored" in a unit that drew no constraint, and
  * is neither listed nor waited for. A plain point is always asked.
  */
@@ -255,12 +255,7 @@ export function closeUnitEvents(pack: Pack, state: RunState, at: string): RunEve
  * Returned rather than committed so a caller can append them to whatever the
  * step itself produced, and land the whole move in the log as one piece.
  */
-export function stepCompletionEvents(
-  phase: Phase,
-  index: number,
-  state: RunState,
-  at: string,
-): RunEvent[] {
+export function stepCompletionEvents(phase: Phase, index: number, state: RunState, at: string): RunEvent[] {
   // A table step that owes more rolls this unit is not done: one roll is
   // taken off what is owed and the step stays where it is.
   const step = phase.steps[index];
@@ -269,11 +264,7 @@ export function stepCompletionEvents(
   }
   const events: RunEvent[] = [{ t: "StepCompleted", at, phase: phase.id, step: index }];
 
-  const done = new Set(
-    state.stepsDone
-      .filter((k) => k.startsWith(`${phase.id}#`))
-      .map((k) => Number(k.slice(phase.id.length + 1))),
-  );
+  const done = new Set(state.stepsDone.filter((k) => k.startsWith(`${phase.id}#`)).map((k) => Number(k.slice(phase.id.length + 1))));
   done.add(index);
 
   if (phase.steps.every((_, i) => done.has(i))) {

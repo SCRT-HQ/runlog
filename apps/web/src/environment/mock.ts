@@ -1,9 +1,4 @@
-import type {
-  EnvironmentLink,
-  ExternalEvent,
-  ExternalSubject,
-  LinkStatus,
-} from "@runlog/engine";
+import type { EnvironmentLink, ExternalEvent, ExternalSubject, LinkStatus } from "@runlog/engine";
 
 /**
  * A pretend environment.

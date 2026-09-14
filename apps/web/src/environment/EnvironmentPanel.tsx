@@ -1,11 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Pack } from "@runlog/rules-schema";
-import {
-  describeDifference,
-  externalName,
-  type Difference,
-  type RunState,
-} from "@runlog/engine";
+import { describeDifference, externalName, type Difference, type RunState } from "@runlog/engine";
 import { MockEnvironment } from "./mock.ts";
 import { useEnvironment } from "./useEnvironment.ts";
 
@@ -45,38 +40,31 @@ export function EnvironmentPanel({ pack, state }: { pack: Pack; state: RunState 
         <button className="disclose" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
           {open ? "▾" : "▸"} Check against your real files
         </button>{" "}
-        <span className="muted">
-          {connected ? `${env.subjects.length} found` : "nothing connected yet"}
-        </span>
+        <span className="muted">{connected ? `${env.subjects.length} found` : "nothing connected yet"}</span>
       </h3>
 
       {open && (
         <>
           <p className="muted small">
-            The board on the right is what this app <em>believes</em> you have made. The
-            work itself lives somewhere else: a folder, a project file, a repository.
-            When the two disagree, the game quietly goes wrong: {v.subject.many.toLowerCase()}{" "}
-            are targeted <em>by position</em>, so a run whose order does not match yours
-            will reach back and hit the wrong one while showing convincing working.
+            The board on the right is what this app <em>believes</em> you have made. The work itself lives somewhere else: a folder, a
+            project file, a repository. When the two disagree, the game quietly goes wrong: {v.subject.many.toLowerCase()} are targeted{" "}
+            <em>by position</em>, so a run whose order does not match yours will reach back and hit the wrong one while showing convincing
+            working.
           </p>
           <p className="muted small">
-            Connecting somewhere lets this app compare the two and tell you where they
-            differ. It only ever reads and reports, it never touches your work, and it
-            never decides who is right.
+            Connecting somewhere lets this app compare the two and tell you where they differ. It only ever reads and reports, it never
+            touches your work, and it never decides who is right.
           </p>
           <p className="muted small">
-            <strong>There is no real connection yet.</strong> Reading a folder or a
-            project file needs a small bridge running on this machine, which does not
-            exist so far. What is here is the practice environment below: a made-up set
-            of things you can make agree and disagree, so the comparison can be seen
-            working before anything real is plugged into it.
+            <strong>There is no real connection yet.</strong> Reading a folder or a project file needs a small bridge running on this
+            machine, which does not exist so far. What is here is the practice environment below: a made-up set of things you can make agree
+            and disagree, so the comparison can be seen working before anything real is plugged into it.
           </p>
 
           {overHttps && (
             <div className="notice">
-              This page is served over https, so it cannot reach a bridge running on this
-              machine. Run the app locally for that: the built files work opened straight
-              from disk.
+              This page is served over https, so it cannot reach a bridge running on this machine. Run the app locally for that: the built
+              files work opened straight from disk.
             </div>
           )}
 
@@ -87,9 +75,7 @@ export function EnvironmentPanel({ pack, state }: { pack: Pack; state: RunState 
             <button className="ghost" onClick={env.disconnect} disabled={!connected}>
               Disconnect
             </button>
-            <span className="muted small">
-              {env.link?.label}, a stand-in, not your actual work.
-            </span>
+            <span className="muted small">{env.link?.label}, a stand-in, not your actual work.</span>
           </div>
 
           {connected && (

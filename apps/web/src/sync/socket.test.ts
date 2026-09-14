@@ -67,7 +67,13 @@ describe("the backoff", () => {
 
 describe("what comes down", () => {
   it("shapes a gesture and refuses what is not one", () => {
-    expect(parseGesture(JSON.stringify({ t: "gesture", id: "s1", kind: "rolled", at: "x" }))).toEqual({ t: "gesture", id: "s1", kind: "rolled", data: {}, at: "x" });
+    expect(parseGesture(JSON.stringify({ t: "gesture", id: "s1", kind: "rolled", at: "x" }))).toEqual({
+      t: "gesture",
+      id: "s1",
+      kind: "rolled",
+      data: {},
+      at: "x",
+    });
     expect(parseGesture(JSON.stringify({ t: "gesture", id: "s1" }))).toBeNull();
     expect(parseGesture(JSON.stringify({ t: "changed", id: "s1", seq: 1 }))).toBeNull();
   });
@@ -110,7 +116,9 @@ describe("the live socket", () => {
     // A gesture goes out only while the line is up, and comes in shaped.
     expect(live.gesture("s1", "rolled", { total: 14 })).toBe(true);
     expect(first.sent.at(-1)).toBe(JSON.stringify({ t: "gesture", id: "s1", kind: "rolled", data: { total: 14 } }));
-    first.onmessage?.({ data: JSON.stringify({ t: "gesture", id: "s1", kind: "rolled", data: { total: 3 }, from: "Mira", at: "2026-01-01T00:00:00Z" }) });
+    first.onmessage?.({
+      data: JSON.stringify({ t: "gesture", id: "s1", kind: "rolled", data: { total: 3 }, from: "Mira", at: "2026-01-01T00:00:00Z" }),
+    });
     expect(gestures).toEqual([{ t: "gesture", id: "s1", kind: "rolled", data: { total: 3 }, from: "Mira", at: "2026-01-01T00:00:00Z" }]);
 
     // Switching runs sends the new watch at once.

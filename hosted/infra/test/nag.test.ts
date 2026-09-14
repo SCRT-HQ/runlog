@@ -57,7 +57,10 @@ describe.each(["dev", "prd"] as EnvName[])("the AWS Solutions rules against %s",
 
   const findings = (stack: ApiStack | SiteStack | ObservabilityStack, level: "error" | "warning") => {
     const annotations = Annotations.fromStack(stack);
-    const found = level === "error" ? annotations.findError("*", Match.stringLikeRegexp("AwsSolutions-.*")) : annotations.findWarning("*", Match.stringLikeRegexp("AwsSolutions-.*"));
+    const found =
+      level === "error"
+        ? annotations.findError("*", Match.stringLikeRegexp("AwsSolutions-.*"))
+        : annotations.findWarning("*", Match.stringLikeRegexp("AwsSolutions-.*"));
     return found.map((f) => `${f.id}: ${String(f.entry.data).split("\n")[0]}`);
   };
 
@@ -68,19 +71,39 @@ describe.each(["dev", "prd"] as EnvName[])("the AWS Solutions rules against %s",
   // these assertions, which are themselves synchronous and fast.
   const timeout = 30_000;
 
-  it("raise no error on the API", () => {
-    expect(findings(stacks.api, "error")).toEqual([]);
-  }, timeout);
+  it(
+    "raise no error on the API",
+    () => {
+      expect(findings(stacks.api, "error")).toEqual([]);
+    },
+    timeout,
+  );
 
-  it("raise no error on the site", () => {
-    expect(findings(stacks.site, "error")).toEqual([]);
-  }, timeout);
+  it(
+    "raise no error on the site",
+    () => {
+      expect(findings(stacks.site, "error")).toEqual([]);
+    },
+    timeout,
+  );
 
-  it("raise no error on observability", () => {
-    expect(findings(stacks.observability, "error")).toEqual([]);
-  }, timeout);
+  it(
+    "raise no error on observability",
+    () => {
+      expect(findings(stacks.observability, "error")).toEqual([]);
+    },
+    timeout,
+  );
 
-  it("raise no warning either", () => {
-    expect([...findings(stacks.api, "warning"), ...findings(stacks.site, "warning"), ...findings(stacks.observability, "warning")]).toEqual([]);
-  }, timeout);
+  it(
+    "raise no warning either",
+    () => {
+      expect([
+        ...findings(stacks.api, "warning"),
+        ...findings(stacks.site, "warning"),
+        ...findings(stacks.observability, "warning"),
+      ]).toEqual([]);
+    },
+    timeout,
+  );
 });

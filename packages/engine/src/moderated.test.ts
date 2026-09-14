@@ -135,7 +135,10 @@ describe("awarding", () => {
     const p = pack();
     const before = reduce(p, opened(p, "first"));
     expect(awardValue(p, before, 1, "c1")).toBe(3);
-    const after = reduce(p, [...opened(p, "first"), ev("Awarded", { contestant: "c1", outcome: 1, table: "trick", entryId: "hard", points: 3 })]);
+    const after = reduce(p, [
+      ...opened(p, "first"),
+      ev("Awarded", { contestant: "c1", outcome: 1, table: "trick", entryId: "hard", points: 3 }),
+    ]);
     expect(challenges(p, after).find((c) => c.outcome === 1)?.open).toBe(false);
     expect(awardValue(p, after, 1, "c2")).toBeNull();
     expect(awardValue(p, after, 2, "c2")).toBe(1);

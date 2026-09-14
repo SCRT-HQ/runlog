@@ -14,7 +14,10 @@ describe("the table card", () => {
     const text = readFileSync(join(__dirname, "..", "..", "..", "packs", "demo", "pack.yaml"), "utf8");
     const loaded = loadPackText(text, "yaml");
     if (!loaded.ok) throw new Error("the demo pack did not load");
-    const pack = { ...loaded.pack, unit: { ...loaded.pack.unit, intro: "Welcome to the kiln yard.", onEnter: "Stage {n}: wedge, throw, fire." } };
+    const pack = {
+      ...loaded.pack,
+      unit: { ...loaded.pack.unit, intro: "Welcome to the kiln yard.", onEnter: "Stage {n}: wedge, throw, fire." },
+    };
     const at = "2026-01-01T00:00:00Z";
     const events = [
       { t: "RunStarted", at, id: "e1", runId: "r1", packId: pack.id, packVersion: pack.version, mode: "standard", players: 1 },
@@ -28,7 +31,13 @@ describe("the table card", () => {
       { name: "This stage", value: "Stage 1: wedge, throw, fire." },
     ]);
     // A quiet pack's card says nothing of the kind.
-    const quiet = cardFor({ pack: loaded.pack, state, events, agenda: agenda(loaded.pack, state, events), run: { sessionId: "01ABC", hostName: "Mira" } });
+    const quiet = cardFor({
+      pack: loaded.pack,
+      state,
+      events,
+      agenda: agenda(loaded.pack, state, events),
+      run: { sessionId: "01ABC", hostName: "Mira" },
+    });
     expect(((quiet.embeds[0] as { fields: Array<{ name: string }> }).fields ?? []).some((f) => f.name === "Welcome")).toBe(false);
   });
 
@@ -59,8 +68,17 @@ describe("the table card", () => {
       generated: [],
       request: { kind: "chooseTarget", key: "target", label: "Choose which piece suffers", eligible: [1, 2, 3] },
     } as unknown as Pending;
-    const card = cardFor({ pack, state, events, agenda: agenda(pack, state, events), run: { sessionId: "01ABC", hostName: "Mira" }, pending });
-    const select = card.components.flatMap((r) => (r as { components: Array<Record<string, unknown>> }).components).find((c) => c["type"] === 3 && String(c["custom_id"]).includes(":target"));
+    const card = cardFor({
+      pack,
+      state,
+      events,
+      agenda: agenda(pack, state, events),
+      run: { sessionId: "01ABC", hostName: "Mira" },
+      pending,
+    });
+    const select = card.components
+      .flatMap((r) => (r as { components: Array<Record<string, unknown>> }).components)
+      .find((c) => c["type"] === 3 && String(c["custom_id"]).includes(":target"));
     expect(select).toBeDefined();
     const options = select!["options"] as Array<{ label: string; value: string; description?: string }>;
     expect(options.map((o) => o.label)).toEqual(["Piece 1", "Piece 2", "Piece 3"]);

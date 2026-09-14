@@ -174,9 +174,6 @@ export type RunEvent =
 export type RunEventType = RunEvent["t"];
 
 /** Narrow an event by type, for readable folds and filters. */
-export function isEvent<T extends RunEventType>(
-  event: RunEvent,
-  type: T,
-): event is Extract<RunEvent, { t: T }> {
+export function isEvent<T extends RunEventType>(event: RunEvent, type: T): event is Extract<RunEvent, { t: T }> {
   return event.t === type;
 }

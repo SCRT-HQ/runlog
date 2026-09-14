@@ -129,5 +129,4 @@ describe("the Ticker widget", () => {
     const html = renderToStaticMarkup(<TickerWidget lines={[]} />);
     expect(html).toContain("Nothing yet");
   });
-
 });

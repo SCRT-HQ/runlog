@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { appliesFor, fits, framesForGesture, landedOf, profileOf, revert, revertGroup, setupFor, type ControlProfile } from "../lib/handlers/control";
+import {
+  appliesFor,
+  fits,
+  framesForGesture,
+  landedOf,
+  profileOf,
+  revert,
+  revertGroup,
+  setupFor,
+  type ControlProfile,
+} from "../lib/handlers/control";
 
 /**
  * The mapping runs on a profile written in somebody's browser and reaches
@@ -25,12 +35,7 @@ describe("reading a profile", () => {
     const p = profileOf({
       control: {
         setup: [{ op: "flag.set", args: { name: "a", value: true } }, { op: 12 }, "nonsense"],
-        rows: [
-          { entry: "rot", ops: [{ op: "speffect.apply" }] },
-          { entry: "no-ops", ops: [] },
-          { ops: [{ op: "x" }] },
-          "nonsense",
-        ],
+        rows: [{ entry: "rot", ops: [{ op: "speffect.apply" }] }, { entry: "no-ops", ops: [] }, { ops: [{ op: "x" }] }, "nonsense"],
       },
     });
     expect(p?.setup).toEqual([{ op: "flag.set", args: { name: "a", value: true } }]);
@@ -47,7 +52,14 @@ describe("reading a profile", () => {
   });
 
   it("holds a lifetime to something a person could live through", () => {
-    const p = profileOf({ control: { rows: [{ entry: "a", for: 999999, ops: [{ op: "x" }] }, { entry: "b", for: -5, ops: [{ op: "x" }] }] } });
+    const p = profileOf({
+      control: {
+        rows: [
+          { entry: "a", for: 999999, ops: [{ op: "x" }] },
+          { entry: "b", for: -5, ops: [{ op: "x" }] },
+        ],
+      },
+    });
     expect(p?.rows?.[0]?.for).toBe(3600);
     expect(p?.rows?.[1]?.for).toBe(1);
   });

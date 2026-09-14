@@ -17,11 +17,11 @@ inputs:
   node-version:
     description: Node version to use
     required: false
-    default: '22'
+    default: "22"
   version:
     description: The version this build is, or becomes on release, without the v; the footer and the shell say it. Absent, the web app's package version.
     required: false
-    default: ''
+    default: ""
 
 runs:
   using: composite

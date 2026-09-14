@@ -44,7 +44,13 @@ export function usePlan(): Plan {
     if (!api) return;
     try {
       const me = await api.me();
-      cached = { gates: me.gates === true, entitlements: me.entitlements ?? [], servers: me.servers === true, serversOpen: me.serversOpen === true, publishersOpen: me.publishersOpen !== false };
+      cached = {
+        gates: me.gates === true,
+        entitlements: me.entitlements ?? [],
+        servers: me.servers === true,
+        serversOpen: me.serversOpen === true,
+        publishersOpen: me.publishersOpen !== false,
+      };
       setState(cached);
     } catch {
       // Offline, or signed out between renders: what was known stands.

@@ -31,7 +31,11 @@ export function Asks({ pack, run, record }: { pack: Pack; run: ReturnType<typeof
   useEffect(() => {
     if (!api || !taking) return;
     let live = true;
-    const read = () => void api.asks(record.runId).then((a) => live && setAsks(a), () => {});
+    const read = () =>
+      void api.asks(record.runId).then(
+        (a) => live && setAsks(a),
+        () => {},
+      );
     read();
     const every = window.setInterval(read, 15_000);
     const off = syncBus.subscribe((news) => {
@@ -107,7 +111,10 @@ export function Asks({ pack, run, record }: { pack: Pack; run: ReturnType<typeof
 
   if (!api || !taking) return null;
   const move = (a: Ask) => (a.kind === "roll" ? "a roll" : (pack.moves?.[a.move ?? ""]?.label ?? a.move ?? "a move"));
-  const recent = asks.filter((a) => a.answer).slice(-4).reverse();
+  const recent = asks
+    .filter((a) => a.answer)
+    .slice(-4)
+    .reverse();
 
   return (
     <details className="panel asks" open={open.length > 0}>

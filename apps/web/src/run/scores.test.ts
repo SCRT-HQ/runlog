@@ -56,12 +56,7 @@ const at = "2026-01-01T00:00:00.000Z";
 const ev = (t: RunEvent["t"], extra: Record<string, unknown> = {}): RunEvent => ({ t, at, ...extra }) as RunEvent;
 
 /** `finalizes` units of a mode, each one bumping cleanBlocks by one, then optionally ends the run. */
-function runOf(
-  runId: string,
-  mode: string,
-  finalizes: number,
-  { ended = true, name }: { ended?: boolean; name?: string } = {},
-): StoredRun {
+function runOf(runId: string, mode: string, finalizes: number, { ended = true, name }: { ended?: boolean; name?: string } = {}): StoredRun {
   const events: RunEvent[] = [ev("RunStarted", { packId: "dev.runlog.test-scores", packVersion: "0.0.1", mode })];
   if (name) events.push(ev("RunRenamed", { name }));
   for (let i = 0; i < finalizes; i++) {

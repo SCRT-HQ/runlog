@@ -13,8 +13,5 @@ import { apiBase } from "./config.ts";
 export function useApi(): Api | null {
   const account = useAccount();
   const base = apiBase();
-  return useMemo(
-    () => (base && account.status === "signed-in" ? createApi(base, account.getAccessToken) : null),
-    [base, account],
-  );
+  return useMemo(() => (base && account.status === "signed-in" ? createApi(base, account.getAccessToken) : null), [base, account]);
 }

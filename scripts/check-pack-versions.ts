@@ -29,7 +29,12 @@ const git = (...args: string[]) => execFileSync("git", args, { encoding: "utf8" 
 /** The `version:` a pack declares, read off the text rather than parsed. */
 function versionOf(text: string): string | null {
   const line = text.split(/\r?\n/).find((l) => /^version:/.test(l));
-  return line ? line.replace(/^version:\s*/, "").trim().replace(/^["']|["']$/g, "") : null;
+  return line
+    ? line
+        .replace(/^version:\s*/, "")
+        .trim()
+        .replace(/^["']|["']$/g, "")
+    : null;
 }
 
 /**
@@ -79,4 +84,8 @@ if (stale.length > 0) {
 
 const touched = changed.length - different.length;
 const aside = touched > 0 ? ` (${touched} edited without saying anything different.)` : "";
-console.log(different.length === 0 ? `No pack changed.${aside}` : `${different.length} pack${different.length === 1 ? "" : "s"} changed, each with a new version.${aside}`);
+console.log(
+  different.length === 0
+    ? `No pack changed.${aside}`
+    : `${different.length} pack${different.length === 1 ? "" : "s"} changed, each with a new version.${aside}`,
+);

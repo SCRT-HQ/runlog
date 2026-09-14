@@ -160,9 +160,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
       seenEntryIds.add(entry.id);
       for (const state of entry.grants ?? []) {
         if (!stateIds.has(state)) {
-          d.push(
-            err("ref/unknown-state", path, `entry ${entry.id} grants undeclared state ${state}`),
-          );
+          d.push(err("ref/unknown-state", path, `entry ${entry.id} grants undeclared state ${state}`));
         }
       }
     }
@@ -190,11 +188,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
           );
         } else if (lo < cursor) {
           d.push(
-            err(
-              "table/range-overlap",
-              path,
-              `entry ${entry.id} starts at ${lo} but ${lo}-${Math.min(hi, cursor - 1)} is already covered`,
-            ),
+            err("table/range-overlap", path, `entry ${entry.id} starts at ${lo} but ${lo}-${Math.min(hi, cursor - 1)} is already covered`),
           );
         }
         cursor = Math.max(cursor, hi + 1);
@@ -227,17 +221,12 @@ export function lintPack(pack: Pack): Diagnostic[] {
       }
       // Bands: warn on totals no band claims, but do not error -- open ladders
       // with a deliberate "anything else" fallthrough are a legitimate style.
-      const covered = (n: number) =>
-        table.entries.some((e) => (e.gte ?? -Infinity) <= n && n <= (e.lte ?? Infinity));
+      const covered = (n: number) => table.entries.some((e) => (e.gte ?? -Infinity) <= n && n <= (e.lte ?? Infinity));
       const uncovered: number[] = [];
       for (let n = dice.min; n <= dice.max; n++) if (!covered(n)) uncovered.push(n);
       if (uncovered.length > 0) {
         d.push(
-          warn(
-            "table/band-gap",
-            path,
-            `${uncovered.length} rollable total(s) match no band, e.g. ${uncovered.slice(0, 5).join(", ")}`,
-          ),
+          warn("table/band-gap", path, `${uncovered.length} rollable total(s) match no band, e.g. ${uncovered.slice(0, 5).join(", ")}`),
         );
       }
     } else if (table.resolution === "opposed") {
@@ -246,22 +235,10 @@ export function lintPack(pack: Pack): Diagnostic[] {
         d.push(err("dice/invalid", `${path}.action`, `cannot parse action dice ${table.action}`));
       }
       if (!tryParseDice(table.challenge.dice)) {
-        d.push(
-          err(
-            "dice/invalid",
-            `${path}.challenge.dice`,
-            `cannot parse challenge dice ${table.challenge.dice}`,
-          ),
-        );
+        d.push(err("dice/invalid", `${path}.challenge.dice`, `cannot parse challenge dice ${table.challenge.dice}`));
       }
       if (table.addResource && !resourceIds.has(table.addResource)) {
-        d.push(
-          err(
-            "ref/unknown-resource",
-            `${path}.addResource`,
-            `unknown resource ${table.addResource}`,
-          ),
-        );
+        d.push(err("ref/unknown-resource", `${path}.addResource`, `unknown resource ${table.addResource}`));
       }
       // An opposed roll can beat anywhere from none of the challenge dice to
       // all of them. Every rung must exist, or a legal roll has no outcome.
@@ -278,13 +255,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
         }
         const prior = seen.get(outcome.beats);
         if (prior) {
-          d.push(
-            err(
-              "table/duplicate-outcome",
-              path,
-              `outcomes ${prior} and ${outcome.id} both claim beats: ${outcome.beats}`,
-            ),
-          );
+          d.push(err("table/duplicate-outcome", path, `outcomes ${prior} and ${outcome.id} both claim beats: ${outcome.beats}`));
         }
         seen.set(outcome.beats, outcome.id);
       }
@@ -343,9 +314,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
           break;
         case "modResource":
           if (!resourceIds.has(a.resource)) {
-            d.push(
-              err("ref/unknown-resource", site.path, `references unknown resource ${a.resource}`),
-            );
+            d.push(err("ref/unknown-resource", site.path, `references unknown resource ${a.resource}`));
           }
           usesResources = true;
           break;
@@ -363,13 +332,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
         case "resolveTarget":
           usesResolveTarget = true;
           if (!pack.targeting || pack.targeting.strategy === "none") {
-            d.push(
-              err(
-                "targeting/unavailable",
-                site.path,
-                "resolveTarget is used but the pack declares no targeting strategy",
-              ),
-            );
+            d.push(err("targeting/unavailable", site.path, "resolveTarget is used but the pack declares no targeting strategy"));
           }
           break;
         default:
@@ -425,7 +388,10 @@ export function lintPack(pack: Pack): Diagnostic[] {
       // The other direction, which is the one that catches a rename: a
       // mark nothing carries is a promise about nothing, and whatever
       // was matching on it is now matching on nothing.
-      if (!carried.has(mark)) d.push(warn("mark/uncarried", `marks.${mark}`, `is declared and no entry carries it; anything matching on ${mark} will never fire`));
+      if (!carried.has(mark))
+        d.push(
+          warn("mark/uncarried", `marks.${mark}`, `is declared and no entry carries it; anything matching on ${mark} will never fire`),
+        );
     }
   }
 
@@ -435,7 +401,13 @@ export function lintPack(pack: Pack): Diagnostic[] {
         const r = requirements.get(need);
         if (!r) d.push(err("ref/unknown-requirement", `tables.${tableId}.entries[${i}].needs`, `needs unknown requirement ${need}`));
         else if (!r.optional) {
-          d.push(warn("requirement/never-lacked", `tables.${tableId}.entries[${i}].needs`, `needs ${need}, which is not optional, so no run can lack it; the entry will never be skipped`));
+          d.push(
+            warn(
+              "requirement/never-lacked",
+              `tables.${tableId}.entries[${i}].needs`,
+              `needs ${need}, which is not optional, so no run can lack it; the entry will never be skipped`,
+            ),
+          );
         }
       }
     });
@@ -444,9 +416,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
   // ── Predicate references ────────────────────────────────────────────────
   const predicateSites: Array<{ path: string; preds: Predicate[] | undefined }> = [];
   for (const [tableId, table] of Object.entries(pack.tables)) {
-    table.entries.forEach((e, i) =>
-      predicateSites.push({ path: `tables.${tableId}.entries[${i}].requires`, preds: e.requires }),
-    );
+    table.entries.forEach((e, i) => predicateSites.push({ path: `tables.${tableId}.entries[${i}].requires`, preds: e.requires }));
   }
   for (const [moveId, move] of Object.entries(pack.moves ?? {})) {
     predicateSites.push({ path: `moves.${moveId}.available`, preds: move.available });
@@ -467,9 +437,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
           const b = bound as { gteCounter?: string; lteCounter?: string };
           for (const ref of [b.gteCounter, b.lteCounter]) {
             if (ref && !counterIds.has(ref)) {
-              d.push(
-                err("ref/unknown-counter", site.path, `bound references unknown counter ${ref}`),
-              );
+              d.push(err("ref/unknown-counter", site.path, `bound references unknown counter ${ref}`));
             }
           }
         }
@@ -520,7 +488,8 @@ export function lintPack(pack: Pack): Diagnostic[] {
           d.push(err("ref/unknown-counter", `${path}.${field}[${ii}]`, `tallies unknown counter ${item.tally}`));
         }
         if (typeof item !== "string" && item.tally) movedCounters.add(item.tally);
-        const shown = typeof item !== "string" && item.shows ? (Array.isArray(item.shows.table) ? item.shows.table : [item.shows.table]) : [];
+        const shown =
+          typeof item !== "string" && item.shows ? (Array.isArray(item.shows.table) ? item.shows.table : [item.shows.table]) : [];
         for (const t of shown.filter((t) => !tableIds.has(t))) {
           d.push(err("ref/unknown-table", `${path}.${field}[${ii}]`, `shows unknown table ${t}`));
         }
@@ -547,13 +516,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
         // A card is not a die roll. Pointing a draw at a numeric table would
         // only work by pretending ranks are d13 results, so require the honest
         // form instead.
-        d.push(
-          err(
-            "deck/resolve-not-keyed",
-            refPath,
-            `table ${deck.resolveOn} must use "keyed" resolution to resolve a card draw`,
-          ),
-        );
+        d.push(err("deck/resolve-not-keyed", refPath, `table ${deck.resolveOn} must use "keyed" resolution to resolve a card draw`));
       } else {
         const keyed = pack.tables[deck.resolveOn] as { entries: Array<{ key: string }> };
         const expected =
@@ -563,13 +526,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
         const present = new Set(keyed.entries.map((e) => e.key.toLowerCase()));
         const missing = expected.filter((k) => !present.has(k));
         if (missing.length > 0) {
-          d.push(
-            warn(
-              "deck/uncovered-key",
-              refPath,
-              `table ${deck.resolveOn} has no entry for ${deck.resolveBy}: ${missing.join(", ")}`,
-            ),
-          );
+          d.push(warn("deck/uncovered-key", refPath, `table ${deck.resolveOn} has no entry for ${deck.resolveBy}: ${missing.join(", ")}`));
         }
       }
     }
@@ -582,13 +539,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
         ids.add(card.id);
       }
       if (deck.drawAtStart > deck.cards.length) {
-        d.push(
-          err(
-            "deck/overdraw",
-            `decks.${deckId}`,
-            `drawAtStart is ${deck.drawAtStart} but the deck holds ${deck.cards.length} cards`,
-          ),
-        );
+        d.push(err("deck/overdraw", `decks.${deckId}`, `drawAtStart is ${deck.drawAtStart} but the deck holds ${deck.cards.length} cards`));
       }
     }
   }
@@ -686,13 +637,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
         d.push(err("targeting/bad-band", `targeting.bands[${i}]`, `range [${lo}, ${hi}] is inverted`));
       }
       if (band.anchor !== "playerChoice" && !band.direction) {
-        d.push(
-          err(
-            "targeting/missing-direction",
-            `targeting.bands[${i}]`,
-            `anchor ${band.anchor} needs a direction (before/after)`,
-          ),
-        );
+        d.push(err("targeting/missing-direction", `targeting.bands[${i}]`, `anchor ${band.anchor} needs a direction (before/after)`));
       }
     }
   }
@@ -721,22 +666,10 @@ export function lintPack(pack: Pack): Diagnostic[] {
     const players = mode.players;
     if (!players) continue;
     if (players.max < players.min) {
-      d.push(
-        err(
-          "mode/player-range",
-          `modes.${modeId}.players`,
-          `max (${players.max}) is below min (${players.min})`,
-        ),
-      );
+      d.push(err("mode/player-range", `modes.${modeId}.players`, `max (${players.max}) is below min (${players.min})`));
     }
     if (players.rotate === "clockwise" && !players.roles?.length) {
-      d.push(
-        warn(
-          "mode/rotate-without-roles",
-          `modes.${modeId}.players.rotate`,
-          "roles are set to rotate, but the mode declares none",
-        ),
-      );
+      d.push(warn("mode/rotate-without-roles", `modes.${modeId}.players.rotate`, "roles are set to rotate, but the mode declares none"));
     }
     if ((players.roles?.length ?? 0) > 1 && players.roles!.every((r) => r.acts)) {
       d.push(
@@ -749,11 +682,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
     }
     if ((players.roles?.length ?? 0) > 0 && players.max < 2) {
       d.push(
-        warn(
-          "mode/roles-without-players",
-          `modes.${modeId}.players.roles`,
-          "roles are declared, but the mode is played by one person",
-        ),
+        warn("mode/roles-without-players", `modes.${modeId}.players.roles`, "roles are declared, but the mode is played by one person"),
       );
     }
   }
@@ -796,13 +725,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
   const claimed = new Set(pack.capabilities);
   const requireCap = (cap: string, used: boolean, why: string) => {
     if (used && !claimed.has(cap as never)) {
-      d.push(
-        warn(
-          "capability/undeclared",
-          "capabilities",
-          `pack ${why} but does not declare the "${cap}" capability`,
-        ),
-      );
+      d.push(warn("capability/undeclared", "capabilities", `pack ${why} but does not declare the "${cap}" capability`));
     }
   };
   const moderatedModes = Object.values(pack.modes).filter((m) => m.moderated);
@@ -813,7 +736,13 @@ export function lintPack(pack: Pack): Diagnostic[] {
   }
   for (const [modeId, m] of Object.entries(pack.modes)) {
     if (m.moderated && m.moderated.contestants.max < m.moderated.contestants.min) {
-      d.push(err("mode/contestant-range", `modes.${modeId}.moderated.contestants`, `max (${m.moderated.contestants.max}) is below min (${m.moderated.contestants.min})`));
+      d.push(
+        err(
+          "mode/contestant-range",
+          `modes.${modeId}.moderated.contestants`,
+          `max (${m.moderated.contestants.max}) is below min (${m.moderated.contestants.min})`,
+        ),
+      );
     }
   }
   requireCap("decks", usesDecks, "uses decks");
@@ -821,11 +750,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
   requireCap("counters", counterIds.size > 0, "declares counters");
   const unitClock = Boolean(pack.unit.clock) || Object.values(pack.modes).some((m) => m.clock);
   requireCap("timers", usesTimers || unitClock, "runs a clock");
-  requireCap(
-    "backwardTargeting",
-    usesResolveTarget || (!!pack.targeting && pack.targeting.strategy !== "none"),
-    "defines targeting",
-  );
+  requireCap("backwardTargeting", usesResolveTarget || (!!pack.targeting && pack.targeting.strategy !== "none"), "defines targeting");
   requireCap(
     "bandsResolution",
     Object.values(pack.tables).some((t) => t.resolution === "bands"),
@@ -839,11 +764,7 @@ export function lintPack(pack: Pack): Diagnostic[] {
     "uses a standard 52-card deck",
   );
   requireCap("journal", !!pack.journal?.enabled, "enables the journal");
-  requireCap(
-    "handsFree",
-    pack.unit.handsFree || Object.values(pack.modes).some((m) => m.handsFree),
-    "runs a unit hands-free",
-  );
+  requireCap("handsFree", pack.unit.handsFree || Object.values(pack.modes).some((m) => m.handsFree), "runs a unit hands-free");
   requireCap(
     "coopRoles",
     Object.values(pack.modes).some((m) => (m.players?.max ?? 1) > 1),
@@ -856,16 +777,11 @@ export function lintPack(pack: Pack): Diagnostic[] {
   );
   requireCap(
     "deferredTriggers",
-    Object.values(pack.tables).some((t) =>
-      t.entries.some((e) => e.triggers?.some((tr) => tr.on !== "immediately")),
-    ) || (pack.triggers?.length ?? 0) > 0,
+    Object.values(pack.tables).some((t) => t.entries.some((e) => e.triggers?.some((tr) => tr.on !== "immediately"))) ||
+      (pack.triggers?.length ?? 0) > 0,
     "uses deferred triggers",
   );
-  requireCap(
-    "clockRules",
-    usesTimerExpired || usesClockPredicate,
-    "reacts to a timer running out or reads how long a clock has run",
-  );
+  requireCap("clockRules", usesTimerExpired || usesClockPredicate, "reacts to a timer running out or reads how long a clock has run");
 
   // ── Play fixtures ────────────────────────────────────────────────────────
   // Only what the schema cannot already rule out: that a step names a phase
@@ -892,5 +808,4 @@ export function lintPack(pack: Pack): Diagnostic[] {
   return d;
 }
 
-export const hasErrors = (diagnostics: Diagnostic[]): boolean =>
-  diagnostics.some((x) => x.level === "error");
+export const hasErrors = (diagnostics: Diagnostic[]): boolean => diagnostics.some((x) => x.level === "error");

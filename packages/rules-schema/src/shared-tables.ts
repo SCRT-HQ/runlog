@@ -48,7 +48,9 @@ export const SharedTables = z
      * something a reader should have to guess.
      */
     defaultVariant: z.string().min(1).max(60).describe("The variant used when a pack or a run does not name one."),
-    variants: z.record(z.string().min(1).max(60), TableVariant).describe("The same table pitched more than one way, by a short name: `gentle`, `harsh`."),
+    variants: z
+      .record(z.string().min(1).max(60), TableVariant)
+      .describe("The same table pitched more than one way, by a short name: `gentle`, `harsh`."),
     license: z
       .object({
         id: z.string().min(1).describe("An SPDX identifier where there is one, else whatever name the terms go by."),
@@ -58,13 +60,14 @@ export const SharedTables = z
       .optional(),
   })
   .strict()
-  .describe("Tables written once and used by any pack: the same set pitched several ways, so a pack can choose one and a run can choose another.");
+  .describe(
+    "Tables written once and used by any pack: the same set pitched several ways, so a pack can choose one and a run can choose another.",
+  );
 
 export type SharedTables = z.infer<typeof SharedTables>;
 
 export type SharedTablesResult =
-  | { ok: true; tables: SharedTables; diagnostics: Diagnostic[] }
-  | { ok: false; tables: null; diagnostics: Diagnostic[] };
+  { ok: true; tables: SharedTables; diagnostics: Diagnostic[] } | { ok: false; tables: null; diagnostics: Diagnostic[] };
 
 export const SHARED_TABLES_SCHEMA_VERSION = 1;
 
@@ -77,11 +80,16 @@ export function parseSharedTables(input: unknown): SharedTablesResult {
 
   if (typeof input !== "object" || input === null || Array.isArray(input)) return fail("tables/shape", "a table set is an object");
   const raw = input as Record<string, unknown>;
-  if (raw["kind"] !== "tables") return fail("tables/kind", `this is not a table set: kind is ${JSON.stringify(raw["kind"]) ?? "missing"}`, "kind");
+  if (raw["kind"] !== "tables")
+    return fail("tables/kind", `this is not a table set: kind is ${JSON.stringify(raw["kind"]) ?? "missing"}`, "kind");
 
   const version = raw["schemaVersion"];
   if (version !== SHARED_TABLES_SCHEMA_VERSION) {
-    return fail("tables/version", `this build reads schemaVersion ${SHARED_TABLES_SCHEMA_VERSION}, and this says ${JSON.stringify(version) ?? "nothing"}`, "schemaVersion");
+    return fail(
+      "tables/version",
+      `this build reads schemaVersion ${SHARED_TABLES_SCHEMA_VERSION}, and this says ${JSON.stringify(version) ?? "nothing"}`,
+      "schemaVersion",
+    );
   }
 
   const parsed = SharedTables.safeParse(raw);
@@ -103,7 +111,11 @@ export function parseSharedTables(input: unknown): SharedTablesResult {
   // and saying nothing would roll on nothing.
   const doc = parsed.data;
   if (!doc.variants[doc.defaultVariant]) {
-    return fail("tables/default", `defaultVariant is ${doc.defaultVariant}, which is not one of: ${Object.keys(doc.variants).join(", ") || "none"}`, "defaultVariant");
+    return fail(
+      "tables/default",
+      `defaultVariant is ${doc.defaultVariant}, which is not one of: ${Object.keys(doc.variants).join(", ") || "none"}`,
+      "defaultVariant",
+    );
   }
 
   return { ok: true, tables: doc, diagnostics: [] };
@@ -148,7 +160,12 @@ export function resolveUses(
       // Not an error here: a pack whose borrowed set is not on this
       // device is a pack somebody has to go and get the set for, which
       // the app can say better than a parser can.
-      diagnostics.push({ level: "warning", code: "use/missing", path: at, message: `${use.from} is not here, so ${use.as} has only what this pack declares itself` });
+      diagnostics.push({
+        level: "warning",
+        code: "use/missing",
+        path: at,
+        message: `${use.from} is not here, so ${use.as} has only what this pack declares itself`,
+      });
       return;
     }
 
@@ -173,20 +190,36 @@ export function resolveUses(
        * coming up, which is the same class of failure as the tag rename.
        */
       if (mine.resolution !== "lookup") {
-        diagnostics.push({ level: "error", code: "use/append", path: at, message: `${use.as} is a ${mine.resolution} table, and entries can only be appended to a lookup table` });
+        diagnostics.push({
+          level: "error",
+          code: "use/append",
+          path: at,
+          message: `${use.as} is a ${mine.resolution} table, and entries can only be appended to a lookup table`,
+        });
         return;
       }
       const had = new Set((mine.entries as Array<{ id?: string }>).map((e) => e.id));
       const clashes = variant.entries.filter((e) => had.has(e.id)).map((e) => e.id);
       if (clashes.length > 0) {
-        diagnostics.push({ level: "error", code: "use/clash", path: at, message: `${use.as} already has entries called ${clashes.join(", ")}, which would be replaced rather than added` });
+        diagnostics.push({
+          level: "error",
+          code: "use/clash",
+          path: at,
+          message: `${use.as} already has entries called ${clashes.join(", ")}, which would be replaced rather than added`,
+        });
         return;
       }
       tables[use.as] = { ...mine, entries: [...(mine.entries as unknown[]), ...variant.entries] };
       return;
     }
 
-    tables[use.as] = { resolution: "lookup", title: variant.title, ...(variant.description ? { description: variant.description } : {}) , roll: variant.roll, entries: variant.entries };
+    tables[use.as] = {
+      resolution: "lookup",
+      title: variant.title,
+      ...(variant.description ? { description: variant.description } : {}),
+      roll: variant.roll,
+      entries: variant.entries,
+    };
   });
 
   return { pack: { ...pack, tables: tables as Pack["tables"] }, diagnostics };

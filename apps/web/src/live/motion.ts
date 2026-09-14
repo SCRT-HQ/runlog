@@ -22,7 +22,14 @@ export interface Motion {
   resources: Set<string>;
 }
 
-export const STILL: Motion = { turned: false, freshFrom: Infinity, struck: new Set(), states: new Set(), counters: new Set(), resources: new Set() };
+export const STILL: Motion = {
+  turned: false,
+  freshFrom: Infinity,
+  struck: new Set(),
+  states: new Set(),
+  counters: new Set(),
+  resources: new Set(),
+};
 
 export function motionBetween(prev: LiveSnapshot | null, next: LiveSnapshot): Motion {
   if (!prev) return STILL;
@@ -33,7 +40,8 @@ export function motionBetween(prev: LiveSnapshot | null, next: LiveSnapshot): Mo
   const states = new Set<string>();
   for (const s of next.subjects) for (const st of s.states) if (!held.get(s.id)?.has(st)) states.add(`${s.id}:${st}`);
   const was = (list: Array<{ id: string; value: number }>) => new Map(list.map((x) => [x.id, x.value]));
-  const changed = (before: Map<string, number>, after: Array<{ id: string; value: number }>) => new Set(after.filter((x) => before.has(x.id) && before.get(x.id) !== x.value).map((x) => x.id));
+  const changed = (before: Map<string, number>, after: Array<{ id: string; value: number }>) =>
+    new Set(after.filter((x) => before.has(x.id) && before.get(x.id) !== x.value).map((x) => x.id));
   return {
     turned: prev.unit !== next.unit,
     freshFrom,

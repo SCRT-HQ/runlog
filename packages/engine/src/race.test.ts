@@ -30,8 +30,28 @@ describe("where a run is", () => {
 
   it("adds up the unit clocks where the pack runs them, and stops the wall clock at the end", () => {
     const clocks = [
-      { id: "u1:unit", kind: "stopwatch", label: "", seconds: null, unit: 1, status: "done", accumulatedMs: 60_000, runningSince: null, elapsedMs: 60_000 },
-      { id: "u2:unit", kind: "stopwatch", label: "", seconds: null, unit: 2, status: "running", accumulatedMs: 0, runningSince: at, elapsedMs: null },
+      {
+        id: "u1:unit",
+        kind: "stopwatch",
+        label: "",
+        seconds: null,
+        unit: 1,
+        status: "done",
+        accumulatedMs: 60_000,
+        runningSince: null,
+        elapsedMs: 60_000,
+      },
+      {
+        id: "u2:unit",
+        kind: "stopwatch",
+        label: "",
+        seconds: null,
+        unit: 2,
+        status: "running",
+        accumulatedMs: 0,
+        runningSince: at,
+        elapsedMs: null,
+      },
     ] as RunState["clocks"];
     expect(progressOf(state({ clocks }), [], Date.parse(at) + 30_000).elapsedMs).toBe(90_000);
     const ended = progressOf(state({ status: "ended", ending: "keep" }), [], Date.parse(at) + 999_999_000);

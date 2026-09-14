@@ -6,7 +6,10 @@ export function Dice3dSwitch() {
   const [on, setOn] = useState(() => dice3dEnabled());
   if (!canDraw3d()) return null;
   return (
-    <label className="toggle dice3dSwitch" title="Dice thrown into a tray, in three dimensions; off, the flat tray. The value is the same either way.">
+    <label
+      className="toggle dice3dSwitch"
+      title="Dice thrown into a tray, in three dimensions; off, the flat tray. The value is the same either way."
+    >
       <input
         type="checkbox"
         checked={on}

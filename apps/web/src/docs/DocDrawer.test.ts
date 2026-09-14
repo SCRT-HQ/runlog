@@ -9,8 +9,14 @@ import { docsFromHash } from "./DocDrawer.tsx";
 describe("the address of a pack's paper", () => {
   it("names the section, the pack and the document", () => {
     expect(docsFromHash("#packs/dev.runlog.kiln/docs")).toEqual({ at: { section: "packs", id: "dev.runlog.kiln" }, kind: "summary" });
-    expect(docsFromHash("#packs/dev.runlog.kiln/docs/rulebook")).toEqual({ at: { section: "packs", id: "dev.runlog.kiln" }, kind: "rulebook" });
-    expect(docsFromHash("#marketplace/dev.runlog.kiln/docs/quickstart")).toEqual({ at: { section: "marketplace", id: "dev.runlog.kiln" }, kind: "quickstart" });
+    expect(docsFromHash("#packs/dev.runlog.kiln/docs/rulebook")).toEqual({
+      at: { section: "packs", id: "dev.runlog.kiln" },
+      kind: "rulebook",
+    });
+    expect(docsFromHash("#marketplace/dev.runlog.kiln/docs/quickstart")).toEqual({
+      at: { section: "marketplace", id: "dev.runlog.kiln" },
+      kind: "quickstart",
+    });
   });
 
   it("reads a pack id back exactly as it was written", () => {

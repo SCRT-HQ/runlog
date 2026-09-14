@@ -1,5 +1,14 @@
 import type { Doc, Block } from "@runlog/rules-schema";
-import type { Column, Content, ContentCanvas, ContentStack, ContentText, TDocumentDefinitions, TableCell, TFontDictionary } from "pdfmake/interfaces";
+import type {
+  Column,
+  Content,
+  ContentCanvas,
+  ContentStack,
+  ContentText,
+  TDocumentDefinitions,
+  TableCell,
+  TFontDictionary,
+} from "pdfmake/interfaces";
 
 /**
  * A document as a PDF, from the same blocks the HTML and Markdown come from.
@@ -40,8 +49,11 @@ export function toPdfDefinition(doc: Doc): TDocumentDefinitions {
   const base = doc.layout === "card" ? 8.5 : doc.layout === "sheet" ? 10 : 11;
   const ctx: Ctx = { base, width: doc.layout === "card" ? (width - 24) / 2 : width, layout: doc.layout };
 
-  const head: Content[] = [{ text: glyphs(doc.title), fontSize: doc.layout === "card" ? 18 : 24, bold: true, lineHeight: 1.05, margin: [0, 0, 0, 3] }];
-  if (doc.subtitle) head.push({ text: glyphs(doc.subtitle), italics: true, color: MUTED, margin: [0, 0, 0, doc.layout === "card" ? 10 : 22] });
+  const head: Content[] = [
+    { text: glyphs(doc.title), fontSize: doc.layout === "card" ? 18 : 24, bold: true, lineHeight: 1.05, margin: [0, 0, 0, 3] },
+  ];
+  if (doc.subtitle)
+    head.push({ text: glyphs(doc.subtitle), italics: true, color: MUTED, margin: [0, 0, 0, doc.layout === "card" ? 10 : 22] });
 
   const body = doc.layout === "card" ? dealIntoColumns(doc.blocks, ctx) : doc.blocks.map((b, i) => block(b, ctx, doc.blocks[i - 1]));
 
@@ -138,8 +150,16 @@ function block(b: Block, ctx: Ctx, previous?: Block): Content {
     case "table": {
       const compact = b.compact === true;
       const cell = s * (compact ? 0.85 : 0.95);
-      const header: TableCell[] = b.columns.map((c) => ({ text: glyphs(c).toUpperCase(), fontSize: s * 0.7, characterSpacing: 0.4, color: MUTED, bold: true }));
-      const rows: TableCell[][] = b.rows.map((r) => r.map((c, i) => ({ ...lines(c, s, { fontSize: cell }), ...(i === 0 && c.length <= 24 ? { noWrap: true } : {}) }) as TableCell));
+      const header: TableCell[] = b.columns.map((c) => ({
+        text: glyphs(c).toUpperCase(),
+        fontSize: s * 0.7,
+        characterSpacing: 0.4,
+        color: MUTED,
+        bold: true,
+      }));
+      const rows: TableCell[][] = b.rows.map((r) =>
+        r.map((c, i) => ({ ...lines(c, s, { fontSize: cell }), ...(i === 0 && c.length <= 24 ? { noWrap: true } : {}) }) as TableCell),
+      );
       return {
         table: { headerRows: 1, widths: columnWidths(b.columns, b.rows), body: [header, ...rows], dontBreakRows: true },
         layout: {
@@ -163,7 +183,15 @@ function block(b: Block, ctx: Ctx, previous?: Block): Content {
       const fields = form(b.fields, ctx);
       // One form after another: a dashed line between them, as on the sheet.
       if (previous?.kind !== "form") return fields;
-      return { stack: [{ canvas: [{ type: "line", x1: 0, y1: 0, x2: ctx.width, y2: 0, lineWidth: 0.5, lineColor: HAIR, dash: { length: 3, space: 3 } }], margin: [0, 0, 0, s * 0.6] }, fields] };
+      return {
+        stack: [
+          {
+            canvas: [{ type: "line", x1: 0, y1: 0, x2: ctx.width, y2: 0, lineWidth: 0.5, lineColor: HAIR, dash: { length: 3, space: 3 } }],
+            margin: [0, 0, 0, s * 0.6],
+          },
+          fields,
+        ],
+      };
     }
     case "rule":
       return { ...line(ctx.width, HAIR), margin: [0, s * 1.2, 0, s * 1.2] };
@@ -207,11 +235,18 @@ function form(fields: Array<{ label: string; width?: "short" | "long" | "full"; 
     const labelText: Content = { text: glyphs(f.label), fontSize: s * 0.85, color: MUTED, margin: [0, 0, 0, 2] };
     let field: Column;
     if (f.box) {
-      field = { columns: [{ ...labelText, width: "auto", margin: [0, 6, 6, 0] }, { canvas: [{ type: "rect", x: 0, y: 0, w: 22, h: 16, lineWidth: 0.8, lineColor: INK }], width: 22 }], width: "auto" };
+      field = {
+        columns: [
+          { ...labelText, width: "auto", margin: [0, 6, 6, 0] },
+          { canvas: [{ type: "rect", x: 0, y: 0, w: 22, h: 16, lineWidth: 0.8, lineColor: INK }], width: 22 },
+        ],
+        width: "auto",
+      };
     } else {
       const count = f.lines && f.lines > 1 ? f.lines : 1;
       const lines: Content[] = [];
-      for (let i = 0; i < count; i++) lines.push({ ...line(width === "short" ? 90 : width === "long" ? 200 : ctx.width, INK, 0.6), margin: [0, s * 1.7, 0, 0] });
+      for (let i = 0; i < count; i++)
+        lines.push({ ...line(width === "short" ? 90 : width === "long" ? 200 : ctx.width, INK, 0.6), margin: [0, s * 1.7, 0, 0] });
       field = { stack: [labelText, ...lines], width: width === "full" ? "*" : "auto", unbreakable: true };
     }
     row.push(field);
@@ -235,7 +270,11 @@ function weight(b: Block, ctx: Ctx): number {
     case "list":
       return b.items.reduce((n, i) => n + linesOf(i), 0) + 0.8;
     case "table":
-      return 1.4 + b.rows.reduce((n, r) => n + Math.max(...r.map((c) => Math.max(1, Math.ceil(c.length / (perLine / r.length))))), 0) * (b.compact ? 0.85 : 1);
+      return (
+        1.4 +
+        b.rows.reduce((n, r) => n + Math.max(...r.map((c) => Math.max(1, Math.ceil(c.length / (perLine / r.length))))), 0) *
+          (b.compact ? 0.85 : 1)
+      );
     case "terms":
       return b.items.reduce((n, t) => n + 1 + linesOf(t.text), 0) + 0.9;
     case "form":
@@ -273,7 +312,15 @@ function dealIntoColumns(blocks: Block[], ctx: Ctx): Content[] {
       rightWeight += w;
     }
   }
-  return [{ columns: [{ stack: left, width: "*" }, { stack: right, width: "*" }], columnGap: 24 }];
+  return [
+    {
+      columns: [
+        { stack: left, width: "*" },
+        { stack: right, width: "*" },
+      ],
+      columnGap: 24,
+    },
+  ];
 }
 
 /** The faces a renderer must register under the name "Literata". */
@@ -281,7 +328,9 @@ export const FACES = ["400-normal", "700-normal", "400-italic", "700-italic"] as
 export type Face = (typeof FACES)[number];
 
 export function fontDictionary(file: (face: Face) => string): TFontDictionary {
-  return { Literata: { normal: file("400-normal"), bold: file("700-normal"), italics: file("400-italic"), bolditalics: file("700-italic") } };
+  return {
+    Literata: { normal: file("400-normal"), bold: file("700-normal"), italics: file("400-italic"), bolditalics: file("700-italic") },
+  };
 }
 
 export async function renderPdf(doc: Doc, engine: PdfEngine): Promise<Uint8Array> {

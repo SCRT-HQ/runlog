@@ -22,7 +22,11 @@ describe("the name data is kept under", () => {
     expect(nameFor({ kind: "account", id: "user_b" })).toBe("runlog:u:user_b");
     expect(nameFor({ kind: "anon" })).toBe("runlog:anon");
     // The three are three, which is the whole claim.
-    const names = new Set([nameFor({ kind: "account", id: "user_a" }), nameFor({ kind: "account", id: "user_b" }), nameFor({ kind: "anon" })]);
+    const names = new Set([
+      nameFor({ kind: "account", id: "user_a" }),
+      nameFor({ kind: "account", id: "user_b" }),
+      nameFor({ kind: "anon" }),
+    ]);
     expect(names.size).toBe(3);
   });
 

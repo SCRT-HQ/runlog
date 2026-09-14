@@ -9,20 +9,48 @@ import { InviteBanner, type IncomingInvite } from "./IncomingInvite.tsx";
  * whose link is dead.
  */
 
-const invite = { role: "player" as const, packId: "kiln", packTitle: "The Long Kiln", session: "Tuesday", inviter: "Nate", accepted: false, sentTo: "f*****@example.com", forYou: true, alreadyIn: false };
+const invite = {
+  role: "player" as const,
+  packId: "kiln",
+  packTitle: "The Long Kiln",
+  session: "Tuesday",
+  inviter: "Nate",
+  accepted: false,
+  sentTo: "f*****@example.com",
+  forYou: true,
+  alreadyIn: false,
+};
 const found: IncomingInvite = { token: "tok1", peek: { found: true, invite } };
 const forSomeoneElse: IncomingInvite = { token: "tok1", peek: { found: true, invite: { ...invite, forYou: false } } };
 
 const banner = (invite: IncomingInvite, account: Account) =>
   renderToStaticMarkup(
     <AccountContext.Provider value={account}>
-      <InviteBanner invite={invite} packTitle={(id) => (id === "kiln" ? "The Long Kiln" : null)} busy={false} onJoin={() => {}} onDismiss={() => {}} />
+      <InviteBanner
+        invite={invite}
+        packTitle={(id) => (id === "kiln" ? "The Long Kiln" : null)}
+        busy={false}
+        onJoin={() => {}}
+        onDismiss={() => {}}
+      />
     </AccountContext.Provider>,
   );
 
 const signedIn: Account = {
   status: "signed-in",
-  user: { object: "user", id: "user_2", email: "f@example.com", emailVerified: true, profilePictureUrl: null, firstName: "Friend", lastName: null, lastSignInAt: null, externalId: undefined, createdAt: "", updatedAt: "" },
+  user: {
+    object: "user",
+    id: "user_2",
+    email: "f@example.com",
+    emailVerified: true,
+    profilePictureUrl: null,
+    firstName: "Friend",
+    lastName: null,
+    lastSignInAt: null,
+    externalId: undefined,
+    createdAt: "",
+    updatedAt: "",
+  },
   signOut: () => {},
   getAccessToken: async () => "t",
 };
@@ -52,7 +80,10 @@ describe("an invitation in a link", () => {
   });
 
   it("says when the pack is not here, and when the link is dead", () => {
-    const elsewhere: IncomingInvite = { token: "tok1", peek: { found: true, invite: { ...invite, packId: "other", packTitle: "Somebody Else Game", session: null } } };
+    const elsewhere: IncomingInvite = {
+      token: "tok1",
+      peek: { found: true, invite: { ...invite, packId: "other", packTitle: "Somebody Else Game", session: null } },
+    };
     expect(banner(elsewhere, signedIn)).toContain("not on this device yet");
     expect(banner(elsewhere, signedIn)).toContain("Somebody Else Game");
     expect(banner(elsewhere, signedIn)).not.toContain("(other)");

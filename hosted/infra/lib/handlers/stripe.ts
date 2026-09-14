@@ -21,7 +21,13 @@ export interface StripeEvent {
 export interface StripeLike {
   createCustomer(input: { email?: string; name?: string; metadata: Record<string, string> }): Promise<{ id: string }>;
   /** A subscription Checkout for one price; the address Stripe sends the person back to afterwards. */
-  checkout(input: { customer: string; price: string; successUrl: string; cancelUrl: string; clientReferenceId: string }): Promise<{ url: string }>;
+  checkout(input: {
+    customer: string;
+    price: string;
+    successUrl: string;
+    cancelUrl: string;
+    clientReferenceId: string;
+  }): Promise<{ url: string }>;
   portal(input: { customer: string; returnUrl: string }): Promise<{ url: string }>;
   /** The lookup keys of the features this customer is entitled to now. */
   activeEntitlements(customer: string): Promise<string[]>;
@@ -35,18 +41,38 @@ export interface StripeLike {
   /** A one-time link into the account's Stripe dashboard. */
   dashboardLink(account: string): Promise<{ url: string }>;
   /** A product with one price, on the publisher's connected account, named for the pack. */
-  createListing(input: { account: string; name: string; packId: string; amount: number; currency: string; productId?: string }): Promise<{ productId: string; priceId: string }>;
+  createListing(input: {
+    account: string;
+    name: string;
+    packId: string;
+    amount: number;
+    currency: string;
+    productId?: string;
+  }): Promise<{ productId: string; priceId: string }>;
   /** Retire a price on the connected account when a listing changes or goes. */
   retirePrice(input: { account: string; priceId: string }): Promise<void>;
   /** A one-off Checkout on the publisher's account for one pack, the platform's fee taken from it. */
-  checkoutSale(input: { account: string; price: string; fee: number; successUrl: string; cancelUrl: string; ref: string; email?: string; metadata: Record<string, string> }): Promise<{ url: string; sessionId: string }>;
+  checkoutSale(input: {
+    account: string;
+    price: string;
+    fee: number;
+    successUrl: string;
+    cancelUrl: string;
+    ref: string;
+    email?: string;
+    metadata: Record<string, string>;
+  }): Promise<{ url: string; sessionId: string }>;
 }
 
 export function realStripe(secretKey: string): StripeLike {
   const stripe = new Stripe(secretKey);
   const impl: StripeLike = {
     async createCustomer(input) {
-      const c = await stripe.customers.create({ ...(input.email ? { email: input.email } : {}), ...(input.name ? { name: input.name } : {}), metadata: input.metadata });
+      const c = await stripe.customers.create({
+        ...(input.email ? { email: input.email } : {}),
+        ...(input.name ? { name: input.name } : {}),
+        metadata: input.metadata,
+      });
       return { id: c.id };
     },
     async checkout(input) {
@@ -94,7 +120,12 @@ export function realStripe(secretKey: string): StripeLike {
       return { id: account.id };
     },
     async onboardingLink(input) {
-      const link = await stripe.accountLinks.create({ account: input.account, type: "account_onboarding", return_url: input.returnUrl, refresh_url: input.refreshUrl });
+      const link = await stripe.accountLinks.create({
+        account: input.account,
+        type: "account_onboarding",
+        return_url: input.returnUrl,
+        refresh_url: input.refreshUrl,
+      });
       return { url: link.url };
     },
     async connectedAccount(id) {
@@ -113,8 +144,12 @@ export function realStripe(secretKey: string): StripeLike {
     },
     async createListing(input) {
       const opts = { stripeAccount: input.account };
-      const productId = input.productId ?? (await stripe.products.create({ name: input.name, metadata: { pack_id: input.packId } }, opts)).id;
-      const price = await stripe.prices.create({ product: productId, unit_amount: input.amount, currency: input.currency, metadata: { pack_id: input.packId } }, opts);
+      const productId =
+        input.productId ?? (await stripe.products.create({ name: input.name, metadata: { pack_id: input.packId } }, opts)).id;
+      const price = await stripe.prices.create(
+        { product: productId, unit_amount: input.amount, currency: input.currency, metadata: { pack_id: input.packId } },
+        opts,
+      );
       return { productId, priceId: price.id };
     },
     async retirePrice(input) {
@@ -144,10 +179,18 @@ export function realStripe(secretKey: string): StripeLike {
 /** The features named in an active-entitlement summary, by lookup key. */
 export function featuresOfSummary(object: Record<string, unknown>): { customer: string; features: string[] } | null {
   const customer = object["customer"];
-  const id = typeof customer === "string" ? customer : typeof customer === "object" && customer !== null ? String((customer as { id?: unknown }).id ?? "") : "";
+  const id =
+    typeof customer === "string"
+      ? customer
+      : typeof customer === "object" && customer !== null
+        ? String((customer as { id?: unknown }).id ?? "")
+        : "";
   if (!id) return null;
   const list = object["entitlements"];
-  const data = list && typeof list === "object" && Array.isArray((list as { data?: unknown }).data) ? ((list as { data: unknown[] }).data as Array<Record<string, unknown>>) : [];
+  const data =
+    list && typeof list === "object" && Array.isArray((list as { data?: unknown }).data)
+      ? ((list as { data: unknown[] }).data as Array<Record<string, unknown>>)
+      : [];
   const features = data.map((e) => e["lookup_key"]).filter((k): k is string => typeof k === "string" && k.length > 0);
   return { customer: id, features };
 }

@@ -114,8 +114,7 @@ function scan(files: string[], terms: string[]): Hit[] {
   return hits;
 }
 
-const show = (hits: Hit[]) =>
-  hits.map((h) => `  ${h.file}:${h.line}  [${h.term}]\n    ${h.text.slice(0, 110)}`).join("\n");
+const show = (hits: Hit[]) => hits.map((h) => `  ${h.file}:${h.line}  [${h.term}]\n    ${h.text.slice(0, 110)}`).join("\n");
 
 describe("the license boundary", () => {
   const files = trackedTextFiles();
@@ -164,9 +163,7 @@ describe("the license boundary", () => {
     // either been committed by mistake or is lying about its license.
     const packs = files.filter((f) => f.startsWith("packs/") && /\.ya?ml$|\.json$/.test(f));
     expect(packs.length).toBeGreaterThan(0);
-    const wrong = packs.filter((f) =>
-      /redistributable:\s*false/.test(readFileSync(join(repoRoot, f), "utf8")),
-    );
+    const wrong = packs.filter((f) => /redistributable:\s*false/.test(readFileSync(join(repoRoot, f), "utf8")));
     expect(wrong).toEqual([]);
   });
 

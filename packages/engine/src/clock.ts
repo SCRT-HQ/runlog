@@ -6,7 +6,7 @@ import type { Clock, RunState } from "./types.ts";
 /**
  * Clocks: a stopwatch that times a unit, a timer that limits it.
  *
- * A clock is four events in the log, started, paused, resumed, stopped, 
+ * A clock is four events in the log, started, paused, resumed, stopped,
  * and nothing else. The log holds timestamps, not a ticking number, so a
  * reload lands on a clock still running from where it was, a second device
  * sees the same time, and a stopped clock's elapsed is written once and
@@ -72,7 +72,15 @@ export function ranOutEvents(state: RunState, nowMs: number): RunEvent[] {
   return liveClocks(state).flatMap((c) => {
     const deadline = deadlineOf(c, nowMs);
     if (deadline === null || deadline > nowMs || c.seconds === null) return [];
-    return [{ t: "ClockStopped", at: new Date(deadline).toISOString(), clock: c.id, elapsedMs: c.seconds * 1000, expired: true } satisfies RunEvent];
+    return [
+      {
+        t: "ClockStopped",
+        at: new Date(deadline).toISOString(),
+        clock: c.id,
+        elapsedMs: c.seconds * 1000,
+        expired: true,
+      } satisfies RunEvent,
+    ];
   });
 }
 
@@ -110,7 +118,10 @@ export function unitClockStart(pack: Pack, state: RunState | null, unit: number,
  * one and leaves the one running alone. A dial at nothing is nothing to
  * go on, so the pack's own number stands.
  */
-function secondsOf(config: { minutes?: number; minutesFrom?: string }, state: RunState | null): { seconds: number } | Record<string, never> {
+function secondsOf(
+  config: { minutes?: number; minutesFrom?: string },
+  state: RunState | null,
+): { seconds: number } | Record<string, never> {
   const dial = config.minutesFrom !== undefined ? state?.resources[config.minutesFrom] : undefined;
   const minutes = dial && dial > 0 ? dial : config.minutes;
   return minutes ? { seconds: Math.round(minutes * 60) } : {};
@@ -128,7 +139,9 @@ function secondsOf(config: { minutes?: number; minutesFrom?: string }, state: Ru
  */
 export function clockStartUndone(events: readonly RunEvent[], unit: number): boolean {
   const gone = voidedIds(events);
-  return events.some((e) => e.t === "ClockStarted" && e.clock.startsWith(`u${unit}`) && e.clock.endsWith(":unit") && e.id !== undefined && gone.has(e.id));
+  return events.some(
+    (e) => e.t === "ClockStarted" && e.clock.startsWith(`u${unit}`) && e.clock.endsWith(":unit") && e.id !== undefined && gone.has(e.id),
+  );
 }
 
 /**
@@ -141,7 +154,13 @@ export function clockStartUndone(events: readonly RunEvent[], unit: number): boo
  * spending them. Null unless this is the phase, and unless the unit's
  * clock has not already started.
  */
-export function clockOnPhase(pack: Pack, state: RunState | null, phaseId: string, at: string, events: readonly RunEvent[] = []): RunEvent | null {
+export function clockOnPhase(
+  pack: Pack,
+  state: RunState | null,
+  phaseId: string,
+  at: string,
+  events: readonly RunEvent[] = [],
+): RunEvent | null {
   const config = unitClockFor(pack, state);
   if (!config || config.startsOn !== phaseId || !state || state.unit === 0) return null;
   if (state.clocks.some((c) => c.unit === state.unit && c.id.endsWith(":unit"))) return null;

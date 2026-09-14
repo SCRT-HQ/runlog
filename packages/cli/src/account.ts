@@ -10,7 +10,7 @@ import { detectFormat, fingerprint, listingPayload, signBytes, verifyPack } from
  * The command line, as somebody.
  *
  * `runlog login` signs in the way a terminal can: it asks WorkOS for a short
- * code, shows it with a link, and waits while you confirm it in a browser: 
+ * code, shows it with a link, and waits while you confirm it in a browser:
  * the OAuth device flow, against a WorkOS application of the CLI's own. What
  * comes back is a session: an access token that lasts an hour and a refresh
  * token that renews it, kept in the user's config directory, mode 600, and
@@ -79,7 +79,13 @@ export function credentials(): Credentials | null {
     if (s && typeof s.accessToken === "string" && typeof s.refreshToken === "string" && typeof s.clientId === "string") {
       return {
         api: raw.api,
-        session: { clientId: s.clientId, issuer: s.issuer ?? WORKOS, accessToken: s.accessToken, refreshToken: s.refreshToken, expiresAt: s.expiresAt ?? "" },
+        session: {
+          clientId: s.clientId,
+          issuer: s.issuer ?? WORKOS,
+          accessToken: s.accessToken,
+          refreshToken: s.refreshToken,
+          expiresAt: s.expiresAt ?? "",
+        },
         savedAt: raw.savedAt ?? "",
       };
     }
@@ -156,8 +162,14 @@ const realDeps: FlowDeps = {
   open: (url) => {
     try {
       const [cmd, args] =
-        process.platform === "win32" ? ["cmd", ["/c", "start", "", url]] : process.platform === "darwin" ? ["open", [url]] : ["xdg-open", [url]];
-      spawn(cmd, args, { detached: true, stdio: "ignore" }).on("error", () => {}).unref();
+        process.platform === "win32"
+          ? ["cmd", ["/c", "start", "", url]]
+          : process.platform === "darwin"
+            ? ["open", [url]]
+            : ["xdg-open", [url]];
+      spawn(cmd, args, { detached: true, stdio: "ignore" })
+        .on("error", () => {})
+        .unref();
     } catch {
       /* no browser here; the link is printed */
     }
@@ -165,7 +177,11 @@ const realDeps: FlowDeps = {
   now: () => Date.now(),
 };
 
-async function postForm(deps: FlowDeps, url: string, form: Record<string, string>): Promise<{ status: number; body: Record<string, unknown> }> {
+async function postForm(
+  deps: FlowDeps,
+  url: string,
+  form: Record<string, string>,
+): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await deps.fetch(url, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
@@ -219,10 +235,20 @@ export async function deviceFlow(clientId: string, issuer: string, deps: FlowDep
   const deadline = deps.now() + (s.expires_in ?? 300) * 1000;
   while (deps.now() < deadline) {
     await deps.sleep(interval * 1000);
-    const poll = await postForm(deps, `${issuer}/user_management/authenticate`, { grant_type: DEVICE_GRANT, device_code: s.device_code, client_id: clientId });
+    const poll = await postForm(deps, `${issuer}/user_management/authenticate`, {
+      grant_type: DEVICE_GRANT,
+      device_code: s.device_code,
+      client_id: clientId,
+    });
     const a = poll.body as TokenAnswer;
     if (a.access_token && a.refresh_token) {
-      return { clientId, issuer, accessToken: a.access_token, refreshToken: a.refresh_token, expiresAt: expiryOf(a.access_token, deps.now()) };
+      return {
+        clientId,
+        issuer,
+        accessToken: a.access_token,
+        refreshToken: a.refresh_token,
+        expiresAt: expiryOf(a.access_token, deps.now()),
+      };
     }
     switch (a.error) {
       case "authorization_pending":
@@ -296,7 +322,11 @@ export async function api<T>(method: string, path: string, body?: unknown): Prom
   // renew once and try again before deciding the sign-in is gone.
   if (answer.status === 401 && creds.session) answer = await once(await bearer(creds, true));
   if (answer.status === 401) {
-    throw new Error(creds.key ? "that key is not accepted; make a new one on your profile page and `runlog login --key` again" : "your sign-in has lapsed; run `runlog login` again");
+    throw new Error(
+      creds.key
+        ? "that key is not accepted; make a new one on your profile page and `runlog login --key` again"
+        : "your sign-in has lapsed; run `runlog login` again",
+    );
   }
   if (answer.status >= 400) {
     const said = (answer.parsed as { error?: string } | null)?.error;
@@ -349,7 +379,8 @@ export async function cmdLogin(args: string[], deps: FlowDeps = realDeps): Promi
     } catch {
       throw new Error(`the API at ${apiUrl} did not answer as expected (${response.status})`);
     }
-    if (!about.clientId) throw new Error(`the API at ${apiUrl} cannot sign in a terminal yet; use \`runlog login --key\` with a key from your profile page`);
+    if (!about.clientId)
+      throw new Error(`the API at ${apiUrl} cannot sign in a terminal yet; use \`runlog login --key\` with a key from your profile page`);
     const session = await deviceFlow(about.clientId, about.issuer ?? WORKOS, deps);
     save({ api: apiUrl, session, savedAt: new Date().toISOString() });
     await greet(apiUrl);
@@ -376,10 +407,18 @@ export async function cmdWhoami(): Promise<number> {
     const creds = credentials();
     const me = await api<{ sub: string; scope?: string; profile?: { name?: string; email?: string } }>("GET", "/me");
     const claims = await api<{ claims: Array<{ fingerprint: string }> }>("GET", "/claims");
-    const how = process.env["RUNLOG_API_KEY"] ? "with RUNLOG_API_KEY" : creds?.key ? "with a key from the profile page" : "from the browser";
+    const how = process.env["RUNLOG_API_KEY"]
+      ? "with RUNLOG_API_KEY"
+      : creds?.key
+        ? "with a key from the profile page"
+        : "from the browser";
     console.log(`${me.profile?.name ?? "(no name)"} <${me.profile?.email ?? "?"}>  ${me.sub}`);
     console.log(`signed in ${how} at ${creds?.api ?? DEFAULT_API}${me.scope === "release" ? " (a key that only releases)" : ""}`);
-    console.log(claims.claims.length > 0 ? `claimed signing keys: ${claims.claims.map((c) => c.fingerprint).join(", ")}` : "no claimed signing keys yet: `runlog claim key.json`");
+    console.log(
+      claims.claims.length > 0
+        ? `claimed signing keys: ${claims.claims.map((c) => c.fingerprint).join(", ")}`
+        : "no claimed signing keys yet: `runlog claim key.json`",
+    );
     return 0;
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
@@ -409,7 +448,11 @@ export async function cmdClaim(args: string[]): Promise<number> {
     const key = readKey(keyPath);
     const { nonce } = await api<{ nonce: string }>("POST", "/claims/nonce");
     const signature = await signBytes(new TextEncoder().encode(nonce), key.privateKey);
-    const { claim } = await api<{ claim: { fingerprint: string; name: string | null } }>("POST", "/claims", { publicKey: key.publicKey, nonce, signature });
+    const { claim } = await api<{ claim: { fingerprint: string; name: string | null } }>("POST", "/claims", {
+      publicKey: key.publicKey,
+      nonce,
+      signature,
+    });
     console.log(`claimed ${claim.fingerprint}${claim.name ? ` as ${claim.name}` : ""}`);
     console.log("packs signed with this key now show your name in the app");
     return 0;
@@ -505,7 +548,8 @@ export async function cmdRelease(args: string[]): Promise<number> {
     const format = detectFormat(path);
     const raw = (format === "json" ? JSON.parse(text) : YAML.parse(text)) as Record<string, unknown>;
     const verified = await verifyPack(raw);
-    if (verified.status === "unsigned") throw new Error("the pack is not signed; run `runlog sign` first, since the marketplace seals what you signed");
+    if (verified.status === "unsigned")
+      throw new Error("the pack is not signed; run `runlog sign` first, since the marketplace seals what you signed");
     if (verified.status === "invalid") throw new Error(`the signature does not match the pack (${verified.reason}); sign it again`);
     const listing = listingPayload(text, format, raw);
     if (!listing.ok) throw new Error(listing.error);
@@ -515,12 +559,20 @@ export async function cmdRelease(args: string[]): Promise<number> {
     if (!me.publisher) throw new Error("this account is not a publisher; become one on your profile page first");
 
     const id = encodeURIComponent(pack.id);
-    const put = await api<{ pack: { status: string; price: { amount: number; currency: string } | null } }>("PUT", `/publishers/packs/${id}`, payload);
+    const put = await api<{ pack: { status: string; price: { amount: number; currency: string } | null } }>(
+      "PUT",
+      `/publishers/packs/${id}`,
+      payload,
+    );
     const dollars = (p: { amount: number; currency: string }) => `${p.currency.toUpperCase()} ${(p.amount / 100).toFixed(2)}`;
     console.log(`uploaded ${pack.id} v${pack.version} to ${me.publisher.name}`);
 
     if (args.includes("--draft")) {
-      console.log(put.pack.status === "listed" ? "  still listed; the card follows the new version" : "  kept as a draft; list it with --price or --free");
+      console.log(
+        put.pack.status === "listed"
+          ? "  still listed; the card follows the new version"
+          : "  kept as a draft; list it with --price or --free",
+      );
       return 0;
     }
     if (price === "keep") {
@@ -528,7 +580,11 @@ export async function cmdRelease(args: string[]): Promise<number> {
       else console.log("  not listed yet; pass --price 3.00 or --free to put it in the marketplace");
       return 0;
     }
-    const listed = await api<{ available?: boolean; error?: string; listing?: { price: "free" | { amount: number; currency: string } } }>("POST", `/publishers/packs/${id}/listing`, price === "free" ? {} : price);
+    const listed = await api<{ available?: boolean; error?: string; listing?: { price: "free" | { amount: number; currency: string } } }>(
+      "POST",
+      `/publishers/packs/${id}/listing`,
+      price === "free" ? {} : price,
+    );
     if (listed.available === false) throw new Error(listed.error ?? "selling is not switched on here yet; a free listing works");
     const shown = listed.listing?.price;
     console.log(`  listed ${shown && shown !== "free" ? `at ${dollars(shown)}` : "free"}`);

@@ -2,7 +2,7 @@
  * Which lights are on.
  *
  * Four looks, all the same app: the same two accents doing the same two jobs,
- * the same faces speaking in the same voices. What changes is the ground: 
+ * the same faces speaking in the same voices. What changes is the ground:
  * the studio with the lights down, daylight on paper, a kiln-lit room, or the
  * inside of a celadon glaze. Choosing is the player's, remembered on this
  * machine only, and "system" hands the choice back to the operating system.

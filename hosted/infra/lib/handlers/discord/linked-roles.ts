@@ -26,7 +26,14 @@ export const VERIFY_MINUTES = 10;
 
 /** Where Discord sends the person to grant the two scopes: to know who they are, and to write the connection. */
 export function authorizeUrl(applicationId: string, redirectUri: string, state: string): string {
-  const q = new URLSearchParams({ client_id: applicationId, redirect_uri: redirectUri, response_type: "code", scope: "identify role_connections.write", state, prompt: "consent" });
+  const q = new URLSearchParams({
+    client_id: applicationId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: "identify role_connections.write",
+    state,
+    prompt: "consent",
+  });
   return `https://discord.com/oauth2/authorize?${q.toString()}`;
 }
 

@@ -105,7 +105,19 @@ export interface Pending {
  * for a run that is only a trial, which writes nothing and syncs nothing.
  */
 export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
-  const { runsFor, loadRun, currentRun, saveRun, forgetRun, takeLegacyRun, clearLegacyRun, activeRunFor, setActiveRunFor, setLastActive, forgetActive } = store;
+  const {
+    runsFor,
+    loadRun,
+    currentRun,
+    saveRun,
+    forgetRun,
+    takeLegacyRun,
+    clearLegacyRun,
+    activeRunFor,
+    setActiveRunFor,
+    setLastActive,
+    forgetActive,
+  } = store;
   const [events, setEvents] = useState<RunEvent[]>([]);
   /**
    * Reading from IndexedDB is asynchronous, so there is a moment before the
@@ -198,10 +210,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
   }, [pack.id, refreshList, store]);
 
   const started = events.length > 0;
-  const state: RunState | null = useMemo(
-    () => (started ? reduce(pack, events) : null),
-    [pack, events, started],
-  );
+  const state: RunState | null = useMemo(() => (started ? reduce(pack, events) : null), [pack, events, started]);
 
   const now = () => new Date().toISOString();
 
@@ -250,22 +259,22 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
   useEffect(() => {
     if (!store.keeps) return;
     return syncBus.subscribe((news) => {
-        if (news.t !== "pulled" || news.kind !== "run") return;
-        void refreshList();
-        const id = runIdRef.current;
-        if (id && !news.ids.includes(id)) return;
-        if (!id && choosingRef.current) return;
-        void currentRun(pack.id).then((saved) => {
-          if (!saved || saved.runId !== id) {
-            name(saved?.runId ?? null);
-            setEvents((saved?.events as RunEvent[]) ?? []);
-          } else {
-            setEvents(saved.events as RunEvent[]);
-          }
-          if (saved) setActiveRunFor(pack.id, saved.runId);
-          setPending(null);
-        });
+      if (news.t !== "pulled" || news.kind !== "run") return;
+      void refreshList();
+      const id = runIdRef.current;
+      if (id && !news.ids.includes(id)) return;
+      if (!id && choosingRef.current) return;
+      void currentRun(pack.id).then((saved) => {
+        if (!saved || saved.runId !== id) {
+          name(saved?.runId ?? null);
+          setEvents((saved?.events as RunEvent[]) ?? []);
+        } else {
+          setEvents(saved.events as RunEvent[]);
+        }
+        if (saved) setActiveRunFor(pack.id, saved.runId);
+        setPending(null);
       });
+    });
   }, [pack.id, refreshList, store]);
 
   const commit = useCallback(
@@ -304,8 +313,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
    * on their own desk. So a seed overrides the auto-roll preference rather
    * than sitting alongside it.
    */
-  const seededRun =
-    runSeed !== "" && Boolean(pack.modes[state?.mode ?? pack.defaultMode]?.seeded);
+  const seededRun = runSeed !== "" && Boolean(pack.modes[state?.mode ?? pack.defaultMode]?.seeded);
 
   const randomSource = useCallback(
     (keyPrefix: string) => {
@@ -314,9 +322,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
         // down the log it is, so two players whose runs diverge still meet the
         // same dungeon.
         const unit = state?.unit ?? 0;
-        const before = events.filter(
-          (e) => e.t === "Rolled" && e.purpose === keyPrefix && unitOf(events, e) === unit,
-        ).length;
+        const before = events.filter((e) => e.t === "Rolled" && e.purpose === keyPrefix && unitOf(events, e) === unit).length;
         return createRandom(streamSeed(runSeed, unit, keyPrefix, before));
       }
       if (!autoRoll) return undefined;
@@ -386,8 +392,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
   );
 
   const begin = useCallback(
-    (p: Omit<Pending, "answers" | "generated">) =>
-      runPending({ ...p, answers: {}, generated: [] }, {}, []),
+    (p: Omit<Pending, "answers" | "generated">) => runPending({ ...p, answers: {}, generated: [] }, {}, []),
     [runPending],
   );
 
@@ -428,7 +433,15 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
    * ---------------------------------------------------------------- */
 
   const startRun = useCallback(
-    (mode: string, startSeed: string, players = 1, runName = "", contestants: string[] = [], lacks: string[] = [], extras: Pick<StoredRun, "raceId" | "setup"> = {}): string => {
+    (
+      mode: string,
+      startSeed: string,
+      players = 1,
+      runName = "",
+      contestants: string[] = [],
+      lacks: string[] = [],
+      extras: Pick<StoredRun, "raceId" | "setup"> = {},
+    ): string => {
       const at = now();
       // Named before it is written, and the name goes into the first event
       // too, so the log says what it is wherever it is read back.
@@ -485,8 +498,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
   }, [commit, pack, state]);
 
   const declareSubject = useCallback(
-    (phase: Phase, index: number, subjectType: string) =>
-      completeStep(phase, index, [{ t: "SubjectDeclared", at: now(), subjectType }]),
+    (phase: Phase, index: number, subjectType: string) => completeStep(phase, index, [{ t: "SubjectDeclared", at: now(), subjectType }]),
     [completeStep],
   );
 
@@ -509,7 +521,11 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     (phase: Phase, index: number) => {
       if (!state) return;
       const at = now();
-      const closing: RunEvent[] = [...stopClocksEvents(state, at), { t: "UnitFinalized", at }, ...stepCompletionEvents(phase, index, state, at)];
+      const closing: RunEvent[] = [
+        ...stopClocksEvents(state, at),
+        { t: "UnitFinalized", at },
+        ...stepCompletionEvents(phase, index, state, at),
+      ];
       const after = reduce(pack, [...events, ...closing]);
       const clock = unitClockStart(pack, after, nextUnit(after), at);
       commit([...closing, { t: "UnitEntered", at }, ...(clock ? [clock] : [])]);
@@ -520,7 +536,11 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     (phase: Phase, index: number) => {
       if (!state) return;
       const at = now();
-      const closing: RunEvent[] = [...stopClocksEvents(state, at), { t: "UnitFinalized", at }, ...stepCompletionEvents(phase, index, state, at)];
+      const closing: RunEvent[] = [
+        ...stopClocksEvents(state, at),
+        { t: "UnitFinalized", at },
+        ...stepCompletionEvents(phase, index, state, at),
+      ];
       const endings = pack.endings ?? [];
       const may = canEndRun(reduce(pack, [...events, ...closing]));
       commit(endings.length <= 1 && may.ok ? [...closing, { t: "RunEnded", at, ending: endings[0]?.id ?? "ended" }] : closing);
@@ -553,33 +573,31 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
       const c = state?.clocks.find((x) => x.id === clock);
       if (!c || c.status === "done") return;
       const at = now();
-      commit([{ t: "ClockStopped", at, clock, elapsedMs: expired && c.seconds !== null ? c.seconds * 1000 : elapsedMs(c, Date.parse(at)), ...(expired ? { expired: true } : {}) }]);
+      commit([
+        {
+          t: "ClockStopped",
+          at,
+          clock,
+          elapsedMs: expired && c.seconds !== null ? c.seconds * 1000 : elapsedMs(c, Date.parse(at)),
+          ...(expired ? { expired: true } : {}),
+        },
+      ]);
     },
     [commit, state],
   );
 
   /** Correct what a subject is called, keeping its id, states and history. */
   /** Call the run something. Empty clears the name. */
-  const renameRun = useCallback(
-    (runName: string) => commit([{ t: "RunRenamed", at: now(), name: runName }]),
-    [commit],
-  );
+  const renameRun = useCallback((runName: string) => commit([{ t: "RunRenamed", at: now(), name: runName }]), [commit]);
 
   const renameSubject = useCallback(
-    (subject: number, name: string) =>
-      commit([{ t: "SubjectRenamed", at: now(), subject, name }]),
+    (subject: number, name: string) => commit([{ t: "SubjectRenamed", at: now(), subject, name }]),
     [commit],
   );
 
-  const writeJournal = useCallback(
-    (unit: number, text: string) => commit([{ t: "JournalWritten", at: now(), unit, text }]),
-    [commit],
-  );
+  const writeJournal = useCallback((unit: number, text: string) => commit([{ t: "JournalWritten", at: now(), unit, text }]), [commit]);
 
-  const endRun = useCallback(
-    (ending: string) => commit([{ t: "RunEnded", at: now(), ending }]),
-    [commit],
-  );
+  const endRun = useCallback((ending: string) => commit([{ t: "RunEnded", at: now(), ending }]), [commit]);
 
   /** Moves offered at this point in the flow. */
   const moves = useMemo(() => {
@@ -695,14 +713,15 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
   /** The moderator marks a contestant, spared, out, whatever the pack names, or unmarks them. */
   const markContestant = useCallback(
     (contestant: string, stateId: string, on: boolean) =>
-      commit([on ? { t: "ContestantStateApplied", at: now(), contestant, state: stateId } : { t: "ContestantStateRemoved", at: now(), contestant, state: stateId }]),
+      commit([
+        on
+          ? { t: "ContestantStateApplied", at: now(), contestant, state: stateId }
+          : { t: "ContestantStateRemoved", at: now(), contestant, state: stateId },
+      ]),
     [commit],
   );
 
-  const removeContestant = useCallback(
-    (contestant: string) => commit([{ t: "ContestantRemoved", at: now(), contestant }]),
-    [commit],
-  );
+  const removeContestant = useCallback((contestant: string) => commit([{ t: "ContestantRemoved", at: now(), contestant }]), [commit]);
 
   /**
    * Tick or untick boxes on a step. In the log, so a reload keeps them; with
@@ -809,8 +828,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
   const roles = useMemo(() => rolesForUnit(pack, state), [pack, state]);
 
   const resolveObligation = useCallback(
-    (id: string, label: string) =>
-      begin({ kind: "obligation", obligationId: id, keyPrefix: `ob:${id}`, label }),
+    (id: string, label: string) => begin({ kind: "obligation", obligationId: id, keyPrefix: `ob:${id}`, label }),
     [begin],
   );
 
@@ -1066,9 +1084,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     const reached: string[] = ["immediately", "onEnterUnit"];
     if (state.subjects.some((s) => s.unit === state.unit && s.type)) reached.push("onDeclareSubject");
     // The work is done once every manual step of the unit has been ticked off.
-    const manualDone = activePhases.every((p) =>
-      p.steps.every((s, i) => s.kind !== "manual" || state.stepsDone.includes(`${p.id}#${i}`)),
-    );
+    const manualDone = activePhases.every((p) => p.steps.every((s, i) => s.kind !== "manual" || state.stepsDone.includes(`${p.id}#${i}`)));
     if (manualDone) reached.push("afterWork");
     // A clock that already expired this unit makes an onTimerExpired
     // obligation due immediately, even one queued afterward -- the bell
@@ -1079,10 +1095,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     return reached.flatMap((point) => dueObligations(state, point));
   }, [state, activePhases]);
 
-  const notes = useMemo(
-    () => (state ? state.obligations.filter((o) => !o.resolved && o.kind === "note") : []),
-    [state],
-  );
+  const notes = useMemo(() => (state ? state.obligations.filter((o) => !o.resolved && o.kind === "note") : []), [state]);
 
   /** Finalizing is blocked while the unit still owes something. */
   const blockingObligations = useMemo(() => {

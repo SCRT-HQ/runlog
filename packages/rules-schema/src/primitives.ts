@@ -23,10 +23,7 @@ export const Id = z
   // JSON Schema emission drops regex flags, which would publish a pattern
   // stricter than the one enforced at runtime and light up an author's editor
   // over ids that actually load fine.
-  .regex(
-    /^[A-Za-z0-9][A-Za-z0-9._-]*$/,
-    "ids must start alphanumeric and contain only letters, digits, dot, dash or underscore",
-  )
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/, "ids must start alphanumeric and contain only letters, digits, dot, dash or underscore")
   .describe(
     "A stable identifier, unique within its collection. Letters, digits, dot, dash and underscore; must start with a letter or digit. Ids appear in saved runs, so renaming one breaks existing logs.",
   );
@@ -53,13 +50,8 @@ export const PackId = z
  */
 export const DiceExpr = z
   .string()
-  .regex(
-    /^([1-9]\d*)?d([1-9]\d*)([+-]\d+)?$/,
-    "expected a dice expression such as d100, 2d10 or d6+3",
-  )
-  .describe(
-    "A dice expression: d100, 2d10, d6+3, 3d6-1. The count defaults to 1. Determines the range a lookup table must cover.",
-  );
+  .regex(/^([1-9]\d*)?d([1-9]\d*)([+-]\d+)?$/, "expected a dice expression such as d100, 2d10 or d6+3")
+  .describe("A dice expression: d100, 2d10, d6+3, 3d6-1. The count defaults to 1. Determines the range a lookup table must cover.");
 export type DiceExpr = z.infer<typeof DiceExpr>;
 
 /**
@@ -71,13 +63,9 @@ export type DiceExpr = z.infer<typeof DiceExpr>;
 export const TargetRef = z
   .union([
     z.literal("thisSubject").describe("The subject being made in the current unit."),
-    z
-      .literal("targetSubject")
-      .describe("The subject picked by the most recent resolveTarget action."),
+    z.literal("targetSubject").describe("The subject picked by the most recent resolveTarget action."),
     z.literal("allSubjects").describe("Every subject in the run, including the current one."),
-    z
-      .literal("allPriorSubjects")
-      .describe("Every completed subject, excluding the one in the current unit."),
+    z.literal("allPriorSubjects").describe("Every completed subject, excluding the one in the current unit."),
     z.literal("run").describe("The run itself, for run-scoped states and flags."),
     z
       .object({
@@ -95,18 +83,14 @@ export const NumericBound = z
     eq: z.number().int().optional().describe("Matches only this exact value."),
     gte: z.number().int().optional().describe("Matches values greater than or equal to this."),
     lte: z.number().int().optional().describe("Matches values less than or equal to this."),
-    gteCounter: Id.optional().describe(
-      "Matches values greater than or equal to this counter's current value.",
-    ),
+    gteCounter: Id.optional().describe("Matches values greater than or equal to this counter's current value."),
     lteCounter: Id.optional().describe(
       "Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number.",
     ),
     gteResource: Id.optional().describe(
       "Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen.",
     ),
-    lteResource: Id.optional().describe(
-      "Matches values less than or equal to this resource's current value.",
-    ),
+    lteResource: Id.optional().describe("Matches values less than or equal to this resource's current value."),
   })
   .strict()
   .refine(
@@ -157,29 +141,18 @@ export const Predicate: z.ZodType<Predicate> = z.lazy(() =>
     .union([
       z
         .object({
-          ask: z
-            .string()
-            .min(1)
-            .describe("The yes/no question to put to the player, phrased so that yes means true."),
+          ask: z.string().min(1).describe("The yes/no question to put to the player, phrased so that yes means true."),
         })
         .strict()
         .describe(
           "Ask the player. Use this for anything about the work itself, which the engine cannot inspect, whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic.",
         ),
-      z
-        .object({ unitIndex: NumericBound })
-        .strict()
-        .describe("Tests the current unit's number, counting from 1."),
-      z
-        .object({ subjectCount: NumericBound })
-        .strict()
-        .describe("Tests how many subjects exist, including removed ones."),
+      z.object({ unitIndex: NumericBound }).strict().describe("Tests the current unit's number, counting from 1."),
+      z.object({ subjectCount: NumericBound }).strict().describe("Tests how many subjects exist, including removed ones."),
       z
         .object({ eligibleTargets: NumericBound })
         .strict()
-        .describe(
-          "Tests how many subjects are currently targetable: completed, still in play, and not made untargetable by a state.",
-        ),
+        .describe("Tests how many subjects are currently targetable: completed, still in play, and not made untargetable by a state."),
       z
         .object({
           counter: Id.describe("Which declared counter to read."),
@@ -196,13 +169,8 @@ export const Predicate: z.ZodType<Predicate> = z.lazy(() =>
         .describe("Tests a resource's current value."),
       z
         .object({
-          clockRan: z
-            .string()
-            .min(1)
-            .describe("`unit` for the current unit's own clock, or a clock's label."),
-          is: NumericBound.describe(
-            "The comparison, in minutes, the clock's live elapsed time must satisfy.",
-          ),
+          clockRan: z.string().min(1).describe("`unit` for the current unit's own clock, or a clock's label."),
+          is: NumericBound.describe("The comparison, in minutes, the clock's live elapsed time must satisfy."),
         })
         .strict()
         .describe(
@@ -210,13 +178,8 @@ export const Predicate: z.ZodType<Predicate> = z.lazy(() =>
         ),
       z
         .object({
-          clockRanOver: z
-            .string()
-            .min(1)
-            .describe("`unit` for the current unit's own clock, or a clock's label."),
-          is: NumericBound.describe(
-            "The comparison, in minutes, the timer's overrun must satisfy.",
-          ),
+          clockRanOver: z.string().min(1).describe("`unit` for the current unit's own clock, or a clock's label."),
+          is: NumericBound.describe("The comparison, in minutes, the timer's overrun must satisfy."),
         })
         .strict()
         .describe(
@@ -238,10 +201,7 @@ export const Predicate: z.ZodType<Predicate> = z.lazy(() =>
         .describe("Tests whether a subject, or the run, currently carries a state."),
       z
         .object({
-          priorSubjectTagged: z
-            .string()
-            .min(1)
-            .describe("The tag to search for among completed subjects."),
+          priorSubjectTagged: z.string().min(1).describe("The tag to search for among completed subjects."),
         })
         .strict()
         .describe(
@@ -335,16 +295,7 @@ export type EventSelector = z.infer<typeof EventSelector>;
 
 /** Lifecycle points at which a table entry's deferred behavior can fire. */
 export const TriggerPoint = z
-  .enum([
-    "immediately",
-    "onEnterUnit",
-    "onDeclareSubject",
-    "afterWork",
-    "onFinalize",
-    "onDeclareRunOver",
-    "onRunEnd",
-    "onTimerExpired",
-  ])
+  .enum(["immediately", "onEnterUnit", "onDeclareSubject", "afterWork", "onFinalize", "onDeclareRunOver", "onRunEnd", "onTimerExpired"])
   .describe(
     "When a trigger fires. `immediately` lands on resolution; the rest reach forward in time, which is precisely where a player forgets a rule an hour into a session. `afterWork` fires once the player has done the unit's actual work, the part the engine cannot see or verify, but before the unit closes. `onTimerExpired` fires when the timer runs out.",
   );

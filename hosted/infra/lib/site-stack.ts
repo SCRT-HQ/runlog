@@ -54,8 +54,7 @@ export class SiteStack extends Stack {
     // something to fall into.
     if (config.region !== "us-east-1") {
       throw new Error(
-        `The site stack must be in us-east-1, not ${config.region}: CloudFront ` +
-          `will not accept a certificate issued anywhere else.`,
+        `The site stack must be in us-east-1, not ${config.region}: CloudFront ` + `will not accept a certificate issued anywhere else.`,
       );
     }
 
@@ -273,13 +272,22 @@ export class SiteStack extends Stack {
     NagSuppressions.addResourceSuppressions(this.bucket, [
       {
         id: "AwsSolutions-S1",
-        reason: "The bucket holds the built app and is read only by CloudFront through its origin access control; a request record of who read a public page is one the privacy policy promises not to keep.",
+        reason:
+          "The bucket holds the built app and is read only by CloudFront through its origin access control; a request record of who read a public page is one the privacy policy promises not to keep.",
       },
     ]);
     NagSuppressions.addResourceSuppressions(this.distribution, [
       { id: "AwsSolutions-CFR1", reason: "The app is for anyone anywhere; no geography is kept out." },
-      { id: "AwsSolutions-CFR2", reason: "Static files and an API that checks a token on every call; a WAF would add cost for rules the handler already applies. Revisit if abuse appears." },
-      { id: "AwsSolutions-CFR3", reason: "Access logs of who read the app are records the privacy policy promises not to keep; the API logs its own requests, without addresses, for a month." },
+      {
+        id: "AwsSolutions-CFR2",
+        reason:
+          "Static files and an API that checks a token on every call; a WAF would add cost for rules the handler already applies. Revisit if abuse appears.",
+      },
+      {
+        id: "AwsSolutions-CFR3",
+        reason:
+          "Access logs of who read the app are records the privacy policy promises not to keep; the API logs its own requests, without addresses, for a month.",
+      },
     ]);
     // The deployment's Lambda is CDK's, a singleton under the stack: its
     // runtime, its managed policy and its grants (the assets bucket, the
@@ -298,7 +306,8 @@ export class SiteStack extends Stack {
           },
           {
             id: "AwsSolutions-IAM5",
-            reason: "The construct's grants: reading the CDK assets bucket, writing and pruning the site bucket, and an invalidation, which CloudFront scopes to no resource.",
+            reason:
+              "The construct's grants: reading the CDK assets bucket, writing and pruning the site bucket, and an invalidation, which CloudFront scopes to no resource.",
             appliesTo: [
               "Action::s3:GetObject*",
               "Action::s3:GetBucket*",

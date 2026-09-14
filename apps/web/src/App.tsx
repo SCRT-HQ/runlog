@@ -32,7 +32,15 @@ import { addressForPlay, addressOf, appBase, goTo, runFromAddress, linkTo } from
 import { LiveRunView } from "./live/LiveRunView.tsx";
 import { DocMenu } from "./docs/DocMenu.tsx";
 import { DocView } from "./docs/DocView.tsx";
-import { marketplaceEntry, LEGACY_IDS, loadMarketplace, RENAMED_IDS, STARTER_PACK, updatesFor, type MarketplaceEntry } from "./library/marketplace.ts";
+import {
+  marketplaceEntry,
+  LEGACY_IDS,
+  loadMarketplace,
+  RENAMED_IDS,
+  STARTER_PACK,
+  updatesFor,
+  type MarketplaceEntry,
+} from "./library/marketplace.ts";
 import { markOpened, forgetOpened, openedAt } from "./library/opened.ts";
 import { SignatureBadge } from "./signing/SignatureBadge.tsx";
 import { IncomingPackBanner, useIncomingPack } from "./share/IncomingPack.tsx";
@@ -76,7 +84,6 @@ import {
   runsFor,
   saveRun,
 } from "./storage/db.ts";
-
 
 /**
  * The app.
@@ -171,21 +178,33 @@ export default function App() {
    * profile's four pages (`#profile`, `#profile/publishing`, and so on).
    * Leaving any of them clears the hash; nothing else in the app lives there.
    */
-  const [guideSlug, setGuideSlug] = useState<string>(() => guideSlugFromHash(typeof location !== "undefined" ? addressOf(location) : "") ?? "start");
+  const [guideSlug, setGuideSlug] = useState<string>(
+    () => guideSlugFromHash(typeof location !== "undefined" ? addressOf(location) : "") ?? "start",
+  );
   /** A section within the guide's page, from `#guide/<slug>/<section>`; the page scrolls to it. */
-  const [guideSection, setGuideSection] = useState<string | null>(() => guideSectionFromHash(typeof location !== "undefined" ? addressOf(location) : ""));
+  const [guideSection, setGuideSection] = useState<string | null>(() =>
+    guideSectionFromHash(typeof location !== "undefined" ? addressOf(location) : ""),
+  );
   /** A widget page: one panel of a run, alone, for a stream to capture. */
-  const [widget, setWidget] = useState<WidgetRoute | null>(() => widgetFromHash(typeof location !== "undefined" ? addressOf(location) : ""));
+  const [widget, setWidget] = useState<WidgetRoute | null>(() =>
+    widgetFromHash(typeof location !== "undefined" ? addressOf(location) : ""),
+  );
   /** A dock: one run's remote, alone on the page, for a streaming app's custom browser dock. */
   const [dock, setDock] = useState<DockRoute | null>(() => dockFromHash(typeof location !== "undefined" ? addressOf(location) : ""));
   /** A live link: one run, watched by anyone, alone on the page. */
-  const [liveRoute, setLiveRoute] = useState<LiveRoute | null>(() => liveFromHash(typeof location !== "undefined" ? addressOf(location) : ""));
+  const [liveRoute, setLiveRoute] = useState<LiveRoute | null>(() =>
+    liveFromHash(typeof location !== "undefined" ? addressOf(location) : ""),
+  );
   /** A pack the marketplace opens on, from `#marketplace/<packId>`: a live page's "in the marketplace" link lands here. */
   const [marketplaceFocus, setMarketplaceFocus] = useState<string | null>(null);
   /** Which of the profile's four pages, from `#profile` or `#profile/<page>`. */
-  const [profilePage, setProfilePage] = useState<ProfilePage>(() => profilePageFromHash(typeof location !== "undefined" ? addressOf(location) : "") ?? "profile");
+  const [profilePage, setProfilePage] = useState<ProfilePage>(
+    () => profilePageFromHash(typeof location !== "undefined" ? addressOf(location) : "") ?? "profile",
+  );
   /** A run named in the address (`#run/<id>`, `/play/run/<id>`), waiting to be opened once the packs and storage are here. */
-  const [wantedRun, setWantedRun] = useState<string | null>(() => runFromAddress(typeof location !== "undefined" ? addressOf(location) : ""));
+  const [wantedRun, setWantedRun] = useState<string | null>(() =>
+    runFromAddress(typeof location !== "undefined" ? addressOf(location) : ""),
+  );
   useEffect(() => {
     // The address in either spelling, read as the hash the parsers know.
     const fromAddress = () => {
@@ -340,7 +359,10 @@ export default function App() {
   useEffect(() => {
     if (view !== "marketplace" || !api) return;
     let live = true;
-    void api.myPurchases().then((p) => live && setPurchases(p), () => {});
+    void api.myPurchases().then(
+      (p) => live && setPurchases(p),
+      () => {},
+    );
     return () => {
       live = false;
     };
@@ -395,7 +417,7 @@ export default function App() {
   /**
    * The pack exactly as written, before the schema fills in defaults.
    *
-   * A signature covers what the author signed, and they signed their file: 
+   * A signature covers what the author signed, and they signed their file:
    * not the engine's normalized reading of it. Verifying the validated pack
    * would break every signature the moment a default changed.
    */
@@ -474,7 +496,10 @@ export default function App() {
       }
       const src = mine?.source;
       if (!src) {
-        if (!quiet) setNotice(`Your latest run is on a pack that is not on this device (${saved.packTitle ?? saved.packId}). Load it from a file and it will open.`);
+        if (!quiet)
+          setNotice(
+            `Your latest run is on a pack that is not on this device (${saved.packTitle ?? saved.packId}). Load it from a file and it will open.`,
+          );
         return false;
       }
       setActiveRunFor(saved.packId, runId);
@@ -650,53 +675,64 @@ export default function App() {
    * event is stamped with the pack version it was played under, and the
    * reducer reads whatever pack is loaded now.
    */
-  const updateFromMarketplace = useCallback(async (record: StoredPack) => {
-    const entry = updates.get(record.id) ?? (record.marketplace ? await marketplaceEntry(record.marketplace.id) : null);
-    if (!entry) return;
-    const at = new Date().toISOString();
-    let next: StoredPack;
-    if (record.sealed) {
-      // A sealed copy is fetched through its purchase: the marketplace's file
-      // is not for a buyer, and the server seals the current master
-      // under the same key on the way.
-      if (!api) return;
-      const packId = record.marketplace?.id ?? record.id;
-      const mine = purchases.length > 0 ? purchases : await api.myPurchases().catch(() => []);
-      const purchase = mine.find((p) => p.packId === packId && p.status === "fulfilled" && p.key);
-      if (!purchase) {
-        setNotice("This copy's purchase is not on your account, so its update cannot be fetched.");
-        return;
+  const updateFromMarketplace = useCallback(
+    async (record: StoredPack) => {
+      const entry = updates.get(record.id) ?? (record.marketplace ? await marketplaceEntry(record.marketplace.id) : null);
+      if (!entry) return;
+      const at = new Date().toISOString();
+      let next: StoredPack;
+      if (record.sealed) {
+        // A sealed copy is fetched through its purchase: the marketplace's file
+        // is not for a buyer, and the server seals the current master
+        // under the same key on the way.
+        if (!api) return;
+        const packId = record.marketplace?.id ?? record.id;
+        const mine = purchases.length > 0 ? purchases : await api.myPurchases().catch(() => []);
+        const purchase = mine.find((p) => p.packId === packId && p.status === "fulfilled" && p.key);
+        if (!purchase) {
+          setNotice("This copy's purchase is not on your account, so its update cannot be fetched.");
+          return;
+        }
+        const got = await openPurchase(purchase, await api.purchaseFile(purchase.ref)).catch(() => null);
+        if (!got) {
+          setNotice("The new copy could not be fetched; try again in a little while.");
+          return;
+        }
+        if (got.pack.version === record.version) {
+          setNotice("The publisher's new version is not ready to fetch yet; try again in a little while.");
+          return;
+        }
+        next = {
+          ...record,
+          title: got.pack.title,
+          version: got.pack.version,
+          source: got.text,
+          format: "yaml",
+          updatedAt: at,
+          marketplace: { id: packId, version: got.pack.version },
+        };
+      } else {
+        const text = await entry.load();
+        const parsed = loadPackText(text, "yaml");
+        if (!parsed.ok) return;
+        next = {
+          ...record,
+          title: parsed.pack.title,
+          version: parsed.pack.version,
+          source: text,
+          format: "yaml",
+          updatedAt: at,
+          origin: "marketplace",
+          marketplace: { id: entry.id, version: entry.version },
+        };
       }
-      const got = await openPurchase(purchase, await api.purchaseFile(purchase.ref)).catch(() => null);
-      if (!got) {
-        setNotice("The new copy could not be fetched; try again in a little while.");
-        return;
-      }
-      if (got.pack.version === record.version) {
-        setNotice("The publisher's new version is not ready to fetch yet; try again in a little while.");
-        return;
-      }
-      next = { ...record, title: got.pack.title, version: got.pack.version, source: got.text, format: "yaml", updatedAt: at, marketplace: { id: packId, version: got.pack.version } };
-    } else {
-      const text = await entry.load();
-      const parsed = loadPackText(text, "yaml");
-      if (!parsed.ok) return;
-      next = {
-        ...record,
-        title: parsed.pack.title,
-        version: parsed.pack.version,
-        source: text,
-        format: "yaml",
-        updatedAt: at,
-        origin: "marketplace",
-        marketplace: { id: entry.id, version: entry.version },
-      };
-    }
-    await savePack(next);
-    syncBus.localChange("pack", next.id);
-    setImported((prev) => prev.map((p) => (p.id === next.id ? next : p)));
-    if (activeId === next.id) setSource(next.source);
-  }, [updates, activeId, api, purchases]);
+      await savePack(next);
+      syncBus.localChange("pack", next.id);
+      setImported((prev) => prev.map((p) => (p.id === next.id ? next : p)));
+      if (activeId === next.id) setSource(next.source);
+    },
+    [updates, activeId, api, purchases],
+  );
 
   /** What the library lists: every pack in storage, whatever it came from. */
   const libraryPacks = useMemo<LibraryPack[]>(
@@ -783,41 +819,44 @@ export default function App() {
     return record;
   }, []);
 
-  const onFile = useCallback(async (file: File | undefined) => {
-    if (!file) return;
+  const onFile = useCallback(
+    async (file: File | undefined) => {
+      if (!file) return;
 
-    // A sealed copy is binary and needs a key before there is anything to
-    // read, so it is caught before any attempt to parse it as text. A key
-    // this browser (or this account) has seen is tried first; the prompt is
-    // for a file none of them opens.
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const header = readHeader(bytes);
-    if (header) {
-      for (const license of await licensesToTry(header)) {
-        const result = await openSealed(bytes, license.key);
-        if (result.ok) {
-          await keepOpened(result.document, license.key, header);
-          return;
+      // A sealed copy is binary and needs a key before there is anything to
+      // read, so it is caught before any attempt to parse it as text. A key
+      // this browser (or this account) has seen is tried first; the prompt is
+      // for a file none of them opens.
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const header = readHeader(bytes);
+      if (header) {
+        for (const license of await licensesToTry(header)) {
+          const result = await openSealed(bytes, license.key);
+          if (result.ok) {
+            await keepOpened(result.document, license.key, header);
+            return;
+          }
         }
+        setSealed({ data: bytes, header });
+        return;
       }
-      setSealed({ data: bytes, header });
-      return;
-    }
 
-    const text = await file.text();
-    const parsed = loadPackText(text, formatOf(file.name));
-    setSource(text);
+      const text = await file.text();
+      const parsed = loadPackText(text, formatOf(file.name));
+      setSource(text);
 
-    // Only a pack that actually loads is worth keeping; storing a broken one
-    // would put it in the picker forever with no way to tell why it fails.
-    if (!parsed.ok) {
-      setActiveId("upload");
-      return;
-    }
-    const record = await keepFromFile(parsed.pack, text, file.name, await loadPack(parsed.pack.id));
-    setActiveId(record.id);
-    rememberPack(record.id);
-  }, [keepOpened, keepFromFile]);
+      // Only a pack that actually loads is worth keeping; storing a broken one
+      // would put it in the picker forever with no way to tell why it fails.
+      if (!parsed.ok) {
+        setActiveId("upload");
+        return;
+      }
+      const record = await keepFromFile(parsed.pack, text, file.name, await loadPack(parsed.pack.id));
+      setActiveId(record.id);
+      rememberPack(record.id);
+    },
+    [keepOpened, keepFromFile],
+  );
 
   /**
    * A newer file of a pack already on the shelf, chosen on its own row.
@@ -825,27 +864,30 @@ export default function App() {
    * refused rather than kept beside it; a sealed copy is not a
    * replacement for anything, it is opened on its own.
    */
-  const replaceFromFile = useCallback(async (record: StoredPack, file: File | undefined) => {
-    if (!file) return;
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    if (readHeader(bytes)) {
-      setNotice("That is a sealed copy. Open it with Load a pack from a file; it does not replace a pack.");
-      return;
-    }
-    const text = await file.text();
-    const parsed = loadPackText(text, formatOf(file.name));
-    if (!parsed.ok) {
-      const first = parsed.diagnostics.find((d) => d.level === "error");
-      setNotice(`${file.name} does not load${first ? ` (${first.message})` : ""}, so ${record.title} is as it was.`);
-      return;
-    }
-    const why = notThisPack(record, parsed.pack);
-    if (why) {
-      setNotice(why);
-      return;
-    }
-    await keepFromFile(parsed.pack, text, file.name, record);
-  }, [keepFromFile]);
+  const replaceFromFile = useCallback(
+    async (record: StoredPack, file: File | undefined) => {
+      if (!file) return;
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (readHeader(bytes)) {
+        setNotice("That is a sealed copy. Open it with Load a pack from a file; it does not replace a pack.");
+        return;
+      }
+      const text = await file.text();
+      const parsed = loadPackText(text, formatOf(file.name));
+      if (!parsed.ok) {
+        const first = parsed.diagnostics.find((d) => d.level === "error");
+        setNotice(`${file.name} does not load${first ? ` (${first.message})` : ""}, so ${record.title} is as it was.`);
+        return;
+      }
+      const why = notThisPack(record, parsed.pack);
+      if (why) {
+        setNotice(why);
+        return;
+      }
+      await keepFromFile(parsed.pack, text, file.name, record);
+    },
+    [keepFromFile],
+  );
 
   /**
    * A bought copy, fetched and opened. By the receipt's token it needs no
@@ -892,7 +934,10 @@ export default function App() {
         for (let tries = 0; live && tries < 30; tries++) {
           const purchase = await api.purchase(incoming.ref);
           if (!purchase) {
-            setPurchaseState({ kind: "error", message: "That purchase is not this account's. Sign in as the account that bought it, or use the link in the receipt." });
+            setPurchaseState({
+              kind: "error",
+              message: "That purchase is not this account's. Sign in as the account that bought it, or use the link in the receipt.",
+            });
             return;
           }
           if (purchase.status === "revoked") {
@@ -907,9 +952,18 @@ export default function App() {
           }
           await new Promise((r) => setTimeout(r, 3000));
         }
-        if (live) setPurchaseState({ kind: "error", message: "The copy is taking longer than usual. The receipt mail has a link that fetches it, and it is on your profile under Purchases." });
+        if (live)
+          setPurchaseState({
+            kind: "error",
+            message:
+              "The copy is taking longer than usual. The receipt mail has a link that fetches it, and it is on your profile under Purchases.",
+          });
       } catch (error) {
-        if (live) setPurchaseState({ kind: "error", message: error instanceof Error && error.message ? error.message : "The copy could not be fetched." });
+        if (live)
+          setPurchaseState({
+            kind: "error",
+            message: error instanceof Error && error.message ? error.message : "The copy could not be fetched.",
+          });
       }
     };
     void run();
@@ -920,58 +974,61 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bought.purchase, api]);
 
-  const forget = useCallback(async (record: StoredPack) => {
-    forgetOpened(record.id);
-    // A sealed copy was never told to the server, so there is nobody to
-    // tell about its deletion: it goes at once, no tombstone. The license
-    // key stays, it is the receipt, and the file can be opened again.
-    if (record.sealed) await purgePack(record.id);
-    else await forgetPack(record.id);
-    await forgetRunsFor(record.id);
+  const forget = useCallback(
+    async (record: StoredPack) => {
+      forgetOpened(record.id);
+      // A sealed copy was never told to the server, so there is nobody to
+      // tell about its deletion: it goes at once, no tombstone. The license
+      // key stays, it is the receipt, and the file can be opened again.
+      if (record.sealed) await purgePack(record.id);
+      else await forgetPack(record.id);
+      await forgetRunsFor(record.id);
 
-    /*
-     * And out of any server that was playing it.
-     *
-     * A vault holds the pack's text so the bot can play it while nobody
-     * is present, which is right and is also why it outlives the shelf
-     * unless something says otherwise. Taking a pack off your shelf is
-     * that something: a server should only be able to play what you
-     * currently have.
-     *
-     * Driven by the press rather than by comparing two lists. A shelf
-     * that is empty because this device is new, or because sync has not
-     * finished, is not a shelf somebody emptied, and reconciling against
-     * one would quietly clear every vault the account has.
-     *
-     * Best effort, and quiet when it fails. The pack is already off the
-     * shelf by this point; a server that could not be reached is a Remove
-     * still waiting on the Servers page, not a reason to refuse the
-     * removal that was asked for.
-     */
-    if (api) {
-      void (async () => {
-        try {
-          const { guilds } = await api.myGuilds();
-          for (const guild of guilds) {
-            try {
-              await api.undelegatePack(guild.guildId, record.id);
-            } catch {
-              // That server keeps it; the Servers page still offers Remove.
+      /*
+       * And out of any server that was playing it.
+       *
+       * A vault holds the pack's text so the bot can play it while nobody
+       * is present, which is right and is also why it outlives the shelf
+       * unless something says otherwise. Taking a pack off your shelf is
+       * that something: a server should only be able to play what you
+       * currently have.
+       *
+       * Driven by the press rather than by comparing two lists. A shelf
+       * that is empty because this device is new, or because sync has not
+       * finished, is not a shelf somebody emptied, and reconciling against
+       * one would quietly clear every vault the account has.
+       *
+       * Best effort, and quiet when it fails. The pack is already off the
+       * shelf by this point; a server that could not be reached is a Remove
+       * still waiting on the Servers page, not a reason to refuse the
+       * removal that was asked for.
+       */
+      if (api) {
+        void (async () => {
+          try {
+            const { guilds } = await api.myGuilds();
+            for (const guild of guilds) {
+              try {
+                await api.undelegatePack(guild.guildId, record.id);
+              } catch {
+                // That server keeps it; the Servers page still offers Remove.
+              }
             }
+          } catch {
+            // No answer about servers at all: nothing to do here.
           }
-        } catch {
-          // No answer about servers at all: nothing to do here.
-        }
-      })();
-    }
-    setImported((prev) => prev.filter((p) => p.id !== record.id));
-    setActiveId((current) => {
-      if (current !== record.id) return current;
-      setSource(null);
-      rememberPack("");
-      return "";
-    });
-  }, [api]);
+        })();
+      }
+      setImported((prev) => prev.filter((p) => p.id !== record.id));
+      setActiveId((current) => {
+        if (current !== record.id) return current;
+        setSource(null);
+        rememberPack("");
+        return "";
+      });
+    },
+    [api],
+  );
 
   // A hosted copy counts the screen, once per change; see hosted/beacon.ts
   // for what is and is not sent. `hosted` itself is read further up, so
@@ -986,7 +1043,11 @@ export default function App() {
     return (
       <main className="main remote">
         <div className="pipPanel">
-          <p className="muted">{dockStatus === "missing" ? "This run is not on this device. Open it in the app here first, and the dock follows." : "Opening the run…"}</p>
+          <p className="muted">
+            {dockStatus === "missing"
+              ? "This run is not on this device. Open it in the app here first, and the dock follows."
+              : "Opening the run…"}
+          </p>
         </div>
       </main>
     );
@@ -994,25 +1055,25 @@ export default function App() {
   if (liveRoute) {
     return (
       <>
-      <LiveRunView
-        route={liveRoute}
-        onWatch={async (runId) => {
-          // The seat is taken on the server; a pass brings the run, and it opens.
-          sync.syncNow();
-          for (let tries = 0; tries < 12; tries += 1) {
-            await new Promise((r) => setTimeout(r, 1000));
-            if (await loadRun(runId)) break;
-          }
-          history.replaceState(null, "", location.pathname + location.search);
-          setLiveRoute(null);
-          if (!(await openRun(runId, true))) {
+        <LiveRunView
+          route={liveRoute}
+          onWatch={async (runId) => {
+            // The seat is taken on the server; a pass brings the run, and it opens.
             sync.syncNow();
-            setNotice("Your seat is taken; the run is on its way and will be on your shelf in a moment.");
-            setView("library");
-          }
-        }}
-      />
-      <Footer onGuide={() => location.assign(linkTo("#guide/streaming", "./"))} />
+            for (let tries = 0; tries < 12; tries += 1) {
+              await new Promise((r) => setTimeout(r, 1000));
+              if (await loadRun(runId)) break;
+            }
+            history.replaceState(null, "", location.pathname + location.search);
+            setLiveRoute(null);
+            if (!(await openRun(runId, true))) {
+              sync.syncNow();
+              setNotice("Your seat is taken; the run is on its way and will be on your shelf in a moment.");
+              setView("library");
+            }
+          }}
+        />
+        <Footer onGuide={() => location.assign(linkTo("#guide/streaming", "./"))} />
       </>
     );
   }
@@ -1062,10 +1123,18 @@ export default function App() {
           >
             {backFromLibrary ? "Play" : "Packs"}
           </button>
-          <button className={`${view === "design" ? "primary" : "ghost"} createBtn`} onClick={() => (view === "design" ? leaveDesigner() : openDesigner())} title={view === "design" ? "Back to the run" : "Write a pack of your own in the Designer"}>
+          <button
+            className={`${view === "design" ? "primary" : "ghost"} createBtn`}
+            onClick={() => (view === "design" ? leaveDesigner() : openDesigner())}
+            title={view === "design" ? "Back to the run" : "Write a pack of your own in the Designer"}
+          >
             {view === "design" ? "Play" : "Create"}
           </button>
-          <button className={`${view === "guide" ? "primary" : "ghost"} guideBtn`} onClick={() => (view === "guide" ? leaveGuide() : openGuide())} title={view === "guide" ? "Back to the run" : "How to use Runlog"}>
+          <button
+            className={`${view === "guide" ? "primary" : "ghost"} guideBtn`}
+            onClick={() => (view === "guide" ? leaveGuide() : openGuide())}
+            title={view === "guide" ? "Back to the run" : "How to use Runlog"}
+          >
             {view === "guide" ? "Play" : "Guide"}
           </button>
           <AccountBadge closeKey={view} onOpenProfile={(page) => openProfile(page)} />
@@ -1118,9 +1187,7 @@ export default function App() {
         onDismiss={shared.clear}
       />
 
-      {result.ok && document !== null && (
-        <SignatureBadge document={document} packId={result.pack.id} />
-      )}
+      {result.ok && document !== null && <SignatureBadge document={document} packId={result.pack.id} />}
 
       {/* Design writes a pack of its own, so whether the *selected* pack
           loads has nothing to do with whether the editor can open. */}
@@ -1156,7 +1223,9 @@ export default function App() {
                     syncBus.localChange("license", id);
                     const record = await loadPack(id);
                     if (record) {
-                      setImported((prev) => [...prev.filter((p) => p.id !== record.id), record].sort((a, b) => a.title.localeCompare(b.title)));
+                      setImported((prev) =>
+                        [...prev.filter((p) => p.id !== record.id), record].sort((a, b) => a.title.localeCompare(b.title)),
+                      );
                       choose(record.id, record.source);
                     }
                   } catch (error) {
@@ -1178,7 +1247,12 @@ export default function App() {
           onBack={openLibrary}
         />
       ) : bench && (view === "design" || onLibrary) ? (
-        <RunView key={`bench:${bench.pack.id}`} pack={bench.pack} store={bench.store} bench={{ from: bench.from, onLeave: () => setBench(null) }} />
+        <RunView
+          key={`bench:${bench.pack.id}`}
+          pack={bench.pack}
+          store={bench.store}
+          bench={{ from: bench.from, onLeave: () => setBench(null) }}
+        />
       ) : onLibrary ? (
         <LibraryView
           packs={libraryPacks}
@@ -1232,7 +1306,9 @@ export default function App() {
                     rememberRaceCode(code);
                     const here = imported.find((p) => p.id === race.meta.packId);
                     if (!here) {
-                      setNotice(`That race plays ${race.meta.packTitle ?? race.meta.packId}, which is not on your shelf. Add it from the marketplace; the code is kept.`);
+                      setNotice(
+                        `That race plays ${race.meta.packTitle ?? race.meta.packId}, which is not on your shelf. Add it from the marketplace; the code is kept.`,
+                      );
                       return;
                     }
                     setActiveRunFor(here.id, NEW_RUN);
@@ -1279,9 +1355,7 @@ function Diagnostics({ diagnostics }: { diagnostics: Diagnostic[] }) {
   return (
     <main className="diagnostics">
       <h2>This pack did not load</h2>
-      <p className="muted">
-        The same three gates the engine uses: version, then shape, then coherence.
-      </p>
+      <p className="muted">The same three gates the engine uses: version, then shape, then coherence.</p>
       <ul>
         {diagnostics.map((d, i) => (
           <li key={i} className={d.level}>
@@ -1294,7 +1368,6 @@ function Diagnostics({ diagnostics }: { diagnostics: Diagnostic[] }) {
     </main>
   );
 }
-
 
 /**
  * The built-ins moved under the operator's domain. A pack stored under an
@@ -1389,8 +1462,17 @@ async function settleLibrary(packs: StoredPack[]): Promise<StoredPack[]> {
     if (!parsed.ok) continue;
     const at = new Date().toISOString();
     const record: StoredPack = {
-      id: parsed.pack.id, title: parsed.pack.title, version: parsed.pack.version, source: text, format: "yaml",
-      filename: `${entry.id}.yaml`, importedAt: at, updatedAt: at, sync: true, origin: "marketplace", marketplace: { id: entry.id, version: entry.version },
+      id: parsed.pack.id,
+      title: parsed.pack.title,
+      version: parsed.pack.version,
+      source: text,
+      format: "yaml",
+      filename: `${entry.id}.yaml`,
+      importedAt: at,
+      updatedAt: at,
+      sync: true,
+      origin: "marketplace",
+      marketplace: { id: entry.id, version: entry.version },
     };
     await savePack(record);
     added.push(record);

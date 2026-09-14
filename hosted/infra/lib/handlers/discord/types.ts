@@ -117,13 +117,21 @@ export const select = (customId: string, placeholder: string, options: Array<{ l
       type: Component.StringSelect,
       custom_id: customId.slice(0, 100),
       placeholder: placeholder.slice(0, 150),
-      options: options.slice(0, 25).map((o) => ({ label: o.label.slice(0, 100), value: o.value.slice(0, 100), ...(o.description ? { description: o.description.slice(0, 100) } : {}) })),
+      options: options.slice(0, 25).map((o) => ({
+        label: o.label.slice(0, 100),
+        value: o.value.slice(0, 100),
+        ...(o.description ? { description: o.description.slice(0, 100) } : {}),
+      })),
     },
   ],
 });
 
 /** A modal with one text input; the answer comes back as a ModalSubmit with the input's value. */
-export const modal = (customId: string, title: string, input: { id: string; label: string; placeholder?: string; value?: string; paragraph?: boolean }): InteractionResponse => ({
+export const modal = (
+  customId: string,
+  title: string,
+  input: { id: string; label: string; placeholder?: string; value?: string; paragraph?: boolean },
+): InteractionResponse => ({
   type: ResponseType.Modal,
   data: {
     custom_id: customId.slice(0, 100),
@@ -160,7 +168,13 @@ const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "obj
 
 /** Whether a body has the shape of an interaction: the fields every one carries. */
 export function isInteraction(v: unknown): v is Interaction {
-  return isRecord(v) && typeof v["id"] === "string" && typeof v["application_id"] === "string" && typeof v["type"] === "number" && typeof v["token"] === "string";
+  return (
+    isRecord(v) &&
+    typeof v["id"] === "string" &&
+    typeof v["application_id"] === "string" &&
+    typeof v["type"] === "number" &&
+    typeof v["token"] === "string"
+  );
 }
 
 /** Who pressed: the member's user in a server, the user alone in a direct message. */

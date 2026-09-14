@@ -60,10 +60,14 @@ export function docsFromHash(hash: string): { at: DocsAt; kind: DocKind } | null
 }
 
 /** The address of one document, and of the place to go back to when it closes. */
-const docsHash = (at: DocsAt, kind: DocKind): string => `#${at.section}/${encodeURIComponent(at.id)}/docs${kind === "summary" ? "" : `/${kind}`}`;
+const docsHash = (at: DocsAt, kind: DocKind): string =>
+  `#${at.section}/${encodeURIComponent(at.id)}/docs${kind === "summary" ? "" : `/${kind}`}`;
 const backHash = (at: DocsAt): string => (at.section === "marketplace" ? `#marketplace/${encodeURIComponent(at.id)}` : "#packs");
 
-const DocDrawerContext = createContext<{ open: (pack: Pack, kind: DocKind, at?: DocsAt) => void; show: (title: string, tabs: DocTab[]) => void }>({
+const DocDrawerContext = createContext<{
+  open: (pack: Pack, kind: DocKind, at?: DocsAt) => void;
+  show: (title: string, tabs: DocTab[]) => void;
+}>({
   open: () => {},
   show: () => {},
 });
@@ -76,7 +80,10 @@ export function DocDrawerProvider({ children }: { children: ReactNode }) {
   const [opened, setOpened] = useState<Opened | null>(null);
   const open = useCallback((pack: Pack, kind: DocKind, at?: DocsAt) => {
     const tabs = DOC_KINDS.map((k) => ({ label: k.label, what: k.what, make: () => generateDoc(pack, k.kind) }));
-    const index = Math.max(0, DOC_KINDS.findIndex((k) => k.kind === kind));
+    const index = Math.max(
+      0,
+      DOC_KINDS.findIndex((k) => k.kind === kind),
+    );
     setOpened({ title: pack.title, tabs, index, ...(at ? { at } : {}) });
     // Pushed rather than replaced: closing the drawer is a Back away.
     if (at) goTo(docsHash(at, DOC_KINDS[index]?.kind ?? "summary"), "push");
@@ -119,7 +126,13 @@ export function DocDrawerProvider({ children }: { children: ReactNode }) {
       {children}
       {opened && tab && doc && (
         <div className="drawerVeil" onClick={close} role="presentation">
-          <aside className="docDrawer" role="dialog" aria-modal="true" aria-label={`${doc.title}: ${tab.label}`} onClick={(e) => e.stopPropagation()}>
+          <aside
+            className="docDrawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${doc.title}: ${tab.label}`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <header className="docDrawerHead">
               <div>
                 <strong>{opened.title}</strong>

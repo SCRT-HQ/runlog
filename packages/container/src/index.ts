@@ -12,13 +12,5 @@
  * about it is the reason this package exists: any file in this shape opens
  * with its key, on any address, with nothing checked online.
  */
-export {
-  generateLicenseKey,
-  isSealed,
-  open,
-  readHeader,
-  seal,
-  type ContainerHeader,
-  type OpenResult,
-} from "./container.ts";
+export { generateLicenseKey, isSealed, open, readHeader, seal, type ContainerHeader, type OpenResult } from "./container.ts";
 export { fromBase64Url, toBase64Url } from "./base64url.ts";

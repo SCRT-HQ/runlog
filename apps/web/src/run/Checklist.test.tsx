@@ -48,7 +48,14 @@ afterEach(cleanup);
 describe("a confirmation beside the rules it repeats", () => {
   it("lists a result the step is not held to, and not one it is", () => {
     render(
-      <Checklist items={items} pack={pack} state={state} ticked={new Set()} onToggle={() => {}} settling={settling({ hidden: (s) => s.entryId === "cull" })} />,
+      <Checklist
+        items={items}
+        pack={pack}
+        state={state}
+        ticked={new Set()}
+        onToggle={() => {}}
+        settling={settling({ hidden: (s) => s.entryId === "cull" })}
+      />,
     );
     expect(screen.queryByText(/Upon finalizing/)).toBeNull();
     expect(screen.getByText(/Swap two slices/)).toBeTruthy();

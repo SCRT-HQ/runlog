@@ -55,7 +55,7 @@ export function readPath(state: unknown, path: string): unknown {
   for (const segment of path.split(".")) {
     if (cursor === null || cursor === undefined) return undefined;
     if (Array.isArray(cursor)) {
-      // `length` reads naturally in an assertion, "two Pieces were made", 
+      // `length` reads naturally in an assertion, "two Pieces were made",
       // and is the only non-index property worth exposing here.
       if (segment === "length") {
         cursor = cursor.length;

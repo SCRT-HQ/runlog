@@ -52,9 +52,7 @@ export function useIncomingPack(): {
         title: typeof named.title === "string" ? named.title : "an untitled pack",
         ...(typeof named.author === "string" && named.author ? { author: named.author } : {}),
         loads: parsed.ok,
-        ...(parsed.ok
-          ? {}
-          : { problem: parsed.diagnostics.find((d) => d.level === "error")?.message }),
+        ...(parsed.ok ? {} : { problem: parsed.diagnostics.find((d) => d.level === "error")?.message }),
         signature: await verifyPack(result.document),
       });
     };
@@ -115,22 +113,14 @@ export function IncomingPackBanner({
         <span className="muted small">
           {" "}
           · shared with you in a link
-          {signature.status === "valid" &&
-            ` · signed${signature.signedBy ? `: “${signature.signedBy}”` : ""}`}
+          {signature.status === "valid" && ` · signed${signature.signedBy ? `: “${signature.signedBy}”` : ""}`}
           {signature.status === "invalid" && " · signature does not match"}
         </span>
-        {!incoming.loads && (
-          <div className="muted small">
-            It does not load: {incoming.problem ?? "it is not a valid pack"}
-          </div>
-        )}
-        {signature.status === "valid" && (
-          <div className="muted small">Fingerprint {signature.fingerprint}</div>
-        )}
+        {!incoming.loads && <div className="muted small">It does not load: {incoming.problem ?? "it is not a valid pack"}</div>}
+        {signature.status === "valid" && <div className="muted small">Fingerprint {signature.fingerprint}</div>}
         {signature.status === "invalid" && (
           <div className="muted small">
-            It carries a signature that does not match its contents: someone changed it
-            after it was signed.
+            It carries a signature that does not match its contents: someone changed it after it was signed.
           </div>
         )}
       </div>

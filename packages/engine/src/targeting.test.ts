@@ -83,8 +83,7 @@ function stateWith(count: number, o: Options = {}): RunState {
   };
 }
 
-const target = (roll: number, count: number, o: Options = {}) =>
-  resolveTargeting(kiln, stateWith(count, o), { roll, from: "currentRoll" });
+const target = (roll: number, count: number, o: Options = {}) => resolveTargeting(kiln, stateWith(count, o), { roll, from: "currentRoll" });
 
 describe("anchored-offset targeting", () => {
   describe("worked examples", () => {
@@ -198,8 +197,7 @@ describe("anchored-offset targeting", () => {
   });
 
   describe("event-triggered targeting", () => {
-    const evt = (roll: number, count: number) =>
-      resolveTargeting(kiln, stateWith(count), { roll, from: "event" });
+    const evt = (roll: number, count: number) => resolveTargeting(kiln, stateWith(count), { roll, from: "event" });
 
     it("reads an odd tens digit as the first band", () => {
       // 37 → tens 3 is odd → treat as 77 → newest anchor, offset 7.

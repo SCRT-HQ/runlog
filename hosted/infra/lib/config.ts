@@ -81,7 +81,14 @@ export interface EnvConfig {
    * and an empty price is a plan that cannot be bought yet.
    */
   stripe: {
-    prices: { plusMonthly: string; plusYearly: string; hostedMonthly: string; hostedYearly: string; serverMonthly: string; serverYearly: string };
+    prices: {
+      plusMonthly: string;
+      plusYearly: string;
+      hostedMonthly: string;
+      hostedYearly: string;
+      serverMonthly: string;
+      serverYearly: string;
+    };
     /** The feature lookup keys Stripe entitles; what `entitlements` in `GET /api/me` carries. */
     features: { plus: string; hostedLicensing: string; server: string };
     /** The platform's share of a sale, in basis points, by whether the publisher subscribes to hosted licensing. */
@@ -181,7 +188,9 @@ function accountFor(name: EnvName): string {
 function required(name: string): string {
   const value = process.env[name];
   if (!value) {
-    throw new Error(`${name} is not set. The account is named by environment variable so this repository is not tied to one person's AWS. See docs/self-hosting.md.`);
+    throw new Error(
+      `${name} is not set. The account is named by environment variable so this repository is not tied to one person's AWS. See docs/self-hosting.md.`,
+    );
   }
   return value;
 }
@@ -197,7 +206,8 @@ function readStage(name: EnvName): Record<string, unknown> {
     );
   }
   const parsed: unknown = JSON.parse(text);
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error(`The configuration for "${name}" is not a JSON object`);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    throw new Error(`The configuration for "${name}" is not a JSON object`);
   return parsed as Record<string, unknown>;
 }
 
@@ -231,7 +241,10 @@ export function envConfig(name: EnvName): EnvConfig {
   const email = rec(c["email"], "email");
   const stripe = rec(c["stripe"], "stripe");
   const prices = rec(stripe["prices"], "stripe.prices");
-  const features = rec({ plus: "plus", hostedLicensing: "hosted-licensing", server: "server", ...(isRecord(stripe["features"]) ? stripe["features"] : {}) }, "stripe.features");
+  const features = rec(
+    { plus: "plus", hostedLicensing: "hosted-licensing", server: "server", ...(isRecord(stripe["features"]) ? stripe["features"] : {}) },
+    "stripe.features",
+  );
   const fee = rec(stripe["applicationFeeBps"] ?? { subscribed: 0, unsubscribed: 500 }, "stripe.applicationFeeBps");
   const hosted = rec(c["hosted"], "hosted");
   const price = (key: string): string => {
@@ -255,19 +268,39 @@ export function envConfig(name: EnvName): EnvConfig {
     retain: bool(c["retain"], "retain"),
     workosClientId: str(c["workosClientId"], "workosClientId"),
     workosCliClientId: str(c["workosCliClientId"], "workosCliClientId"),
-    email: { from: str(email["from"], "email.from"), region: str(email["region"], "email.region"), identity: str(email["identity"], "email.identity") },
+    email: {
+      from: str(email["from"], "email.from"),
+      region: str(email["region"], "email.region"),
+      identity: str(email["identity"], "email.identity"),
+    },
     gates: bool(c["gates"], "gates"),
     stripe: {
-      prices: { plusMonthly: price("plusMonthly"), plusYearly: price("plusYearly"), hostedMonthly: price("hostedMonthly"), hostedYearly: price("hostedYearly"), serverMonthly: price("serverMonthly"), serverYearly: price("serverYearly") },
-      features: { plus: str(features["plus"], "stripe.features.plus"), hostedLicensing: str(features["hostedLicensing"], "stripe.features.hostedLicensing"), server: str(features["server"], "stripe.features.server") },
-      applicationFeeBps: { subscribed: num(fee["subscribed"], "stripe.applicationFeeBps.subscribed"), unsubscribed: num(fee["unsubscribed"], "stripe.applicationFeeBps.unsubscribed") },
+      prices: {
+        plusMonthly: price("plusMonthly"),
+        plusYearly: price("plusYearly"),
+        hostedMonthly: price("hostedMonthly"),
+        hostedYearly: price("hostedYearly"),
+        serverMonthly: price("serverMonthly"),
+        serverYearly: price("serverYearly"),
+      },
+      features: {
+        plus: str(features["plus"], "stripe.features.plus"),
+        hostedLicensing: str(features["hostedLicensing"], "stripe.features.hostedLicensing"),
+        server: str(features["server"], "stripe.features.server"),
+      },
+      applicationFeeBps: {
+        subscribed: num(fee["subscribed"], "stripe.applicationFeeBps.subscribed"),
+        unsubscribed: num(fee["unsubscribed"], "stripe.applicationFeeBps.unsubscribed"),
+      },
     },
     ...(isRecord(c["discord"])
       ? {
           discord: {
             applicationId: str(c["discord"]["applicationId"], "discord.applicationId"),
             publicKey: str(c["discord"]["publicKey"], "discord.publicKey"),
-            ...(typeof c["discord"]["serverSku"] === "string" && c["discord"]["serverSku"].trim() ? { serverSku: c["discord"]["serverSku"].trim() } : {}),
+            ...(typeof c["discord"]["serverSku"] === "string" && c["discord"]["serverSku"].trim()
+              ? { serverSku: c["discord"]["serverSku"].trim() }
+              : {}),
           },
         }
       : {}),
@@ -276,7 +309,9 @@ export function envConfig(name: EnvName): EnvConfig {
           apm: {
             newRelic: {
               accountId: str(c["apm"]["newRelic"]["accountId"], "apm.newRelic.accountId"),
-              ...(typeof c["apm"]["newRelic"]["trustedAccountKey"] === "string" ? { trustedAccountKey: c["apm"]["newRelic"]["trustedAccountKey"] } : {}),
+              ...(typeof c["apm"]["newRelic"]["trustedAccountKey"] === "string"
+                ? { trustedAccountKey: c["apm"]["newRelic"]["trustedAccountKey"] }
+                : {}),
               layerVersion: num(c["apm"]["newRelic"]["layerVersion"] ?? 52, "apm.newRelic.layerVersion"),
             },
           },

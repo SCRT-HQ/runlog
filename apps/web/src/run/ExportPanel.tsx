@@ -1,14 +1,6 @@
 import { useRef, useState } from "react";
 import type { Pack } from "@runlog/rules-schema";
-import {
-  exportRun,
-  importRun,
-  logFilename,
-  mayQuote,
-  renderLog,
-  type RunEvent,
-  type RunState,
-} from "@runlog/engine";
+import { exportRun, importRun, logFilename, mayQuote, renderLog, type RunEvent, type RunState } from "@runlog/engine";
 
 /**
  * Taking the run out of the app.
@@ -57,18 +49,9 @@ export function ExportPanel({
   const audience = share ? "share" : "self";
 
   const saveArchive = () =>
-    download(
-      logFilename(pack, state, "json"),
-      JSON.stringify(exportRun(pack, events), null, 2),
-      "application/json",
-    );
+    download(logFilename(pack, state, "json"), JSON.stringify(exportRun(pack, events), null, 2), "application/json");
 
-  const saveWriteUp = () =>
-    download(
-      logFilename(pack, state, "md"),
-      renderLog(pack, events, { audience }),
-      "text/markdown",
-    );
+  const saveWriteUp = () => download(logFilename(pack, state, "md"), renderLog(pack, events, { audience }), "text/markdown");
 
   const load = async (chosen: File | undefined) => {
     if (!chosen) return;
@@ -92,9 +75,7 @@ export function ExportPanel({
       return;
     }
     if (result.archive.pack.version !== pack.version) {
-      setProblem(
-        `Careful: that log was played against v${result.archive.pack.version} and this is v${pack.version}. Loaded anyway.`,
-      );
+      setProblem(`Careful: that log was played against v${result.archive.pack.version} and this is v${pack.version}. Loaded anyway.`);
     }
     onLoad(result.archive.events);
   };
@@ -109,18 +90,14 @@ export function ExportPanel({
         <button className="ghost" onClick={saveArchive}>
           Save the log
         </button>
-        <span className="muted small">
-          The events themselves, as JSON. Comes back exactly; carries no rules text.
-        </span>
+        <span className="muted small">The events themselves, as JSON. Comes back exactly; carries no rules text.</span>
       </div>
 
       <div className="exportRow">
         <button className="ghost" onClick={saveWriteUp}>
           Write it up
         </button>
-        <span className="muted small">
-          The {pack.vocabulary.run.one.toLowerCase()} as a page of Markdown, to keep or to post.
-        </span>
+        <span className="muted small">The {pack.vocabulary.run.one.toLowerCase()} as a page of Markdown, to keep or to post.</span>
       </div>
 
       <label className="toggle exportToggle" title="Chooses whether the pack's own words travel with it">

@@ -75,7 +75,10 @@ export function simulateThrow(dice: ReadonlyArray<{ faces: number }>, seed: numb
   for (let step = 0; step < MAX_STEPS; step += 1) {
     world.step(DT);
     bodies.forEach((b, i) => {
-      frames[i]!.push({ position: [b.position.x, b.position.y, b.position.z], quaternion: [b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w] });
+      frames[i]!.push({
+        position: [b.position.x, b.position.y, b.position.z],
+        quaternion: [b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w],
+      });
     });
     const quiet = bodies.every((b) => b.sleepState === Body.SLEEPING || (b.velocity.length() < 0.15 && b.angularVelocity.length() < 0.25));
     still = quiet ? still + 1 : 0;

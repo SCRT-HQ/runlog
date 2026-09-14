@@ -36,7 +36,11 @@ function remember(refs: Set<string>): void {
 }
 
 /** Open a fetched copy with its key and keep it; the pack's id once it is on the shelf. */
-export async function keepPurchase(db: Pick<SyncDb, "savePack" | "saveLicense">, purchase: Purchase, bytes: Uint8Array): Promise<string | null> {
+export async function keepPurchase(
+  db: Pick<SyncDb, "savePack" | "saveLicense">,
+  purchase: Purchase,
+  bytes: Uint8Array,
+): Promise<string | null> {
   const got = await openPurchase(purchase, bytes);
   if (!got) return null;
   const { header, text, pack } = got;
@@ -69,7 +73,10 @@ export async function keepPurchase(db: Pick<SyncDb, "savePack" | "saveLicense">,
  * pack itself. Null when the bytes are not a sealed pack, the key does
  * not open it, or what is inside is not a pack.
  */
-export async function openPurchase(purchase: Purchase, bytes: Uint8Array): Promise<{ header: ReturnType<typeof readHeader> & object; text: string; pack: Pack } | null> {
+export async function openPurchase(
+  purchase: Purchase,
+  bytes: Uint8Array,
+): Promise<{ header: ReturnType<typeof readHeader> & object; text: string; pack: Pack } | null> {
   if (!purchase.key) return null;
   const header = readHeader(bytes);
   if (!header) return null;

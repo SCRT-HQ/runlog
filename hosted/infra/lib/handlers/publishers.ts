@@ -52,7 +52,19 @@ export function dynamoPublishers({ table }: { table: string }): PublisherStore {
     async createPublisher(publisher, at) {
       const row = { ...publisher, pk: opk(publisher.id), sk: "META", kind: "org", createdAt: at, updatedAt: at, connectReady: false };
       await ddb.send(new PutCommand({ TableName: table, Item: row, ConditionExpression: "attribute_not_exists(pk)" }));
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: `USER#${publisher.ownerSub}`, sk: `ORG#${publisher.id}`, kind: "orgpointer", id: publisher.id, role: "admin", joinedAt: at } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: {
+            pk: `USER#${publisher.ownerSub}`,
+            sk: `ORG#${publisher.id}`,
+            kind: "orgpointer",
+            id: publisher.id,
+            role: "admin",
+            joinedAt: at,
+          },
+        }),
+      );
       return strip(row);
     },
     async getPublisher(id) {
@@ -60,7 +72,14 @@ export function dynamoPublishers({ table }: { table: string }): PublisherStore {
       return out.Item ? strip(out.Item) : null;
     },
     async publisherOf(sub) {
-      const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `USER#${sub}`, ":sk": "ORG#" }, Limit: 1 }));
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+          ExpressionAttributeValues: { ":pk": `USER#${sub}`, ":sk": "ORG#" },
+          Limit: 1,
+        }),
+      );
       const id = out.Items?.[0]?.["id"];
       return typeof id === "string" ? this.getPublisher(id) : null;
     },
@@ -70,7 +89,9 @@ export function dynamoPublishers({ table }: { table: string }): PublisherStore {
       return typeof id === "string" ? id : null;
     },
     async addMember(id, sub, role, at) {
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: `USER#${sub}`, sk: `ORG#${id}`, kind: "orgpointer", id, role, joinedAt: at } }));
+      await ddb.send(
+        new PutCommand({ TableName: table, Item: { pk: `USER#${sub}`, sk: `ORG#${id}`, kind: "orgpointer", id, role, joinedAt: at } }),
+      );
     },
     async removeMember(id, sub) {
       await ddb.send(new DeleteCommand({ TableName: table, Key: { pk: `USER#${sub}`, sk: `ORG#${id}` } }));
@@ -86,7 +107,12 @@ export function dynamoPublishers({ table }: { table: string }): PublisherStore {
       const row = { ...existing, ...patch, updatedAt: at };
       await ddb.send(new PutCommand({ TableName: table, Item: row }));
       if (patch.connectAccountId) {
-        await ddb.send(new PutCommand({ TableName: table, Item: { pk: `CONNECT#${patch.connectAccountId}`, sk: "ORG", kind: "connect", orgId: id, createdAt: at } }));
+        await ddb.send(
+          new PutCommand({
+            TableName: table,
+            Item: { pk: `CONNECT#${patch.connectAccountId}`, sk: "ORG", kind: "connect", orgId: id, createdAt: at },
+          }),
+        );
       }
       return strip(row);
     },

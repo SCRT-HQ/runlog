@@ -72,7 +72,11 @@ function fromTriangles(positions: ArrayLike<number>): Polyhedron {
     faces.push(corners);
     normals.push([g.normal.x, g.normal.y, g.normal.z]);
   }
-  return finish(verts.map((v) => [v.x, v.y, v.z] as [number, number, number]), faces, normals);
+  return finish(
+    verts.map((v) => [v.x, v.y, v.z] as [number, number, number]),
+    faces,
+    normals,
+  );
 }
 
 function finish(vertices: Polyhedron["vertices"], faces: number[][], normals?: Polyhedron["normals"]): Polyhedron {
@@ -164,11 +168,22 @@ export function polyhedron(faces: number): Polyhedron {
       const s = 0.62;
       p = finish(
         [
-          [-s, -s, -s], [s, -s, -s], [s, s, -s], [-s, s, -s],
-          [-s, -s, s], [s, -s, s], [s, s, s], [-s, s, s],
+          [-s, -s, -s],
+          [s, -s, -s],
+          [s, s, -s],
+          [-s, s, -s],
+          [-s, -s, s],
+          [s, -s, s],
+          [s, s, s],
+          [-s, s, s],
         ],
         [
-          [0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [2, 3, 7, 6], [1, 2, 6, 5], [0, 4, 7, 3],
+          [0, 3, 2, 1],
+          [4, 5, 6, 7],
+          [0, 1, 5, 4],
+          [2, 3, 7, 6],
+          [1, 2, 6, 5],
+          [0, 4, 7, 3],
         ],
       );
     }
@@ -201,7 +216,13 @@ export function topFace(p: Polyhedron, q: { x: number; y: number; z: number; w: 
  * honest without steering it. A d4 reads at its top corner, so the value
  * goes on every face that faces up.
  */
-export function faceLabels(p: Polyhedron, faces: number, display: string, top: number, orientation?: { x: number; y: number; z: number; w: number }): string[] {
+export function faceLabels(
+  p: Polyhedron,
+  faces: number,
+  display: string,
+  top: number,
+  orientation?: { x: number; y: number; z: number; w: number },
+): string[] {
   const all = numbersFor(faces, display);
   const rest = all.filter((n) => n !== display);
   const labels: string[] = new Array<string>(p.faces.length).fill("");
@@ -222,7 +243,9 @@ export function faceLabels(p: Polyhedron, faces: number, display: string, top: n
 export function numbersFor(faces: number, display: string): string[] {
   if (faces === 10 || faces === 100) {
     // A tens die reads 00-90; a ones die 0-9.
-    return display.length === 2 ? Array.from({ length: 10 }, (_, i) => String(i * 10).padStart(2, "0")) : Array.from({ length: 10 }, (_, i) => String(i));
+    return display.length === 2
+      ? Array.from({ length: 10 }, (_, i) => String(i * 10).padStart(2, "0"))
+      : Array.from({ length: 10 }, (_, i) => String(i));
   }
   const n = faces === 4 || faces === 8 || faces === 12 || faces === 20 || faces === 6 ? faces : 6;
   return Array.from({ length: n }, (_, i) => String(i + 1));

@@ -101,7 +101,10 @@ describe("people at the table", () => {
   });
 
   it("is folded when it is only you, and open when somebody else is at the table", () => {
-    const alone = panel(runOf({ role: "owner", members: [{ sub: "user_ME", role: "owner", joinedAt: "2026-01-01T00:00:00Z" }] }), syncOf(true, true));
+    const alone = panel(
+      runOf({ role: "owner", members: [{ sub: "user_ME", role: "owner", joinedAt: "2026-01-01T00:00:00Z" }] }),
+      syncOf(true, true),
+    );
     expect(alone).not.toMatch(/<details[^>]*\sopen/);
     expect(alone).not.toContain("Reaching your account");
     const company = panel(

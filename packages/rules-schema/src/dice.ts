@@ -24,9 +24,7 @@ const DICE_RE = /^([1-9]\d*)?d([1-9]\d*)([+-]\d+)?$/;
 export function parseDice(expr: string): ParsedDice {
   const m = DICE_RE.exec(expr.trim());
   if (!m) {
-    throw new Error(
-      `invalid dice expression ${JSON.stringify(expr)}; expected forms like d100, 2d10, d6+3`,
-    );
+    throw new Error(`invalid dice expression ${JSON.stringify(expr)}; expected forms like d100, 2d10, d6+3`);
   }
   const count = m[1] ? Number(m[1]) : 1;
   const faces = Number(m[2]);

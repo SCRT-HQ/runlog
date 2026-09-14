@@ -298,7 +298,7 @@ function openNamed(name: string): Promise<IDBDatabase | null> {
         db.createObjectStore(RUNS, { keyPath: "runId" }).createIndex(BY_PACK, "packId");
       } else if (e.oldVersion < 4) {
         // A key path cannot be changed in place. Read every run out of the
-        // old store, drop it, make the new one, and put them back with ids: 
+        // old store, drop it, make the new one, and put them back with ids:
         // all inside the version-change transaction, so a failure leaves the
         // old database exactly as it was.
         const old: LegacyRun[] = [];
@@ -382,11 +382,7 @@ export function openedDatabase(): string | null {
   return openedAs;
 }
 
-function run<T>(
-  store: string,
-  mode: IDBTransactionMode,
-  work: (s: IDBObjectStore) => IDBRequest,
-): Promise<T | null> {
+function run<T>(store: string, mode: IDBTransactionMode, work: (s: IDBObjectStore) => IDBRequest): Promise<T | null> {
   return open().then(
     (db) =>
       new Promise<T | null>((resolve) => {
@@ -415,8 +411,7 @@ export const listAllPacks = (): Promise<StoredPack[]> =>
   run<StoredPack[]>(PACKS, "readonly", (s) => s.getAll()).then((r) => (r ?? []).map(asRead));
 
 /** The packs still on the shelf. */
-export const listPacks = (): Promise<StoredPack[]> =>
-  listAllPacks().then((packs) => packs.filter((p) => !p.deletedAt));
+export const listPacks = (): Promise<StoredPack[]> => listAllPacks().then((packs) => packs.filter((p) => !p.deletedAt));
 
 export const loadPack = (id: string): Promise<StoredPack | null> =>
   run<StoredPack>(PACKS, "readonly", (s) => s.get(id)).then((p) => (p ? asRead(p) : p));
@@ -432,8 +427,7 @@ export async function forgetPack(id: string): Promise<void> {
   await run(PACKS, "readwrite", (s) => s.put({ ...pack, source: "", deletedAt: at, updatedAt: at }));
 }
 
-export const purgePack = (id: string): Promise<unknown> =>
-  run(PACKS, "readwrite", (s) => s.delete(id));
+export const purgePack = (id: string): Promise<unknown> => run(PACKS, "readwrite", (s) => s.delete(id));
 
 export async function markPackSync(id: string, on: boolean): Promise<void> {
   const pack = await loadPack(id);
@@ -444,11 +438,9 @@ export async function markPackSync(id: string, on: boolean): Promise<void> {
 /* ---- runs --------------------------------------------------------------- */
 
 /** Every run, tombstones included. Sync reads this. */
-export const listRuns = (): Promise<StoredRun[]> =>
-  run<StoredRun[]>(RUNS, "readonly", (s) => s.getAll()).then((r) => r ?? []);
+export const listRuns = (): Promise<StoredRun[]> => run<StoredRun[]>(RUNS, "readonly", (s) => s.getAll()).then((r) => r ?? []);
 
-export const loadRun = (runId: string): Promise<StoredRun | null> =>
-  run<StoredRun>(RUNS, "readonly", (s) => s.get(runId));
+export const loadRun = (runId: string): Promise<StoredRun | null> => run<StoredRun>(RUNS, "readonly", (s) => s.get(runId));
 
 export const runsFor = (packId: string): Promise<StoredRun[]> =>
   run<StoredRun[]>(RUNS, "readonly", (s) => s.index(BY_PACK).getAll(packId)).then((r) => r ?? []);
@@ -464,8 +456,7 @@ export async function currentRun(packId: string): Promise<StoredRun | null> {
   return live[0] ?? null;
 }
 
-export const saveRun = (record: StoredRun): Promise<unknown> =>
-  run(RUNS, "readwrite", (s) => s.put(record));
+export const saveRun = (record: StoredRun): Promise<unknown> => run(RUNS, "readwrite", (s) => s.put(record));
 
 /** Forget a run. A tombstone: the log goes, the name stays until the deletion has traveled. */
 export async function forgetRun(runId: string): Promise<void> {
@@ -481,8 +472,7 @@ export async function forgetRunsFor(packId: string): Promise<void> {
   }
 }
 
-export const purgeRun = (runId: string): Promise<unknown> =>
-  run(RUNS, "readwrite", (s) => s.delete(runId));
+export const purgeRun = (runId: string): Promise<unknown> => run(RUNS, "readwrite", (s) => s.delete(runId));
 
 /* ---- licenses ----------------------------------------------------------- */
 
@@ -504,8 +494,7 @@ export async function forgetLicense(packId: string): Promise<void> {
   await run(LICENSES, "readwrite", (s) => s.put({ ...license, key: "", deletedAt: at, updatedAt: at }));
 }
 
-export const purgeLicense = (packId: string): Promise<unknown> =>
-  run(LICENSES, "readwrite", (s) => s.delete(packId));
+export const purgeLicense = (packId: string): Promise<unknown> => run(LICENSES, "readwrite", (s) => s.delete(packId));
 
 /**
  * The keys worth trying on a sealed file, most likely first.
@@ -517,21 +506,17 @@ export const purgeLicense = (packId: string): Promise<unknown> =>
  */
 export async function licensesToTry(header: { ref?: string; title?: string }): Promise<StoredLicense[]> {
   const live = (await listLicenses()).filter((l) => !l.deletedAt && l.key);
-  const score = (l: StoredLicense) =>
-    header.ref && l.ref === header.ref ? 2 : header.title && l.title === header.title ? 1 : 0;
+  const score = (l: StoredLicense) => (header.ref && l.ref === header.ref ? 2 : header.title && l.title === header.title ? 1 : 0);
   return live.sort((a, b) => score(b) - score(a));
 }
 
 /* ---- what the server has confirmed --------------------------------------- */
 
-export const listSyncState = (): Promise<SyncState[]> =>
-  run<SyncState[]>(SYNC, "readonly", (s) => s.getAll()).then((r) => r ?? []);
+export const listSyncState = (): Promise<SyncState[]> => run<SyncState[]>(SYNC, "readonly", (s) => s.getAll()).then((r) => r ?? []);
 
-export const putSyncState = (state: SyncState): Promise<unknown> =>
-  run(SYNC, "readwrite", (s) => s.put(state));
+export const putSyncState = (state: SyncState): Promise<unknown> => run(SYNC, "readwrite", (s) => s.put(state));
 
-export const forgetSyncState = (id: string): Promise<unknown> =>
-  run(SYNC, "readwrite", (s) => s.delete(id));
+export const forgetSyncState = (id: string): Promise<unknown> => run(SYNC, "readwrite", (s) => s.delete(id));
 
 /* ---- drafts ------------------------------------------------------------- */
 
@@ -550,14 +535,11 @@ export interface StoredDraft {
   updatedAt: string;
 }
 
-export const loadDraft = (id: string): Promise<StoredDraft | null> =>
-  run<StoredDraft>(DRAFTS, "readonly", (s) => s.get(id));
+export const loadDraft = (id: string): Promise<StoredDraft | null> => run<StoredDraft>(DRAFTS, "readonly", (s) => s.get(id));
 
-export const saveDraft = (draft: StoredDraft): Promise<unknown> =>
-  run(DRAFTS, "readwrite", (s) => s.put(draft));
+export const saveDraft = (draft: StoredDraft): Promise<unknown> => run(DRAFTS, "readwrite", (s) => s.put(draft));
 
-export const forgetDraft = (id: string): Promise<unknown> =>
-  run(DRAFTS, "readwrite", (s) => s.delete(id));
+export const forgetDraft = (id: string): Promise<unknown> => run(DRAFTS, "readwrite", (s) => s.delete(id));
 
 /* ---- signing keys ------------------------------------------------------- */
 
@@ -582,8 +564,7 @@ export interface KnownKey {
   lastSeen: string;
 }
 
-export const knownKey = (publicKey: string): Promise<KnownKey | null> =>
-  run<KnownKey>(KEYS, "readonly", (s) => s.get(publicKey));
+export const knownKey = (publicKey: string): Promise<KnownKey | null> => run<KnownKey>(KEYS, "readonly", (s) => s.get(publicKey));
 
 /** Record a key, merging with whatever was already known about it. */
 export async function rememberKey(
@@ -681,8 +662,7 @@ export interface StoredSetup {
 }
 
 /** Every setup kept here, tombstones included. */
-export const listAllSetups = (): Promise<StoredSetup[]> =>
-  run<StoredSetup[]>(SETUPS, "readonly", (s) => s.getAll()).then((r) => r ?? []);
+export const listAllSetups = (): Promise<StoredSetup[]> => run<StoredSetup[]>(SETUPS, "readonly", (s) => s.getAll()).then((r) => r ?? []);
 
 /** The ones still on the shelf. */
 export const listSetups = (): Promise<StoredSetup[]> => listAllSetups().then((all) => all.filter((s) => !s.deletedAt));

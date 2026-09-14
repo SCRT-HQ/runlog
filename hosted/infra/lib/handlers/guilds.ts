@@ -1,5 +1,13 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DeleteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  DeleteCommand,
+  DynamoDBDocumentClient,
+  GetCommand,
+  PutCommand,
+  QueryCommand,
+  TransactWriteCommand,
+  UpdateCommand,
+} from "@aws-sdk/lib-dynamodb";
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { traced } from "./xray.js";
 
@@ -184,7 +192,17 @@ export interface GuildStore {
   claimGuild(guild: Omit<Guild, "updatedAt">): Promise<Guild>;
   guild(guildId: string): Promise<Guild | null>;
   guildsOf(sub: string): Promise<Guild[]>;
-  updateGuild(guildId: string, at: string, patch: { name?: string; hostRoleId?: string | null; channelId?: string | null; cardMode?: CardMode | null; threadMode?: ThreadMode | null }): Promise<Guild | null>;
+  updateGuild(
+    guildId: string,
+    at: string,
+    patch: {
+      name?: string;
+      hostRoleId?: string | null;
+      channelId?: string | null;
+      cardMode?: CardMode | null;
+      threadMode?: ThreadMode | null;
+    },
+  ): Promise<Guild | null>;
   /** The server's row, its pointer, and every pack in its vault; how many rows went. */
   releaseGuild(guildId: string): Promise<number>;
 
@@ -243,7 +261,11 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
   const runOf = (item: Record<string, unknown> | undefined): GuildRun | null => {
     if (!item || typeof item["sessionId"] !== "string" || typeof item["guildId"] !== "string") return null;
     const { pk: _pk, sk: _sk, kind: _kind, expiresAt: _ttl, ...rest } = item;
-    return { ...(rest as unknown as GuildRun), contestants: typeof item["contestants"] === "object" && item["contestants"] !== null ? (item["contestants"] as Record<string, string>) : {} };
+    return {
+      ...(rest as unknown as GuildRun),
+      contestants:
+        typeof item["contestants"] === "object" && item["contestants"] !== null ? (item["contestants"] as Record<string, string>) : {},
+    };
   };
   /** An ended run's Discord rows go a month after it ended; the run itself is the session's, kept as any run is. */
   const RUN_DAYS = 30;
@@ -259,7 +281,13 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
     );
   };
   const runsOf = async (guildId: string): Promise<GuildRun[]> => {
-    const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `GUILD#${guildId}`, ":sk": "RUN#" } }));
+    const out = await ddb.send(
+      new QueryCommand({
+        TableName: table,
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+        ExpressionAttributeValues: { ":pk": `GUILD#${guildId}`, ":sk": "RUN#" },
+      }),
+    );
     const runs: GuildRun[] = [];
     for (const pointer of out.Items ?? []) {
       const id = str(pointer["sessionId"]);
@@ -284,7 +312,15 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
   };
   const packOf = (item: Record<string, unknown> | undefined): GuildPackMeta | null => {
     if (!item || typeof item["id"] !== "string") return null;
-    const modes = Array.isArray(item["modes"]) ? (item["modes"] as unknown[]).filter((m): m is { id: string; label: string } => typeof m === "object" && m !== null && typeof (m as { id?: unknown }).id === "string" && typeof (m as { label?: unknown }).label === "string") : [];
+    const modes = Array.isArray(item["modes"])
+      ? (item["modes"] as unknown[]).filter(
+          (m): m is { id: string; label: string } =>
+            typeof m === "object" &&
+            m !== null &&
+            typeof (m as { id?: unknown }).id === "string" &&
+            typeof (m as { label?: unknown }).label === "string",
+        )
+      : [];
     return {
       id: item["id"],
       title: str(item["title"]) ?? item["id"],
@@ -313,7 +349,13 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
   };
   /** Every link with the key it is kept under, so one can be replaced or removed exactly. */
   const connectionRows = async (sub: string): Promise<Array<{ sk: string; connection: Connection }>> => {
-    const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `USER#${sub}`, ":sk": "CONNECTION#" } }));
+    const out = await ddb.send(
+      new QueryCommand({
+        TableName: table,
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+        ExpressionAttributeValues: { ":pk": `USER#${sub}`, ":sk": "CONNECTION#" },
+      }),
+    );
     return (out.Items ?? [])
       .map((item) => ({ sk: str(item["sk"]) ?? "", connection: connectionOf(item) }))
       .filter((r): r is { sk: string; connection: Connection } => r.connection !== null && r.sk !== "");
@@ -324,9 +366,16 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
     const out = await ddb.send(new GetCommand({ TableName: table, Key: discordKey(discordUserId) }));
     return str(out.Item?.["sub"]) ?? null;
   };
-  const getGuild = async (guildId: string): Promise<Guild | null> => guildOf((await ddb.send(new GetCommand({ TableName: table, Key: guildKey(guildId) }))).Item);
+  const getGuild = async (guildId: string): Promise<Guild | null> =>
+    guildOf((await ddb.send(new GetCommand({ TableName: table, Key: guildKey(guildId) }))).Item);
   const listPacks = async (guildId: string): Promise<GuildPackMeta[]> => {
-    const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `GUILD#${guildId}`, ":sk": "PACK#" } }));
+    const out = await ddb.send(
+      new QueryCommand({
+        TableName: table,
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+        ExpressionAttributeValues: { ":pk": `GUILD#${guildId}`, ":sk": "PACK#" },
+      }),
+    );
     return (out.Items ?? []).map(packOf).filter((p): p is GuildPackMeta => p !== null);
   };
   /** Every link this account holds, and the pointer each one is found by. */
@@ -364,7 +413,14 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
       await deleteRun(run);
       rows += 3;
     }
-    await ddb.send(new TransactWriteCommand({ TransactItems: [{ Delete: { TableName: table, Key: guildKey(guildId) } }, { Delete: { TableName: table, Key: guildPointer(guild.ownerSub, guildId) } }] }));
+    await ddb.send(
+      new TransactWriteCommand({
+        TransactItems: [
+          { Delete: { TableName: table, Key: guildKey(guildId) } },
+          { Delete: { TableName: table, Key: guildPointer(guild.ownerSub, guildId) } },
+        ],
+      }),
+    );
     return rows + 2;
   };
 
@@ -376,7 +432,12 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
           TransactItems: [
             { Put: { TableName: table, Item: { ...runKey(run.sessionId), kind: "discord-run", ...run, ...ttl } } },
             { Put: { TableName: table, Item: { ...threadKey(run.threadId), kind: "discord-thread", sessionId: run.sessionId, ...ttl } } },
-            { Put: { TableName: table, Item: { ...runPointer(run.guildId, run.sessionId), kind: "discord-runpointer", sessionId: run.sessionId, ...ttl } } },
+            {
+              Put: {
+                TableName: table,
+                Item: { ...runPointer(run.guildId, run.sessionId), kind: "discord-runpointer", sessionId: run.sessionId, ...ttl },
+              },
+            },
           ],
         }),
       );
@@ -390,7 +451,12 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
       return sessionId ? runOf((await ddb.send(new GetCommand({ TableName: table, Key: runKey(sessionId) }))).Item) : null;
     },
     async putLinkCode(link) {
-      await ddb.send(new PutCommand({ TableName: table, Item: { ...linkKey(link.code), kind: "discord-link", ...link, expiresAt: toEpoch(link.expiresAt), expiresAtIso: link.expiresAt } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: { ...linkKey(link.code), kind: "discord-link", ...link, expiresAt: toEpoch(link.expiresAt), expiresAtIso: link.expiresAt },
+        }),
+      );
     },
     async takeLinkCode(code, at) {
       const out = await ddb.send(new DeleteCommand({ TableName: table, Key: linkKey(code), ReturnValues: "ALL_OLD" }));
@@ -398,10 +464,22 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
       if (!item || typeof item["discordUserId"] !== "string") return null;
       const expiresAt = str(item["expiresAtIso"]) ?? "";
       if (!expiresAt || expiresAt < at) return null;
-      return { code, discordUserId: item["discordUserId"], name: str(item["name"]) ?? "", ...(str(item["guildId"]) ? { guildId: item["guildId"] as string } : {}), createdAt: str(item["createdAt"]) ?? at, expiresAt };
+      return {
+        code,
+        discordUserId: item["discordUserId"],
+        name: str(item["name"]) ?? "",
+        ...(str(item["guildId"]) ? { guildId: item["guildId"] as string } : {}),
+        createdAt: str(item["createdAt"]) ?? at,
+        expiresAt,
+      };
     },
     async putVerifyState(v) {
-      await ddb.send(new PutCommand({ TableName: table, Item: { ...verifyKey(v.state), kind: "discord-verify", ...v, expiresAt: toEpoch(v.expiresAt), expiresAtIso: v.expiresAt } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: { ...verifyKey(v.state), kind: "discord-verify", ...v, expiresAt: toEpoch(v.expiresAt), expiresAtIso: v.expiresAt },
+        }),
+      );
     },
     async takeVerifyState(state, at) {
       const out = await ddb.send(new DeleteCommand({ TableName: table, Key: verifyKey(state), ReturnValues: "ALL_OLD" }));
@@ -417,7 +495,9 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
       // it was written. What this account has linked besides stays, which
       // is the whole of what changed here.
       const [previousOwner, mine] = await Promise.all([userFor(c.accountId), connectionRows(sub)]);
-      const items: Array<{ Delete: { TableName: string; Key: Record<string, string> } } | { Put: { TableName: string; Item: Record<string, unknown> } }> = [];
+      const items: Array<
+        { Delete: { TableName: string; Key: Record<string, string> } } | { Put: { TableName: string; Item: Record<string, unknown> } }
+      > = [];
       if (previousOwner && previousOwner !== sub) {
         for (const row of (await connectionRows(previousOwner)).filter((r) => r.connection.accountId === c.accountId)) {
           items.push({ Delete: { TableName: table, Key: { pk: `USER#${previousOwner}`, sk: row.sk } } });
@@ -428,7 +508,9 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
       for (const row of mine.filter((r) => r.connection.accountId === c.accountId && r.sk !== connKey(sub, c.service, c.accountId).sk)) {
         items.push({ Delete: { TableName: table, Key: { pk: `USER#${sub}`, sk: row.sk } } });
       }
-      items.push({ Put: { TableName: table, Item: { ...connKey(sub, c.service, c.accountId), kind: "connection", ...c, discordUserId: c.accountId } } });
+      items.push({
+        Put: { TableName: table, Item: { ...connKey(sub, c.service, c.accountId), kind: "connection", ...c, discordUserId: c.accountId } },
+      });
       items.push({ Put: { TableName: table, Item: { ...discordKey(c.accountId), kind: "discord-user", sub, linkedAt: c.linkedAt } } });
       await ddb.send(new TransactWriteCommand({ TransactItems: items }));
     },
@@ -439,7 +521,18 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
     },
 
     async putClaimCode(claim) {
-      await ddb.send(new PutCommand({ TableName: table, Item: { ...claimKey(claim.code), kind: "discord-claim", ...claim, expiresAt: toEpoch(claim.expiresAt), expiresAtIso: claim.expiresAt } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: {
+            ...claimKey(claim.code),
+            kind: "discord-claim",
+            ...claim,
+            expiresAt: toEpoch(claim.expiresAt),
+            expiresAtIso: claim.expiresAt,
+          },
+        }),
+      );
     },
     async takeClaimCode(code, at) {
       const out = await ddb.send(new DeleteCommand({ TableName: table, Key: claimKey(code), ReturnValues: "ALL_OLD" }));
@@ -452,7 +545,9 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
     async claimGuild(g) {
       const previous = await getGuild(g.guildId);
       const made: Guild = { ...g, updatedAt: g.claimedAt };
-      const items: Array<{ Delete: { TableName: string; Key: Record<string, string> } } | { Put: { TableName: string; Item: Record<string, unknown> } }> = [];
+      const items: Array<
+        { Delete: { TableName: string; Key: Record<string, string> } } | { Put: { TableName: string; Item: Record<string, unknown> } }
+      > = [];
       if (previous && previous.ownerSub !== g.ownerSub) {
         // The vault was the old owner's, from their shelf: it does not
         // change hands with the server. The new owner fills it from theirs.
@@ -460,13 +555,24 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
         items.push({ Delete: { TableName: table, Key: guildPointer(previous.ownerSub, g.guildId) } });
       }
       items.push({ Put: { TableName: table, Item: { ...guildKey(g.guildId), kind: "guild", ...made } } });
-      items.push({ Put: { TableName: table, Item: { ...guildPointer(g.ownerSub, g.guildId), kind: "guildpointer", guildId: g.guildId, claimedAt: g.claimedAt } } });
+      items.push({
+        Put: {
+          TableName: table,
+          Item: { ...guildPointer(g.ownerSub, g.guildId), kind: "guildpointer", guildId: g.guildId, claimedAt: g.claimedAt },
+        },
+      });
       await ddb.send(new TransactWriteCommand({ TransactItems: items }));
       return made;
     },
     guild: getGuild,
     async guildsOf(sub) {
-      const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `USER#${sub}`, ":sk": "GUILD#" } }));
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+          ExpressionAttributeValues: { ":pk": `USER#${sub}`, ":sk": "GUILD#" },
+        }),
+      );
       const guilds: Guild[] = [];
       for (const pointer of out.Items ?? []) {
         const id = str(pointer["guildId"]);
@@ -514,7 +620,14 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
     releaseGuild: release,
 
     async putGuildPack(guildId, meta, source) {
-      await s3.send(new PutObjectCommand({ Bucket: bucket, Key: objectKey(guildId, meta.id, meta.format), Body: source, ContentType: "text/plain; charset=utf-8" }));
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: objectKey(guildId, meta.id, meta.format),
+          Body: source,
+          ContentType: "text/plain; charset=utf-8",
+        }),
+      );
       await ddb.send(new PutCommand({ TableName: table, Item: { ...packKey(guildId, meta.id), kind: "guildpack", ...meta } }));
     },
     async guildPackMeta(guildId, packId) {
@@ -538,7 +651,13 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
 
     async forgetUser(sub) {
       let rows = await disconnectRows(sub);
-      const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": `USER#${sub}`, ":sk": "GUILD#" } }));
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+          ExpressionAttributeValues: { ":pk": `USER#${sub}`, ":sk": "GUILD#" },
+        }),
+      );
       for (const pointer of out.Items ?? []) {
         const id = str(pointer["guildId"]);
         if (!id) continue;

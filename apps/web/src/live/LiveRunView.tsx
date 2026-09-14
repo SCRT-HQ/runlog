@@ -38,7 +38,11 @@ function LiveBar({ title, packId, listed }: { title: string | null; packId: stri
       </span>
       <div className="topbarEnd">
         {listed && packId && (
-          <a className="ghost" href={linkTo(`#marketplace/${encodeURIComponent(packId)}`, "./")} title="The pack's card in the marketplace: what it is, and how to get it">
+          <a
+            className="ghost"
+            href={linkTo(`#marketplace/${encodeURIComponent(packId)}`, "./")}
+            title="The pack's card in the marketplace: what it is, and how to get it"
+          >
             In the marketplace
           </a>
         )}
@@ -72,13 +76,18 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
   useEffect(() => {
     if (!api) return;
     let live = true;
-    void api.me().then((me) => live && setShown(shownAs(me.profile)), () => {});
+    void api.me().then(
+      (me) => live && setShown(shownAs(me.profile)),
+      () => {},
+    );
     return () => {
       live = false;
     };
   }, [api]);
 
-  const bar = <LiveBar title={got?.run.packTitle ?? snapshot?.packTitle ?? null} packId={got?.run.packId ?? null} listed={Boolean(got?.listing)} />;
+  const bar = (
+    <LiveBar title={got?.run.packTitle ?? snapshot?.packTitle ?? null} packId={got?.run.packId ?? null} listed={Boolean(got?.listing)} />
+  );
   if (offline) {
     return (
       <>
@@ -113,7 +122,11 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
         {bar}
         <div className="live liveNote">
           <h1 className="liveTitle">{got.run.packTitle ?? got.run.packId}</h1>
-          <p className="muted">{got.access === "snapshot" ? "The run is shared, but nothing has been written to it since; it fills in with the next move." : "The run's pack did not load."}</p>
+          <p className="muted">
+            {got.access === "snapshot"
+              ? "The run is shared, but nothing has been written to it since; it fills in with the next move."
+              : "The run's pack did not load."}
+          </p>
         </div>
       </>
     );
@@ -150,77 +163,81 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
     <>
       {bar}
       <DiceCurtain roll={roll} />
-    <LiveView
-      snapshot={snapshot}
-      stale={stale}
-      side={
-        // Reactions sit above the board, where a watcher looks: the buttons, and what came back from the table.
-        snapshot.status === "active" || recent.length > 0 ? (
-          <section className="panel react">
-            <h3 className="sectionTitle">React</h3>
-            {snapshot.status === "active" && (
-              <div className="reactRow" aria-label="React">
-                {REACTIONS.map((emoji) => (
-                  <button key={emoji} className="reactButton" onClick={() => react(emoji)} title="Send this to the table">
-                    {emoji}
-                  </button>
-                ))}
-              </div>
+      <LiveView
+        snapshot={snapshot}
+        stale={stale}
+        side={
+          // Reactions sit above the board, where a watcher looks: the buttons, and what came back from the table.
+          snapshot.status === "active" || recent.length > 0 ? (
+            <section className="panel react">
+              <h3 className="sectionTitle">React</h3>
+              {snapshot.status === "active" && (
+                <div className="reactRow" aria-label="React">
+                  {REACTIONS.map((emoji) => (
+                    <button key={emoji} className="reactButton" onClick={() => react(emoji)} title="Send this to the table">
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {recent.length > 0 && (
+                <div className="reactRecent" aria-live="polite">
+                  {recent.map((r, i) => (
+                    <span key={`${r.at}-${i}`} className="chip reactChip" title={new Date(r.at).toLocaleTimeString()}>
+                      {r.emoji}
+                      {r.name ? ` ${r.name}` : ""}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {note && <p className="muted small">{note}</p>}
+            </section>
+          ) : null
+        }
+      >
+        <div className="liveTools">
+          <div className="padRow">
+            {paper && (
+              <button className="ghost tiny" onClick={openPaper} title="What this pack is, and how the mode being played goes">
+                Docs
+              </button>
             )}
-            {recent.length > 0 && (
-              <div className="reactRecent" aria-live="polite">
-                {recent.map((r, i) => (
-                  <span key={`${r.at}-${i}`} className="chip reactChip" title={new Date(r.at).toLocaleTimeString()}>
-                    {r.emoji}
-                    {r.name ? ` ${r.name}` : ""}
-                  </span>
-                ))}
-              </div>
+            {pack ? (
+              <DocMenu compact pack={pack} />
+            ) : (
+              <span className="muted small">
+                {got.listing
+                  ? "The pack is in the marketplace; the run shows what the dice drew, not the rules."
+                  : "The pack's text is not for redistribution; the run shows what the dice drew, not the rules."}
+              </span>
             )}
-            {note && <p className="muted small">{note}</p>}
-          </section>
-        ) : null
-      }
-    >
-      <div className="liveTools">
-        <div className="padRow">
-          {paper && (
-            <button className="ghost tiny" onClick={openPaper} title="What this pack is, and how the mode being played goes">
-              Docs
-            </button>
-          )}
-          {pack ? (
-            <DocMenu compact pack={pack} />
-          ) : (
-            <span className="muted small">{got.listing ? "The pack is in the marketplace; the run shows what the dice drew, not the rules." : "The pack's text is not for redistribution; the run shows what the dice drew, not the rules."}</span>
-          )}
-          {canSit && (
-            <button
-              className="ghost tiny"
-              disabled={seat === "taking"}
-              title="The run joins your account as a watcher and follows you to every device you sign in on."
-              onClick={() => {
-                if (!api) return;
-                setSeat("taking");
-                setNote(null);
-                void api
-                  .watchPublicRun(route.id, route.token)
-                  .then(async () => {
-                    setSeat("taken");
-                    await onWatch(route.id);
-                  })
-                  .catch((error: unknown) => {
-                    setSeat("idle");
-                    setNote(error instanceof Error && error.message ? error.message : "That seat could not be taken just now.");
-                  });
-              }}
-            >
-              {seat === "taking" ? "Taking a seat…" : "Watch from your account"}
-            </button>
-          )}
+            {canSit && (
+              <button
+                className="ghost tiny"
+                disabled={seat === "taking"}
+                title="The run joins your account as a watcher and follows you to every device you sign in on."
+                onClick={() => {
+                  if (!api) return;
+                  setSeat("taking");
+                  setNote(null);
+                  void api
+                    .watchPublicRun(route.id, route.token)
+                    .then(async () => {
+                      setSeat("taken");
+                      await onWatch(route.id);
+                    })
+                    .catch((error: unknown) => {
+                      setSeat("idle");
+                      setNote(error instanceof Error && error.message ? error.message : "That seat could not be taken just now.");
+                    });
+                }}
+              >
+                {seat === "taking" ? "Taking a seat…" : "Watch from your account"}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-    </LiveView>
+      </LiveView>
     </>
   );
 }

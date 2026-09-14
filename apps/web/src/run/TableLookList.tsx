@@ -26,7 +26,13 @@ export function TableLookList({
     <ol className="tableLook" aria-label={`${table.title}: what the roll can land on`}>
       {lines.map((line) => (
         <li key={line.id} className={landing === line.id ? "on" : ""}>
-          <button type="button" className="tableLine" disabled={disabled} onClick={() => onPick(line.value)} title={`Put ${line.value} on the pad`}>
+          <button
+            type="button"
+            className="tableLine"
+            disabled={disabled}
+            onClick={() => onPick(line.value)}
+            title={`Put ${line.value} on the pad`}
+          >
             <span className="range">{line.range}</span>
             <span className="text">{line.title}</span>
           </button>

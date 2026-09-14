@@ -4,13 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
-import {
-  baseName,
-  describeDifference,
-  externalName,
-  reconcile,
-  type ExternalSubject,
-} from "./environment.ts";
+import { baseName, describeDifference, externalName, reconcile, type ExternalSubject } from "./environment.ts";
 import type { RunEvent } from "./events.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -22,14 +16,11 @@ function loadPack(rel: string): Pack {
 const kiln = loadPack("packs/demo/pack.yaml");
 
 const NOW = "2026-01-01T00:00:00.000Z";
-const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent =>
-  ({ t, at: NOW, ...props }) as RunEvent;
+const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent => ({ t, at: NOW, ...props }) as RunEvent;
 
 /** A run in which `names` were made, in order. */
 function run(names: string[], extra: RunEvent[] = []) {
-  const log: RunEvent[] = [
-    ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" }),
-  ];
+  const log: RunEvent[] = [ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" })];
   for (const name of names) {
     log.push(ev("UnitEntered"), ev("SubjectDeclared", { subjectType: name }), ev("UnitFinalized"));
   }
@@ -37,8 +28,7 @@ function run(names: string[], extra: RunEvent[] = []) {
 }
 
 /** What the environment reports, in the order it reports it. */
-const out = (...names: string[]): ExternalSubject[] =>
-  names.map((name, i) => ({ id: `t${i + 1}`, name, index: i + 1 }));
+const out = (...names: string[]): ExternalSubject[] => names.map((name, i) => ({ id: `t${i + 1}`, name, index: i + 1 }));
 
 const kinds = (pack: Pack, state: ReturnType<typeof run>, external: ExternalSubject[]) =>
   reconcile(pack, state, external).differences.map((d) => d.kind);

@@ -18,7 +18,12 @@ describe("a device's copy of a shared log", () => {
     const local = [ev("a", 1), ev("b"), ev("c")];
     // The server numbered b, and somebody else's event landed before it.
     const merged = merge(local, [ev("theirs", 2), ev("b", 3)]);
-    expect(merged.map((e) => [e.id, e.seq])).toEqual([["a", 1], ["theirs", 2], ["b", 3], ["c", undefined]]);
+    expect(merged.map((e) => [e.id, e.seq])).toEqual([
+      ["a", 1],
+      ["theirs", 2],
+      ["b", 3],
+      ["c", undefined],
+    ]);
   });
 
   it("never loses a pending event, and never keeps a confirmed one twice", () => {
@@ -51,6 +56,11 @@ describe("a device's copy of a shared log", () => {
   it("reads the run's name off the log", () => {
     expect(nameFrom([ev("a", 1)])).toBeUndefined();
     expect(nameFrom([ev("a", 1), { t: "RunRenamed", at, id: "n", name: " Tuesday " }])).toBe("Tuesday");
-    expect(nameFrom([{ t: "RunRenamed", at, id: "n", name: "x" }, { t: "RunRenamed", at, id: "m", name: "" }])).toBeUndefined();
+    expect(
+      nameFrom([
+        { t: "RunRenamed", at, id: "n", name: "x" },
+        { t: "RunRenamed", at, id: "m", name: "" },
+      ]),
+    ).toBeUndefined();
   });
 });

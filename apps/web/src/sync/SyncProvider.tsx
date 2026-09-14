@@ -143,7 +143,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         onChanged: (changed) => {
           if (changed.id === lastActive()?.runId) void run();
         },
-        onGesture: (g) => syncBus.emit({ t: "gesture", id: g.id, kind: g.kind, data: g.data, ...(g.from ? { from: g.from } : {}), at: g.at }),
+        onGesture: (g) =>
+          syncBus.emit({ t: "gesture", id: g.id, kind: g.kind, data: g.data, ...(g.from ? { from: g.from } : {}), at: g.at }),
         onState: (open) => {
           socketOpen = open;
         },

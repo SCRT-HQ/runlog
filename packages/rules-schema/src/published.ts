@@ -20,7 +20,12 @@ import { SHARED_TABLES_SCHEMA_VERSION } from "./shared-tables.ts";
 const HOME = "https://runlog.scrthq.com/schema";
 
 /** Which major version of each format this build reads. */
-const VERSIONS = { pack: SCHEMA_VERSION, setup: SETUP_SCHEMA_VERSION, mapping: MAPPING_SCHEMA_VERSION, tables: SHARED_TABLES_SCHEMA_VERSION } as const;
+const VERSIONS = {
+  pack: SCHEMA_VERSION,
+  setup: SETUP_SCHEMA_VERSION,
+  mapping: MAPPING_SCHEMA_VERSION,
+  tables: SHARED_TABLES_SCHEMA_VERSION,
+} as const;
 
 export type SchemaKind = keyof typeof VERSIONS;
 

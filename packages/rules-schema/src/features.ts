@@ -2,7 +2,7 @@
  * How a pack plays, read off its modes and capabilities.
  *
  * A marketplace filters on these, and so does the card a publisher's listing
- * shows, so they are computed in one place from the pack's own head, 
+ * shows, so they are computed in one place from the pack's own head,
  * never typed by an author, and a filter can never disagree with the
  * rules. Both the app and the seeding script use this; the API stores
  * what they send and computes nothing.

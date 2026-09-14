@@ -10,22 +10,29 @@ import type { useRun } from "./useRun.ts";
  * and a state on one small line, the digits, and controls the size of the
  * board's. Static markup; the tick is not exercised here.
  */
-const pack = { defaultMode: "solo", modes: { solo: {} }, unit: {}, vocabulary: { unit: { one: "Trial", many: "Trials" } } } as unknown as Pack;
-const clock = (over: Partial<Clock>): Clock => ({
-  id: "u1:unit",
-  kind: "stopwatch",
-  label: "Trial 1",
-  seconds: null,
-  unit: 1,
-  status: "running",
-  startedAt: "2026-01-01T00:00:00.000Z",
-  runningSince: "2026-01-01T00:00:00.000Z",
-  accumulatedMs: 0,
-  elapsedMs: null,
-  ...over,
-} as Clock);
-const state = (clocks: Clock[]) => ({ unit: 1, mode: "solo", status: "active", clocks } as unknown as RunState);
-const run = (readOnly = false) => ({ readOnly, pauseClock() {}, resumeClock() {}, stopClock() {}, startUnitClock() {} }) as unknown as ReturnType<typeof useRun>;
+const pack = {
+  defaultMode: "solo",
+  modes: { solo: {} },
+  unit: {},
+  vocabulary: { unit: { one: "Trial", many: "Trials" } },
+} as unknown as Pack;
+const clock = (over: Partial<Clock>): Clock =>
+  ({
+    id: "u1:unit",
+    kind: "stopwatch",
+    label: "Trial 1",
+    seconds: null,
+    unit: 1,
+    status: "running",
+    startedAt: "2026-01-01T00:00:00.000Z",
+    runningSince: "2026-01-01T00:00:00.000Z",
+    accumulatedMs: 0,
+    elapsedMs: null,
+    ...over,
+  }) as Clock;
+const state = (clocks: Clock[]) => ({ unit: 1, mode: "solo", status: "active", clocks }) as unknown as RunState;
+const run = (readOnly = false) =>
+  ({ readOnly, pauseClock() {}, resumeClock() {}, stopClock() {}, startUnitClock() {} }) as unknown as ReturnType<typeof useRun>;
 
 describe("the clock in the margin", () => {
   it("shows a running stopwatch with small pause and stop controls, and no panel of its own", () => {
@@ -58,7 +65,16 @@ describe("the clock in the margin", () => {
   });
 
   it("keeps a stopped timer on screen, saying whether it ran out", () => {
-    const out = clock({ id: "t", kind: "timer", label: "Ten Minutes", seconds: 600, status: "done", runningSince: null, elapsedMs: 600_000, expired: true } as Partial<Clock>);
+    const out = clock({
+      id: "t",
+      kind: "timer",
+      label: "Ten Minutes",
+      seconds: 600,
+      status: "done",
+      runningSince: null,
+      elapsedMs: 600_000,
+      expired: true,
+    } as Partial<Clock>);
     const html = renderToStaticMarkup(<ClockPanel pack={pack} run={run()} state={state([out])} />);
     expect(html).toContain("done expired");
     expect(html).toContain(">time<");

@@ -130,16 +130,28 @@ describe("a setting chosen once", () => {
       { answers: { "u1:n": "3" }, now: NOW },
     );
     // The prompt's key is the executor's; find whichever answer it wanted.
-    const answered = chosen.status === "awaiting" && chosen.request ? executeActions(p, state, [
-      { do: "prompt", kind: "chooseValue", label: "How many?", options: ["1", "2", "3"], into: "n" },
-      { do: "modCounter", counter: "perMatch", setFrom: "n" },
-    ], { answers: { [chosen.request.key]: "3" }, now: NOW }) : chosen;
+    const answered =
+      chosen.status === "awaiting" && chosen.request
+        ? executeActions(
+            p,
+            state,
+            [
+              { do: "prompt", kind: "chooseValue", label: "How many?", options: ["1", "2", "3"], into: "n" },
+              { do: "modCounter", counter: "perMatch", setFrom: "n" },
+            ],
+            { answers: { [chosen.request.key]: "3" }, now: NOW },
+          )
+        : chosen;
     expect(answered.status).toBe("done");
     const set = answered.events.find((e) => e.t === "CounterChanged");
     expect(set && set.t === "CounterChanged" ? set.set : null).toBe(3);
 
     const withCount = reduce(p, [...opened(p), ev("CounterChanged", { counter: "perMatch", set: 3 })]);
-    const drawn = executeActions(p, withCount, [{ do: "rollOn", table: "trick", timesFrom: "perMatch" }], { answers: {}, now: NOW, random: () => 0.1 });
+    const drawn = executeActions(p, withCount, [{ do: "rollOn", table: "trick", timesFrom: "perMatch" }], {
+      answers: {},
+      now: NOW,
+      random: () => 0.1,
+    });
     expect(drawn.status).toBe("done");
     expect(drawn.events.filter((e) => e.t === "OutcomeResolved")).toHaveLength(3);
   });

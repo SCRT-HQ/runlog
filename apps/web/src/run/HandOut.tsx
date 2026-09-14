@@ -55,8 +55,8 @@ export function HandOut({
     <>
       <h4 className="stepLabel">{v.one}</h4>
       <p className="muted small">
-        What this {pack.vocabulary.run.one.toLowerCase()} is played under. Changing it here changes what the next tool to attach is given; handing it out gives it
-        to everyone attached now.
+        What this {pack.vocabulary.run.one.toLowerCase()} is played under. Changing it here changes what the next tool to attach is given;
+        handing it out gives it to everyone attached now.
       </p>
       <label className="toggle">
         <span>{v.one}</span>
@@ -85,7 +85,11 @@ export function HandOut({
           title={chosen ? undefined : `Pick ${aOr(v.one)} first`}
           onClick={() => {
             if (!onHandOut) return;
-            setNote(onHandOut() ? `Handed out. Anyone attached has it now.` : "Nothing was sent: this device is not connected to the run right now.");
+            setNote(
+              onHandOut()
+                ? `Handed out. Anyone attached has it now.`
+                : "Nothing was sent: this device is not connected to the run right now.",
+            );
           }}
         >
           Hand it out

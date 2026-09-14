@@ -82,7 +82,13 @@ export function SignPanel({ draft, pack, loads }: { draft: Draft; pack: Pack | n
   const makeKey = async () => {
     const pair = await generateKeyPair();
     const fp = await fingerprint(pair.publicKey);
-    const key = { algorithm: "ecdsa-p256-sha256", publicKey: pair.publicKey, privateKey: pair.privateKey, fingerprint: fp, createdAt: new Date().toISOString() };
+    const key = {
+      algorithm: "ecdsa-p256-sha256",
+      publicKey: pair.publicKey,
+      privateKey: pair.privateKey,
+      fingerprint: fp,
+      createdAt: new Date().toISOString(),
+    };
     download("runlog-key.json", `${JSON.stringify(key, null, 2)}\n`, "application/json");
     setHeld({ publicKey: pair.publicKey, privateKey: pair.privateKey, fingerprint: fp });
     setNote("Keep runlog-key.json private and backed up. Anyone who has it can sign as you; lose it and you cannot sign again.");
@@ -125,14 +131,29 @@ export function SignPanel({ draft, pack, loads }: { draft: Draft; pack: Pack | n
     setBusy(true);
     try {
       const { signature: _old, issue: _issue, ...clean } = draft;
-      const stamped = { ...clean, issue: { to: buyer.trim(), ...(ref.trim() ? { reference: ref.trim() } : {}), issuedAt: new Date().toISOString() } };
+      const stamped = {
+        ...clean,
+        issue: { to: buyer.trim(), ...(ref.trim() ? { reference: ref.trim() } : {}), issuedAt: new Date().toISOString() },
+      };
       const signed = { ...stamped, signature: await signPack(stamped, held.privateKey, signedAs.trim() || claimName || undefined) };
       const licenseKey = generateLicenseKey();
       const bytes = await seal(signed, licenseKey, { ...(ref.trim() ? { ref: ref.trim() } : {}), title: String(draft["title"] ?? "") });
-      const file = `${packFilename(draft).replace(/\.(yaml|json)$/, "")}-${buyer.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}.rlpack`;
+      const file = `${packFilename(draft).replace(/\.(yaml|json)$/, "")}-${buyer
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")}.rlpack`;
       if (withDocs && pack) {
         const to = buyer.trim();
-        download(bundleFilename(file), await bundle({ pack, file: { name: file, data: bytes }, sealed: { to, ...(ref.trim() ? { reference: ref.trim() } : {}) }, pdf: docToPdf }), "application/zip");
+        download(
+          bundleFilename(file),
+          await bundle({
+            pack,
+            file: { name: file, data: bytes },
+            sealed: { to, ...(ref.trim() ? { reference: ref.trim() } : {}) },
+            pdf: docToPdf,
+          }),
+          "application/zip",
+        );
         setIssued({ file: bundleFilename(file), key: licenseKey });
       } else {
         download(file, bytes, "application/octet-stream");
@@ -187,7 +208,9 @@ export function SignPanel({ draft, pack, loads }: { draft: Draft; pack: Pack | n
               </button>
             </div>
           )}
-          <p className="muted small">The key stays in this page while it is open and is never sent anywhere. Only its public half is ever shared.</p>
+          <p className="muted small">
+            The key stays in this page while it is open and is never sent anywhere. Only its public half is ever shared.
+          </p>
 
           <h4 className="stepLabel">2. Claim it</h4>
           {held && !claimed && (
@@ -202,20 +225,44 @@ export function SignPanel({ draft, pack, loads }: { draft: Draft; pack: Pack | n
           <label className="toggle designToggle">
             <input type="checkbox" checked={withDocs} onChange={(e) => setWithDocs(e.target.checked)} disabled={!pack} />
             <span>
-              Bundle the documents: a <code>.zip</code> with the file, every document as PDF, HTML and Markdown, and a note on what is what. For a shop listing or a buyer's mailbox.
+              Bundle the documents: a <code>.zip</code> with the file, every document as PDF, HTML and Markdown, and a note on what is what.
+              For a shop listing or a buyer's mailbox.
             </span>
           </label>
           <div className="inviteForm">
-            <input className="textInput" placeholder={claimName ? `signed as ${claimName}` : "signed as (your name on the pack)"} value={signedAs} onChange={(e) => setSignedAs(e.target.value)} aria-label="Name to sign as" />
-            <button className="primary" disabled={!held || !claimed || !loads || busy} onClick={() => void signRelease()} title={!loads ? "The pack has errors; fix them first" : undefined}>
+            <input
+              className="textInput"
+              placeholder={claimName ? `signed as ${claimName}` : "signed as (your name on the pack)"}
+              value={signedAs}
+              onChange={(e) => setSignedAs(e.target.value)}
+              aria-label="Name to sign as"
+            />
+            <button
+              className="primary"
+              disabled={!held || !claimed || !loads || busy}
+              onClick={() => void signRelease()}
+              title={!loads ? "The pack has errors; fix them first" : undefined}
+            >
               {busy && withDocs ? "Bundling…" : withDocs ? "Sign and bundle" : "Sign and download"}
             </button>
           </div>
 
           <h4 className="stepLabel">4. Or seal a copy for a buyer</h4>
           <div className="inviteForm">
-            <input className="textInput" placeholder="buyer's name" value={buyer} onChange={(e) => setBuyer(e.target.value)} aria-label="Buyer's name" />
-            <input className="textInput short" placeholder="your order ref" value={ref} onChange={(e) => setRef(e.target.value)} aria-label="Order reference" />
+            <input
+              className="textInput"
+              placeholder="buyer's name"
+              value={buyer}
+              onChange={(e) => setBuyer(e.target.value)}
+              aria-label="Buyer's name"
+            />
+            <input
+              className="textInput short"
+              placeholder="your order ref"
+              value={ref}
+              onChange={(e) => setRef(e.target.value)}
+              aria-label="Order reference"
+            />
             <button className="primary" disabled={!held || !claimed || !loads || !buyer.trim() || busy} onClick={() => void issueCopy()}>
               {busy ? "Sealing…" : withDocs ? "Seal and bundle" : "Seal and download"}
             </button>
@@ -223,7 +270,8 @@ export function SignPanel({ draft, pack, loads }: { draft: Draft; pack: Pack | n
           {issued && (
             <div className="freshKey">
               <p className="small">
-                <strong>{issued.file}</strong> is downloading. Send it with this license key, which is not in the file and is not shown again.
+                <strong>{issued.file}</strong> is downloading. Send it with this license key, which is not in the file and is not shown
+                again.
               </p>
               <div className="licenseKey mono">{issued.key}</div>
               <button className="ghost tiny" onClick={() => setIssued(null)}>

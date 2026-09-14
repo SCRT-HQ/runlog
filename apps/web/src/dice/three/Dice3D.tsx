@@ -174,7 +174,10 @@ export function Dice3D({ dice, rollId, seed, onSettled, height = 180 }: Dice3DPr
     scene.add(fill);
 
     // The tray's floor: the theme's ground, so the dice sit on the page.
-    const floor = new Mesh(new PlaneGeometry(TRAY.width + 2, TRAY.depth + 2), new MeshStandardMaterial({ color: new Color(getComputedStyle(el).getPropertyValue("--bg").trim() || "#151311"), roughness: 1 }));
+    const floor = new Mesh(
+      new PlaneGeometry(TRAY.width + 2, TRAY.depth + 2),
+      new MeshStandardMaterial({ color: new Color(getComputedStyle(el).getPropertyValue("--bg").trim() || "#151311"), roughness: 1 }),
+    );
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
 

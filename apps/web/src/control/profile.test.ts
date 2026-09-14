@@ -44,10 +44,16 @@ describe("what is wrong with a profile", () => {
     const said = complaints(kiln, { tool: "TarnishedTool", rows: [{ tag: "curse", ops: [{ op: "speffect.apply", args: { id: 1 } }] }] });
     expect(said.some((c) => c.fatal && c.says.includes("tagged curse"))).toBe(true);
 
-    const noTable = complaints(kiln, { tool: "TarnishedTool", rows: [{ table: "nope", ops: [{ op: "speffect.apply", args: { id: 1 } }] }] });
+    const noTable = complaints(kiln, {
+      tool: "TarnishedTool",
+      rows: [{ table: "nope", ops: [{ op: "speffect.apply", args: { id: 1 } }] }],
+    });
     expect(noTable.some((c) => c.fatal && c.says.includes("no table called nope"))).toBe(true);
 
-    const noEntry = complaints(kiln, { tool: "TarnishedTool", rows: [{ table: "form", entry: "nope", ops: [{ op: "speffect.apply", args: { id: 1 } }] }] });
+    const noEntry = complaints(kiln, {
+      tool: "TarnishedTool",
+      rows: [{ table: "form", entry: "nope", ops: [{ op: "speffect.apply", args: { id: 1 } }] }],
+    });
     expect(noEntry.some((c) => c.fatal && c.says.includes("no entry called nope"))).toBe(true);
   });
 
@@ -76,7 +82,10 @@ describe("what is wrong with a profile", () => {
     const missing = complaints(kiln, { tool: "TarnishedTool", rows: [{ tag: "setback", ops: [{ op: "speffect.apply", args: {} }] }] });
     expect(missing.some((c) => c.fatal && c.says.includes("needs"))).toBe(true);
 
-    const unknown = complaints(kiln, { tool: "TarnishedTool", rows: [{ tag: "setback", ops: [{ op: "flag.set", args: { name: "player.flies", value: true } }] }] });
+    const unknown = complaints(kiln, {
+      tool: "TarnishedTool",
+      rows: [{ tag: "setback", ops: [{ op: "flag.set", args: { name: "player.flies", value: true } }] }],
+    });
     expect(unknown.some((c) => c.says.includes("player.flies"))).toBe(true);
   });
 
@@ -104,7 +113,10 @@ describe("what travels", () => {
         { tag: "setback", ops: [] },
       ],
     });
-    expect(out).toEqual({ tool: "TarnishedTool", rows: [{ table: "form", entry: "form-bowl", ops: [{ op: "speffect.apply", args: { id: 1 } }] }] });
+    expect(out).toEqual({
+      tool: "TarnishedTool",
+      rows: [{ table: "form", entry: "form-bowl", ops: [{ op: "speffect.apply", args: { id: 1 } }] }],
+    });
   });
 
   it("keeps seconds over a unit where a row somehow has both, as the server does", () => {

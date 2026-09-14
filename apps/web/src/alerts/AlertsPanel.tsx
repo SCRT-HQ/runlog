@@ -6,7 +6,8 @@ import { play, SOUNDS } from "./sounds.ts";
  * pick, a play button to hear it, and one volume for all of them.
  */
 export function AlertsPanel({ settings, onChange }: { settings: AlertSettings; onChange: (next: AlertSettings) => void }) {
-  const set = (id: keyof AlertSettings["kinds"], choice: AlertChoice) => onChange({ ...settings, kinds: { ...settings.kinds, [id]: choice } });
+  const set = (id: keyof AlertSettings["kinds"], choice: AlertChoice) =>
+    onChange({ ...settings, kinds: { ...settings.kinds, [id]: choice } });
   return (
     <div className="alerts">
       <label className="alertVolume">
@@ -39,7 +40,12 @@ export function AlertsPanel({ settings, onChange }: { settings: AlertSettings; o
                     </option>
                   ))}
                 </select>
-                <button className="ghost tiny" disabled={choice === "off"} title="Hear it" onClick={() => choice !== "off" && play(choice, settings.volume)}>
+                <button
+                  className="ghost tiny"
+                  disabled={choice === "off"}
+                  title="Hear it"
+                  onClick={() => choice !== "off" && play(choice, settings.volume)}
+                >
                   ▶
                 </button>
               </div>

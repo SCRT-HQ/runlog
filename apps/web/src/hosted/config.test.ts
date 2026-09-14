@@ -8,7 +8,11 @@ const good = {
   termsVersion: "2026-09-06",
   version: "0.2.0",
   sha: "abc123",
-  links: { terms: "https://runlog.example/legal/terms.html", privacy: "https://runlog.example/legal/privacy.html", pricing: "https://runlog.example/pricing.html" },
+  links: {
+    terms: "https://runlog.example/legal/terms.html",
+    privacy: "https://runlog.example/legal/privacy.html",
+    pricing: "https://runlog.example/pricing.html",
+  },
   features: { billing: false, testing: true },
 };
 
