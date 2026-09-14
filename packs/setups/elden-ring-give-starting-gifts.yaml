@@ -10,23 +10,29 @@
 # again and what the menus read, the item is what gets used. `item.named`
 # will not touch a key item tied to an event, so the tool does both.
 #
-# Not in it: leveling. That is Melina's accord rather than an item, and
-# no flag for it exists in the tool's data. Until one is found with the
-# event logger, a run that means to level should start somewhere Melina
-# will meet it.
+# Leveling comes with them, and it is the one thing here that is not an
+# item at all: it is Melina's accord, flag 4680. Found with the event
+# logger at the moment the offer was accepted -- thirty-eight flags
+# moved and exactly one global went true, the rest being map-local
+# markers saying where the conversation happened.
+#
+# Which is why this matters for a run that starts anywhere but the
+# beginning: runes pile up and nothing can be spent on a level until
+# somebody has met her.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-starting-gifts
-version: "1.0.0"
+version: "1.1.0"
 title: Give Starting Gifts
 author: Runlog
 description: >-
   Torrent's whistle, the Spirit Calling Bell, the crafting kit, the
-  tailoring tools and the Physick flask. The things the first hours
-  hand over, for a run that does not begin in the first hours.
+  tailoring tools, the Physick flask, and the ability to spend runes on
+  levels. The things the first hours hand over, for a run that does not
+  begin in the first hours.
 
 tool: TarnishedTool
 
