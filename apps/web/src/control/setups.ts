@@ -1,4 +1,5 @@
 import { loadSetupText, type Setup } from "@runlog/rules-schema";
+import { listSetups } from "../storage/db.ts";
 import type { ControlProfile, ProfileOp } from "./profile.ts";
 
 /**
@@ -33,6 +34,28 @@ export async function shippedSetups(): Promise<Setup[]> {
 
   loaded = out.sort((a, b) => a.title.localeCompare(b.title));
   return loaded;
+}
+
+/**
+ * Every setup available here: the ones that ship, and the ones kept.
+ *
+ * Seven ship with the app. This is those plus whatever somebody added
+ * from a file or from the marketplace, which is the difference between a
+ * shelf and a fixed list. A kept one wins where the ids collide, on the
+ * same rule the pack shelf uses: what you chose to keep beats what
+ * happened to be in the bundle.
+ *
+ * A kept setup that no longer parses is left out rather than shown
+ * broken. That can happen honestly: a file written against a later
+ * version of the format than this build understands.
+ */
+export async function setupsHere(): Promise<Setup[]> {
+  const byId = new Map((await shippedSetups()).map((s) => [s.id, s]));
+  for (const kept of await listSetups()) {
+    const parsed = loadSetupText(kept.source, kept.format);
+    if (parsed.ok) byId.set(parsed.setup.id, parsed.setup);
+  }
+  return [...byId.values()].sort((a, b) => a.title.localeCompare(b.title));
 }
 
 /**

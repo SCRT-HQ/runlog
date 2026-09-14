@@ -5,6 +5,7 @@ import { syncBus } from "../sync/bus.ts";
 import { useSync } from "../sync/SyncProvider.tsx";
 import { activeRunFor } from "../run/active.ts";
 import { RunRow, onDay } from "../run/RunRow.tsx";
+import { SetupShelf } from "./SetupShelf.tsx";
 import { scoresOf } from "../run/scores.ts";
 import { byLastOpened, openedAt } from "./opened.ts";
 import { DocMenu } from "../docs/DocMenu.tsx";
@@ -273,6 +274,13 @@ export function LibraryView({
           </section>
         );
       })}
+
+      {/*
+        The other shelf. Under the packs because a pack is what a person
+        comes here for; a setup is a thing that fits one, and nobody opens
+        the library looking for one first.
+      */}
+      <SetupShelf />
     </main>
   );
 }
