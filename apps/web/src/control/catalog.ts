@@ -148,6 +148,18 @@ const PRESSES = [
   "ForceSave",
   "Rest",
   "RuneArc",
+  // The Travel tab's unlocks. Each is one-shot, which is what a setup
+  // wants: `travel.showAllGraces` reveals graces and these hand them
+  // over, and there is no flag for the maps at all. The toggles beside
+  // them in the tool (ShowAllMaps, NoMapAcquiredPopup) are deliberately
+  // not here, since invoking a toggle flips whatever the state happened
+  // to be and a run cannot then say what it started with.
+  "UnlockMainGameMaps",
+  "UnlockDlcMaps",
+  "UnlockAllMainGameGraces",
+  "UnlockAllDlcGraces",
+  "UnlockAllMainRemembrancesGraces",
+  "UnlockAllDlcRemembrancesGraces",
   "SetMaxHp",
   "SetRfbs",
   "KillTarget",
