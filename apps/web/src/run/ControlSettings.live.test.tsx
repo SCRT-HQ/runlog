@@ -64,10 +64,32 @@ describe("the address the tool dials", () => {
     expect(screen.getByText(/ws:\/\/|wss:\/\//).textContent).toContain("k=a-remembered-key");
   });
 
-  it("says what is missing rather than leaving a placeholder unexplained", () => {
+  it("says what is missing rather than offering an address nobody can use", () => {
+    /*
+     * It printed the address with REPLACE-WITH-YOUR-WATCH-KEY where the
+     * key goes, in the box a finished one appears in, with Copy beside
+     * it. The words were always right; the thing above them was not.
+     */
     render(<ControlSettings pack={tarnished} record={record({})} />);
-    expect(screen.getByText(/ws:\/\/|wss:\/\//).textContent).toContain("REPLACE-WITH-YOUR-WATCH-KEY");
+    expect(screen.queryByText(/ws:\/\/|wss:\/\//)).toBeNull();
     expect(screen.getByText(/once it has a key/)).toBeTruthy();
+  });
+
+  it("says it is still being set up while the run is finding a key", () => {
+    // Not unfinished: unfinished yet. The run mints one on open, and
+    // until it answers there is nothing to print and nothing wrong.
+    render(<ControlSettings pack={tarnished} record={record({})} reachable={{ link: null, key: null, working: true }} />);
+    expect(screen.getByText(/Setting this .* up to be reached/)).toBeTruthy();
+    expect(screen.queryByText(/ws:\/\/|wss:\/\//)).toBeNull();
+  });
+
+  it("takes the key the run minted, rather than asking for one of its own", () => {
+    // The run mints on open and remembers; this panel used to keep its
+    // own answer, so the two could disagree and the panel's was the one
+    // on screen -- with the server saying a key exists and the device
+    // unable to name it, which no button could resolve but Make one.
+    render(<ControlSettings pack={tarnished} record={record({})} reachable={{ link: null, key: "from-the-run", working: false }} />);
+    expect(screen.getByText(/ws:\/\/|wss:\/\//).textContent).toContain("k=from-the-run");
   });
 
   it("attaches as a watcher, which is the only thing this key is for", () => {

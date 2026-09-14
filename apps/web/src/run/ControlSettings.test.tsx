@@ -32,6 +32,12 @@ const record = (control?: unknown): StoredRun => ({
 const paint = (control?: unknown, seats?: string[]) =>
   renderToStaticMarkup(<ControlSettings pack={kiln} record={record(control)} {...(seats ? { seats } : {})} />);
 
+/** The same panel once the run has found the account a watch key. */
+const painted = (control?: unknown, seats?: string[]) =>
+  renderToStaticMarkup(
+    <ControlSettings pack={kiln} record={record(control)} reachable={{ link: null, key: "watchkey", working: false }} {...(seats ? { seats } : {})} />,
+  );
+
 describe("the control panel", () => {
   it("says a run with no rules sends nothing", () => {
     const html = paint();
@@ -39,9 +45,16 @@ describe("the control panel", () => {
     expect(html).toContain("plays exactly as it always has");
   });
 
-  it("leaves a placeholder in the address until there is a key to put there", () => {
+  it("shows no address at all until there is a key to put in one", () => {
+    /*
+     * It used to print the address with REPLACE-WITH-YOUR-WATCH-KEY where
+     * the key goes, in the same box a finished one appears in, with a
+     * Copy button beside it. That is something that looks copyable and
+     * is not, and the panel already says in words what is missing.
+     */
     const html = paint();
-    expect(html).toContain("/ws?k=REPLACE-WITH-YOUR-WATCH-KEY&amp;run=r1&amp;as=control");
+    expect(html).not.toContain("REPLACE-WITH-YOUR-WATCH-KEY");
+    expect(html).toContain("once it has a key");
     // Whatever the origin turns out to be, it is never spoken as http:
     // the socket's scheme is the one thing a copied address must get right.
     expect(html).not.toContain("http");
@@ -52,10 +65,10 @@ describe("the control panel", () => {
     // is open to watchers. For a browser source that is the point; for a
     // tool reaching into a game it means a run ending quietly hands the
     // tool to another run, whose pack has nothing to say to it.
-    expect(paint()).toContain("run=r1");
+    expect(painted()).toContain("run=r1");
     // Every seat's line carries it too, or a race moves one runner and not
     // the rest the first time somebody's run ends.
-    const withRoster = paint(undefined, ["Mira", "Kel"]);
+    const withRoster = painted(undefined, ["Mira", "Kel"]);
     for (const seat of ["Mira", "Kel"]) expect(withRoster).toContain(`run=r1&amp;as=control&amp;seat=${seat}`);
   });
 

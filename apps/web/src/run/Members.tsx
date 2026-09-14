@@ -134,7 +134,18 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
         </p>
       )}
       {!reached && (!sync.available || sync.enabled) && (
-        <p className="muted small">Reaching your account. Inviting opens once it has.</p>
+        /*
+         * What is being waited for is this run, not the account.
+         *
+         * "Reaching your account" read as though signing in had not
+         * taken, which it had: a run is a local thing until sync creates
+         * it on the server, and until then there is nobody to invite to
+         * it. Saying which of the two is still happening is the whole
+         * difference between waiting and something being wrong.
+         */
+        <p className="muted small" aria-live="polite">
+          This {noun} is still on its way to your account. Inviting opens once it has arrived.
+        </p>
       )}
       {members.length > 0 && (
         <div className="reactRow tableReact" aria-label="React">

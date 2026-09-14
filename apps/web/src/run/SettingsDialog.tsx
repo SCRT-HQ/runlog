@@ -33,6 +33,7 @@ export function SettingsDialog({
   onControl,
   onSetup,
   onHandOut,
+  reachable,
 }: {
   runId: string | null;
   race: boolean;
@@ -46,6 +47,8 @@ export function SettingsDialog({
   /** Change which setup the open run is played under, and hand it out. */
   onSetup?: (setup: unknown) => void | Promise<void>;
   onHandOut?: () => boolean;
+  /** What the run found out about being reachable, for the Control section's address. */
+  reachable?: { link: string | null; key: string | null; working: boolean } | undefined;
   /** The roster of a moderated run, so the Control section can address one racer. */
   seats?: string[];
   alerts: AlertSettings;
@@ -127,7 +130,7 @@ export function SettingsDialog({
 
         {at === "control" && pack && record && (
           <section>
-            <ControlSettings pack={pack} record={record} onControl={onControl} {...(onSetup ? { onSetup } : {})} {...(onHandOut ? { onHandOut } : {})} {...(seats && seats.length > 0 ? { seats } : {})} />
+            <ControlSettings pack={pack} record={record} onControl={onControl} {...(reachable ? { reachable } : {})} {...(onSetup ? { onSetup } : {})} {...(onHandOut ? { onHandOut } : {})} {...(seats && seats.length > 0 ? { seats } : {})} />
           </section>
         )}
       </section>
