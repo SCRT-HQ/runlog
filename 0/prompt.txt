@@ -1,0 +1,17 @@
+I would like to start planning out an integration for Elgato Stream Decks to allow full run control (progress through screens, trigger rolls when required, etc) as well as provide Stream Deck widgets that can show current metrics from the active run in a tab.
+
+---
+
+B looks good
+
+---
+
+this makes sense. With the OAuth setup, how does a run get chosen to attach to?
+
+---
+
+this sounds good, we need to make sure we also expose a way to change the run that SD is attached to, e.g. Stream Deck will almost always be launched before a run is started. Another approach would be sending a message over the socket when a new run is launched so the switcher in SD always knows the current list of available runs to choose from. We may also want to show a Toast notification when a run is connected from Stream Deck since the SD itself is not the best UI, especially on older models without the LCD screen or dials
+
+---
+
+we should also fetch the runs on launch / connect of the stream deck if those widgets are actively configured
