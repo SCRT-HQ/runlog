@@ -1925,17 +1925,26 @@ export function Scores({ pack, run, state }: { pack: Pack; run: ReturnType<typeo
  * whether what they say will actually happen, and the alternative is
  * finding out when it does not.
  */
+/**
+ * Which games this run is holding the other end of.
+ *
+ * Named where they say a name. The heading used to read "On the game, a
+ * tool is attached" whether one person was playing alone or four were
+ * on a roster, which told the one case that matters least and the one
+ * that matters most exactly the same thing. A tool that says which seat
+ * it is playing is a tool somebody can be told about by name.
+ */
 function Attached({ tools }: { tools: AttachedTool[] }) {
   const named = tools.map((t) => t.app).filter((a): a is string => Boolean(a));
+  const seated = tools.map((t) => t.seat).filter((s): s is string => Boolean(s));
+  const whose = seated.length > 0 ? seated.join(", ") : tools.length === 1 ? "your game" : `${tools.length} games`;
   return (
     <section className="panel">
       <h3 className="sectionTitle">
-        On the game <span className="muted">{tools.length === 1 ? "a tool is attached" : `${tools.length} tools are attached`}</span>
+        On {whose}{" "}
+        <span className="muted">{named.length > 0 ? named.join(", ") : tools.length === 1 ? "a tool" : `${tools.length} tools`}</span>
       </h3>
-      <p className="muted small">
-        {named.length > 0 ? named.join(", ") : "A tool"} is listening, so what the dice say happens in the game. Results still read the same
-        with nothing attached.
-      </p>
+      <p className="muted small">Listening, so what the dice say happens in the game. Results still read the same with nothing attached.</p>
     </section>
   );
 }
