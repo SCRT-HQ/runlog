@@ -397,3 +397,38 @@ describe("the settings page", () => {
     expect(html).not.toContain("rolls from its seed");
   });
 });
+
+/**
+ * The account menu, in the order somebody reaches for things.
+ *
+ * The theme is changed on a whim and put back; the profile is where
+ * everything about the account is; sync is a switch you check rather than
+ * press. Settings was a door to a sheet that is a page of the profile
+ * now, so it is not a door any more.
+ */
+describe("the account menu, signed in", () => {
+  const menu = () =>
+    renderToStaticMarkup(
+      <AccountContext.Provider value={signedIn}>
+        <AccountBadge onOpenProfile={() => {}} />
+      </AccountContext.Provider>,
+    );
+
+  it("offers no Settings of its own, because the profile holds them", () => {
+    expect(menu()).not.toContain("sounds, dice, rolls");
+  });
+
+  it("does not repeat the address, which is on the profile page itself", () => {
+    expect(menu()).not.toContain("n@example.com");
+  });
+
+  it("puts the theme first, then the profile, then sync", () => {
+    const html = menu();
+    const theme = html.indexOf("<select");
+    const profile = html.indexOf("your keys, your data, your devices");
+    const signOut = html.lastIndexOf("Sign out");
+    expect(theme).toBeGreaterThan(-1);
+    expect(profile).toBeGreaterThan(theme);
+    expect(signOut).toBeGreaterThan(profile);
+  });
+});
