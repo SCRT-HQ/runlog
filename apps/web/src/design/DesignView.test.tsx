@@ -24,24 +24,19 @@ vi.mock("../storage/db.ts", () => ({
  * combination of what loaded and what got shown, not in either alone.
  */
 describe("which pack the Designer opens on", () => {
-  const spyOnConfirm = () => vi.spyOn(window, "confirm").mockReturnValue(true);
-
   let root: Root;
   let container: HTMLDivElement;
-  let confirmSpy: ReturnType<typeof spyOnConfirm>;
 
   beforeEach(() => {
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
-    confirmSpy = spyOnConfirm();
     vi.mocked(saveDraft).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
-    confirmSpy.mockRestore();
     vi.mocked(loadDraft).mockReset();
     vi.mocked(saveDraft).mockReset();
   });
@@ -86,7 +81,14 @@ describe("which pack the Designer opens on", () => {
       buttonLabeled("New pack")!.click();
     });
 
-    expect(confirmSpy).toHaveBeenCalledWith("Start a new pack? The current draft is replaced.");
+    // The app's own dialog, not the browser's grey box: it names the
+    // action and says what replacing the draft costs.
+    expect(container.textContent).toContain("Start a new pack?");
+    expect(container.textContent).toContain("The draft you have open is replaced.");
+    await act(async () => {
+      buttonLabeled("Start a new one")!.click();
+    });
+
     expect(container.textContent).not.toContain("Which pack?");
     expect(container.textContent).toContain("Download");
     // Replaced, not merely dismissed: the title is the blank pack's own.
@@ -107,12 +109,14 @@ describe("which pack the Designer opens on", () => {
     expect(saveDraft).not.toHaveBeenCalled();
   });
 
-  it("declining New pack's confirm leaves the door open", async () => {
-    confirmSpy.mockReturnValue(false);
+  it("cancelling New pack leaves the door open", async () => {
     await mount({ ...blankPack(), title: "Two-Line Days" });
 
     await act(async () => {
       buttonLabeled("New pack")!.click();
+    });
+    await act(async () => {
+      buttonLabeled("Cancel")!.click();
     });
 
     expect(container.textContent).toContain("Which pack?");
