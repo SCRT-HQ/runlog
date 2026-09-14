@@ -232,15 +232,18 @@ export class DriveError extends Error {
  * have, and any caller (the bot included) can reproduce it. Unseeded rolls
  * still need a source when the caller asked the driver to roll on its
  * behalf; `createRandom()` with no seed supplies one.
+ *
+ * The seed decides, and the mode has no say. It used to take both a seed
+ * and a mode declaring itself seeded, which meant two people who had
+ * agreed on a seed met different runs depending on which mode they
+ * picked -- and the other branch, keyed by how far down the log a roll
+ * falls rather than by where in the game it is, put them out of step the
+ * moment one of them logged anything the other did not.
  */
-export function randomFor(pack: Pack, state: RunState, events: readonly RunEvent[], keyPrefix: string, seed?: string): () => number {
-  const seededRun = Boolean(seed) && Boolean(pack.modes[state.mode]?.seeded);
-  if (seededRun) {
-    const before = events.filter((e) => e.t === "Rolled" && e.purpose === keyPrefix && unitOf(events, e) === state.unit).length;
-    return createRandom(streamSeed(seed!, state.unit, keyPrefix, before));
-  }
-  if (seed) return createRandom(`${seed}:${events.length}`);
-  return createRandom();
+export function randomFor(state: RunState, events: readonly RunEvent[], keyPrefix: string, seed?: string): () => number {
+  if (!seed) return createRandom();
+  const before = events.filter((e) => e.t === "Rolled" && e.purpose === keyPrefix && unitOf(events, e) === state.unit).length;
+  return createRandom(streamSeed(seed, state.unit, keyPrefix, before));
 }
 
 /** Which unit an event happened in, counted from the `UnitEntered` markers ahead of it. Mirrors `useRun`'s private helper of the same job. */
@@ -255,16 +258,15 @@ function unitOf(events: readonly RunEvent[], event: RunEvent): number {
 
 /** Whether this block should roll for itself rather than ask, and with what source label. */
 function rollingContext(
-  pack: Pack,
   state: RunState,
   events: readonly RunEvent[],
   keyPrefix: string,
   seed: string | undefined,
   autoRoll: boolean | undefined,
 ): Pick<ExecContext, "random" | "seeded"> {
-  const seededRun = Boolean(seed) && Boolean(pack.modes[state.mode]?.seeded);
+  const seededRun = Boolean(seed);
   if (!seededRun && !autoRoll) return {};
-  return { random: randomFor(pack, state, events, keyPrefix, seed), seeded: seededRun };
+  return { random: randomFor(state, events, keyPrefix, seed), seeded: seededRun };
 }
 
 /** Stamp ids and a shared `move` onto a finished batch, when the caller wants ids at all. */
@@ -316,7 +318,7 @@ function runBlock(
     answers,
     generatedAnswers: generated,
     now: ctx.now,
-    ...rollingContext(pack, state, events, meta.keyPrefix, ctx.seed, ctx.autoRoll),
+    ...rollingContext(state, events, meta.keyPrefix, ctx.seed, ctx.autoRoll),
   };
   const result = meta.exec(execCtx);
   if (result.status === "awaiting") {

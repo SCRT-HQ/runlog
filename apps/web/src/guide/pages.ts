@@ -124,14 +124,7 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
     Moderated,
   ),
   P("live-link", "With others", "Playing together", "A live link", "An address anyone opens to watch, no account needed.", LiveLink),
-  P(
-    "races",
-    "With others",
-    "Playing together",
-    "Races across devices",
-    "The same seeded mode, each on their own device, one leaderboard.",
-    Races,
-  ),
+  P("races", "With others", "Playing together", "Races across devices", "The same seed, each on their own device, one leaderboard.", Races),
   P(
     "stream-why",
     "With others",

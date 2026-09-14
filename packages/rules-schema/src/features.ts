@@ -14,7 +14,7 @@ export const FEATURES: ReadonlyArray<{ id: Feature; label: string; what: string 
   { id: "solo", label: "Solo", what: "Has a mode for one person." },
   { id: "together", label: "Together", what: "Has a mode for several people at one table, taking turns." },
   { id: "moderated", label: "Moderated", what: "One person runs it; a roster races the draws and is awarded points." },
-  { id: "seeded", label: "Seeded", what: "Has a mode that rolls from a shared seed, so everyone meets the same run." },
+  { id: "seeded", label: "Seeded", what: "Has a mode meant to be shared, where everyone entering the same seed meets the same run." },
   { id: "endless", label: "Endless", what: "Has a mode with no end but the one you choose." },
   { id: "timers", label: "Timers", what: "Starts clocks." },
   { id: "cards", label: "Cards", what: "Deals from a deck." },

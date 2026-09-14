@@ -151,6 +151,72 @@ describe("a seeded run", () => {
     expect(rolled.length).toBeGreaterThan(0);
     expect(rolled.every((r) => r.t === "Rolled" && r.source === "seeded")).toBe(true);
   });
+
+  /**
+   * The seed decides, and the mode has no say.
+   *
+   * This wanted a seed *and* a mode declaring itself seeded, which meant
+   * two people who had agreed on a seed met different runs depending on
+   * which mode they picked -- while the box they typed it into said the
+   * rolls would come out the same every time it was entered.
+   *
+   * "solo" is the demo pack's ordinary mode.
+   */
+  it("rolls from the seed in a mode that never called itself seeded", () => {
+    const script = [
+      { enter: 1 },
+      { step: "enter" },
+      { declare: "Bowl" },
+      { step: "work" },
+      { finalize: {} },
+      { enter: 2 },
+      { step: "enter" },
+    ];
+    const run = () => {
+      const prefix = playThrough(kiln, script, { mode: "solo", seed: "drive-2" }).events;
+      return driveToCompletion(kiln, prefix, { step: true }, { now: T(0), seed: "drive-2" });
+    };
+    const a = run();
+    const b = run();
+    expect(a).toEqual(b);
+    const rolled = a.filter((e) => e.t === "Rolled");
+    expect(rolled.length).toBeGreaterThan(0);
+    expect(rolled.every((r) => r.t === "Rolled" && r.source === "seeded")).toBe(true);
+  });
+
+  /**
+   * And a seed rolls without being asked to. `autoRoll` is off above: a
+   * seed is somebody saying they want the app's dice, since a seed does
+   * nothing at all for dice thrown on a desk.
+   */
+  it("rolls for itself on a seed alone, with nobody having turned rolling on", () => {
+    const prefix = playThrough(
+      kiln,
+      [{ enter: 1 }, { step: "enter" }, { declare: "Bowl" }, { step: "work" }, { finalize: {} }, { enter: 2 }, { step: "enter" }],
+      { seed: "drive-3" },
+    ).events;
+    // Without one it stops and asks for the dice; with one it does not.
+    expect(drive(kiln, prefix, { step: true }, { now: T(0) }).status).toBe("awaiting");
+    const sown = driveToCompletion(kiln, prefix, { step: true }, { now: T(0), seed: "drive-3" });
+    expect(sown.filter((e) => e.t === "Rolled").length).toBeGreaterThan(0);
+  });
+
+  /**
+   * Two seeds that agree everywhere but the mode are the same run. The
+   * stream is addressed by where in the game a roll falls -- unit,
+   * purpose, and how many of that purpose came before it in that unit --
+   * and the mode is not part of that address.
+   */
+  it("meets the same results from the same seed whichever mode it is played in", () => {
+    const script = [{ enter: 1 }, { step: "enter" }, { declare: "Bowl" }, { step: "work" }];
+    const rolls = (mode: string) => {
+      const prefix = playThrough(kiln, script, { mode, seed: "drive-4" }).events;
+      return driveToCompletion(kiln, prefix, { finalize: true }, { now: T(0), seed: "drive-4" })
+        .filter((e) => e.t === "Rolled")
+        .map((e) => (e.t === "Rolled" ? e.total : null));
+    };
+    expect(rolls("solo")).toEqual(rolls("shared"));
+  });
 });
 
 describe("a block that awaits", () => {

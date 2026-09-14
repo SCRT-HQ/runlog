@@ -819,6 +819,15 @@ export function StartScreen({
     setNewName("");
   };
   const rosterOk = !moderated || (roster.length >= moderated.contestants.min && roster.length <= moderated.contestants.max);
+  /**
+   * The one thing a mode calling itself seeded still decides.
+   *
+   * Not how the dice are drawn -- that is the seed's, everywhere. Only
+   * that this mode is pointless without one: starting a shared mode
+   * unseeded gives you a private run and no sign that nobody else will
+   * ever match it.
+   */
+  const seedOk = !chosen?.seeded || seed.trim() !== "";
   const v = pack.vocabulary;
   const seats = chosen?.players;
   const minPlayers = seats?.min ?? 1;
@@ -886,66 +895,52 @@ export function StartScreen({
         <SetupPicker pack={pack} chosen={setup} onChoose={setSetup} />
 
         {/*
-          The seed lives where a run starts. A shared mode needs one; any
-          other mode may take one, and the rolls the app makes for it then
-          repeat. It used to sit above the rules page, feeding rolls nobody
+          The seed lives where a run starts, and it is the only thing that
+          decides whether a run is seeded. A shared mode insists on one;
+          every other mode offers one, and does exactly the same thing with
+          it. It used to sit above the rules page, feeding rolls nobody
           logged.
         */}
-        {chosen?.seeded ? (
-          <>
-            <h3 className="sectionTitle">Seed</h3>
-            <p className="muted small">
-              This mode is meant to be shared. Everyone entering the same seed meets the same {v.run.one.toLowerCase()}.
-            </p>
-            <div className="row seedRow">
-              <input className="textInput" value={seed} placeholder="e.g. long-kiln-42" onChange={(e) => setSeed(e.target.value)} />
-              <button className="ghost" onClick={() => setSeed(coinSeed())}>
-                Make one
-              </button>
-            </div>
-            <p className="muted small">
-              A seeded {v.run.one.toLowerCase()} rolls its own dice, so everyone meets the same results in the same order. Keep your own
-              dice for the modes that ask for them.
-            </p>
-          </>
-        ) : (
-          <>
-            <h3 className="sectionTitle">
-              Seed <span className="muted">optional</span>
-            </h3>
-            <div className="row seedRow">
-              <input
-                className="textInput"
-                value={seed}
-                placeholder="unseeded, dice are unrepeatable"
-                onChange={(e) => setSeed(e.target.value)}
-              />
-              <button className="ghost" onClick={() => setSeed(coinSeed())}>
-                Make one
-              </button>
-            </div>
-            <p className="muted small">
-              With a seed, the rolls the app makes for you come out the same every time it is entered. Your own dice are yours regardless.
-            </p>
-          </>
+        <h3 className="sectionTitle">Seed {!chosen?.seeded && <span className="muted">optional</span>}</h3>
+        {chosen?.seeded && (
+          <p className="muted small">
+            This mode is meant to be shared. Everyone entering the same seed meets the same {v.run.one.toLowerCase()}.
+          </p>
         )}
+        <div className="row seedRow">
+          <input
+            className="textInput"
+            value={seed}
+            placeholder={chosen?.seeded ? "e.g. long-kiln-42" : "unseeded, dice are unrepeatable"}
+            onChange={(e) => setSeed(e.target.value)}
+          />
+          <button className="ghost" onClick={() => setSeed(coinSeed())}>
+            Make one
+          </button>
+        </div>
+        <p className="muted small">
+          A seeded {v.run.one.toLowerCase()} rolls its own dice, so the same seed meets the same results in the same order.
+          {!chosen?.seeded && " Leave it empty to roll your own."}
+        </p>
 
-        {race && (chosen?.seeded || raceCode) && (
+        {/*
+          Any mode, now that a seed is what makes a run seeded. This asked
+          for a mode declaring itself seeded, which left a pack whose author
+          had not written one unable to race at all.
+        */}
+        {race && (
           <>
             <h3 className="sectionTitle">
               Race <span className="muted">across devices</span>
             </h3>
             <p className="muted small">
-              {chosen?.seeded
-                ? `Start a race and share its code. Each racer plays this seed on their own device, and the leaderboard follows along in the side column.`
-                : `You have a race code. Join, and the race's own mode and seed are used.`}
+              Start a race and share its code, or join one with a code you were given. Each racer plays the same seed on their own device,
+              and the leaderboard follows along in the side column. Starting one with the seed box empty makes a seed.
             </p>
             <div className="row raceRow">
-              {chosen?.seeded && (
-                <button className="ghost" onClick={() => race.start(mode, seed.trim() || coinSeed(), runName, setup)}>
-                  Start a race
-                </button>
-              )}
+              <button className="ghost" onClick={() => race.start(mode, seed.trim() || coinSeed(), runName, setup)}>
+                Start a race
+              </button>
               <input
                 className="textInput code"
                 value={raceCode}
@@ -1087,8 +1082,14 @@ export function StartScreen({
         <div className="padRow stepAction">
           <button
             className="primary big"
-            disabled={!rosterOk}
-            title={rosterOk ? undefined : `Add ${moderated?.contestants.min ?? 2} or more contestants first`}
+            disabled={!rosterOk || !seedOk}
+            title={
+              !rosterOk
+                ? `Add ${moderated?.contestants.min ?? 2} or more contestants first`
+                : !seedOk
+                  ? "This mode needs a seed"
+                  : undefined
+            }
             onClick={() => onStart(mode, seed, seated, runName, roster, [...lacking], setup ? { setup } : {})}
           >
             Enter the {v.run.one.toLowerCase()}

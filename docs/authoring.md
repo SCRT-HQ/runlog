@@ -250,7 +250,7 @@ modes:
       counters: [streak]
   shared:
     label: Shared Week
-    seeded: true          # everyone with the same seed meets the same rolls
+    seeded: true          # meant to be shared, so a run in it needs a seed
   pairs:
     label: Pairs
     players: { min: 2, max: 4, rotate: clockwise, roles: [...] }
