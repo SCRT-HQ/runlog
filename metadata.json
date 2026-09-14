@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2H29HDRKH8MSWH1208J3QRT",
+  "strategy": "manual-commit",
+  "branch": "the-deck-drives",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "apps/web/src/sync/SyncProvider.tsx",
+    "apps/web/src/sync/socket.test.ts",
+    "apps/web/src/sync/socket.ts",
+    "hosted/infra/lib/handlers/ws.ts",
+    "scripts/drive.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 4024,
+    "cache_creation_tokens": 811932,
+    "cache_read_tokens": 91488218,
+    "output_tokens": 297987,
+    "api_call_count": 257
+  }
+}
