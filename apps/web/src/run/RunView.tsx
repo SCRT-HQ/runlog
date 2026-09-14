@@ -846,7 +846,7 @@ export function RunView({
         <div className="col side">
           {state.status === "ended" && <Scores pack={pack} run={run} state={state} />}
           {run.moderated && <Scoreboard run={run} state={state} pack={pack} tools={tools} />}
-          {!run.moderated && tools.length > 0 && <Attached tools={tools} />}
+          {!run.moderated && (tools.length > 0 || decks > 0) && <Attached tools={tools} decks={decks} />}
           {run.roles.length > 0 && <Roles pack={pack} run={run} state={state} />}
           {/* A pack whose units make nothing has no board; the panel would
               say "nothing made yet" for the whole run. */}
@@ -2108,16 +2108,22 @@ export function Scores({ pack, run, state }: { pack: Pack; run: ReturnType<typeo
  * that matters most exactly the same thing. A tool that says which seat
  * it is playing is a tool somebody can be told about by name.
  */
-function Attached({ tools }: { tools: AttachedTool[] }) {
+function Attached({ tools, decks }: { tools: AttachedTool[]; decks: number }) {
   const named = tools.map((t) => t.app).filter((a): a is string => Boolean(a));
   const seated = tools.map((t) => t.seat).filter((s): s is string => Boolean(s));
   const whose = seated.length > 0 ? seated.join(", ") : tools.length === 1 ? "your game" : `${tools.length} games`;
   return (
     <section className="panel">
-      <h3 className="sectionTitle">
-        On {whose}{" "}
-        <span className="muted">{named.length > 0 ? named.join(", ") : tools.length === 1 ? "a tool" : `${tools.length} tools`}</span>
-      </h3>
+      {tools.length > 0 && (
+        <h3 className="sectionTitle">
+          On {whose}{" "}
+          <span className="muted">{named.length > 0 ? named.join(", ") : tools.length === 1 ? "a tool" : `${tools.length} tools`}</span>
+        </h3>
+      )}
+      {/* A deck signs in rather than taking a line to paste, so it gets no
+          address beside it -- just its own count, the way a tool gets its
+          own line. */}
+      {decks > 0 && <h3 className="sectionTitle">{decks === 1 ? "Stream Deck" : `Stream Deck × ${decks}`}</h3>}
       <p className="muted small">Listening, so what the dice say happens in the game. Results still read the same with nothing attached.</p>
     </section>
   );

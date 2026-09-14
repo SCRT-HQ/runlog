@@ -11,7 +11,6 @@ import type { StoredRun } from "../storage/db.ts";
 import { useProfile } from "../sync/useProfile.ts";
 import { useReachable } from "./useReachable.ts";
 import { controlAddress } from "./controlAddress.ts";
-import { useAttachedDecks } from "./useAttachedTools.ts";
 
 /**
  * Who is at the table, and how to ask someone else.
@@ -33,7 +32,6 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
   const [upgrade, setUpgrade] = useState<string | null>(null);
   const { profile } = useProfile();
   const reach = useReachable(api, run);
-  const decks = useAttachedDecks(run.runId);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const owner = run.role === "owner";
 
@@ -217,16 +215,6 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
                   {r.name ? ` ${r.name}` : ""}
                 </span>
               ))}
-          </div>
-        )}
-        {/* A deck signs in rather than taking a line to paste, so it gets
-            no address to copy -- only a count, at rest as well as when it
-            arrives. */}
-        {decks > 0 && (
-          <div className="row spread memberRow">
-            <span>
-              <strong>Stream Deck{decks > 1 ? ` × ${decks}` : ""}</strong>
-            </span>
           </div>
         )}
         {owner && (

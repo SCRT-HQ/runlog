@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { loadPackText } from "@runlog/rules-schema";
 import type { Api } from "../sync/client.ts";
 import { heldMove, RunView } from "./RunView.tsx";
@@ -100,6 +100,28 @@ describe("the offer rides along with the snapshot", () => {
     await renderRunView({ putSnapshot, shared: false, decksAttached: 1 });
     await vi.advanceTimersByTimeAsync(900);
     expect(putSnapshot).toHaveBeenCalled();
+  });
+
+  /**
+   * The Attached panel says a deck is on the same way it says a tool is:
+   * named where a tool would be, nothing where there is neither.
+   */
+  it("lists a deck in the Attached panel, and says nothing where there is none", async () => {
+    const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+    await renderRunView({ putSnapshot, shared: false, decksAttached: 1 });
+    expect(screen.getByText("Stream Deck")).toBeTruthy();
+  });
+
+  it("counts more than one deck", async () => {
+    const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+    await renderRunView({ putSnapshot, shared: false, decksAttached: 3 });
+    expect(screen.getByText("Stream Deck × 3")).toBeTruthy();
+  });
+
+  it("says nothing in the Attached panel with no tool and no deck", async () => {
+    const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+    await renderRunView({ putSnapshot, shared: false });
+    expect(screen.queryByText(/Stream Deck/)).toBeNull();
   });
 });
 
