@@ -21,23 +21,22 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.soundclash
-version: "0.2.0"
+version: "0.3.0"
 title: Soundclash
 author: Runlog
 description: >-
-  A pack for DJs to add a bit of controlled chaos to their set. A mechanic 
-  called on every transition. Pick a style, and each Round says what the 
-  next mix has to do: double-drop it, swap the bass, cut it in by hand, 
+  A pack for DJs to add a bit of controlled chaos to their set. A mechanic
+  called on every transition. Pick a style, and each Round says what the
+  next mix has to do: double-drop it, swap the bass, cut it in by hand,
   jump twenty BPM. One press ends the Round and calls the next one.
 
 category: music
 tags: [dj, turntables, mixing, stream, practice]
 
 requires:
-  - { id: decks, label: "Two decks and a mixer, or the software equivalent", kind: equipment }
+  - { id: decks, label: "Two decks and a mixer, or the software equivalent", kind: equipment, note: "Turntablism wants platters under your hands: turntables or CDJs, records or not. Anything that can be used to scratch will do though." }
   - { id: library, label: A library you know well enough to pull from quickly, kind: other }
   - { id: fx, label: Effects and a filter on the mixer, kind: equipment, optional: true, note: "A handful of calls ask for one. Without them, those calls are skipped." }
-  - { id: vinyl, label: "Vinyl, or a controller with platters", kind: equipment, optional: true, note: "Turntablism needs something to put a hand on." }
 
 license:
   id: MIT
@@ -194,7 +193,7 @@ tables:
       - { id: tt-05, range: [5, 5], text: "Chirp into the drop." }
       - { id: tt-06, range: [6, 6], text: "Beat juggle two copies of the same record, four bars minimum." }
       - { id: tt-07, range: [7, 7], text: "Stab the first word of the next track's vocal three times before you let it run." }
-      - { id: tt-08, range: [8, 8], text: "Needle drop. Find the spot by eye, no cue point.", needs: [vinyl] }
+      - { id: tt-08, range: [8, 8], text: "Drop in by eye. Find the spot on the platter yourself, no cue point." }
       - { id: tt-09, range: [9, 9], text: "Scratch the outgoing track out while the new one plays underneath." }
       - { id: tt-10, range: [10, 10], text: "Tone play. Pitch a held tone into a melody, four notes minimum." }
       - { id: tt-11, range: [11, 11], text: "Orbit. Two clicks on the way out, and keep it in time." }
