@@ -412,7 +412,7 @@ Names are the compatibility story between versions of one program, and say nothi
 
 ## Driving a run from a deck: `wss://…/ws?token=<jwt>&as=deck`
 
-Everything above reads, or writes only through an ask. A deck presses the same buttons the page does: primary, a move, undo, an answer. It needs a signed-in account rather than a key — the app's own sign-in, the CLI's `runlog login`, or a client of its own that has been through the same WorkOS sign-in — and driving a run from a deck is part of Plus where plans are on. The token here is that account's access token, not a link's token or a stream key; those open the plain watcher and scene sockets described above, never a deck.
+Everything above reads, or writes only through an ask. A deck presses the same buttons the page does: primary, a move, undo, an answer. It needs a signed-in account rather than a key — the app's own sign-in, the CLI's `runlog login`, or a client of its own that has been through the same WorkOS sign-in — and driving a run from a deck is part of Plus where plans are on. The token here is that account's access token, not a link's token or a stream key; those open the plain watcher and scene sockets described above, never a deck. The same address answers on the dev copy, at `wss://runlog.dev.scrthq.com`.
 
 A deck names no run at connect: it is told what is open to it and picks. Only a run some other device is actively holding open ever appears, and pressing never reaches further than that.
 

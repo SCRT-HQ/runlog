@@ -10,6 +10,7 @@
 import { credentials, renew } from "../packages/cli/src/account.ts";
 
 const RENEW_MARGIN_MS = 60_000;
+// RUNLOG_WS=wss://runlog.dev.scrthq.com reaches the dev copy instead.
 const base = process.env["RUNLOG_WS"] ?? "wss://runlog.scrthq.com";
 
 async function tokenFromSession(): Promise<string> {
@@ -28,6 +29,13 @@ const token = await tokenFromSession();
 const ws = new WebSocket(`${base}/ws?token=${encodeURIComponent(token)}&as=deck`);
 let run: string | null = null;
 let seq = 0;
+let connected = true;
+
+ws.addEventListener("close", () => {
+  connected = false;
+  console.log("socket closed");
+});
+ws.addEventListener("error", (event) => console.log((event as ErrorEvent).message ?? String(event)));
 
 ws.addEventListener("message", (event) => {
   const m = JSON.parse(String(event.data)) as Record<string, unknown>;
@@ -45,6 +53,7 @@ ws.addEventListener("message", (event) => {
 });
 
 process.stdin.on("data", () => {
+  if (!connected) return console.log("not connected");
   if (!run) return console.log("nothing to press");
   ws.send(
     JSON.stringify({
