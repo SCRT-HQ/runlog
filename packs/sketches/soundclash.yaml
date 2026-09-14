@@ -34,7 +34,7 @@ category: music
 tags: [dj, turntables, mixing, stream, practice]
 
 requires:
-  - { id: decks, label: "Two decks and a mixer, or the software equivalent", kind: equipment, note: "Turntablism wants platters under your hands: turntables or CDJs, records or not. A trackpad will not do it." }
+  - { id: decks, label: "Two decks and a mixer, or the software equivalent", kind: equipment, note: "Turntablism wants platters under your hands: turntables or CDJs, records or not. Anything that can be used to scratch will do though." }
   - { id: library, label: A library you know well enough to pull from quickly, kind: other }
   - { id: fx, label: Effects and a filter on the mixer, kind: equipment, optional: true, note: "A handful of calls ask for one. Without them, those calls are skipped." }
 
