@@ -10,6 +10,7 @@ import type { Api } from "../sync/client.ts";
 import { heldMove, perRacer, RunView } from "./RunView.tsx";
 import { memoryRunStore } from "./store.ts";
 import { syncBus } from "../sync/bus.ts";
+import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
 
 /**
  * The offer rides along with the snapshot.
@@ -63,17 +64,36 @@ const toTheChecklist = (at: string) => [
   { id: "e7", t: "PhaseCompleted" as const, at, phase: "declare" },
 ];
 
+/**
+ * Sync, as a press needs it: the socket is not here, so `drove` is a spy
+ * and everything else is the off value the app itself falls back to.
+ */
+const syncWith = (drove: Sync["drove"]): Sync => ({
+  available: true,
+  enabled: true,
+  setEnabled: () => {},
+  status: "idle",
+  last: null,
+  syncNow: () => {},
+  setPackSync: async () => {},
+  gesture: () => false,
+  drove,
+});
+
 async function renderRunView({
   putSnapshot,
   shared,
   decksAttached = 0,
   rest = () => [],
+  drove = () => {},
 }: {
   putSnapshot: Api["putSnapshot"];
   shared: boolean;
   decksAttached?: number;
   /** What the run has done since it started, for a test that needs a step. */
   rest?: (at: string) => RunEvent[];
+  /** The verdict this device sends back, for the tests about pressing. */
+  drove?: Sync["drove"];
 }) {
   current.api = { putSnapshot, myRaces: async () => [] } as unknown as Api;
   const store = memoryRunStore();
@@ -99,7 +119,11 @@ async function renderRunView({
   // setTimeout is one this test can wind forward rather than a real one
   // already ticking by the time it asks.
   vi.useFakeTimers();
-  render(<RunView pack={kiln} store={store} bench={{ from: "test", onLeave: () => {} }} />);
+  render(
+    <SyncContext.Provider value={syncWith(drove)}>
+      <RunView pack={kiln} store={store} bench={{ from: "test", onLeave: () => {} }} />
+    </SyncContext.Provider>,
+  );
   await flush();
 
   if (decksAttached > 0) {
@@ -191,6 +215,45 @@ describe("the offer rides along with the snapshot", () => {
         presets: [{ kind: "checklist", label: "Tick everything and Done", items: 2 }],
       },
     });
+  });
+});
+
+/**
+ * Review finding: the act map between a press and the run's own functions
+ * had no test of its own -- `takePress` was tested against a double, and
+ * nothing rendered `RunView` and pressed it. This does: the bus carries
+ * the press the socket would have delivered, and the verdict is the one
+ * the deck would have received.
+ *
+ * The run is a bare `RunStarted`, so what it offers is the page's own
+ * between-units button, and pressing it enters the first Stage: one event
+ * appended, which is exactly what the verdict's `seq` has to have caught
+ * up with.
+ */
+describe("a press from a deck", () => {
+  it("takes the press and answers with the seq the run moved to", async () => {
+    const drove = vi.fn<Sync["drove"]>();
+    await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, drove });
+
+    await act(async () => {
+      syncBus.emit({ t: "drive", from: "deck1", run: "run1", seq: 1, ref: "r1", press: "primary" });
+      await Promise.resolve();
+    });
+    await flush();
+
+    expect(drove).toHaveBeenCalledWith("deck1", "r1", true, undefined, 2);
+  });
+
+  it("refuses a press made against a seq the run has moved past", async () => {
+    const drove = vi.fn<Sync["drove"]>();
+    await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, drove });
+
+    await act(async () => {
+      syncBus.emit({ t: "drive", from: "deck1", run: "run1", seq: 99, ref: "r2", press: "primary" });
+      await Promise.resolve();
+    });
+
+    expect(drove).toHaveBeenCalledWith("deck1", "r2", false, "That moved on.", 1);
   });
 });
 
