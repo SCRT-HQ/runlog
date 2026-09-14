@@ -1224,8 +1224,23 @@ p {
 }
 
 /* Who is at the table, and the form to ask someone. */
-.memberRow {
+/*
+ * A thing on the left, and what you can do to it on the right.
+ *
+ * Grid rather than flex. As a flex row it wrapped once the left side grew
+ * long, and the action landed on a line of its own at the far left, under
+ * the text: a pack with four modes put its Remove button where a Remove
+ * button should never be. Two columns keep it where it belongs whatever
+ * the left side says, and the text wraps inside its own track.
+ */
+.row.memberRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
+}
+/* So a long unbroken name wraps in its track rather than pushing out of it. */
+.row.memberRow > :first-child {
+  min-width: 0;
 }
 /* Your own seat, marked: the accent's wash behind it and a chip that says so. */
 .memberRow.me {
