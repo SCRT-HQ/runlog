@@ -1,0 +1,38 @@
+# The seven great runes, restored, and arcs to spend on them.
+#
+# A great rune exists twice in the game's data: the one a boss drops and
+# the one a Divine Tower gives back for it. Only the second does
+# anything, so this hands over the restored form; a run given the other
+# would still owe the game a climb.
+#
+# The runes are a press, because each is an item and an event together
+# and `item.named` will not touch a key item tied to an event. The arcs
+# are an ordinary gift: a rune does nothing until one is spent, and ten
+# is enough to stop thinking about it.
+#
+# Miquella's Great Rune and the Phantom Great Rune are not here. Both
+# are giveable by name already, being the two runes with no event behind
+# them, and neither is one of the seven a main boss drops.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.give-great-runes
+version: "1.0.0"
+title: Give Great Runes
+author: Runlog
+description: >-
+  All seven great runes, restored and ready, with ten Rune Arcs to
+  spend on them. What eight bosses and six Divine Towers would have
+  cost, for a run that means to start with the reward.
+
+tool: TarnishedTool
+
+ops:
+  - { op: action.invoke, args: { action: GiveGreatRunes }, once: true }
+  - { op: item.named, args: { name: Rune Arc, quantity: 10 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

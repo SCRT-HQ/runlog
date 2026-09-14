@@ -169,6 +169,7 @@ const PRESSES = [
   "GiveStartingFlasks",
   "GiveTalismanPouches",
   "GiveStartingGifts",
+  "GiveGreatRunes",
   "UnlockGestures",
   "UnlockMetyr",
   "FightFortissax",
