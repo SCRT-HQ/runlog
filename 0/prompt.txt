@@ -195,3 +195,7 @@ testing the setups with the actual game:
 - open the map doesn't seem to work [Image #115] 
 - we should add a setup to unlock all gestures
 - why did the give-whetstones setup get reverted back to unlock-affinities?
+
+---
+
+Is there an action to enable Torrent / give the spectral seed whistle? We will want to do that as well for the Start the DLC setup, or maybe also craft a "Give Starting Items" setup that gives the starting flasks, spectral seed whistle, enables leveling and other menu items dependent on talking to Melina and Ranni the first time
