@@ -51,7 +51,7 @@ export interface ControlProfile {
    *
    * Only the ones shipped with the app need it, so a picker can offer
    * the right one for the run being played rather than a list of files
-   * somebody has to recognise. The server ignores it; matching a rule is
+   * somebody has to recognize. The server ignores it; matching a rule is
    * done by table and entry, and a profile pointed at the wrong pack
    * simply matches nothing.
    */

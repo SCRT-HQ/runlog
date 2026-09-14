@@ -2518,7 +2518,7 @@ select.textInput {
 }
 /*
  * The button that does the destroying, where a dialog is asking whether
- * to. Filled like any other primary, in the warning colour rather than
+ * to. Filled like any other primary, in the warning color rather than
  * the accent: it is the action being confirmed, so it should look like
  * the one that happens, and like the thing it is going to do.
  */
@@ -3904,7 +3904,7 @@ select.textInput {
 .matrix tbody .rowHead > span + span {
   margin-top: 0.1rem;
 }
-/* Centred on the row rather than sitting on its own baseline. An
+/* Centered on the row rather than sitting on its own baseline. An
    inline-block's baseline is its last line of text, so the button that
    won a challenge first, and carries a star for it, sat ten pixels
    below the one beside it that did not: same row, same height, two

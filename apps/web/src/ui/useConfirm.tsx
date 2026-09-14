@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
  * interface the app has no say over: the browser draws it, names the
  * host at the top, uses its own buttons and its own words for them, and
  * pins it to the top of the window rather than to the thing being acted
- * on. A run being discarded was announced by a grey box
+ * on. A run being discarded was announced by a gray box
  * naming the host it came from.
  *
  * It also blocks. `confirm` stops the page: timers stop, the socket's
