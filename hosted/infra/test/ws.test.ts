@@ -1192,6 +1192,37 @@ describe("a deck's press", () => {
     expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r1", ok: false, say: "Nothing is holding that run." });
   });
 
+  /**
+   * Review finding: a read that rejected threw past this branch to the
+   * handler's 500, which posts nothing, and the deck waited on a verdict
+   * that was never coming.
+   */
+  it("says so when it cannot check a press, rather than dropping it", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const base = deps(live);
+    const d = {
+      ...base,
+      poster,
+      store: {
+        ...base.store,
+        async getSession() {
+          throw new Error("the table is not answering");
+        },
+      },
+    };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    posted.length = 0;
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "s1", seq: 1, ref: "r1", press: "primary" }) }), d);
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r1", ok: false, say: "Could not check that right now." });
+  });
+
   it("will not forward a press for somebody else's run", async () => {
     const live = memoryLive();
     const posted: Array<[string, string]> = [];

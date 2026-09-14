@@ -469,10 +469,32 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
       return { statusCode: 200 };
     };
     if (!ref || !run) return { statusCode: 400, body: "a press has a run and a ref" };
-    const session = await deps.store.getSession(run);
+    /**
+     * Two reads over the network before a press goes anywhere, and either
+     * can fail on its own. A rejection used to throw past this branch to
+     * the handler's 500, which posts nothing at all: the deck was left
+     * holding a press with no verdict, and no way to tell that from one
+     * still in flight. It is told, in words that say to try again.
+     */
+    let session: Awaited<ReturnType<typeof deps.store.getSession>>;
+    try {
+      session = await deps.store.getSession(run);
+    } catch (error) {
+      console.error("live: could not read the run behind a press", error);
+      return refuse("Could not check that right now.");
+    }
     if (!session || session.meta.deletedAt || session.meta.ownerSub !== conn.sub) return refuse("That run is not yours to press.");
     if (session.meta.endedAt) return refuse("That run has ended.");
-    if (deps.entitled && !(await deps.entitled(conn.sub))) return refuse("Driving a run from a deck is part of Plus.");
+    if (deps.entitled) {
+      let allowed: boolean;
+      try {
+        allowed = await deps.entitled(conn.sub);
+      } catch (error) {
+        console.error("live: could not read the plan behind a press", error);
+        return refuse("Could not check that right now.");
+      }
+      if (!allowed) return refuse("Driving a run from a deck is part of Plus.");
+    }
 
     /**
      * The one device that takes it.

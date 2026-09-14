@@ -456,6 +456,8 @@ From then on this run's `{ "t": "changed", "id": "01RUN", "seq": 42 }` rings on 
 { "t": "drove", "ref": "cli-1758000000000", "ok": false, "say": "That moved on." }
 ```
 
+A verdict is the only answer a press gets, and a socket can drop one: treat a press with no verdict within a few seconds as lost, and press again with the same `ref`, which settles to the first verdict where the press did land.
+
 It comes from the page holding the run wherever one is there to answer, since only that device knows what the press did. The server answers instead when there is nowhere for the press to go, or the press is not this account's to make:
 
 | `say` | From |
@@ -464,6 +466,7 @@ It comes from the page holding the run wherever one is there to answer, since on
 | `That run has ended.` | The server. |
 | `Driving a run from a deck is part of Plus.` | The server, where plans are on and the account is not. |
 | `Nothing is holding that run.` | The server; no device has it open to write to. |
+| `Could not check that right now.` | The server; it could not read the run or the plan behind the press. Worth pressing again. |
 | `That moved on.` | The page; the press named a `seq` that is no longer current. |
 | *(the offer's own `needsPage`, or)* `There is nothing to press.` | The page; `primary` pressed while the offer has none. |
 | `That is not on offer.` | The page; `move` named an id the run is not offering. |
