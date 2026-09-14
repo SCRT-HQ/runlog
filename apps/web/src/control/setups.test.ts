@@ -68,6 +68,34 @@ describe("the setups we ship", () => {
     expect(missing, missing.join("; ")).toEqual([]);
   });
 
+  /**
+   * A press the tool has no action for is the same silent failure as a
+   * misspelled item, and arrives the same way: `action.invoke` takes a
+   * string, the tool answers "not registered in this build", and the run
+   * carries on having been handed nothing.
+   *
+   * The catalog is the list of presses this app offers, written by hand
+   * against the tool's own `HotkeyActions`. So the setups are held
+   * against the catalog, which is the nearest thing to that enum that
+   * lives in this repository.
+   */
+  it("press only buttons the catalog knows", async () => {
+    const { catalogFor, opDef } = await import("./catalog.ts");
+    const catalog = catalogFor("TarnishedTool");
+    const presses = new Set(opDef(catalog, "action.invoke")?.args.find((a) => a.name === "action")?.options ?? []);
+    expect(presses.size, "the catalog should list some presses").toBeGreaterThan(0);
+
+    const unknown: string[] = [];
+    for (const s of forTool(await shippedSetups(), "TarnishedTool")) {
+      for (const op of s.ops) {
+        if (op.op !== "action.invoke") continue;
+        const action = (op.args as { action?: unknown } | undefined)?.action;
+        if (typeof action === "string" && !presses.has(action)) unknown.push(`${s.id}: no such press "${action}"`);
+      }
+    }
+    expect(unknown, unknown.join("; ")).toEqual([]);
+  });
+
   it("are offered by tool rather than by pack, which is why they are their own document", async () => {
     const all = await shippedSetups();
     expect(forTool(all, "TarnishedTool").length).toBeGreaterThan(0);

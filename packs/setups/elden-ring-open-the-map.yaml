@@ -1,0 +1,38 @@
+# The Lands Between, already walked.
+#
+# Four presses rather than four gifts. A map is not an item the tool can
+# hand over, and neither is a grace; both are things it unlocks, so these
+# are `action.invoke` rather than `item.named`.
+#
+# The unlocks and not the toggles beside them. `ShowAllMaps` flips
+# whatever the setting happened to be, so a run playing under it cannot
+# say what it started with; `UnlockMainGameMaps` hands the maps over and
+# is the same afterwards however many times it is pressed.
+#
+# The DLC lines are harmless without the DLC: the tool refuses a press it
+# cannot make rather than failing the run.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.open-the-map
+version: "1.0.0"
+title: Open the Map
+author: Runlog
+description: >-
+  Every map fragment and every site of grace, unlocked. The world is
+  drawn and everywhere is one warp away, so a run can start wherever it
+  means to start instead of walking there first.
+
+tool: TarnishedTool
+
+ops:
+  - { op: action.invoke, args: { action: UnlockMainGameMaps }, once: true }
+  - { op: action.invoke, args: { action: UnlockDlcMaps }, once: true }
+  - { op: action.invoke, args: { action: UnlockAllMainGameGraces }, once: true }
+  - { op: action.invoke, args: { action: UnlockAllDlcGraces }, once: true }
+
+license:
+  id: MIT
+  redistributable: true
