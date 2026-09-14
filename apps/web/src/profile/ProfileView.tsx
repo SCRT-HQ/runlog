@@ -19,6 +19,8 @@ import { usePlan } from "../sync/usePlan.ts";
 import { useInvites } from "../share/useInvites.ts";
 import { liveLinkOf } from "../live/route.ts";
 import { PROFILE_PAGES, profileHash, type ProfilePage } from "./route.ts";
+import { DeviceSettings } from "../settings/DeviceSettings.tsx";
+import { useAlertSettings } from "../alerts/useAlerts.ts";
 import { linkTo } from "../route.ts";
 import { ConnectionsSection } from "../connections/ConnectionsSection.tsx";
 import { PlanSection } from "./PlanSection.tsx";
@@ -115,6 +117,29 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
   // Whether the server tier is this account's to see, for the nav.
   const plan = usePlan();
 
+  /*
+   * The device's settings need no account, so they are not behind the
+   * sign-in that everything else here is.
+   *
+   * The app never needs an account: that is the premise, and a copy on
+   * disk has nobody to sign in as. Somebody playing that way still has
+   * sounds to turn off and dice to hand over, and until now the only door
+   * to those was a run's settings, which means starting a run to reach
+   * them.
+   */
+  if (page === "settings") {
+    return (
+      <main className="main">
+        <div className="profileLayout">
+          <ProfileNav page={page} onNavigate={onNavigate} waiting={invitations.invites.length} servers={plan.servers} />
+          <div className="profileBody">
+            <SettingsPage />
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   if (account.status !== "signed-in") {
     return (
       <main className="main">
@@ -194,6 +219,7 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
             />
           )}
           {page === "social" && <SocialPage api={api} onOpenRun={onOpenRun} onJoinInvite={onJoinInvite} invitations={invitations} />}
+          {/* Settings is answered above: it needs no account, so it never reaches here. */}
           {page === "servers" && <ServersPage api={api} />}
         </div>
       </div>
@@ -1026,5 +1052,34 @@ function InviteFriend({ api }: { api: Api | null }) {
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * This device's settings, as a page rather than only as a dialog.
+ *
+ * The same pane a run's settings opens on, which is the point: somebody
+ * who is not in a run had nowhere to turn the sounds off, and somebody
+ * who is should not have to leave one to do it. It reads and writes this
+ * device's own storage, so the two are two views of one thing rather than
+ * two states to keep in step.
+ *
+ * No `rolling`, because there is no run here. "Roll for me" then means
+ * what it says on the tin: the default the next run starts with.
+ */
+function SettingsPage() {
+  const [alerts, setAlerts] = useAlertSettings();
+  return (
+    <div className="profile">
+      <section className="panel">
+        <h3 className="sectionTitle">
+          This device <span className="muted">kept here, not in your account</span>
+        </h3>
+        <p className="muted small">
+          The theme is in the account menu, where it can be tried and put back without opening anything.
+        </p>
+        <DeviceSettings alerts={alerts} onAlerts={setAlerts} />
+      </section>
+    </div>
   );
 }

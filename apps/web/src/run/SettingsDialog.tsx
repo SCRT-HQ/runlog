@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertsPanel } from "../alerts/AlertsPanel.tsx";
 import type { AlertSettings } from "../alerts/settings.ts";
-import { Dice3dSwitch } from "../dice/Dice3dSwitch.tsx";
-import { ThemeMenu } from "../theme/ThemeMenu.tsx";
-import { carriesOnByItself, rollsForMeByDefault, setCarriesOnByItself, setRollsForMeByDefault } from "./pace.ts";
+import { DeviceSettings } from "../settings/DeviceSettings.tsx";
 import { StreamSettings } from "./StreamPanel.tsx";
 import { ChatSettings } from "./ChatPanel.tsx";
 import { ControlSettings } from "./ControlSettings.tsx";
@@ -61,8 +58,6 @@ export function SettingsDialog({
 }) {
   const close = useRef<HTMLButtonElement>(null);
   const [tab, setTab] = useState<Tab>("device");
-  const [carryOn, setCarryOn] = useState(carriesOnByItself);
-  const [rollForMe, setRollForMe] = useState(rollsForMeByDefault);
   useEffect(() => {
     close.current?.focus();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -88,13 +83,6 @@ export function SettingsDialog({
   // A tab that is no longer there, because the run closed under it, must
   // not leave the sheet blank.
   const at = tabs.some((t) => t.id === tab) ? tab : "device";
-  const rollSwitch = rolling ? rolling.auto : rollForMe;
-  const setRoll = (on: boolean) => {
-    // The device remembers the choice for the next run; the open run takes it now.
-    setRollsForMeByDefault(on);
-    setRollForMe(on);
-    rolling?.onAuto(on);
-  };
 
   return (
     <div className="veil" role="presentation" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -120,50 +108,7 @@ export function SettingsDialog({
           </div>
         </div>
 
-        {at === "device" && (
-          <>
-            <section>
-              <h3 className="sectionTitle">
-                Look <span className="muted">the lights</span>
-              </h3>
-              <ThemeMenu />
-            </section>
-
-            <section>
-              <h3 className="sectionTitle">
-                Alerts <span className="muted">and sounds</span>
-              </h3>
-              <AlertsPanel settings={alerts} onChange={onAlerts} />
-            </section>
-
-            <section>
-              <h3 className="sectionTitle">
-                Rolls <span className="muted">whose dice, and how fast</span>
-              </h3>
-              <Dice3dSwitch />
-              {rolling?.seeded ? (
-                <p className="muted small">This run rolls from its seed, so everyone at it meets the same dice.</p>
-              ) : (
-                <label className="toggle" title="Off by default: the dice are yours">
-                  <input type="checkbox" checked={rollSwitch} onChange={(e) => setRoll(e.target.checked)} />
-                  <span>Roll for me, without asking</span>
-                </label>
-              )}
-              <label className="toggle" title="A receipt shows what a roll did; by default it waits for Carry on">
-                <input
-                  type="checkbox"
-                  checked={carryOn}
-                  onChange={(e) => {
-                    setCarriesOnByItself(e.target.checked);
-                    setCarryOn(e.target.checked);
-                  }}
-                />
-                <span>After a roll, carry on by itself</span>
-              </label>
-              <p className="muted small">Kept on this device.</p>
-            </section>
-          </>
-        )}
+        {at === "device" && <DeviceSettings alerts={alerts} onAlerts={onAlerts} {...(rolling ? { rolling } : {})} />}
 
         {at === "widgets" && runId !== null && (
           <section>

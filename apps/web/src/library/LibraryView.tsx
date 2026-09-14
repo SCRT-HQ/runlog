@@ -212,7 +212,13 @@ export function LibraryView({
                   </button>
                 )}
                 <DocMenu compact pack={() => loadPackText(p.source, p.record?.format ?? "yaml").pack} at={{ section: "packs", id: p.id }} />
-                <button className="ghost tiny" onClick={() => onStartAnother(p)}>
+                {/*
+                  The one thing anybody came here to do, and it looked
+                  like the four things beside it. Documents, Test, Every
+                  server, Replace and Forget are all errands; starting is
+                  the point of a shelf of packs.
+                */}
+                <button className="primary tiny" onClick={() => onStartAnother(p)}>
                   {mine.length > 0 ? `Start another ${v.run.one.toLowerCase()}` : `Start ${an(v.run.one.toLowerCase())}`}
                 </button>
                 {onTest && (

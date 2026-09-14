@@ -47,16 +47,32 @@ describe("the account", () => {
     expect(html).toContain("Theme");
   });
 
-  it("hands the theme to the settings sheet where the app has one", () => {
+  it("keeps the theme in the menu, whether or not there is a settings sheet to open", () => {
     vi.stubEnv("VITE_WORKOS_CLIENT_ID", "");
-    const html = renderToStaticMarkup(
+    /*
+     * It used to be one or the other: a Settings item where the app had a
+     * sheet, the theme itself where it did not. Changing the theme is the
+     * one thing in there somebody does on a whim and undoes ten seconds
+     * later, and it was behind a dialog that had to be shut to see what
+     * it did.
+     */
+    const withSheet = renderToStaticMarkup(
       <AccountProvider>
         <AccountBadge onOpenSettings={() => {}} />
       </AccountProvider>,
     );
-    expect(html).toContain("Settings");
-    expect(html).toContain("theme, sounds, dice, rolls");
-    expect(html).not.toContain("<select");
+    expect(withSheet).toContain("Settings");
+    expect(withSheet).toContain("<select");
+    // And the sheet no longer claims the theme is in it.
+    expect(withSheet).toContain("sounds, dice, rolls");
+    expect(withSheet).not.toContain("theme, sounds, dice, rolls");
+
+    const without = renderToStaticMarkup(
+      <AccountProvider>
+        <AccountBadge />
+      </AccountProvider>,
+    );
+    expect(without).toContain("<select");
   });
 
   it("offers sign-in from the first paint where there is", () => {
