@@ -306,29 +306,31 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
   const runSeed = state?.seed ?? seed;
 
   /**
-   * A shared run rolls its own dice.
+   * A seeded run rolls its own dice, and the seed is the whole of it.
    *
-   * The point of a seeded mode is that several people meet the identical
-   * sequence, and they cannot if any of them is entering numbers from the dice
-   * on their own desk. So a seed overrides the auto-roll preference rather
-   * than sitting alongside it.
+   * Several people meet the identical sequence only if none of them is
+   * entering numbers from the dice on their own desk, so a seed overrides the
+   * auto-roll preference rather than sitting alongside it.
+   *
+   * The mode has no say. This used to want a seed *and* a mode declaring
+   * itself seeded, which meant two people who had agreed on a seed met
+   * different runs depending on which mode they picked, while the screen where
+   * they typed it promised the opposite. A mode that calls itself seeded now
+   * only insists on having one; what having one does is the same everywhere.
    */
-  const seededRun = runSeed !== "" && Boolean(pack.modes[state?.mode ?? pack.defaultMode]?.seeded);
+  const seededRun = runSeed !== "";
 
   const randomSource = useCallback(
     (keyPrefix: string) => {
-      if (seededRun && runSeed) {
-        // Addressed by where in the game the roll falls rather than by how far
-        // down the log it is, so two players whose runs diverge still meet the
-        // same dungeon.
-        const unit = state?.unit ?? 0;
-        const before = events.filter((e) => e.t === "Rolled" && e.purpose === keyPrefix && unitOf(events, e) === unit).length;
-        return createRandom(streamSeed(runSeed, unit, keyPrefix, before));
-      }
-      if (!autoRoll) return undefined;
-      return runSeed ? createRandom(`${runSeed}:${events.length}`) : Math.random;
+      if (!runSeed) return autoRoll ? Math.random : undefined;
+      // Addressed by where in the game the roll falls rather than by how far
+      // down the log it is, so two players whose runs diverge still meet the
+      // same dungeon.
+      const unit = state?.unit ?? 0;
+      const before = events.filter((e) => e.t === "Rolled" && e.purpose === keyPrefix && unitOf(events, e) === unit).length;
+      return createRandom(streamSeed(runSeed, unit, keyPrefix, before));
     },
-    [autoRoll, runSeed, events, state, seededRun],
+    [autoRoll, runSeed, events, state],
   );
 
   /* ---------------------------------------------------------------- *

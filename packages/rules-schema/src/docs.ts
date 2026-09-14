@@ -328,7 +328,7 @@ export function modeDoc(pack: Pack, modeId: string): Doc {
   const n = nouns(pack);
   b.p(m.description ?? `One way to play ${pack.title}.`);
   b.p(
-    `${cap(modeLength(pack, m))}, ${modePlayers(m)}${m.seeded ? ", seeded so every copy rolls the same" : ""}.${modeId === pack.defaultMode ? " The default." : ""}`,
+    `${cap(modeLength(pack, m))}, ${modePlayers(m)}${m.seeded ? ", shared, so it needs a seed" : ""}.${modeId === pack.defaultMode ? " The default." : ""}`,
     "muted",
   );
   const extras = modeExtras(pack, m);
