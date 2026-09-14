@@ -48,7 +48,7 @@ describe("the marketplace", () => {
 
 describe("publishers in the marketplace", () => {
   const entry = (id: string, publisher: { id: string; name: string } | undefined, price: MarketplaceEntry["price"]): MarketplaceEntry =>
-    ({ id, version: "1", title: id, category: "games", tags: [], features: [], requires: [], players: 1, kind: "", price, publisher, source: "listing", load: async () => "" }) as MarketplaceEntry;
+    ({ id, version: "1", title: id, category: "games", tags: [], features: [], requires: [], players: 1, blurb: "", kind: "pack", price, publisher, source: "listing", load: async () => "" }) as MarketplaceEntry;
   const all = [
     entry("a", { id: "org1", name: "Kiln Works" }, "free"),
     entry("b", { id: "org1", name: "Kiln Works" }, { amount: 300, currency: "usd", display: "$3.00" }),
@@ -86,7 +86,8 @@ describe("the test bench", () => {
     features: [],
     requires: [],
     players: 1,
-    kind: "",
+    blurb: "",
+    kind: "pack",
     price: "free",
     source: "bundled",
     load: async () => "",

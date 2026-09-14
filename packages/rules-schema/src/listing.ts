@@ -10,7 +10,23 @@ import type { Pack } from "./pack.ts";
  * the built-ins, and the app's own upload all go through here, so a card
  * looks the same whoever made it.
  */
+/**
+ * What kind of thing a listing is.
+ *
+ * The marketplace sold one kind of thing and so never had to say which.
+ * A setup is a document of its own, written for a tool rather than for a
+ * pack, and somebody looking for one is not looking for the other.
+ *
+ * The same word the documents use: a setup declares `kind: setup` and a
+ * pack declares nothing, so absence means pack here exactly as it does
+ * there, and every listing already written stays a pack without being
+ * touched.
+ */
+export type ListingKind = "pack" | "setup";
+
 export interface ListingHead {
+  /** Absent on every listing written before there was more than one kind. */
+  kind?: ListingKind;
   title: string;
   version: string;
   author?: string;

@@ -15,7 +15,15 @@ import { traced } from "./xray.js";
  * alongside the text.
  */
 
+export type ListingKind = "pack" | "setup";
+
 export interface ListingHead {
+  /**
+   * What the listing is. Absent on everything listed before there was
+   * more than one kind, which is why the app reads its absence as a pack
+   * rather than as a listing with something missing.
+   */
+  kind?: ListingKind;
   title: string;
   version: string;
   author?: string;
@@ -152,6 +160,9 @@ export function headOf(v: unknown): ListingHead | null {
     : [];
   const players = Number(r["players"]);
   return {
+    // Only the one other kind is a kind; anything else is a pack, which
+    // is what every listing was before this field existed.
+    ...(r["kind"] === "setup" ? { kind: "setup" as const } : {}),
     title: r["title"],
     version: r["version"],
     ...(s(r["author"], 120) ? { author: r["author"] } : {}),

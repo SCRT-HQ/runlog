@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { facets, featuresOf, filterMarketplace, type MarketplaceEntry } from "./marketplace.ts";
+import { facets, featuresOf, filterMarketplace, kindCounts, type MarketplaceEntry } from "./marketplace.ts";
 
 /**
  * The sidebar's logic, without the sidebar: features read off a pack's
@@ -15,7 +15,8 @@ const entry = (over: Partial<MarketplaceEntry> & { id: string }): MarketplaceEnt
   source: "bundled",
   players: 1,
   requires: [],
-  kind: "",
+  blurb: "",
+  kind: "pack",
   price: "free",
   load: async () => "",
   ...over,
@@ -76,5 +77,39 @@ describe("narrowing the marketplace", () => {
     expect(f.features[0]).toMatchObject({ id: "solo", count: 2 });
     expect(f.tags.find((t) => t.value === "Elden Ring")?.count).toBe(1);
     expect(f.authors).toEqual([{ value: "Runlog", count: 1 }]);
+  });
+});
+
+/**
+ * The marketplace sold one kind of thing and so never had to say which.
+ *
+ * A setup is a document of its own, written for a tool rather than for a
+ * pack, and somebody looking for one is not looking for the other. What
+ * has to hold is that the second kind arriving changes nothing for
+ * anybody who only wants the first.
+ */
+describe("kinds of listing", () => {
+  const packs = [entry({ id: "a" }), entry({ id: "b" })];
+  const setups = [{ ...entry({ id: "s" }), kind: "setup" as const }];
+  const all = [...packs, ...setups];
+
+  it("shows one kind at a time when asked", () => {
+    expect(filterMarketplace(all, { kind: "pack" }).map((e) => e.id)).toEqual(["a", "b"]);
+    expect(filterMarketplace(all, { kind: "setup" }).map((e) => e.id)).toEqual(["s"]);
+  });
+
+  it("shows everything when not asked, which is what it did before there were kinds", () => {
+    expect(filterMarketplace(all, {}).map((e) => e.id)).toEqual(["a", "b", "s"]);
+  });
+
+  it("counts each kind, so a chooser need not offer an empty one", () => {
+    expect(kindCounts(all)).toEqual({ pack: 2, setup: 1 });
+    expect(kindCounts(packs)).toEqual({ pack: 2, setup: 0 });
+  });
+
+  it("narrows with the other filters rather than instead of them", () => {
+    const tagged = [...packs, { ...entry({ id: "s2" }), kind: "setup" as const, tags: ["elden"] }];
+    expect(filterMarketplace(tagged, { kind: "setup", tags: new Set(["elden"]) }).map((e) => e.id)).toEqual(["s2"]);
+    expect(filterMarketplace(tagged, { kind: "pack", tags: new Set(["elden"]) })).toEqual([]);
   });
 });

@@ -177,7 +177,7 @@ export function HomeStrip<P extends { id: string; title: string }>({
           <ul className="homeList">
             {fresh.map((e) => (
               <li key={e.id}>
-                <button className="linkButton" onClick={onMarketplace} title={e.description ?? e.kind}>
+                <button className="linkButton" onClick={onMarketplace} title={e.description ?? e.blurb}>
                   {e.title}
                 </button>
                 <span className="muted small"> · {e.price === "free" ? "free" : e.price.display}</span>
