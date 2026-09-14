@@ -385,7 +385,7 @@ describe("the held-run list is pushed when it changes", () => {
 
     expect(await live.connection("deck1")).toMatchObject({ deck: true, run: "s1" });
     const toPage = posted.filter(([id]) => id === "page").map(([, l]) => JSON.parse(l));
-    expect(toPage.find((l) => l.t === "gesture")).toMatchObject({ t: "gesture", kind: "tools" });
+    expect(toPage.find((l) => l.t === "gesture")).toMatchObject({ t: "gesture", kind: "tools", data: { decks: 1 } });
   });
 });
 

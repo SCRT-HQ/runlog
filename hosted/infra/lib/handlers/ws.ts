@@ -217,7 +217,8 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     if (!poster) return;
     const watching = await deps.live.watchers(run);
     const tools = watching.filter((w) => w.control).map((w) => ({ ...(w.seat ? { seat: w.seat } : {}), ...(w.app ? { app: w.app } : {}) }));
-    const line = JSON.stringify({ t: "gesture", id: run, kind: "tools", data: { tools, count: tools.length }, at: now() });
+    const decks = watching.filter((w) => w.deck).length;
+    const line = JSON.stringify({ t: "gesture", id: run, kind: "tools", data: { tools, count: tools.length, decks }, at: now() });
     for (const w of watching) {
       // A tool is told in operations, never in words about itself.
       if (w.control) continue;

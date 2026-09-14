@@ -65,12 +65,13 @@ import { bestOf, placeOf, scoresOf, type ScoredRun } from "./scores.ts";
 import { RacePanel } from "./RacePanel.tsx";
 import { useApi } from "../sync/useApi.ts";
 import { useReachable } from "./useReachable.ts";
-import { useAttachedTools, toolFor, type AttachedTool } from "./useAttachedTools.ts";
+import { useAttachedDecks, useAttachedTools, toolFor, type AttachedTool } from "./useAttachedTools.ts";
 import { ulid } from "../storage/ids.ts";
 import { clearPendingRaceCode, pendingRaceCode } from "../share/IncomingRace.tsx";
 import { PlanError } from "../sync/client.ts";
 import { liveLinkOf } from "../live/route.ts";
-import { paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
+import { entryTextOf, paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
+import { offerOf } from "./offer.ts";
 import { isEmpty, tidy, type ControlProfile } from "../control/profile.ts";
 import { chosenFrom, withChosen, type ChosenSetup } from "../control/setups.ts";
 import { SetupPicker } from "./SetupPicker.tsx";
@@ -79,6 +80,31 @@ import { useRace } from "./useRace.ts";
 import { RunRail, type Pane } from "./RunRail.tsx";
 import { useEnterMoves } from "../ui/useEnterMoves.ts";
 import { useConfirm } from "../ui/useConfirm.tsx";
+
+/**
+ * The active step's own heading, the same word the page shows above it.
+ *
+ * Each step kind picks its own fallback where the pack left the label
+ * blank -- a table's title, the phase's own label, the finalize verb --
+ * and this is the one place that mirrors all of them, for the offer that
+ * rides beside the snapshot.
+ */
+function activeStepLabel(pack: Pack, active: ActiveStep | null): string | null {
+  if (!active) return null;
+  const { phase, step } = active;
+  switch (step.kind) {
+    case "rollTable":
+      return step.label ?? pack.tables[step.table]?.title ?? step.table;
+    case "declareSubject":
+      return step.label ?? `Declare the ${pack.vocabulary.subject.one}`;
+    case "actions":
+      return phase.label;
+    case "manual":
+      return step.closesUnit ? (step.label ?? pack.vocabulary.finalize) : step.label;
+    case "finalizeUnit":
+      return step.label ?? pack.vocabulary.finalize;
+  }
+}
 
 /**
  * Playing a run.
@@ -138,14 +164,17 @@ export function RunView({
 
   /**
    * A run shared by link keeps a snapshot on the server for anyone whose
-   * device may not hold the pack: written from here after each move,
-   * redacted here, where the pack and its license are.
+   * device may not hold the pack. A run with a deck on it keeps one for a
+   * different reason: the deck has no engine and reads the offer from
+   * here. Neither is the other's business, so either is enough.
    */
+  const decks = useAttachedDecks(run.record?.runId ?? null);
   const shared = Boolean(!remote && run.record && run.record.role !== "viewer" && (run.record.shared || liveLinkOf(run.record.runId)));
+  const publishing = shared || decks > 0;
   // The race this run is in, if any: the side column's panel and the snapshot both read it.
   const raceView = useRace(run.record, run.state, run.events);
   useEffect(() => {
-    if (!api || !shared || !run.record || !run.state) return;
+    if (!api || !publishing || !run.record || !run.state) return;
     const record = run.record;
     const state = run.state;
     const events = run.events;
@@ -167,13 +196,25 @@ export function RunView({
         .putSnapshot(record.runId, {
           ...snapshotOf(pack, state, events, undefined, { race }),
           paper: paperOf(pack, state.mode),
+          offer: offerOf({
+            seq: events.length,
+            live: Boolean(run.started) && !run.readOnly && state.status !== "ended",
+            settled: run.pending === null,
+            step: run.activeStep?.step ?? null,
+            stepLabel: activeStepLabel(pack, run.activeStep),
+            moves: run.moves.map((m) => ({ id: m.id, label: m.move.label })),
+            canUndo: run.canUndo,
+            lastResult: state.outcomes.at(-1) ? entryTextOf(pack, state.outcomes.at(-1)!) : null,
+            owed: run.blockingObligations.length,
+            suggestions: subjectSuggestions(pack, state).slice(0, 8),
+          }),
           ...control,
         })
         .catch(() => {});
     }, 800);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, shared, run.events, pack, raceView.race, run.record?.control, run.record?.setup]);
+  }, [api, publishing, decks, run.events, pack, raceView.race, run.record?.control, run.record?.setup]);
 
   /**
    * Starting a race, or joining one: an ordinary run of this pack with the
