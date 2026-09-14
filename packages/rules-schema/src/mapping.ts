@@ -24,8 +24,17 @@ import type { Diagnostic } from "./lint.ts";
 /** One thing to do, in the tool's own vocabulary. */
 export const MappingOp = z
   .object({
-    op: z.string().min(1).max(64).describe("The operation, in the tool's own words: `speffect.apply`, `runes.give`. A tool refuses by name anything its build does not have."),
-    args: z.record(z.string(), z.unknown()).optional().describe("What the operation takes. Its shape is the tool's business, not this format's."),
+    op: z
+      .string()
+      .min(1)
+      .max(64)
+      .describe(
+        "The operation, in the tool's own words: `speffect.apply`, `runes.give`. A tool refuses by name anything its build does not have.",
+      ),
+    args: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe("What the operation takes. Its shape is the tool's business, not this format's."),
   })
   .strict();
 
@@ -49,7 +58,9 @@ export const MappingRule = z
     ops: z.array(MappingOp).min(1).max(50).describe("What to do when it fires, in order."),
   })
   .strict()
-  .refine((r) => !(r.for !== undefined && r.until !== undefined), { message: "a rule lasts for seconds or until the unit closes, not both" });
+  .refine((r) => !(r.for !== undefined && r.until !== undefined), {
+    message: "a rule lasts for seconds or until the unit closes, not both",
+  });
 
 export type MappingRule = z.infer<typeof MappingRule>;
 
@@ -71,7 +82,13 @@ export const Mapping = z
      * which packs they actually tried, so a chooser can put the ones
      * written for your game first instead of listing everything.
      */
-    packs: z.array(PackId).max(50).optional().describe("Packs the author wrote this against, so a chooser can offer the likely ones first. Not a restriction: a mapping fires on any pack carrying the marks it names."),
+    packs: z
+      .array(PackId)
+      .max(50)
+      .optional()
+      .describe(
+        "Packs the author wrote this against, so a chooser can offer the likely ones first. Not a restriction: a mapping fires on any pack carrying the marks it names.",
+      ),
     rules: z.array(MappingRule).min(1).max(500).describe("The rules, in order. Every one that matches fires."),
     license: z
       .object({
@@ -88,7 +105,8 @@ export const Mapping = z
 
 export type Mapping = z.infer<typeof Mapping>;
 
-export type MappingResult = { ok: true; mapping: Mapping; diagnostics: Diagnostic[] } | { ok: false; mapping: null; diagnostics: Diagnostic[] };
+export type MappingResult =
+  { ok: true; mapping: Mapping; diagnostics: Diagnostic[] } | { ok: false; mapping: null; diagnostics: Diagnostic[] };
 
 /** The major version of this format that this build understands. */
 export const MAPPING_SCHEMA_VERSION = 1;
@@ -112,11 +130,16 @@ export function parseMapping(input: unknown): MappingResult {
   if (typeof input !== "object" || input === null || Array.isArray(input)) return fail("mapping/shape", "a mapping is an object");
   const raw = input as Record<string, unknown>;
 
-  if (raw["kind"] !== "mapping") return fail("mapping/kind", `this is not a mapping: kind is ${JSON.stringify(raw["kind"]) ?? "missing"}`, "kind");
+  if (raw["kind"] !== "mapping")
+    return fail("mapping/kind", `this is not a mapping: kind is ${JSON.stringify(raw["kind"]) ?? "missing"}`, "kind");
 
   const version = raw["schemaVersion"];
   if (version !== MAPPING_SCHEMA_VERSION) {
-    return fail("mapping/version", `this build reads schemaVersion ${MAPPING_SCHEMA_VERSION}, and this says ${JSON.stringify(version) ?? "nothing"}`, "schemaVersion");
+    return fail(
+      "mapping/version",
+      `this build reads schemaVersion ${MAPPING_SCHEMA_VERSION}, and this says ${JSON.stringify(version) ?? "nothing"}`,
+      "schemaVersion",
+    );
   }
 
   const parsed = Mapping.safeParse(raw);

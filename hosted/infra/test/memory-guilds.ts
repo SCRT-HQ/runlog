@@ -106,7 +106,11 @@ export function memoryDiscord(): DiscordRest & {
 }
 
 /** Discord's OAuth side, for a verification: one code is good, and what was written onto the person is kept. */
-export function memoryOAuth(): DiscordOAuth & { pushed: Array<{ token: string; platformUsername: string; metadata: Record<string, string | number> }>; exchanged: Array<{ code: string; redirectUri: string }>; who: { id: string; name: string } } {
+export function memoryOAuth(): DiscordOAuth & {
+  pushed: Array<{ token: string; platformUsername: string; metadata: Record<string, string | number> }>;
+  exchanged: Array<{ code: string; redirectUri: string }>;
+  who: { id: string; name: string };
+} {
   const me = {
     pushed: [] as Array<{ token: string; platformUsername: string; metadata: Record<string, string | number> }>,
     exchanged: [] as Array<{ code: string; redirectUri: string }>,
@@ -128,7 +132,14 @@ export function memoryOAuth(): DiscordOAuth & { pushed: Array<{ token: string; p
 }
 
 /** Discord's rows, in Maps, with the same rules as the real one: a code is spent by being read, a link or a claim replaces on both sides, and a vault never hands its packs back. */
-export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; claims: Map<string, ClaimCode>; links: Map<string, Connection[]>; guilds: Map<string, Guild>; vault: Map<string, { meta: GuildPackMeta; source: string }>; runs: Map<string, GuildRun> } {
+export function memoryGuilds(): GuildStore & {
+  codes: Map<string, LinkCode>;
+  claims: Map<string, ClaimCode>;
+  links: Map<string, Connection[]>;
+  guilds: Map<string, Guild>;
+  vault: Map<string, { meta: GuildPackMeta; source: string }>;
+  runs: Map<string, GuildRun>;
+} {
   const runs = new Map<string, GuildRun>();
   const codes = new Map<string, LinkCode>();
   const verifying = new Map<string, VerifyState>();
@@ -194,7 +205,11 @@ export function memoryGuilds(): GuildStore & { codes: Map<string, LinkCode>; cla
       // The service account belongs to one Runlog account; everything else
       // either side holds stays where it is.
       const previousOwner = owners.get(c.accountId);
-      if (previousOwner && previousOwner !== sub) links.set(previousOwner, (links.get(previousOwner) ?? []).filter((x) => x.accountId !== c.accountId));
+      if (previousOwner && previousOwner !== sub)
+        links.set(
+          previousOwner,
+          (links.get(previousOwner) ?? []).filter((x) => x.accountId !== c.accountId),
+        );
       links.set(sub, [...(links.get(sub) ?? []).filter((x) => x.accountId !== c.accountId), { ...c }]);
       owners.set(c.accountId, sub);
     },

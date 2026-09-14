@@ -55,11 +55,31 @@ const label = (route: WidgetRoute) => WIDGET_KINDS.find((k) => k.kind === route.
 function ByLink({ route, token }: { route: WidgetRoute; token: string }) {
   const { got, snapshot, offline, gesture } = usePublicRun(route.runId, token);
   const lines = useTicker(snapshot, gesture);
-  if (offline) return <Frame title={label(route)}><p className="widgetNote">A widget by link needs the hosted copy of Runlog.</p></Frame>;
+  if (offline)
+    return (
+      <Frame title={label(route)}>
+        <p className="widgetNote">A widget by link needs the hosted copy of Runlog.</p>
+      </Frame>
+    );
   if (got === undefined) return <Frame title={label(route)} />;
-  if (got === null) return <Frame title={label(route)}><p className="widgetNote">This link is not open any more.</p></Frame>;
-  if (!snapshot) return <Frame title={label(route)}><p className="widgetNote">Nothing written to the run yet.</p></Frame>;
-  if (route.kind === "race" && !snapshot.race) return <Frame title={label(route)}><p className="widgetNote">This run is not in a race.</p></Frame>;
+  if (got === null)
+    return (
+      <Frame title={label(route)}>
+        <p className="widgetNote">This link is not open any more.</p>
+      </Frame>
+    );
+  if (!snapshot)
+    return (
+      <Frame title={label(route)}>
+        <p className="widgetNote">Nothing written to the run yet.</p>
+      </Frame>
+    );
+  if (route.kind === "race" && !snapshot.race)
+    return (
+      <Frame title={label(route)}>
+        <p className="widgetNote">This run is not in a race.</p>
+      </Frame>
+    );
   return <Page kind={route.kind} snapshot={snapshot} lines={lines} />;
 }
 
@@ -126,13 +146,32 @@ function FromHere({ route }: { route: WidgetRoute }) {
   if (record === null || !pack) {
     return (
       <Frame title={label(route)}>
-        <p className="widgetNote">{record === null ? "This run is not on this device. Open it in the app first." : "The run's pack is not on this device."}</p>
+        <p className="widgetNote">
+          {record === null ? "This run is not on this device. Open it in the app first." : "The run's pack is not on this device."}
+        </p>
       </Frame>
     );
   }
-  if (!state || !snapshot) return <Frame title={label(route)}><p className="widgetNote">Not started yet.</p></Frame>;
-  if (route.kind === "race") return <div className="widget"><RaceWidget pack={pack} record={record} state={state} events={events} /></div>;
-  return <Page kind={route.kind} snapshot={snapshot} lines={lines} race={<RaceWidget pack={pack} record={record} state={state} events={events} inColumn />} />;
+  if (!state || !snapshot)
+    return (
+      <Frame title={label(route)}>
+        <p className="widgetNote">Not started yet.</p>
+      </Frame>
+    );
+  if (route.kind === "race")
+    return (
+      <div className="widget">
+        <RaceWidget pack={pack} record={record} state={state} events={events} />
+      </div>
+    );
+  return (
+    <Page
+      kind={route.kind}
+      snapshot={snapshot}
+      lines={lines}
+      race={<RaceWidget pack={pack} record={record} state={state} events={events} inColumn />}
+    />
+  );
 }
 
 function Frame({ title, children }: { title: string; children?: React.ReactNode }) {
@@ -154,7 +193,17 @@ function Frame({ title, children }: { title: string; children?: React.ReactNode 
  * it, trackers in a pack that has none, and takes the race leaderboard
  * where the page can draw one, which is the streamer's own machine.
  */
-function Page({ kind, snapshot, lines, race }: { kind: WidgetRoute["kind"]; snapshot: LiveSnapshot; lines: TickerLine[]; race?: React.ReactNode }) {
+function Page({
+  kind,
+  snapshot,
+  lines,
+  race,
+}: {
+  kind: WidgetRoute["kind"];
+  snapshot: LiveSnapshot;
+  lines: TickerLine[];
+  race?: React.ReactNode;
+}) {
   if (kind === "column") {
     return (
       <div className="widget column">
@@ -168,7 +217,11 @@ function Page({ kind, snapshot, lines, race }: { kind: WidgetRoute["kind"]; snap
       </div>
     );
   }
-  return <div className="widget"><Widget kind={kind} snapshot={snapshot} lines={lines} /></div>;
+  return (
+    <div className="widget">
+      <Widget kind={kind} snapshot={snapshot} lines={lines} />
+    </div>
+  );
 }
 
 function Widget({ kind, snapshot, lines }: { kind: WidgetRoute["kind"]; snapshot: LiveSnapshot; lines: TickerLine[] }) {
@@ -257,7 +310,19 @@ function ScoreboardWidget({ s }: { s: LiveSnapshot }) {
 }
 
 /** The race leaderboard from this device; in a column, a run outside any race draws nothing rather than saying so. */
-function RaceWidget({ pack, record, state, events, inColumn }: { pack: Pack; record: StoredRun; state: RunState; events: readonly RunEvent[]; inColumn?: boolean }) {
+function RaceWidget({
+  pack,
+  record,
+  state,
+  events,
+  inColumn,
+}: {
+  pack: Pack;
+  record: StoredRun;
+  state: RunState;
+  events: readonly RunEvent[];
+  inColumn?: boolean;
+}) {
   const race = useRace(record, state, events);
   const snap = raceOf(race.race, race.standings, pack.vocabulary.unit);
   if (!snap) {
@@ -281,7 +346,14 @@ function ClockWidget({ s }: { s: LiveSnapshot }) {
   if (shown) {
     const face = clockNow(shown, s.at, now);
     digits = formatClock(face.shown, shown.kind === "stopwatch" && face.shown < 60_000 && shown.status === "running");
-    tone = shown.status === "done" ? "done" : shown.status === "paused" ? "paused" : face.fraction !== null && face.fraction <= 0.1 ? "warn" : "";
+    tone =
+      shown.status === "done"
+        ? "done"
+        : shown.status === "paused"
+          ? "paused"
+          : face.fraction !== null && face.fraction <= 0.1
+            ? "warn"
+            : "";
   }
   return (
     <div className={`widgetBody clock ${tone}`}>
@@ -296,7 +368,9 @@ export function StepWidget({ s }: { s: LiveSnapshot }) {
   const constraints = s.constraints ?? [];
   return (
     <div className="widgetBody">
-      <div className="widgetTitle muted small">{s.words.unit} {s.unit || "-"}</div>
+      <div className="widgetTitle muted small">
+        {s.words.unit} {s.unit || "-"}
+      </div>
       <div className="widgetStep">{s.step ?? (s.status === "ended" ? `Ended${s.ending ? ` · ${s.ending}` : ""}` : "Waiting")}</div>
       {constraints.length > 0 && (
         <div className="notice constraints">
@@ -367,7 +441,9 @@ export function StatsWidget({ s }: { s: LiveSnapshot }) {
         {top && (
           <div>
             <dt className="muted small">Leading</dt>
-            <dd>{top.name} · {top.points}</dd>
+            <dd>
+              {top.name} · {top.points}
+            </dd>
           </div>
         )}
         {s.status === "ended" && (

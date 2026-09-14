@@ -83,8 +83,7 @@ export function SignatureBadge({ document, packId }: { document: unknown; packId
     return (
       <div className="signature">
         <span className="muted small">
-          This pack is signed, but {result.reason}. Nothing is wrong with it: the check
-          simply cannot run here.
+          This pack is signed, but {result.reason}. Nothing is wrong with it: the check simply cannot run here.
         </span>
       </div>
     );
@@ -95,8 +94,7 @@ export function SignatureBadge({ document, packId }: { document: unknown; packId
       <div className="signature bad">
         <strong>This pack has been changed since it was signed.</strong>
         <span className="muted small">
-          It will still play, nothing here stops you, but it is not what its author
-          released, so do not judge their game by it.
+          It will still play, nothing here stops you, but it is not what its author released, so do not judge their game by it.
         </span>
       </div>
     );
@@ -108,43 +106,43 @@ export function SignatureBadge({ document, packId }: { document: unknown; packId
   return (
     <div className="signature">
       <button className="disclose" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        {open ? "▾" : "▸"} Signed{claim?.publisher ? ` by ${claim.publisher.name}` : claim?.name ? ` by ${claim.name}` : result.signedBy ? ` - “${result.signedBy}”` : ""}
+        {open ? "▾" : "▸"} Signed
+        {claim?.publisher
+          ? ` by ${claim.publisher.name}`
+          : claim?.name
+            ? ` by ${claim.name}`
+            : result.signedBy
+              ? ` - “${result.signedBy}”`
+              : ""}
       </button>{" "}
       <span className="muted small">
         {claim ? "a claimed key" : first ? "a key you have not seen before" : `seen on ${known?.packs.length ?? 1} pack(s)`}
         {issue?.to && ` · your copy, issued to ${issue.to}`}
       </span>
-
       {open && (
         <div className="signatureDetail">
           <p className="muted small">
-            The contents have not changed since they were signed. That is all a signature
-            proves: the key travels inside the pack, so the name above is what the signer
+            The contents have not changed since they were signed. That is all a signature proves: the key travels inside the pack, so the
+            name above is what the signer
             <em> claims</em> to be called, not proof of who they are.
           </p>
           <p className="fingerprint">{result.fingerprint}</p>
           {claim && (
             <p className="muted small">
-              This key is claimed by the account {claim.name ? `“${claim.name}”` : "of its owner"}: they proved they hold it, and the
-              name above is that account's, not the file's.
+              This key is claimed by the account {claim.name ? `“${claim.name}”` : "of its owner"}: they proved they hold it, and the name
+              above is that account's, not the file's.
             </p>
           )}
           {claim === null && apiBase() && (
             <p className="muted small">No account has claimed this key. The name, if any, is the file's own word.</p>
           )}
           <p className="muted small">
-            Compare that against the fingerprint the author publishes. If it matches, this
-            really is their release.
+            Compare that against the fingerprint the author publishes. If it matches, this really is their release.
           </p>
-          {alias && (
-            <p className="warnText">
-              This key has also signed as {names.filter((n) => n !== result.signedBy).join(", ")}.
-            </p>
-          )}
+          {alias && <p className="warnText">This key has also signed as {names.filter((n) => n !== result.signedBy).join(", ")}.</p>}
           {!first && known && (
             <p className="muted small">
-              First seen {known.firstSeen.slice(0, 10)}, across {known.packs.length}{" "}
-              {known.packs.length === 1 ? "pack" : "packs"}.
+              First seen {known.firstSeen.slice(0, 10)}, across {known.packs.length} {known.packs.length === 1 ? "pack" : "packs"}.
             </p>
           )}
         </div>

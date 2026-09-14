@@ -57,11 +57,7 @@ export function toDisplayDice(expr: string, values: number[], total: number): Ro
   return values.map((v) => ({ faces, display: String(v), label: `d${faces}` }));
 }
 
-export function resolveRoll(
-  table: Table,
-  pack: Pack,
-  random: () => number = Math.random,
-): RollResult {
+export function resolveRoll(table: Table, pack: Pack, random: () => number = Math.random): RollResult {
   switch (table.resolution) {
     case "lookup": {
       const { total, values } = roll(table.roll, random);
@@ -78,14 +74,9 @@ export function resolveRoll(
 
     case "bands": {
       const { total, values } = roll(table.roll, random);
-      const entry = table.entries.find(
-        (e) => (e.gte ?? -Infinity) <= total && total <= (e.lte ?? Infinity),
-      );
+      const entry = table.entries.find((e) => (e.gte ?? -Infinity) <= total && total <= (e.lte ?? Infinity));
       const bound = entry
-        ? [
-            entry.gte !== undefined ? `≥ ${entry.gte}` : null,
-            entry.lte !== undefined ? `≤ ${entry.lte}` : null,
-          ]
+        ? [entry.gte !== undefined ? `≥ ${entry.gte}` : null, entry.lte !== undefined ? `≤ ${entry.lte}` : null]
             .filter(Boolean)
             .join(" and ")
         : "";
@@ -106,10 +97,7 @@ export function resolveRoll(
       const bonus = table.addResource ? (pack.resources?.[table.addResource]?.initial ?? 0) : 0;
       const score = action.total + bonus;
 
-      const challenge = Array.from(
-        { length: table.challenge.count },
-        () => roll(table.challenge.dice, random).total,
-      );
+      const challenge = Array.from({ length: table.challenge.count }, () => roll(table.challenge.dice, random).total);
       const beaten = challenge.filter((c) => score > c).length;
       const entry = table.entries.find((e) => e.beats === beaten);
       const bonusText = table.addResource ? ` + ${bonus} ${table.addResource}` : "";

@@ -17,11 +17,7 @@ export interface FlowStrip {
   next: string | null;
 }
 
-export function flowStrip(
-  phases: Phase[],
-  current: { phase: Phase } | null,
-  skipped: (phase: Phase) => boolean,
-): FlowStrip | null {
+export function flowStrip(phases: Phase[], current: { phase: Phase } | null, skipped: (phase: Phase) => boolean): FlowStrip | null {
   if (!current) return null;
   const at = phases.findIndex((p) => p.id === current.phase.id);
   if (at < 0) return null;

@@ -104,7 +104,15 @@ export interface LiveSnapshot {
   subjects: Array<{ id: number; name: string; type: string | null; states: string[]; finalized: boolean; hits?: string[] }>;
   counters: Array<{ id: string; label: string; value: number }>;
   resources: Array<{ id: string; label: string; value: number; max?: number; display?: "boxes" | "bar" | "number" }>;
-  clocks: Array<{ id: string; label: string; kind: "stopwatch" | "timer"; seconds: number | null; status: "running" | "paused" | "done"; elapsedMs: number; expired: boolean }>;
+  clocks: Array<{
+    id: string;
+    label: string;
+    kind: "stopwatch" | "timer";
+    seconds: number | null;
+    status: "running" | "paused" | "done";
+    elapsedMs: number;
+    expired: boolean;
+  }>;
   /** Units closed, and time on the run. `timed` says the run keeps time by unit clocks; without them, elapsed is wall time since the start, which means little for a run played across days. */
   progress: { unitsDone: number; elapsedMs: number; timed: boolean };
   /** What the pack (or its mode) says this run scores, worded and ready to show. */
@@ -113,7 +121,7 @@ export interface LiveSnapshot {
   /** Newest first, numbered from the start. */
   log: Array<{ n: number; unit: number; where: string; hit: number | null; hitName?: string; text: string }>;
   /**
-   * Every result rolled this unit, in the order the dice landed on them: 
+   * Every result rolled this unit, in the order the dice landed on them:
    * "this unit so far" for a watcher, and a table a manual step draws its
    * constraints from may be rolled more than once. Absent from snapshots
    * written before it was carried.
@@ -167,7 +175,14 @@ export interface RaceSnapshot {
  */
 export function raceOf(
   race: { meta: { name?: string; endedAt?: string }; entries: readonly unknown[] } | null,
-  standings: ReadonlyArray<{ entry: { name?: string; progress?: { unit: number; unitsDone: number; status: "active" | "ended"; ending?: string; elapsedMs: number } }; place: number; me: boolean }>,
+  standings: ReadonlyArray<{
+    entry: {
+      name?: string;
+      progress?: { unit: number; unitsDone: number; status: "active" | "ended"; ending?: string; elapsedMs: number };
+    };
+    place: number;
+    me: boolean;
+  }>,
   words: { one: string; many: string },
 ): RaceSnapshot | undefined {
   if (!race) return undefined;
@@ -227,7 +242,8 @@ function phasesOf(pack: Pack, state: RunState) {
   // result triggered, a setback aimed at an earlier piece, belongs to the
   // phase whose roll led to it, which is the one before it in the log.
   const rolledBy = new Map<string, string>();
-  for (const phase of activePhases(pack, state)) for (const st of phase.steps) if (st.kind === "rollTable" && !rolledBy.has(st.table)) rolledBy.set(st.table, phase.id);
+  for (const phase of activePhases(pack, state))
+    for (const st of phase.steps) if (st.kind === "rollTable" && !rolledBy.has(st.table)) rolledBy.set(st.table, phase.id);
   const ownedIn = (unit: number): Array<{ outcome: RunState["outcomes"][number]; phase: string }> => {
     const owned: Array<{ outcome: RunState["outcomes"][number]; phase: string }> = [];
     let lastPhase: string | null = null;
@@ -272,31 +288,44 @@ function phasesOf(pack: Pack, state: RunState) {
       .map((phase) => ({ id: phase.id, label: phase.label, results: resultsOf(phase, unit) }))
       .filter((p) => p.results.length > 0),
   }));
-  const phases = state.unit > 0 && state.status !== "ended"
-    ? activePhases(pack, state).map((phase) => {
-        const done = state.phasesDone.includes(phase.id);
-        const current = step?.phase.id === phase.id;
-        const skipped = !done && !current && phaseSkipped(pack, state, phase);
-        const why = skipped ? describeSkipReason(pack, phase) : null;
-        const results = resultsOf(phase, state.unit);
-        return {
-          id: phase.id,
-          label: phase.label,
-          state: done ? ("done" as const) : current ? ("current" as const) : skipped ? ("skipped" as const) : ("todo" as const),
-          ...(why ? { why } : {}),
-          ...(results.length > 0 ? { results } : {}),
-        };
-      })
-    : [];
+  const phases =
+    state.unit > 0 && state.status !== "ended"
+      ? activePhases(pack, state).map((phase) => {
+          const done = state.phasesDone.includes(phase.id);
+          const current = step?.phase.id === phase.id;
+          const skipped = !done && !current && phaseSkipped(pack, state, phase);
+          const why = skipped ? describeSkipReason(pack, phase) : null;
+          const results = resultsOf(phase, state.unit);
+          return {
+            id: phase.id,
+            label: phase.label,
+            state: done ? ("done" as const) : current ? ("current" as const) : skipped ? ("skipped" as const) : ("todo" as const),
+            ...(why ? { why } : {}),
+            ...(results.length > 0 ? { results } : {}),
+          };
+        })
+      : [];
   return { step, phases, units };
 }
 
-export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEvent[], at: string = new Date().toISOString(), extra: { race?: RaceSnapshot | undefined } = {}): LiveSnapshot {
+export function snapshotOf(
+  pack: Pack,
+  state: RunState,
+  events: readonly RunEvent[],
+  at: string = new Date().toISOString(),
+  extra: { race?: RaceSnapshot | undefined } = {},
+): LiveSnapshot {
   const v = pack.vocabulary;
   const quoted = mayQuote(pack, "share");
   const now = Date.parse(at);
   const { step, phases, units } = phasesOf(pack, state);
-  const stepLabel = step ? ("label" in step.step && step.step.label ? step.step.label : step.step.kind === "rollTable" ? (pack.tables[step.step.table]?.title ?? step.step.table) : step.phase.label) : null;
+  const stepLabel = step
+    ? "label" in step.step && step.step.label
+      ? step.step.label
+      : step.step.kind === "rollTable"
+        ? (pack.tables[step.step.table]?.title ?? step.step.table)
+        : step.phase.label
+    : null;
   const stateLabel = (id: string) => pack.states?.[id]?.short ?? pack.states?.[id]?.label ?? id;
   /** What a piece a result reached is called, for whoever reads that it did. */
   const named = (id: number | null | undefined): string | undefined => {
@@ -322,7 +351,12 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
   // for "this unit so far" rather than the whole run's log.
   const unitResults = state.outcomes
     .filter((o) => o.unit === state.unit)
-    .map((o) => ({ table: pack.tables[o.table]?.title ?? o.table, text: entryTextOf(pack, o), hit: o.targetSubject, ...(named(o.targetSubject) ? { hitName: named(o.targetSubject)! } : {}) }));
+    .map((o) => ({
+      table: pack.tables[o.table]?.title ?? o.table,
+      text: entryTextOf(pack, o),
+      hit: o.targetSubject,
+      ...(named(o.targetSubject) ? { hitName: named(o.targetSubject)! } : {}),
+    }));
   const constraints = step ? constraintsFor(pack, state, constrainedByOf(step.step)) : [];
   const unitClock = clockOfUnit(state, state.unit);
   const clocks = [...liveClocks(state), ...(unitClock?.status === "done" ? [unitClock] : [])].map((c) => ({
@@ -359,21 +393,48 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
       moves:
         state.status === "ended"
           ? []
-          : availableMoves(pack, state, step ? "anytime" : ["betweenUnits", "beforeEnding"]).map((m) => ({ id: m.id, label: m.move.label })),
+          : availableMoves(pack, state, step ? "anytime" : ["betweenUnits", "beforeEnding"]).map((m) => ({
+              id: m.id,
+              label: m.move.label,
+            })),
     },
     phases,
     units,
     constraints,
     quoted,
-    standings: standings(state).map((s) => ({ name: s.contestant.name, points: s.points, place: s.place, states: s.contestant.states.map(stateLabel) })),
+    standings: standings(state).map((s) => ({
+      name: s.contestant.name,
+      points: s.points,
+      place: s.place,
+      states: s.contestant.states.map(stateLabel),
+    })),
     contestants: state.contestants.length,
-    subjects: state.subjects.filter((s) => !s.removed).map((s) => ({ id: s.id, name: subjectName(pack, s), type: s.type, states: s.states.map(stateLabel), finalized: s.finalized, hits: hitsOn(pack, state, s.id).map((h) => h.table) })),
+    subjects: state.subjects
+      .filter((s) => !s.removed)
+      .map((s) => ({
+        id: s.id,
+        name: subjectName(pack, s),
+        type: s.type,
+        states: s.states.map(stateLabel),
+        finalized: s.finalized,
+        hits: hitsOn(pack, state, s.id).map((h) => h.table),
+      })),
     counters: Object.entries(pack.counters ?? {})
       .filter(([, c]) => !c.hidden)
       .map(([id, c]) => ({ id, label: c.label, value: state.counters[id] ?? 0 })),
-    resources: Object.entries(pack.resources ?? {}).map(([id, r]) => ({ id, label: r.label, value: state.resources[id] ?? r.initial, ...(r.max !== undefined ? { max: r.max } : {}), ...(r.display ? { display: r.display } : {}) })),
+    resources: Object.entries(pack.resources ?? {}).map(([id, r]) => ({
+      id,
+      label: r.label,
+      value: state.resources[id] ?? r.initial,
+      ...(r.max !== undefined ? { max: r.max } : {}),
+      ...(r.display ? { display: r.display } : {}),
+    })),
     clocks,
-    progress: { unitsDone: progress.unitsDone, elapsedMs: progress.elapsedMs, timed: unitClockFor(pack, state) !== null || state.clocks.some((c) => c.id.endsWith(":unit")) },
+    progress: {
+      unitsDone: progress.unitsDone,
+      elapsedMs: progress.elapsedMs,
+      timed: unitClockFor(pack, state) !== null || state.clocks.some((c) => c.id.endsWith(":unit")),
+    },
     score: { label: score.label, text: formatScore(score, pack), value: score.value, better: score.better },
     forcedUnits: state.forcedUnits,
     log,
@@ -385,7 +446,12 @@ export function snapshotOf(pack: Pack, state: RunState, events: readonly RunEven
 
 /** What a snapshot from the server looks like enough to trust; the rest is defaults. */
 export function isSnapshot(value: unknown): value is LiveSnapshot {
-  return typeof value === "object" && value !== null && (value as { v?: unknown }).v === 1 && typeof (value as { packTitle?: unknown }).packTitle === "string";
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { v?: unknown }).v === 1 &&
+    typeof (value as { packTitle?: unknown }).packTitle === "string"
+  );
 }
 
 /** A clock's face now, from where it stood when the snapshot was taken. */

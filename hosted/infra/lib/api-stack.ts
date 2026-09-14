@@ -157,11 +157,31 @@ export class ApiStack extends Stack {
       return made;
     };
     const stripeSecretKey = secret("StripeSecretKey", "stripe/secret-key", "Stripe secret key: sandbox in dev, live in prd");
-    const stripeWebhookSecret = secret("StripeWebhookSecret", "stripe/webhook-secret", "Signing secret of the Stripe webhook endpoint that points at /api/stripe/webhook");
-    const stripeConnectWebhookSecret = secret("StripeConnectWebhookSecret", "stripe/connect-webhook-secret", "Signing secret of the Stripe Connect webhook endpoint that points at /api/stripe/connect-webhook");
-    const workosApiKey = secret("WorkosApiKey", "workos/api-key", "WorkOS API key for the environment, used to create publisher organizations");
-    const discordBotToken = secret("DiscordBotToken", "discord/bot-token", "The Runlog Discord application's bot token, for posting into servers that installed it");
-    const discordClientSecret = secret("DiscordClientSecret", "discord/client-secret", "The Runlog Discord application's OAuth2 client secret, for verifying a linked account for a server's linked roles");
+    const stripeWebhookSecret = secret(
+      "StripeWebhookSecret",
+      "stripe/webhook-secret",
+      "Signing secret of the Stripe webhook endpoint that points at /api/stripe/webhook",
+    );
+    const stripeConnectWebhookSecret = secret(
+      "StripeConnectWebhookSecret",
+      "stripe/connect-webhook-secret",
+      "Signing secret of the Stripe Connect webhook endpoint that points at /api/stripe/connect-webhook",
+    );
+    const workosApiKey = secret(
+      "WorkosApiKey",
+      "workos/api-key",
+      "WorkOS API key for the environment, used to create publisher organizations",
+    );
+    const discordBotToken = secret(
+      "DiscordBotToken",
+      "discord/bot-token",
+      "The Runlog Discord application's bot token, for posting into servers that installed it",
+    );
+    const discordClientSecret = secret(
+      "DiscordClientSecret",
+      "discord/client-secret",
+      "The Runlog Discord application's OAuth2 client secret, for verifying a linked account for a server's linked roles",
+    );
 
     /** What both the API handler and the bot's job function are told; the two run the same code. */
     /**
@@ -174,7 +194,10 @@ export class ApiStack extends Stack {
      * name, and an export in use cannot change, so a rename would refuse
      * to deploy.
      */
-    const timers = new scheduler.ScheduleGroup(this, "Timers", { scheduleGroupName: `runlog-${config.name}-timers`, removalPolicy: RemovalPolicy.DESTROY });
+    const timers = new scheduler.ScheduleGroup(this, "Timers", {
+      scheduleGroupName: `runlog-${config.name}-timers`,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
     const timerRole = new iam.Role(this, "TimerRole", {
       assumedBy: new iam.ServicePrincipal("scheduler.amazonaws.com"),
       description: "Lets a timer's schedule invoke the bot's job function when the timer runs out.",
@@ -289,7 +312,14 @@ export class ApiStack extends Stack {
     handler.addEnvironment("DISCORD_JOB_ARN", job.functionArn);
     this.table.grantReadWriteData(handler);
     this.bucket.grantReadWrite(handler);
-    for (const s of [stripeSecretKey, stripeWebhookSecret, stripeConnectWebhookSecret, workosApiKey, discordBotToken, discordClientSecret]) {
+    for (const s of [
+      stripeSecretKey,
+      stripeWebhookSecret,
+      stripeConnectWebhookSecret,
+      workosApiKey,
+      discordBotToken,
+      discordClientSecret,
+    ]) {
       s.grantRead(handler);
       s.grantRead(job);
     }
@@ -324,7 +354,12 @@ export class ApiStack extends Stack {
       routeKey: apigwv2.HttpRouteKey.DEFAULT,
       integration,
     });
-    NagSuppressions.addResourceSuppressions(fallthrough, [{ id: "AwsSolutions-APIG4", reason: "The handler answers unknown paths with 410 after its own token check; see the API's suppression." }]);
+    NagSuppressions.addResourceSuppressions(fallthrough, [
+      {
+        id: "AwsSolutions-APIG4",
+        reason: "The handler answers unknown paths with 410 after its own token check; see the API's suppression.",
+      },
+    ]);
 
     // A ceiling, not a target: on-demand everything means a loop somewhere
     // would otherwise run up a bill before anyone noticed.
@@ -358,7 +393,13 @@ export class ApiStack extends Stack {
     // by design.
     NagSuppressions.addResourceSuppressions(
       this.api,
-      [{ id: "AwsSolutions-APIG4", reason: "Every route verifies the WorkOS token in the handler; a gateway authorizer's 403 would be rewritten into the app page by CloudFront. The routes that need no token are public by design." }],
+      [
+        {
+          id: "AwsSolutions-APIG4",
+          reason:
+            "Every route verifies the WorkOS token in the handler; a gateway authorizer's 403 would be rewritten into the app page by CloudFront. The routes that need no token are public by design.",
+        },
+      ],
       true,
     );
 
@@ -382,15 +423,13 @@ export class ApiStack extends Stack {
         conditions: { Bool: { "aws:SecureTransport": "false" } },
       }),
     );
-    this.handlerErrorsAlarm = handler
-      .metricErrors({ period: Duration.minutes(5), statistic: "sum" })
-      .createAlarm(this, "HandlerErrors", {
-        alarmName: `runlog-${config.name}-api-errors`,
-        threshold: 5,
-        evaluationPeriods: 1,
-        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-        alarmDescription: "The API handler failed five times in five minutes.",
-      });
+    this.handlerErrorsAlarm = handler.metricErrors({ period: Duration.minutes(5), statistic: "sum" }).createAlarm(this, "HandlerErrors", {
+      alarmName: `runlog-${config.name}-api-errors`,
+      threshold: 5,
+      evaluationPeriods: 1,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      alarmDescription: "The API handler failed five times in five minutes.",
+    });
     this.handlerErrorsAlarm.addAlarmAction(new cloudwatchActions.SnsAction(alarms));
     new CfnOutput(this, "AlarmTopic", { value: alarms.topicArn });
 
@@ -452,7 +491,11 @@ export class ApiStack extends Stack {
      */
     if (config.apm?.newRelic) {
       const nr = config.apm.newRelic;
-      const licenseKey = secret("NewRelicLicenseKey", "newrelic/license-key", 'New Relic license key, as the extension reads it: {"LicenseKey": "…"}');
+      const licenseKey = secret(
+        "NewRelicLicenseKey",
+        "newrelic/license-key",
+        'New Relic license key, as the extension reads it: {"LicenseKey": "…"}',
+      );
       const layer = lambda.LayerVersion.fromLayerVersionArn(
         this,
         "NewRelicLayer",
@@ -475,7 +518,8 @@ export class ApiStack extends Stack {
           NEW_RELIC_TRUSTED_ACCOUNT_KEY: nr.trustedAccountKey ?? nr.accountId,
           NEW_RELIC_LICENSE_KEY_SECRET: secretName("newrelic/license-key"),
           NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS: "true",
-          NEW_RELIC_ATTRIBUTES_EXCLUDE: "request.headers.authorization,request.headers.cookie,request.headers.x-forwarded-for,request.headers.cloudfront-viewer-address,request.parameters.*",
+          NEW_RELIC_ATTRIBUTES_EXCLUDE:
+            "request.headers.authorization,request.headers.cookie,request.headers.x-forwarded-for,request.headers.cloudfront-viewer-address,request.parameters.*",
           NEW_RELIC_ALLOW_ALL_HEADERS: "false",
         })) {
           fn.addEnvironment(name, value);
@@ -499,13 +543,20 @@ export class ApiStack extends Stack {
     });
     NagSuppressions.addResourceSuppressions(
       wsApi,
-      [{ id: "AwsSolutions-APIG4", reason: "$connect verifies the WorkOS token or the live link's token in the handler and writes a connection row only then; $default and $disconnect act only on rows $connect wrote. The socket carries a doorbell and gestures, never a run." }],
+      [
+        {
+          id: "AwsSolutions-APIG4",
+          reason:
+            "$connect verifies the WorkOS token or the live link's token in the handler and writes a connection row only then; $default and $disconnect act only on rows $connect wrote. The socket carries a doorbell and gestures, never a run.",
+        },
+      ],
       true,
     );
     NagSuppressions.addResourceSuppressions(wsStage, [
       {
         id: "AwsSolutions-APIG1",
-        reason: "Access logs for a WebSocket API need the account-wide CloudWatch role for API Gateway, which this stack does not own. The socket's handler logs every connect, message and disconnect to the API's log group, which is the record.",
+        reason:
+          "Access logs for a WebSocket API need the account-wide CloudWatch role for API Gateway, which this stack does not own. The socket's handler logs every connect, message and disconnect to the API's log group, which is the record.",
       },
     ]);
     // The HTTP handler rings the doorbell: it needs the management
@@ -549,7 +600,8 @@ export class ApiStack extends Stack {
         [
           {
             id: "AwsSolutions-IAM4",
-            reason: "AWSLambdaBasicExecutionRole grants writing the function's own CloudWatch logs and nothing else; CloudWatchLambdaInsightsExecutionRolePolicy grants publishing the Insights metrics the layer collects. A customer policy would restate either.",
+            reason:
+              "AWSLambdaBasicExecutionRole grants writing the function's own CloudWatch logs and nothing else; CloudWatchLambdaInsightsExecutionRolePolicy grants publishing the Insights metrics the layer collects. A customer policy would restate either.",
             appliesTo: [
               "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
               "Policy::arn:<AWS::Partition>:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy",
@@ -567,7 +619,10 @@ export class ApiStack extends Stack {
               "Action::s3:DeleteObject*",
               "Resource::*",
               { regex: "/^Resource::<Bucket[A-Za-z0-9]+\\.Arn>/\\*$/g" },
-              { regex: "/^Resource::arn:(aws|<AWS::Partition>):execute-api:[^:]+:[^:]+:<WebSocketApi[A-Za-z0-9]+>/ws/\\*/@connections/\\*$/g" },
+              {
+                regex:
+                  "/^Resource::arn:(aws|<AWS::Partition>):execute-api:[^:]+:[^:]+:<WebSocketApi[A-Za-z0-9]+>/ws/\\*/@connections/\\*$/g",
+              },
               // grantInvoke names the function and its versions, which is how CDK spells "this function".
               { regex: "/^Resource::<DiscordJob[A-Za-z0-9]+\\.Arn>:\\*$/g" },
               // A timer's schedule is made at runtime, named for its run and deadline; the grant names the group.
@@ -583,7 +638,8 @@ export class ApiStack extends Stack {
       [
         {
           id: "AwsSolutions-IAM5",
-          reason: "grantInvoke names the job function and its versions, which is how CDK spells \"this function\"; the role may invoke nothing else.",
+          reason:
+            'grantInvoke names the job function and its versions, which is how CDK spells "this function"; the role may invoke nothing else.',
           appliesTo: [{ regex: "/^Resource::<DiscordJob[A-Za-z0-9]+\\.Arn>:\\*$/g" }],
         },
       ],
@@ -592,7 +648,8 @@ export class ApiStack extends Stack {
     NagSuppressions.addResourceSuppressions(this.bucket, [
       {
         id: "AwsSolutions-S1",
-        reason: "Every object is one person's own run or pack, read and written only by the handler under its role; the API's own logs and CloudTrail are the record. Server access logs would be a second copy of who did what, kept for nobody.",
+        reason:
+          "Every object is one person's own run or pack, read and written only by the handler under its role; the API's own logs and CloudTrail are the record. Server access logs would be a second copy of who did what, kept for nobody.",
       },
     ]);
 

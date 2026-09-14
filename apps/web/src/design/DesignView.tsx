@@ -4,15 +4,7 @@ import YAML from "yaml";
 import { parsePack, type Diagnostic, type Pack, LICENSE_IDS, LICENSE_LABELS } from "@runlog/rules-schema";
 import { describe } from "./describe.ts";
 import { at, AreaField, CheckField, NumberField, RowActions, SelectField, TextField } from "./fields.tsx";
-import {
-  blankPack,
-  coverage,
-  coverageSummary,
-  DRAFT_ID,
-  isBlank,
-  packFilename,
-  type Draft,
-} from "./draft.ts";
+import { blankPack, coverage, coverageSummary, DRAFT_ID, isBlank, packFilename, type Draft } from "./draft.ts";
 import { loadDraft, saveDraft } from "../storage/db.ts";
 import { describeLength, encodePackLink } from "../share/link.ts";
 import { StartFrom } from "./StartFrom.tsx";
@@ -193,7 +185,12 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
             <button
               className="ghost"
               onClick={() => {
-                void ask({ ask: "Start a new pack?", detail: "The draft you have open is replaced.", confirm: "Start a new one", destructive: true }).then((yes) => {
+                void ask({
+                  ask: "Start a new pack?",
+                  detail: "The draft you have open is replaced.",
+                  confirm: "Start a new one",
+                  destructive: true,
+                }).then((yes) => {
                   if (!yes) return;
                   replace(blankPack());
                   setAtDoor(false);
@@ -233,7 +230,12 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
           <button
             className="ghost"
             onClick={() => {
-              void ask({ ask: "Start again from a blank pack?", detail: "The draft you have open is replaced.", confirm: "Start again", destructive: true }).then((yes) => yes && replace(blankPack()));
+              void ask({
+                ask: "Start again from a blank pack?",
+                detail: "The draft you have open is replaced.",
+                confirm: "Start again",
+                destructive: true,
+              }).then((yes) => yes && replace(blankPack()));
             }}
           >
             New pack
@@ -261,7 +263,11 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
               className="ghost"
               disabled={!result?.ok || errors.length > 0}
               onClick={() => result?.ok && onTest(result.pack)}
-              title={errors.length > 0 ? "Fix the problems first; a pack with errors cannot be played" : "Play this draft in a run that is not saved"}
+              title={
+                errors.length > 0
+                  ? "Fix the problems first; a pack with errors cannot be played"
+                  : "Play this draft in a run that is not saved"
+              }
             >
               Try it
             </button>
@@ -304,13 +310,10 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
       {link && (
         <div className="notice shareNotice">
           <div>
-            <strong>Copied.</strong> The whole pack is inside that link, it goes nowhere
-            near a server, so anyone you send it to has your game and nothing in between
-            has seen it.
+            <strong>Copied.</strong> The whole pack is inside that link, it goes nowhere near a server, so anyone you send it to has your
+            game and nothing in between has seen it.
           </div>
-          <div className={describeLength(link).ok ? "muted small" : "warnText"}>
-            {describeLength(link).text}
-          </div>
+          <div className={describeLength(link).ok ? "muted small" : "warnText"}>{describeLength(link).text}</div>
           <input className="textInput mono" readOnly value={link} onFocus={(e) => e.target.select()} />
           <button className="ghost tiny" onClick={() => setLink(null)}>
             done
@@ -320,9 +323,8 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
 
       {droppedSignature && (
         <div className="notice">
-          This pack was signed, and your edit removed the signature, it no longer
-          describes what is in the file. Sign the pack again when you are finished:{" "}
-          <code>runlog sign {packFilename(draft)} --key your-key.json</code>
+          This pack was signed, and your edit removed the signature, it no longer describes what is in the file. Sign the pack again when
+          you are finished: <code>runlog sign {packFilename(draft)} --key your-key.json</code>
         </div>
       )}
 
@@ -408,7 +410,10 @@ function Identity({ draft, diagnostics, edit }: SectionProps) {
           diagnostics={diagnostics}
           value={Array.isArray(draft.tags) ? draft.tags.map(String).join(", ") : ""}
           onChange={(v) => {
-            const list = v.split(",").map((t) => t.trim()).filter(Boolean);
+            const list = v
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean);
             edit(["tags"], list.length > 0 ? list : undefined);
           }}
         />
@@ -487,17 +492,61 @@ function Requirements({ draft, diagnostics, edit }: SectionProps) {
       {requires.map((r, i) => (
         <div key={i} className="entryEditor">
           <div className="fieldGrid tight">
-            <TextField label="Id" path={`requires[${i}].id`} mono diagnostics={diagnostics} value={str(r.id)} onChange={(v) => set(i, "id", v)} />
-            <TextField label="What it is" path={`requires[${i}].label`} help={i === 0 ? describe("requires[].label") : undefined} diagnostics={diagnostics} value={str(r.label)} onChange={(v) => set(i, "label", v)} />
-            <SelectField label="Kind" path={`requires[${i}].kind`} diagnostics={diagnostics} value={str(r.kind) || "other"} options={REQUIREMENT_KINDS} onChange={(v) => set(i, "kind", v === "other" ? undefined : v)} />
+            <TextField
+              label="Id"
+              path={`requires[${i}].id`}
+              mono
+              diagnostics={diagnostics}
+              value={str(r.id)}
+              onChange={(v) => set(i, "id", v)}
+            />
+            <TextField
+              label="What it is"
+              path={`requires[${i}].label`}
+              help={i === 0 ? describe("requires[].label") : undefined}
+              diagnostics={diagnostics}
+              value={str(r.label)}
+              onChange={(v) => set(i, "label", v)}
+            />
+            <SelectField
+              label="Kind"
+              path={`requires[${i}].kind`}
+              diagnostics={diagnostics}
+              value={str(r.kind) || "other"}
+              options={REQUIREMENT_KINDS}
+              onChange={(v) => set(i, "kind", v === "other" ? undefined : v)}
+            />
           </div>
           <div className="fieldGrid tight">
-            <TextField label="Note" path={`requires[${i}].note`} help={i === 0 ? describe("requires[].note") : undefined} diagnostics={diagnostics} value={str(r.note)} onChange={(v) => set(i, "note", v)} />
-            <TextField label="Where to find it" path={`requires[${i}].url`} mono diagnostics={diagnostics} value={str(r.url)} onChange={(v) => set(i, "url", v)} placeholder="https://" />
+            <TextField
+              label="Note"
+              path={`requires[${i}].note`}
+              help={i === 0 ? describe("requires[].note") : undefined}
+              diagnostics={diagnostics}
+              value={str(r.note)}
+              onChange={(v) => set(i, "note", v)}
+            />
+            <TextField
+              label="Where to find it"
+              path={`requires[${i}].url`}
+              mono
+              diagnostics={diagnostics}
+              value={str(r.url)}
+              onChange={(v) => set(i, "url", v)}
+              placeholder="https://"
+            />
           </div>
-          <CheckField label="Nice to have, not needed" help={i === 0 ? describe("requires[].optional") : undefined} value={r.optional === true} onChange={(v) => set(i, "optional", v ? true : undefined)} />
+          <CheckField
+            label="Nice to have, not needed"
+            help={i === 0 ? describe("requires[].optional") : undefined}
+            value={r.optional === true}
+            onChange={(v) => set(i, "optional", v ? true : undefined)}
+          />
           <RowActions>
-            <button className="ghost tiny" onClick={() => edit(["requires"], requires.length > 1 ? requires.filter((_, j) => j !== i) : undefined)}>
+            <button
+              className="ghost tiny"
+              onClick={() => edit(["requires"], requires.length > 1 ? requires.filter((_, j) => j !== i) : undefined)}
+            >
               remove
             </button>
           </RowActions>
@@ -635,13 +684,10 @@ function TableEditor({
           {open ? "▾" : "▸"} <strong>{str(table.title) || id}</strong>
           <span className="muted small">
             {" "}
-            · {str(table.resolution)} · {entries.length}{" "}
-            {entries.length === 1 ? "entry" : "entries"}
+            · {str(table.resolution)} · {entries.length} {entries.length === 1 ? "entry" : "entries"}
           </span>
         </button>
-        {isLookup && summary.text && (
-          <span className={`chip ${summary.ok ? "ok" : "warn"}`}>{summary.text}</span>
-        )}
+        {isLookup && summary.text && <span className={`chip ${summary.ok ? "ok" : "warn"}`}>{summary.text}</span>}
       </div>
 
       {open && (
@@ -702,24 +748,14 @@ function TableEditor({
                       path={`tables.${id}.entries[${i}].range`}
                       diagnostics={diagnostics}
                       value={num((entry.range as number[] | undefined)?.[0], 1)}
-                      onChange={(v) =>
-                        edit(
-                          ["tables", id, "entries", i, "range"],
-                          [v, num((entry.range as number[] | undefined)?.[1], v)],
-                        )
-                      }
+                      onChange={(v) => edit(["tables", id, "entries", i, "range"], [v, num((entry.range as number[] | undefined)?.[1], v)])}
                     />
                     <NumberField
                       label="To"
                       path={`tables.${id}.entries[${i}].rangeTo`}
                       diagnostics={diagnostics}
                       value={num((entry.range as number[] | undefined)?.[1], 1)}
-                      onChange={(v) =>
-                        edit(
-                          ["tables", id, "entries", i, "range"],
-                          [num((entry.range as number[] | undefined)?.[0], v), v],
-                        )
-                      }
+                      onChange={(v) => edit(["tables", id, "entries", i, "range"], [num((entry.range as number[] | undefined)?.[0], v), v])}
                     />
                   </>
                 )}
@@ -772,7 +808,12 @@ function TableEditor({
               <RowActions>
                 <button
                   className="ghost tiny"
-                  onClick={() => edit(["tables", id, "entries"], entries.filter((_, j) => j !== i))}
+                  onClick={() =>
+                    edit(
+                      ["tables", id, "entries"],
+                      entries.filter((_, j) => j !== i),
+                    )
+                  }
                 >
                   remove
                 </button>
@@ -786,17 +827,20 @@ function TableEditor({
               onClick={() => {
                 const last = entries.at(-1);
                 const previousTo = num((last?.range as number[] | undefined)?.[1], 0);
-                edit(["tables", id, "entries"], [
-                  ...entries,
-                  {
-                    id: `e${entries.length + 1}`,
-                    // Starts where the last one stopped: the common case is a
-                    // table filled in order, and guessing right saves the two
-                    // numbers everyone gets wrong.
-                    range: [previousTo + 1, previousTo + 1],
-                    text: "",
-                  },
-                ]);
+                edit(
+                  ["tables", id, "entries"],
+                  [
+                    ...entries,
+                    {
+                      id: `e${entries.length + 1}`,
+                      // Starts where the last one stopped: the common case is a
+                      // table filled in order, and guessing right saves the two
+                      // numbers everyone gets wrong.
+                      range: [previousTo + 1, previousTo + 1],
+                      text: "",
+                    },
+                  ],
+                );
               }}
             >
               Add an entry
@@ -939,27 +983,23 @@ function Phases({ draft, diagnostics, edit }: SectionProps) {
             ))}
 
             <RowActions>
-              <button
-                className="ghost tiny"
-                onClick={() =>
-                  edit(["phases", i, "steps"], [...steps, { kind: "manual", label: "Do it." }])
-                }
-              >
+              <button className="ghost tiny" onClick={() => edit(["phases", i, "steps"], [...steps, { kind: "manual", label: "Do it." }])}>
                 add a step
               </button>
               <button className="ghost tiny" onClick={() => move(i, i - 1)} disabled={i === 0}>
                 ↑
               </button>
-              <button
-                className="ghost tiny"
-                onClick={() => move(i, i + 1)}
-                disabled={i === phases.length - 1}
-              >
+              <button className="ghost tiny" onClick={() => move(i, i + 1)} disabled={i === phases.length - 1}>
                 ↓
               </button>
               <button
                 className="ghost tiny"
-                onClick={() => edit(["phases"], phases.filter((_, k) => k !== i))}
+                onClick={() =>
+                  edit(
+                    ["phases"],
+                    phases.filter((_, k) => k !== i),
+                  )
+                }
               >
                 remove
               </button>
@@ -971,12 +1011,7 @@ function Phases({ draft, diagnostics, edit }: SectionProps) {
       <RowActions>
         <button
           className="ghost"
-          onClick={() =>
-            edit(["phases"], [
-              ...phases,
-              { id: `phase${phases.length + 1}`, label: "New phase", steps: [] },
-            ])
-          }
+          onClick={() => edit(["phases"], [...phases, { id: `phase${phases.length + 1}`, label: "New phase", steps: [] }])}
         >
           Add a phase
         </button>
@@ -1087,7 +1122,19 @@ function Modes({ draft, diagnostics, edit }: SectionProps) {
  * or stay put as the mode says above. Optional: seats without roles are
  * just seats.
  */
-function Roles({ id, base, players, diagnostics, edit }: { id: string; base: (string | number)[]; players: Record<string, unknown>; diagnostics: Diagnostic[]; edit: SectionProps["edit"] }) {
+function Roles({
+  id,
+  base,
+  players,
+  diagnostics,
+  edit,
+}: {
+  id: string;
+  base: (string | number)[];
+  players: Record<string, unknown>;
+  diagnostics: Diagnostic[];
+  edit: SectionProps["edit"];
+}) {
   const roles = Array.isArray(players.roles) ? (players.roles as Record<string, unknown>[]) : [];
   const path = [...base, "players", "roles"];
   return (
@@ -1097,10 +1144,31 @@ function Roles({ id, base, players, diagnostics, edit }: { id: string; base: (st
       {roles.map((r, i) => (
         <div key={i} className="entryEditor">
           <div className="fieldGrid tight">
-            <TextField label="Id" path={`modes.${id}.players.roles[${i}].id`} mono diagnostics={diagnostics} value={str(r.id)} onChange={(v) => edit([...path, i, "id"], v)} />
-            <TextField label="Name" path={`modes.${id}.players.roles[${i}].label`} help={i === 0 ? describe("modes.*.players.roles[].label") : undefined} diagnostics={diagnostics} value={str(r.label)} onChange={(v) => edit([...path, i, "label"], v)} />
+            <TextField
+              label="Id"
+              path={`modes.${id}.players.roles[${i}].id`}
+              mono
+              diagnostics={diagnostics}
+              value={str(r.id)}
+              onChange={(v) => edit([...path, i, "id"], v)}
+            />
+            <TextField
+              label="Name"
+              path={`modes.${id}.players.roles[${i}].label`}
+              help={i === 0 ? describe("modes.*.players.roles[].label") : undefined}
+              diagnostics={diagnostics}
+              value={str(r.label)}
+              onChange={(v) => edit([...path, i, "label"], v)}
+            />
           </div>
-          <TextField label="What it does" path={`modes.${id}.players.roles[${i}].description`} help={i === 0 ? describe("modes.*.players.roles[].description") : undefined} diagnostics={diagnostics} value={str(r.description)} onChange={(v) => edit([...path, i, "description"], v || undefined)} />
+          <TextField
+            label="What it does"
+            path={`modes.${id}.players.roles[${i}].description`}
+            help={i === 0 ? describe("modes.*.players.roles[].description") : undefined}
+            diagnostics={diagnostics}
+            value={str(r.description)}
+            onChange={(v) => edit([...path, i, "description"], v || undefined)}
+          />
           <RowActions>
             <button className="ghost tiny" onClick={() => edit(path, roles.length > 1 ? roles.filter((_, j) => j !== i) : undefined)}>
               remove
@@ -1140,7 +1208,6 @@ function Problems({ diagnostics }: { diagnostics: Diagnostic[] }) {
   );
 }
 
-
 /**
  * What a mode changes about the base rules: its length, its seed, who sits
  * at the table, its clock, whether it is moderated, and what it leaves out.
@@ -1151,7 +1218,8 @@ function Problems({ diagnostics }: { diagnostics: Diagnostic[] }) {
 function ModeDetails({ draft, id, mode, diagnostics, edit }: SectionProps & { id: string; mode: Record<string, unknown> }) {
   const base = ["modes", id];
   const units = (mode.units ?? {}) as Record<string, unknown>;
-  const shape = units.fixed !== undefined ? "fixed" : units.roll ? "roll" : units.min !== undefined || units.max !== undefined ? "range" : "open";
+  const shape =
+    units.fixed !== undefined ? "fixed" : units.roll ? "roll" : units.min !== undefined || units.max !== undefined ? "range" : "open";
   const players = (mode.players ?? null) as Record<string, unknown> | null;
   const clock = (mode.clock ?? null) as Record<string, unknown> | null;
   const moderated = (mode.moderated ?? null) as Record<string, unknown> | null;
@@ -1192,21 +1260,56 @@ function ModeDetails({ draft, id, mode, diagnostics, edit }: SectionProps & { id
             { value: "range", label: "Between two numbers" },
             { value: "roll", label: "Rolled at the start" },
           ]}
-          onChange={(v) => edit([...base, "units"], v === "open" ? undefined : v === "fixed" ? { fixed: 5 } : v === "range" ? { min: 1, max: 12 } : { roll: "d6+2" })}
+          onChange={(v) =>
+            edit(
+              [...base, "units"],
+              v === "open" ? undefined : v === "fixed" ? { fixed: 5 } : v === "range" ? { min: 1, max: 12 } : { roll: "d6+2" },
+            )
+          }
         />
         {shape === "fixed" && (
-          <NumberField label="Units" path={`modes.${id}.units.fixed`} diagnostics={diagnostics} value={num(units.fixed, 5)} onChange={(v) => edit([...base, "units"], { fixed: Math.max(1, v) })} />
+          <NumberField
+            label="Units"
+            path={`modes.${id}.units.fixed`}
+            diagnostics={diagnostics}
+            value={num(units.fixed, 5)}
+            onChange={(v) => edit([...base, "units"], { fixed: Math.max(1, v) })}
+          />
         )}
         {shape === "range" && (
           <>
-            <NumberField label="Fewest" path={`modes.${id}.units.min`} diagnostics={diagnostics} value={num(units.min, 1)} onChange={(v) => edit([...base, "units", "min"], Math.max(1, v))} />
-            <NumberField label="Most" path={`modes.${id}.units.max`} diagnostics={diagnostics} value={num(units.max, 12)} onChange={(v) => edit([...base, "units", "max"], Math.max(1, v))} />
+            <NumberField
+              label="Fewest"
+              path={`modes.${id}.units.min`}
+              diagnostics={diagnostics}
+              value={num(units.min, 1)}
+              onChange={(v) => edit([...base, "units", "min"], Math.max(1, v))}
+            />
+            <NumberField
+              label="Most"
+              path={`modes.${id}.units.max`}
+              diagnostics={diagnostics}
+              value={num(units.max, 12)}
+              onChange={(v) => edit([...base, "units", "max"], Math.max(1, v))}
+            />
           </>
         )}
         {shape === "roll" && (
-          <TextField label="Dice for the count" path={`modes.${id}.units.roll`} mono diagnostics={diagnostics} value={str(units.roll)} onChange={(v) => edit([...base, "units", "roll"], v)} />
+          <TextField
+            label="Dice for the count"
+            path={`modes.${id}.units.roll`}
+            mono
+            diagnostics={diagnostics}
+            value={str(units.roll)}
+            onChange={(v) => edit([...base, "units", "roll"], v)}
+          />
         )}
-        <CheckField label="Seeded" help={describe("modes.*.seeded")} value={mode.seeded === true} onChange={(v) => edit([...base, "seeded"], v ? true : undefined)} />
+        <CheckField
+          label="Seeded"
+          help={describe("modes.*.seeded")}
+          value={mode.seeded === true}
+          onChange={(v) => edit([...base, "seeded"], v ? true : undefined)}
+        />
       </div>
 
       <h5 className="stepLabel">At the table</h5>
@@ -1220,12 +1323,24 @@ function ModeDetails({ draft, id, mode, diagnostics, edit }: SectionProps & { id
           onChange={(v) => {
             const max = Math.max(1, v);
             if (max <= 1) edit([...base, "players"], undefined);
-            else edit([...base, "players"], { min: Math.min(num(players?.min, 2), max), max, rotate: str(players?.rotate) || "clockwise", ...(players?.roles ? { roles: players.roles } : {}) });
+            else
+              edit([...base, "players"], {
+                min: Math.min(num(players?.min, 2), max),
+                max,
+                rotate: str(players?.rotate) || "clockwise",
+                ...(players?.roles ? { roles: players.roles } : {}),
+              });
           }}
         />
         {players && (
           <>
-            <NumberField label="Fewest players" path={`modes.${id}.players.min`} diagnostics={diagnostics} value={num(players.min, 2)} onChange={(v) => edit([...base, "players", "min"], Math.max(1, Math.min(v, num(players.max, 2))))} />
+            <NumberField
+              label="Fewest players"
+              path={`modes.${id}.players.min`}
+              diagnostics={diagnostics}
+              value={num(players.min, 2)}
+              onChange={(v) => edit([...base, "players", "min"], Math.max(1, Math.min(v, num(players.max, 2))))}
+            />
             <SelectField
               label="Roles"
               path={`modes.${id}.players.rotate`}
@@ -1251,8 +1366,20 @@ function ModeDetails({ draft, id, mode, diagnostics, edit }: SectionProps & { id
         />
         {moderated && (
           <>
-            <NumberField label="Fewest contestants" path={`modes.${id}.moderated.contestants.min`} diagnostics={diagnostics} value={num(contestants.min, 2)} onChange={(v) => edit([...base, "moderated", "contestants", "min"], Math.max(1, v))} />
-            <NumberField label="Most contestants" path={`modes.${id}.moderated.contestants.max`} diagnostics={diagnostics} value={num(contestants.max, 10)} onChange={(v) => edit([...base, "moderated", "contestants", "max"], Math.max(1, v))} />
+            <NumberField
+              label="Fewest contestants"
+              path={`modes.${id}.moderated.contestants.min`}
+              diagnostics={diagnostics}
+              value={num(contestants.min, 2)}
+              onChange={(v) => edit([...base, "moderated", "contestants", "min"], Math.max(1, v))}
+            />
+            <NumberField
+              label="Most contestants"
+              path={`modes.${id}.moderated.contestants.max`}
+              diagnostics={diagnostics}
+              value={num(contestants.max, 10)}
+              onChange={(v) => edit([...base, "moderated", "contestants", "max"], Math.max(1, v))}
+            />
             <SelectField
               label="Who scores"
               path={`modes.${id}.moderated.award`}
@@ -1266,7 +1393,14 @@ function ModeDetails({ draft, id, mode, diagnostics, edit }: SectionProps & { id
               onChange={(v) => edit([...base, "moderated", "award"], v)}
             />
             {moderated.award === "everyone" && (
-              <NumberField label="Bonus for first" path={`modes.${id}.moderated.firstBonus`} help={describe("modes.*.moderated.firstBonus")} diagnostics={diagnostics} value={num(moderated.firstBonus, 0)} onChange={(v) => edit([...base, "moderated", "firstBonus"], v > 0 ? v : undefined)} />
+              <NumberField
+                label="Bonus for first"
+                path={`modes.${id}.moderated.firstBonus`}
+                help={describe("modes.*.moderated.firstBonus")}
+                diagnostics={diagnostics}
+                value={num(moderated.firstBonus, 0)}
+                onChange={(v) => edit([...base, "moderated", "firstBonus"], v > 0 ? v : undefined)}
+              />
             )}
           </>
         )}
@@ -1285,15 +1419,38 @@ function ModeDetails({ draft, id, mode, diagnostics, edit }: SectionProps & { id
             { value: "stopwatch", label: "A stopwatch" },
             { value: "timer", label: "A timer" },
           ]}
-          onChange={(v) => edit([...base, "clock"], v === "none" ? undefined : v === "timer" ? { kind: "timer", minutes: num(clock?.minutes, 25) } : { kind: "stopwatch" })}
+          onChange={(v) =>
+            edit(
+              [...base, "clock"],
+              v === "none" ? undefined : v === "timer" ? { kind: "timer", minutes: num(clock?.minutes, 25) } : { kind: "stopwatch" },
+            )
+          }
         />
         {clock?.kind === "timer" && (
-          <NumberField label="Minutes" path={`modes.${id}.clock.minutes`} diagnostics={diagnostics} value={num(clock.minutes, 25)} onChange={(v) => edit([...base, "clock", "minutes"], Math.max(1, v))} />
+          <NumberField
+            label="Minutes"
+            path={`modes.${id}.clock.minutes`}
+            diagnostics={diagnostics}
+            value={num(clock.minutes, 25)}
+            onChange={(v) => edit([...base, "clock", "minutes"], Math.max(1, v))}
+          />
         )}
         {clock && (
           <>
-            <TextField label="Called" path={`modes.${id}.clock.label`} help={describe("modes.*.clock.label")} diagnostics={diagnostics} value={str(clock.label)} onChange={(v) => edit([...base, "clock", "label"], v || undefined)} />
-            <CheckField label="Starts with the unit" help={describe("modes.*.clock.auto")} value={clock.auto !== false} onChange={(v) => edit([...base, "clock", "auto"], v ? undefined : false)} />
+            <TextField
+              label="Called"
+              path={`modes.${id}.clock.label`}
+              help={describe("modes.*.clock.label")}
+              diagnostics={diagnostics}
+              value={str(clock.label)}
+              onChange={(v) => edit([...base, "clock", "label"], v || undefined)}
+            />
+            <CheckField
+              label="Starts with the unit"
+              help={describe("modes.*.clock.auto")}
+              value={clock.auto !== false}
+              onChange={(v) => edit([...base, "clock", "auto"], v ? undefined : false)}
+            />
           </>
         )}
       </div>
@@ -1325,7 +1482,10 @@ function ModeDetails({ draft, id, mode, diagnostics, edit }: SectionProps & { id
         diagnostics={diagnostics}
         value={notes.join("\n")}
         onChange={(v) => {
-          const lines = v.split("\n").map((l) => l.trim()).filter(Boolean);
+          const lines = v
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean);
           edit([...base, "notes"], lines.length > 0 ? lines : undefined);
         }}
       />

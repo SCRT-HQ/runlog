@@ -24,9 +24,7 @@ export const IMPLEMENTED_CAPABILITIES = [
   "handsFree",
 ] as const;
 
-export type ParseResult =
-  | { ok: true; pack: Pack; diagnostics: Diagnostic[] }
-  | { ok: false; pack: null; diagnostics: Diagnostic[] };
+export type ParseResult = { ok: true; pack: Pack; diagnostics: Diagnostic[] } | { ok: false; pack: null; diagnostics: Diagnostic[] };
 
 /**
  * Validate an untrusted object into a Pack.
@@ -45,9 +43,7 @@ export function parsePack(input: unknown): ParseResult {
     return {
       ok: false,
       pack: null,
-      diagnostics: [
-        { level: "error", code: "pack/not-an-object", path: "", message: "pack must be an object" },
-      ],
+      diagnostics: [{ level: "error", code: "pack/not-an-object", path: "", message: "pack must be an object" }],
     };
   }
 
@@ -62,8 +58,7 @@ export function parsePack(input: unknown): ParseResult {
           code: "pack/unsupported-schema-version",
           path: "schemaVersion",
           message:
-            `pack declares schemaVersion ${JSON.stringify(declared)}; ` +
-            `this build supports ${SUPPORTED_SCHEMA_VERSIONS.join(", ")}`,
+            `pack declares schemaVersion ${JSON.stringify(declared)}; ` + `this build supports ${SUPPORTED_SCHEMA_VERSIONS.join(", ")}`,
         },
       ],
     };
@@ -86,9 +81,7 @@ export function parsePack(input: unknown): ParseResult {
   const pack = parsed.data;
   const diagnostics = lintPack(pack);
 
-  const unsupported = pack.capabilities.filter(
-    (c) => !(IMPLEMENTED_CAPABILITIES as readonly string[]).includes(c),
-  );
+  const unsupported = pack.capabilities.filter((c) => !(IMPLEMENTED_CAPABILITIES as readonly string[]).includes(c));
   for (const cap of unsupported) {
     diagnostics.push({
       level: "error",

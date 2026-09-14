@@ -59,7 +59,9 @@ describe("lintPack", () => {
     it("wants the terms in text for proprietary and custom licenses, and nothing more for the rest", () => {
       expect(codesOf({ ...basePack(), license: { id: "proprietary", redistributable: false } })).toContain("license/text-required");
       expect(codesOf({ ...basePack(), license: { id: "custom", redistributable: true, text: "   " } })).toContain("license/text-required");
-      expect(codesOf({ ...basePack(), license: { id: "custom", redistributable: true, text: "Do as you like." } })).not.toContain("license/text-required");
+      expect(codesOf({ ...basePack(), license: { id: "custom", redistributable: true, text: "Do as you like." } })).not.toContain(
+        "license/text-required",
+      );
       expect(codesOf({ ...basePack(), license: { id: "MIT", redistributable: true } })).not.toContain("license/text-required");
     });
   });
@@ -127,9 +129,7 @@ describe("lintPack", () => {
   describe("reference integrity", () => {
     it("flags a rollOn pointing at a table that does not exist", () => {
       const p = basePack();
-      (p.tables as any).simple.entries[0].triggers = [
-        { on: "immediately", do: [{ do: "rollOn", table: "ghost" }] },
-      ];
+      (p.tables as any).simple.entries[0].triggers = [{ on: "immediately", do: [{ do: "rollOn", table: "ghost" }] }];
       expect(codesOf(p)).toContain("ref/unknown-table");
     });
 
@@ -164,9 +164,7 @@ describe("lintPack", () => {
 
     it("flags resolveTarget without a targeting strategy", () => {
       const p = basePack();
-      (p.tables as any).simple.entries[0].triggers = [
-        { on: "immediately", do: [{ do: "resolveTarget" }] },
-      ];
+      (p.tables as any).simple.entries[0].triggers = [{ on: "immediately", do: [{ do: "resolveTarget" }] }];
       expect(codesOf(p)).toContain("targeting/unavailable");
     });
 
@@ -288,22 +286,19 @@ describe("lintPack", () => {
     });
 
     it("flags rotation with nothing to rotate", () => {
-      expect(codesOf(withPlayers({ min: 2, max: 4, rotate: "clockwise" }))).toContain(
-        "mode/rotate-without-roles",
-      );
+      expect(codesOf(withPlayers({ min: 2, max: 4, rotate: "clockwise" }))).toContain("mode/rotate-without-roles");
     });
 
     it("flags every role acting, which says nothing", () => {
-      const acting = (acts: boolean[]) => withPlayers({ min: 2, max: 2, roles: acts.map((a, i) => ({ id: `r${i}`, label: `Role ${i}`, acts: a })) });
+      const acting = (acts: boolean[]) =>
+        withPlayers({ min: 2, max: 2, roles: acts.map((a, i) => ({ id: `r${i}`, label: `Role ${i}`, acts: a })) });
       expect(codesOf(acting([true, true]))).toContain("mode/all-roles-act");
       expect(codesOf(acting([true, false]))).not.toContain("mode/all-roles-act");
       expect(codesOf(acting([false, false]))).not.toContain("mode/all-roles-act");
     });
 
     it("flags roles in a mode only one person plays", () => {
-      expect(
-        codesOf(withPlayers({ min: 1, max: 1, roles: [{ id: "lead", label: "Lead" }] })),
-      ).toContain("mode/roles-without-players");
+      expect(codesOf(withPlayers({ min: 1, max: 1, roles: [{ id: "lead", label: "Lead" }] }))).toContain("mode/roles-without-players");
     });
 
     it("flags a player range that cannot be satisfied", () => {
@@ -500,6 +495,10 @@ describe("declared marks", () => {
   });
 
   it("is a warning, not an error: a pack with a loose tag still plays", () => {
-    expect(lintPack(withTags(["typo"], { curse: {} })).filter((x) => x.code.startsWith("mark/")).every((x) => x.level === "warning")).toBe(true);
+    expect(
+      lintPack(withTags(["typo"], { curse: {} }))
+        .filter((x) => x.code.startsWith("mark/"))
+        .every((x) => x.level === "warning"),
+    ).toBe(true);
   });
 });

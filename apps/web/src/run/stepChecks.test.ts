@@ -7,7 +7,7 @@ import { ticksFor } from "./stepChecks.ts";
  * a step's ticked boxes from: lifted out so a change to how boxes are keyed
  * cannot happen in one place and not the other.
  */
-const state = (checks: string[]) => ({ checks } as unknown as RunState);
+const state = (checks: string[]) => ({ checks }) as unknown as RunState;
 
 describe("ticksFor", () => {
   it("reads back only this step's boxes, by their item key", () => {

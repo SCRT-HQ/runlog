@@ -64,7 +64,21 @@ export interface ToolCatalog {
 }
 
 /** The affinities a weapon can carry, in the game's own order. */
-const AFFINITIES = ["Standard", "Heavy", "Keen", "Quality", "Fire", "Flame Art", "Lightning", "Sacred", "Magic", "Cold", "Poison", "Blood", "Occult"];
+const AFFINITIES = [
+  "Standard",
+  "Heavy",
+  "Keen",
+  "Quality",
+  "Fire",
+  "Flame Art",
+  "Lightning",
+  "Sacred",
+  "Magic",
+  "Cold",
+  "Poison",
+  "Blood",
+  "Occult",
+];
 
 /** Every toggle Tarnished Tool exposes to a source, by its own name. */
 const FLAGS = [
@@ -168,7 +182,13 @@ export const TARNISHED_TOOL: ToolCatalog = {
       note: "Put back to whatever it was when the effect ends.",
       args: [
         { name: "name", kind: "choice", label: "What", required: true, options: VALUES.map((v) => v.name) },
-        { name: "value", kind: "number", label: "To", required: true, note: "Each has its own range; the tool refuses anything outside it." },
+        {
+          name: "value",
+          kind: "number",
+          label: "To",
+          required: true,
+          note: "Each has its own range; the tool refuses anything outside it.",
+        },
       ],
     },
     {
@@ -212,11 +232,44 @@ export const TARNISHED_TOOL: ToolCatalog = {
       note: "A weapon is not an item with a count: its id carries how far it has been reinforced, so the level is part of naming it. Ordinary weapons go to +25 and somber ones to +10; a level past a weapon's own ceiling is held there rather than refused.",
       oneWay: true,
       args: [
-        { name: "name", kind: "name", list: "weapons", label: "Weapon", required: true, note: "Wing of Astel, Blasphemous Blade, Uchigatana." },
-        { name: "upgrade", kind: "number", label: "Level", least: 0, most: 25, note: "0 is the weapon as found. Leave it empty for the same thing." },
-        { name: "ash", kind: "name", list: "ashes", label: "Ash of War", note: "Only where the weapon takes one, and only an ash that goes on that kind of weapon. Refused by name rather than quietly dropped." },
-        { name: "affinity", kind: "choice", label: "Affinity", options: AFFINITIES, note: "Part of the weapon rather than the ash. Left empty it is the ordinary one, or the ash's own first choice where the ash does not allow ordinary." },
-        { name: "count", kind: "number", label: "How many", least: 1, most: 8, note: "A weapon does not stack, so two of them is two of them: this is how a run hands somebody a pair to dual wield." },
+        {
+          name: "name",
+          kind: "name",
+          list: "weapons",
+          label: "Weapon",
+          required: true,
+          note: "Wing of Astel, Blasphemous Blade, Uchigatana.",
+        },
+        {
+          name: "upgrade",
+          kind: "number",
+          label: "Level",
+          least: 0,
+          most: 25,
+          note: "0 is the weapon as found. Leave it empty for the same thing.",
+        },
+        {
+          name: "ash",
+          kind: "name",
+          list: "ashes",
+          label: "Ash of War",
+          note: "Only where the weapon takes one, and only an ash that goes on that kind of weapon. Refused by name rather than quietly dropped.",
+        },
+        {
+          name: "affinity",
+          kind: "choice",
+          label: "Affinity",
+          options: AFFINITIES,
+          note: "Part of the weapon rather than the ash. Left empty it is the ordinary one, or the ash's own first choice where the ash does not allow ordinary.",
+        },
+        {
+          name: "count",
+          kind: "number",
+          label: "How many",
+          least: 1,
+          most: 8,
+          note: "A weapon does not stack, so two of them is two of them: this is how a run hands somebody a pair to dual wield.",
+        },
       ],
     },
     {
@@ -224,7 +277,17 @@ export const TARNISHED_TOOL: ToolCatalog = {
       label: "Give runes",
       note: "Adds, and cannot set: nothing in the game says how many somebody is carrying, so there is no number to set one to. A negative amount is a toll. One way, and it does not come back off, because runes given are usually spent by the time anything would take them and taking away what somebody earned instead is worse than letting a gift stand.",
       oneWay: true,
-      args: [{ name: "amount", kind: "number", label: "How many", required: true, least: -999999999, most: 999999999, note: "Negative takes them away." }],
+      args: [
+        {
+          name: "amount",
+          kind: "number",
+          label: "How many",
+          required: true,
+          least: -999999999,
+          most: 999999999,
+          note: "Negative takes them away.",
+        },
+      ],
     },
     {
       op: "value.add",
@@ -241,8 +304,21 @@ export const TARNISHED_TOOL: ToolCatalog = {
       note: "By name, from the tool's own list of every grace in the game. Works for graces the player has never found. Say the area too where a name is used twice.",
       oneWay: true,
       args: [
-        { name: "name", kind: "name", list: "graces", label: "Grace", required: true, note: "Exactly as the tool spells it: Church of Elleh, Lake-Facing Cliffs." },
-        { name: "area", kind: "area", list: "graces", label: "Area", note: "Needed only where two graces share a name, and then it is one of the two." },
+        {
+          name: "name",
+          kind: "name",
+          list: "graces",
+          label: "Grace",
+          required: true,
+          note: "Exactly as the tool spells it: Church of Elleh, Lake-Facing Cliffs.",
+        },
+        {
+          name: "area",
+          kind: "area",
+          list: "graces",
+          label: "Area",
+          note: "Needed only where two graces share a name, and then it is one of the two.",
+        },
       ],
     },
     {
@@ -251,8 +327,21 @@ export const TARNISHED_TOOL: ToolCatalog = {
       note: "The other half of naming a place: destinations that are not graces. Say the area too, since several of these are the same fight in two places.",
       oneWay: true,
       args: [
-        { name: "name", kind: "name", list: "bosses", label: "Boss", required: true, note: "Godrick the Grafted, Bell Bearing Hunter, Erdtree Avatar." },
-        { name: "area", kind: "area", list: "bosses", label: "Area", note: "Needed only where one name is used in more than one place, and then it is one of them." },
+        {
+          name: "name",
+          kind: "name",
+          list: "bosses",
+          label: "Boss",
+          required: true,
+          note: "Godrick the Grafted, Bell Bearing Hunter, Erdtree Avatar.",
+        },
+        {
+          name: "area",
+          kind: "area",
+          list: "bosses",
+          label: "Area",
+          note: "Needed only where one name is used in more than one place, and then it is one of them.",
+        },
       ],
     },
     /**
@@ -310,7 +399,16 @@ export const TARNISHED_TOOL: ToolCatalog = {
       label: "Lift the player, and let go",
       note: "Straight up from wherever they are, and then gravity. Usually fatal. Needs no map at all.",
       oneWay: true,
-      args: [{ name: "height", kind: "number", label: "How far up", least: 5, most: 500, note: "Metres. Around 150 is reliably fatal; 20 hurts." }],
+      args: [
+        {
+          name: "height",
+          kind: "number",
+          label: "How far up",
+          least: 5,
+          most: 500,
+          note: "Metres. Around 150 is reliably fatal; 20 hurts.",
+        },
+      ],
     },
     {
       op: "item.give",

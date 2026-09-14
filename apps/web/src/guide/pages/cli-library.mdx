@@ -18,7 +18,7 @@ await email(buyer, {
 });
 
 // Later, or elsewhere:
-readHeader(bytes);            // { v: 1, ref, title, ... } without a key
+readHeader(bytes); // { v: 1, ref, title, ... } without a key
 const result = await open(bytes, key);
 if (result.ok) result.document; // the pack, as sealed
 ```

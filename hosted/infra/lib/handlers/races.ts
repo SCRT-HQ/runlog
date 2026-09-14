@@ -61,13 +61,22 @@ export interface Race {
 
 export interface RaceStore {
   /** Null once the id is taken. The owner is the first entry. */
-  createRace(meta: Omit<RaceMeta, "seq" | "createdAt" | "updatedAt">, at: string, owner: { name?: string; sessionId?: string }): Promise<Race | null>;
+  createRace(
+    meta: Omit<RaceMeta, "seq" | "createdAt" | "updatedAt">,
+    at: string,
+    owner: { name?: string; sessionId?: string },
+  ): Promise<Race | null>;
   getRace(id: string): Promise<Race | null>;
   /** The race a code names, or null. */
   raceByCode(code: string): Promise<string | null>;
   /** Join, or be already in: the same entry either way. */
   joinRace(id: string, sub: string, name: string | undefined, at: string): Promise<Race | null>;
-  updateEntry(id: string, sub: string, at: string, patch: { sessionId?: string; name?: string; progress?: RaceProgress }): Promise<Race | null>;
+  updateEntry(
+    id: string,
+    sub: string,
+    at: string,
+    patch: { sessionId?: string; name?: string; progress?: RaceProgress },
+  ): Promise<Race | null>;
   updateRace(id: string, at: string, patch: { name?: string; endedAt?: string }): Promise<Race | null>;
   /** Every race this person is in, newest first. */
   listRaces(sub: string): Promise<Race[]>;
@@ -95,7 +104,13 @@ export function newCode(random: (n: number) => Buffer = randomBytes): string {
 
 /** A code as typed: upper-cased, with the lookalikes people type corrected. */
 export function normalizeCode(raw: string): string {
-  return raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/0/g, "O").replace(/1/g, "I").slice(0, CODE_LENGTH);
+  return raw
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .replace(/0/g, "O")
+    .replace(/1/g, "I")
+    .slice(0, CODE_LENGTH);
 }
 
 /** Days a race and its rows stay after they were last touched. */
@@ -114,7 +129,9 @@ export function dynamoRaces({ table }: { table: string }): RaceStore {
   };
 
   async function rows(id: string): Promise<Race | null> {
-    const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk", ExpressionAttributeValues: { ":pk": rpk(id) } }));
+    const out = await ddb.send(
+      new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk", ExpressionAttributeValues: { ":pk": rpk(id) } }),
+    );
     const all = (out.Items ?? []) as Row[];
     const meta = all.find((r) => r.sk === "META");
     if (!meta) return null;
@@ -139,20 +156,45 @@ export function dynamoRaces({ table }: { table: string }): RaceStore {
     if (!existing && !create) return;
     const row: Row = { ...(existing ?? { ...key, kind: "entry", sub, joinedAt: at }), ...fields, expiresAt: expiresAfter(at) };
     await ddb.send(new PutCommand({ TableName: table, Item: row }));
-    await ddb.send(new PutCommand({ TableName: table, Item: { pk: upk(sub), sk: `RACE#${id}`, kind: "racepointer", id, updatedAt: at, expiresAt: expiresAfter(at) } }));
+    await ddb.send(
+      new PutCommand({
+        TableName: table,
+        Item: { pk: upk(sub), sk: `RACE#${id}`, kind: "racepointer", id, updatedAt: at, expiresAt: expiresAfter(at) },
+      }),
+    );
   }
 
   return {
     async createRace(meta, at, owner) {
-      const row: Row = { ...meta, pk: rpk(meta.id), sk: "META", kind: "race", createdAt: at, updatedAt: at, seq: 0, expiresAt: expiresAfter(at) };
+      const row: Row = {
+        ...meta,
+        pk: rpk(meta.id),
+        sk: "META",
+        kind: "race",
+        createdAt: at,
+        updatedAt: at,
+        seq: 0,
+        expiresAt: expiresAfter(at),
+      };
       try {
         await ddb.send(new PutCommand({ TableName: table, Item: row, ConditionExpression: "attribute_not_exists(pk)" }));
       } catch (error) {
         if ((error as { name?: string }).name === "ConditionalCheckFailedException") return null;
         throw error;
       }
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: `CODE#${meta.code}`, sk: "RACE", kind: "code", raceId: meta.id, expiresAt: expiresAfter(at) } }));
-      await entry(meta.id, meta.ownerSub, at, { ...(owner.name ? { name: owner.name } : {}), ...(owner.sessionId ? { sessionId: owner.sessionId } : {}) }, true);
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: { pk: `CODE#${meta.code}`, sk: "RACE", kind: "code", raceId: meta.id, expiresAt: expiresAfter(at) },
+        }),
+      );
+      await entry(
+        meta.id,
+        meta.ownerSub,
+        at,
+        { ...(owner.name ? { name: owner.name } : {}), ...(owner.sessionId ? { sessionId: owner.sessionId } : {}) },
+        true,
+      );
       return rows(meta.id);
     },
     getRace: rows,
@@ -183,11 +225,18 @@ export function dynamoRaces({ table }: { table: string }): RaceStore {
       return rows(id);
     },
     async listRaces(sub) {
-      const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": upk(sub), ":sk": "RACE#" } }));
-      const ids = ((out.Items ?? []) as Row[]).sort((a, b) => (String(a["updatedAt"]) < String(b["updatedAt"]) ? 1 : -1)).map((r) => String(r["id"]));
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+          ExpressionAttributeValues: { ":pk": upk(sub), ":sk": "RACE#" },
+        }),
+      );
+      const ids = ((out.Items ?? []) as Row[])
+        .sort((a, b) => (String(a["updatedAt"]) < String(b["updatedAt"]) ? 1 : -1))
+        .map((r) => String(r["id"]));
       const races = await Promise.all(ids.map(rows));
       return races.filter((r): r is Race => r !== null);
     },
   };
 }
-

@@ -115,16 +115,12 @@ export interface Reconciliation {
  * Compare what the run believes against what the environment reports.
  *
  * Reports rather than resolves. The app cannot know which side is right, the
- * player may have renamed a track for good reason, or forgotten to make one, 
+ * player may have renamed a track for good reason, or forgotten to make one,
  * and silently "fixing" a session on their behalf is exactly the kind of help
  * nobody asked for. Same principle as contradictions in the rules: show the
  * disagreement, let the human rule on it.
  */
-export function reconcile(
-  pack: Pack,
-  state: RunState,
-  external: readonly ExternalSubject[],
-): Reconciliation {
+export function reconcile(pack: Pack, state: RunState, external: readonly ExternalSubject[]): Reconciliation {
   const differences: Difference[] = [];
   const matched: Array<{ subject: number; external: ExternalSubject }> = [];
 

@@ -61,7 +61,14 @@ export interface DiscordRest {
   createChannel(guildId: string, name: string): Promise<string | null>;
 }
 
-async function call(token: string, method: string, path: string, body: unknown, fetchImpl: typeof fetch, ropeMs: number): Promise<Record<string, unknown> | null> {
+async function call(
+  token: string,
+  method: string,
+  path: string,
+  body: unknown,
+  fetchImpl: typeof fetch,
+  ropeMs: number,
+): Promise<Record<string, unknown> | null> {
   const rope = new AbortController();
   const timer = setTimeout(() => rope.abort(), ropeMs);
   try {
@@ -94,7 +101,16 @@ export function discordRest(token: string, fetchImpl: typeof fetch = fetch, rope
       // `invitable` lets the host add whoever else the run is for without
       // asking the bot to; Discord takes it on a private thread alone.
       const kind = privately ? { type: PRIVATE_THREAD, invitable: true } : { type: PUBLIC_THREAD };
-      return id(await call(token, "POST", `/channels/${channelId}/threads`, { name: name.slice(0, 100), ...kind, auto_archive_duration: 1440 }, fetchImpl, ropeMs));
+      return id(
+        await call(
+          token,
+          "POST",
+          `/channels/${channelId}/threads`,
+          { name: name.slice(0, 100), ...kind, auto_archive_duration: 1440 },
+          fetchImpl,
+          ropeMs,
+        ),
+      );
     },
     async addThreadMember(threadId, userId) {
       // Discord answers 204 with no body, which `call` reads as an empty object rather than a failure.
@@ -116,7 +132,10 @@ export function discordRest(token: string, fetchImpl: typeof fetch = fetch, rope
       return (await call(token, "PATCH", `/channels/${threadId}`, { archived: true }, fetchImpl, ropeMs)) !== null;
     },
     async editOriginal(applicationId, interactionToken, message) {
-      return (await call(token, "PATCH", `/webhooks/${applicationId}/${interactionToken}/messages/@original`, message, fetchImpl, ropeMs)) !== null;
+      return (
+        (await call(token, "PATCH", `/webhooks/${applicationId}/${interactionToken}/messages/@original`, message, fetchImpl, ropeMs)) !==
+        null
+      );
     },
     async followUp(applicationId, interactionToken, message, privately = false) {
       // 64 is Discord's ephemeral flag: only whoever pressed ever sees it.
@@ -127,7 +146,16 @@ export function discordRest(token: string, fetchImpl: typeof fetch = fetch, rope
       return named(await call(token, "GET", `/guilds/${guildId}/roles`, undefined, fetchImpl, ropeMs));
     },
     async createRole(guildId, name, color) {
-      return id(await call(token, "POST", `/guilds/${guildId}/roles`, { name: name.slice(0, 100), permissions: "0", color, hoist: false, mentionable: true }, fetchImpl, ropeMs));
+      return id(
+        await call(
+          token,
+          "POST",
+          `/guilds/${guildId}/roles`,
+          { name: name.slice(0, 100), permissions: "0", color, hoist: false, mentionable: true },
+          fetchImpl,
+          ropeMs,
+        ),
+      );
     },
     async listChannels(guildId) {
       const rows = named(await call(token, "GET", `/guilds/${guildId}/channels`, undefined, fetchImpl, ropeMs), (row) => row["type"] === 0);
@@ -140,7 +168,10 @@ export function discordRest(token: string, fetchImpl: typeof fetch = fetch, rope
 }
 
 /** A list Discord answered, kept to the rows with an id and a name, and to those a filter keeps. */
-function named(out: Record<string, unknown> | null, keep: (row: Record<string, unknown>) => boolean = () => true): Array<{ id: string; name: string }> | null {
+function named(
+  out: Record<string, unknown> | null,
+  keep: (row: Record<string, unknown>) => boolean = () => true,
+): Array<{ id: string; name: string }> | null {
   const rows = out?.["items"];
   if (!Array.isArray(rows)) return null;
   return rows
@@ -158,10 +189,18 @@ function named(out: Record<string, unknown> | null, keep: (row: Record<string, u
 export interface DiscordOAuth {
   exchange(code: string, redirectUri: string): Promise<string | null>;
   me(accessToken: string): Promise<{ id: string; name: string } | null>;
-  pushRoleConnection(accessToken: string, connection: { platformUsername: string; metadata: Record<string, string | number> }): Promise<boolean>;
+  pushRoleConnection(
+    accessToken: string,
+    connection: { platformUsername: string; metadata: Record<string, string | number> },
+  ): Promise<boolean>;
 }
 
-export function discordOAuth(applicationId: string, clientSecret: string, fetchImpl: typeof fetch = fetch, ropeMs: number = PATIENT_ROPE_MS): DiscordOAuth {
+export function discordOAuth(
+  applicationId: string,
+  clientSecret: string,
+  fetchImpl: typeof fetch = fetch,
+  ropeMs: number = PATIENT_ROPE_MS,
+): DiscordOAuth {
   const bearer = async (method: string, path: string, token: string, body?: unknown): Promise<Record<string, unknown> | null> => {
     const rope = new AbortController();
     const timer = setTimeout(() => rope.abort(), ropeMs);
@@ -190,7 +229,13 @@ export function discordOAuth(applicationId: string, clientSecret: string, fetchI
         const res = await fetchImpl(`${API}/oauth2/token`, {
           method: "POST",
           headers: { "content-type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ client_id: applicationId, client_secret: clientSecret, grant_type: "authorization_code", code, redirect_uri: redirectUri }).toString(),
+          body: new URLSearchParams({
+            client_id: applicationId,
+            client_secret: clientSecret,
+            grant_type: "authorization_code",
+            code,
+            redirect_uri: redirectUri,
+          }).toString(),
           signal: rope.signal,
         });
         if (!res.ok) return null;
@@ -212,7 +257,13 @@ export function discordOAuth(applicationId: string, clientSecret: string, fetchI
       return { id, name: name.slice(0, 100) };
     },
     async pushRoleConnection(accessToken, connection) {
-      return (await bearer("PUT", `/users/@me/applications/${applicationId}/role-connection`, accessToken, { platform_name: "Runlog", platform_username: connection.platformUsername.slice(0, 100), metadata: connection.metadata })) !== null;
+      return (
+        (await bearer("PUT", `/users/@me/applications/${applicationId}/role-connection`, accessToken, {
+          platform_name: "Runlog",
+          platform_username: connection.platformUsername.slice(0, 100),
+          metadata: connection.metadata,
+        })) !== null
+      );
     },
   };
 }
@@ -223,9 +274,23 @@ export function discordOAuth(applicationId: string, clientSecret: string, fetchI
  * that lapsed keeps its entitlement row with an `ends_at` in the past;
  * Discord can also be asked to leave ended ones out, and is.
  */
-export async function guildEntitledFrom(token: string, applicationId: string, guildId: string, skuId: string, fetchImpl: typeof fetch = fetch, nowMs = Date.now()): Promise<boolean> {
+export async function guildEntitledFrom(
+  token: string,
+  applicationId: string,
+  guildId: string,
+  skuId: string,
+  fetchImpl: typeof fetch = fetch,
+  nowMs = Date.now(),
+): Promise<boolean> {
   if (!/^\d{15,22}$/.test(guildId) || !/^\d{15,22}$/.test(skuId)) return false;
-  const out = await call(token, "GET", `/applications/${applicationId}/entitlements?guild_id=${guildId}&sku_ids=${skuId}&exclude_ended=true`, undefined, fetchImpl, ROPE_MS);
+  const out = await call(
+    token,
+    "GET",
+    `/applications/${applicationId}/entitlements?guild_id=${guildId}&sku_ids=${skuId}&exclude_ended=true`,
+    undefined,
+    fetchImpl,
+    ROPE_MS,
+  );
   const rows: unknown = out && Array.isArray(out["items"]) ? out["items"] : out;
   if (!Array.isArray(rows)) return false;
   return rows.some((row) => {

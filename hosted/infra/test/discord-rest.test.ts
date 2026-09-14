@@ -16,9 +16,15 @@ describe("a verification on a person's behalf", () => {
   const seen: Array<{ url: string; method: string; headers: Record<string, string>; body: string | null }> = [];
   const discord = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
-    seen.push({ url, method: init?.method ?? "GET", headers: (init?.headers as Record<string, string>) ?? {}, body: typeof init?.body === "string" ? init.body : null });
+    seen.push({
+      url,
+      method: init?.method ?? "GET",
+      headers: (init?.headers as Record<string, string>) ?? {},
+      body: typeof init?.body === "string" ? init.body : null,
+    });
     if (url.endsWith("/oauth2/token")) return new Response(JSON.stringify({ access_token: "tok", token_type: "Bearer" }), { status: 200 });
-    if (url.endsWith("/users/@me")) return new Response(JSON.stringify({ id: "100000000000000001", username: "mira", global_name: "Mira" }), { status: 200 });
+    if (url.endsWith("/users/@me"))
+      return new Response(JSON.stringify({ id: "100000000000000001", username: "mira", global_name: "Mira" }), { status: 200 });
     if (url.includes("/role-connection")) return new Response(JSON.stringify({ platform_name: "Runlog" }), { status: 200 });
     return new Response("", { status: 404 });
   }) as typeof fetch;
@@ -27,12 +33,30 @@ describe("a verification on a person's behalf", () => {
     const oauth = discordOAuth("app", "s".repeat(32), discord);
     expect(await oauth.exchange("code1", "https://runlog.test/api/discord/linked-role/callback")).toBe("tok");
     expect(seen[0]).toMatchObject({ url: "https://discord.com/api/v10/oauth2/token", method: "POST" });
-    expect(seen[0]!.body).toBe(new URLSearchParams({ client_id: "app", client_secret: "s".repeat(32), grant_type: "authorization_code", code: "code1", redirect_uri: "https://runlog.test/api/discord/linked-role/callback" }).toString());
+    expect(seen[0]!.body).toBe(
+      new URLSearchParams({
+        client_id: "app",
+        client_secret: "s".repeat(32),
+        grant_type: "authorization_code",
+        code: "code1",
+        redirect_uri: "https://runlog.test/api/discord/linked-role/callback",
+      }).toString(),
+    );
     expect(await oauth.me("tok")).toEqual({ id: "100000000000000001", name: "Mira" });
     expect(seen[1]).toMatchObject({ url: "https://discord.com/api/v10/users/@me", headers: { authorization: "Bearer tok" } });
-    expect(await oauth.pushRoleConnection("tok", { platformUsername: "Mira", metadata: { linked: 1, since: "2026-09-06T12:00:00.000Z" } })).toBe(true);
-    expect(seen[2]).toMatchObject({ url: "https://discord.com/api/v10/users/@me/applications/app/role-connection", method: "PUT", headers: { authorization: "Bearer tok" } });
-    expect(JSON.parse(seen[2]!.body!)).toEqual({ platform_name: "Runlog", platform_username: "Mira", metadata: { linked: 1, since: "2026-09-06T12:00:00.000Z" } });
+    expect(
+      await oauth.pushRoleConnection("tok", { platformUsername: "Mira", metadata: { linked: 1, since: "2026-09-06T12:00:00.000Z" } }),
+    ).toBe(true);
+    expect(seen[2]).toMatchObject({
+      url: "https://discord.com/api/v10/users/@me/applications/app/role-connection",
+      method: "PUT",
+      headers: { authorization: "Bearer tok" },
+    });
+    expect(JSON.parse(seen[2]!.body!)).toEqual({
+      platform_name: "Runlog",
+      platform_username: "Mira",
+      metadata: { linked: 1, since: "2026-09-06T12:00:00.000Z" },
+    });
   });
 
   it("answers null, and false, when Discord will not", async () => {
@@ -47,8 +71,12 @@ describe("a verification on a person's behalf", () => {
 describe("a server's entitlement through Discord's store", () => {
   it("holds while an entitlement to the SKU is live, and not once it ended, was deleted, or is for something else", async () => {
     expect(await guildEntitledFrom("t", "app", GUILD, SKU, answering([{ sku_id: SKU, ends_at: null }]), NOW)).toBe(true);
-    expect(await guildEntitledFrom("t", "app", GUILD, SKU, answering([{ sku_id: SKU, ends_at: "2026-10-01T00:00:00.000Z" }]), NOW)).toBe(true);
-    expect(await guildEntitledFrom("t", "app", GUILD, SKU, answering([{ sku_id: SKU, ends_at: "2026-09-01T00:00:00.000Z" }]), NOW)).toBe(false);
+    expect(await guildEntitledFrom("t", "app", GUILD, SKU, answering([{ sku_id: SKU, ends_at: "2026-10-01T00:00:00.000Z" }]), NOW)).toBe(
+      true,
+    );
+    expect(await guildEntitledFrom("t", "app", GUILD, SKU, answering([{ sku_id: SKU, ends_at: "2026-09-01T00:00:00.000Z" }]), NOW)).toBe(
+      false,
+    );
     expect(await guildEntitledFrom("t", "app", GUILD, SKU, answering([{ sku_id: SKU, deleted: true }]), NOW)).toBe(false);
     expect(await guildEntitledFrom("t", "app", GUILD, SKU, answering([{ sku_id: "9999999999999999999" }]), NOW)).toBe(false);
     expect(await guildEntitledFrom("t", "app", GUILD, SKU, answering([]), NOW)).toBe(false);
@@ -57,7 +85,9 @@ describe("a server's entitlement through Discord's store", () => {
   it("asks for the one server and the one SKU, leaving ended entitlements out, and asks nothing for ids that are not Discord's", async () => {
     const calls: string[] = [];
     await guildEntitledFrom("t", "app", GUILD, SKU, answering([], calls), NOW);
-    expect(calls).toEqual([`https://discord.com/api/v10/applications/app/entitlements?guild_id=${GUILD}&sku_ids=${SKU}&exclude_ended=true`]);
+    expect(calls).toEqual([
+      `https://discord.com/api/v10/applications/app/entitlements?guild_id=${GUILD}&sku_ids=${SKU}&exclude_ended=true`,
+    ]);
     expect(await guildEntitledFrom("t", "app", "g1", SKU, answering([{ sku_id: SKU }], calls), NOW)).toBe(false);
     expect(calls).toHaveLength(1);
   });
@@ -73,7 +103,9 @@ describe("the thread a run lives in", () => {
   const discord = (async (input: string | URL | Request, init?: RequestInit) => {
     seen.push({ url: String(input), method: init?.method ?? "GET", body: typeof init?.body === "string" ? init.body : null });
     // Discord answers a thread with its row, and a member put in one with 204 and no body at all.
-    return String(input).includes("/thread-members/") ? new Response(null, { status: 204 }) : new Response(JSON.stringify({ id: "thread_1" }), { status: 200 });
+    return String(input).includes("/thread-members/")
+      ? new Response(null, { status: 204 })
+      : new Response(JSON.stringify({ id: "thread_1" }), { status: 200 });
   }) as typeof fetch;
 
   it("is public unless a private one was asked for, and a private one is invitable, so the host can add to it", async () => {
@@ -86,7 +118,10 @@ describe("the thread a run lives in", () => {
 
   it("takes the empty answer Discord gives to a member put in it as the yes it is, and a refusal as a no", async () => {
     expect(await discordRest("t", discord).addThreadMember("thread_1", "1001")).toBe(true);
-    expect(seen[seen.length - 1]).toMatchObject({ url: "https://discord.com/api/v10/channels/thread_1/thread-members/1001", method: "PUT" });
+    expect(seen[seen.length - 1]).toMatchObject({
+      url: "https://discord.com/api/v10/channels/thread_1/thread-members/1001",
+      method: "PUT",
+    });
     const down = (async () => new Response("", { status: 403 })) as typeof fetch;
     expect(await discordRest("t", down).addThreadMember("thread_1", "1001")).toBe(false);
     expect(await discordRest("t", down).createThread("chan", "The Long Kiln", true)).toBeNull();

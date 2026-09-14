@@ -3,15 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import YAML from "yaml";
-import {
-  canonicalize,
-  fingerprint,
-  fromBase64Url,
-  generateKeyPair,
-  signPack,
-  toBase64Url,
-  verifyPack,
-} from "./signing.ts";
+import { canonicalize, fingerprint, fromBase64Url, generateKeyPair, signPack, toBase64Url, verifyPack } from "./signing.ts";
 import { parsePack } from "./parse.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");

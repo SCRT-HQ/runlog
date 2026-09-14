@@ -20,11 +20,30 @@ In the overlay editor, **Add widget** → **Static / Custom** → **Custom widge
 **CSS**
 
 ```css
-.runlog { font-family: "IBM Plex Mono", ui-monospace, monospace; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); display: grid; gap: .3em; }
-.runlog .where { font-size: 1.1em; opacity: .85; }
-.runlog .score { font-size: 2em; font-weight: 600; }
-.runlog .clock { font-size: 3em; font-variant-numeric: tabular-nums; }
-.runlog .latest { font-family: Georgia, serif; font-size: 1em; max-width: 30ch; }
+.runlog {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  display: grid;
+  gap: 0.3em;
+}
+.runlog .where {
+  font-size: 1.1em;
+  opacity: 0.85;
+}
+.runlog .score {
+  font-size: 2em;
+  font-weight: 600;
+}
+.runlog .clock {
+  font-size: 3em;
+  font-variant-numeric: tabular-nums;
+}
+.runlog .latest {
+  font-family: Georgia, serif;
+  font-size: 1em;
+  max-width: 30ch;
+}
 ```
 
 **JS**

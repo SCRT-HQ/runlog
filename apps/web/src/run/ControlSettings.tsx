@@ -11,7 +11,21 @@ import { HandOut } from "./HandOut.tsx";
 import { areasFor, known, listsFor, type Lists } from "../control/lists.ts";
 import { rememberWatchKey, watchKeyHere } from "./watchKey.ts";
 import { liveLinkOf, rememberLiveLink } from "../live/route.ts";
-import { complaints, describes, entriesOf, EMPTY, isEmpty, parse, selectorOf, tablesOf, tagsOf, tidy, type ControlProfile, type ProfileOp, type ProfileRow } from "../control/profile.ts";
+import {
+  complaints,
+  describes,
+  entriesOf,
+  EMPTY,
+  isEmpty,
+  parse,
+  selectorOf,
+  tablesOf,
+  tagsOf,
+  tidy,
+  type ControlProfile,
+  type ProfileOp,
+  type ProfileRow,
+} from "../control/profile.ts";
 
 /**
  * What a tool attached to the game should do about what the dice say.
@@ -106,19 +120,22 @@ export function ControlSettings({
 
   useEffect(() => {
     let live = true;
-    void builtins().then((all) => {
-      if (!live) return;
-      const fits = forPack(all, pack.id);
-      setShipped(fits);
-      // A pack that ships a profile has already answered the question
-      // this panel asks. Loading it is not a decision somebody was
-      // going to make differently, and leaving it unloaded meant a run
-      // of that pack quietly did nothing to the game until they found
-      // the button. Only where the run has never had one: a profile
-      // that was emptied on purpose stays empty.
-      const its = fits.find((b) => b.pack === pack.id);
-      if (its && saved === undefined) update(its.profile);
-    }, () => {});
+    void builtins().then(
+      (all) => {
+        if (!live) return;
+        const fits = forPack(all, pack.id);
+        setShipped(fits);
+        // A pack that ships a profile has already answered the question
+        // this panel asks. Loading it is not a decision somebody was
+        // going to make differently, and leaving it unloaded meant a run
+        // of that pack quietly did nothing to the game until they found
+        // the button. Only where the run has never had one: a profile
+        // that was emptied on purpose stays empty.
+        const its = fits.find((b) => b.pack === pack.id);
+        if (its && saved === undefined) update(its.profile);
+      },
+      () => {},
+    );
     return () => {
       live = false;
     };
@@ -128,7 +145,10 @@ export function ControlSettings({
   useEffect(() => {
     if (!api) return;
     let live = true;
-    void api.streamKeys().then((k) => live && setKeys(k), () => {});
+    void api.streamKeys().then(
+      (k) => live && setKeys(k),
+      () => {},
+    );
     return () => {
       live = false;
     };
@@ -136,7 +156,10 @@ export function ControlSettings({
 
   useEffect(() => {
     let live = true;
-    void listsFor(profile.tool).then((l) => live && setLists(l), () => {});
+    void listsFor(profile.tool).then(
+      (l) => live && setLists(l),
+      () => {},
+    );
     return () => {
       live = false;
     };
@@ -301,13 +324,18 @@ export function ControlSettings({
         Control <span className="muted">what a tool does about the dice</span>
       </h3>
       <p className="muted small">
-        Make what the dice say happen in the game, through a tool on the machine playing it. Off unless there are rules here; a {pack.vocabulary.run.one.toLowerCase()} with none
-        plays exactly as it always has.
+        Make what the dice say happen in the game, through a tool on the machine playing it. Off unless there are rules here; a{" "}
+        {pack.vocabulary.run.one.toLowerCase()} with none plays exactly as it always has.
       </p>
 
       <label className="toggle">
         <span>The tool</span>
-        <select className="chipAdd" value={profile.tool ?? ""} onChange={(e) => update({ ...profile, tool: e.target.value || undefined })} aria-label="Which tool this is written for">
+        <select
+          className="chipAdd"
+          value={profile.tool ?? ""}
+          onChange={(e) => update({ ...profile, tool: e.target.value || undefined })}
+          aria-label="Which tool this is written for"
+        >
           <option value="">Anything listening</option>
           {CATALOGS.map((c) => (
             <option key={c.tool} value={c.tool}>
@@ -343,9 +371,9 @@ export function ControlSettings({
         ) : null}
         {!reachable && (
           <p className="muted small">
-            <strong>This address cannot work yet.</strong> It names this {noun}, and only a {noun} open to watchers can be reached. A tool given it now is refused at the
-            door, and what it says about that is its own business: the one we know of reports only that it could not reach the server. Open this {noun} to watchers and the
-            same address starts working, with no need to copy it again.
+            <strong>This address cannot work yet.</strong> It names this {noun}, and only a {noun} open to watchers can be reached. A tool
+            given it now is refused at the door, and what it says about that is its own business: the one we know of reports only that it
+            could not reach the server. Open this {noun} to watchers and the same address starts working, with no need to copy it again.
           </p>
         )}
         <div className="padRow">
@@ -378,8 +406,8 @@ export function ControlSettings({
         {roster.length > 0 && (
           <>
             <p className="muted small">
-              One each, so a rule can be addressed to one person. A tool that dials its own line hears the rules with that name on them and the rules with no name
-              on them; the address above hears only the second kind.
+              One each, so a rule can be addressed to one person. A tool that dials its own line hears the rules with that name on them and
+              the rules with no name on them; the address above hears only the second kind.
             </p>
             {roster.map((name) => (
               <div className="padRow" key={name}>
@@ -402,8 +430,8 @@ export function ControlSettings({
       {itsOwn && isEmpty(profile) && (
         <div className="askKey">
           <p className="muted small">
-            {pack.title} ships with a profile, which a {pack.vocabulary.run.one.toLowerCase()} of it takes by itself. There are no rules here now, so this one
-            does nothing to the game; putting the pack&apos;s back is one press, and it is yours to change from there.
+            {pack.title} ships with a profile, which a {pack.vocabulary.run.one.toLowerCase()} of it takes by itself. There are no rules
+            here now, so this one does nothing to the game; putting the pack&apos;s back is one press, and it is yours to change from there.
           </p>
           <div className="padRow">
             <button className="primary tiny" onClick={() => use(itsOwn)}>
@@ -454,7 +482,10 @@ export function ControlSettings({
       </div>
 
       <h4 className="stepLabel">The {pack.vocabulary.run.one.toLowerCase()}&apos;s terms</h4>
-      <p className="muted small">Applied when a tool attaches and held until the {pack.vocabulary.run.one.toLowerCase()} ends. The settings that would otherwise be a paragraph nobody reads.</p>
+      <p className="muted small">
+        Applied when a tool attaches and held until the {pack.vocabulary.run.one.toLowerCase()} ends. The settings that would otherwise be a
+        paragraph nobody reads.
+      </p>
       {chosenSetup && (
         <p className="muted small">
           This {pack.vocabulary.run.one.toLowerCase()} is played under <strong>{chosenSetup.title}</strong>, and its{" "}
@@ -492,7 +523,13 @@ export function ControlSettings({
               aria-label="What this rule matches"
               onChange={(e) => {
                 const kind = e.target.value;
-                const bare: ProfileRow = { ops: row.ops, ...(row.label ? { label: row.label } : {}), ...(row.to ? { to: row.to } : {}), ...(row.for ? { for: row.for } : {}), ...(row.until ? { until: row.until } : {}) };
+                const bare: ProfileRow = {
+                  ops: row.ops,
+                  ...(row.label ? { label: row.label } : {}),
+                  ...(row.to ? { to: row.to } : {}),
+                  ...(row.for ? { for: row.for } : {}),
+                  ...(row.until ? { until: row.until } : {}),
+                };
                 if (kind === "tag") setRow(i, { ...bare, tag: tags[0] ?? "" });
                 else if (kind === "table") setRow(i, { ...bare, table: tables[0]?.id ?? "" });
                 else setRow(i, { ...bare, table: tables[0]?.id ?? "", entry: entriesOf(pack, tables[0]?.id)[0]?.id ?? "" });
@@ -504,7 +541,12 @@ export function ControlSettings({
             </select>
 
             {row.tag !== undefined && (
-              <select className="chipAdd" value={row.tag} aria-label="Which tag" onChange={(e) => setRow(i, { ...row, tag: e.target.value })}>
+              <select
+                className="chipAdd"
+                value={row.tag}
+                aria-label="Which tag"
+                onChange={(e) => setRow(i, { ...row, tag: e.target.value })}
+              >
                 {tags.length === 0 && <option value="">this pack tags nothing</option>}
                 {tags.map((t) => (
                   <option key={t} value={t}>
@@ -519,7 +561,13 @@ export function ControlSettings({
                 className="chipAdd"
                 value={row.table ?? ""}
                 aria-label="Which table"
-                onChange={(e) => setRow(i, { ...row, table: e.target.value, ...(row.entry !== undefined ? { entry: entriesOf(pack, e.target.value)[0]?.id ?? "" } : {}) })}
+                onChange={(e) =>
+                  setRow(i, {
+                    ...row,
+                    table: e.target.value,
+                    ...(row.entry !== undefined ? { entry: entriesOf(pack, e.target.value)[0]?.id ?? "" } : {}),
+                  })
+                }
               >
                 {tables.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -530,7 +578,12 @@ export function ControlSettings({
             )}
 
             {row.entry !== undefined && (
-              <select className="chipAdd" value={row.entry} aria-label="Which result" onChange={(e) => setRow(i, { ...row, entry: e.target.value })}>
+              <select
+                className="chipAdd"
+                value={row.entry}
+                aria-label="Which result"
+                onChange={(e) => setRow(i, { ...row, entry: e.target.value })}
+              >
                 {entriesOf(pack, row.table).map((e) => (
                   <option key={e.id} value={e.id}>
                     {e.text.length > 60 ? `${e.text.slice(0, 60)}…` : e.text}
@@ -567,7 +620,15 @@ export function ControlSettings({
             </select>
             {row.for !== undefined && (
               <>
-                <input type="number" min={1} max={3600} value={row.for} aria-label="Seconds" onChange={(e) => setRow(i, { ...row, for: Number(e.target.value) })} style={{ width: "5rem" }} />
+                <input
+                  type="number"
+                  min={1}
+                  max={3600}
+                  value={row.for}
+                  aria-label="Seconds"
+                  onChange={(e) => setRow(i, { ...row, for: Number(e.target.value) })}
+                  style={{ width: "5rem" }}
+                />
                 <span className="muted small">seconds</span>
               </>
             )}
@@ -580,7 +641,13 @@ export function ControlSettings({
               onChange={(e) => setRow(i, { ...row, to: e.target.value || undefined })}
               style={{ width: "8rem" }}
             />
-            <input type="text" value={row.label ?? ""} placeholder="what to call it" aria-label="What to call it" onChange={(e) => setRow(i, { ...row, label: e.target.value || undefined })} />
+            <input
+              type="text"
+              value={row.label ?? ""}
+              placeholder="what to call it"
+              aria-label="What to call it"
+              onChange={(e) => setRow(i, { ...row, label: e.target.value || undefined })}
+            />
           </div>
 
           <Ops catalog={catalog} lists={lists} ops={row.ops} onChange={(ops) => setRow(i, { ...row, ops })} />
@@ -611,7 +678,17 @@ export function ControlSettings({
 }
 
 /** A list of operations, which is what both the terms and a rule hold. */
-function Ops({ catalog, lists, ops, onChange }: { catalog: ToolCatalog | null; lists: Lists; ops: ProfileOp[]; onChange: (ops: ProfileOp[]) => void }) {
+function Ops({
+  catalog,
+  lists,
+  ops,
+  onChange,
+}: {
+  catalog: ToolCatalog | null;
+  lists: Lists;
+  ops: ProfileOp[];
+  onChange: (ops: ProfileOp[]) => void;
+}) {
   const set = (i: number, op: ProfileOp) => onChange(ops.map((o, at) => (at === i ? op : o)));
   const add = () => onChange([...ops, { op: catalog?.ops[0]?.op ?? "", args: {} }]);
 
@@ -641,7 +718,13 @@ function Ops({ catalog, lists, ops, onChange }: { catalog: ToolCatalog | null; l
             </select>
 
             {(def?.args ?? []).map((arg) => (
-              <Arg key={arg.name} arg={arg} op={op} lists={lists} onChange={(value) => set(i, { ...op, args: { ...op.args, [arg.name]: value } })} />
+              <Arg
+                key={arg.name}
+                arg={arg}
+                op={op}
+                lists={lists}
+                onChange={(value) => set(i, { ...op, args: { ...op.args, [arg.name]: value } })}
+              />
             ))}
 
             <button className="ghost tiny" onClick={() => onChange(ops.filter((_, at) => at !== i))} aria-label="Remove this">
@@ -654,7 +737,9 @@ function Ops({ catalog, lists, ops, onChange }: { catalog: ToolCatalog | null; l
         <button className="ghost tiny" onClick={add}>
           Add something to do
         </button>
-        {ops.some((o) => opDef(catalog, o.op)?.oneWay) && <span className="muted small">One of these cannot be undone when the effect ends.</span>}
+        {ops.some((o) => opDef(catalog, o.op)?.oneWay) && (
+          <span className="muted small">One of these cannot be undone when the effect ends.</span>
+        )}
       </div>
     </>
   );
@@ -740,7 +825,13 @@ function Arg({ arg, op, lists, onChange }: { arg: ArgDef; op: ProfileOp; lists: 
 
   if (arg.kind === "choice") {
     return (
-      <select className="chipAdd" value={String(value ?? "")} aria-label={arg.label} onChange={(e) => onChange(e.target.value)} title={arg.note}>
+      <select
+        className="chipAdd"
+        value={String(value ?? "")}
+        aria-label={arg.label}
+        onChange={(e) => onChange(e.target.value)}
+        title={arg.note}
+      >
         <option value="">{arg.label}…</option>
         {(arg.options ?? []).map((o) => (
           <option key={o} value={o}>
@@ -752,7 +843,8 @@ function Arg({ arg, op, lists, onChange }: { arg: ArgDef; op: ProfileOp; lists: 
   }
 
   // A number, where the range depends on which one is being set.
-  const range = op.op === "value.set" && arg.name === "value" ? rangeOfValue(String(op.args["name"] ?? "")) : { least: arg.least, most: arg.most };
+  const range =
+    op.op === "value.set" && arg.name === "value" ? rangeOfValue(String(op.args["name"] ?? "")) : { least: arg.least, most: arg.most };
   return (
     <input
       type="number"

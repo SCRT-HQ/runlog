@@ -18,17 +18,12 @@ function loadPack(rel: string): Pack {
 const kiln = loadPack("packs/demo/pack.yaml");
 
 const NOW = "2026-01-01T00:00:00.000Z";
-const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent =>
-  ({ t, at: NOW, ...props }) as RunEvent;
+const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent => ({ t, at: NOW, ...props }) as RunEvent;
 
 const start = ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" });
 
 /** A log that has entered `n` units. */
-const through = (n: number, extra: RunEvent[] = []): RunEvent[] => [
-  start,
-  ...Array.from({ length: n }, () => ev("UnitEntered")),
-  ...extra,
-];
+const through = (n: number, extra: RunEvent[] = []): RunEvent[] => [start, ...Array.from({ length: n }, () => ev("UnitEntered")), ...extra];
 
 /**
  * Triggers the pack owns outright.
@@ -51,14 +46,8 @@ describe("pack-level triggers", () => {
   });
 
   it("stops coming due once it has fired", () => {
-    const first = pendingGlobalTriggers(
-      kiln,
-      reduce(kiln, through(2, [ev("RunEnded", { ending: "kept" })])),
-    )[0]!;
-    const state = reduce(
-      kiln,
-      through(2, [ev("RunEnded", { ending: "kept" }), ev("TriggerFired", { key: first.key })]),
-    );
+    const first = pendingGlobalTriggers(kiln, reduce(kiln, through(2, [ev("RunEnded", { ending: "kept" })])))[0]!;
+    const state = reduce(kiln, through(2, [ev("RunEnded", { ending: "kept" }), ev("TriggerFired", { key: first.key })]));
     expect(pendingGlobalTriggers(kiln, state)).toEqual([]);
   });
 

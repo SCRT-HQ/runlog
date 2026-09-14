@@ -117,15 +117,26 @@ async function main() {
     console.log(`portal configuration: ${portal.id}`);
   }
 
-  console.log("\nPut these under stripe.prices in the stage's configuration (env/<stage>.json, and the RUNLOG_ENV_CONFIG variable on its environments):\n");
+  console.log(
+    "\nPut these under stripe.prices in the stage's configuration (env/<stage>.json, and the RUNLOG_ENV_CONFIG variable on its environments):\n",
+  );
   console.log(
     JSON.stringify(
-      { plusMonthly: priceIds["plus-monthly"], plusYearly: priceIds["plus-yearly"], hostedMonthly: priceIds["hosted-monthly"], hostedYearly: priceIds["hosted-yearly"], serverMonthly: priceIds["server-monthly"], serverYearly: priceIds["server-yearly"] },
+      {
+        plusMonthly: priceIds["plus-monthly"],
+        plusYearly: priceIds["plus-yearly"],
+        hostedMonthly: priceIds["hosted-monthly"],
+        hostedYearly: priceIds["hosted-yearly"],
+        serverMonthly: priceIds["server-monthly"],
+        serverYearly: priceIds["server-yearly"],
+      },
       null,
       2,
     ),
   );
-  console.log("\nThen register the webhook endpoint https://<domain>/api/stripe/webhook for the event entitlements.active_entitlement_summary.updated, and fill stripe/webhook-secret with its signing secret.");
+  console.log(
+    "\nThen register the webhook endpoint https://<domain>/api/stripe/webhook for the event entitlements.active_entitlement_summary.updated, and fill stripe/webhook-secret with its signing secret.",
+  );
 }
 
 void main();

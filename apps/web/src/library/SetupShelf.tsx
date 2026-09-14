@@ -68,7 +68,11 @@ export function SetupShelf() {
       updatedAt: at,
     });
     await reload();
-    setNote(had ? `${setup.title} is now version ${setup.version}.` : `${setup.title} is on your shelf; runs of any pack for ${setup.tool} can be started under it.`);
+    setNote(
+      had
+        ? `${setup.title} is now version ${setup.version}.`
+        : `${setup.title} is on your shelf; runs of any pack for ${setup.tool} can be started under it.`,
+    );
   };
 
   const drop = async (setup: StoredSetup) => {
@@ -81,8 +85,8 @@ export function SetupShelf() {
     <section className="panel setupShelf">
       <h3 className="sectionTitle">Your setups</h3>
       <p className="muted small">
-        What a tool attached to the game is set to while a run lasts, and what you start holding. A setup is written for a tool rather than for a pack, so one
-        fits every pack for the same game.
+        What a tool attached to the game is set to while a run lasts, and what you start holding. A setup is written for a tool rather than
+        for a pack, so one fits every pack for the same game.
       </p>
 
       {kept.length === 0 ? (

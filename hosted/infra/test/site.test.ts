@@ -31,8 +31,20 @@ const config = (over: Partial<EnvConfig> = {}): EnvConfig => ({
   workosCliClientId: "client_cli_test",
   email: { from: "Runlog <noreply@example.com>", region: "us-west-2", identity: "example.com" },
   gates: false,
-  stripe: { prices: { plusMonthly: "", plusYearly: "", hostedMonthly: "", hostedYearly: "", serverMonthly: "", serverYearly: "" }, features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" }, applicationFeeBps: { subscribed: 0, unsubscribed: 500 } },
-  hosted: { operator: "Example Co, LLC", operatorShort: "Example Co", support: "help@example.com", termsVersion: "2026-01-01", termsDate: "2026-01-01", billing: false, testing: false },
+  stripe: {
+    prices: { plusMonthly: "", plusYearly: "", hostedMonthly: "", hostedYearly: "", serverMonthly: "", serverYearly: "" },
+    features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" },
+    applicationFeeBps: { subscribed: 0, unsubscribed: 500 },
+  },
+  hosted: {
+    operator: "Example Co, LLC",
+    operatorShort: "Example Co",
+    support: "help@example.com",
+    termsVersion: "2026-01-01",
+    termsDate: "2026-01-01",
+    billing: false,
+    testing: false,
+  },
   ...over,
 });
 
@@ -116,13 +128,10 @@ describe("the site", () => {
      * deploy, after the bucket and certificate had already been created.
      */
     it("does not ask for compression on a policy CloudFront would call disabled", () => {
-      const policies = Object.values(
-        template.findResources("AWS::CloudFront::CachePolicy"),
-      ).map((r) => r.Properties.CachePolicyConfig);
+      const policies = Object.values(template.findResources("AWS::CloudFront::CachePolicy")).map((r) => r.Properties.CachePolicyConfig);
 
       for (const policy of policies) {
-        const disabled =
-          policy.DefaultTTL === 0 && policy.MaxTTL === 0 && policy.MinTTL === 0;
+        const disabled = policy.DefaultTTL === 0 && policy.MaxTTL === 0 && policy.MinTTL === 0;
         const compresses =
           policy.ParametersInCacheKeyAndForwardedToOrigin?.EnableAcceptEncodingGzip ||
           policy.ParametersInCacheKeyAndForwardedToOrigin?.EnableAcceptEncodingBrotli;
@@ -135,15 +144,12 @@ describe("the site", () => {
       const config = Object.values(distributions)[0]!.Properties.DistributionConfig;
       expect(config.CacheBehaviors).toHaveLength(1);
       expect(config.CacheBehaviors[0].PathPattern).toBe("/assets/*");
-      expect(config.CacheBehaviors[0].CachePolicyId).not.toEqual(
-        config.DefaultCacheBehavior.CachePolicyId,
-      );
+      expect(config.CacheBehaviors[0].CachePolicyId).not.toEqual(config.DefaultCacheBehavior.CachePolicyId);
     });
   });
 
   it("serves only over https", () => {
-    const config = Object.values(template.findResources("AWS::CloudFront::Distribution"))[0]!
-      .Properties.DistributionConfig;
+    const config = Object.values(template.findResources("AWS::CloudFront::Distribution"))[0]!.Properties.DistributionConfig;
     expect(config.DefaultCacheBehavior.ViewerProtocolPolicy).toBe("redirect-to-https");
     expect(config.ViewerCertificate.MinimumProtocolVersion).toBe("TLSv1.2_2021");
   });
@@ -152,8 +158,7 @@ describe("the site", () => {
     // The app has no paths of its own; everything it shares is in the
     // fragment. So anything unrecognized is a typo, and S3's XML complaint is
     // a worse answer than the app.
-    const config = Object.values(template.findResources("AWS::CloudFront::Distribution"))[0]!
-      .Properties.DistributionConfig;
+    const config = Object.values(template.findResources("AWS::CloudFront::Distribution"))[0]!.Properties.DistributionConfig;
     expect(config.CustomErrorResponses).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ ErrorCode: 403, ResponseCode: 200, ResponsePagePath: "/index.html" }),
@@ -182,7 +187,7 @@ describe("the site", () => {
 
   it("puts nothing between the edge and the bundle", () => {
     // Who may use the app is the app's question, answered by AuthKit. A
-    // function at the edge cannot verify that session, so there is none: 
+    // function at the edge cannot verify that session, so there is none:
     // the shared-password door this replaced lived exactly here.
     template.resourceCountIs("AWS::CloudFront::Function", 0);
   });

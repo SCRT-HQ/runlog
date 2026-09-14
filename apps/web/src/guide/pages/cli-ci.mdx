@@ -2,11 +2,11 @@
 
 Nobody is at a build server to confirm a sign-in code, so two things go in the environment instead:
 
-| Variable | What it is |
-| --- | --- |
-| `RUNLOG_API_KEY` | A command-line key from your profile page in the app; stands in for `login`. Make it a key that *only releases*: it can check, sign, publish and release packs and nothing else, so a leaked build secret cannot reach your runs, sales or people. |
-| `RUNLOG_SIGNING_KEY` | The whole contents of the `my-key.json` that `keygen` wrote; stands in for `--key`. |
-| `RUNLOG_API` | Optional: another address, such as a copy you run yourself (`https://<your domain>/api`), with a key made there. |
+| Variable             | What it is                                                                                                                                                                                                                                         |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RUNLOG_API_KEY`     | A command-line key from your profile page in the app; stands in for `login`. Make it a key that _only releases_: it can check, sign, publish and release packs and nothing else, so a leaked build secret cannot reach your runs, sales or people. |
+| `RUNLOG_SIGNING_KEY` | The whole contents of the `my-key.json` that `keygen` wrote; stands in for `--key`.                                                                                                                                                                |
+| `RUNLOG_API`         | Optional: another address, such as a copy you run yourself (`https://<your domain>/api`), with a key made there.                                                                                                                                   |
 
 ## A workflow to copy
 

@@ -7,8 +7,18 @@ describe("a widget's address", () => {
   });
 
   it("names the kind, the run, and the look", () => {
-    expect(widgetFromHash("#widget/clock/01ARZ3NDEKTSV4RRFFQ69G5FAV")).toEqual({ kind: "clock", runId: "01ARZ3NDEKTSV4RRFFQ69G5FAV", bg: "solid", scale: 1 });
-    expect(widgetFromHash("#widget/scoreboard/run1?bg=clear&scale=1.5")).toEqual({ kind: "scoreboard", runId: "run1", bg: "clear", scale: 1.5 });
+    expect(widgetFromHash("#widget/clock/01ARZ3NDEKTSV4RRFFQ69G5FAV")).toEqual({
+      kind: "clock",
+      runId: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+      bg: "solid",
+      scale: 1,
+    });
+    expect(widgetFromHash("#widget/scoreboard/run1?bg=clear&scale=1.5")).toEqual({
+      kind: "scoreboard",
+      runId: "run1",
+      bg: "clear",
+      scale: 1.5,
+    });
     expect(widgetFromHash("#widget/step/run1")?.kind).toBe("step");
   });
   it("refuses what it does not know and clamps the size", () => {
@@ -18,7 +28,13 @@ describe("a widget's address", () => {
     expect(widgetFromHash("#widget/stats/run1?bg=plaid")?.bg).toBe("solid");
   });
   it("carries a live link's token, for a machine that is not the streamer's", () => {
-    expect(widgetFromHash("#widget/stats/run1?t=tok&bg=clear")).toEqual({ kind: "stats", runId: "run1", bg: "clear", scale: 1, token: "tok" });
+    expect(widgetFromHash("#widget/stats/run1?t=tok&bg=clear")).toEqual({
+      kind: "stats",
+      runId: "run1",
+      bg: "clear",
+      scale: 1,
+      token: "tok",
+    });
     expect(widgetHash({ kind: "clock", runId: "r", bg: "solid", scale: 1, token: "tok" })).toBe("#widget/clock/r?t=tok");
   });
 
@@ -46,6 +62,8 @@ describe("a widget's address", () => {
     expect(widgetFromHash(widgetHash(route))).toEqual(route);
     const pinned = { kind: "stats" as const, runId: "r", bg: "none" as const, scale: 1.25, token: "tok", theme: "daylight" as const };
     expect(widgetFromHash(widgetHash(pinned))).toEqual(pinned);
-    expect(widgetHref(route, "https://runlog.example/app/?purchase=x#play")).toBe("https://runlog.example/app/#widget/race/r?bg=clear&scale=2");
+    expect(widgetHref(route, "https://runlog.example/app/?purchase=x#play")).toBe(
+      "https://runlog.example/app/#widget/race/r?bg=clear&scale=2",
+    );
   });
 });

@@ -117,7 +117,12 @@ export function profileOf(snapshot: unknown): ControlProfile | null {
   if (!control || typeof control !== "object") return null;
   const raw = control as Record<string, unknown>;
   const setup = opsOf(raw["setup"]);
-  const rows = Array.isArray(raw["rows"]) ? raw["rows"].slice(0, MOST_ROWS).map(rowOf).filter((r): r is ControlRow => r !== null) : [];
+  const rows = Array.isArray(raw["rows"])
+    ? raw["rows"]
+        .slice(0, MOST_ROWS)
+        .map(rowOf)
+        .filter((r): r is ControlRow => r !== null)
+    : [];
   if (setup.length === 0 && rows.length === 0) return null;
   const tool = typeof raw["tool"] === "string" && raw["tool"].length > 0 && raw["tool"].length <= 64 ? raw["tool"] : undefined;
   return { ...(tool ? { tool } : {}), setup, rows };
@@ -151,7 +156,10 @@ function rowOf(value: unknown): ControlRow | null {
   const ops = opsOf(raw["ops"]);
   if (ops.length === 0) return null;
   const text = (name: string) => (typeof raw[name] === "string" && (raw[name] as string).length <= 200 ? (raw[name] as string) : undefined);
-  const seconds = typeof raw["for"] === "number" && Number.isFinite(raw["for"]) ? Math.max(1, Math.min(LONGEST, Math.floor(raw["for"] as number))) : undefined;
+  const seconds =
+    typeof raw["for"] === "number" && Number.isFinite(raw["for"])
+      ? Math.max(1, Math.min(LONGEST, Math.floor(raw["for"] as number)))
+      : undefined;
   const row: ControlRow = { ops };
   const table = text("table");
   const entry = text("entry");

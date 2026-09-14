@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { useDocDrawer } from "../docs/DocDrawer.tsx";
-import { facets, FEATURES, filterMarketplace, kindCounts, loadMarketplace, publishersOf, type MarketplaceEntry, type Feature } from "./marketplace.ts";
+import {
+  facets,
+  FEATURES,
+  filterMarketplace,
+  kindCounts,
+  loadMarketplace,
+  publishersOf,
+  type MarketplaceEntry,
+  type Feature,
+} from "./marketplace.ts";
 import type { ListingKind } from "@runlog/rules-schema";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 
@@ -97,9 +106,22 @@ export function MarketplaceView({
   const all = entries ?? [];
   const sides = useMemo(() => facets(all), [all]);
   const publishers = useMemo(() => publishersOf(all), [all]);
-  const who = publisher ? publishers.find((p) => p.id === publisher) ?? null : null;
+  const who = publisher ? (publishers.find((p) => p.id === publisher) ?? null) : null;
   const shown = useMemo(
-    () => filterMarketplace(all, { q, categories, features, tags, kind, ...(owned === "all" ? {} : { mine: owned === "mine" }), ...(publisher ? { publisher } : {}) }, new Set([...mine, ...bought])),
+    () =>
+      filterMarketplace(
+        all,
+        {
+          q,
+          categories,
+          features,
+          tags,
+          kind,
+          ...(owned === "all" ? {} : { mine: owned === "mine" }),
+          ...(publisher ? { publisher } : {}),
+        },
+        new Set([...mine, ...bought]),
+      ),
     [all, q, categories, features, tags, kind, owned, publisher, mine, bought],
   );
   const counts = useMemo(() => kindCounts(all), [all]);
@@ -156,7 +178,10 @@ export function MarketplaceView({
       <header className="libraryHead marketHead">
         <div>
           <h2>Marketplace</h2>
-          <p className="muted">Packs anyone may add: the ones that come with the app, and what people have published. Free ones go straight to your packs; a priced one is bought from its publisher.</p>
+          <p className="muted">
+            Packs anyone may add: the ones that come with the app, and what people have published. Free ones go straight to your packs; a
+            priced one is bought from its publisher.
+          </p>
         </div>
         <button className="ghost tiny" onClick={onBack}>
           Back to your packs
@@ -171,12 +196,7 @@ export function MarketplaceView({
           </label>
 
           {/* The phone's way in and out of the facets; it draws nothing on a wide screen. */}
-          <button
-            type="button"
-            className="filtersToggle"
-            aria-expanded={filtersOpen}
-            onClick={() => setFiltersOpen((open) => !open)}
-          >
+          <button type="button" className="filtersToggle" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}>
             {filtersOpen ? "Hide the filters" : "Filters"}
             {narrowed && <span className="chip ok">on</span>}
           </button>
@@ -193,8 +213,8 @@ export function MarketplaceView({
                 ))}
               </div>
               <p className="muted small">
-                A pack is a game: what the dice can do. A setup is what a tool attached to the game is set to while a run lasts, and fits any pack for that
-                game.
+                A pack is a game: what the dice can do. A setup is what a tool attached to the game is set to while a run lasts, and fits
+                any pack for that game.
               </p>
             </div>
           )}
@@ -234,7 +254,11 @@ export function MarketplaceView({
                 {sides.categories.map((c) => (
                   <li key={c.value}>
                     <label>
-                      <input type="checkbox" checked={categories.has(c.value)} onChange={() => toggle(categories, c.value, setCategories)} />
+                      <input
+                        type="checkbox"
+                        checked={categories.has(c.value)}
+                        onChange={() => toggle(categories, c.value, setCategories)}
+                      />
                       <span>{c.value}</span>
                       <span className="muted num">{c.count}</span>
                     </label>
@@ -251,7 +275,13 @@ export function MarketplaceView({
                 {publishers.map((p) => (
                   <li key={p.id}>
                     <label>
-                      <input type="radio" name="publisher" checked={publisher === p.id} onChange={() => setPublisher(p.id)} onClick={() => publisher === p.id && setPublisher(null)} />
+                      <input
+                        type="radio"
+                        name="publisher"
+                        checked={publisher === p.id}
+                        onChange={() => setPublisher(p.id)}
+                        onClick={() => publisher === p.id && setPublisher(null)}
+                      />
                       <span>{p.name}</span>
                       <span className="muted num">{p.count}</span>
                     </label>
@@ -266,7 +296,11 @@ export function MarketplaceView({
               <h4 className="facetTitle">Tags</h4>
               <div className="options">
                 {sides.tags.map((t) => (
-                  <button key={t.value} className={`chip pick ${tags.has(t.value) ? "on" : ""}`} onClick={() => toggle(tags, t.value, setTags)}>
+                  <button
+                    key={t.value}
+                    className={`chip pick ${tags.has(t.value) ? "on" : ""}`}
+                    onClick={() => toggle(tags, t.value, setTags)}
+                  >
                     {t.value}
                   </button>
                 ))}
@@ -304,9 +338,7 @@ export function MarketplaceView({
               {shown.length === all.length ? `${all.length} packs` : `${shown.length} of ${all.length} packs`}
             </p>
           )}
-          {entries !== null && shown.length === 0 && (
-            <p className="muted">Nothing matches. Loosen a filter, or clear them.</p>
-          )}
+          {entries !== null && shown.length === 0 && <p className="muted">Nothing matches. Loosen a filter, or clear them.</p>}
           <div className="marketGrid">
             {shown.map((e) => {
               const have = mine.has(e.id);
@@ -314,7 +346,9 @@ export function MarketplaceView({
                 <article key={e.id} className="panel marketCard">
                   <header className="marketCardHead">
                     <span className="pill">{e.category}</span>
-                    <span className={`muted small ${e.price !== "free" ? "priceTag" : ""}`}>{e.price === "free" ? "free" : e.price.display}</span>
+                    <span className={`muted small ${e.price !== "free" ? "priceTag" : ""}`}>
+                      {e.price === "free" ? "free" : e.price.display}
+                    </span>
                   </header>
                   <h3 className="marketTitle">
                     {e.title}
@@ -326,7 +360,11 @@ export function MarketplaceView({
                     {e.publisher && e.publisher.name !== e.author && (
                       <>
                         {" · "}
-                        <button className="publisherLink" onClick={() => setPublisher(e.publisher!.id)} title={`Everything ${e.publisher.name} has listed`}>
+                        <button
+                          className="publisherLink"
+                          onClick={() => setPublisher(e.publisher!.id)}
+                          title={`Everything ${e.publisher.name} has listed`}
+                        >
                           {e.publisher.name}
                         </button>
                       </>
@@ -337,12 +375,22 @@ export function MarketplaceView({
                     <p className="muted small marketNeeds">
                       {e.requires.some((r) => !r.optional) && (
                         <>
-                          <strong>Needs:</strong> {e.requires.filter((r) => !r.optional).map((r) => r.label).join("; ")}.{" "}
+                          <strong>Needs:</strong>{" "}
+                          {e.requires
+                            .filter((r) => !r.optional)
+                            .map((r) => r.label)
+                            .join("; ")}
+                          .{" "}
                         </>
                       )}
                       {e.requires.some((r) => r.optional) && (
                         <>
-                          <strong>Better with:</strong> {e.requires.filter((r) => r.optional).map((r) => r.label).join("; ")}.
+                          <strong>Better with:</strong>{" "}
+                          {e.requires
+                            .filter((r) => r.optional)
+                            .map((r) => r.label)
+                            .join("; ")}
+                          .
                         </>
                       )}
                     </p>
@@ -357,7 +405,12 @@ export function MarketplaceView({
                   {e.tags.length > 0 && (
                     <div className="entryTags">
                       {e.tags.map((t) => (
-                        <button key={t} className={`chip pick ${tags.has(t) ? "on" : ""}`} title="Filter by this tag" onClick={() => toggle(tags, t, setTags)}>
+                        <button
+                          key={t}
+                          className={`chip pick ${tags.has(t) ? "on" : ""}`}
+                          title="Filter by this tag"
+                          onClick={() => toggle(tags, t, setTags)}
+                        >
                           {t}
                         </button>
                       ))}
@@ -365,7 +418,12 @@ export function MarketplaceView({
                   )}
                   <footer className="marketCardFoot">
                     <div className="marketCardFootLeft">
-                      <button className="ghost tiny" disabled={reading === e.id} title="The summary, and the rest of the pack's paper, in the side drawer" onClick={() => void showDocs(e)}>
+                      <button
+                        className="ghost tiny"
+                        disabled={reading === e.id}
+                        title="The summary, and the rest of the pack's paper, in the side drawer"
+                        onClick={() => void showDocs(e)}
+                      >
                         {reading === e.id ? "Reading…" : "Docs"}
                       </button>
                       {have && <span className="chip cap">In your packs</span>}

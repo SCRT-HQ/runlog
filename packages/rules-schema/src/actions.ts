@@ -18,11 +18,7 @@ import { DiceExpr, Id, NumericBound, Predicate, TargetRef } from "./primitives.t
 /** A branch case: match a set of values, or a numeric range. */
 export const BranchCase = z
   .object({
-    in: z
-      .array(z.number().int())
-      .min(1)
-      .optional()
-      .describe("Match when the bound value is exactly one of these numbers."),
+    in: z.array(z.number().int()).min(1).optional().describe("Match when the bound value is exactly one of these numbers."),
     is: NumericBound.optional().describe("Match when the bound value satisfies this comparison."),
     then: z
       .array(z.lazy(() => Action))
@@ -65,7 +61,7 @@ export type Action =
    * declared targeting strategy, and bind it as `targetSubject`.
    *
    * This is deliberately explicit rather than implicit. An entry that reaches
-   * backwards has to say so, which keeps "what got hit and why" auditable: 
+   * backwards has to say so, which keeps "what got hit and why" auditable:
    * the derivation is shown to the player rather than happening off-screen.
    */
   | { do: "resolveTarget"; from?: "currentRoll" | "event" | "choice"; into?: string }
@@ -100,10 +96,7 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
         .object({
           do: z.literal("roll").describe("Roll dice and remember the total under a name."),
           dice: DiceExpr.describe("What to roll, e.g. d6."),
-          into: z
-            .string()
-            .min(1)
-            .describe("Name to bind the total to, so a later branch can test it."),
+          into: z.string().min(1).describe("Name to bind the total to, so a later branch can test it."),
           label: z.string().optional().describe("Shown to the player when prompting for the roll."),
         })
         .strict()
@@ -112,18 +105,14 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
         .object({
           do: z.literal("rollOn").describe("Roll on another table and resolve whatever comes up."),
           table: Id.describe("Id of the table to roll on."),
-          times: z
-            .number()
-            .int()
-            .min(1)
-            .max(10)
-            .optional()
-            .describe("How many times to roll. Defaults to 1."),
+          times: z.number().int().min(1).max(10).optional().describe("How many times to roll. Defaults to 1."),
           timesFrom: z
             .string()
             .min(1)
             .optional()
-            .describe("Name a total bound earlier with `roll … into`; that many times, instead of `times`. How a pack rolls for how many to roll."),
+            .describe(
+              "Name a total bound earlier with `roll … into`; that many times, instead of `times`. How a pack rolls for how many to roll.",
+            ),
           choose: z
             .enum(["one", "all"])
             .optional()
@@ -139,10 +128,7 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
           do: z.literal("branch").describe("Choose between action lists based on a value bound earlier."),
           on: z.string().min(1).describe("Name of a value bound earlier by roll or prompt."),
           cases: z.array(BranchCase).min(1).describe("Cases tested in order; the first match wins."),
-          else: z
-            .array(Action)
-            .optional()
-            .describe("Actions to run when no case matches."),
+          else: z.array(Action).optional().describe("Actions to run when no case matches."),
         })
         .strict()
         .describe("Choose between action lists based on a value bound earlier."),
@@ -151,21 +137,11 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
           do: z.literal("prompt").describe("Put a question to the player and remember the answer."),
           kind: z
             .enum(["chooseSubject", "chooseValue", "chooseState", "confirm", "text"])
-            .describe(
-              "What kind of answer is wanted: a subject, one of `options`, a state, a yes/no, or free text.",
-            ),
+            .describe("What kind of answer is wanted: a subject, one of `options`, a state, a yes/no, or free text."),
           label: z.string().min(1).describe("The question shown to the player."),
           into: z.string().min(1).optional().describe("Name to bind the answer to."),
-          options: z
-            .array(z.string())
-            .optional()
-            .describe("The choices offered, for kind `chooseValue`."),
-          eligibleOnly: z
-            .boolean()
-            .optional()
-            .describe(
-              "For kind `chooseSubject`: restrict the list to currently targetable subjects.",
-            ),
+          options: z.array(z.string()).optional().describe("The choices offered, for kind `chooseValue`."),
+          eligibleOnly: z.boolean().optional().describe("For kind `chooseSubject`: restrict the list to currently targetable subjects."),
         })
         .strict()
         .describe("Put a question to the player and remember the answer."),
@@ -178,11 +154,7 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
             .describe(
               "How to pick: `currentRoll` reads the roll that triggered this against the pack's targeting bands, `event` uses the fallback roll for consequences not tied to a band, `choice` lets the player decide.",
             ),
-          into: z
-            .string()
-            .min(1)
-            .optional()
-            .describe("Name to bind the chosen subject to. Also always available as targetSubject."),
+          into: z.string().min(1).optional().describe("Name to bind the chosen subject to. Also always available as targetSubject."),
         })
         .strict()
         .describe(
@@ -210,19 +182,12 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
           to: TargetRef.describe("Which subject leaves play."),
         })
         .strict()
-        .describe(
-          "Take a subject out of the run. Its unit still happened, but the subject plays no further part.",
-        ),
+        .describe("Take a subject out of the run. Its unit still happened, but the subject plays no further part."),
       z
         .object({
           do: z.literal("ban").describe("Forbid declaring further subjects of a given type."),
-          subjectType: z
-            .string()
-            .optional()
-            .describe("A literal subject type to forbid, when it is known up front."),
-          from: TargetRef.optional().describe(
-            "Take the forbidden type from this subject's declared type instead of naming it.",
-          ),
+          subjectType: z.string().optional().describe("A literal subject type to forbid, when it is known up front."),
+          from: TargetRef.optional().describe("Take the forbidden type from this subject's declared type instead of naming it."),
           label: z.string().optional().describe("How to describe the ban to the player."),
         })
         .strict()
@@ -230,20 +195,22 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
       z
         .object({
           do: z.literal("forceUnit").describe("Queue mandatory extra units before the run may end."),
+          count: z.number().int().min(1).max(20).optional().describe("How many extra units to queue. Defaults to 1."),
+        })
+        .strict()
+        .describe("Queue mandatory extra units; the run cannot end while any remain."),
+      z
+        .object({
+          do: z
+            .literal("rewind")
+            .describe("Send the player back: when this unit closes, the run enters an earlier unit again instead of the next one."),
           count: z
             .number()
             .int()
             .min(1)
             .max(20)
             .optional()
-            .describe("How many extra units to queue. Defaults to 1."),
-        })
-        .strict()
-        .describe("Queue mandatory extra units; the run cannot end while any remain."),
-      z
-        .object({
-          do: z.literal("rewind").describe("Send the player back: when this unit closes, the run enters an earlier unit again instead of the next one."),
-          count: z.number().int().min(1).max(20).optional().describe("How many units back. Defaults to 1: the previous unit is played again. Never before the first."),
+            .describe("How many units back. Defaults to 1: the previous unit is played again. Never before the first."),
         })
         .strict()
         .describe("Send the player back a unit or more, played again from its start, at the close of the current one."),
@@ -255,7 +222,9 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
           unit: z
             .enum(["current", "next"])
             .optional()
-            .describe("Which unit owes them: `next` (the default) for \"the next Stage rolls two Setbacks\", `current` when the step has not happened yet this unit."),
+            .describe(
+              'Which unit owes them: `next` (the default) for "the next Stage rolls two Setbacks", `current` when the step has not happened yet this unit.',
+            ),
         })
         .strict()
         .describe("Owe extra rolls on a table's step, this unit or the next; the flow keeps the step open until they are made."),
@@ -318,9 +287,7 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
           persistent: z
             .boolean()
             .optional()
-            .describe(
-              "Keep it on screen for the rest of the run rather than clearing it once acknowledged.",
-            ),
+            .describe("Keep it on screen for the rest of the run rather than clearing it once acknowledged."),
         })
         .strict()
         .describe(
@@ -337,9 +304,7 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
       z
         .object({ do: z.literal("endRunAttempt").describe("Try to end the run.") })
         .strict()
-        .describe(
-          "Try to end the run. It may be refused, by queued forced units or by a trigger that fires on the attempt.",
-        ),
+        .describe("Try to end the run. It may be refused, by queued forced units or by a trigger that fires on the attempt."),
       z
         .object({
           do: z.literal("when").describe("Run actions conditionally on run state."),
@@ -350,11 +315,7 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
         .strict()
         .describe("Run actions conditionally on run state."),
     ])
-    .describe(
-      "One step of behavior. The vocabulary is closed on purpose: packs are data, never code.",
-    ),
+    .describe("One step of behavior. The vocabulary is closed on purpose: packs are data, never code."),
 );
 
-export const ActionList = z
-  .array(Action)
-  .describe("Actions run in order, top to bottom.");
+export const ActionList = z.array(Action).describe("Actions run in order, top to bottom.");

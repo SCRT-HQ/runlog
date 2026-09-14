@@ -47,7 +47,8 @@ export function WelcomeView() {
   // same-document change the browser does not reload for: go to the app.
   useEffect(() => {
     const onHash = () => {
-      if (location.hash) location.replace(PATHS_ON ? `${hrefFor(location.hash)}${location.search}` : `${play}${location.search}${location.hash}`);
+      if (location.hash)
+        location.replace(PATHS_ON ? `${hrefFor(location.hash)}${location.search}` : `${play}${location.search}${location.hash}`);
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
@@ -151,9 +152,9 @@ export function WelcomeView() {
               <div>
                 <h4>Pick a pack, or write one</h4>
                 <p>
-                  Nine come free: a penalty wheel for any stream, challenge packs for games people already play, a called mechanic on
-                  every DJ transition, deliberate practice, a rehearsal run segment by segment, a training log, and a day in blocks of
-                  twenty-five minutes. The Designer writes new ones without touching a file.
+                  Nine come free: a penalty wheel for any stream, challenge packs for games people already play, a called mechanic on every
+                  DJ transition, deliberate practice, a rehearsal run segment by segment, a training log, and a day in blocks of twenty-five
+                  minutes. The Designer writes new ones without touching a file.
                 </p>
               </div>
             </li>
@@ -163,8 +164,8 @@ export function WelcomeView() {
                 <h4>Play the run</h4>
                 <p>
                   Each unit of the game, a {persona.unit} here, walks its steps: roll on a table, take what comes, declare what you are
-                  making, make it. Runlog keeps the states, counters, timers and deferred results, and applies the consequences that land
-                  on earlier work. It never judges the work itself; it cannot see it.
+                  making, make it. Runlog keeps the states, counters, timers and deferred results, and applies the consequences that land on
+                  earlier work. It never judges the work itself; it cannot see it.
                 </p>
               </div>
             </li>
@@ -191,9 +192,8 @@ export function WelcomeView() {
               <div>
                 <h4>Pick the game</h4>
                 <p>
-                  A challenge pack for the game you already stream, or one of your own: a handicap every region, a curse that lands
-                  on the whole roster, a target worth points to whoever settles it first. Chat can be the roster; nobody in it needs an
-                  account.
+                  A challenge pack for the game you already stream, or one of your own: a handicap every region, a curse that lands on the
+                  whole roster, a target worth points to whoever settles it first. Chat can be the roster; nobody in it needs an account.
                 </p>
               </div>
             </li>
@@ -203,8 +203,8 @@ export function WelcomeView() {
                 <h4>Paste one address</h4>
                 <p>
                   Share a live link, copy a widget's address, paste it into a browser source in OBS, Streamlabs or StreamElements. No
-                  plugin, no download, nothing for viewers to install. The scoreboard, the clock, the latest twist, each on a page of
-                  its own.
+                  plugin, no download, nothing for viewers to install. The scoreboard, the clock, the latest twist, each on a page of its
+                  own.
                 </p>
               </div>
             </li>
@@ -213,15 +213,15 @@ export function WelcomeView() {
               <div>
                 <h4>Let the dice run it</h4>
                 <p>
-                  The dice land where chat can see them. The log remembers what came up and whether it was done, the scoreboard keeps
-                  the standings, and a race on the same seed puts another channel on the leaderboard beside you.
+                  The dice land where chat can see them. The log remembers what came up and whether it was done, the scoreboard keeps the
+                  standings, and a race on the same seed puts another channel on the leaderboard beside you.
                 </p>
               </div>
             </li>
           </ol>
           <p className="muted small">
-            A wheel forgets the spin. A virtual tabletop wants a map, tokens and an evening of setup before anyone rolls. A chaos
-            platform hands the controls to chat. Runlog is the referee, and anything can be the hand that acts:{" "}
+            A wheel forgets the spin. A virtual tabletop wants a map, tokens and an evening of setup before anyone rolls. A chaos platform
+            hands the controls to chat. Runlog is the referee, and anything can be the hand that acts:{" "}
             <a href={linkTo("#guide/stream-why", play)}>what it is for on a stream, what it needs, and what to compare</a>.
           </p>
         </section>
@@ -234,23 +234,23 @@ export function WelcomeView() {
             <div>
               <dt>Minutes, not an evening.</dt>
               <dd>
-                No map, no tokens, no character sheets, no plugin. Open the app and a first run is a minute away, with no account. A
-                widget on a scene is a live link and one address pasted into a browser source.
+                No map, no tokens, no character sheets, no plugin. Open the app and a first run is a minute away, with no account. A widget
+                on a scene is a live link and one address pasted into a browser source.
               </dd>
             </div>
             <div>
               <dt>It does not know your game</dt>
               <dd>
-                Every noun on screen comes from the pack's own vocabulary: {persona.vocabulary}, {wordsTwo}, {wordsThree}. One app, any
-                game of rounds, dice and consequences.
+                Every noun on screen comes from the pack's own vocabulary: {persona.vocabulary}, {wordsTwo}, {wordsThree}. One app, any game
+                of rounds, dice and consequences.
               </dd>
             </div>
             <div>
               <dt>The bookkeeping, carried for you.</dt>
               <dd>
-                Results that reach back and damage something you made an hour ago. States that pile up. Counters running in the
-                background. "After you finish, roll a d6." Runlog remembers, applies and writes down all of it. Your own dice still
-                count: roll them and type what they said.
+                Results that reach back and damage something you made an hour ago. States that pile up. Counters running in the background.
+                "After you finish, roll a d6." Runlog remembers, applies and writes down all of it. Your own dice still count: roll them and
+                type what they said.
               </dd>
             </div>
             <div>
@@ -263,9 +263,9 @@ export function WelcomeView() {
             <div>
               <dt>A table with company.</dt>
               <dd>
-                Invite people into a run as players or watchers, on their own devices. Moderate a room of contestants from chat with
-                a live scoreboard, no accounts for them. Share a link anyone can watch, put widgets on a stream, throw dice everyone
-                sees land, race another device on the same seed.
+                Invite people into a run as players or watchers, on their own devices. Moderate a room of contestants from chat with a live
+                scoreboard, no accounts for them. Share a link anyone can watch, put widgets on a stream, throw dice everyone sees land,
+                race another device on the same seed.
               </dd>
             </div>
             <div>
@@ -278,22 +278,22 @@ export function WelcomeView() {
             <div>
               <dt>Sell it your way.</dt>
               <dd>
-                Seal a copy for a buyer from your own hands, for free, forever. Or list it in the marketplace and let it handle the sale, the
-                delivery and the ledger for five percent.
+                Seal a copy for a buyer from your own hands, for free, forever. Or list it in the marketplace and let it handle the sale,
+                the delivery and the ledger for five percent.
               </dd>
             </div>
             <div>
               <dt>Open, and yours to run.</dt>
               <dd>
-                The app, the engine, the format and the command line are MIT. <code>npx @scrthq/runlog serve</code> puts the whole app
-                on a local port with nothing else installed.
+                The app, the engine, the format and the command line are MIT. <code>npx @scrthq/runlog serve</code> puts the whole app on a
+                local port with nothing else installed.
               </dd>
             </div>
             <div>
               <dt>Dice you can read.</dt>
               <dd>
-                Every roll shows its working: the notation, the numbers, the range it fell in. The value is decided before the dice
-                move, so a seeded run replays exactly and a watcher sees the same throw.
+                Every roll shows its working: the notation, the numbers, the range it fell in. The value is decided before the dice move, so
+                a seeded run replays exactly and a watcher sees the same throw.
               </dd>
             </div>
           </dl>
@@ -324,7 +324,9 @@ export function WelcomeView() {
             </div>
             <p className="muted small">
               <a href={hosted.links.pricing}>The whole of it, on the pricing page.</a>{" "}
-              {hosted.features.billing ? "Subscribe from your profile in the app." : "Not switched on yet: everything in Plus is free for everyone while Runlog is in preview."}
+              {hosted.features.billing
+                ? "Subscribe from your profile in the app."
+                : "Not switched on yet: everything in Plus is free for everyone while Runlog is in preview."}
             </p>
           </section>
         ) : (
@@ -351,7 +353,10 @@ export function WelcomeView() {
               Write a pack
             </a>
           </p>
-          <label className="toggle welcomeSkip" title="On this device, the address goes straight to the app. The Runlog mark in the app's bar brings this page back.">
+          <label
+            className="toggle welcomeSkip"
+            title="On this device, the address goes straight to the app. The Runlog mark in the app's bar brings this page back."
+          >
             <input
               type="checkbox"
               checked={skip}

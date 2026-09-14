@@ -2,15 +2,7 @@ import { readFileSync, writeFileSync, existsSync, chmodSync } from "node:fs";
 import { resolve } from "node:path";
 import YAML from "yaml";
 import { requireClaimed } from "./account.ts";
-import {
-  detectFormat,
-  fingerprint,
-  generateKeyPair,
-  generateLicenseKey,
-  seal,
-  signPack,
-  verifyPack,
-} from "@runlog/rules-schema";
+import { detectFormat, fingerprint, generateKeyPair, generateLicenseKey, seal, signPack, verifyPack } from "@runlog/rules-schema";
 
 /**
  * Signing from the command line.
@@ -91,7 +83,8 @@ export async function cmdKeygen(args: string[]): Promise<number> {
 export function loadKey(args: string[], env: NodeJS.ProcessEnv = process.env): { key: StoredKey; from: string } | { error: string } {
   const keyPath = flag(args, "--key") ?? flag(args, "-k");
   const fromEnv = env["RUNLOG_SIGNING_KEY"];
-  if (!keyPath && !fromEnv) return { error: "no signing key: pass --key runlog-key.json, or set RUNLOG_SIGNING_KEY to the key file's contents" };
+  if (!keyPath && !fromEnv)
+    return { error: "no signing key: pass --key runlog-key.json, or set RUNLOG_SIGNING_KEY to the key file's contents" };
   const from = keyPath ?? "RUNLOG_SIGNING_KEY";
   let key: StoredKey;
   try {
@@ -106,7 +99,7 @@ export function loadKey(args: string[], env: NodeJS.ProcessEnv = process.env): {
 export async function cmdSign(args: string[]): Promise<number> {
   const input = args.filter((a) => !a.startsWith("-"))[0];
   if (!input) {
-    console.error("usage: runlog sign <pack.yaml> --key runlog-key.json [--as \"Your Name\"]   (or RUNLOG_SIGNING_KEY in the environment)");
+    console.error('usage: runlog sign <pack.yaml> --key runlog-key.json [--as "Your Name"]   (or RUNLOG_SIGNING_KEY in the environment)');
     return 2;
   }
 
@@ -135,18 +128,12 @@ export async function cmdSign(args: string[]): Promise<number> {
 
   // Written back in the format it arrived in: an author who keeps YAML under
   // version control should not find it turned into JSON by signing it.
-  writeFileSync(
-    path,
-    format === "json" ? `${JSON.stringify(signed, null, 2)}\n` : YAML.stringify(signed, { lineWidth: 90 }),
-    "utf8",
-  );
+  writeFileSync(path, format === "json" ? `${JSON.stringify(signed, null, 2)}\n` : YAML.stringify(signed, { lineWidth: 90 }), "utf8");
 
   console.log(`${paint(GREEN, "signed")} ${input}`);
   console.log(paint(DIM, `  fingerprint ${key.fingerprint}`));
   if (format === "yaml") {
-    console.log(
-      paint(DIM, "  note: rewriting the file drops comments; sign a copy if you keep them"),
-    );
+    console.log(paint(DIM, "  note: rewriting the file drops comments; sign a copy if you keep them"));
   }
   return 0;
 }
@@ -168,9 +155,7 @@ export async function cmdIssue(args: string[]): Promise<number> {
   const input = args.filter((a) => !a.startsWith("-"))[0];
   const to = flag(args, "--to");
   if (!input || !to) {
-    console.error(
-      'usage: runlog issue <pack.yaml> --to "Buyer Name" [--ref order-123] [--key key.json] [-o out.yaml]',
-    );
+    console.error('usage: runlog issue <pack.yaml> --to "Buyer Name" [--ref order-123] [--key key.json] [-o out.yaml]');
     return 2;
   }
 
@@ -216,9 +201,7 @@ export async function cmdIssue(args: string[]): Promise<number> {
   const licenseKey = sealing ? (flag(args, "--license") ?? generateLicenseKey()) : null;
 
   const extension = sealing ? "rlpack" : format;
-  const out = resolve(
-    flag(args, "-o") ?? flag(args, "--out") ?? defaultIssueName(document, to, extension),
-  );
+  const out = resolve(flag(args, "-o") ?? flag(args, "--out") ?? defaultIssueName(document, to, extension));
   if (existsSync(out)) {
     console.error(paint(RED, `refusing to overwrite ${out}`));
     return 1;
@@ -233,8 +216,10 @@ export async function cmdIssue(args: string[]): Promise<number> {
   } else {
     writeFileSync(
       out,
-      format === "json" ? `${JSON.stringify(stamped, null, 2)}
-` : YAML.stringify(stamped, { lineWidth: 90 }),
+      format === "json"
+        ? `${JSON.stringify(stamped, null, 2)}
+`
+        : YAML.stringify(stamped, { lineWidth: 90 }),
       "utf8",
     );
   }
@@ -243,14 +228,10 @@ export async function cmdIssue(args: string[]): Promise<number> {
   console.log(paint(DIM, `  to ${to}${flag(args, "--ref") ? ` · ref ${flag(args, "--ref")}` : ""}`));
   if (keyGiven) {
     console.log(paint(DIM, `  signed · fingerprint ${fingerprintText}`));
-    console.log(
-      paint(DIM, "  the name is inside the signature, so removing it breaks verification"),
-    );
+    console.log(paint(DIM, "  the name is inside the signature, so removing it breaks verification"));
   } else {
     console.log(paint(YELLOW, "  not signed"));
-    console.log(
-      paint(DIM, "  an unsigned stamp is one line of YAML anyone can delete. Pass --key to bind it."),
-    );
+    console.log(paint(DIM, "  an unsigned stamp is one line of YAML anyone can delete. Pass --key to bind it."));
   }
   if (licenseKey) {
     console.log("");
@@ -308,15 +289,11 @@ export async function reportSignature(document: unknown): Promise<void> {
 
   const issue = (document as { issue?: { to?: string; reference?: string } } | null)?.issue;
   if (issue?.to) {
-    console.log(
-      `${paint(GREEN, "issued to")} ${issue.to}${issue.reference ? paint(DIM, ` · ref ${issue.reference}`) : ""}`,
-    );
+    console.log(`${paint(GREEN, "issued to")} ${issue.to}${issue.reference ? paint(DIM, ` · ref ${issue.reference}`) : ""}`);
   }
 
   const who = result.signedBy ? ` by ${result.signedBy}` : "";
   console.log(`${paint(GREEN, "signature: valid")}${who}`);
   console.log(paint(DIM, `  fingerprint ${result.fingerprint} · signed ${result.signedAt}`));
-  console.log(
-    paint(DIM, "  unchanged since it was signed. Check that fingerprint against the author's."),
-  );
+  console.log(paint(DIM, "  unchanged since it was signed. Check that fingerprint against the author's."));
 }

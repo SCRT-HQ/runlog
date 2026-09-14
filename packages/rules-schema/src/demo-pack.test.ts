@@ -35,9 +35,7 @@ describe("the demo pack", () => {
 
   it("declares every capability it actually uses", () => {
     const pack = result.ok ? result.pack : null;
-    expect(pack!.capabilities).toEqual(
-      expect.arrayContaining(["decks", "counters", "backwardTargeting", "bandsResolution"]),
-    );
+    expect(pack!.capabilities).toEqual(expect.arrayContaining(["decks", "counters", "backwardTargeting", "bandsResolution"]));
   });
 
   it("keeps the d100 check table tiling 1..100", () => {

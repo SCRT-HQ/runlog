@@ -4,7 +4,7 @@ import type { Award, Contestant, RunState } from "./types.ts";
 /**
  * Moderated play: one person runs the game, everyone else races it.
  *
- * The moderator holds the device. The contestants are a roster of names, 
+ * The moderator holds the device. The contestants are a roster of names,
  * not accounts, because a stream's viewers and a room's friends rarely have
  * one, and every draw the flow makes is a challenge they all go for at
  * once. When somebody finishes, the moderator awards them the result, and

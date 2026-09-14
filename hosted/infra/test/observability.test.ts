@@ -116,7 +116,11 @@ describe.each(["dev", "prd"] as EnvName[])("observability for %s", (name) => {
     const [failureAlarm] = Object.values(failures);
     expect(failureAlarm!.Properties).toMatchObject({
       Threshold: 1,
-      Metrics: [{ MetricStat: { Metric: { Namespace: "Runlog", MetricName: "failures", Dimensions: [{ Name: "env", Value: name }] }, Stat: "Sum" } }],
+      Metrics: [
+        {
+          MetricStat: { Metric: { Namespace: "Runlog", MetricName: "failures", Dimensions: [{ Name: "env", Value: name }] }, Stat: "Sum" },
+        },
+      ],
     });
   });
 

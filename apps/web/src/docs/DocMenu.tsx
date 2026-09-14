@@ -7,7 +7,15 @@ import { useDocDrawer, type DocsAt } from "./DocDrawer.tsx";
  * each opening in the side drawer. The pack is handed in lazily because a
  * library row may not have parsed its text yet.
  */
-export function DocMenu({ pack, compact = false, at }: { pack: Pack | (() => Pack | null); compact?: boolean; /** Where this pack is read, so the document it opens has an address. Absent on a watcher's page, where there is no library behind it. */ at?: DocsAt }) {
+export function DocMenu({
+  pack,
+  compact = false,
+  at,
+}: {
+  pack: Pack | (() => Pack | null);
+  compact?: boolean;
+  /** Where this pack is read, so the document it opens has an address. Absent on a watcher's page, where there is no library behind it. */ at?: DocsAt;
+}) {
   const [open, setOpen] = useState(false);
   const drawer = useDocDrawer();
   const resolve = () => (typeof pack === "function" ? pack() : pack);
@@ -15,7 +23,10 @@ export function DocMenu({ pack, compact = false, at }: { pack: Pack | (() => Pac
   return (
     <details className="docMenu" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className={`ghost ${compact ? "tiny" : ""} summaryButton`}>
-        Documents <span className="caret" aria-hidden="true">▾</span>
+        Documents{" "}
+        <span className="caret" aria-hidden="true">
+          ▾
+        </span>
       </summary>
       <div className="docMenuPanel" role="menu">
         <p className="muted small">Written from the pack as it is.</p>

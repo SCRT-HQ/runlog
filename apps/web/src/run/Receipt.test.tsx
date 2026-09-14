@@ -91,7 +91,12 @@ describe("the receipt", () => {
 
   it("still says something when a roll resolved nothing", () => {
     const html = renderToStaticMarkup(
-      <Receipt pack={kiln} settled onDismiss={() => {}} receipts={[{ dice: null, total: 4, label: null, notation: "d6", machineRolled: false, outcomes: [] }]} />,
+      <Receipt
+        pack={kiln}
+        settled
+        onDismiss={() => {}}
+        receipts={[{ dice: null, total: 4, label: null, notation: "d6", machineRolled: false, outcomes: [] }]}
+      />,
     );
     expect(html).toContain("It is recorded");
   });

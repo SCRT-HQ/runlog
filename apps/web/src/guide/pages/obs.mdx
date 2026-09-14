@@ -6,36 +6,41 @@ A widget goes into a scene as a **browser source**. The fields below are OBS Stu
 
 In a scene, **Sources** → **+** → **Browser**, name it after the widget, and set:
 
-| Field | Value |
-| --- | --- |
-| **URL** | The copied widget address, token and all: see [the address that works on a stream](#guide/stream-address). |
-| **Width** and **Height** | From the table below, at 1.25×; the Stream panel shows the numbers for the size you chose. Scale the source in the scene after; the page adapts to its box. |
-| **FPS** | 30. The only motion is a clock's tenths and the ticker's slide. |
-| **Custom CSS** | Leave OBS's default. `body { background-color: rgba(0, 0, 0, 0); … }` is what a clear background expects. |
-| **Shutdown source when not visible** | Tick it. A widget off scene costs nothing and re-reads the run when shown again. |
-| **Refresh browser when scene becomes active** | Optional; it only helps after a **Stop sharing**, once you have pasted a fresh address. |
+| Field                                         | Value                                                                                                                                                       |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **URL**                                       | The copied widget address, token and all: see [the address that works on a stream](#guide/stream-address).                                                  |
+| **Width** and **Height**                      | From the table below, at 1.25×; the Stream panel shows the numbers for the size you chose. Scale the source in the scene after; the page adapts to its box. |
+| **FPS**                                       | 30. The only motion is a clock's tenths and the ticker's slide.                                                                                             |
+| **Custom CSS**                                | Leave OBS's default. `body { background-color: rgba(0, 0, 0, 0); … }` is what a clear background expects.                                                   |
+| **Shutdown source when not visible**          | Tick it. A widget off scene costs nothing and re-reads the run when shown again.                                                                            |
+| **Refresh browser when scene becomes active** | Optional; it only helps after a **Stop sharing**, once you have pasted a fresh address.                                                                     |
 
 ## Sizes
 
 Suggested sizes, at 1.25×:
 
-| Widget | Width × height | What it is |
-| --- | --- | --- |
-| Clock | 480 × 200 | The unit's stopwatch or timer, large. |
-| Step | 520 × 380 | The current step, the constraints in play, the latest result. |
-| Stats | 520 × 560 | Unit, units done, time, step, constraints, score. |
-| Scoreboard | 480 × 440 | Standings in a moderated run. Grows with the roster. |
-| Trackers | 480 × 420 | Resources and counters as bars and boxes. Grows with the pack. |
-| Ticker | 520 × 300 | The last few things that happened, one line each, newest on top. |
-| Race | 560 × 440 | The race leaderboard. |
-| Everything, stacked | 460 × 1080 | The panels above in one column, for one source down the side of a scene. |
+| Widget              | Width × height | What it is                                                               |
+| ------------------- | -------------- | ------------------------------------------------------------------------ |
+| Clock               | 480 × 200      | The unit's stopwatch or timer, large.                                    |
+| Step                | 520 × 380      | The current step, the constraints in play, the latest result.            |
+| Stats               | 520 × 560      | Unit, units done, time, step, constraints, score.                        |
+| Scoreboard          | 480 × 440      | Standings in a moderated run. Grows with the roster.                     |
+| Trackers            | 480 × 420      | Resources and counters as bars and boxes. Grows with the pack.           |
+| Ticker              | 520 × 300      | The last few things that happened, one line each, newest on top.         |
+| Race                | 560 × 440      | The race leaderboard.                                                    |
+| Everything, stacked | 460 × 1080     | The panels above in one column, for one source down the side of a scene. |
 
 ## Recoloring a widget for a scene
 
 A widget's colors are the app's theme tokens; for the clock in white on nothing, add to **Custom CSS** under OBS's own line:
 
 ```css
-:root { --text: #fff; --panel: transparent; --line: transparent; --raise: none; }
+:root {
+  --text: #fff;
+  --panel: transparent;
+  --line: transparent;
+  --raise: none;
+}
 ```
 
 ## How closely it follows

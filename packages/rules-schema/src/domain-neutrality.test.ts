@@ -5,9 +5,10 @@ import { describe, expect, it } from "vitest";
 import { SCHEMA_VERSION } from "./pack.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const emitted = JSON.parse(
-  readFileSync(join(here, "..", "schema", `pack-${SCHEMA_VERSION}.schema.json`), "utf8"),
-) as Record<string, unknown>;
+const emitted = JSON.parse(readFileSync(join(here, "..", "schema", `pack-${SCHEMA_VERSION}.schema.json`), "utf8")) as Record<
+  string,
+  unknown
+>;
 
 /**
  * The contract must not assume what kind of game it is describing.
@@ -109,9 +110,7 @@ describe("the pack format stays domain-neutral", () => {
   });
 
   it("keeps the lifecycle points described in terms of the game, not the medium", () => {
-    const triggerPoints = identifiers
-      .filter(([, where]) => where.endsWith(".enum"))
-      .map(([id]) => id);
+    const triggerPoints = identifiers.filter(([, where]) => where.endsWith(".enum")).map(([id]) => id);
     expect(triggerPoints).toContain("afterWork");
     expect(triggerPoints).toContain("onFinalize");
     expect(triggerPoints).not.toContain("afterCompose");

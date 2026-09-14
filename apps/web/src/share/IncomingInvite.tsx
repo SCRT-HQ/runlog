@@ -8,7 +8,7 @@ import { apiBase } from "../sync/config.ts";
  * An invitation that arrived in a link.
  *
  * `?join=<token>` is read once, taken off the address bar so a reload does
- * not re-offer it, and kept in sessionStorage until it has been acted on: 
+ * not re-offer it, and kept in sessionStorage until it has been acted on:
  * because acting on it usually means signing in first, and sign-in is a
  * round trip through WorkOS that comes back to a fresh page. What the link
  * is for is asked of the API without an account, so the banner can say
@@ -133,8 +133,13 @@ export function InviteBanner({
           <strong>{inviter ?? "Somebody"}</strong>
           <span> invited </span>
           <strong>{sentTo}</strong>
-          <span> to {session ?? `${an(title ?? packId)} run`}, and you are signed in as {account.user.email}.</span>
-          <div className="muted small">Sign out, then sign in with that address or create an account for it, and this invitation will be waiting.</div>
+          <span>
+            {" "}
+            to {session ?? `${an(title ?? packId)} run`}, and you are signed in as {account.user.email}.
+          </span>
+          <div className="muted small">
+            Sign out, then sign in with that address or create an account for it, and this invitation will be waiting.
+          </div>
         </div>
         <div className="incomingActions">
           <button className="primary" onClick={account.signOut}>
@@ -161,7 +166,9 @@ export function InviteBanner({
           </div>
         )}
         {alreadyIn && <div className="muted small">You are already at this table; joining opens it.</div>}
-        {accepted && !alreadyIn && <div className="muted small">This link has been used once already. If that was you, joining again is fine.</div>}
+        {accepted && !alreadyIn && (
+          <div className="muted small">This link has been used once already. If that was you, joining again is fine.</div>
+        )}
         {forYou === null && <div className="muted small">Sent to {sentTo}. Sign in with that address to join.</div>}
       </div>
       <div className="incomingActions">

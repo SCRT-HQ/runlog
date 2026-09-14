@@ -27,13 +27,7 @@ export function RequestPanel({
   request: InputRequest;
   pack: Pack;
   state: RunState;
-  onAnswer: (
-    key: string,
-    value: string | number | boolean,
-    machineRolled?: boolean,
-    dice?: RolledDie[],
-    seed?: number,
-  ) => void;
+  onAnswer: (key: string, value: string | number | boolean, machineRolled?: boolean, dice?: RolledDie[], seed?: number) => void;
   onCancel: () => void;
 }) {
   return (
@@ -47,12 +41,8 @@ export function RequestPanel({
           onAnswer={(v) => onAnswer(request.key, v)}
         />
       )}
-      {request.kind === "prompt" && (
-        <PromptRequest request={request} pack={pack} state={state} onAnswer={onAnswer} />
-      )}
-      {request.kind === "chooseTarget" && (
-        <ChooseTarget request={request} pack={pack} state={state} onAnswer={onAnswer} />
-      )}
+      {request.kind === "prompt" && <PromptRequest request={request} pack={pack} state={state} onAnswer={onAnswer} />}
+      {request.kind === "chooseTarget" && <ChooseTarget request={request} pack={pack} state={state} onAnswer={onAnswer} />}
       <button className="ghost small" onClick={onCancel}>
         Cancel this step
       </button>
@@ -161,7 +151,12 @@ function RollRequest({
           {thrown ? "Rolling…" : "Roll for me"}
         </button>
         {lines.length > 0 && (
-          <button className={`ghost ${tableOpen ? "on" : ""}`} aria-expanded={tableOpen} onClick={() => setTableOpen((o) => !o)} title="See the lines this roll can land on">
+          <button
+            className={`ghost ${tableOpen ? "on" : ""}`}
+            aria-expanded={tableOpen}
+            onClick={() => setTableOpen((o) => !o)}
+            title="See the lines this roll can land on"
+          >
             Table
           </button>
         )}
@@ -173,12 +168,7 @@ function RollRequest({
 
       {thrown && (
         <div className="throw">
-          <DiceTray
-            dice={thrown.dice}
-            rollId={rollId}
-            seed={thrown.seed}
-            onSettled={() => setSettled(true)}
-          />
+          <DiceTray dice={thrown.dice} rollId={rollId} seed={thrown.seed} onSettled={() => setSettled(true)} />
           <div className={`rollTotal ${settled ? "" : "pending"}`} aria-live="polite">
             <span className="big">{settled ? thrown.total : "…"}</span>
             <span className="how">{request.dice}</span>
@@ -191,20 +181,11 @@ function RollRequest({
           {request.dice} can only produce {dice.min}-{dice.max}.
         </p>
       )}
-
     </div>
   );
 }
 
-function YesNo({
-  label,
-  hint,
-  onAnswer,
-}: {
-  label: string;
-  hint?: string;
-  onAnswer: (v: boolean) => void;
-}) {
+function YesNo({ label, hint, onAnswer }: { label: string; hint?: string; onAnswer: (v: boolean) => void }) {
   return (
     <div>
       <p className="askLabel">{label}</p>
@@ -240,9 +221,7 @@ function PromptRequest({
   }
 
   if (request.promptKind === "chooseSubject") {
-    const candidates = state.subjects.filter(
-      (s) => !s.removed && (!request.eligibleOnly || s.finalized),
-    );
+    const candidates = state.subjects.filter((s) => !s.removed && (!request.eligibleOnly || s.finalized));
     return (
       <div>
         <p className="askLabel">{request.label}</p>
@@ -258,9 +237,7 @@ function PromptRequest({
   }
 
   if (request.promptKind === "chooseValue" || request.promptKind === "chooseState") {
-    const options =
-      request.options ??
-      Object.entries(pack.states ?? {}).map(([id, s]) => `${id}|${s.label}`);
+    const options = request.options ?? Object.entries(pack.states ?? {}).map(([id, s]) => `${id}|${s.label}`);
     return (
       <div>
         <p className="askLabel">{request.label}</p>
@@ -268,11 +245,7 @@ function PromptRequest({
           {options.map((o) => {
             const [value, label] = o.includes("|") ? o.split("|") : [o, o];
             return (
-              <button
-                key={value}
-                className="choice"
-                onClick={() => onAnswer(request.key, value!)}
-              >
+              <button key={value} className="choice" onClick={() => onAnswer(request.key, value!)}>
                 {label}
               </button>
             );
@@ -315,9 +288,7 @@ function ChooseTarget({
   return (
     <div>
       <p className="askLabel">{request.label}</p>
-      <p className="muted small">
-        The rules hand you this one. Choose from the {request.eligible.length} still eligible.
-      </p>
+      <p className="muted small">The rules hand you this one. Choose from the {request.eligible.length} still eligible.</p>
       <div className="options">
         {request.eligible.map((id) => {
           const subject = state.subjects.find((s) => s.id === id);

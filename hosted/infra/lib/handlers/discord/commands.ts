@@ -39,23 +39,85 @@ export const COMMANDS = [
     default_member_permissions: MANAGE_GUILD,
     dm_permission: false,
     options: [
-      { type: SUB_COMMAND, name: "claim", description: "Claim this server for your Runlog account, which pays for it and chooses its packs" },
-      { type: SUB_COMMAND, name: "role", description: "Who may host runs here", options: [{ type: ROLE, name: "role", description: "The role that may host; leave it out to allow anyone who can manage the server", required: false }] },
-      { type: SUB_COMMAND, name: "channel", description: "Where runs open by default", options: [{ type: CHANNEL, name: "channel", description: "The channel; leave it out to open runs wherever the command is used", required: false }] },
-      { type: SUB_COMMAND, name: "make-role", description: "Make a host role (or find one by that name) and set it as who may host", options: [{ type: STRING, name: "name", description: "The role's name; Runlog Host if left out", required: false, max_length: 100 }] },
+      {
+        type: SUB_COMMAND,
+        name: "claim",
+        description: "Claim this server for your Runlog account, which pays for it and chooses its packs",
+      },
+      {
+        type: SUB_COMMAND,
+        name: "role",
+        description: "Who may host runs here",
+        options: [
+          {
+            type: ROLE,
+            name: "role",
+            description: "The role that may host; leave it out to allow anyone who can manage the server",
+            required: false,
+          },
+        ],
+      },
+      {
+        type: SUB_COMMAND,
+        name: "channel",
+        description: "Where runs open by default",
+        options: [
+          {
+            type: CHANNEL,
+            name: "channel",
+            description: "The channel; leave it out to open runs wherever the command is used",
+            required: false,
+          },
+        ],
+      },
+      {
+        type: SUB_COMMAND,
+        name: "make-role",
+        description: "Make a host role (or find one by that name) and set it as who may host",
+        options: [
+          { type: STRING, name: "name", description: "The role's name; Runlog Host if left out", required: false, max_length: 100 },
+        ],
+      },
       {
         type: SUB_COMMAND,
         name: "cards",
         description: "Where a run's card lives: following the thread as its last message, or pinned at the top",
-        options: [{ type: STRING, name: "mode", description: "follow: a fresh card after every move, at the bottom. pinned: one card at the top, edited in place", required: true, choices: [{ name: "follow the thread (default)", value: "follow" }, { name: "pinned at the top", value: "pinned" }] }],
+        options: [
+          {
+            type: STRING,
+            name: "mode",
+            description: "follow: a fresh card after every move, at the bottom. pinned: one card at the top, edited in place",
+            required: true,
+            choices: [
+              { name: "follow the thread (default)", value: "follow" },
+              { name: "pinned at the top", value: "pinned" },
+            ],
+          },
+        ],
       },
       {
         type: SUB_COMMAND,
         name: "threads",
         description: "Whether a run opens in a public thread or a private one, unless the command says otherwise",
-        options: [{ type: STRING, name: "kind", description: "public: anyone in the channel can open it. private: only the host, and whoever they add", required: true, choices: [{ name: "public (default)", value: "public" }, { name: "private", value: "private" }] }],
+        options: [
+          {
+            type: STRING,
+            name: "kind",
+            description: "public: anyone in the channel can open it. private: only the host, and whoever they add",
+            required: true,
+            choices: [
+              { name: "public (default)", value: "public" },
+              { name: "private", value: "private" },
+            ],
+          },
+        ],
       },
-      { type: SUB_COMMAND, name: "make-channel", description: "Make a channel for runs (or find one by that name) and set it as where runs open", options: [{ type: STRING, name: "name", description: "The channel's name; runs if left out", required: false, max_length: 100 }] },
+      {
+        type: SUB_COMMAND,
+        name: "make-channel",
+        description: "Make a channel for runs (or find one by that name) and set it as where runs open",
+        options: [{ type: STRING, name: "name", description: "The channel's name; runs if left out", required: false, max_length: 100 }],
+      },
       { type: SUB_COMMAND, name: "status", description: "Who claimed this server, its plan, its hosts and its packs" },
     ],
   },
@@ -79,13 +141,32 @@ export const COMMANDS = [
           { type: STRING, name: "pack", description: "Which pack", required: true, autocomplete: true },
           { type: STRING, name: "mode", description: "Which of its modes", required: true, autocomplete: true },
           { type: STRING, name: "name", description: "What to call the run", required: false, max_length: 80 },
-          { type: INTEGER, name: "players", description: "How many seats, in a mode played by several; the mode's fewest if left out", required: false, min_value: 1, max_value: 12 },
-          { type: BOOLEAN, name: "private", description: "A private thread: only you and whoever you add can see it. Left out, the server's default applies", required: false },
+          {
+            type: INTEGER,
+            name: "players",
+            description: "How many seats, in a mode played by several; the mode's fewest if left out",
+            required: false,
+            min_value: 1,
+            max_value: 12,
+          },
+          {
+            type: BOOLEAN,
+            name: "private",
+            description: "A private thread: only you and whoever you add can see it. Left out, the server's default applies",
+            required: false,
+          },
         ],
       },
       { type: SUB_COMMAND, name: "status", description: "Post the table card again, in this run's thread" },
       { type: SUB_COMMAND, name: "link", description: "The live link: anyone watches, no account needed" },
-      { type: SUB_COMMAND, name: "end", description: "End the run", options: [{ type: STRING, name: "ending", description: "How it ends, where the pack offers a choice", required: false, autocomplete: true }] },
+      {
+        type: SUB_COMMAND,
+        name: "end",
+        description: "End the run",
+        options: [
+          { type: STRING, name: "ending", description: "How it ends, where the pack offers a choice", required: false, autocomplete: true },
+        ],
+      },
       { type: SUB_COMMAND, name: "undo", description: "Take the last move back" },
       { type: SUB_COMMAND, name: "join", description: "Join this run: the roster, an open seat, or your own library as a watcher" },
       { type: SUB_COMMAND, name: "leave", description: "Leave this run's roster or your seat" },
@@ -126,7 +207,15 @@ const PERMISSION_BITS = {
   SEND_MESSAGES_IN_THREADS: 38n,
 } as const;
 
-export const PERMISSION_NAMES = ["View Channels", "Send Messages", "Manage Messages", "Embed Links", "Read Message History", "Create Public Threads", "Send Messages in Threads"] as const;
+export const PERMISSION_NAMES = [
+  "View Channels",
+  "Send Messages",
+  "Manage Messages",
+  "Embed Links",
+  "Read Message History",
+  "Create Public Threads",
+  "Send Messages in Threads",
+] as const;
 
 /**
  * Three more the bot asks for only when a server asks for what they are
@@ -138,7 +227,11 @@ export const PERMISSION_NAMES = ["View Channels", "Send Messages", "Manage Messa
  */
 export const OPTIONAL_PERMISSION_BITS = { MANAGE_CHANNELS: 4n, MANAGE_ROLES: 28n, CREATE_PRIVATE_THREADS: 36n } as const;
 export type OptionalPermission = keyof typeof OPTIONAL_PERMISSION_BITS;
-export const OPTIONAL_PERMISSION_NAMES: Record<OptionalPermission, string> = { MANAGE_CHANNELS: "Manage Channels", MANAGE_ROLES: "Manage Roles", CREATE_PRIVATE_THREADS: "Create Private Threads" };
+export const OPTIONAL_PERMISSION_NAMES: Record<OptionalPermission, string> = {
+  MANAGE_CHANNELS: "Manage Channels",
+  MANAGE_ROLES: "Manage Roles",
+  CREATE_PRIVATE_THREADS: "Create Private Threads",
+};
 
 const sumOf = (bits: readonly bigint[]) => bits.reduce((sum, bit) => sum | (1n << bit), 0n);
 export const PERMISSIONS = String(sumOf(Object.values(PERMISSION_BITS)));

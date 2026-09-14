@@ -36,9 +36,7 @@ function tiebreakOf(
 ): RunScore["tiebreak"] {
   if (!key) return undefined;
   const progress = progressOf(state, events, nowMs);
-  return key === "time"
-    ? { key, value: progress.elapsedMs, better: "lower" }
-    : { key, value: progress.unitsDone, better: "higher" };
+  return key === "time" ? { key, value: progress.elapsedMs, better: "lower" } : { key, value: progress.unitsDone, better: "higher" };
 }
 
 /** Where a run stands against the number its pack said it should beat. */

@@ -4,7 +4,16 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
-import { activePhases, constrainedByOf, constraintsFor, entryWords, handsFree, nextStep, stepCompletionEvents, subjectSuggestions } from "./flow.ts";
+import {
+  activePhases,
+  constrainedByOf,
+  constraintsFor,
+  entryWords,
+  handsFree,
+  nextStep,
+  stepCompletionEvents,
+  subjectSuggestions,
+} from "./flow.ts";
 import type { RunEvent } from "./events.ts";
 import type { RunState } from "./types.ts";
 
@@ -18,12 +27,9 @@ const kiln = loadPack("packs/demo/pack.yaml");
 const soundclash = loadPack("packs/sketches/soundclash.yaml");
 
 const NOW = "2026-01-01T00:00:00.000Z";
-const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent =>
-  ({ t, at: NOW, ...props }) as RunEvent;
+const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent => ({ t, at: NOW, ...props }) as RunEvent;
 
-const start = [
-  ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" }),
-];
+const start = [ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" })];
 
 /** Walk the flow, completing each step, and report the order visited. */
 function walk(log: RunEvent[], limit = 12): string[] {
@@ -41,7 +47,10 @@ function walk(log: RunEvent[], limit = 12): string[] {
 
 describe("what the unit says on entry", () => {
   it("says the welcome on the first unit only, and the unit's word until its first step is done", () => {
-    const talking = { ...kiln, unit: { ...kiln.unit, intro: "Welcome to the kiln yard.", onEnter: "Stage {n}: wedge, throw, fire." } } as Pack;
+    const talking = {
+      ...kiln,
+      unit: { ...kiln.unit, intro: "Welcome to the kiln yard.", onEnter: "Stage {n}: wedge, throw, fire." },
+    } as Pack;
     // Before the first unit there is nothing to say.
     expect(entryWords(talking, reduce(talking, start))).toEqual([]);
     const entered = [...start, ev("UnitEntered", {})];
@@ -77,11 +86,7 @@ describe("moving through a unit", () => {
   it("advances once a step records itself as done", () => {
     const state = reduce(kiln, [...start, ev("UnitEntered")]);
     const first = nextStep(kiln, state)!;
-    const after = reduce(kiln, [
-      ...start,
-      ev("UnitEntered"),
-      ...stepCompletionEvents(first.phase, first.index, state, NOW),
-    ]);
+    const after = reduce(kiln, [...start, ev("UnitEntered"), ...stepCompletionEvents(first.phase, first.index, state, NOW)]);
     const second = nextStep(kiln, after)!;
     expect(`${second.phase.id}#${second.index}`).not.toBe(`${first.phase.id}#${first.index}`);
   });
@@ -105,23 +110,12 @@ describe("moving through a unit", () => {
   });
 
   it("includes the check and the constraint from the second unit on", () => {
-    const visited = walk([
-      ...start,
-      ev("UnitEntered"),
-      ev("UnitFinalized"),
-      ev("UnitEntered"),
-    ]);
+    const visited = walk([...start, ev("UnitEntered"), ev("UnitFinalized"), ev("UnitEntered")]);
     expect(visited).toEqual(["enter#0", "check#0", "declare#0", "constrain#0", "work#0", "close#0"]);
   });
 
   it("skips the check once the run-wide state says the game has lost you", () => {
-    const visited = walk([
-      ...start,
-      ev("UnitEntered"),
-      ev("UnitFinalized"),
-      ev("UnitEntered"),
-      ev("StateApplied", { state: "coldKiln" }),
-    ]);
+    const visited = walk([...start, ev("UnitEntered"), ev("UnitFinalized"), ev("UnitEntered"), ev("StateApplied", { state: "coldKiln" })]);
     expect(visited).not.toContain("check#0");
     expect(visited).toContain("constrain#0");
   });
@@ -168,9 +162,7 @@ describe("what a step must honor", () => {
     // that does, rather than editing the shipped one.
     const pack: Pack = {
       ...kiln,
-      phases: [
-        { id: "work", label: "Throw the Piece", steps: [{ kind: "manual", label: "Throw it.", constrainedBy: "constraint" }] },
-      ],
+      phases: [{ id: "work", label: "Throw the Piece", steps: [{ kind: "manual", label: "Throw it.", constrainedBy: "constraint" }] }],
     };
     const state = reduce(pack, [...start, ev("UnitEntered")]);
     const withOutcomes = {
@@ -201,14 +193,7 @@ describe("what a step must honor", () => {
 describe("which phases a mode plays", () => {
   it("plays them all by default", () => {
     const state = reduce(kiln, [...start, ev("UnitEntered")]);
-    expect(activePhases(kiln, state).map((p) => p.id)).toEqual([
-      "enter",
-      "check",
-      "declare",
-      "constrain",
-      "work",
-      "close",
-    ]);
+    expect(activePhases(kiln, state).map((p) => p.id)).toEqual(["enter", "check", "declare", "constrain", "work", "close"]);
   });
 
   it("drops the phases a mode disables for that unit", () => {
@@ -253,8 +238,15 @@ describe("subjectSuggestions", () => {
 
   it("leaves out a result too long to be a name rather than cutting it short", () => {
     const long = "x".repeat(80);
-    const pack = { ...kiln, tables: { ...kiln.tables, form: { ...kiln.tables.form!, entries: [{ id: "e", range: [1, 1], text: long }] } } } as unknown as typeof kiln;
-    const state = { ...reduce(kiln, [...start, ev("UnitEntered")]), unit: 1, outcomes: [{ unit: 1, table: "form", entryId: "e", targetSubject: null, at: "" }] } as unknown as RunState;
+    const pack = {
+      ...kiln,
+      tables: { ...kiln.tables, form: { ...kiln.tables.form!, entries: [{ id: "e", range: [1, 1], text: long }] } },
+    } as unknown as typeof kiln;
+    const state = {
+      ...reduce(kiln, [...start, ev("UnitEntered")]),
+      unit: 1,
+      outcomes: [{ unit: 1, table: "form", entryId: "e", targetSubject: null, at: "" }],
+    } as unknown as RunState;
     expect(subjectSuggestions(pack, state, "form")).toEqual([]);
   });
 });

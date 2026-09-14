@@ -23,8 +23,7 @@ const closed: Pack = {
 };
 
 const NOW = "2026-03-12T10:00:00.000Z";
-const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent =>
-  ({ t, at: NOW, ...props }) as RunEvent;
+const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent => ({ t, at: NOW, ...props }) as RunEvent;
 
 /** A short but complete run: two stages, a setback, a journal entry, an end. */
 const log: RunEvent[] = [
@@ -185,9 +184,7 @@ describe("the write-up", () => {
   describe("a pack whose text is not redistributable", () => {
     it("still quotes it in a copy for yourself", () => {
       expect(mayQuote(closed, "self")).toBe(true);
-      expect(renderLog(closed, log, { audience: "self" })).toContain(
-        "The Kiln reaches for recent work",
-      );
+      expect(renderLog(closed, log, { audience: "self" })).toContain("The Kiln reaches for recent work");
     });
 
     it("withholds the text in a copy meant for anyone else", () => {
@@ -203,9 +200,7 @@ describe("the write-up", () => {
 
     it("leaves an openly licensed pack alone", () => {
       expect(mayQuote(kiln, "share")).toBe(true);
-      expect(renderLog(kiln, log, { audience: "share" })).toContain(
-        "The Kiln reaches for recent work",
-      );
+      expect(renderLog(kiln, log, { audience: "share" })).toContain("The Kiln reaches for recent work");
     });
   });
 });

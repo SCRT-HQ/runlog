@@ -18,7 +18,19 @@ import { apiBase } from "../sync/config.ts";
  */
 export type Screen = "welcome" | "library" | "play" | "rules" | "marketplace" | "guide" | "design" | "profile" | "live" | "widget" | "dock";
 
-export const SCREENS: readonly Screen[] = ["welcome", "library", "play", "rules", "marketplace", "guide", "design", "profile", "live", "widget", "dock"];
+export const SCREENS: readonly Screen[] = [
+  "welcome",
+  "library",
+  "play",
+  "rules",
+  "marketplace",
+  "guide",
+  "design",
+  "profile",
+  "live",
+  "widget",
+  "dock",
+];
 
 /** Whether the browser asked not to be counted. */
 export function askedNotTo(nav: Partial<Navigator> & { globalPrivacyControl?: boolean } = navigator): boolean {
@@ -36,14 +48,22 @@ let last: Screen | null = null;
  * Count a screen, once per change: the same screen twice in a row is one
  * stay, not two visits. Returns whether anything was sent, for the tests.
  */
-export function countView(screen: Screen, opts: { hosted: boolean; version: string; send?: (url: string, body: string) => boolean } = { hosted: false, version: "" }): boolean {
+export function countView(
+  screen: Screen,
+  opts: { hosted: boolean; version: string; send?: (url: string, body: string) => boolean } = { hosted: false, version: "" },
+): boolean {
   if (!opts.hosted) return false;
   if (screen === last) return false;
   last = screen;
   if (typeof navigator !== "undefined" && askedNotTo()) return false;
   const base = apiBase();
   if (!base) return false;
-  const send = opts.send ?? ((url, body) => (typeof navigator !== "undefined" && "sendBeacon" in navigator ? navigator.sendBeacon(url, new Blob([body], { type: "application/json" })) : false));
+  const send =
+    opts.send ??
+    ((url, body) =>
+      typeof navigator !== "undefined" && "sendBeacon" in navigator
+        ? navigator.sendBeacon(url, new Blob([body], { type: "application/json" }))
+        : false);
   try {
     return send(`${base}/beacon`, beaconBody(screen, opts.version));
   } catch {

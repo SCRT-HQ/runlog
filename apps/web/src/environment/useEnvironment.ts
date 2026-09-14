@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Pack } from "@runlog/rules-schema";
-import {
-  externalName,
-  reconcile,
-  type EnvironmentLink,
-  type ExternalSubject,
-  type LinkStatus,
-  type RunState,
-} from "@runlog/engine";
+import { externalName, reconcile, type EnvironmentLink, type ExternalSubject, type LinkStatus, type RunState } from "@runlog/engine";
 
 /**
  * Holding a link to the world outside, and keeping the comparison current.
@@ -37,7 +30,7 @@ export function useEnvironment(pack: Pack, state: RunState | null, link: Environ
     setStatus(link.status());
   }, [link]);
 
-  // Anything the environment does on its own, a track added, a file renamed, 
+  // Anything the environment does on its own, a track added, a file renamed,
   // must reach the panel without the player pressing refresh, or the
   // comparison is stale exactly when it is being trusted.
   useEffect(() => {
@@ -78,10 +71,7 @@ export function useEnvironment(pack: Pack, state: RunState | null, link: Environ
     [link, pack, state, refresh],
   );
 
-  const comparison = useMemo(
-    () => (state ? reconcile(pack, state, subjects) : { differences: [], matched: [] }),
-    [pack, state, subjects],
-  );
+  const comparison = useMemo(() => (state ? reconcile(pack, state, subjects) : { differences: [], matched: [] }), [pack, state, subjects]);
 
   return {
     link,

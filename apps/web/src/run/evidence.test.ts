@@ -53,13 +53,21 @@ describe("what a point shows", () => {
   it("gathers from several tables when the point names them, in the order they were rolled", () => {
     const both = evidenceFor(kiln, state, { table: ["constraint", "setback"], scope: "run" });
     expect(both).toHaveLength(4);
-    expect(both.map((s) => s.where)).toEqual(expect.arrayContaining([expect.stringContaining("Setback"), expect.stringContaining("Constraint")]));
+    expect(both.map((s) => s.where)).toEqual(
+      expect.arrayContaining([expect.stringContaining("Setback"), expect.stringContaining("Constraint")]),
+    );
   });
 });
 
 describe("when a checklist is done", () => {
   const points = [{ text: "plain" }, { text: "with evidence", shows: { table: "constraint", scope: "unit" as const } }];
-  const evidence = [[], [{ key: "o1", where: "", text: "", table: "t", entryId: "o1" }, { key: "o2", where: "", text: "", table: "t", entryId: "o2" }]];
+  const evidence = [
+    [],
+    [
+      { key: "o1", where: "", text: "", table: "t", entryId: "o1" },
+      { key: "o2", where: "", text: "", table: "t", entryId: "o2" },
+    ],
+  ];
 
   it("needs a plain point's own box", () => {
     expect(pointMade(0, [], new Set())).toBe(false);

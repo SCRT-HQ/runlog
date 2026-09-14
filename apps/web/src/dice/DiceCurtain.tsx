@@ -65,7 +65,12 @@ export function DiceCurtain({ roll }: { roll: RolledGesture | null }) {
         {shown.from ? `${shown.from} rolls` : "Rolling"}
         {shown.label ? ` · ${shown.label}` : ""}
       </div>
-      <DiceTray dice={shown.dice} rollId={rollId} {...(shown.seed !== undefined ? { seed: shown.seed } : {})} onSettled={() => setSettled(true)} />
+      <DiceTray
+        dice={shown.dice}
+        rollId={rollId}
+        {...(shown.seed !== undefined ? { seed: shown.seed } : {})}
+        onSettled={() => setSettled(true)}
+      />
       {shown.total !== null && (
         <div className={`rollTotal ${settled ? "" : "pending"}`}>
           <span className="big">{settled ? shown.total : "…"}</span>

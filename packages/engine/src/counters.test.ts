@@ -18,8 +18,7 @@ const kiln = loadPack("packs/demo/pack.yaml");
 const tarnished = loadPack("packs/sketches/elden-ring-tarnishedtool.yaml");
 
 const NOW = "2026-01-01T00:00:00.000Z";
-const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent =>
-  ({ t, at: NOW, ...props }) as RunEvent;
+const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent => ({ t, at: NOW, ...props }) as RunEvent;
 
 const start = ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" });
 
@@ -100,9 +99,7 @@ describe("counter thresholds", () => {
       });
     }
     expect(done.status).toBe("done");
-    expect(done.events).toContainEqual(
-      expect.objectContaining({ t: "OutcomeResolved", table: "strain" }),
-    );
+    expect(done.events).toContainEqual(expect.objectContaining({ t: "OutcomeResolved", table: "strain" }));
     expect(done.events.at(-1)).toMatchObject({ t: "TriggerFired", key: due.key });
   });
 

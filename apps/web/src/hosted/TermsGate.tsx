@@ -55,8 +55,7 @@ export function TermsGate() {
         <p>
           {hosted.legalName ?? hosted.operator} runs this copy of Runlog. Signing in means your runs, packs and the addresses you invite are
           kept on its servers, under its <a href={hosted.links.terms}>terms of service</a> and{" "}
-          <a href={hosted.links.privacy}>privacy policy</a>. Please read them; the short version at the top of each is
-          the whole idea.
+          <a href={hosted.links.privacy}>privacy policy</a>. Please read them; the short version at the top of each is the whole idea.
         </p>
         <p className="muted small">Version {hosted.termsVersion}. You are asked again only when they change.</p>
         <div className="padRow">

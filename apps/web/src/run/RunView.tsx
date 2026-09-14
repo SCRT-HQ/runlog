@@ -5,9 +5,34 @@ import { SettingsDialog } from "./SettingsDialog.tsx";
 import { ControlPanel, openControlsWindow, RemoteControls } from "./ControlPanel.tsx";
 import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
-import { clockOfUnit, compareScores, formatClock, formatScore, handsFree as handsFreeIn, nextUnit, scoreOf, unitPhases } from "@runlog/engine";
+import {
+  clockOfUnit,
+  compareScores,
+  formatClock,
+  formatScore,
+  handsFree as handsFreeIn,
+  nextUnit,
+  scoreOf,
+  unitPhases,
+} from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
-import { closesUnit, constrainedByOf, constraintLines, constraintsFor, describeSkip, describeSkipReason, entryWords, phaseSkipped, resultText, subjectLabel, subjectName, subjectSuggestions, type PhaseResult, type RunEvent, type RunState } from "@runlog/engine";
+import {
+  closesUnit,
+  constrainedByOf,
+  constraintLines,
+  constraintsFor,
+  describeSkip,
+  describeSkipReason,
+  entryWords,
+  phaseSkipped,
+  resultText,
+  subjectLabel,
+  subjectName,
+  subjectSuggestions,
+  type PhaseResult,
+  type RunEvent,
+  type RunState,
+} from "@runlog/engine";
 import { useDocDrawer } from "../docs/DocDrawer.tsx";
 import { useRun, type ActiveStep } from "./useRun.ts";
 import type { RunStore } from "./store.ts";
@@ -59,7 +84,7 @@ import { useConfirm } from "../ui/useConfirm.tsx";
  * Playing a run.
  *
  * Every noun on screen comes from the pack's vocabulary, and every step comes
- * from its declared flow. Nothing here knows what kind of game it is hosting: 
+ * from its declared flow. Nothing here knows what kind of game it is hosting:
  * which is the same claim the format makes, held to to the last label.
  */
 export function RunView({
@@ -138,7 +163,13 @@ export function RunView({
        */
       const profile = withChosen((record.control as ControlProfile) ?? {}, chosenFrom(record.setup));
       const control = isEmpty(profile) ? {} : { control: tidy(profile) };
-      void api.putSnapshot(record.runId, { ...snapshotOf(pack, state, events, undefined, { race }), paper: paperOf(pack, state.mode), ...control }).catch(() => {});
+      void api
+        .putSnapshot(record.runId, {
+          ...snapshotOf(pack, state, events, undefined, { race }),
+          paper: paperOf(pack, state.mode),
+          ...control,
+        })
+        .catch(() => {});
     }, 800);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -155,10 +186,20 @@ export function RunView({
     const raceId = ulid();
     const runId = run.startRun(mode, seed, 1, runName, [], [], { raceId, ...(setup ? { setup } : {}) });
     try {
-      const race = await api.createRace({ id: raceId, packId: pack.id, packVersion: pack.version, packTitle: pack.title, ...(runName.trim() ? { name: runName.trim() } : {}), mode, seed, sessionId: runId });
+      const race = await api.createRace({
+        id: raceId,
+        packId: pack.id,
+        packVersion: pack.version,
+        packTitle: pack.title,
+        ...(runName.trim() ? { name: runName.trim() } : {}),
+        mode,
+        seed,
+        sessionId: runId,
+      });
       setRaceNote(`Racing. The code is ${race.meta.code}; it is in the side column too.`);
     } catch (error) {
-      if (error instanceof PlanError) setRaceNote(`${error.message}. This is an ordinary run for now; subscribe from your profile, under Plan, and start a race again.`);
+      if (error instanceof PlanError)
+        setRaceNote(`${error.message}. This is an ordinary run for now; subscribe from your profile, under Plan, and start a race again.`);
       else setRaceNote(error instanceof Error && error.message ? error.message : "The race could not be started; this is an ordinary run.");
     }
   };
@@ -176,7 +217,10 @@ export function RunView({
         return;
       }
       clearPendingRaceCode();
-      const runId = run.startRun(race.meta.mode, race.meta.seed, 1, race.meta.name ?? "", [], [], { raceId: race.meta.id, ...(setup ? { setup } : {}) });
+      const runId = run.startRun(race.meta.mode, race.meta.seed, 1, race.meta.name ?? "", [], [], {
+        raceId: race.meta.id,
+        ...(setup ? { setup } : {}),
+      });
       await api.putRaceEntry(race.meta.id, { sessionId: runId });
     } catch (error) {
       setRaceNote(error instanceof Error && error.message ? error.message : "That code did not open a race.");
@@ -190,7 +234,7 @@ export function RunView({
    *
    * The engine moves on the instant a roll is answered, so the dice and the
    * result would otherwise vanish together. The answer is still committed
-   * as the engine sees fit, a receipt is a record, not a hold on the game, 
+   * as the engine sees fit, a receipt is a record, not a hold on the game,
    * but the step's rolls stay on screen, in order, with the next roll's
    * keypad beneath them, until "Carry on" closes the step.
    *
@@ -460,7 +504,15 @@ export function RunView({
           others={run.runList}
           onContinue={run.switchRun}
           onBack={run.runList.length > 0 ? run.cancelAnother : undefined}
-          {...(api && !bench ? { race: { start: (mode, seed, name, setup) => void startRace(mode, seed, name, setup), join: (code, setup) => void joinRace(code, setup), note: raceNote } } : {})}
+          {...(api && !bench
+            ? {
+                race: {
+                  start: (mode, seed, name, setup) => void startRace(mode, seed, name, setup),
+                  join: (code, setup) => void joinRace(code, setup),
+                  note: raceNote,
+                },
+              }
+            : {})}
         />
       </>
     );
@@ -471,7 +523,15 @@ export function RunView({
   if (remote) {
     return (
       <main className="main remote">
-        <RemoteControls pack={pack} run={run} state={state} receipt={settled ? lastReceipt : null} onCarryOn={carryOn} onAnswer={answer} {...receiptFollowUps(run, settled, lastReceipt)} />
+        <RemoteControls
+          pack={pack}
+          run={run}
+          state={state}
+          receipt={settled ? lastReceipt : null}
+          onCarryOn={carryOn}
+          onAnswer={answer}
+          {...receiptFollowUps(run, settled, lastReceipt)}
+        />
       </main>
     );
   }
@@ -515,7 +575,10 @@ export function RunView({
             the way in and which the Rules button leads back to. An
             unnamed run says the pack, as it always did.
           */}
-          <span className="stagePack" title={state.name ? `${state.name}, a ${pack.vocabulary.run.one.toLowerCase()} of ${pack.title}` : pack.title}>
+          <span
+            className="stagePack"
+            title={state.name ? `${state.name}, a ${pack.vocabulary.run.one.toLowerCase()} of ${pack.title}` : pack.title}
+          >
             {state.name?.trim() || pack.title}
           </span>
           {/*
@@ -535,19 +598,14 @@ export function RunView({
             <span className="visuallyHidden">This {pack.vocabulary.run.one.toLowerCase()}</span>
           </button>
           {state.unit > 0 && <ClockPanel pack={pack} run={run} state={state} />}
-          <Flow
-            pack={pack}
-            run={run}
-            state={state}
-            open={pane === "unit"}
-            onOpen={() => setPane(pane === "unit" ? "now" : "unit")}
-          />
+          <Flow pack={pack} run={run} state={state} open={pane === "unit"} onOpen={() => setPane(pane === "unit" ? "now" : "unit")} />
         </aside>
 
         <div className={`col wide ${run.readOnly ? "watching" : ""}`}>
           {run.readOnly && (
             <p className="notice">
-              You are watching this {pack.vocabulary.run.one.toLowerCase()}. Every move shows here as it is made; none can be made from here.
+              You are watching this {pack.vocabulary.run.one.toLowerCase()}. Every move shows here as it is made; none can be made from
+              here.
             </p>
           )}
           <DiceCurtain roll={othersRoll} />
@@ -573,13 +631,7 @@ export function RunView({
           {run.pending?.request ? (
             // The next thing the game is waiting on comes beneath the
             // receipts of the rolls before it, which stay where they are.
-            <RequestPanel
-              request={run.pending.request}
-              pack={pack}
-              state={state}
-              onAnswer={answer}
-              onCancel={run.abandonPending}
-            />
+            <RequestPanel request={run.pending.request} pack={pack} state={state} onAnswer={answer} onCancel={run.abandonPending} />
           ) : receipts.length > 0 ? null : state.status === "ended" ? (
             <Ended pack={pack} state={state} />
           ) : state.unit === 0 ? (
@@ -597,9 +649,7 @@ export function RunView({
 
           {/* Whatever is owed and not already offered on the rule that
               incurred it, plus the standing notes. */}
-          {(elsewhere(pack, run, state).length > 0 || run.notes.length > 0) && (
-            <Obligations pack={pack} run={run} state={state} />
-          )}
+          {(elsewhere(pack, run, state).length > 0 || run.notes.length > 0) && <Obligations pack={pack} run={run} state={state} />}
 
           {run.moderated && run.challenges.length > 0 && <Winners run={run} state={state} />}
           {run.moves.length > 0 && <Moves run={run} pack={pack} state={state} />}
@@ -615,12 +665,7 @@ export function RunView({
           {!bench && (
             <details className="more">
               <summary>Export and share</summary>
-              <ExportPanel
-                pack={pack}
-                state={state}
-                events={run.events}
-                onLoad={run.loadEvents}
-              />
+              <ExportPanel pack={pack} state={state} events={run.events} onLoad={run.loadEvents} />
               <EnvironmentPanel pack={pack} state={state} />
             </details>
           )}
@@ -636,7 +681,12 @@ export function RunView({
           {pack.unit.createsSubject && (
             <Board pack={pack} state={state} onRename={run.renameSubject} onCorrect={run.readOnly ? undefined : run.correctState} />
           )}
-          <Trackers pack={pack} state={state} onNudge={run.readOnly ? undefined : run.nudgeCounter} onTurn={run.readOnly ? undefined : run.turnResource} />
+          <Trackers
+            pack={pack}
+            state={state}
+            onNudge={run.readOnly ? undefined : run.nudgeCounter}
+            onTurn={run.readOnly ? undefined : run.turnResource}
+          />
           {run.record && api && !bench && <RacePanel pack={pack} race={raceView} />}
           {run.record && !bench && api && <Asks pack={pack} run={run} record={run.record} />}
           {run.record && !bench && <Members pack={pack} run={run.record} />}
@@ -701,7 +751,8 @@ function BenchBar({ pack, bench, onRestart }: { pack: Pack; bench: { from: strin
     <div className="benchBar" role="status">
       <span className="benchLabel">Test run</span>
       <span className="muted">
-        Nothing is saved. Roll for me is a choice here as anywhere; with it off, the Table button beside the pad lands any roll on the line you pick.
+        Nothing is saved. Roll for me is a choice here as anywhere; with it off, the Table button beside the pad lands any roll on the line
+        you pick.
       </span>
       <span className="benchActions">
         {onRestart && (
@@ -726,9 +777,21 @@ export function StartScreen({
   race,
 }: {
   pack: Pack;
-  onStart: (mode: string, seed: string, players: number, name?: string, contestants?: string[], lacks?: string[], extras?: { setup?: ChosenSetup }) => void;
+  onStart: (
+    mode: string,
+    seed: string,
+    players: number,
+    name?: string,
+    contestants?: string[],
+    lacks?: string[],
+    extras?: { setup?: ChosenSetup },
+  ) => void;
   /** Races across devices, where there is an account to hold one. */
-  race?: { start: (mode: string, seed: string, name: string, setup: ChosenSetup | null) => void; join: (code: string, setup: ChosenSetup | null) => void; note: string | null };
+  race?: {
+    start: (mode: string, seed: string, name: string, setup: ChosenSetup | null) => void;
+    join: (code: string, setup: ChosenSetup | null) => void;
+    note: string | null;
+  };
   /** Runs of this pack already here, offered before a new one. */
   others?: StoredRun[];
   onContinue?: (runId: string) => void;
@@ -813,11 +876,7 @@ export function StartScreen({
         <h3 className="sectionTitle">Mode</h3>
         <div className="choices">
           {Object.entries(pack.modes).map(([id, m]) => (
-            <button
-              key={id}
-              className={`choice ${id === mode ? "on" : ""}`}
-              onClick={() => setMode(id)}
-            >
+            <button key={id} className={`choice ${id === mode ? "on" : ""}`} onClick={() => setMode(id)}>
               <strong>{m.label}</strong>
               <span className="muted small">{m.description}</span>
             </button>
@@ -836,24 +895,17 @@ export function StartScreen({
           <>
             <h3 className="sectionTitle">Seed</h3>
             <p className="muted small">
-              This mode is meant to be shared. Everyone entering the same seed meets the same
-              {" "}
-              {v.run.one.toLowerCase()}.
+              This mode is meant to be shared. Everyone entering the same seed meets the same {v.run.one.toLowerCase()}.
             </p>
             <div className="row seedRow">
-              <input
-                className="textInput"
-                value={seed}
-                placeholder="e.g. long-kiln-42"
-                onChange={(e) => setSeed(e.target.value)}
-              />
+              <input className="textInput" value={seed} placeholder="e.g. long-kiln-42" onChange={(e) => setSeed(e.target.value)} />
               <button className="ghost" onClick={() => setSeed(coinSeed())}>
                 Make one
               </button>
             </div>
             <p className="muted small">
-              A seeded {v.run.one.toLowerCase()} rolls its own dice, so everyone meets the same
-              results in the same order. Keep your own dice for the modes that ask for them.
+              A seeded {v.run.one.toLowerCase()} rolls its own dice, so everyone meets the same results in the same order. Keep your own
+              dice for the modes that ask for them.
             </p>
           </>
         ) : (
@@ -894,7 +946,13 @@ export function StartScreen({
                   Start a race
                 </button>
               )}
-              <input className="textInput code" value={raceCode} placeholder="code" maxLength={8} onChange={(e) => setRaceCode(e.target.value.toUpperCase())} />
+              <input
+                className="textInput code"
+                value={raceCode}
+                placeholder="code"
+                maxLength={8}
+                onChange={(e) => setRaceCode(e.target.value.toUpperCase())}
+              />
               <button className="ghost" disabled={raceCode.trim().length < 6} onClick={() => race.join(raceCode.trim(), setup)}>
                 Join
               </button>
@@ -906,11 +964,16 @@ export function StartScreen({
         {moderated && (
           <>
             <h3 className="sectionTitle">
-              Contestants <span className="muted">{moderated.contestants.min}-{moderated.contestants.max}</span>
+              Contestants{" "}
+              <span className="muted">
+                {moderated.contestants.min}-{moderated.contestants.max}
+              </span>
             </h3>
             <p className="muted small">
               You run the {v.run.one.toLowerCase()} from this device; they race it. Names, not accounts: anyone who can hear you can play.
-              {moderated.award === "everyone" ? " Everyone who finishes a challenge scores it" : " The first to finish a challenge scores it"}
+              {moderated.award === "everyone"
+                ? " Everyone who finishes a challenge scores it"
+                : " The first to finish a challenge scores it"}
               {moderated.firstBonus ? `, and the first gets ${moderated.firstBonus} more.` : "."}
             </p>
             <ul className="roster">
@@ -947,11 +1010,7 @@ export function StartScreen({
             </p>
             <div className="options">
               {Array.from({ length: maxPlayers - minPlayers + 1 }, (_, i) => minPlayers + i).map((n) => (
-                <button
-                  key={n}
-                  className={`chip pick ${n === seated ? "on" : ""}`}
-                  onClick={() => setPlayers(n)}
-                >
+                <button key={n} className={`chip pick ${n === seated ? "on" : ""}`} onClick={() => setPlayers(n)}>
                   {n}
                 </button>
               ))}
@@ -998,7 +1057,9 @@ export function StartScreen({
                 </li>
               ))}
             </ul>
-            {requirements.some((r) => r.optional) && <p className="muted small">Untick what you do not have. Results that need it are drawn again.</p>}
+            {requirements.some((r) => r.optional) && (
+              <p className="muted small">Untick what you do not have. Results that need it are drawn again.</p>
+            )}
           </>
         )}
 
@@ -1015,9 +1076,7 @@ export function StartScreen({
         <h3 className="sectionTitle">
           Name it <span className="muted">optional</span>
         </h3>
-        <p className="muted small">
-          For telling this {v.run.one.toLowerCase()} from the next one. You can change it later.
-        </p>
+        <p className="muted small">For telling this {v.run.one.toLowerCase()} from the next one. You can change it later.</p>
         <input
           className="textInput runNameField"
           value={runName}
@@ -1080,7 +1139,10 @@ function RunHeader({
         {state.status === "ended" && <span className="chip ok">ended</span>}
         {state.forcedUnits > 0 && <span className="chip warn">{state.forcedUnits} forced</span>}
         {state.rewindNext > 0 && (
-          <span className="chip warn" title={`When this ${v.unit.one.toLowerCase()} closes, the ${v.run.one.toLowerCase()} goes back to ${v.unit.one.toLowerCase()} ${nextUnit(state)}`}>
+          <span
+            className="chip warn"
+            title={`When this ${v.unit.one.toLowerCase()} closes, the ${v.run.one.toLowerCase()} goes back to ${v.unit.one.toLowerCase()} ${nextUnit(state)}`}
+          >
             back to {v.unit.one.toLowerCase()} {nextUnit(state)}
           </span>
         )}
@@ -1099,7 +1161,11 @@ function RunHeader({
           read it against. The same word and the same drawer as the marketplace
           and the library use, so "Docs" means one thing everywhere.
         */}
-        <button className="ghost" onClick={() => drawer.open(pack, "summary", { section: "packs", id: pack.id })} title="What this pack is, and the rules of what you are running">
+        <button
+          className="ghost"
+          onClick={() => drawer.open(pack, "summary", { section: "packs", id: pack.id })}
+          title="What this pack is, and the rules of what you are running"
+        >
           Docs
         </button>
         <button className="ghost" onClick={run.undo} disabled={!run.canUndo || run.readOnly}>
@@ -1114,7 +1180,12 @@ function RunHeader({
           title={`End this ${v.run.one.toLowerCase()} and delete its log`}
           onClick={() => {
             const named = state.name ? `${state.name}` : `this ${v.run.one.toLowerCase()}`;
-            void ask({ ask: `Discard ${named}?`, detail: "Its log is deleted, and there is no undoing it.", confirm: "Discard", destructive: true }).then((yes) => yes && run.discard());
+            void ask({
+              ask: `Discard ${named}?`,
+              detail: "Its log is deleted, and there is no undoing it.",
+              confirm: "Discard",
+              destructive: true,
+            }).then((yes) => yes && run.discard());
           }}
         >
           Discard
@@ -1174,7 +1245,8 @@ function owedAction(pack: Pack, run: ReturnType<typeof useRun>, state: RunState)
   return (line: { table: string; entryId: string }) => {
     if (!stillOwed(owed, line)) return null;
     const due = state.obligations.find(
-      (o) => !o.resolved && o.kind === "trigger" && o.ref?.kind === "tableEntry" && o.ref.table === line.table && o.ref.entryId === line.entryId,
+      (o) =>
+        !o.resolved && o.kind === "trigger" && o.ref?.kind === "tableEntry" && o.ref.table === line.table && o.ref.entryId === line.entryId,
     );
     if (!due || run.readOnly) return null;
     return (
@@ -1185,17 +1257,7 @@ function owedAction(pack: Pack, run: ReturnType<typeof useRun>, state: RunState)
   };
 }
 
-function StepPanel({
-  pack,
-  run,
-  state,
-  active,
-}: {
-  pack: Pack;
-  run: ReturnType<typeof useRun>;
-  state: RunState;
-  active: ActiveStep;
-}) {
+function StepPanel({ pack, run, state, active }: { pack: Pack; run: ReturnType<typeof useRun>; state: RunState; active: ActiveStep }) {
   const { phase, step, index } = active;
   const v = pack.vocabulary;
   const [declared, setDeclared] = useState("");
@@ -1216,7 +1278,8 @@ function StepPanel({
           <p className="muted">{table?.description}</p>
           {owed > 0 && (
             <p className="notice">
-              This {pack.vocabulary.unit.one.toLowerCase()} rolls {table?.title ?? step.table} {owed + 1} times: {owed === 1 ? "one more is owed" : `${owed} more are owed`} after this one.
+              This {pack.vocabulary.unit.one.toLowerCase()} rolls {table?.title ?? step.table} {owed + 1} times:{" "}
+              {owed === 1 ? "one more is owed" : `${owed} more are owed`} after this one.
             </p>
           )}
           <div className="stepAction">
@@ -1249,11 +1312,7 @@ function StepPanel({
         <section className="panel runStep" key={key}>
           <StepHead phase={phase} label={step.label ?? `Declare the ${v.subject.one}`} />
           <Constraints lines={constraints} action={owedAction(pack, run, state)} />
-          {state.bannedTypes.length > 0 && (
-            <p className="muted small">
-              No longer allowed: {state.bannedTypes.join(", ")}
-            </p>
-          )}
+          {state.bannedTypes.length > 0 && <p className="muted small">No longer allowed: {state.bannedTypes.join(", ")}</p>}
           {suggested.length > 0 && (
             <div className="padRow">
               {suggested.map((name) => (
@@ -1271,15 +1330,9 @@ function StepPanel({
               placeholder={`What is this ${v.subject.one.toLowerCase()}?`}
               value={declared}
               onChange={(e) => setDeclared(e.target.value)}
-              onKeyDown={(e) =>
-                e.key === "Enter" && declared && run.declareSubject(phase, index, declared)
-              }
+              onKeyDown={(e) => e.key === "Enter" && declared && run.declareSubject(phase, index, declared)}
             />
-            <button
-              className="primary"
-              disabled={!declared}
-              onClick={() => run.declareSubject(phase, index, declared)}
-            >
+            <button className="primary" disabled={!declared} onClick={() => run.declareSubject(phase, index, declared)}>
               Declare
             </button>
           </div>
@@ -1288,7 +1341,8 @@ function StepPanel({
     }
 
     case "manual": {
-      if (closesUnit(step)) return <ClosingStep key={key} pack={pack} run={run} state={state} active={active} ticked={ticked} tick={tick} />;
+      if (closesUnit(step))
+        return <ClosingStep key={key} pack={pack} run={run} state={state} active={active} ticked={ticked} tick={tick} />;
       const list = step.checklist ?? [];
       const allTicked = checklistDone(list, pack, state, ticked);
       const constraints = constraintLines(pack, state, step.constrainedBy);
@@ -1443,7 +1497,15 @@ function ClosingStep({
         />
       )}
       {points.length > 0 && (
-        <Checklist items={points} pack={pack} state={state} ticked={ticked} onToggle={tick} settling={settling} action={owedAction(pack, run, state)} />
+        <Checklist
+          items={points}
+          pack={pack}
+          state={state}
+          ticked={ticked}
+          onToggle={tick}
+          settling={settling}
+          action={owedAction(pack, run, state)}
+        />
       )}
       <div className="padRow stepAction">
         <button
@@ -1461,7 +1523,13 @@ function ClosingStep({
         <button
           className="ghost big"
           disabled={!run.canEnd.ok}
-          title={!run.canEnd.ok ? `Cannot finish yet: ${run.canEnd.reason}` : (pack.endings?.length ?? 0) > 1 ? "Close this and choose how the run ends" : undefined}
+          title={
+            !run.canEnd.ok
+              ? `Cannot finish yet: ${run.canEnd.reason}`
+              : (pack.endings?.length ?? 0) > 1
+                ? "Close this and choose how the run ends"
+                : undefined
+          }
           onClick={(e) =>
             blocked.length > 0 ? nudgeOwed(e.currentTarget) : allTicked ? run.finish(phase, index) : nudgeFirstUnticked(e.currentTarget)
           }
@@ -1473,15 +1541,7 @@ function ClosingStep({
   );
 }
 
-function BetweenUnits({
-  pack,
-  run,
-  state,
-}: {
-  pack: Pack;
-  run: ReturnType<typeof useRun>;
-  state: RunState;
-}) {
+function BetweenUnits({ pack, run, state }: { pack: Pack; run: ReturnType<typeof useRun>; state: RunState }) {
   const v = pack.vocabulary;
   const [note, setNote] = useState(state.journal[state.unit] ?? "");
   const [ending, setEnding] = useState<string | null>(null);
@@ -1523,9 +1583,7 @@ function BetweenUnits({
           Enter {v.unit.one} {state.unit + 1}
         </button>
         <span className="muted small">
-          {state.unit >= pack.unit.min
-            ? countMade(pack, state)
-            : `at least ${pack.unit.min} needed before you can stop`}
+          {state.unit >= pack.unit.min ? countMade(pack, state) : `at least ${pack.unit.min} needed before you can stop`}
         </span>
       </div>
 
@@ -1536,11 +1594,7 @@ function BetweenUnits({
           <h3 className="sectionTitle">Or end here</h3>
           <div className="choices">
             {(pack.endings ?? [{ id: "done", label: "End", text: "" }]).map((e) => (
-              <button
-                key={e.id}
-                className={`choice ${ending === e.id ? "on" : ""}`}
-                onClick={() => setEnding(e.id)}
-              >
+              <button key={e.id} className={`choice ${ending === e.id ? "on" : ""}`} onClick={() => setEnding(e.id)}>
                 <strong>{e.label}</strong>
                 <span className="muted small">{e.text}</span>
               </button>
@@ -1566,8 +1620,8 @@ function Ended({ pack, state }: { pack: Pack; state: RunState }) {
       <h4 className="stepLabel">{ending?.label ?? state.ending}</h4>
       <p>{ending?.text}</p>
       <p className="muted small">
-        {state.unit} {v.unit.many.toLowerCase()} ·{" "}
-        {state.subjects.filter((s) => !s.removed).length} {v.subject.many.toLowerCase()} surviving
+        {state.unit} {v.unit.many.toLowerCase()} · {state.subjects.filter((s) => !s.removed).length} {v.subject.many.toLowerCase()}{" "}
+        surviving
       </p>
     </section>
   );
@@ -1590,9 +1644,7 @@ function Ended({ pack, state }: { pack: Pack; state: RunState }) {
  */
 function elsewhere(pack: Pack, run: ReturnType<typeof useRun>, state: RunState) {
   const step = run.activeStep?.step;
-  const shown = new Set(
-    (step ? constraintLines(pack, state, constrainedByOf(step)) : []).map((l) => `${l.table}/${l.entryId}`),
-  );
+  const shown = new Set((step ? constraintLines(pack, state, constrainedByOf(step)) : []).map((l) => `${l.table}/${l.entryId}`));
   // And whatever its confirmation lists, which is where a closing step puts
   // what the unit drew.
   const points = step?.kind === "manual" ? (step.checklist ?? []) : step?.kind === "finalizeUnit" ? (step.confirm ?? []) : [];
@@ -1762,7 +1814,11 @@ function Winners({ run, state }: { run: ReturnType<typeof useRun>; state: RunSta
                         className={`cell ${mine ? "won" : ""}`}
                         disabled={!editable || (!mine && !canTake)}
                         aria-pressed={Boolean(mine)}
-                        title={mine ? `${c.name} +${mine.points}${first && ch.awards.length > 1 ? ", first" : ""} - press to take it back` : `${c.name} finished it`}
+                        title={
+                          mine
+                            ? `${c.name} +${mine.points}${first && ch.awards.length > 1 ? ", first" : ""} - press to take it back`
+                            : `${c.name} finished it`
+                        }
                         onClick={press}
                       >
                         {mine ? `+${mine.points}` : "·"}
@@ -1816,7 +1872,11 @@ export function Scores({ pack, run, state }: { pack: Pack; run: ReturnType<typeo
   const rows = useMemo((): ScoredRun[] => {
     if (!run.runId) return [];
     const nowMs = Date.now();
-    const past = scoresOf(pack, run.runList.filter((r) => r.runId !== run.runId), nowMs);
+    const past = scoresOf(
+      pack,
+      run.runList.filter((r) => r.runId !== run.runId),
+      nowMs,
+    );
     const score = scoreOf(pack, state, run.events, nowMs);
     const mine: ScoredRun = { runId: run.runId, name: state.name, endedAt: state.updatedAt, score, text: formatScore(score, pack) };
     return [...past, mine].sort((a, b) => compareScores(a.score, b.score));
@@ -1873,8 +1933,8 @@ function Attached({ tools }: { tools: AttachedTool[] }) {
         On the game <span className="muted">{tools.length === 1 ? "a tool is attached" : `${tools.length} tools are attached`}</span>
       </h3>
       <p className="muted small">
-        {named.length > 0 ? named.join(", ") : "A tool"} is listening, so what the dice say happens in the game. Results still read the same with nothing
-        attached.
+        {named.length > 0 ? named.join(", ") : "A tool"} is listening, so what the dice say happens in the game. Results still read the same
+        with nothing attached.
       </p>
     </section>
   );
@@ -1897,7 +1957,8 @@ function Scoreboard({ run, state, pack, tools }: { run: ReturnType<typeof useRun
     setName("");
   };
   /** The marks a contestant can be given: contestant-scoped states they do not carry. */
-  const marks = (held: string[]) => Object.entries(pack.states ?? {}).filter(([id, def]) => def.scope === "contestant" && !held.includes(id));
+  const marks = (held: string[]) =>
+    Object.entries(pack.states ?? {}).filter(([id, def]) => def.scope === "contestant" && !held.includes(id));
   /** The tallies the pack keeps per racer, which is what this board carries for each of them. */
   const theirs = Object.entries(pack.counters ?? {}).filter(([, def]) => def.per === "contestant" && !def.hidden);
   return (
@@ -1922,7 +1983,12 @@ function Scoreboard({ run, state, pack, tools }: { run: ReturnType<typeof useRun
               </span>
             ))}
             {editable && marks(s.contestant.states).length > 0 && (
-              <select className="chipAdd" value="" aria-label={`Mark ${s.contestant.name}`} onChange={(e) => e.target.value && run.markContestant(s.contestant.id, e.target.value, true)}>
+              <select
+                className="chipAdd"
+                value=""
+                aria-label={`Mark ${s.contestant.name}`}
+                onChange={(e) => e.target.value && run.markContestant(s.contestant.id, e.target.value, true)}
+              >
                 <option value="">mark…</option>
                 {marks(s.contestant.states).map(([id, def]) => (
                   <option key={id} value={id}>
@@ -1942,13 +2008,21 @@ function Scoreboard({ run, state, pack, tools }: { run: ReturnType<typeof useRun
               <span key={id} className="chip nudge" title={`${def.label}, for ${s.contestant.name}`}>
                 {def.label}
                 {editable && (
-                  <button className="chipX" title={`One fewer for ${s.contestant.name}`} onClick={() => run.nudgeCounter(id, -1, s.contestant.id)}>
+                  <button
+                    className="chipX"
+                    title={`One fewer for ${s.contestant.name}`}
+                    onClick={() => run.nudgeCounter(id, -1, s.contestant.id)}
+                  >
                     −
                   </button>
                 )}
                 <span className="num">{s.contestant.counters[id] ?? def.initial}</span>
                 {editable && (
-                  <button className="chipX" title={`One more for ${s.contestant.name}`} onClick={() => run.nudgeCounter(id, 1, s.contestant.id)}>
+                  <button
+                    className="chipX"
+                    title={`One more for ${s.contestant.name}`}
+                    onClick={() => run.nudgeCounter(id, 1, s.contestant.id)}
+                  >
                     +
                   </button>
                 )}
@@ -1965,7 +2039,13 @@ function Scoreboard({ run, state, pack, tools }: { run: ReturnType<typeof useRun
       ))}
       {editable && (
         <div className="padRow">
-          <input className="textInput" value={name} placeholder="add a contestant" onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
+          <input
+            className="textInput"
+            value={name}
+            placeholder="add a contestant"
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && add()}
+          />
           <button className="ghost tiny" onClick={add} disabled={!name.trim()}>
             Add
           </button>
@@ -2045,15 +2125,7 @@ function Moves({ run, pack, state }: { run: ReturnType<typeof useRun>; pack: Pac
  * line of text because whoever has just been handed the device needs to find
  * it at a glance.
  */
-function Roles({
-  pack,
-  run,
-  state,
-}: {
-  pack: Pack;
-  run: ReturnType<typeof useRun>;
-  state: RunState;
-}) {
+function Roles({ pack, run, state }: { pack: Pack; run: ReturnType<typeof useRun>; state: RunState }) {
   const v = pack.vocabulary;
   return (
     <section className="panel">
@@ -2143,18 +2215,18 @@ function Board({
                 }}
               />
             ) : !s.removed ? (
-              <button
-                className="renameTrigger"
-                title="Click to rename"
-                onClick={() => setEditing({ id: s.id, draft: s.name ?? "" })}
-              >
+              <button className="renameTrigger" title="Click to rename" onClick={() => setEditing({ id: s.id, draft: s.name ?? "" })}>
                 {subjectName(pack, s)}
               </button>
             ) : (
               <strong>{subjectName(pack, s)}</strong>
             )}
             {/* The declared type beside the name, unless the name already says it. */}
-            {s.type && s.type !== s.name ? <span className="muted subjectType"> · {s.type}</span> : !s.type && <span className="muted subjectType"> · undeclared</span>}
+            {s.type && s.type !== s.name ? (
+              <span className="muted subjectType"> · {s.type}</span>
+            ) : (
+              !s.type && <span className="muted subjectType"> · undeclared</span>
+            )}
             {/*
               What the player wrote when this subject's unit closed. The
               journal is kept by unit and a subject is made in one, so the
@@ -2178,7 +2250,11 @@ function Board({
                 <span key={id} className="chip state" title={pack.states?.[id]?.description}>
                   {pack.states?.[id]?.label ?? id}
                   {onCorrect && !s.removed && (
-                    <button className="chipX" title="Take this state off: a correction, written to the log" onClick={() => onCorrect(s.id, id, false)}>
+                    <button
+                      className="chipX"
+                      title="Take this state off: a correction, written to the log"
+                      onClick={() => onCorrect(s.id, id, false)}
+                    >
                       ×
                     </button>
                   )}
@@ -2210,11 +2286,7 @@ function Board({
           </div>
           <button
             className="ghost tiny"
-            title={
-              editing?.id === s.id
-                ? "Save the new name"
-                : "Copy the name with its states, to paste onto the thing itself"
-            }
+            title={editing?.id === s.id ? "Save the new name" : "Copy the name with its states, to paste onto the thing itself"}
             onClick={() => {
               if (editing?.id === s.id) {
                 save();
@@ -2297,7 +2369,13 @@ function Trackers({
               <strong title={def.description}>{def.label}</strong>
               <span className="nudge">
                 {onTurn && (
-                  <button className="ghost tiny" disabled={low} aria-label={would(-step)} title={would(-step)} onClick={() => onTurn(id, -step)}>
+                  <button
+                    className="ghost tiny"
+                    disabled={low}
+                    aria-label={would(-step)}
+                    title={would(-step)}
+                    onClick={() => onTurn(id, -step)}
+                  >
                     −
                   </button>
                 )}
@@ -2306,7 +2384,13 @@ function Trackers({
                   {def.max !== undefined && ` / ${def.max}`}
                 </span>
                 {onTurn && (
-                  <button className="ghost tiny" disabled={high} aria-label={would(step)} title={would(step)} onClick={() => onTurn(id, step)}>
+                  <button
+                    className="ghost tiny"
+                    disabled={high}
+                    aria-label={would(step)}
+                    title={would(step)}
+                    onClick={() => onTurn(id, step)}
+                  >
                     +
                   </button>
                 )}
@@ -2388,9 +2472,10 @@ function Flow({
     () => new Set(run.activeStep ? constraintsFor(pack, state, constrainedByOf(run.activeStep.step)) : []),
     [pack, state, run.activeStep],
   );
-  const listed = phases.length > 0
-    ? phases
-    : run.activePhases.map((p) => ({ id: p.id, label: p.label, state: "todo" as const, why: undefined, results: undefined }));
+  const listed =
+    phases.length > 0
+      ? phases
+      : run.activePhases.map((p) => ({ id: p.id, label: p.label, state: "todo" as const, why: undefined, results: undefined }));
   return (
     <section className={`stageFlow${open ? " open" : ""}`}>
       {strip && (
@@ -2402,9 +2487,7 @@ function Flow({
           {strip.next && <span className="muted">then {strip.next}</span>}
         </button>
       )}
-      <h3 className="sectionTitle">
-        This {pack.vocabulary.unit.one.toLowerCase()}
-      </h3>
+      <h3 className="sectionTitle">This {pack.vocabulary.unit.one.toLowerCase()}</h3>
       <ol className="flow">
         {listed.map((phase, i) => {
           // Out of play this unit: grayed, with the reason under the name,
@@ -2455,7 +2538,9 @@ function PhaseLanded({ result, holding }: { result: PhaseResult; holding: Set<st
   // the number.
   const reached = hit ? (from?.hitName ?? `#${from!.hit}`) : null;
   const held = holding.has(text);
-  const cls = ["result", held ? "constrains" : "", hit ? "heat" : "", from?.table ? "chained" : "", from?.declared ? "declared" : ""].filter(Boolean).join(" ");
+  const cls = ["result", held ? "constrains" : "", hit ? "heat" : "", from?.table ? "chained" : "", from?.declared ? "declared" : ""]
+    .filter(Boolean)
+    .join(" ");
   return (
     <span className={cls} title={held ? "The game has already had its say: this holds over the step in hand" : undefined}>
       {from?.table && (
@@ -2500,7 +2585,12 @@ function Timeline({ pack, state }: { pack: Pack; state: RunState }) {
       <div className="logHead">
         <h3 className="sectionTitle">
           The log
-          {lines.length < total && <span className="muted"> · the last {lines.length} of {total}</span>}
+          {lines.length < total && (
+            <span className="muted">
+              {" "}
+              · the last {lines.length} of {total}
+            </span>
+          )}
         </h3>
         <div className="logTools">
           <button className="ghost tiny" onClick={flip} title="Read the log from the other end">
@@ -2560,15 +2650,7 @@ function coinSeed(): string {
  * The run's own name, in the bar. Click to change it; empty clears it. A run
  * without one is offered the chance rather than shown a blank.
  */
-function RunName({
-  name,
-  noun,
-  onRename,
-}: {
-  name: string | null;
-  noun: string;
-  onRename: (name: string) => void;
-}) {
+function RunName({ name, noun, onRename }: { name: string | null; noun: string; onRename: (name: string) => void }) {
   const [draft, setDraft] = useState<string | null>(null);
   if (draft !== null) {
     const done = () => {

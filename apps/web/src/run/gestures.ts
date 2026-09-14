@@ -65,7 +65,13 @@ export function marksOf(state: RunState, events: readonly RunEvent[], nowMs: num
  * the clocks, then the tallies, then the unit closing, then the run
  * ending, which is the order the table would say them in.
  */
-export function lifecycleGestures(pack: Pack, state: RunState, events: readonly RunEvent[], before: LifecycleMarks, nowMs: number = Date.now()): LifecycleGesture[] {
+export function lifecycleGestures(
+  pack: Pack,
+  state: RunState,
+  events: readonly RunEvent[],
+  before: LifecycleMarks,
+  nowMs: number = Date.now(),
+): LifecycleGesture[] {
   const out: LifecycleGesture[] = [];
   const now = marksOf(state, events, nowMs);
   const tableTitle = (id: string) => pack.tables[id]?.title ?? id;
@@ -82,7 +88,8 @@ export function lifecycleGestures(pack: Pack, state: RunState, events: readonly 
   // them, so a listener can drop a line it has already shown.
   for (let i = before.outcomes; i < state.outcomes.length; i++) {
     const o = state.outcomes[i]!;
-    const subject = o.targetSubject === null || o.targetSubject === undefined ? undefined : state.subjects.find((s) => s.id === o.targetSubject);
+    const subject =
+      o.targetSubject === null || o.targetSubject === undefined ? undefined : state.subjects.find((s) => s.id === o.targetSubject);
     // The words are for a person; the ids are for a tool acting on this.
     // A listener keying off `text` breaks the first time an author fixes a
     // typo, so the entry it landed on travels beside what it says, with
@@ -112,15 +119,37 @@ export function lifecycleGestures(pack: Pack, state: RunState, events: readonly 
     const who = state.contestants.find((c) => c.id === a.contestant);
     out.push({
       kind: "award",
-      data: { n: a.outcome + 1, contestant: who?.name ?? a.contestant, points: a.points, table: tableTitle(a.table), text: entryTextOf(pack, a) },
+      data: {
+        n: a.outcome + 1,
+        contestant: who?.name ?? a.contestant,
+        points: a.points,
+        table: tableTitle(a.table),
+        text: entryTextOf(pack, a),
+      },
     });
   }
 
   for (const c of state.clocks) {
     const was = before.clocks[c.id];
-    const status = c.status === "done" ? (was === "done" ? null : "stopped") : c.status === "paused" ? (was === "paused" ? null : "paused") : was === undefined ? "started" : was === "paused" ? "resumed" : null;
+    const status =
+      c.status === "done"
+        ? was === "done"
+          ? null
+          : "stopped"
+        : c.status === "paused"
+          ? was === "paused"
+            ? null
+            : "paused"
+          : was === undefined
+            ? "started"
+            : was === "paused"
+              ? "resumed"
+              : null;
     if (!status) continue;
-    out.push({ kind: "clock", data: { clock: c.id, label: c.label, kind: c.kind, status, ...(status === "stopped" ? { expired: Boolean(c.expired) } : {}) } });
+    out.push({
+      kind: "clock",
+      data: { clock: c.id, label: c.label, kind: c.kind, status, ...(status === "stopped" ? { expired: Boolean(c.expired) } : {}) },
+    });
   }
 
   // A tally that moved, by its label, with where it was: a death counted,

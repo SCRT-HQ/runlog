@@ -45,8 +45,7 @@ function printDiagnostics(diagnostics: Diagnostic[], file: string): void {
   if (diagnostics.length === 0) return;
   console.error("");
   for (const d of diagnostics) {
-    const tag =
-      d.level === "error" ? paint(RED, "error") : paint(YELLOW, "warning");
+    const tag = d.level === "error" ? paint(RED, "error") : paint(YELLOW, "warning");
     const where = d.path ? paint(DIM, ` at ${d.path}`) : "";
     console.error(`  ${tag} ${paint(DIM, d.code)}${where}`);
     console.error(`    ${d.message}`);
@@ -194,21 +193,13 @@ function cmdBundle(args: string[]): number {
   const body = JSON.stringify(pack, null, 2);
   const hash = createHash("sha256").update(body).digest("hex").slice(0, 16);
   const bundled = { ...pack, bundledAt: new Date().toISOString(), contentHash: hash };
-  const out =
-    outIndex >= 0 && args[outIndex + 1]
-      ? resolve(args[outIndex + 1]!)
-      : resolve(`${pack.id}-${pack.version}.pack.json`);
+  const out = outIndex >= 0 && args[outIndex + 1] ? resolve(args[outIndex + 1]!) : resolve(`${pack.id}-${pack.version}.pack.json`);
 
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, `${JSON.stringify(bundled, null, 2)}\n`, "utf8");
   console.log(`${paint(GREEN, "bundled")} ${out} ${paint(DIM, `sha256:${hash}`)}`);
   if (!pack.license.redistributable) {
-    console.log(
-      paint(
-        YELLOW,
-        "  note: this pack is marked non-redistributable. Keep the bundle private.",
-      ),
-    );
+    console.log(paint(YELLOW, "  note: this pack is marked non-redistributable. Keep the bundle private."));
   }
   return 0;
 }
@@ -250,18 +241,12 @@ function cmdTest(args: string[]): number {
       if (a.ok) continue;
       // Both values, always: "expected 1" without "got 0" sends the author
       // back to the app to find out what actually happened.
-      console.log(
-        `    ${a.path}: expected ${JSON.stringify(a.expected)}, got ${JSON.stringify(a.actual)}`,
-      );
+      console.log(`    ${a.path}: expected ${JSON.stringify(a.expected)}, got ${JSON.stringify(a.actual)}`);
     }
   }
 
   const failed = results.filter((r) => !r.ok).length;
-  console.log(
-    failed === 0
-      ? paint(GREEN, `all ${results.length} passed`)
-      : paint(RED, `${failed} of ${results.length} failed`),
-  );
+  console.log(failed === 0 ? paint(GREEN, `all ${results.length} passed`) : paint(RED, `${failed} of ${results.length} failed`));
   return failed === 0 ? 0 : 1;
 }
 

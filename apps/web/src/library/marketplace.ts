@@ -182,7 +182,7 @@ export function loadMarketplace(opts: { testing?: boolean } = {}): Promise<Marke
 
 /**
  * Drop the bench entries where a copy is not meant to carry them. `testing`
- * left unset keeps everything, the same as `loadMarketplace()` with no options: 
+ * left unset keeps everything, the same as `loadMarketplace()` with no options:
  * see its doc comment for why. Exported so the rule is checked directly,
  * without needing a real `packs/testing/` pack on disk to exercise it.
  */
@@ -300,7 +300,13 @@ export function newerVersion(candidate: string, current: string): boolean {
  * marketplace has one with the same id, it is theirs, and may differ.
  */
 export function updatesFor(
-  packs: ReadonlyArray<{ id: string; origin?: string; marketplace?: { id: string; version: string }; catalog?: { id: string; version: string }; deletedAt?: string }>,
+  packs: ReadonlyArray<{
+    id: string;
+    origin?: string;
+    marketplace?: { id: string; version: string };
+    catalog?: { id: string; version: string };
+    deletedAt?: string;
+  }>,
   entries: readonly MarketplaceEntry[],
 ): Map<string, MarketplaceEntry> {
   const byId = new Map(entries.map((e) => [e.id, e]));
@@ -342,7 +348,11 @@ export interface MarketplaceQuery {
 
 const norm = (s: string) => s.trim().toLowerCase();
 
-export function filterMarketplace(entries: readonly MarketplaceEntry[], query: MarketplaceQuery, owned: ReadonlySet<string> = new Set()): MarketplaceEntry[] {
+export function filterMarketplace(
+  entries: readonly MarketplaceEntry[],
+  query: MarketplaceQuery,
+  owned: ReadonlySet<string> = new Set(),
+): MarketplaceEntry[] {
   const q = norm(query.q ?? "");
   const words = q ? q.split(/\s+/) : [];
   return entries.filter((e) => {
@@ -383,7 +393,14 @@ export function publishersOf(entries: readonly MarketplaceEntry[]): PublisherFac
     // it out on purpose), but the check is explicit rather than relying on
     // that: a bench pack should never show up as something to publish by.
     if (!e.publisher || e.bench) continue;
-    const p = m.get(e.publisher.id) ?? { id: e.publisher.id, name: e.publisher.name, count: 0, free: 0, from: null, low: Number.POSITIVE_INFINITY };
+    const p = m.get(e.publisher.id) ?? {
+      id: e.publisher.id,
+      name: e.publisher.name,
+      count: 0,
+      free: 0,
+      from: null,
+      low: Number.POSITIVE_INFINITY,
+    };
     p.count += 1;
     if (e.price === "free") p.free += 1;
     else if (e.price.amount < p.low) {
@@ -395,13 +412,22 @@ export function publishersOf(entries: readonly MarketplaceEntry[]): PublisherFac
   return [...m.values()].map(({ low: _low, ...p }) => p).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
-export function facets(entries: readonly MarketplaceEntry[]): { categories: Facet[]; tags: Facet[]; features: Array<Facet & { id: Feature }>; authors: Facet[] } {
+export function facets(entries: readonly MarketplaceEntry[]): {
+  categories: Facet[];
+  tags: Facet[];
+  features: Array<Facet & { id: Feature }>;
+  authors: Facet[];
+} {
   const count = (values: string[]): Facet[] => {
     const m = new Map<string, number>();
     for (const v of values) m.set(v, (m.get(v) ?? 0) + 1);
     return [...m.entries()].map(([value, n]) => ({ value, count: n })).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
   };
-  const features = FEATURES.map((f) => ({ id: f.id, value: f.label, count: entries.filter((e) => e.features.includes(f.id)).length })).filter((f) => f.count > 0);
+  const features = FEATURES.map((f) => ({
+    id: f.id,
+    value: f.label,
+    count: entries.filter((e) => e.features.includes(f.id)).length,
+  })).filter((f) => f.count > 0);
   return {
     categories: count(entries.map((e) => e.category)),
     tags: count(entries.flatMap((e) => e.tags)),
@@ -420,9 +446,19 @@ export function facets(entries: readonly MarketplaceEntry[]): { categories: Face
  * time it is read; the map is what says which is which.
  */
 export const RENAMED_IDS: Record<string, string> = Object.fromEntries(
-  ["any-given-day", "long-kiln", "salt-and-signal", "ladder-work", "elden-ring-expedition", "elden-ring-trial", "homefront", "practice-room", "pantry-roulette", "rocket-league-ladder", "rocket-league-showdown"].map(
-    (name) => [`dev.runlog.${name}`, `com.scrthq.runlog.${name}`],
-  ),
+  [
+    "any-given-day",
+    "long-kiln",
+    "salt-and-signal",
+    "ladder-work",
+    "elden-ring-expedition",
+    "elden-ring-trial",
+    "homefront",
+    "practice-room",
+    "pantry-roulette",
+    "rocket-league-ladder",
+    "rocket-league-showdown",
+  ].map((name) => [`dev.runlog.${name}`, `com.scrthq.runlog.${name}`]),
 );
 
 export const LEGACY_IDS: Record<string, string> = {

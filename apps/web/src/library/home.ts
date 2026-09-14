@@ -16,7 +16,11 @@ export interface PickUp<P> {
  * here, else the newest run of any pack here, else the first pack alone.
  * Nothing when the shelf is empty; the shelf says so itself.
  */
-export function pickUp<P extends { id: string }>(packs: readonly P[], runs: readonly StoredRun[], last: { packId: string; runId: string } | null): PickUp<P> | null {
+export function pickUp<P extends { id: string }>(
+  packs: readonly P[],
+  runs: readonly StoredRun[],
+  last: { packId: string; runId: string } | null,
+): PickUp<P> | null {
   const byId = new Map(packs.map((p) => [p.id, p]));
   const live = runs.filter((r) => !r.deletedAt && byId.has(r.packId));
   if (last) {
@@ -33,7 +37,10 @@ export function pickUp<P extends { id: string }>(packs: readonly P[], runs: read
 /** A run's line on the strip: its name, or how far it is by the pack's word. */
 export function runLine(run: StoredRun, unitWord: string): string {
   const events = run.events as Array<{ t?: unknown; name?: unknown }>;
-  const named = events.reduce<string | null>((n, e) => (e.t === "RunRenamed" && typeof e.name === "string" ? e.name.trim() || null : n), null);
+  const named = events.reduce<string | null>(
+    (n, e) => (e.t === "RunRenamed" && typeof e.name === "string" ? e.name.trim() || null : n),
+    null,
+  );
   if (named) return named;
   const entered = events.filter((e) => e.t === "UnitEntered").length;
   return entered > 0 ? `${unitWord} ${entered}` : "not started";
@@ -42,7 +49,10 @@ export function runLine(run: StoredRun, unitWord: string): string {
 /** A run's title: its name, or the pack's word for a run and when it began. */
 export function runTitle(run: StoredRun, runNoun: string): string {
   const events = run.events as Array<{ at?: unknown; t?: unknown; name?: unknown }>;
-  const named = events.reduce<string | null>((n, e) => (e.t === "RunRenamed" && typeof e.name === "string" ? e.name.trim() || null : n), null);
+  const named = events.reduce<string | null>(
+    (n, e) => (e.t === "RunRenamed" && typeof e.name === "string" ? e.name.trim() || null : n),
+    null,
+  );
   if (named) return named;
   const first = events[0] as { at?: unknown } | undefined;
   const began = typeof first?.at === "string" ? onDay(first.at) : "";

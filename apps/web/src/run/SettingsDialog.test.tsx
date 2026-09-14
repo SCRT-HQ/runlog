@@ -9,7 +9,16 @@ import { SettingsDialog } from "./SettingsDialog.tsx";
  * storage that a test process does not have.
  */
 const sheet = (runId: string | null, rolling?: { auto: boolean; seeded: boolean; onAuto: () => void }) =>
-  renderToStaticMarkup(<SettingsDialog runId={runId} race={false} alerts={DEFAULT_ALERTS} onAlerts={() => {}} onClose={() => {}} {...(rolling ? { rolling } : {})} />);
+  renderToStaticMarkup(
+    <SettingsDialog
+      runId={runId}
+      race={false}
+      alerts={DEFAULT_ALERTS}
+      onAlerts={() => {}}
+      onClose={() => {}}
+      {...(rolling ? { rolling } : {})}
+    />,
+  );
 
 describe("the settings sheet", () => {
   it("holds every choice about this device on one tab, the theme excepted", () => {

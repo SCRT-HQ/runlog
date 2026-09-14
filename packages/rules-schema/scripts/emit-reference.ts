@@ -73,10 +73,7 @@ function describe(node: Node): string {
   const own = typeof node.description === "string" ? node.description : "";
   const inherited = typeof node.$ref === "string" ? "" : "";
   const text = (own || inherited).replace(/\s+/g, " ").trim();
-  const withDefault =
-    node.default !== undefined
-      ? `${text} Default: \`${JSON.stringify(node.default)}\`.`
-      : text;
+  const withDefault = node.default !== undefined ? `${text} Default: \`${JSON.stringify(node.default)}\`.` : text;
   return withDefault.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
 }
 
@@ -89,9 +86,7 @@ function table(node: Node): string[] {
   const lines = ["| Field | Type | Required | What it does |", "| --- | --- | --- | --- |"];
   for (const name of names) {
     const field = props[name]!;
-    lines.push(
-      `| \`${name}\` | ${typeOf(field)} | ${required.has(name) ? "yes" : "-"} | ${describe(field)} |`,
-    );
+    lines.push(`| \`${name}\` | ${typeOf(field)} | ${required.has(name) ? "yes" : "-"} | ${describe(field)} |`);
   }
   return lines;
 }
@@ -128,8 +123,7 @@ function collect(node: Node, path: string, depth: number): void {
     // A variant whose only field is the literal that selects it says nothing a
     // one-line entry in the union list does not. Twenty such sections bury the
     // shapes that do have something to document.
-    const onlyDiscriminant =
-      Object.keys(props).length === 1 && variantLabel(resolved) !== null;
+    const onlyDiscriminant = Object.keys(props).length === 1 && variantLabel(resolved) !== null;
     if (onlyDiscriminant) return;
 
     if (!seen.has(path)) {
@@ -268,10 +262,7 @@ for (const { path, node } of sections) {
 
 out.push("## Shared definitions");
 out.push("");
-out.push(
-  "These two recurse, so they are defined once and referenced from everywhere " +
-    "they are accepted.",
-);
+out.push("These two recurse, so they are defined once and referenced from everywhere " + "they are accepted.");
 out.push("");
 
 for (const [name, node] of Object.entries(defs).sort(([a], [b]) => a.localeCompare(b))) {
@@ -292,9 +283,7 @@ for (const [name, node] of Object.entries(defs).sort(([a], [b]) => a.localeCompa
       const label = variantLabel(variant);
       const summary = deref(variant).description;
       out.push(
-        `- ${label ? "`" + label + "`" : typeOf(variant)}${
-          typeof summary === "string" ? ` - ${summary.replace(/\s+/g, " ").trim()}` : ""
-        }`,
+        `- ${label ? "`" + label + "`" : typeOf(variant)}${typeof summary === "string" ? ` - ${summary.replace(/\s+/g, " ").trim()}` : ""}`,
       );
     }
     out.push("");

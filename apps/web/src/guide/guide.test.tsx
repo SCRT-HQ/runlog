@@ -27,7 +27,10 @@ describe("the guide", () => {
     for (const part of GUIDE_PARTS) {
       const first = parts.indexOf(part);
       const last = parts.lastIndexOf(part);
-      expect(parts.slice(first, last + 1).every((x) => x === part), part).toBe(true);
+      expect(
+        parts.slice(first, last + 1).every((x) => x === part),
+        part,
+      ).toBe(true);
     }
   });
 
@@ -111,7 +114,8 @@ describe("the guide", () => {
     expect(new Set(slugs).size).toBe(slugs.length);
     for (const page of GUIDE_PAGES) {
       const html = renderToStaticMarkup(<page.Page components={guideComponents} />);
-      for (const m of html.matchAll(/href="#guide\/([a-z-]+)(?:\/[a-z0-9-]+)?"/g)) expect(slugs, `${page.slug} links to ${m[1]}`).toContain(m[1]);
+      for (const m of html.matchAll(/href="#guide\/([a-z-]+)(?:\/[a-z0-9-]+)?"/g))
+        expect(slugs, `${page.slug} links to ${m[1]}`).toContain(m[1]);
     }
   });
 });

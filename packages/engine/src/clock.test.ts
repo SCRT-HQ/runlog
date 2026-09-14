@@ -2,7 +2,17 @@ import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
 import { executeActions } from "./execute.ts";
-import { clockOfUnit, deadlineOf, elapsedMs, formatClock, liveClocks, ranOutEvents, remainingMs, stopClocksEvents, unitClockStart } from "./clock.ts";
+import {
+  clockOfUnit,
+  deadlineOf,
+  elapsedMs,
+  formatClock,
+  liveClocks,
+  ranOutEvents,
+  remainingMs,
+  stopClocksEvents,
+  unitClockStart,
+} from "./clock.ts";
 import type { RunEvent } from "./events.ts";
 
 /**
@@ -51,7 +61,10 @@ function pack(): Pack {
 const T0 = Date.parse("2026-01-01T10:00:00.000Z");
 const at = (plusMs: number) => new Date(T0 + plusMs).toISOString();
 const ev = (t: RunEvent["t"], when: number, props: Record<string, unknown> = {}): RunEvent => ({ t, at: at(when), ...props }) as RunEvent;
-const opened = (p: Pack, mode = "standard"): RunEvent[] => [ev("RunStarted", 0, { packId: p.id, packVersion: p.version, mode }), ev("UnitEntered", 0)];
+const opened = (p: Pack, mode = "standard"): RunEvent[] => [
+  ev("RunStarted", 0, { packId: p.id, packVersion: p.version, mode }),
+  ev("UnitEntered", 0),
+];
 
 describe("a clock in the log", () => {
   it("runs, pauses, resumes and stops, and its elapsed is the sum of the stretches", () => {
@@ -77,7 +90,11 @@ describe("a clock in the log", () => {
     const state = reduce(p, [...opened(p), ev("ClockStarted", 0, { clock: "t", kind: "timer", label: "Rest", seconds: 60 })]);
     const c = state.clocks[0]!;
     expect(remainingMs(c, T0 + 45_000)).toBe(15_000);
-    const out = reduce(p, [...opened(p), ev("ClockStarted", 0, { clock: "t", kind: "timer", label: "Rest", seconds: 60 }), ev("ClockStopped", 60_000, { clock: "t", elapsedMs: 60_000, expired: true })]);
+    const out = reduce(p, [
+      ...opened(p),
+      ev("ClockStarted", 0, { clock: "t", kind: "timer", label: "Rest", seconds: 60 }),
+      ev("ClockStopped", 60_000, { clock: "t", elapsedMs: 60_000, expired: true }),
+    ]);
     expect(out.clocks[0]?.expired).toBe(true);
   });
 
@@ -137,7 +154,10 @@ describe("clock actions", () => {
   it("startTimer and startStopwatch start clocks rather than leaving notes", () => {
     const p = pack();
     const state = reduce(p, opened(p));
-    const result = executeActions(p, state, [{ do: "startTimer", minutes: 2, label: "Rest" }, { do: "startStopwatch" }], { answers: {}, now: at(0) });
+    const result = executeActions(p, state, [{ do: "startTimer", minutes: 2, label: "Rest" }, { do: "startStopwatch" }], {
+      answers: {},
+      now: at(0),
+    });
     const started = result.events.filter((e) => e.t === "ClockStarted");
     expect(started).toHaveLength(2);
     expect(started[0]).toMatchObject({ kind: "timer", seconds: 120, label: "Rest" });

@@ -83,9 +83,7 @@ function matches(event: RunEvent, selector: EventSelector): boolean {
       return event.t === "Rolled" && event.purpose === selector.table;
     case "outcomeResolved":
       return (
-        event.t === "OutcomeResolved" &&
-        event.table === selector.table &&
-        (selector.cause === "any" || event.cause === selector.cause)
+        event.t === "OutcomeResolved" && event.table === selector.table && (selector.cause === "any" || event.cause === selector.cause)
       );
     case "stateApplied":
       return event.t === "StateApplied" && event.state === selector.state;
@@ -107,15 +105,10 @@ function matches(event: RunEvent, selector: EventSelector): boolean {
  *
  * So a reset dominates the unit it occurs in: once something resets a counter,
  * further increments from that same unit are suppressed. This keeps the
- * obvious authoring, increment on the phase, reset on the consequence, 
+ * obvious authoring, increment on the phase, reset on the consequence,
  * meaning what an author expects it to mean.
  */
-function applyCounters(
-  pack: Pack,
-  state: RunState,
-  event: RunEvent,
-  resetThisUnit: Set<string>,
-): void {
+function applyCounters(pack: Pack, state: RunState, event: RunEvent, resetThisUnit: Set<string>): void {
   for (const [id, def] of Object.entries(pack.counters ?? {})) {
     if (def.resetOn?.some((sel) => matches(event, sel))) {
       state.counters[id] = def.initial;
@@ -359,9 +352,7 @@ export function reduce(pack: Pack, log: readonly RunEvent[]): RunState {
 
       case "CardPlayed":
       case "CardDiscarded": {
-        const index = state.hand.findIndex(
-          (c) => c.deck === event.deck && c.cardId === event.cardId,
-        );
+        const index = state.hand.findIndex((c) => c.deck === event.deck && c.cardId === event.cardId);
         if (index >= 0) state.hand.splice(index, 1);
         break;
       }

@@ -38,7 +38,13 @@ describe("a table beside the keypad", () => {
   });
 
   it("has nothing to list for a table that is not landed on by one number", () => {
-    const opposed = { resolution: "opposed", title: "Opposed", action: "d6", challenge: { dice: "d6", count: 2 }, entries: [] } as unknown as Table;
+    const opposed = {
+      resolution: "opposed",
+      title: "Opposed",
+      action: "d6",
+      challenge: { dice: "d6", count: 2 },
+      entries: [],
+    } as unknown as Table;
     expect(tableLines(opposed, null)).toEqual([]);
   });
 });

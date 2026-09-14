@@ -34,7 +34,11 @@ export function PlanSection({ api }: { api: Api | null }) {
       setNote("Thank you. Reading what Stripe says…");
       void api.refreshEntitlements().then(
         (features) => {
-          setNote(features.includes("plus") ? "You are on Plus." : "The payment went through; the plan lands in a moment. Press Refresh if it does not.");
+          setNote(
+            features.includes("plus")
+              ? "You are on Plus."
+              : "The payment went through; the plan lands in a moment. Press Refresh if it does not.",
+          );
           void plan.refresh();
         },
         () => setNote("The payment went through, but the plan could not be read just now. Press Refresh."),

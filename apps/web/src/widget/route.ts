@@ -12,10 +12,25 @@ export const WIDGET_KINDS = [
   { kind: "race", label: "Race", what: "The race leaderboard, as the racers' devices report it.", size: { w: 560, h: 440 } },
   { kind: "clock", label: "Clock", what: "The unit's stopwatch or timer, large.", size: { w: 480, h: 200 } },
   { kind: "step", label: "Step", what: "The current step, the constraints in play, and the latest result.", size: { w: 520, h: 380 } },
-  { kind: "stats", label: "Stats", what: "Where the run stands: unit, units done, time, step, constraints, score.", size: { w: 520, h: 560 } },
+  {
+    kind: "stats",
+    label: "Stats",
+    what: "Where the run stands: unit, units done, time, step, constraints, score.",
+    size: { w: 520, h: 560 },
+  },
   { kind: "trackers", label: "Trackers", what: "Resources and counters, as bars and boxes.", size: { w: 480, h: 420 } },
-  { kind: "ticker", label: "Ticker", what: "The last few things that happened, one line each, newest on top: dice, results, points, clocks, the unit closing.", size: { w: 520, h: 300 } },
-  { kind: "column", label: "Everything, stacked", what: "Clock, step, ticker, stats, scoreboard, race and trackers in one column, leaving out what the run has nothing for.", size: { w: 460, h: 1080 } },
+  {
+    kind: "ticker",
+    label: "Ticker",
+    what: "The last few things that happened, one line each, newest on top: dice, results, points, clocks, the unit closing.",
+    size: { w: 520, h: 300 },
+  },
+  {
+    kind: "column",
+    label: "Everything, stacked",
+    what: "Clock, step, ticker, stats, scoreboard, race and trackers in one column, leaving out what the run has nothing for.",
+    size: { w: 460, h: 1080 },
+  },
 ] as const;
 
 /** The size a browser source wants for a kind, in pixels, as the address scales it: the numbers in the docs are at 1.25×. */

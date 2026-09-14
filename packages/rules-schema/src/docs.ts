@@ -45,7 +45,12 @@ export const DOC_KINDS: ReadonlyArray<{ kind: DocKind; label: string; what: stri
   { kind: "summary", label: "Summary", what: "What the marketplace shows: the shape of the game without its rules.", full: false },
   { kind: "rulebook", label: "Rulebook", what: "Everything, in reading order: setup, flow, every table, every rule.", full: true },
   { kind: "quickstart", label: "Quick start", what: "Enough to play the first time; the rest is on the reference card.", full: true },
-  { kind: "reference", label: "Reference card", what: "Every table and the things people forget, compact enough to keep beside you.", full: true },
+  {
+    kind: "reference",
+    label: "Reference card",
+    what: "Every table and the things people forget, compact enough to keep beside you.",
+    full: true,
+  },
   { kind: "runlog", label: "Run log sheet", what: "A printable sheet to write a run on by hand.", full: true },
 ];
 
@@ -77,7 +82,8 @@ class Builder {
     return this;
   }
   p(text: string | undefined, tone?: "muted" | "note") {
-    if (text && text.trim()) this.blocks.push(tone ? { kind: "paragraph", text: text.trim(), tone } : { kind: "paragraph", text: text.trim() });
+    if (text && text.trim())
+      this.blocks.push(tone ? { kind: "paragraph", text: text.trim(), tone } : { kind: "paragraph", text: text.trim() });
     return this;
   }
   list(items: string[], ordered = false) {
@@ -115,7 +121,10 @@ function stepInWords(pack: Pack, step: Step): string {
     case "rollTable":
       return `${step.label ?? `Roll on ${pack.tables[step.table]?.title ?? step.table}`}${step.optional ? " (optional)" : ""}`;
     case "declareSubject":
-      return step.label ?? `Declare the ${n.subject}${step.constrainedBy ? `, within what ${pack.tables[step.constrainedBy]?.title ?? step.constrainedBy} allowed` : ""}`;
+      return (
+        step.label ??
+        `Declare the ${n.subject}${step.constrainedBy ? `, within what ${pack.tables[step.constrainedBy]?.title ?? step.constrainedBy} allowed` : ""}`
+      );
     case "manual":
       return step.closesUnit ? `${step.label} ${cap(n.finalize)} the ${n.unit} with it.` : step.label;
     case "actions":
@@ -142,7 +151,9 @@ function whatYouNeed(pack: Pack): string[] {
   const n = nouns(pack);
   const items: string[] = [];
   for (const r of pack.requires ?? []) {
-    items.push(`${cap(r.label)}${r.optional ? " (optional; results that need it are drawn again without it)" : ""}${r.note ? `: ${r.note}` : ""}${r.url ? ` (${r.url})` : ""}.`);
+    items.push(
+      `${cap(r.label)}${r.optional ? " (optional; results that need it are drawn again without it)" : ""}${r.note ? `: ${r.note}` : ""}${r.url ? ` (${r.url})` : ""}.`,
+    );
   }
   const dice = diceInWords(diceNeeded(pack));
   if (dice) items.push(cap(dice) + ".");
@@ -151,8 +162,17 @@ function whatYouNeed(pack: Pack): string[] {
     else items.push(`${plural(deck.cards.length, "card", "cards")} for ${deck.title} - write them out, or use the app.`);
   }
   if (pack.capabilities.includes("timers") && !pack.unit.clock) items.push("A timer.");
-  if (pack.unit.clock) items.push(pack.unit.clock.kind === "timer" ? `A clock: every ${n.unit} is timed, ${pack.unit.clock.minutes} minutes. The app keeps it.` : `A clock: every ${n.unit} is timed. The app keeps it.`);
-  items.push(pack.journal?.enabled === false ? `Somewhere to keep the ${n.run} log.` : `Somewhere to keep the ${n.run} log, the run log sheet, or the app.`);
+  if (pack.unit.clock)
+    items.push(
+      pack.unit.clock.kind === "timer"
+        ? `A clock: every ${n.unit} is timed, ${pack.unit.clock.minutes} minutes. The app keeps it.`
+        : `A clock: every ${n.unit} is timed. The app keeps it.`,
+    );
+  items.push(
+    pack.journal?.enabled === false
+      ? `Somewhere to keep the ${n.run} log.`
+      : `Somewhere to keep the ${n.run} log, the run log sheet, or the app.`,
+  );
   return items;
 }
 
@@ -163,7 +183,17 @@ function flowSteps(pack: Pack, opts: { detail: boolean }): string[] {
     const notes: string[] = [];
     if (opts.detail && phase.description) notes.push(phase.description);
     if (opts.detail && phase.skipWhen?.length) notes.push(`Skipped when ${conditionsInWords(pack, phase.skipWhen, "any")}.`);
-    if (phase.steps.length > 1) for (const s of phase.steps) notes.push(`${stepInWords(pack, s)}${opts.detail ? stepDetail(pack, s).map((d) => `: ${d}`).join("") : ""}`);
+    if (phase.steps.length > 1)
+      for (const s of phase.steps)
+        notes.push(
+          `${stepInWords(pack, s)}${
+            opts.detail
+              ? stepDetail(pack, s)
+                  .map((d) => `: ${d}`)
+                  .join("")
+              : ""
+          }`,
+        );
     else if (opts.detail) notes.push(...stepDetail(pack, phase.steps[0]!));
     items.push([head, ...notes.map((t) => `  ${t}`)].join("\n"));
   }
@@ -231,7 +261,12 @@ export function summaryDoc(pack: Pack): Doc {
   const n = nouns(pack);
   const b = new Builder();
   b.p(pack.description);
-  b.p([pack.category ? `Category: ${pack.category}` : "", pack.tags?.length ? `Tags: ${pack.tags.join(", ")}` : ""].filter(Boolean).join(" · "), "muted");
+  b.p(
+    [pack.category ? `Category: ${pack.category}` : "", pack.tags?.length ? `Tags: ${pack.tags.join(", ")}` : ""]
+      .filter(Boolean)
+      .join(" · "),
+    "muted",
+  );
   b.p(license(pack), "muted");
   if (pack.license.text) b.p(pack.license.text, "note");
 
@@ -246,17 +281,27 @@ export function summaryDoc(pack: Pack): Doc {
   const tables = Object.values(pack.tables);
   const decks = Object.values(pack.decks ?? {});
   const parts: string[] = [];
-  if (tables.length) parts.push(`${plural(tables.length, "table", "tables")}: ${tables.map((t) => `${t.title} (${howConsulted(t).replace(/\.$/, "").toLowerCase()}, ${plural(t.entries.length, "entry", "entries")})`).join("; ")}.`);
-  if (decks.length) parts.push(`${plural(decks.length, "deck", "decks")}: ${decks.map((d) => (d.kind === "cards" ? `${d.title} (${plural(d.cards.length, "card", "cards")})` : `${d.title} (a standard deck)`)).join("; ")}.`);
+  if (tables.length)
+    parts.push(
+      `${plural(tables.length, "table", "tables")}: ${tables.map((t) => `${t.title} (${howConsulted(t).replace(/\.$/, "").toLowerCase()}, ${plural(t.entries.length, "entry", "entries")})`).join("; ")}.`,
+    );
+  if (decks.length)
+    parts.push(
+      `${plural(decks.length, "deck", "decks")}: ${decks.map((d) => (d.kind === "cards" ? `${d.title} (${plural(d.cards.length, "card", "cards")})` : `${d.title} (a standard deck)`)).join("; ")}.`,
+    );
   const states = Object.values(pack.states ?? {});
-  if (states.length) parts.push(`${plural(states.length, "state", "states")} ${an(n.subject)} or ${n.run} can carry: ${states.map((s) => s.label).join(", ")}.`);
+  if (states.length)
+    parts.push(
+      `${plural(states.length, "state", "states")} ${an(n.subject)} or ${n.run} can carry: ${states.map((s) => s.label).join(", ")}.`,
+    );
   const counters = Object.values(pack.counters ?? {}).filter((c) => !c.hidden);
   if (counters.length) parts.push(`${plural(counters.length, "tally", "tallies")}: ${counters.map((c) => c.label).join(", ")}.`);
   const resources = Object.values(pack.resources ?? {});
   if (resources.length) parts.push(`${plural(resources.length, "track", "tracks")}: ${resources.map((r) => r.label).join(", ")}.`);
   const moves = Object.values(pack.moves ?? {});
   if (moves.length) parts.push(`${plural(moves.length, "move", "moves")} you may make: ${moves.map((m) => m.label).join(", ")}.`);
-  if (pack.endings?.length) parts.push(`${plural(pack.endings.length, "ending", "endings")}: ${pack.endings.map((e) => e.label).join(", ")}.`);
+  if (pack.endings?.length)
+    parts.push(`${plural(pack.endings.length, "ending", "endings")}: ${pack.endings.map((e) => e.label).join(", ")}.`);
   if (pack.targeting && pack.targeting.strategy !== "none") parts.push(`Consequences can reach back to earlier ${n.subjects}.`);
   if (pack.journal?.enabled !== false) parts.push(`A journal line per ${n.unit}${pack.journal?.required ? ", required" : ""}.`);
   b.list(parts);
@@ -282,7 +327,10 @@ export function modeDoc(pack: Pack, modeId: string): Doc {
   }
   const n = nouns(pack);
   b.p(m.description ?? `One way to play ${pack.title}.`);
-  b.p(`${cap(modeLength(pack, m))}, ${modePlayers(m)}${m.seeded ? ", seeded so every copy rolls the same" : ""}.${modeId === pack.defaultMode ? " The default." : ""}`, "muted");
+  b.p(
+    `${cap(modeLength(pack, m))}, ${modePlayers(m)}${m.seeded ? ", seeded so every copy rolls the same" : ""}.${modeId === pack.defaultMode ? " The default." : ""}`,
+    "muted",
+  );
   const extras = modeExtras(pack, m);
   if (extras.length) {
     b.h(2, "In this mode");
@@ -290,7 +338,10 @@ export function modeDoc(pack: Pack, modeId: string): Doc {
   }
   const off = new Set(m.disable?.phases ?? []);
   b.h(2, `${cap(an(n.unit))}, in order`);
-  b.list(pack.phases.filter((p) => !off.has(p.id)).map((p) => p.label), true);
+  b.list(
+    pack.phases.filter((p) => !off.has(p.id)).map((p) => p.label),
+    true,
+  );
   return { kind: "summary", layout: "book", title: m.label, subtitle: pack.title, blocks: b.blocks };
 }
 
@@ -306,19 +357,34 @@ export function rulebookDoc(pack: Pack): Doc {
 
   b.h(2, "Terms");
   b.terms([
-    { term: cap(n.run), text: `One session of play. ${an(n.run, true)} is a series of ${n.units}, and ends when you say so or when the game does.` },
-    { term: cap(n.unit), text: `One round. Every ${n.unit} passes through the same phases${pack.unit.createsSubject ? ` and produces one ${n.subject}` : ""}.` },
-    ...(pack.unit.createsSubject ? [{ term: cap(n.subject), text: `The thing ${an(n.unit)} makes. States attach to it, and consequences can land on it later.` }] : []),
-    { term: cap(n.finalize), text: `Closing ${an(n.unit)}. Once ${n.finalize.toLowerCase()}d, what it made is fixed unless a rule says otherwise.` },
+    {
+      term: cap(n.run),
+      text: `One session of play. ${an(n.run, true)} is a series of ${n.units}, and ends when you say so or when the game does.`,
+    },
+    {
+      term: cap(n.unit),
+      text: `One round. Every ${n.unit} passes through the same phases${pack.unit.createsSubject ? ` and produces one ${n.subject}` : ""}.`,
+    },
+    ...(pack.unit.createsSubject
+      ? [{ term: cap(n.subject), text: `The thing ${an(n.unit)} makes. States attach to it, and consequences can land on it later.` }]
+      : []),
+    {
+      term: cap(n.finalize),
+      text: `Closing ${an(n.unit)}. Once ${n.finalize.toLowerCase()}d, what it made is fixed unless a rule says otherwise.`,
+    },
     ...Object.entries(pack.vocabulary.terms ?? {}).map(([term, text]) => ({ term, text })),
   ]);
-  if (pack.hierarchy?.length) b.p(`When rules contradict each other, the more specific wins, in this order: ${pack.hierarchy.join(" > ")}.`, "note");
+  if (pack.hierarchy?.length)
+    b.p(`When rules contradict each other, the more specific wins, in this order: ${pack.hierarchy.join(" > ")}.`, "note");
 
   b.h(2, `${an(n.unit, true)}, step by step`);
   if (pack.unit.intro) b.p(`On entering the first ${n.unit}: “${pack.unit.intro}”`, "note");
   if (pack.unit.onEnter) b.p(`On entering ${an(n.unit)}: “${pack.unit.onEnter.replace(/\{n\}/g, "…")}”`, "note");
   b.list(flowSteps(pack, { detail: true }), true);
-  if (pack.journal?.enabled !== false) b.p(`${pack.journal?.prompt ? `After each ${n.unit}: “${pack.journal.prompt}”` : `Keep a line of notes per ${n.unit}.`}${pack.journal?.required ? " A note is required before moving on." : ""}`);
+  if (pack.journal?.enabled !== false)
+    b.p(
+      `${pack.journal?.prompt ? `After each ${n.unit}: “${pack.journal.prompt}”` : `Keep a line of notes per ${n.unit}.`}${pack.journal?.required ? " A note is required before moving on." : ""}`,
+    );
 
   b.h(2, "Modes");
   b.table(["Mode", "Length", "Players", "About"], modeRows(pack, { notes: true }));
@@ -337,12 +403,37 @@ export function rulebookDoc(pack: Pack): Doc {
     for (const [, deck] of decks) {
       b.h(3, deck.title);
       if (deck.kind === "standard52") {
-        b.p([deck.description, `A standard deck${deck.includeJokers ? " with jokers" : ""}; ${deck.drawAtStart ? `draw ${deck.drawAtStart} at the start. ` : ""}Each draw is read by ${deck.resolveBy}${deck.resolveOn ? ` on ${pack.tables[deck.resolveOn]?.title ?? deck.resolveOn}` : ""}.`].filter(Boolean).join(" "));
+        b.p(
+          [
+            deck.description,
+            `A standard deck${deck.includeJokers ? " with jokers" : ""}; ${deck.drawAtStart ? `draw ${deck.drawAtStart} at the start. ` : ""}Each draw is read by ${deck.resolveBy}${deck.resolveOn ? ` on ${pack.tables[deck.resolveOn]?.title ?? deck.resolveOn}` : ""}.`,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
       } else {
-        b.p([deck.description, deck.drawAtStart ? `Draw ${deck.drawAtStart} at the start.` : "", deck.unique ? "" : "Cards may repeat.", deck.carriesOver ? `Unused cards carry over to the next ${n.run}.` : ""].filter(Boolean).join(" "));
+        b.p(
+          [
+            deck.description,
+            deck.drawAtStart ? `Draw ${deck.drawAtStart} at the start.` : "",
+            deck.unique ? "" : "Cards may repeat.",
+            deck.carriesOver ? `Unused cards carry over to the next ${n.run}.` : "",
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
         b.table(
           ["Card", "Effect"],
-          deck.cards.map((c) => [c.title, [c.text, ...(c.triggers ?? []).map((t) => triggerInWords(pack, t)), c.requires?.length ? `Only if ${conditionsInWords(pack, c.requires)}.` : ""].filter(Boolean).join(" ")]),
+          deck.cards.map((c) => [
+            c.title,
+            [
+              c.text,
+              ...(c.triggers ?? []).map((t) => triggerInWords(pack, t)),
+              c.requires?.length ? `Only if ${conditionsInWords(pack, c.requires)}.` : "",
+            ]
+              .filter(Boolean)
+              .join(" "),
+          ]),
         );
       }
     }
@@ -356,7 +447,14 @@ export function rulebookDoc(pack: Pack): Doc {
       states.map(([, s]) => [
         s.short ? `${s.label} (${s.short})` : s.label,
         s.scope === "run" ? `the ${n.run}` : s.scope === "contestant" ? "a contestant" : an(n.subject),
-        [s.description ?? "", ...(s.semantics ?? []).map(semanticInWords), s.group ? `Replaces any other “${s.group}” state.` : "", s.until === "unitEnd" ? `Lifts when the ${n.unit} closes.` : ""].filter(Boolean).join(" "),
+        [
+          s.description ?? "",
+          ...(s.semantics ?? []).map(semanticInWords),
+          s.group ? `Replaces any other “${s.group}” state.` : "",
+          s.until === "unitEnd" ? `Lifts when the ${n.unit} closes.` : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
       ]),
     );
   }
@@ -372,13 +470,29 @@ export function rulebookDoc(pack: Pack): Doc {
           c.label,
           String(c.initial ?? 0),
           [
-            c.min !== undefined && c.max !== undefined ? `Stays within ${c.min}-${c.max}.` : c.max !== undefined ? `Never above ${c.max}.` : c.min !== undefined && c.min !== 0 ? `Never below ${c.min}.` : "",
-            ...(c.triggers ?? []).map((t) => sentence(`${t.label ? `${t.label}: ` : ""}at ${boundText(t.when)}${t.oncePerRun ? `, once per ${n.run}` : ""}: ${actionsInWords(pack, t.do)}`)),
+            c.min !== undefined && c.max !== undefined
+              ? `Stays within ${c.min}-${c.max}.`
+              : c.max !== undefined
+                ? `Never above ${c.max}.`
+                : c.min !== undefined && c.min !== 0
+                  ? `Never below ${c.min}.`
+                  : "",
+            ...(c.triggers ?? []).map((t) =>
+              sentence(
+                `${t.label ? `${t.label}: ` : ""}at ${boundText(t.when)}${t.oncePerRun ? `, once per ${n.run}` : ""}: ${actionsInWords(pack, t.do)}`,
+              ),
+            ),
           ]
             .filter(Boolean)
             .join(" "),
         ]),
-        ...resources.map(([, r]) => [r.label, String(r.initial ?? 0), [r.description ?? "", `From ${r.min ?? 0}${r.max !== undefined ? ` to ${r.max}` : ""}, in steps of ${r.step ?? 1}.`].filter(Boolean).join(" ")]),
+        ...resources.map(([, r]) => [
+          r.label,
+          String(r.initial ?? 0),
+          [r.description ?? "", `From ${r.min ?? 0}${r.max !== undefined ? ` to ${r.max}` : ""}, in steps of ${r.step ?? 1}.`]
+            .filter(Boolean)
+            .join(" "),
+        ]),
       ],
     );
   }
@@ -390,8 +504,16 @@ export function rulebookDoc(pack: Pack): Doc {
       ["Move", "When", "What happens"],
       moves.map(([, m]) => [
         m.label,
-        [whenInWords(m.when, n), m.oncePerRun ? `once per ${n.run}` : "", m.available?.length ? `if ${conditionsInWords(pack, m.available)}` : ""].filter(Boolean).join("; "),
-        [m.description ?? "", sentence(cap(actionsInWords(pack, m.do))), m.finalizes ? `Closes the ${n.unit}.` : ""].filter(Boolean).join(" "),
+        [
+          whenInWords(m.when, n),
+          m.oncePerRun ? `once per ${n.run}` : "",
+          m.available?.length ? `if ${conditionsInWords(pack, m.available)}` : "",
+        ]
+          .filter(Boolean)
+          .join("; "),
+        [m.description ?? "", sentence(cap(actionsInWords(pack, m.do))), m.finalizes ? `Closes the ${n.unit}.` : ""]
+          .filter(Boolean)
+          .join(" "),
       ]),
     );
   }
@@ -408,7 +530,12 @@ export function rulebookDoc(pack: Pack): Doc {
 
   if (pack.endings?.length) {
     b.h(2, `Ending ${an(n.run)}`);
-    b.terms(pack.endings.map((e) => ({ term: e.label, text: [e.text ?? "", e.requires?.length ? `Available when ${conditionsInWords(pack, e.requires)}.` : ""].filter(Boolean).join(" ") })));
+    b.terms(
+      pack.endings.map((e) => ({
+        term: e.label,
+        text: [e.text ?? "", e.requires?.length ? `Available when ${conditionsInWords(pack, e.requires)}.` : ""].filter(Boolean).join(" "),
+      })),
+    );
   }
   return { kind: "rulebook", layout: "book", title: pack.title, subtitle: byline(pack), blocks: b.blocks };
 }
@@ -420,7 +547,9 @@ export function quickstartDoc(pack: Pack): Doc {
   b.h(2, "What you need");
   b.list(whatYouNeed(pack));
   b.h(2, "The words");
-  b.p(`${an(n.run, true)} is one session. It is made of ${n.units}${pack.unit.createsSubject ? `, and each ${n.unit} makes one ${n.subject}` : ""}. Closing a ${n.unit} is called “${n.finalize}”.`);
+  b.p(
+    `${an(n.run, true)} is one session. It is made of ${n.units}${pack.unit.createsSubject ? `, and each ${n.unit} makes one ${n.subject}` : ""}. Closing a ${n.unit} is called “${n.finalize}”.`,
+  );
   b.h(2, `Each ${n.unit}`);
   b.list(flowSteps(pack, { detail: false }), true);
   const d = pack.modes[pack.defaultMode];
@@ -450,16 +579,25 @@ export function referenceDoc(pack: Pack): Doc {
   const states = Object.values(pack.states ?? {});
   if (states.length) {
     b.h(2, "States");
-    b.table(["", "State"], states.map((s) => [s.short ?? "", `${s.label}${s.description ? `: ${s.description}` : ""}`]), true);
+    b.table(
+      ["", "State"],
+      states.map((s) => [s.short ?? "", `${s.label}${s.description ? `: ${s.description}` : ""}`]),
+      true,
+    );
   }
   const moves = Object.values(pack.moves ?? {});
   if (moves.length) {
     b.h(2, "Moves");
-    b.list(moves.map((m) => sentence(`${m.label} (${whenInWords(m.when, n)}${m.oncePerRun ? `, once per ${n.run}` : ""}): ${actionsInWords(pack, m.do)}`)));
+    b.list(
+      moves.map((m) =>
+        sentence(`${m.label} (${whenInWords(m.when, n)}${m.oncePerRun ? `, once per ${n.run}` : ""}): ${actionsInWords(pack, m.do)}`),
+      ),
+    );
   }
   const remember: string[] = [];
   for (const t of pack.triggers ?? []) remember.push(sentence(cap(triggerInWords(pack, t))));
-  for (const c of Object.values(pack.counters ?? {})) for (const t of c.triggers ?? []) remember.push(sentence(`${c.label} at ${boundText(t.when)}: ${actionsInWords(pack, t.do)}`));
+  for (const c of Object.values(pack.counters ?? {}))
+    for (const t of c.triggers ?? []) remember.push(sentence(`${c.label} at ${boundText(t.when)}: ${actionsInWords(pack, t.do)}`));
   for (const m of Object.values(pack.modes)) for (const note of m.notes ?? []) remember.push(`${m.label}: ${note}`);
   if (pack.hierarchy?.length) remember.push(`Precedence: ${pack.hierarchy.join(" > ")}.`);
   if (remember.length) {
@@ -476,10 +614,14 @@ export function referenceDoc(pack: Pack): Doc {
 export function runlogDoc(pack: Pack): Doc {
   const n = nouns(pack);
   const b = new Builder();
-  const head: Array<{ label: string; width?: "short" | "long" | "full"; box?: boolean }> = [{ label: "Date", width: "short" }, { label: "Mode", width: "short" }];
+  const head: Array<{ label: string; width?: "short" | "long" | "full"; box?: boolean }> = [
+    { label: "Date", width: "short" },
+    { label: "Mode", width: "short" },
+  ];
   if (Object.values(pack.modes).some((m) => m.seeded)) head.push({ label: "Seed", width: "short" });
   if (Object.values(pack.modes).some((m) => (m.players?.max ?? 1) > 1)) head.push({ label: "Players", width: "long" });
-  for (const deck of Object.values(pack.decks ?? {})) if (deck.kind === "cards" && deck.drawAtStart) head.push({ label: deck.title, width: "short" });
+  for (const deck of Object.values(pack.decks ?? {}))
+    if (deck.kind === "cards" && deck.drawAtStart) head.push({ label: deck.title, width: "short" });
   for (const c of Object.values(pack.counters ?? {}).filter((c) => !c.hidden)) head.push({ label: c.label, width: "short", box: true });
   for (const r of Object.values(pack.resources ?? {})) head.push({ label: r.label, width: "short", box: true });
   head.push({ label: "Page", width: "short" });
@@ -498,7 +640,10 @@ export function runlogDoc(pack: Pack): Doc {
   for (let i = 0; i < 6; i++) b.form(unitFields);
 
   b.rule();
-  b.form([{ label: `${cap(n.run)} states`, width: "full", lines: 2 }, { label: "Ending", width: "long" }]);
+  b.form([
+    { label: `${cap(n.run)} states`, width: "full", lines: 2 },
+    { label: "Ending", width: "long" },
+  ]);
   return { kind: "runlog", layout: "sheet", title: pack.title, subtitle: `${cap(n.run)} log`, blocks: b.blocks };
 }
 
@@ -601,13 +746,23 @@ export function toMarkdown(doc: Doc): string {
         out.push(block.items.map((item, i) => `${block.ordered ? `${i + 1}.` : "-"} ${item.replace(/\n\s*/g, "  \n   ")}`).join("\n"));
         break;
       case "table":
-        out.push([`| ${block.columns.map(mdEscape).join(" | ")} |`, `| ${block.columns.map(() => "---").join(" | ")} |`, ...block.rows.map((r) => `| ${r.map(mdEscape).join(" | ")} |`)].join("\n"));
+        out.push(
+          [
+            `| ${block.columns.map(mdEscape).join(" | ")} |`,
+            `| ${block.columns.map(() => "---").join(" | ")} |`,
+            ...block.rows.map((r) => `| ${r.map(mdEscape).join(" | ")} |`),
+          ].join("\n"),
+        );
         break;
       case "terms":
         out.push(block.items.map((t) => `**${t.term}** - ${t.text}`).join("\n\n"));
         break;
       case "form":
-        out.push(block.fields.map((f) => `${f.label}: ${f.box ? "[    ]" : "_".repeat(f.width === "full" ? 40 : f.width === "long" ? 24 : 12)}`).join("  \n"));
+        out.push(
+          block.fields
+            .map((f) => `${f.label}: ${f.box ? "[    ]" : "_".repeat(f.width === "full" ? 40 : f.width === "long" ? 24 : 12)}`)
+            .join("  \n"),
+        );
         break;
       case "rule":
         out.push("---");
@@ -676,7 +831,9 @@ export function toHtml(doc: Doc): string {
         body.push(`<p${block.tone ? ` class="${block.tone}"` : ""}>${multiline(block.text)}</p>`);
         break;
       case "list":
-        body.push(`<${block.ordered ? "ol" : "ul"}>${block.items.map((i) => `<li>${esc(i)}</li>`).join("")}</${block.ordered ? "ol" : "ul"}>`);
+        body.push(
+          `<${block.ordered ? "ol" : "ul"}>${block.items.map((i) => `<li>${esc(i)}</li>`).join("")}</${block.ordered ? "ol" : "ul"}>`,
+        );
         break;
       case "table":
         body.push(
@@ -693,7 +850,11 @@ export function toHtml(doc: Doc): string {
           `<div class="form">${block.fields
             .map((f) => {
               const width = f.width ?? "short";
-              const line = f.box ? `<span class="box"></span>` : f.lines && f.lines > 1 ? `<span class="lines">${'<span class="line"></span>'.repeat(f.lines)}</span>` : `<span class="line"></span>`;
+              const line = f.box
+                ? `<span class="box"></span>`
+                : f.lines && f.lines > 1
+                  ? `<span class="lines">${'<span class="line"></span>'.repeat(f.lines)}</span>`
+                  : `<span class="line"></span>`;
               return `<span class="field ${width}"><span class="label">${esc(f.label)}</span>${line}</span>`;
             })
             .join("")}</div>`,

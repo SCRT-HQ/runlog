@@ -43,12 +43,7 @@ export function Footer({ onGuide }: { onGuide: () => void }) {
             {links.release ? <a href={links.release}>{hosted.version}</a> : hosted.version}
           </>
         )}
-        {hosted.sha && (
-          <>
-            {" "}
-            {links.commit ? <a href={links.commit}>{hosted.sha.slice(0, 7)}</a> : hosted.sha.slice(0, 7)}
-          </>
-        )}
+        {hosted.sha && <> {links.commit ? <a href={links.commit}>{hosted.sha.slice(0, 7)}</a> : hosted.sha.slice(0, 7)}</>}
       </span>
     </footer>
   );

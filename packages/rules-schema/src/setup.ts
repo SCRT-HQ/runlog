@@ -27,8 +27,13 @@ export const SetupOp = z
       .string()
       .min(1)
       .max(64)
-      .describe("The operation, in the tool's own vocabulary: `flag.set`, `runes.give`. A tool refuses by name anything its build does not have."),
-    args: z.record(z.string(), z.unknown()).optional().describe("What the operation takes. Its shape is the tool's business, not this format's."),
+      .describe(
+        "The operation, in the tool's own vocabulary: `flag.set`, `runes.give`. A tool refuses by name anything its build does not have.",
+      ),
+    args: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe("What the operation takes. Its shape is the tool's business, not this format's."),
     once: z
       .boolean()
       .optional()
@@ -45,9 +50,16 @@ export const Setup = z
     kind: z.literal("setup").describe("What this document is. A pack says `pack`; this says `setup`."),
     schemaVersion: z.number().int().positive().describe("The format's major version, as a pack carries one."),
     id: PackId.describe("Reverse-domain id, the way a pack is identified: `com.example.setups.bare-handed`."),
-    version: z.string().min(1).describe("Semantic version. A setup that changes what it does changes this, or nobody holding it is offered the new one."),
+    version: z
+      .string()
+      .min(1)
+      .describe("Semantic version. A setup that changes what it does changes this, or nobody holding it is offered the new one."),
     title: z.string().min(1).max(120).describe("What it is called, on a card and in a chooser."),
-    author: z.string().max(120).optional().describe("Who wrote it, for a card and a list. A setup travels on its own, so this is the only credit it carries."),
+    author: z
+      .string()
+      .max(120)
+      .optional()
+      .describe("Who wrote it, for a card and a list. A setup travels on its own, so this is the only credit it carries."),
     description: z.string().max(2000).optional().describe("What playing under it is like, in a line or two."),
     /**
      * Which tool this is written for.
@@ -99,7 +111,8 @@ export function parseSetup(input: unknown): SetupResult {
   if (typeof input !== "object" || input === null || Array.isArray(input)) return fail("setup/shape", "a setup is an object");
   const raw = input as Record<string, unknown>;
 
-  if (raw["kind"] !== "setup") return fail("setup/kind", `this is not a setup: kind is ${JSON.stringify(raw["kind"]) ?? "missing"}`, "kind");
+  if (raw["kind"] !== "setup")
+    return fail("setup/kind", `this is not a setup: kind is ${JSON.stringify(raw["kind"]) ?? "missing"}`, "kind");
 
   const version = raw["schemaVersion"];
   if (version !== SETUP_SCHEMA_VERSION) {

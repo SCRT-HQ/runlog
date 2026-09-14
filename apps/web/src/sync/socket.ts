@@ -8,7 +8,7 @@
  * still come down the same authenticated fetch as before, so a socket
  * that lies can only cause a fetch that finds nothing new.
  *
- * Sockets close for a hundred reasons, a laptop lid, a tunnel, a deploy, 
+ * Sockets close for a hundred reasons, a laptop lid, a tunnel, a deploy,
  * so this one reconnects with a backoff that starts at a second and stops
  * growing at half a minute, re-sends its watch on every open, and fetches
  * a fresh token for each attempt, since the last one may have expired
@@ -99,7 +99,8 @@ export function parseChanged(data: unknown): Changed | null {
   if (typeof data !== "string") return null;
   try {
     const m = JSON.parse(data) as Record<string, unknown>;
-    if (m && m["t"] === "changed" && typeof m["id"] === "string" && typeof m["seq"] === "number") return { t: "changed", id: m["id"], seq: m["seq"] };
+    if (m && m["t"] === "changed" && typeof m["id"] === "string" && typeof m["seq"] === "number")
+      return { t: "changed", id: m["id"], seq: m["seq"] };
   } catch {
     // Not ours.
   }

@@ -76,21 +76,12 @@ export function AreaField({
 }: FieldProps & { value: string; onChange: (value: string) => void; rows?: number }) {
   return (
     <Field {...field}>
-      <textarea
-        className="textInput area"
-        rows={rows}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      <textarea className="textInput area" rows={rows} value={value} onChange={(e) => onChange(e.target.value)} />
     </Field>
   );
 }
 
-export function NumberField({
-  value,
-  onChange,
-  ...field
-}: FieldProps & { value: number; onChange: (value: number) => void }) {
+export function NumberField({ value, onChange, ...field }: FieldProps & { value: number; onChange: (value: number) => void }) {
   return (
     <Field {...field}>
       <input

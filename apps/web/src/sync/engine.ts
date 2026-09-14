@@ -61,8 +61,7 @@ export interface Engine {
 }
 
 /** What a license's fingerprint covers: the key and what it was matched on. */
-const licenseText = (l: { key: string; ref?: string; title?: string }) =>
-  JSON.stringify([l.key, l.ref ?? "", l.title ?? ""]);
+const licenseText = (l: { key: string; ref?: string; title?: string }) => JSON.stringify([l.key, l.ref ?? "", l.title ?? ""]);
 
 export function createEngine(api: Api, db: SyncDb, now: () => string = () => new Date().toISOString()): Engine {
   let inFlight: Promise<Report> | null = null;
@@ -81,8 +80,7 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
       const seen = known.get(key);
       // A fingerprint the server confirmed for this very stamp is still good;
       // hashing a long log on every pass is the cost this saves.
-      const hash =
-        seen && seen.updatedAt === item.updatedAt && !item.deletedAt ? seen.hash : await hashText(text(item));
+      const hash = seen && seen.updatedAt === item.updatedAt && !item.deletedAt ? seen.hash : await hashText(text(item));
       out.push({
         id: key,
         updatedAt: item.updatedAt,
@@ -115,122 +113,124 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
         seen.add(local.runId);
         const theirs = remoteSessions.get(local.runId);
         try {
+          if (local.deletedAt) {
+            // Forgotten here. Tell the server once, then let the tombstone go.
+            if (theirs && !theirs.deletedAt) await api.deleteSession(local.runId);
+            await db.purgeRun(local.runId);
+            await db.forgetSyncState(local.runId);
+            continue;
+          }
+          if (theirs?.deletedAt) {
+            // Ended for everyone by its owner: this copy goes too.
+            await db.purgeRun(local.runId);
+            await db.forgetSyncState(local.runId);
+            pulledRuns.push(local.runId);
+            continue;
+          }
 
-        if (local.deletedAt) {
-          // Forgotten here. Tell the server once, then let the tombstone go.
-          if (theirs && !theirs.deletedAt) await api.deleteSession(local.runId);
-          await db.purgeRun(local.runId);
-          await db.forgetSyncState(local.runId);
-          continue;
-        }
-        if (theirs?.deletedAt) {
-          // Ended for everyone by its owner: this copy goes too.
-          await db.purgeRun(local.runId);
-          await db.forgetSyncState(local.runId);
-          pulledRuns.push(local.runId);
-          continue;
-        }
+          const stamped = await stampIds(local.runId, local.events as RunEvent[]);
+          const pending = pendingEvents(stamped);
+          const before = tailSeq(stamped);
+          let incoming: SessionEvent[] = [];
+          let role = local.role;
+          let members = local.members;
+          let shared = local.shared;
+          let asks = local.asks;
 
-        const stamped = await stampIds(local.runId, local.events as RunEvent[]);
-        const pending = pendingEvents(stamped);
-        const before = tailSeq(stamped);
-        let incoming: SessionEvent[] = [];
-        let role = local.role;
-        let members = local.members;
-        let shared = local.shared;
-        let asks = local.asks;
-
-        if (!theirs) {
-          // The server has never heard of it, or no longer lists it for
-          // this account: start the session with the whole log, numbered
-          // afresh. If another device got there first, take its tail and
-          // send what is still pending against it.
-          const created = await api.createSession({
-            id: local.runId,
-            packId: local.packId,
-            packVersion: local.packVersion,
-            ...(local.packTitle ? { packTitle: local.packTitle } : {}),
-            ...(nameFrom(stamped) ? { name: nameFrom(stamped)! } : {}),
-            events: stamped,
-          });
-          if (created) {
-            incoming = created.events;
-            role = "owner";
-            pushed += 1;
+          if (!theirs) {
+            // The server has never heard of it, or no longer lists it for
+            // this account: start the session with the whole log, numbered
+            // afresh. If another device got there first, take its tail and
+            // send what is still pending against it.
+            const created = await api.createSession({
+              id: local.runId,
+              packId: local.packId,
+              packVersion: local.packVersion,
+              ...(local.packTitle ? { packTitle: local.packTitle } : {}),
+              ...(nameFrom(stamped) ? { name: nameFrom(stamped)! } : {}),
+              events: stamped,
+            });
+            if (created) {
+              incoming = created.events;
+              role = "owner";
+              pushed += 1;
+            } else {
+              const got = await api.getSession(local.runId, 0);
+              if (got) {
+                incoming = got.events;
+                members = got.members;
+                shared = got.session.shared;
+                asks = got.session.asks ?? null;
+                const merged = merge(stamped, incoming as unknown as RunEvent[]);
+                const still = pendingEvents(merged);
+                if (still.length > 0) incoming = [...incoming, ...(await api.appendEvents(local.runId, still)).appended];
+              }
+            }
           } else {
-            const got = await api.getSession(local.runId, 0);
-            if (got) {
-              incoming = got.events;
-              members = got.members;
-              shared = got.session.shared;
-              asks = got.session.asks ?? null;
-              const merged = merge(stamped, incoming as unknown as RunEvent[]);
-              const still = pendingEvents(merged);
-              if (still.length > 0) incoming = [...incoming, ...(await api.appendEvents(local.runId, still)).appended];
+            // How far the server's log goes: the manifest's word, or the
+            // append's, whichever is later.
+            let serverTail = theirs?.seq ?? 0;
+            if (pending.length > 0) {
+              const sent = await api.appendEvents(local.runId, pending);
+              incoming = sent.appended;
+              serverTail = Math.max(serverTail, sent.seq);
+              pushed += 1;
+              const renamed = pending.some((e) => e.t === "RunRenamed");
+              if (renamed) await api.patchSession(local.runId, { name: nameFrom(stamped) ?? "" });
             }
-          }
-        } else {
-          // How far the server's log goes: the manifest's word, or the
-          // append's, whichever is later.
-          let serverTail = theirs?.seq ?? 0;
-          if (pending.length > 0) {
-            const sent = await api.appendEvents(local.runId, pending);
-            incoming = sent.appended;
-            serverTail = Math.max(serverTail, sent.seq);
-            pushed += 1;
-            const renamed = pending.some((e) => e.t === "RunRenamed");
-            if (renamed) await api.patchSession(local.runId, { name: nameFrom(stamped) ?? "" });
-          }
-          // Anything numbered past what was here and not among what just
-          // came back is somebody else's: fetch from where this device was.
-          if (serverTail > before + incoming.length) {
-            const got = await api.getSession(local.runId, before);
-            if (got) {
-              incoming = [...incoming, ...got.events];
-              members = got.members;
-              shared = got.session.shared;
-              asks = got.session.asks ?? null;
+            // Anything numbered past what was here and not among what just
+            // came back is somebody else's: fetch from where this device was.
+            if (serverTail > before + incoming.length) {
+              const got = await api.getSession(local.runId, before);
+              if (got) {
+                incoming = [...incoming, ...got.events];
+                members = got.members;
+                shared = got.session.shared;
+                asks = got.session.asks ?? null;
+              }
             }
+            if (theirs) role = theirs.role;
           }
-          if (theirs) role = theirs.role;
-        }
 
-        const merged = merge(stamped, incoming as unknown as RunEvent[]);
-        /**
-         * What the record carries besides its log, and which only the
-         * server can say: who this account is in the run, who else is in
-         * it, whether it is shared, what its ask key is.
-         *
-         * Kept apart from the log because the app has to hear about these
-         * and must not hear about its own moves coming back numbered. A
-         * run started here is pushed, answered with a role, and every
-         * event that comes back is this device's own: nothing arrived, so
-         * the run was left out of the news, and news with nothing in it is
-         * dropped. Storage said `owner` while the screen still said
-         * nothing, and the panel that waits on a role waited for a reload.
-         */
-        const aboutTheRun =
-          members !== local.members || role !== local.role || shared !== local.shared || JSON.stringify(asks ?? null) !== JSON.stringify(local.asks ?? null);
-        const changed = aboutTheRun || merged.length !== local.events.length || tailSeq(merged) !== before || stamped !== local.events;
-        if (changed) {
-          await db.saveRun({
-            ...local,
-            events: merged,
-            seq: tailSeq(merged),
-            ...(role ? { role } : {}),
-            ...(members ? { members } : {}),
-            ...(typeof shared === "boolean" ? { shared } : {}),
-            ...(asks !== undefined ? { asks } : {}),
-            updatedAt: theirs && theirs.updatedAt > local.updatedAt ? theirs.updatedAt : local.updatedAt,
-          });
-          const mine = new Set(pending.map((e) => e.id));
-          const fromElsewhere = incoming.some((e) => e.seq > before && !mine.has(e.id));
-          // The count is about events arriving; the news is about a record
-          // the app is holding going stale. They are not the same question,
-          // and answering both with the first one is what hid the role.
-          if (fromElsewhere) pulled += 1;
-          if (fromElsewhere || aboutTheRun) pulledRuns.push(local.runId);
-        }
+          const merged = merge(stamped, incoming as unknown as RunEvent[]);
+          /**
+           * What the record carries besides its log, and which only the
+           * server can say: who this account is in the run, who else is in
+           * it, whether it is shared, what its ask key is.
+           *
+           * Kept apart from the log because the app has to hear about these
+           * and must not hear about its own moves coming back numbered. A
+           * run started here is pushed, answered with a role, and every
+           * event that comes back is this device's own: nothing arrived, so
+           * the run was left out of the news, and news with nothing in it is
+           * dropped. Storage said `owner` while the screen still said
+           * nothing, and the panel that waits on a role waited for a reload.
+           */
+          const aboutTheRun =
+            members !== local.members ||
+            role !== local.role ||
+            shared !== local.shared ||
+            JSON.stringify(asks ?? null) !== JSON.stringify(local.asks ?? null);
+          const changed = aboutTheRun || merged.length !== local.events.length || tailSeq(merged) !== before || stamped !== local.events;
+          if (changed) {
+            await db.saveRun({
+              ...local,
+              events: merged,
+              seq: tailSeq(merged),
+              ...(role ? { role } : {}),
+              ...(members ? { members } : {}),
+              ...(typeof shared === "boolean" ? { shared } : {}),
+              ...(asks !== undefined ? { asks } : {}),
+              updatedAt: theirs && theirs.updatedAt > local.updatedAt ? theirs.updatedAt : local.updatedAt,
+            });
+            const mine = new Set(pending.map((e) => e.id));
+            const fromElsewhere = incoming.some((e) => e.seq > before && !mine.has(e.id));
+            // The count is about events arriving; the news is about a record
+            // the app is holding going stale. They are not the same question,
+            // and answering both with the first one is what hid the role.
+            if (fromElsewhere) pulled += 1;
+            if (fromElsewhere || aboutTheRun) pulledRuns.push(local.runId);
+          }
         } catch (error) {
           if (error instanceof SyncError && (error.kind === "offline" || error.kind === "unauthorized")) throw error;
           troubled = true;
@@ -270,7 +270,12 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
       const packs = allPacks.filter((p) => !p.sealed && (p.sync || p.deletedAt));
       const byPack = new Map(packs.map((p) => [p.id, p]));
       const packPlan = diff(
-        await fingerprint(packs, (p) => p.id, (p) => p.source, known),
+        await fingerprint(
+          packs,
+          (p) => p.id,
+          (p) => p.source,
+          known,
+        ),
         remote.packs.filter((p) => !sealedHere.has(p.id)),
       );
       const remotePacks = new Map(remote.packs.map((p) => [p.id, p]));
@@ -296,11 +301,7 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
           // the pack to a stranger with a live link only where it may.
           shareable: shareableOf(local),
         };
-        const entry = await pushOnce(
-          () => api.putPack(remotePack, known.get(id)?.hash),
-          remotePacks.get(id),
-          local.updatedAt,
-        );
+        const entry = await pushOnce(() => api.putPack(remotePack, known.get(id)?.hash), remotePacks.get(id), local.updatedAt);
         if (entry) {
           await db.putSyncState({ id, kind: "pack", updatedAt: entry.updatedAt, hash: entry.hash });
           pushed += 1;
@@ -329,7 +330,9 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
           // recorded keeps whatever this device knew.
           ...((theirs.origin ?? existing?.origin) ? { origin: theirs.origin ?? existing!.origin! } : {}),
           // Either spelling from the account, kept as the one written now.
-          ...((theirs.marketplace ?? theirs.catalog ?? existing?.marketplace ?? existing?.catalog) ? { marketplace: (theirs.marketplace ?? theirs.catalog ?? existing?.marketplace ?? existing?.catalog)! } : {}),
+          ...((theirs.marketplace ?? theirs.catalog ?? existing?.marketplace ?? existing?.catalog)
+            ? { marketplace: (theirs.marketplace ?? theirs.catalog ?? existing?.marketplace ?? existing?.catalog)! }
+            : {}),
         });
         await db.putSyncState({ id, kind: "pack", updatedAt: theirs.updatedAt, hash: theirs.hash });
         pulledPacks.push(id);
@@ -354,10 +357,7 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
       // ---- licenses: small, and always ----
       const licenses = await db.listLicenses();
       const byLicense = new Map(licenses.map((l) => [l.packId, l]));
-      const licensePlan = diff(
-        await fingerprint(licenses, (l) => l.packId, licenseText, known),
-        remote.licenses ?? [],
-      );
+      const licensePlan = diff(await fingerprint(licenses, (l) => l.packId, licenseText, known), remote.licenses ?? []);
       const remoteLicenses = new Map((remote.licenses ?? []).map((l) => [l.id, l]));
 
       for (const id of licensePlan.push) {
@@ -371,11 +371,7 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
           updatedAt: local.updatedAt,
           hash,
         };
-        const entry = await pushOnce(
-          () => api.putLicense(remoteLicense, known.get(id)?.hash),
-          remoteLicenses.get(id),
-          local.updatedAt,
-        );
+        const entry = await pushOnce(() => api.putLicense(remoteLicense, known.get(id)?.hash), remoteLicenses.get(id), local.updatedAt);
         if (entry) {
           await db.putSyncState({ id, kind: "license", updatedAt: entry.updatedAt, hash: entry.hash });
           pushed += 1;
@@ -433,11 +429,7 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
    * this pass did not know about. If theirs is newer, pulling is the right
    * answer; if mine is, push again without the precondition.
    */
-  async function pushOnce(
-    put: () => Promise<Entry>,
-    theirs: Entry | undefined,
-    mineUpdatedAt: string,
-  ): Promise<Entry | null> {
+  async function pushOnce(put: () => Promise<Entry>, theirs: Entry | undefined, mineUpdatedAt: string): Promise<Entry | null> {
     try {
       return await put();
     } catch (error) {

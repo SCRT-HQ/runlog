@@ -14,7 +14,10 @@ import { traced } from "./xray.js";
 export type SecretReader = (name: string) => Promise<string | null>;
 
 /** Whether a value is the real thing, by the shape the service gives its keys. */
-export function looksLike(kind: "stripe-key" | "webhook-secret" | "workos-key" | "discord-token" | "discord-secret", value: string | null | undefined): value is string {
+export function looksLike(
+  kind: "stripe-key" | "webhook-secret" | "workos-key" | "discord-token" | "discord-secret",
+  value: string | null | undefined,
+): value is string {
   if (!value) return false;
   switch (kind) {
     case "discord-secret":

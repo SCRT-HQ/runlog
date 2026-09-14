@@ -24,11 +24,7 @@ function generate(fileNames: string[]): Emitted {
   };
   const bundle = Object.fromEntries(fileNames.map((fileName) => [fileName, { fileName }]));
 
-  plugin.generateBundle.call(
-    { emitFile: (file: Emitted) => emitted.push(file) },
-    {},
-    bundle,
-  );
+  plugin.generateBundle.call({ emitFile: (file: Emitted) => emitted.push(file) }, {}, bundle);
 
   const worker = emitted.find((e) => e.fileName === "sw.js");
   if (!worker) throw new Error("the plugin emitted no service worker");
@@ -83,9 +79,7 @@ describe("the offline worker", () => {
   });
 
   it("keeps the cache name stable for an identical build", () => {
-    expect(generate(["assets/index-abc123.js"]).source).toBe(
-      generate(["assets/index-abc123.js"]).source,
-    );
+    expect(generate(["assets/index-abc123.js"]).source).toBe(generate(["assets/index-abc123.js"]).source);
   });
 
   it("falls back to the shell for a navigation, so offline lands in the app", () => {

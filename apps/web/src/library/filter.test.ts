@@ -39,15 +39,34 @@ describe("what a pack's declaration says about how it plays", () => {
   });
 
   it("does not count a journal the pack switched off, nor targeting set to none", () => {
-    const { features } = featuresOf({ modes: { a: { label: "A" } }, capabilities: ["journal"], journal: { enabled: false }, targeting: { strategy: "none" } });
+    const { features } = featuresOf({
+      modes: { a: { label: "A" } },
+      capabilities: ["journal"],
+      journal: { enabled: false },
+      targeting: { strategy: "none" },
+    });
     expect(features).toEqual(["solo"]);
   });
 });
 
 describe("narrowing the marketplace", () => {
   const list = [
-    entry({ id: "day", title: "Any Given Day", category: "everyday", tags: ["habits", "focus"], features: ["solo", "together"], description: "A day of things to do." }),
-    entry({ id: "trial", title: "Elden Ring: Trial", category: "games", tags: ["Elden Ring", "race"], features: ["moderated", "seeded"], author: "Runlog" }),
+    entry({
+      id: "day",
+      title: "Any Given Day",
+      category: "everyday",
+      tags: ["habits", "focus"],
+      features: ["solo", "together"],
+      description: "A day of things to do.",
+    }),
+    entry({
+      id: "trial",
+      title: "Elden Ring: Trial",
+      category: "games",
+      tags: ["Elden Ring", "race"],
+      features: ["moderated", "seeded"],
+      author: "Runlog",
+    }),
     entry({ id: "kiln", title: "The Long Kiln", category: "craft", tags: ["ceramics"], features: ["solo", "cards"] }),
   ];
 

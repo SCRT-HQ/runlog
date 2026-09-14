@@ -52,9 +52,7 @@ export function lastActive(): LastActive | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as Partial<LastActive>;
-    return typeof parsed.packId === "string" && typeof parsed.runId === "string"
-      ? { packId: parsed.packId, runId: parsed.runId }
-      : null;
+    return typeof parsed.packId === "string" && typeof parsed.runId === "string" ? { packId: parsed.packId, runId: parsed.runId } : null;
   } catch {
     return null;
   }

@@ -86,15 +86,13 @@ export function exportRun(pack: Pack, events: RunEvent[], now = new Date().toISO
   };
 }
 
-export type ImportResult =
-  | { ok: true; archive: RunArchive }
-  | { ok: false; error: string };
+export type ImportResult = { ok: true; archive: RunArchive } | { ok: false; error: string };
 
 /**
  * Read an archive back.
  *
  * Deliberately strict about the envelope and entirely trusting of the events
- * inside it, because the reducer is the thing that knows what an event is: 
+ * inside it, because the reducer is the thing that knows what an event is:
  * and it will throw on a log that does not begin properly. Checking the shape
  * twice would only mean two places to keep in step.
  */
@@ -145,7 +143,7 @@ function stateLabel(pack: Pack, id: string): string {
 /**
  * How a subject is referred to mid-log.
  *
- * By number and by what it was declared to be, but *without* its states: 
+ * By number and by what it was declared to be, but *without* its states:
  * those change as the run goes on, and a line describing what happened in
  * unit two should not be re-labeled by something that happened in unit five.
  */
@@ -161,11 +159,7 @@ function ref(pack: Pack, state: RunState, id: number): string {
  * order things actually happened in: a log that reorders itself into tidy
  * categories stops being a record of the session.
  */
-export function renderLog(
-  pack: Pack,
-  events: RunEvent[],
-  { audience = "self" }: { audience?: Audience } = {},
-): string {
+export function renderLog(pack: Pack, events: RunEvent[], { audience = "self" }: { audience?: Audience } = {}): string {
   const state = reduce(pack, events);
   const v = pack.vocabulary;
   const quote = mayQuote(pack, audience);
@@ -260,20 +254,13 @@ export function renderLog(
         const roll = rolls.get(e.table);
         rolls.delete(e.table);
         const shown = roll ? ` (${roll.dice} → ${roll.total}${roll.source === "physical" ? "" : `, ${roll.source}`})` : "";
-        const target =
-          e.targetSubject !== undefined
-            ? ` → ${ref(pack, state, e.targetSubject)}`
-            : "";
-        line(
-          `- **${tableTitle(pack, e.table)}**${shown}${target} - ${entryText(pack, e.table, e.entryId, quote)}`,
-        );
+        const target = e.targetSubject !== undefined ? ` → ${ref(pack, state, e.targetSubject)}` : "";
+        line(`- **${tableTitle(pack, e.table)}**${shown}${target} - ${entryText(pack, e.table, e.entryId, quote)}`);
         break;
       }
 
       case "StateApplied":
-        line(
-          `- ${stateLabel(pack, e.state)}${e.subject ? ` on ${ref(pack, state, e.subject)}` : " (run-wide)"}`,
-        );
+        line(`- ${stateLabel(pack, e.state)}${e.subject ? ` on ${ref(pack, state, e.subject)}` : " (run-wide)"}`);
         break;
 
       case "SubjectRemoved":
@@ -290,7 +277,9 @@ export function renderLog(
 
       case "ExtraRollQueued": {
         const title = pack.tables[e.table]?.title ?? e.table;
-        line(`- ${e.count} more ${title} roll${e.count === 1 ? "" : "s"} ${e.unit === "next" ? `next ${v.unit.one.toLowerCase()}` : `this ${v.unit.one.toLowerCase()}`}`);
+        line(
+          `- ${e.count} more ${title} roll${e.count === 1 ? "" : "s"} ${e.unit === "next" ? `next ${v.unit.one.toLowerCase()}` : `this ${v.unit.one.toLowerCase()}`}`,
+        );
         break;
       }
 
@@ -305,8 +294,7 @@ export function renderLog(
       case "CardPlayed":
       case "CardDrawn": {
         const deck = pack.decks?.[e.deck];
-        const card =
-          deck?.kind === "cards" ? deck.cards.find((c) => c.id === e.cardId) : undefined;
+        const card = deck?.kind === "cards" ? deck.cards.find((c) => c.id === e.cardId) : undefined;
         const name = quote ? (card?.title ?? e.cardId) : `\`${e.cardId}\``;
         line(`- ${e.t === "CardDrawn" ? "Drew" : "Played"} ${name}`);
         break;
@@ -353,9 +341,7 @@ export function renderLog(
   } else {
     for (const s of surviving) {
       const states = s.states.map((id) => stateLabel(pack, id)).join(", ");
-      out.push(
-        `- ${subjectName(pack, s)}: ${s.type ?? "undeclared"}${states ? ` - ${states}` : ""}`,
-      );
+      out.push(`- ${subjectName(pack, s)}: ${s.type ?? "undeclared"}${states ? ` - ${states}` : ""}`);
     }
   }
 

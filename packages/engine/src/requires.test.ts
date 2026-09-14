@@ -115,7 +115,11 @@ describe("a run that lacks something", () => {
   it("applies to draws made by actions too", () => {
     const p = pack();
     const state = reduce(p, opened(p, ["barbell"]));
-    const result = executeActions(p, state, [{ do: "rollOn", table: "movement", times: 2 }], { answers: {}, now: NOW, random: faces(2, 4, 1, 1, 3) });
+    const result = executeActions(p, state, [{ do: "rollOn", table: "movement", times: 2 }], {
+      answers: {},
+      now: NOW,
+      random: faces(2, 4, 1, 1, 3),
+    });
     const ids = result.events.filter((e) => e.t === "OutcomeResolved").map((e) => (e.t === "OutcomeResolved" ? e.entryId : ""));
     expect(ids).toEqual(["plank", "pushup"]);
   });

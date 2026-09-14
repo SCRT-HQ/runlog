@@ -152,9 +152,18 @@ describe("ticks in the log", () => {
     const p = pack();
     const ticked = reduce(p, [...opened(p), ev("Checked", { step: "play#0", item: "0:o0", on: true })]);
     expect(ticked.checks).toEqual(["play#0|0:o0"]);
-    const unticked = reduce(p, [...opened(p), ev("Checked", { step: "play#0", item: "0:o0", on: true }), ev("Checked", { step: "play#0", item: "0:o0", on: false })]);
+    const unticked = reduce(p, [
+      ...opened(p),
+      ev("Checked", { step: "play#0", item: "0:o0", on: true }),
+      ev("Checked", { step: "play#0", item: "0:o0", on: false }),
+    ]);
     expect(unticked.checks).toEqual([]);
-    const next = reduce(p, [...opened(p), ev("Checked", { step: "play#0", item: "0:o0", on: true }), ev("UnitFinalized"), ev("UnitEntered")]);
+    const next = reduce(p, [
+      ...opened(p),
+      ev("Checked", { step: "play#0", item: "0:o0", on: true }),
+      ev("UnitFinalized"),
+      ev("UnitEntered"),
+    ]);
     expect(next.checks).toEqual([]);
   });
 });

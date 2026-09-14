@@ -27,8 +27,22 @@ const set = (over: Partial<SharedTables> = {}): SharedTables =>
     title: "Curses",
     defaultVariant: "gentle",
     variants: {
-      gentle: { title: "Gentle", roll: "d2", entries: [{ id: "g1", range: [1, 1], text: "A small one." }, { id: "g2", range: [2, 2], text: "Another." }] },
-      harsh: { title: "Harsh", roll: "d2", entries: [{ id: "h1", range: [1, 1], text: "A big one." }, { id: "h2", range: [2, 2], text: "Another." }] },
+      gentle: {
+        title: "Gentle",
+        roll: "d2",
+        entries: [
+          { id: "g1", range: [1, 1], text: "A small one." },
+          { id: "g2", range: [2, 2], text: "Another." },
+        ],
+      },
+      harsh: {
+        title: "Harsh",
+        roll: "d2",
+        entries: [
+          { id: "h1", range: [1, 1], text: "A big one." },
+          { id: "h2", range: [2, 2], text: "Another." },
+        ],
+      },
     },
     ...over,
   }).tables!;
@@ -42,7 +56,18 @@ const packWith = (use: unknown[], tables: Record<string, unknown> = {}) =>
     license: { id: "MIT", redistributable: true },
     vocabulary: { run: { one: "Run", many: "Runs" }, unit: { one: "Unit", many: "Units" }, subject: { one: "Thing", many: "Things" } },
     use,
-    tables: { own: { resolution: "lookup", title: "Own", roll: "d2", entries: [{ id: "o1", range: [1, 1], text: "Mine." }, { id: "o2", range: [2, 2], text: "Also mine." }] }, ...tables },
+    tables: {
+      own: {
+        resolution: "lookup",
+        title: "Own",
+        roll: "d2",
+        entries: [
+          { id: "o1", range: [1, 1], text: "Mine." },
+          { id: "o2", range: [2, 2], text: "Also mine." },
+        ],
+      },
+      ...tables,
+    },
     phases: [{ id: "p", label: "P", steps: [{ kind: "rollTable", table: "own" }] }],
     modes: { m: { label: "M", units: { min: 1, max: 1 } } },
     defaultMode: "m",
@@ -90,7 +115,10 @@ describe("borrowing them", () => {
   it("refuses to append entries that would replace the pack's own", () => {
     // Silently overwriting here is a result that stops coming up and
     // nothing anywhere saying so.
-    const clashing = set({ variants: { gentle: { title: "G", roll: "d1", entries: [{ id: "o1", range: [1, 1], text: "Not yours." }] } }, defaultVariant: "gentle" });
+    const clashing = set({
+      variants: { gentle: { title: "G", roll: "d1", entries: [{ id: "o1", range: [1, 1], text: "Not yours." }] } },
+      defaultVariant: "gentle",
+    });
     const { diagnostics } = resolveUses(packWith([{ from: "com.example.tables.curses", as: "own", merge: "append" }]), () => clashing);
     expect(diagnostics[0]?.code).toBe("use/clash");
     expect(diagnostics[0]?.message).toContain("o1");

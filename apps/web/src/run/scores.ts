@@ -5,7 +5,7 @@ import type { StoredRun } from "../storage/db.ts";
 /**
  * A run that has ended, reduced once to the number it made.
  *
- * Everything past this point, the best of them, a run's place among them, 
+ * Everything past this point, the best of them, a run's place among them,
  * reads this array rather than folding the log again, since a side column
  * and a setup screen both want the same answer from the same runs.
  */

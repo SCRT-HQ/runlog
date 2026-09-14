@@ -48,7 +48,12 @@ export function PublisherSection({ api }: { api: Api | null }) {
       (p) => {
         if (!live) return;
         setPublisher(p);
-        if (outcome === "connected") setNote(p?.connectReady ? "Payouts are set up. You can list packs for sale." : "Stripe is still checking a few things; press Refresh in a moment.");
+        if (outcome === "connected")
+          setNote(
+            p?.connectReady
+              ? "Payouts are set up. You can list packs for sale."
+              : "Stripe is still checking a few things; press Refresh in a moment.",
+          );
         if (outcome === "connect-again") setNote("That link had expired. Set up payouts again to continue where you left off.");
       },
       () => live && setPublisher(null),
@@ -79,8 +84,8 @@ export function PublisherSection({ api }: { api: Api | null }) {
           Publishing <span className="muted">coming soon</span>
         </h3>
         <p className="muted small">
-          A publisher is a name in the marketplace and, once payouts are set up, a seller. Becoming one is not open here yet; when it is, this
-          is where it starts.
+          A publisher is a name in the marketplace and, once payouts are set up, a seller. Becoming one is not open here yet; when it is,
+          this is where it starts.
         </p>
       </section>
     );
@@ -93,7 +98,14 @@ export function PublisherSection({ api }: { api: Api | null }) {
         </h3>
         <p className="muted small">
           A publisher is a name in the marketplace and, once payouts are set up, a seller: buyers pay you directly through Stripe, and the
-          marketplace takes a small share per sale{hosted?.links.pricing ? <> (<a href={hosted.links.pricing}>how much</a>)</> : null}.
+          marketplace takes a small share per sale
+          {hosted?.links.pricing ? (
+            <>
+              {" "}
+              (<a href={hosted.links.pricing}>how much</a>)
+            </>
+          ) : null}
+          .
           {hosted?.links.publishers ? (
             <>
               {" "}
@@ -113,7 +125,13 @@ export function PublisherSection({ api }: { api: Api | null }) {
             });
           }}
         >
-          <input className="textInput" value={name} placeholder="your name in the marketplace" maxLength={120} onChange={(e) => setName(e.target.value)} />
+          <input
+            className="textInput"
+            value={name}
+            placeholder="your name in the marketplace"
+            maxLength={120}
+            onChange={(e) => setName(e.target.value)}
+          />
           <button className="primary tiny" type="submit" disabled={busy || !name.trim()}>
             Become a publisher
           </button>
@@ -180,7 +198,11 @@ export function PublisherSection({ api }: { api: Api | null }) {
                 if (e.key === "Escape") setRenaming(null);
               }}
             />
-            <button className="primary tiny" disabled={busy || !renaming.trim() || renaming.trim() === publisher.name} onClick={() => void rename()}>
+            <button
+              className="primary tiny"
+              disabled={busy || !renaming.trim() || renaming.trim() === publisher.name}
+              onClick={() => void rename()}
+            >
               {busy ? "Changing…" : "Change the name"}
             </button>
             <button className="ghost tiny" disabled={busy} onClick={() => setRenaming(null)}>
@@ -213,7 +235,11 @@ export function PublisherSection({ api }: { api: Api | null }) {
             </button>
           )}
           {publisher.connectStarted && (
-            <button className="ghost" disabled={busy} onClick={() => void run(async () => setPublisher(await api.refreshPublisherConnect()))}>
+            <button
+              className="ghost"
+              disabled={busy}
+              onClick={() => void run(async () => setPublisher(await api.refreshPublisherConnect()))}
+            >
               Refresh
             </button>
           )}
@@ -305,7 +331,12 @@ function Members({ api, publisher }: { api: Api; publisher: PublisherView }) {
           </span>
           <span className="row">
             {admin && !m.owner && !m.me && (
-              <button className="ghost tiny" disabled={busy} title={`Take ${m.name ?? m.email ?? "them"} out of ${publisher.name}`} onClick={() => void act(() => api.removePublisherMember(m.userId), "Removed.")}>
+              <button
+                className="ghost tiny"
+                disabled={busy}
+                title={`Take ${m.name ?? m.email ?? "them"} out of ${publisher.name}`}
+                onClick={() => void act(() => api.removePublisherMember(m.userId), "Removed.")}
+              >
                 Remove
               </button>
             )}
@@ -320,7 +351,11 @@ function Members({ api, publisher }: { api: Api; publisher: PublisherView }) {
           </span>
           <span className="row">
             {admin && (
-              <button className="ghost tiny" disabled={busy} onClick={() => void act(() => api.revokePublisherInvitation(i.id), "Invitation taken back.")}>
+              <button
+                className="ghost tiny"
+                disabled={busy}
+                onClick={() => void act(() => api.revokePublisherInvitation(i.id), "Invitation taken back.")}
+              >
                 Revoke
               </button>
             )}
@@ -329,8 +364,21 @@ function Members({ api, publisher }: { api: Api; publisher: PublisherView }) {
       ))}
       {admin && available && (
         <div className="inviteForm">
-          <input className="textInput" type="email" placeholder="their email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && email.includes("@") && void invite()} aria-label="Email address to invite" />
-          <select className="chipAdd" value={role} onChange={(e) => setRole(e.target.value === "admin" ? "admin" : "member")} aria-label="Their role">
+          <input
+            className="textInput"
+            type="email"
+            placeholder="their email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && email.includes("@") && void invite()}
+            aria-label="Email address to invite"
+          />
+          <select
+            className="chipAdd"
+            value={role}
+            onChange={(e) => setRole(e.target.value === "admin" ? "admin" : "member")}
+            aria-label="Their role"
+          >
             <option value="member">member</option>
             <option value="admin">admin</option>
           </select>
@@ -340,7 +388,9 @@ function Members({ api, publisher }: { api: Api; publisher: PublisherView }) {
         </div>
       )}
       {admin && !available && <p className="muted small">Invitations need the hosted address; here the publisher is just you.</p>}
-      <p className="muted small">A member uploads and lists packs and sees the ledger; an admin also invites and removes people. Payouts stay with the founder.</p>
+      <p className="muted small">
+        A member uploads and lists packs and sees the ledger; an admin also invites and removes people. Payouts stay with the founder.
+      </p>
       {note && <p className="muted small">{note}</p>}
     </div>
   );
@@ -376,17 +426,28 @@ function Sales({ api }: { api: Api }) {
             <strong>{s.title}</strong>
             <span className="muted small">
               {" "}
-              · {showPrice({ amount: s.amount, currency: s.currency })} · {s.buyerEmail ?? "no address"} · {s.createdAt.slice(0, 10)} · {s.status}
+              · {showPrice({ amount: s.amount, currency: s.currency })} · {s.buyerEmail ?? "no address"} · {s.createdAt.slice(0, 10)} ·{" "}
+              {s.status}
             </span>
             <div className="mono small muted">{s.ref}</div>
           </span>
           <span className="row">
             {s.status === "fulfilled" && (
               <>
-                <button className="ghost tiny" disabled={busy === s.ref || !s.buyerEmail} title="Send the key and a fresh link to the buyer again" onClick={() => void act(s.ref, () => api.reissueSale(s.ref), `Sent again to ${s.buyerEmail}.`)}>
+                <button
+                  className="ghost tiny"
+                  disabled={busy === s.ref || !s.buyerEmail}
+                  title="Send the key and a fresh link to the buyer again"
+                  onClick={() => void act(s.ref, () => api.reissueSale(s.ref), `Sent again to ${s.buyerEmail}.`)}
+                >
                   Reissue
                 </button>
-                <button className="ghost tiny" disabled={busy === s.ref} title="Stop this copy being fetched again" onClick={() => void act(s.ref, () => api.revokeSale(s.ref), "Revoked.")}>
+                <button
+                  className="ghost tiny"
+                  disabled={busy === s.ref}
+                  title="Stop this copy being fetched again"
+                  onClick={() => void act(s.ref, () => api.revokeSale(s.ref), "Revoked.")}
+                >
                   Revoke
                 </button>
               </>
@@ -521,7 +582,8 @@ export function PublisherPacks({ api, publisher }: { api: Api; publisher: Publis
   const list = async (p: PublisherPack) => {
     const dollars = (prices[p.packId] ?? "").trim();
     const amount = dollars ? Math.round(Number(dollars) * 100) : 0;
-    if (dollars && (!Number.isFinite(amount) || amount < 100 || amount > 100_000)) throw new Error("a price is between 1 and 1000, in dollars, or blank for free");
+    if (dollars && (!Number.isFinite(amount) || amount < 100 || amount > 100_000))
+      throw new Error("a price is between 1 and 1000, in dollars, or blank for free");
     const out = await api.listPublisherPack(p.packId, amount > 0 ? { amount, currency: "usd" } : undefined);
     if ("available" in out) setNote("Selling is not switched on here yet; a free listing works.");
   };
@@ -552,7 +614,9 @@ export function PublisherPacks({ api, publisher }: { api: Api; publisher: Publis
       {packs === null ? (
         <p className="muted small">Reading…</p>
       ) : packs.length === 0 ? (
-        <p className="muted small">Nothing uploaded yet. Pick a pack from this device's library below; sign it first if you want the badge.</p>
+        <p className="muted small">
+          Nothing uploaded yet. Pick a pack from this device's library below; sign it first if you want the badge.
+        </p>
       ) : (
         packs.map((p) => {
           const priceText = p.status === "listed" ? (p.price ? priceDisplay(p.price) : "free") : "not listed";
@@ -612,7 +676,11 @@ export function PublisherPacks({ api, publisher }: { api: Api; publisher: Publis
                     </summary>
                     <div className="rowMenuPanel" role="menu">
                       {p.status === "listed" && (
-                        <button role="menuitem" disabled={isBusy} onClick={() => void act(p.packId, async () => void (await api.unlistPublisherPack(p.packId)))}>
+                        <button
+                          role="menuitem"
+                          disabled={isBusy}
+                          onClick={() => void act(p.packId, async () => void (await api.unlistPublisherPack(p.packId)))}
+                        >
                           Unlist
                         </button>
                       )}
@@ -628,7 +696,12 @@ export function PublisherPacks({ api, publisher }: { api: Api; publisher: Publis
         })
       )}
       <div className="row">
-        <select className="textInput" value={chosen} onChange={(e) => setChosen(e.target.value)} aria-label="A pack from this device to upload">
+        <select
+          className="textInput"
+          value={chosen}
+          onChange={(e) => setChosen(e.target.value)}
+          aria-label="A pack from this device to upload"
+        >
           <option value="">Upload a pack from this device…</option>
           {library.map((p) => (
             <option key={p.id} value={p.id}>

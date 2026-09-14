@@ -9,7 +9,12 @@ import { ConnectionsSection } from "./ConnectionsSection.tsx";
  * followed the bot's address knows what they are being asked. Static
  * markup, so nothing is fetched.
  */
-const signedIn: Account = { status: "signed-in", user: { id: "u1", email: "mira@example.com" } as Account extends { user: infer U } ? U : never, signOut: () => {}, getAccessToken: async () => "t" } as Account;
+const signedIn: Account = {
+  status: "signed-in",
+  user: { id: "u1", email: "mira@example.com" } as Account extends { user: infer U } ? U : never,
+  signOut: () => {},
+  getAccessToken: async () => "t",
+} as Account;
 const anonymous: Account = { status: "anonymous", signIn: () => {}, signUp: () => {} };
 const api = {} as Api;
 

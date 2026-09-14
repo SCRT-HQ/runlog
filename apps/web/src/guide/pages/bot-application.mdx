@@ -37,6 +37,7 @@ Deploy the stage. The API now answers the endpoint.
   ```
 
   (or `aws secretsmanager put-secret-value --secret-id runlog/discord/bot-token --secret-string "$(cat)"` signed in to the stage's account). The handler reads it on its next cold start; no deploy. Nothing in the repository ever sees it.
+
 - **Public Bot**: on, so any server can install it.
 - **Requires OAuth2 Code Grant**: off.
 - **Privileged Gateway Intents** (Presence, Server Members, Message Content): all off; the bot reads only what Discord sends it and what it posted itself.

@@ -6,9 +6,7 @@ import YAML from "yaml";
 import { decodePack, describeLength, encodePack, encodePackLink, LINK_PREFIX } from "./link.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-const kiln = YAML.parse(
-  readFileSync(join(repoRoot, "packs", "demo", "pack.yaml"), "utf8"),
-) as Record<string, unknown>;
+const kiln = YAML.parse(readFileSync(join(repoRoot, "packs", "demo", "pack.yaml"), "utf8")) as Record<string, unknown>;
 
 describe("a pack in a link", () => {
   it("round-trips a whole pack unchanged", async () => {

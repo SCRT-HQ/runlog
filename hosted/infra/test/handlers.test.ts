@@ -2,7 +2,23 @@ import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { describe, expect, it } from "vitest";
 import { finishDeferred, finishMoved, finishTimer, route, type Deps } from "../lib/handlers/api";
 import type { TimerJob } from "../lib/handlers/discord/play";
-import { SeqConflict, type ApiKey, type Ask, type Claim, type Invite, type LicenseMeta, type PackMeta, type Person, type Profile, type Reaction, type SessionMember, type SessionMeta, type SessionPointer, type Store, type StoredEvent } from "../lib/handlers/store";
+import {
+  SeqConflict,
+  type ApiKey,
+  type Ask,
+  type Claim,
+  type Invite,
+  type LicenseMeta,
+  type PackMeta,
+  type Person,
+  type Profile,
+  type Reaction,
+  type SessionMember,
+  type SessionMeta,
+  type SessionPointer,
+  type Store,
+  type StoredEvent,
+} from "../lib/handlers/store";
 import type { Race, RaceEntry, RaceMeta, RaceStore } from "../lib/handlers/races";
 import type { BillingStore } from "../lib/handlers/billing";
 import type { StripeLike } from "../lib/handlers/stripe";
@@ -138,10 +154,19 @@ function memoryPublishers(): PublisherStore {
   };
 }
 
-function fakeWorkOS(flags: Record<string, { enabled: boolean; defaultValue: boolean }> = {}): WorkOSLike & { calls: string[]; accept: (organizationId: string, userId: string, role: "admin" | "member") => void } {
+function fakeWorkOS(
+  flags: Record<string, { enabled: boolean; defaultValue: boolean }> = {},
+): WorkOSLike & { calls: string[]; accept: (organizationId: string, userId: string, role: "admin" | "member") => void } {
   const calls: string[] = [];
   const members: Array<{ organizationId: string; membershipId: string; userId: string; role: "admin" | "member" }> = [];
-  const invitations: Array<{ id: string; email: string; state: "pending" | "accepted" | "expired" | "revoked"; expiresAt: string; organizationId: string; inviterUserId: string }> = [];
+  const invitations: Array<{
+    id: string;
+    email: string;
+    state: "pending" | "accepted" | "expired" | "revoked";
+    expiresAt: string;
+    organizationId: string;
+    inviterUserId: string;
+  }> = [];
   return {
     calls,
     async flag(slug) {
@@ -160,10 +185,14 @@ function fakeWorkOS(flags: Record<string, { enabled: boolean; defaultValue: bool
       members.push({ organizationId, membershipId: `om_${userId}`, userId, role });
     },
     async listMembers(organizationId) {
-      return members.filter((m) => m.organizationId === organizationId).map((m) => ({ membershipId: m.membershipId, userId: m.userId, role: m.role, email: `${m.userId}@example.com` }));
+      return members
+        .filter((m) => m.organizationId === organizationId)
+        .map((m) => ({ membershipId: m.membershipId, userId: m.userId, role: m.role, email: `${m.userId}@example.com` }));
     },
     async membershipsOf(userId) {
-      return members.filter((m) => m.userId === userId).map((m) => ({ organizationId: m.organizationId, membershipId: m.membershipId, role: m.role }));
+      return members
+        .filter((m) => m.userId === userId)
+        .map((m) => ({ organizationId: m.organizationId, membershipId: m.membershipId, role: m.role }));
     },
     async removeMember(membershipId) {
       calls.push(`remove ${membershipId}`);
@@ -171,14 +200,25 @@ function fakeWorkOS(flags: Record<string, { enabled: boolean; defaultValue: bool
       if (at >= 0) members.splice(at, 1);
     },
     async listInvitations(organizationId) {
-      return invitations.filter((i) => i.organizationId === organizationId && i.state === "pending").map(({ organizationId: _o, ...i }) => i);
+      return invitations
+        .filter((i) => i.organizationId === organizationId && i.state === "pending")
+        .map(({ organizationId: _o, ...i }) => i);
     },
     async invitationsBy(userId) {
-      return invitations.filter((i) => i.inviterUserId === userId && !i.organizationId).map(({ organizationId: _o, inviterUserId: _u, ...i }) => i);
+      return invitations
+        .filter((i) => i.inviterUserId === userId && !i.organizationId)
+        .map(({ organizationId: _o, inviterUserId: _u, ...i }) => i);
     },
     async invite({ email, organizationId, role, inviterUserId }) {
       calls.push(`invite ${email} ${organizationId ?? "platform"} ${role ?? "-"} by ${inviterUserId}`);
-      const made = { id: `inv_${invitations.length + 1}`, email, state: "pending" as const, expiresAt: "2026-09-14T00:00:00Z", organizationId: organizationId ?? "", inviterUserId };
+      const made = {
+        id: `inv_${invitations.length + 1}`,
+        email,
+        state: "pending" as const,
+        expiresAt: "2026-09-14T00:00:00Z",
+        organizationId: organizationId ?? "",
+        inviterUserId,
+      };
       invitations.push(made);
       const { organizationId: _o, ...out } = made;
       return out;
@@ -301,7 +341,17 @@ function memoryRaces(): RaceStore {
   return {
     async createRace(meta, at, owner) {
       if (races.has(meta.id)) return null;
-      const r: Race = { meta: { ...meta, createdAt: at, updatedAt: at, seq: 0 } as RaceMeta, entries: [{ sub: meta.ownerSub, joinedAt: at, ...(owner.name ? { name: owner.name } : {}), ...(owner.sessionId ? { sessionId: owner.sessionId } : {}) }] };
+      const r: Race = {
+        meta: { ...meta, createdAt: at, updatedAt: at, seq: 0 } as RaceMeta,
+        entries: [
+          {
+            sub: meta.ownerSub,
+            joinedAt: at,
+            ...(owner.name ? { name: owner.name } : {}),
+            ...(owner.sessionId ? { sessionId: owner.sessionId } : {}),
+          },
+        ],
+      };
       races.set(meta.id, r);
       return copy(r);
     },
@@ -332,7 +382,11 @@ function memoryRaces(): RaceStore {
     async updateRace(id, at, patch) {
       const r = races.get(id);
       if (!r) return null;
-      r.meta = { ...r.meta, ...(patch.name !== undefined ? { name: patch.name } : {}), ...(patch.endedAt ? { endedAt: patch.endedAt } : {}) };
+      r.meta = {
+        ...r.meta,
+        ...(patch.name !== undefined ? { name: patch.name } : {}),
+        ...(patch.endedAt ? { endedAt: patch.endedAt } : {}),
+      };
       if (patch.name === "") delete r.meta.name;
       touch(r, at);
       return copy(r);
@@ -424,10 +478,16 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
         sessions: [...sessions.values()]
           .filter((s) => s.members.some((m) => m.sub === sub))
           .map((s): SessionPointer => ({
-            id: s.meta.id, role: s.members.find((m) => m.sub === sub)!.role, packId: s.meta.packId, packVersion: s.meta.packVersion,
-            ownerSub: s.meta.ownerSub, updatedAt: s.meta.updatedAt, seq: s.meta.seq,
+            id: s.meta.id,
+            role: s.members.find((m) => m.sub === sub)!.role,
+            packId: s.meta.packId,
+            packVersion: s.meta.packVersion,
+            ownerSub: s.meta.ownerSub,
+            updatedAt: s.meta.updatedAt,
+            seq: s.meta.seq,
             ...(s.meta.packTitle ? { packTitle: s.meta.packTitle } : {}),
-            ...(s.meta.name ? { name: s.meta.name } : {}), ...(s.meta.endedAt ? { endedAt: s.meta.endedAt } : {}),
+            ...(s.meta.name ? { name: s.meta.name } : {}),
+            ...(s.meta.endedAt ? { endedAt: s.meta.endedAt } : {}),
             ...(s.meta.deletedAt ? { deletedAt: s.meta.deletedAt } : {}),
           })),
         licenses: [...licenses.entries()].filter(([key]) => key.startsWith(`${sub}/`)).map(([, v]) => v.meta),
@@ -488,7 +548,12 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
     async updateSession(id, at, patch) {
       const s = sessions.get(id);
       if (!s) return null;
-      s.meta = { ...s.meta, updatedAt: at, ...(patch.name !== undefined ? { name: patch.name } : {}), ...(patch.endedAt ? { endedAt: patch.endedAt } : {}) };
+      s.meta = {
+        ...s.meta,
+        updatedAt: at,
+        ...(patch.name !== undefined ? { name: patch.name } : {}),
+        ...(patch.endedAt ? { endedAt: patch.endedAt } : {}),
+      };
       if (patch.publicTokenHash === null) {
         delete s.meta.publicTokenHash;
         delete s.meta.publicAt;
@@ -688,8 +753,10 @@ function fakeMail() {
     sent,
     receipts,
     mailer: {
-      invite: async (to: string, t: { link: string; role: string; pack: string }) => void sent.push({ to, link: t.link, role: t.role, pack: t.pack }),
-      purchase: async (to: string, t: { link: string; key: string; pack: string }) => void receipts.push({ to, link: t.link, key: t.key, pack: t.pack }),
+      invite: async (to: string, t: { link: string; role: string; pack: string }) =>
+        void sent.push({ to, link: t.link, role: t.role, pack: t.pack }),
+      purchase: async (to: string, t: { link: string; key: string; pack: string }) =>
+        void receipts.push({ to, link: t.link, key: t.key, pack: t.pack }),
     },
   };
 }
@@ -751,7 +818,16 @@ async function call(event: APIGatewayProxyEventV2, d = deps()) {
 const started = { t: "RunStarted", at: "2026-09-06T00:00:00Z", id: "e0", packId: "p", packVersion: "1", runId: "01RUN" };
 const entered = { t: "UnitEntered", at: "2026-09-06T00:01:00Z", id: "e1" };
 const sessionBody = { id: "01RUN", packId: "p", packVersion: "1", packTitle: "The Pack", events: [started, entered] };
-const packBody = { title: "T", version: "1", format: "yaml", filename: "t.yaml", importedAt: "2026-09-06T00:00:00Z", updatedAt: "2026-09-06T00:00:00Z", hash: "h1", source: "id: p" };
+const packBody = {
+  title: "T",
+  version: "1",
+  format: "yaml",
+  filename: "t.yaml",
+  importedAt: "2026-09-06T00:00:00Z",
+  updatedAt: "2026-09-06T00:00:00Z",
+  hash: "h1",
+  source: "id: p",
+};
 
 describe("who is asking", () => {
   it("refuses without a token, with a 401 and not a 403", async () => {
@@ -774,16 +850,35 @@ describe("who is asking", () => {
     expect((await call(request("GET", "/api/me"))).body).toMatchObject({ servers: false, serversOpen: false, publishersOpen: true });
     // With a bot, and no hold: on sale, for a signed-in person and for the page with no token alike.
     const bot = { applicationId: "app", publicKey: "00".repeat(32), token: async () => null };
-    const open = deps(memoryStore(), { releaseGates: async () => ({ servers: true, publishers: true }), guilds: memoryGuilds(), discord: bot });
+    const open = deps(memoryStore(), {
+      releaseGates: async () => ({ servers: true, publishers: true }),
+      guilds: memoryGuilds(),
+      discord: bot,
+    });
     expect((await call(request("GET", "/api/me"), open)).body).toMatchObject({ servers: true, serversOpen: true, publishersOpen: true });
-    expect((await call(request("GET", "/api/plans", { token: null }), open)).body).toMatchObject({ servers: true, serversOpen: true, publishersOpen: true });
+    expect((await call(request("GET", "/api/plans", { token: null }), open)).body).toMatchObject({
+      servers: true,
+      serversOpen: true,
+      publishersOpen: true,
+    });
     // A hold on a tier: coming soon, whatever the stage's file once said.
-    const held = deps(memoryStore(), { releaseGates: async () => ({ servers: false, publishers: false }), guilds: memoryGuilds(), discord: { ...bot } });
+    const held = deps(memoryStore(), {
+      releaseGates: async () => ({ servers: false, publishers: false }),
+      guilds: memoryGuilds(),
+      discord: { ...bot },
+    });
     expect((await call(request("GET", "/api/me"), held)).body).toMatchObject({ serversOpen: false, publishersOpen: false });
     expect((await call(request("GET", "/api/guilds"), held)).body).toMatchObject({ open: false });
     // Behind a hold, a Checkout for the tier is refused, and so is becoming a publisher where plans gate; an existing publisher is untouched.
     const stripe = fakeStripe();
-    const gated = deps(memoryStore(), { gates: true, stripe: async () => stripe, prices: { "server-monthly": "price_server", "hosted-monthly": "price_hosted", "plus-monthly": "price_plus" }, releaseGates: async () => ({ servers: false, publishers: false }), guilds: memoryGuilds(), discord: bot });
+    const gated = deps(memoryStore(), {
+      gates: true,
+      stripe: async () => stripe,
+      prices: { "server-monthly": "price_server", "hosted-monthly": "price_hosted", "plus-monthly": "price_plus" },
+      releaseGates: async () => ({ servers: false, publishers: false }),
+      guilds: memoryGuilds(),
+      discord: bot,
+    });
     expect((await call(request("POST", "/api/billing/checkout", { body: { price: "server-monthly" } }), gated)).status).toBe(403);
     expect((await call(request("POST", "/api/billing/checkout", { body: { price: "hosted-monthly" } }), gated)).status).toBe(403);
     expect((await call(request("POST", "/api/billing/checkout", { body: { price: "plus-monthly" } }), gated)).status).toBe(200);
@@ -832,7 +927,12 @@ describe("who is asking", () => {
 
   it("carries where a pack came from, and which marketplace entry, without reading them", async () => {
     const d = deps();
-    const put = await call(request("PUT", "/api/packs/p", { body: { ...packBody, origin: "marketplace", marketplace: { id: "dev.runlog.kiln", version: "1.2.0" } } }), d);
+    const put = await call(
+      request("PUT", "/api/packs/p", {
+        body: { ...packBody, origin: "marketplace", marketplace: { id: "dev.runlog.kiln", version: "1.2.0" } },
+      }),
+      d,
+    );
     expect(put.status).toBe(200);
     const got = await call(request("GET", "/api/packs/p"), d);
     expect(got.body["pack"]).toMatchObject({ origin: "marketplace", marketplace: { id: "dev.runlog.kiln", version: "1.2.0" } });
@@ -840,8 +940,13 @@ describe("who is asking", () => {
     expect((manifest.body["packs"] as Array<Record<string, unknown>>)[0]).toMatchObject({ origin: "marketplace" });
     // A client written before the field was renamed is understood, and what
     // it sent is kept under the name the field has now.
-    await call(request("PUT", "/api/packs/old", { body: { ...packBody, origin: "catalog", catalog: { id: "dev.runlog.kiln", version: "1.2.0" } } }), d);
-    expect((await call(request("GET", "/api/packs/old"), d)).body["pack"]).toMatchObject({ marketplace: { id: "dev.runlog.kiln", version: "1.2.0" } });
+    await call(
+      request("PUT", "/api/packs/old", { body: { ...packBody, origin: "catalog", catalog: { id: "dev.runlog.kiln", version: "1.2.0" } } }),
+      d,
+    );
+    expect((await call(request("GET", "/api/packs/old"), d)).body["pack"]).toMatchObject({
+      marketplace: { id: "dev.runlog.kiln", version: "1.2.0" },
+    });
     expect((await call(request("PUT", "/api/packs/q", { body: { ...packBody, origin: "stolen" } }), d)).status).toBe(422);
     expect((await call(request("PUT", "/api/packs/q", { body: { ...packBody, marketplace: { id: "x" } } }), d)).status).toBe(422);
     // Without them, nothing is invented.
@@ -873,14 +978,24 @@ describe("who is asking", () => {
     await call(request("PUT", "/api/me/profile", { body: { name: "Ada" } }), d);
     await call(request("PUT", "/api/me/profile", { body: { name: "Ben" } }), guest);
 
-    const made = await call(request("POST", "/api/races", { body: { id: "R1", packId: "p", packVersion: "1", packTitle: "The Pack", mode: "race", seed: "winter", sessionId: "01RUN" } }), d);
+    const made = await call(
+      request("POST", "/api/races", {
+        body: { id: "R1", packId: "p", packVersion: "1", packTitle: "The Pack", mode: "race", seed: "winter", sessionId: "01RUN" },
+      }),
+      d,
+    );
     expect(made.status).toBe(200);
     const race = made.body["race"] as Record<string, unknown>;
     expect(race).toMatchObject({ id: "R1", mode: "race", seed: "winter", ownerSub: "user_1" });
     expect(String(race["code"])).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
     expect(made.body["entries"]).toEqual([{ sub: "user_1", name: "Ada", sessionId: "01RUN", joinedAt: "2026-09-06T12:00:00.000Z" }]);
-    expect((await call(request("POST", "/api/races", { body: { id: "R1", packId: "p", packVersion: "1", mode: "race", seed: "x" } }), d)).status).toBe(409);
-    expect((await call(request("POST", "/api/races", { body: { id: "R2", packId: "p", packVersion: "1", mode: "race", seed: "  " } }), d)).status).toBe(422);
+    expect(
+      (await call(request("POST", "/api/races", { body: { id: "R1", packId: "p", packVersion: "1", mode: "race", seed: "x" } }), d)).status,
+    ).toBe(409);
+    expect(
+      (await call(request("POST", "/api/races", { body: { id: "R2", packId: "p", packVersion: "1", mode: "race", seed: "  " } }), d))
+        .status,
+    ).toBe(422);
 
     // A stranger sees nothing; a code lets them in, however it was typed.
     expect((await call(request("GET", "/api/races/R1"), guest)).body).toEqual({ found: false });
@@ -892,10 +1007,18 @@ describe("who is asking", () => {
     expect(rung).toEqual(["R1"]);
 
     // Progress, and its shape.
-    const progress = await call(request("PUT", "/api/races/R1/entries/me", { body: { sessionId: "02RUN", progress: { unit: 2, unitsDone: 1, status: "active", elapsedMs: 61234.7 } } }), guest);
+    const progress = await call(
+      request("PUT", "/api/races/R1/entries/me", {
+        body: { sessionId: "02RUN", progress: { unit: 2, unitsDone: 1, status: "active", elapsedMs: 61234.7 } },
+      }),
+      guest,
+    );
     expect(progress.status).toBe(200);
     const ben = (progress.body["entries"] as Array<Record<string, unknown>>).find((e) => e["sub"] === "user_2");
-    expect(ben).toMatchObject({ sessionId: "02RUN", progress: { unit: 2, unitsDone: 1, status: "active", elapsedMs: 61235, updatedAt: "2026-09-06T12:00:00.000Z" } });
+    expect(ben).toMatchObject({
+      sessionId: "02RUN",
+      progress: { unit: 2, unitsDone: 1, status: "active", elapsedMs: 61235, updatedAt: "2026-09-06T12:00:00.000Z" },
+    });
     expect((await call(request("PUT", "/api/races/R1/entries/me", { body: { progress: { unit: -1 } } }), guest)).status).toBe(422);
     expect(rung).toEqual(["R1", "R1"]);
 
@@ -911,21 +1034,38 @@ describe("who is asking", () => {
     expect(ended.body["race"]).toMatchObject({ name: "Friday" });
     expect((ended.body["race"] as Record<string, unknown>)["endedAt"]).toBeTruthy();
     // Nobody joins an ended race.
-    expect((await call(request("POST", "/api/races/join", { body: { code: String(race["code"]) } }), { ...d, verify: async () => ({ sub: "user_3", sid: "s3" }) })).status).toBe(410);
+    expect(
+      (
+        await call(request("POST", "/api/races/join", { body: { code: String(race["code"]) } }), {
+          ...d,
+          verify: async () => ({ sub: "user_3", sid: "s3" }),
+        })
+      ).status,
+    ).toBe(410);
   });
 
   it("says billing is off, and gates nothing, until Stripe is configured", async () => {
     const d = deps();
     expect((await call(request("GET", "/api/me"), d)).body["gates"]).toBe(false);
-    expect((await call(request("POST", "/api/billing/checkout", { body: { price: "plus-monthly" } }), d)).body).toEqual({ available: false });
+    expect((await call(request("POST", "/api/billing/checkout", { body: { price: "plus-monthly" } }), d)).body).toEqual({
+      available: false,
+    });
     expect((await call(request("POST", "/api/billing/portal"), d)).body).toEqual({ available: false });
-    expect((await call(request("POST", "/api/stripe/webhook", { token: null, body: { id: "evt_1" } }), d)).body).toEqual({ available: false });
+    expect((await call(request("POST", "/api/stripe/webhook", { token: null, body: { id: "evt_1" } }), d)).body).toEqual({
+      available: false,
+    });
   });
 
   it("makes a customer once, sends a person to Checkout and the Portal, and re-reads what they have", async () => {
     const stripe = fakeStripe();
     const billing = memoryBilling();
-    const d = deps(memoryStore(), { billing, gates: true, stripe: async () => stripe, prices: { "plus-monthly": "price_m", "plus-yearly": "price_y" }, appUrl: "https://runlog.example/" });
+    const d = deps(memoryStore(), {
+      billing,
+      gates: true,
+      stripe: async () => stripe,
+      prices: { "plus-monthly": "price_m", "plus-yearly": "price_y" },
+      appUrl: "https://runlog.example/",
+    });
     await call(request("PUT", "/api/me/profile", { body: { name: "Ada", email: "ada@example.com" } }), d);
     const checkout = await call(request("POST", "/api/billing/checkout", { body: { price: "plus-yearly" } }), d);
     expect(checkout.status).toBe(200);
@@ -946,17 +1086,26 @@ describe("who is asking", () => {
     const billing = memoryBilling();
     await billing.setCustomer("user_1", "cus_user_1", "");
     const d = deps(memoryStore(), { billing, stripe: async () => stripe, webhookSecret: async () => "whsec_test" });
-    const summary = { id: "evt_1", type: "entitlements.active_entitlement_summary.updated", data: { object: { customer: "cus_user_1", entitlements: { data: [{ lookup_key: "plus" }, { lookup_key: "hosted-licensing" }] } } } };
-    const hook = (body: unknown, signature = "good") => request("POST", "/api/stripe/webhook", { token: null, body, headers: { "stripe-signature": signature } });
+    const summary = {
+      id: "evt_1",
+      type: "entitlements.active_entitlement_summary.updated",
+      data: { object: { customer: "cus_user_1", entitlements: { data: [{ lookup_key: "plus" }, { lookup_key: "hosted-licensing" }] } } },
+    };
+    const hook = (body: unknown, signature = "good") =>
+      request("POST", "/api/stripe/webhook", { token: null, body, headers: { "stripe-signature": signature } });
     expect((await call(hook(summary, "forged"), d)).status).toBe(401);
     const first = await call(hook(summary), d);
     expect(first.status).toBe(200);
     expect(first.body).toEqual({ applied: true, features: ["plus", "hosted-licensing"] });
     expect(billing.rows.get("user_1")).toEqual(["plus", "hosted-licensing"]);
     expect((await call(hook(summary), d)).body).toEqual({ duplicate: true });
-    expect((await call(hook({ id: "evt_2", type: "customer.created", data: { object: {} } }), d)).body).toEqual({ ignored: "customer.created" });
+    expect((await call(hook({ id: "evt_2", type: "customer.created", data: { object: {} } }), d)).body).toEqual({
+      ignored: "customer.created",
+    });
     // A customer nobody here knows: taken, not applied.
-    expect((await call(hook({ ...summary, id: "evt_3", data: { object: { ...summary.data.object, customer: "cus_stranger" } } }), d)).body).toEqual({ applied: false });
+    expect(
+      (await call(hook({ ...summary, id: "evt_3", data: { object: { ...summary.data.object, customer: "cus_stranger" } } }), d)).body,
+    ).toEqual({ applied: false });
   });
 
   it("asks for Plus to host a table where plans are on, and for nothing where they are off", async () => {
@@ -970,9 +1119,21 @@ describe("who is asking", () => {
     const refused = await call(request("POST", "/api/sessions/01RUN/invites", { body: { email: "b@example.com" } }), gated);
     expect(refused.status).toBe(402);
     expect(refused.body).toMatchObject({ plan: "plus", upgrade: true });
-    expect((await call(request("POST", "/api/races", { body: { id: "R1", packId: "p", packVersion: "1", mode: "race", seed: "s" } }), gated)).status).toBe(402);
+    expect(
+      (await call(request("POST", "/api/races", { body: { id: "R1", packId: "p", packVersion: "1", mode: "race", seed: "s" } }), gated))
+        .status,
+    ).toBe(402);
     // Moderated play on one device is not hosting a table: nothing there is gated.
-    expect((await call(request("POST", "/api/sessions/01RUN/events", { body: { events: [{ t: "ContestantAdded", at: "2026-09-06T12:00:00Z", id: "e9", contestant: "c1", name: "Ada" }] } }), gated)).status).toBe(200);
+    expect(
+      (
+        await call(
+          request("POST", "/api/sessions/01RUN/events", {
+            body: { events: [{ t: "ContestantAdded", at: "2026-09-06T12:00:00Z", id: "e9", contestant: "c1", name: "Ada" }] },
+          }),
+          gated,
+        )
+      ).status,
+    ).toBe(200);
     // A "plus" feature flag on the session is as good as the subscription: a friend testing, a comped account.
     const flagged = { ...gated, verify: async () => ({ sub: "user_1", sid: "s1", flags: ["plus"] }) };
     expect((await call(request("POST", "/api/sessions/01RUN/invites", { body: { email: "c@example.com" } }), flagged)).status).toBe(200);
@@ -980,19 +1141,33 @@ describe("who is asking", () => {
 
     await billing.putEntitlements("user_1", ["plus"], "");
     expect((await call(request("POST", "/api/sessions/01RUN/invites", { body: { email: "b@example.com" } }), gated)).status).toBe(200);
-    expect((await call(request("POST", "/api/races", { body: { id: "R1", packId: "p", packVersion: "1", mode: "race", seed: "s" } }), gated)).status).toBe(200);
+    expect(
+      (await call(request("POST", "/api/races", { body: { id: "R1", packId: "p", packVersion: "1", mode: "race", seed: "s" } }), gated))
+        .status,
+    ).toBe(200);
   });
 
   it("makes a publisher once, an organization with its founder in it, and sets up its payouts", async () => {
     const workos = fakeWorkOS();
     const stripe = fakeStripe();
     const publishers = memoryPublishers();
-    const d = deps(memoryStore(), { publishers, workos: async () => workos, stripe: async () => stripe, appUrl: "https://runlog.example/" });
+    const d = deps(memoryStore(), {
+      publishers,
+      workos: async () => workos,
+      stripe: async () => stripe,
+      appUrl: "https://runlog.example/",
+    });
     expect((await call(request("GET", "/api/publishers/me"), d)).body).toEqual({ publisher: null });
     expect((await call(request("POST", "/api/publishers", { body: { name: " " } }), d)).status).toBe(422);
     const made = await call(request("POST", "/api/publishers", { body: { name: "Kiln Press" } }), d);
     expect(made.status).toBe(200);
-    expect(made.body["publisher"]).toMatchObject({ id: "org_kiln-press", name: "Kiln Press", owner: true, connectStarted: false, connectReady: false });
+    expect(made.body["publisher"]).toMatchObject({
+      id: "org_kiln-press",
+      name: "Kiln Press",
+      owner: true,
+      connectStarted: false,
+      connectReady: false,
+    });
     expect(workos.calls).toEqual(["org Kiln Press", "member org_kiln-press user_1 admin"]);
     expect((await call(request("POST", "/api/publishers", { body: { name: "Again" } }), d)).status).toBe(409);
 
@@ -1001,10 +1176,15 @@ describe("who is asking", () => {
     expect(connect.body["url"]).toBe("https://connect.stripe.test/acct_org_kiln-press");
     await call(request("POST", "/api/publishers/connect"), d);
     expect(stripe.calls.filter((c) => c.startsWith("connect"))).toEqual(["connect org_kiln-press"]);
-    expect((await call(request("POST", "/api/publishers/connect/refresh"), d)).body["publisher"]).toMatchObject({ connectStarted: true, connectReady: false });
+    expect((await call(request("POST", "/api/publishers/connect/refresh"), d)).body["publisher"]).toMatchObject({
+      connectStarted: true,
+      connectReady: false,
+    });
     stripe.ready = true;
     expect((await call(request("POST", "/api/publishers/connect/refresh"), d)).body["publisher"]).toMatchObject({ connectReady: true });
-    expect((await call(request("POST", "/api/publishers/dashboard"), d)).body["url"]).toBe("https://dashboard.stripe.test/acct_org_kiln-press");
+    expect((await call(request("POST", "/api/publishers/dashboard"), d)).body["url"]).toBe(
+      "https://dashboard.stripe.test/acct_org_kiln-press",
+    );
 
     // The claim of a signing key names the publisher, to anyone.
     const nonce = (await call(request("POST", "/api/claims/nonce"), d)).body["nonce"] as string;
@@ -1031,7 +1211,11 @@ describe("who is asking", () => {
     // Ben accepts in WorkOS; his first visit writes him in here, as a member who cannot invite.
     workos.accept("org_kiln-press", "user_2", "member");
     const ben = { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) };
-    expect((await call(request("GET", "/api/publishers/me"), ben)).body["publisher"]).toMatchObject({ id: "org_kiln-press", owner: false, role: "member" });
+    expect((await call(request("GET", "/api/publishers/me"), ben)).body["publisher"]).toMatchObject({
+      id: "org_kiln-press",
+      owner: false,
+      role: "member",
+    });
     expect((await call(request("POST", "/api/publishers/members/invite", { body: { email: "cy@example.com" } }), ben)).status).toBe(422);
     expect((await call(request("GET", "/api/publishers/members"), ben)).body["members"]).toHaveLength(2);
     // The founder revokes an invitation and removes a member; not themselves.
@@ -1046,7 +1230,9 @@ describe("who is asking", () => {
     expect(workos.calls).toContain("invite dee@example.com platform - by user_2");
     expect((await call(request("POST", "/api/invitations", { body: { email: "nope" } }), ben)).status).toBe(422);
     // The sender sees what they sent, and takes one back; nobody else can.
-    expect((await call(request("GET", "/api/invitations"), ben)).body["invitations"]).toMatchObject([{ email: "dee@example.com", state: "pending" }]);
+    expect((await call(request("GET", "/api/invitations"), ben)).body["invitations"]).toMatchObject([
+      { email: "dee@example.com", state: "pending" },
+    ]);
     expect((await call(request("GET", "/api/invitations"), d)).body["invitations"]).toEqual([]);
     expect((await call(request("DELETE", "/api/invitations/inv_2"), d)).body).toEqual({ found: false });
     expect((await call(request("DELETE", "/api/invitations/inv_2"), ben)).body).toEqual({ revoked: true });
@@ -1060,12 +1246,32 @@ describe("who is asking", () => {
     const listings = memoryListings();
     const sales = memorySales();
     let refs = 0;
-    const d = deps(memoryStore(), { billing, publishers, listings, sales, stripe: async () => stripe, appUrl: "https://runlog.example/", ref: () => `REF${++refs}` });
+    const d = deps(memoryStore(), {
+      billing,
+      publishers,
+      listings,
+      sales,
+      stripe: async () => stripe,
+      appUrl: "https://runlog.example/",
+      ref: () => `REF${++refs}`,
+    });
     const flagged = { ...d, verify: async () => ({ sub: "user_1", sid: "s1", flags: ["hosted-licensing"] }) };
     await call(request("POST", "/api/publishers", { body: { name: "Kiln Press" } }), d);
     await publishers.setConnect((await publishers.publisherOf("user_1"))!.id, "", { connectAccountId: "acct_1", connectReady: true });
-    const head = { title: "The Long Kiln", version: "1.0.0", category: "craft", tags: [], features: ["solo"], requires: [], players: 1, license: { id: "proprietary", redistributable: false } };
-    await call(request("PUT", "/api/publishers/packs/com.example.kiln", { body: { source: "id: com.example.kiln\n", head, summary: null } }), d);
+    const head = {
+      title: "The Long Kiln",
+      version: "1.0.0",
+      category: "craft",
+      tags: [],
+      features: ["solo"],
+      requires: [],
+      players: 1,
+      license: { id: "proprietary", redistributable: false },
+    };
+    await call(
+      request("PUT", "/api/publishers/packs/com.example.kiln", { body: { source: "id: com.example.kiln\n", head, summary: null } }),
+      d,
+    );
     await call(request("POST", "/api/publishers/packs/com.example.kiln/listing", { body: { amount: 1000 } }), d);
     // The publisher's session carried the flag once: /api/me remembers it.
     expect((await call(request("GET", "/api/me"), flagged)).body["entitlements"]).toEqual(["hosted-licensing"]);
@@ -1078,7 +1284,17 @@ describe("who is asking", () => {
     const stripe = fakeStripe();
     const publishers = memoryPublishers();
     const d = deps(memoryStore(), { publishers, stripe: async () => stripe });
-    const head = { title: "The Long Kiln", version: "1.0.0", author: "Runlog", category: "Craft", tags: ["pottery"], features: ["solo"], requires: [{ label: "A wheel", kind: "equipment", optional: false }], players: 1, license: { id: "MIT", redistributable: true } };
+    const head = {
+      title: "The Long Kiln",
+      version: "1.0.0",
+      author: "Runlog",
+      category: "Craft",
+      tags: ["pottery"],
+      features: ["solo"],
+      requires: [{ label: "A wheel", kind: "equipment", optional: false }],
+      players: 1,
+      license: { id: "MIT", redistributable: true },
+    };
     const upload = { source: "id: com.example.kiln\ntitle: The Long Kiln\n", head, summary: { kind: "summary", blocks: [] } };
     // Not a publisher yet: nothing to upload to.
     expect((await call(request("PUT", "/api/publishers/packs/com.example.kiln", { body: upload }), d)).body).toEqual({ publisher: null });
@@ -1086,8 +1302,15 @@ describe("who is asking", () => {
 
     const put = await call(request("PUT", "/api/publishers/packs/com.example.kiln", { body: upload }), d);
     expect(put.status).toBe(200);
-    expect(put.body["pack"]).toMatchObject({ packId: "com.example.kiln", status: "draft", price: null, head: { title: "The Long Kiln", category: "craft" } });
-    expect((await call(request("PUT", "/api/publishers/packs/com.example.kiln", { body: { source: "x", head: { title: "T" } } }), d)).status).toBe(422);
+    expect(put.body["pack"]).toMatchObject({
+      packId: "com.example.kiln",
+      status: "draft",
+      price: null,
+      head: { title: "The Long Kiln", category: "craft" },
+    });
+    expect(
+      (await call(request("PUT", "/api/publishers/packs/com.example.kiln", { body: { source: "x", head: { title: "T" } } }), d)).status,
+    ).toBe(422);
     // Nothing listed yet: the feed is empty, and the pack is nobody's to read.
     expect((await call(request("GET", "/api/listings", { token: null }), d)).body).toEqual({ listings: [] });
     expect((await call(request("GET", "/api/listings/com.example.kiln", { token: null }), d)).body).toEqual({ found: false });
@@ -1107,7 +1330,10 @@ describe("who is asking", () => {
     expect((await call(request("POST", "/api/publishers/packs/com.example.kiln/listing", { body: { amount: 300 } }), d)).status).toBe(422);
     await publishers.setConnect((await publishers.publisherOf("user_1"))!.id, "", { connectAccountId: "acct_1", connectReady: true });
     expect((await call(request("POST", "/api/publishers/packs/com.example.kiln/listing", { body: { amount: 5 } }), d)).status).toBe(422);
-    const priced = await call(request("POST", "/api/publishers/packs/com.example.kiln/listing", { body: { amount: 300, currency: "USD" } }), d);
+    const priced = await call(
+      request("POST", "/api/publishers/packs/com.example.kiln/listing", { body: { amount: 300, currency: "USD" } }),
+      d,
+    );
     expect(priced.body["listing"]).toMatchObject({ price: { amount: 300, currency: "usd" } });
     expect(stripe.calls).toContain("listing acct_1 com.example.kiln 300 usd");
     expect((await call(request("GET", "/api/listings/com.example.kiln/file", { token: null }), d)).status).toBe(410);
@@ -1120,7 +1346,10 @@ describe("who is asking", () => {
 
     // A new upload refreshes the card; unlisting takes it off the feed and keeps the pack.
     await call(request("PUT", "/api/publishers/packs/com.example.kiln", { body: { ...upload, head: { ...head, version: "1.1.0" } } }), d);
-    expect(((await call(request("GET", "/api/listings", { token: null }), d)).body["listings"] as Array<{ head: { version: string } }>)[0]!.head.version).toBe("1.1.0");
+    expect(
+      ((await call(request("GET", "/api/listings", { token: null }), d)).body["listings"] as Array<{ head: { version: string } }>)[0]!.head
+        .version,
+    ).toBe("1.1.0");
     await call(request("DELETE", "/api/publishers/packs/com.example.kiln/listing"), d);
     expect((await call(request("GET", "/api/listings", { token: null }), d)).body).toEqual({ listings: [] });
     expect(((await call(request("GET", "/api/publishers/packs"), d)).body["packs"] as Array<{ status: string }>)[0]!.status).toBe("draft");
@@ -1134,25 +1363,45 @@ describe("who is asking", () => {
     const publishers = memoryPublishers();
     const workos = fakeWorkOS();
     const d = deps(memoryStore(), { publishers, stripe: async () => stripe, workos: async () => workos });
-    const head = { title: "The Long Kiln", version: "1.0.0", category: "Craft", tags: ["pottery"], features: ["solo"], requires: [], players: 1, license: { id: "MIT", redistributable: true } };
+    const head = {
+      title: "The Long Kiln",
+      version: "1.0.0",
+      category: "Craft",
+      tags: ["pottery"],
+      features: ["solo"],
+      requires: [],
+      players: 1,
+      license: { id: "MIT", redistributable: true },
+    };
     await call(request("POST", "/api/publishers", { body: { name: "Kiln Press" } }), d);
-    await call(request("PUT", "/api/publishers/packs/com.example.kiln", { body: { source: "id: com.example.kiln\ntitle: The Long Kiln\n", head, summary: { kind: "summary", blocks: [] } } }), d);
+    await call(
+      request("PUT", "/api/publishers/packs/com.example.kiln", {
+        body: { source: "id: com.example.kiln\ntitle: The Long Kiln\n", head, summary: { kind: "summary", blocks: [] } },
+      }),
+      d,
+    );
     await call(request("POST", "/api/publishers/packs/com.example.kiln/listing", { body: {} }), d);
-    expect((await call(request("GET", "/api/listings", { token: null }), d)).body).toMatchObject({ listings: [{ publisherName: "Kiln Press" }] });
+    expect((await call(request("GET", "/api/listings", { token: null }), d)).body).toMatchObject({
+      listings: [{ publisherName: "Kiln Press" }],
+    });
 
     // The name changes on the publisher, in WorkOS, and on the card the
     // marketplace actually reads; the answer says how many cards it touched.
     const renamed = await call(request("PATCH", "/api/publishers", { body: { name: "Cinder & Salt" } }), d);
     expect(renamed.body).toMatchObject({ publisher: { name: "Cinder & Salt" }, listings: 1 });
     expect(workos.calls).toContain("rename org_kiln-press Cinder & Salt");
-    expect((await call(request("GET", "/api/listings", { token: null }), d)).body).toMatchObject({ listings: [{ publisherName: "Cinder & Salt" }] });
+    expect((await call(request("GET", "/api/listings", { token: null }), d)).body).toMatchObject({
+      listings: [{ publisherName: "Cinder & Salt" }],
+    });
     expect((await call(request("GET", "/api/publishers/me"), d)).body).toMatchObject({ publisher: { name: "Cinder & Salt" } });
 
     // The same name again is not a rename, and an empty one is refused.
     expect((await call(request("PATCH", "/api/publishers", { body: { name: " Cinder & Salt " } }), d)).body).toMatchObject({ listings: 0 });
     expect((await call(request("PATCH", "/api/publishers", { body: { name: "  " } }), d)).status).toBe(422);
     // Somebody who is not an admin of it does not rename it.
-    expect((await call(request("PATCH", "/api/publishers", { body: { name: "Theirs" }, token: "guest" }), d)).body).toEqual({ publisher: null });
+    expect((await call(request("PATCH", "/api/publishers", { body: { name: "Theirs" }, token: "guest" }), d)).body).toEqual({
+      publisher: null,
+    });
   });
 
   it("sells a pack: a Checkout on the publisher's account, a sealed copy for the buyer alone, a receipt, and a ledger", async () => {
@@ -1162,14 +1411,32 @@ describe("who is asking", () => {
     const sales = memorySales();
     const mail = fakeMail();
     let refs = 0;
-    const d = deps(memoryStore(), { publishers, listings, sales, stripe: async () => stripe, mailer: mail.mailer, appUrl: "https://runlog.example/", connectWebhookSecret: async () => "whsec_connect", ref: () => `REF${++refs}` });
+    const d = deps(memoryStore(), {
+      publishers,
+      listings,
+      sales,
+      stripe: async () => stripe,
+      mailer: mail.mailer,
+      appUrl: "https://runlog.example/",
+      connectWebhookSecret: async () => "whsec_connect",
+      ref: () => `REF${++refs}`,
+    });
     const buyer = { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) };
     // The publisher, set up, with a priced pack.
     await call(request("PUT", "/api/me/profile", { body: { name: "Kiln Press", email: "press@example.com" } }), d);
     await call(request("POST", "/api/publishers", { body: { name: "Kiln Press" } }), d);
     await publishers.setConnect((await publishers.publisherOf("user_1"))!.id, "", { connectAccountId: "acct_1", connectReady: true });
-    const source = "id: com.example.kiln\ntitle: The Long Kiln\nversion: \"1.0.0\"\n";
-    const head = { title: "The Long Kiln", version: "1.0.0", category: "craft", tags: [], features: ["solo"], requires: [], players: 1, license: { id: "proprietary", redistributable: false } };
+    const source = 'id: com.example.kiln\ntitle: The Long Kiln\nversion: "1.0.0"\n';
+    const head = {
+      title: "The Long Kiln",
+      version: "1.0.0",
+      category: "craft",
+      tags: [],
+      features: ["solo"],
+      requires: [],
+      players: 1,
+      license: { id: "proprietary", redistributable: false },
+    };
     await call(request("PUT", "/api/publishers/packs/com.example.kiln", { body: { source, head, summary: null } }), d);
     await call(request("POST", "/api/publishers/packs/com.example.kiln/listing", { body: { amount: 1000 } }), d);
 
@@ -1185,8 +1452,18 @@ describe("who is asking", () => {
     expect((await call(request("POST", "/api/listings/nope/checkout"), buyer)).body).toEqual({ found: false });
 
     // Stripe says it was paid: sealed, filed, mailed.
-    const paid = { id: "evt_c1", type: "checkout.session.completed", account: "acct_1", data: { object: { id: "cs_REF1", metadata: { sale_ref: "REF1" }, customer_details: { email: "ben@example.com" } } } };
-    const hook = (body: unknown, signature = "good", id?: string) => request("POST", "/api/stripe/connect-webhook", { token: null, body: id ? { ...(body as object), id } : body, headers: { "stripe-signature": signature } });
+    const paid = {
+      id: "evt_c1",
+      type: "checkout.session.completed",
+      account: "acct_1",
+      data: { object: { id: "cs_REF1", metadata: { sale_ref: "REF1" }, customer_details: { email: "ben@example.com" } } },
+    };
+    const hook = (body: unknown, signature = "good", id?: string) =>
+      request("POST", "/api/stripe/connect-webhook", {
+        token: null,
+        body: id ? { ...(body as object), id } : body,
+        headers: { "stripe-signature": signature },
+      });
     expect((await call(hook(paid, "forged"), d)).status).toBe(401);
     expect((await call(hook(paid), d)).body).toEqual({ applied: true, ref: "REF1" });
     expect((await call(hook(paid), d)).body).toEqual({ duplicate: true });
@@ -1198,7 +1475,10 @@ describe("who is asking", () => {
     const token = new URL(mail.receipts[0]!.link).searchParams.get("t")!;
 
     // The buyer's account holds the key; the purchase and the file are theirs.
-    expect((await call(request("GET", "/api/licenses/com.example.kiln"), buyer)).body).toMatchObject({ found: true, license: { key, ref: "REF1" } });
+    expect((await call(request("GET", "/api/licenses/com.example.kiln"), buyer)).body).toMatchObject({
+      found: true,
+      license: { key, ref: "REF1" },
+    });
     const mine = await call(request("GET", "/api/me/purchases"), buyer);
     expect(mine.body["purchases"]).toMatchObject([{ ref: "REF1", status: "fulfilled", key }]);
     // Buying it again is refused: the copy is already theirs.
@@ -1212,7 +1492,12 @@ describe("who is asking", () => {
     expect(await open(bytes, key)).toMatchObject({ id: "com.example.kiln" });
     // The publisher releases a new version: the same key opens the copy as it now stands.
     const newer = ["id: com.example.kiln", "title: The Long Kiln", 'version: "1.1.0"', ""].join("\n");
-    await call(request("PUT", "/api/publishers/packs/com.example.kiln", { body: { source: newer, head: { ...head, version: "1.1.0" }, summary: null } }), d);
+    await call(
+      request("PUT", "/api/publishers/packs/com.example.kiln", {
+        body: { source: newer, head: { ...head, version: "1.1.0" }, summary: null },
+      }),
+      d,
+    );
     const fresh = await route(request("GET", "/api/purchases/REF1/file"), buyer);
     const freshBytes = Buffer.from(typeof fresh === "string" ? "" : (fresh.body ?? ""), "base64");
     expect(await open(freshBytes, key)).toMatchObject({ id: "com.example.kiln", version: "1.1.0" });
@@ -1224,13 +1509,17 @@ describe("who is asking", () => {
 
     // The ledger: the sale, a reissue that mails the same key again, a revocation that closes the file.
     const ledger = await call(request("GET", "/api/publishers/sales"), d);
-    expect(ledger.body["sales"]).toMatchObject([{ ref: "REF1", buyerEmail: "ben@example.com", amount: 1000, fee: 50, status: "fulfilled", key }]);
+    expect(ledger.body["sales"]).toMatchObject([
+      { ref: "REF1", buyerEmail: "ben@example.com", amount: 1000, fee: 50, status: "fulfilled", key },
+    ]);
     expect((await call(request("GET", "/api/publishers/sales"), buyer)).body).toEqual({ publisher: null });
     const reissued = await call(request("POST", "/api/publishers/sales/REF1/reissue"), d);
     expect(reissued.status).toBe(200);
     expect(mail.receipts).toHaveLength(2);
     expect(mail.receipts[1]!.key).toBe(key);
-    expect((await call(request("GET", `/api/purchases/REF1/file?t=${encodeURIComponent(token)}`, { token: null }), d)).body).toEqual({ found: false });
+    expect((await call(request("GET", `/api/purchases/REF1/file?t=${encodeURIComponent(token)}`, { token: null }), d)).body).toEqual({
+      found: false,
+    });
     await call(request("POST", "/api/publishers/sales/REF1/revoke"), d);
     expect((await call(request("GET", "/api/purchases/REF1/file"), buyer)).status).toBe(410);
   });
@@ -1243,7 +1532,16 @@ describe("who is asking", () => {
     await call(request("POST", "/api/publishers", { body: { name: "P" } }), d);
     await publishers.setConnect((await publishers.publisherOf("user_1"))!.id, "", { connectAccountId: "acct_1", connectReady: true });
     await billing.putEntitlements("user_1", ["hosted-licensing"], "");
-    const head = { title: "T", version: "1", category: "other", tags: [], features: [], requires: [], players: 1, license: { id: "MIT", redistributable: true } };
+    const head = {
+      title: "T",
+      version: "1",
+      category: "other",
+      tags: [],
+      features: [],
+      requires: [],
+      players: 1,
+      license: { id: "MIT", redistributable: true },
+    };
     await call(request("PUT", "/api/publishers/packs/p", { body: { source: "id: p", head, summary: null } }), d);
     await call(request("POST", "/api/publishers/packs/p/listing", { body: { amount: 1000 } }), d);
     await call(request("POST", "/api/listings/p/checkout"), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) });
@@ -1253,7 +1551,9 @@ describe("who is asking", () => {
   it("passes Stripe's refusal of a connected account on as a 422, in its words", async () => {
     const stripe = fakeStripe();
     stripe.createConnectedAccount = async () => {
-      throw Object.assign(new Error("You can only create new accounts if you've signed up for Connect"), { type: "StripeInvalidRequestError" });
+      throw Object.assign(new Error("You can only create new accounts if you've signed up for Connect"), {
+        type: "StripeInvalidRequestError",
+      });
     };
     const d = deps(memoryStore(), { stripe: async () => stripe });
     await call(request("POST", "/api/publishers", { body: { name: "P" } }), d);
@@ -1268,19 +1568,33 @@ describe("who is asking", () => {
     await publishers.createPublisher({ id: "org_1", name: "P", ownerSub: "user_1" }, "");
     await publishers.setConnect("org_1", "", { connectAccountId: "acct_1" });
     const d = deps(memoryStore(), { publishers, stripe: async () => stripe, webhookSecret: async () => "whsec_test" });
-    const hook = (object: Record<string, unknown>, id = "evt_a") => request("POST", "/api/stripe/webhook", { token: null, body: { id, type: "account.updated", data: { object } }, headers: { "stripe-signature": "good" } });
+    const hook = (object: Record<string, unknown>, id = "evt_a") =>
+      request("POST", "/api/stripe/webhook", {
+        token: null,
+        body: { id, type: "account.updated", data: { object } },
+        headers: { "stripe-signature": "good" },
+      });
     expect((await call(hook({ id: "acct_1", charges_enabled: true, details_submitted: true }), d)).body).toEqual({ applied: true });
     expect((await publishers.getPublisher("org_1"))?.connectReady).toBe(true);
-    expect((await call(hook({ id: "acct_nobody", charges_enabled: true, details_submitted: true }, "evt_b"), d)).body).toEqual({ applied: false });
+    expect((await call(hook({ id: "acct_nobody", charges_enabled: true, details_submitted: true }, "evt_b"), d)).body).toEqual({
+      applied: false,
+    });
   });
 
   it("shares a run by link: a stranger reads the state, the pack only where its license allows, and nothing once revoked", async () => {
     const rung: string[] = [];
     const listings = memoryListings();
-    const d = deps(memoryStore(), { listings, notify: async (id) => void rung.push(id), appUrl: "https://runlog.example/", token: () => "livetok" });
+    const d = deps(memoryStore(), {
+      listings,
+      notify: async (id) => void rung.push(id),
+      appUrl: "https://runlog.example/",
+      token: () => "livetok",
+    });
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
     // Only the owner shares; the link carries the token, the session row its hash.
-    expect((await call(request("POST", "/api/sessions/01RUN/public"), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) })).body).toEqual({ found: false });
+    expect(
+      (await call(request("POST", "/api/sessions/01RUN/public"), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) })).body,
+    ).toEqual({ found: false });
     const shared = await call(request("POST", "/api/sessions/01RUN/public"), d);
     expect(shared.body).toEqual({ shared: true, token: "livetok", link: "https://runlog.example/r/01RUN?t=livetok" });
     // Sharing again leaves the link where it is; see the test below.
@@ -1293,7 +1607,10 @@ describe("who is asking", () => {
     expect(html).toContain('http-equiv="refresh" content="0; url=https://runlog.example/play/run/01RUN?t=livetok"');
     expect(html).toContain("og:title");
     expect(html).not.toContain("<script");
-    const closed = typeof (await route(request("GET", "/r/01RUN?t=nope", { token: null }), d)) === "string" ? "" : ((await route(request("GET", "/r/01RUN?t=nope", { token: null }), d)) as { body?: string }).body ?? "";
+    const closed =
+      typeof (await route(request("GET", "/r/01RUN?t=nope", { token: null }), d)) === "string"
+        ? ""
+        : (((await route(request("GET", "/r/01RUN?t=nope", { token: null }), d)) as { body?: string }).body ?? "");
     expect(closed).toContain("Not open");
     expect(closed).not.toContain("refresh");
     const seen = await call(request("GET", "/api/sessions/01RUN"), d);
@@ -1302,10 +1619,20 @@ describe("who is asking", () => {
     // A stranger with the wrong token sees nothing; with the right one, the state as a snapshot, since the owner's pack is not shareable.
     expect((await call(request("GET", "/api/public/runs/01RUN?t=nope", { token: null }), d)).body).toEqual({ found: false });
     const before = await call(request("GET", "/api/public/runs/01RUN?t=livetok", { token: null }), d);
-    expect(before.body).toMatchObject({ found: true, access: "snapshot", run: { id: "01RUN", packId: sessionBody.packId }, snapshot: null });
+    expect(before.body).toMatchObject({
+      found: true,
+      access: "snapshot",
+      run: { id: "01RUN", packId: sessionBody.packId },
+      snapshot: null,
+    });
     expect(JSON.stringify(before.body)).not.toContain("source");
     // The owner's device writes the snapshot after a move; watchers are rung.
-    const snapshot = { unit: 2, score: { label: "Days", text: "2 days", value: 2, better: "higher" }, latest: { where: "Day 2", text: "A dry wind." }, log: ["a move"] };
+    const snapshot = {
+      unit: 2,
+      score: { label: "Days", text: "2 days", value: 2, better: "higher" },
+      latest: { where: "Day 2", text: "A dry wind." },
+      log: ["a move"],
+    };
     expect((await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot } }), d)).body).toEqual({ kept: true });
     expect(rung).toContain("01RUN");
     const after = await call(request("GET", "/api/public/runs/01RUN?t=livetok", { token: null }), d);
@@ -1314,26 +1641,61 @@ describe("who is asking", () => {
     // snapshot carries passes through untouched: docs/stream-api.md promises a chat bot `score.text`
     // and `latest.text` without reducing anything, so the route must not pick fields.
     const metrics = await route(request("GET", "/api/public/runs/01RUN/metrics?t=livetok", { token: null }), d);
-    expect(typeof metrics !== "string" && metrics.headers).toMatchObject({ "access-control-allow-origin": "*", "cache-control": "no-store" });
+    expect(typeof metrics !== "string" && metrics.headers).toMatchObject({
+      "access-control-allow-origin": "*",
+      "cache-control": "no-store",
+    });
     const numbers = JSON.parse(typeof metrics === "string" ? "{}" : (metrics.body ?? "{}")) as Record<string, unknown>;
-    expect(numbers).toMatchObject({ found: true, ready: true, unit: 2, score: snapshot.score, latest: snapshot.latest, run: { id: "01RUN", packId: sessionBody.packId } });
+    expect(numbers).toMatchObject({
+      found: true,
+      ready: true,
+      unit: 2,
+      score: snapshot.score,
+      latest: snapshot.latest,
+      run: { id: "01RUN", packId: sessionBody.packId },
+    });
     expect(numbers).not.toHaveProperty("log");
     expect((await call(request("GET", "/api/public/runs/01RUN/metrics?t=nope", { token: null }), d)).body).toEqual({ found: false });
     // A pack whose license lets its text travel is handed over whole, with the log.
-    await call(request("PUT", `/api/packs/${sessionBody.packId}`, { body: { title: "Kiln", version: "1", format: "yaml", filename: "k.yaml", importedAt: "2026-01-01", updatedAt: "2026-01-01", hash: "h", source: "id: kiln\n", shareable: true } }), d);
+    await call(
+      request("PUT", `/api/packs/${sessionBody.packId}`, {
+        body: {
+          title: "Kiln",
+          version: "1",
+          format: "yaml",
+          filename: "k.yaml",
+          importedAt: "2026-01-01",
+          updatedAt: "2026-01-01",
+          hash: "h",
+          source: "id: kiln\n",
+          shareable: true,
+        },
+      }),
+      d,
+    );
     const full = await call(request("GET", "/api/public/runs/01RUN?t=livetok", { token: null }), d);
     expect(full.body).toMatchObject({ found: true, access: "full", pack: { format: "yaml", source: "id: kiln\n" } });
     expect(Array.isArray(full.body["events"])).toBe(true);
     // A watcher signed in takes a seat on their own account: the run follows them like an invited one.
     const guest = { ...d, verify: async () => ({ sub: "user_9", sid: "s9" }) };
     expect((await call(request("POST", "/api/public/runs/01RUN/watch?t=nope"), guest)).body).toEqual({ found: false });
-    expect((await call(request("POST", "/api/public/runs/01RUN/watch?t=livetok"), guest)).body).toEqual({ sessionId: "01RUN", role: "viewer" });
-    expect((await call(request("GET", "/api/sync/manifest"), guest)).body["sessions"]).toEqual(expect.arrayContaining([expect.objectContaining({ id: "01RUN", role: "viewer" })]));
+    expect((await call(request("POST", "/api/public/runs/01RUN/watch?t=livetok"), guest)).body).toEqual({
+      sessionId: "01RUN",
+      role: "viewer",
+    });
+    expect((await call(request("GET", "/api/sync/manifest"), guest)).body["sessions"]).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "01RUN", role: "viewer" })]),
+    );
     // The owner asking keeps their seat.
     expect((await call(request("POST", "/api/public/runs/01RUN/watch?t=livetok"), d)).body).toEqual({ sessionId: "01RUN", role: "owner" });
     // Anyone with the link reacts, with one of a few emoji; the table and the watchers see it.
-    expect((await call(request("POST", "/api/public/runs/01RUN/reactions?t=livetok", { token: null, body: { emoji: "🎉" } }), d)).status).toBe(422);
-    const reacted = await call(request("POST", "/api/public/runs/01RUN/reactions?t=livetok", { token: null, body: { emoji: "🔥", name: "Mira" } }), d);
+    expect(
+      (await call(request("POST", "/api/public/runs/01RUN/reactions?t=livetok", { token: null, body: { emoji: "🎉" } }), d)).status,
+    ).toBe(422);
+    const reacted = await call(
+      request("POST", "/api/public/runs/01RUN/reactions?t=livetok", { token: null, body: { emoji: "🔥", name: "Mira" } }),
+      d,
+    );
     expect(reacted.body["reactions"]).toEqual([{ emoji: "🔥", name: "Mira", at: expect.any(String) as unknown as string }]);
     expect((await call(request("GET", "/api/public/runs/01RUN?t=livetok", { token: null }), d)).body["reactions"]).toHaveLength(1);
     expect((await call(request("GET", "/api/sessions/01RUN/reactions"), d)).body["reactions"]).toHaveLength(1);
@@ -1341,7 +1703,9 @@ describe("who is asking", () => {
     const named = await call(request("PUT", "/api/me/profile", { body: { name: "Nate Ferrell", handle: "kilnkeeper" } }), d);
     // Choosing a name is remembered as a choice, and the seats this person holds show it from now on.
     expect((named.body["profile"] as Profile).handleSetAt).toEqual(expect.any(String));
-    expect((await call(request("GET", "/api/sessions/01RUN"), d)).body["members"]).toEqual(expect.arrayContaining([expect.objectContaining({ role: "owner", name: "kilnkeeper" })]));
+    expect((await call(request("GET", "/api/sessions/01RUN"), d)).body["members"]).toEqual(
+      expect.arrayContaining([expect.objectContaining({ role: "owner", name: "kilnkeeper" })]),
+    );
     expect((await call(request("PUT", "/api/me/profile", { body: { handle: "no@address.example" } }), d)).status).toBe(422);
     const fromTable = await call(request("POST", "/api/sessions/01RUN/reactions", { body: { emoji: "👏" } }), d);
     expect((fromTable.body["reactions"] as Array<{ name?: string }>).at(-1)).toMatchObject({ name: "kilnkeeper" });
@@ -1377,43 +1741,98 @@ describe("who is asking", () => {
     const told: Array<{ id: string; kind: string; data: Record<string, unknown> }> = [];
     const rung: string[] = [];
     let minted = 0;
-    const d = deps(memoryStore(), { notify: async (id) => void rung.push(id), tell: async (id, kind, data) => void told.push({ id, kind, data }), token: () => (minted += 1) === 1 ? "livetok" : "askkey" });
+    const d = deps(memoryStore(), {
+      notify: async (id) => void rung.push(id),
+      tell: async (id, kind, data) => void told.push({ id, kind, data }),
+      token: () => ((minted += 1) === 1 ? "livetok" : "askkey"),
+    });
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
     await call(request("POST", "/api/sessions/01RUN/public"), d);
     // Not taking asks yet: the live token is no key, and there is no key.
-    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=livetok", { token: null, body: { kind: "roll" } }), d)).status).toBe(403);
+    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=livetok", { token: null, body: { kind: "roll" } }), d)).status).toBe(
+      403,
+    );
     // Only the host mints one; the answer carries the key once, and the session says it is taking asks, never the hash.
-    expect((await call(request("POST", "/api/sessions/01RUN/ask-key"), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) })).body).toEqual({ found: false });
+    expect(
+      (await call(request("POST", "/api/sessions/01RUN/ask-key"), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) })).body,
+    ).toEqual({ found: false });
     const key = await call(request("POST", "/api/sessions/01RUN/ask-key", { body: { policy: "auto" } }), d);
     expect(key.body).toEqual({ key: "askkey", asks: { policy: "auto" } });
     const seen = await call(request("GET", "/api/sessions/01RUN"), d);
     expect(seen.body["session"]).toMatchObject({ shared: true, asks: { policy: "auto" } });
     expect(JSON.stringify(seen.body)).not.toContain("askKeyHash");
     // The live token still opens nothing here; the key does.
-    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=livetok", { token: null, body: { kind: "roll" } }), d)).status).toBe(403);
-    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "dance" } }), d)).status).toBe(422);
-    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "move" } }), d)).status).toBe(422);
-    const asked = await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "move", move: "died", name: "viewer_42", via: "channel-points" } }), d);
+    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=livetok", { token: null, body: { kind: "roll" } }), d)).status).toBe(
+      403,
+    );
+    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "dance" } }), d)).status).toBe(
+      422,
+    );
+    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "move" } }), d)).status).toBe(
+      422,
+    );
+    const asked = await call(
+      request("POST", "/api/public/runs/01RUN/asks?k=askkey", {
+        token: null,
+        body: { kind: "move", move: "died", name: "viewer_42", via: "channel-points" },
+      }),
+      d,
+    );
     expect(asked.status).toBe(200);
     const open = asked.body["asks"] as Ask[];
-    expect(open).toEqual([{ id: expect.any(String) as unknown as string, kind: "move", move: "died", name: "viewer_42", via: "channel-points", at: expect.any(String) as unknown as string }]);
+    expect(open).toEqual([
+      {
+        id: expect.any(String) as unknown as string,
+        kind: "move",
+        move: "died",
+        name: "viewer_42",
+        via: "channel-points",
+        at: expect.any(String) as unknown as string,
+      },
+    ]);
     // Everyone on the socket hears the ask as a gesture, with the policy, and the table is nudged to read.
-    expect(told).toEqual([{ id: "01RUN", kind: "ask", data: { ask: open[0]!.id, kind: "move", move: "died", name: "viewer_42", via: "channel-points", policy: "auto" } }]);
+    expect(told).toEqual([
+      {
+        id: "01RUN",
+        kind: "ask",
+        data: { ask: open[0]!.id, kind: "move", move: "died", name: "viewer_42", via: "channel-points", policy: "auto" },
+      },
+    ]);
     expect(rung).toContain("01RUN");
     // The same name again inside twenty seconds is too many.
-    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "roll", name: "viewer_42" } }), d)).status).toBe(429);
+    expect(
+      (await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "roll", name: "viewer_42" } }), d))
+        .status,
+    ).toBe(429);
     // The host reads the list and answers; the answer is kept beside the ask and told to the socket.
     expect((await call(request("GET", "/api/sessions/01RUN/asks"), d)).body["asks"]).toHaveLength(1);
-    expect((await call(request("POST", `/api/sessions/01RUN/asks/${open[0]!.id}`, { body: { answer: "accepted" } }), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) })).body).toEqual({ found: false });
+    expect(
+      (
+        await call(request("POST", `/api/sessions/01RUN/asks/${open[0]!.id}`, { body: { answer: "accepted" } }), {
+          ...d,
+          verify: async () => ({ sub: "user_2", sid: "s2" }),
+        })
+      ).body,
+    ).toEqual({ found: false });
     expect((await call(request("POST", `/api/sessions/01RUN/asks/${open[0]!.id}`, { body: { answer: "maybe" } }), d)).status).toBe(422);
-    const answered = await call(request("POST", `/api/sessions/01RUN/asks/${open[0]!.id}`, { body: { answer: "declined", reason: "no such move right now" } }), d);
+    const answered = await call(
+      request("POST", `/api/sessions/01RUN/asks/${open[0]!.id}`, { body: { answer: "declined", reason: "no such move right now" } }),
+      d,
+    );
     expect((answered.body["asks"] as Ask[])[0]).toMatchObject({ answer: "declined", reason: "no such move right now" });
     expect(told.at(-1)).toMatchObject({ kind: "asked", data: { ask: open[0]!.id, accepted: false, reason: "no such move right now" } });
-    expect((await call(request("POST", "/api/sessions/01RUN/asks/nothing", { body: { answer: "accepted" } }), d)).body).toEqual({ found: false });
+    expect((await call(request("POST", "/api/sessions/01RUN/asks/nothing", { body: { answer: "accepted" } }), d)).body).toEqual({
+      found: false,
+    });
     // The policy changes without a new key; the key is revoked on its own, and the live link stays.
-    expect((await call(request("PUT", "/api/sessions/01RUN/ask-key", { body: { policy: "ask" } }), d)).body).toEqual({ asks: { policy: "ask" } });
+    expect((await call(request("PUT", "/api/sessions/01RUN/ask-key", { body: { policy: "ask" } }), d)).body).toEqual({
+      asks: { policy: "ask" },
+    });
     expect((await call(request("DELETE", "/api/sessions/01RUN/ask-key"), d)).body).toEqual({ asks: null });
-    expect((await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "roll", name: "someone" } }), d)).status).toBe(403);
+    expect(
+      (await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "roll", name: "someone" } }), d))
+        .status,
+    ).toBe(403);
     expect((await call(request("GET", "/api/sessions/01RUN"), d)).body["session"]).toMatchObject({ shared: true, asks: null });
     expect((await call(request("PUT", "/api/sessions/01RUN/ask-key", { body: { policy: "auto" } }), d)).status).toBe(422);
   });
@@ -1422,7 +1841,10 @@ describe("who is asking", () => {
     const d = deps(memoryStore(), { token: () => "askkey" });
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
     await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
-    const got = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&kind=move&move=died&name=viewer_7&via=channel-points", { token: null }), d);
+    const got = await call(
+      request("GET", "/api/public/runs/01RUN/asks?k=askkey&kind=move&move=died&name=viewer_7&via=channel-points", { token: null }),
+      d,
+    );
     expect(got.status).toBe(200);
     expect(got.body["ok"]).toBe(true);
     expect((got.body["asks"] as Ask[])[0]).toMatchObject({ kind: "move", move: "died", name: "viewer_7", via: "channel-points" });
@@ -1452,7 +1874,14 @@ describe("who is asking", () => {
     const d = deps(memoryStore(), { token: () => "askkey" });
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
     await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
-    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: { v: 1, packTitle: "Any Given Day", asks: { roll: true, moves: [{ id: "salvage", label: "Salvage a Piece" }] } } } }), d);
+    await call(
+      request("PUT", "/api/sessions/01RUN/snapshot", {
+        body: {
+          snapshot: { v: 1, packTitle: "Any Given Day", asks: { roll: true, moves: [{ id: "salvage", label: "Salvage a Piece" }] } },
+        },
+      }),
+      d,
+    );
     const menu = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey", { token: null }), d);
     expect(menu.status).toBe(200);
     expect(menu.body["ok"]).toBe(true);
@@ -1474,7 +1903,10 @@ describe("who is asking", () => {
     const press = await call(request("POST", "/api/me/stream-keys", { body: { kind: "press" } }), d);
     expect(press.body["key"]).toBe("key2");
     const listed = await call(request("GET", "/api/me/stream-keys"), d);
-    expect(listed.body["keys"]).toMatchObject({ watch: { madeAt: expect.any(String) as unknown as string }, press: { madeAt: expect.any(String) as unknown as string } });
+    expect(listed.body["keys"]).toMatchObject({
+      watch: { madeAt: expect.any(String) as unknown as string },
+      press: { madeAt: expect.any(String) as unknown as string },
+    });
     expect(JSON.stringify(listed.body)).not.toContain("key1");
     // Minting again replaces: the old one opens nothing from that moment.
     await call(request("POST", "/api/me/stream-keys", { body: { kind: "watch" } }), d);
@@ -1482,7 +1914,9 @@ describe("who is asking", () => {
     expect((await call(request("GET", "/api/public/stream/runs?k=key3", { token: null }), d)).body["ok"]).toBe(true);
     // A kind that is not one of the two is refused, and either can be killed on its own.
     expect((await call(request("POST", "/api/me/stream-keys", { body: { kind: "both" } }), d)).status).toBe(422);
-    expect((await call(request("DELETE", "/api/me/stream-keys?kind=press"), d)).body).toEqual({ keys: { watch: { madeAt: expect.any(String) as unknown as string } } });
+    expect((await call(request("DELETE", "/api/me/stream-keys?kind=press"), d)).body).toEqual({
+      keys: { watch: { madeAt: expect.any(String) as unknown as string } },
+    });
   });
 
   it("reads the numbers of the run in play by a watch key, so no one picks a link apart for a token", async () => {
@@ -1504,7 +1938,9 @@ describe("who is asking", () => {
     expect(numbers.body["run"]).toMatchObject({ id: "01RUN", packTitle: "The Pack" });
     // A press key presses; it does not read.
     const press = await call(request("POST", "/api/me/stream-keys", { body: { kind: "press" } }), d);
-    expect((await call(request("GET", `/api/public/stream/metrics?k=${String(press.body["key"])}`, { token: null }), d)).body["ok"]).toBe(false);
+    expect((await call(request("GET", `/api/public/stream/metrics?k=${String(press.body["key"])}`, { token: null }), d)).body["ok"]).toBe(
+      false,
+    );
   });
 
   it("presses the run in play by the account's press key, so a bot is wired once and not once a run", async () => {
@@ -1545,7 +1981,9 @@ describe("who is asking", () => {
     expect(listed.body["inPlay"]).toBe("01RUN");
     // A press key is not a watch key: it opens nothing here.
     const press = await call(request("POST", "/api/me/stream-keys", { body: { kind: "press" } }), d);
-    expect((await call(request("GET", `/api/public/stream/runs?k=${String(press.body["key"])}`, { token: null }), d)).body["ok"]).toBe(false);
+    expect((await call(request("GET", `/api/public/stream/runs?k=${String(press.body["key"])}`, { token: null }), d)).body["ok"]).toBe(
+      false,
+    );
     // A run that is over leaves the list: a scene should not go on drawing last night's.
     await call(request("PATCH", "/api/sessions/01RUN", { body: { ended: true } }), d);
     const after = await call(request("GET", `/api/public/stream/runs?k=${k}`, { token: null }), d);
@@ -1557,7 +1995,14 @@ describe("who is asking", () => {
     const d = deps(memoryStore(), { token: () => "askkey" });
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
     await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
-    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: { v: 1, packTitle: "Any Given Day", asks: { roll: true, moves: [{ id: "salvage", label: "Salvage a Piece" }] } } } }), d);
+    await call(
+      request("PUT", "/api/sessions/01RUN/snapshot", {
+        body: {
+          snapshot: { v: 1, packTitle: "Any Given Day", asks: { roll: true, moves: [{ id: "salvage", label: "Salvage a Piece" }] } },
+        },
+      }),
+      d,
+    );
     const pressed = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&ask=salvage&name=viewer_9", { token: null }), d);
     const askId = String(pressed.body["ask"]);
     // Before the table has answered, the read says so rather than guessing.
@@ -1578,7 +2023,10 @@ describe("who is asking", () => {
     await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
     const pressed = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&kind=roll&name=viewer_10", { token: null }), d);
     const askId = String(pressed.body["ask"]);
-    await call(request("POST", `/api/sessions/01RUN/asks/${askId}`, { body: { answer: "declined", reason: "nothing to roll right now" } }), d);
+    await call(
+      request("POST", `/api/sessions/01RUN/asks/${askId}`, { body: { answer: "declined", reason: "nothing to roll right now" } }),
+      d,
+    );
     const said = await call(request("GET", `/api/public/runs/01RUN/asks?k=askkey&of=${askId}`, { token: null }), d);
     expect(said.body["answer"]).toBe("declined");
     expect(said.body["say"]).toContain("nothing to roll right now");
@@ -1592,7 +2040,14 @@ describe("who is asking", () => {
     const d = deps(memoryStore(), { token: () => "askkey" });
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
     await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
-    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: { v: 1, packTitle: "Any Given Day", asks: { roll: true, moves: [{ id: "salvage", label: "Salvage a Piece" }] } } } }), d);
+    await call(
+      request("PUT", "/api/sessions/01RUN/snapshot", {
+        body: {
+          snapshot: { v: 1, packTitle: "Any Given Day", asks: { roll: true, moves: [{ id: "salvage", label: "Salvage a Piece" }] } },
+        },
+      }),
+      d,
+    );
     // A reward named for the move takes it, whatever case the name is in.
     const byLabel = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&ask=salvage%20a%20piece&name=a", { token: null }), d);
     expect(byLabel.body["ok"]).toBe(true);
@@ -1607,7 +2062,14 @@ describe("who is asking", () => {
     const d = deps(memoryStore(), { token: () => "askkey" });
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
     await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
-    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: { v: 1, packTitle: "Any Given Day", asks: { roll: true, moves: [{ id: "salvage", label: "Salvage a Piece" }] } } } }), d);
+    await call(
+      request("PUT", "/api/sessions/01RUN/snapshot", {
+        body: {
+          snapshot: { v: 1, packTitle: "Any Given Day", asks: { roll: true, moves: [{ id: "salvage", label: "Salvage a Piece" }] } },
+        },
+      }),
+      d,
+    );
     const lost = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey&ask=Free%20Pizza&name=c", { token: null }), d);
     expect(lost.status).toBe(200);
     expect(lost.body["ok"]).toBe(false);
@@ -1640,7 +2102,10 @@ describe("who is asking", () => {
     const refused = await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "dance" } }), d);
     expect(refused.status).toBe(422);
     expect(typeof refused.body["say"]).toBe("string");
-    const taken = await call(request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "roll", name: "someone" } }), d);
+    const taken = await call(
+      request("POST", "/api/public/runs/01RUN/asks?k=askkey", { token: null, body: { kind: "roll", name: "someone" } }),
+      d,
+    );
     expect(taken.status).toBe(200);
     expect(taken.body["ok"]).toBe(true);
     expect(typeof taken.body["say"]).toBe("string");
@@ -1650,7 +2115,10 @@ describe("who is asking", () => {
     const rung: Array<[string, number]> = [];
     const d = deps(memoryStore(), { notify: async (id, seq) => void rung.push([id, seq]) });
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
-    await call(request("POST", "/api/sessions/01RUN/events", { body: { events: [{ t: "UnitEntered", at: "2026-09-06T12:00:00Z", id: "e2" }] } }), d);
+    await call(
+      request("POST", "/api/sessions/01RUN/events", { body: { events: [{ t: "UnitEntered", at: "2026-09-06T12:00:00Z", id: "e2" }] } }),
+      d,
+    );
     await call(request("PATCH", "/api/sessions/01RUN", { body: { name: "Tuesday" } }), d);
     expect(rung).toEqual([
       ["01RUN", 3],
@@ -1684,7 +2152,10 @@ describe("sessions", () => {
     const d = deps();
     const made = await call(request("POST", "/api/sessions", { body: sessionBody }), d);
     expect(made.status).toBe(200);
-    expect((made.body["events"] as StoredEvent[]).map((e) => [e.id, e.seq, e.author])).toEqual([["e0", 1, "user_1"], ["e1", 2, "user_1"]]);
+    expect((made.body["events"] as StoredEvent[]).map((e) => [e.id, e.seq, e.author])).toEqual([
+      ["e0", 1, "user_1"],
+      ["e1", 2, "user_1"],
+    ]);
     const listed = await call(request("GET", "/api/sessions"), d);
     expect(listed.body["sessions"]).toMatchObject([{ id: "01RUN", role: "owner", seq: 2, packId: "p" }]);
     const got = await call(request("GET", "/api/sessions/01RUN"), d);
@@ -1711,7 +2182,10 @@ describe("sessions", () => {
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
     expect((await call(request("POST", "/api/sessions", { body: sessionBody }), d)).status).toBe(409);
     expect((await call(request("POST", "/api/sessions", { body: { ...sessionBody, id: "02", events: [entered] } }), d)).status).toBe(422);
-    expect((await call(request("POST", "/api/sessions", { body: { ...sessionBody, id: "02", events: [{ ...started, id: undefined }] } }), d)).status).toBe(422);
+    expect(
+      (await call(request("POST", "/api/sessions", { body: { ...sessionBody, id: "02", events: [{ ...started, id: undefined }] } }), d))
+        .status,
+    ).toBe(422);
   });
 
   it("shows a stranger nothing, and the same nothing as a session that never was", async () => {
@@ -1720,7 +2194,9 @@ describe("sessions", () => {
     const stranger: Deps = { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) };
     expect((await call(request("GET", "/api/sessions/01RUN"), stranger)).body).toEqual({ found: false });
     expect((await call(request("GET", "/api/sessions/nothing"), d)).body).toEqual({ found: false });
-    expect((await call(request("POST", "/api/sessions/01RUN/events", { body: { events: [entered] } }), stranger)).body).toEqual({ found: false });
+    expect((await call(request("POST", "/api/sessions/01RUN/events", { body: { events: [entered] } }), stranger)).body).toEqual({
+      found: false,
+    });
   });
 
   it("renames and ends, and the owner's delete reads back as gone", async () => {
@@ -1750,7 +2226,17 @@ describe("sessions", () => {
     expect(peek.status).toBe(200);
     expect(peek.body).toEqual({
       found: true,
-      invite: { role: "player", packId: "p", packTitle: "The Pack", session: "Tuesday", inviter: "Nate", accepted: false, sentTo: "f*****@example.com", forYou: null, alreadyIn: false },
+      invite: {
+        role: "player",
+        packId: "p",
+        packTitle: "The Pack",
+        session: "Tuesday",
+        inviter: "Nate",
+        accepted: false,
+        sentTo: "f*****@example.com",
+        forYou: null,
+        alreadyIn: false,
+      },
     });
     expect(JSON.stringify(peek.body)).not.toContain("friend@example.com");
 
@@ -1768,35 +2254,55 @@ describe("sessions", () => {
     // A fresh account that never opened its profile carries its address with the accept; a wrong one is still refused.
     const fresh = { ...d, verify: async () => ({ sub: "user_4", sid: "s4" }) };
     expect((await call(request("POST", "/api/invites/tok1/accept", { body: { email: "someone@example.com" } }), fresh)).status).toBe(422);
-    expect((await call(request("GET", "/api/invites/tok1", { token: "guest" }), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) })).body["invite"]).toMatchObject({ forYou: false });
+    expect(
+      (await call(request("GET", "/api/invites/tok1", { token: "guest" }), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) }))
+        .body["invite"],
+    ).toMatchObject({ forYou: false });
     // The invitee, signed in as the address it went to, accepts and can play.
-    await call(request("PUT", "/api/me/profile", { body: { email: "Friend@example.com" } }), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) });
-    expect((await call(request("GET", "/api/invites/tok1", { token: "guest" }), d)).body["invite"]).toMatchObject({ forYou: true, alreadyIn: false });
+    await call(request("PUT", "/api/me/profile", { body: { email: "Friend@example.com" } }), {
+      ...d,
+      verify: async () => ({ sub: "user_2", sid: "s2" }),
+    });
+    expect((await call(request("GET", "/api/invites/tok1", { token: "guest" }), d)).body["invite"]).toMatchObject({
+      forYou: true,
+      alreadyIn: false,
+    });
     const joined = await call(request("POST", "/api/invites/tok1/accept", { token: "guest" }), d);
     expect(joined.body).toEqual({ sessionId: "01RUN" });
     const theirs = await call(request("GET", "/api/sessions/01RUN"), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) });
     expect(theirs.body["found"]).toBe(true);
-    expect(theirs.body["members"]).toMatchObject([{ sub: "user_1", role: "owner" }, { sub: "user_2", role: "player" }]);
+    expect(theirs.body["members"]).toMatchObject([
+      { sub: "user_1", role: "owner" },
+      { sub: "user_2", role: "player" },
+    ]);
 
     // The owner's list says it was taken; the people list on both sides knows the other.
     const list = await call(request("GET", "/api/sessions/01RUN/invites"), d);
     expect(list.body["invites"]).toMatchObject([{ email: "friend@example.com", accepted: true }]);
     expect((await call(request("GET", "/api/people"), d)).body["people"]).toMatchObject([{ sub: "user_2" }]);
-    expect((await call(request("GET", "/api/people", { token: "guest" }), d)).body["people"]).toMatchObject([{ sub: "user_1", name: "Nate" }]);
+    expect((await call(request("GET", "/api/people", { token: "guest" }), d)).body["people"]).toMatchObject([
+      { sub: "user_1", name: "Nate" },
+    ]);
   });
 
   it("counts a screen, by version and country, and never anyone who asked not to be", async () => {
     const counted: Array<{ screen: string; version: string; country: string }> = [];
     const d = deps(memoryStore(), { count: (v) => counted.push(v) });
     const view = { t: "view", screen: "play", v: "0.1.0" };
-    expect((await call(request("POST", "/api/beacon", { body: view, token: null, headers: { "cloudfront-viewer-country": "de" } }), d)).body).toEqual({ counted: true });
-    expect((await call(request("POST", "/api/beacon", { body: { ...view, v: "not a version" }, token: null }), d)).body).toEqual({ counted: true });
+    expect(
+      (await call(request("POST", "/api/beacon", { body: view, token: null, headers: { "cloudfront-viewer-country": "de" } }), d)).body,
+    ).toEqual({ counted: true });
+    expect((await call(request("POST", "/api/beacon", { body: { ...view, v: "not a version" }, token: null }), d)).body).toEqual({
+      counted: true,
+    });
     expect(counted).toEqual([
       { screen: "play", version: "0.1.0", country: "DE" },
       { screen: "play", version: "unknown", country: "ZZ" },
     ]);
     // The browser's wish, and a screen that is not one of the app's.
-    expect((await call(request("POST", "/api/beacon", { body: view, token: null, headers: { "sec-gpc": "1" } }), d)).body).toEqual({ counted: false });
+    expect((await call(request("POST", "/api/beacon", { body: view, token: null, headers: { "sec-gpc": "1" } }), d)).body).toEqual({
+      counted: false,
+    });
     expect((await call(request("POST", "/api/beacon", { body: { ...view, screen: "run/01ABC" }, token: null }), d)).status).toBe(422);
     expect(counted).toHaveLength(2);
   });
@@ -1812,14 +2318,19 @@ describe("sessions", () => {
     expect(made.status).toBe(200);
     expect(made.body).toMatchObject({ url: "https://export.test/user_1" });
     expect(made.body["bytes"]).toBeGreaterThan(100);
-    const file = JSON.parse((d.store as unknown as { exports: Map<string, string> }).exports.get("user_1") ?? "{}") as Record<string, unknown>;
+    const file = JSON.parse((d.store as unknown as { exports: Map<string, string> }).exports.get("user_1") ?? "{}") as Record<
+      string,
+      unknown
+    >;
     expect(file["account"]).toMatchObject({ id: "user_1", profile: { name: "Nate", email: "nate@example.com" } });
     expect(file["sessions"]).toMatchObject([{ id: "01RUN", role: "owner", name: "Tuesday", invites: [{ email: "friend@example.com" }] }]);
     expect((file["sessions"] as Array<{ events: unknown[] }>)[0]!.events.length).toBeGreaterThan(0);
     expect(file["packs"]).toMatchObject([{ id: "p", source: packBody.source }]);
 
     // A command-line key does not get to walk off with the lot.
-    expect((await call(request("POST", "/api/me/export"), { ...d, verify: async () => ({ sub: "user_1", sid: "key:k1" }) })).status).toBe(422);
+    expect((await call(request("POST", "/api/me/export"), { ...d, verify: async () => ({ sub: "user_1", sid: "key:k1" }) })).status).toBe(
+      422,
+    );
   });
 
   it("lists the invitations waiting for an address in the app, and lets one be declined", async () => {
@@ -1833,7 +2344,9 @@ describe("sessions", () => {
     expect((await call(request("GET", "/api/me/invites"), friend)).body).toEqual({ invites: [] });
     await call(request("PUT", "/api/me/profile", { body: { email: "friend@example.com" } }), friend);
     const mine = await call(request("GET", "/api/me/invites"), friend);
-    expect(mine.body["invites"]).toMatchObject([{ token: "tok1", role: "viewer", packId: "p", packTitle: "The Pack", session: "Tuesday", inviter: "Nate", alreadyIn: false }]);
+    expect(mine.body["invites"]).toMatchObject([
+      { token: "tok1", role: "viewer", packId: "p", packTitle: "The Pack", session: "Tuesday", inviter: "Nate", alreadyIn: false },
+    ]);
 
     // Somebody else's address sees nothing of it, and cannot decline it.
     const stranger: Deps = { ...d, verify: async () => ({ sub: "user_3", sid: "s3" }) };
@@ -1863,17 +2376,24 @@ describe("sessions", () => {
     }
     expect((await call(request("POST", "/api/sessions/01RUN/invites", { body: { email: "p21@example.com" } }), d)).status).toBe(429);
     // A stranger, even with a valid token, is not a member and sees nothing.
-    expect((await call(request("POST", "/api/sessions/01RUN/invites", { body: { email: "x@example.com" }, token: "guest" }), d)).body).toEqual({ found: false });
+    expect(
+      (await call(request("POST", "/api/sessions/01RUN/invites", { body: { email: "x@example.com" }, token: "guest" }), d)).body,
+    ).toEqual({ found: false });
   });
 
   it("keeps a viewer watching, lets the owner remove a member, and withdraws an invitation", async () => {
     const d = deps();
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
     await call(request("POST", "/api/sessions/01RUN/invites", { body: { email: "w@example.com", role: "viewer" } }), d);
-    await call(request("PUT", "/api/me/profile", { body: { email: "w@example.com" } }), { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) });
+    await call(request("PUT", "/api/me/profile", { body: { email: "w@example.com" } }), {
+      ...d,
+      verify: async () => ({ sub: "user_2", sid: "s2" }),
+    });
     await call(request("POST", "/api/invites/tok1/accept", { token: "guest" }), d);
     const asGuest = { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) };
-    expect((await call(request("POST", "/api/sessions/01RUN/events", { body: { events: [{ ...entered, id: "e9" }] } }), asGuest)).status).toBe(422);
+    expect(
+      (await call(request("POST", "/api/sessions/01RUN/events", { body: { events: [{ ...entered, id: "e9" }] } }), asGuest)).status,
+    ).toBe(422);
     expect((await call(request("DELETE", "/api/sessions/01RUN/members/user_2"), d)).body).toEqual({ removed: true });
     expect((await call(request("GET", "/api/sessions/01RUN"), asGuest)).body).toEqual({ found: false });
 
@@ -1894,7 +2414,10 @@ describe("sessions", () => {
     // The key is the person, on any route, but cannot mint more keys.
     const asKey = request("GET", "/api/me", { token: null, headers: { authorization: `Bearer ${secret}` } });
     expect((await call(asKey, d)).body).toMatchObject({ sub: "user_1", sid: expect.stringMatching(/^key:/) as unknown as string });
-    expect((await call(request("POST", "/api/keys", { body: { name: "more" }, token: null, headers: { authorization: `Bearer ${secret}` } }), d)).status).toBe(422);
+    expect(
+      (await call(request("POST", "/api/keys", { body: { name: "more" }, token: null, headers: { authorization: `Bearer ${secret}` } }), d))
+        .status,
+    ).toBe(422);
     // Listed without the secret; revoked, it is refused.
     const listed = await call(request("GET", "/api/keys"), d);
     expect(JSON.stringify(listed.body)).not.toContain(secret);
@@ -1910,7 +2433,8 @@ describe("sessions", () => {
     const made = await call(request("POST", "/api/keys", { body: { name: "ci", scope: "release" } }), d);
     expect(made.body["key"]).toMatchObject({ name: "ci", scope: "release" });
     const secret = String(made.body["secret"]);
-    const asKey = (method: string, path: string, body?: unknown) => call(request(method, path, { body, token: null, headers: { authorization: `Bearer ${secret}` } }), d);
+    const asKey = (method: string, path: string, body?: unknown) =>
+      call(request(method, path, { body, token: null, headers: { authorization: `Bearer ${secret}` } }), d);
     expect((await asKey("GET", "/api/me")).body).toMatchObject({ sub: "user_1", scope: "release" });
     expect((await asKey("GET", "/api/claims")).status).toBe(200);
     expect((await asKey("GET", "/api/publishers/me")).status).toBe(200);
@@ -1927,7 +2451,9 @@ describe("sessions", () => {
     expect((await asKey("DELETE", "/api/me")).status).toBe(422);
     // A full key, as before, is the person on every route.
     const full = String((await call(request("POST", "/api/keys", { body: { name: "laptop" } }), d)).body["secret"]);
-    expect((await call(request("GET", "/api/sync/manifest", { token: null, headers: { authorization: `Bearer ${full}` } }), d)).status).toBe(200);
+    expect(
+      (await call(request("GET", "/api/sync/manifest", { token: null, headers: { authorization: `Bearer ${full}` } }), d)).status,
+    ).toBe(200);
   });
 
   it("claims a signing key by proving it, names its owner to anyone, and refuses a second owner", async () => {
@@ -1937,7 +2463,9 @@ describe("sessions", () => {
     const pair = await webcrypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
     const spki = Buffer.from(await webcrypto.subtle.exportKey("spki", pair.publicKey)).toString("base64url");
     const nonce = String((await call(request("POST", "/api/claims/nonce"), d)).body["nonce"]);
-    const sig = Buffer.from(await webcrypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, pair.privateKey, new TextEncoder().encode(nonce))).toString("base64url");
+    const sig = Buffer.from(
+      await webcrypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, pair.privateKey, new TextEncoder().encode(nonce)),
+    ).toString("base64url");
 
     const claimed = await call(request("POST", "/api/claims", { body: { publicKey: spki, nonce, signature: sig } }), d);
     expect(claimed.status).toBe(200);
@@ -1955,8 +2483,12 @@ describe("sessions", () => {
     expect((await call(request("POST", "/api/claims", { body: { publicKey: spki, nonce: nonce2, signature: sig } }), d)).status).toBe(422);
     const other: Deps = { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) };
     const nonce3 = String((await call(request("POST", "/api/claims/nonce"), other)).body["nonce"]);
-    const sig3 = Buffer.from(await webcrypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, pair.privateKey, new TextEncoder().encode(nonce3))).toString("base64url");
-    expect((await call(request("POST", "/api/claims", { body: { publicKey: spki, nonce: nonce3, signature: sig3 } }), other)).status).toBe(409);
+    const sig3 = Buffer.from(
+      await webcrypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, pair.privateKey, new TextEncoder().encode(nonce3)),
+    ).toString("base64url");
+    expect((await call(request("POST", "/api/claims", { body: { publicKey: spki, nonce: nonce3, signature: sig3 } }), other)).status).toBe(
+      409,
+    );
 
     // Mine to remove; then nobody.
     expect((await call(request("DELETE", `/api/claims/${fp}`), d)).body).toEqual({ removed: true });
@@ -2048,12 +2580,27 @@ describe("discord", () => {
   const signedRequest = (body: unknown, timestamp = "1700000000", tamper = false) => {
     const raw = JSON.stringify(body);
     const signature = sign(null, Buffer.concat([Buffer.from(timestamp), Buffer.from(raw)]), privateKey).toString("hex");
-    const event = request("POST", "/api/discord/interactions", { token: null, headers: { "x-signature-ed25519": tamper ? signature.replace(/^./, (c) => (c === "0" ? "1" : "0")) : signature, "x-signature-timestamp": timestamp } });
+    const event = request("POST", "/api/discord/interactions", {
+      token: null,
+      headers: {
+        "x-signature-ed25519": tamper ? signature.replace(/^./, (c) => (c === "0" ? "1" : "0")) : signature,
+        "x-signature-timestamp": timestamp,
+      },
+    });
     return { ...event, body: raw } as APIGatewayProxyEventV2;
   };
-  const withBot = (guilds = memoryGuilds()) => deps(memoryStore(), { guilds, discord: { applicationId: "app", publicKey: publicHex, token: async () => null }, code: () => "ABCDEF" });
+  const withBot = (guilds = memoryGuilds()) =>
+    deps(memoryStore(), { guilds, discord: { applicationId: "app", publicKey: publicHex, token: async () => null }, code: () => "ABCDEF" });
   const ping = { id: "p1", application_id: "app", type: 1, token: "t" };
-  const press = { id: "i1", application_id: "app", type: 2, token: "t", guild_id: "g1", member: { user: { id: "1001", username: "mira", global_name: "Mira" } }, data: { name: "link" } };
+  const press = {
+    id: "i1",
+    application_id: "app",
+    type: 2,
+    token: "t",
+    guild_id: "g1",
+    member: { user: { id: "1001", username: "mira", global_name: "Mira" } },
+    data: { name: "link" },
+  };
 
   it("answers only what Discord signed, and says so when there is no bot to answer for", async () => {
     // Not configured: nothing to verify against, so nothing is believed.
@@ -2072,9 +2619,16 @@ describe("discord", () => {
     const d = withBot(guilds);
     const pressed = await call(signedRequest(press), d);
     expect(pressed.body["data"]).toMatchObject({ flags: 64 });
-    expect(String((pressed.body["data"] as Record<string, unknown>)["content"])).toContain("https://runlog.test/play/link/discord?c=ABCDEF");
+    expect(String((pressed.body["data"] as Record<string, unknown>)["content"])).toContain(
+      "https://runlog.test/play/link/discord?c=ABCDEF",
+    );
     // Nothing linked yet, and the code is a code: typed loosely, it still matches.
-    expect((await call(request("GET", "/api/connections"), d)).body).toEqual({ available: true, discord: null, connections: [], verify: false });
+    expect((await call(request("GET", "/api/connections"), d)).body).toEqual({
+      available: true,
+      discord: null,
+      connections: [],
+      verify: false,
+    });
     expect((await call(request("POST", "/api/connections/discord", { body: { code: "" } }), d)).status).toBe(422);
     const linked = await call(request("POST", "/api/connections/discord", { body: { code: " abcdef " } }), d);
     // `discord` is the one link a page built before several could be held
@@ -2091,22 +2645,45 @@ describe("discord", () => {
     const again = await call(signedRequest(press), d);
     expect(String((again.body["data"] as Record<string, unknown>)["content"])).toContain("already linked");
     // Another account handing in a fresh code for the same Discord account takes it over.
-    await guilds.putLinkCode({ code: "GHJKLM", discordUserId: "1001", name: "Mira", createdAt: "2026-09-06T12:00:00.000Z", expiresAt: "2026-09-06T12:10:00.000Z" });
-    expect((await call(request("POST", "/api/connections/discord", { body: { code: "GHJKLM" }, token: "guest" }), d)).body).toMatchObject({ linked: true });
+    await guilds.putLinkCode({
+      code: "GHJKLM",
+      discordUserId: "1001",
+      name: "Mira",
+      createdAt: "2026-09-06T12:00:00.000Z",
+      expiresAt: "2026-09-06T12:10:00.000Z",
+    });
+    expect((await call(request("POST", "/api/connections/discord", { body: { code: "GHJKLM" }, token: "guest" }), d)).body).toMatchObject({
+      linked: true,
+    });
     expect((await call(request("GET", "/api/connections"), d)).body).toMatchObject({ discord: null });
-    expect((await call(request("GET", "/api/connections", { token: "guest" }), d)).body).toMatchObject({ discord: { discordUserId: "1001" } });
+    expect((await call(request("GET", "/api/connections", { token: "guest" }), d)).body).toMatchObject({
+      discord: { discordUserId: "1001" },
+    });
     // An account holds as many Discord accounts as it links: a second one
     // joins the first rather than replacing it, and either can be let go of
     // by name while the other stays.
-    await guilds.putLinkCode({ code: "NPQRST", discordUserId: "1002", name: "kiln_hand", createdAt: "2026-09-06T12:00:00.000Z", expiresAt: "2026-09-06T12:10:00.000Z" });
-    expect((await call(request("POST", "/api/connections/discord", { body: { code: "NPQRST" }, token: "guest" }), d)).body).toMatchObject({ linked: true });
-    const both = (await call(request("GET", "/api/connections", { token: "guest" }), d)).body as { connections: Array<{ accountId: string }>; discord: { discordUserId: string } };
+    await guilds.putLinkCode({
+      code: "NPQRST",
+      discordUserId: "1002",
+      name: "kiln_hand",
+      createdAt: "2026-09-06T12:00:00.000Z",
+      expiresAt: "2026-09-06T12:10:00.000Z",
+    });
+    expect((await call(request("POST", "/api/connections/discord", { body: { code: "NPQRST" }, token: "guest" }), d)).body).toMatchObject({
+      linked: true,
+    });
+    const both = (await call(request("GET", "/api/connections", { token: "guest" }), d)).body as {
+      connections: Array<{ accountId: string }>;
+      discord: { discordUserId: string };
+    };
     expect(both.connections.map((c) => c.accountId)).toEqual(["1001", "1002"]);
     // The oldest is what a page built before this reads as "the" link.
     expect(both.discord.discordUserId).toBe("1001");
     expect((await call(request("DELETE", "/api/connections/discord/1001", { token: "guest" }), d)).body).toEqual({ unlinked: true });
     expect((await call(request("DELETE", "/api/connections/discord/1001", { token: "guest" }), d)).body).toEqual({ unlinked: false });
-    const left = (await call(request("GET", "/api/connections", { token: "guest" }), d)).body as { connections: Array<{ accountId: string }> };
+    const left = (await call(request("GET", "/api/connections", { token: "guest" }), d)).body as {
+      connections: Array<{ accountId: string }>;
+    };
     expect(left.connections.map((c) => c.accountId)).toEqual(["1002"]);
     expect(await guilds.userForDiscord("1001")).toBeNull();
     expect(await guilds.userForDiscord("1002")).toBe("user_2");
@@ -2141,7 +2718,11 @@ describe("discord", () => {
   it("verifies a linked account for a server's linked roles: begun signed in, ended by Discord bringing the person back", async () => {
     const guilds = memoryGuilds();
     const oauth = memoryOAuth();
-    const d: Deps = { ...withBot(guilds), token: () => "state1", discord: { applicationId: "app", publicKey: publicHex, token: async () => null, oauth: async () => oauth } };
+    const d: Deps = {
+      ...withBot(guilds),
+      token: () => "state1",
+      discord: { applicationId: "app", publicKey: publicHex, token: async () => null, oauth: async () => oauth },
+    };
     // The profile knows a verification can be offered.
     expect((await call(request("GET", "/api/connections"), d)).body).toMatchObject({ available: true, verify: true });
     expect((await call(request("GET", "/api/connections"), withBot(guilds))).body).toMatchObject({ verify: false });
@@ -2158,22 +2739,56 @@ describe("discord", () => {
     expect(url.searchParams.get("state")).toBe("state1");
     expect(url.searchParams.get("redirect_uri")).toBe("https://runlog.test/api/discord/linked-role/callback");
     // Back from Discord with a code: the account is linked to whoever consented, and Runlog's word is written on them.
-    const done = await call({ ...request("GET", "/api/discord/linked-role/callback", { token: null }), queryStringParameters: { code: "good", state: "state1" } } as APIGatewayProxyEventV2, d);
+    const done = await call(
+      {
+        ...request("GET", "/api/discord/linked-role/callback", { token: null }),
+        queryStringParameters: { code: "good", state: "state1" },
+      } as APIGatewayProxyEventV2,
+      d,
+    );
     expect(done.status).toBe(302);
     expect(done.headers?.["location"]).toBe("https://runlog.test/play/link/discord?verified=1");
     expect(oauth.exchanged).toEqual([{ code: "good", redirectUri: "https://runlog.test/api/discord/linked-role/callback" }]);
-    expect((await call(request("GET", "/api/connections"), d)).body).toMatchObject({ discord: { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" } });
-    expect(oauth.pushed).toEqual([{ token: "bearer-good", platformUsername: "Mira", metadata: { linked: 1, since: "2026-09-06T12:00:00.000Z" } }]);
+    expect((await call(request("GET", "/api/connections"), d)).body).toMatchObject({
+      discord: { discordUserId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" },
+    });
+    expect(oauth.pushed).toEqual([
+      { token: "bearer-good", platformUsername: "Mira", metadata: { linked: 1, since: "2026-09-06T12:00:00.000Z" } },
+    ]);
     // The state is spent; a stranger's state, or a bad code, ends in a failure the app can say.
-    for (const q of [{ code: "good", state: "state1" }, { code: "good", state: "nope" }, { code: "bad", state: "state1" }]) {
-      if (q.code === "bad") await guilds.putVerifyState({ state: "state1", sub: "user_1", createdAt: "2026-09-06T12:00:00.000Z", expiresAt: "2026-09-06T12:10:00.000Z" });
-      const failed = await call({ ...request("GET", "/api/discord/linked-role/callback", { token: null }), queryStringParameters: q } as APIGatewayProxyEventV2, d);
+    for (const q of [
+      { code: "good", state: "state1" },
+      { code: "good", state: "nope" },
+      { code: "bad", state: "state1" },
+    ]) {
+      if (q.code === "bad")
+        await guilds.putVerifyState({
+          state: "state1",
+          sub: "user_1",
+          createdAt: "2026-09-06T12:00:00.000Z",
+          expiresAt: "2026-09-06T12:10:00.000Z",
+        });
+      const failed = await call(
+        { ...request("GET", "/api/discord/linked-role/callback", { token: null }), queryStringParameters: q } as APIGatewayProxyEventV2,
+        d,
+      );
       expect(failed.headers?.["location"]).toBe("https://runlog.test/play/link/discord?verified=0");
     }
     expect(oauth.pushed).toHaveLength(1);
     // Already linked to the same Discord account, a second verification keeps the first link's date.
-    await guilds.putVerifyState({ state: "state1", sub: "user_1", createdAt: "2026-09-07T12:00:00.000Z", expiresAt: "2026-09-07T12:10:00.000Z" });
-    await call({ ...request("GET", "/api/discord/linked-role/callback", { token: null }), queryStringParameters: { code: "good", state: "state1" } } as APIGatewayProxyEventV2, { ...d, now: () => "2026-09-07T12:00:00.000Z" });
+    await guilds.putVerifyState({
+      state: "state1",
+      sub: "user_1",
+      createdAt: "2026-09-07T12:00:00.000Z",
+      expiresAt: "2026-09-07T12:10:00.000Z",
+    });
+    await call(
+      {
+        ...request("GET", "/api/discord/linked-role/callback", { token: null }),
+        queryStringParameters: { code: "good", state: "state1" },
+      } as APIGatewayProxyEventV2,
+      { ...d, now: () => "2026-09-07T12:00:00.000Z" },
+    );
     expect(oauth.pushed[1]?.metadata).toEqual({ linked: 1, since: "2026-09-06T12:00:00.000Z" });
     // Without a client secret, nothing is offered and the callback fails softly.
     const unfilled: Deps = { ...d, discord: { ...d.discord!, oauth: async () => null } };
@@ -2183,7 +2798,13 @@ describe("discord", () => {
   it("refuses a code past its ten minutes", async () => {
     const guilds = memoryGuilds();
     const d = withBot(guilds);
-    await guilds.putLinkCode({ code: "OLDONE", discordUserId: "1001", name: "Mira", createdAt: "2026-09-06T11:00:00.000Z", expiresAt: "2026-09-06T11:10:00.000Z" });
+    await guilds.putLinkCode({
+      code: "OLDONE",
+      discordUserId: "1001",
+      name: "Mira",
+      createdAt: "2026-09-06T11:00:00.000Z",
+      expiresAt: "2026-09-06T11:10:00.000Z",
+    });
     expect((await call(request("POST", "/api/connections/discord", { body: { code: "OLDONE" } }), d)).status).toBe(422);
     expect(guilds.codes.size).toBe(0);
   });
@@ -2195,25 +2816,78 @@ describe("a claimed server", () => {
   const signed = (body: unknown) => {
     const raw = JSON.stringify(body);
     const signature = sign(null, Buffer.concat([Buffer.from("1700000000"), Buffer.from(raw)]), privateKey).toString("hex");
-    return { ...request("POST", "/api/discord/interactions", { token: null, headers: { "x-signature-ed25519": signature, "x-signature-timestamp": "1700000000" } }), body: raw } as APIGatewayProxyEventV2;
+    return {
+      ...request("POST", "/api/discord/interactions", {
+        token: null,
+        headers: { "x-signature-ed25519": signature, "x-signature-timestamp": "1700000000" },
+      }),
+      body: raw,
+    } as APIGatewayProxyEventV2;
   };
-  const claimPress = (guildId: string) => ({ id: "i1", application_id: "app", type: 2, token: "t", guild_id: guildId, member: { user: { id: "1001", username: "mira" }, permissions: "32" }, data: { name: "setup", options: [{ name: "claim", type: 1 }] } });
-  const pack = { title: "The Long Kiln", version: "1.0.0", format: "yaml", hash: "h1", modes: [{ id: "standard", label: "Standard" }, { id: "short", label: "Short" }], source: "id: com.scrthq.runlog.long-kiln\n" };
+  const claimPress = (guildId: string) => ({
+    id: "i1",
+    application_id: "app",
+    type: 2,
+    token: "t",
+    guild_id: guildId,
+    member: { user: { id: "1001", username: "mira" }, permissions: "32" },
+    data: { name: "setup", options: [{ name: "claim", type: 1 }] },
+  });
+  const pack = {
+    title: "The Long Kiln",
+    version: "1.0.0",
+    format: "yaml",
+    hash: "h1",
+    modes: [
+      { id: "standard", label: "Standard" },
+      { id: "short", label: "Short" },
+    ],
+    source: "id: com.scrthq.runlog.long-kiln\n",
+  };
 
   it("is claimed by handing in the code, lists for its owner alone, takes packs into a vault it never hands back, and is released whole", async () => {
     const guilds = memoryGuilds();
     let codes = 0;
-    const d = deps(memoryStore(), { guilds, discord: { applicationId: "app", publicKey: publicHex, token: async () => null, guildName: async (id) => (id === "g1" ? "The Kiln Room" : null) }, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
+    const d = deps(memoryStore(), {
+      guilds,
+      discord: {
+        applicationId: "app",
+        publicKey: publicHex,
+        token: async () => null,
+        guildName: async (id) => (id === "g1" ? "The Kiln Room" : null),
+      },
+      code: () => `CLAIM${"ABCDEFGH"[codes++]}`,
+    });
     await call(signed(claimPress("g1")), d);
     // With plans off, nothing to upgrade to; the server is simply claimed, and named by Discord where the bot could ask.
     const claimed = await call(request("POST", "/api/guilds/claim", { body: { code: "claima" } }), d);
-    expect(claimed.body).toEqual({ claimed: true, plan: "server", upgrade: false, guild: { guildId: "g1", name: "The Kiln Room", ownerSub: "user_1", claimedAt: "2026-09-06T12:00:00.000Z", updatedAt: "2026-09-06T12:00:00.000Z" } });
+    expect(claimed.body).toEqual({
+      claimed: true,
+      plan: "server",
+      upgrade: false,
+      guild: {
+        guildId: "g1",
+        name: "The Kiln Room",
+        ownerSub: "user_1",
+        claimedAt: "2026-09-06T12:00:00.000Z",
+        updatedAt: "2026-09-06T12:00:00.000Z",
+      },
+    });
     expect((await call(request("POST", "/api/guilds/claim", { body: { code: "claima" } }), d)).status).toBe(422);
     expect((await call(request("GET", "/api/guilds"), d)).body).toMatchObject({ server: true, guilds: [{ guildId: "g1" }] });
     expect((await call(request("GET", "/api/guilds", { token: "guest" }), d)).body).toMatchObject({ guilds: [] });
     // The vault: the owner puts a pack in, sees it listed without its text, and nobody else sees the server at all.
     const kept = await call(request("PUT", "/api/guilds/g1/packs/com.scrthq.runlog.long-kiln", { body: pack }), d);
-    expect(kept.body).toMatchObject({ kept: true, pack: { id: "com.scrthq.runlog.long-kiln", title: "The Long Kiln", modes: pack.modes, bytes: Buffer.byteLength(pack.source), delegatedBy: "user_1" } });
+    expect(kept.body).toMatchObject({
+      kept: true,
+      pack: {
+        id: "com.scrthq.runlog.long-kiln",
+        title: "The Long Kiln",
+        modes: pack.modes,
+        bytes: Buffer.byteLength(pack.source),
+        delegatedBy: "user_1",
+      },
+    });
     const listed = await call(request("GET", "/api/guilds/g1/packs"), d);
     expect(listed.body["packs"]).toHaveLength(1);
     expect(JSON.stringify(listed.body)).not.toContain("source");
@@ -2232,19 +2906,40 @@ describe("a claimed server", () => {
     const guilds = memoryGuilds();
     const billing = memoryBilling();
     let codes = 0;
-    const d = deps(memoryStore(), { guilds, billing, gates: true, features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" }, discord: { applicationId: "app", publicKey: publicHex, token: async () => null }, code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
+    const d = deps(memoryStore(), {
+      guilds,
+      billing,
+      gates: true,
+      features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" },
+      discord: { applicationId: "app", publicKey: publicHex, token: async () => null },
+      code: () => `CLAIM${"ABCDEFGH"[codes++]}`,
+    });
     for (const g of ["g1", "g2", "g3", "g4"]) await call(signed(claimPress(g)), d);
-    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMA" } }), d)).body).toMatchObject({ claimed: true, upgrade: true });
+    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMA" } }), d)).body).toMatchObject({
+      claimed: true,
+      upgrade: true,
+    });
     await billing.putEntitlements("user_1", ["server"], "now");
-    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMB" } }), d)).body).toMatchObject({ claimed: true, upgrade: false });
+    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMB" } }), d)).body).toMatchObject({
+      claimed: true,
+      upgrade: false,
+    });
     expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMC" } }), d)).body).toMatchObject({ claimed: true });
     expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMD" } }), d)).status).toBe(422);
     expect((await call(request("GET", "/api/guilds"), d)).body).toMatchObject({ server: true });
     // Another account claiming one of them takes it over; the first account's list shrinks, and the vault, which was the first account's packs, empties.
-    await call(request("PUT", "/api/guilds/g1/packs/com.scrthq.runlog.long-kiln", { body: { title: "The Long Kiln", version: "1", format: "yaml", hash: "h", modes: [], source: "id: x" } }), d);
+    await call(
+      request("PUT", "/api/guilds/g1/packs/com.scrthq.runlog.long-kiln", {
+        body: { title: "The Long Kiln", version: "1", format: "yaml", hash: "h", modes: [], source: "id: x" },
+      }),
+      d,
+    );
     expect(guilds.vault.size).toBe(1);
     await call(signed(claimPress("g1")), d);
-    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIME" }, token: "guest" }), d)).body).toMatchObject({ claimed: true, guild: { guildId: "g1", ownerSub: "user_2" } });
+    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIME" }, token: "guest" }), d)).body).toMatchObject({
+      claimed: true,
+      guild: { guildId: "g1", ownerSub: "user_2" },
+    });
     expect(guilds.vault.size).toBe(0);
     expect(((await call(request("GET", "/api/guilds"), d)).body["guilds"] as unknown[]).length).toBe(2);
     // Deleting the account releases what it owned.
@@ -2262,13 +2957,23 @@ describe("a claimed server", () => {
       if (authorization === "Bearer guest") return { sub: "user_2", sid: "session_2" };
       throw new Error("bad token");
     };
-    const d = deps(memoryStore(), { guilds, gates: true, discord: bot, verify: flagged, releaseGates: async () => ({ servers: false, publishers: true }), code: () => `CLAIM${"ABCDEFGH"[codes++]}` });
+    const d = deps(memoryStore(), {
+      guilds,
+      gates: true,
+      discord: bot,
+      verify: flagged,
+      releaseGates: async () => ({ servers: false, publishers: true }),
+      code: () => `CLAIM${"ABCDEFGH"[codes++]}`,
+    });
     // Without a bot there is no tier at all; with one it is offered to everyone, and, while the hold stands, not yet for sale.
     expect((await call(request("GET", "/api/me"), deps())).body).toMatchObject({ servers: false, serversOpen: false });
     expect((await call(request("GET", "/api/me", { token: "guest" }), d)).body).toMatchObject({ servers: true, serversOpen: false });
     // Anyone may claim a server and see the plan as coming; the flag on a session is the plan, the way a plus flag is Plus.
     await call(signed(claimPress("g1")), d);
-    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMA" }, token: "guest" }), d)).body).toMatchObject({ claimed: true, upgrade: true });
+    expect((await call(request("POST", "/api/guilds/claim", { body: { code: "CLAIMA" }, token: "guest" }), d)).body).toMatchObject({
+      claimed: true,
+      upgrade: true,
+    });
     expect((await call(request("GET", "/api/guilds", { token: "guest" }), d)).body).toMatchObject({ server: false });
     expect((await call(request("GET", "/api/me"), d)).body["entitlements"]).toContain("server");
     expect((await call(request("GET", "/api/guilds"), d)).body).toMatchObject({ server: true });
@@ -2284,25 +2989,63 @@ describe("a run hosted in discord", () => {
   const signed = (body: unknown) => {
     const raw = JSON.stringify(body);
     const signature = sign(null, Buffer.concat([Buffer.from("1700000000"), Buffer.from(raw)]), privateKey).toString("hex");
-    return { ...request("POST", "/api/discord/interactions", { token: null, headers: { "x-signature-ed25519": signature, "x-signature-timestamp": "1700000000" } }), body: raw } as APIGatewayProxyEventV2;
+    return {
+      ...request("POST", "/api/discord/interactions", {
+        token: null,
+        headers: { "x-signature-ed25519": signature, "x-signature-timestamp": "1700000000" },
+      }),
+      body: raw,
+    } as APIGatewayProxyEventV2;
   };
   const demo = readFileSync(join(__dirname, "..", "..", "..", "packs", "demo", "pack.yaml"), "utf8");
   const PACK = "com.scrthq.runlog.long-kiln";
   const mira = { id: "1001", username: "mira", global_name: "Mira" };
   const sam = { id: "1002", username: "sam", global_name: "Sam" };
   const member = (user: typeof mira, permissions = "0") => ({ user, permissions, roles: [] as string[] });
-  const command = (options: unknown, user = mira, channel = "chan") => ({ id: "i", application_id: "app", type: 2, token: "t", guild_id: "g1", channel_id: channel, member: member(user, user === mira ? "32" : "0"), data: { name: "run", options: [options] } });
+  const command = (options: unknown, user = mira, channel = "chan") => ({
+    id: "i",
+    application_id: "app",
+    type: 2,
+    token: "t",
+    guild_id: "g1",
+    channel_id: channel,
+    member: member(user, user === mira ? "32" : "0"),
+    data: { name: "run", options: [options] },
+  });
   /** The message the buttons are on, as a press would name it: the opening message at first, then whatever fresh card was posted last (see `cardAfter`). */
   let currentCard = "msg_2";
-  const press = (customId: string, user = mira, extra: Record<string, unknown> = {}) => ({ id: "i", application_id: "app", type: 3, token: "t", guild_id: "g1", channel_id: "thread_1", member: member(user, user === mira ? "32" : "0"), message: { id: currentCard }, data: { custom_id: customId, component_type: 2, ...extra } });
-  const typed = (customId: string, value: string) => ({ id: "i", application_id: "app", type: 5, token: "t", guild_id: "g1", channel_id: "thread_1", member: member(mira, "32"), message: { id: currentCard }, data: { custom_id: customId, components: [{ components: [{ custom_id: "x", value }] }] } });
+  const press = (customId: string, user = mira, extra: Record<string, unknown> = {}) => ({
+    id: "i",
+    application_id: "app",
+    type: 3,
+    token: "t",
+    guild_id: "g1",
+    channel_id: "thread_1",
+    member: member(user, user === mira ? "32" : "0"),
+    message: { id: currentCard },
+    data: { custom_id: customId, component_type: 2, ...extra },
+  });
+  const typed = (customId: string, value: string) => ({
+    id: "i",
+    application_id: "app",
+    type: 5,
+    token: "t",
+    guild_id: "g1",
+    channel_id: "thread_1",
+    member: member(mira, "32"),
+    message: { id: currentCard },
+    data: { custom_id: customId, components: [{ components: [{ custom_id: "x", value }] }] },
+  });
   const content = (out: { body: Record<string, unknown> }) => String((out.body["data"] as Record<string, unknown>)["content"]);
 
   /** The demo pack with a one-minute timer on every unit: started by the bot, or left to the player. */
   const timed = (auto: boolean) =>
     demo
       .replace(/capabilities:\r?\n/, "capabilities:\n  - timers\n")
-      .replace(/unit:\r?\n  createsSubject: true\r?\n/, `unit:\n  createsSubject: true\n  clock: { kind: timer, minutes: 1, auto: ${auto}, label: The Firing }\n`);
+      .replace(
+        /unit:\r?\n  createsSubject: true\r?\n/,
+        `unit:\n  createsSubject: true\n  clock: { kind: timer, minutes: 1, auto: ${auto}, label: The Firing }\n`,
+      );
 
   async function table(source = demo) {
     currentCard = "msg_2";
@@ -2312,7 +3055,21 @@ describe("a run hosted in discord", () => {
     let ids = 0;
     await guilds.claimGuild({ guildId: "g1", name: "The Kiln Room", ownerSub: "user_1", claimedAt: "2026-09-06T12:00:00.000Z" });
     await guilds.connect("user_1", { service: "discord", accountId: "1001", name: "Mira", linkedAt: "2026-09-06T12:00:00.000Z" });
-    await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: `h${source.length}`, bytes: source.length, modes: [{ id: "standard", label: "Standard" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, source);
+    await guilds.putGuildPack(
+      "g1",
+      {
+        id: PACK,
+        title: "The Long Kiln",
+        version: "1",
+        format: "yaml",
+        hash: `h${source.length}`,
+        bytes: source.length,
+        modes: [{ id: "standard", label: "Standard" }],
+        updatedAt: "2026-09-06T12:00:00.000Z",
+        delegatedBy: "user_1",
+      },
+      source,
+    );
     const d = deps(store, {
       guilds,
       discord: { applicationId: "app", publicKey: publicHex, token: async () => null, rest: async () => bot },
@@ -2332,11 +3089,14 @@ describe("a run hosted in discord", () => {
 
   /** The first press the card offers: a button in its first row, or a select with its first option. */
   const firstPress = (card: Record<string, unknown>): { customId: string; value?: string } | null => {
-    const rows = card["components"] as Array<{ components: Array<{ custom_id: string; type: number; disabled?: boolean; label?: string; options?: Array<{ value: string }> }> }>;
+    const rows = card["components"] as Array<{
+      components: Array<{ custom_id: string; type: number; disabled?: boolean; label?: string; options?: Array<{ value: string }> }>;
+    }>;
     for (const row of rows) {
       for (const c of row.components) {
         // Never Undo, which a person would not press to move forward; never a box already ticked.
-        if (c.type === 2 && !c.disabled && !(c.label ?? "").startsWith("☑") && !c.custom_id.endsWith(":undo")) return { customId: c.custom_id };
+        if (c.type === 2 && !c.disabled && !(c.label ?? "").startsWith("☑") && !c.custom_id.endsWith(":undo"))
+          return { customId: c.custom_id };
         if (c.type === 3 && c.options?.[0]) return { customId: c.custom_id, value: c.options[0].value };
       }
     }
@@ -2346,9 +3106,37 @@ describe("a run hosted in discord", () => {
   it("starts in a thread with a pinned card and a live link, and the host plays a whole unit from the card while everyone else watches", async () => {
     const { guilds, bot, store, d } = await table();
     // Somebody who cannot manage the server, with no host role set, cannot host.
-    const stranger = await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] }, sam)), d);
+    const stranger = await call(
+      signed(
+        command(
+          {
+            name: "start",
+            type: 1,
+            options: [
+              { name: "pack", type: 3, value: PACK },
+              { name: "mode", type: 3, value: "standard" },
+            ],
+          },
+          sam,
+        ),
+      ),
+      d,
+    );
     expect(content(stranger)).toContain("manage the server");
-    const started = await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }, { name: "name", type: 3, value: "First firing" }] })), d);
+    const started = await call(
+      signed(
+        command({
+          name: "start",
+          type: 1,
+          options: [
+            { name: "pack", type: 3, value: PACK },
+            { name: "mode", type: 3, value: "standard" },
+            { name: "name", type: 3, value: "First firing" },
+          ],
+        }),
+      ),
+      d,
+    );
     expect(content(started)).toContain("**Mira** started **The Long Kiln · Standard Firing** - First firing in <#thread_1>");
     expect(content(started)).toContain("https://runlog.test/r/01000000000000000000000001?t=livetok");
     expect(bot.threads).toEqual(["thread_1 The Long Kiln · Standard Firing · First firing"]);
@@ -2356,7 +3144,11 @@ describe("a run hosted in discord", () => {
     const run = await guilds.guildRun("01000000000000000000000001");
     expect(run).toMatchObject({ hostSub: "user_1", hostDiscordId: "1001", threadId: "thread_1", cardMessageId: "msg_2" });
     // The session is the host account's, like any run, and a stranger with the link already reads the table.
-    expect((await call(request("GET", "/api/sessions/01000000000000000000000001"), d)).body["session"]).toMatchObject({ ownerSub: "user_1", packTitle: "The Long Kiln", name: "First firing" });
+    expect((await call(request("GET", "/api/sessions/01000000000000000000000001"), d)).body["session"]).toMatchObject({
+      ownerSub: "user_1",
+      packTitle: "The Long Kiln",
+      name: "First firing",
+    });
     const metrics = await call(request("GET", "/api/public/runs/01000000000000000000000001/metrics?t=livetok", { token: null }), d);
     expect(metrics.body).toMatchObject({ ready: true, unit: 0, runName: "First firing" });
 
@@ -2379,7 +3171,8 @@ describe("a run hosted in discord", () => {
         if (next.customId.includes(":next:")) closing = card;
         let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
         // A modal was opened: answer it.
-        if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
+        if (out.body["type"] === 9)
+          out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
         expect(out.body["type"], `${next.customId}: ${JSON.stringify(out.body["data"])}`).toBe(7);
         // A move's reply turns the pressed card into the move's line; the fresh card is the last post.
         const data = out.body["data"] as { content?: string; embeds?: unknown[]; components?: unknown[] };
@@ -2388,14 +3181,25 @@ describe("a run hosted in discord", () => {
         closed = (await store.eventsAfter("01000000000000000000000001", 0)).filter((e) => e["t"] === "UnitFinalized").length >= units;
       }
       const events = await store.eventsAfter("01000000000000000000000001", 0);
-      expect(closed, JSON.stringify({ presses, rows: card["components"], last: events.slice(-8).map((e) => `${e["t"]}${e["t"] === "StepCompleted" ? `:${e["phase"]}#${e["step"]}` : ""}`) })).toBe(true);
+      expect(
+        closed,
+        JSON.stringify({
+          presses,
+          rows: card["components"],
+          last: events.slice(-8).map((e) => `${e["t"]}${e["t"] === "StepCompleted" ? `:${e["phase"]}#${e["step"]}` : ""}`),
+        }),
+      ).toBe(true);
       return events;
     };
     const events = await playUntil(2);
     // Between stages the card still shows the closed stage's results under their tables; the next stage begins clean.
     const OURS = new Set(["Waiting on", "The game has already had its say", "On the table", "Clocks", "Standings", "At the table"]);
     // A table's result is a full-width field; the board's blocks are inline ones, and ours are named.
-    const tableFields = (c: Record<string, unknown>) => ((c["embeds"] as Array<{ fields: Array<{ name: string; inline?: boolean }> }>)[0]!.fields ?? []).filter((f) => !f.inline).map((f) => f.name).filter((n) => !OURS.has(n));
+    const tableFields = (c: Record<string, unknown>) =>
+      ((c["embeds"] as Array<{ fields: Array<{ name: string; inline?: boolean }> }>)[0]!.fields ?? [])
+        .filter((f) => !f.inline)
+        .map((f) => f.name)
+        .filter((n) => !OURS.has(n));
     expect(closing).not.toBeNull();
     expect(tableFields(closing!).length).toBeGreaterThan(0);
     // Next closed the stage and entered the next in one press: the card in hand is the third stage's, clean.
@@ -2417,7 +3221,9 @@ describe("a run hosted in discord", () => {
     expect(everything.filter((m) => m.content && !m.content.includes("Watch it live")).length).toBeGreaterThan(0);
     // What kind of thing each line is stands out; a stage beginning or closing is a colored bar, not a line.
     expect(everything.some((m) => /\*\*Declared\*\* A wide bowl/.test(m.content ?? ""))).toBe(true);
-    const bars = everything.flatMap((m) => (m.embeds ?? []) as Array<{ description?: string; color?: number }>).filter((e) => e.description);
+    const bars = everything
+      .flatMap((m) => (m.embeds ?? []) as Array<{ description?: string; color?: number }>)
+      .filter((e) => e.description);
     expect(bars.some((e) => /\*\*Stage 1\*\* begins\./.test(e.description!) && e.color === 0x4f8a78)).toBe(true);
     expect(bars.some((e) => /\*\*Stage 1\*\* closed\./.test(e.description!))).toBe(true);
     // The card is the thread's last message, and only the last card has buttons.
@@ -2445,11 +3251,16 @@ describe("a run hosted in discord", () => {
     // End from the card asks how, to the host alone: each ending named, with what it asks of the player under it.
     const how = await call(signed(press("rl:01000000000000000000000001:end")), d);
     expect(content(how)).toContain("How does it end?");
-    const endings = ((how.body["data"] as Record<string, unknown>)["components"] as Array<{ components: Array<{ options: Array<{ label: string; value: string; description?: string }> }> }>)[0]!.components[0]!.options;
+    const endings = (
+      (how.body["data"] as Record<string, unknown>)["components"] as Array<{
+        components: Array<{ options: Array<{ label: string; value: string; description?: string }> }>;
+      }>
+    )[0]!.components[0]!.options;
     expect(endings.map((e) => e.value)).toEqual(["kept", "broken", "out"]);
     expect(endings[0]!.description).toBe("Keep the set. Photograph it, log it, leave it intact.");
     expect(endings[2]!.description).toContain("Carry the work out of the Kiln.");
-    const end = () => call(signed(command({ name: "end", type: 1, options: [{ name: "ending", type: 3, value: "kept" }] }, mira, "thread_1")), d);
+    const end = () =>
+      call(signed(command({ name: "end", type: 1, options: [{ name: "ending", type: 3, value: "kept" }] }, mira, "thread_1")), d);
     let ended = await end();
     // The dice may have queued a forced stage, which must be played out before the firing can end.
     for (let more = 3; content(ended).includes("still queued") && more <= 5; more += 1) {
@@ -2460,13 +3271,22 @@ describe("a run hosted in discord", () => {
     expect(content(ended)).toContain("The Shelf");
     // The thread stays open to talk in; Discord closes it after a day idle.
     expect(bot.archived).toEqual([]);
-    expect((await call(request("GET", "/api/sessions/01000000000000000000000001"), d)).body["session"]).toMatchObject({ endedAt: "2026-09-06T12:00:00.000Z" });
+    expect((await call(request("GET", "/api/sessions/01000000000000000000000001"), d)).body["session"]).toMatchObject({
+      endedAt: "2026-09-06T12:00:00.000Z",
+    });
     expect(content(await call(signed(press("rl:01000000000000000000000001:enter")), d))).toContain("has ended");
   });
 
   it("refuses to host where the owner has no server plan and plans gate, where Discord will not open a thread, and where the bot has no token", async () => {
     const { d, bot } = await table();
-    const start = command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] });
+    const start = command({
+      name: "start",
+      type: 1,
+      options: [
+        { name: "pack", type: 3, value: PACK },
+        { name: "mode", type: 3, value: "standard" },
+      ],
+    });
     const gated = { ...d, gates: true, features: { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" } };
     expect(content(await call(signed(start), gated))).toContain("needs the server plan");
     bot.down = true;
@@ -2477,9 +3297,23 @@ describe("a run hosted in discord", () => {
 
   it("offers the vault packs and their modes as the command is typed", async () => {
     const { d } = await table();
-    const ask = (name: string, value: string, options: unknown[] = []) => ({ id: "i", application_id: "app", type: 4, token: "t", guild_id: "g1", member: member(mira, "32"), data: { name: "run", options: [{ name: "start", type: 1, options: [...options, { name, type: 3, value, focused: true }] }] } });
-    expect((await call(signed(ask("pack", "lon")), d)).body).toEqual({ type: 8, data: { choices: [{ name: "The Long Kiln", value: PACK }] } });
-    expect((await call(signed(ask("mode", "", [{ name: "pack", type: 3, value: PACK }])), d)).body).toEqual({ type: 8, data: { choices: [{ name: "Standard", value: "standard" }] } });
+    const ask = (name: string, value: string, options: unknown[] = []) => ({
+      id: "i",
+      application_id: "app",
+      type: 4,
+      token: "t",
+      guild_id: "g1",
+      member: member(mira, "32"),
+      data: { name: "run", options: [{ name: "start", type: 1, options: [...options, { name, type: 3, value, focused: true }] }] },
+    });
+    expect((await call(signed(ask("pack", "lon")), d)).body).toEqual({
+      type: 8,
+      data: { choices: [{ name: "The Long Kiln", value: PACK }] },
+    });
+    expect((await call(signed(ask("mode", "", [{ name: "pack", type: 3, value: PACK }])), d)).body).toEqual({
+      type: 8,
+      data: { choices: [{ name: "Standard", value: "standard" }] },
+    });
     expect((await call(signed(ask("pack", "zzz")), d)).body).toEqual({ type: 8, data: { choices: [] } });
   });
   /**
@@ -2492,7 +3326,19 @@ describe("a run hosted in discord", () => {
   it("answers /run link with the link the thread already has, twice", async () => {
     const { bot, d } = await table();
     const id = "01000000000000000000000001";
-    await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), d);
+    await call(
+      signed(
+        command({
+          name: "start",
+          type: 1,
+          options: [
+            { name: "pack", type: 3, value: PACK },
+            { name: "mode", type: 3, value: "standard" },
+          ],
+        }),
+      ),
+      d,
+    );
     const opening = String(bot.posts[0]!.message.content);
 
     const first = content(await call(signed(command({ name: "link", type: 1 }, mira, "thread_1")), d));
@@ -2503,18 +3349,41 @@ describe("a run hosted in discord", () => {
     expect(token).toBeTruthy();
     expect(opening).toContain(`?t=${token}`);
     // Which still reads the run, the whole point of not having moved it.
-    expect((await call(request("GET", `/api/public/runs/${id}/metrics?t=${token}`, { token: null }), d)).body).toMatchObject({ found: true });
+    expect((await call(request("GET", `/api/public/runs/${id}/metrics?t=${token}`, { token: null }), d)).body).toMatchObject({
+      found: true,
+    });
   });
 
   it("takes a move back, writes the journal, and takes a wave from anyone, from the thread", async () => {
     const { bot, store, d } = await table();
     const id = "01000000000000000000000001";
-    await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), d);
+    await call(
+      signed(
+        command({
+          name: "start",
+          type: 1,
+          options: [
+            { name: "pack", type: 3, value: PACK },
+            { name: "mode", type: 3, value: "standard" },
+          ],
+        }),
+      ),
+      d,
+    );
     // The card and the link are one message, pinned: a start is one post.
     expect(bot.posts).toHaveLength(1);
     expect(bot.posts[0]!.message.content).toContain("Watch it live");
     expect(Array.isArray(bot.posts[0]!.message.embeds)).toBe(true);
-    const journal = (text: string, user = mira) => ({ id: "i", application_id: "app", type: 2, token: "t", guild_id: "g1", channel_id: "thread_1", member: member(user, user === mira ? "32" : "0"), data: { name: "journal", options: [{ name: "text", type: 3, value: text }] } });
+    const journal = (text: string, user = mira) => ({
+      id: "i",
+      application_id: "app",
+      type: 2,
+      token: "t",
+      guild_id: "g1",
+      channel_id: "thread_1",
+      member: member(user, user === mira ? "32" : "0"),
+      data: { name: "journal", options: [{ name: "text", type: 3, value: text }] },
+    });
     // Nothing to write before the first unit, and nothing to take back but the start.
     expect(content(await call(signed(journal("too soon")), d))).toContain("Nothing to write about");
     expect((await call(signed(press(`rl:${id}:enter`)), d)).body["type"]).toBe(7);
@@ -2529,12 +3398,18 @@ describe("a run hosted in discord", () => {
     // The journal, once there is a unit to write about; the line is posted under the card.
     await call(signed(press(`rl:${id}:enter`)), d);
     expect(content(await call(signed(journal("Slip trailed, then waited.")), d))).toContain("📓 Slip trailed");
-    expect((await store.eventsAfter(id, 0)).some((e) => e["t"] === "JournalWritten" && e["unit"] === 1 && e["text"] === "Slip trailed, then waited.")).toBe(true);
+    expect(
+      (await store.eventsAfter(id, 0)).some(
+        (e) => e["t"] === "JournalWritten" && e["unit"] === 1 && e["text"] === "Slip trailed, then waited.",
+      ),
+    ).toBe(true);
     expect(content(await call(signed(journal("mine", sam)), d))).toContain("Only the host");
     // A wave from a watcher lands where the live page's waves land, and rings the same bell.
     const waved = await call(signed(press(`rl:${id}:wave`, sam, { values: ["🔥"] })), d);
     expect(waved.body["type"]).toBe(7);
-    expect((await call(request("GET", `/api/sessions/${id}/reactions`), d)).body["reactions"]).toMatchObject([{ emoji: "🔥", name: "Sam" }]);
+    expect((await call(request("GET", `/api/sessions/${id}/reactions`), d)).body["reactions"]).toMatchObject([
+      { emoji: "🔥", name: "Sam" },
+    ]);
     expect(content(await call(signed(press(`rl:${id}:wave`, sam, { values: ["🍕"] })), d))).toContain("Not one of the six");
     // A stale card cannot begin a unit the table is already in.
     expect(content(await call(signed(press(`rl:${id}:enter`)), d))).toContain("stale");
@@ -2543,7 +3418,14 @@ describe("a run hosted in discord", () => {
     const { bot, d } = await table();
     const handed: unknown[] = [];
     const deferring = { ...d, defer: async (interaction: unknown) => void handed.push(interaction) };
-    const start = command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] });
+    const start = command({
+      name: "start",
+      type: 1,
+      options: [
+        { name: "pack", type: 3, value: PACK },
+        { name: "mode", type: 3, value: "standard" },
+      ],
+    });
     // What can refuse still refuses in this turn, without deferring.
     expect(content(await call(signed({ ...start, member: member(sam, "0") }), deferring))).toContain("manage the server");
     expect(handed).toHaveLength(0);
@@ -2568,7 +3450,23 @@ describe("a run hosted in discord", () => {
     const timers: TimerJob[] = [];
     const dd: Deps = { ...d, now: () => clock, schedule: async (job) => void timers.push(job) };
     const id = "01000000000000000000000001";
-    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), dd))).toContain("started");
+    expect(
+      content(
+        await call(
+          signed(
+            command({
+              name: "start",
+              type: 1,
+              options: [
+                { name: "pack", type: 3, value: PACK },
+                { name: "mode", type: 3, value: "standard" },
+              ],
+            }),
+          ),
+          dd,
+        ),
+      ),
+    ).toContain("started");
     // Beginning the unit starts its timer, and somebody is asked to come back a minute later.
     expect((await call(signed(press(`rl:${id}:enter`)), dd)).body["type"]).toBe(7);
     expect(timers).toEqual([{ sessionId: id, clock: "u1:unit", at: "2026-09-06T12:01:00.000Z" }]);
@@ -2604,7 +3502,23 @@ describe("a run hosted in discord", () => {
     const late = await table(timed(true));
     let later = "2026-09-06T12:00:00.000Z";
     const ld: Deps = { ...late.d, now: () => later };
-    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), ld))).toContain("started");
+    expect(
+      content(
+        await call(
+          signed(
+            command({
+              name: "start",
+              type: 1,
+              options: [
+                { name: "pack", type: 3, value: PACK },
+                { name: "mode", type: 3, value: "standard" },
+              ],
+            }),
+          ),
+          ld,
+        ),
+      ),
+    ).toContain("started");
     const entered = await call(signed(press(`rl:${id}:enter`)), ld);
     later = "2026-09-06T12:05:00.000Z";
     const next = firstPress(cardAfter(entered, late.bot));
@@ -2617,7 +3531,10 @@ describe("a run hosted in discord", () => {
     expect(log[ranOut]).toMatchObject({ at: "2026-09-06T12:01:00.000Z" });
     expect(log.length).toBeGreaterThan(ranOut + 1);
     // The press was on the card, so its answer is the line, led by the timer that ran out first.
-    const saidLate = [String((lateOut.body["data"] as { content?: string }).content ?? ""), ...late.bot.posts.map((p) => p.message.content ?? "")];
+    const saidLate = [
+      String((lateOut.body["data"] as { content?: string }).content ?? ""),
+      ...late.bot.posts.map((p) => p.message.content ?? ""),
+    ];
     expect(saidLate.some((c) => c.includes("The Firing ran out."))).toBe(true);
   });
 
@@ -2626,7 +3543,14 @@ describe("a run hosted in discord", () => {
     await guilds.claimGuild({ guildId: "g2", name: "Another Room", ownerSub: "user_1", claimedAt: "2026-09-06T12:00:00.000Z" });
     const gated: Deps = { ...d, gates: true, discord: { ...d.discord!, entitled: async (g) => g === "g1" } };
     // The account holds no grant; the server's own subscription carries it.
-    const start = command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] });
+    const start = command({
+      name: "start",
+      type: 1,
+      options: [
+        { name: "pack", type: 3, value: PACK },
+        { name: "mode", type: 3, value: "standard" },
+      ],
+    });
     expect(content(await call(signed(start), gated))).toContain("started");
     const elsewhere = { ...start, guild_id: "g2" };
     expect(content(await call(signed(elsewhere), gated))).toContain("subscribes through Discord's store");
@@ -2635,7 +3559,9 @@ describe("a run hosted in discord", () => {
     expect(listed.find((g) => g.guildId === "g1")?.discord).toBe(true);
     expect(listed.find((g) => g.guildId === "g2")?.discord).toBeUndefined();
     // Without a store to ask, nothing is claimed either way.
-    const plain = (await call(request("GET", "/api/guilds"), { ...gated, discord: d.discord })).body["guilds"] as Array<{ discord?: boolean }>;
+    const plain = (await call(request("GET", "/api/guilds"), { ...gated, discord: d.discord })).body["guilds"] as Array<{
+      discord?: boolean;
+    }>;
     expect(plain.every((g) => g.discord === undefined)).toBe(true);
   });
 
@@ -2644,18 +3570,47 @@ describe("a run hosted in discord", () => {
     const moved: Array<{ sessionId: string; seq: number }> = [];
     const dd: Deps = { ...d, later: async (job) => void moved.push(job) };
     const id = "01000000000000000000000001";
-    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), dd))).toContain("started");
+    expect(
+      content(
+        await call(
+          signed(
+            command({
+              name: "start",
+              type: 1,
+              options: [
+                { name: "pack", type: 3, value: PACK },
+                { name: "mode", type: 3, value: "standard" },
+              ],
+            }),
+          ),
+          dd,
+        ),
+      ),
+    ).toContain("started");
     expect((await guilds.guildRun(id))?.seenSeq).toBeGreaterThan(0);
     // A press from Discord tells the job nothing: the thread heard it as it happened.
     expect((await call(signed(press(`rl:${id}:enter`)), dd)).body["type"]).toBe(7);
     expect(moved).toHaveLength(0);
     const heard = (await guilds.guildRun(id))!.seenSeq!;
     // The host, in the app, takes the move back and begins again; the route hands the run to the job.
-    const undo = await call(request("POST", `/api/sessions/${id}/events`, { body: { events: [{ t: "Undone", at: "2026-09-06T12:01:00Z", id: "app_1", move: "app_m1", ids: [] }] } }), dd);
+    const undo = await call(
+      request("POST", `/api/sessions/${id}/events`, {
+        body: { events: [{ t: "Undone", at: "2026-09-06T12:01:00Z", id: "app_1", move: "app_m1", ids: [] }] },
+      }),
+      dd,
+    );
     expect(undo.status).toBe(200);
-    const again = await call(request("POST", `/api/sessions/${id}/events`, { body: { events: [{ t: "UnitEntered", at: "2026-09-06T12:01:30Z", id: "app_2", move: "app_m2" }] } }), dd);
+    const again = await call(
+      request("POST", `/api/sessions/${id}/events`, {
+        body: { events: [{ t: "UnitEntered", at: "2026-09-06T12:01:30Z", id: "app_2", move: "app_m2" }] },
+      }),
+      dd,
+    );
     expect(again.status).toBe(200);
-    expect(moved).toEqual([{ sessionId: id, seq: heard + 1 }, { sessionId: id, seq: heard + 2 }]);
+    expect(moved).toEqual([
+      { sessionId: id, seq: heard + 1 },
+      { sessionId: id, seq: heard + 2 },
+    ]);
     // The job tells the thread once for both, redraws the card, and remembers how far it heard.
     const posts = bot.posts.length;
     const retired = bot.edits.length + bot.deleted.length;
@@ -2671,7 +3626,16 @@ describe("a run hosted in discord", () => {
     expect(await finishMoved(moved[1]!, dd)).toBe("quiet");
     expect(bot.posts).toHaveLength(posts + 2);
     // The app ends the run; the thread hears that too, and the card is done pressing.
-    expect((await call(request("POST", `/api/sessions/${id}/events`, { body: { events: [{ t: "RunEnded", at: "2026-09-06T12:02:00Z", id: "app_3", move: "app_m3", ending: "kept" }] } }), dd)).status).toBe(200);
+    expect(
+      (
+        await call(
+          request("POST", `/api/sessions/${id}/events`, {
+            body: { events: [{ t: "RunEnded", at: "2026-09-06T12:02:00Z", id: "app_3", move: "app_m3", ending: "kept" }] },
+          }),
+          dd,
+        )
+      ).status,
+    ).toBe(200);
     expect(await finishMoved(moved[moved.length - 1]!, dd)).toBe("told");
     expect(bot.posts[bot.posts.length - 2]!.message.content).toContain("The firing is over: The Shelf.");
     expect((await guilds.guildRun(id))!.endedAt).toBeTruthy();
@@ -2684,15 +3648,35 @@ describe("a run hosted in discord", () => {
   it("lets the host throw real dice and type the total, says so in the log, and refuses a total the dice could not make", async () => {
     const { bot, store, d } = await table();
     const id = "01000000000000000000000001";
-    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), d))).toContain("started");
+    expect(
+      content(
+        await call(
+          signed(
+            command({
+              name: "start",
+              type: 1,
+              options: [
+                { name: "pack", type: 3, value: PACK },
+                { name: "mode", type: 3, value: "standard" },
+              ],
+            }),
+          ),
+          d,
+        ),
+      ),
+    ).toContain("started");
     let card = cardAfter(await call(signed(press(`rl:${id}:enter`)), d), bot);
-    const buttons = (c: Record<string, unknown>) => (c["components"] as Array<{ components: Array<{ custom_id: string; label?: string; disabled?: boolean }> }>).flatMap((r) => r.components);
+    const buttons = (c: Record<string, unknown>) =>
+      (c["components"] as Array<{ components: Array<{ custom_id: string; label?: string; disabled?: boolean }> }>).flatMap(
+        (r) => r.components,
+      );
     // Press along until the card offers a table to roll on; beside "Roll:" sits "Roll it yourself".
     for (let n = 0; n < 40 && !buttons(card).some((b) => b.custom_id.includes(":byhand")); n += 1) {
       const next = firstPress(card);
       if (!next) break;
       let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
-      if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
+      if (out.body["type"] === 9)
+        out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
       card = cardAfter(out, bot);
     }
     expect(buttons(card).some((b) => b.custom_id.includes(":byhand") && b.label === "Roll it yourself")).toBe(true);
@@ -2726,16 +3710,50 @@ describe("a run hosted in discord", () => {
 
   it("throws the dice itself in a seeded mode, whatever the host presses", async () => {
     const { guilds, bot, store, d } = await table();
-    await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: "h", bytes: demo.length, modes: [{ id: "standard", label: "Standard" }, { id: "shared", label: "Shared" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, demo);
+    await guilds.putGuildPack(
+      "g1",
+      {
+        id: PACK,
+        title: "The Long Kiln",
+        version: "1",
+        format: "yaml",
+        hash: "h",
+        bytes: demo.length,
+        modes: [
+          { id: "standard", label: "Standard" },
+          { id: "shared", label: "Shared" },
+        ],
+        updatedAt: "2026-09-06T12:00:00.000Z",
+        delegatedBy: "user_1",
+      },
+      demo,
+    );
     const id = "01000000000000000000000001";
-    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "shared" }] })), d))).toContain("started");
+    expect(
+      content(
+        await call(
+          signed(
+            command({
+              name: "start",
+              type: 1,
+              options: [
+                { name: "pack", type: 3, value: PACK },
+                { name: "mode", type: 3, value: "shared" },
+              ],
+            }),
+          ),
+          d,
+        ),
+      ),
+    ).toContain("started");
     const rows = (c: Record<string, unknown>) => JSON.stringify(c["components"]);
     let card = cardAfter(await call(signed(press(`rl:${id}:enter`)), d), bot);
     for (let n = 0; n < 40 && !rows(card).includes('"label":"Roll:'); n += 1) {
       const next = firstPress(card);
       if (!next) break;
       let out = await call(signed(press(next.customId, mira, next.value ? { values: [next.value] } : {})), d);
-      if (out.body["type"] === 9) out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
+      if (out.body["type"] === 9)
+        out = await call(signed(typed(String((out.body["data"] as Record<string, unknown>)["custom_id"]), "A wide bowl")), d);
       card = cardAfter(out, bot);
     }
     expect(rows(card)).toContain('"label":"Roll:');
@@ -2748,9 +3766,43 @@ describe("a run hosted in discord", () => {
   it("joins and leaves from the thread by command, as the mode allows", async () => {
     // A mode played by several: the command takes the first open seat, and leaves it.
     const pairs = await table();
-    await pairs.guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: "h", bytes: demo.length, modes: [{ id: "standard", label: "Standard" }, { id: "pairs", label: "Pairs" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, demo);
+    await pairs.guilds.putGuildPack(
+      "g1",
+      {
+        id: PACK,
+        title: "The Long Kiln",
+        version: "1",
+        format: "yaml",
+        hash: "h",
+        bytes: demo.length,
+        modes: [
+          { id: "standard", label: "Standard" },
+          { id: "pairs", label: "Pairs" },
+        ],
+        updatedAt: "2026-09-06T12:00:00.000Z",
+        delegatedBy: "user_1",
+      },
+      demo,
+    );
     const id = "01000000000000000000000001";
-    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "pairs" }, { name: "players", type: 4, value: 2 }] })), pairs.d))).toContain("started");
+    expect(
+      content(
+        await call(
+          signed(
+            command({
+              name: "start",
+              type: 1,
+              options: [
+                { name: "pack", type: 3, value: PACK },
+                { name: "mode", type: 3, value: "pairs" },
+                { name: "players", type: 4, value: 2 },
+              ],
+            }),
+          ),
+          pairs.d,
+        ),
+      ),
+    ).toContain("started");
     expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "thread_1")), pairs.d))).toContain("You have seat 2");
     expect((await pairs.guilds.guildRun(id))!.seats?.["2"]).toEqual({ discordId: "1002", name: "Sam" });
     expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "thread_1")), pairs.d))).toContain("seat here already");
@@ -2761,7 +3813,23 @@ describe("a run hosted in discord", () => {
     expect(content(await call(signed(command({ name: "leave", type: 1 }, kit, "thread_1")), pairs.d))).toContain("nothing to leave");
     // A solo run: joining means following it into a linked member's library; unlinked, the command says to link.
     const solo = await table();
-    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), solo.d))).toContain("started");
+    expect(
+      content(
+        await call(
+          signed(
+            command({
+              name: "start",
+              type: 1,
+              options: [
+                { name: "pack", type: 3, value: PACK },
+                { name: "mode", type: 3, value: "standard" },
+              ],
+            }),
+          ),
+          solo.d,
+        ),
+      ),
+    ).toContain("started");
     expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "thread_1")), solo.d))).toContain("/link first");
     await solo.guilds.connect("user_2", { service: "discord", accountId: "1002", name: "Sam", linkedAt: "2026-09-06T12:00:00.000Z" });
     expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "thread_1")), solo.d))).toContain("Followed");
@@ -2773,8 +3841,26 @@ describe("a run hosted in discord", () => {
   it("lets the host choose where the card lives from the opening card, and keeps the live link where that card becomes a line", async () => {
     const { guilds, bot, d } = await table();
     const id = "01000000000000000000000001";
-    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), d))).toContain("started");
-    const opening = bot.posts[0]!.message as unknown as { components: Array<{ components: Array<{ custom_id: string; placeholder?: string }> }> };
+    expect(
+      content(
+        await call(
+          signed(
+            command({
+              name: "start",
+              type: 1,
+              options: [
+                { name: "pack", type: 3, value: PACK },
+                { name: "mode", type: 3, value: "standard" },
+              ],
+            }),
+          ),
+          d,
+        ),
+      ),
+    ).toContain("started");
+    const opening = bot.posts[0]!.message as unknown as {
+      components: Array<{ components: Array<{ custom_id: string; placeholder?: string }> }>;
+    };
     const chooser = opening.components.flatMap((r) => r.components).find((c) => c.custom_id.endsWith(":cards"))!;
     expect(chooser.placeholder).toContain("follows the thread");
     // A watcher cannot choose; the host can, and the card says so in place.
@@ -2786,7 +3872,13 @@ describe("a run hosted in discord", () => {
     expect(content(await call(signed(press(`rl:${id}:cards`, mira, { values: ["follow"] })), d)).length).toBeGreaterThan(0);
     expect((await guilds.guildRun(id))?.cardMode).toBeUndefined();
     // Following: the first move turns the opening card into its line, with the live link kept above it.
-    const entered = await call(signed({ ...press(`rl:${id}:enter`), message: { id: "msg_2", content: "Watch it live, no account needed: https://runlog.test/r/x?t=livetok" } }), d);
+    const entered = await call(
+      signed({
+        ...press(`rl:${id}:enter`),
+        message: { id: "msg_2", content: "Watch it live, no account needed: https://runlog.test/r/x?t=livetok" },
+      }),
+      d,
+    );
     expect(entered.body["type"]).toBe(7);
     const morphed = entered.body["data"] as { content?: string; components?: unknown[] };
     expect(morphed.content).toContain("Watch it live");
@@ -2796,11 +3888,30 @@ describe("a run hosted in discord", () => {
 
   it("keeps the card pinned at the top and edits it in place where the server asked for that", async () => {
     const { guilds, bot, d } = await table();
-    const setup = (mode: string) => ({ ...command({ name: "cards", type: 1, options: [{ name: "mode", type: 3, value: mode }] }), data: { name: "setup", options: [{ name: "cards", type: 1, options: [{ name: "mode", type: 3, value: mode }] }] } });
+    const setup = (mode: string) => ({
+      ...command({ name: "cards", type: 1, options: [{ name: "mode", type: 3, value: mode }] }),
+      data: { name: "setup", options: [{ name: "cards", type: 1, options: [{ name: "mode", type: 3, value: mode }] }] },
+    });
     expect(content(await call(signed(setup("pinned")), d))).toContain("stays pinned");
     expect((await guilds.guild("g1"))?.cardMode).toBe("pinned");
     const id = "01000000000000000000000001";
-    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), d))).toContain("started");
+    expect(
+      content(
+        await call(
+          signed(
+            command({
+              name: "start",
+              type: 1,
+              options: [
+                { name: "pack", type: 3, value: PACK },
+                { name: "mode", type: 3, value: "standard" },
+              ],
+            }),
+          ),
+          d,
+        ),
+      ),
+    ).toContain("started");
     expect((await guilds.guildRun(id))?.cardMode).toBe("pinned");
     // A move's reply is the card itself, in place; its line is posted; no fresh card follows.
     const posts = bot.posts.length;
@@ -2819,9 +3930,26 @@ describe("a run hosted in discord", () => {
   it("answers a press made for a step the table has moved past with the card as it stands, and drives nothing", async () => {
     const { bot, store, d } = await table();
     const id = "01000000000000000000000001";
-    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), d))).toContain("started");
+    expect(
+      content(
+        await call(
+          signed(
+            command({
+              name: "start",
+              type: 1,
+              options: [
+                { name: "pack", type: 3, value: PACK },
+                { name: "mode", type: 3, value: "standard" },
+              ],
+            }),
+          ),
+          d,
+        ),
+      ),
+    ).toContain("started");
     const card = cardAfter(await call(signed(press(`rl:${id}:enter`)), d), bot);
-    const buttons = (c: Record<string, unknown>) => (c["components"] as Array<{ components: Array<{ custom_id: string }> }>).flatMap((r) => r.components);
+    const buttons = (c: Record<string, unknown>) =>
+      (c["components"] as Array<{ components: Array<{ custom_id: string }> }>).flatMap((r) => r.components);
     // Every button that drives the step names it.
     const step = buttons(card).find((b) => /:(step|tick|declare|finalize|byhand):/.test(b.custom_id))!;
     expect(step.custom_id).toMatch(/:[a-z-]+:(\d+@)?[a-z-]+#\d+$/);
@@ -2834,7 +3962,10 @@ describe("a run hosted in discord", () => {
     expect((await store.eventsAfter(id, 0)).length).toBe(events);
     // From a message that is not the card, the stale message loses its buttons and a fresh card goes to the bottom.
     const posts = bot.posts.length;
-    const elsewhere = await call(signed({ ...press(stale), message: { id: "msg_old", content: "an old card", embeds: [{ title: "old" }] } }), d);
+    const elsewhere = await call(
+      signed({ ...press(stale), message: { id: "msg_old", content: "an old card", embeds: [{ title: "old" }] } }),
+      d,
+    );
     expect(elsewhere.body["data"]).toMatchObject({ content: "an old card", components: [] });
     expect(bot.posts.length).toBe(posts + 1);
     expect((await store.eventsAfter(id, 0)).length).toBe(events);
@@ -2847,15 +3978,36 @@ describe("a run hosted in discord", () => {
     const timers: TimerJob[] = [];
     const dd: Deps = { ...d, schedule: async (job) => void timers.push(job) };
     const id = "01000000000000000000000001";
-    expect(content(await call(signed(command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }] })), dd))).toContain("started");
+    expect(
+      content(
+        await call(
+          signed(
+            command({
+              name: "start",
+              type: 1,
+              options: [
+                { name: "pack", type: 3, value: PACK },
+                { name: "mode", type: 3, value: "standard" },
+              ],
+            }),
+          ),
+          dd,
+        ),
+      ),
+    ).toContain("started");
     const entered = await call(signed(press(`rl:${id}:enter`)), dd);
-    const labels = (card: Record<string, unknown>) => (card["components"] as Array<{ components: Array<{ label?: string; custom_id: string }> }>).flatMap((r) => r.components.map((c) => c.label ?? c.custom_id));
+    const labels = (card: Record<string, unknown>) =>
+      (card["components"] as Array<{ components: Array<{ label?: string; custom_id: string }> }>).flatMap((r) =>
+        r.components.map((c) => c.label ?? c.custom_id),
+      );
     expect(labels(cardAfter(entered, bot))).toContain("Start The Firing");
     expect(timers).toHaveLength(0);
     const started = await call(signed(press(`rl:${id}:clock:start`)), dd);
     expect(started.body["type"]).toBe(7);
     expect(labels(cardAfter(started, bot))).toContain("Pause The Firing");
-    expect((await store.eventsAfter(id, 0)).filter((e) => e["t"] === "ClockStarted")).toMatchObject([{ clock: "u1:unit", seconds: 60, label: "The Firing" }]);
+    expect((await store.eventsAfter(id, 0)).filter((e) => e["t"] === "ClockStarted")).toMatchObject([
+      { clock: "u1:unit", seconds: 60, label: "The Firing" },
+    ]);
     expect(timers).toEqual([{ sessionId: id, clock: "u1:unit", at: "2026-09-06T12:01:00.000Z" }]);
     // The press was on the card, so its line is the card's own answer; the fresh card is the last post.
     expect(String((started.body["data"] as { content?: string }).content)).toContain("The Firing started.");
@@ -2867,9 +4019,35 @@ describe("a run hosted in discord", () => {
 
   it("seats several in a mode played by several: a seat presses, an open chair is anyone\u2019s, a linked seat follows the run home", async () => {
     const { guilds, bot, store, d } = await table();
-    await guilds.putGuildPack("g1", { id: PACK, title: "The Long Kiln", version: "1", format: "yaml", hash: "h", bytes: demo.length, modes: [{ id: "standard", label: "Standard" }, { id: "pairs", label: "Pairs" }], updatedAt: "2026-09-06T12:00:00.000Z", delegatedBy: "user_1" }, demo);
+    await guilds.putGuildPack(
+      "g1",
+      {
+        id: PACK,
+        title: "The Long Kiln",
+        version: "1",
+        format: "yaml",
+        hash: "h",
+        bytes: demo.length,
+        modes: [
+          { id: "standard", label: "Standard" },
+          { id: "pairs", label: "Pairs" },
+        ],
+        updatedAt: "2026-09-06T12:00:00.000Z",
+        delegatedBy: "user_1",
+      },
+      demo,
+    );
     const id = "01000000000000000000000001";
-    const start = (players?: number) => command({ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "pairs" }, ...(players ? [{ name: "players", type: 4, value: players }] : [])] });
+    const start = (players?: number) =>
+      command({
+        name: "start",
+        type: 1,
+        options: [
+          { name: "pack", type: 3, value: PACK },
+          { name: "mode", type: 3, value: "pairs" },
+          ...(players ? [{ name: "players", type: 4, value: players }] : []),
+        ],
+      });
     // Too many chairs for the mode is refused before anything is made.
     expect(content(await call(signed(start(4)), d))).toContain("2 to 3");
     expect(content(await call(signed(start(2)), d))).toContain("started");
@@ -2908,7 +4086,9 @@ describe("a run hosted in discord", () => {
     expect((await guilds.guildRun(id))!.seats).toEqual({ "1": { discordId: "1001", name: "Mira" } });
     expect(content(await call(signed(press(`rl:${id}:unseat`)), d))).toContain("host keeps a seat");
     // A move that landed elsewhere between the read and the write is not built over.
-    await store.appendEvents(id, "user_1", "2026-09-06T12:00:00.000Z", [{ t: "JournalWritten", at: "2026-09-06T12:00:00.000Z", id: "elsewhere", unit: 1, text: "from the app" }]);
+    await store.appendEvents(id, "user_1", "2026-09-06T12:00:00.000Z", [
+      { t: "JournalWritten", at: "2026-09-06T12:00:00.000Z", id: "elsewhere", unit: 1, text: "from the app" },
+    ]);
     const original = store.appendEvents.bind(store);
     let attempts = 0;
     store.appendEvents = async (sid, author, at, events, opts) => {

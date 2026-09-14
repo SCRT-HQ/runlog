@@ -38,7 +38,12 @@ describe("a purchased copy", () => {
     };
     const id = await keepPurchase(db as never, purchase, await seal(kiln, key, { ref: "REF1", title: "The Long Kiln" }));
     expect(id).toBe(kiln["id"]);
-    expect(saved[0]).toMatchObject({ id: kiln["id"], sealed: true, origin: "listing", catalog: { id: kiln["id"], version: kiln["version"] } });
+    expect(saved[0]).toMatchObject({
+      id: kiln["id"],
+      sealed: true,
+      origin: "listing",
+      catalog: { id: kiln["id"], version: kiln["version"] },
+    });
     expect(licenses[0]).toMatchObject({ packId: kiln["id"], key, ref: "REF1", title: "The Long Kiln" });
   });
 });

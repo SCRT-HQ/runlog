@@ -79,9 +79,7 @@ describe("one schema, three unrelated games", () => {
       const table = signal.tables[deck.resolveOn!]!;
       expect(table.resolution).toBe("keyed");
       if (table.resolution !== "keyed") return;
-      expect(new Set(table.entries.map((e) => e.key))).toEqual(
-        new Set(["hearts", "diamonds", "clubs", "spades"]),
-      );
+      expect(new Set(table.entries.map((e) => e.key))).toEqual(new Set(["hearts", "diamonds", "clubs", "spades"]));
     });
 
     it("allows a resource to sit below zero", () => {

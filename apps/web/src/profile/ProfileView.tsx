@@ -85,10 +85,7 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
     });
   }, []);
 
-  const api = useMemo(
-    () => (base && account.status === "signed-in" ? createApi(base, account.getAccessToken) : null),
-    [base, account],
-  );
+  const api = useMemo(() => (base && account.status === "signed-in" ? createApi(base, account.getAccessToken) : null), [base, account]);
 
   // The visit is the profile's heartbeat, and the name and email travel
   // with it so the row is never older than the last time the page was
@@ -232,7 +229,17 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
  * is named only for an account the tier is open to, or when it is the
  * page being shown (a claim code lands there whoever follows it).
  */
-function ProfileNav({ page, onNavigate, waiting, servers }: { page: ProfilePage; onNavigate?: (page: ProfilePage) => void; waiting: number; servers: boolean }) {
+function ProfileNav({
+  page,
+  onNavigate,
+  waiting,
+  servers,
+}: {
+  page: ProfilePage;
+  onNavigate?: (page: ProfilePage) => void;
+  waiting: number;
+  servers: boolean;
+}) {
   return (
     <nav className="profileNav" aria-label="Profile pages">
       {PROFILE_PAGES.filter((p) => p.id !== "servers" || servers || page === "servers").map((p) => (
@@ -461,9 +468,9 @@ function PublishingPage({ api }: { api: Api | null }) {
       {loading ? null : empty ? (
         <section className="panel">
           <p className="muted small">
-            This is where a publisher lives: who else is in it, what you have listed for sale and what it has
-            earned, hosted licensing, and the command-line keys and signing keys tied to your account. Write a pack
-            first, in the <a href={linkTo("#create")}>Designer</a>.
+            This is where a publisher lives: who else is in it, what you have listed for sale and what it has earned, hosted licensing, and
+            the command-line keys and signing keys tied to your account. Write a pack first, in the <a href={linkTo("#create")}>Designer</a>
+            .
           </p>
         </section>
       ) : (
@@ -508,13 +515,11 @@ function AccountPage({
         </h3>
         {licenses.length === 0 ? (
           <p className="muted small">
-            None yet. Open a sealed copy and the key you type is kept here, so the same file opens on your other
-            devices without the receipt.
+            None yet. Open a sealed copy and the key you type is kept here, so the same file opens on your other devices without the
+            receipt.
           </p>
         ) : (
-          licenses.map((l) => (
-            <LicenseRow key={l.packId} license={l} title={titleOf(l)} onForget={() => onForgetLicense(l.packId)} />
-          ))
+          licenses.map((l) => <LicenseRow key={l.packId} license={l} title={titleOf(l)} onForget={() => onForgetLicense(l.packId)} />)
         )}
       </section>
 
@@ -523,9 +528,9 @@ function AccountPage({
           Your data on the server <span className="muted">a copy of it, or the end of it</span>
         </h3>
         <p className="muted small">
-          Everything your account holds, runs, the packs you switched on, license keys, purchases, races, the people you
-          have played with, and this profile, can be downloaded as one file, or removed from the server at once. What is on
-          this device stays on this device either way.
+          Everything your account holds, runs, the packs you switched on, license keys, purchases, races, the people you have played with,
+          and this profile, can be downloaded as one file, or removed from the server at once. What is on this device stays on this device
+          either way.
         </p>
         <Export disabled={!api} onExport={async () => (api ? api.exportMe() : Promise.reject(new Error("no API")))} />
         <Forget disabled={!api} onConfirm={onDeleteEverything} />
@@ -611,7 +616,12 @@ function SocialPage({
                     </span>
                   </div>
                   <div className="inviteActs">
-                    <button className="primary tiny" disabled={busy || !onJoinInvite} aria-busy={busy || undefined} onClick={() => void act(invite.token, "join")}>
+                    <button
+                      className="primary tiny"
+                      disabled={busy || !onJoinInvite}
+                      aria-busy={busy || undefined}
+                      onClick={() => void act(invite.token, "join")}
+                    >
                       {invite.alreadyIn ? "Open" : "Join"}
                     </button>
                     <button className="ghost tiny" disabled={busy} onClick={() => void act(invite.token, "decline")}>
@@ -636,7 +646,10 @@ function SocialPage({
             <button key={r.runId} className="row spread memberRow openTableRow" onClick={() => onOpenRun?.(r.runId)}>
               <span>
                 <strong>{r.packTitle ?? r.packId}</strong>
-                <span className="muted small"> · {(r.members?.length ?? 0) > 1 ? `${r.members!.length} at the table` : "shared by a live link"}</span>
+                <span className="muted small">
+                  {" "}
+                  · {(r.members?.length ?? 0) > 1 ? `${r.members!.length} at the table` : "shared by a live link"}
+                </span>
               </span>
               <span className="muted small">{onDay(r.updatedAt)}</span>
             </button>
@@ -670,7 +683,15 @@ function SocialPage({
  * chosen here wins over it, and an address is never shown to anyone but
  * its owner.
  */
-function ShownAs({ api, profile, onSaved }: { api: ReturnType<typeof createApi> | null; profile: Profile | null; onSaved: (p: Profile) => void }) {
+function ShownAs({
+  api,
+  profile,
+  onSaved,
+}: {
+  api: ReturnType<typeof createApi> | null;
+  profile: Profile | null;
+  onSaved: (p: Profile) => void;
+}) {
   const [draft, setDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -711,7 +732,10 @@ function ShownAs({ api, profile, onSaved }: { api: ReturnType<typeof createApi> 
           {busy ? "Saving…" : "Save"}
         </button>
       </label>
-      <p className="muted small">{note ?? "What people at a table, in a race, or watching a live link see. Blank shows the name on your account; your address is never shown."}</p>
+      <p className="muted small">
+        {note ??
+          "What people at a table, in a race, or watching a live link see. Blank shows the name on your account; your address is never shown."}
+      </p>
     </div>
   );
 }
@@ -746,9 +770,10 @@ function CommandLine({ api }: { api: Api | null }) {
       {!api && <p className="muted small">Sign in on a hosted address to make a key for the command line.</p>}
       {api && (
         <p className="muted small">
-          On your own computer, <code>npx @scrthq/runlog login</code> signs in through this browser and needs no key. A key is for a machine with
-          nobody at it, such as CI publishing a release: set it as <code>RUNLOG_API_KEY</code> there. A key that only releases can check,
-          sign, publish and release packs and nothing else, so a leaked build secret cannot reach your runs, your sales or your people.
+          On your own computer, <code>npx @scrthq/runlog login</code> signs in through this browser and needs no key. A key is for a machine
+          with nobody at it, such as CI publishing a release: set it as <code>RUNLOG_API_KEY</code> there. A key that only releases can
+          check, sign, publish and release packs and nothing else, so a leaked build secret cannot reach your runs, your sales or your
+          people.
         </p>
       )}
       {api && (
@@ -759,7 +784,11 @@ function CommandLine({ api }: { api: Api | null }) {
                 <strong>{k.name}</strong>
                 <span className="muted small mono"> {k.prefix}…</span>
                 {k.scope === "release" && <span className="chip state">releases only</span>}
-                <span className="muted small"> · made {onDay(k.createdAt)}{k.lastUsedAt ? `, used ${onDay(k.lastUsedAt)}` : ", never used"}</span>
+                <span className="muted small">
+                  {" "}
+                  · made {onDay(k.createdAt)}
+                  {k.lastUsedAt ? `, used ${onDay(k.lastUsedAt)}` : ", never used"}
+                </span>
               </span>
               <button className="ghost tiny" onClick={() => void api.revokeKey(k.id).then(refresh, () => {})}>
                 Revoke
@@ -788,7 +817,8 @@ function CommandLine({ api }: { api: Api | null }) {
                 </button>
               </div>
               <p className="muted small">
-                In CI, set it as <code>RUNLOG_API_KEY</code>. On a machine you sit at, <code>npx @scrthq/runlog login --key</code> and paste it.
+                In CI, set it as <code>RUNLOG_API_KEY</code>. On a machine you sit at, <code>npx @scrthq/runlog login --key</code> and paste
+                it.
               </p>
             </div>
           ) : (
@@ -857,15 +887,7 @@ function CommandLine({ api }: { api: Api | null }) {
  * screen; shown or copied on purpose. Forgetting takes two presses, since a
  * key is the receipt for something paid for.
  */
-function LicenseRow({
-  license,
-  title,
-  onForget,
-}: {
-  license: StoredLicense;
-  title: string;
-  onForget: () => Promise<void>;
-}) {
+function LicenseRow({ license, title, onForget }: { license: StoredLicense; title: string; onForget: () => Promise<void> }) {
   const [shown, setShown] = useState(false);
   const [copied, setCopied] = useState(false);
   const [arming, setArming] = useState(false);
@@ -912,7 +934,9 @@ function LicenseRow({
 
 /** The copy: one button, then the file, then a word on how big it was. */
 function Export({ disabled, onExport }: { disabled: boolean; onExport: () => Promise<{ url: string; bytes: number }> }) {
-  const [state, setState] = useState<{ kind: "idle" } | { kind: "busy" } | { kind: "done"; bytes: number } | { kind: "failed"; why: string }>({ kind: "idle" });
+  const [state, setState] = useState<
+    { kind: "idle" } | { kind: "busy" } | { kind: "done"; bytes: number } | { kind: "failed"; why: string }
+  >({ kind: "idle" });
   return (
     <div className="padRow">
       <button
@@ -926,13 +950,16 @@ function Export({ disabled, onExport }: { disabled: boolean; onExport: () => Pro
               setState({ kind: "done", bytes });
               location.assign(url);
             },
-            (error: unknown) => setState({ kind: "failed", why: error instanceof Error && error.message ? error.message : "the export could not be made" }),
+            (error: unknown) =>
+              setState({ kind: "failed", why: error instanceof Error && error.message ? error.message : "the export could not be made" }),
           );
         }}
       >
         {state.kind === "busy" ? "Gathering…" : "Download everything"}
       </button>
-      {state.kind === "done" && <span className="muted small">{Math.max(1, Math.round(state.bytes / 1024))} KB, as JSON. The link works for fifteen minutes.</span>}
+      {state.kind === "done" && (
+        <span className="muted small">{Math.max(1, Math.round(state.bytes / 1024))} KB, as JSON. The link works for fifteen minutes.</span>
+      )}
       {state.kind === "failed" && <span className="muted small">{state.why}</span>}
     </div>
   );
@@ -997,7 +1024,9 @@ function InviteFriend({ api }: { api: Api | null }) {
     setNote(null);
     try {
       const out = await api.inviteFriend(email.trim());
-      setNote("available" in out ? "Invitations are not switched on here." : `Invited ${out.email}. They get one mail, with a link to sign up.`);
+      setNote(
+        "available" in out ? "Invitations are not switched on here." : `Invited ${out.email}. They get one mail, with a link to sign up.`,
+      );
       if (!("available" in out)) setEmail("");
       refresh();
     } catch (error) {
@@ -1018,14 +1047,26 @@ function InviteFriend({ api }: { api: Api | null }) {
     }
   };
   const said = (i: PublisherInvitation) =>
-    i.state === "accepted" ? `joined${i.acceptedAt ? ` ${i.acceptedAt.slice(0, 10)}` : ""}` : i.state === "pending" ? `invited · until ${i.expiresAt.slice(0, 10)}` : i.state;
+    i.state === "accepted"
+      ? `joined${i.acceptedAt ? ` ${i.acceptedAt.slice(0, 10)}` : ""}`
+      : i.state === "pending"
+        ? `invited · until ${i.expiresAt.slice(0, 10)}`
+        : i.state;
   return (
     <section className="panel">
       <h3 className="sectionTitle">
         Invite a friend <span className="muted">to Runlog</span>
       </h3>
       <div className="inviteForm">
-        <input className="textInput" type="email" placeholder="their email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && email.includes("@") && void send()} aria-label="Email address to invite" />
+        <input
+          className="textInput"
+          type="email"
+          placeholder="their email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && email.includes("@") && void send()}
+          aria-label="Email address to invite"
+        />
         <button className="ghost tiny" disabled={busy || !email.includes("@")} onClick={() => void send()}>
           {busy ? "Sending…" : "Invite"}
         </button>
@@ -1075,9 +1116,7 @@ function SettingsPage() {
         <h3 className="sectionTitle">
           This device <span className="muted">kept here, not in your account</span>
         </h3>
-        <p className="muted small">
-          The theme is in the account menu, where it can be tried and put back without opening anything.
-        </p>
+        <p className="muted small">The theme is in the account menu, where it can be tried and put back without opening anything.</p>
         <DeviceSettings alerts={alerts} onAlerts={setAlerts} />
       </section>
     </div>

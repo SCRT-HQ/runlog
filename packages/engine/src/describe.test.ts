@@ -30,9 +30,7 @@ describe("a predicate, in prose", () => {
   });
 
   it("joins alternatives with or, and negates in plain words", () => {
-    expect(describePredicate(kiln, { anyOf: [{ unitIndex: { eq: 1 } }, { unitIndex: { eq: 2 } }] })).toBe(
-      "in Stage 1 or in Stage 2",
-    );
+    expect(describePredicate(kiln, { anyOf: [{ unitIndex: { eq: 1 } }, { unitIndex: { eq: 2 } }] })).toBe("in Stage 1 or in Stage 2");
     expect(describePredicate(kiln, { not: { flag: "cold" } })).toBe("it is not the case that cold is on");
   });
 });

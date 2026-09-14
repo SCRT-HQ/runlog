@@ -42,16 +42,13 @@ describe("which pack the Designer opens on", () => {
   });
 
   async function mount(stored: Draft | null) {
-    vi.mocked(loadDraft).mockResolvedValue(
-      stored ? { id: "current", pack: stored, updatedAt: "2026-01-01T00:00:00Z" } : null,
-    );
+    vi.mocked(loadDraft).mockResolvedValue(stored ? { id: "current", pack: stored, updatedAt: "2026-01-01T00:00:00Z" } : null);
     await act(async () => {
       root.render(<DesignView />);
     });
   }
 
-  const buttonLabeled = (text: string) =>
-    Array.from(container.querySelectorAll("button")).find((b) => b.textContent === text);
+  const buttonLabeled = (text: string) => Array.from(container.querySelectorAll("button")).find((b) => b.textContent === text);
 
   it("asks which pack when a real draft is waiting", async () => {
     await mount({ ...blankPack(), title: "Two-Line Days" });
@@ -158,8 +155,7 @@ describe("trying a draft from the Designer", () => {
     vi.mocked(saveDraft).mockReset();
   });
 
-  const buttonLabeled = (text: string) =>
-    Array.from(container.querySelectorAll("button")).find((b) => b.textContent === text);
+  const buttonLabeled = (text: string) => Array.from(container.querySelectorAll("button")).find((b) => b.textContent === text);
 
   it("hands the parsed pack over when Try it is pressed", async () => {
     const tried: string[] = [];

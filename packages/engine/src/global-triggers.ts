@@ -48,9 +48,7 @@ export function globalTriggerKey(index: number, on: TriggerPoint, unit: number, 
 
 export function pendingGlobalTriggers(pack: Pack, state: RunState): PendingGlobalTrigger[] {
   const points = new Set<string>(reached(state));
-  const expiredClocks = state.clocks.filter(
-    (c) => c.unit === state.unit && c.status === "done" && c.expired,
-  );
+  const expiredClocks = state.clocks.filter((c) => c.unit === state.unit && c.status === "done" && c.expired);
   const due: PendingGlobalTrigger[] = [];
 
   pack.triggers?.forEach((trigger, index) => {

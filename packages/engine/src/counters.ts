@@ -33,12 +33,7 @@ export interface PendingTrigger {
  * threshold holds", without that a trigger whose condition stays true would
  * fire on every render, forever.
  */
-export function triggerKey(
-  counter: string,
-  index: number,
-  oncePerRun: boolean,
-  unit: number,
-): string {
+export function triggerKey(counter: string, index: number, oncePerRun: boolean, unit: number): string {
   return oncePerRun ? `counter:${counter}:${index}` : `counter:${counter}:${index}:u${unit}`;
 }
 

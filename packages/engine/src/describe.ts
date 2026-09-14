@@ -10,7 +10,15 @@ import type { Pack, Phase, Predicate } from "@runlog/rules-schema";
  * a blank tooltip.
  */
 
-type Bound = { eq?: number; gte?: number; lte?: number; gteCounter?: string; lteCounter?: string; gteResource?: string; lteResource?: string };
+type Bound = {
+  eq?: number;
+  gte?: number;
+  lte?: number;
+  gteCounter?: string;
+  lteCounter?: string;
+  gteResource?: string;
+  lteResource?: string;
+};
 
 function counterName(pack: Pack, id: string): string {
   return pack.counters?.[id]?.label ?? id;

@@ -36,7 +36,7 @@ import type { InputRequest, Obligation, RunState } from "./types.ts";
  * `playThrough` plays a whole scripted run in one call, which is right for a
  * fixture but wrong for a Discord bot: a Lambda answers one button press,
  * writes down where it got to, and forgets everything until the next press.
- * `drive` and `answer` are that shape. Each call does exactly one thing, 
+ * `drive` and `answer` are that shape. Each call does exactly one thing,
  * advance the flow, or take one more step through an interrupted block, and
  * either finishes with events to commit or hands back a `Pending` the caller
  * can serialize, store, and resume later with the next answer.
@@ -227,7 +227,7 @@ export class DriveError extends Error {
 
 /**
  * The stream a seeded run draws from for a request keyed by `keyPrefix`,
- * addressed by unit and occurrence exactly as `useRun.randomSource` does: 
+ * addressed by unit and occurrence exactly as `useRun.randomSource` does:
  * moved here so the driver rolls a shared seed the same way the app would
  * have, and any caller (the bot included) can reproduce it. Unseeded rolls
  * still need a source when the caller asked the driver to roll on its
@@ -254,7 +254,14 @@ function unitOf(events: readonly RunEvent[], event: RunEvent): number {
 }
 
 /** Whether this block should roll for itself rather than ask, and with what source label. */
-function rollingContext(pack: Pack, state: RunState, events: readonly RunEvent[], keyPrefix: string, seed: string | undefined, autoRoll: boolean | undefined): Pick<ExecContext, "random" | "seeded"> {
+function rollingContext(
+  pack: Pack,
+  state: RunState,
+  events: readonly RunEvent[],
+  keyPrefix: string,
+  seed: string | undefined,
+  autoRoll: boolean | undefined,
+): Pick<ExecContext, "random" | "seeded"> {
   const seededRun = Boolean(seed) && Boolean(pack.modes[state.mode]?.seeded);
   if (!seededRun && !autoRoll) return {};
   return { random: randomFor(pack, state, events, keyPrefix, seed), seeded: seededRun };
@@ -362,11 +369,17 @@ export function drive(pack: Pack, events: readonly RunEvent[], action: DriveActi
   if ("declare" in action) {
     const active = nextStep(pack, state);
     if (!active || active.step.kind !== "declareSubject") {
-      throw new DriveError(`cannot declare: the active step is ${active ? `"${active.phase.id}#${active.index}" (${active.step.kind})` : "none"}, not declareSubject`, action);
+      throw new DriveError(
+        `cannot declare: the active step is ${active ? `"${active.phase.id}#${active.index}" (${active.step.kind})` : "none"}, not declareSubject`,
+        action,
+      );
     }
     return stamp(
       ctx,
-      [{ t: "SubjectDeclared", at: ctx.now, subjectType: action.declare }, ...stepCompletionEvents(active.phase, active.index, state, ctx.now)],
+      [
+        { t: "SubjectDeclared", at: ctx.now, subjectType: action.declare },
+        ...stepCompletionEvents(active.phase, active.index, state, ctx.now),
+      ],
       undefined,
     );
   }
@@ -385,14 +398,21 @@ export function drive(pack: Pack, events: readonly RunEvent[], action: DriveActi
   if ("finalize" in action) {
     const active = nextStep(pack, state);
     if (!active || !closesUnit(active.step)) {
-      throw new DriveError(`cannot finalize: the active step is ${active ? `"${active.phase.id}#${active.index}" (${active.step.kind})` : "none"}, not one that closes the unit`, action);
+      throw new DriveError(
+        `cannot finalize: the active step is ${active ? `"${active.phase.id}#${active.index}" (${active.step.kind})` : "none"}, not one that closes the unit`,
+        action,
+      );
     }
     if (!checklistSatisfied(pack, state, active)) {
       throw new DriveError("cannot finalize: not every confirmation on the active step is ticked", action);
     }
     return stamp(
       ctx,
-      [...stopClocksEvents(state, ctx.now), { t: "UnitFinalized", at: ctx.now }, ...stepCompletionEvents(active.phase, active.index, state, ctx.now)],
+      [
+        ...stopClocksEvents(state, ctx.now),
+        { t: "UnitFinalized", at: ctx.now },
+        ...stepCompletionEvents(active.phase, active.index, state, ctx.now),
+      ],
       undefined,
     );
   }
@@ -464,7 +484,13 @@ export function drive(pack: Pack, events: readonly RunEvent[], action: DriveActi
         pack,
         state,
         events,
-        { kind: "actions", actions: list, keyPrefix: `u${state.unit}:${key}`, exec: (ec) => executeActions(pack, state, list, ec), completes },
+        {
+          kind: "actions",
+          actions: list,
+          keyPrefix: `u${state.unit}:${key}`,
+          exec: (ec) => executeActions(pack, state, list, ec),
+          completes,
+        },
         {},
         [],
         ctx,
@@ -507,7 +533,14 @@ export function closeAndEnter(pack: Pack, events: readonly RunEvent[], ctx: Driv
  * `drive`, marks `value` itself as generated rather than physical; see
  * `DriveContext.autoRoll`.
  */
-export function answer(pack: Pack, events: readonly RunEvent[], pending: Pending, key: string, value: AnswerValue, ctx: DriveContext): DriveResult {
+export function answer(
+  pack: Pack,
+  events: readonly RunEvent[],
+  pending: Pending,
+  key: string,
+  value: AnswerValue,
+  ctx: DriveContext,
+): DriveResult {
   const state = reduce(pack, events);
   const answers = { ...pending.answers, [key]: value };
   const generated = ctx.autoRoll ? [...pending.generated, key] : pending.generated;
@@ -522,14 +555,5 @@ export function answer(pack: Pack, events: readonly RunEvent[], pending: Pending
     completes: pending.completes,
     closesUnit: pending.closesUnit,
   };
-  return runBlock(
-    pack,
-    state,
-    events,
-    meta,
-    answers,
-    generated,
-    { ...ctx, seed: pending.seed, autoRoll: pending.autoRoll },
-    pending.move,
-  );
+  return runBlock(pack, state, events, meta, answers, generated, { ...ctx, seed: pending.seed, autoRoll: pending.autoRoll }, pending.move);
 }

@@ -11,7 +11,12 @@ import { ConnectionsSection } from "./ConnectionsSection.tsx";
  * with a code, and then looked for the way to verify has to find it
  * right there, not after a reload.
  */
-const signedIn: Account = { status: "signed-in", user: { id: "u1", email: "mira@example.com" } as Account extends { user: infer U } ? U : never, signOut: () => {}, getAccessToken: async () => "t" } as Account;
+const signedIn: Account = {
+  status: "signed-in",
+  user: { id: "u1", email: "mira@example.com" } as Account extends { user: infer U } ? U : never,
+  signOut: () => {},
+  getAccessToken: async () => "t",
+} as Account;
 
 afterEach(cleanup);
 

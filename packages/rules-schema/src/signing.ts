@@ -46,7 +46,7 @@ export interface PackSignature {
  *
  * **Keys are sorted and whitespace is dropped**, so the signature covers the
  * game rather than the file. An author can reformat their YAML, re-indent it,
- * add comments or convert it to JSON, and the signature still verifies: 
+ * add comments or convert it to JSON, and the signature still verifies:
  * which is the difference between a signature people keep and one they stop
  * bothering with.
  *
@@ -147,18 +147,8 @@ export async function fingerprint(publicKey: string): Promise<string> {
   return (hex.toUpperCase().match(/.{4}/g) ?? []).join("-");
 }
 
-export async function signPack(
-  document: unknown,
-  privateKey: string,
-  signedBy?: string,
-): Promise<PackSignature> {
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    fromBase64Url(privateKey),
-    ALGORITHM,
-    false,
-    ["sign"],
-  );
+export async function signPack(document: unknown, privateKey: string, signedBy?: string): Promise<PackSignature> {
+  const key = await crypto.subtle.importKey("pkcs8", fromBase64Url(privateKey), ALGORITHM, false, ["sign"]);
   const publicKey = await derivePublicKey(privateKey);
   const bytes = new TextEncoder().encode(canonicalize(document));
   const value = await crypto.subtle.sign(SIGN, key, bytes);
@@ -192,22 +182,10 @@ export async function signBytes(bytes: Uint8Array<ArrayBuffer>, privateKey: stri
 }
 
 async function derivePublicKey(privateKey: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    fromBase64Url(privateKey),
-    ALGORITHM,
-    true,
-    ["sign"],
-  );
+  const key = await crypto.subtle.importKey("pkcs8", fromBase64Url(privateKey), ALGORITHM, true, ["sign"]);
   const jwk = (await crypto.subtle.exportKey("jwk", key)) as Jwk;
   const { d: _d, key_ops: _ops, ext: _ext, ...pub } = jwk;
-  const publicKey = await crypto.subtle.importKey(
-    "jwk",
-    { ...pub, key_ops: ["verify"] },
-    ALGORITHM,
-    true,
-    ["verify"],
-  );
+  const publicKey = await crypto.subtle.importKey("jwk", { ...pub, key_ops: ["verify"] }, ALGORITHM, true, ["verify"]);
   return toBase64Url(new Uint8Array(await crypto.subtle.exportKey("spki", publicKey)));
 }
 
@@ -247,20 +225,9 @@ export async function verifyPack(document: unknown): Promise<VerifyResult> {
   }
 
   try {
-    const key = await crypto.subtle.importKey(
-      "spki",
-      fromBase64Url(signature.publicKey),
-      ALGORITHM,
-      false,
-      ["verify"],
-    );
+    const key = await crypto.subtle.importKey("spki", fromBase64Url(signature.publicKey), ALGORITHM, false, ["verify"]);
     const bytes = new TextEncoder().encode(canonicalize(document));
-    const ok = await crypto.subtle.verify(
-      SIGN,
-      key,
-      fromBase64Url(signature.value),
-      bytes,
-    );
+    const ok = await crypto.subtle.verify(SIGN, key, fromBase64Url(signature.value), bytes);
     if (!ok) {
       return {
         status: "invalid",

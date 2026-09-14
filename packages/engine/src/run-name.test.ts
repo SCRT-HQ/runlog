@@ -13,9 +13,7 @@ if (!loaded.ok) throw new Error("the demo pack did not load");
 const kiln = loaded.pack;
 
 const at = "2026-01-01T00:00:00.000Z";
-const started: RunEvent[] = [
-  { t: "RunStarted", at, packId: kiln.id, packVersion: kiln.version, mode: kiln.defaultMode },
-];
+const started: RunEvent[] = [{ t: "RunStarted", at, packId: kiln.id, packVersion: kiln.version, mode: kiln.defaultMode }];
 
 describe("naming a run", () => {
   it("starts nameless", () => {
