@@ -163,6 +163,11 @@ export function asProfileOps(ops: Setup["ops"]): ProfileOp[] {
   return ops.map((o) => ({ op: o.op, args: { ...(o.args ?? {}) }, ...(o.once ? { once: true as const } : {}) }));
 }
 
+/** The same, marked as the run's chosen loadout rather than the pack's terms. */
+function asChosenOps(ops: Setup["ops"]): ProfileOp[] {
+  return asProfileOps(ops).map((o) => ({ ...o, chosen: true as const }));
+}
+
 /** And back, for an editor that hands a profile's shape to something that keeps a setup's. */
 export function asSetupOps(ops: ProfileOp[]): Setup["ops"] {
   return ops.map((o) => ({ op: o.op, args: { ...o.args }, ...(o.once ? { once: true } : {}) }));
@@ -246,5 +251,5 @@ export function chosenFrom(value: unknown): ChosenSetup | null {
  */
 export function withChosen(profile: ControlProfile, chosen: ChosenSetup | null): ControlProfile {
   if (!chosen || chosen.ops.length === 0) return profile;
-  return { ...profile, setup: [...(profile.setup ?? []), ...asProfileOps(chosen.ops)] };
+  return { ...profile, setup: [...(profile.setup ?? []), ...asChosenOps(chosen.ops)] };
 }

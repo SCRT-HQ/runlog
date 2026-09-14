@@ -28,6 +28,17 @@ export interface ProfileOp {
    * end only has to carry the flag there without dropping it.
    */
   once?: boolean;
+  /**
+   * Came from the loadout chosen for this run, rather than from the
+   * pack's own terms.
+   *
+   * The two are folded into one list before they go out, because a tool
+   * applies them the same way and the server never had to learn what a
+   * loadout is. Handing one out is the one moment the difference
+   * matters: the button says it gives the loadout to everyone attached,
+   * and without this it re-applied the pack's terms with it.
+   */
+  chosen?: boolean;
 }
 
 export interface ProfileRow {
@@ -203,7 +214,19 @@ export function complaints(pack: Pack, profile: ControlProfile): Complaint[] {
 /** What goes over the wire and into a file: no empties, nothing extra. */
 export function tidy(profile: ControlProfile): ControlProfile {
   const ops = (list: ProfileOp[]) =>
-    list.filter((o) => o.op).map((o) => ({ op: o.op, args: { ...o.args }, ...(o.once ? { once: true as const } : {}) }));
+    list
+      .filter((o) => o.op)
+      .map((o) => ({
+        op: o.op,
+        args: { ...o.args },
+        ...(o.once ? { once: true as const } : {}),
+        // The one field here the editors never set. It is written by the
+        // fold that puts the run's loadout into the terms, on the way to
+        // the snapshot, and it is what tells the server to send the
+        // loadout as its own effect. Dropped here, the whole thing reads
+        // as the pack's terms again.
+        ...(o.chosen ? { chosen: true as const } : {}),
+      }));
   const setup = ops(profile.setup ?? []);
   const rows = (profile.rows ?? [])
     .map((row) => {

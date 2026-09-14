@@ -36,6 +36,19 @@ export interface ControlOp {
    * remembers who has had it.
    */
   once?: boolean;
+  /**
+   * Came from the loadout this run is played under, not from the pack's
+   * own terms.
+   *
+   * They travel as one list because a tool applies them the same way and
+   * because the alternative is a second field in every snapshot. They go
+   * out as two effects because handing the loadout out again is a button
+   * somebody presses, and a tool re-applying an id takes the old one off
+   * first: one list would mean that button reverted the run's terms and
+   * put them back, which is at best a flicker and at worst a setting
+   * that came back wrong.
+   */
+  chosen?: boolean;
 }
 
 /**
@@ -85,6 +98,9 @@ export interface ControlProfile {
 
 /** The id every attached tool knows its setup by, so the run can take it back. */
 export const SETUP_ID = "setup";
+
+/** And the loadout, which is chosen per run and handed out on its own. */
+export const LOADOUT_ID = "loadout";
 
 /** Reverting this id takes back everything, whatever it was. */
 export const EVERYTHING = "*";
@@ -141,10 +157,15 @@ function opsOf(value: unknown): ControlOp[] {
       // being handed over again on every reconnect, and a field dropped
       // here would be a field the run silently ignores.
       const once = (entry as Record<string, unknown>)["once"] === true;
+      // And so does `chosen`, which decides which of the two effects an
+      // operation goes out in. Dropped here, the whole loadout would
+      // read as the pack's terms and the button would hand out both.
+      const chosen = (entry as Record<string, unknown>)["chosen"] === true;
       return {
         op,
         args: args && typeof args === "object" && !Array.isArray(args) ? (args as Record<string, unknown>) : {},
         ...(once ? { once: true } : {}),
+        ...(chosen ? { chosen: true } : {}),
       };
     })
     .filter((o): o is ControlOp => o !== null);
@@ -263,9 +284,12 @@ export function appliesFor(profile: ControlProfile, landed: Landed, seat: string
   return out;
 }
 
-/** The run's terms, applied when a tool attaches and held until it ends. */
 /**
  * The run's terms, for a tool that has just attached.
+ *
+ * The pack's own, without the loadout: those are `loadoutFor` below, and
+ * they are a separate effect under a separate id so that handing one out
+ * mid-run does not disturb the other.
  *
  * `had` is whether this seat has already been given the parts that are
  * given once. Everything else goes every time, because a tool that
@@ -276,13 +300,41 @@ export function appliesFor(profile: ControlProfile, landed: Landed, seat: string
  * caller knows there is something to remember.
  */
 export function setupFor(profile: ControlProfile, had = false): { frame: string; gave: boolean } | null {
-  const ops = (profile.setup ?? []).filter((o) => !(o.once && had));
+  return frameOf(
+    (profile.setup ?? []).filter((o) => !o.chosen),
+    SETUP_ID,
+    "The run's terms",
+    had,
+  );
+}
+
+/**
+ * The loadout the run is played under, for the same tool.
+ *
+ * Its own effect, because it is the one part of the setup with a button
+ * that re-sends it. A tool applying an id it already holds takes the old
+ * one off first, so a single effect carrying both would mean pressing
+ * Hand it out reverted the pack's terms and re-applied them — and the
+ * gifts among them, which is the thing the whole `once` record exists to
+ * stop.
+ */
+export function loadoutFor(profile: ControlProfile, had = false): { frame: string; gave: boolean } | null {
+  return frameOf(
+    (profile.setup ?? []).filter((o) => o.chosen === true),
+    LOADOUT_ID,
+    "The run's loadout",
+    had,
+  );
+}
+
+function frameOf(all: ControlOp[], id: string, label: string, had: boolean): { frame: string; gave: boolean } | null {
+  const ops = all.filter((o) => !(o.once && had));
   if (ops.length === 0) return null;
   const gave = ops.some((o) => o.once === true);
   const frame = JSON.stringify({
     t: "apply",
-    id: SETUP_ID,
-    label: "The run's terms",
+    id,
+    label,
     // A list of separate things, not one effect. A rule's operations
     // stand or fall together, because a rule that makes somebody slow
     // and blind is one rule and half of it is a different one nobody

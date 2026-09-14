@@ -581,19 +581,53 @@ describe("telling the listeners", () => {
     });
 
     /**
-     * Handing the setup out again, on purpose.
+     * The pack's terms and the loadout chosen for the run are one list in
+     * the profile and two effects on the wire, under two ids. A tool
+     * re-applying an id takes the old one off first, which is why: the
+     * button below hands the loadout out again, and one effect carrying
+     * both would have made that press revert the terms and re-apply
+     * them, gifts included.
+     */
+    it("sends the terms and the loadout as their own effects", async () => {
+      const both = {
+        control: {
+          setup: [
+            { op: "flag.set", args: { name: "player.noRoll", value: true } },
+            { op: "runes.give", args: { amount: 50000 }, once: true, chosen: true },
+          ],
+        },
+      };
+      const { live, posted, d } = attached(memoryLive(), both);
+      await live.connect("tool", "public:shared", "", { control: true, seat: "Mira", run: "shared" });
+      await route(
+        { requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "hello", app: "TarnishedTool" }) },
+        d,
+      );
+      const applies = posted
+        .filter(([c]) => c === "tool")
+        .map(([, l]) => JSON.parse(l) as { t: string; id?: string; ops?: Array<{ op: string }> })
+        .filter((f) => f.t === "apply");
+      expect(applies.map((f) => f.id)).toEqual(["setup", "loadout"]);
+      expect(applies[0]?.ops?.map((o) => o.op)).toEqual(["flag.set"]);
+      expect(applies[1]?.ops?.map((o) => o.op)).toEqual(["runes.give"]);
+      // Two records, because the two are re-sent on different occasions.
+      expect(patched.at(-1)).toEqual(["shared", { loadoutGiven: ["Mira"] }]);
+    });
+
+    /**
+     * Handing the loadout out again, on purpose.
      *
      * The record that stops a gift going twice exists for a reconnect. A
-     * host who has picked a different setup and pressed the button is not
-     * reconnecting, so the record is dropped and rebuilt from what
+     * host who has picked a different loadout and pressed the button is
+     * not reconnecting, so the record is dropped and rebuilt from what
      * actually went out.
      */
-    it("hands the setup out again when the owner asks, gifts and all", async () => {
+    it("hands the loadout out again when the owner asks, and leaves the terms where they are", async () => {
       const gift = {
         control: {
           setup: [
             { op: "flag.set", args: { name: "player.noRoll", value: true } },
-            { op: "runes.give", args: { amount: 50000 }, once: true },
+            { op: "runes.give", args: { amount: 50000 }, once: true, chosen: true },
           ],
         },
       };
@@ -604,17 +638,12 @@ describe("telling the listeners", () => {
         { requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "hello", app: "TarnishedTool" }) },
         d,
       );
-      const ops = () =>
+      const applies = () =>
         posted
           .filter(([c]) => c === "tool")
-          .map(([, l]) => JSON.parse(l) as { t: string; ops?: Array<{ op: string }> })
+          .map(([, l]) => JSON.parse(l) as { t: string; id?: string; ops?: Array<{ op: string }> })
           .filter((f) => f.t === "apply");
-      expect(
-        ops()
-          .at(-1)
-          ?.ops?.map((o) => o.op),
-      ).toEqual(["flag.set", "runes.give"]);
-      expect(patched.at(-1)).toEqual(["shared", { termsGiven: ["Mira"] }]);
+      expect(applies().map((f) => f.id)).toEqual(["setup", "loadout"]);
 
       // The owner's socket, saying hand it out.
       await live.connect("host", "user_1", "");
@@ -628,18 +657,24 @@ describe("telling the listeners", () => {
         d,
       );
 
-      // The runes again: that is the entire point of the button.
+      // The runes again: that is the entire point of the button. And the
+      // terms are not re-sent, which is the bug this fixes -- the press
+      // that gave somebody the loadout handed them the pack's own gifts
+      // a second time along with it.
+      expect(applies().map((f) => f.id)).toEqual(["loadout"]);
       expect(
-        ops()
+        applies()
           .at(-1)
           ?.ops?.map((o) => o.op),
-      ).toEqual(["flag.set", "runes.give"]);
-      // And written down again, so the next reconnect is short of them.
-      expect(patched.at(-1)).toEqual(["shared", { termsGiven: ["Mira"] }]);
+      ).toEqual(["runes.give"]);
+      // Written down again, so the next reconnect is short of them; and
+      // the terms' own record is not touched, because they did not move.
+      expect(patched.at(-1)).toEqual(["shared", { loadoutGiven: ["Mira"] }]);
+      expect(patched.map(([, p]) => p)).not.toContainEqual({ termsGiven: [] });
     });
 
-    it("refuses to hand the setup out for anybody but the owner", async () => {
-      const gift = { control: { setup: [{ op: "runes.give", args: { amount: 50000 }, once: true }] } };
+    it("refuses to hand the loadout out for anybody but the owner", async () => {
+      const gift = { control: { setup: [{ op: "runes.give", args: { amount: 50000 }, once: true, chosen: true }] } };
       const { live, posted, d } = attached(memoryLive(), gift);
       await live.connect("tool", "public:shared", "", { control: true, seat: "Mira", run: "shared" });
       await live.watch("tool", "shared", "public:shared", "", { control: true, seat: "Mira", run: "shared" });

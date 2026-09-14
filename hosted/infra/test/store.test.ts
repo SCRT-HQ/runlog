@@ -1,0 +1,109 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { dynamoStore } from "../lib/handlers/store";
+
+/**
+ * What a session patch actually writes.
+ *
+ * The store is otherwise reached through the handlers, whose own tests
+ * hand them a Map and are therefore no evidence at all about this file:
+ * a field the patch type accepts and the real `updateSession` never
+ * writes passes every one of them and is simply lost in the account.
+ *
+ * Which is what happened to `termsGiven`. The record exists so that a
+ * tool which drops and reconnects is not handed the runes again; the
+ * type carried it, the handler set it, and the Put left it out, so a
+ * deployed run gave them away on every reconnection while the suite
+ * stayed green.
+ */
+
+// Hoisted with the mock, which is hoisted above the import below.
+const table = vi.hoisted(() => ({
+  sent: [] as Array<{ kind: string; input: Record<string, unknown> }>,
+  row: null as Record<string, unknown> | null,
+}));
+
+vi.mock("@aws-sdk/lib-dynamodb", () => {
+  class Cmd {
+    constructor(
+      readonly input: Record<string, unknown>,
+      readonly kind: string,
+    ) {}
+  }
+  const of = (kind: string) =>
+    class extends Cmd {
+      constructor(input: Record<string, unknown>) {
+        super(input, kind);
+      }
+    };
+  return {
+    DynamoDBDocumentClient: {
+      from: () => ({
+        async send(c: Cmd) {
+          table.sent.push({ kind: c.kind, input: c.input });
+          if (c.kind === "get") return { Item: table.row ?? undefined };
+          if (c.kind === "put") table.row = c.input["Item"] as Record<string, unknown>;
+          return {};
+        },
+      }),
+    },
+    GetCommand: of("get"),
+    PutCommand: of("put"),
+    QueryCommand: of("query"),
+    DeleteCommand: of("delete"),
+    BatchWriteCommand: of("batch"),
+    UpdateCommand: of("update"),
+    TransactWriteCommand: of("transact"),
+  };
+});
+
+const store = dynamoStore({ table: "t", bucket: "b" });
+const put = () => table.sent.filter((s) => s.kind === "put").at(-1)?.input["Item"] as Record<string, unknown> | undefined;
+
+beforeEach(() => {
+  table.sent.length = 0;
+  table.row = { pk: "SESSION#r1", sk: "META", kind: "session", id: "r1", ownerSub: "user_1", seq: 3, updatedAt: "t0" };
+});
+
+describe("patching a session", () => {
+  it("writes who has had the parts of the terms that are given once", async () => {
+    await store.updateSession("r1", "t1", { termsGiven: ["Mira", "the table"] });
+    expect(put()?.["termsGiven"]).toEqual(["Mira", "the table"]);
+  });
+
+  /** Its own record, because the two are re-sent on different occasions. */
+  it("writes the loadout's separately from the terms'", async () => {
+    await store.updateSession("r1", "t1", { termsGiven: ["Mira"] });
+    await store.updateSession("r1", "t2", { loadoutGiven: ["Kel"] });
+    expect(put()?.["termsGiven"]).toEqual(["Mira"]);
+    expect(put()?.["loadoutGiven"]).toEqual(["Kel"]);
+  });
+
+  /**
+   * Nobody was reachable when the loadout went out. That is an empty
+   * list, not an absent one: dropped to absent, everyone attached would
+   * be handed the gifts a second time on their next attach.
+   */
+  it("writes an empty record rather than treating it as nothing to say", async () => {
+    await store.updateSession("r1", "t1", { loadoutGiven: ["Kel"] });
+    await store.updateSession("r1", "t2", { loadoutGiven: [] });
+    expect(put()?.["loadoutGiven"]).toEqual([]);
+  });
+
+  it("leaves a record alone where the patch says nothing about it", async () => {
+    await store.updateSession("r1", "t1", { termsGiven: ["Mira"] });
+    await store.updateSession("r1", "t2", { name: "Thursday" });
+    expect(put()?.["termsGiven"]).toEqual(["Mira"]);
+    expect(put()?.["name"]).toBe("Thursday");
+  });
+
+  it("answers with the meta, without the keys that are the table's business", async () => {
+    const meta = await store.updateSession("r1", "t1", { termsGiven: ["Mira"] });
+    expect(meta?.termsGiven).toEqual(["Mira"]);
+    expect((meta as unknown as Record<string, unknown>)["pk"]).toBeUndefined();
+  });
+
+  it("answers null for a session that is not there", async () => {
+    table.row = null;
+    expect(await store.updateSession("gone", "t1", { termsGiven: ["Mira"] })).toBeNull();
+  });
+});
