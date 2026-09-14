@@ -42,6 +42,15 @@ export interface DiscordRest {
   archiveThread(threadId: string): Promise<boolean>;
   /** Fill in a reply the handler deferred: the interaction's own webhook, good for fifteen minutes, needs no bot token. */
   editOriginal(applicationId: string, interactionToken: string, message: DiscordMessage): Promise<boolean>;
+  /**
+   * A second message on the same interaction, for when the first is
+   * nobody else's business.
+   *
+   * An interaction answers once, and a press on the card answers by
+   * updating the card. A player's own connection details do not belong in
+   * a thread, so they follow privately.
+   */
+  followUp(applicationId: string, interactionToken: string, message: DiscordMessage, privately?: boolean): Promise<boolean>;
   /** The server's roles, by id and name; null when Discord would not say. */
   listRoles(guildId: string): Promise<Array<{ id: string; name: string }> | null>;
   /** A role with no permissions of its own, in a color; its id, or null. */
@@ -108,6 +117,11 @@ export function discordRest(token: string, fetchImpl: typeof fetch = fetch, rope
     },
     async editOriginal(applicationId, interactionToken, message) {
       return (await call(token, "PATCH", `/webhooks/${applicationId}/${interactionToken}/messages/@original`, message, fetchImpl, ropeMs)) !== null;
+    },
+    async followUp(applicationId, interactionToken, message, privately = false) {
+      // 64 is Discord's ephemeral flag: only whoever pressed ever sees it.
+      const body = privately ? { ...message, flags: 64 } : message;
+      return (await call(token, "POST", `/webhooks/${applicationId}/${interactionToken}`, body, fetchImpl, ropeMs)) !== null;
     },
     async listRoles(guildId) {
       return named(await call(token, "GET", `/guilds/${guildId}/roles`, undefined, fetchImpl, ropeMs));

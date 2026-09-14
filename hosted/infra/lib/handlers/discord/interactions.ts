@@ -2,6 +2,7 @@ import { actingSeats, constrainedByOf, constraintsFor, moderation, type Pending 
 import type { Pack } from "@runlog/rules-schema";
 import { newCode } from "../races.js";
 import { hashToken } from "../auth.js";
+import { profileOf } from "../control.js";
 import type { GuildRun, GuildStore } from "../guilds.js";
 import type { Store } from "../store.js";
 import type { Notify } from "../live.js";
@@ -486,12 +487,66 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     const played = await play(table, run, found.pack, actor, action);
     if ("error" in played) return ephemeral(played.error);
     await follow(table, played, { postLine: false });
+    // The same private line the card's own Join sends; see `pressed`.
+    if (action.kind === "join" || action.kind === "seat") await tellThemHow(deps, table, played.run, i, actor.name);
     if (played.line) return say(played.line);
     if (action.kind === "seat") return ephemeral(`You have seat ${action.seat}. The card says which seat presses this ${found.pack.vocabulary.unit.one.toLowerCase()}.`);
     if (action.kind === "follow") return ephemeral("Followed: this run is in your Runlog library now, as a watcher.");
     return ephemeral("Done.");
   }
   return ephemeral("Run has start, status, link, end, undo, join and leave.");
+}
+
+/**
+ * The address a player's tool connects on, for the seat they just took.
+ *
+ * What used to happen is that somebody joined, nothing else happened, and
+ * the host had to find them privately and paste a URL with their name on
+ * the end of it.
+ *
+ * Built on the run's live token rather than on the host's watch key. The
+ * key exists only in the browser that minted it and the server keeps a
+ * hash, by design, so the server could not send it even if it should. The
+ * live token is already the thing handed to watchers, the socket has
+ * always taken it for a control connection, and it is scoped to this one
+ * run rather than to everything the host has ever played.
+ *
+ * Nothing is sent for a run no tool could act on: a pack with no control
+ * profile has no operations for anything to receive, and an address for a
+ * tool that would be told nothing is worse than no address at all.
+ */
+async function controlAddress(deps: InteractionDeps, table: TableDeps, run: GuildRun, seat: string): Promise<string | null> {
+  const store = deps.store;
+  if (!store) return null;
+  if (!profileOf((await store.getSnapshot(run.sessionId))?.snapshot)) return null;
+
+  // The same token the thread's link uses, minted here the first time if
+  // the run predates tokens being kept. A second one would cut off every
+  // watcher and every tool already attached.
+  let token = run.liveToken;
+  if (!token) {
+    token = table.token();
+    await store.updateSession(run.sessionId, deps.now(), { publicTokenHash: hashToken(token) });
+    await table.guilds.putGuildRun({ ...run, liveToken: token, updatedAt: deps.now() });
+  }
+
+  const origin = deps.appUrl.replace(/\/$/, "").replace(/^http/, "ws");
+  return `${origin}/ws?t=${encodeURIComponent(token)}&run=${encodeURIComponent(run.sessionId)}&as=control&seat=${encodeURIComponent(seat)}`;
+}
+
+/** Told to whoever just became a player, and to nobody else. */
+async function tellThemHow(deps: InteractionDeps, table: TableDeps, run: GuildRun, i: Interaction, seat: string): Promise<void> {
+  const address = await controlAddress(deps, table, run, seat);
+  if (!address || !deps.rest) return;
+  const said = [
+    "Playing with a tool attached? This is your own address, for your seat.",
+    "It is not the same as anybody else's, and it is not for sharing:",
+    "",
+    "`" + address + "`",
+    "",
+    "Only you can see this message.",
+  ].join("\n");
+  await deps.rest.followUp(i.application_id, i.token, { content: said }, true);
 }
 
 async function seatOf(deps: InteractionDeps, who: NonNullable<ReturnType<typeof userOf>>, i: Interaction): Promise<Seat> {
@@ -615,6 +670,20 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   if (!action) return ephemeral("That press means nothing here any more; the card may be stale. /run status posts a fresh one.");
   const played = await play(table, run, pack, actor, action);
   if ("error" in played) return ephemeral(played.error);
+
+  /*
+   * Somebody who just became a player is told how to attach a tool.
+   *
+   * Sent here rather than folded into the reply because a press has half
+   * a dozen shapes of answer below, from a card update to an endings
+   * menu, and threading a private line through all of them would be
+   * threading it through all of them. A follow-up is a message of its own
+   * on the same interaction, so this stays one insertion.
+   *
+   * A player, not a watcher: somebody who followed a run into their
+   * library is reading it, and there is nothing for a tool to do.
+   */
+  if (action.kind === "join" || action.kind === "seat") await tellThemHow(deps, table, played.run, i, actor.name);
   // The card follows the thread, unless the server pinned it. Following: a
   // press on the card that made a move turns the pressed message into the
   // move's line (the answer to the press, which costs no call) and posts a
