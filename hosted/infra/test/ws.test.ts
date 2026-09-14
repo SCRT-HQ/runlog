@@ -40,6 +40,11 @@ function memoryLive(): LiveStore & { conns: Map<string, string>; watches: Map<st
         ...(marks.get(connectionId) ?? {}),
       }));
     },
+    async decksOf(sub) {
+      return [...conns.entries()]
+        .filter(([id, s]) => s === sub && marks.get(id)?.deck === true)
+        .map(([connectionId]) => ({ connectionId, ...(marks.get(connectionId) ?? {}) }));
+    },
     async disconnect(id) {
       conns.delete(id);
       marks.delete(id);
@@ -248,6 +253,20 @@ describe("watching", () => {
     await route(ev("$disconnect", "c1"), d);
     expect(d.live.conns.has("c1")).toBe(false);
     expect(await d.live.watchers("shared")).toEqual([]);
+  });
+});
+
+describe("decksOf", () => {
+  it("finds an account's deck connections and forgets them on disconnect", async () => {
+    const live = memoryLive();
+    await live.connect("c1", "user_a", "2026-09-14T00:00:00.000Z", { deck: true });
+    await live.connect("c2", "user_a", "2026-09-14T00:00:00.000Z");
+    await live.connect("c3", "user_b", "2026-09-14T00:00:00.000Z", { deck: true });
+
+    expect((await live.decksOf("user_a")).map((d) => d.connectionId)).toEqual(["c1"]);
+
+    await live.disconnect("c1");
+    expect(await live.decksOf("user_a")).toEqual([]);
   });
 });
 

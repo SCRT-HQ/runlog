@@ -39,6 +39,13 @@ export interface Attached {
   app?: string;
   /** The run it was opened for, settled at connect.  */
   run?: string;
+  /**
+   * A socket that presses rather than draws: a deck, signed in as the
+   * account, holding no run of its own. Marked so a press is never
+   * forwarded to one — two decks on one account must not look to each
+   * other like somewhere a press could land.
+   */
+  deck?: boolean;
 }
 
 export interface Watcher extends Attached {
@@ -52,6 +59,8 @@ export interface LiveStore {
   connection(connectionId: string): Promise<({ sub: string } & Attached) | null>;
   watch(connectionId: string, sessionId: string, sub: string, at: string, attached?: Attached): Promise<void>;
   watchers(sessionId: string): Promise<Watcher[]>;
+  /** An account's deck connections, for news that is not about one run. */
+  decksOf(sub: string): Promise<Array<{ connectionId: string } & Attached>>;
   /** The connection and every watch it held, gone. */
   disconnect(connectionId: string): Promise<void>;
 }
@@ -63,6 +72,7 @@ function marks(attached: Attached): Record<string, unknown> {
     ...(attached.seat ? { seat: attached.seat } : {}),
     ...(attached.app ? { app: attached.app } : {}),
     ...(attached.run ? { run: attached.run } : {}),
+    ...(attached.deck ? { deck: true } : {}),
   };
 }
 
@@ -72,6 +82,7 @@ function read(row: Record<string, unknown>): Attached {
     ...(typeof row["seat"] === "string" ? { seat: row["seat"] } : {}),
     ...(typeof row["app"] === "string" ? { app: row["app"] } : {}),
     ...(typeof row["run"] === "string" ? { run: row["run"] } : {}),
+    ...(row["deck"] === true ? { deck: true as const } : {}),
   };
 }
 
@@ -79,15 +90,31 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
   const ddb = DynamoDBDocumentClient.from(traced(new DynamoDBClient({})), { marshallOptions: { removeUndefinedValues: true } });
   const cpk = (id: string) => `CONN#${id}`;
   const spk = (id: string) => `SESSION#${id}`;
+  const upk = (sub: string) => `USER#${sub}`;
 
   return {
     async connect(connectionId, sub, at, attached = {}) {
-      await ddb.send(
-        new PutCommand({
-          TableName: table,
-          Item: { pk: cpk(connectionId), sk: "CONN", kind: "conn", sub, connectedAt: at, expiresAt: expiresAfter(at), ...marks(attached) },
-        }),
-      );
+      const expiresAt = expiresAfter(at);
+      const writes = [
+        ddb.send(
+          new PutCommand({
+            TableName: table,
+            Item: { pk: cpk(connectionId), sk: "CONN", kind: "conn", sub, connectedAt: at, expiresAt, ...marks(attached) },
+          }),
+        ),
+      ];
+      // An account's decks, found in one query. A watch writes a row under
+      // the session for the same reason; a deck holds no session yet.
+      if (attached.deck)
+        writes.push(
+          ddb.send(
+            new PutCommand({
+              TableName: table,
+              Item: { pk: upk(sub), sk: `DECK#${connectionId}`, kind: "deck", sub, expiresAt, ...marks(attached) },
+            }),
+          ),
+        );
+      await Promise.all(writes);
     },
     async connection(connectionId) {
       const out = await ddb.send(
@@ -132,6 +159,19 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
         .filter((r) => typeof r["expiresAt"] !== "number" || r["expiresAt"] > now)
         .map((r) => ({ connectionId: String(r["sk"]).slice("CONN#".length), sub: String(r["sub"] ?? ""), ...read(r) }));
     },
+    async decksOf(sub) {
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+          ExpressionAttributeValues: { ":pk": upk(sub), ":sk": "DECK#" },
+        }),
+      );
+      const now = Date.now() / 1000;
+      return (out.Items ?? [])
+        .filter((r) => typeof r["expiresAt"] !== "number" || r["expiresAt"] > now)
+        .map((r) => ({ connectionId: String(r["sk"]).slice("DECK#".length), ...read(r) }));
+    },
     async disconnect(connectionId) {
       const out = await ddb.send(
         new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk", ExpressionAttributeValues: { ":pk": cpk(connectionId) } }),
@@ -141,6 +181,8 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
         rows.flatMap((r) => {
           const sk = String(r["sk"]);
           const own = ddb.send(new DeleteCommand({ TableName: table, Key: { pk: cpk(connectionId), sk } }));
+          if (sk === "CONN" && r["deck"] === true && typeof r["sub"] === "string")
+            return [own, ddb.send(new DeleteCommand({ TableName: table, Key: { pk: upk(r["sub"]), sk: `DECK#${connectionId}` } }))];
           if (!sk.startsWith("WATCH#")) return [own];
           const sessionId = sk.slice("WATCH#".length);
           return [own, ddb.send(new DeleteCommand({ TableName: table, Key: { pk: spk(sessionId), sk: `CONN#${connectionId}` } }))];
