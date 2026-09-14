@@ -1,0 +1,197 @@
+<task-notification>
+<task-id>bq7tug4qh</task-id>
+<tool-use-id>toolu_016ePz5Q9jQ5wij8366eVgPr</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\bq7tug4qh.output</output-file>
+<status>completed</status>
+<summary>Background command "Start the dev server" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+Can we also create a setup that provides the talisman pouches? We only need 4
+
+---
+
+I don't think we should do 99 of each for the loadouts either, we should provide enough to provide a generous boost
+
+---
+
+we need to use "leveling", not "levelling"
+
+---
+
+american english please throughout
+
+---
+
+[Image #104] I wanted a drop-down, not an expanded section with the cards still
+
+---
+
+at least the cards should be smaller if we need cards
+
+---
+
+I also don't see where I can add new loadout items on this page
+
+---
+
+wouldn't we still show it when "None" is selected?
+
+---
+
+I see them when I pick a loadout
+
+---
+
+instead of "Add something to do", you should instead say "Add starting loadout"
+
+---
+
+or add custom loadout
+
+---
+
+[Image #105] Can we make these the width of the container instead of constraining it? Item fields are cut off for all of the sombers.
+
+---
+
+Give a weapon item has a shorter width than the rest [Image #106]
+
+---
+
+and too much space is given to the level field, it's only ever 2 digits max
+
+---
+
+Give runes is also a very narrow row, controls do not align
+
+---
+
+[Image #107] can we /deslop-text:deslop-text this? It's overly verbose and very sloppy
+
+---
+
+[Image #108] [Image #109] Give weapon rows are wrapping to 2 lines
+
+---
+
+Entire bits are fine to add here
+
+---
+
+Is there a way to set the number of talisman slots via player attributes?
+
+---
+
+what about giving the player all maps? I see all graces, but not all maps
+
+---
+
+[Image #110] It looks like the tool is capable of it?
+
+---
+
+[Image #111] Talisman pouches appear to be included in the Key Items list by name
+
+---
+
+what other items have event ids that are getting dropped?
+
+---
+
+oooh, we need to include the Dectus and Haligtree Medallions in the Open The Map setup
+
+---
+
+or the Rold Medallion
+
+---
+
+oooh, we need to include the Dectus and Haligtree Medallions in the Open The Map setup
+or the Rold Medallion rather
+
+---
+
+We should include the Rold Medallion as well if possible
+
+---
+
+For the Haligtree medallions, should we toggle those event flags as part of the setup?
+
+---
+
+It may be interesting to include setups that set certain game states, e.g. Start of DLC that also places the players at the entrypoint to the DLC area, or certain quest lines completed like Ranni's questline (awarded Cursemark of Death and Fingerslayer Blade as well), etc
+
+---
+
+would we be able to map the events using the Cheat Engine tables for Elden Ring? https://github.com/The-Grand-Archives/Elden-Ring-CT-TGA/tree/master
+
+---
+
+Could we mark bosses as dead to progress story/quests to certain points?
+
+---
+
+multiple failures in CI for the latest PR
+
+let's add the Start of the DLC pack to this PR when we fix it
+
+---
+
+did we figure out how to create a setup that gives talisman pouches?
+
+---
+
+what about a setup for unlocking all of the whetblades / affinities?
+
+---
+
+maybe "unlock affinities" insted of "every affinity"
+
+---
+
+maybe we should use "give whetstones" instead of "unlock affinities" to align with the others.
+
+let's fix the watch.boss bug
+
+let's handle the necessary fork work -- let me know if we need to update/fix existing code from upstream
+
+---
+
+& "C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" `
+  "C:\Users\xbox\ScrtGit\TarnishedTool-runlog-integration\TarnishedTool.sln" `
+  -t:restore -p:RestorePackagesConfig=true
+& "C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" `
+  "C:\Users\xbox\ScrtGit\TarnishedTool-runlog-integration\TarnishedTool.sln" `
+  -t:rebuild -p:Configuration=Release
+
+---
+
+How would I go about capturing/verifying the event IDs?
+
+---
+
+We likely want to include GiveStartingFlasks as well on some that bring a player immediately into a later area
+
+---
+
+it shows in HotkeyActions.cs on line 181, I'm assuming as a hotkey?
+
+---
+
+we should be pulling all work on the fork into the `integration` branch, not creating new branches and PRs
+
+---
+
+I need to be able to build a combined version
+
+---
+
+testing the setups with the actual game:
+
+- [Image #114] event and flags for the talisman pouches (only the events were needed)
+- Doesn't seem like I'm able to get the starting flasks [Image #116]
+- open the map doesn't seem to work [Image #115] 
+- we should add a setup to unlock all gestures
+- why did the give-whetstones setup get reverted back to unlock-affinities?
