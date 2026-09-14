@@ -129,6 +129,17 @@ export interface SessionMeta {
    * by the third one.
    */
   termsGiven?: string[];
+  /**
+   * The same, for the loadout the run is played under.
+   *
+   * Kept apart from the terms because the two are re-sent on different
+   * occasions. The terms go out when a tool attaches and never again;
+   * the loadout goes out then too, and again whenever the host presses
+   * Hand it out, which is somebody deciding the table is playing with
+   * different gear from here on. One record could not answer both
+   * questions without lying about one of them.
+   */
+  loadoutGiven?: string[];
 }
 
 export type AskPolicy = "ask" | "auto";
@@ -361,6 +372,7 @@ export interface Store {
       askKeyHash?: string | null;
       askPolicy?: AskPolicy;
       termsGiven?: string[];
+      loadoutGiven?: string[];
     },
   ): Promise<SessionMeta | null>;
   /** What a stranger with the link sees of a run whose pack they may not hold: the owner's device writes it, redacted, after each move. */
@@ -899,6 +911,12 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
         row["askAt"] = at;
       }
       if (patch.askPolicy && row["askKeyHash"]) row["askPolicy"] = patch.askPolicy;
+      // Who has had the parts that are given once. The patch type has
+      // carried these since the terms learned to be given once; nothing
+      // wrote them, so every reconnection was handed the runes again on
+      // a deployed run while the tests, whose store is a Map, passed.
+      if (patch.termsGiven) row["termsGiven"] = patch.termsGiven;
+      if (patch.loadoutGiven) row["loadoutGiven"] = patch.loadoutGiven;
       await ddb.send(new PutCommand({ TableName: table, Item: row }));
       const meta = strip(row) as unknown as SessionMeta;
       await store.touchPointers(id, meta.ownerSub, at, meta.seq);

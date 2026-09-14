@@ -1,5 +1,5 @@
 import { hashToken, verify as verifyToken, type Caller } from "./auth.js";
-import { askFor, fits, framesForGesture, profileOf, setupFor } from "./control.js";
+import { askFor, fits, framesForGesture, loadoutFor, profileOf, setupFor } from "./control.js";
 import { askAllowed } from "./asking.js";
 import { apiGatewayPoster, type Poster } from "./live.js";
 import { dynamoLive, type LiveStore } from "./live.js";
@@ -231,23 +231,49 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
      */
     const whose = conn.seat || "the table";
     const given = session?.meta.termsGiven ?? [];
-    let setup: { frame: string; gave: boolean } | null = null;
-    const line = !profile
-      ? JSON.stringify({
+    const gotLoadout = session?.meta.loadoutGiven ?? [];
+    /*
+     * Two effects, not one. The pack's terms and the loadout chosen for
+     * this run are one list in the profile and go out as two applies,
+     * because the loadout has a button that re-sends it and a tool
+     * re-applying an id takes the old one off first.
+     */
+    let terms: { frame: string; gave: boolean } | null = null;
+    let loadout: { frame: string; gave: boolean } | null = null;
+    const lines: string[] = [];
+    if (!profile) {
+      lines.push(
+        JSON.stringify({
           t: "note",
           text: `Attached to ${which}, which has no rules for a tool. An address finds the most recently played run that is open to watchers; if that is not the one you are playing, open that one to watchers and connect again.`,
-        })
-      : fits(profile, app || undefined)
-        ? ((setup = setupFor(profile, given.includes(whose))), setup?.frame ?? null)
-        : JSON.stringify({
-            t: "note",
-            text: `${which} is set up for ${profile.tool}, so nothing here will reach ${app || "a tool that did not say what it is"}.`,
-          });
-    if (line && (await poster.post(connectionId, line)) === "gone") await deps.live.disconnect(connectionId);
+        }),
+      );
+    } else if (!fits(profile, app || undefined)) {
+      lines.push(
+        JSON.stringify({
+          t: "note",
+          text: `${which} is set up for ${profile.tool}, so nothing here will reach ${app || "a tool that did not say what it is"}.`,
+        }),
+      );
+    } else {
+      terms = setupFor(profile, given.includes(whose));
+      loadout = loadoutFor(profile, gotLoadout.includes(whose));
+      if (terms) lines.push(terms.frame);
+      if (loadout) lines.push(loadout.frame);
+    }
+    for (const line of lines) {
+      if ((await poster.post(connectionId, line)) === "gone") {
+        await deps.live.disconnect(connectionId);
+        return { statusCode: 200 };
+      }
+    }
     // Remembered only once it has actually gone out. A post that failed
     // is a tool that never got its terms, and marking it given would
     // leave the next attach short of them for the rest of the run.
-    if (setup?.gave && !given.includes(whose)) await deps.store.updateSession(conn.run, now(), { termsGiven: [...given, whose] });
+    const patch: { termsGiven?: string[]; loadoutGiven?: string[] } = {};
+    if (terms?.gave && !given.includes(whose)) patch.termsGiven = [...given, whose];
+    if (loadout?.gave && !gotLoadout.includes(whose)) patch.loadoutGiven = [...gotLoadout, whose];
+    if (patch.termsGiven || patch.loadoutGiven) await deps.store.updateSession(conn.run, now(), patch);
     return { statusCode: 200 };
   }
 
@@ -348,19 +374,24 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     const poster = deps.poster;
 
     /**
-     * The setup, handed out again on purpose.
+     * The loadout, handed out again on purpose.
      *
      * Every other gesture is passed on. This one means something to the
-     * server, because the thing standing in the way of handing a setup
+     * server, because the thing standing in the way of handing a loadout
      * out twice is a record the server keeps.
      *
-     * `termsGiven` exists so that a tool which dropped and reconnected is
-     * not given the runes again, and it has to go on doing that. But a
-     * run whose host has picked a different setup and pressed the button
-     * is not a reconnect; it is somebody deciding that this table is
-     * playing with different gear from now on. So the record is cleared
-     * here and rebuilt from what actually goes out, and a reconnect a
-     * second later is short of the gifts exactly as before.
+     * `loadoutGiven` exists so that a tool which dropped and reconnected
+     * is not given the runes again, and it has to go on doing that. But
+     * a run whose host has picked a different loadout and pressed the
+     * button is not a reconnect; it is somebody deciding that this table
+     * is playing with different gear from now on. So the record is
+     * cleared here and rebuilt from what actually goes out, and a
+     * reconnect a second later is short of the gifts exactly as before.
+     *
+     * The loadout only. The pack's terms are a separate effect and are
+     * not re-sent: the button is under a list of loadouts and says it
+     * hands out the loadout, and sending the terms with it handed over
+     * the pack's own gifts a second time as well.
      *
      * The owner only. Every member can send a gesture, and that is right
      * for dice in the air and a step opening; handing somebody a hundred
@@ -387,10 +418,10 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
             if (!profile || !fits(profile, w.app)) return;
             // `false`, because being handed one is the whole point: the
             // record that would hold the gifts back has just been dropped.
-            const setup = setupFor(profile, false);
-            if (!setup) return;
-            out = setup.frame;
-            if (setup.gave) gave.push(w.seat || "the table");
+            const loadout = loadoutFor(profile, false);
+            if (!loadout) return;
+            out = loadout.frame;
+            if (loadout.gave) gave.push(w.seat || "the table");
           }
           if (!out) return;
           try {
@@ -402,8 +433,10 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
       );
       // Written after the fact, from what went out rather than from what
       // was meant to: a tool that was not reachable did not get its
-      // setup, and saying it did would leave it short on the next attach.
-      await deps.store.updateSession(id, now(), { termsGiven: [...new Set(gave)] });
+      // loadout, and saying it did would leave it short on the next
+      // attach. `termsGiven` is left alone, because the terms did not
+      // move.
+      await deps.store.updateSession(id, now(), { loadoutGiven: [...new Set(gave)] });
       return { statusCode: 200 };
     }
 
