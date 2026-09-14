@@ -22,7 +22,7 @@ import { sesMailer, type Mailer } from "./email.js";
 import { fingerprintOf, verifyProof } from "./proof.js";
 import { apiGatewayPoster, dynamoLive, notifier, teller, type Notify, type Tell } from "./live.js";
 import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, type RaceStore } from "./races.js";
-import { dynamoBilling, grantsOf as grantsOfStore, type BillingStore } from "./billing.js";
+import { dynamoBilling, featuresFromEnv, grantsOf as grantsOfStore, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
 import { dynamoGuilds, guildsAllowed, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
 import { handleInteraction, kindOf, threadHears, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
@@ -2890,16 +2890,6 @@ export function feesFromEnv(raw: string | undefined): { subscribed: number; unsu
     return { subscribed: n(parsed["subscribed"], 0), unsubscribed: n(parsed["unsubscribed"], 500) };
   } catch {
     return { subscribed: 0, unsubscribed: 500 };
-  }
-}
-
-export function featuresFromEnv(raw: string | undefined): { plus: string; hostedLicensing: string; server: string } {
-  try {
-    const parsed = JSON.parse(raw ?? "{}") as Record<string, unknown>;
-    const s = (key: string, fallback: string) => (typeof parsed[key] === "string" && parsed[key] ? (parsed[key] as string) : fallback);
-    return { plus: s("plus", "plus"), hostedLicensing: s("hostedLicensing", "hosted-licensing"), server: s("server", "server") };
-  } catch {
-    return { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" };
   }
 }
 

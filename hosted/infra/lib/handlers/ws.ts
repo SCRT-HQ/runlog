@@ -5,7 +5,7 @@ import { apiGatewayPoster, type Poster } from "./live.js";
 import { dynamoLive, type LiveStore } from "./live.js";
 import { dynamoStore, type Ask, type Store } from "./store.js";
 import { dynamoRaces, type RaceStore } from "./races.js";
-import { dynamoBilling, grantsOf } from "./billing.js";
+import { dynamoBilling, featuresFromEnv, grantsOf } from "./billing.js";
 import { annotate } from "./xray.js";
 import { randomBytes } from "node:crypto";
 
@@ -665,21 +665,6 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
 
 /* ---- the Lambda ---------------------------------------------------------- */
 
-/**
- * The plan flag's name, read the same `STRIPE_FEATURES` json api.ts reads
- * so a relabeled flag means the same thing on both sides of the socket.
- * Mirrors api.ts's `featuresFromEnv`, narrowed to the one feature a press
- * cares about.
- */
-function plusFeatureFromEnv(raw: string | undefined): string {
-  try {
-    const parsed = JSON.parse(raw ?? "{}") as Record<string, unknown>;
-    return typeof parsed["plus"] === "string" && parsed["plus"] ? (parsed["plus"] as string) : "plus";
-  } catch {
-    return "plus";
-  }
-}
-
 let deps: WsDeps | undefined;
 
 export async function handler(event: WsEvent): Promise<WsResult> {
@@ -688,7 +673,7 @@ export async function handler(event: WsEvent): Promise<WsResult> {
     const cliClientId = process.env["WORKOS_CLI_CLIENT_ID"] ?? "";
     const table = process.env["TABLE_NAME"] ?? "";
     const gates = process.env["RUNLOG_GATES"] === "on";
-    const plusFeature = plusFeatureFromEnv(process.env["STRIPE_FEATURES"]);
+    const plusFeature = featuresFromEnv(process.env["STRIPE_FEATURES"]).plus;
     const billing = dynamoBilling({ table });
     deps = {
       live: dynamoLive({ table }),

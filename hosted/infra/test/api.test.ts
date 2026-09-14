@@ -108,6 +108,21 @@ describe("the API", () => {
     template.hasResourceProperties("AWS::CloudWatch::Alarm", { MetricName: "Errors", Namespace: "AWS/Lambda", Threshold: 5 });
   });
 
+  it("tells the live function whether plans gate too, so a press from a deck knows the same answer", () => {
+    // WS_ENDPOINT names the socket's own function, the one the check
+    // matters for: a press is refused or forwarded from there, not from
+    // the HTTP handler.
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          WS_ENDPOINT: Match.anyValue(),
+          RUNLOG_GATES: "off",
+          STRIPE_FEATURES: Match.stringLikeRegexp("plus"),
+        }),
+      },
+    });
+  });
+
   it("offers no CORS, because nothing but the app's own origin calls it", () => {
     const api = JSON.stringify(Object.values(template.findResources("AWS::ApiGatewayV2::Api")));
     expect(api).not.toContain("CorsConfiguration");

@@ -462,6 +462,8 @@ export class ApiStack extends Stack {
         BUCKET_NAME: this.bucket.bucketName,
         WORKOS_CLIENT_ID: config.workosClientId,
         WORKOS_CLI_CLIENT_ID: config.workosCliClientId,
+        RUNLOG_GATES: config.gates ? "on" : "off",
+        STRIPE_FEATURES: JSON.stringify(config.stripe.features),
         AWS_XRAY_CONTEXT_MISSING: "IGNORE_ERROR",
       },
       bundling: {
