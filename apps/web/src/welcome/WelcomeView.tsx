@@ -239,7 +239,7 @@ export function WelcomeView() {
               </dd>
             </div>
             <div>
-              <dt>It does not know your game. That is the point.</dt>
+              <dt>It does not know your game</dt>
               <dd>
                 Every noun on screen comes from the pack's own vocabulary: {persona.vocabulary}, {wordsTwo}, {wordsThree}. One app, any
                 game of rounds, dice and consequences.
