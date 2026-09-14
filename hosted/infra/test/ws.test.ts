@@ -180,6 +180,22 @@ describe("opening a socket", () => {
   });
 });
 
+describe("attaching as a deck", () => {
+  it("a signed-in socket may attach as a deck", async () => {
+    const d = deps();
+    const res = await route(ev("$connect", "c1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    expect(res.statusCode).toBe(200);
+    expect(await d.live.connection("c1")).toMatchObject({ sub: "user_1", deck: true });
+  });
+
+  it("a live link may not attach as a deck", async () => {
+    const d = deps();
+    const res = await route(ev("$connect", "c9", { queryStringParameters: { t: "livetok", run: "open", as: "deck" } }), d);
+    expect(res.statusCode).toBe(200);
+    expect(await d.live.connection("c9")).not.toMatchObject({ deck: true });
+  });
+});
+
 describe("a socket on a stream key", () => {
   it("watches the account's run in play, so a bot holds no run id and no link token", async () => {
     const d = deps();

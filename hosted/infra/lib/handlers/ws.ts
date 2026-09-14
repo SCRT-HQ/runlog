@@ -62,6 +62,19 @@ function attachedOf(event: WsEvent, run: string): { control: true; seat?: string
   return { control: true, ...(raw ? { seat: raw } : {}), run };
 }
 
+/**
+ * A socket that presses rather than draws.
+ *
+ * It signs in as the account, the way the app's own devices do, because
+ * what it may do is what the owner may do. It names no run at connect: it
+ * is told which runs are being held, and picks. A link's token and a
+ * stream key are refused here, which is why this is read only on the
+ * signed-in branch below.
+ */
+function deckOf(event: WsEvent): { deck: true } | undefined {
+  return event.queryStringParameters?.["as"] === "deck" ? { deck: true } : undefined;
+}
+
 export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
   const { routeKey, connectionId } = event.requestContext;
   const now = deps.now ?? (() => new Date().toISOString());
@@ -124,7 +137,8 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     } catch {
       return { statusCode: 401, body: "sign in first" };
     }
-    await deps.live.connect(connectionId, caller.sub, now());
+    const deck = deckOf(event);
+    await deps.live.connect(connectionId, caller.sub, now(), deck);
     return { statusCode: 200 };
   }
 
