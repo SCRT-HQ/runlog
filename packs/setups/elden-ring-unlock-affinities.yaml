@@ -1,0 +1,55 @@
+# Every affinity at the table, and the knife to apply one.
+#
+# The five whetblades are what a smithing table reads to decide which
+# affinities it will offer, and the whetstone knife is what lets a run
+# apply an ash of war at all. Found, they are five detours; a run about
+# builds should not have to make them.
+#
+# By id rather than by name. All six are key items tied to an event
+# flag, so `item.named` will not hand one over: giving a key item
+# without the event behind it is how a quest breaks, and the name list
+# is built from that flag. These six are not a quest -- the flag records
+# where you picked it up -- so the item alone is the whole of it, and
+# `item.give` is the way in. An id is a number out of the game's own
+# data and is wrong the first time the game moves, which is the price of
+# the six lines.
+#
+# Not verified against a running game. The mechanism is possession: the
+# table offers what you are carrying, so handing over the item should be
+# the whole of it. Nothing here can check that, and neither can the
+# guard that checks names, because an id is a bare number. If the
+# affinities do not appear at a table after attaching, this is why.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.unlock-affinities
+version: "1.0.0"
+title: Unlock Affinities
+author: Runlog
+description: >-
+  All five whetblades and the whetstone knife, so every affinity is on
+  offer at a smithing table and every ash of war can be applied. For a
+  run that is about what you build rather than about finding the tools
+  to build it.
+
+tool: TarnishedTool
+
+ops:
+  # Whetstone Knife, 0x4000218E. Ashes of war at all.
+  - { op: item.give, args: { id: 1073750414, quantity: 1 }, once: true }
+  # Iron Whetblade, 0x4000230A. Heavy, Keen, Quality, Standard.
+  - { op: item.give, args: { id: 1073750794, quantity: 1 }, once: true }
+  # Red-Hot Whetblade, 0x4000230B. Fire, Flame Art.
+  - { op: item.give, args: { id: 1073750795, quantity: 1 }, once: true }
+  # Sanctified Whetblade, 0x4000230C. Lightning, Sacred.
+  - { op: item.give, args: { id: 1073750796, quantity: 1 }, once: true }
+  # Glintstone Whetblade, 0x4000230D. Magic, Cold.
+  - { op: item.give, args: { id: 1073750797, quantity: 1 }, once: true }
+  # Black Whetblade, 0x4000230E. Poison, Blood, Occult.
+  - { op: item.give, args: { id: 1073750798, quantity: 1 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true
