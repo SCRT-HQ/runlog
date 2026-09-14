@@ -19,7 +19,7 @@ import type { Doc } from "@runlog/rules-schema";
  * and the view does not change.
  */
 
-import { FEATURES, featuresOf, priceDisplay, type Feature } from "@runlog/rules-schema";
+import { FEATURES, featuresOf, priceDisplay, type Feature, type ListingKind } from "@runlog/rules-schema";
 export { FEATURES, featuresOf, priceDisplay, type Feature };
 import { apiBase } from "../sync/config.ts";
 
@@ -39,8 +39,15 @@ export interface MarketplaceEntry {
   requires: Array<{ label: string; kind: string; optional: boolean }>;
   /** Most people a mode seats, moderator or contestants included. */
   players: number;
-  /** A short line under the title, made from the above. */
-  kind: string;
+  /**
+   * A short line under the title, made from the above.
+   *
+   * Was called `kind`, which is now the word for what a listing *is*. A
+   * card saying "games · solo" was never a kind of anything.
+   */
+  blurb: string;
+  /** What this listing is: a pack, or a setup for a tool. */
+  kind: ListingKind;
   /**
    * Set on a pack from `packs/testing/`: a test bench, never seeded to the
    * platform as a listing and never counted as "new in the marketplace". A
@@ -89,7 +96,7 @@ const benchFiles = import.meta.glob("../../../../packs/testing/*.yaml", { query:
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** What a pack's declaration says about how it plays. Tolerant: this reads a file, not a validated pack. */
-function kindOf(category: string, features: Feature[]): string {
+function blurbOf(category: string, features: Feature[]): string {
   const how = features.includes("moderated") ? "moderated race" : features.includes("together") ? "solo or together" : "solo";
   return `${category} · ${how}`;
 }
@@ -120,7 +127,8 @@ async function bundledEntry(load: () => Promise<string>, bench: boolean): Promis
     features,
     players,
     requires,
-    kind: kindOf(category, features),
+    blurb: blurbOf(category, features),
+    kind: "pack",
     price: "free",
     source: "bundled",
     load: async () => text,
@@ -188,6 +196,8 @@ interface FeedCard {
   orgId: string;
   publisherName: string;
   head: {
+    /** Absent on everything listed before there was more than one kind. */
+    kind?: ListingKind;
     title: string;
     version: string;
     author?: string;
@@ -234,7 +244,8 @@ export function feedEntry(card: FeedCard, base: string): MarketplaceEntry {
     features,
     players: card.head.players || 1,
     requires: card.head.requires ?? [],
-    kind: kindOf((card.head.category || "other").toLowerCase(), features),
+    blurb: blurbOf((card.head.category || "other").toLowerCase(), features),
+    kind: card.head.kind === "setup" ? "setup" : "pack",
     price,
     publisher: { id: card.orgId, name: card.publisherName },
     source: "listing",
@@ -320,6 +331,13 @@ export interface MarketplaceQuery {
   mine?: boolean;
   /** One publisher's packs, by the publisher's id. */
   publisher?: string;
+  /**
+   * One kind of thing: packs, or setups.
+   *
+   * Absent means all of them, which is what the marketplace did when
+   * there was only one kind to show.
+   */
+  kind?: ListingKind;
 }
 
 const norm = (s: string) => s.trim().toLowerCase();
@@ -328,6 +346,7 @@ export function filterMarketplace(entries: readonly MarketplaceEntry[], query: M
   const q = norm(query.q ?? "");
   const words = q ? q.split(/\s+/) : [];
   return entries.filter((e) => {
+    if (query.kind && e.kind !== query.kind) return false;
     if (query.mine !== undefined && owned.has(e.id) !== query.mine) return false;
     if (query.publisher && e.publisher?.id !== query.publisher) return false;
     if (query.categories?.size && !query.categories.has(e.category)) return false;
@@ -416,3 +435,16 @@ export const LEGACY_IDS: Record<string, string> = {
   ladder: "com.scrthq.runlog.ladder-work",
   ...RENAMED_IDS,
 };
+
+/**
+ * How many of each kind are on the shelf.
+ *
+ * For a chooser that should not offer a tab with nothing behind it. A
+ * marketplace with no setups in it yet looks exactly as it did before
+ * setups existed, which is the right way for a second kind to arrive.
+ */
+export function kindCounts(entries: readonly MarketplaceEntry[]): Record<ListingKind, number> {
+  const counts: Record<ListingKind, number> = { pack: 0, setup: 0 };
+  for (const e of entries) counts[e.kind] += 1;
+  return counts;
+}

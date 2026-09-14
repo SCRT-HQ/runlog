@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { useDocDrawer } from "../docs/DocDrawer.tsx";
-import { facets, FEATURES, filterMarketplace, loadMarketplace, publishersOf, type MarketplaceEntry, type Feature } from "./marketplace.ts";
+import { facets, FEATURES, filterMarketplace, kindCounts, loadMarketplace, publishersOf, type MarketplaceEntry, type Feature } from "./marketplace.ts";
+import type { ListingKind } from "@runlog/rules-schema";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 
 /**
@@ -56,6 +57,14 @@ export function MarketplaceView({
   const [owned, setOwned] = useState<"all" | "mine" | "new">("all");
   const [publisher, setPublisher] = useState<string | null>(null);
   /**
+   * Which kind of thing is being browsed.
+   *
+   * Packs first and packs by default, because that is what the
+   * marketplace is for and what almost everybody opening it wants. The
+   * chooser is not drawn at all until there is a second kind behind it.
+   */
+  const [kind, setKind] = useState<ListingKind>("pack");
+  /**
    * Whether the facets are showing. A wide screen keeps them in the side
    * column and ignores this; a phone has one column, and eleven ways to
    * narrow a list of nineteen packs put the packs two screens below the
@@ -90,9 +99,12 @@ export function MarketplaceView({
   const publishers = useMemo(() => publishersOf(all), [all]);
   const who = publisher ? publishers.find((p) => p.id === publisher) ?? null : null;
   const shown = useMemo(
-    () => filterMarketplace(all, { q, categories, features, tags, ...(owned === "all" ? {} : { mine: owned === "mine" }), ...(publisher ? { publisher } : {}) }, new Set([...mine, ...bought])),
-    [all, q, categories, features, tags, owned, publisher, mine, bought],
+    () => filterMarketplace(all, { q, categories, features, tags, kind, ...(owned === "all" ? {} : { mine: owned === "mine" }), ...(publisher ? { publisher } : {}) }, new Set([...mine, ...bought])),
+    [all, q, categories, features, tags, kind, owned, publisher, mine, bought],
   );
+  const counts = useMemo(() => kindCounts(all), [all]);
+  /** Drawn only once there is something behind the second tab. */
+  const kinds: ListingKind[] = counts.setup > 0 ? ["pack", "setup"] : [];
   const narrowed = q.trim() !== "" || categories.size > 0 || features.size > 0 || tags.size > 0 || owned !== "all" || publisher !== null;
 
   const toggle = <T,>(set: Set<T>, value: T, put: (next: Set<T>) => void) => {
@@ -168,6 +180,24 @@ export function MarketplaceView({
             {filtersOpen ? "Hide the filters" : "Filters"}
             {narrowed && <span className="chip ok">on</span>}
           </button>
+
+          {kinds.length > 0 && (
+            <div className="facet">
+              <h4 className="facetTitle">Looking for</h4>
+              <div className="options">
+                {kinds.map((k) => (
+                  <button key={k} className={`chip pick ${kind === k ? "on" : ""}`} onClick={() => setKind(k)}>
+                    {k === "pack" ? "Packs" : "Setups"}
+                    <span className="muted num">{counts[k]}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="muted small">
+                A pack is a game: what the dice can do. A setup is what a tool attached to the game is set to while a run lasts, and fits any pack for that
+                game.
+              </p>
+            </div>
+          )}
 
           <div className="facet">
             <h4 className="facetTitle">Show</h4>
