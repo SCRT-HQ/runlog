@@ -145,7 +145,9 @@ export function chose(setup: Setup): ChosenSetup {
 export function edit(chosen: ChosenSetup | null, ops: Setup["ops"], seeded: Setup["ops"]): ChosenSetup | null {
   if (ops.length === 0 && (!chosen || chosen.from.length === 0)) return null;
   const from = chosen?.from ?? [];
-  const same = JSON.stringify(ops) === JSON.stringify(seeded);
+  // Nothing to have deviated from: a list written by hand is not an
+  // edited loadout, it is somebody's own terms.
+  const same = from.length === 0 || JSON.stringify(ops) === JSON.stringify(seeded);
   return { from, ops: copyOps(ops), ...(same ? {} : { edited: true }) };
 }
 
@@ -168,7 +170,9 @@ export function asSetupOps(ops: ProfileOp[]): Setup["ops"] {
 
 /** How a screen should describe where a run's terms came from. */
 export function creditLine(chosen: ChosenSetup | null): string | null {
-  if (!chosen || chosen.from.length === 0) return null;
+  if (!chosen || chosen.ops.length === 0) return null;
+  // Operations with no loadout behind them: written here, by hand.
+  if (chosen.from.length === 0) return "Your own terms";
   const names = chosen.from.map((f) => f.title);
   const list = names.length === 1 ? names[0]! : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
   return chosen.edited ? `Seeded from ${list}, then edited` : `Played under ${list}`;

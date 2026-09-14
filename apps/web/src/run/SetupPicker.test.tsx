@@ -31,17 +31,16 @@ const withoutTool = load("packs/demo/pack.yaml");
 afterEach(cleanup);
 
 /**
- * One of the cards in the list, rather than the summary button above it.
+ * One row of the menu, rather than the summary button above it.
  *
- * Once something is chosen the summary names it, so "Give Runes" matches
- * both. The cards are the ones that carry `aria-pressed`, being the
- * things that are on or off.
+ * Once something is chosen the summary names it, so "Give Runes" would
+ * match both. The rows are the listbox's options; the summary is not.
  */
 const choice = async (name: RegExp): Promise<HTMLElement> => {
-  await screen.findAllByRole("button", { name });
-  const card = screen.getAllByRole("button", { name }).find((b) => b.hasAttribute("aria-pressed"));
-  if (!card) throw new Error(`no card for ${name}`);
-  return card;
+  const rows = await screen.findAllByRole("option", { name });
+  const row = rows[0];
+  if (!row) throw new Error(`no option for ${name}`);
+  return row;
 };
 
 describe("choosing a setup", () => {
@@ -64,14 +63,14 @@ describe("choosing a setup", () => {
     render(<SetupPicker pack={withTool} chosen={null} onChoose={() => {}} />);
     const summary = await screen.findByRole("button", { name: /Choose a Loadout/ });
     expect(summary.getAttribute("aria-expanded")).toBe("false");
-    expect(screen.queryByRole("button", { name: /Bare-handed/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /Bare-handed/ })).toBeNull();
   });
 
   it("offers the ones written for this run's tool, and None first", async () => {
     render(<SetupPicker pack={withTool} chosen={null} onChoose={() => {}} />);
     (await screen.findByRole("button", { name: /Choose a Loadout/ })).click();
-    await screen.findByRole("button", { name: /Bare-handed/ });
-    const offered = screen.getAllByRole("button").map((b) => b.textContent ?? "");
+    await screen.findAllByRole("option", { name: /Bare-handed/ });
+    const offered = screen.getAllByRole("option").map((b) => b.textContent ?? "");
     expect(offered.some((t) => t.includes("None"))).toBe(true);
     expect(offered.some((t) => t.includes("Well armed"))).toBe(true);
     // The leveling ones are written for the same tool, so they are here too.
@@ -131,6 +130,22 @@ describe("choosing a setup", () => {
     await screen.findByRole("heading", { name: /What that hands over/ });
     // Every operation is a row with a way to take it off the list.
     expect(screen.getAllByRole("button", { name: /Remove this/ }).length).toBeGreaterThan(0);
+  });
+
+  /**
+   * "None" is an empty list, not the absence of one.
+   *
+   * Terms without a loadout behind them are an ordinary thing to want:
+   * one line, written here, with nothing else attached. If the editor
+   * only appeared once something was ticked there would be no way to
+   * write that without picking a loadout first and then emptying it.
+   */
+  it("offers the editor under None too, as an empty list to add to", async () => {
+    render(<SetupPicker pack={withTool} chosen={null} onChoose={() => {}} />);
+    await screen.findByRole("heading", { name: /What that hands over/ });
+    await screen.findByRole("button", { name: /Add custom loadout/i });
+    // Nothing is on the list yet, so there is nothing to remove from it.
+    expect(screen.queryAllByRole("button", { name: /Remove this/ })).toEqual([]);
   });
 
   it("says nothing at all where no tool plays this pack", async () => {

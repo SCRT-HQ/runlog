@@ -21,11 +21,19 @@ export function Ops({
   lists,
   ops,
   onChange,
+  addLabel,
 }: {
   catalog: ToolCatalog | null;
   lists: Lists;
   ops: ProfileOp[];
   onChange: (ops: ProfileOp[]) => void;
+  /**
+   * What the button that adds a row says. The same editor holds three
+   * different lists, and "add something to do" is only the right words
+   * for the two that are a rule's consequences; on the page where a run
+   * starts, the list is what you begin holding.
+   */
+  addLabel?: string;
 }) {
   const set = (i: number, op: ProfileOp) => onChange(ops.map((o, at) => (at === i ? op : o)));
   const add = () => onChange([...ops, { op: catalog?.ops[0]?.op ?? "", args: {} }]);
@@ -73,7 +81,7 @@ export function Ops({
       })}
       <div className="padRow">
         <button className="ghost tiny" onClick={add}>
-          Add something to do
+          {addLabel ?? "Add something to do"}
         </button>
         {ops.some((o) => opDef(catalog, o.op)?.oneWay) && (
           <span className="muted small">One of these cannot be undone when the effect ends.</span>
@@ -118,7 +126,7 @@ function Arg({ arg, op, lists, onChange }: { arg: ArgDef; op: ProfileOp; lists: 
         placeholder={arg.label}
         aria-label={arg.label}
         aria-invalid={fits === false}
-        className={fits === false ? "wrongName" : undefined}
+        className={`opName${fits === false ? " wrongName" : ""}`}
         title={fits === false ? `Nothing the tool knows is called that` : arg.note}
         onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
       />

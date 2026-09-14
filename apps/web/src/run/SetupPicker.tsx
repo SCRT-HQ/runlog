@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Pack, Setup } from "@runlog/rules-schema";
 import { builtins } from "../control/builtin.ts";
 import { catalogFor, type ToolCatalog } from "../control/catalog.ts";
@@ -41,6 +41,28 @@ export function SetupPicker({
   const [tool, setTool] = useState<string | undefined>(undefined);
   const [lists, setLists] = useState<Lists>({});
   const [open, setOpen] = useState(false);
+
+  /**
+   * A menu is a thing that closes. Escape, and a press anywhere outside
+   * it, because one that only closes by pressing the button that opened
+   * it is a panel wearing a menu's clothes.
+   */
+  const menu = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!menu.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", key);
+    };
+  }, [open]);
 
   useEffect(() => {
     let live = true;
@@ -107,47 +129,55 @@ export function SetupPicker({
         changing a thing about what the dice can do.
       </p>
 
-      <button className="chipAdd setupSummary" aria-expanded={open} onClick={() => setOpen(!open)}>
-        {credit ?? `Choose ${aOr(v.one)}`}
-        <span className="muted"> {open ? "▴" : "▾"}</span>
-      </button>
+      <div className="setupMenu" ref={menu}>
+        <button className="chipAdd setupSummary" aria-expanded={open} aria-haspopup="listbox" onClick={() => setOpen(!open)}>
+          <span className="setupSummaryText">{credit ?? `Choose ${aOr(v.one)}`}</span>
+          <span className="caret">{open ? "▴" : "▾"}</span>
+        </button>
 
-      {open && (
-        <div className="choices">
-          <button className={`choice ${picked.length === 0 ? "on" : ""}`} onClick={() => onChoose(null)}>
-            <strong>None</strong>
-            <span className="muted small">Start as the game would have you start.</span>
-          </button>
-          {offered.map((setup) => (
-            <button
-              key={setup.id}
-              className={`choice ${picked.includes(setup.id) ? "on" : ""}`}
-              aria-pressed={picked.includes(setup.id)}
-              onClick={() => toggle(setup)}
-            >
-              <strong>{setup.title}</strong>
-              <span className="muted small">{setup.description}</span>
+        {open && (
+          <div className="setupPanel" role="listbox" aria-multiselectable="true" aria-label={`Which ${word}`}>
+            <button className="setupOption" role="option" aria-selected={picked.length === 0} onClick={() => onChoose(null)}>
+              <span className="tick">{picked.length === 0 ? "✓" : ""}</span>
+              <span className="setupOptionText">
+                <strong>None</strong>
+                <span className="muted small">Start as the game would have you start.</span>
+              </span>
             </button>
-          ))}
-        </div>
-      )}
+            {offered.map((setup) => (
+              <button
+                key={setup.id}
+                className="setupOption"
+                role="option"
+                aria-selected={picked.includes(setup.id)}
+                onClick={() => toggle(setup)}
+              >
+                <span className="tick">{picked.includes(setup.id) ? "✓" : ""}</span>
+                <span className="setupOptionText">
+                  <strong>{setup.title}</strong>
+                  <span className="muted small">{setup.description}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {(chosen?.ops.length ?? 0) > 0 || picked.length > 0 ? (
-        <>
-          <h4 className="stepLabel">What that hands over</h4>
-          <p className="muted small">
-            {picked.length > 1
-              ? `In the order you picked them. Nothing is merged: where two say the same thing, the last one wins, and a line you do not want is a line you can remove.`
-              : `Change any of it. What is here is what goes out when a tool attaches.`}
-          </p>
-          <Ops
-            catalog={catalog}
-            lists={lists}
-            ops={asProfileOps(chosen?.ops ?? [])}
-            onChange={(ops) => onChoose(edit(chosen, asSetupOps(ops), seeded))}
-          />
-        </>
-      ) : null}
+      <h4 className="stepLabel">What that hands over</h4>
+      <p className="muted small">
+        {picked.length > 1
+          ? `In the order you picked them. Nothing is merged: where two say the same thing, the last one wins, and a line you do not want is a line you can remove.`
+          : picked.length === 1
+            ? `Change any of it. What is here is what goes out when a tool attaches.`
+            : `Nothing chosen, so nothing goes out. Add something below to write your own without starting from ${aOr(word)}.`}
+      </p>
+      <Ops
+        catalog={catalog}
+        lists={lists}
+        ops={asProfileOps(chosen?.ops ?? [])}
+        onChange={(ops) => onChoose(edit(chosen, asSetupOps(ops), seeded))}
+        addLabel={`Add custom ${word}`}
+      />
 
       <p className="muted small">
         A {word} needs a tool attached to do anything. With none attached it is simply not applied, and the {run} plays as it always has.

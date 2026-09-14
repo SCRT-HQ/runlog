@@ -1494,6 +1494,14 @@ button:disabled,
 .opRow > button {
   flex: none;
 }
+/* The name is the long argument and the only one whose length is not
+   known: "Somber Ancient Dragon Smithing Stone" is three times an
+   amount. So it takes the row's spare width instead of being cut off at
+   a guess, and the row stops needing to be scrolled sideways to read. */
+.opRow > input.opName {
+  flex: 1 1 10rem;
+  min-width: 8rem;
+}
 /* A move that belongs to one racer: the move reads as one thing, and
    the names under it are the press. */
 .choice.perRacer {
@@ -6889,5 +6897,81 @@ html[data-pip="controls"] body {
   }
   .veil {
     padding: 0.6rem;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Choosing loadouts, on the page where a run is started.
+ *
+ * A menu rather than a section that unfolds. Fourteen of them is a lot
+ * of page to push down for a choice most runs do not make, and the
+ * cards were a three-column grid taller than the rest of the form put
+ * together. So the list floats over what is under it and each one is a
+ * row: a tick, a name, and the line that says what it does.
+ * ------------------------------------------------------------------ */
+.setupMenu {
+  position: relative;
+  display: block;
+  margin: 0.35rem 0 0.6rem;
+}
+.setupSummary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+}
+.setupSummaryText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.setupPanel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: min(30rem, calc(100vw - 2rem));
+  max-height: 22rem;
+  overflow-y: auto;
+  padding: 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 45%);
+}
+.setupOption {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.setupOption .tick {
+  flex: 0 0 1rem;
+  color: var(--accent);
+}
+.setupOptionText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.setupOptionText .small {
+  line-height: 1.35;
+}
+.setupOption[aria-selected="true"] {
+  background: var(--panel-3, rgb(255 255 255 / 5%));
+}
+@media (hover: hover) {
+  .setupOption:hover {
+    background: rgb(255 255 255 / 7%);
   }
 }
