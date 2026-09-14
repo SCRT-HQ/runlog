@@ -109,17 +109,15 @@ describe("the API", () => {
   });
 
   it("tells the live function whether plans gate too, so a press from a deck knows the same answer", () => {
-    // WS_ENDPOINT names the socket's own function, the one the check
-    // matters for: a press is refused or forwarded from there, not from
-    // the HTTP handler.
-    template.hasResourceProperties("AWS::Lambda::Function", {
-      Environment: {
-        Variables: Match.objectLike({
-          WS_ENDPOINT: Match.anyValue(),
-          RUNLOG_GATES: "off",
-          STRIPE_FEATURES: Match.stringLikeRegexp("plus"),
-        }),
-      },
+    // The function itself, found by its construct id, rather than any
+    // function in the template whose environment happens to match: the
+    // HTTP handler carries the same three keys, so the check passed
+    // without the socket's own function carrying anything at all.
+    const [, live] = Object.entries(template.findResources("AWS::Lambda::Function")).find(([id]) => id.startsWith("LiveHandler")) ?? [];
+    expect(live).toBeDefined();
+    expect(live!.Properties.Environment.Variables).toMatchObject({
+      RUNLOG_GATES: "off",
+      STRIPE_FEATURES: expect.stringContaining("plus"),
     });
   });
 
