@@ -17,6 +17,7 @@ import {
   loadPackText,
   loadSetupText,
   loadMappingText,
+  loadSharedTablesText,
   marksUsed,
   schemaUrl,
   whichKind,
@@ -100,6 +101,21 @@ async function cmdValidate(args: string[]): Promise<number> {
      */
     const abs = resolve(file);
     const which = existsSync(abs) ? whichKind(readFileSync(abs, "utf8"), detectFormat(abs)) : "pack";
+
+    if (which === "tables") {
+      const loaded = loadSharedTablesText(readFileSync(abs, "utf8"), detectFormat(abs));
+      const code = report(file, loaded.diagnostics, strict);
+      worst = Math.max(worst, code);
+      if (loaded.tables && code === 0) {
+        const names = Object.keys(loaded.tables.variants);
+        const entries = Object.values(loaded.tables.variants).reduce((n, v) => n + v.entries.length, 0);
+        console.log(
+          `${paint(GREEN, "ok")} ${paint(BOLD, loaded.tables.title)} ${paint(DIM, `v${loaded.tables.version}`)} - ` +
+            `${names.length} variant${names.length === 1 ? "" : "s"} (${names.join(", ")}), ${entries} entries, ${loaded.tables.defaultVariant} by default`,
+        );
+      }
+      continue;
+    }
 
     if (which === "mapping") {
       const loaded = loadMappingText(readFileSync(abs, "utf8"), detectFormat(abs));

@@ -4,6 +4,7 @@ export * from "./tables.ts";
 export * from "./pack.ts";
 export * from "./setup.ts";
 export * from "./mapping.ts";
+export * from "./shared-tables.ts";
 export * from "./published.ts";
 export * from "./dice.ts";
 export * from "./lint.ts";

@@ -60,6 +60,49 @@
         "maxLength": 40
       }
     },
+    "use": {
+      "description": "Tables written elsewhere, folded into this pack's own before anything rolls. A pack that borrows a hundred good results does not fork them: a fix to the set is a fix everywhere it is used. Resolved as the pack is loaded, so nothing downstream ever sees a reference.",
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$",
+            "description": "The shared table set, by id."
+          },
+          "as": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60,
+            "description": "The table id it becomes here, which is what a phase or a move rolls on."
+          },
+          "variant": {
+            "description": "Which pitch of it to use. Absent, the set's own default.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "merge": {
+            "default": "replace",
+            "description": "`replace` uses the borrowed entries alone; `append` puts them after this pack's own table of that id, which is how a pack keeps its results and borrows more.",
+            "type": "string",
+            "enum": [
+              "replace",
+              "append"
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "as"
+        ],
+        "additionalProperties": false
+      }
+    },
     "marks": {
       "description": "The tags this pack's entries carry that anything outside the pack may match on, declared so they can be relied upon. Entry tags are free strings; a pack that declares its marks is promising these ones will not quietly be renamed, and the linter says so when an entry carries a tag that was never declared. Absent, tags go on being free and nothing checks them.",
       "type": "object",

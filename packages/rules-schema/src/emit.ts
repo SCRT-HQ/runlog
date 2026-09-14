@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Pack, SCHEMA_VERSION } from "./pack.ts";
 import { Setup, SETUP_SCHEMA_VERSION } from "./setup.ts";
 import { Mapping, MAPPING_SCHEMA_VERSION } from "./mapping.ts";
+import { SharedTables, SHARED_TABLES_SCHEMA_VERSION } from "./shared-tables.ts";
 import { schemaUrl } from "./published.ts";
 
 /**
@@ -117,5 +118,18 @@ export function buildMappingSchemaDocument(): Record<string, unknown> {
     $id: schemaUrl("mapping"),
     title: `Runlog mapping (schema version ${MAPPING_SCHEMA_VERSION})`,
     ...buildMappingSchemaBody(),
+  };
+}
+
+/** And for a shared table set. */
+export function buildTablesSchemaBody(): Record<string, unknown> {
+  return z.toJSONSchema(SharedTables, { target: "draft-2020-12", io: "input", unrepresentable: "any" }) as Record<string, unknown>;
+}
+
+export function buildTablesSchemaDocument(): Record<string, unknown> {
+  return {
+    $id: schemaUrl("tables"),
+    title: `Runlog shared tables (schema version ${SHARED_TABLES_SCHEMA_VERSION})`,
+    ...buildTablesSchemaBody(),
   };
 }
