@@ -282,8 +282,10 @@ export function RunView({
   const [receipts, setReceipts] = useState<RollReceipt[]>([]);
 
   // Who is on the board, read here as `Moves` reads it: the offer has to
-  // split a move the same way the panel does.
-  const racing = run.moderated ? (run.state?.contestants ?? []) : [];
+  // split a move the same way the panel does. Held by a memo because the
+  // offer is, and an empty roster built afresh on every render would
+  // rebuild the offer with it and keep restarting the publish timer.
+  const racing = useMemo(() => (run.moderated ? (run.state?.contestants ?? []) : []), [run.moderated, run.state]);
 
   /**
    * What a deck may press, right now: one value for the snapshot this
