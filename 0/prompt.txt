@@ -15,3 +15,11 @@ this sounds good, we need to make sure we also expose a way to change the run th
 ---
 
 we should also fetch the runs on launch / connect of the stream deck if those widgets are actively configured
+
+---
+
+Let's implement
+
+---
+
+are we creating a full plugin or do I need to use something like a community built WS plugin to bridge the gap?
