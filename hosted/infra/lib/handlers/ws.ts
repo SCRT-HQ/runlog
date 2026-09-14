@@ -474,7 +474,25 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     if (session.meta.endedAt) return refuse("That run has ended.");
     if (deps.entitled && !(await deps.entitled(conn.sub))) return refuse("Driving a run from a deck is part of Plus.");
 
-    const writers = (await deps.live.watchers(run)).filter(writes);
+    /**
+     * The one device that takes it.
+     *
+     * A press is an ordinary move by the owner's own hand, and a move
+     * happens once. Posted to every writing watcher it happened as many
+     * times as the account had the run open: a second device of the
+     * owner's appended the same event again, and another member's browser
+     * appended it under their name, whose verdict is then dropped on the
+     * way back and never reaches the deck at all.
+     *
+     * So: the account's own devices only, and of those the one that
+     * opened the run last, which is the one in front of whoever is
+     * playing. Ties by connection id, so two watches in the same
+     * millisecond still settle on the same device every time.
+     */
+    const writers = (await deps.live.watchers(run))
+      .filter((w) => writes(w) && w.sub === conn.sub)
+      .sort((a, b) => (a.watchedAt === b.watchedAt ? (a.connectionId < b.connectionId ? -1 : 1) : a.watchedAt > b.watchedAt ? -1 : 1))
+      .slice(0, 1);
     if (writers.length === 0) return refuse("Nothing is holding that run.");
     if (!poster) return { statusCode: 200 };
 

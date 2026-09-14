@@ -51,6 +51,14 @@ export interface Attached {
 export interface Watcher extends Attached {
   connectionId: string;
   sub: string;
+  /**
+   * When this connection said it was watching. Carried because an account
+   * with the same run open on two devices has two watchers that are
+   * otherwise alike, and something that may happen on only one of them --
+   * a press from a deck -- has to pick. The last one opened is the one in
+   * front of whoever is playing.
+   */
+  watchedAt: string;
 }
 
 export interface LiveStore {
@@ -135,13 +143,13 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
         ddb.send(
           new PutCommand({
             TableName: table,
-            Item: { pk: spk(sessionId), sk: `CONN#${connectionId}`, kind: "watch", sub, expiresAt, ...marks(attached) },
+            Item: { pk: spk(sessionId), sk: `CONN#${connectionId}`, kind: "watch", sub, watchedAt: at, expiresAt, ...marks(attached) },
           }),
         ),
         ddb.send(
           new PutCommand({
             TableName: table,
-            Item: { pk: cpk(connectionId), sk: `WATCH#${sessionId}`, kind: "watch", sub, expiresAt, ...marks(attached) },
+            Item: { pk: cpk(connectionId), sk: `WATCH#${sessionId}`, kind: "watch", sub, watchedAt: at, expiresAt, ...marks(attached) },
           }),
         ),
       ]);
@@ -157,7 +165,14 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
       const now = Date.now() / 1000;
       return (out.Items ?? [])
         .filter((r) => typeof r["expiresAt"] !== "number" || r["expiresAt"] > now)
-        .map((r) => ({ connectionId: String(r["sk"]).slice("CONN#".length), sub: String(r["sub"] ?? ""), ...read(r) }));
+        .map((r) => ({
+          connectionId: String(r["sk"]).slice("CONN#".length),
+          sub: String(r["sub"] ?? ""),
+          // A row written before watches were dated has none; empty sorts
+          // oldest, which is what a watch nobody can date should be.
+          watchedAt: typeof r["watchedAt"] === "string" ? r["watchedAt"] : "",
+          ...read(r),
+        }));
     },
     async decksOf(sub) {
       const out = await ddb.send(

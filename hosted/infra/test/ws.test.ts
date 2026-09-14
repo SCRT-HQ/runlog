@@ -17,7 +17,8 @@ import type { Ask, SessionMember, SessionMeta } from "../lib/handlers/store";
 // per-session row, written by watch() from its own attached argument and
 // read by watchers(). A deck's watch row must carry `deck: true` on its
 // own, the same as it does in dynamo, or a deck would look like a writer
-// of the run it is watching.
+// of the run it is watching. The watch row is dated too, as dynamo dates
+// it, because which of an account's devices takes a press turns on it.
 function memoryLive(): LiveStore & {
   conns: Map<string, string>;
   watches: Map<string, Set<string>>;
@@ -28,6 +29,7 @@ function memoryLive(): LiveStore & {
   const watches = new Map<string, Set<string>>();
   const marks = new Map<string, Attached>();
   const watchMarks = new Map<string, Attached>();
+  const watchedAt = new Map<string, string>();
   const watchKey = (sessionId: string, connectionId: string) => `${sessionId}|${connectionId}`;
   return {
     conns,
@@ -42,15 +44,17 @@ function memoryLive(): LiveStore & {
       const sub = conns.get(id);
       return sub ? { sub, ...(marks.get(id) ?? {}) } : null;
     },
-    async watch(id, sessionId, _sub, _at, attached) {
+    async watch(id, sessionId, _sub, at, attached) {
       if (!watches.has(sessionId)) watches.set(sessionId, new Set());
       watches.get(sessionId)!.add(id);
       watchMarks.set(watchKey(sessionId, id), attached ?? {});
+      watchedAt.set(watchKey(sessionId, id), at);
     },
     async watchers(sessionId): Promise<Watcher[]> {
       return [...(watches.get(sessionId) ?? [])].map((connectionId) => ({
         connectionId,
         sub: conns.get(connectionId) ?? "",
+        watchedAt: watchedAt.get(watchKey(sessionId, connectionId)) ?? "",
         ...(watchMarks.get(watchKey(sessionId, connectionId)) ?? {}),
       }));
     },
@@ -65,6 +69,7 @@ function memoryLive(): LiveStore & {
       for (const [sessionId, set] of watches) {
         set.delete(id);
         watchMarks.delete(watchKey(sessionId, id));
+        watchedAt.delete(watchKey(sessionId, id));
       }
     },
   };
@@ -273,7 +278,7 @@ describe("a socket on a stream key", () => {
     const d = deps();
     expect((await route(ev("$connect", "c1", { queryStringParameters: { k: "watchkey" } }), d)).statusCode).toBe(200);
     // "open" is the one that is both shared and most recently moved.
-    expect(await d.live.watchers("open")).toEqual([{ connectionId: "c1", sub: "stream:user_1" }]);
+    expect(await d.live.watchers("open")).toMatchObject([{ connectionId: "c1", sub: "stream:user_1" }]);
   });
 
   it("refuses a press key, which belongs in a bot and never in a scene", async () => {
@@ -297,7 +302,7 @@ describe("watching", () => {
     const d = deps();
     await route(ev("$connect", "c1", { queryStringParameters: { token: "good" } }), d);
     expect((await route(ev("$default", "c1", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d)).statusCode).toBe(200);
-    expect(await d.live.watchers("shared")).toEqual([{ connectionId: "c1", sub: "user_1" }]);
+    expect(await d.live.watchers("shared")).toMatchObject([{ connectionId: "c1", sub: "user_1" }]);
     // Not a member, and not a session: the same answer.
     expect((await route(ev("$default", "c1", { body: JSON.stringify({ t: "watch", id: "private" }) }), d)).statusCode).toBe(200);
     expect((await route(ev("$default", "c1", { body: JSON.stringify({ t: "watch", id: "nope" }) }), d)).statusCode).toBe(200);
@@ -492,7 +497,7 @@ describe("telling the listeners", () => {
       live.marks.clear();
       await connect({ k: "watchkey", seat: "Mira" });
       expect(live.marks.get("c1")).toBeUndefined();
-      expect(await live.watchers("open")).toEqual([{ connectionId: "c1", sub: "stream:user_1" }]);
+      expect(await live.watchers("open")).toMatchObject([{ connectionId: "c1", sub: "stream:user_1" }]);
     });
 
     it("attaches on a run's own live link, which is how a player who is not the host joins", async () => {
@@ -983,7 +988,7 @@ describe("telling the listeners", () => {
     await notifier(live, poster)("shared", 12);
     expect(posted.map(([c]) => c).sort()).toEqual(["c1", "c2"]);
     expect(JSON.parse(posted[0]![1])).toEqual({ t: "changed", id: "shared", seq: 12 });
-    expect(await live.watchers("shared")).toEqual([{ connectionId: "c1", sub: "user_1" }]);
+    expect(await live.watchers("shared")).toMatchObject([{ connectionId: "c1", sub: "user_1" }]);
   });
 
   it("never throws: a failed nudge costs a poll, not a move", async () => {
@@ -1073,6 +1078,58 @@ describe("a deck's press", () => {
     posted.length = 0;
     await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "s1", seq: 1, ref: "r2", press: "primary" }) }), d);
     expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r2", ok: false, say: "Nothing is holding that run." });
+  });
+
+  /**
+   * Review finding: a press posted to every writing watcher is applied
+   * once per device with the run open, which is one move made twice.
+   */
+  it("posts a press to one device of the owner's, the one that opened the run last", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    let clock = "2026-09-14T00:00:00.000Z";
+    const d = { ...deps(live), poster, now: () => clock };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$connect", "laptop", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$connect", "phone", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$default", "laptop", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    clock = "2026-09-14T00:05:00.000Z";
+    await route(ev("$default", "phone", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "s1", seq: 7, ref: "r1", press: "primary" }) }), d);
+    const drives = posted.filter(([, data]) => JSON.parse(data)["t"] === "drive");
+    expect(drives.map(([id]) => id)).toEqual(["phone"]);
+  });
+
+  it("does not post a press to another member's browser", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    const at = "2026-09-14T00:00:00.000Z";
+    // The other member's page, signed in as themselves: it writes, but
+    // what it writes is authored under their name and its verdict never
+    // reaches the deck.
+    await live.connect("theirs", "user_2", at);
+    await live.watch("theirs", "shared", "user_2", at);
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "shared", seq: 3, ref: "r1", press: "primary" }) }), d);
+    expect(posted.some(([id]) => id === "theirs")).toBe(false);
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r1", ok: false, say: "Nothing is holding that run." });
   });
 
   it("will not forward a press for somebody else's run", async () => {
