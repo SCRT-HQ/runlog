@@ -436,6 +436,92 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     return { statusCode: 200 };
   }
 
+  /**
+   * A deck pressing something.
+   *
+   * The server checks who is asking and finds the devices that could take
+   * it; it does not read the press. What may be pressed is the run's
+   * business, and the run is the only thing holding the pack and the log.
+   *
+   * Nothing is stored. A press is worth exactly as much as the moment it
+   * was made in: `seq` names the offer it was drawn from, and the writing
+   * device refuses one it has already moved past. Durability would buy a
+   * press that lands after the reason for it has gone.
+   */
+  if (conn.deck && m["t"] === "drive") {
+    const poster = deps.poster;
+    const ref = typeof m["ref"] === "string" ? m["ref"].slice(0, 64) : "";
+    const run = typeof m["run"] === "string" ? m["run"] : "";
+    const refuse = async (say: string): Promise<WsResult> => {
+      if (poster) {
+        try {
+          await poster.post(connectionId, JSON.stringify({ t: "drove", ref, ok: false, say }));
+        } catch (error) {
+          console.error("live: could not refuse a press", error);
+        }
+      }
+      return { statusCode: 200 };
+    };
+    if (!ref || !run) return { statusCode: 400, body: "a press has a run and a ref" };
+    const session = await deps.store.getSession(run);
+    if (!session || session.meta.deletedAt || session.meta.ownerSub !== conn.sub) return refuse("That run is not yours to press.");
+    if (session.meta.endedAt) return refuse("That run has ended.");
+
+    const writers = (await deps.live.watchers(run)).filter(writes);
+    if (writers.length === 0) return refuse("Nothing is holding that run.");
+    if (!poster) return { statusCode: 200 };
+
+    const line = JSON.stringify({
+      t: "drive",
+      from: connectionId,
+      run,
+      seq: typeof m["seq"] === "number" ? m["seq"] : 0,
+      ref,
+      press: String(m["press"] ?? ""),
+      ...(typeof m["move"] === "string" ? { move: m["move"] } : {}),
+      ...(m["answer"] && typeof m["answer"] === "object" ? { answer: m["answer"] } : {}),
+    });
+    for (const w of writers) {
+      try {
+        if ((await poster.post(w.connectionId, line)) === "gone") await deps.live.disconnect(w.connectionId);
+      } catch (error) {
+        console.error("live: could not pass a press on", error);
+      }
+    }
+    return { statusCode: 200 };
+  }
+
+  /**
+   * The verdict, on its way back to the one deck that asked.
+   *
+   * The deck's connection id came out with the press and goes back with
+   * the answer, so the server keeps no record of who asked for what. It is
+   * checked before it is posted to: a member may only answer a deck of
+   * their own account.
+   */
+  if (m["t"] === "drove" && typeof m["to"] === "string") {
+    // A link's socket and a scene's have no account of their own to share
+    // with a deck, so no `sub` of theirs can ever match one; said outright
+    // rather than left to fall out of the comparison below.
+    if (conn.sub.startsWith("public:") || conn.sub.startsWith("stream:")) return { statusCode: 200 };
+    const poster = deps.poster;
+    if (!poster) return { statusCode: 200 };
+    const target = await deps.live.connection(m["to"]);
+    if (!target || !target.deck || target.sub !== conn.sub) return { statusCode: 200 };
+    const line = JSON.stringify({
+      t: "drove",
+      ref: typeof m["ref"] === "string" ? m["ref"] : "",
+      ok: m["ok"] === true,
+      ...(typeof m["say"] === "string" ? { say: m["say"] } : {}),
+    });
+    try {
+      if ((await poster.post(m["to"], line)) === "gone") await deps.live.disconnect(m["to"]);
+    } catch (error) {
+      console.error("live: could not pass a verdict back", error);
+    }
+    return { statusCode: 200 };
+  }
+
   // A link's socket, and a scene's, watch the one run they were opened for
   // and take no requests.
   if (conn.sub.startsWith("public:") || conn.sub.startsWith("stream:")) return { statusCode: 200 };
@@ -555,7 +641,7 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     const race = inSession ? null : await deps.races.getRace(m["id"]);
     const inRace = Boolean(race && race.entries.some((e) => e.sub === conn.sub));
     if (!inSession && !inRace) return { statusCode: 200 };
-    await deps.live.watch(connectionId, m["id"], conn.sub, now());
+    await deps.live.watch(connectionId, m["id"], conn.sub, now(), conn.deck ? { deck: true, run: m["id"] } : undefined);
     if (conn.deck) {
       // A deck is told a run is on it the same way a page is told a tool
       // is: the row says so, and the table hears it.
