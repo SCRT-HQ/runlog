@@ -75,11 +75,11 @@ describe("the address the tool dials", () => {
     expect(screen.getByText(/once it has a key/)).toBeTruthy();
   });
 
-  it("says it is still being set up while the run is finding a key", () => {
+  it("says it is loading while the run is finding a key", () => {
     // Not unfinished: unfinished yet. The run mints one on open, and
     // until it answers there is nothing to print and nothing wrong.
     render(<ControlSettings pack={tarnished} record={record({})} reachable={{ link: null, key: null, working: true }} />);
-    expect(screen.getByText(/Setting this .* up to be reached/)).toBeTruthy();
+    expect(screen.getByText("Loading…")).toBeTruthy();
     expect(screen.queryByText(/ws:\/\/|wss:\/\//)).toBeNull();
   });
 
