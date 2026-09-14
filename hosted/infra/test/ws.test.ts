@@ -1122,6 +1122,12 @@ describe("a deck's press", () => {
     posted.length = 0;
     await route(ev("$default", "page", { body: JSON.stringify({ t: "drove", to: "deck1", ref: "r1", ok: true }) }), d);
     expect(JSON.parse(posted.find(([id]) => id === "deck1")![1])).toEqual({ t: "drove", ref: "r1", ok: true });
+
+    // And the run's new seq where the page sends one: the deck's next
+    // press is made against it, ahead of the doorbell that carries it.
+    posted.length = 0;
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "drove", to: "deck1", ref: "r4", ok: true, seq: 43 }) }), d);
+    expect(JSON.parse(posted.find(([id]) => id === "deck1")![1])).toEqual({ t: "drove", ref: "r4", ok: true, seq: 43 });
   });
 
   it("tells a deck when nothing is holding the run", async () => {

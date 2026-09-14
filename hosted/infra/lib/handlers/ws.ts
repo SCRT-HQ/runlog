@@ -560,6 +560,11 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
       ref: typeof m["ref"] === "string" ? m["ref"] : "",
       ok: m["ok"] === true,
       ...(typeof m["say"] === "string" ? { say: m["say"] } : {}),
+      // What the run reads at now that the press has landed, where the
+      // page said: the doorbell that would otherwise carry it is a sync
+      // away, and a deck pressing twice inside that window named a seq
+      // the page had already moved past.
+      ...(typeof m["seq"] === "number" ? { seq: m["seq"] } : {}),
     });
     try {
       if ((await poster.post(m["to"], line)) === "gone") await deps.live.disconnect(m["to"]);

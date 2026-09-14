@@ -43,8 +43,8 @@ export interface Sync {
    * between telling somebody it happened and telling them the truth.
    */
   gesture: (id: string, kind: string, data?: Record<string, unknown>) => boolean;
-  /** The verdict on a deck's press, back to the one deck that made it. */
-  drove: (to: string, ref: string, ok: boolean, say?: string) => void;
+  /** The verdict on a deck's press, back to the one deck that made it, with the run's `seq` where there is a fresh one. */
+  drove: (to: string, ref: string, ok: boolean, say?: string, seq?: number) => void;
 }
 
 const off: Sync = {
@@ -239,7 +239,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
               syncBus.localChange("pack", id);
             },
             gesture: (id, kind, data) => socketRef.current?.gesture(id, kind, data) ?? false,
-            drove: (to, ref, ok, say) => socketRef.current?.drove(to, ref, ok, say),
+            drove: (to, ref, ok, say, seq) => socketRef.current?.drove(to, ref, ok, say, seq),
           }
         : off,
     [available, enabled, active, status, last],

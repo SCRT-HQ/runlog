@@ -49,7 +49,13 @@ ws.addEventListener("message", (event) => {
     }
   }
   if (m["t"] === "changed" && m["id"] === run) seq = m["seq"] as number;
-  if (m["t"] === "drove") console.log(m["ok"] ? "pressed" : `refused: ${String(m["say"] ?? "")}`);
+  if (m["t"] === "drove") {
+    // The verdict carries the run's new seq where the page sent one, and
+    // it arrives before the doorbell does: taking it here is what lets a
+    // second press follow the first without waiting for the sync to settle.
+    if (typeof m["seq"] === "number") seq = m["seq"];
+    console.log(m["ok"] ? "pressed" : `refused: ${String(m["say"] ?? "")}`);
+  }
 });
 
 process.stdin.on("data", () => {

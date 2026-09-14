@@ -206,6 +206,10 @@ describe("the live socket", () => {
     expect(socket.sent.at(-1)).toBe(JSON.stringify({ t: "drove", to: "d1", ref: "r1", ok: true }));
     live.drove("d1", "r2", false, "That moved on.");
     expect(socket.sent.at(-1)).toBe(JSON.stringify({ t: "drove", to: "d1", ref: "r2", ok: false, say: "That moved on." }));
+    // The run's new seq rides back with the verdict, so a deck pressing
+    // again need not wait for the doorbell to tell it where the run got to.
+    live.drove("d1", "r3", true, undefined, 12);
+    expect(socket.sent.at(-1)).toBe(JSON.stringify({ t: "drove", to: "d1", ref: "r3", ok: true, seq: 12 }));
   });
 
   it("waits and tries again when there is no token to connect with", async () => {

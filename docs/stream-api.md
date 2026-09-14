@@ -452,9 +452,11 @@ From then on this run's `{ "t": "changed", "id": "01RUN", "seq": 42 }` rings on 
 ### The verdict
 
 ```json
-{ "t": "drove", "ref": "cli-1758000000000", "ok": true }
+{ "t": "drove", "ref": "cli-1758000000000", "ok": true, "seq": 43 }
 { "t": "drove", "ref": "cli-1758000000000", "ok": false, "say": "That moved on." }
 ```
+
+A verdict from the page carries `seq`, the run's own `events.length` once the press has landed: the `changed` that would otherwise carry it is a sync settle behind, and a deck pressing twice inside that window would name a `seq` the run had already moved past. Take it as you take the one on `changed`. The server's own refusals carry none, because nothing moved.
 
 A verdict is the only answer a press gets, and a socket can drop one: treat a press with no verdict within a few seconds as lost, and press again with the same `ref`, which settles to the first verdict where the press did land.
 

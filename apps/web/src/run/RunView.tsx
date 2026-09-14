@@ -167,6 +167,12 @@ export function heldMove(move: { finalizes?: boolean }, owed: number): boolean {
 }
 
 /**
+ * How long an accepted verdict waits for this device's log to grow before
+ * it is sent with whatever the run reads at anyway.
+ */
+const HELD_VERDICT_MS = 1500;
+
+/**
  * Whether a move is asked of each racer rather than of the table: the pack
  * marks it `per: contestant` and there is a roster to ask. The one rule
  * behind `Moves`' split into a button per name, read by the offer as well,
@@ -463,6 +469,47 @@ export function RunView({
   }, [run.record?.runId]);
 
   /**
+   * A verdict waiting on the run to catch up.
+   *
+   * A deck presses against a `seq`, and the next `seq` it knows about
+   * arrives with the doorbell, a sync settle away. Pressed twice inside
+   * that window, the second press named the old one and was refused
+   * "That moved on." for no reason anybody at the table could see. So an
+   * accepted verdict waits here until this device's own log has grown,
+   * and goes out naming what it grew to. A refusal changed nothing and
+   * goes at once.
+   *
+   * The timer is the promise that nothing hangs: a press that somehow
+   * appended no event is answered anyway, with whatever the run reads at
+   * by then.
+   */
+  const heldVerdict = useRef<{ to: string; ref: string; was: number; timer: number } | null>(null);
+  const eventCount = useRef(run.events.length);
+  const settleVerdict = useCallback(
+    (seq: number) => {
+      const held = heldVerdict.current;
+      if (!held) return;
+      heldVerdict.current = null;
+      window.clearTimeout(held.timer);
+      sync.drove(held.to, held.ref, true, undefined, seq);
+    },
+    [sync],
+  );
+  useEffect(() => {
+    eventCount.current = run.events.length;
+    if (heldVerdict.current && heldVerdict.current.was !== run.events.length) settleVerdict(run.events.length);
+  }, [run.events.length, settleVerdict]);
+  // Nothing outlives the screen: a timer left running would answer a deck
+  // from a run this device no longer has open.
+  useEffect(
+    () => () => {
+      if (heldVerdict.current) window.clearTimeout(heldVerdict.current.timer);
+      heldVerdict.current = null;
+    },
+    [],
+  );
+
+  /**
    * A press from a deck, taken here because this is the device holding the
    * run. What the deck may press is the offer this device published; what
    * happens when it does is the same function the page's own button calls.
@@ -520,9 +567,22 @@ export function RunView({
           },
         },
       );
-      sync.drove(news.from, news.ref, verdict.ok, verdict.say);
+      if (!verdict.ok) {
+        sync.drove(news.from, news.ref, false, verdict.say, run.events.length);
+        return;
+      }
+      // One press at a time: a verdict still waiting when the next press
+      // lands is answered with where the run has got to, and the new one
+      // takes the seat.
+      settleVerdict(eventCount.current);
+      heldVerdict.current = {
+        to: news.from,
+        ref: news.ref,
+        was: run.events.length,
+        timer: window.setTimeout(() => settleVerdict(eventCount.current), HELD_VERDICT_MS),
+      };
     });
-  }, [run, currentOffer, sync, pack]);
+  }, [run, currentOffer, sync, pack, settleVerdict]);
   const seen = useRef<number | null>(null);
   const awaiting = useRef<Omit<RollReceipt, "outcomes"> | null>(null);
   // How many answers this view has given, and how many it had given when

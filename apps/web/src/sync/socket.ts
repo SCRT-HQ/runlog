@@ -27,8 +27,12 @@ export interface LiveSocket {
   watch(id: string | null): void;
   /** Pass a gesture to everyone watching a run; false when the line is down (a gesture is not worth queueing). */
   gesture(id: string, kind: string, data?: Record<string, unknown>): boolean;
-  /** The verdict on one press, to the deck that made it. */
-  drove(to: string, ref: string, ok: boolean, say?: string): void;
+  /**
+   * The verdict on one press, to the deck that made it, with the run's
+   * own `seq` where the sender has a fresh one: a deck that pressed and
+   * was told nothing else would go on naming the seq it pressed against.
+   */
+  drove(to: string, ref: string, ok: boolean, say?: string, seq?: number): void;
   close(): void;
   readonly open: boolean;
 }
@@ -239,8 +243,9 @@ export function openLive(opts: LiveOptions): LiveSocket {
       socket.send(JSON.stringify({ t: "gesture", id, kind, data }));
       return true;
     },
-    drove(to, ref, ok, say) {
-      if (open && socket) socket.send(JSON.stringify({ t: "drove", to, ref, ok, ...(say ? { say } : {}) }));
+    drove(to, ref, ok, say, seq) {
+      if (open && socket)
+        socket.send(JSON.stringify({ t: "drove", to, ref, ok, ...(say ? { say } : {}), ...(typeof seq === "number" ? { seq } : {}) }));
     },
     watch(id) {
       if (watching === id) return;
