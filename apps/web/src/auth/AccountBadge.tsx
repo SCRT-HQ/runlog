@@ -89,7 +89,7 @@ function GuestMenu({ account, onOpenSettings, closeKey }: MenuActions & { accoun
             )}
           </div>
         )}
-        {onOpenSettings ? (
+        {onOpenSettings && (
           <button
             role="menuitem"
             className="accountItem"
@@ -99,13 +99,18 @@ function GuestMenu({ account, onOpenSettings, closeKey }: MenuActions & { accoun
             }}
           >
             <span>Settings</span>
-            <span className="muted small">theme, sounds, dice, rolls</span>
+            <span className="muted small">sounds, dice, rolls</span>
           </button>
-        ) : (
-          <div className="menuTheme">
-            <ThemeMenu />
-          </div>
         )}
+        {/*
+          The lights, here rather than two presses inside Settings.
+          Changing the theme is the one thing in Settings somebody does
+          on a whim and undoes ten seconds later, and it was behind a
+          dialog that has to be opened and closed to see the result.
+        */}
+        <div className="menuTheme">
+          <ThemeMenu />
+        </div>
       </div>
     </details>
   );
@@ -230,11 +235,9 @@ function AccountMenu({ account, onOpenProfile, onOpenSettings, closeKey }: MenuA
             {e.hint && <span className="muted small">{e.hint}</span>}
           </button>
         ))}
-        {!onOpenSettings && (
-          <div className="menuTheme">
-            <ThemeMenu />
-          </div>
-        )}
+        <div className="menuTheme">
+          <ThemeMenu />
+        </div>
         <button
           role="menuitem"
           className="accountItem"

@@ -10,7 +10,7 @@ import { AccountContext, type Account } from "../auth/Account.tsx";
 import { AccountBadge, syncLabel, syncTone } from "../auth/AccountBadge.tsx";
 import type { PendingInvite } from "../sync/client.ts";
 import { useInvites } from "../share/useInvites.ts";
-import { profileHash, profilePageFromHash, type ProfilePage } from "./route.ts";
+import { PROFILE_PAGES, profileHash, profilePageFromHash, type ProfilePage } from "./route.ts";
 import { ProfileView } from "./ProfileView.tsx";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -363,5 +363,37 @@ describe("the account menu", () => {
       renderWith("profile");
       expect(details.hasAttribute("open")).toBe(false);
     });
+  });
+});
+
+/**
+ * The device's settings, as a page of the profile.
+ *
+ * The same pane the run's settings opens on. Somebody who is not in a run
+ * had nowhere at all to turn the sounds off, and somebody who is should
+ * not have to leave one to do it, so it is both rather than either.
+ */
+describe("the settings page", () => {
+  it("is one of the profile's pages", () => {
+    expect(PROFILE_PAGES.map((p) => p.id)).toContain("settings");
+    expect(profilePageFromHash("#profile/settings")).toBe("settings");
+    expect(profileHash("settings")).toBe("#profile/settings");
+  });
+
+  it("offers what is kept on this device, and says the theme is elsewhere", () => {
+    const html = renderToStaticMarkup(<ProfileView page="settings" onBack={() => {}} />);
+    expect(html).toContain("Alerts");
+    expect(html).toContain("Roll for me, without asking");
+    expect(html).toContain("carry on by itself");
+    // Not here: it is in the account menu, and saying so beats leaving
+    // somebody to hunt for it.
+    expect(html).toContain("account menu");
+  });
+
+  it("says nothing about a run's dice, because there is no run here", () => {
+    // The seeded line belongs to an open run. On this page "roll for me"
+    // means the default the next run starts with, and is always a choice.
+    const html = renderToStaticMarkup(<ProfileView page="settings" onBack={() => {}} />);
+    expect(html).not.toContain("rolls from its seed");
   });
 });

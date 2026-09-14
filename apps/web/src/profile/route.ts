@@ -12,6 +12,7 @@ export const PROFILE_PAGES = [
   { id: "account", label: "Account" },
   { id: "social", label: "Social" },
   { id: "servers", label: "Servers" },
+  { id: "settings", label: "Settings" },
 ] as const;
 
 export type ProfilePage = (typeof PROFILE_PAGES)[number]["id"];
