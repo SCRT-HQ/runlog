@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { Pack } from "@runlog/rules-schema";
 import type { RunState } from "@runlog/engine";
 import { Checklist, checklistDone, ticksToFinish } from "./Checklist.tsx";
-import type { Settling } from "./evidence.ts";
+import type { Settling, Shown } from "./evidence.ts";
 
 /**
  * A confirmation that lists what the unit drew, beside a rule the step is
@@ -146,6 +146,27 @@ describe("ticksToFinish", () => {
     expect(ticksToFinish(items, pack, state, new Set())).toEqual([{ items: ["0:o0", "0:o1"] }]);
   });
 
+  /*
+   * Review finding: a row the list leaves out is ticked by the rule's own
+   * box, and that box commits no tally. Counted in the point's group it
+   * would move the counter further than any run of clicks could.
+   */
+  it("keeps a row the list leaves out away from the point's counter", () => {
+    const tallied = [
+      { text: "Every Mutation has been honored.", shows: { table: "mutation", scope: "unit" }, tally: "setbacksSuffered" },
+    ] as never;
+    const onTheRule = {
+      owing: () => false,
+      settled: () => false,
+      answered: (s: Shown) => s.entryId === "cull",
+      hidden: (s: Shown) => s.entryId === "cull",
+    };
+    expect(ticksToFinish(tallied, pack, state, new Set(), onTheRule)).toEqual([
+      { items: ["0:o1"], tally: "setbacksSuffered" },
+      { items: ["0:o0"] },
+    ]);
+  });
+
   it("commits what a click on the same box commits", () => {
     const committed: Array<[string[], boolean, string | undefined]> = [];
     render(
@@ -160,5 +181,36 @@ describe("ticksToFinish", () => {
     fireEvent.click(screen.getAllByRole("checkbox")[0]!);
     expect(committed).toEqual([[["0:o0", "0:o1"], true, undefined]]);
     expect(ticksToFinish(items, pack, state, new Set())).toEqual([{ items: committed[0]![0] }]);
+  });
+
+  it("commits what a click commits where a rule carries one of the rows", () => {
+    const tallied = [
+      { text: "Every Mutation has been honored.", shows: { table: "mutation", scope: "unit" }, tally: "setbacksSuffered" },
+    ] as never;
+    const onTheRule = {
+      owing: () => false,
+      settled: () => false,
+      answered: (s: Shown) => s.entryId === "cull",
+      hidden: (s: Shown) => s.entryId === "cull",
+    };
+    const committed: Array<[string[], boolean, string | undefined]> = [];
+    render(
+      <Checklist
+        items={tallied}
+        pack={pack}
+        state={state}
+        ticked={new Set()}
+        onToggle={(keys, on, tally) => committed.push([keys, on, tally])}
+        settling={onTheRule}
+      />,
+    );
+    fireEvent.click(screen.getAllByRole("checkbox")[0]!);
+    // The point's own box reaches only the row it draws, and carries the
+    // counter; the row it does not draw is the Constraints panel's to tick,
+    // and that box passes no tally at all.
+    expect(committed).toEqual([[["0:o1"], true, "setbacksSuffered"]]);
+    const groups = ticksToFinish(tallied, pack, state, new Set(), onTheRule);
+    expect(groups[0]).toEqual({ items: committed[0]![0], tally: committed[0]![2] });
+    expect(groups[1]).toEqual({ items: ["0:o0"] });
   });
 });
