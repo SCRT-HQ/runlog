@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { createClient, type User } from "@workos-inc/authkit-js";
 import { honestAddress } from "../welcome/route.ts";
 import { appUrl, configuredClientId } from "./config.ts";
+import { whoIsHere } from "../storage/who.ts";
 
 /**
  * Who is here, if anyone.
@@ -54,6 +55,30 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         { status: "checking", signIn: () => window.location.reload() }
       : { status: "local" },
   );
+
+  /**
+   * Tell the device whose data to keep, and to stop keeping the last
+   * person's.
+   *
+   * Everything on this machine used to live under one name, so signing
+   * out cleared nothing and the next person to open the app saw the shelf
+   * of whoever was here last. Storage waits for this before it opens
+   * anything; see storage/who.ts.
+   *
+   * `checking` says nothing on purpose. It is the state where the answer
+   * is not known yet, and guessing it would be guessing exactly the thing
+   * that must not be guessed.
+   */
+  useEffect(() => {
+    if (account.status === "checking") return;
+    whoIsHere(
+      account.status === "signed-in"
+        ? { kind: "account", id: account.user.id }
+        : account.status === "local"
+          ? { kind: "local" }
+          : { kind: "anon" },
+    );
+  }, [account.status, account.status === "signed-in" ? account.user.id : null]);
 
   useEffect(() => {
     const clientId = configuredClientId();

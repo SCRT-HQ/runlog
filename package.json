@@ -37,6 +37,7 @@
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "esbuild": "^0.28.2",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^30.0.1",
     "markdownlint-cli2": "^0.23.2",
     "typescript": "^5.9.0",
