@@ -160,6 +160,17 @@ const PRESSES = [
   "UnlockAllDlcGraces",
   "UnlockAllMainRemembrancesGraces",
   "UnlockAllDlcRemembrancesGraces",
+  // The Event tab's own unlocks. Each sets the game's event flags for
+  // a thing rather than handing over the item that represents it,
+  // which is the difference between the affinity appearing at a table
+  // and a whetblade sitting unused in a bag. `UnlockAffinites` is the
+  // tool's spelling.
+  "UnlockAffinites",
+  "GiveStartingFlasks",
+  "UnlockGestures",
+  "UnlockMetyr",
+  "FightFortissax",
+  "FightEldenBeast",
   "SetMaxHp",
   "SetRfbs",
   "KillTarget",
