@@ -28,17 +28,18 @@ const DB_NAME = "runlog";
 /**
  * v2 added `drafts`, v3 `keys`, v4 re-keyed `runs` by run id, gave packs an
  * `updatedAt`, and added `sync`; v5 added the license store under its
- * British name, and v6 renamed it. `onupgradeneeded` creates whatever is
- * missing, for v4 walks the old runs through `migrateRuns`, and for v6
- * carries the v5 store's rows across.
+ * British name, v6 renamed it, and v7 added `setups`. `onupgradeneeded`
+ * creates whatever is missing, for v4 walks the old runs through
+ * `migrateRuns`, and for v6 carries the v5 store's rows across.
  */
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 const PACKS = "packs";
 const RUNS = "runs";
 const DRAFTS = "drafts";
 const KEYS = "keys";
 const SYNC = "sync";
 const LICENSES = "licenses";
+const SETUPS = "setups";
 const BY_PACK = "byPack";
 
 /** A pack the player imported from their own file. */
@@ -191,6 +192,7 @@ function open(): Promise<IDBDatabase | null> {
       if (!db.objectStoreNames.contains(KEYS)) db.createObjectStore(KEYS, { keyPath: "publicKey" });
       if (!db.objectStoreNames.contains(SYNC)) db.createObjectStore(SYNC, { keyPath: "id" });
       if (!db.objectStoreNames.contains(LICENSES)) db.createObjectStore(LICENSES, { keyPath: "packId" });
+      if (!db.objectStoreNames.contains(SETUPS)) db.createObjectStore(SETUPS, { keyPath: "id" });
 
       if (!db.objectStoreNames.contains(RUNS)) {
         db.createObjectStore(RUNS, { keyPath: "runId" }).createIndex(BY_PACK, "packId");
@@ -519,4 +521,57 @@ export function clearLegacyRun(packId: string): void {
   } catch {
     /* nothing to do */
   }
+}
+
+/* ---- setups ------------------------------------------------------------- */
+
+/**
+ * A setup somebody keeps.
+ *
+ * Seven of them ship with the app, and those are read from the bundle
+ * rather than kept here: this is the shelf for the ones that did not,
+ * whether they came from a file or from the marketplace.
+ *
+ * The source is kept verbatim, as a pack's is, so it can be re-read by a
+ * later build that understands more of the format than this one does, and
+ * handed back as the file it arrived as.
+ */
+export interface StoredSetup {
+  id: string;
+  title: string;
+  version: string;
+  /** The tool it is written for, which is what decides who is offered it. */
+  tool: string;
+  description?: string;
+  author?: string;
+  /** The authored document, kept as it arrived. */
+  source: string;
+  format: "yaml" | "json";
+  importedAt: string;
+  updatedAt: string;
+  /** Where it came from, for a card and for offering a newer version. */
+  marketplace?: { id: string; version: string };
+  /** Taken off the shelf. A tombstone, so it can be seen to have gone. */
+  deletedAt?: string;
+}
+
+/** Every setup kept here, tombstones included. */
+export const listAllSetups = (): Promise<StoredSetup[]> =>
+  run<StoredSetup[]>(SETUPS, "readonly", (s) => s.getAll()).then((r) => r ?? []);
+
+/** The ones still on the shelf. */
+export const listSetups = (): Promise<StoredSetup[]> => listAllSetups().then((all) => all.filter((s) => !s.deletedAt));
+
+export const loadSetup = (id: string): Promise<StoredSetup | null> =>
+  run<StoredSetup>(SETUPS, "readonly", (s) => s.get(id)).then((s) => s ?? null);
+
+export const saveSetup = (setup: StoredSetup): Promise<unknown> =>
+  run(SETUPS, "readwrite", (s) => s.put({ ...setup, updatedAt: setup.updatedAt || now() }));
+
+/** Take one off the shelf, the way a pack goes: a tombstone rather than a hole. */
+export async function forgetSetup(id: string): Promise<void> {
+  const setup = await loadSetup(id);
+  if (!setup) return;
+  const at = now();
+  await run(SETUPS, "readwrite", (s) => s.put({ ...setup, source: "", deletedAt: at, updatedAt: at }));
 }
