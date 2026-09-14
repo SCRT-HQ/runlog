@@ -576,7 +576,9 @@ export const Mode = z
     seeded: z
       .boolean()
       .default(false)
-      .describe("Pre-roll the whole run from a seed, so several people can attempt the identical sequence and compare results."),
+      .describe(
+        "This mode is meant to be shared, so a run in it cannot start without a seed. What a seed does is the same in every mode: the run rolls its own dice from it, and the same seed meets the same results in the same order.",
+      ),
     players: z
       .object({
         min: z.number().int().min(1).default(1).describe("Fewest players."),

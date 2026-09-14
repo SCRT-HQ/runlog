@@ -79,9 +79,17 @@ describe("playing a pack through", () => {
 
     expect(a.events).toEqual(b.events);
     expect(a.state).toEqual(b.state);
-    // Every request in a seeded play with no script answers was rolled from the seed.
-    expect(a.requests.every((r) => r.source === "seed")).toBe(true);
-    expect(a.requests.length).toBeGreaterThan(0);
+    /*
+     * Nothing was left to ask. The driver rolls from the seed itself, so
+     * a seeded play never reaches the fallback below it that answers a
+     * roll request on the seed's behalf -- it did while a run counted as
+     * seeded only where its mode said so, and the demo pack's mode here
+     * does not.
+     */
+    expect(a.requests).toEqual([]);
+    const rolled = a.events.filter((e) => e.t === "Rolled");
+    expect(rolled.length).toBeGreaterThan(0);
+    expect(rolled.every((e) => e.source === "seeded")).toBe(true);
   });
 
   it("declares differently rolled Constraints for two different seeds", () => {

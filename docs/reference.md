@@ -764,7 +764,7 @@ A set of deltas over the base ruleset. Keeping modes as deltas rather than separ
 | `description` | `string` | - | What is different about this mode. |
 | `disable` | `object` | - | Parts of the base ruleset this mode leaves out. |
 | `units` | `object` | - | How long a run in this mode is. Omit to let the player stop whenever. |
-| `seeded` | `boolean` | - | Pre-roll the whole run from a seed, so several people can attempt the identical sequence and compare results. Default: `false`. |
+| `seeded` | `boolean` | - | This mode is meant to be shared, so a run in it cannot start without a seed. What a seed does is the same in every mode: the run rolls its own dice from it, and the same seed meets the same results in the same order. Default: `false`. |
 | `players` | `object` | - | Multi-player configuration. Omit for solo play. |
 | `perUnit` | `object`[] | - | Per-unit overrides, for modes with a fixed shape,'unit three always suffers a consequence', and the like. |
 | `clock` | `object` | - | This mode's clock on every unit, instead of the pack's `unit.clock`. |
