@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce } from "./reduce.ts";
-import { activePhases, constrainedByOf, constraintsFor, entryWords, nextStep, stepCompletionEvents, subjectSuggestions } from "./flow.ts";
+import { activePhases, constrainedByOf, constraintsFor, entryWords, handsFree, nextStep, stepCompletionEvents, subjectSuggestions } from "./flow.ts";
 import type { RunEvent } from "./events.ts";
 import type { RunState } from "./types.ts";
 
@@ -15,6 +15,7 @@ function loadPack(rel: string): Pack {
   return r.pack;
 }
 const kiln = loadPack("packs/demo/pack.yaml");
+const soundclash = loadPack("packs/sketches/soundclash.yaml");
 
 const NOW = "2026-01-01T00:00:00.000Z";
 const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent =>
@@ -255,5 +256,44 @@ describe("subjectSuggestions", () => {
     const pack = { ...kiln, tables: { ...kiln.tables, form: { ...kiln.tables.form!, entries: [{ id: "e", range: [1, 1], text: long }] } } } as unknown as typeof kiln;
     const state = { ...reduce(kiln, [...start, ev("UnitEntered")]), unit: 1, outcomes: [{ unit: 1, table: "form", entryId: "e", targetSubject: null, at: "" }] } as unknown as RunState;
     expect(subjectSuggestions(pack, state, "form")).toEqual([]);
+  });
+});
+
+/**
+ * Pace is a thing a mode is allowed to disagree with the pack about, the
+ * same way it disagrees about phases and tables: one game drilled
+ * hands-free and the same game studied a step at a time.
+ */
+describe("whether a run's units carry themselves", () => {
+  it("is no, for a pack that never said otherwise", () => {
+    const state = reduce(kiln, [...start, ev("UnitEntered")]);
+    expect(handsFree(kiln, state)).toBe(false);
+  });
+
+  it("is what the pack says, in every mode that does not say its own", () => {
+    for (const mode of Object.keys(soundclash.modes)) {
+      const state = reduce(soundclash, [
+        ev("RunStarted", { packId: soundclash.id, packVersion: soundclash.version, mode }),
+        ev("UnitEntered"),
+      ]);
+      expect(handsFree(soundclash, state), mode).toBe(true);
+    }
+  });
+
+  it("is what the mode says, where a mode says anything", () => {
+    const studied = {
+      ...soundclash,
+      modes: { ...soundclash.modes, clash: { ...soundclash.modes["clash"]!, handsFree: false } },
+    };
+    const state = reduce(studied, [
+      ev("RunStarted", { packId: studied.id, packVersion: studied.version, mode: "clash" }),
+      ev("UnitEntered"),
+    ]);
+    expect(handsFree(studied, state)).toBe(false);
+  });
+
+  it("falls back to the default mode before a run has started", () => {
+    expect(handsFree(soundclash, null)).toBe(true);
+    expect(handsFree(kiln, null)).toBe(false);
   });
 });

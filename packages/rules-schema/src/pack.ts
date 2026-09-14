@@ -28,6 +28,7 @@ export const Capability = z
     "keyedResolution",
     "moderated",
     "clockRules",
+    "handsFree",
   ])
   .describe("An engine feature this pack needs in order to play correctly.");
 export type Capability = z.infer<typeof Capability>;
@@ -700,6 +701,12 @@ export const Mode = z
       .describe(
         "Moderated play: one person runs the game on the device, a roster of named contestants races every drawn result, and the moderator awards points. Results with `points` are the challenges; everything else lands on everyone.",
       ),
+    handsFree: z
+      .boolean()
+      .optional()
+      .describe(
+        "This mode's answer to `unit.handsFree`, instead of the pack's. Set it where one mode is played at a different pace from the rest: a drill run hands-free and the same game studied a step at a time.",
+      ),
     notes: z.array(z.string()).optional().describe("Reminders shown to the player in this mode."),
   })
   .strict()
@@ -1153,11 +1160,17 @@ export const Pack = z
           .boolean()
           .default(true)
           .describe("Whether entering a unit produces a new subject."),
+        handsFree: z
+          .boolean()
+          .default(false)
+          .describe(
+            "Run a unit without the presses that only mean 'go': a step asking the player nothing starts itself, and reading the last result closes the unit and opens the next. Anything actually asked -- a declaration, a checklist, a confirmation, something owed -- still stops and waits. For games played with both hands busy. A mode can set its own.",
+          ),
         min: z.number().int().min(1).default(1).describe("Fewest units in a run."),
         max: z.number().int().min(1).default(20).describe("Most units in a run."),
       })
       .strict()
-      .default({ createsSubject: true, min: 1, max: 20 })
+      .default({ createsSubject: true, handsFree: false, min: 1, max: 20 })
       .describe("How units behave in this game."),
 
     tables: z.record(Id, Table).default({}).describe("Tables the game rolls on, keyed by id."),
