@@ -260,7 +260,8 @@
           "opposedResolution",
           "keyedResolution",
           "moderated",
-          "clockRules"
+          "clockRules",
+          "handsFree"
         ],
         "description": "An engine feature this pack needs in order to play correctly."
       }
@@ -382,6 +383,7 @@
     "unit": {
       "default": {
         "createsSubject": true,
+        "handsFree": false,
         "min": 1,
         "max": 20
       },
@@ -446,6 +448,11 @@
         "createsSubject": {
           "default": true,
           "description": "Whether entering a unit produces a new subject.",
+          "type": "boolean"
+        },
+        "handsFree": {
+          "default": false,
+          "description": "Run a unit without the presses that only mean 'go': a step asking the player nothing starts itself, and reading the last result closes the unit and opens the next. Anything actually asked -- a declaration, a checklist, a confirmation, something owed -- still stops and waits. For games played with both hands busy. A mode can set its own.",
           "type": "boolean"
         },
         "min": {
@@ -3387,6 +3394,10 @@
               }
             },
             "additionalProperties": false
+          },
+          "handsFree": {
+            "description": "This mode's answer to `unit.handsFree`, instead of the pack's. Set it where one mode is played at a different pace from the rest: a drill run hands-free and the same game studied a step at a time.",
+            "type": "boolean"
           },
           "notes": {
             "description": "Reminders shown to the player in this mode.",

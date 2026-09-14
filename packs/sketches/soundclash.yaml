@@ -1,12 +1,11 @@
 # Soundclash: a called mechanic every time you change records.
 #
-# Built for DJs who stream. A Set is a series of Rounds, and a Round is one
-# transition: the app calls a mechanic, you do it on the decks, and you call
-# the Round. Nothing is declared, nothing is journalled, nothing is targeted,
-# so a whole Round is two presses -- call it, then Next -- and with Auto-roll
-# and "carry on by itself" switched on, neither one waits for anything. That
-# is the point of the pack: it has to be playable with a camera on you and a
-# hand on a record.
+# Built for DJs who stream. A Set is a series of Rounds, a Round is one
+# transition: the call arrives, you do it on the decks, and you say you have
+# read it. That last press is the whole Round. Nothing is declared, nothing
+# is journalled, nothing is targeted, and `unit.handsFree` drops the two
+# presses that only ever meant "go" -- so this is played with one hand on a
+# record and one on a fader, which is the only reason the pack exists.
 #
 # Four styles, one table each, chosen as the mode at the top of the Set:
 # First Sets for somebody learning, Club Standard for the working
@@ -14,21 +13,22 @@
 # genre and era whiplash. The fifth mode is the clash itself: the same
 # Open Format table, two or more selectors trading Rounds.
 #
-# Written to show a pack with no subjects at all, and modes that differ by
-# nothing except which phase they leave switched on.
+# Written to show a pack with no subjects at all, and a hands-free unit:
+# the two things that take a Round down to one press.
 
 $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 # yaml-language-server: $schema=../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.soundclash
-version: "0.1.0"
+version: "0.2.0"
 title: Soundclash
 author: Runlog
 description: >-
-  A mechanic called on every transition. Pick a style, and each Round says
-  what the next mix has to do: double-drop it, swap the bass, cut it in by
-  hand, jump twenty BPM. One press ends the Round and calls the next one.
+  A pack for DJs to add a bit of controlled chaos to their set. A mechanic 
+  called on every transition. Pick a style, and each Round says what the 
+  next mix has to do: double-drop it, swap the bass, cut it in by hand, 
+  jump twenty BPM. One press ends the Round and calls the next one.
 
 category: music
 tags: [dj, turntables, mixing, stream, practice]
@@ -51,6 +51,7 @@ capabilities:
   - resources
   - timers
   - coopRoles
+  - handsFree
 
 vocabulary:
   run: { one: Set, many: Sets }
@@ -64,6 +65,7 @@ vocabulary:
 # avoid.
 unit:
   createsSubject: false
+  handsFree: true
   min: 1
   max: 60
 
@@ -241,42 +243,38 @@ tables:
       - { id: of-19, range: [19, 19], text: "Regional jump. The next track comes from somewhere else entirely." }
       - { id: of-20, range: [20, 20], text: "Dealer's choice. Play whatever you like." }
 
-# Two presses is the whole Round: the call, and the one that ends it. Which
-# table gets called is the only thing the modes differ by, so there is a
-# call phase per style and every mode switches off the four it does not use.
+# One step, and the Round is the result of it. Hands-free, the roll starts
+# itself the moment the Round opens and reading it is what closes the Round,
+# so the only press in a Round is the one that says you have read it.
+#
+# Which table gets called is the only thing the modes differ by. A style's
+# roll is skipped in every mode but its own, which leaves exactly one of
+# them standing whichever mode is being played.
 phases:
-  - id: callFirstSets
-    label: Call the Round
+  - id: mix
+    label: Mix it
+    description: "Do what the call says, then carry on."
     steps:
       - kind: rollTable
         table: firstSets
-        label: Call it
-
-  - id: callClub
-    label: Call the Round
-    steps:
+        label: The call
+        skipWhen:
+          - { not: { modeIs: [firstSets] } }
       - kind: rollTable
         table: clubStandard
-        label: Call it
-
-  - id: callTurntablism
-    label: Call the Round
-    steps:
+        label: The call
+        skipWhen:
+          - { not: { modeIs: [clubStandard] } }
       - kind: rollTable
         table: turntablism
-        label: Call it
-
-  - id: callOpen
-    label: Call the Round
-    steps:
+        label: The call
+        skipWhen:
+          - { not: { modeIs: [turntablism] } }
       - kind: rollTable
         table: openFormat
-        label: Call it
-
-  - id: mix
-    label: Mix it
-    description: "The call is on screen. Do it on the decks, then press Next."
-    steps:
+        label: The call
+        skipWhen:
+          - { not: { modeIs: [openFormat, clash] } }
       - kind: finalizeUnit
         label: Next
 
@@ -298,7 +296,6 @@ modes:
     units: { min: 1, max: 60 }
     disable:
       tables: [clubStandard, turntablism, openFormat]
-      phases: [callClub, callTurntablism, callOpen]
 
   clubStandard:
     label: Club Standard
@@ -306,7 +303,6 @@ modes:
     units: { min: 1, max: 60 }
     disable:
       tables: [firstSets, turntablism, openFormat]
-      phases: [callFirstSets, callTurntablism, callOpen]
 
   turntablism:
     label: Turntablism
@@ -314,7 +310,6 @@ modes:
     units: { min: 1, max: 60 }
     disable:
       tables: [firstSets, clubStandard, openFormat]
-      phases: [callFirstSets, callClub, callOpen]
 
   openFormat:
     label: Open Format
@@ -322,7 +317,6 @@ modes:
     units: { min: 1, max: 60 }
     disable:
       tables: [firstSets, clubStandard, turntablism]
-      phases: [callFirstSets, callClub, callTurntablism]
 
   clash:
     label: The clash
@@ -332,7 +326,6 @@ modes:
     units: { min: 1, max: 60 }
     disable:
       tables: [firstSets, clubStandard, turntablism]
-      phases: [callFirstSets, callClub, callTurntablism]
     players:
       min: 2
       max: 6
@@ -351,16 +344,17 @@ hierarchy:
   - General rules
 
 fixtures:
-  # The shape the whole pack is built around: a Round is a call and a Next,
-  # and nothing is left over in between.
-  - name: A Round is a call and a Next
+  # The shape the whole pack is built around. A play script presses what the
+  # app presses, so the call and the close are both written out here; what
+  # hands-free changes is who does the pressing, not what lands in the log.
+  - name: A Round is one call and the close
     mode: clubStandard
     play:
       - { enter: 1 }
-      - { step: callClub, answers: { d20: 1 } }
-      - { step: mix }
+      - { step: "mix#1", answers: { d20: 1 } }
+      - { step: "mix#4" }
       - { enter: 2 }
-      - { step: callClub, answers: { d20: 8 } }
+      - { step: "mix#1", answers: { d20: 8 } }
     expect:
       - { path: outcomes.length, equals: 2 }
       - { path: outcomes.0.entryId, equals: cs-01 }
@@ -370,17 +364,20 @@ fixtures:
       - { path: status, equals: active }
       - { requests: answered }
 
-  # Each mode calls from its own table and no other. Turntablism rolling a
-  # 4 has to land on the flare, not on whatever a 4 means in Club Standard.
-  - name: A mode calls from its own table and switches off the rest
+  # Each mode calls from its own table and no other: the three rolls that
+  # are not this mode's are skipped, so a 4 in Turntablism is the flare and
+  # never whatever a 4 means in Club Standard.
+  - name: A mode calls from its own table and skips the rest
     mode: turntablism
     play:
       - { enter: 1 }
-      - { step: callTurntablism, answers: { d20: 4 } }
+      - { step: "mix#2", answers: { d20: 4 } }
+      - { step: "mix#4" }
     expect:
       - { path: outcomes.length, equals: 1 }
       - { path: outcomes.0.table, equals: turntablism }
       - { path: outcomes.0.entryId, equals: tt-04 }
+      - { path: counters.rounds, equals: 1 }
       - { requests: answered }
 
   # The clash is Open Format with people taking turns, so it calls the same
@@ -389,7 +386,7 @@ fixtures:
     mode: clash
     play:
       - { enter: 1 }
-      - { step: callOpen, answers: { d20: 13 } }
+      - { step: "mix#3", answers: { d20: 13 } }
     expect:
       - { path: outcomes.0.table, equals: openFormat }
       - { path: outcomes.0.entryId, equals: of-13 }
@@ -400,9 +397,9 @@ fixtures:
     mode: firstSets
     play:
       - { enter: 1 }
-      - { step: callFirstSets, answers: { d20: 4 } }
+      - { step: "mix#0", answers: { d20: 4 } }
       - { move: pass }
-      - { step: mix }
+      - { step: "mix#4" }
     expect:
       - { path: resources.passes, equals: 2 }
       - { path: counters.rounds, equals: 1 }

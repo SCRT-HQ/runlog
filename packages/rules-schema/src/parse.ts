@@ -21,6 +21,7 @@ export const IMPLEMENTED_CAPABILITIES = [
   "keyedResolution",
   "moderated",
   "clockRules",
+  "handsFree",
 ] as const;
 
 export type ParseResult =

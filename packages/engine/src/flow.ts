@@ -19,6 +19,23 @@ export interface ActiveStep {
   index: number;
 }
 
+/**
+ * Whether this run's units carry themselves past the presses that only
+ * mean "go".
+ *
+ * The mode answers first, because a mode is a delta and pace is one of the
+ * things a delta is for: the same game drilled hands-free and studied a
+ * step at a time. Absent a mode's own answer, the pack's stands.
+ *
+ * What this does *not* decide is which presses go. That is the app's, and
+ * deliberately so: the engine has no idea a receipt exists, and a headless
+ * caller driving the same run has no screen to take a press from.
+ */
+export function handsFree(pack: Pack, state: RunState | null): boolean {
+  const mode = pack.modes[state?.mode ?? pack.defaultMode];
+  return mode?.handsFree ?? pack.unit.handsFree;
+}
+
 /** The phases this mode actually plays, in order. */
 export function activePhases(pack: Pack, state: RunState | null): Phase[] {
   const mode = pack.modes[state?.mode ?? pack.defaultMode];

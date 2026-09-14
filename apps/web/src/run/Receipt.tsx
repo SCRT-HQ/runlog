@@ -66,6 +66,8 @@ export function Receipt({
   nameOf,
   settled,
   onDismiss,
+  onFinish,
+  finishWord,
   onDrawAgain,
   onKeepRolling,
 }: {
@@ -77,6 +79,13 @@ export function Receipt({
   /** The step is done: nothing more is asked, and Carry on closes it. */
   settled: boolean;
   onDismiss: () => void;
+  /**
+   * Where carrying on is also what closes the unit, the other door out of
+   * it. Hands-free, the receipt is the whole unit, so the fork the closing
+   * step would have offered has to be here or it is nowhere.
+   */
+  onFinish?: () => void;
+  finishWord?: string;
   /** When the draw can be unmade and taken again: a result that cannot be done today. */
   onDrawAgain?: (reason?: string) => void;
   /**
@@ -158,6 +167,11 @@ export function Receipt({
             <button className="primary" onClick={onDismiss} autoFocus>
               Carry on
             </button>
+            {onFinish && (
+              <button className="ghost" onClick={onFinish}>
+                {finishWord ?? "Finish"}
+              </button>
+            )}
             {onKeepRolling && (
               <button className="ghost" onClick={onKeepRolling} title="Roll for you from here on; the log still says which rolls were the machine's">
                 Keep rolling for me

@@ -30,10 +30,10 @@ A complete, self-contained description of a dice-driven creative-practice game. 
 | `marks` | map of `object` | - | The tags this pack's entries carry that anything outside the pack may match on, declared so they can be relied upon. Entry tags are free strings; a pack that declares its marks is promising these ones will not quietly be renamed, and the linter says so when an entry carries a tag that was never declared. Absent, tags go on being free and nothing checks them. |
 | `requires` | `object`[] | - | What a person needs before playing, shown in the marketplace and the rulebook: the game and a system that runs it, mods or training packs, a wheel, a kitchen, supplies. Mark the ones that are nice to have `optional`; results can `need` those and be drawn again for a player who lacks them. |
 | `license` | `object` | yes | Licensing, and whether the app may share this pack's text. |
-| `capabilities` | `deferredTriggers` \| `seededRuns` \| `decks` \| `standardDeck` \| `resources` \| `counters` \| `coopRoles` \| `backwardTargeting` \| `timers` \| `journal` \| `bandsResolution` \| `opposedResolution` \| `keyedResolution` \| `moderated` \| `clockRules`[] | - | Engine features this pack needs. Declaring them lets an older app refuse the pack with a clear message instead of misplaying it. Default: `[]`. |
+| `capabilities` | `deferredTriggers` \| `seededRuns` \| `decks` \| `standardDeck` \| `resources` \| `counters` \| `coopRoles` \| `backwardTargeting` \| `timers` \| `journal` \| `bandsResolution` \| `opposedResolution` \| `keyedResolution` \| `moderated` \| `clockRules` \| `handsFree`[] | - | Engine features this pack needs. Declaring them lets an older app refuse the pack with a clear message instead of misplaying it. Default: `[]`. |
 | `extends` | `string` | - | Base pack this one layers on, for house rules and variants. |
 | `vocabulary` | `object` | yes | The words this game uses. The interface speaks these rather than any built-in noun, which is what lets one engine host wholly different games. |
-| `unit` | `object` | - | How units behave in this game. Default: `{"createsSubject":true,"min":1,"max":20}`. |
+| `unit` | `object` | - | How units behave in this game. Default: `{"createsSubject":true,"handsFree":false,"min":1,"max":20}`. |
 | `tables` | map of `object` | - | Tables the game rolls on, keyed by id. Default: `{}`. |
 | `decks` | map of `object` | - | Decks the game draws from, keyed by id. |
 | `states` | map of `object` | - | Persistent states that can attach to subjects or the run, keyed by id. |
@@ -155,6 +155,7 @@ How units behave in this game.
 | `intro` | `string` | - | Said once, when the first unit is entered: the welcome that sets the stage for the whole run. |
 | `onEnter` | `string` | - | Said every time a unit is entered, until its first step is done. `{n}` stands for the unit's number. |
 | `createsSubject` | `boolean` | - | Whether entering a unit produces a new subject. Default: `true`. |
+| `handsFree` | `boolean` | - | Run a unit without the presses that only mean 'go': a step asking the player nothing starts itself, and reading the last result closes the unit and opens the next. Anything actually asked -- a declaration, a checklist, a confirmation, something owed -- still stops and waits. For games played with both hands busy. A mode can set its own. Default: `false`. |
 | `min` | `integer` | - | Fewest units in a run. Default: `1`. |
 | `max` | `integer` | - | Most units in a run. Default: `20`. |
 
@@ -769,6 +770,7 @@ A set of deltas over the base ruleset. Keeping modes as deltas rather than separ
 | `clock` | `object` | - | This mode's clock on every unit, instead of the pack's `unit.clock`. |
 | `score` | `object` | - | This mode's own score, instead of the pack's `score`. |
 | `moderated` | `object` | - | Moderated play: one person runs the game on the device, a roster of named contestants races every drawn result, and the moderator awards points. Results with `points` are the challenges; everything else lands on everyone. |
+| `handsFree` | `boolean` | - | This mode's answer to `unit.handsFree`, instead of the pack's. Set it where one mode is played at a different pace from the rest: a drill run hands-free and the same game studied a step at a time. |
 | `notes` | `string`[] | - | Reminders shown to the player in this mode. |
 
 ## `pack.modes.*.disable`
