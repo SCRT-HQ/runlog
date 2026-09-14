@@ -2,6 +2,7 @@ import { useId, useMemo } from "react";
 import { opDef, rangeOfValue, type ArgDef, type ToolCatalog } from "../control/catalog.ts";
 import { areasFor, known, type Lists } from "../control/lists.ts";
 import type { ProfileOp } from "../control/profile.ts";
+import { tensionLine, tensionsIn } from "./repeats.ts";
 
 /**
  * The editor for a list of operations.
@@ -56,6 +57,14 @@ export function Ops({
    * to somebody else's list.
    */
   const listId = useId();
+  /**
+   * What two lines are arguing about, where they are.
+   *
+   * Said rather than settled: the list is what was chosen and stays
+   * that way, and a line nobody wants is a line with a button beside
+   * it.
+   */
+  const tension = useMemo(() => tensionLine(tensionsIn(catalog, ops)), [catalog, ops]);
   const inUse = useMemo(() => {
     const out = new Set<string>();
     for (const op of ops) for (const arg of opDef(catalog, op.op)?.args ?? []) if (arg.list) out.add(arg.list);
@@ -121,6 +130,7 @@ export function Ops({
           <span className="muted small">One of these cannot be undone when the effect ends.</span>
         )}
       </div>
+      {tension && <p className="notice">{tension}</p>}
     </>
   );
 }
