@@ -30,14 +30,11 @@ const kiln = loadPack("packs/demo/pack.yaml");
 const signal = loadPack("packs/testing/salt-and-signal.yaml");
 
 const NOW = "2026-01-01T00:00:00.000Z";
-const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent =>
-  ({ t, at: NOW, ...props }) as RunEvent;
+const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent => ({ t, at: NOW, ...props }) as RunEvent;
 
 /** A run with `n` completed units, so there is something to reach back at. */
 function runWith(n: number): RunState {
-  const log: RunEvent[] = [
-    ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" }),
-  ];
+  const log: RunEvent[] = [ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" })];
   for (let i = 1; i <= n; i++) {
     log.push(ev("UnitEntered"), ev("SubjectDeclared", { subjectType: `Piece ${i}` }), ev("UnitFinalized"));
   }
@@ -112,12 +109,7 @@ describe("executing actions", () => {
   describe("triggers that fire now", () => {
     it("follows an entry that rolls on another table", () => {
       // Kiln Check 20-69 says: the Kiln dictates the form. Roll on Form.
-      const result = executeTableRoll(
-        kiln,
-        runWith(1),
-        "check",
-        ctx({ check: 40, "check=40/t0/0#0": 3 }),
-      );
+      const result = executeTableRoll(kiln, runWith(1), "check", ctx({ check: 40, "check=40/t0/0#0": 3 }));
       expect(result.status).toBe("done");
       const resolved = result.events.filter((e) => e.t === "OutcomeResolved");
       expect(resolved).toEqual([
@@ -127,22 +119,13 @@ describe("executing actions", () => {
     });
 
     it("applies the states an entry grants", () => {
-      const result = executeActions(
-        kiln,
-        runWith(2),
-        [{ do: "applyState", state: "locked", to: "thisSubject" }],
-        ctx(),
-      );
-      expect(result.events).toEqual([
-        expect.objectContaining({ t: "StateApplied", state: "locked", subject: 3 }),
-      ]);
+      const result = executeActions(kiln, runWith(2), [{ do: "applyState", state: "locked", to: "thisSubject" }], ctx());
+      expect(result.events).toEqual([expect.objectContaining({ t: "StateApplied", state: "locked", subject: 3 })]);
     });
 
     it("routes a run-scoped state to the run", () => {
       const result = executeTableRoll(kiln, runWith(2), "check", ctx({ check: 100 }));
-      expect(result.events).toContainEqual(
-        expect.objectContaining({ t: "StateApplied", state: "coldKiln" }),
-      );
+      expect(result.events).toContainEqual(expect.objectContaining({ t: "StateApplied", state: "coldKiln" }));
       expect(result.events.find((e) => e.t === "StateApplied")).not.toHaveProperty("subject");
     });
   });
@@ -151,21 +134,12 @@ describe("executing actions", () => {
     it("aims the consequence and lands it on the computed subject", () => {
       // A 74 against three eligible: anchor newest (id 3), four before it,
       // 4 % 3 = 1, so one before the newest -- id 2.
-      const result = executeTableRoll(
-        kiln,
-        runWith(3),
-        "check",
-        ctx({ check: 74, "check=74/t0/1#0": 1 }),
-      );
+      const result = executeTableRoll(kiln, runWith(3), "check", ctx({ check: 74, "check=74/t0/1#0": 1 }));
       expect(result.status).toBe("done");
-      const setback = result.events.find(
-        (e) => e.t === "OutcomeResolved" && e.table === "setback",
-      );
+      const setback = result.events.find((e) => e.t === "OutcomeResolved" && e.table === "setback");
       expect(setback).toMatchObject({ targetSubject: 2, entryId: "set-crack" });
       // The granted state lands on the target, not on the piece being made.
-      expect(result.events).toContainEqual(
-        expect.objectContaining({ t: "StateApplied", state: "locked", subject: 2 }),
-      );
+      expect(result.events).toContainEqual(expect.objectContaining({ t: "StateApplied", state: "locked", subject: 2 }));
     });
 
     it("asks the player when the rules hand them the choice", () => {
@@ -175,16 +149,9 @@ describe("executing actions", () => {
     });
 
     it("honors the choice once made", () => {
-      const result = executeTableRoll(
-        kiln,
-        runWith(3),
-        "check",
-        ctx({ check: 95, "check=95/t0/0": 1, "check=95/t0/1#0": 9 }),
-      );
+      const result = executeTableRoll(kiln, runWith(3), "check", ctx({ check: 95, "check=95/t0/0": 1, "check=95/t0/1#0": 9 }));
       expect(result.status).toBe("done");
-      expect(result.events).toContainEqual(
-        expect.objectContaining({ t: "OutcomeResolved", table: "setback", targetSubject: 1 }),
-      );
+      expect(result.events).toContainEqual(expect.objectContaining({ t: "OutcomeResolved", table: "setback", targetSubject: 1 }));
     });
   });
 
@@ -228,9 +195,7 @@ describe("executing actions", () => {
         (answers) => executeObligation(kiln, state, owed.id, ctx(answers)),
         () => 6,
       );
-      expect(done.events).toContainEqual(
-        expect.objectContaining({ t: "StateApplied", state: "shattered" }),
-      );
+      expect(done.events).toContainEqual(expect.objectContaining({ t: "StateApplied", state: "shattered" }));
       expect(done.events.at(-1)).toMatchObject({ t: "ObligationResolved", id: owed.id });
     });
 
@@ -248,9 +213,7 @@ describe("executing actions", () => {
         () => 2,
       );
       expect(done.events.some((e) => e.t === "StateApplied")).toBe(false);
-      expect(done.events).toContainEqual(
-        expect.objectContaining({ t: "ObligationResolved", id: owed.id }),
-      );
+      expect(done.events).toContainEqual(expect.objectContaining({ t: "ObligationResolved", id: owed.id }));
     });
 
     it("gives a queued trigger a stable id, so replaying cannot double the debt", () => {
@@ -320,10 +283,7 @@ defaultMode: standard
 
     it("is not due while no clock in the unit has expired", () => {
       const p = bellPack();
-      const base = reduce(p, [
-        ev("RunStarted", { packId: p.id, packVersion: p.version, mode: "standard" }),
-        ev("UnitEntered"),
-      ]);
+      const base = reduce(p, [ev("RunStarted", { packId: p.id, packVersion: p.version, mode: "standard" }), ev("UnitEntered")]);
       const queued = executeTableRoll(p, base, "bench", { answers: {}, now: NOW, random: () => 0 });
       const state = reduce(p, [
         ev("RunStarted", { packId: p.id, packVersion: p.version, mode: "standard" }),
@@ -338,10 +298,7 @@ defaultMode: standard
 
     it("comes due once a clock in the unit expires", () => {
       const p = bellPack();
-      const base = reduce(p, [
-        ev("RunStarted", { packId: p.id, packVersion: p.version, mode: "standard" }),
-        ev("UnitEntered"),
-      ]);
+      const base = reduce(p, [ev("RunStarted", { packId: p.id, packVersion: p.version, mode: "standard" }), ev("UnitEntered")]);
       const queued = executeTableRoll(p, base, "bench", { answers: {}, now: NOW, random: () => 0 });
       const state = reduce(p, [
         ev("RunStarted", { packId: p.id, packVersion: p.version, mode: "standard" }),
@@ -378,12 +335,7 @@ defaultMode: standard
 
   describe("notes", () => {
     it("records a manual instruction the player must tick off", () => {
-      const result = executeActions(
-        kiln,
-        runWith(1),
-        [{ do: "note", text: "Go and look at it in daylight." }],
-        ctx(),
-      );
+      const result = executeActions(kiln, runWith(1), [{ do: "note", text: "Go and look at it in daylight." }], ctx());
       const state = reduce(kiln, [
         ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" }),
         ev("UnitEntered"),
@@ -394,12 +346,7 @@ defaultMode: standard
     });
 
     it("starts a clock for a timer; the app still cannot make you stop, but it can tell you when", () => {
-      const result = executeActions(
-        kiln,
-        runWith(1),
-        [{ do: "startTimer", minutes: 4, label: "Stage fires" }],
-        ctx(),
-      );
+      const result = executeActions(kiln, runWith(1), [{ do: "startTimer", minutes: 4, label: "Stage fires" }], ctx());
       expect(result.events[0]).toMatchObject({ t: "ClockStarted", kind: "timer", label: "Stage fires", seconds: 240 });
     });
   });
@@ -467,9 +414,7 @@ defaultMode: standard
         now: NOW,
       });
       expect(result.status).toBe("done");
-      expect(result.events).toContainEqual(
-        expect.objectContaining({ t: "OutcomeResolved", entryId: "signal-strong" }),
-      );
+      expect(result.events).toContainEqual(expect.objectContaining({ t: "OutcomeResolved", entryId: "signal-strong" }));
     });
 
     it("gives ties to the challenge", () => {
@@ -482,9 +427,7 @@ defaultMode: standard
         answers: { signala: 5, signalc0: 6, signalc1: 6 },
         now: NOW,
       });
-      expect(result.events).toContainEqual(
-        expect.objectContaining({ t: "OutcomeResolved", entryId: "signal-miss" }),
-      );
+      expect(result.events).toContainEqual(expect.objectContaining({ t: "OutcomeResolved", entryId: "signal-miss" }));
     });
   });
 });
@@ -548,10 +491,7 @@ describe("moves the player chooses to make", () => {
     const state = runWith(3);
     const taken = executeMove(kiln, state, "salvage", ctx({ "move:salvage/0": 6 }));
     expect(taken.status).toBe("done");
-    const after = reduce(kiln, [
-      ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" }),
-      ...taken.events,
-    ]);
+    const after = reduce(kiln, [ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" }), ...taken.events]);
     expect(availableMoves(kiln, after, "beforeEnding").map((m) => m.id)).not.toContain("salvage");
   });
 
@@ -584,9 +524,7 @@ describe("moves the player chooses to make", () => {
     const state = runWith(2);
     const taken = executeMove(kiln, state, "breakOne", ctx({ "move:breakOne/0": 1 }));
     expect(taken.status).toBe("done");
-    expect(taken.events).toContainEqual(
-      expect.objectContaining({ t: "StateApplied", state: "shattered", subject: 1 }),
-    );
+    expect(taken.events).toContainEqual(expect.objectContaining({ t: "StateApplied", state: "shattered", subject: 1 }));
   });
 });
 
@@ -603,9 +541,27 @@ describe("moves offered at a point in the flow", () => {
   const packWithMoves = {
     ...kiln,
     moves: {
-      always: { label: "Always", oncePerRun: false, per: "table" as const, when: "anytime" as const, do: [{ do: "note" as const, text: "x" }] },
-      between: { label: "Between", oncePerRun: false, per: "table" as const, when: "betweenUnits" as const, do: [{ do: "note" as const, text: "x" }] },
-      ending: { label: "Ending", oncePerRun: false, per: "table" as const, when: "beforeEnding" as const, do: [{ do: "note" as const, text: "x" }] },
+      always: {
+        label: "Always",
+        oncePerRun: false,
+        per: "table" as const,
+        when: "anytime" as const,
+        do: [{ do: "note" as const, text: "x" }],
+      },
+      between: {
+        label: "Between",
+        oncePerRun: false,
+        per: "table" as const,
+        when: "betweenUnits" as const,
+        do: [{ do: "note" as const, text: "x" }],
+      },
+      ending: {
+        label: "Ending",
+        oncePerRun: false,
+        per: "table" as const,
+        when: "beforeEnding" as const,
+        do: [{ do: "note" as const, text: "x" }],
+      },
     },
   };
   const state = reduce(packWithMoves, [
@@ -614,17 +570,13 @@ describe("moves offered at a point in the flow", () => {
   ]);
 
   it("offers an anytime move exactly once when several placements are open", () => {
-    const ids = availableMoves(packWithMoves, state, ["betweenUnits", "beforeEnding"]).map(
-      (m) => m.id,
-    );
+    const ids = availableMoves(packWithMoves, state, ["betweenUnits", "beforeEnding"]).map((m) => m.id);
     expect(ids.filter((id) => id === "always")).toHaveLength(1);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("offers every move belonging to any open placement", () => {
-    const ids = availableMoves(packWithMoves, state, ["betweenUnits", "beforeEnding"]).map(
-      (m) => m.id,
-    );
+    const ids = availableMoves(packWithMoves, state, ["betweenUnits", "beforeEnding"]).map((m) => m.id);
     expect(new Set(ids)).toEqual(new Set(["always", "between", "ending"]));
   });
 

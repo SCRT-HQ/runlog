@@ -335,7 +335,11 @@ function dependenciesAt(appRoot: string): Dependency[] {
 /** Copy the hosted files into the build, filled in, and stamp the shell. Returns what was written, relative to `dist`. */
 export function overlay(opts: Overlay): string[] {
   const config = envConfig(opts.env);
-  const words = wordsFor(config, { version: opts.version ?? versionAt(opts.appRoot), sha: opts.sha.slice(0, 12), today: opts.today ?? new Date() });
+  const words = wordsFor(config, {
+    version: opts.version ?? versionAt(opts.appRoot),
+    sha: opts.sha.slice(0, 12),
+    today: opts.today ?? new Date(),
+  });
   const templates = opts.templates ?? HOSTED_DIR;
   const written: string[] = [];
   const write = (rel: string, body: string | Buffer) => {

@@ -117,8 +117,7 @@ export function LibraryView({
     return out;
   }, [packs, parsedPacks]);
 
-  const runsOf = (packId: string) =>
-    runs.filter((r) => r.packId === packId).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  const runsOf = (packId: string) => runs.filter((r) => r.packId === packId).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
 
   /** Score text for an ended run, by pack: a pack that failed to parse scores nothing. */
   const scoresByPack = useMemo(() => {
@@ -133,9 +132,7 @@ export function LibraryView({
     <main className="main library">
       <header className="libraryHead">
         <h2>Your packs</h2>
-        <p className="muted">
-          Newest played first. A pack's runs are beneath it; the one open on this device is marked.
-        </p>
+        <p className="muted">Newest played first. A pack's runs are beneath it; the one open on this device is marked.</p>
         <div className="libraryActions">
           <div className="libraryActionGroup">
             <h3 className="sectionTitle">Add a pack</h3>
@@ -179,7 +176,15 @@ export function LibraryView({
         </div>
       </header>
 
-      <HomeStrip packs={ordered} runs={runs} vocabularies={vocabularies} onContinue={onContinue} onContinueLast={onContinueLast} onOpen={onOpen} onMarketplace={onMarketplace} />
+      <HomeStrip
+        packs={ordered}
+        runs={runs}
+        vocabularies={vocabularies}
+        onContinue={onContinue}
+        onContinueLast={onContinueLast}
+        onOpen={onOpen}
+        onMarketplace={onMarketplace}
+      />
 
       {ordered.length === 0 && (
         <section className="panel">
@@ -207,7 +212,11 @@ export function LibraryView({
               </button>
               <div className="libraryPackActions">
                 {record && p.update && onUpdate && (
-                  <button className="ghost tiny update" onClick={() => onUpdate(record)} title={`The marketplace has v${p.update}; your ${v.run.many.toLowerCase()} are kept`}>
+                  <button
+                    className="ghost tiny update"
+                    onClick={() => onUpdate(record)}
+                    title={`The marketplace has v${p.update}; your ${v.run.many.toLowerCase()} are kept`}
+                  >
                     Update to v{p.update}
                   </button>
                 )}
@@ -222,7 +231,11 @@ export function LibraryView({
                   {mine.length > 0 ? `Start another ${v.run.one.toLowerCase()}` : `Start ${an(v.run.one.toLowerCase())}`}
                 </button>
                 {onTest && (
-                  <button className="ghost tiny" onClick={() => onTest(p)} title={`Play ${p.title} in ${an(v.run.one.toLowerCase())} that is not saved`}>
+                  <button
+                    className="ghost tiny"
+                    onClick={() => onTest(p)}
+                    title={`Play ${p.title} in ${an(v.run.one.toLowerCase())} that is not saved`}
+                  >
                     Test
                   </button>
                 )}
@@ -230,7 +243,10 @@ export function LibraryView({
                     rather than from each server's own page. */}
                 {record && <PackServers pack={record} vaults={vaults} />}
                 {record && !record.sealed && onReplace && (
-                  <label className="ghost tiny fileButton" title={`Load a newer file of ${p.title}; its ${v.run.many.toLowerCase()} are kept`}>
+                  <label
+                    className="ghost tiny fileButton"
+                    title={`Load a newer file of ${p.title}; its ${v.run.many.toLowerCase()} are kept`}
+                  >
                     Replace from a file
                     <input
                       type="file"
@@ -244,7 +260,11 @@ export function LibraryView({
                   </label>
                 )}
                 {record && (
-                  <button className="ghost tiny danger" title={`Forget ${p.title} and its ${v.run.many.toLowerCase()}`} onClick={() => onForgetPack(record)}>
+                  <button
+                    className="ghost tiny danger"
+                    title={`Forget ${p.title} and its ${v.run.many.toLowerCase()}`}
+                    onClick={() => onForgetPack(record)}
+                  >
                     Forget pack
                   </button>
                 )}
@@ -267,16 +287,16 @@ export function LibraryView({
               </div>
             )}
 
-            {record && sync.available && (
-              record.sealed ? (
+            {record &&
+              sync.available &&
+              (record.sealed ? (
                 <p className="packSync muted">license key kept in your account; the text stays on this device</p>
               ) : (
                 <label className="packSync" title="Its text is stored in your account and comes to your other devices">
                   <input type="checkbox" checked={record.sync === true} onChange={(e) => onSyncToggle(record, e.target.checked)} />
                   <span>keep this pack in sync</span>
                 </label>
-              )
-            )}
+              ))}
           </section>
         );
       })}

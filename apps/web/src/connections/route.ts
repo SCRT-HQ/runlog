@@ -47,8 +47,10 @@ export function pendingLink(kind?: LinkKind): LinkRoute | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { kind?: unknown; code?: unknown; result?: unknown };
     let found: LinkRoute | null = null;
-    if ((parsed.kind === "discord" || parsed.kind === "guild") && typeof parsed.code === "string" && parsed.code) found = { kind: parsed.kind, code: parsed.code };
-    if (parsed.kind === "verify" && (parsed.result === "asked" || parsed.result === "done" || parsed.result === "failed")) found = { kind: "verify", result: parsed.result };
+    if ((parsed.kind === "discord" || parsed.kind === "guild") && typeof parsed.code === "string" && parsed.code)
+      found = { kind: parsed.kind, code: parsed.code };
+    if (parsed.kind === "verify" && (parsed.result === "asked" || parsed.result === "done" || parsed.result === "failed"))
+      found = { kind: "verify", result: parsed.result };
     if (!found || (kind && found.kind !== kind)) return null;
     return found;
   } catch {

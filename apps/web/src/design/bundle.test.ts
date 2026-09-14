@@ -31,7 +31,11 @@ describe("a distribution bundle", () => {
 
   it("names the buyer on a sealed copy and keeps the key out", async () => {
     const sealed = new Uint8Array([0x52, 0x4c, 0x50, 0x41, 0x43, 0x4b, 1, 2, 3]);
-    const bytes = await bundle({ pack: kiln, file: { name: "long-kiln-1.0.0-ada.rlpack", data: sealed }, sealed: { to: "Ada", reference: "ORD-7" } });
+    const bytes = await bundle({
+      pack: kiln,
+      file: { name: "long-kiln-1.0.0-ada.rlpack", data: sealed },
+      sealed: { to: "Ada", reference: "ORD-7" },
+    });
     const back = unzip(bytes);
     const readme = text(back.find((e) => e.name === "README.md")!.data);
     expect(readme).toContain("sealed for Ada (order ORD-7)");

@@ -13,17 +13,25 @@ import { RunRow } from "./RunRow.tsx";
  * marked; the row still opens the run.
  */
 
-const vocabulary = { unit: { one: "Unit", many: "Units" }, subject: { one: "Piece", many: "Pieces" }, run: { one: "Run", many: "Runs" } } as Pack["vocabulary"];
+const vocabulary = {
+  unit: { one: "Unit", many: "Units" },
+  subject: { one: "Piece", many: "Pieces" },
+  run: { one: "Run", many: "Runs" },
+} as Pack["vocabulary"];
 
 const run: StoredRun = {
   runId: "01RUN",
   packId: "com.example.kiln",
   packVersion: "1.0.0",
-  events: [{ t: "RunStarted", at: "2026-09-01T10:00:00Z", packId: "com.example.kiln", packVersion: "1.0.0" }, { t: "RunRenamed", at: "2026-09-01T10:01:00Z", name: "first firing" }],
+  events: [
+    { t: "RunStarted", at: "2026-09-01T10:00:00Z", packId: "com.example.kiln", packVersion: "1.0.0" },
+    { t: "RunRenamed", at: "2026-09-01T10:01:00Z", name: "first firing" },
+  ],
   updatedAt: "2026-09-02T10:00:00Z",
 };
 
-const paint = (open: boolean) => renderToStaticMarkup(<RunRow run={run} vocabulary={vocabulary} open={open} onPick={() => {}} onForget={() => {}} />);
+const paint = (open: boolean) =>
+  renderToStaticMarkup(<RunRow run={run} vocabulary={vocabulary} open={open} onPick={() => {}} onForget={() => {}} />);
 
 describe("the run open on this device", () => {
   it("is marked, and still a press away", () => {

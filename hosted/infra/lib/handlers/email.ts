@@ -60,7 +60,12 @@ export function sesMailer({ from, region }: { from: string; region: string }): M
   };
 }
 
-async function sendPurchase(ses: SESv2Client, from: string, to: string, { pack, publisher, link, key, ref }: { pack: string; publisher: string; link: string; key: string; ref: string }) {
+async function sendPurchase(
+  ses: SESv2Client,
+  from: string,
+  to: string,
+  { pack, publisher, link, key, ref }: { pack: string; publisher: string; link: string; key: string; ref: string },
+) {
   const subject = `Your copy of ${pack}`;
   const plain = [
     `Thank you for buying ${pack} from ${publisher}.`,
@@ -84,7 +89,12 @@ async function sendPurchase(ses: SESv2Client, from: string, to: string, { pack, 
     new SendEmailCommand({
       FromEmailAddress: from,
       Destination: { ToAddresses: [to] },
-      Content: { Simple: { Subject: { Data: subject, Charset: "UTF-8" }, Body: { Text: { Data: plain, Charset: "UTF-8" }, Html: { Data: html, Charset: "UTF-8" } } } },
+      Content: {
+        Simple: {
+          Subject: { Data: subject, Charset: "UTF-8" },
+          Body: { Text: { Data: plain, Charset: "UTF-8" }, Html: { Data: html, Charset: "UTF-8" } },
+        },
+      },
     }),
   );
 }

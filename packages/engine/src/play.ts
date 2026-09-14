@@ -185,7 +185,14 @@ function runBlock(
     const exact = opts.stepAnswers?.[request.key];
     if (exact !== undefined) {
       const value = Array.isArray(exact) ? exact[0]! : exact;
-      opts.requests.push({ step: opts.scriptIndex, key: request.key, kind: request.kind, label: requestLabel(request), answer: value, source: "given" });
+      opts.requests.push({
+        step: opts.scriptIndex,
+        key: request.key,
+        kind: request.kind,
+        label: requestLabel(request),
+        answer: value,
+        source: "given",
+      });
       result = answer(pack, opts.events(), pending, request.key, value, { now: opts.at });
       continue;
     }
@@ -193,17 +200,30 @@ function runBlock(
     const q = queues.get(queueName(request));
     if (q && q.length > 0) {
       const value = q.shift()!;
-      opts.requests.push({ step: opts.scriptIndex, key: request.key, kind: request.kind, label: requestLabel(request), answer: value, source: "given" });
+      opts.requests.push({
+        step: opts.scriptIndex,
+        key: request.key,
+        kind: request.kind,
+        label: requestLabel(request),
+        answer: value,
+        source: "given",
+      });
       result = answer(pack, opts.events(), pending, request.key, value, { now: opts.at });
       continue;
     }
 
     if (opts.seed !== undefined && request.kind === "roll") {
-      const occurrence =
-        countRolls(eventsThisUnit(opts.events()), request.purpose) + countRolls(pending.partial, request.purpose);
+      const occurrence = countRolls(eventsThisUnit(opts.events()), request.purpose) + countRolls(pending.partial, request.purpose);
       const random = createRandom(streamSeed(opts.seed, opts.unit, request.purpose, occurrence));
       const { total } = rollDice(request.dice, random);
-      opts.requests.push({ step: opts.scriptIndex, key: request.key, kind: request.kind, label: requestLabel(request), answer: total, source: "seed" });
+      opts.requests.push({
+        step: opts.scriptIndex,
+        key: request.key,
+        kind: request.kind,
+        label: requestLabel(request),
+        answer: total,
+        source: "seed",
+      });
       // `autoRoll: true` on `answer` marks this key generated rather than
       // physical, the same distinction a "roll for me" button makes in the app.
       result = answer(pack, opts.events(), pending, request.key, total, { now: opts.at, autoRoll: true });
@@ -305,10 +325,9 @@ export function playThrough(pack: Pack, script: readonly PlayStep[], options: Pl
       if (result.status !== "done") throw new Error("unreachable: enter never awaits");
       commit(result.events);
       if (state.unit !== raw.enter) {
-        throw new PlayError(
-          `script step #${index} expected to enter unit ${raw.enter}, but the run is now at unit ${state.unit}`,
-          { step: index },
-        );
+        throw new PlayError(`script step #${index} expected to enter unit ${raw.enter}, but the run is now at unit ${state.unit}`, {
+          step: index,
+        });
       }
       return;
     }
@@ -332,7 +351,9 @@ export function playThrough(pack: Pack, script: readonly PlayStep[], options: Pl
       const [phaseId, indexPart] = raw.step.split("#");
       const active = nextStep(pack, state);
       if (!active) {
-        throw new PlayError(`script step #${index} ("${raw.step}"): no active step, the unit is finished or has not begun`, { step: index });
+        throw new PlayError(`script step #${index} ("${raw.step}"): no active step, the unit is finished or has not begun`, {
+          step: index,
+        });
       }
       if (active.phase.id !== phaseId || (indexPart !== undefined && active.index !== Number(indexPart))) {
         throw new PlayError(
@@ -371,10 +392,9 @@ export function playThrough(pack: Pack, script: readonly PlayStep[], options: Pl
           break;
         }
         case "declareSubject":
-          throw new PlayError(
-            `script step #${index} ("${raw.step}") is a declareSubject step; use { declare: "<type>" } instead`,
-            { step: index },
-          );
+          throw new PlayError(`script step #${index} ("${raw.step}") is a declareSubject step; use { declare: "<type>" } instead`, {
+            step: index,
+          });
         case "finalizeUnit":
           finalizeCurrentUnit(active, index);
           break;

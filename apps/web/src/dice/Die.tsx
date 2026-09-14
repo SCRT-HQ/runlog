@@ -109,9 +109,7 @@ export function Die({ faces, display, rolling, settleDelay = 0, variant, label }
         ))}
 
         {isPipped ? (
-          PIPS[Number(display)]?.map(([cx, cy], i) => (
-            <circle key={i} cx={cx} cy={cy} r="8" className="pip" />
-          ))
+          PIPS[Number(display)]?.map(([cx, cy], i) => <circle key={i} cx={cx} cy={cy} r="8" className="pip" />)
         ) : (
           <text
             x="50"

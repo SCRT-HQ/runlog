@@ -325,7 +325,12 @@ export interface Profile {
 export interface Store {
   manifest(sub: string): Promise<{ packs: PackMeta[]; sessions: SessionPointer[]; licenses: LicenseMeta[] }>;
   /** Null once the id is taken: a session is created once, by its owner. */
-  createSession(meta: Omit<SessionMeta, "seq" | "createdAt" | "updatedAt">, at: string, ownerName: string | undefined, events: Record<string, unknown>[]): Promise<{ meta: SessionMeta; events: StoredEvent[] } | null>;
+  createSession(
+    meta: Omit<SessionMeta, "seq" | "createdAt" | "updatedAt">,
+    at: string,
+    ownerName: string | undefined,
+    events: Record<string, unknown>[],
+  ): Promise<{ meta: SessionMeta; events: StoredEvent[] } | null>;
   getSession(id: string): Promise<{ meta: SessionMeta; members: SessionMember[] } | null>;
   eventsAfter(id: string, after: number): Promise<StoredEvent[]>;
   /**
@@ -339,8 +344,25 @@ export interface Store {
    * another (the bot, between two presses) must not write over a move
    * that landed in between. Throws `SeqConflict` when the tail has moved.
    */
-  appendEvents(id: string, author: string, at: string, events: Record<string, unknown>[], opts?: { expectSeq?: number }): Promise<{ appended: StoredEvent[]; seq: number }>;
-  updateSession(id: string, at: string, patch: { name?: string; endedAt?: string; publicTokenHash?: string | null; askKeyHash?: string | null; askPolicy?: AskPolicy; termsGiven?: string[] }): Promise<SessionMeta | null>;
+  appendEvents(
+    id: string,
+    author: string,
+    at: string,
+    events: Record<string, unknown>[],
+    opts?: { expectSeq?: number },
+  ): Promise<{ appended: StoredEvent[]; seq: number }>;
+  updateSession(
+    id: string,
+    at: string,
+    patch: {
+      name?: string;
+      endedAt?: string;
+      publicTokenHash?: string | null;
+      askKeyHash?: string | null;
+      askPolicy?: AskPolicy;
+      termsGiven?: string[];
+    },
+  ): Promise<SessionMeta | null>;
   /** What a stranger with the link sees of a run whose pack they may not hold: the owner's device writes it, redacted, after each move. */
   putSnapshot(id: string, at: string, snapshot: unknown): Promise<void>;
   getSnapshot(id: string): Promise<{ at: string; snapshot: unknown } | null>;
@@ -371,7 +393,13 @@ export interface Store {
   invitesFor(email: string): Promise<Invite[]>;
   revokeInvite(sessionId: string, token: string): Promise<void>;
   /** Join: a member row, a pointer, and the people rows both ways. Idempotent for the same person. */
-  acceptInvite(token: string, sub: string, name: string | undefined, email: string | undefined, at: string): Promise<{ sessionId: string } | null>;
+  acceptInvite(
+    token: string,
+    sub: string,
+    name: string | undefined,
+    email: string | undefined,
+    at: string,
+  ): Promise<{ sessionId: string } | null>;
   /** The owner removes a member; their pointer becomes a tombstone so their device drops the copy. */
   removeMember(sessionId: string, sub: string, at: string): Promise<boolean>;
   listPeople(sub: string): Promise<Person[]>;
@@ -402,7 +430,11 @@ export interface Store {
   listClaims(sub: string): Promise<Claim[]>;
   unclaim(sub: string, fingerprint: string): Promise<boolean>;
   /** Read the profile, creating it on first sight; `lastSeenAt` is stamped either way. */
-  touchProfile(sub: string, at: string, snapshot?: { name?: string; handle?: string; email?: string; termsVersion?: string }): Promise<Profile>;
+  touchProfile(
+    sub: string,
+    at: string,
+    snapshot?: { name?: string; handle?: string; email?: string; termsVersion?: string },
+  ): Promise<Profile>;
   /** Read a profile without touching it: somebody else's, for the name they are shown as. */
   getProfile(sub: string): Promise<Profile | null>;
   /** The features Stripe says this person has; none until billing exists. */
@@ -441,8 +473,24 @@ type Row = Record<string, unknown> & {
   pk: string;
   sk: string;
   kind:
-    | "pack" | "run" | "license" | "profile" | "entitlements" | "session" | "member" | "event" | "seen" | "pointer"
-    | "invite" | "person" | "counter" | "apikey" | "apikeyhash" | "nonce" | "signkey" | "claim";
+    | "pack"
+    | "run"
+    | "license"
+    | "profile"
+    | "entitlements"
+    | "session"
+    | "member"
+    | "event"
+    | "seen"
+    | "pointer"
+    | "invite"
+    | "person"
+    | "counter"
+    | "apikey"
+    | "apikeyhash"
+    | "nonce"
+    | "signkey"
+    | "claim";
   /** Where the body is in S3, for the kinds that have one. */
   key?: string;
   /** The license key itself, for a license row. Never in a manifest. */
@@ -495,7 +543,10 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
     return row;
   }
 
-  const store: Store & { getSessionRows(id: string): Promise<{ meta: SessionMeta; members: SessionMember[] } | null>; touchPointers(id: string, author: string, at: string, seq: number): Promise<void> } = {
+  const store: Store & {
+    getSessionRows(id: string): Promise<{ meta: SessionMeta; members: SessionMember[] } | null>;
+    touchPointers(id: string, author: string, at: string, seq: number): Promise<void>;
+  } = {
     async getProfile(sub) {
       const row = await get(sub, "PROFILE");
       return row ? (strip(row) as unknown as Profile) : null;
@@ -552,9 +603,7 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       // whose row was already a tombstone still goes.
       let token: string | undefined;
       do {
-        const listed = await s3.send(
-          new ListObjectsV2Command({ Bucket: bucket, Prefix: `users/${sub}/`, ContinuationToken: token }),
-        );
+        const listed = await s3.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: `users/${sub}/`, ContinuationToken: token }));
         const objects = (listed.Contents ?? []).flatMap((o) => (o.Key ? [{ Key: o.Key }] : []));
         if (objects.length > 0) {
           await s3.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: objects, Quiet: true } }));
@@ -567,12 +616,22 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
     async saveExport(sub, body, at) {
       const key = `users/${sub}/exports/${at.replace(/[:.]/g, "-")}.json`;
       await s3.send(
-        new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: "application/json; charset=utf-8", Tagging: "runlog=export" }),
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: body,
+          ContentType: "application/json; charset=utf-8",
+          Tagging: "runlog=export",
+        }),
       );
       const seconds = 15 * 60;
       const url = await getSignedUrl(
         s3,
-        new GetObjectCommand({ Bucket: bucket, Key: key, ResponseContentDisposition: `attachment; filename="runlog-export-${at.slice(0, 10)}.json"` }),
+        new GetObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          ResponseContentDisposition: `attachment; filename="runlog-export-${at.slice(0, 10)}.json"`,
+        }),
         { expiresIn: seconds },
       );
       return { url, expiresAt: new Date(Date.parse(at) + seconds * 1000).toISOString() };
@@ -615,11 +674,19 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
 
     async deletePack(sub, id, at) {
       const row = await tombstone(sub, `PACK#${id}`, at, {
-        pk: pk(sub), sk: `PACK#${id}`, kind: "pack", id, title: "", version: "", format: "yaml", filename: "", importedAt: at, hash: "",
+        pk: pk(sub),
+        sk: `PACK#${id}`,
+        kind: "pack",
+        id,
+        title: "",
+        version: "",
+        format: "yaml",
+        filename: "",
+        importedAt: at,
+        hash: "",
       });
       return strip(row) as unknown as PackMeta;
     },
-
 
     async createSession(meta, at, ownerName, events) {
       const spk = `SESSION#${meta.id}`;
@@ -633,7 +700,15 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       await ddb.send(
         new PutCommand({
           TableName: table,
-          Item: { pk: spk, sk: `MEMBER#${meta.ownerSub}`, kind: "member", sub: meta.ownerSub, role: "owner", joinedAt: at, ...(ownerName ? { name: ownerName } : {}) },
+          Item: {
+            pk: spk,
+            sk: `MEMBER#${meta.ownerSub}`,
+            kind: "member",
+            sub: meta.ownerSub,
+            role: "owner",
+            joinedAt: at,
+            ...(ownerName ? { name: ownerName } : {}),
+          },
         }),
       );
       const { appended, seq } = await store.appendEvents(meta.id, meta.ownerSub, at, events);
@@ -710,12 +785,15 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
                 Key: { pk: spk, sk: "META" },
                 UpdateExpression: "ADD seq :n SET updatedAt = :at",
                 ExpressionAttributeValues: { ":n": chunk.length, ":at": at, ...(expected !== undefined ? { ":expected": expected } : {}) },
-                ...(expected !== undefined ? { ConditionExpression: expected === 0 ? "attribute_not_exists(seq) OR seq = :expected" : "seq = :expected" } : {}),
+                ...(expected !== undefined
+                  ? { ConditionExpression: expected === 0 ? "attribute_not_exists(seq) OR seq = :expected" : "seq = :expected" }
+                  : {}),
                 ReturnValues: "UPDATED_NEW",
               }),
             );
           } catch (error) {
-            if ((error as { name?: string }).name === "ConditionalCheckFailedException" && expected !== undefined) throw new SeqConflict(expected);
+            if ((error as { name?: string }).name === "ConditionalCheckFailedException" && expected !== undefined)
+              throw new SeqConflict(expected);
             throw error;
           }
           // Only the first chunk can be held to the caller's expectation; the rest follow it.
@@ -768,11 +846,19 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       if (!found) return;
       const { meta, members } = found;
       const pointer = (m: SessionMember): Row => ({
-        pk: pk(m.sub), sk: `SESSION#${id}`, kind: "pointer",
-        id, role: m.role, packId: meta.packId, packVersion: meta.packVersion, ownerSub: meta.ownerSub,
+        pk: pk(m.sub),
+        sk: `SESSION#${id}`,
+        kind: "pointer",
+        id,
+        role: m.role,
+        packId: meta.packId,
+        packVersion: meta.packVersion,
+        ownerSub: meta.ownerSub,
         ...(meta.packTitle ? { packTitle: meta.packTitle } : {}),
-        ...(meta.name ? { name: meta.name } : {}), ...(meta.endedAt ? { endedAt: meta.endedAt } : {}),
-        updatedAt: at, seq,
+        ...(meta.name ? { name: meta.name } : {}),
+        ...(meta.endedAt ? { endedAt: meta.endedAt } : {}),
+        updatedAt: at,
+        seq,
       });
       for (const m of members) await ddb.send(new PutCommand({ TableName: table, Item: pointer(m) }));
       // The one to open on a device with nothing active: whatever the author touched last.
@@ -790,7 +876,12 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       const spk = `SESSION#${id}`;
       const existing = await get_(spk, "META");
       if (!existing) return null;
-      const row: Row = { ...existing, updatedAt: at, ...(patch.name !== undefined ? { name: patch.name } : {}), ...(patch.endedAt ? { endedAt: patch.endedAt } : {}) };
+      const row: Row = {
+        ...existing,
+        updatedAt: at,
+        ...(patch.name !== undefined ? { name: patch.name } : {}),
+        ...(patch.endedAt ? { endedAt: patch.endedAt } : {}),
+      };
       if (patch.name === "") delete row["name"];
       if (patch.publicTokenHash === null) {
         delete row["publicTokenHash"];
@@ -815,7 +906,12 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
     },
 
     async putSnapshot(id, at, snapshot) {
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: `SESSION#${id}`, sk: "SNAPSHOT", kind: "snapshot", at, snapshot: JSON.stringify(snapshot) } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: { pk: `SESSION#${id}`, sk: "SNAPSHOT", kind: "snapshot", at, snapshot: JSON.stringify(snapshot) },
+        }),
+      );
     },
     async getSnapshot(id) {
       const row = await get_(`SESSION#${id}`, "SNAPSHOT");
@@ -836,9 +932,20 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       if (!found || found.meta.deletedAt) return null;
       const already = found.members.find((m) => m.sub === sub);
       if (already) return { role: already.role };
-      await ddb.send(new PutCommand({ TableName: table, Item: {
-        pk: `SESSION#${id}`, sk: `MEMBER#${sub}`, kind: "member", sub, role, joinedAt: at, ...(name ? { name } : {}),
-      } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: {
+            pk: `SESSION#${id}`,
+            sk: `MEMBER#${sub}`,
+            kind: "member",
+            sub,
+            role,
+            joinedAt: at,
+            ...(name ? { name } : {}),
+          },
+        }),
+      );
       await store.touchPointers(id, sub, at, found.meta.seq);
       return { role };
     },
@@ -862,7 +969,18 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
 
     async addReaction(id, reaction) {
       const kept = [...(await store.listReactions(id)), reaction].slice(-REACTIONS_KEPT);
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: `SESSION#${id}`, sk: "REACTIONS", kind: "reactions", reactions: JSON.stringify(kept), expiresAt: expiresAfter(reaction.at) } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: {
+            pk: `SESSION#${id}`,
+            sk: "REACTIONS",
+            kind: "reactions",
+            reactions: JSON.stringify(kept),
+            expiresAt: expiresAfter(reaction.at),
+          },
+        }),
+      );
       return kept;
     },
     async listReactions(id) {
@@ -877,7 +995,12 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
     },
     async addAsk(id, ask) {
       const kept = [...(await store.listAsks(id)), ask].slice(-ASKS_KEPT);
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: `SESSION#${id}`, sk: "ASKS", kind: "asks", asks: JSON.stringify(kept), expiresAt: expiresAfter(ask.at) } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: { pk: `SESSION#${id}`, sk: "ASKS", kind: "asks", asks: JSON.stringify(kept), expiresAt: expiresAfter(ask.at) },
+        }),
+      );
       return kept;
     },
     async listAsks(id) {
@@ -895,7 +1018,12 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       const found = asks.find((a) => a.id === askId);
       if (!found) return null;
       const kept = asks.map((a) => (a.id === askId ? { ...a, answer, answeredAt: at, ...(reason ? { reason } : {}) } : a));
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: `SESSION#${id}`, sk: "ASKS", kind: "asks", asks: JSON.stringify(kept), expiresAt: expiresAfter(at) } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: { pk: `SESSION#${id}`, sk: "ASKS", kind: "asks", asks: JSON.stringify(kept), expiresAt: expiresAfter(at) },
+        }),
+      );
       return kept;
     },
 
@@ -906,21 +1034,47 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       if (!me) return null;
       const spk = `SESSION#${id}`;
       if (me.role !== "owner") {
-        await ddb.send(new BatchWriteCommand({ RequestItems: { [table]: [
-          { DeleteRequest: { Key: { pk: spk, sk: `MEMBER#${sub}` } } },
-          { DeleteRequest: { Key: { pk: pk(sub), sk: `SESSION#${id}` } } },
-        ] } }));
+        await ddb.send(
+          new BatchWriteCommand({
+            RequestItems: {
+              [table]: [
+                { DeleteRequest: { Key: { pk: spk, sk: `MEMBER#${sub}` } } },
+                { DeleteRequest: { Key: { pk: pk(sub), sk: `SESSION#${id}` } } },
+              ],
+            },
+          }),
+        );
         return { left: true };
       }
       // The owner: META and every pointer become tombstones, so each
       // member's next manifest carries the deletion; the events stay
       // until the tombstones expire, then a sweep can take them.
-      await ddb.send(new PutCommand({ TableName: table, Item: { ...(await get_(spk, "META")), deletedAt: at, updatedAt: at, expiresAt: expiresAfter(at) } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: { ...(await get_(spk, "META")), deletedAt: at, updatedAt: at, expiresAt: expiresAfter(at) },
+        }),
+      );
       for (const m of found.members) {
-        await ddb.send(new PutCommand({ TableName: table, Item: {
-          pk: pk(m.sub), sk: `SESSION#${id}`, kind: "pointer", id, role: m.role, packId: found.meta.packId, packVersion: found.meta.packVersion,
-          ownerSub: found.meta.ownerSub, updatedAt: at, seq: found.meta.seq, deletedAt: at, expiresAt: expiresAfter(at),
-        } }));
+        await ddb.send(
+          new PutCommand({
+            TableName: table,
+            Item: {
+              pk: pk(m.sub),
+              sk: `SESSION#${id}`,
+              kind: "pointer",
+              id,
+              role: m.role,
+              packId: found.meta.packId,
+              packVersion: found.meta.packVersion,
+              ownerSub: found.meta.ownerSub,
+              updatedAt: at,
+              seq: found.meta.seq,
+              deletedAt: at,
+              expiresAt: expiresAfter(at),
+            },
+          }),
+        );
       }
       return { deletedAt: at };
     },
@@ -932,8 +1086,12 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       // list in the app. All expire with the invite.
       const item = { ...invite, expiresAtIso: invite.expiresAt, expiresAt: ttl, kind: "invite" as const };
       await ddb.send(new PutCommand({ TableName: table, Item: { ...item, pk: `INVITE#${invite.token}`, sk: "INVITE" } }));
-      await ddb.send(new PutCommand({ TableName: table, Item: { ...item, pk: `SESSION#${invite.sessionId}`, sk: `INVITE#${invite.token}` } }));
-      await ddb.send(new PutCommand({ TableName: table, Item: { ...item, pk: `EMAIL#${invite.email.toLowerCase()}`, sk: `INVITE#${invite.token}` } }));
+      await ddb.send(
+        new PutCommand({ TableName: table, Item: { ...item, pk: `SESSION#${invite.sessionId}`, sk: `INVITE#${invite.token}` } }),
+      );
+      await ddb.send(
+        new PutCommand({ TableName: table, Item: { ...item, pk: `EMAIL#${invite.email.toLowerCase()}`, sk: `INVITE#${invite.token}` } }),
+      );
     },
 
     async getInvite(token) {
@@ -973,33 +1131,57 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
 
     async revokeInvite(sessionId, token) {
       const invite = await store.getInvite(token);
-      await ddb.send(new BatchWriteCommand({ RequestItems: { [table]: [
-        { DeleteRequest: { Key: { pk: `INVITE#${token}`, sk: "INVITE" } } },
-        { DeleteRequest: { Key: { pk: `SESSION#${sessionId}`, sk: `INVITE#${token}` } } },
-        // An invitation from before the address row existed has none to delete; a delete of a missing key is nothing.
-        ...(invite ? [{ DeleteRequest: { Key: { pk: `EMAIL#${invite.email.toLowerCase()}`, sk: `INVITE#${token}` } } }] : []),
-      ] } }));
+      await ddb.send(
+        new BatchWriteCommand({
+          RequestItems: {
+            [table]: [
+              { DeleteRequest: { Key: { pk: `INVITE#${token}`, sk: "INVITE" } } },
+              { DeleteRequest: { Key: { pk: `SESSION#${sessionId}`, sk: `INVITE#${token}` } } },
+              // An invitation from before the address row existed has none to delete; a delete of a missing key is nothing.
+              ...(invite ? [{ DeleteRequest: { Key: { pk: `EMAIL#${invite.email.toLowerCase()}`, sk: `INVITE#${token}` } } }] : []),
+            ],
+          },
+        }),
+      );
     },
 
     async acceptInvite(token, sub, name, email, at) {
       const invite = await store.getInvite(token);
-      if (!invite || invite.acceptedBy && invite.acceptedBy !== sub) return null;
+      if (!invite || (invite.acceptedBy && invite.acceptedBy !== sub)) return null;
       const found = await store.getSessionRows(invite.sessionId);
       if (!found || found.meta.deletedAt) return null;
       const spk = `SESSION#${invite.sessionId}`;
       if (!found.members.some((m) => m.sub === sub)) {
-        await ddb.send(new PutCommand({ TableName: table, Item: {
-          pk: spk, sk: `MEMBER#${sub}`, kind: "member", sub, role: invite.role, joinedAt: at, ...(name ? { name } : {}),
-        } }));
+        await ddb.send(
+          new PutCommand({
+            TableName: table,
+            Item: {
+              pk: spk,
+              sk: `MEMBER#${sub}`,
+              kind: "member",
+              sub,
+              role: invite.role,
+              joinedAt: at,
+              ...(name ? { name } : {}),
+            },
+          }),
+        );
       }
       // The invite is spent, but stays readable so a second open of the
       // same link by the same person lands them in the session again.
-      for (const key of [{ pk: `INVITE#${token}`, sk: "INVITE" }, { pk: spk, sk: `INVITE#${token}` }, { pk: `EMAIL#${invite.email.toLowerCase()}`, sk: `INVITE#${token}` }]) {
-        await ddb.send(new UpdateCommand({
-          TableName: table, Key: key,
-          UpdateExpression: "SET acceptedBy = :sub, acceptedAt = :at",
-          ExpressionAttributeValues: { ":sub": sub, ":at": at },
-        }));
+      for (const key of [
+        { pk: `INVITE#${token}`, sk: "INVITE" },
+        { pk: spk, sk: `INVITE#${token}` },
+        { pk: `EMAIL#${invite.email.toLowerCase()}`, sk: `INVITE#${token}` },
+      ]) {
+        await ddb.send(
+          new UpdateCommand({
+            TableName: table,
+            Key: key,
+            UpdateExpression: "SET acceptedBy = :sub, acceptedAt = :at",
+            ExpressionAttributeValues: { ":sub": sub, ":at": at },
+          }),
+        );
       }
       // People rows both ways: everyone already here has now played with
       // the newcomer, and the newcomer with each of them.
@@ -1007,9 +1189,19 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       for (const m of found.members) {
         if (m.sub === sub) continue;
         await ddb.send(new PutCommand({ TableName: table, Item: { ...me, pk: pk(m.sub), sk: `PERSON#${sub}`, kind: "person" } }));
-        await ddb.send(new PutCommand({ TableName: table, Item: {
-          sub: m.sub, lastPlayedAt: at, ...(m.name ? { name: m.name } : {}), pk: pk(sub), sk: `PERSON#${m.sub}`, kind: "person",
-        } }));
+        await ddb.send(
+          new PutCommand({
+            TableName: table,
+            Item: {
+              sub: m.sub,
+              lastPlayedAt: at,
+              ...(m.name ? { name: m.name } : {}),
+              pk: pk(sub),
+              sk: `PERSON#${m.sub}`,
+              kind: "person",
+            },
+          }),
+        );
       }
       await store.touchPointers(invite.sessionId, sub, at, found.meta.seq);
       return { sessionId: invite.sessionId };
@@ -1020,10 +1212,25 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       const member = found?.members.find((m) => m.sub === sub);
       if (!found || !member || member.role === "owner") return false;
       await ddb.send(new DeleteCommand({ TableName: table, Key: { pk: `SESSION#${sessionId}`, sk: `MEMBER#${sub}` } }));
-      await ddb.send(new PutCommand({ TableName: table, Item: {
-        pk: pk(sub), sk: `SESSION#${sessionId}`, kind: "pointer", id: sessionId, role: member.role, packId: found.meta.packId,
-        packVersion: found.meta.packVersion, ownerSub: found.meta.ownerSub, updatedAt: at, seq: found.meta.seq, deletedAt: at, expiresAt: expiresAfter(at),
-      } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: {
+            pk: pk(sub),
+            sk: `SESSION#${sessionId}`,
+            kind: "pointer",
+            id: sessionId,
+            role: member.role,
+            packId: found.meta.packId,
+            packVersion: found.meta.packVersion,
+            ownerSub: found.meta.ownerSub,
+            updatedAt: at,
+            seq: found.meta.seq,
+            deletedAt: at,
+            expiresAt: expiresAfter(at),
+          },
+        }),
+      );
       return true;
     },
 
@@ -1040,22 +1247,32 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
 
     async countInvite(sub, at) {
       const hour = at.slice(0, 13);
-      const out = await ddb.send(new UpdateCommand({
-        TableName: table,
-        Key: { pk: pk(sub), sk: `COUNT#invites#${hour}` },
-        UpdateExpression: "ADD n :one SET kind = :kind, expiresAt = :ttl",
-        ExpressionAttributeValues: { ":one": 1, ":kind": "counter", ":ttl": Math.floor(new Date(at).getTime() / 1000) + 2 * 3600 },
-        ReturnValues: "UPDATED_NEW",
-      }));
+      const out = await ddb.send(
+        new UpdateCommand({
+          TableName: table,
+          Key: { pk: pk(sub), sk: `COUNT#invites#${hour}` },
+          UpdateExpression: "ADD n :one SET kind = :kind, expiresAt = :ttl",
+          ExpressionAttributeValues: { ":one": 1, ":kind": "counter", ":ttl": Math.floor(new Date(at).getTime() / 1000) + 2 * 3600 },
+          ReturnValues: "UPDATED_NEW",
+        }),
+      );
       return Number(out.Attributes?.["n"] ?? 1);
     },
 
     async setStreamKey(sub, kind, hash, at) {
       const had = await get(sub, `STREAMKEY#${kind}`);
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: pk(sub), sk: `STREAMKEY#${kind}`, kind: "streamkey", which: kind, hash, madeAt: at } }));
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: `STREAMKEY#${hash}`, sk: "KEY", kind: "streamkeyhash", sub, which: kind } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: { pk: pk(sub), sk: `STREAMKEY#${kind}`, kind: "streamkey", which: kind, hash, madeAt: at },
+        }),
+      );
+      await ddb.send(
+        new PutCommand({ TableName: table, Item: { pk: `STREAMKEY#${hash}`, sk: "KEY", kind: "streamkeyhash", sub, which: kind } }),
+      );
       // The one it replaced stops opening anything, rather than lingering as a second way in.
-      if (had && String(had["hash"]) !== hash) await ddb.send(new DeleteCommand({ TableName: table, Key: { pk: `STREAMKEY#${String(had["hash"])}`, sk: "KEY" } }));
+      if (had && String(had["hash"]) !== hash)
+        await ddb.send(new DeleteCommand({ TableName: table, Key: { pk: `STREAMKEY#${String(had["hash"])}`, sk: "KEY" } }));
     },
 
     async streamKeyOwner(hash) {
@@ -1067,11 +1284,13 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
     },
 
     async streamKeys(sub) {
-      const out = await ddb.send(new QueryCommand({
-        TableName: table,
-        KeyConditionExpression: "pk = :pk AND begins_with(sk, :k)",
-        ExpressionAttributeValues: { ":pk": pk(sub), ":k": "STREAMKEY#" },
-      }));
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :k)",
+          ExpressionAttributeValues: { ":pk": pk(sub), ":k": "STREAMKEY#" },
+        }),
+      );
       const keys: StreamKeys = {};
       for (const row of (out.Items ?? []) as Row[]) {
         const which = row["which"];
@@ -1083,10 +1302,16 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
     async clearStreamKey(sub, kind) {
       const row = await get(sub, `STREAMKEY#${kind}`);
       if (!row) return false;
-      await ddb.send(new BatchWriteCommand({ RequestItems: { [table]: [
-        { DeleteRequest: { Key: { pk: pk(sub), sk: `STREAMKEY#${kind}` } } },
-        { DeleteRequest: { Key: { pk: `STREAMKEY#${String(row["hash"])}`, sk: "KEY" } } },
-      ] } }));
+      await ddb.send(
+        new BatchWriteCommand({
+          RequestItems: {
+            [table]: [
+              { DeleteRequest: { Key: { pk: pk(sub), sk: `STREAMKEY#${kind}` } } },
+              { DeleteRequest: { Key: { pk: `STREAMKEY#${String(row["hash"])}`, sk: "KEY" } } },
+            ],
+          },
+        }),
+      );
       return true;
     },
 
@@ -1096,11 +1321,13 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
     },
 
     async listApiKeys(sub) {
-      const out = await ddb.send(new QueryCommand({
-        TableName: table,
-        KeyConditionExpression: "pk = :pk AND begins_with(sk, :k)",
-        ExpressionAttributeValues: { ":pk": pk(sub), ":k": "APIKEY#" },
-      }));
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :k)",
+          ExpressionAttributeValues: { ":pk": pk(sub), ":k": "APIKEY#" },
+        }),
+      );
       return ((out.Items ?? []) as Row[]).map((r) => {
         const { hash: _h, ...rest } = strip(r);
         return rest as unknown as ApiKey;
@@ -1110,10 +1337,16 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
     async revokeApiKey(sub, id) {
       const row = await get(sub, `APIKEY#${id}`);
       if (!row) return false;
-      await ddb.send(new BatchWriteCommand({ RequestItems: { [table]: [
-        { DeleteRequest: { Key: { pk: pk(sub), sk: `APIKEY#${id}` } } },
-        { DeleteRequest: { Key: { pk: `APIKEY#${String(row["hash"])}`, sk: "KEY" } } },
-      ] } }));
+      await ddb.send(
+        new BatchWriteCommand({
+          RequestItems: {
+            [table]: [
+              { DeleteRequest: { Key: { pk: pk(sub), sk: `APIKEY#${id}` } } },
+              { DeleteRequest: { Key: { pk: `APIKEY#${String(row["hash"])}`, sk: "KEY" } } },
+            ],
+          },
+        }),
+      );
       return true;
     },
 
@@ -1127,24 +1360,39 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       if (!owner) return null;
       const last = typeof owner["lastUsedAt"] === "string" ? owner["lastUsedAt"] : "";
       if (at.slice(0, 16) !== last.slice(0, 16)) {
-        await ddb.send(new UpdateCommand({
-          TableName: table, Key: { pk: pk(sub), sk: `APIKEY#${id}` },
-          UpdateExpression: "SET lastUsedAt = :at", ExpressionAttributeValues: { ":at": at },
-        }));
+        await ddb.send(
+          new UpdateCommand({
+            TableName: table,
+            Key: { pk: pk(sub), sk: `APIKEY#${id}` },
+            UpdateExpression: "SET lastUsedAt = :at",
+            ExpressionAttributeValues: { ":at": at },
+          }),
+        );
       }
       const scope = owner["scope"] === "release" ? "release" : undefined;
       return { sub, id, ...(scope ? { scope } : {}) };
     },
 
     async issueNonce(sub, nonce, at) {
-      await ddb.send(new PutCommand({ TableName: table, Item: {
-        pk: pk(sub), sk: `NONCE#${nonce}`, kind: "nonce", createdAt: at, expiresAt: Math.floor(new Date(at).getTime() / 1000) + 600,
-      } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: {
+            pk: pk(sub),
+            sk: `NONCE#${nonce}`,
+            kind: "nonce",
+            createdAt: at,
+            expiresAt: Math.floor(new Date(at).getTime() / 1000) + 600,
+          },
+        }),
+      );
     },
 
     async takeNonce(sub, nonce) {
       try {
-        await ddb.send(new DeleteCommand({ TableName: table, Key: { pk: pk(sub), sk: `NONCE#${nonce}` }, ConditionExpression: "attribute_exists(pk)" }));
+        await ddb.send(
+          new DeleteCommand({ TableName: table, Key: { pk: pk(sub), sk: `NONCE#${nonce}` }, ConditionExpression: "attribute_exists(pk)" }),
+        );
         return true;
       } catch (error) {
         if ((error as { name?: string }).name === "ConditionalCheckFailedException") return false;
@@ -1163,21 +1411,29 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
     },
 
     async listClaims(sub) {
-      const out = await ddb.send(new QueryCommand({
-        TableName: table,
-        KeyConditionExpression: "pk = :pk AND begins_with(sk, :k)",
-        ExpressionAttributeValues: { ":pk": pk(sub), ":k": "SIGNKEY#" },
-      }));
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :k)",
+          ExpressionAttributeValues: { ":pk": pk(sub), ":k": "SIGNKEY#" },
+        }),
+      );
       return ((out.Items ?? []) as Row[]).map((r) => strip(r) as unknown as Claim);
     },
 
     async unclaim(sub, fingerprint) {
       const row = await get(sub, `SIGNKEY#${fingerprint}`);
       if (!row) return false;
-      await ddb.send(new BatchWriteCommand({ RequestItems: { [table]: [
-        { DeleteRequest: { Key: { pk: pk(sub), sk: `SIGNKEY#${fingerprint}` } } },
-        { DeleteRequest: { Key: { pk: `AUTHOR#${fingerprint}`, sk: "CLAIM" } } },
-      ] } }));
+      await ddb.send(
+        new BatchWriteCommand({
+          RequestItems: {
+            [table]: [
+              { DeleteRequest: { Key: { pk: pk(sub), sk: `SIGNKEY#${fingerprint}` } } },
+              { DeleteRequest: { Key: { pk: `AUTHOR#${fingerprint}`, sk: "CLAIM" } } },
+            ],
+          },
+        }),
+      );
       return true;
     },
 
@@ -1199,7 +1455,11 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
 
     async deleteLicense(sub, packId, at) {
       const row = await tombstone(sub, `LICENSE#${packId}`, at, {
-        pk: pk(sub), sk: `LICENSE#${packId}`, kind: "license", id: packId, hash: "",
+        pk: pk(sub),
+        sk: `LICENSE#${packId}`,
+        kind: "license",
+        id: packId,
+        hash: "",
       });
       const { bytes: _bytes, ...meta } = strip(row);
       return meta as unknown as LicenseMeta;

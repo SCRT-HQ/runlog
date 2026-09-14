@@ -18,7 +18,18 @@ import { ChatSettings } from "./ChatPanel.tsx";
 
 const current: { api: Api | null } = { api: null };
 vi.mock("../sync/useApi.ts", () => ({ useApi: () => current.api }));
-vi.mock("../sync/usePlan.ts", () => ({ usePlan: () => ({ gates: false, entitlements: [], can: () => true, servers: false, serversOpen: true, publishersOpen: true, loaded: true, refresh: async () => {} }) }));
+vi.mock("../sync/usePlan.ts", () => ({
+  usePlan: () => ({
+    gates: false,
+    entitlements: [],
+    can: () => true,
+    servers: false,
+    serversOpen: true,
+    publishersOpen: true,
+    loaded: true,
+    refresh: async () => {},
+  }),
+}));
 
 const pack = {
   id: "demo",
@@ -27,7 +38,8 @@ const pack = {
   tables: {},
 } as unknown as Pack;
 
-const record = (over: Partial<StoredRun> = {}): StoredRun => ({ runId: "r1", packId: "demo", role: "owner", events: [], ...over }) as unknown as StoredRun;
+const record = (over: Partial<StoredRun> = {}): StoredRun =>
+  ({ runId: "r1", packId: "demo", role: "owner", events: [], ...over }) as unknown as StoredRun;
 
 const api = (over: Partial<Api> = {}): Api =>
   ({
@@ -88,7 +100,12 @@ describe("taking asks from chat", () => {
    */
   it("starts on what the pack would do with an ask, and asks where the pack says nothing", async () => {
     const minted: string[] = [];
-    current.api = api({ mintAskKey: async (_id: string, policy: string) => { minted.push(policy); return { key: "k", policy: policy as "ask" | "auto" }; } } as Partial<Api>);
+    current.api = api({
+      mintAskKey: async (_id: string, policy: string) => {
+        minted.push(policy);
+        return { key: "k", policy: policy as "ask" | "auto" };
+      },
+    } as Partial<Api>);
     const opinionated = { ...pack, asks: { policy: "auto" } } as unknown as Pack;
 
     render(<ChatSettings pack={opinionated} record={record()} />);

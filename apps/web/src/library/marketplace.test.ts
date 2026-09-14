@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { loadPackText } from "@runlog/rules-schema";
-import { marketplaceEntry, filterMarketplace, LEGACY_IDS, loadMarketplace, publishersOf, STARTER_PACK, withTesting, type MarketplaceEntry } from "./marketplace.ts";
+import {
+  marketplaceEntry,
+  filterMarketplace,
+  LEGACY_IDS,
+  loadMarketplace,
+  publishersOf,
+  STARTER_PACK,
+  withTesting,
+  type MarketplaceEntry,
+} from "./marketplace.ts";
 
 /**
  * The marketplace is the packs directory, read at build. What has to hold: every
@@ -49,7 +58,22 @@ describe("the marketplace", () => {
 
 describe("publishers in the marketplace", () => {
   const entry = (id: string, publisher: { id: string; name: string } | undefined, price: MarketplaceEntry["price"]): MarketplaceEntry =>
-    ({ id, version: "1", title: id, category: "games", tags: [], features: [], requires: [], players: 1, blurb: "", kind: "pack", price, publisher, source: "listing", load: async () => "" }) as MarketplaceEntry;
+    ({
+      id,
+      version: "1",
+      title: id,
+      category: "games",
+      tags: [],
+      features: [],
+      requires: [],
+      players: 1,
+      blurb: "",
+      kind: "pack",
+      price,
+      publisher,
+      source: "listing",
+      load: async () => "",
+    }) as MarketplaceEntry;
   const all = [
     entry("a", { id: "org1", name: "Kiln Works" }, "free"),
     entry("b", { id: "org1", name: "Kiln Works" }, { amount: 300, currency: "usd", display: "$3.00" }),
@@ -107,6 +131,8 @@ describe("the test bench", () => {
 
   it("is never counted as a publisher's listing, even if one somehow named it", () => {
     const listed = { ...bench, publisher: { id: "org1", name: "Kiln Works" } };
-    expect(publishersOf([listed, { ...ordinary, publisher: { id: "org1", name: "Kiln Works" } }])).toEqual([{ id: "org1", name: "Kiln Works", count: 1, free: 1, from: null }]);
+    expect(publishersOf([listed, { ...ordinary, publisher: { id: "org1", name: "Kiln Works" } }])).toEqual([
+      { id: "org1", name: "Kiln Works", count: 1, free: 1, from: null },
+    ]);
   });
 });

@@ -80,6 +80,12 @@ jobs:
       # stays consistent without anybody holding the rules in their head.
       - run: npm run lint:docs
 
+      # And style for the code, from .prettierrc.json. The pre-commit hook
+      # does this on the way in, but a hook is a convenience: it arrives
+      # with `npm install`, it is skipped by `npm ci --ignore-scripts`,
+      # and `--no-verify` walks past it. This is the gate.
+      - run: npm run format:check
+
       # The same shape the hosting's job has: the run writes JUnit beside
       # its console output, and the step below turns it into a check with
       # every test named, so a failure here reads the way a failure there

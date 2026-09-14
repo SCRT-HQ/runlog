@@ -81,7 +81,13 @@ export function useConfirm(): { dialog: ReactNode; ask: (question: Question | st
 
   const dialog = open ? (
     <div className="veil" role="presentation" onClick={(e) => e.target === e.currentTarget && close(false)}>
-      <section className="panel confirmDialog" role="alertdialog" aria-modal="true" aria-labelledby="confirmAsk" {...(open.detail ? { "aria-describedby": "confirmDetail" } : {})}>
+      <section
+        className="panel confirmDialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirmAsk"
+        {...(open.detail ? { "aria-describedby": "confirmDetail" } : {})}
+      >
         <h2 id="confirmAsk">{open.ask}</h2>
         {open.detail && (
           <p id="confirmDetail" className="muted small">

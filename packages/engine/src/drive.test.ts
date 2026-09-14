@@ -45,7 +45,8 @@ function driveToCompletion(pack: Pack, events: readonly RunEvent[], action: Driv
   let result = drive(pack, events, action, ctx);
   while (result.status === "awaiting") {
     const req = result.request;
-    const value: AnswerValue = req.kind === "chooseTarget" ? req.eligible[0]! : req.kind === "prompt" ? (req.options?.[0] ?? true) : req.kind === "ask" ? true : 0;
+    const value: AnswerValue =
+      req.kind === "chooseTarget" ? req.eligible[0]! : req.kind === "prompt" ? (req.options?.[0] ?? true) : req.kind === "ask" ? true : 0;
     result = answer(pack, events, result.pending, req.key, value, ctx);
   }
   return result.events;
@@ -127,7 +128,7 @@ describe("drive with autoRoll", () => {
 });
 
 describe("a seeded run", () => {
-  it("rolls with source \"seeded\", and two runs from the same seed agree", () => {
+  it('rolls with source "seeded", and two runs from the same seed agree', () => {
     // "shared" is the demo pack's seeded mode; autoRoll turns rolling on the
     // same way a moderator's "roll for the table" setting would.
     const script = [
@@ -157,15 +158,9 @@ describe("a block that awaits", () => {
     // Pending sits in DynamoDB between two Lambda invocations, so it has to
     // be plain, serializable data. If any field were a class instance or
     // something JSON drops, a resume that went through a real HTTP round
-    // trip would silently diverge from one answered in the same process: 
+    // trip would silently diverge from one answered in the same process:
     // exactly the kind of bug that would never show up in an in-memory test.
-    const prefix = playThrough(kiln, [
-      { enter: 1 },
-      { step: "enter" },
-      { declare: "Bowl" },
-      { step: "work" },
-      { finalize: {} },
-    ]).events;
+    const prefix = playThrough(kiln, [{ enter: 1 }, { step: "enter" }, { declare: "Bowl" }, { step: "work" }, { finalize: {} }]).events;
     // "breakOne" is a betweenUnits move that prompts chooseSubject, the
     // demo pack's example of a block that asks a real question rather than
     // just rolling dice.
@@ -201,7 +196,13 @@ function toFinalize(events: RunEvent[], ctx: DriveContext): RunEvent[] {
     const a = agenda(kiln, state, log);
     if (!a.active || a.active.step.kind === "finalizeUnit") break;
     const unticked = a.checklist.find((c) => !c.on && !c.optional);
-    const action: DriveAction = unticked ? { tick: { index: unticked.index, on: true } } : a.active.step.kind === "declareSubject" ? { declare: "A wide bowl" } : a.due[0] ? { settle: a.due[0].id } : { step: true };
+    const action: DriveAction = unticked
+      ? { tick: { index: unticked.index, on: true } }
+      : a.active.step.kind === "declareSubject"
+        ? { declare: "A wide bowl" }
+        : a.due[0]
+          ? { settle: a.due[0].id }
+          : { step: true };
     log = [...log, ...driveToCompletion(kiln, log, action, ctx)];
   }
   return log;
@@ -232,7 +233,12 @@ describe("a point that shows a table", () => {
     expect(two.active?.step.kind).toBe("finalizeUnit");
     expect(itemApplies(kiln, state, confirm[0]!)).toBe(true);
     expect(shownFor(kiln, state, confirm[0]!).length).toBeGreaterThan(0);
-    expect(two.checklist.map((c) => c.index)).toEqual(confirm.map((item, index) => ({ item, index })).filter((x) => itemApplies(kiln, state, x.item)).map((x) => x.index));
+    expect(two.checklist.map((c) => c.index)).toEqual(
+      confirm
+        .map((item, index) => ({ item, index }))
+        .filter((x) => itemApplies(kiln, state, x.item))
+        .map((x) => x.index),
+    );
     expect(two.checklist.some((c) => c.index === 0)).toBe(true);
     expect(() => drive(kiln, second, { finalize: true }, ctx)).toThrow(/confirmation/);
     let ticked = second;
@@ -262,7 +268,7 @@ describe("tick", () => {
     if (result.status !== "done") return;
     const after = agenda(kiln, reduce(kiln, [...prefix, ...result.events]), [...prefix, ...result.events]);
     expect(after.checklist[0]!.on).toBe(true);
-    // Still on the same step: ticking one box does not advance the flow, 
+    // Still on the same step: ticking one box does not advance the flow,
     // that is what a `{ step: true }` action, gated on every box being
     // ticked, is for.
     expect(after.active?.step.kind).toBe("manual");
@@ -272,7 +278,18 @@ describe("tick", () => {
 describe("a step that closes the unit", () => {
   // The Long Kiln, with its Throw step closing the stage and its Fire phase gone: the work's own Done is the close.
   const folded = (() => {
-    const phases = kiln.phases.filter((p) => p.id !== "close").map((p) => (p.id === "work" ? { ...p, steps: p.steps.map((s) => (s.kind === "manual" ? { ...s, closesUnit: true, checklist: ["The Constraint has been honored."] } : s)) } : p));
+    const phases = kiln.phases
+      .filter((p) => p.id !== "close")
+      .map((p) =>
+        p.id === "work"
+          ? {
+              ...p,
+              steps: p.steps.map((s) =>
+                s.kind === "manual" ? { ...s, closesUnit: true, checklist: ["The Constraint has been honored."] } : s,
+              ),
+            }
+          : p,
+      );
     return { ...kiln, phases } as typeof kiln;
   })();
 
@@ -284,7 +301,10 @@ describe("a step that closes the unit", () => {
     expect(a.canFinalize).toBe(true);
     expect(a.checklist.map((c) => c.text)).toEqual(["The Constraint has been honored."]);
     expect(() => drive(folded, prefix, { step: true }, { now: T(10) })).toThrow(/confirmation|ticked/);
-    const ticked = [...prefix, ...(drive(folded, prefix, { tick: { index: 0, on: true } }, { now: T(10) }) as { events: RunEvent[] }).events];
+    const ticked = [
+      ...prefix,
+      ...(drive(folded, prefix, { tick: { index: 0, on: true } }, { now: T(10) }) as { events: RunEvent[] }).events,
+    ];
     const done = drive(folded, ticked, { step: true }, { now: T(11) });
     expect(done.status).toBe("done");
     if (done.status !== "done") return;

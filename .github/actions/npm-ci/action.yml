@@ -1,16 +1,16 @@
-name: 'Setup Node and run npm ci'
-description: 'Setup Node and run npm ci'
+name: "Setup Node and run npm ci"
+description: "Setup Node and run npm ci"
 
-author: 'Nate Ferrell <nate@scrthq.com>'
+author: "Nate Ferrell <nate@scrthq.com>"
 
 inputs:
   node-version:
-    description: 'Node version to use'
+    description: "Node version to use"
     required: false
     default: 22
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - uses: actions/setup-node@v7
       with:

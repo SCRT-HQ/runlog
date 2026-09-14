@@ -33,7 +33,11 @@ export async function builtins(): Promise<Builtin[]> {
   if (loaded) return loaded;
   const out: Builtin[] = [];
   for (const [path, read] of Object.entries(files)) {
-    const id = path.split("/").pop()?.replace(/\.json$/, "") ?? path;
+    const id =
+      path
+        .split("/")
+        .pop()
+        ?.replace(/\.json$/, "") ?? path;
     try {
       const profile = parse(await read());
       // A shipped profile that does not parse is a bug in this

@@ -35,7 +35,12 @@ const paint = (control?: unknown, seats?: string[]) =>
 /** The same panel once the run has found the account a watch key. */
 const painted = (control?: unknown, seats?: string[]) =>
   renderToStaticMarkup(
-    <ControlSettings pack={kiln} record={record(control)} reachable={{ link: null, key: "watchkey", working: false }} {...(seats ? { seats } : {})} />,
+    <ControlSettings
+      pack={kiln}
+      record={record(control)}
+      reachable={{ link: null, key: "watchkey", working: false }}
+      {...(seats ? { seats } : {})}
+    />,
   );
 
 describe("the control panel", () => {
@@ -79,7 +84,10 @@ describe("the control panel", () => {
   });
 
   it("draws a saved rule in the pack's own words", () => {
-    const html = paint({ tool: "TarnishedTool", rows: [{ table: "check", entry: "check-recent", ops: [{ op: "speffect.apply", args: { id: 6900 } }] }] });
+    const html = paint({
+      tool: "TarnishedTool",
+      rows: [{ table: "check", entry: "check-recent", ops: [{ op: "speffect.apply", args: { id: 6900 } }] }],
+    });
     expect(html).toContain(kiln.tables.check!.title);
     expect(html).not.toContain("None. Nothing is sent.");
   });
@@ -110,7 +118,10 @@ describe("the control panel", () => {
   });
 
   it("asks for a grace by name against the tool's own list, not an empty box", () => {
-    const html = paint({ tool: "TarnishedTool", rows: [{ tag: "setback", ops: [{ op: "warp.grace", args: { name: "Church of Elleh" } }] }] });
+    const html = paint({
+      tool: "TarnishedTool",
+      rows: [{ tag: "setback", ops: [{ op: "warp.grace", args: { name: "Church of Elleh" } }] }],
+    });
     // The field points at a list; the list itself is fetched, so a
     // static render has the one without the other, which is the state
     // the panel is in for the moment before it arrives.
@@ -121,7 +132,12 @@ describe("the control panel", () => {
   it("offers a weapon with an ash on it, which is the one gift that is three things at once", () => {
     const html = paint({
       tool: "TarnishedTool",
-      rows: [{ tag: "boon", ops: [{ op: "weapon.named", args: { name: "Godskin Peeler", upgrade: 25, ash: "Bloody Slash", affinity: "Blood", count: 2 } }] }],
+      rows: [
+        {
+          tag: "boon",
+          ops: [{ op: "weapon.named", args: { name: "Godskin Peeler", upgrade: 25, ash: "Bloody Slash", affinity: "Blood", count: 2 } }],
+        },
+      ],
     });
     expect(html).toContain('list="controlNames-ashes"');
     expect(html).toContain('value="Godskin Peeler"');
@@ -129,20 +145,29 @@ describe("the control panel", () => {
   });
 
   it("offers a weapon at a level, which an item with a count could never be", () => {
-    const html = paint({ tool: "TarnishedTool", rows: [{ tag: "boon", ops: [{ op: "weapon.named", args: { name: "Wing of Astel", upgrade: 10 } }] }] });
+    const html = paint({
+      tool: "TarnishedTool",
+      rows: [{ tag: "boon", ops: [{ op: "weapon.named", args: { name: "Wing of Astel", upgrade: 10 } }] }],
+    });
     expect(html).toContain('list="controlNames-weapons"');
     expect(html).toContain('value="Wing of Astel"');
     expect(html).not.toContain("never heard of");
   });
 
   it("names a boss to warp to, rather than a block and three coordinates", () => {
-    const html = paint({ tool: "TarnishedTool", rows: [{ tag: "setback", ops: [{ op: "warp.boss", args: { name: "Godrick the Grafted" } }] }] });
+    const html = paint({
+      tool: "TarnishedTool",
+      rows: [{ tag: "setback", ops: [{ op: "warp.boss", args: { name: "Godrick the Grafted" } }] }],
+    });
     expect(html).toContain('list="controlNames-bosses"');
     expect(html).toContain('value="Godrick the Grafted"');
   });
 
   it("names an ash of war, which was the last id with a name sitting behind it", () => {
-    const html = paint({ tool: "TarnishedTool", rows: [{ tag: "boon", ops: [{ op: "item.give", args: { id: 1, ashOfWar: "Bloody Slash" } }] }] });
+    const html = paint({
+      tool: "TarnishedTool",
+      rows: [{ tag: "boon", ops: [{ op: "item.give", args: { id: 1, ashOfWar: "Bloody Slash" } }] }],
+    });
     expect(html).toContain('list="controlNames-ashes"');
   });
 
@@ -167,6 +192,8 @@ describe("the control panel", () => {
   });
 
   it("uses the pack's own word for a unit when offering how long an effect lasts", () => {
-    expect(paint({ rows: [{ tag: "setback", ops: [{ op: "x", args: {} }] }] })).toContain(`Until this ${kiln.vocabulary.unit.one.toLowerCase()} closes`);
+    expect(paint({ rows: [{ tag: "setback", ops: [{ op: "x", args: {} }] }] })).toContain(
+      `Until this ${kiln.vocabulary.unit.one.toLowerCase()} closes`,
+    );
   });
 });

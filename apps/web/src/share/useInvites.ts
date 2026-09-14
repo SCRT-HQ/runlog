@@ -12,7 +12,10 @@ import type { Api, PendingInvite } from "../sync/client.ts";
  */
 const EVERY_MS = 120_000;
 
-export function useInvites(api: Api | null, open: boolean): { invites: PendingInvite[]; refresh: () => void; forget: (token: string) => void } {
+export function useInvites(
+  api: Api | null,
+  open: boolean,
+): { invites: PendingInvite[]; refresh: () => void; forget: (token: string) => void } {
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const live = useRef(true);
 

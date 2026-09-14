@@ -108,11 +108,15 @@ async function cli(): Promise<void> {
     legalComments: "none",
     logLevel: "warning",
   });
-  execFileSync("npx", ["tsc", "-p", "tsconfig.build.json", "--declaration", "--emitDeclarationOnly", "--outDir", join(dir, "dist", "types")], {
-    cwd: join(root, "packages", "container"),
-    stdio: "inherit",
-    shell: process.platform === "win32",
-  });
+  execFileSync(
+    "npx",
+    ["tsc", "-p", "tsconfig.build.json", "--declaration", "--emitDeclarationOnly", "--outDir", join(dir, "dist", "types")],
+    {
+      cwd: join(root, "packages", "container"),
+      stdio: "inherit",
+      shell: process.platform === "win32",
+    },
+  );
   cpSync(join(root, "packages", "cli", "README.md"), join(dir, "README.md"));
   // The third-party notice, so a copy laid over this package at someone's
   // own address can say what the app is made of (hosted/scripts/overlay.ts).

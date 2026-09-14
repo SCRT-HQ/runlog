@@ -38,7 +38,10 @@ export function appBase(href: string): string {
  * into the hash the parsers read, with its query kept; otherwise the hash
  * as it is. `base` is where the app is served from; null means paths are off.
  */
-export function addressOf(loc: { pathname: string; search: string; hash: string }, base: string | null = PATHS_ON ? import.meta.env.BASE_URL : null): string {
+export function addressOf(
+  loc: { pathname: string; search: string; hash: string },
+  base: string | null = PATHS_ON ? import.meta.env.BASE_URL : null,
+): string {
   if (base) {
     // A hash naming a page wins over the path. It is the more specific
     // thing the address carries, and it is what an old link and the
@@ -97,7 +100,9 @@ export function runFromAddress(address: string): string | null {
 /** Put a page in the address bar, spelled for this build; an empty hash is the bare app, keeping any query. */
 export function goTo(hash: string, how: "replace" | "push" = "replace"): void {
   const target = hash ? hrefFor(hash) : PATHS_ON ? `${hrefFor("")}${location.search}` : `${location.pathname}${location.search}`;
-  const current = PATHS_ON ? `${location.pathname}${location.search}${location.hash}` : location.hash || `${location.pathname}${location.search}`;
+  const current = PATHS_ON
+    ? `${location.pathname}${location.search}${location.hash}`
+    : location.hash || `${location.pathname}${location.search}`;
   if (target === current) return;
   if (how === "push") history.pushState(null, "", target);
   else history.replaceState(null, "", target);

@@ -6,7 +6,7 @@ import { tracedCalls } from "./xray.js";
  *
  * A publisher is a WorkOS organization: it can have several people in
  * it, its members carry an `org_id` in their tokens, and later a Stripe
- * subscription of its own. The API needs two things of WorkOS for that, 
+ * subscription of its own. The API needs two things of WorkOS for that,
  * make an organization, put its founder in it as an admin, and, for the
  * people a publisher brings in, the memberships and invitations WorkOS
  * keeps. Invitations are WorkOS's mail and WorkOS's acceptance; the API
@@ -87,7 +87,13 @@ export function realWorkOS(apiKey: string): WorkOSLike {
         } catch {
           /* a user WorkOS no longer has: listed by id */
         }
-        out.push({ membershipId: m.id, userId: m.userId, role: roleOf(m.role?.slug), ...(email ? { email } : {}), ...(name ? { name } : {}) });
+        out.push({
+          membershipId: m.id,
+          userId: m.userId,
+          role: roleOf(m.role?.slug),
+          ...(email ? { email } : {}),
+          ...(name ? { name } : {}),
+        });
       }
       return out;
     },
@@ -100,10 +106,16 @@ export function realWorkOS(apiKey: string): WorkOSLike {
     },
     async listInvitations(organizationId) {
       const page = await workos.userManagement.listInvitations({ organizationId, limit: 100 });
-      return page.data.filter((i) => i.state === "pending").map((i) => ({ id: i.id, email: i.email, state: i.state, expiresAt: i.expiresAt }));
+      return page.data
+        .filter((i) => i.state === "pending")
+        .map((i) => ({ id: i.id, email: i.email, state: i.state, expiresAt: i.expiresAt }));
     },
     async invite({ email, organizationId, role, inviterUserId }) {
-      const made = await workos.userManagement.sendInvitation({ email, inviterUserId, ...(organizationId ? { organizationId, roleSlug: role ?? "member" } : {}) });
+      const made = await workos.userManagement.sendInvitation({
+        email,
+        inviterUserId,
+        ...(organizationId ? { organizationId, roleSlug: role ?? "member" } : {}),
+      });
       return { id: made.id, email: made.email, state: made.state, expiresAt: made.expiresAt };
     },
     async revokeInvitation(invitationId) {
@@ -116,7 +128,13 @@ export function realWorkOS(apiKey: string): WorkOSLike {
       const page = await workos.userManagement.listInvitations({ limit: 100 });
       return page.data
         .filter((i) => i.inviterUserId === userId && !i.organizationId)
-        .map((i) => ({ id: i.id, email: i.email, state: i.state, expiresAt: i.expiresAt, ...(i.acceptedAt ? { acceptedAt: i.acceptedAt } : {}) }));
+        .map((i) => ({
+          id: i.id,
+          email: i.email,
+          state: i.state,
+          expiresAt: i.expiresAt,
+          ...(i.acceptedAt ? { acceptedAt: i.acceptedAt } : {}),
+        }));
     },
   };
   return tracedCalls("workos", impl);

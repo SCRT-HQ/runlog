@@ -106,7 +106,16 @@ export interface Ask {
 
 /** A run as its link shows it to anyone: the whole thing where the pack may travel, else the owner's snapshot. */
 export interface PublicRun {
-  run: { id: string; packId: string; packVersion: string; packTitle: string | null; name: string | null; seq: number; updatedAt: string; endedAt: string | null };
+  run: {
+    id: string;
+    packId: string;
+    packVersion: string;
+    packTitle: string | null;
+    name: string | null;
+    seq: number;
+    updatedAt: string;
+    endedAt: string | null;
+  };
   access: "full" | "snapshot";
   pack?: { format: "yaml" | "json"; source: string } | null;
   events?: unknown[];
@@ -446,7 +455,18 @@ export interface Api {
   releaseGuild(guildId: string): Promise<void>;
   guildPacks(guildId: string): Promise<GuildPackMeta[]>;
   /** Put a pack in the server's vault, with the summary the bot lists it by; the text never comes back. */
-  delegatePack(guildId: string, pack: { packId: string; title: string; version: string; format: "yaml" | "json"; hash: string; modes: Array<{ id: string; label: string }>; source: string }): Promise<GuildPackMeta>;
+  delegatePack(
+    guildId: string,
+    pack: {
+      packId: string;
+      title: string;
+      version: string;
+      format: "yaml" | "json";
+      hash: string;
+      modes: Array<{ id: string; label: string }>;
+      source: string;
+    },
+  ): Promise<GuildPackMeta>;
   undelegatePack(guildId: string, packId: string): Promise<void>;
   /** The name and email the SDK reported, so the server's row is never older than the last visit. */
   putProfile(snapshot: { name?: string; handle?: string; email?: string; termsVersion?: string }): Promise<Profile>;
@@ -456,7 +476,14 @@ export interface Api {
   exportMe(): Promise<{ url: string; bytes: number; expiresAt: string }>;
   manifest(): Promise<Manifest>;
   /** Start a session with its first events. Null when the id is already taken. */
-  createSession(session: { id: string; packId: string; packVersion: string; packTitle?: string; name?: string; events: unknown[] }): Promise<{ session: SessionMeta; events: SessionEvent[] } | null>;
+  createSession(session: {
+    id: string;
+    packId: string;
+    packVersion: string;
+    packTitle?: string;
+    name?: string;
+    events: unknown[];
+  }): Promise<{ session: SessionMeta; events: SessionEvent[] } | null>;
   /** The session and every event past `after`; null when there is none the caller may see. */
   getSession(id: string, after: number): Promise<{ session: SessionMeta; members: SessionMember[]; events: SessionEvent[] } | null>;
   /** Append a move. What came back numbered is `appended`; `seq` is the log's new tail. */
@@ -506,7 +533,9 @@ export interface Api {
   removeMember(sessionId: string, sub: string): Promise<void>;
   people(): Promise<Person[]>;
   /** A Stripe Checkout for a plan, by key; `available: false` where billing is off. */
-  checkout(price: "plus-monthly" | "plus-yearly" | "hosted-monthly" | "hosted-yearly" | "server-monthly" | "server-yearly"): Promise<{ url: string } | { available: false }>;
+  checkout(
+    price: "plus-monthly" | "plus-yearly" | "hosted-monthly" | "hosted-yearly" | "server-monthly" | "server-yearly",
+  ): Promise<{ url: string } | { available: false }>;
   portal(): Promise<{ url: string } | { available: false }>;
   /** Ask Stripe again what this account has, and keep the answer. */
   refreshEntitlements(): Promise<string[]>;
@@ -545,12 +574,24 @@ export interface Api {
   unlistPublisherPack(packId: string): Promise<PublisherPack | null>;
   deletePublisherPack(packId: string): Promise<void>;
   /** Start a race: this run is the first entry. */
-  createRace(race: { id: string; packId: string; packVersion: string; packTitle?: string; name?: string; mode: string; seed: string; sessionId: string }): Promise<Race>;
+  createRace(race: {
+    id: string;
+    packId: string;
+    packVersion: string;
+    packTitle?: string;
+    name?: string;
+    mode: string;
+    seed: string;
+    sessionId: string;
+  }): Promise<Race>;
   myRaces(): Promise<Race[]>;
   /** Join by code; throws with the API's words when no race answers to it. */
   joinRace(code: string): Promise<Race>;
   getRace(id: string): Promise<Race | null>;
-  putRaceEntry(id: string, patch: { sessionId?: string; name?: string; progress?: Omit<NonNullable<RaceEntry["progress"]>, "updatedAt"> }): Promise<Race | null>;
+  putRaceEntry(
+    id: string,
+    patch: { sessionId?: string; name?: string; progress?: Omit<NonNullable<RaceEntry["progress"]>, "updatedAt"> },
+  ): Promise<Race | null>;
   patchRace(id: string, patch: { name?: string; ended?: true }): Promise<Race | null>;
   inviteToRace(id: string, email: string): Promise<{ link: string; code: string }>;
   listKeys(): Promise<ApiKey[]>;
@@ -590,19 +631,31 @@ export async function fetchBytes(url: string, token?: string, fetchImpl: Fetch =
 /** The buyer's sealed copy by the token in the receipt mail: no account needed. */
 /** A run by its live link, no account: null when the link is not open. */
 /** A reaction to a run watched by its link; no account. What comes back is the run's recent reactions. */
-export async function reactToRun(base: string, id: string, token: string, emoji: string, name?: string, fetchImpl: Fetch = fetch): Promise<Reaction[]> {
-  const response = await fetchImpl(`${base.replace(/\/$/, "")}/public/runs/${encodeURIComponent(id)}/reactions?t=${encodeURIComponent(token)}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ emoji, ...(name ? { name } : {}) }),
-  });
+export async function reactToRun(
+  base: string,
+  id: string,
+  token: string,
+  emoji: string,
+  name?: string,
+  fetchImpl: Fetch = fetch,
+): Promise<Reaction[]> {
+  const response = await fetchImpl(
+    `${base.replace(/\/$/, "")}/public/runs/${encodeURIComponent(id)}/reactions?t=${encodeURIComponent(token)}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ emoji, ...(name ? { name } : {}) }),
+    },
+  );
   const body = (await response.json()) as { reactions?: Reaction[]; error?: string };
   if (response.status !== 200 || !body.reactions) throw new SyncError("error", undefined, body.error ?? "that did not land");
   return body.reactions;
 }
 
 export async function publicRun(base: string, id: string, token: string, fetchImpl: Fetch = fetch): Promise<PublicRun | null> {
-  const response = await fetchImpl(`${base.replace(/\/$/, "")}/public/runs/${encodeURIComponent(id)}?t=${encodeURIComponent(token)}`, { cache: "no-store" });
+  const response = await fetchImpl(`${base.replace(/\/$/, "")}/public/runs/${encodeURIComponent(id)}?t=${encodeURIComponent(token)}`, {
+    cache: "no-store",
+  });
   if (!(response.headers.get("content-type") ?? "").includes("application/json")) throw new SyncError("error", undefined, "no answer");
   const body = (await response.json()) as PublicRun & { found?: boolean };
   if (response.status === 410 || body.found === false) return null;
@@ -619,7 +672,11 @@ export function publicSocketUrl(apiBase: string, id: string, token: string): str
 }
 
 export function purchaseFileByToken(base: string, ref: string, token: string, fetchImpl: Fetch = fetch): Promise<Uint8Array> {
-  return fetchBytes(`${base.replace(/\/$/, "")}/purchases/${encodeURIComponent(ref)}/file?t=${encodeURIComponent(token)}`, undefined, fetchImpl);
+  return fetchBytes(
+    `${base.replace(/\/$/, "")}/purchases/${encodeURIComponent(ref)}/file?t=${encodeURIComponent(token)}`,
+    undefined,
+    fetchImpl,
+  );
 }
 
 /** Who claimed a signing key. No account: the badge asks for any signature it sees. */
@@ -644,11 +701,7 @@ export async function peekInvite(base: string, token: string, accessToken?: stri
   return (await response.json()) as InvitePeek;
 }
 
-export function createApi(
-  base: string,
-  getAccessToken: () => Promise<string>,
-  fetchImpl: Fetch = fetch,
-): Api {
+export function createApi(base: string, getAccessToken: () => Promise<string>, fetchImpl: Fetch = fetch): Api {
   const root = base.replace(/\/$/, "");
 
   async function request<T>(
@@ -724,7 +777,9 @@ export function createApi(
     },
     appendEvents: async (id, events) => {
       // A session the server does not know answers `found: false` with a 200 and nothing appended.
-      const { body } = await request<{ found?: boolean; appended?: SessionEvent[]; seq?: number }>("POST", `/sessions/${id}/events`, { events });
+      const { body } = await request<{ found?: boolean; appended?: SessionEvent[]; seq?: number }>("POST", `/sessions/${id}/events`, {
+        events,
+      });
       if (body.found === false) throw new SyncError("error", undefined, "the server does not know this run");
       return { appended: body.appended ?? [], seq: body.seq ?? 0 };
     },
@@ -755,23 +810,42 @@ export function createApi(
       return body.publisher;
     },
     renamePublisher: async (name) => {
-      const { status, body } = await request<{ publisher?: PublisherView | null; listings?: number; error?: string }>("PATCH", "/publishers", { name });
+      const { status, body } = await request<{ publisher?: PublisherView | null; listings?: number; error?: string }>(
+        "PATCH",
+        "/publishers",
+        { name },
+      );
       if (status !== 200 || !body.publisher) throw new Error(body.error ?? "that name could not be changed");
       return { publisher: body.publisher, listings: body.listings ?? 0 };
     },
     connectPublisher: async () => {
-      const { status, body } = await request<{ url?: string; available?: boolean; error?: string; publisher?: null }>("POST", "/publishers/connect");
+      const { status, body } = await request<{ url?: string; available?: boolean; error?: string; publisher?: null }>(
+        "POST",
+        "/publishers/connect",
+      );
       if (body.available === false) return { available: false };
       if (status !== 200 || !body.url) throw new Error(body.error ?? "payouts could not be set up just now");
       return { url: body.url };
     },
-    refreshPublisherConnect: async () => (await request<{ publisher: PublisherView | null }>("POST", "/publishers/connect/refresh")).body.publisher ?? null,
+    refreshPublisherConnect: async () =>
+      (await request<{ publisher: PublisherView | null }>("POST", "/publishers/connect/refresh")).body.publisher ?? null,
     publisherMembers: async () => {
-      const { body } = await request<{ members?: PublisherMember[]; invitations?: PublisherInvitation[]; available?: boolean }>("GET", "/publishers/members");
-      return { members: body.members ?? [], invitations: body.invitations ?? [], ...(body.available === false ? { available: false as const } : {}) };
+      const { body } = await request<{ members?: PublisherMember[]; invitations?: PublisherInvitation[]; available?: boolean }>(
+        "GET",
+        "/publishers/members",
+      );
+      return {
+        members: body.members ?? [],
+        invitations: body.invitations ?? [],
+        ...(body.available === false ? { available: false as const } : {}),
+      };
     },
     invitePublisherMember: async (email, role) => {
-      const { status, body } = await request<{ invitation?: PublisherInvitation; available?: boolean; error?: string }>("POST", "/publishers/members/invite", { email, role });
+      const { status, body } = await request<{ invitation?: PublisherInvitation; available?: boolean; error?: string }>(
+        "POST",
+        "/publishers/members/invite",
+        { email, role },
+      );
       if (body.available === false) return { available: false };
       if (status !== 200 || !body.invitation) throw new Error(body.error ?? "the invitation could not be sent");
       return body.invitation;
@@ -790,13 +864,24 @@ export function createApi(
       if (status !== 200) throw new Error(body.error ?? "the invitation could not be taken back");
     },
     inviteFriend: async (email) => {
-      const { status, body } = await request<{ sent?: boolean; email?: string; available?: boolean; error?: string }>("POST", "/invitations", { email });
+      const { status, body } = await request<{ sent?: boolean; email?: string; available?: boolean; error?: string }>(
+        "POST",
+        "/invitations",
+        { email },
+      );
       if (body.available === false) return { available: false };
       if (status !== 200 || !body.sent) throw new Error(body.error ?? "the invitation could not be sent");
       return { sent: true, email: body.email ?? email };
     },
     startPurchase: async (packId) => {
-      const { status, body } = await request<{ url?: string; ref?: string; available?: boolean; found?: boolean; owned?: boolean; error?: string }>("POST", `/listings/${encodeURIComponent(packId)}/checkout`);
+      const { status, body } = await request<{
+        url?: string;
+        ref?: string;
+        available?: boolean;
+        found?: boolean;
+        owned?: boolean;
+        error?: string;
+      }>("POST", `/listings/${encodeURIComponent(packId)}/checkout`);
       if (body.owned === true) return { owned: true };
       if (body.available === false) return { available: false };
       if (body.found === false) return { found: false };
@@ -811,28 +896,43 @@ export function createApi(
     myPurchases: async () => (await request<{ purchases?: Purchase[] }>("GET", "/me/purchases")).body.purchases ?? [],
     sales: async () => (await request<{ sales?: SaleRow[] }>("GET", "/publishers/sales")).body.sales ?? [],
     reissueSale: async (ref) => {
-      const { status, body } = await request<{ sale?: SaleRow; error?: string }>("POST", `/publishers/sales/${encodeURIComponent(ref)}/reissue`);
+      const { status, body } = await request<{ sale?: SaleRow; error?: string }>(
+        "POST",
+        `/publishers/sales/${encodeURIComponent(ref)}/reissue`,
+      );
       if (status !== 200 || !body.sale) throw new Error(body.error ?? "that could not be reissued");
       return body.sale;
     },
     revokeSale: async (ref) => {
-      const { status, body } = await request<{ sale?: SaleRow; error?: string }>("POST", `/publishers/sales/${encodeURIComponent(ref)}/revoke`);
+      const { status, body } = await request<{ sale?: SaleRow; error?: string }>(
+        "POST",
+        `/publishers/sales/${encodeURIComponent(ref)}/revoke`,
+      );
       if (status !== 200 || !body.sale) throw new Error(body.error ?? "that could not be revoked");
       return body.sale;
     },
     publisherPacks: async () => (await request<{ packs?: PublisherPack[] }>("GET", "/publishers/packs")).body.packs ?? [],
     putPublisherPack: async (packId, body) => {
-      const { status, body: out } = await request<{ pack?: PublisherPack; error?: string }>("PUT", `/publishers/packs/${encodeURIComponent(packId)}`, body);
+      const { status, body: out } = await request<{ pack?: PublisherPack; error?: string }>(
+        "PUT",
+        `/publishers/packs/${encodeURIComponent(packId)}`,
+        body,
+      );
       if (status !== 200 || !out.pack) throw new Error(out.error ?? "the pack could not be uploaded");
       return out.pack;
     },
     listPublisherPack: async (packId, price) => {
-      const { status, body } = await request<{ pack?: PublisherPack; available?: boolean; error?: string }>("POST", `/publishers/packs/${encodeURIComponent(packId)}/listing`, price ?? {});
+      const { status, body } = await request<{ pack?: PublisherPack; available?: boolean; error?: string }>(
+        "POST",
+        `/publishers/packs/${encodeURIComponent(packId)}/listing`,
+        price ?? {},
+      );
       if (body.available === false) return { available: false };
       if (status !== 200 || !body.pack) throw new Error(body.error ?? "the pack could not be listed");
       return body.pack;
     },
-    unlistPublisherPack: async (packId) => (await request<{ pack?: PublisherPack }>("DELETE", `/publishers/packs/${encodeURIComponent(packId)}/listing`)).body.pack ?? null,
+    unlistPublisherPack: async (packId) =>
+      (await request<{ pack?: PublisherPack }>("DELETE", `/publishers/packs/${encodeURIComponent(packId)}/listing`)).body.pack ?? null,
     deletePublisherPack: async (packId) => {
       await request("DELETE", `/publishers/packs/${encodeURIComponent(packId)}`);
     },
@@ -844,7 +944,11 @@ export function createApi(
     },
 
     createRace: async (race) => {
-      const { status, body } = await request<{ race?: RaceMeta; entries?: RaceEntry[]; error?: string; plan?: string }>("POST", "/races", race);
+      const { status, body } = await request<{ race?: RaceMeta; entries?: RaceEntry[]; error?: string; plan?: string }>(
+        "POST",
+        "/races",
+        race,
+      );
       if (status === 402 && body.plan) throw new PlanError(body.plan, body.error ?? "that is part of a plan this account does not have");
       if (status !== 200 || !body.race) throw new Error(body.error ?? "the race could not be started");
       return { meta: body.race, entries: body.entries ?? [] };
@@ -856,33 +960,73 @@ export function createApi(
       return { meta: body.race, entries: body.entries ?? [] };
     },
     getRace: async (id) => {
-      const { status, body } = await request<{ found: boolean; race?: RaceMeta; entries?: RaceEntry[] }>("GET", `/races/${encodeURIComponent(id)}`);
+      const { status, body } = await request<{ found: boolean; race?: RaceMeta; entries?: RaceEntry[] }>(
+        "GET",
+        `/races/${encodeURIComponent(id)}`,
+      );
       return status === 200 && body.found && body.race ? { meta: body.race, entries: body.entries ?? [] } : null;
     },
     putRaceEntry: async (id, patch) => {
-      const { status, body } = await request<{ found?: boolean; race?: RaceMeta; entries?: RaceEntry[] }>("PUT", `/races/${encodeURIComponent(id)}/entries/me`, patch);
+      const { status, body } = await request<{ found?: boolean; race?: RaceMeta; entries?: RaceEntry[] }>(
+        "PUT",
+        `/races/${encodeURIComponent(id)}/entries/me`,
+        patch,
+      );
       return status === 200 && body.race ? { meta: body.race, entries: body.entries ?? [] } : null;
     },
     patchRace: async (id, patch) => {
-      const { status, body } = await request<{ found?: boolean; race?: RaceMeta; entries?: RaceEntry[]; error?: string }>("PATCH", `/races/${encodeURIComponent(id)}`, patch);
+      const { status, body } = await request<{ found?: boolean; race?: RaceMeta; entries?: RaceEntry[]; error?: string }>(
+        "PATCH",
+        `/races/${encodeURIComponent(id)}`,
+        patch,
+      );
       if (status === 422) throw new Error(body.error ?? "that could not be changed");
       return status === 200 && body.race ? { meta: body.race, entries: body.entries ?? [] } : null;
     },
     inviteToRace: async (id, email) => {
-      const { status, body } = await request<{ link?: string; code?: string; error?: string }>("POST", `/races/${encodeURIComponent(id)}/invites`, { email });
+      const { status, body } = await request<{ link?: string; code?: string; error?: string }>(
+        "POST",
+        `/races/${encodeURIComponent(id)}/invites`,
+        { email },
+      );
       if (status !== 200 || !body.code) throw new Error(body.error ?? "the invitation could not be sent");
       return { link: body.link ?? "", code: body.code };
     },
 
     connections: async () => {
-      const { body } = await request<{ available?: boolean; discord?: DiscordConnection | null; connections?: Connection[]; verify?: boolean }>("GET", "/connections");
+      const { body } = await request<{
+        available?: boolean;
+        discord?: DiscordConnection | null;
+        connections?: Connection[];
+        verify?: boolean;
+      }>("GET", "/connections");
       // A server written before an account could hold several sends the one
       // it has; the list is made from it so this page has one thing to read.
-      const listed = body.connections ?? (body.discord ? [{ service: "discord" as const, accountId: body.discord.discordUserId, name: body.discord.name, linkedAt: body.discord.linkedAt }] : []);
-      return { available: body.available === true, connections: listed, discord: body.discord ?? null, ...(body.verify === true ? { verify: true } : {}) };
+      const listed =
+        body.connections ??
+        (body.discord
+          ? [
+              {
+                service: "discord" as const,
+                accountId: body.discord.discordUserId,
+                name: body.discord.name,
+                linkedAt: body.discord.linkedAt,
+              },
+            ]
+          : []);
+      return {
+        available: body.available === true,
+        connections: listed,
+        discord: body.discord ?? null,
+        ...(body.verify === true ? { verify: true } : {}),
+      };
     },
     linkDiscord: async (code) => {
-      const { status, body } = await request<{ linked?: boolean; discord?: DiscordConnection; error?: string }>("POST", "/connections/discord", { code });
+      const { status, body } = await request<{ linked?: boolean; discord?: DiscordConnection; error?: string }>(
+        "POST",
+        "/connections/discord",
+        { code },
+      );
       if (status !== 200 || !body.discord) throw new SyncError("error", undefined, body.error ?? "that code could not be linked");
       return body.discord;
     },
@@ -895,7 +1039,11 @@ export function createApi(
       return body.url;
     },
     claimGuild: async (code) => {
-      const { status, body } = await request<{ claimed?: boolean; guild?: Guild; plan?: string; upgrade?: boolean; error?: string }>("POST", "/guilds/claim", { code });
+      const { status, body } = await request<{ claimed?: boolean; guild?: Guild; plan?: string; upgrade?: boolean; error?: string }>(
+        "POST",
+        "/guilds/claim",
+        { code },
+      );
       if (status !== 200 || !body.guild) throw new SyncError("error", undefined, body.error ?? "that server could not be claimed");
       return { guild: body.guild, plan: body.plan ?? "server", upgrade: body.upgrade === true };
     },
@@ -903,25 +1051,41 @@ export function createApi(
       const { body } = await request<{ guilds?: Guild[]; server?: boolean; open?: boolean; allowed?: number }>("GET", "/guilds");
       // How many this account may claim is the plan's to say; a server
       // written before it said so meant three.
-      return { guilds: body.guilds ?? [], server: body.server !== false, open: body.open === true, allowed: typeof body.allowed === "number" ? body.allowed : 3 };
+      return {
+        guilds: body.guilds ?? [],
+        server: body.server !== false,
+        open: body.open === true,
+        allowed: typeof body.allowed === "number" ? body.allowed : 3,
+      };
     },
     releaseGuild: async (guildId) => {
       await request("DELETE", `/guilds/${encodeURIComponent(guildId)}`);
     },
-    guildPacks: async (guildId) => (await request<{ packs?: GuildPackMeta[] }>("GET", `/guilds/${encodeURIComponent(guildId)}/packs`)).body.packs ?? [],
+    guildPacks: async (guildId) =>
+      (await request<{ packs?: GuildPackMeta[] }>("GET", `/guilds/${encodeURIComponent(guildId)}/packs`)).body.packs ?? [],
     delegatePack: async (guildId, pack) => {
       const { packId, ...rest } = pack;
-      const { status, body } = await request<{ kept?: boolean; pack?: GuildPackMeta; error?: string }>("PUT", `/guilds/${encodeURIComponent(guildId)}/packs/${encodeURIComponent(packId)}`, rest);
-      if (status !== 200 || !body.pack) throw new SyncError(status === 413 ? "too-large" : "error", undefined, body.error ?? "that pack could not be added");
+      const { status, body } = await request<{ kept?: boolean; pack?: GuildPackMeta; error?: string }>(
+        "PUT",
+        `/guilds/${encodeURIComponent(guildId)}/packs/${encodeURIComponent(packId)}`,
+        rest,
+      );
+      if (status !== 200 || !body.pack)
+        throw new SyncError(status === 413 ? "too-large" : "error", undefined, body.error ?? "that pack could not be added");
       return body.pack;
     },
     undelegatePack: async (guildId, packId) => {
       await request("DELETE", `/guilds/${encodeURIComponent(guildId)}/packs/${encodeURIComponent(packId)}`);
     },
     createInvite: async (sessionId, email, role) => {
-      const { status, body } = await request<{ invite?: Invite; link?: string; error?: string; plan?: string }>("POST", `/sessions/${sessionId}/invites`, { email, role });
+      const { status, body } = await request<{ invite?: Invite; link?: string; error?: string; plan?: string }>(
+        "POST",
+        `/sessions/${sessionId}/invites`,
+        { email, role },
+      );
       if (status === 402 && body.plan) throw new PlanError(body.plan, body.error ?? "that is part of a plan this account does not have");
-      if (status !== 200 || !body.invite || !body.link) throw new SyncError("error", undefined, body.error ?? "the invitation was not sent");
+      if (status !== 200 || !body.invite || !body.link)
+        throw new SyncError("error", undefined, body.error ?? "the invitation was not sent");
       return { invite: body.invite, link: body.link };
     },
     listInvites: async (sessionId) => (await request<{ invites?: Invite[] }>("GET", `/sessions/${sessionId}/invites`)).body.invites ?? [],
@@ -929,7 +1093,10 @@ export function createApi(
       await request("DELETE", `/sessions/${sessionId}/invites/${encodeURIComponent(token)}`);
     },
     shareRun: async (sessionId) => {
-      const { status, body } = await request<{ link?: string; already?: boolean; error?: string; plan?: string }>("POST", `/sessions/${encodeURIComponent(sessionId)}/public`);
+      const { status, body } = await request<{ link?: string; already?: boolean; error?: string; plan?: string }>(
+        "POST",
+        `/sessions/${encodeURIComponent(sessionId)}/public`,
+      );
       if (status === 402 && body.plan) throw new PlanError(body.plan, body.error ?? "that is part of a plan this account does not have");
       // A run already open keeps the link it has, and the server cannot
       // repeat it: it keeps a hash. So there is no link to hand back, and
@@ -940,13 +1107,26 @@ export function createApi(
       return { link: body.link };
     },
     watchPublicRun: async (sessionId, token) => {
-      const { status, body } = await request<{ sessionId?: string; role?: "owner" | "player" | "viewer"; error?: string; found?: boolean }>("POST", `/public/runs/${encodeURIComponent(sessionId)}/watch?t=${encodeURIComponent(token)}`);
-      if (status !== 200 || !body.sessionId || !body.role) throw new SyncError("error", undefined, body.error ?? (body.found === false ? "this link is not open any more" : "that seat could not be taken"));
+      const { status, body } = await request<{ sessionId?: string; role?: "owner" | "player" | "viewer"; error?: string; found?: boolean }>(
+        "POST",
+        `/public/runs/${encodeURIComponent(sessionId)}/watch?t=${encodeURIComponent(token)}`,
+      );
+      if (status !== 200 || !body.sessionId || !body.role)
+        throw new SyncError(
+          "error",
+          undefined,
+          body.error ?? (body.found === false ? "this link is not open any more" : "that seat could not be taken"),
+        );
       return { sessionId: body.sessionId, role: body.role };
     },
-    reactions: async (sessionId) => (await request<{ reactions?: Reaction[] }>("GET", `/sessions/${encodeURIComponent(sessionId)}/reactions`)).body.reactions ?? [],
+    reactions: async (sessionId) =>
+      (await request<{ reactions?: Reaction[] }>("GET", `/sessions/${encodeURIComponent(sessionId)}/reactions`)).body.reactions ?? [],
     react: async (sessionId, emoji) => {
-      const { status, body } = await request<{ reactions?: Reaction[]; error?: string }>("POST", `/sessions/${encodeURIComponent(sessionId)}/reactions`, { emoji });
+      const { status, body } = await request<{ reactions?: Reaction[]; error?: string }>(
+        "POST",
+        `/sessions/${encodeURIComponent(sessionId)}/reactions`,
+        { emoji },
+      );
       if (status !== 200 || !body.reactions) throw new SyncError("error", undefined, body.error ?? "that did not land");
       return body.reactions;
     },
@@ -955,12 +1135,20 @@ export function createApi(
     },
     asks: async (sessionId) => (await request<{ asks?: Ask[] }>("GET", `/sessions/${encodeURIComponent(sessionId)}/asks`)).body.asks ?? [],
     answerAsk: async (sessionId, askId, answer, reason) => {
-      const { status, body } = await request<{ asks?: Ask[]; error?: string }>("POST", `/sessions/${encodeURIComponent(sessionId)}/asks/${encodeURIComponent(askId)}`, { answer, ...(reason ? { reason } : {}) });
+      const { status, body } = await request<{ asks?: Ask[]; error?: string }>(
+        "POST",
+        `/sessions/${encodeURIComponent(sessionId)}/asks/${encodeURIComponent(askId)}`,
+        { answer, ...(reason ? { reason } : {}) },
+      );
       if (status !== 200 || !body.asks) throw new SyncError("error", undefined, body.error ?? "that answer did not land");
       return body.asks;
     },
     mintAskKey: async (sessionId, policy) => {
-      const { status, body } = await request<{ key?: string; asks?: { policy: AskPolicy }; error?: string; plan?: string }>("POST", `/sessions/${encodeURIComponent(sessionId)}/ask-key`, policy ? { policy } : {});
+      const { status, body } = await request<{ key?: string; asks?: { policy: AskPolicy }; error?: string; plan?: string }>(
+        "POST",
+        `/sessions/${encodeURIComponent(sessionId)}/ask-key`,
+        policy ? { policy } : {},
+      );
       if (status === 402 && body.plan) throw new PlanError(body.plan, body.error ?? "that is part of a plan this account does not have");
       if (status !== 200 || !body.key) throw new SyncError("error", undefined, body.error ?? "no key could be made");
       return { key: body.key, policy: body.asks?.policy ?? "ask" };
@@ -974,7 +1162,11 @@ export function createApi(
     },
     streamKeys: async () => (await request<{ keys?: StreamKeys }>("GET", "/me/stream-keys")).body.keys ?? {},
     mintStreamKey: async (kind) => {
-      const { status, body } = await request<{ key?: string; keys?: StreamKeys; error?: string; plan?: string }>("POST", "/me/stream-keys", { kind });
+      const { status, body } = await request<{ key?: string; keys?: StreamKeys; error?: string; plan?: string }>(
+        "POST",
+        "/me/stream-keys",
+        { kind },
+      );
       if (status === 402 && body.plan) throw new PlanError(body.plan, body.error ?? "that is part of a plan this account does not have");
       if (status !== 200 || !body.key) throw new SyncError("error", undefined, body.error ?? "no key could be made");
       return { key: body.key, keys: body.keys ?? {} };
@@ -984,7 +1176,11 @@ export function createApi(
       await request("PUT", `/sessions/${encodeURIComponent(sessionId)}/snapshot`, { snapshot });
     },
     acceptInvite: async (token, email) => {
-      const { status, body } = await request<{ sessionId?: string; alreadyIn?: boolean; error?: string }>("POST", `/invites/${encodeURIComponent(token)}/accept`, email ? { email } : {});
+      const { status, body } = await request<{ sessionId?: string; alreadyIn?: boolean; error?: string }>(
+        "POST",
+        `/invites/${encodeURIComponent(token)}/accept`,
+        email ? { email } : {},
+      );
       if (status !== 200 || !body.sessionId) throw new SyncError("error", undefined, body.error ?? "that invitation could not be accepted");
       return { sessionId: body.sessionId, ...(body.alreadyIn ? { alreadyIn: true } : {}) };
     },
@@ -1002,7 +1198,10 @@ export function createApi(
 
     listKeys: async () => (await request<{ keys?: ApiKey[] }>("GET", "/keys")).body.keys ?? [],
     createKey: async (name, scope) => {
-      const { status, body } = await request<{ key?: ApiKey; secret?: string; error?: string }>("POST", "/keys", { name, ...(scope ? { scope } : {}) });
+      const { status, body } = await request<{ key?: ApiKey; secret?: string; error?: string }>("POST", "/keys", {
+        name,
+        ...(scope ? { scope } : {}),
+      });
       if (status !== 200 || !body.key || !body.secret) throw new SyncError("error", undefined, body.error ?? "the key was not made");
       return { key: body.key, secret: body.secret };
     },
@@ -1025,28 +1224,17 @@ export function createApi(
       return status === 200 && body.found && body.pack ? body.pack : null;
     },
     putPack: async (pack, ifMatch) =>
-      (await request<{ entry: Entry }>("PUT", `/packs/${pack.id}`, pack, ifMatch ? { "if-match": ifMatch } : {}))
-        .body.entry,
+      (await request<{ entry: Entry }>("PUT", `/packs/${pack.id}`, pack, ifMatch ? { "if-match": ifMatch } : {})).body.entry,
     deletePack: async (id) => {
       await request("DELETE", `/packs/${id}`);
     },
 
     getLicense: async (packId) => {
-      const { status, body } = await request<{ found: boolean; license?: RemoteLicense }>(
-        "GET",
-        `/licenses/${packId}`,
-      );
+      const { status, body } = await request<{ found: boolean; license?: RemoteLicense }>("GET", `/licenses/${packId}`);
       return status === 200 && body.found && body.license ? body.license : null;
     },
     putLicense: async (license, ifMatch) =>
-      (
-        await request<{ entry: Entry }>(
-          "PUT",
-          `/licenses/${license.id}`,
-          license,
-          ifMatch ? { "if-match": ifMatch } : {},
-        )
-      ).body.entry,
+      (await request<{ entry: Entry }>("PUT", `/licenses/${license.id}`, license, ifMatch ? { "if-match": ifMatch } : {})).body.entry,
     deleteLicense: async (packId) => {
       await request("DELETE", `/licenses/${packId}`);
     },

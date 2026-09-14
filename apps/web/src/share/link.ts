@@ -57,9 +57,7 @@ async function gzip(bytes: Uint8Array): Promise<Uint8Array> {
 }
 
 async function gunzip(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([bytes as BlobPart])
-    .stream()
-    .pipeThrough(new DecompressionStream("gzip"));
+  const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream("gzip"));
   return collect(stream as ReadableStream<Uint8Array>);
 }
 
@@ -84,14 +82,10 @@ export async function encodePackLink(document: unknown, base = location.href): P
   return `${url.toString().replace(/#$/, "")}${await encodePack(document)}`;
 }
 
-export type DecodeResult =
-  | { ok: true; document: unknown }
-  | { ok: false; error: string };
+export type DecodeResult = { ok: true; document: unknown } | { ok: false; error: string };
 
 export async function decodePack(fragment: string): Promise<DecodeResult> {
-  const body = fragment.startsWith(LINK_PREFIX)
-    ? fragment.slice(LINK_PREFIX.length)
-    : fragment.replace(/^#/, "");
+  const body = fragment.startsWith(LINK_PREFIX) ? fragment.slice(LINK_PREFIX.length) : fragment.replace(/^#/, "");
   if (!body) return { ok: false, error: "there is no pack in this link" };
 
   const dot = body.indexOf(".");

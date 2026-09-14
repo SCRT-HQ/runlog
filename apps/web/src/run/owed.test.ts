@@ -45,7 +45,11 @@ const pack = {
     },
   },
   counters: {
-    dread: { label: "Dread", initial: 0, triggers: [{ when: { gte: 3 }, label: "The reckoning", do: [{ do: "rollOn", table: "mutation" }] }] },
+    dread: {
+      label: "Dread",
+      initial: 0,
+      triggers: [{ when: { gte: 3 }, label: "The reckoning", do: [{ do: "rollOn", table: "mutation" }] }],
+    },
   },
 } as unknown as Pack;
 

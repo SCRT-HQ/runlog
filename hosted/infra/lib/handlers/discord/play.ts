@@ -1,4 +1,28 @@
-import { createRandom, drive, answer, reduce, agenda, closeAndEnter, snapshotOf, paperOf, awardValue, canEndRun, undoableIds, DriveError, clockOfUnit, deadlineOf, liveClocks, ranOutEvents, unitClockStart, type Agenda, type DriveAction, type DriveResult, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import {
+  createRandom,
+  drive,
+  answer,
+  reduce,
+  agenda,
+  closeAndEnter,
+  snapshotOf,
+  paperOf,
+  awardValue,
+  canEndRun,
+  undoableIds,
+  DriveError,
+  clockOfUnit,
+  deadlineOf,
+  liveClocks,
+  ranOutEvents,
+  unitClockStart,
+  type Agenda,
+  type DriveAction,
+  type DriveResult,
+  type Pending,
+  type RunEvent,
+  type RunState,
+} from "@runlog/engine";
 import { loadPackText, rollDice, tryParseDice, type Pack } from "@runlog/rules-schema";
 import { SeqConflict, type Store } from "../store.js";
 import type { CardMode, GuildRun, GuildStore } from "../guilds.js";
@@ -104,7 +128,18 @@ export interface Opened {
  */
 export async function openRun(
   deps: TableDeps,
-  input: { guildId: string; channelId: string; pack: Pack; packTitle: string; modeId: string; name?: string; players?: number; host: Seat & { sub: string }; cardMode?: CardMode; private?: boolean },
+  input: {
+    guildId: string;
+    channelId: string;
+    pack: Pack;
+    packTitle: string;
+    modeId: string;
+    name?: string;
+    players?: number;
+    host: Seat & { sub: string };
+    cardMode?: CardMode;
+    private?: boolean;
+  },
 ): Promise<Opened | { error: string }> {
   if (!deps.rest) return { error: "The bot cannot post to Discord yet: its token is not filled in on this copy of Runlog." };
   const { pack, modeId } = input;
@@ -114,12 +149,25 @@ export async function openRun(
   // for more, never more than it allows. The host takes seat one.
   const seatsWanted = mode.players ? Math.max(mode.players.min, Math.min(mode.players.max, input.players ?? mode.players.min)) : 1;
   if (mode.players && input.players !== undefined && (input.players < mode.players.min || input.players > mode.players.max)) {
-    return { error: `${mode.label} is played by ${mode.players.min === mode.players.max ? mode.players.min : `${mode.players.min} to ${mode.players.max}`}.` };
+    return {
+      error: `${mode.label} is played by ${mode.players.min === mode.players.max ? mode.players.min : `${mode.players.min} to ${mode.players.max}`}.`,
+    };
   }
   const at = deps.now();
   const id = deps.mintId();
   const seed = mode.seeded ? deps.mintId().slice(10) : undefined;
-  const first: RunEvent[] = [{ t: "RunStarted", at, packId: pack.id, packVersion: pack.version, runId: id, mode: modeId, ...(seed ? { seed } : {}), ...(seatsWanted > 1 ? { players: seatsWanted } : {}) } as RunEvent];
+  const first: RunEvent[] = [
+    {
+      t: "RunStarted",
+      at,
+      packId: pack.id,
+      packVersion: pack.version,
+      runId: id,
+      mode: modeId,
+      ...(seed ? { seed } : {}),
+      ...(seatsWanted > 1 ? { players: seatsWanted } : {}),
+    } as RunEvent,
+  ];
   // Opening draws, where the pack deals a hand at the start; the same
   // dealing the app does, from the seed where there is one.
   for (const [deckId, deck] of Object.entries(pack.decks ?? {})) {
@@ -134,12 +182,27 @@ export async function openRun(
   if (input.name?.trim()) first.push({ t: "RunRenamed", at, name: input.name.trim() } as RunEvent);
   const stamped = first.map((e) => ({ ...e, id: deps.mintId() }));
 
-  const created = await deps.store.createSession({ id, packId: pack.id, packVersion: pack.version, packTitle: input.packTitle, ...(input.name?.trim() ? { name: input.name.trim() } : {}), ownerSub: input.host.sub }, at, input.host.name, stamped as unknown as Record<string, unknown>[]);
+  const created = await deps.store.createSession(
+    {
+      id,
+      packId: pack.id,
+      packVersion: pack.version,
+      packTitle: input.packTitle,
+      ...(input.name?.trim() ? { name: input.name.trim() } : {}),
+      ownerSub: input.host.sub,
+    },
+    at,
+    input.host.name,
+    stamped as unknown as Record<string, unknown>[],
+  );
   if (!created) return { error: "That run id is taken; try again." };
 
   const threadName = `${input.packTitle} · ${mode.label}${input.name?.trim() ? ` · ${input.name.trim()}` : ""}`;
   const threadId = await deps.rest.createThread(input.channelId, threadName, input.private);
-  if (!threadId) return { error: `Discord would not open a thread here. The bot needs permission to create ${input.private ? "private" : "public"} threads in this channel.` };
+  if (!threadId)
+    return {
+      error: `Discord would not open a thread here. The bot needs permission to create ${input.private ? "private" : "public"} threads in this channel.`,
+    };
   // A private thread starts with nobody in it but the bot, so the host is
   // put in it at once; whoever else the run is for, they add themselves.
   if (input.private) await deps.rest.addThreadMember(threadId, input.host.discordId);
@@ -231,7 +294,26 @@ export function whosePress(pack: Pack, run: GuildRun, acting: number[]): string 
 
 /** Events that begin a player-visible move, for undoing a log written before moves were named. Mirrors the app's rule. */
 const isBoundary = (e: RunEvent): boolean =>
-  ["UnitEntered", "StepCompleted", "SubjectRenamed", "Checked", "Corrected", "ClockStarted", "ClockPaused", "ClockResumed", "ClockStopped", "Awarded", "ContestantAdded", "ContestantRemoved", "ContestantStateApplied", "ContestantStateRemoved", "Rolled", "ObligationResolved", "JournalWritten", "RunEnded"].includes(e.t);
+  [
+    "UnitEntered",
+    "StepCompleted",
+    "SubjectRenamed",
+    "Checked",
+    "Corrected",
+    "ClockStarted",
+    "ClockPaused",
+    "ClockResumed",
+    "ClockStopped",
+    "Awarded",
+    "ContestantAdded",
+    "ContestantRemoved",
+    "ContestantStateApplied",
+    "ContestantStateRemoved",
+    "Rolled",
+    "ObligationResolved",
+    "JournalWritten",
+    "RunEnded",
+  ].includes(e.t);
 
 export interface Played {
   card: Card;
@@ -249,7 +331,13 @@ export interface Played {
  * that stops to ask is kept on the guild-run row until the next press
  * answers it.
  */
-export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Seat, action: TableAction): Promise<Played | { error: string }> {
+export async function play(
+  deps: TableDeps,
+  run: GuildRun,
+  pack: Pack,
+  actor: Seat,
+  action: TableAction,
+): Promise<Played | { error: string }> {
   const at = deps.now();
   let events = await eventsOf(deps.store, run.sessionId);
   let state = reduce(pack, events);
@@ -337,7 +425,17 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         const points = awardValue(pack, state, action.outcome, action.contestant);
         const outcome = state.outcomes[action.outcome];
         if (points === null || !outcome) return { error: "That result cannot be awarded to them." };
-        produced = [{ t: "Awarded", at, contestant: action.contestant, outcome: action.outcome, table: outcome.table, entryId: outcome.entryId, points } as RunEvent];
+        produced = [
+          {
+            t: "Awarded",
+            at,
+            contestant: action.contestant,
+            outcome: action.outcome,
+            table: outcome.table,
+            entryId: outcome.entryId,
+            points,
+          } as RunEvent,
+        ];
         const who = state.contestants.find((c) => c.id === action.contestant)?.name ?? action.contestant;
         line = `${who} takes ${points} point${points === 1 ? "" : "s"}.`;
         break;
@@ -355,7 +453,10 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
           const ending = action.ending ?? pack.endings?.[0]?.id ?? "ended";
           produced = [...produced, { t: "RunEnded", at, ending } as RunEvent];
           ended = true;
-          mark = { text: `The **${pack.vocabulary.run.one.toLowerCase()}** is over: ${pack.endings?.find((e) => e.id === ending)?.label ?? ending}.`, color: COLORS.over };
+          mark = {
+            text: `The **${pack.vocabulary.run.one.toLowerCase()}** is over: ${pack.endings?.find((e) => e.id === ending)?.label ?? ending}.`,
+            color: COLORS.over,
+          };
           line = mark.text;
         }
         break;
@@ -366,7 +467,10 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         if (!may.ok) return { error: may.reason ?? "The run cannot end here." };
         produced = [{ t: "RunEnded", at, ending: action.ending } as RunEvent];
         ended = true;
-        mark = { text: `The **${pack.vocabulary.run.one.toLowerCase()}** is over: ${pack.endings?.find((e) => e.id === action.ending)?.label ?? action.ending}.`, color: COLORS.over };
+        mark = {
+          text: `The **${pack.vocabulary.run.one.toLowerCase()}** is over: ${pack.endings?.find((e) => e.id === action.ending)?.label ?? action.ending}.`,
+          color: COLORS.over,
+        };
         line = mark.text;
         break;
       }
@@ -405,7 +509,8 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
       }
       case "startClock": {
         // The clock a pack leaves to the player: once per unit, while the unit is open.
-        if (state.unit === 0 || agenda(pack, state, events).phase !== "step") return { error: `There is no open ${pack.vocabulary.unit.one.toLowerCase()} to time.` };
+        if (state.unit === 0 || agenda(pack, state, events).phase !== "step")
+          return { error: `There is no open ${pack.vocabulary.unit.one.toLowerCase()} to time.` };
         if (clockOfUnit(state, state.unit)) return { error: `This ${pack.vocabulary.unit.one.toLowerCase()} has its clock already.` };
         const started = unitClockStart(pack, state, state.unit, at, true);
         if (!started) return { error: "This pack has no clock to start." };
@@ -427,7 +532,8 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
         if (!run.seats || state.players < 2) return { error: "This run has no seats to take; the host plays it." };
         const key = String(action.seat);
         if (action.seat < 1 || action.seat > state.players) return { error: "No such seat." };
-        if (run.seats[key] && run.seats[key]!.discordId !== actor.discordId) return { error: `Seat ${action.seat} is ${run.seats[key]!.name}'s.` };
+        if (run.seats[key] && run.seats[key]!.discordId !== actor.discordId)
+          return { error: `Seat ${action.seat} is ${run.seats[key]!.name}'s.` };
         const mine = Object.entries(run.seats).find(([, s]) => s.discordId === actor.discordId);
         if (mine) delete run.seats[mine[0]];
         run.seats[key] = { discordId: actor.discordId, name: actor.name };
@@ -472,7 +578,11 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
   // hand is stamped here, each as a move of its own, so an undo takes it
   // back as one.
   const move = deps.mintId();
-  const stamped = produced.map((e) => ({ ...e, id: (e as { id?: string }).id ?? deps.mintId(), move: (e as { move?: string }).move ?? move }));
+  const stamped = produced.map((e) => ({
+    ...e,
+    id: (e as { id?: string }).id ?? deps.mintId(),
+    move: (e as { move?: string }).move ?? move,
+  }));
   const next = [...events, ...stamped];
   const after = reduce(pack, next);
   if (stamped.length > 0) {
@@ -482,9 +592,14 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
     const tail = (events[events.length - 1] as { seq?: number } | undefined)?.seq ?? 0;
     let seq: number;
     try {
-      ({ seq } = await deps.store.appendEvents(run.sessionId, author, at, stamped as unknown as Record<string, unknown>[], { expectSeq: tail }));
+      ({ seq } = await deps.store.appendEvents(run.sessionId, author, at, stamped as unknown as Record<string, unknown>[], {
+        expectSeq: tail,
+      }));
     } catch (error) {
-      if (error instanceof SeqConflict) return { error: "The table moved since this card was drawn, from the app perhaps. /run status posts a fresh card; press again there." };
+      if (error instanceof SeqConflict)
+        return {
+          error: "The table moved since this card was drawn, from the app perhaps. /run status posts a fresh card; press again there.",
+        };
       throw error;
     }
     if (ended) await deps.store.updateSession(run.sessionId, at, { endedAt: at });
@@ -500,7 +615,8 @@ export async function play(deps: TableDeps, run: GuildRun, pack: Pack, actor: Se
     if (deps.schedule && !ended) {
       for (const clock of liveClocks(after)) {
         const deadline = deadlineOf(clock, Date.parse(at));
-        if (deadline !== null && deadline !== asked.get(clock.id)) await deps.schedule({ sessionId: run.sessionId, clock: clock.id, at: new Date(deadline).toISOString() });
+        if (deadline !== null && deadline !== asked.get(clock.id))
+          await deps.schedule({ sessionId: run.sessionId, clock: clock.id, at: new Date(deadline).toISOString() });
       }
     }
   }
@@ -576,7 +692,9 @@ export async function catchUp(deps: TableDeps, sessionId: string): Promise<{ out
     for (const e of move) {
       if (e.t === "RunEnded") {
         ended = true;
-        lines.push(`The ${pack.vocabulary.run.one.toLowerCase()} is over: ${pack.endings?.find((x) => x.id === e.ending)?.label ?? e.ending}.`);
+        lines.push(
+          `The ${pack.vocabulary.run.one.toLowerCase()} is over: ${pack.endings?.find((x) => x.id === e.ending)?.label ?? e.ending}.`,
+        );
       }
       if (e.t === "Undone") lines.push("Took a move back.");
     }
@@ -608,7 +726,14 @@ export function seedOf(events: readonly RunEvent[]): string | undefined {
   return first && first.t === "RunStarted" && typeof first.seed === "string" ? first.seed : undefined;
 }
 
-async function writeSnapshot(deps: TableDeps, sessionId: string, pack: Pack, state: RunState, events: readonly RunEvent[], seq: number): Promise<void> {
+async function writeSnapshot(
+  deps: TableDeps,
+  sessionId: string,
+  pack: Pack,
+  state: RunState,
+  events: readonly RunEvent[],
+  seq: number,
+): Promise<void> {
   const at = deps.now();
   await deps.store.putSnapshot(sessionId, at, { ...snapshotOf(pack, state, events, at), paper: paperOf(pack, state.mode) });
   await deps.notify?.(sessionId, seq);

@@ -18,7 +18,7 @@ import { fromBase64Url, toBase64Url } from "./base64url.ts";
  * What it does buy:
  *
  *  - The distributed file is not YAML. Opening it in an editor shows binary.
- *  - Without the license key it is inert, so the file alone is worthless: 
+ *  - Without the license key it is inert, so the file alone is worthless:
  *    passing it on means passing on a key that was issued to one person.
  *  - The buyer's name is inside the sealed, signed payload, so a copy that has
  *    been opened and re-sealed is either still named or no longer verifies.
@@ -88,16 +88,14 @@ export function generateLicenseKey(): string {
 }
 
 /** Normalized so spacing and case in a typed key do not matter. */
-const normalizeKey = (key: string) => key.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+const normalizeKey = (key: string) =>
+  key
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
 
 async function deriveKey(licenseKey: string, salt: Uint8Array<ArrayBuffer>, iterations: number) {
-  const material = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(normalizeKey(licenseKey)),
-    "PBKDF2",
-    false,
-    ["deriveKey"],
-  );
+  const material = await crypto.subtle.importKey("raw", encoder.encode(normalizeKey(licenseKey)), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
     { name: "PBKDF2", salt: salt, iterations, hash: "SHA-256" },
     material,
@@ -123,11 +121,7 @@ export async function seal(
   const key = await deriveKey(licenseKey, salt, KDF_ITERATIONS);
 
   const plaintext = encoder.encode(JSON.stringify(document));
-  const sealed = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: iv },
-    key,
-    plaintext,
-  );
+  const sealed = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, plaintext);
 
   const header: ContainerHeader = {
     v: 1,
@@ -166,9 +160,7 @@ export function readHeader(data: Uint8Array): ContainerHeader | null {
   if (!start) return null;
   try {
     const length = new DataView(data.buffer, data.byteOffset).getUint32(start, false);
-    const header = JSON.parse(
-      decoder.decode(data.subarray(start + 4, start + 4 + length)),
-    ) as ContainerHeader;
+    const header = JSON.parse(decoder.decode(data.subarray(start + 4, start + 4 + length))) as ContainerHeader;
     return header.v === 1 ? header : null;
   } catch {
     return null;
@@ -176,8 +168,7 @@ export function readHeader(data: Uint8Array): ContainerHeader | null {
 }
 
 export type OpenResult =
-  | { ok: true; document: unknown }
-  | { ok: false; reason: "not-sealed" | "unsupported" | "wrong-key" | "damaged"; message: string };
+  { ok: true; document: unknown } | { ok: false; reason: "not-sealed" | "unsupported" | "wrong-key" | "damaged"; message: string };
 
 export async function open(data: Uint8Array, licenseKey: string): Promise<OpenResult> {
   const header = readHeader(data);
@@ -202,11 +193,7 @@ export async function open(data: Uint8Array, licenseKey: string): Promise<OpenRe
     const body = new Uint8Array(new ArrayBuffer(view.length));
     body.set(view);
     const key = await deriveKey(licenseKey, fromBase64Url(header.salt), header.iterations);
-    const plain = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: fromBase64Url(header.iv) },
-      key,
-      body,
-    );
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromBase64Url(header.iv) }, key, body);
     return { ok: true, document: JSON.parse(decoder.decode(plain)) as unknown };
   } catch {
     // AES-GCM fails the same way for a wrong key and for a corrupted file, and

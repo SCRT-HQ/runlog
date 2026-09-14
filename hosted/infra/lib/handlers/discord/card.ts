@@ -1,4 +1,29 @@
-import { actingSeats, canEndRun, challenges, clockOfUnit, closesUnit, entryWords, hitsOn, constrainedByOf, constraintsFor, eligibleTargets, entryTextOf, formatClock, elapsedMs, liveClocks, moderation, rolesForUnit, standings, subjectName, subjectTitle, unitClockFor, type Agenda, type Pending, type RunEvent, type RunState } from "@runlog/engine";
+import {
+  actingSeats,
+  canEndRun,
+  challenges,
+  clockOfUnit,
+  closesUnit,
+  entryWords,
+  hitsOn,
+  constrainedByOf,
+  constraintsFor,
+  eligibleTargets,
+  entryTextOf,
+  formatClock,
+  elapsedMs,
+  liveClocks,
+  moderation,
+  rolesForUnit,
+  standings,
+  subjectName,
+  subjectTitle,
+  unitClockFor,
+  type Agenda,
+  type Pending,
+  type RunEvent,
+  type RunState,
+} from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import type { GuildRun } from "../guilds.js";
 import { REACTIONS } from "./reactions.js";
@@ -46,7 +71,14 @@ export interface Mark {
   color: number;
 }
 
-export function cardFor(input: { pack: Pack; state: RunState; events: readonly RunEvent[]; agenda: Agenda; run: Pick<GuildRun, "sessionId" | "hostName" | "seats" | "cardMode">; pending?: Pending }): Card {
+export function cardFor(input: {
+  pack: Pack;
+  state: RunState;
+  events: readonly RunEvent[];
+  agenda: Agenda;
+  run: Pick<GuildRun, "sessionId" | "hostName" | "seats" | "cardMode">;
+  pending?: Pending;
+}): Card {
   const { pack, state, agenda, run, pending, events } = input;
   const v = pack.vocabulary;
   const id = run.sessionId;
@@ -56,7 +88,13 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
   const moderated = Boolean(moderation(pack, state));
   const ending = state.ending ? (pack.endings?.find((e) => e.id === state.ending)?.label ?? state.ending) : null;
   const active = agenda.active;
-  const stepLabel = active ? ("label" in active.step && active.step.label ? active.step.label : active.step.kind === "rollTable" ? (pack.tables[active.step.table]?.title ?? active.step.table) : active.phase.label) : null;
+  const stepLabel = active
+    ? "label" in active.step && active.step.label
+      ? active.step.label
+      : active.step.kind === "rollTable"
+        ? (pack.tables[active.step.table]?.title ?? active.step.table)
+        : active.phase.label
+    : null;
 
   const embed: Embed = {
     title: `${state.name ?? pack.title} · ${mode?.label ?? state.mode}`,
@@ -73,7 +111,11 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
   const fields = embed.fields!;
   // What the pack says on entering the unit, first on the card, until the
   // unit's first step is done: the welcome once, the unit's word each time.
-  for (const w of entryWords(pack, state)) fields.push({ name: state.unit === 1 && pack.unit.intro && w === pack.unit.intro.trim() ? "Welcome" : `This ${v.unit.one.toLowerCase()}`, value: clip(w) });
+  for (const w of entryWords(pack, state))
+    fields.push({
+      name: state.unit === 1 && pack.unit.intro && w === pack.unit.intro.trim() ? "Welcome" : `This ${v.unit.one.toLowerCase()}`,
+      value: clip(w),
+    });
 
   if (pending) {
     const r = pending.request;
@@ -81,14 +123,19 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
     fields.push({ name: "Waiting on", value: clip(`${what} - or Undo, to take the move back.`) });
   }
   const constraints = active ? constraintsFor(pack, state, constrainedByOf(active.step)) : [];
-  if (constraints.length > 0) fields.push({ name: "The game has already had its say", value: clip(constraints.map((c) => `• ${c}`).join("\n")) });
+  if (constraints.length > 0)
+    fields.push({ name: "The game has already had its say", value: clip(constraints.map((c) => `• ${c}`).join("\n")) });
   // This unit's results, each under the name of the table it came from
   // ("Twist", "Weather"), not a word of ours; the last few, in order. A
   // result from an earlier unit is the log's, not the table's: what the
   // live page shows as "this unit so far", and nothing older.
   for (const o of state.outcomes.filter((o) => o.unit === state.unit).slice(-4)) {
-    const hit = o.targetSubject !== null && o.targetSubject !== undefined ? state.subjects.find((s) => s.id === o.targetSubject) : undefined;
-    fields.push({ name: clip(pack.tables[o.table]?.title ?? o.table, 256), value: clip(`${entryTextOf(pack, o)}${hit ? ` → ${subjectTitle(pack, hit)}` : ""}`) });
+    const hit =
+      o.targetSubject !== null && o.targetSubject !== undefined ? state.subjects.find((s) => s.id === o.targetSubject) : undefined;
+    fields.push({
+      name: clip(pack.tables[o.table]?.title ?? o.table, 256),
+      value: clip(`${entryTextOf(pack, o)}${hit ? ` → ${subjectTitle(pack, hit)}` : ""}`),
+    });
   }
   // The board, as the nearest thing an embed has to a table: one small
   // block per thing, its name in bold over what is known of it, laid three
@@ -101,15 +148,27 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
       .slice(-6)
       .map((s) => ({ name: subjectName(pack, s), value: aboutSubject(pack, state, s) || "-" })),
     ...Object.entries(state.counters ?? {}).map(([cid, value]) => ({ name: pack.counters?.[cid]?.label ?? cid, value: String(value) })),
-    ...Object.entries(state.resources ?? {}).map(([rid, value]) => ({ name: pack.resources?.[rid]?.label ?? rid, value: `${value}${pack.resources?.[rid]?.max !== undefined ? ` / ${pack.resources[rid]!.max}` : ""}` })),
+    ...Object.entries(state.resources ?? {}).map(([rid, value]) => ({
+      name: pack.resources?.[rid]?.label ?? rid,
+      value: `${value}${pack.resources?.[rid]?.max !== undefined ? ` / ${pack.resources[rid]!.max}` : ""}`,
+    })),
   ];
   for (const b of board) fields.push({ name: clip(b.name, 256), value: clip(b.value), inline: true });
   const now = Date.now();
-  const clocks = liveClocks(state).map((c) => `${c.label}: ${formatClock(c.seconds === null ? elapsedMs(c, now) : Math.max(0, c.seconds * 1000 - elapsedMs(c, now)))}${c.status === "paused" ? " (paused)" : ""}`);
+  const clocks = liveClocks(state).map(
+    (c) =>
+      `${c.label}: ${formatClock(c.seconds === null ? elapsedMs(c, now) : Math.max(0, c.seconds * 1000 - elapsedMs(c, now)))}${c.status === "paused" ? " (paused)" : ""}`,
+  );
   if (clocks.length > 0) fields.push({ name: "Clocks", value: clip(clocks.join("\n")), inline: true });
   if (moderated) {
     const board = standings(state);
-    fields.push({ name: "Standings", value: board.length === 0 ? "Nobody on the roster yet. Press Join." : clip(board.map((s) => `#${s.place} ${s.contestant.name} · ${s.points}`).join("\n")) });
+    fields.push({
+      name: "Standings",
+      value:
+        board.length === 0
+          ? "Nobody on the roster yet. Press Join."
+          : clip(board.map((s) => `#${s.place} ${s.contestant.name} · ${s.points}`).join("\n")),
+    });
   }
   if (state.players > 1) {
     // Who sits where, and which role each seat holds this unit: the same
@@ -131,16 +190,30 @@ export function cardFor(input: { pack: Pack; state: RunState; events: readonly R
   // The opening card, the one that stays pinned, offers where the cards after it will live; the host chooses.
   if (state.unit === 0 && components.length < 5) {
     components.push(
-      select(customId(id, "cards"), run.cardMode === "pinned" ? "The card: pinned at the top, edited in place" : "The card: follows the thread, a fresh one after every move", [
-        { label: "Follow the thread: a fresh card after every move, at the bottom", value: "follow" },
-        { label: "Pinned at the top: one card, edited in place", value: "pinned" },
-      ]),
+      select(
+        customId(id, "cards"),
+        run.cardMode === "pinned"
+          ? "The card: pinned at the top, edited in place"
+          : "The card: follows the thread, a fresh one after every move",
+        [
+          { label: "Follow the thread: a fresh card after every move, at the bottom", value: "follow" },
+          { label: "Pinned at the top: one card, edited in place", value: "pinned" },
+        ],
+      ),
     );
   }
   return { embeds: [embed], components };
 }
 
-function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, seats: GuildRun["seats"], pending?: Pending, seeded = false): unknown[] {
+function componentsFor(
+  id: string,
+  pack: Pack,
+  state: RunState,
+  agenda: Agenda,
+  seats: GuildRun["seats"],
+  pending?: Pending,
+  seeded = false,
+): unknown[] {
   const rows: unknown[] = [];
   const v = pack.vocabulary;
   // The step this card was drawn for, on every button that drives it, so a
@@ -167,22 +240,48 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
     let undoShown = false;
     const choose = (label: string, options: Array<{ label: string; value: string }>) => {
       if (options.length === 0) {
-        rows.push(row(button(customId(id, "none"), `Nothing to choose for: ${label}`.slice(0, 80), ButtonStyle.Secondary, true), button(customId(id, "undo"), "Undo")));
+        rows.push(
+          row(
+            button(customId(id, "none"), `Nothing to choose for: ${label}`.slice(0, 80), ButtonStyle.Secondary, true),
+            button(customId(id, "undo"), "Undo"),
+          ),
+        );
         undoShown = true;
       } else rows.push(select(customId(id, "target"), label, options));
     };
-    if (r.kind === "roll") rows.push(row(button(customId(id, "roll"), `Roll ${r.dice}`, ButtonStyle.Primary), ...(seeded ? [] : [button(customId(id, "typeroll"), `Enter ${r.dice}…`)])));
-    else if (r.kind === "ask" || (r.kind === "prompt" && r.promptKind === "confirm")) rows.push(row(button(customId(id, "yes"), "Yes", ButtonStyle.Success), button(customId(id, "no"), "No", ButtonStyle.Danger)));
+    if (r.kind === "roll")
+      rows.push(
+        row(
+          button(customId(id, "roll"), `Roll ${r.dice}`, ButtonStyle.Primary),
+          ...(seeded ? [] : [button(customId(id, "typeroll"), `Enter ${r.dice}…`)]),
+        ),
+      );
+    else if (r.kind === "ask" || (r.kind === "prompt" && r.promptKind === "confirm"))
+      rows.push(row(button(customId(id, "yes"), "Yes", ButtonStyle.Success), button(customId(id, "no"), "No", ButtonStyle.Danger)));
     else if (r.kind === "chooseTarget") choose(r.label, subjects(r.eligible, false));
     else if (r.kind === "prompt" && r.promptKind === "chooseSubject") choose(r.label, subjects(null, r.eligibleOnly === true));
     else if (r.kind === "prompt" && r.promptKind === "text") rows.push(row(button(customId(id, "text"), "Answer…", ButtonStyle.Primary)));
-    else if (r.kind === "prompt" && r.options && r.options.length > 0) rows.push(select(customId(id, "pick"), r.label, r.options.map((o, i) => ({ label: o, value: String(i) }))));
+    else if (r.kind === "prompt" && r.options && r.options.length > 0)
+      rows.push(
+        select(
+          customId(id, "pick"),
+          r.label,
+          r.options.map((o, i) => ({ label: o, value: String(i) })),
+        ),
+      );
     else rows.push(row(button(customId(id, "text"), "Answer…", ButtonStyle.Primary)));
     // A waiting card is still the table's card: the move that began the
     // block can be taken back from it, and a watcher can still wave, so it
     // never reads as the controls having gone.
     if (!undoShown) rows.push(row(button(customId(id, "undo"), "Undo")));
-    if (rows.length < 5) rows.push(select(customId(id, "wave"), "Wave at the table…", REACTIONS.map((emoji) => ({ label: emoji, value: emoji }))));
+    if (rows.length < 5)
+      rows.push(
+        select(
+          customId(id, "wave"),
+          "Wave at the table…",
+          REACTIONS.map((emoji) => ({ label: emoji, value: emoji })),
+        ),
+      );
     return rows;
   }
 
@@ -192,7 +291,19 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
   const ticked = agenda.checklist.every((c) => c.on || c.optional);
   // Five to a row, up to ten: a longer checklist than that is the app's to tick.
   for (let from = 0; from < Math.min(agenda.checklist.length, 10); from += 5) {
-    rows.push(row(...agenda.checklist.slice(from, from + 5).map((c) => button(customId(id, "tick", `${c.index}@${at}`), `${c.on ? "☑" : "☐"} ${c.text}${c.optional ? " (optional)" : ""}`, c.on ? ButtonStyle.Success : ButtonStyle.Secondary))));
+    rows.push(
+      row(
+        ...agenda.checklist
+          .slice(from, from + 5)
+          .map((c) =>
+            button(
+              customId(id, "tick", `${c.index}@${at}`),
+              `${c.on ? "☑" : "☐"} ${c.text}${c.optional ? " (optional)" : ""}`,
+              c.on ? ButtonStyle.Success : ButtonStyle.Secondary,
+            ),
+          ),
+      ),
+    );
   }
   const main: unknown[] = [];
   if (agenda.phase === "setup" || agenda.phase === "betweenUnits") {
@@ -203,8 +314,8 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
       main.push(button(customId(id, "step", at), `Roll: ${pack.tables[step.table]?.title ?? step.table}`, ButtonStyle.Primary));
       // Or throw real dice: the step opens, asks for the total, and the log says a person rolled it.
       if (!seeded) main.push(button(customId(id, "byhand", at), "Roll it yourself"));
-    }
-    else if (step.kind === "declareSubject") main.push(button(customId(id, "declare", at), `Declare the ${v.subject.one.toLowerCase()}…`, ButtonStyle.Primary));
+    } else if (step.kind === "declareSubject")
+      main.push(button(customId(id, "declare", at), `Declare the ${v.subject.one.toLowerCase()}…`, ButtonStyle.Primary));
     else if (closesUnit(step)) {
       // The step that closes the unit is the fork: on to the next unit in
       // one press, or finish the run, which asks how it ends where the pack
@@ -221,15 +332,24 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
   }
   // The first live clock is on the card to pause and resume; a second is in the field above.
   const clock = liveClocks(state).find((c) => c.status === "running" || c.status === "paused");
-  if (clock) main.push(button(customId(id, "clock", `${clock.status === "running" ? "pause" : "resume"}:${clock.id}`), clock.status === "running" ? `Pause ${clock.label}` : `Resume ${clock.label}`));
+  if (clock)
+    main.push(
+      button(
+        customId(id, "clock", `${clock.status === "running" ? "pause" : "resume"}:${clock.id}`),
+        clock.status === "running" ? `Pause ${clock.label}` : `Resume ${clock.label}`,
+      ),
+    );
   // A clock the pack leaves to the player is offered once per open unit, until it is started.
   const byHand = unitClockFor(pack, state);
-  if (!clock && agenda.phase === "step" && byHand?.auto === false && !clockOfUnit(state, state.unit)) main.push(button(customId(id, "clock", "start"), `Start ${byHand.label ?? `${v.unit.one} ${state.unit}`}`));
+  if (!clock && agenda.phase === "step" && byHand?.auto === false && !clockOfUnit(state, state.unit))
+    main.push(button(customId(id, "clock", "start"), `Start ${byHand.label ?? `${v.unit.one} ${state.unit}`}`));
   if (state.unit > 0 && main.length < 5) main.push(button(customId(id, "undo"), "Undo"));
   if (main.length > 0) rows.push(row(...main));
   const extras: unknown[] = [
     ...agenda.moves.slice(0, 3).map((m) => button(customId(id, "move", m), pack.moves?.[m]?.label ?? m)),
-    ...agenda.due.slice(0, 2).map((o) => button(customId(id, "settle", o.id), (o as { label?: string }).label ?? "Settle what is due", ButtonStyle.Primary)),
+    ...agenda.due
+      .slice(0, 2)
+      .map((o) => button(customId(id, "settle", o.id), (o as { label?: string }).label ?? "Settle what is due", ButtonStyle.Primary)),
   ];
   if (extras.length > 0) rows.push(row(...extras));
 
@@ -238,20 +358,39 @@ function componentsFor(id: string, pack: Pack, state: RunState, agenda: Agenda, 
     // into one's own library; the host's seat is not offered.
     const taken = seats ?? {};
     const open = Array.from({ length: state.players }, (_, i) => i + 1).filter((n) => !taken[String(n)]);
-    rows.push(row(...open.slice(0, 3).map((n) => button(customId(id, "seat", String(n)), `Take seat ${n}`, ButtonStyle.Success)), button(customId(id, "unseat"), "Leave seat"), button(customId(id, "follow"), "Follow in Runlog")));
+    rows.push(
+      row(
+        ...open.slice(0, 3).map((n) => button(customId(id, "seat", String(n)), `Take seat ${n}`, ButtonStyle.Success)),
+        button(customId(id, "unseat"), "Leave seat"),
+        button(customId(id, "follow"), "Follow in Runlog"),
+      ),
+    );
   }
   if (moderation(pack, state)) {
     rows.push(row(button(customId(id, "join"), "Join the roster", ButtonStyle.Success), button(customId(id, "leave"), "Leave")));
     const open = challenges(pack, state).filter((c) => c.open);
     const ch = open[open.length - 1];
     if (ch && state.contestants.length > 0 && rows.length < 5) {
-      rows.push(select(customId(id, "award", String(ch.outcome)), `Award ${ch.points} pt: ${ch.text.slice(0, 80)}`, state.contestants.map((c) => ({ label: c.name, value: c.id }))));
+      rows.push(
+        select(
+          customId(id, "award", String(ch.outcome)),
+          `Award ${ch.points} pt: ${ch.text.slice(0, 80)}`,
+          state.contestants.map((c) => ({ label: c.name, value: c.id })),
+        ),
+      );
     }
   }
   // A wave from anyone watching, where the card has a row to spare: the
   // same six the live page offers, landing in the same place. A menu,
   // since a row holds five buttons and there are six.
-  if (rows.length < 5) rows.push(select(customId(id, "wave"), "Wave at the table…", REACTIONS.map((emoji) => ({ label: emoji, value: emoji }))));
+  if (rows.length < 5)
+    rows.push(
+      select(
+        customId(id, "wave"),
+        "Wave at the table…",
+        REACTIONS.map((emoji) => ({ label: emoji, value: emoji })),
+      ),
+    );
   return rows.slice(0, 5);
 }
 
@@ -264,7 +403,13 @@ function aboutSubject(pack: Pack, state: RunState, s: RunState["subjects"][numbe
   const name = subjectName(pack, s);
   const hits = hitsOn(pack, state, s.id).map((h) => h.table);
   const states = s.states.map((st) => pack.states?.[st]?.short ?? pack.states?.[st]?.label ?? st);
-  return [s.type && s.type !== name ? s.type : s.type ? null : "undeclared", hits.length > 0 ? `hit by ${hits.join(", ")}` : null, states.length > 0 ? `[${states.join(" ")}]` : null].filter((x): x is string => x !== null).join(" · ");
+  return [
+    s.type && s.type !== name ? s.type : s.type ? null : "undeclared",
+    hits.length > 0 ? `hit by ${hits.join(", ")}` : null,
+    states.length > 0 ? `[${states.join(" ")}]` : null,
+  ]
+    .filter((x): x is string => x !== null)
+    .join(" · ");
 }
 
 /** What just happened, for the line under the card: results in the pack's words, the dice as thrown. */
@@ -274,7 +419,12 @@ function aboutSubject(pack: Pack, state: RunState, s: RunState["subjects"][numbe
  * and, apart from them, the moment that deserves a colored bar, a unit
  * begun or closed, as a mark. The rolls keep their dice.
  */
-export function lineFor(pack: Pack, before: RunState, after: RunState, produced: readonly RunEvent[]): { text: string | null; mark: Mark | null } {
+export function lineFor(
+  pack: Pack,
+  before: RunState,
+  after: RunState,
+  produced: readonly RunEvent[],
+): { text: string | null; mark: Mark | null } {
   const parts: string[] = [];
   const marks: Mark[] = [];
   const unit = pack.vocabulary.unit.one;
@@ -290,7 +440,8 @@ export function lineFor(pack: Pack, before: RunState, after: RunState, produced:
   }
   const fresh = after.outcomes.slice(before.outcomes.length);
   for (const o of fresh) {
-    const hit = o.targetSubject !== null && o.targetSubject !== undefined ? after.subjects.find((s) => s.id === o.targetSubject) : undefined;
+    const hit =
+      o.targetSubject !== null && o.targetSubject !== undefined ? after.subjects.find((s) => s.id === o.targetSubject) : undefined;
     parts.push(`**${pack.tables[o.table]?.title ?? o.table}** ${entryTextOf(pack, o)}${hit ? ` → ${subjectTitle(pack, hit)}` : ""}`);
   }
   // A unit closed and the next begun in one move is one bar, in the color of what begins.

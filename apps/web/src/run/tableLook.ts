@@ -32,7 +32,14 @@ export function tableLines(table: Table, dice: { min: number; max: number } | nu
   if (table.resolution === "bands") {
     return table.entries.map((e) => {
       const lo = e.gte ?? dice?.min ?? 1;
-      const range = e.gte !== undefined && e.lte !== undefined ? `${e.gte}-${e.lte}` : e.gte !== undefined ? `${e.gte}+` : e.lte !== undefined ? `up to ${e.lte}` : "any";
+      const range =
+        e.gte !== undefined && e.lte !== undefined
+          ? `${e.gte}-${e.lte}`
+          : e.gte !== undefined
+            ? `${e.gte}+`
+            : e.lte !== undefined
+              ? `up to ${e.lte}`
+              : "any";
       return { id: e.id, range, value: lo, title: e.title ?? e.text };
     });
   }
@@ -44,6 +51,7 @@ export function tableLines(table: Table, dice: { min: number; max: number } | nu
 /** Which line a number would land on, if any. */
 export function lineFor(lines: TableLine[], table: Table, total: number): string | null {
   if (table.resolution === "lookup") return table.entries.find((e) => total >= e.range[0] && total <= e.range[1])?.id ?? null;
-  if (table.resolution === "bands") return table.entries.find((e) => (e.gte ?? -Infinity) <= total && total <= (e.lte ?? Infinity))?.id ?? null;
+  if (table.resolution === "bands")
+    return table.entries.find((e) => (e.gte ?? -Infinity) <= total && total <= (e.lte ?? Infinity))?.id ?? null;
   return lines.find((l) => l.value === total)?.id ?? null;
 }

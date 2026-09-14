@@ -27,11 +27,16 @@ export function PackServers({ pack, vaults }: { pack: StoredPack; vaults: GuildV
     <details ref={root} className="rowMenu packServers" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary title={`Which of your Discord servers may play ${pack.title}`}>
         {/* What it says when closed is the answer, not the question. */}
-        {on.length === 0 ? "No server" : on.length === vaults.guilds.length ? "Every server" : `${on.length} of ${vaults.guilds.length} servers`}
+        {on.length === 0
+          ? "No server"
+          : on.length === vaults.guilds.length
+            ? "Every server"
+            : `${on.length} of ${vaults.guilds.length} servers`}
       </summary>
       <div className="rowMenuPanel">
         <p className="muted small">
-          The bot plays this pack in the servers ticked. Its text goes up once and stays there; members see what the dice draw, never the pack.
+          The bot plays this pack in the servers ticked. Its text goes up once and stays there; members see what the dice draw, never the
+          pack.
         </p>
         <ul className="docMenuList">
           {vaults.guilds.map((g) => {

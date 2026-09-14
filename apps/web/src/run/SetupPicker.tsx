@@ -58,8 +58,8 @@ export function SetupPicker({
         {v.one} <span className="muted">optional</span>
       </h3>
       <p className="muted small">
-        What the game is set to, and what you start holding, once a tool is attached. It changes what this {pack.vocabulary.run.one.toLowerCase()} is like
-        to play without changing a thing about what the dice can do.
+        What the game is set to, and what you start holding, once a tool is attached. It changes what this{" "}
+        {pack.vocabulary.run.one.toLowerCase()} is like to play without changing a thing about what the dice can do.
       </p>
       <div className="choices">
         <button className={`choice ${chosen ? "" : "on"}`} onClick={() => onChoose(null)}>
@@ -74,8 +74,8 @@ export function SetupPicker({
         ))}
       </div>
       <p className="muted small">
-        A {word} needs a tool attached to do anything. With none attached it is simply not applied, and the {pack.vocabulary.run.one.toLowerCase()} plays as
-        it always has.
+        A {word} needs a tool attached to do anything. With none attached it is simply not applied, and the{" "}
+        {pack.vocabulary.run.one.toLowerCase()} plays as it always has.
       </p>
     </>
   );

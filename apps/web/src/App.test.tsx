@@ -111,9 +111,7 @@ describe("the setup screen", () => {
 });
 
 describe("the inspector", () => {
-  const html = renderToStaticMarkup(
-    <StructurePanel pack={kiln} warnings={[]} random={() => Math.random} />,
-  );
+  const html = renderToStaticMarkup(<StructurePanel pack={kiln} warnings={[]} random={() => Math.random} />);
 
   it("shows the pack's own vocabulary rather than generic nouns", () => {
     for (const word of ["Firing", "Stage", "Piece"]) expect(html).toContain(word);

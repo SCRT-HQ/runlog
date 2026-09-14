@@ -263,7 +263,8 @@ describe("the files an author would copy", () => {
       // repository tells them apart.
       else if (entry.isFile() && entry.name.endsWith(".yaml")) {
         const folder = basename(dir);
-        const kind: SchemaKind = folder === "setups" ? "setup" : folder === "mappings" ? "mapping" : folder === "tables" ? "tables" : "pack";
+        const kind: SchemaKind =
+          folder === "setups" ? "setup" : folder === "mappings" ? "mapping" : folder === "tables" ? "tables" : "pack";
         into.push([full, kind]);
       }
     }

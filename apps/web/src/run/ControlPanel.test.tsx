@@ -97,10 +97,18 @@ describe("the floating remote", () => {
 
   it("says what the pack says on entering the unit, above the step, until its first step is done", () => {
     const talking = { ...kiln, unit: { ...kiln.unit, intro: "Welcome to the kiln yard.", onEnter: "Stage {n}: wedge, throw, fire." } };
-    const html = panel({ pack: talking, run: run({ activeStep: { phase: kiln.phases[0]!, step: kiln.phases[0]!.steps[0]!, index: 0 } as never }), state: state({ unit: 1, stepsDone: [] }) });
+    const html = panel({
+      pack: talking,
+      run: run({ activeStep: { phase: kiln.phases[0]!, step: kiln.phases[0]!.steps[0]!, index: 0 } as never }),
+      state: state({ unit: 1, stepsDone: [] }),
+    });
     expect(html).toContain("Welcome to the kiln yard.");
     expect(html).toContain("Stage 1: wedge, throw, fire.");
-    const later = panel({ pack: talking, run: run({ activeStep: { phase: kiln.phases[0]!, step: kiln.phases[0]!.steps[0]!, index: 0 } as never }), state: state({ unit: 2, stepsDone: ["enter#0"] }) });
+    const later = panel({
+      pack: talking,
+      run: run({ activeStep: { phase: kiln.phases[0]!, step: kiln.phases[0]!.steps[0]!, index: 0 } as never }),
+      state: state({ unit: 2, stepsDone: ["enter#0"] }),
+    });
     expect(later).not.toContain("wedge, throw, fire");
   });
 
@@ -108,18 +116,27 @@ describe("the floating remote", () => {
     const work = kiln.phases.find((p) => p.id === "work")!;
     const manual = work.steps.find((s) => s.kind === "manual")!;
     const closing = panel({
-      run: run({ activeStep: { phase: work, step: { ...manual, closesUnit: true, checklist: [] }, index: 0 } as never, canEnd: { ok: true } }),
+      run: run({
+        activeStep: { phase: work, step: { ...manual, closesUnit: true, checklist: [] }, index: 0 } as never,
+        canEnd: { ok: true },
+      }),
       state: state({ unit: 2 }),
     });
     expect(closing).toContain("Next stage");
     expect(closing).toContain("Finish");
     expect(closing).not.toContain(">Done<");
-    const plain = panel({ run: run({ activeStep: { phase: work, step: { ...manual, checklist: [] }, index: 0 } as never }), state: state({ unit: 2 }) });
+    const plain = panel({
+      run: run({ activeStep: { phase: work, step: { ...manual, checklist: [] }, index: 0 } as never }),
+      state: state({ unit: 2 }),
+    });
     expect(plain).toContain("Done");
     expect(plain).not.toContain("Finish");
     // The pack's own closing step forks the same way; Finish waits while the run may not end.
     const close = kiln.phases.find((p) => p.id === "close")!;
-    const fire = panel({ run: run({ activeStep: { phase: close, step: close.steps[0]!, index: 0 } as never, canEnd: { ok: false, reason: "too soon" } }), state: state({ unit: 1 }) });
+    const fire = panel({
+      run: run({ activeStep: { phase: close, step: close.steps[0]!, index: 0 } as never, canEnd: { ok: false, reason: "too soon" } }),
+      state: state({ unit: 1 }),
+    });
     // Nothing this stage drew is among what its confirmations show, so nothing waits to be ticked; Finish is there, and held.
     expect(fire).toContain("Next stage");
     expect(fire).toMatch(/<button[^>]*disabled[^>]*title="Cannot finish yet: too soon"[^>]*>Finish<\/button>/);
@@ -176,7 +193,11 @@ describe("the floating remote", () => {
     const undoButton = (html: string) => html.match(/<button[^>]*>Undo<\/button>/)?.[0] ?? "";
 
     const disabled = panel({
-      run: run({ canUndo: false, blockingObligations: [{ id: "o1", text: "Owed thing", on: "onRunEnd" } as never], due: [{ id: "o1", text: "Owed thing", on: "onRunEnd" } as never] }),
+      run: run({
+        canUndo: false,
+        blockingObligations: [{ id: "o1", text: "Owed thing", on: "onRunEnd" } as never],
+        due: [{ id: "o1", text: "Owed thing", on: "onRunEnd" } as never],
+      }),
     });
     expect(disabled).toContain("Owed");
     expect(disabled.indexOf("Owed")).toBeLessThan(disabled.indexOf(">Undo<"));

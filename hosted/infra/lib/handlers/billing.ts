@@ -45,11 +45,14 @@ export function dynamoBilling({ table }: { table: string }): BillingStore {
         new UpdateCommand({
           TableName: table,
           Key: { pk: upk(sub), sk: "PROFILE" },
-          UpdateExpression: "SET stripeCustomerId = :c, kind = if_not_exists(kind, :k), createdAt = if_not_exists(createdAt, :at), lastSeenAt = if_not_exists(lastSeenAt, :at)",
+          UpdateExpression:
+            "SET stripeCustomerId = :c, kind = if_not_exists(kind, :k), createdAt = if_not_exists(createdAt, :at), lastSeenAt = if_not_exists(lastSeenAt, :at)",
           ExpressionAttributeValues: { ":c": customerId, ":k": "profile", ":at": at },
         }),
       );
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: `CUSTOMER#${customerId}`, sk: "USER", kind: "customer", sub, createdAt: at } }));
+      await ddb.send(
+        new PutCommand({ TableName: table, Item: { pk: `CUSTOMER#${customerId}`, sk: "USER", kind: "customer", sub, createdAt: at } }),
+      );
     },
     async userForCustomer(customerId) {
       const out = await ddb.send(new GetCommand({ TableName: table, Key: { pk: `CUSTOMER#${customerId}`, sk: "USER" } }));
@@ -57,7 +60,9 @@ export function dynamoBilling({ table }: { table: string }): BillingStore {
       return typeof sub === "string" ? sub : null;
     },
     async putEntitlements(sub, features, at) {
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: upk(sub), sk: "ENTITLEMENTS", kind: "entitlements", features, updatedAt: at } }));
+      await ddb.send(
+        new PutCommand({ TableName: table, Item: { pk: upk(sub), sk: "ENTITLEMENTS", kind: "entitlements", features, updatedAt: at } }),
+      );
     },
     async entitlements(sub) {
       const out = await ddb.send(new GetCommand({ TableName: table, Key: { pk: upk(sub), sk: "ENTITLEMENTS" } }));

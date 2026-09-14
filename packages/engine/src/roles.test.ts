@@ -16,8 +16,7 @@ function loadPack(rel: string): Pack {
 const kiln = loadPack("packs/demo/pack.yaml");
 
 const NOW = "2026-01-01T00:00:00.000Z";
-const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent =>
-  ({ t, at: NOW, ...props }) as RunEvent;
+const ev = (t: RunEvent["t"], props: Record<string, unknown> = {}): RunEvent => ({ t, at: NOW, ...props }) as RunEvent;
 
 /** A run in `mode` with `players` at the table, having entered `units` units. */
 function run(mode: string, players: number | undefined, units: number) {

@@ -59,9 +59,7 @@ describe("naming the file", () => {
   });
 
   it("keeps a filename a filesystem will accept", () => {
-    expect(packFilename({ id: "com.example.my game/v2", version: "0.1.0" })).toBe(
-      "my-game-v2-0.1.0.yaml",
-    );
+    expect(packFilename({ id: "com.example.my game/v2", version: "0.1.0" })).toBe("my-game-v2-0.1.0.yaml");
   });
 });
 

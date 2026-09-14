@@ -51,14 +51,23 @@ describe("release gates", () => {
     const none = gateReader(async () => null, { warn: (m) => warned.push(m) });
     expect(await none()).toEqual({ servers: true, publishers: true });
     expect(warned[0]).toContain("not configured");
-    const partial = gateReader(async () => flagsOnly({ [HOLD_SLUGS.servers]: HELD, [HOLD_SLUGS.publishers]: new Error("503") }), { warn: (m) => warned.push(m) });
+    const partial = gateReader(async () => flagsOnly({ [HOLD_SLUGS.servers]: HELD, [HOLD_SLUGS.publishers]: new Error("503") }), {
+      warn: (m) => warned.push(m),
+    });
     expect(await partial()).toEqual({ servers: false, publishers: true });
     expect(warned.some((m) => m.includes(HOLD_SLUGS.publishers) && m.includes("503"))).toBe(true);
     // A launch: the flag deleted, or turned off. Neither is a hold, and neither is worth a warning.
     const before = warned.length;
     const gone = gateReader(async () => flagsOnly({}), { warn: (m) => warned.push(m) });
     expect(await gone()).toEqual({ servers: true, publishers: true });
-    const off = gateReader(async () => flagsOnly({ [HOLD_SLUGS.servers]: { enabled: false, defaultValue: true }, [HOLD_SLUGS.publishers]: { enabled: true, defaultValue: false } }), { warn: (m) => warned.push(m) });
+    const off = gateReader(
+      async () =>
+        flagsOnly({
+          [HOLD_SLUGS.servers]: { enabled: false, defaultValue: true },
+          [HOLD_SLUGS.publishers]: { enabled: true, defaultValue: false },
+        }),
+      { warn: (m) => warned.push(m) },
+    );
     expect(await off()).toEqual({ servers: true, publishers: true });
     expect(warned).toHaveLength(before);
   });

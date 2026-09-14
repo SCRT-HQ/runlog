@@ -54,7 +54,11 @@ export function DocsPanel({ pack }: { pack: Pack | null }) {
       <h3 className="sectionTitle">
         Documents <span className="muted">written from the pack</span>
       </h3>
-      {!pack && <p className="muted small">Once the pack loads, its rulebook, quick start, reference card, run log sheet and marketplace summary can be made here.</p>}
+      {!pack && (
+        <p className="muted small">
+          Once the pack loads, its rulebook, quick start, reference card, run log sheet and marketplace summary can be made here.
+        </p>
+      )}
       {pack && (
         <>
           <ul className="docKinds">
@@ -86,9 +90,13 @@ export function DocsPanel({ pack }: { pack: Pack | null }) {
               <DocView doc={generateDoc(pack, preview)} heading />
             </div>
           )}
-          {!pack.license.redistributable && <p className="muted small">This pack is private. The summary is safe to show anyone; the other four carry the whole game.</p>}
+          {!pack.license.redistributable && (
+            <p className="muted small">This pack is private. The summary is safe to show anyone; the other four carry the whole game.</p>
+          )}
           {note && <p className="muted small">{note}</p>}
-          <p className="muted small">The PDF is made here, in the browser; nothing is sent anywhere. To ship them all with the pack, bundle the documents under Sign.</p>
+          <p className="muted small">
+            The PDF is made here, in the browser; nothing is sent anywhere. To ship them all with the pack, bundle the documents under Sign.
+          </p>
         </>
       )}
     </section>

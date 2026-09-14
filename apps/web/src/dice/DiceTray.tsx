@@ -93,10 +93,7 @@ export function DiceTray({ dice, rollId, onSettled, seed }: DiceTrayProps) {
     // handful thrown together rather than a row of counters flipping.
     dice.forEach((die, i) => {
       timers.current.push(
-        setTimeout(
-          () => setFaces((prev) => prev.map((f, j) => (j === i ? die.display : f))),
-          TUMBLE_MS + i * STAGGER_MS,
-        ),
+        setTimeout(() => setFaces((prev) => prev.map((f, j) => (j === i ? die.display : f))), TUMBLE_MS + i * STAGGER_MS),
       );
     });
 

@@ -21,7 +21,15 @@ if (!loaded.ok) throw new Error("the TarnishedTool pack did not load");
 const tarnished = loaded.pack;
 
 const record = (control?: unknown): StoredRun =>
-  ({ runId: "r1", packId: tarnished.id, packVersion: tarnished.version, events: [], updatedAt: "", role: "owner", ...(control !== undefined ? { control } : {}) }) as StoredRun;
+  ({
+    runId: "r1",
+    packId: tarnished.id,
+    packVersion: tarnished.version,
+    events: [],
+    updatedAt: "",
+    role: "owner",
+    ...(control !== undefined ? { control } : {}),
+  }) as StoredRun;
 
 afterEach(() => {
   cleanup();

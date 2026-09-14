@@ -1,0 +1,46 @@
+# Generated, staged, or built. Formatting these is churn at best and a
+# corrupted artifact at worst, and every one of them is rewritten by a
+# script that does not read this file.
+**/dist/
+**/cdk.out/
+**/stage/
+**/node_modules/
+packages/rules-schema/schema/
+apps/web/dist/
+docs/reference.md
+junit.xml
+package-lock.json
+
+# The packs are documents, not code.
+#
+# A pack is written to be read as a rulebook: tables are one line per
+# entry so a d100 reads like the paper it came from, and a folded block
+# is wrapped where the sentence wants to break. Prettier would explode
+# every flow-style entry into eight lines of block YAML and reflow prose
+# it cannot tell from data. There is already a linter, a schema and a
+# validator holding these to a standard; none of them care about column
+# width, and neither should this.
+packs/
+
+# Someone else's four hundred place names and nine hundred item names,
+# generated from a tool's own resources. See tests/license-boundary.test.ts.
+apps/web/src/control/lists/
+
+# The Remember plugin scratch area, not part of the project.
+.remember/
+
+# Markdown belongs to markdownlint-cli2, which already has a considered
+# config for it (.markdownlint-cli2.jsonc) and a reason for the rule that
+# matters: one line per paragraph, no fill column, so a one-word edit
+# does not touch the whole paragraph. Prettier would also rewrite
+# emphasis style and pad every table column, which is churn nobody asked
+# for.
+*.md
+
+# Deployed page templates, filled in by hosted/scripts/overlay.ts.
+#
+# `{{PLACEHOLDER}}` is not valid JSON and these are not source: they are
+# hand-written pages with a substitution step, and the legal ones say
+# only what counsel has confirmed. Reformatting them buys nothing and
+# puts a diff through text that is checked by a person, not a parser.
+hosted/pages/

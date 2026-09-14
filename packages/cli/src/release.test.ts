@@ -20,7 +20,13 @@ describe("the release command's price", () => {
 });
 
 describe("the signing key in the environment", () => {
-  const key = JSON.stringify({ algorithm: "ecdsa-p256-sha256", publicKey: "pk", privateKey: "sk", fingerprint: "ab:cd", createdAt: "2026-09-07T00:00:00Z" });
+  const key = JSON.stringify({
+    algorithm: "ecdsa-p256-sha256",
+    publicKey: "pk",
+    privateKey: "sk",
+    fingerprint: "ab:cd",
+    createdAt: "2026-09-07T00:00:00Z",
+  });
   it("is read from RUNLOG_SIGNING_KEY when no --key is passed", () => {
     const held = loadKey(["pack.yaml"], { RUNLOG_SIGNING_KEY: key });
     expect("key" in held && held.key.privateKey).toBe("sk");

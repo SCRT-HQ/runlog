@@ -69,11 +69,7 @@ const base = (roll: number, eligible: number[]): TargetingDerivation => ({
   explain: [],
 });
 
-export function resolveTargeting(
-  pack: Pack,
-  state: RunState,
-  options: ResolveTargetingOptions = {},
-): TargetingDerivation {
+export function resolveTargeting(pack: Pack, state: RunState, options: ResolveTargetingOptions = {}): TargetingDerivation {
   const candidates = eligibleTargets(pack, state);
   const ids = candidates.map((s) => s.id);
   const roll = options.roll ?? 0;
@@ -116,12 +112,7 @@ export function resolveTargeting(
   }
 }
 
-function pick(
-  d: TargetingDerivation,
-  candidates: Array<{ id: number }>,
-  index: number,
-  why: string,
-): TargetingDerivation {
+function pick(d: TargetingDerivation, candidates: Array<{ id: number }>, index: number, why: string): TargetingDerivation {
   const subject = candidates[index];
   d.targetIndex = index;
   d.outcome = subject ? "target" : "noTarget";
@@ -145,9 +136,7 @@ function anchoredOffset(
     d.originalRoll = roll;
     if (fb.missOn !== undefined && roll === fb.missOn) {
       d.outcome = "miss";
-      d.explain.push(
-        `Rolled ${roll}: a miss. It still counts as having been triggered.`,
-      );
+      d.explain.push(`Rolled ${roll}: a miss. It still counts as having been triggered.`);
       return d;
     }
     const tens = Math.floor(roll / 10);
@@ -185,8 +174,7 @@ function anchoredOffset(
   d.rawOffset = rawOffset;
 
   d.explain.push(
-    `${roll} is in ${found.range[0]}-${found.range[1]}: anchor on the ${found.anchor} ` +
-      `of ${n} eligible, counting ${found.direction}.`,
+    `${roll} is in ${found.range[0]}-${found.range[1]}: anchor on the ${found.anchor} ` + `of ${n} eligible, counting ${found.direction}.`,
   );
 
   // The shortcut these rules are usually written with: subtract the number of
@@ -195,9 +183,7 @@ function anchoredOffset(
   const offset = rawOffset % n;
   d.reducedOffset = offset;
   if (offset !== rawOffset) {
-    d.explain.push(
-      `Offset ${rawOffset} exceeds ${n} eligible, so reduce it: ${rawOffset} % ${n} = ${offset}.`,
-    );
+    d.explain.push(`Offset ${rawOffset} exceeds ${n} eligible, so reduce it: ${rawOffset} % ${n} = ${offset}.`);
   } else if (rawOffset === 0) {
     d.explain.push("A ones digit of 0 targets the anchor itself.");
   }
@@ -218,8 +204,6 @@ function anchoredOffset(
   const subject = candidates[index];
   d.targetSubject = subject?.id ?? null;
   d.outcome = subject ? "target" : "noTarget";
-  d.explain.push(
-    `Position ${index + 1} of ${n}${subject ? "" : ", which does not exist"}.`,
-  );
+  d.explain.push(`Position ${index + 1} of ${n}${subject ? "" : ", which does not exist"}.`);
   return d;
 }

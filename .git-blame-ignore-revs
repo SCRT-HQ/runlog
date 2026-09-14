@@ -1,0 +1,11 @@
+# Revisions that changed how the code is written and not what it does.
+#
+# `git blame` walks past these, so a line's history is the change that
+# made it rather than the day everything was reformatted:
+#
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub reads this file by name and does the same without being asked.
+
+# style: run the formatter, once
+2a17eca1e138d34d0d366603e3188848f305c76e

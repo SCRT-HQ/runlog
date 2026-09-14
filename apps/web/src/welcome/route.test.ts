@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { appPath, baseOf, honestAddress, isAppPath, welcomePath, whereTo } from "./route.ts";
 
-const at = (over: Partial<Parameters<typeof whereTo>[0]> = {}) => ({ protocol: "https:", pathname: "/", base: "/", hash: "", search: "", skip: false, ...over });
+const at = (over: Partial<Parameters<typeof whereTo>[0]> = {}) => ({
+  protocol: "https:",
+  pathname: "/",
+  base: "/",
+  hash: "",
+  search: "",
+  skip: false,
+  ...over,
+});
 
 describe("which page an address opens", () => {
   it("opens the welcome page at the bare address, and the app at any section of its own", () => {

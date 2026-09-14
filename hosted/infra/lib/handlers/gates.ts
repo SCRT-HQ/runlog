@@ -56,7 +56,9 @@ export function gateReader(
         // A hold is a flag on for everyone; anything less is not one.
         if (flag) out[gate] = !(flag.enabled && flag.defaultValue);
       } catch (error) {
-        warn(`release gates: "${slug}" could not be read (${error instanceof Error ? error.message : String(error)}); ${gate} reads as on sale`);
+        warn(
+          `release gates: "${slug}" could not be read (${error instanceof Error ? error.message : String(error)}); ${gate} reads as on sale`,
+        );
       }
     }
     return out;

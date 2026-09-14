@@ -54,6 +54,9 @@ describe("which servers may play a pack", () => {
     fireEvent.click(boxes[1]!);
     expect(asked).toEqual([["2", true]]);
     fireEvent.click(boxes[0]!);
-    expect(asked).toEqual([["2", true], ["1", false]]);
+    expect(asked).toEqual([
+      ["2", true],
+      ["1", false],
+    ]);
   });
 });

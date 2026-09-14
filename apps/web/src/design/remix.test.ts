@@ -10,10 +10,22 @@ describe("what may be remixed", () => {
   });
 
   it("refuses no-derivatives, non-redistributable, unknown, and missing licenses, each with its reason", () => {
-    expect(remixable({ id: "CC-BY-ND-4.0", redistributable: true })).toMatchObject({ ok: false, reason: expect.stringContaining("not changed ones") as unknown as string });
-    expect(remixable({ id: "CC0-1.0", redistributable: false })).toMatchObject({ ok: false, reason: expect.stringContaining("shared") as unknown as string });
-    expect(remixable({ id: "proprietary", redistributable: true })).toMatchObject({ ok: false, reason: expect.stringContaining("ask the author") as unknown as string });
-    expect(remixable({ id: "All rights reserved", redistributable: true })).toMatchObject({ ok: false, reason: expect.stringContaining("ask the author") as unknown as string });
+    expect(remixable({ id: "CC-BY-ND-4.0", redistributable: true })).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("not changed ones") as unknown as string,
+    });
+    expect(remixable({ id: "CC0-1.0", redistributable: false })).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("shared") as unknown as string,
+    });
+    expect(remixable({ id: "proprietary", redistributable: true })).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("ask the author") as unknown as string,
+    });
+    expect(remixable({ id: "All rights reserved", redistributable: true })).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("ask the author") as unknown as string,
+    });
     expect(remixable(undefined)).toMatchObject({ ok: false });
   });
 });
@@ -38,7 +50,9 @@ describe("a remix", () => {
     expect(remix).not.toHaveProperty("issue");
     expect(remix).not.toHaveProperty("author");
     expect((remix["license"] as { id: string; notice: string }).id).toBe("CC-BY-SA-4.0");
-    expect((remix["license"] as { notice: string }).notice).toContain("Based on “The Long Kiln” by Runlog (com.scrthq.runlog.long-kiln v1.0.0)");
+    expect((remix["license"] as { notice: string }).notice).toContain(
+      "Based on “The Long Kiln” by Runlog (com.scrthq.runlog.long-kiln v1.0.0)",
+    );
     expect(remix["tables"]).toEqual({});
   });
 });

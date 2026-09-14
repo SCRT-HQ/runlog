@@ -13,7 +13,17 @@ import { GUIDE_PAGES, GUIDE_PARTS, guidePage, guideSectionFromHash, guideSlugFro
  * `#guide/<slug>`, a section as `#guide/<slug>/<section>`, so either can
  * be sent to someone and comes back on reload.
  */
-export function GuideView({ slug, section, onNavigate, onBack }: { slug: string; section?: string | null; onNavigate: (slug: string, section?: string) => void; onBack: () => void }) {
+export function GuideView({
+  slug,
+  section,
+  onNavigate,
+  onBack,
+}: {
+  slug: string;
+  section?: string | null;
+  onNavigate: (slug: string, section?: string) => void;
+  onBack: () => void;
+}) {
   const page = guidePage(slug) ?? GUIDE_PAGES[0]!;
   const Page = page.Page;
   const at = GUIDE_PAGES.findIndex((p) => p.slug === page.slug);
@@ -56,7 +66,11 @@ export function GuideView({ slug, section, onNavigate, onBack }: { slug: string;
       <ol className={className} aria-label={label}>
         {sections.map((s) => (
           <li key={s.id} className={`${s.level === 3 ? "sub" : ""}${inView === s.id ? " on" : ""}`}>
-            <a href={hrefFor(`#guide/${page.slug}/${s.id}`)} aria-current={inView === s.id ? "location" : undefined} onClick={(e) => go(e, page.slug, s.id)}>
+            <a
+              href={hrefFor(`#guide/${page.slug}/${s.id}`)}
+              aria-current={inView === s.id ? "location" : undefined}
+              onClick={(e) => go(e, page.slug, s.id)}
+            >
               {s.text}
             </a>
           </li>
@@ -104,7 +118,11 @@ export function GuideView({ slug, section, onNavigate, onBack }: { slug: string;
                         <ol>
                           {run.pages.map((p) => (
                             <li key={p.slug} className={p.slug === page.slug ? "on" : ""}>
-                              <a href={hrefFor(`#guide/${p.slug}`)} aria-current={p.slug === page.slug ? "page" : undefined} onClick={(e) => go(e, p.slug)}>
+                              <a
+                                href={hrefFor(`#guide/${p.slug}`)}
+                                aria-current={p.slug === page.slug ? "page" : undefined}
+                                onClick={(e) => go(e, p.slug)}
+                              >
                                 {p.title}
                               </a>
                               {open && here && <span className="muted small">{p.blurb}</span>}

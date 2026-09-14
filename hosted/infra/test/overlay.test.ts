@@ -90,10 +90,31 @@ describe("laid over a build", () => {
 
     const files = overlay({ dist, appRoot: app, env: "dev", sha: "0123456789abcdef", today: build.today });
 
-    for (const f of ["hosted.json", "hosted.css", "legal/terms.html", "legal/privacy.html", "legal/publishers.html", "pricing.html", "about.html", "licenses.html", "og.png", "robots.txt", "sitemap.xml", ".well-known/security.txt", "index.html"]) {
+    for (const f of [
+      "hosted.json",
+      "hosted.css",
+      "legal/terms.html",
+      "legal/privacy.html",
+      "legal/publishers.html",
+      "pricing.html",
+      "about.html",
+      "licenses.html",
+      "og.png",
+      "robots.txt",
+      "sitemap.xml",
+      ".well-known/security.txt",
+      "index.html",
+    ]) {
       expect(files).toContain(f);
     }
-    const hosted = JSON.parse(readFileSync(join(dist, "hosted.json"), "utf8")) as { operator: string; legalName: string; links: Record<string, string>; termsVersion: string; sha: string; features: { billing: boolean; testing: boolean } };
+    const hosted = JSON.parse(readFileSync(join(dist, "hosted.json"), "utf8")) as {
+      operator: string;
+      legalName: string;
+      links: Record<string, string>;
+      termsVersion: string;
+      sha: string;
+      features: { billing: boolean; testing: boolean };
+    };
     expect(hosted.links["terms"]).toBe("https://runlog.example.com/legal/terms.html");
     expect(hosted.termsVersion).toBe(envConfig("dev").hosted.termsVersion);
     expect(hosted.sha).toBe("0123456789ab");
@@ -140,7 +161,16 @@ describe("laid over a build", () => {
   });
 
   it("writes the licenses page from what it is given", () => {
-    const page = licensesPage([{ name: "left-pad", version: "1.0.0", license: "WTFPL" }], { DOMAIN: "d", YEAR: "2026", VERSION: "1", SHA: "s", OPERATOR: "o", OPERATOR_URL: "https://o.example/", RELEASE_URL: "https://r.example/", COMMIT_URL: "https://c.example/" });
+    const page = licensesPage([{ name: "left-pad", version: "1.0.0", license: "WTFPL" }], {
+      DOMAIN: "d",
+      YEAR: "2026",
+      VERSION: "1",
+      SHA: "s",
+      OPERATOR: "o",
+      OPERATOR_URL: "https://o.example/",
+      RELEASE_URL: "https://r.example/",
+      COMMIT_URL: "https://c.example/",
+    });
     expect(page).toContain("left-pad");
     expect(page).toContain("WTFPL");
   });

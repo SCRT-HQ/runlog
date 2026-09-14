@@ -36,9 +36,7 @@ export function eligibleTargets(pack: Pack, state: RunState): Subject[] {
 
 /** True when a state, as declared, stops the player editing a subject. */
 export function isLocked(pack: Pack, subject: Subject): boolean {
-  return subject.states.some((s) =>
-    (pack.states?.[s]?.semantics ?? []).some((x) => x === "blocksEdit" || x === "locksValue"),
-  );
+  return subject.states.some((s) => (pack.states?.[s]?.semantics ?? []).some((x) => x === "blocksEdit" || x === "locksValue"));
 }
 
 /**

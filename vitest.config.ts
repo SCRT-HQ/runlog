@@ -8,15 +8,9 @@ export default defineConfig({
   plugins: [{ enforce: "pre", ...mdx({ jsxImportSource: "react", remarkPlugins: [remarkGfm] }) }],
   resolve: {
     alias: {
-      "@runlog/rules-schema": fileURLToPath(
-        new URL("./packages/rules-schema/src/index.ts", import.meta.url),
-      ),
-      "@runlog/engine": fileURLToPath(
-        new URL("./packages/engine/src/index.ts", import.meta.url),
-      ),
-      "@runlog/container": fileURLToPath(
-        new URL("./packages/container/src/index.ts", import.meta.url),
-      ),
+      "@runlog/rules-schema": fileURLToPath(new URL("./packages/rules-schema/src/index.ts", import.meta.url)),
+      "@runlog/engine": fileURLToPath(new URL("./packages/engine/src/index.ts", import.meta.url)),
+      "@runlog/container": fileURLToPath(new URL("./packages/container/src/index.ts", import.meta.url)),
     },
   },
   define: {

@@ -8,7 +8,7 @@ import { traced } from "./xray.js";
  *
  * A device with a run open holds a WebSocket and says which session it is
  * watching. When another device appends to that session, the API posts a
- * one-line message down every socket watching it, "changed, seq 12", 
+ * one-line message down every socket watching it, "changed, seq 12",
  * and the device syncs at once instead of at the next poll. The socket
  * carries no data of its own: what changed still comes through the same
  * authenticated HTTP fetch as before, so a socket that lies can only
@@ -82,10 +82,21 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
 
   return {
     async connect(connectionId, sub, at, attached = {}) {
-      await ddb.send(new PutCommand({ TableName: table, Item: { pk: cpk(connectionId), sk: "CONN", kind: "conn", sub, connectedAt: at, expiresAt: expiresAfter(at), ...marks(attached) } }));
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: { pk: cpk(connectionId), sk: "CONN", kind: "conn", sub, connectedAt: at, expiresAt: expiresAfter(at), ...marks(attached) },
+        }),
+      );
     },
     async connection(connectionId) {
-      const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND sk = :sk", ExpressionAttributeValues: { ":pk": cpk(connectionId), ":sk": "CONN" } }));
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND sk = :sk",
+          ExpressionAttributeValues: { ":pk": cpk(connectionId), ":sk": "CONN" },
+        }),
+      );
       const row = out.Items?.[0];
       if (!row || typeof row["sub"] !== "string") return null;
       if (typeof row["expiresAt"] === "number" && row["expiresAt"] * 1000 < Date.now()) return null;
@@ -94,19 +105,37 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
     async watch(connectionId, sessionId, sub, at, attached = {}) {
       const expiresAt = expiresAfter(at);
       await Promise.all([
-        ddb.send(new PutCommand({ TableName: table, Item: { pk: spk(sessionId), sk: `CONN#${connectionId}`, kind: "watch", sub, expiresAt, ...marks(attached) } })),
-        ddb.send(new PutCommand({ TableName: table, Item: { pk: cpk(connectionId), sk: `WATCH#${sessionId}`, kind: "watch", sub, expiresAt, ...marks(attached) } })),
+        ddb.send(
+          new PutCommand({
+            TableName: table,
+            Item: { pk: spk(sessionId), sk: `CONN#${connectionId}`, kind: "watch", sub, expiresAt, ...marks(attached) },
+          }),
+        ),
+        ddb.send(
+          new PutCommand({
+            TableName: table,
+            Item: { pk: cpk(connectionId), sk: `WATCH#${sessionId}`, kind: "watch", sub, expiresAt, ...marks(attached) },
+          }),
+        ),
       ]);
     },
     async watchers(sessionId) {
-      const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)", ExpressionAttributeValues: { ":pk": spk(sessionId), ":sk": "CONN#" } }));
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+          ExpressionAttributeValues: { ":pk": spk(sessionId), ":sk": "CONN#" },
+        }),
+      );
       const now = Date.now() / 1000;
       return (out.Items ?? [])
         .filter((r) => typeof r["expiresAt"] !== "number" || r["expiresAt"] > now)
         .map((r) => ({ connectionId: String(r["sk"]).slice("CONN#".length), sub: String(r["sub"] ?? ""), ...read(r) }));
     },
     async disconnect(connectionId) {
-      const out = await ddb.send(new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk", ExpressionAttributeValues: { ":pk": cpk(connectionId) } }));
+      const out = await ddb.send(
+        new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk", ExpressionAttributeValues: { ":pk": cpk(connectionId) } }),
+      );
       const rows = out.Items ?? [];
       await Promise.all(
         rows.flatMap((r) => {

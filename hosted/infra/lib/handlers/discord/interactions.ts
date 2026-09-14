@@ -8,9 +8,34 @@ import type { Store } from "../store.js";
 import type { Notify } from "../live.js";
 import { hasPermission, installLink, isCommandName, OPTIONAL_PERMISSION_NAMES } from "./commands.js";
 import { customId, parseCustomId, cardFor, COLORS, messageFor, type Card } from "./card.js";
-import { agendaFor, catchUp, eventsOf, expireTimer, mayPress, openRun, packFor, play, whosePress, type Seat, type TableAction, type TableDeps, type TimerJob } from "./play.js";
+import {
+  agendaFor,
+  catchUp,
+  eventsOf,
+  expireTimer,
+  mayPress,
+  openRun,
+  packFor,
+  play,
+  whosePress,
+  type Seat,
+  type TableAction,
+  type TableDeps,
+  type TimerJob,
+} from "./play.js";
 import type { DiscordRest } from "./rest.js";
-import { EPHEMERAL, InteractionType, ResponseType, modal, nameOf, userOf, select, type CommandOption, type Interaction, type InteractionResponse } from "./types.js";
+import {
+  EPHEMERAL,
+  InteractionType,
+  ResponseType,
+  modal,
+  nameOf,
+  userOf,
+  select,
+  type CommandOption,
+  type Interaction,
+  type InteractionResponse,
+} from "./types.js";
 
 /**
  * What the bot says back.
@@ -65,7 +90,10 @@ export interface InteractionDeps {
  * account that claimed it holds the grant (bought, or flagged); the
  * server's members bought it through Discord's store; or not at all.
  */
-export async function serverPlanOf(deps: InteractionDeps, guild: { guildId: string; ownerSub: string }): Promise<"open" | "account" | "discord" | "none"> {
+export async function serverPlanOf(
+  deps: InteractionDeps,
+  guild: { guildId: string; ownerSub: string },
+): Promise<"open" | "account" | "discord" | "none"> {
   if (!deps.gates) return "open";
   if (deps.grants && (await deps.grants(guild.ownerSub)).includes(deps.serverFeature ?? "server")) return "account";
   if (deps.guildEntitled && (await deps.guildEntitled(guild.guildId))) return "discord";
@@ -117,9 +145,15 @@ const ADMINISTRATOR = 1n << 3n;
 const packLine = (p: { title: string; modes: Array<{ label: string }> }): string =>
   `**${p.title}** - ${p.modes.map((m) => m.label).join(", ") || "one mode"}`;
 
-const ephemeral = (content: string): InteractionResponse => ({ type: ResponseType.ChannelMessage, data: { content: content.slice(0, 2000), flags: EPHEMERAL } });
+const ephemeral = (content: string): InteractionResponse => ({
+  type: ResponseType.ChannelMessage,
+  data: { content: content.slice(0, 2000), flags: EPHEMERAL },
+});
 const say = (content: string): InteractionResponse => ({ type: ResponseType.ChannelMessage, data: { content: content.slice(0, 2000) } });
-const withCard = (type: number, card: Card, content?: string): InteractionResponse => ({ type, data: { ...(content ? { content } : {}), embeds: card.embeds, components: card.components } });
+const withCard = (type: number, card: Card, content?: string): InteractionResponse => ({
+  type,
+  data: { ...(content ? { content } : {}), embeds: card.embeds, components: card.components },
+});
 
 /** Whether the member who pressed may manage the server, by the permissions Discord computed for them. */
 export function canManage(i: Interaction): boolean {
@@ -166,7 +200,14 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       // account, it moves the link there, which is how a person relinks.
       const already = await deps.guilds.userForDiscord(who.id);
       const code = deps.code ? deps.code() : newCode();
-      await deps.guilds.putLinkCode({ code, discordUserId: who.id, name: nameOf(who), ...(i.guild_id ? { guildId: i.guild_id } : {}), createdAt: at, expiresAt });
+      await deps.guilds.putLinkCode({
+        code,
+        discordUserId: who.id,
+        name: nameOf(who),
+        ...(i.guild_id ? { guildId: i.guild_id } : {}),
+        createdAt: at,
+        expiresAt,
+      });
       return ephemeral(
         `${already ? "This Discord account is already linked to a Runlog account; opening this signed in to a different one moves the link there. " : ""}Open this address signed in to Runlog, within ${LINK_MINUTES} minutes, and your accounts are linked:\n${home}/play/link/discord?c=${code}\n\nOnly you can see this message. The code works once.`,
       );
@@ -175,7 +216,9 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       const linked = await deps.guilds.userForDiscord(who.id);
       if (!linked) return ephemeral("This Discord account is not linked to a Runlog account.");
       await deps.guilds.disconnect(linked);
-      return ephemeral("Unlinked. The bot no longer knows this Discord account; /link links it again, to the same Runlog account or another. What a linked-role verification wrote on your Discord profile stays until you remove it under Discord's own Connections.");
+      return ephemeral(
+        "Unlinked. The bot no longer knows this Discord account; /link links it again, to the same Runlog account or another. What a linked-role verification wrote on your Discord profile stays until you remove it under Discord's own Connections.",
+      );
     }
 
     if (name === "setup") {
@@ -197,7 +240,9 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       if (which?.name === "role") {
         const roleId = optionValue(which.options, "role");
         await deps.guilds.updateGuild(i.guild_id, at, { hostRoleId: roleId });
-        return ephemeral(roleId ? `Hosting runs here now takes the <@&${roleId}> role.` : "Anyone who can manage the server may host runs here now.");
+        return ephemeral(
+          roleId ? `Hosting runs here now takes the <@&${roleId}> role.` : "Anyone who can manage the server may host runs here now.",
+        );
       }
       if (which?.name === "channel") {
         const channelId = optionValue(which.options, "channel");
@@ -208,7 +253,11 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
         const mode = optionValue(which.options, "mode");
         if (mode !== "follow" && mode !== "pinned") return ephemeral("The card either follows the thread or is pinned at the top.");
         await deps.guilds.updateGuild(i.guild_id, at, { cardMode: mode === "follow" ? null : mode });
-        return ephemeral(mode === "pinned" ? "From the next run, the card stays pinned at the top of the thread and is edited in place." : "From the next run, the card follows the thread: a fresh one after every move, at the bottom.");
+        return ephemeral(
+          mode === "pinned"
+            ? "From the next run, the card stays pinned at the top of the thread and is edited in place."
+            : "From the next run, the card follows the thread: a fresh one after every move, at the bottom.",
+        );
       }
       if (which?.name === "threads") {
         const kind = optionValue(which.options, "kind");
@@ -233,16 +282,29 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
         }
         if (!deps.rest) return ephemeral("This copy of Runlog has no bot token yet, so it cannot ask Discord to make anything.");
         const name = (optionValue(which.options, "name")?.trim() || (role ? "Runlog Host" : "runs")).slice(0, 100);
-        const existing = (role ? await deps.rest.listRoles(i.guild_id) : await deps.rest.listChannels(i.guild_id))?.find((r) => r.name.toLowerCase() === name.toLowerCase());
-        const made = existing ? null : role ? await deps.rest.createRole(i.guild_id, name, COLORS.begins) : await deps.rest.createChannel(i.guild_id, name);
+        const existing = (role ? await deps.rest.listRoles(i.guild_id) : await deps.rest.listChannels(i.guild_id))?.find(
+          (r) => r.name.toLowerCase() === name.toLowerCase(),
+        );
+        const made = existing
+          ? null
+          : role
+            ? await deps.rest.createRole(i.guild_id, name, COLORS.begins)
+            : await deps.rest.createChannel(i.guild_id, name);
         const id = existing?.id ?? made;
-        if (!id) return ephemeral(`Discord would not ${existing ? "list" : "make"} the ${role ? "role" : "channel"}. Its own settings may say why; the bot's role must sit above any role it makes.`);
+        if (!id)
+          return ephemeral(
+            `Discord would not ${existing ? "list" : "make"} the ${role ? "role" : "channel"}. Its own settings may say why; the bot's role must sit above any role it makes.`,
+          );
         if (role) {
           await deps.guilds.updateGuild(i.guild_id, at, { hostRoleId: id });
-          return ephemeral(`${existing ? "Found" : "Made"} <@&${id}>; hosting runs here now takes it. Give it to whoever may host. A role that requires a Runlog account linked is set up by hand: Server Settings → Roles → the role → Links.`);
+          return ephemeral(
+            `${existing ? "Found" : "Made"} <@&${id}>; hosting runs here now takes it. Give it to whoever may host. A role that requires a Runlog account linked is set up by hand: Server Settings → Roles → the role → Links.`,
+          );
         }
         await deps.guilds.updateGuild(i.guild_id, at, { channelId: id });
-        return ephemeral(`${existing ? "Found" : "Made"} <#${id}>; runs open there by default now. Make sure the bot may post and open public threads in it.`);
+        return ephemeral(
+          `${existing ? "Found" : "Made"} <#${id}>; runs open there by default now. Make sure the bot may post and open public threads in it.`,
+        );
       }
       if (which?.name === "status") {
         // Whoever claimed it, by the Discord accounts they have linked;
@@ -269,7 +331,9 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
           // semicolons, a server with twenty of them was a paragraph
           // nobody could find anything in, and it buried the four lines
           // above it that answer the question actually asked.
-          packs.length === 0 ? "Packs: none yet; the account that claimed the server adds them from its profile, under Servers." : `Packs:\n${packs.map(packLine).join("\n")}`,
+          packs.length === 0
+            ? "Packs: none yet; the account that claimed the server adds them from its profile, under Servers."
+            : `Packs:\n${packs.map(packLine).join("\n")}`,
         ];
         return ephemeral(lines.join("\n"));
       }
@@ -293,11 +357,14 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
        */
       if (!mayHost(i, guild.hostRoleId)) {
         return ephemeral(
-          guild.hostRoleId ? `Seeing what this server can play takes the <@&${guild.hostRoleId}> role.` : "Seeing what this server can play takes someone who can manage the server, until /setup role names a role.",
+          guild.hostRoleId
+            ? `Seeing what this server can play takes the <@&${guild.hostRoleId}> role.`
+            : "Seeing what this server can play takes someone who can manage the server, until /setup role names a role.",
         );
       }
       const packs = await deps.guilds.listGuildPacks(i.guild_id);
-      if (packs.length === 0) return ephemeral("No packs here yet. The account that claimed the server adds them from its Runlog profile, under Servers.");
+      if (packs.length === 0)
+        return ephemeral("No packs here yet. The account that claimed the server adds them from its Runlog profile, under Servers.");
       return ephemeral(packs.map(packLine).join("\n"));
     }
 
@@ -325,7 +392,17 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
 
 function tableDeps(deps: InteractionDeps): TableDeps | null {
   if (!deps.store || !deps.mintId) return null;
-  return { store: deps.store, guilds: deps.guilds, rest: deps.rest ?? null, ...(deps.notify ? { notify: deps.notify } : {}), now: deps.now, mintId: deps.mintId, token: deps.token ?? (() => deps.mintId!()), appUrl: deps.appUrl, ...(deps.schedule ? { schedule: deps.schedule } : {}) };
+  return {
+    store: deps.store,
+    guilds: deps.guilds,
+    rest: deps.rest ?? null,
+    ...(deps.notify ? { notify: deps.notify } : {}),
+    now: deps.now,
+    mintId: deps.mintId,
+    token: deps.token ?? (() => deps.mintId!()),
+    appUrl: deps.appUrl,
+    ...(deps.schedule ? { schedule: deps.schedule } : {}),
+  };
 }
 
 /**
@@ -351,8 +428,15 @@ export async function timerRanOut(deps: InteractionDeps, job: TimerJob): Promise
 
 /** How the run ends, asked of the host alone: each ending named, with what it asks of the player under it, the way the app's choices say it; one line, since that is the room Discord gives it. */
 function endingsMenu(pack: Pack, sessionId: string): InteractionResponse {
-  const endings = (pack.endings ?? []).map((e) => ({ label: e.label, value: e.id, ...(e.text?.trim() ? { description: oneLine(e.text) } : {}) }));
-  return { type: ResponseType.ChannelMessage, data: { content: "How does it end?", flags: EPHEMERAL, components: [select(customId(sessionId, "ending"), "The ending", endings)] } };
+  const endings = (pack.endings ?? []).map((e) => ({
+    label: e.label,
+    value: e.id,
+    ...(e.text?.trim() ? { description: oneLine(e.text) } : {}),
+  }));
+  return {
+    type: ResponseType.ChannelMessage,
+    data: { content: "How does it end?", flags: EPHEMERAL, components: [select(customId(sessionId, "ending"), "The ending", endings)] },
+  };
 }
 
 /** A paragraph as one line, for the room a select option's description gives it. */
@@ -364,7 +448,11 @@ function mayHost(i: Interaction, hostRoleId: string | undefined): boolean {
   return canManage(i);
 }
 
-async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullable<ReturnType<typeof userOf>>): Promise<InteractionResponse> {
+async function runCommand(
+  i: Interaction,
+  deps: InteractionDeps,
+  who: NonNullable<ReturnType<typeof userOf>>,
+): Promise<InteractionResponse> {
   if (!i.guild_id) return ephemeral("Runs are hosted in a server; ask in one.");
   const table = tableDeps(deps);
   if (!table) return ephemeral("This copy of Runlog cannot host runs.");
@@ -373,11 +461,18 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
   if (!guild) return ephemeral("This server is not set up for Runlog yet. Someone who can manage it runs /setup claim.");
 
   if (which?.name === "start") {
-    if (!mayHost(i, guild.hostRoleId)) return ephemeral(guild.hostRoleId ? `Hosting a run here takes the <@&${guild.hostRoleId}> role.` : "Hosting a run here takes someone who can manage the server, until /setup role names a role.");
+    if (!mayHost(i, guild.hostRoleId))
+      return ephemeral(
+        guild.hostRoleId
+          ? `Hosting a run here takes the <@&${guild.hostRoleId}> role.`
+          : "Hosting a run here takes someone who can manage the server, until /setup role names a role.",
+      );
     const hostSub = await deps.guilds.userForDiscord(who.id);
     if (!hostSub) return ephemeral("A host needs a Runlog account linked, so the run is theirs: run /link first, then start again.");
     if ((await serverPlanOf(deps, guild)) === "none") {
-      return ephemeral(`Hosting runs here needs the server plan, which this server does not hold yet. The account that claimed it subscribes from its Runlog profile, under Servers${deps.guildEntitled ? ", or the server subscribes through Discord's store" : ""}.`);
+      return ephemeral(
+        `Hosting runs here needs the server plan, which this server does not hold yet. The account that claimed it subscribes from its Runlog profile, under Servers${deps.guildEntitled ? ", or the server subscribes through Discord's store" : ""}.`,
+      );
     }
     const packId = optionValue(which.options, "pack") ?? "";
     const modeId = optionValue(which.options, "mode") ?? "";
@@ -390,7 +485,11 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     const mode = found.pack.modes[modeId];
     if (!mode) return ephemeral(`${found.title} has no mode "${modeId}". Pick one from the list as you type.`);
     if (players !== undefined && (!mode.players || players < mode.players.min || players > mode.players.max)) {
-      return ephemeral(mode.players ? `${mode.label} is played by ${mode.players.min === mode.players.max ? mode.players.min : `${mode.players.min} to ${mode.players.max}`}.` : `${mode.label} is played by one; leave players out.`);
+      return ephemeral(
+        mode.players
+          ? `${mode.label} is played by ${mode.players.min === mode.players.max ? mode.players.min : `${mode.players.min} to ${mode.players.max}`}.`
+          : `${mode.label} is played by one; leave players out.`,
+      );
     }
     const channelId = guild.channelId ?? i.channel_id;
     if (!channelId) return ephemeral("Nowhere to open the run: run this in a channel, or set one with /setup channel.");
@@ -447,7 +546,14 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     if (!table.rest) return ephemeral("The bot cannot post to Discord yet.");
     const events = await eventsOf(table.store, run.sessionId);
     const { state, agenda } = agendaFor(found.pack, events);
-    const card = cardFor({ pack: found.pack, state, events, agenda, run, ...(run.pending ? { pending: run.pending as unknown as Pending } : {}) });
+    const card = cardFor({
+      pack: found.pack,
+      state,
+      events,
+      agenda,
+      run,
+      ...(run.pending ? { pending: run.pending as unknown as Pending } : {}),
+    });
     const before = run.cardMessageId;
     await retire(table, run);
     await postCard(table, run, card);
@@ -471,7 +577,9 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
       await table.store.updateSession(run.sessionId, deps.now(), { publicTokenHash: hashToken(token) });
       await table.guilds.putGuildRun({ ...run, liveToken: token, updatedAt: deps.now() });
     }
-    return say(`Watch it live, no account needed: ${deps.appUrl.replace(/\/$/, "")}/r/${encodeURIComponent(run.sessionId)}?t=${encodeURIComponent(token)}`);
+    return say(
+      `Watch it live, no account needed: ${deps.appUrl.replace(/\/$/, "")}/r/${encodeURIComponent(run.sessionId)}?t=${encodeURIComponent(token)}`,
+    );
   }
   if (which?.name === "end") {
     if (who.id !== run.hostDiscordId && !canManage(i)) return ephemeral("Only the host ends the run.");
@@ -500,7 +608,8 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     const { state } = agendaFor(found.pack, await eventsOf(table.store, run.sessionId));
     const moderated = Boolean(moderation(found.pack, state));
     const seated = Object.entries(run.seats ?? {}).some(([, s]) => s.discordId === who.id);
-    const open = state.players > 1 ? Array.from({ length: state.players }, (_, n) => n + 1).find((n) => !run.seats?.[String(n)]) : undefined;
+    const open =
+      state.players > 1 ? Array.from({ length: state.players }, (_, n) => n + 1).find((n) => !run.seats?.[String(n)]) : undefined;
     let action: TableAction | null = null;
     if (which.name === "join") {
       if (moderated) action = { kind: "join" };
@@ -512,7 +621,8 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     } else {
       if (moderated) action = { kind: "leave" };
       else if (state.players > 1) action = seated ? { kind: "unseat" } : null;
-      if (!action) return ephemeral("There is nothing to leave: you hold no seat here. A run followed into your library is left from the library.");
+      if (!action)
+        return ephemeral("There is nothing to leave: you hold no seat here. A run followed into your library is left from the library.");
     }
     const played = await play(table, run, found.pack, actor, action);
     if ("error" in played) return ephemeral(played.error);
@@ -520,7 +630,10 @@ async function runCommand(i: Interaction, deps: InteractionDeps, who: NonNullabl
     // The same private line the card's own Join sends; see `pressed`.
     if (action.kind === "join" || action.kind === "seat") await tellThemHow(deps, table, played.run, i, actor.name);
     if (played.line) return say(played.line);
-    if (action.kind === "seat") return ephemeral(`You have seat ${action.seat}. The card says which seat presses this ${found.pack.vocabulary.unit.one.toLowerCase()}.`);
+    if (action.kind === "seat")
+      return ephemeral(
+        `You have seat ${action.seat}. The card says which seat presses this ${found.pack.vocabulary.unit.one.toLowerCase()}.`,
+      );
     if (action.kind === "follow") return ephemeral("Followed: this run is in your Runlog library now, as a watcher.");
     return ephemeral("Done.");
   }
@@ -599,7 +712,11 @@ async function seatOf(deps: InteractionDeps, who: NonNullable<ReturnType<typeof 
  * line is posted and the one card is edited in place. A press on the
  * card itself takes a shorter road; see `pressed`.
  */
-async function follow(table: TableDeps, played: { line: string | null; mark?: import("./card.js").Mark | null; run: GuildRun; ended: boolean; card: Card }, opts: { postLine: boolean }): Promise<void> {
+async function follow(
+  table: TableDeps,
+  played: { line: string | null; mark?: import("./card.js").Mark | null; run: GuildRun; ended: boolean; card: Card },
+  opts: { postLine: boolean },
+): Promise<void> {
   if (!table.rest) return;
   const said = sayingOf(played);
   if (opts.postLine && said) await table.rest.postMessage(played.run.threadId, said);
@@ -612,7 +729,10 @@ async function follow(table: TableDeps, played: { line: string | null; mark?: im
 }
 
 /** What a move says in the thread, as one message: the line, and the bar; nothing where it was only the bar's words. */
-function sayingOf(played: { line: string | null; mark?: import("./card.js").Mark | null }): { content?: string; embeds?: unknown[] } | null {
+function sayingOf(played: {
+  line: string | null;
+  mark?: import("./card.js").Mark | null;
+}): { content?: string; embeds?: unknown[] } | null {
   const plain = (s: string) => s.replace(/\*\*/g, "");
   return messageFor(played.mark && played.line && plain(played.line) === plain(played.mark.text) ? null : played.line, played.mark ?? null);
 }
@@ -652,7 +772,11 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   const hostOnly = ["end", "ending", "finish", "undo", "award", "cards"].includes(id.verb);
   // The host presses anything; whoever holds a seat presses the table; anyone joins, sits, waves or follows.
   if (!anyone && !host && !(mayPress(run, who.id) && !hostOnly)) {
-    return ephemeral(run.seats ? `Only ${run.hostName} and whoever holds a seat press here. Take a seat, or watch by the live link.` : `Only the host, ${run.hostName}, presses here. Everyone else watches, here and by the live link.`);
+    return ephemeral(
+      run.seats
+        ? `Only ${run.hostName} and whoever holds a seat press here. Take a seat, or watch by the live link.`
+        : `Only the host, ${run.hostName}, presses here. Everyone else watches, here and by the live link.`,
+    );
   }
   // Where the pack says which role acts this unit, a seat presses only in its turn.
   if (!anyone && !host && run.seats) {
@@ -666,34 +790,63 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
     const events = await eventsOf(table.store, run.sessionId);
     const { state, agenda } = agendaFor(pack, events);
     const hint = agenda.active ? constraintsFor(pack, state, constrainedByOf(agenda.active.step)).join("; ") : "";
-    return modal(customId(run.sessionId, "declared"), `Declare the ${pack.vocabulary.subject.one.toLowerCase()}`, { id: "subject", label: `What is this ${pack.vocabulary.subject.one.toLowerCase()}?`, ...(hint ? { placeholder: hint } : {}) });
+    return modal(customId(run.sessionId, "declared"), `Declare the ${pack.vocabulary.subject.one.toLowerCase()}`, {
+      id: "subject",
+      label: `What is this ${pack.vocabulary.subject.one.toLowerCase()}?`,
+      ...(hint ? { placeholder: hint } : {}),
+    });
   }
   if (i.type === InteractionType.MessageComponent && id.verb === "typeroll") {
-    const dice = run.pending && typeof (run.pending as { request?: { dice?: string } }).request?.dice === "string" ? (run.pending as { request: { dice: string } }).request.dice : "the dice";
-    return modal(customId(run.sessionId, "rolled"), "Your roll", { id: "total", label: `What did ${dice} come to?`, placeholder: "The total, as a number" });
+    const dice =
+      run.pending && typeof (run.pending as { request?: { dice?: string } }).request?.dice === "string"
+        ? (run.pending as { request: { dice: string } }).request.dice
+        : "the dice";
+    return modal(customId(run.sessionId, "rolled"), "Your roll", {
+      id: "total",
+      label: `What did ${dice} come to?`,
+      placeholder: "The total, as a number",
+    });
   }
   if (i.type === InteractionType.MessageComponent && id.verb === "text") {
-    const label = run.pending && typeof (run.pending as { request?: { label?: string } }).request?.label === "string" ? (run.pending as { request: { label: string } }).request.label : "Your answer";
+    const label =
+      run.pending && typeof (run.pending as { request?: { label?: string } }).request?.label === "string"
+        ? (run.pending as { request: { label: string } }).request.label
+        : "Your answer";
     return modal(customId(run.sessionId, "answered"), "Answer", { id: "answer", label, paragraph: true });
   }
-  if (i.type === InteractionType.MessageComponent && id.verb === "end" && (pack.endings?.length ?? 0) > 1) return endingsMenu(pack, run.sessionId);
+  if (i.type === InteractionType.MessageComponent && id.verb === "end" && (pack.endings?.length ?? 0) > 1)
+    return endingsMenu(pack, run.sessionId);
 
   // A button that drives a step names the step it was drawn for. Pressed
   // once the table has moved past it (from the app, from another seat,
   // from this card an instant ago) it drives nothing: the answer is the
   // card as it stands now where the pressed message was the card, or a
   // fresh card at the bottom with the stale message's buttons taken off.
-  const boundTo = ["step", "byhand", "finalize", "next", "finish", "declare"].includes(id.verb) ? (id.arg ?? "") : id.verb === "tick" ? ((id.arg ?? "").split("@")[1] ?? "") : "";
+  const boundTo = ["step", "byhand", "finalize", "next", "finish", "declare"].includes(id.verb)
+    ? (id.arg ?? "")
+    : id.verb === "tick"
+      ? ((id.arg ?? "").split("@")[1] ?? "")
+      : "";
   if (boundTo) {
     const events = await eventsOf(table.store, run.sessionId);
     const { state, agenda: now } = agendaFor(pack, events);
     const current = now.active ? `${now.active.phase.id}#${now.active.index}` : "";
     if (current !== boundTo) {
-      const fresh = cardFor({ pack, state, events, agenda: now, run, ...(run.pending ? { pending: run.pending as unknown as Pending } : {}) });
+      const fresh = cardFor({
+        pack,
+        state,
+        events,
+        agenda: now,
+        run,
+        ...(run.pending ? { pending: run.pending as unknown as Pending } : {}),
+      });
       if (i.message?.id === run.cardMessageId) return withCard(ResponseType.UpdateMessage, fresh);
       await retire(table, run);
       await postCard(table, run, fresh);
-      return { type: ResponseType.UpdateMessage, data: { ...(i.message?.content ? { content: i.message.content } : {}), embeds: i.message?.embeds ?? [], components: [] } };
+      return {
+        type: ResponseType.UpdateMessage,
+        data: { ...(i.message?.content ? { content: i.message.content } : {}), embeds: i.message?.embeds ?? [], components: [] },
+      };
     }
   }
   const action = actionFor(id, i, run, pack);
@@ -717,7 +870,7 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   // The card follows the thread, unless the server pinned it. Following: a
   // press on the card that made a move turns the pressed message into the
   // move's line (the answer to the press, which costs no call) and posts a
-  // fresh card at the bottom; a press that made no line, a tick, a seat, 
+  // fresh card at the bottom; a press that made no line, a tick, a seat,
   // updates the card in place, which keeps it the last message. Pinned:
   // the card is updated in place and the line posted, as it always was.
   // The ending menu lives on an ephemeral message, whose reply is the line.
@@ -735,7 +888,8 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
   const said = sayingOf(played);
   if (played.run.cardMode === "pinned") {
     if (table.rest && said) await table.rest.postMessage(played.run.threadId, said);
-    if (!onCard && table.rest && played.run.cardMessageId) await table.rest.editMessage(played.run.threadId, played.run.cardMessageId, played.card);
+    if (!onCard && table.rest && played.run.cardMessageId)
+      await table.rest.editMessage(played.run.threadId, played.run.cardMessageId, played.card);
     return withCard(ResponseType.UpdateMessage, played.card);
   }
   if (!onCard) {
@@ -769,7 +923,9 @@ function actionFor(id: { verb: string; arg?: string }, i: Interaction, run: Guil
     case "next":
       return { kind: "close", andThen: "enter" };
     case "finish":
-      return (pack.endings?.length ?? 0) > 1 ? { kind: "close", andThen: "stay" } : { kind: "close", andThen: "end", ending: pack.endings?.[0]?.id ?? "ended" };
+      return (pack.endings?.length ?? 0) > 1
+        ? { kind: "close", andThen: "stay" }
+        : { kind: "close", andThen: "end", ending: pack.endings?.[0]?.id ?? "ended" };
     case "tick": {
       const index = Number((id.arg ?? "").split("@")[0]);
       if (!Number.isInteger(index)) return null;
@@ -837,8 +993,11 @@ function actionFor(id: { verb: string; arg?: string }, i: Interaction, run: Guil
  * flips what the person saw rather than what the log says an instant later.
  */
 function messageTick(i: Interaction, index: string): boolean {
-  const rows = (i as unknown as { message?: { components?: Array<{ components?: Array<{ custom_id?: string; label?: string }> }> } }).message?.components ?? [];
-  for (const r of rows) for (const c of r.components ?? []) if (c.custom_id?.endsWith(`:tick:${index}`)) return (c.label ?? "").startsWith("☑");
+  const rows =
+    (i as unknown as { message?: { components?: Array<{ components?: Array<{ custom_id?: string; label?: string }> }> } }).message
+      ?.components ?? [];
+  for (const r of rows)
+    for (const c of r.components ?? []) if (c.custom_id?.endsWith(`:tick:${index}`)) return (c.label ?? "").startsWith("☑");
   return false;
 }
 
@@ -848,7 +1007,8 @@ async function autocomplete(i: Interaction, deps: InteractionDeps): Promise<Inte
   const typed = typeof focused?.value === "string" ? focused.value.toLowerCase() : "";
   const choices: Array<{ name: string; value: string }> = [];
   if (i.guild_id && which?.name === "start" && focused?.name === "pack") {
-    for (const p of await deps.guilds.listGuildPacks(i.guild_id)) if (!typed || p.title.toLowerCase().includes(typed)) choices.push({ name: p.title, value: p.id });
+    for (const p of await deps.guilds.listGuildPacks(i.guild_id))
+      if (!typed || p.title.toLowerCase().includes(typed)) choices.push({ name: p.title, value: p.id });
   } else if (i.guild_id && which?.name === "start" && focused?.name === "mode") {
     const packId = optionValue(which.options, "pack") ?? "";
     const meta = (await deps.guilds.listGuildPacks(i.guild_id)).find((p) => p.id === packId);
@@ -856,7 +1016,8 @@ async function autocomplete(i: Interaction, deps: InteractionDeps): Promise<Inte
   } else if (which?.name === "end" && focused?.name === "ending" && i.channel_id) {
     const run = await deps.guilds.guildRunByThread(i.channel_id);
     const found = run ? await packFor(deps.guilds, run.guildId, run.packId) : null;
-    for (const e of found?.pack.endings ?? []) if (!typed || e.label.toLowerCase().includes(typed)) choices.push({ name: e.label, value: e.id });
+    for (const e of found?.pack.endings ?? [])
+      if (!typed || e.label.toLowerCase().includes(typed)) choices.push({ name: e.label, value: e.id });
   }
   return { type: ResponseType.AutocompleteResult, data: { choices: choices.slice(0, 25) } };
 }

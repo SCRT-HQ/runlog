@@ -21,23 +21,15 @@ const signal = loadPack("packs/testing/salt-and-signal.yaml");
 
 let clock = 0;
 /** Build an event with a monotonically increasing timestamp. */
-function ev<T extends RunEvent["t"]>(
-  t: T,
-  props: Omit<Extract<RunEvent, { t: T }>, "t" | "at"> = {} as never,
-): RunEvent {
+function ev<T extends RunEvent["t"]>(t: T, props: Omit<Extract<RunEvent, { t: T }>, "t" | "at"> = {} as never): RunEvent {
   clock += 1000;
   return { t, at: new Date(Date.UTC(2026, 0, 1, 0, 0, 0, clock)).toISOString(), ...props } as RunEvent;
 }
 
-const start = () =>
-  ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" });
+const start = () => ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" });
 
 /** A completed unit: enter, declare, close. */
-const unit = (type: string): RunEvent[] => [
-  ev("UnitEntered"),
-  ev("SubjectDeclared", { subjectType: type }),
-  ev("UnitFinalized"),
-];
+const unit = (type: string): RunEvent[] => [ev("UnitEntered"), ev("SubjectDeclared", { subjectType: type }), ev("UnitFinalized")];
 
 describe("reduce", () => {
   it("refuses a log that does not begin at the beginning", () => {
@@ -86,13 +78,7 @@ describe("reduce", () => {
     it("marks a removed subject rather than deleting it", () => {
       // Deleting would renumber everything after it, and targeting counts
       // positions -- history has to stay put.
-      const state = reduce(kiln, [
-        start(),
-        ...unit("Bowl"),
-        ...unit("Vase"),
-        ev("SubjectRemoved", { subject: 1 }),
-        ...unit("Cup"),
-      ]);
+      const state = reduce(kiln, [start(), ...unit("Bowl"), ...unit("Vase"), ev("SubjectRemoved", { subject: 1 }), ...unit("Cup")]);
       expect(state.subjects.map((s) => s.id)).toEqual([1, 2, 3]);
       expect(state.subjects[0]!.removed).toBe(true);
       expect(eligibleTargets(kiln, state).map((s) => s.id)).toEqual([2, 3]);
@@ -101,11 +87,7 @@ describe("reduce", () => {
 
   describe("states", () => {
     it("attaches a subject-scoped state to the named subject", () => {
-      const state = reduce(kiln, [
-        start(),
-        ...unit("Bowl"),
-        ev("StateApplied", { state: "locked", subject: 1 }),
-      ]);
+      const state = reduce(kiln, [start(), ...unit("Bowl"), ev("StateApplied", { state: "locked", subject: 1 })]);
       expect(state.subjects[0]!.states).toEqual(["locked"]);
       expect(state.runStates).toEqual([]);
     });
@@ -185,10 +167,7 @@ describe("reduce", () => {
     });
 
     it("clamps to the declared bounds", () => {
-      const state = reduce(kiln, [
-        start(),
-        ev("CounterChanged", { counter: "calm", set: 999 }),
-      ]);
+      const state = reduce(kiln, [start(), ev("CounterChanged", { counter: "calm", set: 999 })]);
       expect(state.counters.calm).toBe(999); // calm declares no ceiling
       const bounded = reduce(kiln, [start(), ev("CounterChanged", { counter: "calm", by: -5 })]);
       expect(bounded.counters.calm).toBe(0); // but min is 0
@@ -229,7 +208,15 @@ describe("reduce", () => {
       expect(queued.unit).toBe(2);
       expect(queued.rewindNext).toBe(1);
       expect(nextUnit(queued)).toBe(1);
-      const back = reduce(kiln, [start(), ...unit("Bowl"), ...unit("Cup"), ev("UnitEntered"), ev("RewindQueued", { count: 1 }), ev("UnitFinalized"), ev("UnitEntered")]);
+      const back = reduce(kiln, [
+        start(),
+        ...unit("Bowl"),
+        ...unit("Cup"),
+        ev("UnitEntered"),
+        ev("RewindQueued", { count: 1 }),
+        ev("UnitFinalized"),
+        ev("UnitEntered"),
+      ]);
       expect(back.unit).toBe(2);
       expect(back.rewindNext).toBe(0);
       expect(back.rewinds).toBe(1);
@@ -237,7 +224,14 @@ describe("reduce", () => {
       expect(back.stepsDone).toEqual([]);
       expect(back.subjects.filter((s) => s.unit === 2)).toHaveLength(2);
       expect(back.subjects.findLast((s) => s.unit === 2)?.finalized).toBe(false);
-      const floor = reduce(kiln, [start(), ...unit("Bowl"), ev("UnitEntered"), ev("RewindQueued", { count: 5 }), ev("UnitFinalized"), ev("UnitEntered")]);
+      const floor = reduce(kiln, [
+        start(),
+        ...unit("Bowl"),
+        ev("UnitEntered"),
+        ev("RewindQueued", { count: 5 }),
+        ev("UnitFinalized"),
+        ev("UnitEntered"),
+      ]);
       expect(floor.unit).toBe(1);
     });
   });
@@ -247,17 +241,34 @@ describe("reduce", () => {
       const owed = reduce(kiln, [start(), ...unit("Bowl"), ev("ExtraRollQueued", { table: "form", count: 1, unit: "next" })]);
       expect(owed.extraRollsNext).toEqual({ form: 1 });
       expect(owed.extraRolls).toEqual({});
-      const next = reduce(kiln, [start(), ...unit("Bowl"), ev("ExtraRollQueued", { table: "form", count: 1, unit: "next" }), ev("UnitFinalized"), ev("UnitEntered")]);
+      const next = reduce(kiln, [
+        start(),
+        ...unit("Bowl"),
+        ev("ExtraRollQueued", { table: "form", count: 1, unit: "next" }),
+        ev("UnitFinalized"),
+        ev("UnitEntered"),
+      ]);
       expect(next.extraRolls).toEqual({ form: 1 });
       expect(next.extraRollsNext).toEqual({});
-      const paid = reduce(kiln, [start(), ...unit("Bowl"), ev("ExtraRollQueued", { table: "form", count: 2, unit: "current" }), ev("ExtraRollTaken", { table: "form" })]);
+      const paid = reduce(kiln, [
+        start(),
+        ...unit("Bowl"),
+        ev("ExtraRollQueued", { table: "form", count: 2, unit: "current" }),
+        ev("ExtraRollTaken", { table: "form" }),
+      ]);
       expect(paid.extraRolls).toEqual({ form: 1 });
     });
 
     it("keeps a table step open while rolls are owed, then completes it", () => {
-      const phase = { id: "shape", label: "Shape", steps: [{ kind: "rollTable" as const, table: "form", optional: false }] } as unknown as Parameters<typeof stepCompletionEvents>[0];
+      const phase = {
+        id: "shape",
+        label: "Shape",
+        steps: [{ kind: "rollTable" as const, table: "form", optional: false }],
+      } as unknown as Parameters<typeof stepCompletionEvents>[0];
       const owing = reduce(kiln, [start(), ...unit("Bowl"), ev("ExtraRollQueued", { table: "form", count: 1, unit: "current" })]);
-      expect(stepCompletionEvents(phase, 0, owing, "2026-01-01T00:00:01Z")).toEqual([{ t: "ExtraRollTaken", at: "2026-01-01T00:00:01Z", table: "form" }]);
+      expect(stepCompletionEvents(phase, 0, owing, "2026-01-01T00:00:01Z")).toEqual([
+        { t: "ExtraRollTaken", at: "2026-01-01T00:00:01Z", table: "form" },
+      ]);
       const settled = reduce(kiln, [start(), ...unit("Bowl")]);
       expect(stepCompletionEvents(phase, 0, settled, "2026-01-01T00:00:01Z").map((e) => e.t)).toEqual(["StepCompleted", "PhaseCompleted"]);
     });
@@ -272,34 +283,20 @@ describe("reduce", () => {
     });
 
     it("works one off each time a unit is entered", () => {
-      const state = reduce(kiln, [
-        start(),
-        ...unit("Bowl"),
-        ev("UnitForced", { count: 2 }),
-        ...unit("Vase"),
-      ]);
+      const state = reduce(kiln, [start(), ...unit("Bowl"), ev("UnitForced", { count: 2 }), ...unit("Vase")]);
       expect(state.forcedUnits).toBe(1);
       expect(canEndRun(state).ok).toBe(false);
     });
 
     it("allows the run to end once the queue is empty", () => {
-      const state = reduce(kiln, [
-        start(),
-        ...unit("Bowl"),
-        ev("UnitForced", { count: 1 }),
-        ...unit("Vase"),
-      ]);
+      const state = reduce(kiln, [start(), ...unit("Bowl"), ev("UnitForced", { count: 1 }), ...unit("Vase")]);
       expect(canEndRun(state).ok).toBe(true);
     });
   });
 
   describe("the rest of the board", () => {
     it("records journal entries against their unit", () => {
-      const state = reduce(kiln, [
-        start(),
-        ...unit("Bowl"),
-        ev("JournalWritten", { unit: 1, text: "Wobbled, kept it anyway." }),
-      ]);
+      const state = reduce(kiln, [start(), ...unit("Bowl"), ev("JournalWritten", { unit: 1, text: "Wobbled, kept it anyway." })]);
       expect(state.journal[1]).toBe("Wobbled, kept it anyway.");
     });
 
@@ -324,9 +321,7 @@ describe("reduce", () => {
         ev("UnitEntered"),
         ev("OutcomeResolved", { table: "constraint", entryId: "con-thin", cause: "phase" }),
       ]);
-      expect(state.outcomes).toEqual([
-        expect.objectContaining({ unit: 1, table: "constraint", entryId: "con-thin" }),
-      ]);
+      expect(state.outcomes).toEqual([expect.objectContaining({ unit: 1, table: "constraint", entryId: "con-thin" })]);
     });
 
     it("advances the clock so a run can span more than one sitting", () => {

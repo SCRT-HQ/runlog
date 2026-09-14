@@ -46,13 +46,13 @@ export function Checklist({
   action?: (s: Shown) => ReactNode;
 }) {
   const points = useMemo(() => items.map(pointOf), [items]);
-  const evidence = useMemo(
-    () => points.map((p) => (p.shows ? evidenceFor(pack, state, p.shows) : [])),
-    [points, pack, state],
-  );
+  const evidence = useMemo(() => points.map((p) => (p.shows ? evidenceFor(pack, state, p.shows) : [])), [points, pack, state]);
 
   return (
-    <ul className="checklist" title="Nothing here is checked by the app. It cannot see the work; ticking a box is your word, and the log keeps it.">
+    <ul
+      className="checklist"
+      title="Nothing here is checked by the app. It cannot see the work; ticking a box is your word, and the log keeps it."
+    >
       {points.map((point, i) => {
         const shown: Shown[] = evidence[i] ?? [];
         if (point.shows && shown.length === 0) return null;
@@ -72,7 +72,12 @@ export function Checklist({
         const mine = listed.filter((s) => !settling?.owing(s) && !settling?.settled(s));
         const childKeys = mine.map((s) => `${i}:${s.key}`);
         const made = pointMade(i, shown, ticked, point, settling);
-        const toggle = (keys: string[], on: boolean) => onToggle(keys.filter((k) => ticked.has(k) !== on), on, point.tally);
+        const toggle = (keys: string[], on: boolean) =>
+          onToggle(
+            keys.filter((k) => ticked.has(k) !== on),
+            on,
+            point.tally,
+          );
         return (
           <li key={i}>
             <label>

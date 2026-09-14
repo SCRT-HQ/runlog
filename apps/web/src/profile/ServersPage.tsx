@@ -67,10 +67,16 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
     run("claim", async () => {
       if (!api || !pending || pending.kind !== "guild") return null;
       const { guild, upgrade } = await api.claimGuild(pending.code);
-      setKnown((k) => ({ guilds: [...(k?.guilds ?? []).filter((g) => g.guildId !== guild.guildId), guild], server: k?.server ?? !upgrade, open: k?.open ?? false }));
+      setKnown((k) => ({
+        guilds: [...(k?.guilds ?? []).filter((g) => g.guildId !== guild.guildId), guild],
+        server: k?.server ?? !upgrade,
+        open: k?.open ?? false,
+      }));
       clearPendingLink();
       setPending(null);
-      return upgrade ? `${guild.name ?? "The server"} is yours. To host runs there, subscribe to Runlog for servers below; claiming and choosing packs work meanwhile.` : `${guild.name ?? "The server"} is yours. Add packs below, and set who may host with /setup role in Discord.`;
+      return upgrade
+        ? `${guild.name ?? "The server"} is yours. To host runs there, subscribe to Runlog for servers below; claiming and choosing packs work meanwhile.`
+        : `${guild.name ?? "The server"} is yours. Add packs below, and set who may host with /setup role in Discord.`;
     });
   const dismiss = () => {
     clearPendingLink();
@@ -91,7 +97,15 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
       const parsed = loadPackText(pack.source, pack.format);
       if (!parsed.ok) return "That pack does not load as it is; open it in the Designer first.";
       const modes = Object.entries(parsed.pack.modes).map(([id, m]) => ({ id, label: m.label ?? id }));
-      const kept = await api.delegatePack(g.guildId, { packId: pack.id, title: pack.title, version: pack.version, format: pack.format, hash: await hashText(pack.source), modes, source: pack.source });
+      const kept = await api.delegatePack(g.guildId, {
+        packId: pack.id,
+        title: pack.title,
+        version: pack.version,
+        format: pack.format,
+        hash: await hashText(pack.source),
+        modes,
+        source: pack.source,
+      });
       setVaults((v) => ({ ...v, [g.guildId]: [...(v[g.guildId] ?? []).filter((p) => p.id !== kept.id), kept] }));
       return `${kept.title} is in the vault. /packs in Discord lists it now.`;
     });
@@ -118,20 +132,29 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
   return (
     <div className="profile">
       <h2>Servers</h2>
-      <p className="muted small">Discord servers you claimed. The bot hosts runs in them on the packs you put in each server's vault; members see what the dice draw, never the pack.</p>
+      <p className="muted small">
+        Discord servers you claimed. The bot hosts runs in them on the packs you put in each server's vault; members see what the dice draw,
+        never the pack.
+      </p>
 
       {pending && (
         <div className="incoming">
           <div className="incomingWhat">
             <strong>Discord asked to claim a server for this account.</strong>
             <div className="muted small">
-              The code came from <code>/setup claim</code>, pressed by someone who can manage that server. The account that claims it pays for its plan and chooses its packs.
+              The code came from <code>/setup claim</code>, pressed by someone who can manage that server. The account that claims it pays
+              for its plan and chooses its packs.
               {account.status === "signed-in" ? ` You are signed in as ${account.user.email}.` : " Sign in first, and the code waits."}
             </div>
           </div>
           <div className="incomingActions">
             {account.status === "signed-in" ? (
-              <button className="primary" disabled={busy !== null || !api} aria-busy={busy === "claim" || undefined} onClick={() => void claim()}>
+              <button
+                className="primary"
+                disabled={busy !== null || !api}
+                aria-busy={busy === "claim" || undefined}
+                onClick={() => void claim()}
+              >
                 {busy === "claim" ? "Claiming…" : "Claim it for this account"}
               </button>
             ) : account.status === "anonymous" ? (
@@ -197,7 +220,10 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
           {known.guilds.length === 0 ? (
             <section className="panel">
               <h3 className="sectionTitle">No servers yet</h3>
-              <p className="muted small">In a Discord server of yours, add the Runlog bot, run /setup claim, and open the address it gives you: it lands here, and the server is yours to fill.</p>
+              <p className="muted small">
+                In a Discord server of yours, add the Runlog bot, run /setup claim, and open the address it gives you: it lands here, and
+                the server is yours to fill.
+              </p>
             </section>
           ) : (
             known.guilds.map((g) => {
@@ -225,7 +251,12 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
                     ))
                   )}
                   <div className="padRow">
-                    <select className="chipAdd" aria-label={`A pack to add to ${g.name ?? "this server"}`} value={picked[g.guildId] ?? ""} onChange={(e) => setPicked((p) => ({ ...p, [g.guildId]: e.target.value }))}>
+                    <select
+                      className="chipAdd"
+                      aria-label={`A pack to add to ${g.name ?? "this server"}`}
+                      value={picked[g.guildId] ?? ""}
+                      onChange={(e) => setPicked((p) => ({ ...p, [g.guildId]: e.target.value }))}
+                    >
                       <option value="">Add a pack from your shelf…</option>
                       {candidates.map((p) => (
                         <option key={p.id} value={p.id}>
@@ -233,10 +264,20 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
                         </option>
                       ))}
                     </select>
-                    <button className="ghost tiny" disabled={busy !== null || !picked[g.guildId]} aria-busy={busy === `add:${g.guildId}` || undefined} onClick={() => void add(g)}>
+                    <button
+                      className="ghost tiny"
+                      disabled={busy !== null || !picked[g.guildId]}
+                      aria-busy={busy === `add:${g.guildId}` || undefined}
+                      onClick={() => void add(g)}
+                    >
                       Add
                     </button>
-                    <button className="ghost tiny" disabled={busy !== null} onClick={() => void release(g)} title="The server is no longer yours and its vault is emptied; claim it again from Discord any time">
+                    <button
+                      className="ghost tiny"
+                      disabled={busy !== null}
+                      onClick={() => void release(g)}
+                      title="The server is no longer yours and its vault is emptied; claim it again from Discord any time"
+                    >
                       Release
                     </button>
                   </div>

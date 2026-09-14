@@ -73,7 +73,8 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     const run = event.queryStringParameters?.["run"];
     if (t && run) {
       const session = await deps.store.getSession(run);
-      if (!session || session.meta.deletedAt || !session.meta.publicTokenHash || hashToken(t) !== session.meta.publicTokenHash) return { statusCode: 401, body: "not shared" };
+      if (!session || session.meta.deletedAt || !session.meta.publicTokenHash || hashToken(t) !== session.meta.publicTokenHash)
+        return { statusCode: 401, body: "not shared" };
       const who = `public:${run}`;
       const attached = attachedOf(event, run);
       await deps.live.connect(connectionId, who, now(), attached);
@@ -104,7 +105,11 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
         .filter((p) => p.role === "owner" && !p.deletedAt && !p.endedAt && (!named || p.id === named))
         .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0));
       let watching: string | null = null;
-      for (const p of live) if ((await deps.store.getSession(p.id))?.meta.publicTokenHash) { watching = p.id; break; }
+      for (const p of live)
+        if ((await deps.store.getSession(p.id))?.meta.publicTokenHash) {
+          watching = p.id;
+          break;
+        }
       if (!watching) return { statusCode: 401, body: "no run is open to watch" };
       const who = `stream:${owner.sub}`;
       const attached = attachedOf(event, watching);
@@ -136,9 +141,7 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     const poster = deps.poster;
     if (!poster) return;
     const watching = await deps.live.watchers(run);
-    const tools = watching
-      .filter((w) => w.control)
-      .map((w) => ({ ...(w.seat ? { seat: w.seat } : {}), ...(w.app ? { app: w.app } : {}) }));
+    const tools = watching.filter((w) => w.control).map((w) => ({ ...(w.seat ? { seat: w.seat } : {}), ...(w.app ? { app: w.app } : {}) }));
     const line = JSON.stringify({ t: "gesture", id: run, kind: "tools", data: { tools, count: tools.length }, at: now() });
     for (const w of watching) {
       // A tool is told in operations, never in words about itself.
@@ -236,7 +239,10 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
         })
       : fits(profile, app || undefined)
         ? ((setup = setupFor(profile, given.includes(whose))), setup?.frame ?? null)
-        : JSON.stringify({ t: "note", text: `${which} is set up for ${profile.tool}, so nothing here will reach ${app || "a tool that did not say what it is"}.` });
+        : JSON.stringify({
+            t: "note",
+            text: `${which} is set up for ${profile.tool}, so nothing here will reach ${app || "a tool that did not say what it is"}.`,
+          });
     if (line && (await poster.post(connectionId, line)) === "gone") await deps.live.disconnect(connectionId);
     // Remembered only once it has actually gone out. A post that failed
     // is a tool that never got its terms, and marking it given would
@@ -280,7 +286,9 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     // Taking asks stays the host's word, per run, the same as it is for
     // chat. A tool cannot switch it on by being attached.
     if (!session.meta.askPolicy)
-      return drop("This run is not taking asks, so nothing was counted. Switch it on under Settings, Stream, Chat, and the game's word counts from then on.");
+      return drop(
+        "This run is not taking asks, so nothing was counted. Switch it on under Settings, Stream, Chat, and the game's word counts from then on.",
+      );
     const who = conn.seat || "the game";
     const at = now();
     if (!askAllowed(conn.run, who, Date.parse(at)).ok) return drop("Too many, too quickly: this one was not counted.");
@@ -292,9 +300,7 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     // having been ignored is a tool nobody believes.
     if (poster) {
       const heard =
-        session.meta.askPolicy === "auto"
-          ? "Counted."
-          : "Said. It is in the run's asks, waiting for whoever is at the table to take it.";
+        session.meta.askPolicy === "auto" ? "Counted." : "Said. It is in the run's asks, waiting for whoever is at the table to take it.";
       try {
         await poster.post(connectionId, JSON.stringify({ t: "note", text: heard }));
       } catch (error) {
@@ -302,7 +308,13 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
       }
     }
     if (poster) {
-      const line = JSON.stringify({ t: "gesture", id: conn.run, kind: "ask", data: { ask: ask.id, kind: ask.kind, move: ask.move, name: who, via: ask.via, policy: session.meta.askPolicy }, at });
+      const line = JSON.stringify({
+        t: "gesture",
+        id: conn.run,
+        kind: "ask",
+        data: { ask: ask.id, kind: ask.kind, move: ask.move, name: who, via: ask.via, policy: session.meta.askPolicy },
+        at,
+      });
       for (const w of await deps.live.watchers(conn.run)) {
         if (w.control) continue;
         try {

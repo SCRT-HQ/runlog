@@ -23,14 +23,18 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
   override render() {
     const { error } = this.state;
     if (!error) return this.props.children;
-    const report = [`Runlog ${__RUNLOG_VERSION__}${__RUNLOG_SHA__ ? ` (${__RUNLOG_SHA__})` : ""}`, `${error.name}: ${error.message}`, error.stack ?? ""].join("\n");
+    const report = [
+      `Runlog ${__RUNLOG_VERSION__}${__RUNLOG_SHA__ ? ` (${__RUNLOG_SHA__})` : ""}`,
+      `${error.name}: ${error.message}`,
+      error.stack ?? "",
+    ].join("\n");
     return (
       <main className="main">
         <section className="panel broke">
           <h2>Something broke on this page</h2>
           <p>
-            The app stopped drawing. Your packs and runs are safe: they are saved as they happen, and a reload brings them back. If it breaks again
-            the same way, copy the error and send it with what you were doing.
+            The app stopped drawing. Your packs and runs are safe: they are saved as they happen, and a reload brings them back. If it
+            breaks again the same way, copy the error and send it with what you were doing.
           </p>
           <pre className="brokeError">{`${error.name}: ${error.message}`}</pre>
           <div className="padRow">

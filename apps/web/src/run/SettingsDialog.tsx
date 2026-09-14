@@ -81,7 +81,12 @@ export function SettingsDialog({
   const tabs: { id: Tab; label: string }[] = [
     { id: "device", label: "This device" },
     ...(runId !== null ? [{ id: "widgets" as const, label: "Widgets" }] : []),
-    ...(pack && record ? [{ id: "chat" as const, label: "Chat" }, { id: "control" as const, label: "Control" }] : []),
+    ...(pack && record
+      ? [
+          { id: "chat" as const, label: "Chat" },
+          { id: "control" as const, label: "Control" },
+        ]
+      : []),
   ];
   // A tab that is no longer there, because the run closed under it, must
   // not leave the sheet blank.
@@ -96,7 +101,13 @@ export function SettingsDialog({
             {tabs.length > 1 && (
               <div className="dialogTabs" role="tablist" aria-label="Settings">
                 {tabs.map((t) => (
-                  <button key={t.id} role="tab" aria-selected={at === t.id} className={`chip pick ${at === t.id ? "on" : ""}`} onClick={() => setTab(t.id)}>
+                  <button
+                    key={t.id}
+                    role="tab"
+                    aria-selected={at === t.id}
+                    className={`chip pick ${at === t.id ? "on" : ""}`}
+                    onClick={() => setTab(t.id)}
+                  >
                     {t.label}
                   </button>
                 ))}
@@ -130,7 +141,15 @@ export function SettingsDialog({
 
         {at === "control" && pack && record && (
           <section>
-            <ControlSettings pack={pack} record={record} onControl={onControl} {...(reachable ? { reachable } : {})} {...(onSetup ? { onSetup } : {})} {...(onHandOut ? { onHandOut } : {})} {...(seats && seats.length > 0 ? { seats } : {})} />
+            <ControlSettings
+              pack={pack}
+              record={record}
+              onControl={onControl}
+              {...(reachable ? { reachable } : {})}
+              {...(onSetup ? { onSetup } : {})}
+              {...(onHandOut ? { onHandOut } : {})}
+              {...(seats && seats.length > 0 ? { seats } : {})}
+            />
           </section>
         )}
       </section>

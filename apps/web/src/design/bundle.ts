@@ -56,12 +56,17 @@ function readme({ pack, file, sealed, pdf }: BundleInput): string {
   } else {
     lines.push(`- \`${file.name}\`: the pack, signed by its author. Loading it in Runlog shows who signed it; an altered copy will not.`);
   }
-  for (const k of DOC_KINDS) lines.push(`- ${pdf ? `\`docs/${k.kind}.pdf\`, ` : ""}\`docs/${k.kind}.html\` and \`docs/${k.kind}.md\`: ${k.label.toLowerCase()}. ${k.what}`);
+  for (const k of DOC_KINDS)
+    lines.push(
+      `- ${pdf ? `\`docs/${k.kind}.pdf\`, ` : ""}\`docs/${k.kind}.html\` and \`docs/${k.kind}.md\`: ${k.label.toLowerCase()}. ${k.what}`,
+    );
   lines.push(
     "",
     "## Reading and playing",
     "",
-    pdf ? "The PDFs are for reading and printing. The HTML is the same document for a browser, and the Markdown the same text for editing or pasting." : "Open an HTML file in a browser to read it, and print it there for a PDF. The Markdown is the same text for editing or pasting.",
+    pdf
+      ? "The PDFs are for reading and printing. The HTML is the same document for a browser, and the Markdown the same text for editing or pasting."
+      : "Open an HTML file in a browser to read it, and print it there for a PDF. The Markdown is the same text for editing or pasting.",
     "",
     `To play, open Runlog, choose **Load a pack from a file**, and pick \`${file.name}\`.${sealed ? " Type the license key once; signed in, it is kept in your account so the pack opens on your other devices too." : ""}`,
     "",

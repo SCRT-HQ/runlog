@@ -162,9 +162,14 @@ export function complaints(pack: Pack, profile: ControlProfile): Complaint[] {
             continue;
           }
 
-          const bounds = op.op === "value.set" && arg.name === "value" ? rangeOfValue(String(op.args["name"] ?? "")) : { least: arg.least, most: arg.most };
-          if (bounds && bounds.least !== undefined && n < bounds.least) out.push({ where: at, says: `${arg.label} is below ${bounds.least}, which the tool will refuse.` });
-          if (bounds && bounds.most !== undefined && n > bounds.most) out.push({ where: at, says: `${arg.label} is above ${bounds.most}, which the tool will refuse.` });
+          const bounds =
+            op.op === "value.set" && arg.name === "value"
+              ? rangeOfValue(String(op.args["name"] ?? ""))
+              : { least: arg.least, most: arg.most };
+          if (bounds && bounds.least !== undefined && n < bounds.least)
+            out.push({ where: at, says: `${arg.label} is below ${bounds.least}, which the tool will refuse.` });
+          if (bounds && bounds.most !== undefined && n > bounds.most)
+            out.push({ where: at, says: `${arg.label} is above ${bounds.most}, which the tool will refuse.` });
         }
 
         if (arg.kind === "choice" && arg.options && !arg.options.includes(String(value))) {
@@ -197,7 +202,8 @@ export function complaints(pack: Pack, profile: ControlProfile): Complaint[] {
 
 /** What goes over the wire and into a file: no empties, nothing extra. */
 export function tidy(profile: ControlProfile): ControlProfile {
-  const ops = (list: ProfileOp[]) => list.filter((o) => o.op).map((o) => ({ op: o.op, args: { ...o.args }, ...(o.once ? { once: true as const } : {}) }));
+  const ops = (list: ProfileOp[]) =>
+    list.filter((o) => o.op).map((o) => ({ op: o.op, args: { ...o.args }, ...(o.once ? { once: true as const } : {}) }));
   const setup = ops(profile.setup ?? []);
   const rows = (profile.rows ?? [])
     .map((row) => {

@@ -1,48 +1,48 @@
-name: 'Run AWS CDK'
-description: 'Run AWS CDK command'
+name: "Run AWS CDK"
+description: "Run AWS CDK command"
 
-author: 'Nate Ferrell <nate@scrthq.com>'
+author: "Nate Ferrell <nate@scrthq.com>"
 
 inputs:
   cdk-command:
-    description: 'CDK command to run. Supported options include: diff, deploy, destroy, synth'
+    description: "CDK command to run. Supported options include: diff, deploy, destroy, synth"
     required: true
   target-account-id:
-    description: 'Target AWS account ID'
+    description: "Target AWS account ID"
     required: true
   target-region:
-    description: 'Target AWS region'
+    description: "Target AWS region"
     required: false
     # CloudFront will not accept a certificate issued anywhere else, and the
     # site stack refuses to synthesise outside it rather than failing later
     # inside ACM with a message that does not say why.
     default: us-east-1
   node-version:
-    description: 'Node version to use'
+    description: "Node version to use"
     required: false
     default: 22
   github-role-name:
-    description: 'Name of the role to assume in the target AWS account for GitHub Actions'
+    description: "Name of the role to assume in the target AWS account for GitHub Actions"
     required: false
     default: GitHubActionRole
   aws-environment:
-    description: 'AWS environment to deploy to. Supported options include: prd, dev'
+    description: "AWS environment to deploy to. Supported options include: prd, dev"
     required: true
   hosted-zone-id:
-    description: 'Route 53 zone the site records go in. Omit to let CDK look it up.'
+    description: "Route 53 zone the site records go in. Omit to let CDK look it up."
     required: false
-    default: ''
+    default: ""
   env-config:
     description: The stage's configuration as JSON (the RUNLOG_ENV_CONFIG variable on its environment).
     required: false
-    default: ''
+    default: ""
   app-dist:
-    description: 'The built app, laid over with the hosted pages, for the site stack to publish. Relative to the repository root; empty publishes nothing.'
+    description: "The built app, laid over with the hosted pages, for the site stack to publish. Relative to the repository root; empty publishes nothing."
     required: false
-    default: ''
+    default: ""
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Evaluate Inputs
       run: |

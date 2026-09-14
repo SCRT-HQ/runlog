@@ -13,15 +13,7 @@ import { DiceTray } from "../dice/DiceTray.tsx";
  * Designer is. So it stands here, beside the pack's paper and its signing,
  * with every table rollable to see what it does.
  */
-export function StructurePanel({
-  pack,
-  warnings,
-  random,
-}: {
-  pack: Pack;
-  warnings: Diagnostic[];
-  random: () => () => number;
-}) {
+export function StructurePanel({ pack, warnings, random }: { pack: Pack; warnings: Diagnostic[]; random: () => () => number }) {
   const v = pack.vocabulary;
   return (
     <>
@@ -44,8 +36,7 @@ export function StructurePanel({
           {pack.license.text && <pre className="licenseText">{pack.license.text}</pre>}
           {!pack.license.redistributable && (
             <p className="notice">
-              Marked non-redistributable. Exports meant for other people carry roll results
-              and references, never this pack&rsquo;s text.
+              Marked non-redistributable. Exports meant for other people carry roll results and references, never this pack&rsquo;s text.
             </p>
           )}
         </div>
@@ -99,17 +90,7 @@ export function StructurePanel({
   );
 }
 
-function TableCard({
-  id,
-  table,
-  pack,
-  random,
-}: {
-  id: string;
-  table: Table;
-  pack: Pack;
-  random: () => () => number;
-}) {
+function TableCard({ id, table, pack, random }: { id: string; table: Table; pack: Pack; random: () => () => number }) {
   const [open, setOpen] = useState(false);
   const [roll, setRoll] = useState<RollResult | null>(null);
   const [rollId, setRollId] = useState(0);
@@ -154,9 +135,7 @@ function TableCard({
         </div>
       </header>
 
-      {roll && roll.dice.length > 0 && (
-        <DiceTray dice={roll.dice} rollId={rollId} onSettled={() => setRevealed(roll)} />
-      )}
+      {roll && roll.dice.length > 0 && <DiceTray dice={roll.dice} rollId={rollId} onSettled={() => setRevealed(roll)} />}
 
       {revealed && (
         <div className="rollResult">
@@ -216,9 +195,7 @@ function Flow({ pack }: { pack: Pack }) {
                 <li key={i} className="step">
                   <span className="chip kindSm">{step.kind}</span>
                   {"label" in step && step.label ? step.label : ""}
-                  {step.kind === "rollTable" && (
-                    <span className="muted"> → {pack.tables[step.table]?.title ?? step.table}</span>
-                  )}
+                  {step.kind === "rollTable" && <span className="muted"> → {pack.tables[step.table]?.title ?? step.table}</span>}
                 </li>
               ))}
             </ul>
@@ -259,9 +236,7 @@ function Boxes({ pack }: { pack: Pack }) {
               <strong>{c.label}</strong>
               <span className="muted">
                 {c.hidden && "hidden · "}
-                {c.triggers?.length
-                  ? `fires at ${c.triggers.map((t) => t.when.gte ?? t.when.eq).join(", ")}`
-                  : "tally only"}
+                {c.triggers?.length ? `fires at ${c.triggers.map((t) => t.when.gte ?? t.when.eq).join(", ")}` : "tally only"}
               </span>
             </div>
           ))}
@@ -288,8 +263,7 @@ function Boxes({ pack }: { pack: Pack }) {
             <div key={id} className="row">
               <strong>{d.title}</strong>
               <span className="muted">
-                {d.kind === "cards" ? `${d.cards.length} cards` : "standard 52"} · draw{" "}
-                {d.drawAtStart} at start
+                {d.kind === "cards" ? `${d.cards.length} cards` : "standard 52"} · draw {d.drawAtStart} at start
               </span>
             </div>
           ))}
@@ -300,11 +274,7 @@ function Boxes({ pack }: { pack: Pack }) {
         <h3 className="sectionTitle">
           Targeting <span className="muted">how consequences reach back</span>
         </h3>
-        <p className="muted small">
-          {pack.targeting
-            ? `${pack.targeting.strategy}`
-            : "none, nothing in this game reaches backwards"}
-        </p>
+        <p className="muted small">{pack.targeting ? `${pack.targeting.strategy}` : "none, nothing in this game reaches backwards"}</p>
       </section>
 
       <section className="panel">

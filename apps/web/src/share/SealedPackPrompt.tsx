@@ -49,8 +49,7 @@ export function SealedPackPrompt({
       <section className="panel setup">
         <h2>{header.title ?? "A sealed pack"}</h2>
         <p className="muted">
-          This copy was sold, so it is sealed. The license key came with it: check the
-          receipt or the message it arrived in.
+          This copy was sold, so it is sealed. The license key came with it: check the receipt or the message it arrived in.
         </p>
 
         <h3 className="sectionTitle">License key</h3>
@@ -76,9 +75,8 @@ export function SealedPackPrompt({
         </div>
 
         <p className="muted small">
-          This copy carries your name inside it, and anything you export from it will say
-          so. It is not locked to this machine and nothing is checked online, but if it
-          turns up somewhere public, it is traceable to the sale.
+          This copy carries your name inside it, and anything you export from it will say so. It is not locked to this machine and nothing
+          is checked online, but if it turns up somewhere public, it is traceable to the sale.
         </p>
       </section>
     </main>

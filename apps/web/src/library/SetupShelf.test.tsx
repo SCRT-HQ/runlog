@@ -41,7 +41,7 @@ const SETUP = [
   "  - { op: flag.set, args: { name: player.noRoll, value: true } }",
 ].join("\n");
 
-const PACK = "schemaVersion: 1\nid: com.example.pack\nversion: \"1.0.0\"\ntitle: A pack\n";
+const PACK = 'schemaVersion: 1\nid: com.example.pack\nversion: "1.0.0"\ntitle: A pack\n';
 
 /** A file the input will hand over, without a real file picker. */
 const pick = async (name: string, text: string) => {
@@ -82,7 +82,16 @@ describe("the setup shelf", () => {
 
   it("says which tool it is for, since that is what decides where it fits", async () => {
     shelf.rows = [
-      { id: "x", title: "Bare-handed", version: "1.0.0", tool: "TarnishedTool", source: SETUP, format: "yaml", importedAt: "", updatedAt: "" },
+      {
+        id: "x",
+        title: "Bare-handed",
+        version: "1.0.0",
+        tool: "TarnishedTool",
+        source: SETUP,
+        format: "yaml",
+        importedAt: "",
+        updatedAt: "",
+      },
     ];
     render(<SetupShelf />);
     await screen.findByText(/TarnishedTool/);

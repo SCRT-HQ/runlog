@@ -16,7 +16,15 @@ import type { StoredRun } from "../storage/db.ts";
  * key in it, ready to paste into Streamer.bot or whatever holds the
  * channel-point redeem. Lives under Stream in the run's Settings.
  */
-export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: StoredRun | null; onAsks?: (asks: StoredRun["asks"]) => void | Promise<void> }) {
+export function ChatSettings({
+  pack,
+  record,
+  onAsks,
+}: {
+  pack: Pack;
+  record: StoredRun | null;
+  onAsks?: (asks: StoredRun["asks"]) => void | Promise<void>;
+}) {
   const api = useApi();
   const plan = usePlan();
   const allowed = !plan.gates || plan.can("plus");
@@ -50,7 +58,10 @@ export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: Sto
   useEffect(() => {
     if (!api || !allowed) return;
     let live = true;
-    void api.streamKeys().then((k) => live && setKeys(k), () => {});
+    void api.streamKeys().then(
+      (k) => live && setKeys(k),
+      () => {},
+    );
     return () => {
       live = false;
     };
@@ -63,7 +74,13 @@ export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: Sto
     try {
       await work();
     } catch (error) {
-      setNote(error instanceof PlanError ? error.message : error instanceof Error && error.message ? error.message : "That did not take. Try again in a moment.");
+      setNote(
+        error instanceof PlanError
+          ? error.message
+          : error instanceof Error && error.message
+            ? error.message
+            : "That did not take. Try again in a moment.",
+      );
     } finally {
       setBusy(false);
     }
@@ -139,19 +156,24 @@ export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: Sto
         Chat <span className="muted">asks from outside</span>
       </h3>
       {!allowed ? (
-        <p className="muted small">Taking asks from chat, a channel-point redeem that rolls or a command that takes a move, is part of Plus, like hosting a table.</p>
+        <p className="muted small">
+          Taking asks from chat, a channel-point redeem that rolls or a command that takes a move, is part of Plus, like hosting a table.
+        </p>
       ) : (
         <>
           <p className="muted small">
-            Anything that can make a web request, a channel-point redeem in Streamer.bot, a chat command, a button on a stream deck, can ask this run to take a move or
-            roll the table that is waiting. It asks with a key of its own, not the live link, so a widget address that gets out lets people watch and never press.
+            Anything that can make a web request, a channel-point redeem in Streamer.bot, a chat command, a button on a stream deck, can ask
+            this run to take a move or roll the table that is waiting. It asks with a key of its own, not the live link, so a widget address
+            that gets out lets people watch and never press.
           </p>
           {!taking ? (
             <div className="padRow">
               <button className="primary tiny" disabled={busy} onClick={() => void mint()}>
                 Take asks
               </button>
-              <span className="muted small">Makes the key, shown once. Asks wait for you to accept them until you say otherwise below.</span>
+              <span className="muted small">
+                Makes the key, shown once. Asks wait for you to accept them until you say otherwise below.
+              </span>
             </div>
           ) : (
             <>
@@ -169,10 +191,24 @@ export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: Sto
                   </div>
                 </div>
               )}
-              {!key && <p className="muted small">Taking asks{taking.since ? ` since ${new Date(taking.since).toLocaleString()}` : ""}. The key was shown when it was made; make a new one if it is lost.</p>}
-              <label className="toggle" title="Under Ask, each one waits in the Asks panel for Accept. Under Auto, the table takes it the moment it lands, if it can.">
+              {!key && (
+                <p className="muted small">
+                  Taking asks{taking.since ? ` since ${new Date(taking.since).toLocaleString()}` : ""}. The key was shown when it was made;
+                  make a new one if it is lost.
+                </p>
+              )}
+              <label
+                className="toggle"
+                title="Under Ask, each one waits in the Asks panel for Accept. Under Auto, the table takes it the moment it lands, if it can."
+              >
                 <span>What the table does</span>
-                <select className="chipAdd" value={policy} disabled={busy} onChange={(e) => void setPolicy(e.target.value as AskPolicy)} aria-label="What the table does with an ask">
+                <select
+                  className="chipAdd"
+                  value={policy}
+                  disabled={busy}
+                  onChange={(e) => void setPolicy(e.target.value as AskPolicy)}
+                  aria-label="What the table does with an ask"
+                >
                   <option value="ask">Wait for me to accept</option>
                   <option value="auto">Act on it as it lands</option>
                 </select>
@@ -191,8 +227,9 @@ export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: Sto
 
           <h4 className="stepLabel">One address for every run</h4>
           <p className="muted small">
-            The address above belongs to this {pack.vocabulary.run.one.toLowerCase()} and dies with it. This one belongs to your account and does not: point a bot at it
-            once and it finds whichever {pack.vocabulary.run.one.toLowerCase()} you have taking asks. Taking asks stays this {pack.vocabulary.run.one.toLowerCase()}
+            The address above belongs to this {pack.vocabulary.run.one.toLowerCase()} and dies with it. This one belongs to your account and
+            does not: point a bot at it once and it finds whichever {pack.vocabulary.run.one.toLowerCase()} you have taking asks. Taking
+            asks stays this {pack.vocabulary.run.one.toLowerCase()}
             &apos;s own switch, above.
           </p>
           {streamKey ? (
@@ -215,19 +252,22 @@ export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: Sto
                 {keys.press ? "New press key" : "Make a press key"}
               </button>
               <span className="muted small">
-                {keys.press ? `Made ${new Date(keys.press.madeAt).toLocaleDateString()}. A new one replaces it, and the old one stops working.` : "Shown once, for a bot's settings. It presses and reads nothing."}
+                {keys.press
+                  ? `Made ${new Date(keys.press.madeAt).toLocaleDateString()}. A new one replaces it, and the old one stops working.`
+                  : "Shown once, for a bot's settings. It presses and reads nothing."}
               </span>
             </div>
           )}
 
           <h4 className="stepLabel">What to name a reward</h4>
           <p className="muted small">
-            One action in Streamer.bot serves every reward: send <code>&amp;ask=%rewardName%</code> and name the reward after what it should do. These are the names this
-            pack answers to.
+            One action in Streamer.bot serves every reward: send <code>&amp;ask=%rewardName%</code> and name the reward after what it should
+            do. These are the names this pack answers to.
           </p>
           <ul className="askMoves">
             <li>
-              <strong>Roll</strong> <span className="muted small">rolls the table the {pack.vocabulary.run.one.toLowerCase()} is waiting on</span>
+              <strong>Roll</strong>{" "}
+              <span className="muted small">rolls the table the {pack.vocabulary.run.one.toLowerCase()} is waiting on</span>
             </li>
             {moves.map(([id, m]) => (
               <li key={id}>
@@ -236,8 +276,8 @@ export function ChatSettings({ pack, record, onAsks }: { pack: Pack; record: Sto
             ))}
           </ul>
           <p className="muted small">
-            One ask a name every twenty seconds, thirty a minute for the {pack.vocabulary.run.one.toLowerCase()}. A press that is refused says why in a sentence a bot can
-            put straight into chat.
+            One ask a name every twenty seconds, thirty a minute for the {pack.vocabulary.run.one.toLowerCase()}. A press that is refused
+            says why in a sentence a bot can put straight into chat.
           </p>
         </>
       )}

@@ -2,16 +2,16 @@
 
 A stage is described by one JSON file, which git ignores: copy `hosted/infra/env/example.json` to `hosted/infra/env/prd.json` and make it yours. `prd` is the stage name the commands use; any short lowercase word works, and it names the stacks.
 
-| Field | Yours |
-| --- | --- |
-| `domain`, `zone`, `zoneId` | The address, its hosted zone, and the zone's id. |
-| `workosClientId`, `workosCliClientId` | The AuthKit client ids. |
-| `email.from`, `email.identity`, `email.region` | The SES identity mail goes out as, and where it is verified. |
-| `hosted.operator`, `hosted.operatorShort`, `hosted.support` | Your name as it appears on the pages, and your support address. |
-| `hosted.operatorUrl` | Your own site, where your name in every footer links; leave it out and the name goes to the about page. |
-| `hosted.termsVersion`, `hosted.termsDate` | The day your terms take effect. |
-| `gates`, `hosted.billing`, `stripe.prices` | `false`, `false`, and empty strings, until you set Stripe up. |
-| `retain` | `true` keeps the table and the buckets if the stack is ever deleted. |
+| Field                                                       | Yours                                                                                                   |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `domain`, `zone`, `zoneId`                                  | The address, its hosted zone, and the zone's id.                                                        |
+| `workosClientId`, `workosCliClientId`                       | The AuthKit client ids.                                                                                 |
+| `email.from`, `email.identity`, `email.region`              | The SES identity mail goes out as, and where it is verified.                                            |
+| `hosted.operator`, `hosted.operatorShort`, `hosted.support` | Your name as it appears on the pages, and your support address.                                         |
+| `hosted.operatorUrl`                                        | Your own site, where your name in every footer links; leave it out and the name goes to the about page. |
+| `hosted.termsVersion`, `hosted.termsDate`                   | The day your terms take effect.                                                                         |
+| `gates`, `hosted.billing`, `stripe.prices`                  | `false`, `false`, and empty strings, until you set Stripe up.                                           |
+| `retain`                                                    | `true` keeps the table and the buckets if the stack is ever deleted.                                    |
 
 The account id comes from `RUNLOG_TARGET_ACCOUNT` at deploy time, not from the file, so the file does not tie the copy to one account. A pipeline hands the stack the same document, as one line of JSON, in the `RUNLOG_ENV_CONFIG` variable.
 

@@ -21,9 +21,10 @@ import { runFixtures } from "../packages/cli/src/fixtures.ts";
  */
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const schema = JSON.parse(
-  readFileSync(join(repoRoot, "packages", "rules-schema", "schema", "pack-1.schema.json"), "utf8"),
-) as Record<string, unknown>;
+const schema = JSON.parse(readFileSync(join(repoRoot, "packages", "rules-schema", "schema", "pack-1.schema.json"), "utf8")) as Record<
+  string,
+  unknown
+>;
 const reference = readFileSync(join(repoRoot, "docs", "reference.md"), "utf8");
 
 /** Every property name the format accepts, anywhere in the schema. */
@@ -87,9 +88,7 @@ describe("the authoring guide", () => {
     // Tolerant of CRLF: this file gets edited on Windows too.
     const fenced = new RegExp("```yaml\\r?\\n([\\s\\S]*?)```", "g");
     const blocks = [...guide.matchAll(fenced)].map((m) => m[1]!);
-    const complete = blocks.filter(
-      (b) => b.includes("schemaVersion: 1") && b.includes("defaultMode:"),
-    );
+    const complete = blocks.filter((b) => b.includes("schemaVersion: 1") && b.includes("defaultMode:"));
 
     it("is there, exactly once", () => {
       expect(complete).toHaveLength(1);

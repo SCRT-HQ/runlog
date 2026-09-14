@@ -62,7 +62,10 @@ export function HomeStrip<P extends { id: string; title: string }>({
       return;
     }
     let live = true;
-    void api.me().then((it) => live && setAccountRunId(it.profile.currentSessionId ?? null), () => {});
+    void api.me().then(
+      (it) => live && setAccountRunId(it.profile.currentSessionId ?? null),
+      () => {},
+    );
     return () => {
       live = false;
     };
@@ -75,7 +78,10 @@ export function HomeStrip<P extends { id: string; title: string }>({
       return;
     }
     let live = true;
-    void api.myRaces().then((all) => live && setRaces(all.filter((r) => !r.meta.endedAt)), () => {});
+    void api.myRaces().then(
+      (all) => live && setRaces(all.filter((r) => !r.meta.endedAt)),
+      () => {},
+    );
     return () => {
       live = false;
     };
@@ -119,7 +125,9 @@ export function HomeStrip<P extends { id: string; title: string }>({
         <div className="panel homeCard">
           <span className="homeLabel muted small">New here?</span>
           <strong>What Runlog is</strong>
-          <span className="muted small">A referee and a run log for games played around the things you already do. One page says the rest.</span>
+          <span className="muted small">
+            A referee and a run log for games played around the things you already do. One page says the rest.
+          </span>
           <div className="padRow">
             <a className="ghost" href={welcome}>
               Read it
@@ -132,7 +140,9 @@ export function HomeStrip<P extends { id: string; title: string }>({
           <span className="homeLabel muted small">{up.run ? "Continue where you left off" : "Start"}</span>
           <strong>{up.run ? runTitle(up.run, vocabularies.get(up.pack.id)?.run.one ?? "Run") : up.pack.title}</strong>
           <span className="muted small">
-            {up.run ? `${runLine(up.run, vocabularies.get(up.pack.id)?.unit.one ?? "Unit")} · ${onDay(up.run.updatedAt)}` : "Nothing played yet; a first run is one press away."}
+            {up.run
+              ? `${runLine(up.run, vocabularies.get(up.pack.id)?.unit.one ?? "Unit")} · ${onDay(up.run.updatedAt)}`
+              : "Nothing played yet; a first run is one press away."}
           </span>
           <div className="padRow">
             {up.run ? (
@@ -161,7 +171,9 @@ export function HomeStrip<P extends { id: string; title: string }>({
           <strong>
             #{s.place} of {s.of}
           </strong>
-          <span className="muted small">{s.race.meta.packTitle ?? s.race.meta.packId} · code {s.race.meta.code}</span>
+          <span className="muted small">
+            {s.race.meta.packTitle ?? s.race.meta.packId} · code {s.race.meta.code}
+          </span>
           {s.run && s.pack && (
             <div className="padRow">
               <button className="ghost" onClick={() => onContinue(s.pack!, s.run!)}>

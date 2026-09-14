@@ -6,9 +6,7 @@ import YAML from "yaml";
 import { generateLicenseKey, isSealed, open, readHeader, seal } from "./container.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-const kiln = YAML.parse(
-  readFileSync(join(repoRoot, "packs", "demo", "pack.yaml"), "utf8"),
-) as Record<string, unknown>;
+const kiln = YAML.parse(readFileSync(join(repoRoot, "packs", "demo", "pack.yaml"), "utf8")) as Record<string, unknown>;
 
 const KEY = "ABCDE-FGHJK-LMNPQ-RSTUV";
 const text = (bytes: Uint8Array) => new TextDecoder("latin1").decode(bytes);

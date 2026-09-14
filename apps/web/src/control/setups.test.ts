@@ -65,7 +65,14 @@ describe("what a run keeps", () => {
   });
 
   it("keeps `once`, which is the whole difference between a setting and a gift", () => {
-    const kept = chose(setup({ ops: [{ op: "flag.set", args: { name: "x" } }, { op: "runes.give", args: { amount: 1 }, once: true }] }));
+    const kept = chose(
+      setup({
+        ops: [
+          { op: "flag.set", args: { name: "x" } },
+          { op: "runes.give", args: { amount: 1 }, once: true },
+        ],
+      }),
+    );
     const read = chosenFrom(JSON.parse(JSON.stringify(kept)));
     expect(read?.ops[0]?.once).toBeUndefined();
     expect(read?.ops[1]?.once).toBe(true);
@@ -73,7 +80,11 @@ describe("what a run keeps", () => {
 });
 
 describe("what a tool is sent", () => {
-  const profile: ControlProfile = { tool: "TarnishedTool", setup: [{ op: "flag.set", args: { name: "world.noCutscenes", value: true } }], rows: [] };
+  const profile: ControlProfile = {
+    tool: "TarnishedTool",
+    setup: [{ op: "flag.set", args: { name: "world.noCutscenes", value: true } }],
+    rows: [],
+  };
 
   it("puts the run's setup in the terms, so the server needs to know nothing new", () => {
     const merged = withChosen(profile, chose(setup({ ops: [{ op: "runes.give", args: { amount: 50000 }, once: true }] })));

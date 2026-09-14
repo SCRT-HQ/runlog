@@ -22,7 +22,9 @@ export function cmdDocs(args: string[]): number {
   const outIndex = args.findIndex((a) => a === "-o" || a === "--out");
   const onlyIndex = args.findIndex((a) => a === "--only");
   const wanted = new Set<DocKind>(
-    onlyIndex >= 0 && args[onlyIndex + 1] ? (args[onlyIndex + 1]!.split(",").map((k) => k.trim()) as DocKind[]) : DOC_KINDS.map((k) => k.kind),
+    onlyIndex >= 0 && args[onlyIndex + 1]
+      ? (args[onlyIndex + 1]!.split(",").map((k) => k.trim()) as DocKind[])
+      : DOC_KINDS.map((k) => k.kind),
   );
   for (const k of wanted) {
     if (!DOC_KINDS.some((d) => d.kind === k)) {
@@ -30,7 +32,12 @@ export function cmdDocs(args: string[]): number {
       return 2;
     }
   }
-  const formats = args.includes("--md") && !args.includes("--html") ? ["md"] : args.includes("--html") && !args.includes("--md") ? ["html"] : ["html", "md"];
+  const formats =
+    args.includes("--md") && !args.includes("--html")
+      ? ["md"]
+      : args.includes("--html") && !args.includes("--md")
+        ? ["html"]
+        : ["html", "md"];
 
   const path = resolve(input);
   let text: string;

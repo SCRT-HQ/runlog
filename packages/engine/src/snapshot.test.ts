@@ -14,7 +14,17 @@ if (!r.ok) throw new Error("could not load the demo pack");
 const kiln = r.pack;
 
 const events: RunEvent[] = [
-  { t: "RunStarted", at: "2026-01-01T00:00:00Z", id: "e1", runId: "r1", packId: kiln.id, packVersion: kiln.version, mode: "standard", seed: null, players: 1 } as unknown as RunEvent,
+  {
+    t: "RunStarted",
+    at: "2026-01-01T00:00:00Z",
+    id: "e1",
+    runId: "r1",
+    packId: kiln.id,
+    packVersion: kiln.version,
+    mode: "standard",
+    seed: null,
+    players: 1,
+  } as unknown as RunEvent,
   { t: "UnitEntered", at: "2026-01-01T00:00:01Z", id: "e2" } as unknown as RunEvent,
 ];
 
@@ -64,7 +74,10 @@ describe("a live snapshot", () => {
     expect(snap.phases.every((p) => ["done", "current", "skipped", "todo"].includes(p.state))).toBe(true);
     // What a phase produced this unit sits under it: the declared type under the phase that declares.
     expect(snap.phases.every((p) => p.results === undefined)).toBe(true);
-    const declaredEvents = [...events, { t: "SubjectDeclared", at: "2026-01-01T00:00:02Z", id: "e3", subjectType: "A wide bowl" } as unknown as RunEvent];
+    const declaredEvents = [
+      ...events,
+      { t: "SubjectDeclared", at: "2026-01-01T00:00:02Z", id: "e3", subjectType: "A wide bowl" } as unknown as RunEvent,
+    ];
     const declaredSnap = snapshotOf(kiln, reduce(kiln, declaredEvents), declaredEvents, "2026-01-01T00:00:05Z");
     const declaring = declaredSnap.phases.find((p) => (p.results ?? []).some((r) => resultText(r) === "A wide bowl"));
     expect(declaring?.results).toEqual([{ text: "A wide bowl", declared: true }]);
@@ -75,8 +88,23 @@ describe("a live snapshot", () => {
     const chained: RunEvent[] = [
       ...events,
       { t: "UnitEntered", at: "2026-01-01T00:00:03Z", id: "e4" } as unknown as RunEvent,
-      { t: "OutcomeResolved", at: "2026-01-01T00:00:04Z", id: "e5", table: "constraint", entryId: kiln.tables["constraint"]!.entries[0]!.id, cause: "phase" } as unknown as RunEvent,
-      { t: "OutcomeResolved", at: "2026-01-01T00:00:05Z", id: "e6", table: "setback", entryId: kiln.tables["setback"]!.entries[0]!.id, cause: "action", targetSubject: 1 } as unknown as RunEvent,
+      {
+        t: "OutcomeResolved",
+        at: "2026-01-01T00:00:04Z",
+        id: "e5",
+        table: "constraint",
+        entryId: kiln.tables["constraint"]!.entries[0]!.id,
+        cause: "phase",
+      } as unknown as RunEvent,
+      {
+        t: "OutcomeResolved",
+        at: "2026-01-01T00:00:05Z",
+        id: "e6",
+        table: "setback",
+        entryId: kiln.tables["setback"]!.entries[0]!.id,
+        cause: "action",
+        targetSubject: 1,
+      } as unknown as RunEvent,
     ];
     const chainedSnap = snapshotOf(kiln, reduce(kiln, chained), chained, "2026-01-01T00:00:06Z");
     const under = chainedSnap.phases.find((p) => p.id === constrain.id)!;
@@ -86,11 +114,18 @@ describe("a live snapshot", () => {
     expect(under.results![1]).toMatchObject({ table: "Setback", hit: 1 });
     // And named, not only numbered: a reader of the flow, the log or a
     // Discord card should not have to go and look up which piece #1 was.
-    const reached = subjectTitle(kiln, reduce(kiln, chained).subjects.find((s) => s.id === 1)!);
+    const reached = subjectTitle(
+      kiln,
+      reduce(kiln, chained).subjects.find((s) => s.id === 1)!,
+    );
     expect(under.results![1]).toMatchObject({ hitName: reached });
     expect(chainedSnap.log.find((l) => l.hit === 1)?.hitName).toBe(reached);
     expect(chainedSnap.unitResults?.find((r) => r.hit === 1)?.hitName).toBe(reached);
-    expect(chainedSnap.phases.filter((p) => p.id !== constrain.id).every((p) => !(p.results ?? []).some((r) => typeof r !== "string" && r.table === "Setback"))).toBe(true);
+    expect(
+      chainedSnap.phases
+        .filter((p) => p.id !== constrain.id)
+        .every((p) => !(p.results ?? []).some((r) => typeof r !== "string" && r.table === "Setback")),
+    ).toBe(true);
     // Every unit so far, as what its phases produced: the first stage made nothing, the second the two results under the one phase.
     expect(chainedSnap.units?.map((u) => u.unit)).toEqual([1, 2]);
     expect(chainedSnap.units?.[0]?.phases).toEqual([]);
@@ -187,12 +222,20 @@ describe("a live snapshot", () => {
     const race = { meta: { name: "Friday" }, entries: [1, 2] };
     const standings = [
       { entry: { name: "Mira", progress: { unit: 3, unitsDone: 2, status: "active" as const, elapsedMs: 61_000 } }, place: 1, me: false },
-      { entry: { progress: { unit: 1, unitsDone: 4, status: "ended" as const, ending: "out of wood", elapsedMs: 90_000 } }, place: 2, me: true },
+      {
+        entry: { progress: { unit: 1, unitsDone: 4, status: "ended" as const, ending: "out of wood", elapsedMs: 90_000 } },
+        place: 2,
+        me: true,
+      },
       { entry: {}, place: 3, me: false },
     ];
     const snap = raceOf(race, standings, kiln.vocabulary.unit);
     expect(snap).toMatchObject({ name: "Friday", ended: false, racing: 2 });
-    expect(snap?.standings.map((s) => s.line)).toEqual([`${kiln.vocabulary.unit.one} 3 · 2 done`, `finished · 4 ${kiln.vocabulary.unit.many.toLowerCase()} · out of wood`, "not started"]);
+    expect(snap?.standings.map((s) => s.line)).toEqual([
+      `${kiln.vocabulary.unit.one} 3 · 2 done`,
+      `finished · 4 ${kiln.vocabulary.unit.many.toLowerCase()} · out of wood`,
+      "not started",
+    ]);
     expect(snap?.standings[1]).toMatchObject({ name: "You", owner: true });
     expect(raceOf(null, [], kiln.vocabulary.unit)).toBeUndefined();
     const state = reduce(kiln, events);
@@ -201,7 +244,15 @@ describe("a live snapshot", () => {
   });
 
   it("keeps a clock moving from the moment the snapshot was taken", () => {
-    const clock = { id: "c", label: "Unit", kind: "stopwatch" as const, seconds: null, status: "running" as const, elapsedMs: 1000, expired: false };
+    const clock = {
+      id: "c",
+      label: "Unit",
+      kind: "stopwatch" as const,
+      seconds: null,
+      status: "running" as const,
+      elapsedMs: 1000,
+      expired: false,
+    };
     expect(clockNow(clock, "2026-01-01T00:00:00Z", Date.parse("2026-01-01T00:00:03Z")).shown).toBe(4000);
     const timer = { ...clock, kind: "timer" as const, seconds: 10 };
     expect(clockNow(timer, "2026-01-01T00:00:00Z", Date.parse("2026-01-01T00:00:03Z"))).toEqual({ shown: 6000, fraction: 0.6 });

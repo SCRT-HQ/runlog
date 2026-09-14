@@ -15,7 +15,12 @@ import { createPublicKey, verify as verifySignature } from "node:crypto";
 /** The DER wrapping Node wants around a raw 32-byte Ed25519 public key: SubjectPublicKeyInfo for OID 1.3.101.112. */
 const SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
 
-export function verifyInteraction(publicKeyHex: string, signatureHex: string | undefined, timestamp: string | undefined, rawBody: Buffer): boolean {
+export function verifyInteraction(
+  publicKeyHex: string,
+  signatureHex: string | undefined,
+  timestamp: string | undefined,
+  rawBody: Buffer,
+): boolean {
   if (!/^[0-9a-f]{64}$/i.test(publicKeyHex)) return false;
   if (!signatureHex || !/^[0-9a-f]{128}$/i.test(signatureHex) || !timestamp) return false;
   try {

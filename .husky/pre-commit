@@ -1,0 +1,6 @@
+# Format what is being committed, and nothing else.
+#
+# lint-staged runs the formatter over the staged files only and restages
+# what it changed, so a commit is formatted without touching work still
+# in the working tree.
+npx lint-staged

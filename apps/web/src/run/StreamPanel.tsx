@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { usePlan } from "../sync/usePlan.ts";
 import { THEMES, type ThemeId } from "../theme/theme.ts";
-import { WIDGET_BACKGROUNDS, WIDGET_KINDS, widgetHref, widgetSize, type WidgetBackground, type WidgetKind, type WidgetRoute } from "../widget/route.ts";
+import {
+  WIDGET_BACKGROUNDS,
+  WIDGET_KINDS,
+  widgetHref,
+  widgetSize,
+  type WidgetBackground,
+  type WidgetKind,
+  type WidgetRoute,
+} from "../widget/route.ts";
 import { liveLinkOf } from "../live/route.ts";
 import { dockHref } from "../dock/route.ts";
 import { canFloat } from "./ControlPanel.tsx";
@@ -38,7 +46,14 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
   // since its browser holds none of this device's runs; the plain address is for a pop-out here.
   const [elsewhere, setElsewhere] = useState(() => Boolean(token));
 
-  const route = (kind: WidgetKind): WidgetRoute => ({ kind, runId, bg, scale, ...(theme ? { theme } : {}), ...(elsewhere && token ? { token } : {}) });
+  const route = (kind: WidgetKind): WidgetRoute => ({
+    kind,
+    runId,
+    bg,
+    scale,
+    ...(theme ? { theme } : {}),
+    ...(elsewhere && token ? { token } : {}),
+  });
   const open = (kind: WidgetKind) => {
     const { w, h } = widgetSize(kind, scale);
     window.open(widgetHref(route(kind)), `runlog-widget-${kind}`, `popup=yes,width=${w},height=${h}`);
@@ -56,14 +71,28 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
   return (
     <div className="streamSettings">
       {!allowed ? (
-        <p className="muted small">Pop-out widgets for a stream, the scoreboard, the clock, the race, are part of Plus, like hosting a table. Subscribe from your profile, under Plan.</p>
+        <p className="muted small">
+          Pop-out widgets for a stream, the scoreboard, the clock, the race, are part of Plus, like hosting a table. Subscribe from your
+          profile, under Plan.
+        </p>
       ) : (
         <>
-          <p className="muted small">Each opens on a page of its own, following this run as it moves. Add the address as a browser source in your streaming app, or keep the window on a second screen.{token ? " A streaming app needs the address with the live link's token in it, since its own browser holds none of this device's runs; the plain address is for a window here." : " Share a live link under People at the table first: a streaming app needs the address with the link's token in it, since its own browser holds none of this device's runs."}</p>
+          <p className="muted small">
+            Each opens on a page of its own, following this run as it moves. Add the address as a browser source in your streaming app, or
+            keep the window on a second screen.
+            {token
+              ? " A streaming app needs the address with the live link's token in it, since its own browser holds none of this device's runs; the plain address is for a window here."
+              : " Share a live link under People at the table first: a streaming app needs the address with the link's token in it, since its own browser holds none of this device's runs."}
+          </p>
           <div className="padRow">
             <label className="toggle" title={WIDGET_BACKGROUNDS.find((b) => b.bg === bg)?.what}>
               <span>Background</span>
-              <select className="chipAdd" value={bg} onChange={(e) => setBg(e.target.value as WidgetBackground)} aria-label="Widget background">
+              <select
+                className="chipAdd"
+                value={bg}
+                onChange={(e) => setBg(e.target.value as WidgetBackground)}
+                aria-label="Widget background"
+              >
                 {WIDGET_BACKGROUNDS.map((b) => (
                   <option key={b.bg} value={b.bg}>
                     {b.label}
@@ -71,9 +100,17 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
                 ))}
               </select>
             </label>
-            <label className="toggle" title="Pinned in the address, so the capture looks the same whatever the streaming machine has chosen">
+            <label
+              className="toggle"
+              title="Pinned in the address, so the capture looks the same whatever the streaming machine has chosen"
+            >
               <span>Theme</span>
-              <select className="chipAdd" value={theme} onChange={(e) => setTheme(e.target.value as WidgetRoute["theme"] | "")} aria-label="Widget theme">
+              <select
+                className="chipAdd"
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as WidgetRoute["theme"] | "")}
+                aria-label="Widget theme"
+              >
                 <option value="">Follow the device</option>
                 {PINNABLE.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -83,7 +120,10 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
               </select>
             </label>
             {token && (
-              <label className="toggle" title="The address carries the live link's token, so it works in a streaming app and on a machine that is not this one">
+              <label
+                className="toggle"
+                title="The address carries the live link's token, so it works in a streaming app and on a machine that is not this one"
+              >
                 <input type="checkbox" checked={elsewhere} onChange={(e) => setElsewhere(e.target.checked)} />
                 <span>For another machine</span>
               </label>
@@ -99,7 +139,12 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
             </label>
           </div>
           <div className="padRow floatRow">
-            <button className="ghost tiny" disabled={!canFloat() || !onControls} onClick={onControls} title="The run's next move, its last result and undo, in a small window that stays in front">
+            <button
+              className="ghost tiny"
+              disabled={!canFloat() || !onControls}
+              onClick={onControls}
+              title="The run's next move, its last result and undo, in a small window that stays in front"
+            >
               Float the controls
             </button>
             <span className="muted small">
@@ -109,10 +154,17 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
             </span>
           </div>
           <div className="padRow floatRow">
-            <button className="ghost tiny" onClick={() => void copy("dock")} title="The same controls on a page of their own, for a streaming app's custom browser dock; sign in there once and the run follows">
+            <button
+              className="ghost tiny"
+              onClick={() => void copy("dock")}
+              title="The same controls on a page of their own, for a streaming app's custom browser dock; sign in there once and the run follows"
+            >
               {copied === "dock" ? "Copied" : "Copy dock address"}
             </button>
-            <span className="muted small">The same controls as a page, for a dock beside your streaming app's preview: OBS calls it a Custom Browser Dock. Sign in there once; the run must be on that machine too.</span>
+            <span className="muted small">
+              The same controls as a page, for a dock beside your streaming app's preview: OBS calls it a Custom Browser Dock. Sign in there
+              once; the run must be on that machine too.
+            </span>
           </div>
           <ul className="widgetList">
             {WIDGET_KINDS.filter((k) => k.kind !== "race" || race).map((k) => (

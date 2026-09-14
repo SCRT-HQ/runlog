@@ -137,7 +137,10 @@ export function boundInWords(pack: Pack, b: NumericBound): string {
 export function predicateInWords(pack: Pack, p: Predicate): string {
   const n = nouns(pack);
   if ("ask" in p) return `you answer yes to “${p.ask}”`;
-  if ("unitIndex" in p) return p.unitIndex.eq !== undefined ? `this is ${n.unit} ${p.unitIndex.eq}` : `the ${n.unit} number is ${boundInWords(pack, p.unitIndex)}`;
+  if ("unitIndex" in p)
+    return p.unitIndex.eq !== undefined
+      ? `this is ${n.unit} ${p.unitIndex.eq}`
+      : `the ${n.unit} number is ${boundInWords(pack, p.unitIndex)}`;
   if ("subjectCount" in p) return `there are ${boundInWords(pack, p.subjectCount)} ${n.subjects}`;
   if ("eligibleTargets" in p) return `there are ${boundInWords(pack, p.eligibleTargets)} ${n.subjects} that can be targeted`;
   if ("counter" in p) return `${label(pack, "counters", p.counter)} is ${boundInWords(pack, p.is)}`;
@@ -201,7 +204,12 @@ export function actionInWords(pack: Pack, a: Action): string {
     case "removeSubject":
       return `remove ${targetInWords(pack, a.to)} from play`;
     case "ban":
-      return a.label ?? (a.subjectType ? `no more ${a.subjectType} ${n.subjects} this ${n.run}` : `no more ${n.subjects} of ${targetInWords(pack, a.from)}'s kind this ${n.run}`);
+      return (
+        a.label ??
+        (a.subjectType
+          ? `no more ${a.subjectType} ${n.subjects} this ${n.run}`
+          : `no more ${n.subjects} of ${targetInWords(pack, a.from)}'s kind this ${n.run}`)
+      );
     case "forceUnit": {
       const c = a.count ?? 1;
       return `add ${c} more ${c === 1 ? n.unit : n.units} before the ${n.run} may end`;

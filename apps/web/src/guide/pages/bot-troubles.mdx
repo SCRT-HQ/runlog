@@ -10,16 +10,16 @@
 
 ## Where things are
 
-| What | Where |
-| --- | --- |
-| Application id and public key | The stage's configuration, `discord.applicationId` and `discord.publicKey`; the handler's `DISCORD_APPLICATION_ID` and `DISCORD_PUBLIC_KEY` |
-| Whether a tier is on sale | On sale unless held: the WorkOS feature flags `servers-coming-soon` and `publishers-coming-soon`, per environment, on for everyone, read by the API once a minute |
-| The store's SKU, where Discord sells the plan | `discord.serverSku`; the handler's `DISCORD_SERVER_SKU` |
-| The bot token | Secrets Manager `runlog/discord/bot-token` |
-| The OAuth2 client secret, for linked roles | Secrets Manager `runlog/discord/client-secret`; without it, no verification is offered |
-| Who has the plan meanwhile | The WorkOS feature flag `server`, per environment, on the people trying it |
-| The commands | `hosted/infra/lib/handlers/discord/commands.ts`, registered by `hosted/scripts/discord-setup.ts` |
-| The handler | `hosted/infra/lib/handlers/discord/` and the route in `api.ts` |
-| How it is doing | The bot section of the `runlog-<env>` CloudWatch dashboard; alarms `runlog-<env>-discord-failures` and `runlog-<env>-discord-job-errors` |
-| Timers waiting to run out | EventBridge Scheduler, group `runlog-<env>-timers`: one schedule per running timer, gone once it has run |
-| A server's rows and vault | `GUILD#<id>` in the table, `guilds/<id>/packs/` in the bucket |
+| What                                          | Where                                                                                                                                                             |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Application id and public key                 | The stage's configuration, `discord.applicationId` and `discord.publicKey`; the handler's `DISCORD_APPLICATION_ID` and `DISCORD_PUBLIC_KEY`                       |
+| Whether a tier is on sale                     | On sale unless held: the WorkOS feature flags `servers-coming-soon` and `publishers-coming-soon`, per environment, on for everyone, read by the API once a minute |
+| The store's SKU, where Discord sells the plan | `discord.serverSku`; the handler's `DISCORD_SERVER_SKU`                                                                                                           |
+| The bot token                                 | Secrets Manager `runlog/discord/bot-token`                                                                                                                        |
+| The OAuth2 client secret, for linked roles    | Secrets Manager `runlog/discord/client-secret`; without it, no verification is offered                                                                            |
+| Who has the plan meanwhile                    | The WorkOS feature flag `server`, per environment, on the people trying it                                                                                        |
+| The commands                                  | `hosted/infra/lib/handlers/discord/commands.ts`, registered by `hosted/scripts/discord-setup.ts`                                                                  |
+| The handler                                   | `hosted/infra/lib/handlers/discord/` and the route in `api.ts`                                                                                                    |
+| How it is doing                               | The bot section of the `runlog-<env>` CloudWatch dashboard; alarms `runlog-<env>-discord-failures` and `runlog-<env>-discord-job-errors`                          |
+| Timers waiting to run out                     | EventBridge Scheduler, group `runlog-<env>-timers`: one schedule per running timer, gone once it has run                                                          |
+| A server's rows and vault                     | `GUILD#<id>` in the table, `guilds/<id>/packs/` in the bucket                                                                                                     |

@@ -23,8 +23,7 @@ describe("the engine-testing bench reports every feature featuresOf knows", () =
     const missing = FEATURES.map((f) => f.id).filter((id) => !features.includes(id));
     if (missing.length > 0) {
       throw new Error(
-        `the bench does not report: ${missing.join(", ")}. Every Feature id should be ` +
-          `reachable from its modes and capabilities.`,
+        `the bench does not report: ${missing.join(", ")}. Every Feature id should be ` + `reachable from its modes and capabilities.`,
       );
     }
     expect(missing).toEqual([]);

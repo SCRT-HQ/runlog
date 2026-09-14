@@ -63,9 +63,7 @@ describe("presenting a roll as physical dice", () => {
   });
 
   it("keeps the shape of an unusual die", () => {
-    expect(toDisplayDice("d12", [11], 11)).toEqual([
-      { faces: 12, display: "11", label: "d12" },
-    ]);
+    expect(toDisplayDice("d12", [11], 11)).toEqual([{ faces: 12, display: "11", label: "d12" }]);
   });
 
   it("distinguishes the action die from the opposition", () => {

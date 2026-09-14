@@ -15,25 +15,17 @@ export const Trigger = z
   .object({
     on: TriggerPoint.describe("The lifecycle point at which this fires."),
     do: z.array(Action).min(1).describe("Actions to run, in order, when it fires."),
-    when: z
-      .array(Predicate)
-      .optional()
-      .describe("Only fire if every one of these still holds at trigger time."),
+    when: z.array(Predicate).optional().describe("Only fire if every one of these still holds at trigger time."),
     label: z.string().optional().describe("How the pending obligation is described to the player."),
   })
   .strict()
-  .describe(
-    "Behavior attached to a result, optionally deferred to a later point in the unit or run.",
-  );
+  .describe("Behavior attached to a result, optionally deferred to a later point in the unit or run.");
 export type Trigger = z.infer<typeof Trigger>;
 
 const EntryBase = {
   id: Id.describe("Unique within this table. Referenced by saved runs, so avoid renaming."),
   title: z.string().optional().describe("Short heading, when the entry has a name of its own."),
-  text: z
-    .string()
-    .min(1)
-    .describe("The rules text shown to the player, verbatim. This is what they read and obey."),
+  text: z.string().min(1).describe("The rules text shown to the player, verbatim. This is what they read and obey."),
   triggers: z.array(Trigger).optional().describe("Mechanical consequences of this result."),
   requires: z
     .array(Predicate)
@@ -41,16 +33,8 @@ const EntryBase = {
     .describe(
       "Conditions that must ALL hold for this result to make sense. When one fails the dice are thrown again, up to a few times, the way they are for a result the run lacks a requirement for. Use it where a result has no referent yet rather than where it is merely hard: `unitIndex: { gte: 2 }` on a result that sends somebody back to where the last one started. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does.",
     ),
-  grants: z
-    .array(Id)
-    .optional()
-    .describe(
-      "States applied to the relevant subject on resolution. Shorthand for an applyState trigger.",
-    ),
-  tags: z
-    .array(z.string())
-    .optional()
-    .describe("Free tags, for cross-referencing and for filtering results out in some modes."),
+  grants: z.array(Id).optional().describe("States applied to the relevant subject on resolution. Shorthand for an applyState trigger."),
+  tags: z.array(z.string()).optional().describe("Free tags, for cross-referencing and for filtering results out in some modes."),
   points: z
     .number()
     .int()
@@ -123,9 +107,7 @@ export const KeyedEntry = z
     key: z
       .string()
       .min(1)
-      .describe(
-        "The value that selects this entry, e.g. a suit (hearts) or a rank (A, 7, K). Compared case-insensitively.",
-      ),
+      .describe("The value that selects this entry, e.g. a suit (hearts) or a rank (A, 7, K). Compared case-insensitively."),
   })
   .strict()
   .describe("One result in a keyed table.");
@@ -147,37 +129,27 @@ export const Table = z
   .discriminatedUnion("resolution", [
     z
       .object({
-        resolution: z
-          .literal("lookup")
-          .describe("Roll once and find the entry whose range contains the result."),
+        resolution: z.literal("lookup").describe("Roll once and find the entry whose range contains the result."),
         title: z.string().min(1).describe("Table name shown to the player."),
         description: z.string().optional().describe("When and why this table is consulted."),
         roll: DiceExpr.describe("What is rolled. Entries must cover its whole range."),
         entries: z.array(LookupEntry).min(1).describe("Results, each owning a roll range."),
       })
       .strict()
-      .describe(
-        "A range table: the familiar d100 form where every result owns a span of numbers.",
-      ),
+      .describe("A range table: the familiar d100 form where every result owns a span of numbers."),
     z
       .object({
-        resolution: z
-          .literal("bands")
-          .describe("Roll an expression and compare the total against open-ended thresholds."),
+        resolution: z.literal("bands").describe("Roll an expression and compare the total against open-ended thresholds."),
         title: z.string().min(1).describe("Table name shown to the player."),
         description: z.string().optional().describe("When and why this table is consulted."),
         roll: DiceExpr.describe("What is rolled, e.g. 2d10 or d6+2."),
         entries: z.array(BandEntry).min(1).describe("Outcome tiers, ordered however you like."),
       })
       .strict()
-      .describe(
-        "An outcome ladder: hit, partial, miss. Use when the total matters more than a lookup, as in move-resolution games.",
-      ),
+      .describe("An outcome ladder: hit, partial, miss. Use when the total matters more than a lookup, as in move-resolution games."),
     z
       .object({
-        resolution: z
-          .literal("opposed")
-          .describe("Roll an action total against several challenge dice and count how many it beat."),
+        resolution: z.literal("opposed").describe("Roll an action total against several challenge dice and count how many it beat."),
         title: z.string().min(1).describe("Table name shown to the player."),
         description: z.string().optional().describe("When and why this table is consulted."),
         action: DiceExpr.describe("The action roll, e.g. d6 or d6+1."),
@@ -187,19 +159,11 @@ export const Table = z
         challenge: z
           .object({
             dice: DiceExpr.describe("A single challenge die, e.g. d10."),
-            count: z
-              .number()
-              .int()
-              .min(1)
-              .max(6)
-              .describe("How many challenge dice are rolled. Each is compared separately."),
+            count: z.number().int().min(1).max(6).describe("How many challenge dice are rolled. Each is compared separately."),
           })
           .strict()
           .describe("The opposition. These are compared individually, never summed."),
-        entries: z
-          .array(OpposedOutcome)
-          .min(1)
-          .describe("Outcomes, one for each possible number of challenge dice beaten."),
+        entries: z.array(OpposedOutcome).min(1).describe("Outcomes, one for each possible number of challenge dice beaten."),
       })
       .strict()
       .describe(
@@ -207,9 +171,7 @@ export const Table = z
       ),
     z
       .object({
-        resolution: z
-          .literal("keyed")
-          .describe("Selected by a name rather than a number, such as a drawn card's suit."),
+        resolution: z.literal("keyed").describe("Selected by a name rather than a number, such as a drawn card's suit."),
         title: z.string().min(1).describe("Table name shown to the player."),
         description: z.string().optional().describe("When and why this table is consulted."),
         entries: z.array(KeyedEntry).min(1).describe("Results, each owning a key."),
@@ -229,10 +191,7 @@ export const Card = z
     title: z.string().min(1).describe("The card's name."),
     text: z.string().min(1).describe("What the card does, in the player's words."),
     triggers: z.array(Trigger).optional().describe("Mechanical effects of playing the card."),
-    requires: z
-      .array(Predicate)
-      .optional()
-      .describe("Conditions that must hold for the card to be playable."),
+    requires: z.array(Predicate).optional().describe("Conditions that must hold for the card to be playable."),
     tags: z.array(z.string()).optional().describe("Free tags, for filtering in some modes."),
   })
   .strict()
@@ -252,49 +211,24 @@ export const Deck = z
         title: z.string().min(1).describe("Deck name shown to the player."),
         description: z.string().optional().describe("What this deck is for."),
         cards: z.array(Card).min(1).describe("Every card in the deck."),
-        drawAtStart: z
-          .number()
-          .int()
-          .min(0)
-          .default(0)
-          .describe("How many cards are dealt when a run begins."),
-        unique: z
-          .boolean()
-          .default(true)
-          .describe("Whether two copies of the same card may exist at once."),
-        carriesOver: z
-          .boolean()
-          .default(false)
-          .describe("Whether unspent cards survive into the next run."),
+        drawAtStart: z.number().int().min(0).default(0).describe("How many cards are dealt when a run begins."),
+        unique: z.boolean().default(true).describe("Whether two copies of the same card may exist at once."),
+        carriesOver: z.boolean().default(false).describe("Whether unspent cards survive into the next run."),
       })
       .strict()
       .describe("A deck of cards you write yourself."),
     z
       .object({
-        kind: z
-          .literal("standard52")
-          .describe("An ordinary playing-card deck, addressed by rank and suit."),
+        kind: z.literal("standard52").describe("An ordinary playing-card deck, addressed by rank and suit."),
         title: z.string().min(1).describe("Deck name shown to the player."),
         description: z.string().optional().describe("What this deck is for."),
         includeJokers: z.boolean().default(false).describe("Whether to shuffle in two jokers."),
-        drawAtStart: z
-          .number()
-          .int()
-          .min(0)
-          .default(0)
-          .describe("How many cards are dealt when a run begins."),
-        resolveOn: Id.optional().describe(
-          "Table consulted on each draw, if the draw should produce a prompt.",
-        ),
-        resolveBy: z
-          .enum(["rank", "suit"])
-          .default("rank")
-          .describe("Whether the draw's rank or its suit selects the table entry."),
+        drawAtStart: z.number().int().min(0).default(0).describe("How many cards are dealt when a run begins."),
+        resolveOn: Id.optional().describe("Table consulted on each draw, if the draw should produce a prompt."),
+        resolveBy: z.enum(["rank", "suit"]).default("rank").describe("Whether the draw's rank or its suit selects the table entry."),
       })
       .strict()
-      .describe(
-        "A standard 52-card deck. Included because a whole family of solo journaling games is built on drawing from one.",
-      ),
+      .describe("A standard 52-card deck. Included because a whole family of solo journaling games is built on drawing from one."),
   ])
   .describe("A deck the game draws from.");
 export type Deck = z.infer<typeof Deck>;

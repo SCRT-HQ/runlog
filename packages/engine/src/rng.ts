@@ -30,12 +30,7 @@ function hashSeed(seed: string): [number, number, number, number] {
   h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
   h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
   h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
-  return [
-    (h1 ^ h2 ^ h3 ^ h4) >>> 0,
-    (h2 ^ h1) >>> 0,
-    (h3 ^ h1) >>> 0,
-    (h4 ^ h1) >>> 0,
-  ];
+  return [(h1 ^ h2 ^ h3 ^ h4) >>> 0, (h2 ^ h1) >>> 0, (h3 ^ h1) >>> 0, (h4 ^ h1) >>> 0];
 }
 
 /**
@@ -87,11 +82,6 @@ export const refuseRandom = (): number => {
  * `occurrence` separates repeats of the same roll within one unit, so a table
  * rolled twice does not come up twice the same.
  */
-export function streamSeed(
-  seed: string,
-  unit: number,
-  purpose: string,
-  occurrence = 0,
-): string {
+export function streamSeed(seed: string, unit: number, purpose: string, occurrence = 0): string {
   return `${seed}:u${unit}:${purpose}:${occurrence}`;
 }
