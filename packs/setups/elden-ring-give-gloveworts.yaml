@@ -1,0 +1,47 @@
+# The spirits, brought up to where the player is.
+#
+# Grave glovewort upgrades an ordinary ash and ghost glovewort a `+`
+# one; the two Great ones are the last step of each. Ten a tier is
+# several summons raised, which is the boost; it is deliberately not so
+# many that a glovewort on the ground stops being worth bending for.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.give-gloveworts
+version: "1.0.0"
+title: Give Gloveworts
+author: Runlog
+description: >-
+  Ten of every glovewort, grave and ghost, and five of each Great one.
+  Enough to bring several spirit ashes up to where the player is,
+  rather than enough to never think about one again.
+
+tool: TarnishedTool
+
+ops:
+  - { op: item.named, args: { name: "Grave Glovewort [1]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Grave Glovewort [2]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Grave Glovewort [3]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Grave Glovewort [4]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Grave Glovewort [5]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Grave Glovewort [6]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Grave Glovewort [7]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Grave Glovewort [8]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Grave Glovewort [9]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: Great Grave Glovewort, quantity: 5 }, once: true }
+  - { op: item.named, args: { name: "Ghost Glovewort [1]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Ghost Glovewort [2]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Ghost Glovewort [3]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Ghost Glovewort [4]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Ghost Glovewort [5]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Ghost Glovewort [6]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Ghost Glovewort [7]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Ghost Glovewort [8]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: "Ghost Glovewort [9]", quantity: 10 }, once: true }
+  - { op: item.named, args: { name: Great Ghost Glovewort, quantity: 5 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

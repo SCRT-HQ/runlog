@@ -78,7 +78,7 @@ describe("which pack the Designer opens on", () => {
       buttonLabeled("New pack")!.click();
     });
 
-    // The app's own dialog, not the browser's grey box: it names the
+    // The app's own dialog, not the browser's gray box: it names the
     // action and says what replacing the draft costs.
     expect(container.textContent).toContain("Start a new pack?");
     expect(container.textContent).toContain("The draft you have open is replaced.");

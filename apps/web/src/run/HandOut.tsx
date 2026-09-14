@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Pack, Setup } from "@runlog/rules-schema";
 import { builtins } from "../control/builtin.ts";
-import { chose, chosenFrom, forTool, setupsHere, type ChosenSetup } from "../control/setups.ts";
+import { chose, chosenFrom, creditLine, forTool, setupsHere, type ChosenSetup } from "../control/setups.ts";
 
 /**
  * Handing out a setup in the middle of a run.
@@ -62,7 +62,7 @@ export function HandOut({
         <span>{v.one}</span>
         <select
           className="chipAdd"
-          value={chosen?.id ?? ""}
+          value={chosen?.from.length === 1 ? (chosen.from[0]?.id ?? "") : ""}
           aria-label={`Which ${word} this ${pack.vocabulary.run.one.toLowerCase()} is played under`}
           onChange={(e) => {
             const picked = offered.find((s) => s.id === e.target.value);
@@ -97,8 +97,8 @@ export function HandOut({
         <span className="muted small">
           {chosen
             ? gifts > 0
-              ? `${chosen.title}, including ${gifts === 1 ? "one thing that is given" : `${gifts} things that are given`} rather than set. Given again, on purpose.`
-              : `${chosen.title}. Nothing in it is a gift, so this only reapplies settings.`
+              ? `${creditLine(chosen) ?? "This run's terms"}, including ${gifts === 1 ? "one thing that is given" : `${gifts} things that are given`} rather than set. Given again, on purpose.`
+              : `${creditLine(chosen) ?? "This run's terms"}. Nothing in it is a gift, so this only reapplies settings.`
             : `Nothing is chosen, so there is nothing to hand out.`}
         </span>
       </div>
