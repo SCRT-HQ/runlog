@@ -11,6 +11,8 @@ export function memoryDiscord(): DiscordRest & {
   posts: Array<{ channel: string; message: DiscordMessage; id: string }>;
   edits: Array<{ channel: string; id: string; message: DiscordMessage }>;
   originals: Array<{ token: string; message: DiscordMessage }>;
+  /** Second messages on an interaction, and whether each was only for whoever pressed. */
+  followUps: Array<{ token: string; message: DiscordMessage; privately: boolean }>;
   pins: string[];
   deleted: string[];
   archived: string[];
@@ -49,10 +51,16 @@ export function memoryDiscord(): DiscordRest & {
     pins: [] as string[],
     deleted: [] as string[],
     archived: [] as string[],
+    followUps: [] as Array<{ token: string; message: DiscordMessage; privately: boolean }>,
     down: false,
     async editOriginal(_applicationId: string, token: string, message: DiscordMessage) {
       if (me.down) return false;
       me.originals.push({ token, message });
+      return true;
+    },
+    async followUp(_applicationId: string, token: string, message: DiscordMessage, privately?: boolean) {
+      if (me.down) return false;
+      me.followUps.push({ token, message, privately: privately === true });
       return true;
     },
     async createThread(_channelId: string, name: string, privately?: boolean) {
