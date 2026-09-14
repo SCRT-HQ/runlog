@@ -174,6 +174,24 @@ export function RunView({
   const publishing = shared || decks > 0;
   // The race this run is in, if any: the side column's panel and the snapshot both read it.
   const raceView = useRace(run.record, run.state, run.events);
+
+  /**
+   * The receipts: what each throw of the step did, kept until the step has
+   * been read.
+   *
+   * The engine moves on the instant a roll is answered, so the dice and the
+   * result would otherwise vanish together. The answer is still committed
+   * as the engine sees fit, a receipt is a record, not a hold on the game,
+   * but the step's rolls stay on screen, in order, with the next roll's
+   * keypad beneath them, until "Carry on" closes the step.
+   *
+   * Outcomes are the signal: whatever the run had not resolved before an
+   * answer, and has now, is what that answer did. Measured from the count
+   * rather than the request, so a machine roll with auto-roll on, or a move
+   * that resolves a table, gets a receipt too, just one without dice.
+   */
+  const [receipts, setReceipts] = useState<RollReceipt[]>([]);
+
   /**
    * What a deck may press, right now: one value for the snapshot this
    * device publishes and for the drive this device takes, so a press is
@@ -192,6 +210,24 @@ export function RunView({
         lastResult: run.state?.outcomes.at(-1) ? entryTextOf(pack, run.state.outcomes.at(-1)!) : null,
         owed: run.blockingObligations.length,
         suggestions: run.state ? subjectSuggestions(pack, run.state).slice(0, 8) : [],
+        // The same button the page itself would show between units: nothing
+        // else is waiting to be read or answered first, and there is
+        // nowhere left to go but the unit ahead. Ended, unstarted, watching,
+        // still asked something, or a receipt still on screen -- none of
+        // those has a between-units button on the page, so none of them has
+        // one here.
+        between:
+          run.state &&
+          Boolean(run.started) &&
+          !run.readOnly &&
+          run.state.status !== "ended" &&
+          run.pending === null &&
+          receipts.length === 0 &&
+          !run.activeStep
+            ? run.state.unit === 0
+              ? `Enter ${pack.vocabulary.unit.one} 1`
+              : `Enter ${pack.vocabulary.unit.one} ${run.state.unit + 1}`
+            : null,
       }),
     [
       run.events.length,
@@ -203,6 +239,7 @@ export function RunView({
       run.moves,
       run.canUndo,
       run.blockingObligations.length,
+      receipts.length,
       pack,
     ],
   );
@@ -291,22 +328,6 @@ export function RunView({
   };
   useAlerts(run.events, run.runId, me, alerts);
 
-  /**
-   * The receipts: what each throw of the step did, kept until the step has
-   * been read.
-   *
-   * The engine moves on the instant a roll is answered, so the dice and the
-   * result would otherwise vanish together. The answer is still committed
-   * as the engine sees fit, a receipt is a record, not a hold on the game,
-   * but the step's rolls stay on screen, in order, with the next roll's
-   * keypad beneath them, until "Carry on" closes the step.
-   *
-   * Outcomes are the signal: whatever the run had not resolved before an
-   * answer, and has now, is what that answer did. Measured from the count
-   * rather than the request, so a machine roll with auto-roll on, or a move
-   * that resolves a table, gets a receipt too, just one without dice.
-   */
-  const [receipts, setReceipts] = useState<RollReceipt[]>([]);
   const sync = useSync();
   // A hosted run opens itself to watchers and sees to a watch key, so an
   // address copied from this run works when it is pasted somewhere.

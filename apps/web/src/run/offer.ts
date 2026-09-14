@@ -38,6 +38,8 @@ export interface OfferInput {
   owed: number;
   /** What the run would suggest for a subject, where it suggests anything. */
   suggestions: string[];
+  /** What the page's between-units button says, or null when the run is not between units. */
+  between: string | null;
 }
 
 /** Steps a key can answer with one press, because they ask nothing first. */
@@ -55,7 +57,10 @@ export function offerOf(input: OfferInput): Offer {
   const bare = { seq: input.seq, moves, undo, presets: [] as Offer["presets"] };
 
   if (!input.live) return { ...bare, primary: null, needsPage: "Open the run on the page" };
-  if (!input.step) return { ...bare, primary: null, needsPage: null };
+  if (!input.step) {
+    if (input.between) return { ...bare, primary: { id: "enter", label: input.between, kind: "between" }, needsPage: null };
+    return { ...bare, primary: null, needsPage: null };
+  }
 
   const step = input.step;
   const kind = step.kind;

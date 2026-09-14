@@ -12,6 +12,7 @@ const base = {
   lastResult: null,
   owed: 0,
   suggestions: [],
+  between: null,
 };
 
 describe("offerOf", () => {
@@ -83,5 +84,18 @@ describe("offerOf", () => {
     const offer = offerOf({ ...base, settled: false, step: { kind: "rollTable" } as never, stepLabel: "Roll the Weather" });
     expect(offer.primary).toBeNull();
     expect(offer.needsPage).toBe("Roll the Weather on the page");
+  });
+
+  // Controller ruling: between units, the page's own button is the primary
+  // press too, in its own words.
+  it("offers the page's between-units button as the primary", () => {
+    const offer = offerOf({ ...base, between: "Enter Day 5" });
+    expect(offer.primary).toEqual({ id: "enter", label: "Enter Day 5", kind: "between" });
+    expect(offer.needsPage).toBeNull();
+  });
+
+  it("offers nothing between units when the page has no between-units button", () => {
+    const offer = offerOf({ ...base, between: null });
+    expect(offer.primary).toBeNull();
   });
 });
