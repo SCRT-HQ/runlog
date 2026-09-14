@@ -140,3 +140,11 @@ let's add the Start of the DLC pack to this PR when we fix it
 ---
 
 did we figure out how to create a setup that gives talisman pouches?
+
+---
+
+what about a setup for unlocking all of the whetblades / affinities?
+
+---
+
+maybe "unlock affinities" insted of "every affinity"
