@@ -151,9 +151,9 @@ export function WelcomeView() {
               <div>
                 <h4>Pick a pack, or write one</h4>
                 <p>
-                  Eight come free: a penalty wheel for any stream, challenge packs for games people already play, deliberate practice,
-                  a rehearsal run segment by segment, a training log, and a day in blocks of twenty-five minutes. The Designer writes
-                  new ones without touching a file.
+                  Nine come free: a penalty wheel for any stream, challenge packs for games people already play, a called mechanic on
+                  every DJ transition, deliberate practice, a rehearsal run segment by segment, a training log, and a day in blocks of
+                  twenty-five minutes. The Designer writes new ones without touching a file.
                 </p>
               </div>
             </li>

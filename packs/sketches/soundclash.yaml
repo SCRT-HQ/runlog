@@ -1,0 +1,409 @@
+# Soundclash: a called mechanic every time you change records.
+#
+# Built for DJs who stream. A Set is a series of Rounds, and a Round is one
+# transition: the app calls a mechanic, you do it on the decks, and you call
+# the Round. Nothing is declared, nothing is journalled, nothing is targeted,
+# so a whole Round is two presses -- call it, then Next -- and with Auto-roll
+# and "carry on by itself" switched on, neither one waits for anything. That
+# is the point of the pack: it has to be playable with a camera on you and a
+# hand on a record.
+#
+# Four styles, one table each, chosen as the mode at the top of the Set:
+# First Sets for somebody learning, Club Standard for the working
+# vocabulary, Turntablism for scratch and juggle work, Open Format for
+# genre and era whiplash. The fifth mode is the clash itself: the same
+# Open Format table, two or more selectors trading Rounds.
+#
+# Written to show a pack with no subjects at all, and modes that differ by
+# nothing except which phase they leave switched on.
+
+$schema: ../../packages/rules-schema/schema/pack-1.schema.json
+# yaml-language-server: $schema=../../packages/rules-schema/schema/pack-1.schema.json
+
+schemaVersion: 1
+id: com.scrthq.runlog.soundclash
+version: "0.1.0"
+title: Soundclash
+author: Runlog
+description: >-
+  A mechanic called on every transition. Pick a style, and each Round says
+  what the next mix has to do: double-drop it, swap the bass, cut it in by
+  hand, jump twenty BPM. One press ends the Round and calls the next one.
+
+category: music
+tags: [dj, turntables, mixing, stream, practice]
+
+requires:
+  - { id: decks, label: "Two decks and a mixer, or the software equivalent", kind: equipment }
+  - { id: library, label: A library you know well enough to pull from quickly, kind: other }
+  - { id: fx, label: Effects and a filter on the mixer, kind: equipment, optional: true, note: "A handful of calls ask for one. Without them, those calls are skipped." }
+  - { id: vinyl, label: "Vinyl, or a controller with platters", kind: equipment, optional: true, note: "Turntablism needs something to put a hand on." }
+
+license:
+  id: MIT
+  redistributable: true
+  holder: Runlog
+
+capabilities:
+  - deferredTriggers
+  - seededRuns
+  - counters
+  - resources
+  - timers
+  - coopRoles
+
+vocabulary:
+  run: { one: Set, many: Sets }
+  unit: { one: Round, many: Rounds }
+  # Nothing is ever declared, so this only ever names the idea of one.
+  subject: { one: Track, many: Tracks }
+  finalize: Next
+
+# No subject. A Round is a transition, not a thing that survives the
+# transition, and declaring one would cost the press this pack exists to
+# avoid.
+unit:
+  createsSubject: false
+  min: 1
+  max: 60
+
+counters:
+  rounds:
+    label: Rounds mixed
+    initial: 0
+    incrementOn:
+      - { on: unitFinalized }
+    triggers:
+      - when: { gte: 12 }
+        oncePerRun: true
+        label: Twelve in
+        do:
+          - do: note
+            text: Twelve Rounds. Take the next one off the clock and play something you just want to hear.
+            persistent: true
+
+resources:
+  passes:
+    label: Passes
+    initial: 3
+    min: 0
+    max: 3
+    step: 1
+    display: boxes
+    description: >-
+      Spend one when the call is impossible with the records in front of you.
+      Difficulty is not what these are for.
+
+moves:
+  pass:
+    label: Pass on the call
+    description: "Spend a Pass. This Round has no mechanic; mix it however you like."
+    when: anytime
+    available:
+      - { resource: passes, is: { gte: 1 } }
+    do:
+      - { do: modResource, resource: passes, by: -1 }
+      - { do: note, text: "Passed. Mix this one however you like." }
+
+tables:
+  # ---------------------------------------------------------------------
+  # First Sets. One instruction, nothing that needs a third hand, and
+  # nothing that will derail a set if it goes wrong on camera.
+  # ---------------------------------------------------------------------
+  firstSets:
+    resolution: lookup
+    title: First Sets
+    description: "What the next transition has to do. Beginner calls: one thing at a time."
+    roll: d20
+    entries:
+      - { id: fs-01, range: [1, 1], text: "Bass swap. Kill the bass on the outgoing track the moment the new one's comes in." }
+      - { id: fs-02, range: [2, 2], text: "Long blend. At least 32 beats from the first fader move to the last." }
+      - { id: fs-03, range: [3, 3], text: "Quick cut. Bring the next track in on the one, no blend at all." }
+      - { id: fs-04, range: [4, 4], text: "Faders and EQ only. No effects, no filter.", needs: [fx] }
+      - { id: fs-05, range: [5, 5], text: "Say the transition out loud before you start it, then do exactly that." }
+      - { id: fs-06, range: [6, 6], text: "Count it in. Find the phrase, count it, and land the new track on the one." }
+      - { id: fs-07, range: [7, 7], text: "Pick the next track before this one reaches its breakdown. No scrolling after that." }
+      - { id: fs-08, range: [8, 8], text: "Mix out before the last chorus. Do not let this one finish." }
+      - { id: fs-09, range: [9, 9], text: "Let it finish. Ride this one to the end, then start the next clean." }
+      - { id: fs-10, range: [10, 10], text: "Cue the next track on a downbeat, not on the first sound you hear." }
+      - { id: fs-11, range: [11, 11], text: "Mid swap. Trade the mids across and leave the bass and highs where they are." }
+      - { id: fs-12, range: [12, 12], text: "Bring the new track in on a break or a drum fill. Nowhere else." }
+      - { id: fs-13, range: [13, 13], text: "Filter sweep. Take the outgoing track up and out on a high-pass and let it go.", needs: [fx] }
+      - { id: fs-14, range: [14, 14], text: "Hands off the pitch fader. Whatever the tempo is, it stays." }
+      - { id: fs-15, range: [15, 15], text: "Both tracks in time for 16 beats before you touch a single EQ knob." }
+      - { id: fs-16, range: [16, 16], text: "Change one thing about the energy: quieter, faster, heavier, sparser. Say which." }
+      - { id: fs-17, range: [17, 17], text: "Pull the next track from the genre you know least well." }
+      - { id: fs-18, range: [18, 18], text: "Trim first. Set the gain so both channels hit the same level, then mix." }
+      - { id: fs-19, range: [19, 19], text: "Play something you have never played on stream before." }
+      - { id: fs-20, range: [20, 20], text: "Dealer's choice. Mix it however you like." }
+
+  # ---------------------------------------------------------------------
+  # Club Standard. The vocabulary a working DJ already has, called at
+  # random so the set stops defaulting to the two transitions that always
+  # work.
+  # ---------------------------------------------------------------------
+  clubStandard:
+    resolution: lookup
+    title: Club Standard
+    description: "What the next transition has to do. The working vocabulary, called at random."
+    roll: d20
+    entries:
+      - { id: cs-01, range: [1, 1], text: "Double-drop. Land both drops on the same one." }
+      - { id: cs-02, range: [2, 2], text: "Echo out. Throw a delay on the outgoing track and pull the fader while it tails.", needs: [fx] }
+      - { id: cs-03, range: [3, 3], text: "The next track is at least 20 BPM off this one. Get there however you like." }
+      - { id: cs-04, range: [4, 4], text: "Loop the outgoing track's last four beats and build the new one underneath it." }
+      - { id: cs-05, range: [5, 5], text: "Play the next track at least 6% off its native tempo." }
+      - { id: cs-06, range: [6, 6], text: "High-pass the outgoing track at 1 kHz and never bring it back.", needs: [fx] }
+      - id: cs-07
+        range: [7, 7]
+        text: "From the moment you touch the crossfader, you have 90 seconds."
+        triggers:
+          - on: immediately
+            do:
+              - { do: startTimer, minutes: 1.5, label: "The transition" }
+      - { id: cs-08, range: [8, 8], text: "Beat-match by ear. Sync off, waveforms covered." }
+      - { id: cs-09, range: [9, 9], text: "Key change. The next track is a fifth up or a semitone down from this one." }
+      - { id: cs-10, range: [10, 10], text: "Drop the next track cold on this one's last beat. No overlap." }
+      - { id: cs-11, range: [11, 11], text: "Loop roll out of the breakdown, halving each pass, into the new track." }
+      - { id: cs-12, range: [12, 12], text: "Run the full 32-bar phrase with both tracks up. No early exit." }
+      - { id: cs-13, range: [13, 13], text: "Reverb wash. Send the outgoing track to reverb, kill its channel, let the tail carry.", needs: [fx] }
+      - { id: cs-14, range: [14, 14], text: "An acapella or a vocal loop sits over the incoming track for at least 8 bars." }
+      - { id: cs-15, range: [15, 15], text: "Something has to be playing that is not either track: a third deck, a pad, your own voice." }
+      - { id: cs-16, range: [16, 16], text: "Cut the bass on both channels for 8 beats, then bring the new one's back alone." }
+      - { id: cs-17, range: [17, 17], text: "The next track is slower than this one. Take the energy down and make it land anyway." }
+      - { id: cs-18, range: [18, 18], text: "Tease it. Four beats of the next track, out again, then in for real." }
+      - { id: cs-19, range: [19, 19], text: "Ride the pitch fader through the whole blend. Never let it sit still." }
+      - { id: cs-20, range: [20, 20], text: "Dealer's choice. Mix it however you like." }
+
+  # ---------------------------------------------------------------------
+  # Turntablism. A hand on the platter and a hand on the fader; every call
+  # here assumes both.
+  # ---------------------------------------------------------------------
+  turntablism:
+    resolution: lookup
+    title: Turntablism
+    description: "What the next transition has to do. Scratch and juggle calls."
+    roll: d20
+    entries:
+      - { id: tt-01, range: [1, 1], text: "Baby scratch only. Forward and back, no fader." }
+      - { id: tt-02, range: [2, 2], text: "Transformer. Chop the fader through a held sound, four cuts minimum." }
+      - { id: tt-03, range: [3, 3], text: "Crab. One clean pass is enough." }
+      - { id: tt-04, range: [4, 4], text: "Flare, two clicks minimum." }
+      - { id: tt-05, range: [5, 5], text: "Chirp into the drop." }
+      - { id: tt-06, range: [6, 6], text: "Beat juggle two copies of the same record, four bars minimum." }
+      - { id: tt-07, range: [7, 7], text: "Stab the first word of the next track's vocal three times before you let it run." }
+      - { id: tt-08, range: [8, 8], text: "Needle drop. Find the spot by eye, no cue point.", needs: [vinyl] }
+      - { id: tt-09, range: [9, 9], text: "Scratch the outgoing track out while the new one plays underneath." }
+      - { id: tt-10, range: [10, 10], text: "Tone play. Pitch a held tone into a melody, four notes minimum." }
+      - { id: tt-11, range: [11, 11], text: "Orbit. Two clicks on the way out, and keep it in time." }
+      - { id: tt-12, range: [12, 12], text: "A hand stays on the platter the whole Round. If the record is not moving, you are." }
+      - { id: tt-13, range: [13, 13], text: "Backspin into the next track." }
+      - { id: tt-14, range: [14, 14], text: "Drag the record to a stop and start the new one out of the silence." }
+      - { id: tt-15, range: [15, 15], text: "Cut the first bar of the new track in on the crossfader, four cuts a beat." }
+      - { id: tt-16, range: [16, 16], text: "Two-click flare into a chirp, back to back, no pause between them." }
+      - { id: tt-17, range: [17, 17], text: "Scratch a phrase you could whistle back afterwards." }
+      - { id: tt-18, range: [18, 18], text: "Juggle the drums out of this track and let the new one come up under them." }
+      - { id: tt-19, range: [19, 19], text: "No fader this Round. Everything with the platter." }
+      - { id: tt-20, range: [20, 20], text: "Dealer's choice. Scratch or mix it however you like." }
+
+  # ---------------------------------------------------------------------
+  # Open Format. The calls that are about what you reach for rather than
+  # what your hands do, which is also what the clash mode runs on.
+  # ---------------------------------------------------------------------
+  openFormat:
+    resolution: lookup
+    title: Open Format
+    description: "What the next track has to be. Genre, era and left turns."
+    roll: d20
+    entries:
+      - { id: of-01, range: [1, 1], text: "Change decade. The next track is from a different one than this." }
+      - { id: of-02, range: [2, 2], text: "Change genre outright. Nothing about the next track should share a shelf with this one." }
+      - { id: of-03, range: [3, 3], text: "Match the groove of a track you already played tonight." }
+      - id: of-04
+        range: [4, 4]
+        text: "Play a track from earlier tonight, edited or pitched enough that it reads as new."
+        requires:
+          - { unitIndex: { gte: 5 } }
+      - { id: of-05, range: [5, 5], text: "Break one convention of the genre you are in." }
+      - { id: of-06, range: [6, 6], text: "The next track shares a word with this one's title." }
+      - { id: of-07, range: [7, 7], text: "Halftime. The next track feels half the speed, whatever the number says." }
+      - { id: of-08, range: [8, 8], text: "Doubletime. The next track feels twice the speed." }
+      - { id: of-09, range: [9, 9], text: "Vocal to instrumental, or instrumental to vocal. Whichever this one is not." }
+      - { id: of-10, range: [10, 10], text: "Play the track chat would least expect, and play it straight." }
+      - { id: of-11, range: [11, 11], text: "Same key, different world. Keep the key and change everything else." }
+      - { id: of-12, range: [12, 12], text: "Bridge it. The next track has to work for both crowds, then go where you wanted." }
+      - { id: of-13, range: [13, 13], text: "Play something older than you are." }
+      - { id: of-14, range: [14, 14], text: "Play something released this month." }
+      - { id: of-15, range: [15, 15], text: "The next track shares an artist, a producer or a sample with this one. Say which." }
+      - { id: of-16, range: [16, 16], text: "Language change. The next track is sung in a different one." }
+      - { id: of-17, range: [17, 17], text: "Take the energy down two steps and earn it back before the Round is out." }
+      - { id: of-18, range: [18, 18], text: "Play the most obvious possible track. No irony." }
+      - { id: of-19, range: [19, 19], text: "Regional jump. The next track comes from somewhere else entirely." }
+      - { id: of-20, range: [20, 20], text: "Dealer's choice. Play whatever you like." }
+
+# Two presses is the whole Round: the call, and the one that ends it. Which
+# table gets called is the only thing the modes differ by, so there is a
+# call phase per style and every mode switches off the four it does not use.
+phases:
+  - id: callFirstSets
+    label: Call the Round
+    steps:
+      - kind: rollTable
+        table: firstSets
+        label: Call it
+
+  - id: callClub
+    label: Call the Round
+    steps:
+      - kind: rollTable
+        table: clubStandard
+        label: Call it
+
+  - id: callTurntablism
+    label: Call the Round
+    steps:
+      - kind: rollTable
+        table: turntablism
+        label: Call it
+
+  - id: callOpen
+    label: Call the Round
+    steps:
+      - kind: rollTable
+        table: openFormat
+        label: Call it
+
+  - id: mix
+    label: Mix it
+    description: "The call is on screen. Do it on the decks, then press Next."
+    steps:
+      - kind: finalizeUnit
+        label: Next
+
+endings:
+  - id: lastTrack
+    label: Last track
+    text: Let it play out, say goodnight over the outro, and stop.
+  - id: handOver
+    label: Hand over
+    text: Mix into whatever the next selector cued, and get out of the way.
+  - id: called
+    label: Called it
+    text: Stop where you are. The Round on screen goes uncalled.
+
+modes:
+  firstSets:
+    label: First Sets
+    description: "Beginner calls. One instruction a Round, nothing that needs a third hand."
+    units: { min: 1, max: 60 }
+    disable:
+      tables: [clubStandard, turntablism, openFormat]
+      phases: [callClub, callTurntablism, callOpen]
+
+  clubStandard:
+    label: Club Standard
+    description: "The working vocabulary, called at random so the set stops defaulting to what always works."
+    units: { min: 1, max: 60 }
+    disable:
+      tables: [firstSets, turntablism, openFormat]
+      phases: [callFirstSets, callTurntablism, callOpen]
+
+  turntablism:
+    label: Turntablism
+    description: "Scratch and juggle calls. Assumes a hand on the platter and a hand on the fader."
+    units: { min: 1, max: 60 }
+    disable:
+      tables: [firstSets, clubStandard, openFormat]
+      phases: [callFirstSets, callClub, callOpen]
+
+  openFormat:
+    label: Open Format
+    description: "Calls about what you reach for rather than what your hands do."
+    units: { min: 1, max: 60 }
+    disable:
+      tables: [firstSets, clubStandard, turntablism]
+      phases: [callFirstSets, callClub, callTurntablism]
+
+  clash:
+    label: The clash
+    description: >-
+      Two or more selectors trading Rounds on the same decks. The call lands
+      on whoever has them, and the Round passes with the press.
+    units: { min: 1, max: 60 }
+    disable:
+      tables: [firstSets, clubStandard, turntablism]
+      phases: [callFirstSets, callClub, callTurntablism]
+    players:
+      min: 2
+      max: 6
+      rotate: clockwise
+      roles:
+        - { id: selector, label: Selector, description: Has the decks this Round., acts: true }
+        - { id: waiting, label: Waiting, description: Cueing whatever answers it. }
+    notes:
+      - The press ends the Round and hands the decks over. Nobody scores; the room decides.
+
+defaultMode: clubStandard
+
+hierarchy:
+  - The call
+  - Pass
+  - General rules
+
+fixtures:
+  # The shape the whole pack is built around: a Round is a call and a Next,
+  # and nothing is left over in between.
+  - name: A Round is a call and a Next
+    mode: clubStandard
+    play:
+      - { enter: 1 }
+      - { step: callClub, answers: { d20: 1 } }
+      - { step: mix }
+      - { enter: 2 }
+      - { step: callClub, answers: { d20: 8 } }
+    expect:
+      - { path: outcomes.length, equals: 2 }
+      - { path: outcomes.0.entryId, equals: cs-01 }
+      - { path: outcomes.1.entryId, equals: cs-08 }
+      - { path: counters.rounds, equals: 1 }
+      - { path: subjects.length, equals: 0 }
+      - { path: status, equals: active }
+      - { requests: answered }
+
+  # Each mode calls from its own table and no other. Turntablism rolling a
+  # 4 has to land on the flare, not on whatever a 4 means in Club Standard.
+  - name: A mode calls from its own table and switches off the rest
+    mode: turntablism
+    play:
+      - { enter: 1 }
+      - { step: callTurntablism, answers: { d20: 4 } }
+    expect:
+      - { path: outcomes.length, equals: 1 }
+      - { path: outcomes.0.table, equals: turntablism }
+      - { path: outcomes.0.entryId, equals: tt-04 }
+      - { requests: answered }
+
+  # The clash is Open Format with people taking turns, so it calls the same
+  # table the solo mode does.
+  - name: The clash calls Open Format
+    mode: clash
+    play:
+      - { enter: 1 }
+      - { step: callOpen, answers: { d20: 13 } }
+    expect:
+      - { path: outcomes.0.table, equals: openFormat }
+      - { path: outcomes.0.entryId, equals: of-13 }
+      - { requests: answered }
+
+  # A Pass spends one and leaves the Round without a call to honor.
+  - name: A Pass costs one and the Round carries on
+    mode: firstSets
+    play:
+      - { enter: 1 }
+      - { step: callFirstSets, answers: { d20: 4 } }
+      - { move: pass }
+      - { step: mix }
+    expect:
+      - { path: resources.passes, equals: 2 }
+      - { path: counters.rounds, equals: 1 }
+      - { requests: answered }
