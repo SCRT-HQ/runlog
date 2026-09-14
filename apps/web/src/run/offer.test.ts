@@ -78,6 +78,31 @@ describe("offerOf", () => {
     expect(offer.needsPage).toBe("Close Day 4 on the page");
   });
 
+  // Review finding: a manual step marked closesUnit is routed to the page's
+  // ClosingStep, whose button writes the close, not a step's own carry-on.
+  it("offers the close, not carry-on, for a manual step that closes the unit", () => {
+    const offer = offerOf({
+      ...base,
+      step: { kind: "manual", closesUnit: true } as never,
+      stepLabel: "Close Day 4",
+    });
+    expect(offer.primary).toEqual({ id: "close", label: "Close Day 4", kind: "manual" });
+    expect(offer.needsPage).toBeNull();
+  });
+
+  // Review finding: owed used to be checked after the manual branch had
+  // already returned, so a closing manual step skipped it entirely.
+  it("will not close a unit-closing manual step with something owed", () => {
+    const offer = offerOf({
+      ...base,
+      step: { kind: "manual", closesUnit: true } as never,
+      stepLabel: "Close Day 4",
+      owed: 1,
+    });
+    expect(offer.primary).toBeNull();
+    expect(offer.needsPage).toBe("Something is owed; settle it on the page");
+  });
+
   // Self-review: settled is a declared input; an unsettled step is not
   // pressable, the same way closesTheUnit refuses an unsettled unit.
   it("will not offer a step that is not yet settled", () => {

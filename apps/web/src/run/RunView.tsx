@@ -108,6 +108,15 @@ function activeStepLabel(pack: Pack, active: ActiveStep | null): string | null {
 }
 
 /**
+ * Whether a move may not be pressed: it closes the unit, and something is
+ * still owed. The one rule behind `Moves`' own disabled button and the
+ * offer a deck reads, so a deck can never press what the page would not.
+ */
+export function heldMove(move: { finalizes?: boolean }, owed: number): boolean {
+  return Boolean(move.finalizes) && owed > 0;
+}
+
+/**
  * Playing a run.
  *
  * Every noun on screen comes from the pack's vocabulary, and every step comes
@@ -205,7 +214,10 @@ export function RunView({
         settled: run.pending === null,
         step: run.activeStep?.step ?? null,
         stepLabel: run.state ? activeStepLabel(pack, run.activeStep) : null,
-        moves: run.moves.map((m) => ({ id: m.id, label: m.move.label })),
+        // A held move -- finalizing, with something still owed -- is the
+        // page's own button disabled; a deck sees the same offer the page
+        // would show, so it is left off rather than pressed and refused.
+        moves: run.moves.filter((m) => !heldMove(m.move, run.blockingObligations.length)).map((m) => ({ id: m.id, label: m.move.label })),
         canUndo: run.canUndo,
         lastResult: run.state?.outcomes.at(-1) ? entryTextOf(pack, run.state.outcomes.at(-1)!) : null,
         owed: run.blockingObligations.length,
@@ -2233,7 +2245,7 @@ function Moves({ run, pack, state }: { run: ReturnType<typeof useRun>; pack: Pac
       </h3>
       <div className="choices">
         {run.moves.map(({ id, move }) => {
-          const held = Boolean(move.finalizes) && owed > 0;
+          const held = heldMove(move, owed);
           const why = held ? "Settle what is owed first; this move closes the unit." : undefined;
           const closes = move.finalizes ? `Closes the ${pack.vocabulary.unit.one.toLowerCase()}.` : null;
 

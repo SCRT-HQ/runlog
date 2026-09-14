@@ -1,4 +1,5 @@
 import type { Step } from "@runlog/rules-schema";
+import { checklistOf, closesUnit } from "@runlog/engine";
 
 /**
  * What a deck may press, right now, in the pack's own words.
@@ -42,10 +43,15 @@ export interface OfferInput {
   between: string | null;
 }
 
-/** Steps a key can answer with one press, because they ask nothing first. */
+/**
+ * Steps a key can answer with one press, because they ask nothing first.
+ *
+ * A step that closes the unit is not listed here: it is routed by
+ * `closesUnit` below, the same way whichever kind it is, rather than by
+ * its own kind.
+ */
 const PRESSABLE: Record<string, "roll" | "carry-on" | "close" | "enter"> = {
   rollTable: "roll",
-  finalizeUnit: "close",
 };
 
 /** Steps that take something typed, and the preset that covers each. */
@@ -79,19 +85,28 @@ export function offerOf(input: OfferInput): Offer {
       presets: [{ kind, label, ...(input.suggestions.length > 0 ? { suggestions: input.suggestions } : {}) }],
     };
 
-  // A manual step asks nothing on its own; it only asks something when it
-  // carries a checklist to confirm. Empty, it is as bare a press as a roll.
-  if (step.kind === "manual") {
-    const items = step.checklist ?? [];
-    if (items.length > 0) return { ...bare, primary: null, needsPage: `${label} on the page` };
-    return { ...bare, primary: { id: "carry-on", label, kind }, needsPage: null };
+  // Owed blocks every bare press but a typed step's own preset: the page
+  // would refuse the same close or carry-on until it is settled, checked
+  // once here rather than separately for every kind that reaches this far.
+  if (input.owed > 0) return { ...bare, primary: null, needsPage: "Something is owed; settle it on the page" };
+
+  // A step that closes the unit goes to the page's closing card, whichever
+  // kind it is underneath: a finalizeUnit, or a manual step marked
+  // closesUnit. Its own confirmation or checklist is the same kind of ask
+  // as any other and sends it back to the page; empty, it is the one
+  // press that writes the close, not a step's own carry-on.
+  if (closesUnit(step)) {
+    if (checklistOf(step).length > 0) return { ...bare, primary: null, needsPage: `${label} on the page` };
+    return { ...bare, primary: { id: "close", label, kind: step.kind }, needsPage: null };
   }
 
-  // A finalizeUnit with confirmation items is the honor check: the same
-  // kind of ask as a manual checklist, not a bare close.
-  if (step.kind === "finalizeUnit" && (step.confirm ?? []).length > 0) return { ...bare, primary: null, needsPage: `${label} on the page` };
-
-  if (input.owed > 0) return { ...bare, primary: null, needsPage: "Something is owed; settle it on the page" };
+  // A manual step that does not close the unit asks nothing on its own; it
+  // only asks something when it carries a checklist to confirm. Empty, it
+  // is as bare a press as a roll.
+  if (step.kind === "manual") {
+    if (checklistOf(step).length > 0) return { ...bare, primary: null, needsPage: `${label} on the page` };
+    return { ...bare, primary: { id: "carry-on", label, kind }, needsPage: null };
+  }
 
   const id = PRESSABLE[kind];
   if (!id) return { ...bare, primary: null, needsPage: `${label} on the page` };

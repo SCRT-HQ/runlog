@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import { loadPackText } from "@runlog/rules-schema";
 import type { Api } from "../sync/client.ts";
-import { RunView } from "./RunView.tsx";
+import { heldMove, RunView } from "./RunView.tsx";
 import { memoryRunStore } from "./store.ts";
 import { syncBus } from "../sync/bus.ts";
 
@@ -100,5 +100,24 @@ describe("the offer rides along with the snapshot", () => {
     await renderRunView({ putSnapshot, shared: false, decksAttached: 1 });
     await vi.advanceTimersByTimeAsync(900);
     expect(putSnapshot).toHaveBeenCalled();
+  });
+});
+
+/**
+ * Review finding: `offer.moves` used to list a finalizing move with
+ * something owed, though the page's own button is disabled for exactly
+ * that move. `heldMove` is the one rule behind both now, so this is a
+ * unit test of the rule rather than an integration one: this file's
+ * fixture is a single `RunStarted` event with no obligation of its own
+ * to come due, and putting one in the demo pack's way would mean
+ * authoring a rule and a log deep enough to trip it, not exercising the
+ * filter that reads `heldMove`'s answer.
+ */
+describe("heldMove", () => {
+  it("holds a finalizing move only while something is owed", () => {
+    expect(heldMove({ finalizes: true }, 1)).toBe(true);
+    expect(heldMove({ finalizes: true }, 0)).toBe(false);
+    expect(heldMove({ finalizes: false }, 1)).toBe(false);
+    expect(heldMove({}, 1)).toBe(false);
   });
 });
