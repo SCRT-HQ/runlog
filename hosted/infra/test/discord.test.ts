@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { canManage, handleInteraction, LINK_MINUTES, type InteractionDeps } from "../lib/handlers/discord/interactions";
 import { COMMANDS, isCommandName } from "../lib/handlers/discord/commands";
+import { customId } from "../lib/handlers/discord/card";
 import { EPHEMERAL, InteractionType, ResponseType, type Interaction } from "../lib/handlers/discord/types";
 import { verifyInteraction } from "../lib/handlers/discord/verify";
 import type { SessionMeta, Store } from "../lib/handlers/store";
@@ -283,6 +284,126 @@ describe("a run in a private thread", () => {
     app_permissions: MAY,
     ...over,
     data: { name: "run", options: [{ name: "start", type: 1, options: [{ name: "pack", type: 3, value: PACK }, { name: "mode", type: 3, value: "standard" }, ...options] }] },
+  });
+
+  /**
+   * Joining a run as a player, and being told how to attach a tool.
+   *
+   * What used to happen is that somebody joined, nothing else happened,
+   * and the host had to find them privately and paste a URL with their
+   * name on the end of it.
+   */
+  describe("joining as a player", () => {
+    const forfeits = readFileSync(join(__dirname, "..", "..", "..", "packs", "sketches", "forfeits.yaml"), "utf8");
+    const FORFEITS = "com.scrthq.runlog.forfeits";
+
+    /**
+     * Enough of a store to start a run and press a button on it: the
+     * session, its log, and a snapshot that may or may not carry a
+     * control profile.
+     */
+    function storeWithTool(profile: unknown = { control: { tool: "TarnishedTool", rows: [{ table: "t", ops: [{ op: "flag.set", args: {} }] }] } }): Store {
+      const sessions = new Map<string, SessionMeta>();
+      const logs = new Map<string, Array<Record<string, unknown>>>();
+      return {
+        async createSession(meta: Omit<SessionMeta, "seq" | "createdAt" | "updatedAt">, at: string, _ownerName: string | undefined, events: Record<string, unknown>[]) {
+          const made = { ...meta, seq: 1, createdAt: at, updatedAt: at } as SessionMeta;
+          sessions.set(made.id, made);
+          // The opening log, where RunStarted lives. Dropping it left the
+          // engine reducing an empty log on the first press.
+          logs.set(made.id, [...events]);
+          return { meta: made, events: events.map((e, n) => ({ ...e, seq: n + 1 })) };
+        },
+        async getSession(id: string) {
+          const meta = sessions.get(id);
+          return meta ? { meta, members: [{ sub: meta.ownerSub, role: "owner" as const, joinedAt: NOW }] } : null;
+        },
+        async updateSession(id: string) {
+          return sessions.get(id) ?? null;
+        },
+        async eventsAfter(id: string, after: number) {
+          return (logs.get(id) ?? []).slice(after).map((e, n) => ({ ...e, seq: after + n + 1 }));
+        },
+        async appendEvents(id: string, _author: string, _at: string, events: Record<string, unknown>[]) {
+          const held = logs.get(id) ?? [];
+          const seq = held.length;
+          held.push(...events);
+          logs.set(id, held);
+          return { appended: events.map((e, n) => ({ ...e, seq: seq + n + 1 })), seq: held.length };
+        },
+        async joinAs() {
+          return null;
+        },
+        async getSnapshot() {
+          return { at: NOW, snapshot: profile };
+        },
+        async putSnapshot() {},
+      } as unknown as Store;
+    }
+
+    /** A moderated run, which is the shape with a roster to join. */
+    async function moderatedRun(store: Store) {
+      const guilds = memoryGuilds();
+      const rest = memoryDiscord();
+      let ids = 0;
+      await guilds.claimGuild({ guildId: "g1", name: "The Kiln Room", ownerSub: "user_1", claimedAt: NOW });
+      await guilds.connect("user_1", { service: "discord", accountId: "1001", name: "Mira", linkedAt: NOW });
+      await guilds.putGuildPack("g1", { id: FORFEITS, title: "Forfeits", version: "1", format: "yaml", hash: "h", bytes: forfeits.length, modes: [{ id: "chats", label: "Chat's forfeits" }], updatedAt: NOW, delegatedBy: "user_1" }, forfeits);
+      const deps: InteractionDeps = { guilds, appUrl: "https://runlog.test/", now: () => NOW, store, rest, mintId: () => `01${String((ids += 1)).padStart(24, "0")}`, token: () => "livetok" };
+      await handleInteraction(
+        {
+          ...press({}),
+          guild_id: "g1",
+          channel_id: "chan",
+          member: { user: mira, permissions: String(1 << 5), roles: [] },
+          app_permissions: MAY,
+          data: { name: "run", options: [{ name: "start", type: 1, options: [{ name: "pack", type: 3, value: FORFEITS }, { name: "mode", type: 3, value: "chats" }] }] },
+        },
+        deps,
+      );
+      return { guilds, rest, deps };
+    }
+
+    /** Somebody who is not the host, pressing the card's Join. */
+    const joining = (): Interaction => ({
+      ...press({}),
+      guild_id: "g1",
+      channel_id: "thread_1",
+      member: { user: { id: "1002", username: "kiln_hand", global_name: "Rennala" }, permissions: "0", roles: [] },
+      app_permissions: MAY,
+      type: InteractionType.MessageComponent,
+      data: { custom_id: customId("01000000000000000000000001", "join") },
+    });
+
+    it("sends the player their own address, privately", async () => {
+      const { rest, deps } = await moderatedRun(storeWithTool());
+      const out = await handleInteraction(joining(), deps);
+
+      // The press answers by updating the card, as every press does.
+      expect(out.type).toBe(ResponseType.UpdateMessage);
+
+      // And the address follows, on the same interaction, to them alone.
+      const priv = rest.followUps.filter((f) => f.privately);
+      expect(priv).toHaveLength(1);
+      const said = priv[0]!.message.content ?? "";
+      // The run's own live token, not the host's watch key, which the
+      // server holds only as a hash and could not send.
+      expect(said).toContain("wss://runlog.test/ws?t=livetok");
+      expect(said).toContain("run=01000000000000000000000001");
+      expect(said).toContain("as=control");
+      // Their seat, by the name Discord shows for them.
+      expect(said).toContain("seat=Rennala");
+      expect(said).toContain("not for sharing");
+    });
+
+    it("sends nothing where no tool could act on the run", async () => {
+      // No control profile: a pack with no operations for anything to
+      // receive. An address for a tool that would be told nothing is
+      // worse than no address.
+      const { rest, deps } = await moderatedRun(storeWithTool({}));
+      await handleInteraction(joining(), deps);
+      expect(rest.followUps.filter((f) => f.privately)).toEqual([]);
+    });
   });
 
   it("opens a private thread on request, puts the host in it, and answers the host alone", async () => {
