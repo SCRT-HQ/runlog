@@ -16,6 +16,8 @@ import {
   hasErrors,
   loadPackText,
   loadSetupText,
+  loadMappingText,
+  marksUsed,
   schemaUrl,
   whichKind,
   type Diagnostic,
@@ -97,7 +99,24 @@ async function cmdValidate(args: string[]): Promise<number> {
      * is a true answer to a question nobody asked.
      */
     const abs = resolve(file);
-    if (existsSync(abs) && whichKind(readFileSync(abs, "utf8"), detectFormat(abs)) === "setup") {
+    const which = existsSync(abs) ? whichKind(readFileSync(abs, "utf8"), detectFormat(abs)) : "pack";
+
+    if (which === "mapping") {
+      const loaded = loadMappingText(readFileSync(abs, "utf8"), detectFormat(abs));
+      const code = report(file, loaded.diagnostics, strict);
+      worst = Math.max(worst, code);
+      if (loaded.mapping && code === 0) {
+        const rules = loaded.mapping.rules.length;
+        const marks = marksUsed(loaded.mapping);
+        console.log(
+          `${paint(GREEN, "ok")} ${paint(BOLD, loaded.mapping.title)} ${paint(DIM, `v${loaded.mapping.version}`)} - ` +
+            `a mapping for ${loaded.mapping.tool}, ${rules} rule${rules === 1 ? "" : "s"} on ${marks.length} mark${marks.length === 1 ? "" : "s"} (${marks.join(", ")})`,
+        );
+      }
+      continue;
+    }
+
+    if (which === "setup") {
       const loaded = loadSetupText(readFileSync(abs, "utf8"), detectFormat(abs));
       const code = report(file, loaded.diagnostics, strict);
       worst = Math.max(worst, code);
