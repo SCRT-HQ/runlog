@@ -13,6 +13,7 @@ const base = {
   owed: 0,
   suggestions: [],
   between: null,
+  finishLabel: null,
 };
 
 describe("offerOf", () => {
@@ -122,5 +123,64 @@ describe("offerOf", () => {
   it("offers nothing between units when the page has no between-units button", () => {
     const offer = offerOf({ ...base, between: null });
     expect(offer.primary).toBeNull();
+  });
+
+  /*
+   * Task 12: the list still needs reading, so the follow key still says so.
+   * A named key the streamer chose to put there may carry the whole list
+   * and the step's own button, which is what the preset is.
+   */
+  it("offers ticking the whole list and pressing Done on a manual checklist", () => {
+    const offer = offerOf({
+      ...base,
+      step: { kind: "manual", checklist: [{ text: "Matches the roll" }, { text: "Signed it" }] } as never,
+      stepLabel: "Sketch the room",
+      finishLabel: "Done",
+    });
+    expect(offer.needsPage).toBe("Sketch the room on the page");
+    expect(offer.presets).toEqual([{ kind: "checklist", label: "Tick everything and Done", items: 2 }]);
+  });
+
+  it("offers it on a closing step in the closing button's own words", () => {
+    const offer = offerOf({
+      ...base,
+      step: { kind: "finalizeUnit", confirm: [{ text: "Honored the constraint" }] } as never,
+      stepLabel: "Close Day 4",
+      finishLabel: "Next Day 5",
+    });
+    expect(offer.needsPage).toBe("Close Day 4 on the page");
+    expect(offer.presets).toEqual([{ kind: "checklist", label: "Tick everything and Next Day 5", items: 1 }]);
+  });
+
+  it("will not offer it with something owed", () => {
+    const offer = offerOf({
+      ...base,
+      step: { kind: "manual", checklist: [{ text: "Matches the roll" }] } as never,
+      stepLabel: "Sketch the room",
+      finishLabel: "Done",
+      owed: 1,
+    });
+    expect(offer.presets).toEqual([]);
+  });
+
+  // The page's own button is what the preset presses, so a step whose
+  // button this device cannot name is not one a key may press blind.
+  it("will not offer it without a button to press at the end", () => {
+    const offer = offerOf({
+      ...base,
+      step: { kind: "manual", checklist: [{ text: "Matches the roll" }] } as never,
+      stepLabel: "Sketch the room",
+    });
+    expect(offer.presets).toEqual([]);
+  });
+
+  it("counts only the points the step waits for", () => {
+    const offer = offerOf({
+      ...base,
+      step: { kind: "manual", checklist: [{ text: "Matches the roll" }, { text: "Photograph it", optional: true }] } as never,
+      stepLabel: "Sketch the room",
+      finishLabel: "Done",
+    });
+    expect(offer.presets[0]).toMatchObject({ items: 1 });
   });
 });

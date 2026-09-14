@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { loadPackText } from "@runlog/rules-schema";
+import type { RunEvent } from "@runlog/engine";
 import type { Api } from "../sync/client.ts";
 import { heldMove, RunView } from "./RunView.tsx";
 import { memoryRunStore } from "./store.ts";
@@ -47,20 +48,41 @@ async function flush(turns = 6) {
   }
 }
 
+/**
+ * The rest of a log that lands on the pack's one checklist step: into the
+ * first Stage, past the manual step that opens it, and past the declared
+ * Piece. The Kiln Check and the Constraint are both skipped in Stage 1 by
+ * the pack's own rules, so "Throw it." and its checklist come next.
+ */
+const toTheChecklist = (at: string) => [
+  { id: "e2", t: "UnitEntered" as const, at },
+  { id: "e3", t: "StepCompleted" as const, at, phase: "enter", step: 0 },
+  { id: "e4", t: "PhaseCompleted" as const, at, phase: "enter" },
+  { id: "e5", t: "SubjectDeclared" as const, at, subjectType: "bowl" },
+  { id: "e6", t: "StepCompleted" as const, at, phase: "declare", step: 0 },
+  { id: "e7", t: "PhaseCompleted" as const, at, phase: "declare" },
+];
+
 async function renderRunView({
   putSnapshot,
   shared,
   decksAttached = 0,
+  rest = () => [],
 }: {
   putSnapshot: Api["putSnapshot"];
   shared: boolean;
   decksAttached?: number;
+  /** What the run has done since it started, for a test that needs a step. */
+  rest?: (at: string) => RunEvent[];
 }) {
   current.api = { putSnapshot, myRaces: async () => [] } as unknown as Api;
   const store = memoryRunStore();
   const runId = "run1";
   const at = "2026-09-14T00:00:00.000Z";
-  const events = [{ id: "e1", t: "RunStarted" as const, at, packId: kiln.id, packVersion: kiln.version, runId, mode }];
+  const events = [
+    { id: "e1", t: "RunStarted" as const, at, packId: kiln.id, packVersion: kiln.version, runId, mode },
+    ...rest(at),
+  ] as RunEvent[];
   await store.saveRun({
     runId,
     packId: kiln.id,
@@ -152,6 +174,23 @@ describe("the offer rides along with the snapshot", () => {
 
     await act(() => vi.advanceTimersByTimeAsync(5100));
     expect(notes()).toHaveLength(0);
+  });
+
+  /*
+   * Task 12: a named key may carry the whole list and the button under it.
+   * The follow key is still sent to the page, which is the point: the
+   * preset is a decision somebody chose to put on a key.
+   */
+  it("offers a deck the whole list and the step's own button", async () => {
+    const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+    await renderRunView({ putSnapshot, shared: true, rest: toTheChecklist });
+    await vi.advanceTimersByTimeAsync(900);
+    expect(putSnapshot.mock.calls.at(-1)![1]).toMatchObject({
+      offer: {
+        needsPage: "Throw it. on the page",
+        presets: [{ kind: "checklist", label: "Tick everything and Done", items: 2 }],
+      },
+    });
   });
 });
 

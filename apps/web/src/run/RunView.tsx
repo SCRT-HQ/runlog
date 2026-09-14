@@ -17,6 +17,7 @@ import {
 } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
 import {
+  checklistOf,
   closesUnit,
   constrainedByOf,
   constraintLines,
@@ -38,7 +39,7 @@ import { useRun, type ActiveStep } from "./useRun.ts";
 import type { RunStore } from "./store.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { RequestPanel } from "./RequestPanel.tsx";
-import { Checklist, checklistDone } from "./Checklist.tsx";
+import { Checklist, checklistDone, ticksToFinish } from "./Checklist.tsx";
 import { evidenceFor, pointOf } from "./evidence.ts";
 import { Receipt, type RollReceipt } from "./Receipt.tsx";
 import { closesTheUnit, startsItself } from "./handsFree.ts";
@@ -106,6 +107,54 @@ function activeStepLabel(pack: Pack, active: ActiveStep | null): string | null {
     case "finalizeUnit":
       return step.label ?? pack.vocabulary.finalize;
   }
+}
+
+/**
+ * One press for a whole list: every box the step waits on, then the button
+ * the card's own finish sits on.
+ *
+ * The same rules as a click, read from the same place: `ticksToFinish`
+ * says which keys, `check` writes them, and `closesUnit` picks which of
+ * the two finish functions the card would have called.
+ *
+ * Whether the list is done is decided over the boxes this is about to
+ * write rather than over the log, because `commit` has not re-rendered
+ * this effect yet and reading the state back here would read the state
+ * before the ticks. A box a deck cannot reach -- a row the game still owes
+ * -- leaves the list short, and then nothing is written at all: the press
+ * says so and the page finishes the step.
+ */
+function tickEverythingAndFinish(pack: Pack, run: ReturnType<typeof useRun>, active: ActiveStep) {
+  const state = run.state;
+  if (!state) return;
+  const { phase, step, index } = active;
+  const key = `${phase.id}#${index}`;
+  const list = checklistOf(step);
+  const ticked = ticksFor(state, key);
+  // A closing card settles some of its rows by the game rather than by
+  // the player, and its own boxes know it; the deck's press is held to
+  // the same reading of the list the card in front of them shows.
+  const settling = closesUnit(step)
+    ? settlingFor(pack, state, step.kind === "manual" ? constraintLines(pack, state, step.constrainedBy) : [], list)
+    : undefined;
+  const groups = ticksToFinish(list, pack, state, ticked, settling);
+  const predicted = new Set([...ticked, ...groups.flatMap((g) => g.items)]);
+  if (!checklistDone(list, pack, state, predicted, settling)) throw new Error("Something on the list needs the page.");
+  for (const group of groups) run.check(key, group.items, true, group.tally);
+  if (closesUnit(step)) run.closeAndEnter(phase, index);
+  else run.completeStep(phase, index);
+}
+
+/**
+ * What a step's own finish button says once every box on it is ticked.
+ *
+ * The closing card goes on to the next unit, the manual card is simply
+ * done. One place, because a deck is offered these words and then presses
+ * the button they are on: if they drifted apart the key would promise one
+ * thing and do another.
+ */
+function finishWords(pack: Pack, step: ActiveStep["step"]): string {
+  return closesUnit(step) ? `Next ${pack.vocabulary.unit.one.toLowerCase()}` : "Done";
 }
 
 /**
@@ -254,6 +303,11 @@ export function RunView({
               ? `Enter ${pack.vocabulary.unit.one} 1`
               : `Enter ${pack.vocabulary.unit.one} ${run.state.unit + 1}`
             : null,
+        // What the step's own button says with every box ticked, in the
+        // card's words: the closing card's Next, or the manual card's
+        // Done. Nothing where the step has no list, because there is then
+        // no list to tick and the primary is the press.
+        finishLabel: run.activeStep && checklistOf(run.activeStep.step).length > 0 ? finishWords(pack, run.activeStep.step) : null,
       }),
     [
       run.events.length,
@@ -428,6 +482,10 @@ export function RunView({
           undo: () => run.undo(),
           answer: (a) => {
             if (!active) return;
+            if (a["ticks"] === "all") {
+              tickEverythingAndFinish(pack, run, active);
+              return;
+            }
             run.declareSubject(active.phase, active.index, String(a["subject"] ?? ""));
           },
         },
@@ -1535,7 +1593,7 @@ function StepPanel({ pack, run, state, active }: { pack: Pack; run: ReturnType<t
               className="primary big"
               onClick={(e) => (allTicked ? run.completeStep(phase, index) : nudgeFirstUnticked(e.currentTarget))}
             >
-              {allTicked ? "Done" : "Tick what you honored"}
+              {allTicked ? finishWords(pack, step) : "Tick what you honored"}
             </button>
           </div>
         </section>
@@ -1644,7 +1702,6 @@ function ClosingStep({
   const settling = settlingFor(pack, state, constraints, points);
   const boxesFor = settling.boxes;
   const allTicked = checklistDone(points, pack, state, ticked, settling);
-  const unit = v.unit.one.toLowerCase();
   const label = (step.kind === "manual" || step.kind === "finalizeUnit" ? step.label : undefined) ?? v.finalize;
   return (
     <section className="panel runStep finalize">
@@ -1692,7 +1749,7 @@ function ClosingStep({
                 : nudgeFirstUnticked(e.currentTarget)
           }
         >
-          {blocked.length > 0 ? "Settle what is owed first" : allTicked ? `Next ${unit}` : "Tick what you honored"}
+          {blocked.length > 0 ? "Settle what is owed first" : allTicked ? finishWords(pack, step) : "Tick what you honored"}
         </button>
         <button
           className="ghost big"

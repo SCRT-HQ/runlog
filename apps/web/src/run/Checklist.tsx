@@ -135,3 +135,42 @@ export function checklistDone(items: ChecklistItem[], pack: Pack, state: RunStat
     settling,
   );
 }
+
+/**
+ * The boxes a step is still waiting on, for a press that means "all of them".
+ *
+ * The page's own box is the authority on which keys a tick writes -- a
+ * point with evidence writes its children, a plain one writes itself --
+ * so this reads the same `pointOf`/`evidenceFor`/`pointMade` machinery
+ * rather than a second copy of the rules. Optional points are left alone,
+ * because the step is not waiting on them, and nothing here unticks.
+ *
+ * Grouped by tally, because a group is one `check()` and a counter moves
+ * by the size of the group it is given: two points on the same counter are
+ * one call of two boxes, which is what ticking them one at a time adds up
+ * to. A row the game itself settles is not in any group; a row it still
+ * owes is not tickable at all, so the list comes back short and the step
+ * stays unfinished, which is the answer.
+ */
+export function ticksToFinish(
+  items: ChecklistItem[],
+  pack: Pack,
+  state: RunState,
+  ticked: Set<string>,
+  settling?: Settling,
+): Array<{ items: string[]; tally?: string }> {
+  const groups = new Map<string, { items: string[]; tally?: string }>();
+  items.map(pointOf).forEach((point, i) => {
+    if (point.optional) return;
+    const shown = point.shows ? evidenceFor(pack, state, point.shows) : [];
+    if (pointMade(i, shown, ticked, point, settling)) return;
+    const keys =
+      shown.length > 0 ? shown.filter((s) => !settling?.owing(s) && !settling?.settled(s)).map((s) => `${i}:${s.key}`) : [`${i}`];
+    const fresh = keys.filter((k) => !ticked.has(k));
+    if (fresh.length === 0) return;
+    const group = groups.get(point.tally ?? "") ?? { items: [], ...(point.tally ? { tally: point.tally } : {}) };
+    group.items.push(...fresh);
+    groups.set(point.tally ?? "", group);
+  });
+  return [...groups.values()];
+}

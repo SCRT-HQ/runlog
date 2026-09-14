@@ -51,19 +51,33 @@ describe("takePress", () => {
   // Review finding: an act that throws (a write raced by another device,
   // most likely) still settles a verdict and spends the ref, rather than
   // leaving the deck waiting on one that will never answer.
+  //
+  // In the act's own words where it has any: a press the page has to
+  // finish says why on the key rather than as a bare failure.
   it("settles a throw from an act as a press that failed, and spends the ref", () => {
     const act = {
       ...acts(),
       primary: vi.fn(() => {
-        throw new Error("write conflict");
+        throw new Error("Something on the list needs the page.");
       }),
     };
     const seen = new Map();
     const out = takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen }, act);
-    expect(out).toEqual({ ok: false, say: "That press failed." });
+    expect(out).toEqual({ ok: false, say: "Something on the list needs the page." });
     const again = takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen }, act);
-    expect(again).toEqual({ ok: false, say: "That press failed." });
+    expect(again).toEqual({ ok: false, say: "Something on the list needs the page." });
     expect(act.primary).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to its own words for a throw that carries none", () => {
+    const act = {
+      ...acts(),
+      primary: vi.fn(() => {
+        throw "nothing to say";
+      }),
+    };
+    const out = takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen: new Map() }, act);
+    expect(out).toEqual({ ok: false, say: "That press failed." });
   });
 
   it("refuses a move that is no longer on offer", () => {
@@ -123,5 +137,34 @@ describe("takePress", () => {
     );
     expect(out).toEqual({ ok: true });
     expect(act.answer).toHaveBeenCalledWith({ subject: "clay bowl" });
+  });
+
+  /*
+   * Task 12: a named key may tick the whole list and press the step's own
+   * button. Only where the offer says the run is asking a list, though --
+   * the same rule the subject preset is held to.
+   */
+  it("ticks everything against a checklist preset", () => {
+    const act = acts();
+    const asking = { ...offer, primary: null, presets: [{ kind: "checklist", label: "Tick everything and Done", items: 2 }] };
+    const out = takePress(
+      { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { ticks: "all" } },
+      { seq: 42, offer: asking, seen: new Map() },
+      act,
+    );
+    expect(out).toEqual({ ok: true });
+    expect(act.answer).toHaveBeenCalledWith({ ticks: "all" });
+  });
+
+  it("refuses ticking everything where nothing is asking a list", () => {
+    const act = acts();
+    const asking = { ...offer, primary: null, presets: [{ kind: "declareSubject", label: "Name the bowl" }] };
+    const out = takePress(
+      { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { ticks: "all" } },
+      { seq: 42, offer: asking, seen: new Map() },
+      act,
+    );
+    expect(out).toEqual({ ok: false, say: "The run is not asking for that." });
+    expect(act.answer).not.toHaveBeenCalled();
   });
 });

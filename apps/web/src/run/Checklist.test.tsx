@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { Pack } from "@runlog/rules-schema";
 import type { RunState } from "@runlog/engine";
-import { Checklist, checklistDone } from "./Checklist.tsx";
+import { Checklist, checklistDone, ticksToFinish } from "./Checklist.tsx";
 import type { Settling } from "./evidence.ts";
 
 /**
@@ -105,5 +105,60 @@ describe("a confirmation beside the rules it repeats", () => {
     expect(screen.getByText(/Swap two slices/)).toBeTruthy();
     expect(checklistDone(items, pack, state, new Set(), nothingOwed)).toBe(false);
     expect(checklistDone(items, pack, state, new Set(["0:o0", "0:o1"]), nothingOwed)).toBe(true);
+  });
+});
+
+/**
+ * The keys a deck's one press would commit.
+ *
+ * Every case here is the page's own `tick` said back: a box a click would
+ * write, in the shape `Checklist` gives its inputs. Where the two could
+ * drift the test clicks the real box and compares.
+ */
+describe("ticksToFinish", () => {
+  const plain = [{ text: "The Piece is different." }, { text: "The Constraint has been honored." }] as never;
+
+  it("names every box a step still waits on, in one group", () => {
+    expect(ticksToFinish(plain, pack, state, new Set())).toEqual([{ items: ["0", "1"] }]);
+  });
+
+  it("leaves a box that is already ticked alone", () => {
+    expect(ticksToFinish(plain, pack, state, new Set(["0"]))).toEqual([{ items: ["1"] }]);
+  });
+
+  it("gives a point that moves a counter a group of its own, carrying the counter", () => {
+    const tallied = [{ text: "The Piece is different." }, { text: "A setback was suffered.", tally: "setbacksSuffered" }] as never;
+    expect(ticksToFinish(tallied, pack, state, new Set())).toEqual([{ items: ["0"] }, { items: ["1"], tally: "setbacksSuffered" }]);
+  });
+
+  // The step does not wait for an optional point, so neither does a press
+  // that means "everything this is waiting on".
+  it("never ticks an optional point", () => {
+    const optional = [{ text: "The Piece is different." }, { text: "Photograph it.", optional: true }] as never;
+    expect(ticksToFinish(optional, pack, state, new Set())).toEqual([{ items: ["0"] }]);
+  });
+
+  it("asks for nothing on a list that is already done", () => {
+    expect(ticksToFinish(plain, pack, state, new Set(["0", "1"]))).toEqual([]);
+  });
+
+  it("names a point's evidence rather than the point, the way the page's own box does", () => {
+    expect(ticksToFinish(items, pack, state, new Set())).toEqual([{ items: ["0:o0", "0:o1"] }]);
+  });
+
+  it("commits what a click on the same box commits", () => {
+    const committed: Array<[string[], boolean, string | undefined]> = [];
+    render(
+      <Checklist
+        items={items}
+        pack={pack}
+        state={state}
+        ticked={new Set()}
+        onToggle={(keys, on, tally) => committed.push([keys, on, tally])}
+      />,
+    );
+    fireEvent.click(screen.getAllByRole("checkbox")[0]!);
+    expect(committed).toEqual([[["0:o0", "0:o1"], true, undefined]]);
+    expect(ticksToFinish(items, pack, state, new Set())).toEqual([{ items: committed[0]![0] }]);
   });
 });

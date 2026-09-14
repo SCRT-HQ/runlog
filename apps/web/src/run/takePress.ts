@@ -50,13 +50,18 @@ export function takePress(press: Press, at: { seq: number; offer: Offer; seen: M
 
   if (press.seq !== at.seq) return settle({ ok: false, say: "That moved on." });
 
-  /** Taking the press itself: a throw is still a press taken, not one left hanging. */
+  /**
+   * Taking the press itself: a throw is still a press taken, not one left
+   * hanging. In the act's own words where it threw any, because an act is
+   * the only thing that can see why -- a list still wanting the page, say.
+   */
   const take = (fn: () => void): Verdict => {
     try {
       fn();
       return { ok: true };
-    } catch {
-      return { ok: false, say: "That press failed." };
+    } catch (e) {
+      const said = e instanceof Error ? e.message.trim() : "";
+      return { ok: false, say: said === "" ? "That press failed." : said };
     }
   };
 
@@ -75,6 +80,13 @@ export function takePress(press: Press, at: { seq: number; offer: Offer; seen: M
       return settle(take(() => act.undo()));
     }
     case "answer": {
+      // Tick everything this step waits for and press its own button. The
+      // offer says whether there is a list to tick; the act says whether
+      // one of its boxes is beyond a deck, and throws its own words if so.
+      if (press.answer?.["ticks"] === "all") {
+        if (!at.offer.presets.some((p) => p.kind === "checklist")) return settle({ ok: false, say: "The run is not asking for that." });
+        return settle(take(() => act.answer({ ticks: "all" })));
+      }
       if (!at.offer.presets.some((p) => p.kind === "declareSubject")) return settle({ ok: false, say: "The run is not asking for that." });
       if (String(press.answer?.["subject"] ?? "").trim() === "") return settle({ ok: false, say: "That answer was empty." });
       return settle(take(() => act.answer(press.answer!)));

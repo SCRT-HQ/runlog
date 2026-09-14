@@ -1,5 +1,6 @@
 import type { Step } from "@runlog/rules-schema";
 import { checklistOf, closesUnit } from "@runlog/engine";
+import { pointOf } from "./evidence.ts";
 
 /**
  * What a deck may press, right now, in the pack's own words.
@@ -20,7 +21,7 @@ export interface Offer {
   undo: { what: string } | null;
   /** Why a deck cannot press this, in words a key face can carry. */
   needsPage: string | null;
-  presets: Array<{ kind: string; label: string; suggestions?: string[] }>;
+  presets: Array<{ kind: string; label: string; suggestions?: string[]; items?: number }>;
 }
 
 export interface OfferInput {
@@ -41,6 +42,12 @@ export interface OfferInput {
   suggestions: string[];
   /** What the page's between-units button says, or null when the run is not between units. */
   between: string | null;
+  /**
+   * What the step's own button says once every box is ticked, or null
+   * where the step has no list. The preset presses that button, so it is
+   * offered in the words the page uses for it.
+   */
+  finishLabel: string | null;
 }
 
 /**
@@ -90,13 +97,38 @@ export function offerOf(input: OfferInput): Offer {
   // once here rather than separately for every kind that reaches this far.
   if (input.owed > 0) return { ...bare, primary: null, needsPage: "Something is owed; settle it on the page" };
 
+  /*
+   * Ticking the whole list and pressing the step's own button, for a key
+   * the streamer put there themselves.
+   *
+   * A preset, never the primary: `needsPage` stays, so the follow key goes
+   * on saying the list is on the page. Pressing this one skips the reading,
+   * which is a decision, and `handsFree.ts` gives the rule -- a decision is
+   * skipped only where somebody chose to skip it.
+   *
+   * The count is what the step waits for, which is its points less the
+   * optional ones. Not less the ones with nothing to show: that needs the
+   * log and the pack, and this says what is on offer from the step alone.
+   */
+  const list = checklistOf(step);
+  const ticking: Offer["presets"] =
+    list.length > 0 && input.finishLabel
+      ? [
+          {
+            kind: "checklist",
+            label: `Tick everything and ${input.finishLabel}`,
+            items: list.map(pointOf).filter((p) => !p.optional).length,
+          },
+        ]
+      : [];
+
   // A step that closes the unit goes to the page's closing card, whichever
   // kind it is underneath: a finalizeUnit, or a manual step marked
   // closesUnit. Its own confirmation or checklist is the same kind of ask
   // as any other and sends it back to the page; empty, it is the one
   // press that writes the close, not a step's own carry-on.
   if (closesUnit(step)) {
-    if (checklistOf(step).length > 0) return { ...bare, primary: null, needsPage: `${label} on the page` };
+    if (list.length > 0) return { ...bare, primary: null, needsPage: `${label} on the page`, presets: ticking };
     return { ...bare, primary: { id: "close", label, kind: step.kind }, needsPage: null };
   }
 
@@ -104,7 +136,7 @@ export function offerOf(input: OfferInput): Offer {
   // only asks something when it carries a checklist to confirm. Empty, it
   // is as bare a press as a roll.
   if (step.kind === "manual") {
-    if (checklistOf(step).length > 0) return { ...bare, primary: null, needsPage: `${label} on the page` };
+    if (list.length > 0) return { ...bare, primary: null, needsPage: `${label} on the page`, presets: ticking };
     return { ...bare, primary: { id: "carry-on", label, kind }, needsPage: null };
   }
 
