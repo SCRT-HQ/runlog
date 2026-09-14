@@ -385,6 +385,50 @@ export function lintPack(pack: Pack): Diagnostic[] {
 
   // ── Requirements ────────────────────────────────────────────────────────
   const requirements = new Map((pack.requires ?? []).map((r) => [r.id, r]));
+  /**
+   * The marks a pack promised, held to.
+   *
+   * An entry tag is a free string and nothing ever checked it, which is
+   * fine while the only reader is the pack itself. It stops being fine
+   * the moment something outside matches on one: a mapping that fires on
+   * `curse` goes quiet for ever when an author types `curses`, and
+   * nothing anywhere says so. The run just stops doing anything.
+   *
+   * Declaring them is the pack saying which tags are a promise rather
+   * than a note to itself. Then a typo is caught here, a rename is a
+   * visible change to a declared list, and anything binding to a mark has
+   * something it can check against.
+   *
+   * Only where a pack declares any. Saying nothing leaves tags exactly as
+   * free as they were, which is what every pack written so far expects.
+   */
+  const marks = new Set(Object.keys(pack.marks ?? {}));
+  if (marks.size > 0) {
+    const carried = new Set<string>();
+    for (const [tableId, table] of Object.entries(pack.tables)) {
+      table.entries.forEach((e, i) => {
+        for (const tag of e.tags ?? []) {
+          carried.add(tag);
+          if (!marks.has(tag)) {
+            d.push(
+              warn(
+                "mark/undeclared",
+                `tables.${tableId}.entries[${i}].tags`,
+                `carries ${tag}, which this pack does not declare in marks; either declare it or it is a note to yourself that nothing outside can rely on`,
+              ),
+            );
+          }
+        }
+      });
+    }
+    for (const mark of marks) {
+      // The other direction, which is the one that catches a rename: a
+      // mark nothing carries is a promise about nothing, and whatever
+      // was matching on it is now matching on nothing.
+      if (!carried.has(mark)) d.push(warn("mark/uncarried", `marks.${mark}`, `is declared and no entry carries it; anything matching on ${mark} will never fire`));
+    }
+  }
+
   for (const [tableId, table] of Object.entries(pack.tables)) {
     table.entries.forEach((e, i) => {
       for (const need of e.needs ?? []) {
