@@ -326,6 +326,8 @@ The tool speaks first, saying what it is and which operations it can perform:
 
 The answer, where the run has terms of its own, is the settings it wants in force before anything is rolled: an ordinary effect with no lifetime, under the id `setup`.
 
+A run played under a loadout gets a second one, under the id `loadout`, immediately after. Two effects rather than one because the loadout has a button behind it: the host can pick a different one mid-run and hand it out, and that re-sends `loadout` alone. Applying an id already held takes the first one off, so a single effect would have meant every press of that button reverting the run's terms and re-applying them, gifts included.
+
 Then, as the table plays, an effect per result:
 
 ```json
@@ -393,7 +395,8 @@ A profile is a setup set and a list of rows. A row selects by the entry a result
 | Field | What it is |
 | --- | --- |
 | `tool` | The program this was written for, as that program names itself in its `hello`. Anything else listening is sent nothing and told why. Leave it out and the profile is for whatever is attached, which is how a script of your own works with no ceremony. |
-| `setup` | Operations applied when a tool attaches, held for the run, under the id `setup`. The run's terms: the level, the restrictions, the things that would otherwise be a paragraph in a description and fifteen boxes ticked by hand. |
+| `setup` | Operations applied when a tool attaches, held for the run. The run's terms: the level, the restrictions, the things that would otherwise be a paragraph in a description and fifteen boxes ticked by hand. |
+| `chosen` | On an operation in `setup`: it came from the loadout the run is played under rather than from the profile itself, and goes out under the id `loadout` instead of `setup`. Written by the run's own device when it publishes; a profile you write by hand has no use for it. |
 | `table`, `entry`, `tag` | What a row matches. An entry, with its table where two tables share an id; a tag the entry carries, which is how one row covers a table full of curses; or a whole table. A row matching none of these is ignored rather than matching everything. |
 | `label` | What a person sees in the tool's log. Without one, the line the table drew. |
 | `for` | Seconds. |

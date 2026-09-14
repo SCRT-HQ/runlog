@@ -4,6 +4,7 @@ import {
   fits,
   framesForGesture,
   landedOf,
+  loadoutFor,
   profileOf,
   revert,
   revertGroup,
@@ -184,6 +185,52 @@ describe("the run's own terms", () => {
 
   it("are nothing where a profile sets none", () => {
     expect(setupFor({ rows: [] })).toBeNull();
+  });
+});
+
+/**
+ * The loadout chosen for a run rides in the same list as the pack's own
+ * terms, marked. It goes out as its own effect under its own id.
+ *
+ * Because a tool re-applying an id takes the old one off first, and the
+ * loadout is the one part of a setup with a button that re-sends it. One
+ * effect carrying both meant pressing Hand it out reverted the terms and
+ * re-applied them, handing over the pack's gifts a second time -- which
+ * is the whole thing the `once` record exists to stop.
+ */
+describe("the loadout the run is played under", () => {
+  const both: ControlProfile = {
+    setup: [
+      { op: "flag.set", args: { name: "player.noRoll", value: true } },
+      { op: "runes.give", args: { amount: 50000 }, once: true, chosen: true },
+    ],
+  };
+
+  it("is its own effect, under its own id", () => {
+    expect(JSON.parse(loadoutFor(both)!.frame)).toEqual({
+      t: "apply",
+      id: "loadout",
+      label: "The run's loadout",
+      each: true,
+      ops: [{ op: "runes.give", args: { amount: 50000 } }],
+    });
+  });
+
+  it("is left out of the terms, so handing it out cannot disturb them", () => {
+    expect(JSON.parse(setupFor(both)!.frame).ops).toEqual([{ op: "flag.set", args: { name: "player.noRoll", value: true } }]);
+    expect(setupFor(both)!.gave).toBe(false);
+    expect(loadoutFor(both)!.gave).toBe(true);
+  });
+
+  it("keeps its own count of who has had the parts given once", () => {
+    expect(loadoutFor(both, true)).toBeNull();
+    // And the terms are unaffected by that answer, which is the point of
+    // two records rather than one.
+    expect(setupFor(both, true)).not.toBeNull();
+  });
+
+  it("is nothing where a run was started under none", () => {
+    expect(loadoutFor({ setup: [{ op: "flag.set", args: { name: "player.noRoll" } }] })).toBeNull();
   });
 });
 
