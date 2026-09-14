@@ -47,32 +47,28 @@ describe("the account", () => {
     expect(html).toContain("Theme");
   });
 
-  it("keeps the theme in the menu, whether or not there is a settings sheet to open", () => {
+  it("puts the theme first, and sends the rest of the settings to the profile", () => {
     vi.stubEnv("VITE_WORKOS_CLIENT_ID", "");
     /*
-     * It used to be one or the other: a Settings item where the app had a
-     * sheet, the theme itself where it did not. Changing the theme is the
-     * one thing in there somebody does on a whim and undoes ten seconds
-     * later, and it was behind a dialog that had to be shut to see what
-     * it did.
+     * The theme is the one thing in here somebody changes on a whim and
+     * undoes ten seconds later, so it is the first thing and it is the
+     * switch itself rather than a door to one.
+     *
+     * Signed out there is no profile to speak of, so Settings stays as
+     * the only way to reach the page the rest of them live on.
      */
-    const withSheet = renderToStaticMarkup(
+    const html = renderToStaticMarkup(
       <AccountProvider>
-        <AccountBadge onOpenSettings={() => {}} />
+        <AccountBadge onOpenProfile={() => {}} />
       </AccountProvider>,
     );
-    expect(withSheet).toContain("Settings");
-    expect(withSheet).toContain("<select");
-    // And the sheet no longer claims the theme is in it.
-    expect(withSheet).toContain("sounds, dice, rolls");
-    expect(withSheet).not.toContain("theme, sounds, dice, rolls");
-
-    const without = renderToStaticMarkup(
-      <AccountProvider>
-        <AccountBadge />
-      </AccountProvider>,
-    );
-    expect(without).toContain("<select");
+    expect(html).toContain("<select");
+    expect(html).toContain("Settings");
+    expect(html).toContain("sounds, dice, rolls");
+    // The theme is not something Settings holds any more.
+    expect(html).not.toContain("theme, sounds, dice, rolls");
+    // And the switch comes before the door.
+    expect(html.indexOf("<select")).toBeLessThan(html.indexOf("Settings"));
   });
 
   it("offers sign-in from the first paint where there is", () => {

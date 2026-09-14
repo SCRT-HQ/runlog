@@ -153,7 +153,6 @@ export default function App() {
   // This device's settings, opened from the account menu on any page. In a
   // run the same sheet is behind the run's own Settings button, with the
   // streaming tab; here it has only the device tab, which needs no run.
-  const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(false);
   /**
    * A pack on the bench: played in a store that forgets, from the Designer
    * (a draft, valid but unsaved) or the library (a pack, to see how it
@@ -1069,13 +1068,9 @@ export default function App() {
           <button className={`${view === "guide" ? "primary" : "ghost"} guideBtn`} onClick={() => (view === "guide" ? leaveGuide() : openGuide())} title={view === "guide" ? "Back to the run" : "How to use Runlog"}>
             {view === "guide" ? "Play" : "Guide"}
           </button>
-          <AccountBadge closeKey={view} onOpenProfile={(page) => openProfile(page)} onOpenSettings={() => setDeviceSettingsOpen(true)} />
+          <AccountBadge closeKey={view} onOpenProfile={(page) => openProfile(page)} />
         </div>
       </header>
-
-      {deviceSettingsOpen && (
-        <SettingsDialog runId={null} race={false} alerts={alerts} onAlerts={setAlerts} onClose={() => setDeviceSettingsOpen(false)} />
-      )}
 
       {notice && (
         <div className="notice underBar" role="status">

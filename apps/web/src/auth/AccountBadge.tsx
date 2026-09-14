@@ -30,8 +30,7 @@ import { useDismiss } from "../ui/useDismiss.ts";
 export interface MenuActions {
   /** Opens the profile, on the page named: the default page absent one. */
   onOpenProfile?: (page?: ProfilePage) => void;
-  /** Opens this device's settings: theme, sounds, dice, who rolls. Absent, the menu holds the theme switch itself. */
-  onOpenSettings?: () => void;
+
   /**
    * Closes the menu again whenever this changes: the current view, say.
    * Without it the menu stayed open across a page change, with no way to
@@ -47,7 +46,7 @@ export function AccountBadge(actions: MenuActions = {}) {
 }
 
 /** The menu for somebody not signed in, or somewhere with nothing to sign into. */
-function GuestMenu({ account, onOpenSettings, closeKey }: MenuActions & { account: Exclude<Account, { status: "signed-in" }> }) {
+function GuestMenu({ account, onOpenProfile, closeKey }: MenuActions & { account: Exclude<Account, { status: "signed-in" }> }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const rootRef = useRef<HTMLDetailsElement>(null);
@@ -89,28 +88,28 @@ function GuestMenu({ account, onOpenSettings, closeKey }: MenuActions & { accoun
             )}
           </div>
         )}
-        {onOpenSettings && (
+        {/* The lights first: the one thing here somebody changes on a whim. */}
+        <div className="menuTheme">
+          <ThemeMenu />
+        </div>
+        {/*
+          The rest of this device's settings. A signed-out person has no
+          profile to speak of, and this is their only door to the page
+          the settings live on; signed in, Profile is that door.
+        */}
+        {onOpenProfile && (
           <button
             role="menuitem"
             className="accountItem"
             onClick={() => {
               setOpen(false);
-              onOpenSettings();
+              onOpenProfile("settings");
             }}
           >
             <span>Settings</span>
             <span className="muted small">sounds, dice, rolls</span>
           </button>
         )}
-        {/*
-          The lights, here rather than two presses inside Settings.
-          Changing the theme is the one thing in Settings somebody does
-          on a whim and undoes ten seconds later, and it was behind a
-          dialog that has to be opened and closed to see the result.
-        */}
-        <div className="menuTheme">
-          <ThemeMenu />
-        </div>
       </div>
     </details>
   );
@@ -147,7 +146,7 @@ export function syncLabel(sync: Pick<Sync, "enabled" | "status" | "last">): stri
   }
 }
 
-function AccountMenu({ account, onOpenProfile, onOpenSettings, closeKey }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
+function AccountMenu({ account, onOpenProfile, closeKey }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
   const { user, signOut } = account;
   const sync = useSync();
   const { profile } = useProfile();
@@ -180,13 +179,14 @@ function AccountMenu({ account, onOpenProfile, onOpenSettings, closeKey }: MenuA
     ...(onOpenProfile && waiting > 0
       ? [{ label: `Invitations (${waiting})`, hint: "people asking you to their table", act: () => onOpenProfile("social") }]
       : []),
-    // This device's choices, the theme among them, live on one sheet now.
-    ...(onOpenSettings ? [{ label: "Settings", hint: "theme, sounds, dice, rolls", act: onOpenSettings }] : []),
   ];
 
   return (
     <details ref={rootRef} className="account accountMenu" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary title={user.email} aria-label={`Account menu for ${label}${waiting ? `, ${waiting} invitation${waiting === 1 ? "" : "s"} waiting` : ""}`}>
+      {/* No address in the tooltip either: on a shared screen a hover is
+          as public as a line of text, and the profile page says who you
+          are signed in as. */}
+      <summary aria-label={`Account menu for ${label}${waiting ? `, ${waiting} invitation${waiting === 1 ? "" : "s"} waiting` : ""}`}>
         {tone && <span className={`led ${tone}`} title={syncLabel(sync)} aria-hidden="true" />}
         {label}
         {waiting > 0 && (
@@ -199,10 +199,29 @@ function AccountMenu({ account, onOpenProfile, onOpenSettings, closeKey }: MenuA
         </span>
       </summary>
       <div className="accountPanel" role="menu">
-        <div className="accountWho">
-          {shown && shown !== label && <div className="accountName">{shown}</div>}
-          {user.email && <div className="muted small accountEmail">{user.email}</div>}
+        {shown && shown !== label && (
+          <div className="accountWho">
+            <div className="accountName">{shown}</div>
+          </div>
+        )}
+        {/* The lights, first: the one thing in here changed on a whim. */}
+        <div className="menuTheme">
+          <ThemeMenu />
         </div>
+        {entries.map((e) => (
+          <button
+            key={e.label}
+            role="menuitem"
+            className="accountItem"
+            onClick={() => {
+              setOpen(false);
+              e.act();
+            }}
+          >
+            <span>{e.label}</span>
+            {e.hint && <span className="muted small">{e.hint}</span>}
+          </button>
+        ))}
         {sync.available && (
           <div className="syncSection">
             {/* The words are in the tooltip: a menu is a list, not a page. */}
@@ -221,23 +240,6 @@ function AccountMenu({ account, onOpenProfile, onOpenSettings, closeKey }: MenuA
             )}
           </div>
         )}
-        {entries.map((e) => (
-          <button
-            key={e.label}
-            role="menuitem"
-            className="accountItem"
-            onClick={() => {
-              setOpen(false);
-              e.act();
-            }}
-          >
-            <span>{e.label}</span>
-            {e.hint && <span className="muted small">{e.hint}</span>}
-          </button>
-        ))}
-        <div className="menuTheme">
-          <ThemeMenu />
-        </div>
         <button
           role="menuitem"
           className="accountItem"
