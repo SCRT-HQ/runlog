@@ -1,0 +1,55 @@
+I would like to start planning out an integration for Elgato Stream Decks to allow full run control (progress through screens, trigger rolls when required, etc) as well as provide Stream Deck widgets that can show current metrics from the active run in a tab.
+
+---
+
+B looks good
+
+---
+
+this makes sense. With the OAuth setup, how does a run get chosen to attach to?
+
+---
+
+this sounds good, we need to make sure we also expose a way to change the run that SD is attached to, e.g. Stream Deck will almost always be launched before a run is started. Another approach would be sending a message over the socket when a new run is launched so the switcher in SD always knows the current list of available runs to choose from. We may also want to show a Toast notification when a run is connected from Stream Deck since the SD itself is not the best UI, especially on older models without the LCD screen or dials
+
+---
+
+we should also fetch the runs on launch / connect of the stream deck if those widgets are actively configured
+
+---
+
+Let's implement
+
+---
+
+are we creating a full plugin or do I need to use something like a community built WS plugin to bridge the gap?
+
+---
+
+why are we writing docs and committing them instead of using Claude artifacts?
+
+---
+
+<task-notification>
+<task-type>artifact-watch-lifecycle</task-type>
+<summary>Not watching Artifact: "The Deck Drives" (watch limit reached)</summary>
+<event>The live subscription for https://claude.ai/code/artifact/442de4ff-fd8f-42fd-b511-ba7606b82e1b did not arm — this session already holds its maximum of 5 artifact watches and none could make room (each is a watch you requested, one auto-replying to comments, or the artifact you most recently published, or watch slots are still connecting); unwatch one first. This session is NOT watching it and will not hear when it is republished; pass action "watch" with its url if you still need that, and do not claim to be watching it meanwhile.</event>
+</task-notification>
+
+---
+
+looks good -- for the open question, yes, this should be part of Plus
+
+---
+
+it should remain local for the spec, .claude/* is gitignored intentionally
+
+noted on the 2 surfaced items, makes sense
+
+---
+
+We should also switch to Fable for this (just switched models)
+
+---
+
+1.
