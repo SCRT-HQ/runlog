@@ -1,0 +1,38 @@
+# What the opening hours hand over, handed over at once.
+#
+# Torrent's whistle, the Spirit Calling Bell, the crafting kit, the
+# tailoring tools and the Physick flask. A run that starts in the middle
+# of the game starts without all five, and without the whistle it starts
+# on foot.
+#
+# A press, because each is an item and an event together and neither
+# half does the job alone: the event is what stops the game awarding it
+# again and what the menus read, the item is what gets used. `item.named`
+# will not touch a key item tied to an event, so the tool does both.
+#
+# Not in it: levelling. That is Melina's accord rather than an item, and
+# no flag for it exists in the tool's data. Until one is found with the
+# event logger, a run that means to level should start somewhere Melina
+# will meet it.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.give-starting-gifts
+version: "1.0.0"
+title: Give Starting Gifts
+author: Runlog
+description: >-
+  Torrent's whistle, the Spirit Calling Bell, the crafting kit, the
+  tailoring tools and the Physick flask. The things the first hours
+  hand over, for a run that does not begin in the first hours.
+
+tool: TarnishedTool
+
+ops:
+  - { op: action.invoke, args: { action: GiveStartingGifts }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

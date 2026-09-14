@@ -168,6 +168,7 @@ const PRESSES = [
   "UnlockAffinites",
   "GiveStartingFlasks",
   "GiveTalismanPouches",
+  "GiveStartingGifts",
   "UnlockGestures",
   "UnlockMetyr",
   "FightFortissax",
