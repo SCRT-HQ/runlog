@@ -468,7 +468,13 @@ export function RunView({
    * happens when it does is the same function the page's own button calls.
    */
   useEffect(() => {
-    if (!publishing || !run.record || !run.state) return;
+    // Not gated on publishing. A press only ever reaches a device the
+    // server picked as the one holding the run, and `currentOffer` is
+    // computed whether or not this device is publishing, so the answer to
+    // one is always at hand -- `needsPage` included. Gated, a page that
+    // opened the run before it heard about the deck, or came back from a
+    // reload with `decks` at nought, left every press hanging.
+    if (!run.record || !run.state) return;
     const runId = run.record.runId;
     const active = run.activeStep;
     return syncBus.subscribe((news) => {
@@ -516,7 +522,7 @@ export function RunView({
       );
       sync.drove(news.from, news.ref, verdict.ok, verdict.say);
     });
-  }, [publishing, run, currentOffer, sync, pack]);
+  }, [run, currentOffer, sync, pack]);
   const seen = useRef<number | null>(null);
   const awaiting = useRef<Omit<RollReceipt, "outcomes"> | null>(null);
   // How many answers this view has given, and how many it had given when

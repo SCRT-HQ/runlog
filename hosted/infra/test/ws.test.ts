@@ -58,6 +58,11 @@ function memoryLive(): LiveStore & {
         ...(watchMarks.get(watchKey(sessionId, connectionId)) ?? {}),
       }));
     },
+    async unwatch(id, sessionId) {
+      watches.get(sessionId)?.delete(id);
+      watchMarks.delete(watchKey(sessionId, id));
+      watchedAt.delete(watchKey(sessionId, id));
+    },
     async decksOf(sub) {
       return [...conns.entries()]
         .filter(([id, s]) => s === sub && marks.get(id)?.deck === true)
@@ -411,6 +416,61 @@ describe("the held-run list is pushed when it changes", () => {
     expect(await live.connection("deck1")).toMatchObject({ deck: true, run: "s1" });
     const toPage = posted.filter(([id]) => id === "page").map(([, l]) => JSON.parse(l));
     expect(toPage.find((l) => l.t === "gesture")).toMatchObject({ t: "gesture", kind: "tools", data: { decks: 1 } });
+  });
+
+  /**
+   * Review finding: the gesture fired on a tool's hello and a deck's
+   * watch, so a page that opened the run afterwards -- or came back from
+   * a reload -- never learned the deck was there, and left its presses
+   * hanging.
+   */
+  it("tells a page what is attached when it starts watching, deck and all", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    const toPage = posted.filter(([id]) => id === "page").map(([, l]) => JSON.parse(l));
+    expect(toPage.find((l) => l.kind === "tools")).toMatchObject({ data: { decks: 1 } });
+  });
+
+  /**
+   * Review finding: a deck moving to another run told only the run it
+   * arrived at, so the page it left went on drawing a deck that had gone
+   * and publishing a snapshot for it for the rest of the evening.
+   */
+  it("tells the run a deck left that it is on its own again", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    await route(ev("$connect", "first", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$default", "first", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d);
+    const toFirst = posted
+      .filter(([id]) => id === "first")
+      .map(([, l]) => JSON.parse(l))
+      .filter((l) => l.kind === "tools");
+    expect(toFirst.at(-1)).toMatchObject({ id: "s1", data: { decks: 0 } });
   });
 });
 

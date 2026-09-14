@@ -67,6 +67,13 @@ export interface LiveStore {
   connection(connectionId: string): Promise<({ sub: string } & Attached) | null>;
   watch(connectionId: string, sessionId: string, sub: string, at: string, attached?: Attached): Promise<void>;
   watchers(sessionId: string): Promise<Watcher[]>;
+  /**
+   * One connection's watch on one session, gone, with the connection
+   * itself left open. For a deck moving from one run to another: it holds
+   * one run at a time, and a watch it left behind would go on counting
+   * against that run and drawing its doorbells.
+   */
+  unwatch(connectionId: string, sessionId: string): Promise<void>;
   /** An account's deck connections, for news that is not about one run. */
   decksOf(sub: string): Promise<Array<{ connectionId: string } & Attached>>;
   /** The connection and every watch it held, gone. */
@@ -173,6 +180,12 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
           watchedAt: typeof r["watchedAt"] === "string" ? r["watchedAt"] : "",
           ...read(r),
         }));
+    },
+    async unwatch(connectionId, sessionId) {
+      await Promise.all([
+        ddb.send(new DeleteCommand({ TableName: table, Key: { pk: spk(sessionId), sk: `CONN#${connectionId}` } })),
+        ddb.send(new DeleteCommand({ TableName: table, Key: { pk: cpk(connectionId), sk: `WATCH#${sessionId}` } })),
+      ]);
     },
     async decksOf(sub) {
       const out = await ddb.send(

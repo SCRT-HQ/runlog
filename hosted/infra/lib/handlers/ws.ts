@@ -668,11 +668,27 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     if (!inSession && !inRace) return { statusCode: 200 };
     await deps.live.watch(connectionId, m["id"], conn.sub, now(), conn.deck ? { deck: true, run: m["id"] } : undefined);
     if (conn.deck) {
+      // Which run it was on before this one, read before the row is
+      // rewritten: a deck that switches runs leaves the page it left
+      // showing a deck that is no longer there, and publishing for it.
+      const left = conn.run;
       // A deck is told a run is on it the same way a page is told a tool
       // is: the row says so, and the table hears it.
       await deps.live.connect(connectionId, conn.sub, now(), { deck: true, run: m["id"] });
-      await tellWhoIsAttached(m["id"]);
+      if (left && left !== m["id"]) {
+        // A deck holds one run at a time: the watch it came from goes, or
+        // the run it left goes on counting a deck that has moved house.
+        await deps.live.unwatch(connectionId, left);
+        await tellWhoIsAttached(left);
+      }
     }
+    // Everyone watching, not only the run a deck just picked. A page that
+    // opened the run after the deck attached, or came back from a reload,
+    // otherwise never hears that a deck is on it: the gesture fires when a
+    // tool says hello and when a deck picks, and a page arriving late
+    // missed both. It is also what puts the Attached panel back after a
+    // refresh.
+    await tellWhoIsAttached(m["id"]);
     // A run just came under a device. A deck that has been sitting on "No
     // run open" all evening is the one thing waiting to hear it.
     await tellDecks(conn.sub);
