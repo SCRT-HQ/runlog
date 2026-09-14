@@ -280,6 +280,22 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       if (!i.guild_id) return ephemeral("Packs are a server's; ask in one.");
       const guild = await deps.guilds.guild(i.guild_id);
       if (!guild) return ephemeral("This server is not set up for Runlog yet. Someone who can manage it runs /setup claim.");
+      /*
+       * Whoever may host, and nobody else.
+       *
+       * The vault is what this server can play, and what is in it is the
+       * business of the people who run it. Every member could read the
+       * list, which is a list of titles somebody chose to delegate and
+       * may not have chosen to announce.
+       *
+       * The same test that gates starting a run: the host role, or
+       * whoever can manage the server where no role has been named.
+       */
+      if (!mayHost(i, guild.hostRoleId)) {
+        return ephemeral(
+          guild.hostRoleId ? `Seeing what this server can play takes the <@&${guild.hostRoleId}> role.` : "Seeing what this server can play takes someone who can manage the server, until /setup role names a role.",
+        );
+      }
       const packs = await deps.guilds.listGuildPacks(i.guild_id);
       if (packs.length === 0) return ephemeral("No packs here yet. The account that claimed the server adds them from its Runlog profile, under Servers.");
       return ephemeral(packs.map(packLine).join("\n"));
