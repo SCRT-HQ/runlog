@@ -121,6 +121,7 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
           };
         if (id === "open") return { meta: { ...meta(id, "user_1"), publicTokenHash: hashToken("livetok") }, members: [member("user_1")] };
         if (id === "shared") return { meta: meta(id, "user_1"), members: [member("user_1"), member("user_2")] };
+        if (id === "s1") return { meta: { ...meta(id, "user_1"), packTitle: "The Long Kiln" }, members: [member("user_1")] };
         if (id === "private") return { meta: meta(id, "user_9"), members: [member("user_9")] };
         return null;
       },
@@ -334,6 +335,57 @@ describe("decksOf", () => {
 
     await live.disconnect("c1");
     expect(await live.decksOf("user_a")).toEqual([]);
+  });
+});
+
+describe("the held-run list is pushed when it changes", () => {
+  it("tells a deck when a run is opened and when the page goes", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    expect(JSON.parse(posted.at(-1)![1]).runs.map((r: { id: string }) => r.id)).toEqual(["s1"]);
+
+    posted.length = 0;
+    await route(ev("$disconnect", "page"), d);
+    expect(JSON.parse(posted.at(-1)![1]).runs).toEqual([]);
+  });
+
+  /**
+   * A deck watching a run is on it the same way an attached tool is: the
+   * row says so, and the table hears it, exactly as it hears a tool
+   * attach.
+   */
+  it("marks a deck's connection with the run it watches, and tells the table", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+
+    expect(await live.connection("deck1")).toMatchObject({ deck: true, run: "s1" });
+    const toPage = posted.filter(([id]) => id === "page").map(([, l]) => JSON.parse(l));
+    expect(toPage.find((l) => l.t === "gesture")).toMatchObject({ t: "gesture", kind: "tools" });
   });
 });
 

@@ -235,6 +235,12 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     const leaving = await deps.live.connection(connectionId);
     await deps.live.disconnect(connectionId);
     if (leaving?.control && leaving.run) await tellWhoIsAttached(leaving.run);
+    // A deck leaving its run is news the same way a tool leaving is: the
+    // page is told, as it was told the deck came on.
+    if (leaving?.deck && leaving.run) await tellWhoIsAttached(leaving.run);
+    // A page closing may have been the last thing holding a run, and a deck
+    // whose keys still look live is worse than one that says so.
+    if (leaving && !leaving.deck && writes(leaving)) await tellDecks(leaving.sub);
     return { statusCode: 200 };
   }
 
@@ -549,6 +555,15 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     const inRace = Boolean(race && race.entries.some((e) => e.sub === conn.sub));
     if (!inSession && !inRace) return { statusCode: 200 };
     await deps.live.watch(connectionId, m["id"], conn.sub, now());
+    if (conn.deck) {
+      // A deck is told a run is on it the same way a page is told a tool
+      // is: the row says so, and the table hears it.
+      await deps.live.connect(connectionId, conn.sub, now(), { deck: true, run: m["id"] });
+      await tellWhoIsAttached(m["id"]);
+    }
+    // A run just came under a device. A deck that has been sitting on "No
+    // run open" all evening is the one thing waiting to hear it.
+    await tellDecks(conn.sub);
     return { statusCode: 200 };
   }
   return { statusCode: 400, body: "unknown message" };
