@@ -107,6 +107,16 @@ export const LINK_MINUTES = 10;
 const MANAGE_GUILD = 1n << 5n;
 const ADMINISTRATOR = 1n << 3n;
 
+/**
+ * A pack and the modes it offers, said the one way.
+ *
+ * Two commands list packs and they had drifted into two formats: one a
+ * line each, the other a sentence of semicolons. Whichever is right, it
+ * is the same answer to the same question.
+ */
+const packLine = (p: { title: string; modes: Array<{ label: string }> }): string =>
+  `**${p.title}** - ${p.modes.map((m) => m.label).join(", ") || "one mode"}`;
+
 const ephemeral = (content: string): InteractionResponse => ({ type: ResponseType.ChannelMessage, data: { content: content.slice(0, 2000), flags: EPHEMERAL } });
 const say = (content: string): InteractionResponse => ({ type: ResponseType.ChannelMessage, data: { content: content.slice(0, 2000) } });
 const withCard = (type: number, card: Card, content?: string): InteractionResponse => ({ type, data: { ...(content ? { content } : {}), embeds: card.embeds, components: card.components } });
@@ -255,7 +265,11 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
           `Hosts: ${guild.hostRoleId ? `<@&${guild.hostRoleId}>` : "anyone who can manage the server"}.`,
           `Runs open ${guild.channelId ? `in <#${guild.channelId}>` : "wherever /run is used"}, in a ${guild.threadMode === "private" ? "private thread the host and whoever they add can see" : "public thread anyone who can see the channel can open"}.`,
           `The card ${guild.cardMode === "pinned" ? "stays pinned at the top of a run's thread" : "follows a run's thread as its last message"}.`,
-          packs.length === 0 ? "Packs: none yet; the account that claimed the server adds them from its profile, under Servers." : `Packs: ${packs.map((p) => `${p.title} (${p.modes.map((m) => m.label).join(", ") || "one mode"})`).join("; ")}.`,
+          // The packs go on lines of their own. As one sentence of
+          // semicolons, a server with twenty of them was a paragraph
+          // nobody could find anything in, and it buried the four lines
+          // above it that answer the question actually asked.
+          packs.length === 0 ? "Packs: none yet; the account that claimed the server adds them from its profile, under Servers." : `Packs:\n${packs.map(packLine).join("\n")}`,
         ];
         return ephemeral(lines.join("\n"));
       }
@@ -268,7 +282,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       if (!guild) return ephemeral("This server is not set up for Runlog yet. Someone who can manage it runs /setup claim.");
       const packs = await deps.guilds.listGuildPacks(i.guild_id);
       if (packs.length === 0) return ephemeral("No packs here yet. The account that claimed the server adds them from its Runlog profile, under Servers.");
-      return ephemeral(packs.map((p) => `**${p.title}** - ${p.modes.map((m) => m.label).join(", ") || "one mode"}`).join("\n"));
+      return ephemeral(packs.map(packLine).join("\n"));
     }
 
     if (name === "run") return runCommand(i, deps, who);
