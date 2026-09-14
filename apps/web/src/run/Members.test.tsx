@@ -95,7 +95,7 @@ describe("people at the table", () => {
     const html = panel(runOf(), syncOf(true, true));
     // Which of the two is still happening, said plainly: "Reaching your
     // account" read as though signing in had not taken, and it had.
-    expect(html).toContain("still on its way to your account");
+    expect(html).toContain("has not reached your account yet");
     expect(html).not.toContain("Reaching your account");
     expect(html).not.toContain("Turn sync on");
   });
