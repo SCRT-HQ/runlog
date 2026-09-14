@@ -39,6 +39,7 @@ const PACKS = [
   "packs/sketches/twenty-five.yaml",
   "packs/sketches/run-of-show.yaml",
   "packs/sketches/forfeits.yaml",
+  "packs/sketches/soundclash.yaml",
   // packs/demo and packs/testing are deliberately absent from this list.
   // The bench is a bench; the demo pack is the worked example the guide
   // and the suite are written against. Both keep loading and neither is

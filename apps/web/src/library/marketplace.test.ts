@@ -20,6 +20,7 @@ describe("the marketplace", () => {
       "com.scrthq.runlog.rocket-league-showdown",
       "com.scrthq.runlog.run-of-show",
       "com.scrthq.runlog.salt-and-signal",
+      "com.scrthq.runlog.soundclash",
       "com.scrthq.runlog.twenty-five",
     ]);
     for (const e of entries) {

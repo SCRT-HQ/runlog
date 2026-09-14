@@ -550,7 +550,11 @@ export function RunView({
           {run.moderated && <Scoreboard run={run} state={state} pack={pack} tools={tools} />}
           {!run.moderated && tools.length > 0 && <Attached tools={tools} />}
           {run.roles.length > 0 && <Roles pack={pack} run={run} state={state} />}
-          <Board pack={pack} state={state} onRename={run.renameSubject} onCorrect={run.readOnly ? undefined : run.correctState} />
+          {/* A pack whose units make nothing has no board; the panel would
+              say "nothing made yet" for the whole run. */}
+          {pack.unit.createsSubject && (
+            <Board pack={pack} state={state} onRename={run.renameSubject} onCorrect={run.readOnly ? undefined : run.correctState} />
+          )}
           <Trackers pack={pack} state={state} onNudge={run.readOnly ? undefined : run.nudgeCounter} onTurn={run.readOnly ? undefined : run.turnResource} />
           {run.record && api && !bench && <RacePanel pack={pack} race={raceView} />}
           {run.record && !bench && api && <Asks pack={pack} run={run} record={run.record} />}

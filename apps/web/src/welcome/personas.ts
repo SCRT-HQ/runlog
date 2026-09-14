@@ -70,6 +70,32 @@ export const PERSONAS: Persona[] = [
     closing: "Spin for the next round.",
   },
   {
+    // Second, because a DJ is the case where the one-press loop is the
+    // whole pitch: both hands are busy and the run has to move anyway.
+    id: "dj",
+    noun: "DJ",
+    packId: "com.scrthq.runlog.soundclash",
+    packTitle: "Soundclash",
+    mode: "Club Standard",
+    at: "Round 4",
+    scene: "A set where the next transition is not your call",
+    vocabulary: "a Set of Rounds",
+    unit: "round",
+    log: [
+      { where: "Round 1, Call the Round", roll: "d20 → 1", text: "Double-drop. Land both drops on the same one." },
+      { where: "Round 2, Call the Round", roll: "d20 → 3", text: "The next track is at least 20 BPM off this one. Get there however you like." },
+      { where: "Round 3, Call the Round", roll: "d20 → 16", text: "Cut the bass on both channels for 8 beats, then bring the new one's back alone." },
+      { where: "Round 4, Call the Round", roll: "d20 → 7", text: "From the moment you touch the crossfader, you have 90 seconds.", heat: true },
+    ],
+    state: [
+      { label: "Rounds mixed", value: "3" },
+      { label: "Passes", value: "2" },
+      { label: "Style", value: "Club Standard" },
+    ],
+    clock: "Round 4 · 01:30",
+    closing: "Call the next one.",
+  },
+  {
     id: "learner",
     noun: "learner",
     packId: "com.scrthq.runlog.practice-room",
