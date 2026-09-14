@@ -2422,6 +2422,17 @@ select.textInput {
   color: var(--warn);
   border-color: color-mix(in oklab, var(--warn) 40%, var(--line));
 }
+/*
+ * The button that does the destroying, where a dialog is asking whether
+ * to. Filled like any other primary, in the warning colour rather than
+ * the accent: it is the action being confirmed, so it should look like
+ * the one that happens, and like the thing it is going to do.
+ */
+.primary.danger {
+  border-color: var(--warn);
+  background: var(--warn);
+  color: var(--on-accent);
+}
 @media (hover: hover) {
   .ghost.danger:hover:not(:disabled) {
     background: color-mix(in oklab, var(--warn) 10%, transparent);
@@ -3804,6 +3815,11 @@ a.plan { text-decoration: none; }
 }
 .veil { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 1rem; background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(6px); }
 .termsGate { max-width: 34rem; display: grid; gap: 0.75rem; }
+/* Asking before something irreversible: narrow, and the question first. */
+.confirmDialog { width: min(100%, 26rem); display: grid; gap: 0.6rem; }
+.confirmDialog h2 { margin: 0; font-size: var(--t-1); }
+/* The action first, then Cancel, and room between them so neither is hit by accident. */
+.confirmDialog .confirmActions { justify-content: flex-end; gap: 0.6rem; margin-top: 0.2rem; }
 .nameGate .inviteForm { align-items: center; }
 .nameGate .inviteForm input { flex: 1; min-width: 12rem; }
 /* The run's settings: one dialog, its sections ruled like the side column's. */

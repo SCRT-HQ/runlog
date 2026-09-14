@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useConfirm } from "../ui/useConfirm.tsx";
 import YAML from "yaml";
 import { parsePack, type Diagnostic, type Pack, LICENSE_IDS, LICENSE_LABELS } from "@runlog/rules-schema";
 import { describe } from "./describe.ts";
@@ -64,6 +65,8 @@ const str = (v: unknown) => (typeof v === "string" ? v : "");
 const num = (v: unknown, fallback = 0) => (typeof v === "number" ? v : fallback);
 
 export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
+  // Replacing a draft is not undoable, so it is asked first; see useConfirm.
+  const { dialog, ask } = useConfirm();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saved, setSaved] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -175,6 +178,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
   if (atDoor) {
     return (
       <main className="main design">
+        {dialog}
         <section className="hero runHero">
           <div>
             <h2>Which pack?</h2>
@@ -189,10 +193,11 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
             <button
               className="ghost"
               onClick={() => {
-                if (confirm("Start a new pack? The current draft is replaced.")) {
+                void ask({ ask: "Start a new pack?", detail: "The draft you have open is replaced.", confirm: "Start a new one", destructive: true }).then((yes) => {
+                  if (!yes) return;
                   replace(blankPack());
                   setAtDoor(false);
-                }
+                });
               }}
             >
               New pack
@@ -207,6 +212,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
 
   return (
     <main className="main design">
+      {dialog}
       <section className="hero runHero">
         <div>
           <h2>{str(draft.title) || "Untitled"}</h2>
@@ -227,9 +233,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
           <button
             className="ghost"
             onClick={() => {
-              if (confirm("Start again from a blank pack? Your draft is replaced.")) {
-                replace(blankPack());
-              }
+              void ask({ ask: "Start again from a blank pack?", detail: "The draft you have open is replaced.", confirm: "Start again", destructive: true }).then((yes) => yes && replace(blankPack()));
             }}
           >
             New pack

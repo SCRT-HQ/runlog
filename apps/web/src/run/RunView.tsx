@@ -52,6 +52,7 @@ import { lifecycleGestures, marksOf, type LifecycleMarks } from "./gestures.ts";
 import { useRace } from "./useRace.ts";
 import { RunRail, type Pane } from "./RunRail.tsx";
 import { useEnterMoves } from "../ui/useEnterMoves.ts";
+import { useConfirm } from "../ui/useConfirm.tsx";
 
 /**
  * Playing a run.
@@ -981,8 +982,11 @@ function RunHeader({
   const v = pack.vocabulary;
   const drawer = useDocDrawer();
   const mode = pack.modes[state.mode];
+  // Discarding deletes the log, so it is asked first; see useConfirm.
+  const { dialog, ask } = useConfirm();
   return (
     <section className={`runBar${open ? " open" : ""}`}>
+      {dialog}
       <div className="runMeta">
         <strong>{pack.title}</strong>
         <span className="muted">{mode?.label ?? state.mode}</span>
@@ -1025,7 +1029,7 @@ function RunHeader({
           title={`End this ${v.run.one.toLowerCase()} and delete its log`}
           onClick={() => {
             const named = state.name ? `${state.name}` : `this ${v.run.one.toLowerCase()}`;
-            if (confirm(`Discard ${named}? Its log is deleted.`)) run.discard();
+            void ask({ ask: `Discard ${named}?`, detail: "Its log is deleted, and there is no undoing it.", confirm: "Discard", destructive: true }).then((yes) => yes && run.discard());
           }}
         >
           Discard
