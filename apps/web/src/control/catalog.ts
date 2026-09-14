@@ -49,6 +49,15 @@ export interface OpDef {
   note?: string;
   /** True where the tool cannot undo it: an item given, a player moved. */
   oneWay?: boolean;
+  /**
+   * True where asking twice is twice as much.
+   *
+   * Runes add up and so do items with a count; a switch thrown twice is
+   * still thrown, and a grace unlocked twice is unlocked. Which is which
+   * decides whether a repeated line is worth saying anything about, so
+   * it is declared here rather than guessed at from the name.
+   */
+  additive?: boolean;
   args: ArgDef[];
 }
 
@@ -247,6 +256,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
       label: "Give an item, by name",
       note: "From the tool's own lists: consumables, upgrade and crafting materials, crystal tears, talismans, armor, arrows, spells, and the key items that are simply given. Spell it as the game does. A weapon is not one of these; it has an operation of its own, because its level is part of naming it.",
       oneWay: true,
+      additive: true,
       args: [
         { name: "name", kind: "name", list: "items", label: "Item", required: true, note: "Golden Seed, Rune Arc, Smithing Stone [3]." },
         { name: "quantity", kind: "number", label: "How many", least: 1, most: 99 },
@@ -303,6 +313,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
       label: "Give runes",
       note: "Adds, and cannot set: nothing in the game says how many somebody is carrying, so there is no number to set one to. A negative amount is a toll. One way, and it does not come back off, because runes given are usually spent by the time anything would take them and taking away what somebody earned instead is worse than letting a gift stand.",
       oneWay: true,
+      additive: true,
       args: [
         {
           name: "amount",
@@ -319,6 +330,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
       op: "value.add",
       label: "Change a number by an amount",
       note: "Sets the count; it does not add to it. Use Give runes to hand somebody five thousand on top of what they have. Reverts to what it was.",
+      additive: true,
       args: [
         { name: "name", kind: "choice", label: "What", required: true, options: VALUES.map((v) => v.name) },
         { name: "by", kind: "number", label: "By", required: true, note: "Negative takes it away. Held to the same range as setting it." },
@@ -441,6 +453,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
       label: "Give an item, by id",
       note: "The way in for anything the two operations above have no name for. Where a name will do, use it: an id is a number out of the game's own data and is wrong the first time the game moves.",
       oneWay: true,
+      additive: true,
       args: [
         { name: "id", kind: "number", label: "Item id", required: true, least: 0 },
         { name: "quantity", kind: "number", label: "How many", least: 1, most: 99 },
