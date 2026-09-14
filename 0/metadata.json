@@ -1,0 +1,203 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2FF6H6YRGED894PFWWM8DWQ",
+  "session_id": "a16a568b-4e39-4550-853f-b3bed3341834",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-14T08:05:40.3978541Z",
+  "branch": "the-names-suggest-themselves",
+  "checkpoints_count": 2,
+  "save_step_count": 3,
+  "files_touched": [
+    "apps/web/src/run/ControlSettings.test.tsx",
+    "apps/web/src/run/ControlSettings.tsx",
+    "apps/web/src/run/Ops.tsx"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-opus-5",
+  "turn_id": "0c1bda4cd016",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 1412,
+    "cache_creation_tokens": 1373636,
+    "cache_read_tokens": 338245963,
+    "output_tokens": 411011,
+    "api_call_count": 706
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_01TVFVaiNxHnMMA4xjRMx4FL",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:brainstorming"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "48059e944930",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 36,
+        "end": 37,
+        "entry_ids": [
+          "509df852-81a4-4306-8a32-6b9f409068c5"
+        ],
+        "tool_use_id": "toolu_01TVFVaiNxHnMMA4xjRMx4FL"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01TVFVaiNxHnMMA4xjRMx4FL"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:brainstorming",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01GCi3kW6pVi8cZGaszGrWYQ",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "avoid-ai-writing"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "48059e944930",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 303,
+        "end": 304,
+        "entry_ids": [
+          "083ae5ab-2c8e-43b8-9d21-6fd69dadb37b"
+        ],
+        "tool_use_id": "toolu_01GCi3kW6pVi8cZGaszGrWYQ"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01GCi3kW6pVi8cZGaszGrWYQ"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: avoid-ai-writing",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_019mconefLkA2KkeHwAJPJ5h",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "run"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "48059e944930",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 550,
+        "end": 551,
+        "entry_ids": [
+          "6a6b4da0-4434-4964-b8d5-318cfa4feaba"
+        ],
+        "tool_use_id": "toolu_019mconefLkA2KkeHwAJPJ5h"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_019mconefLkA2KkeHwAJPJ5h"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: run",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01XzxaWRcEXrqG7LxcxPK7dG",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "deslop-text:deslop-text"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "026985bb2a78",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 3494,
+        "end": 3495,
+        "entry_ids": [
+          "cd0f27da-94c5-44f2-9311-05d0971fb4b9"
+        ],
+        "tool_use_id": "toolu_01XzxaWRcEXrqG7LxcxPK7dG"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01XzxaWRcEXrqG7LxcxPK7dG"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: deslop-text:deslop-text",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 14
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-14T08:05:39.9885938Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 78,
+    "human_modified": 2193,
+    "human_removed": 0,
+    "total_committed": 78,
+    "total_lines_changed": 2272,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 63608,
+      "agent_lines_removed": 58794
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 1136,
+      "user_lines_removed": 1097,
+      "agent_lines_added": 63608,
+      "agent_lines_removed": 58794,
+      "user_added_per_file": {
+        "apps/web/src/run/ControlSettings.test.tsx": 212,
+        "apps/web/src/run/ControlSettings.tsx": 658,
+        "apps/web/src/run/Ops.tsx": 265,
+        "packs/setups/elden-ring-give-starting-gifts.yaml": 1
+      },
+      "user_removed_per_file": {
+        "apps/web/src/run/ControlSettings.test.tsx": 199,
+        "apps/web/src/run/ControlSettings.tsx": 679,
+        "apps/web/src/run/Ops.tsx": 218,
+        "packs/setups/elden-ring-give-starting-gifts.yaml": 1
+      }
+    }
+  ]
+}
