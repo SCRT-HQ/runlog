@@ -43,6 +43,20 @@ const painted = (control?: unknown, seats?: string[]) =>
     />,
   );
 
+/**
+ * That a name field points at a list that is actually on the page.
+ *
+ * The id itself is the editor's own and generated, so asserting the
+ * literal would be asserting React's counter. What matters is the
+ * relationship: every `list=` resolves to a `<datalist>` that exists.
+ * It did not, on the page where a run starts, for as long as the
+ * datalists were drawn by the settings panel alone.
+ */
+const listedAgainst = (html: string, which: string): boolean => {
+  const field = new RegExp(`list="([^"]*-${which})"`).exec(html);
+  return field !== null && html.includes(`id="${field[1]}"`);
+};
+
 describe("the control panel", () => {
   it("says a run with no rules sends nothing", () => {
     const html = paint();
@@ -125,8 +139,7 @@ describe("the control panel", () => {
     // The field points at a list; the list itself is fetched, so a
     // static render has the one without the other, which is the state
     // the panel is in for the moment before it arrives.
-    expect(html).toContain('list="controlNames-graces"');
-    expect(html).toContain('id="controlNames-graces"');
+    expect(listedAgainst(html, "graces")).toBe(true);
   });
 
   it("offers a weapon with an ash on it, which is the one gift that is three things at once", () => {
@@ -139,7 +152,7 @@ describe("the control panel", () => {
         },
       ],
     });
-    expect(html).toContain('list="controlNames-ashes"');
+    expect(listedAgainst(html, "ashes")).toBe(true);
     expect(html).toContain('value="Godskin Peeler"');
     expect(html).toContain('value="Bloody Slash"');
   });
@@ -149,7 +162,7 @@ describe("the control panel", () => {
       tool: "TarnishedTool",
       rows: [{ tag: "boon", ops: [{ op: "weapon.named", args: { name: "Wing of Astel", upgrade: 10 } }] }],
     });
-    expect(html).toContain('list="controlNames-weapons"');
+    expect(listedAgainst(html, "weapons")).toBe(true);
     expect(html).toContain('value="Wing of Astel"');
     expect(html).not.toContain("never heard of");
   });
@@ -159,7 +172,7 @@ describe("the control panel", () => {
       tool: "TarnishedTool",
       rows: [{ tag: "setback", ops: [{ op: "warp.boss", args: { name: "Godrick the Grafted" } }] }],
     });
-    expect(html).toContain('list="controlNames-bosses"');
+    expect(listedAgainst(html, "bosses")).toBe(true);
     expect(html).toContain('value="Godrick the Grafted"');
   });
 
@@ -168,11 +181,11 @@ describe("the control panel", () => {
       tool: "TarnishedTool",
       rows: [{ tag: "boon", ops: [{ op: "item.give", args: { id: 1, ashOfWar: "Bloody Slash" } }] }],
     });
-    expect(html).toContain('list="controlNames-ashes"');
+    expect(listedAgainst(html, "ashes")).toBe(true);
   });
 
   it("carries no list for a tool that has none", () => {
-    expect(paint({ rows: [{ tag: "setback", ops: [{ op: "x", args: {} }] }] })).not.toContain("controlNames-");
+    expect(paint({ rows: [{ tag: "setback", ops: [{ op: "x", args: {} }] }] })).not.toContain("<datalist");
   });
 
   it("puts loading a profile from a file above the rules, not below all of them", () => {
