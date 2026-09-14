@@ -319,7 +319,7 @@ export function ControlSettings({
       <p className="muted small">
         {catalog
           ? `Anything else that connects is sent nothing and told why. Written against ${catalog.against}; a tool that reports more than this list knows is fine, and what it reports wins.`
-          : "A profile naming no tool is for whatever connects, which is right for a script of your own and wrong for anything shared."}
+          : "A profile naming no tool is sent to whatever connects. Fine for a script of your own; risky for anything shared."}
       </p>
 
       <div className="askKey">

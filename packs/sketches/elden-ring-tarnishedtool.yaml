@@ -20,7 +20,7 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-tarnishedtool
-version: "3.3.0"
+version: "3.3.1"
 title: "Elden Ring: TarnishedTool"
 author: Runlog
 description: >-
@@ -1246,7 +1246,7 @@ tables:
     title: Blessing
     description: >-
       What settling an objective is worth. Drawn when you say you
-      settled it, which is the only way anything here can know.
+      settled it; nothing here can tell on its own.
       Nothing in it is a punishment and nothing is worth points: the
       points were on the objective.
     roll: d100
@@ -1856,7 +1856,7 @@ modes:
       One person draws and everybody plays it, each on their own copy, and
       the curse lands on every runner at the same moment. The harsh
       draws are worth points; award them to whoever got through the
-      scene under one. A mercy is worth nothing, which is fair.
+      scene under one. A mercy is worth nothing.
     units: { min: 3, max: 20 }
     # Awarding an objective is how a race says somebody settled it, so that
     # is where the blessing is drawn and it is drawn for them. The move that
