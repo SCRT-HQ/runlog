@@ -1,0 +1,37 @@
+# Four talisman slots instead of one.
+#
+# The pouches are three separate awards -- Margit, Godfrey's shade,
+# Enia -- and the game hands each over with an event rather than an
+# item. All three share one item id, so spawning it gives you one thing
+# and no slots; the slots come from the flags, 60500, 60510 and 60520.
+#
+# That is why this is a press and not a gift. `item.named` will not
+# touch a key item tied to an event, and giving the item by id would
+# have put a pouch in the bag and left the slots where they were.
+# `GiveTalismanPouches` sets the three, the way the tool's own
+# whetblade unlock sets its five.
+#
+# Found with the tool's event logger against a running game, which is
+# the only way any of these are worth writing down.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.give-talisman-pouches
+version: "1.0.0"
+title: Give Talisman Pouches
+author: Runlog
+description: >-
+  All three talisman pouches, so a run wears four talismans from the
+  start. For builds that are about what you stack rather than about
+  when the game lets you stack it.
+
+tool: TarnishedTool
+
+ops:
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

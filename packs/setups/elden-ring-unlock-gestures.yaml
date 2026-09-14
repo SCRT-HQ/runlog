@@ -1,0 +1,29 @@
+# Every gesture, for a run that is partly a performance.
+#
+# Gestures are scattered across the map and behind NPCs, and a stream
+# that wants to point at something, or bow, or clap, should not have to
+# go and find the one it needs first.
+#
+# A press rather than a gift: a gesture is an event flag, not an item,
+# and the tool already has the unlock that sets the lot.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.unlock-gestures
+version: "1.0.0"
+title: Unlock Gestures
+author: Runlog
+description: >-
+  Every gesture in the game, base and DLC. For a run being watched,
+  where pointing at the thing is half of saying it.
+
+tool: TarnishedTool
+
+ops:
+  - { op: action.invoke, args: { action: UnlockGestures }, once: true }
+
+license:
+  id: MIT
+  redistributable: true
