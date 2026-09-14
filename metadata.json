@@ -1,0 +1,41 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2GTSR2MQAAQPXGT68DXBGQH",
+  "strategy": "manual-commit",
+  "branch": "the-deck-drives",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "apps/web/src/library/LibraryView.tsx",
+    "apps/web/src/run/Members.test.tsx",
+    "apps/web/src/run/RunView.tsx",
+    "apps/web/src/run/takePress.test.ts",
+    "apps/web/src/run/takePress.ts",
+    "apps/web/src/sync/SyncProvider.tsx",
+    "apps/web/src/sync/bus.ts",
+    "apps/web/src/sync/socket.test.ts",
+    "apps/web/src/sync/socket.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 2088,
+    "cache_creation_tokens": 668185,
+    "cache_read_tokens": 46815748,
+    "output_tokens": 220529,
+    "api_call_count": 174,
+    "subagent_tokens": {
+      "input_tokens": 144,
+      "cache_creation_tokens": 176759,
+      "cache_read_tokens": 8624119,
+      "output_tokens": 50144,
+      "api_call_count": 72
+    }
+  }
+}
