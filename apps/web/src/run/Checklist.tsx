@@ -4,6 +4,27 @@ import type { RunState } from "@runlog/engine";
 import { allMade, evidenceFor, pointMade, pointOf, rowMade, type Settling, type Shown } from "./evidence.ts";
 
 /**
+ * Whether the list leaves a row out.
+ *
+ * What is already in front of the player as a rule is not listed again
+ * under a box; a point with nothing left to list has nothing to ask, and
+ * the rule it stands for is doing the asking.
+ *
+ * Only where something can actually answer it, though: the game settling
+ * it, or the rule carrying the tick that honors it. A row nothing can
+ * answer stays on the screen whatever it is told, because the alternative
+ * is a step that cannot be finished.
+ *
+ * One spelling, because the answer decides two things that have to agree:
+ * which rows the card draws, and which box the tick on such a row comes
+ * from -- the rule's, which carries no tally.
+ */
+function offTheList(s: Shown, settling?: Settling): boolean {
+  const answerable = Boolean(settling && (settling.owing(s) || settling.settled(s) || settling.answered?.(s)));
+  return Boolean(settling?.hidden?.(s) && answerable);
+}
+
+/**
  * Points to tick off, with their evidence under them.
  *
  * A point that shows a table's results lists them beneath it, each with a box
@@ -56,16 +77,7 @@ export function Checklist({
       {points.map((point, i) => {
         const shown: Shown[] = evidence[i] ?? [];
         if (point.shows && shown.length === 0) return null;
-        // What is already in front of the player as a rule is not listed
-        // again under a box; a point with nothing left to list has nothing
-        // to ask, and the rule it stands for is doing the asking.
-        //
-        // Only where something can actually answer it, though: the game
-        // settling it, or the rule carrying the tick that honors it. A row
-        // nothing can answer stays on the screen whatever it is told,
-        // because the alternative is a step that cannot be finished.
-        const answerable = (s: Shown) => Boolean(settling && (settling.owing(s) || settling.settled(s) || settling.answered?.(s)));
-        const listed = shown.filter((s) => !(settling?.hidden?.(s) && answerable(s)));
+        const listed = shown.filter((s) => !offTheList(s, settling));
         if (point.shows && listed.length === 0) return null;
         // A row the game settles is not offered as a box to tick, and
         // ticking the point over it does not reach down to it.
@@ -134,4 +146,56 @@ export function checklistDone(items: ChecklistItem[], pack: Pack, state: RunStat
     ticked,
     settling,
   );
+}
+
+/**
+ * The boxes a step is still waiting on, for a press that means "all of them".
+ *
+ * The page's own box is the authority on which keys a tick writes -- a
+ * point with evidence writes its children, a plain one writes itself --
+ * so this reads the same `pointOf`/`evidenceFor`/`pointMade` machinery
+ * rather than a second copy of the rules. Optional points are left alone,
+ * because the step is not waiting on them, and nothing here unticks.
+ *
+ * Grouped by tally, because a group is one `check()` and a counter moves
+ * by the size of the group it is given: two points on the same counter are
+ * one call of two boxes, which is what ticking them one at a time adds up
+ * to. A row the list leaves out is grouped away from the point's tally,
+ * because the box that ticks it is the rule's own and that one carries no
+ * counter; put in the point's group it would move the counter further than
+ * any run of clicks could. A row the game itself settles is in no group;
+ * one it still owes is not tickable at all, so the list comes back short
+ * and the step stays unfinished, which is the answer.
+ */
+export function ticksToFinish(
+  items: ChecklistItem[],
+  pack: Pack,
+  state: RunState,
+  ticked: Set<string>,
+  settling?: Settling,
+): Array<{ items: string[]; tally?: string }> {
+  const groups = new Map<string, { items: string[]; tally?: string }>();
+  const add = (tally: string | undefined, keys: string[]) => {
+    const fresh = keys.filter((k) => !ticked.has(k));
+    if (fresh.length === 0) return;
+    const group = groups.get(tally ?? "") ?? { items: [], ...(tally ? { tally } : {}) };
+    group.items.push(...fresh);
+    groups.set(tally ?? "", group);
+  };
+  items.map(pointOf).forEach((point, i) => {
+    if (point.optional) return;
+    const shown = point.shows ? evidenceFor(pack, state, point.shows) : [];
+    if (pointMade(i, shown, ticked, point, settling)) return;
+    if (shown.length === 0) {
+      add(point.tally, [`${i}`]);
+      return;
+    }
+    // A row the game settles is not offered as a box to tick, and ticking
+    // the point over it does not reach down to it.
+    const mine = shown.filter((s) => !settling?.owing(s) && !settling?.settled(s));
+    const keysOf = (rows: Shown[]) => rows.map((s) => `${i}:${s.key}`);
+    add(point.tally, keysOf(mine.filter((s) => !offTheList(s, settling))));
+    add(undefined, keysOf(mine.filter((s) => offTheList(s, settling))));
+  });
+  return [...groups.values()];
 }

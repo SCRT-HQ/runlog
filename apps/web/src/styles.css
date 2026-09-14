@@ -7004,3 +7004,27 @@ html[data-pip="controls"] body {
     background: rgb(255 255 255 / 7%);
   }
 }
+
+/* ---- toast ------------------------------------------------------------- */
+/*
+ * A line that says something happened, out from under whatever did it: a
+ * deck attaching has no place of its own on the page. Bottom-center, fixed
+ * to the viewport rather than the run's own column, so it says its piece
+ * over whatever is on screen and goes.
+ */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  z-index: 30;
+  max-width: min(90vw, 24rem);
+  padding: 0.6rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: var(--t-2);
+  text-align: center;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+}

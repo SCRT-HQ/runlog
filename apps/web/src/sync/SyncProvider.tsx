@@ -43,6 +43,8 @@ export interface Sync {
    * between telling somebody it happened and telling them the truth.
    */
   gesture: (id: string, kind: string, data?: Record<string, unknown>) => boolean;
+  /** The verdict on a deck's press, back to the one deck that made it, with the run's `seq` where there is a fresh one. */
+  drove: (to: string, ref: string, ok: boolean, say?: string, seq?: number) => void;
 }
 
 const off: Sync = {
@@ -54,6 +56,7 @@ const off: Sync = {
   syncNow: () => {},
   setPackSync: async () => {},
   gesture: () => false,
+  drove: () => {},
 };
 
 export const SyncContext = createContext<Sync>(off);
@@ -145,6 +148,17 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         },
         onGesture: (g) =>
           syncBus.emit({ t: "gesture", id: g.id, kind: g.kind, data: g.data, ...(g.from ? { from: g.from } : {}), at: g.at }),
+        onDrive: (d) =>
+          syncBus.emit({
+            t: "drive",
+            from: d.from,
+            run: d.run,
+            seq: d.seq,
+            ref: d.ref,
+            press: d.press,
+            ...(d.move !== undefined ? { move: d.move } : {}),
+            ...(d.answer !== undefined ? { answer: d.answer } : {}),
+          }),
         onState: (open) => {
           socketOpen = open;
         },
@@ -225,6 +239,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
               syncBus.localChange("pack", id);
             },
             gesture: (id, kind, data) => socketRef.current?.gesture(id, kind, data) ?? false,
+            drove: (to, ref, ok, say, seq) => socketRef.current?.drove(to, ref, ok, say, seq),
           }
         : off,
     [available, enabled, active, status, last],

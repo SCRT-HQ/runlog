@@ -47,6 +47,27 @@ export function useAttachedTools(runId: string | null): AttachedTool[] {
 }
 
 /**
+ * How many decks are on this run.
+ *
+ * The same `tools` gesture that names attached games names decks, so the
+ * publisher can switch itself on for one. A count rather than a list:
+ * nothing at the table needs to tell two decks apart.
+ */
+export function useAttachedDecks(runId: string | null): number {
+  const [decks, setDecks] = useState(0);
+  useEffect(() => {
+    setDecks(0);
+    if (!runId) return;
+    return syncBus.subscribe((news) => {
+      if (news.t !== "gesture" || news.id !== runId || news.kind !== "tools") return;
+      const n = (news.data as { decks?: unknown }).decks;
+      if (typeof n === "number") setDecks(n);
+    });
+  }, [runId]);
+  return decks;
+}
+
+/**
  * Whether this named racer has a tool on their game.
  *
  * A tool says which seat it is playing when it attaches, so a race can

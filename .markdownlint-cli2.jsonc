@@ -16,6 +16,9 @@
     "docs/reference.md",
     // Scratch notes, not documentation.
     ".remember/**",
+    // Task reports from SDD plan execution; gitignored by their own
+    // .superpowers/sdd/.gitignore, and not documentation either.
+    ".superpowers/sdd/**",
   ],
   "config": {
     "default": true,

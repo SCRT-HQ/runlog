@@ -28,6 +28,28 @@ export interface BillingStore {
   seenWebhook(eventId: string, at: string): Promise<boolean>;
 }
 
+/**
+ * What a person has: what Stripe granted them, and what a WorkOS feature
+ * flag on their session grants: a flag named like a feature counts as
+ * that feature. The flags are remembered per person so a rule that reads
+ * someone else's standing (the fee on a sale, for the publisher) sees them.
+ */
+export async function grantsOf(billing: Pick<BillingStore, "entitlements" | "flags">, sub: string, flags?: string[]): Promise<string[]> {
+  const [bought, kept] = await Promise.all([billing.entitlements(sub), billing.flags(sub)]);
+  return [...new Set([...bought, ...kept, ...(flags ?? [])])];
+}
+
+/** The feature ids Stripe was given, from the stack's environment. */
+export function featuresFromEnv(raw: string | undefined): { plus: string; hostedLicensing: string; server: string } {
+  try {
+    const parsed = JSON.parse(raw ?? "{}") as Record<string, unknown>;
+    const s = (key: string, fallback: string) => (typeof parsed[key] === "string" && parsed[key] ? (parsed[key] as string) : fallback);
+    return { plus: s("plus", "plus"), hostedLicensing: s("hostedLicensing", "hosted-licensing"), server: s("server", "server") };
+  } catch {
+    return { plus: "plus", hostedLicensing: "hosted-licensing", server: "server" };
+  }
+}
+
 const WEBHOOK_DAYS = 7;
 const expiresAfter = (at: string, days: number) => Math.floor(new Date(at).getTime() / 1000) + days * 86400;
 
