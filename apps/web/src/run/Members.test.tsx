@@ -100,6 +100,48 @@ describe("people at the table", () => {
     expect(html).not.toContain("Turn sync on");
   });
 
+  /**
+   * A solo run has a player. The server's member list is the people it
+   * knows about, and for a run nobody has been invited to that is
+   * nobody, so the panel used to show an empty box to the one person
+   * certainly sitting there.
+   */
+  it("shows you, even where the server knows of nobody", () => {
+    const html = panel(runOf({ role: "owner" }), syncOf(true, true));
+    expect(html).toContain("owner");
+    expect(html).toContain("you</span>");
+  });
+
+  it("does not show you twice where the server does list you", () => {
+    const html = panel(
+      runOf({ role: "owner", members: [{ sub: "user_ME", role: "owner", joinedAt: "2026-01-01T00:00:00Z" }] }),
+      syncOf(true, true),
+    );
+    expect(html.match(/chip you/g)?.length ?? 0).toBe(1);
+  });
+
+  /**
+   * Setting a tool up is a thing you do per person, while looking at the
+   * list of who is playing. It used to be only behind Settings, with one
+   * address and a note saying to add a seat by hand.
+   */
+  it("offers an address for the table and one for each person", () => {
+    const html = panel(
+      runOf({
+        role: "owner",
+        members: [
+          { sub: "user_ME", name: "Nate", role: "owner", joinedAt: "2026-01-01T00:00:00Z" },
+          { sub: "user_KEL", name: "Kel", role: "player", joinedAt: "2026-01-01T00:00:00Z" },
+        ],
+      }),
+      syncOf(true, true),
+    );
+    expect(html).toContain("The table");
+    // One for the table and one each, and none for somebody with no name
+    // to put in a seat.
+    expect(html.match(/Copy address/g)?.length ?? 0).toBe(3);
+  });
+
   it("is folded when it is only you, and open when somebody else is at the table", () => {
     const alone = panel(
       runOf({ role: "owner", members: [{ sub: "user_ME", role: "owner", joinedAt: "2026-01-01T00:00:00Z" }] }),

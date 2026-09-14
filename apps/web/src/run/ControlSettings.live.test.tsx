@@ -37,7 +37,14 @@ afterEach(() => {
 });
 
 describe("a run that has never had a profile", () => {
-  it("takes the one its pack ships with, without being asked", async () => {
+  /*
+   * Twenty seconds, for a test that takes two: it reads the shipped
+   * TarnishedTool profile, which is a hundred and some rows through a
+   * raw glob, and the default five were close enough to the real number
+   * that a slower machine failed on the arithmetic rather than on
+   * anything the panel did.
+   */
+  it("takes the one its pack ships with, without being asked", { timeout: 20000 }, async () => {
     const onControl = vi.fn();
     render(<ControlSettings pack={tarnished} record={record()} onControl={onControl} />);
     await waitFor(() => expect(onControl).toHaveBeenCalled());

@@ -1,6 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Pack } from "@runlog/rules-schema";
-import { apiBase } from "../sync/config.ts";
 import { useApi } from "../sync/useApi.ts";
 import type { StreamKeys } from "../sync/client.ts";
 import type { StoredRun } from "../storage/db.ts";
@@ -11,6 +10,7 @@ import { HandOut } from "./HandOut.tsx";
 import { Ops } from "./Ops.tsx";
 import { listsFor, type Lists } from "../control/lists.ts";
 import { rememberWatchKey, watchKeyHere } from "./watchKey.ts";
+import { controlAddress } from "./controlAddress.ts";
 import { liveLinkOf, rememberLiveLink } from "../live/route.ts";
 import {
   complaints,
@@ -184,31 +184,7 @@ export function ControlSettings({
   const dropRow = (i: number) => update({ ...profile, rows: (profile.rows ?? []).filter((_, at) => at !== i) });
   const addRow = () => update({ ...profile, rows: [...(profile.rows ?? []), { tag: tags[0] ?? "", ops: [] }] });
 
-  /**
-   * The address the tool dials, finished where the key is in hand.
-   *
-   * One per person where there is a roster. A connection that says which
-   * seat it is hears the rules addressed to that seat as well as the ones
-   * addressed to nobody, so a race is set up by handing each runner their
-   * own line of this and nothing else: one curse can land on one of them
-   * and the warp can still land on all of them.
-   *
-   * It names this run. A watch key on its own reaches whichever run of
-   * yours moved most recently and is open to watchers, which is right for
-   * a browser source that sits in a scene for months and wrong for a tool
-   * reaching into a game: a run that ends, or a newer one somewhere else,
-   * silently moves the tool to a run whose pack has nothing to say to it.
-   * With `run=` the address either finds this run or is refused, and being
-   * refused is the better of the two.
-   */
-  const addressFor = (seat?: string) => {
-    const b = (apiBase() ?? "/api").replace(/\/$/, "");
-    const origin = /^https?:/.test(b) ? new URL(b).origin : typeof location !== "undefined" ? location.origin : "";
-    const k = key ? encodeURIComponent(key) : "REPLACE-WITH-YOUR-WATCH-KEY";
-    const run = record ? `&run=${encodeURIComponent(record.runId)}` : "";
-    const tail = seat ? `&seat=${encodeURIComponent(seat)}` : "";
-    return `${origin.replace(/^http/, "ws")}/ws?k=${k}${run}&as=control${tail}`;
-  };
+  const addressFor = (seat?: string) => controlAddress({ key, runId: record?.runId, seat });
   const address = addressFor();
   /** The roster, without the blanks and without anybody twice. */
   const roster = useMemo(() => [...new Set((seats ?? []).map((n) => n.trim()).filter(Boolean))], [seats]);

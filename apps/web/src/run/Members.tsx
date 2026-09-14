@@ -8,6 +8,9 @@ import { liveLinkOf, rememberLiveLink } from "../live/route.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 import { useSync } from "../sync/SyncProvider.tsx";
 import type { StoredRun } from "../storage/db.ts";
+import { useProfile } from "../sync/useProfile.ts";
+import { useReachable } from "./useReachable.ts";
+import { controlAddress } from "./controlAddress.ts";
 
 /**
  * Who is at the table, and how to ask someone else.
@@ -27,8 +30,44 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
   const me = account.status === "signed-in" ? account.user.id : null;
   const noun = pack.vocabulary.run.one.toLowerCase();
   const [upgrade, setUpgrade] = useState<string | null>(null);
-  const members: SessionMember[] = run.members ?? [];
+  const { profile } = useProfile();
+  const reach = useReachable(api, run);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const owner = run.role === "owner";
+
+  /**
+   * Who is at the table, with yourself in it.
+   *
+   * The server's member list is the people it knows about, which for a
+   * run nobody has been invited to is nobody at all -- so the panel
+   * showed an empty box to the one person certainly sitting there. A
+   * solo run has a player; it just has not had to tell anybody.
+   */
+  const listed: SessionMember[] = run.members ?? [];
+  const mine = profile?.handle?.trim() || profile?.name?.trim() || "You";
+  const members: SessionMember[] =
+    me && !listed.some((m) => m.sub === me)
+      ? [{ sub: me, name: mine, role: owner ? "owner" : (run.role ?? "player") } as SessionMember, ...listed]
+      : listed;
+
+  /**
+   * The address a tool dials for one person, or for the table.
+   *
+   * Here rather than only behind Settings because this is the list of
+   * who is playing, and setting a tool up is a thing you do per person
+   * while looking at exactly that.
+   */
+  const copyAddress = async (seat: string | undefined, id: string) => {
+    const address = controlAddress({ key: reach.key, runId: run.runId, seat });
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedAddress(id);
+      window.setTimeout(() => setCopiedAddress((was) => (was === id ? null : was)), 1500);
+    } catch {
+      // A clipboard that refuses is the browser's call; the address is
+      // still on screen to read.
+    }
+  };
 
   const [invites, setInvites] = useState<Invite[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
@@ -178,6 +217,21 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
               ))}
           </div>
         )}
+        {owner && (
+          <div className="row spread memberRow">
+            <span>
+              <strong>The table</strong>
+              <span className="muted small"> · everyone</span>
+            </span>
+            <button
+              className="ghost tiny"
+              title="The address a tool dials to reach this run without saying who it is playing"
+              onClick={() => void copyAddress(undefined, "table")}
+            >
+              {copiedAddress === "table" ? "Copied" : "Copy address"}
+            </button>
+          </div>
+        )}
         {members.map((m) => (
           <div key={m.sub} className={`row spread memberRow${m.sub === me ? " me" : ""}`} aria-current={m.sub === me ? "true" : undefined}>
             <span>
@@ -185,17 +239,33 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
               <span className="muted small"> · {m.role}</span>
               {m.sub === me && <span className="chip you">you</span>}
             </span>
-            {owner && m.role !== "owner" && (
-              <button
-                className="ghost tiny"
-                title="Remove them from this run"
-                onClick={() => void api.removeMember(run.runId, m.sub).then(refresh, () => {})}
-              >
-                Remove
-              </button>
-            )}
+            <span className="padRow">
+              {owner && m.name && (
+                <button
+                  className="ghost tiny"
+                  title={`The address a tool on ${m.name}'s game dials, so rules meant for them reach them`}
+                  onClick={() => void copyAddress(m.name, m.sub)}
+                >
+                  {copiedAddress === m.sub ? "Copied" : "Copy address"}
+                </button>
+              )}
+              {owner && m.role !== "owner" && (
+                <button
+                  className="ghost tiny"
+                  title="Remove them from this run"
+                  onClick={() => void api.removeMember(run.runId, m.sub).then(refresh, () => {})}
+                >
+                  Remove
+                </button>
+              )}
+            </span>
           </div>
         ))}
+        {owner && !reach.key && (
+          <p className="muted small">
+            An address needs a watch key, and this device has not made one yet. Opening this {noun} to watchers below makes one.
+          </p>
+        )}
 
         {owner && (
           <>
