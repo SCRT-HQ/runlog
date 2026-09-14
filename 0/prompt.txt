@@ -207,3 +207,13 @@ Is there an action to enable Torrent / give the spectral seed whistle? We will w
 ---
 
 we shouldn't parse the URL to extract the seat, that is something Runlog specific, not TarnishedTool specific
+
+---
+
+*leveling
+
+On the Item/weapon/ash of war/etc name fields in the run start UI when customizing your loadout, I do not get enum list results that match the input text like the Terms page in Settings provides. [Image #118] [Image #119]
+
+---
+
+how do we give Great Runes that main bosses drop?
