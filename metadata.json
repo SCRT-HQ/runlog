@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2GZFWHY7H5N90YETJG74RE8",
+  "strategy": "manual-commit",
+  "branch": "the-deck-drives",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "docs/stream-api.md",
+    "package.json",
+    "scripts/drive.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 3368,
+    "cache_creation_tokens": 758384,
+    "cache_read_tokens": 75156900,
+    "output_tokens": 270005,
+    "api_call_count": 229,
+    "subagent_tokens": {
+      "input_tokens": 78,
+      "cache_creation_tokens": 334429,
+      "cache_read_tokens": 4346383,
+      "output_tokens": 41631,
+      "api_call_count": 39
+    }
+  }
+}
