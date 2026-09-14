@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2GV5AMGCSZF5TJ19C2YQZAJ",
+  "strategy": "manual-commit",
+  "branch": "the-deck-drives",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "apps/web/src/run/RunView.tsx",
+    "apps/web/src/run/offer.test.ts",
+    "apps/web/src/run/offer.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 2186,
+    "cache_creation_tokens": 672529,
+    "cache_read_tokens": 48696794,
+    "output_tokens": 223605,
+    "api_call_count": 178,
+    "subagent_tokens": {
+      "input_tokens": 58,
+      "cache_creation_tokens": 40823,
+      "cache_read_tokens": 4632664,
+      "output_tokens": 21135,
+      "api_call_count": 29
+    }
+  }
+}
