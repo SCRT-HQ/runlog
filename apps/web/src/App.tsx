@@ -929,6 +929,42 @@ export default function App() {
     if (record.sealed) await purgePack(record.id);
     else await forgetPack(record.id);
     await forgetRunsFor(record.id);
+
+    /*
+     * And out of any server that was playing it.
+     *
+     * A vault holds the pack's text so the bot can play it while nobody
+     * is present, which is right and is also why it outlives the shelf
+     * unless something says otherwise. Taking a pack off your shelf is
+     * that something: a server should only be able to play what you
+     * currently have.
+     *
+     * Driven by the press rather than by comparing two lists. A shelf
+     * that is empty because this device is new, or because sync has not
+     * finished, is not a shelf somebody emptied, and reconciling against
+     * one would quietly clear every vault the account has.
+     *
+     * Best effort, and quiet when it fails. The pack is already off the
+     * shelf by this point; a server that could not be reached is a Remove
+     * still waiting on the Servers page, not a reason to refuse the
+     * removal that was asked for.
+     */
+    if (api) {
+      void (async () => {
+        try {
+          const { guilds } = await api.myGuilds();
+          for (const guild of guilds) {
+            try {
+              await api.undelegatePack(guild.guildId, record.id);
+            } catch {
+              // That server keeps it; the Servers page still offers Remove.
+            }
+          }
+        } catch {
+          // No answer about servers at all: nothing to do here.
+        }
+      })();
+    }
     setImported((prev) => prev.filter((p) => p.id !== record.id));
     setActiveId((current) => {
       if (current !== record.id) return current;
@@ -936,7 +972,7 @@ export default function App() {
       rememberPack("");
       return "";
     });
-  }, []);
+  }, [api]);
 
   // A hosted copy counts the screen, once per change; see hosted/beacon.ts
   // for what is and is not sent. `hosted` itself is read further up, so

@@ -215,10 +215,28 @@ describe("setting up a server", () => {
     expect(store.data?.content).toContain("active through Discord's store");
     const neither = await handleInteraction(setup("status"), { guilds, appUrl: "https://runlog.test/", now: () => NOW, gates: true, serverFeature: "server", grants: async () => [], guildEntitled: async () => false });
     expect(neither.data?.content).toContain("or the server subscribes through Discord's store");
-    // /packs, for anyone: the same list, without the rest.
-    const packs = await handleInteraction(press({ guild_id: "g1", member: { user: mira }, data: { name: "packs" } }), { guilds, appUrl: "https://runlog.test/", now: () => NOW });
-    expect(packs.data?.content).toContain("**The Long Kiln** - Standard, Short");
-    const none = await handleInteraction(press({ guild_id: "g2", member: { user: mira }, data: { name: "packs" } }), { guilds, appUrl: "https://runlog.test/", now: () => NOW });
+    /*
+     * /packs is the same list without the rest, and it takes hosting the
+     * server to see it. What is in a vault is a list of titles somebody
+     * chose to delegate and may not have chosen to announce.
+     */
+    const asks = (member: Interaction["member"], guild = "g1") =>
+      handleInteraction(press({ guild_id: guild, member, data: { name: "packs" } }), { guilds, appUrl: "https://runlog.test/", now: () => NOW });
+
+    // Somebody who is merely in the server.
+    const plain = await asks({ user: mira, permissions: "0", roles: [] });
+    expect(plain.data?.content).toContain("<@&r1>");
+    expect(plain.data?.content).not.toContain("The Long Kiln");
+
+    // Whoever holds the host role.
+    const host = await asks({ user: mira, permissions: "0", roles: ["r1"] });
+    expect(host.data?.content).toContain("**The Long Kiln** - Standard, Short");
+
+    // And whoever runs the server, role or no role.
+    const boss = await asks({ user: mira, permissions: String(1 << 5), roles: [] });
+    expect(boss.data?.content).toContain("**The Long Kiln** - Standard, Short");
+
+    const none = await asks({ user: mira, permissions: String(1 << 5), roles: [] }, "g2");
     expect(none.data?.content).toContain("not set up");
   });
 
