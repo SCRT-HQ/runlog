@@ -1,0 +1,939 @@
+I would like to start planning out an integration for Elgato Stream Decks to allow full run control (progress through screens, trigger rolls when required, etc) as well as provide Stream Deck widgets that can show current metrics from the active run in a tab.
+
+---
+
+B looks good
+
+---
+
+this makes sense. With the OAuth setup, how does a run get chosen to attach to?
+
+---
+
+this sounds good, we need to make sure we also expose a way to change the run that SD is attached to, e.g. Stream Deck will almost always be launched before a run is started. Another approach would be sending a message over the socket when a new run is launched so the switcher in SD always knows the current list of available runs to choose from. We may also want to show a Toast notification when a run is connected from Stream Deck since the SD itself is not the best UI, especially on older models without the LCD screen or dials
+
+---
+
+we should also fetch the runs on launch / connect of the stream deck if those widgets are actively configured
+
+---
+
+Let's implement
+
+---
+
+are we creating a full plugin or do I need to use something like a community built WS plugin to bridge the gap?
+
+---
+
+why are we writing docs and committing them instead of using Claude artifacts?
+
+---
+
+<task-notification>
+<task-type>artifact-watch-lifecycle</task-type>
+<summary>Not watching Artifact: "The Deck Drives" (watch limit reached)</summary>
+<event>The live subscription for https://claude.ai/code/artifact/442de4ff-fd8f-42fd-b511-ba7606b82e1b did not arm — this session already holds its maximum of 5 artifact watches and none could make room (each is a watch you requested, one auto-replying to comments, or the artifact you most recently published, or watch slots are still connecting); unwatch one first. This session is NOT watching it and will not hear when it is republished; pass action "watch" with its url if you still need that, and do not claim to be watching it meanwhile.</event>
+</task-notification>
+
+---
+
+looks good -- for the open question, yes, this should be part of Plus
+
+---
+
+it should remain local for the spec, .claude/* is gitignored intentionally
+
+noted on the 2 surfaced items, makes sense
+
+---
+
+We should also switch to Fable for this (just switched models)
+
+---
+
+1.
+
+---
+
+<task-notification>
+<task-id>aac464d4ebf7b20c5</task-id>
+<tool-use-id>toolu_0118KzkUc3kR2fb6kRwvvzes</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\aac464d4ebf7b20c5.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 1: deck connections" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>- **Status:** DONE
+- Commit: 5add212 feat(live): a connection can say it is a deck
+- Test summary: full hosted/infra suite 274/274 passing; typecheck clean; TDD RED confirmed (`live.decksOf is not a function`) before GREEN
+- Concerns: none — `handlers.test.ts` left untouched since no existing pattern mocks `dynamoLive`'s SDK calls; `decksOf`/deck-aware `connect`/`disconnect` paths in `dynamoLive` are covered by typecheck only, same as the rest of that function today
+- Report: C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-1-report.md</result>
+<usage><subagent_tokens>104882</subagent_tokens><tool_uses>25</tool_uses><duration_ms>194844</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>ae538b1c0aebea2dd</task-id>
+<tool-use-id>toolu_01ETPrAtVZnoGewaWXtyFuGu</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\ae538b1c0aebea2dd.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 1 (spec + quality)" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Named risk checked: `LiveStore` has exactly two implementations — `dynamoLive` (`hosted/infra/lib/handlers/live.ts`) and `memoryLive()` (`hosted/infra/test/ws.test.ts`); `ws.ts` only consumes the type, doesn't implement it. Both implementations in the diff gained `decksOf`, so no implementation is left non-conforming.
+
+### Spec Compliance
+- ✅ Spec compliant. All amended-brief requirements are present: `Attached.deck?: boolean` with the specified comment (live.ts:33), single spelling point in `marks()`/`read()` (live.ts:60, live.ts:70), `upk` helper (live.ts:78), third-row write in `connect()` guarded by `attached.deck` with matching pk/sk shape and shared `expiresAt` (live.ts:99-107), `decksOf` query with TTL filtering (live.ts:130-142), `disconnect()` cleanup of the `USER#`/`DECK#` row keyed off the `CONN` row's `sub` (live.ts:152-153), `LiveStore.decksOf` interface addition (live.ts:47-48), `memoryLive().decksOf` (ws.test.ts:179-183), and the `decksOf` contract test against `memoryLive()` in place of the brief's `dynamoLive`/`makeLive()` version per the ruling (ws.test.ts:205-217). Only `hosted/infra/lib/handlers/live.ts` and `hosted/infra/test/ws.test.ts` are touched; `handlers.test.ts` was correctly left alone per the ruling.
+- ⚠️ Cannot verify from diff: the diff's commit list shows only the one-line subject (`feat(live): a connection can say it is a deck`), not the full commit message body, so the "no Claude trailer/session link/footer" constraint and the report's claim of an unrelated repo `Entire-Checkpoint:` trailer can't be confirmed from this diff package alone.
+
+### Strengths
+- `marks()`/`read()` stay the single place a mark is spelled — `deck` follows the exact ternary idiom already used for `control`/`seat`/`app`/`run` (live.ts:56-61, 66-71).
+- Test double coverage is real behavior, not mocked internals: the `decksOf` test (ws.test.ts:205-217) exercises a plain (non-deck) connection alongside a deck connection on the same account (`c1` deck, `c2` plain, both `user_a`), a second account's deck (`c3`, `user_b`), and disconnect-removes-the-deck — all three edge cases named in the review brief are covered in one compact test.
+- `disconnect()`'s deck-row cleanup correctly short-circuits before the `WATCH#` branch by keying off `sk === "CONN"`, so no double-delete or missed branch (live.ts:152-156).
+- Third-row TTL and shape match the two existing row-pair patterns (`CONN`/`WATCH#`) exactly — `expiresAt` shared from the same `connect()` call, `kind: "deck"` mirrors `kind: "conn"`, filtering in `decksOf` mirrors `watchers()`'s `expiresAt` filter (live.ts:88-107, 138-141 vs the pre-existing `watchers()` block).
+- No scope creep: nothing beyond what the interface/rows require was added.
+
+### Issues
+#### Critical (Must Fix)
+None.
+
+#### Important (Should Fix)
+None.
+
+#### Minor (Nice to Have)
+- ws.test.ts:207 — `const live = memoryLive();` omits the `const live: LiveStore = ...` annotation the brief's snippet used. Harmless here since `memoryLive()`'s own declared return type (`LiveStore &amp; {...}`) already enforces the contract, but worth noting since the brief's Step 1 snippet explicitly typed it that way to make the "is this still a `LiveStore`" check visible at the call site.
+- live.ts: the new `DECK#` row's `marks(attached)` will also copy any other truthy `Attached` fields (`seat`, `app`, `run`, `control`) onto the deck row if a caller ever passes them alongside `deck: true`. Not incorrect per the brief (which specifies the same `...marks(attached)` spread), but it means `decksOf()`'s results carry whatever else was attached at connect time rather than only deck-relevant fields — worth a one-line comment if this becomes a real combination in practice.
+
+### Assessment
+**Task quality:** Approved
+**Reasoning:** The diff implements every amended-brief requirement precisely, reuses existing patterns (`marks`/`read`, two-row write/query/cleanup shape, TTL filtering) without deviation, and the new test exercises all three required edge cases against a real (non-mocked) double; only an unverifiable commit-trailer detail and two cosmetic minor notes remain.</result>
+<usage><subagent_tokens>75376</subagent_tokens><tool_uses>5</tool_uses><duration_ms>84795</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>aee5f6ab87f4d2e38</task-id>
+<tool-use-id>toolu_01Qzm1nXhuk6YvxmQ8kLezcC</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\aee5f6ab87f4d2e38.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 2: deck attaches" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Status: DONE
+Commits: b9f395d feat(live): a deck attaches on the socket
+Tests: ws suite 34/34, full hosted/infra suite 276/276, typecheck clean
+Concerns: none — only deviation from brief is using the file's real `deps()`/`ev()` helpers and fixture values (`user_1`, `t=livetok`/`run=open`) instead of the brief's illustrative `depsWith`/`user_a`/`tok`/`s1`, which the task instructions explicitly authorized
+Report: C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-2-report.md</result>
+<usage><subagent_tokens>82835</subagent_tokens><tool_uses>19</tool_uses><duration_ms>169870</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a1b30cdb83e2ac8cc</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a1b30cdb83e2ac8cc.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 2 (spec + quality)" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Confirmed the fixture: `getSession("open")` returns `publicTokenHash: hashToken("livetok")` (test/ws.test.ts:116), so `t=livetok&amp;run=open` genuinely reaches the live-link branch (statusCode 200) rather than falling through to a 401. This is the same pattern used elsewhere in the file (line 380 for the `as=control` case).
+
+### Spec Compliance
+- ✅ `deckOf(event)` added at `hosted/infra/lib/handlers/ws.ts:74-76`, comment verbatim from the brief (diff lines 27-38).
+- ✅ Signed-in `$connect` branch marks `{ deck: true }`: `ws.ts:140-141`, `const deck = deckOf(event); await deps.live.connect(connectionId, caller.sub, now(), deck);` — read only after `deps.verify` succeeds (`ws.ts:134-139` try/catch precedes it), satisfying the named ordering risk.
+- ✅ Live-link branch (`t`+`run`, `ws.ts:87-96`) and watch-key branch (`k`, `ws.ts:110-132`) are untouched by the diff (only `attachedOf` is called there) and use `attachedOf`, which only recognizes `as=control` (`ws.ts:59-63`, unchanged) — `as=deck` on either is inert by construction, matching the global constraint.
+- ✅ Test 1 (`ws.test.ts:187-190`) exercises the real signed-in path (`token: "good"` → `sub: "user_1"` per the file's existing `deps()`/`verify` fixture) and asserts `{ sub: "user_1", deck: true }` against a live `memoryLive` store where `marks.set` only fires when `attached` is truthy (`ws.test.ts:23-25`) — a real positive check, not vacuous.
+- ✅ Test 2 (`ws.test.ts:192-196`) uses `t: "livetok", run: "open", as: "deck"`; `getSession("open")` fixture has `publicTokenHash: hashToken("livetok")` (`ws.test.ts:116`), so the request genuinely reaches the live-link branch (200), and `connection("c9")` returns a real object `{ sub: "public:open" }` (not null/undefined, since `conns.set` always runs) — so `.not.toMatchObject({ deck: true })` is a meaningful negative check, not one that passes only because the record is missing.
+- ✅ Only `hosted/infra/lib/handlers/ws.ts` and `hosted/infra/test/ws.test.ts` touched (diff stat: 2 files, 31 insertions, 1 deletion).
+- ✅ Brief's illustrative helper names (`depsWith`, `user_a`, `tok`, `s1`) correctly swapped for the file's real `deps()`/`ev()` and fixtures (`user_1`, `good`, `livetok`/`open`), per the task's explicit authorization; assertion shapes preserved.
+- ⚠️ Cannot verify from diff: commit body content (no Claude trailer/Co-Authored-By/session link) — the diff file's commit list shows only the subject line `b9f395d feat(live): a deck attaches on the socket`, which matches the required exact subject, but the full commit message body (trailers) isn't part of the diff text and per instructions git commands were not re-run to check it.
+- ⚠️ Cannot verify from diff: `npm run typecheck` and full-suite pass claims (276/276) — test re-run was not performed per review instructions; report's RED/GREEN transcripts are internally consistent with the code shown but unverified independently.
+
+### Strengths
+- `deckOf` mirrors `attachedOf`'s established shape exactly: pure function on `event`, strict equality on `as`, returns a typed marker object or `undefined` (`ws.ts:59-63` vs `74-76`).
+- The one-line integration into the signed-in branch is minimal and doesn't disturb the two untouched branches, keeping the blast radius exactly at the brief's boundary.
+- Test 2 isn't a throwaway regression guard dressed up as new coverage — it targets a real fixture path (`open`/`livetok`) already used elsewhere in the file, so it actually exercises the live-link branch rather than short-circuiting on a 401.
+
+### Issues
+#### Critical (Must Fix)
+None.
+
+#### Important (Should Fix)
+None.
+
+#### Minor (Nice to Have)
+- The report notes (accurately) that test 2 already passed before `deckOf` existed, since `attachedOf` never reads `"deck"`. That's expected given the branch separation, but it means test 2 alone would not have caught a regression where someone wired `deckOf` into the wrong branch — only test 1 combined with the branch-isolation-by-construction argument closes that gap. Not a defect since the brief specified exactly this test, just worth naming.
+
+### Assessment
+**Task quality:** Approved
+**Reasoning:** The implementation matches the brief precisely (verbatim comment, correct branch, correct signature), respects the deps.verify-before-deckOf ordering and branch-isolation constraints confirmed directly in the diff, and both new tests exercise real fixture-backed behavior rather than trivially-passing assertions.</result>
+<usage><subagent_tokens>78740</subagent_tokens><tool_uses>8</tool_uses><duration_ms>99970</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>aab28aa6fa7722e80</task-id>
+<tool-use-id>toolu_015n3fYzfCu7SHYQAMYCeSpP</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\aab28aa6fa7722e80.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 3: held-run list" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Status: DONE
+Commits: 64f6bd8 feat(live): a deck is told which runs are held
+Tests: full infra suite 277/277 passing; typecheck clean
+Concerns: none
+Report: C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-3-report.md</result>
+<usage><subagent_tokens>121273</subagent_tokens><tool_uses>29</tool_uses><duration_ms>265925</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>aecaee5c73e420268</task-id>
+<tool-use-id>toolu_01BdfGwzUKXtu9ikkBwdu8N3</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\aecaee5c73e420268.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 3 (spec + quality)" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>### Spec Compliance
+- ✅ `writes()` is module-level, defined above `route` (review-diff lines ~78–87, `hosted/infra/lib/handlers/ws.ts`) — excludes `control`, `deck`, and `sub` prefixed `public:`/`stream:`, matching the "held" definition exactly.
+- ✅ `heldRuns`/`tellDecks` are defined inside `route`, closing over `deps`/`now`, before the `$connect` block (diff lines ~95–138) — matches the controller's placement ruling (annotate() staying between `const now` and the new helpers is pre-existing code, not a relocation issue).
+- ✅ `heldRuns` filter/sort/cap exactly as specified: `role === "owner" &amp;&amp; !deletedAt &amp;&amp; !endedAt` → sort newest `updatedAt` first → `.slice(0, 20)` → then (and only then) the `watchers()` check (diff lines 106–109). Confirms named risk 1: the per-candidate `watchers()` await is bounded by the 20-cap, not the full manifest.
+- ✅ Entry shape `{ id, name?, packTitle?, held: true }` with `name`/`packTitle` included only when truthy (diff lines 112–117).
+- ✅ `$connect` signed-in branch wired exactly per the controller's literal ruling: `const deck = deckOf(event); await deps.live.connect(...); if (deck) await tellDecks(caller.sub, connectionId); return { statusCode: 200 };` (diff, second hunk, `hosted/infra/lib/handlers/ws.ts`).
+- ✅ `tellDecks` posts to `only` when given, else `decksOf(sub)`, and disconnects on a `"gone"` reply (diff lines 128, 133).
+- ✅ Test uses `ws.test.ts`'s real `deps()`/`ev()` helpers, signed-in `token: "good"` → `user_1` fixture, manifest extended minimally with `s1` (name "Thursday", packTitle "The Long Kiln") and `s2` (neither) — `hosted/infra/test/ws.test.ts` lines 138–154 (fixture), 177–195 (test). The `toEqual` assertion on the full `runs` array proves both inclusion of the held run and exclusion of the unheld one in one check.
+- ✅ Commit subject exactly `feat(live): a deck is told which runs are held`; only the two named files touched (diff stat: 2 files, 84 insertions, 1 deletion).
+- ❌ **Named risk 2, second half** — "a failed post cannot fail the `$connect`": the posted line is correctly targeted at the deck's own `connectionId` (`hosted/infra/test/ws.test.ts:193` confirms via `posted.find(([id]) =&gt; id === "deck1")`), but `tellDecks`'s `try/catch` wraps only `poster.post`/`disconnect` (diff lines 131–137). The line building it — `const line = JSON.stringify({ t: "runs", runs: await heldRuns(sub) });` (diff line 130) — sits *outside* that try/catch. If `deps.store.manifest` or `deps.live.watchers` inside `heldRuns` rejects, the rejection propagates out of `tellDecks`, out of the `if (deck) await tellDecks(...)` call in `$connect` (unguarded there too), and out of `route()` itself — so `$connect` would not return 200, and the error would not be "logged... and never thrown" as the global constraint on `tellDecks` requires. This exact unguarded structure was given verbatim in the brief's Step 3 code, so it is a plan-mandated defect, not something the implementer introduced independently.
+- ⚠️ Cannot verify from diff: whether the `console.error("live: could not say which runs are held", ...)` prefix matches the convention used elsewhere in `ws.ts` (not shown in the diff; not one of the two sanctioned outside-diff risks, so not checked further).
+- ⚠️ Cannot verify from diff: whether `tellDecks`'s post/disconnect loop meaningfully reuses/mirrors `tellWhoIsAttached`'s loop rather than duplicating it verbatim — `tellWhoIsAttached` itself is unchanged and not shown in the diff.
+
+### Strengths
+- `heldRuns` and `writes()` reproduce the brief's filter/sort/cap/shape logic precisely, with the twenty-cap correctly ordered before the `watchers()` fan-out (bounded concurrency, confirmed named risk 1).
+- The new test exercises real production wiring (`deps()`, `ev()`, real `token: "good"` fixture) rather than a hand-rolled stub, and its exact-equality assertion proves both that the held run appears with the right fields and that the unheld run is absent — not just a shallow "was something posted" check.
+- Fixture extension is minimal and non-disruptive: added `s1`/`s2` without touching `getSession` or the existing "open"/"shared" entries other tests depend on (`hosted/infra/test/ws.test.ts:138–154`).
+- `$connect` wiring matches the controller's literal ruling character-for-character.
+
+### Issues
+#### Critical (Must Fix)
+None.
+
+#### Important (Should Fix)
+- **Plan-mandated:** `tellDecks`'s `heldRuns(sub)` call is not covered by the function's `try/catch` (`hosted/infra/lib/handlers/ws.ts`, diff line 130, inside the `tellDecks` body at diff lines 125–138). A rejection from `deps.store.manifest` or `deps.live.watchers` (both awaited inside `heldRuns`) escapes `tellDecks` uncaught, propagates through the unguarded `if (deck) await tellDecks(caller.sub, connectionId);` in `$connect` (second diff hunk), and would make `route()` reject instead of returning `{ statusCode: 200 }`. This violates both the reviewer-flagged risk ("a failed post cannot fail the `$connect`") and the task's own global constraint that `tellDecks` errors are "logged... and never thrown." The unguarded placement was given verbatim in the brief's Step 3 code, so this is inherited from the plan rather than introduced by the implementer — still needs a fix (move the `heldRuns` call inside the try, or wrap it separately) before this can be trusted under real backend failures.
+
+#### Minor (Nice to Have)
+- No dedicated test for "a run held only by a `deck` watcher" or "a run held only by a `public:` link watcher" — `writes()`'s exclusions for these cases are correct by inspection but untested directly. The brief's Step 1 only required the one posted-line test, so this isn't a missed requirement, just uncovered by the new suite.
+- `console.error("live: could not say which runs are held", error)` prefix consistency with the rest of `ws.ts` isn't visible in the diff (flagged above as ⚠️, not independently checked per the review's outside-diff restriction).
+
+### Assessment
+**Task quality:** Needs fixes
+**Reasoning:** The implementation matches the brief and controller rulings closely — helper placement, filtering/sorting/cap logic, wire shape, and the `$connect` wiring are all correct, and the new test genuinely verifies held-inclusion/unheld-exclusion. But the reviewer-flagged risk about `tellDecks` not being allowed to fail `$connect` turns up a real gap: `heldRuns()`'s call is unguarded by the try/catch, so a backend failure during connect would break the 200-response guarantee and violate the "never thrown" constraint — inherited from the brief's own sample code, but still a defect that needs fixing before this can be trusted in production.</result>
+<usage><subagent_tokens>82696</subagent_tokens><tool_uses>3</tool_uses><duration_ms>168657</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>aab28aa6fa7722e80</task-id>
+<tool-use-id>toolu_01UAXQP3Yq1tn1jEooXMGNK5</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\aab28aa6fa7722e80.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 3: held-run list" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Status: DONE (fix round 1 addressed)
+Commits: 64f6bd8 feat(live): a deck is told which runs are held; 49869b2 fix(live): a deck attaches even when its run list cannot be built
+Tests: `npm test -w hosted/infra -- ws` 36/36 passing; typecheck clean
+Concerns: none
+Report: C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-3-report.md</result>
+<usage><subagent_tokens>131371</subagent_tokens><tool_uses>12</tool_uses><duration_ms>97271</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a03d33b8d05c980bf</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a03d33b8d05c980bf.output</output-file>
+<status>completed</status>
+<summary>Agent "Re-review Task 3 fix round 1" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Good — `WsDeps` is already imported, and the pattern `const d: WsDeps = { ...base, store: {...}, poster: {...} }` matches an existing usage at line 394, so this isn't a new pattern. The fix diff is self-contained and type-checks per the report.
+
+### Finding Verdicts
+
+**heldRuns unguarded in tellDecks** — ADDRESSED. `hosted/infra/lib/handlers/ws.ts` (diff lines ~24-48 of the review diff): `tellDecks`'s entire body — the `decksOf` read, `const line = JSON.stringify({ t: "runs", runs: await heldRuns(sub) })`, and the post loop — is now inside one `try { … } catch (error) { console.error("live: could not say which runs are held", error); }`. No `await` in the function's happy path sits outside the guard, so a `manifest`/`watchers` rejection inside `heldRuns` can no longer escape `tellDecks`. Since `tellDecks` never rejects, `if (deck) await tellDecks(...)` in `$connect` no longer propagates a rejection, and `route()` still reaches `return { statusCode: 200 }`. `hosted/infra/test/ws.test.ts:227-251` adds `"still attaches a deck when its run list cannot be built"`, which overrides `store.manifest` to throw, drives a real `$connect` as a deck, and asserts `res.statusCode === 200` and `posted` is empty — proving both that the connect still succeeds and that no partial/garbage post went out. This matches the controller's ruling and the specific defect (manifest rejection escaping) is gone.
+
+### New Breakage in the Fix Diff
+None at Critical/Important severity. One behavioral note below (non-blocking, and it's the literal shape the controller's ruling mandated).
+
+### Out-of-Scope Observations
+- `hosted/infra/lib/handlers/ws.ts` (new `tellDecks` shape): wrapping the whole function body in one `try` instead of keeping the per-iteration `try/catch` around `poster.post`/`disconnect` inside the loop means that if posting to one deck's connection throws mid-loop, the remaining decks in that `decksOf(sub)` batch are skipped for this push (they'll only pick up the held-run list on the next change, not this one). This is a minor regression in fan-out coverage versus the pre-fix per-post isolation, but it is exactly the shape the controller's ruling specified ("the whole body of `tellDecks` goes inside a try/catch"), so it's not something the implementer introduced beyond the mandate — flagging only for awareness, not blocking.
+- Test coverage under the fix targets `deps.store.manifest` rejecting; it does not add a second test for `deps.live.watchers` rejecting. The finding's "(or watchers)" phrasing reads as either being sufficient for one test, and `heldRuns`'s `await Promise.all(mine.map(... deps.live.watchers ...))` sits inside the same try as `manifest`, so the guard covers both paths identically — no functional gap, just noting the untested branch is structurally identical to the tested one.
+
+### Verdict
+**Fix round:** All findings addressed, no new Critical/Important breakage.</result>
+<usage><subagent_tokens>70180</subagent_tokens><tool_uses>4</tool_uses><duration_ms>51460</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>adc7f7f3c9f81fa86</task-id>
+<tool-use-id>toolu_01P6ff2fFtJcPzEdwjGhUY5w</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\adc7f7f3c9f81fa86.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 4: runs pushed on change" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Status: DONE
+Commit: 8e094a0 feat(live): the held-run list is pushed when it changes
+Tests: hosted/infra suite 280/280 passing (ws.test.ts 38/38 incl. 2 new); RED confirmed pre-implementation via stash; typecheck clean
+Concerns: none
+Report: C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-4-report.md</result>
+<usage><subagent_tokens>123317</subagent_tokens><tool_uses>34</tool_uses><duration_ms>360655</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>af7649490631e48dc</task-id>
+<tool-use-id>toolu_0147pzEjgfte9ukvkfEBDkph</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\af7649490631e48dc.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 4 (spec + quality)" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>### Spec Compliance
+- ✅ `watch` branch: `deps.live.watch(...)` unconditional, then `if (conn.deck)` re-writes CONN row via `deps.live.connect(connectionId, conn.sub, now(), { deck: true, run: m["id"] })` and calls `tellWhoIsAttached(m["id"])`, then unconditionally `await tellDecks(conn.sub)` — `hosted/infra/lib/handlers/ws.ts:557-566`. Order matches the ruling exactly (tellDecks after tellWhoIsAttached for a deck).
+- ✅ `$disconnect`: existing control line untouched (`ws.ts:237`), ruling's deck line added beside it (`ws.ts:238-240`), brief's `tellDecks` line added (`ws.ts:241-243`). All three conditions verified against `writes()` (`ws.ts:85-87`): public:/stream: excluded (prefix check), attached tool excluded (`!w.control`), deck's own excluded (`!w.deck` in `writes()` and redundantly `!leaving.deck` in the guard), writing page included.
+- ✅ New test count and shape: `describe("the held-run list is pushed when it changes", ...)` (`ws.test.ts:341-390`) contains (1) the brief's Step-1 test verbatim in substance (`ws.test.ts:342-362`) and (2) exactly one ruling-mandated test (`ws.test.ts:369-389`) asserting `live.connection("deck1")` matches `{ deck: true, run: "s1" }` and a `{ t: "gesture", kind: "tools" }` line posted to `"page"`, with no `decks` field asserted.
+- ✅ Fixture addition is minimal and reuses the pre-existing `s1`/"The Long Kiln" convention already established in `manifest()` at Task 3 (`ws.test.ts:94-95`, `222`), not a new invented title — traced and confirmed no boundary violation and no conflict with any other test that references `getSession("s1")`.
+- ✅ Comments: both brief comments used verbatim (`ws.ts:564-565`, `241-242`); both ruling additions carry exactly one short why-comment each (`ws.ts:238-239`, `559-560`), matching "one short why-comment" constraint.
+- ✅ Commit subject exact match: `feat(live): the held-run list is pushed when it changes` (diff header, single commit `8e094a0`).
+- ✅ Only the two allowed files touched (diff stat: `ws.ts` +15, `ws.test.ts` +52, no other files).
+- ⚠️ Cannot verify from diff: the reported TDD RED/GREEN transcript and `npx prettier --write` run (not re-executed per instructions; code trace below stands in for it).
+
+### Strengths
+- The two named risks both check out under direct trace, not guesswork: `memoryLive().connect` does `marks.set(id, attached)` (`ws.test.ts:23-26`), a full replace, so `leaving.run` is correctly populated for a deck's CONN row after the ruling's re-write — confirmed independently by test assertion `ws.test.ts:386`.
+- New tests assert real state (`live.connection("deck1")`) and real posted payload content (`JSON.parse`), not call-count spies — matches the review's bar for "do the tests verify real behavior."
+- Four disconnect kinds (public:/stream:, attached tool, deck's own, writing page) all traced against `writes()` and the new guard and behave as specced — `ws.ts:85-87`, `241-243`.
+- Non-owner-member watch and deck-not-a-member watch both correctly gated by the pre-existing, unchanged membership check (`ws.ts:552-556`) before any of the new deck logic runs — the new code adds no new authorization surface.
+
+### Issues
+
+#### Critical (Must Fix)
+None.
+
+#### Important (Should Fix)
+None.
+
+#### Minor (Nice to Have)
+- `ws.ts:218` (`tellWhoIsAttached`'s `await deps.live.watchers(run)`) sits outside any try, same as the pre-existing control-tool call sites at `ws.ts:237` and `ws.ts:289`. The diff extends this same unguarded shape to two new call sites: `ws.ts:240` (deck disconnect) and `ws.ts:562` (deck watch). Net-new consequence unique to the watch branch: if `live.watchers` rejects inside the `if (conn.deck)` block, the throw propagates past the unconditional `await tellDecks(conn.sub)` at `ws.ts:566`, so a deck's watch could 500 without the "deck or not, tellDecks" push firing. This matches the file's existing risk tolerance (top-level `try/catch` in `handler()`, `ws.ts:589-594`, downgrades any such throw to a logged 500 rather than crashing), so it's not a regression in kind, just an additional trigger of an accepted pattern.
+- `tellWhoIsAttached(m["id"])` at `ws.ts:562` fans out to all non-control watchers of the run, which — traced through `ws.ts:557`'s unconditional `live.watch(connectionId, m["id"], conn.sub, now())` — now includes the deck itself (it becomes a watcher of the run it just watched). The deck therefore also receives its own `{t:"gesture", kind:"tools"}` broadcast. Neither test asserts this either way (`ws.test.ts:387` filters only for `"page"`). The report flags this class of gap as deliberately deferred ("tellWhoIsAttached counts nothing deck-shaped yet, Task 6's job"), which is consistent with the ruling's brief not asking for any exclusion — noted for completeness, not a defect against this task's scope.
+
+### Assessment
+**Task quality:** Approved
+**Reasoning:** Every brief and ruling requirement is present at the cited lines, ordering and comment placement match verbatim where specified, the two named risks were traced and confirmed safe (memory double's `connect` overwrites, not merges; the unguarded-rejection shape is pre-existing and now merely extended, not newly introduced), and the new tests verify real posted-line content and real CONN-row state rather than call counts.</result>
+<usage><subagent_tokens>103236</subagent_tokens><tool_uses>16</tool_uses><duration_ms>251913</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a69534a9f2b01fbee</task-id>
+<tool-use-id>toolu_0142WjHQ4N4xLDWx9Nt2DbB9</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a69534a9f2b01fbee.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 5: offer.ts" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Status: DONE
+Commit: 7c97da3 feat(run): the run says what a deck may press
+Tests: 9/9 in offer.test.ts pass (RED confirmed first); full `apps/web/src/run` suite 198/198 pass; typecheck clean
+Concerns: settled gates before TYPED/manual/finalizeUnit branching — an unsettled declareSubject/manual-with-items would get the generic message and empty presets instead of the typed preset; no test covers that combination, message text is identical either way, only presets would differ
+Report: C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-5-report.md</result>
+<usage><subagent_tokens>88642</subagent_tokens><tool_uses>22</tool_uses><duration_ms>266780</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>aced883dd8aa47c1c</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\aced883dd8aa47c1c.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 5 (spec + quality)" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Confirmed: `manual.checklist` (pack.ts:385-388) and `finalizeUnit.confirm` (pack.ts:410-415) are exactly the fields `offer.ts:190,197` read. Field names are correct — no silent-pressable bug.
+
+Both named risks are clear. Now the final assessment.
+
+### Spec Compliance
+- ✅ Ruling 1 — `PRESSABLE` is a plain `Record&lt;string, "roll" | "carry-on" | "close" | "enter"&gt;`, no `infer` expression. `apps/web/src/run/offer.ts:154`.
+- ✅ Ruling 2 — manual: empty `checklist` → primary `carry-on` (label = step label); non-empty → `needsPage`. `finalizeUnit`: non-empty `confirm` → `needsPage`; empty/absent falls through to `PRESSABLE` → `close`. `manual` removed from `TYPED`; `declareSubject` stays. `offer.ts:160,189-197`.
+- ✅ Ruling 3 — three extra tests present and correctly targeted: manual-no-items→carry-on (`offer.test.ts:67-71`), manual-with-items→needsPage (`offer.test.ts:75-83`), finalizeUnit-with-items→needsPage (`offer.test.ts:87-95`).
+- ✅ Ruling 4 — `settled` is read (not left unused), placed as an early gate mirroring `closesTheUnit`'s own gate ordering (`handsFree.ts:60`, checked before any step-kind branching), with a test (`offer.test.ts:99-103`). Concern is disclosed rather than hidden.
+- ✅ Field names verified against schema: `manual.checklist` and `finalizeUnit.confirm` (`packages/rules-schema/src/pack.ts:385-388,410-415`) match exactly what `offer.ts:190,197` reads — no silent-pressable risk.
+- ✅ `settled`/owed/confirm semantics agree with `handsFree.ts`'s `closesTheUnit` (`handsFree.ts:60-63`): settled gates first, `finalizeUnit.confirm` gates next, owed gates after — same relative order the implementation uses.
+- ✅ Exported shapes match exactly: `Offer`, `OfferInput`, `offerOf` (`offer.ts:99-107,109-125,162`).
+- ✅ Ordering for the brief's five original branches (not live / no step / typed+preset / owed&gt;0 / pressable-or-page) preserved verbatim (`offer.ts:167-203`).
+- ✅ Pure function, no React/engine mutation; lives beside `handsFree.ts`; comment voice matches (references `snapshot.asks`, "honor check" language lifted from `pack.ts:393`, why-not-what comments throughout).
+- ✅ American English; no stray prose.
+- ✅ Commit subject exact: `feat(run): the run says what a deck may press` (per diff header and report).
+- ✅ Only `offer.ts` and `offer.test.ts` created; diffstat confirms nothing else touched.
+- ⚠️ Cannot verify from diff: actual TDD RED/GREEN transcript and full-suite/typecheck runs — taken on the report's word per task instructions (not re-run).
+
+### Strengths
+- Placing the `settled` gate exactly where `closesTheUnit` places its own `!run.settled` check (before any step-kind branching) is a genuinely faithful precedent read, not just a plausible guess — verified against `handsFree.ts:60`.
+- Comments are consistently why-not-what and reuse domain vocabulary ("honor check") rather than inventing new phrasing — `offer.ts:174-176,187-188,195-196`.
+- The report's self-flagged concern about `settled` ordering vs. typed presets is accurate, precisely scoped, and honestly labeled as untested rather than smoothed over.
+- Test assertions check full `primary`/`presets` object shapes where new behavior is introduced (`offer.test.ts:45,69,81,93,101`), not just truthiness.
+
+### Issues
+
+#### Critical (Must Fix)
+None.
+
+#### Important (Should Fix)
+None.
+
+#### Minor (Nice to Have)
+- The flagged `settled`-before-typed ordering: an unsettled `declareSubject` returns the generic `"&lt;label&gt; on the page"` with empty `presets` instead of the typed preset (`offer.ts:177` fires before `offer.ts:179-185`). This is a reasonable call — it mirrors `closesTheUnit`'s own gate order, and `presets` existing only to seed a preset the page will ignore anyway (since the page still owns the field) makes the practical impact of missing it small. No brief or ruling test covers this combination. Worth a one-line comment at `offer.ts:174` noting the preset is intentionally dropped when unsettled, and/or a follow-up test, but not a defect to block on.
+- Four branches repeat the identical `{ ...bare, primary: null, needsPage: \`${label} on the page\` }` shape (`offer.ts:177,191,197,202`). Each carries its own rationale comment so the repetition reads more like "four distinct rulings that happen to produce the same shape" than duplication, but a small local helper would trim it further if this file grows more branches later.
+
+### Assessment
+**Task quality:** Approved
+**Reasoning:** All three controller rulings and the `settled`-reading requirement are implemented correctly and verified against both the schema (correct field names, ruling out the silent-pressable risk) and `handsFree.ts`'s precedent (ordering agrees, not contradicts); the one open design question is self-disclosed, low-impact, and untested by design rather than a defect.</result>
+<usage><subagent_tokens>81760</subagent_tokens><tool_uses>7</tool_uses><duration_ms>114628</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a86f0a6c6e22f46ab</task-id>
+<tool-use-id>toolu_01KYd9aMvkbsxRsUoofVPmtU</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a86f0a6c6e22f46ab.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 6: publisher carries offer" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>All clean after the commit's prettier pass.
+
+Status: complete
+Commit: 264227b — `feat(run): the snapshot carries what a deck may press`
+Tests: `RunView.offer.test.tsx` 2/2 pass (TDD RED confirmed for both, then GREEN); `apps/web/src/run` 33 files/200 tests pass; `hosted/infra` 17 files/280 tests pass (ws.ts decks-count line also RED→GREEN verified); `npm run typecheck` clean.
+
+Concerns: `activeStepLabel` helper added beyond the brief's literal code, needed because `ActiveStep` has no `.label` field (brief's `run.activeStep?.label` doesn't exist — verified against `flow.ts`/`pack.ts`); mirrors the label logic already duplicated in `StepPanel`/`ClosingStep`/`ControlPanel`'s `RemoteStep`. Flagged a possible pre-existing gap in `dynamoLive`'s deck-watch-row marking (outside touched files, not fixed). Full report: `C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-6-report.md`</result>
+<usage><subagent_tokens>253372</subagent_tokens><tool_uses>109</tool_uses><duration_ms>1081168</duration_ms></usage>
+</task-notification>
+
+---
+
+nice catch -- let's get these changes all committed and a PR opened when we're done with the work. I also have a Stream Deck connected once we've run the headless test to directly validate with.
+
+---
+
+<task-notification>
+<task-id>ad8a4f750941e988a</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\ad8a4f750941e988a.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 6 (spec + quality)" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Confirmed. I now have everything needed for the review.
+
+### Spec Compliance
+- ✅ Publisher gate widened to `shared || decks &gt; 0` named `publishing` — `apps/web/src/run/RunView.tsx:212`. Effect guard changed from `!shared` to `!publishing` — `RunView.tsx:217`. Dependency array has `publishing, decks` in place of `shared` — `RunView.tsx:258`.
+- ✅ `useAttachedDecks(run.record?.runId ?? null)` called beside `shared` — `RunView.tsx:210`, with the brief's comment reproduced verbatim at `RunView.tsx:202-208`.
+- ✅ `putSnapshot` body carries `offer: offerOf({...})` beside `paper` and `control`, with `seq: events.length` as the offer's first field — `RunView.tsx:239-250`, `snapshotOf`/`paperOf`/`control` untouched around it.
+- ✅ `useAttachedDecks(runId)` added beside `useAttachedTools`, reads `data.decks` off `tools` gestures scoped to `runId`, resets to `0` on `runId` change — `apps/web/src/run/useAttachedTools.ts:291-303`.
+- ✅ `tellWhoIsAttached` adds `decks: watching.filter((w) =&gt; w.deck).length` to the `tools` gesture's `data` — `hosted/infra/lib/handlers/ws.ts:331-332`.
+- ✅ Page stays the one writer — no code path in the diff calls anything that moves/mutates the run; only `putSnapshot` is called, same as before.
+- ✅ Only the five permitted files touched (diff stat: `RunView.offer.test.tsx` new, `RunView.tsx`, `useAttachedTools.ts`, `ws.ts`, `ws.test.ts` — matches exactly).
+- ✅ Commit subject exactly `feat(run): the snapshot carries what a deck may press` (commit `264227b`).
+- ✅ American English and file-voice comments: `activeStepLabel`'s new doc comment uses the file's existing "--" em-dash convention (also at `RunView.tsx:866`); the two brief-specified comments are reproduced verbatim (`RunView.tsx:202-208`, `useAttachedTools.ts:284-290`).
+- ✅ Dispatch-note amendment honored: `renderRunView` was hand-built on the `App.test.tsx`/`ChatPanel.test.tsx`-style module-mock render pattern (not a nonexistent helper) — `apps/web/src/run/RunView.offer.test.tsx:51-108`; `useAttachedDecks` is driven via a real `syncBus.emit` of a `tools` gesture, not a mock — `RunView.offer.test.tsx:103-107`.
+- ✅ Dispatch-note amendment honored: every `useRun` field the `offerOf` block reads was checked against `useRun.ts`'s actual return shape. Verified independently: `started` (`useRun.ts:212`), `readOnly` (`:948`), `pending` (`:128`), `activeStep`/`ActiveStep = {phase,step,index}` with no `.label` (`packages/engine/src/flow.ts:16-20`, `useRun.ts:422`), `moves: Array&lt;{id, move: MoveDef}&gt;` with `MoveDef.label: string` required (`packages/engine/src/execute.ts:789-800`, `packages/rules-schema/src/pack.ts:687-689`), `canUndo` (`useRun.ts:857`), `blockingObligations` (`:1103`). The brief's non-existent `run.activeStep?.label` was correctly replaced by the new `activeStepLabel(pack, run.activeStep)` helper rather than left broken.
+- ✅ Dispatch note's extra server test present: `hosted/infra/test/ws.test.ts:359` extends the existing "marks a deck's connection... tells the table" test to assert `data: { decks: 1 }` on the `tools` gesture posted after a deck's `watch`.
+- ⚠️ Cannot verify from diff: whether `dynamoLive`'s real two-row watcher model actually threads `deck: true` onto the per-session watch row `watchers()` reads (only the in-memory test double is exercised here). The diff's new `ws.ts:331` line (`watching.filter((w) =&gt; w.deck).length`) does depend on that row carrying `deck` — per the controller's ruling this is a Task 4 defect fixed in Task 7, out of scope for Task 6's touched files, and the implementer flagged it explicitly in the report's "Concerns" section rather than silently leaving it. Not a Task 6 defect.
+
+### Strengths
+- `activeStepLabel` (`RunView.tsx:92-107`) is a byte-for-byte mirror of `StepPanel`'s per-`step.kind` label logic — verified all five cases against `StepPanel`/`ClosingStep` (`RunView.tsx:1319`, `:1355`, `:1393`, `:1416`, `:1516`), including the `manual`/`closesUnit` boundary against the engine's own `closesUnit()` (`packages/engine/src/flow.ts:123-125`). No third spelling introduced.
+- `live`/`settled`/`owed` in the `offerOf` input are computed from exactly the concepts `OfferInput`'s own doc comments name (`apps/web/src/run/offer.ts:28-38`): `live` = started &amp;&amp; editable &amp;&amp; not ended; `settled` = `pending === null`; `owed` = `blockingObligations.length`.
+- The new test drives `useAttachedDecks` through a genuine `syncBus.emit` gesture rather than mocking the hook, and asserts the actual `putSnapshot` call body rather than a stand-in — real coverage of both named cases.
+- Implementer's self-report is candid about a scope boundary (the `dynamoLive` watch-row dependency) instead of silently glossing over it.
+
+### Issues
+#### Critical (Must Fix)
+None.
+
+#### Important (Should Fix)
+None.
+
+#### Minor (Nice to Have)
+- `activeStepLabel` (`RunView.tsx:92-107`) is now a third independent copy of the step-heading switch, alongside `StepPanel`'s (`:1314-1438`) and `ControlPanel.tsx`'s `RemoteStep` (`ControlPanel.tsx:314-406`) — and the diff didn't touch either existing copy, so a future edit to one heading rule (adding a case, changing a fallback) can silently drift from the other two without a compiler complaint. Since `StepPanel` lives in the same touched file (`RunView.tsx`), extracting one shared helper both `StepPanel` and `activeStepLabel` call was possible within the file-scope constraint; not doing so is a reasonable, low-risk call for a task scoped narrowly to the offer, but it is duplication worth collapsing later.
+- Test 1 (`RunView.offer.test.tsx:111-116`) asserts `offer.seq` only via `expect.any(Number)`, not the concrete value (`events.length === 1` for this fixture). The production code path is independently verified correct by reading `offer.ts`/`RunView.tsx`, so this doesn't undermine the verdict, but the test itself doesn't pin the value it's nominally about.
+- Noted in the report: the jsdom `HTMLCanvasElement.getContext` console warning is pre-existing `preloadDice3d()` behavior unrelated to this change, caught internally, and doesn't affect any assertion — correctly judged as noise, not a defect.
+
+### Assessment
+**Task quality:** Approved
+**Reasoning:** All brief and global-constraint requirements are met with file:line evidence, all three named risks (useRun field shapes, `activeStepLabel` fidelity to the page's real heading, and the dependency array) check out against the actual source, and the tests exercise the real `useAttachedDecks` path rather than a mock; only minor polish items (a third duplicated label switch, one under-specific assertion) remain.</result>
+<usage><subagent_tokens>103046</subagent_tokens><tool_uses>26</tool_uses><duration_ms>201743</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a1b402695dc88db97</task-id>
+<tool-use-id>toolu_011ZhXoJphtNTvmKETzjgZXG</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a1b402695dc88db97.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 7: drive forwarded" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Status: DONE
+Commit: ed9b17b feat(live): a deck's press reaches the device holding the run
+Tests: RED confirmed first (4 failures, including the pre-existing deck-attach test surfaced by the faithful double), then GREEN — `ws` suite 41/41, full `hosted/infra` suite 283/283, `npm run typecheck` clean.
+Concerns: none; `s2` in the fixture has no `getSession` entry (resolves to no session) so `s3` (owned by `user_2`) was added for the "somebody else's run" test, as the brief anticipated.
+Report: C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-7-report.md</result>
+<usage><subagent_tokens>130525</subagent_tokens><tool_uses>28</tool_uses><duration_ms>348873</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a926fe853d5006d55</task-id>
+<tool-use-id>toolu_01TjtD7f1J64m85YjSjGdjSX</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a926fe853d5006d55.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 7 (spec + quality)" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>All verification complete. Findings below.
+
+### Spec Compliance
+- ✅ `drive` branch placed after the control `event` branch (`ws.ts:371`) and before the `public:`/`stream:` early return (`ws.ts:534`-ish) — confirmed at `ws.ts:440-492`.
+- ✅ `drive` requires `conn.deck` — `ws.ts:451`.
+- ✅ Wire shapes exact: deck→server consumed fields `run/seq/ref/press/move?/answer?` (`ws.ts:474-481`); server→writer `{t:"drive",from,run,seq,ref,press,move?,answer?}` (`ws.ts:474-481`); page→server `drove` with `to` (`ws.ts:502`); server→deck `drove` with `to` stripped (`ws.ts:509-513`).
+- ✅ Refusal strings verbatim: "That run is not yours to press." (`ws.ts:462`), "That run has ended." (`ws.ts:463`), "Nothing is holding that run." (`ws.ts:466`); 400 body "a press has a run and a ref" (`ws.ts:461`).
+- ✅ `writes()` reused unmodified as sole writer predicate (`ws.ts:85-87`, `ws.ts:465`), not re-spelled.
+- ✅ Server stores nothing about a press — no `deps.store` writes in either branch, only a `getSession` read (`ws.ts:458`).
+- ✅ Ruling's extension 1: `watch` branch now passes marks to `deps.live.watch` — `conn.deck ? { deck: true, run: m["id"] } : undefined` (`ws.ts:648`, confirmed against diff line 135).
+- ✅ Verified against production: `dynamoLive.watch()` writes `marks(attached)` onto the `SESSION#…/CONN#…` row that `watchers()` queries (`hosted/infra/lib/handlers/live.ts:132-138,149-160`) — the fix is correct for production, not just for the test double.
+- ✅ Ruling's extension 2: `memoryLive()` rebuilt as a faithful two-row double — `watchMarks` keyed by `${sessionId}|${connectionId}`, written only by `watch()`, read only by `watchers()`; `connection()`/`decksOf()` keep reading `marks` from `connect()`; `disconnect` clears both (`hosted/infra/test/ws.test.ts:21-70`).
+- ✅ New test proving a deck watching `s1` is not among the writers — `hosted/infra/test/ws.test.ts:1033-1046` (deck1 also sends `watch`, asserts exactly one `drive` posted, to `page` only).
+- ✅ `drove` branch has explicit `public:`/`stream:` guard at its top (`ws.ts:503-506`), with its own explanatory comment in the file's voice.
+- ✅ Tests use the file's real `deps()`/`ev()` helpers (pre-existing at `ws.test.ts:89,194`), not the brief's inline event-literal style.
+- ✅ `s3` fixture added, owned by `user_2` only (`ws.test.ts:144`), used correctly since `deck1` authenticates as `user_1` via the `"good"` token (`ws.test.ts:187`).
+- ✅ Existing test `"marks a deck's connection with the run it watches, and tells the table"` (`ws.test.ts:389-409`, untouched by the diff) went red under the faithful double and green again purely from the `ws.ts` production fix — confirmed its `decks:1` assertion traces to `tellWhoIsAttached`'s `watching.filter((w) =&gt; w.deck).length` (`ws.ts:220`), which reads `watchers()`. No test assertion was weakened; the fix lives in production code as required.
+- ✅ Commit subject exact: "feat(live): a deck's press reaches the device holding the run".
+- ✅ Only `hosted/infra/lib/handlers/ws.ts` and `hosted/infra/test/ws.test.ts` touched (per diff stat).
+- ✅ Named risk 2 (drove route): checks both `target.deck` and `target.sub === conn.sub` before posting (`ws.ts:508`); an unresolved/expired `to` (`target` null) is a silent 200 (`ws.ts:508`), not a throw.
+- ✅ Named risk 3 (drive forwarding loop): a `"gone"` result disconnects the writer, a post error is caught and logged per-iteration, and neither aborts the loop or the route (`ws.ts:483-489`) — matches the file's standing idiom used elsewhere (e.g. the `ask`-forwarding loop just above it, `ws.ts:424-428`).
+- ⚠️ Cannot verify from diff: full-suite behavior beyond the reported 283/283 (not re-run per task instructions; spot-checked ~10 pre-existing `live.watch(...)` call sites across the file and found each either passes explicit marks or relied on no marks either way, consistent with the report's claim that no other test needed a setup change).
+
+### Strengths
+- The `drive`/`drove` code is copied from the brief's own snippet verbatim except for the ruling's mandated guard line — no scope creep, no re-spelling of `writes()`.
+- The `memoryLive()` rewrite is a genuinely faithful two-row model (mirrors `dynamoLive`'s CONN row vs. SESSION#…/CONN# row split), not a partial patch — verified against `live.ts` directly.
+- New tests assert whole posted lines with `toEqual`, including the deck-watching-its-own-run edge case explicitly required by the ruling, and correctly narrow the assertion to `drive`-typed posts only before checking count/destination.
+- Self-review in the report is accurate; I did not find any unacknowledged deviation.
+
+### Issues
+#### Critical (Must Fix)
+None.
+
+#### Important (Should Fix)
+None.
+
+#### Minor (Nice to Have)
+- `ws.ts:481` — `answer` is accepted when `typeof m["answer"] === "object"`, which also admits arrays (JS `typeof [] === "object"`), not just plain objects. This is copied verbatim from the brief's own code, not an implementer deviation, so it's not chargeable to this task — flagging only as a latent brief-level looseness for whoever owns the wire contract going forward.
+
+### Assessment
+**Task quality:** Approved
+**Reasoning:** Both the brief's own requirements and the controller's ruling extensions (production fix to `watch`, faithful two-row double, extra `drove` guard, `s3` fixture) are implemented correctly and verified against production code in `live.ts`; all three named risks check out; no test assertions were weakened to force green.</result>
+<usage><subagent_tokens>98968</subagent_tokens><tool_uses>21</tool_uses><duration_ms>220889</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>ab3974428abe3e5d3</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\ab3974428abe3e5d3.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 8: Plus gate" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Status: DONE
+
+Commit: 5ff6e30 feat(api): driving a run from a deck is part of plus
+
+Tests: `npm test -w hosted/infra` → 17 files, 286 tests, all green; `npm run typecheck` passes; TDD RED confirmed first (1 failing ws test, press wrongly forwarded), then GREEN after wiring.
+
+Concerns:
+1. `hosted/infra/lib/api-stack.ts`'s `wsHandler` environment does not set `RUNLOG_GATES`/`STRIPE_FEATURES` — outside this task's touch list, so the gate is inert in deployed environments until a CDK follow-up adds those env vars to the WebSocket Lambda.
+2. Deviated from the brief's literal `featuresFromEnv` import from `api.ts` — wrote a small local `plusFeatureFromEnv` mirror in `ws.ts` instead, to avoid pulling api.ts's whole module graph (WorkOS/Stripe/Discord, ~3000 lines, with module-level side effects) into the WebSocket Lambda's bundle. `grantsOf` (the one entitlement check) is still shared via `billing.ts`.
+
+Report: C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-8-report.md</result>
+<usage><subagent_tokens>127844</subagent_tokens><tool_uses>63</tool_uses><duration_ms>458460</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>ab3974428abe3e5d3</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\ab3974428abe3e5d3.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 8: Plus gate" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Status: DONE (fix round 1 complete)
+
+Commits: 5ff6e30 feat(api): driving a run from a deck is part of plus; 8049f00 fix(api): the live function is told where plans are on
+
+Tests: `npm test -w hosted/infra` → 17 files, 287 tests, all green (added one stack test asserting `wsHandler` gets `RUNLOG_GATES`/`STRIPE_FEATURES`); `npm run typecheck` passes.
+
+Concerns: both prior concerns closed — `wsHandler` environment in `api-stack.ts` now carries `RUNLOG_GATES`/`STRIPE_FEATURES`; `featuresFromEnv` now lives once in `billing.ts`, imported by both `api.ts` and `ws.ts`, with `plusFeatureFromEnv` deleted from `ws.ts`. No new concerns.
+
+Report: C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-8-report.md (fix report appended)</result>
+<usage><subagent_tokens>151618</subagent_tokens><tool_uses>27</tool_uses><duration_ms>217005</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>aba7e4e87a8717b0f</task-id>
+<tool-use-id>toolu_011rvsupsDto1tm16FPuTuWe</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\aba7e4e87a8717b0f.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 8 (spec + quality)" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>### Spec Compliance
+
+- ✅ `grantsOf` extracted to `hosted/infra/lib/handlers/billing.ts:159` as `export async function grantsOf(billing: Pick&lt;BillingStore, "entitlements" | "flags"&gt;, sub: string, flags?: string[])`, doc comment carried verbatim from the old `api.ts` closure. Matches controller ruling 1.
+- ✅ `hosted/infra/lib/handlers/api.ts:96` binds it locally: `const grantsOf = (sub, flags) =&gt; grantsOfStore(deps.billing, sub, flags);` — same `deps.billing` store, same `(sub, flags?)` signature as the removed closure (`hosted/infra/lib/handlers/api.ts:89-92` old), so no existing call site needed to change. Smallest-diff extraction confirmed.
+- ✅ `ws.ts`'s `handler` (`hosted/infra/lib/handlers/ws.ts:266-281`) builds `dynamoBilling({ table })` the same way `api.ts`'s `depsFromEnv` does, reads `RUNLOG_GATES`/`STRIPE_FEATURES` by the same names, and sets `entitled` only when gates are on (`...(gates ? {...} : {})`). Kept-flags-stand-in-for-token-flags comment is present at `ws.ts:276-279`. Matches ruling 2.
+- ✅ Fix round: `hosted/infra/lib/api-stack.ts:465-466` adds `RUNLOG_GATES: config.gates ? "on" : "off"` and `STRIPE_FEATURES: JSON.stringify(config.stripe.features)` to `wsHandler`'s environment — checked against `handlerEnvironment` (`api-stack.ts:222,224`), spelled identically, same expressions. Stack test added at `hosted/infra/test/api.test.ts:305-318`. Matches ruling 3.
+- ✅ `featuresFromEnv` moved to `billing.ts:165-173`, imported by both `api.ts:61` and `ws.ts:197`; no `plusFeatureFromEnv` remains anywhere in the diff — one parser, two call sites. Matches ruling 4.
+- ✅ `grantsOf` unit test at `hosted/infra/test/handlers.test.ts:368-376` — bought (`putEntitlements(...,["plus"])`), kept (`putFlags(...,["hosted-licensing"])`), token flag (`["plus","server"]` arg) all present via `arrayContaining` + `toHaveLength(3)`, proving the union/dedup. Matches ruling 5.
+- ✅ Gate string exact, shape `{t:"drove", ref, ok:false, say}` confirmed via test assertion at `ws.test.ts:421`; placed at `ws.ts:469`, immediately after the ended-run check (`ws.ts:468`) and before `const writers = (await deps.live.watchers(run))...` (`ws.ts:471`).
+- ✅ Refused press never forwarded — `ws.test.ts:415-422` clears `posted` right before the press and asserts `posted.some(([id]) =&gt; id === "page")` is `false`.
+- ✅ Watching not gated — `ws.test.ts:425-439` connects a deck with `entitled: async () =&gt; false` and asserts a `runs` message still arrives.
+- ✅ `entitled` absent when gates are off — `...(gates ? {entitled...} : {})` spread at `ws.ts:280` omits the key entirely, not just sets it `undefined`.
+- ✅ Commit subjects exact: `5ff6e30 feat(api): driving a run from a deck is part of plus`, `8049f00 fix(api): the live function is told where plans are on` (diff header).
+- ✅ Touch-list respected — diff stat: `api-stack.ts`, `handlers/api.ts`, `handlers/billing.ts`, `handlers/ws.ts`, `test/api.test.ts`, `test/handlers.test.ts`, `test/ws.test.ts`. Nothing outside the allowed set.
+- ✅ American English throughout comments/strings — no British spellings found.
+- ⚠️ Cannot verify from diff: the `refuse(...)` helper's exact construction of `{t:"drove", ref, ok:false, say}` is pre-existing code not shown in this diff's hunks; inferred correct from the pattern of prior `refuse` calls and the passing test assertions.
+
+### Named-risk checks performed
+1. `grantsOf` extraction (`api.ts:89-96`): local wrapper binds `deps.billing`, same object the old closure read (`deps.billing.entitlements`/`deps.billing.flags`); signature unchanged (`sub, flags?`) so no call site elsewhere in `api.ts` needed editing. No behavior change.
+2. WS Lambda env spelling: read `hosted/infra/lib/api-stack.ts:206-224` (API/Discord `handlerEnvironment`) against `:462-467` (`wsHandler`). `RUNLOG_GATES: config.gates ? "on" : "off"` and `STRIPE_FEATURES: JSON.stringify(config.stripe.features)` are byte-identical expressions in both places; `ws.ts:267-268` reads `process.env["RUNLOG_GATES"]` / `process.env["STRIPE_FEATURES"]`, the same names.
+3. Ordering in `ws.ts`: `deps.entitled` check at line 469 runs before `const writers = (await deps.live.watchers(run))...` at line 471 — confirmed directly in the diff hunk; a refusal returns before `watchers()` is ever called.
+
+### Strengths
+- Extraction is genuinely the smallest diff that preserves behavior (`api.ts:89-96`); no ripple into other `grantsOf` call sites.
+- `billing.ts` is the right home for both moved functions — no new imports dragged in (both use only built-ins: `Promise.all`, `Set`, `JSON.parse`).
+- Tests are precise about what they claim: the refusal test checks both the exact refusal payload and that nothing reached `page`; the watch test isolates that `entitled: false` doesn't block `$connect`; the stack test anchors on `WS_ENDPOINT` to make sure it's asserting against the right Lambda function.
+- Fix-round concerns (inert gate in prod, duplicate parser) were both real gaps against the global "one entitlement check / one parser" constraint, and both are closed cleanly with no re-introduced duplication (grepped: `featuresFromEnv` has one definition, two call sites).
+
+### Issues
+
+#### Critical (Must Fix)
+None.
+
+#### Important (Should Fix)
+None.
+
+#### Minor (Nice to Have)
+- Error handling inside `entitled` (`ws.ts:280`): if `billing.entitlements`/`billing.flags` reject, `grantsOf` rejects, `deps.entitled(conn.sub)` rejects, and the unguarded `await` at `ws.ts:469` propagates the exception up to `handler`'s outer `try/catch` (`ws.ts:283-288`), producing a generic `{statusCode:500}` with no `"drove"` refusal posted. This never forwards the press and never crashes the process, so it's fail-closed, but it's untested and diverges from the normal `refuse(...)` flow (deck gets a 500 instead of a `say`). This matches the existing convention in the same branch — `deps.store.getSession(run)` (`ws.ts:467`) is equally unguarded — so it's not a regression introduced by this task, just an untested edge case worth a follow-up test if store failures matter here.
+- `ws.test.ts:425-439` ("lets a deck watch without Plus") can't regress-detect gating on `$connect` specifically, since `entitled` is never referenced on that path — it would pass identically whether or not the fix existed. This is copied verbatim from the brief, so not an implementer defect, just a weak assertion worth flagging.
+
+### Assessment
+**Task quality:** Approved
+**Reasoning:** Every controller ruling and global constraint is satisfied and traceable to specific lines, the two named extraction/env risks check out byte-for-byte against the API function's wiring, and the fix round closed both self-reported gaps (inert stack env, duplicate parser) without leaving any second entitlement check or feature parser behind.</result>
+<usage><subagent_tokens>91331</subagent_tokens><tool_uses>6</tool_uses><duration_ms>165218</duration_ms></usage>
+</task-notification>
+
+---
+
+status?
+
+---
+
+<task-notification>
+<task-id>ae071fb43e06ea3e7</task-id>
+<tool-use-id>toolu_01H9P2zWpk48UZyW6ptizxyk</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\ae071fb43e06ea3e7.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 9: the page takes the press" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Both clean post-commit (prettier hook reformatted 9 staged files in place, no substantive changes).
+
+Status: DONE
+Commit: 0b5ed6c — feat(run): a deck's press moves the run that is holding it
+Tests: 629/629 passing (apps/web/src), typecheck clean, prettier clean
+Concerns: (1) `offer.ts` never actually emits `primary.id === "enter"` today (its no-step branch returns `primary: null`), so that arm is implemented but currently dead code — fix is in `offer.ts`, out of scope; (2) a per-contestant move can't be driven from a deck since `Offer.moves` erases the contestant; (3) touched two extra files beyond the plan (`LibraryView.tsx`, `Members.test.tsx`) — both one-line fixes required by `bus.ts`'s new `drive` union member for `npm run typecheck` to pass; (4) the drive-taking effect re-subscribes every render (depends on the whole `run` object per the brief's own dep list, with `live` swapped for `sync` per ruling 4).
+Report: C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-9-report.md</result>
+<usage><subagent_tokens>178967</subagent_tokens><tool_uses>71</tool_uses><duration_ms>684289</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>ae071fb43e06ea3e7</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\ae071fb43e06ea3e7.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 9: the page takes the press" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Status: DONE
+Commits: 0b5ed6c (feat: a deck's press moves the run that is holding it), 6f9ec6f (fix: between units, a deck may enter the next one)
+Tests: 631/631 passing (apps/web/src), typecheck clean; `offer.test.ts` RED confirmed before the fix, then GREEN
+Concerns: only concern 1 was in scope and is now closed (offer.ts's no-step branch produces `enter` from a new `between` input, gated in RunView on the same conditions — pending, receipts, ended, readOnly, started — that gate the page's own two "Enter" buttons); concerns 2-4 from the original report are untouched, left for the reviewer as instructed
+Report: C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-9-report.md (fix round appended)</result>
+<usage><subagent_tokens>217869</subagent_tokens><tool_uses>30</tool_uses><duration_ms>352917</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a9d0f5eb675ca7407</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a9d0f5eb675ca7407.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 9 (spec + quality)" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>### Spec Compliance
+- ✅ `takePress.ts` is the brief's Step 3 verbatim — `Press`/`Verdict`/`Acts` shapes, the doc comment, and all six refusal strings exactly as specified (`takePress.ts:26-71`); `takePress.test.ts` is the brief's five-case Step 1 file verbatim.
+- ✅ `parseDrive`, `Drive`, `LiveOptions.onDrive`, `LiveSocket.drove` land as specified (`socket.ts:64-96`, `:110`, `:241-243`), and the `onmessage` drive branch sits before the gesture branch (`socket.ts:204-208`).
+- ✅ Ruling 1 honored: bus member is `{ t:"drive"; from; run; seq; ref; press; move?; answer? }` (`bus.ts:16-17`) and `RunView` matches on `news.run` (`RunView.tsx:371`).
+- ✅ Ruling 3 honored: `offerOf` hoisted into `const currentOffer = useMemo(...)` (`RunView.tsx:200-250`) and the publish effect spreads `offer: currentOffer` (`RunView.tsx:269`).
+- ✅ Ruling 4 honored: `onDrive` wired at the sync engine's single `openLive` call and emitted on `syncBus` (`SyncProvider.tsx:150-160`); `drove` added to `Sync` beside `gesture` and routed to the same `socketRef.current` (`SyncProvider.tsx:46`, `:241-242`). No second socket.
+- ✅ Ruling 5 honored: `driveSeen` is a `useRef` on `RunView` (`:356`) cleared in an effect keyed on `run.record?.runId` (`:357-359`), declared *before* the subscribing effect so the clear commits first on a run change.
+- ✅ Ruling 6 honored: `OfferInput.between` added (`offer.ts:41`), `enter` produced only in the `!input.step` branch (`offer.ts:60-63`), and `RunView` computes `between` from `state`/`started`/`readOnly`/`ended`/`pending`/`receipts`/`activeStep` with the labels copied from the buttons (`RunView.tsx:225-238`).
+- ✅ `seq` is compared against `run.events.length` (`RunView.tsx:374`), the same number `currentOffer` writes as `offer.seq` (`:202`).
+- ✅ Commit subjects are exactly the two required strings (diff header).
+- ❌ `carry-on` is mapped to the wrong page function for a `manual` step with `closesUnit: true` — see Important #1.
+- ❌ An `answer` press is accepted against any offer, including one whose step is not `declareSubject` — see Important #2.
+- ⚠️ Cannot verify from diff: nothing. Every hunk I needed was in the file; the four named-risk checks required reading `RunView.tsx`/`offer.ts`/`useRun.ts`/`flow.ts` outside the diff, each named below.
+
+### Strengths
+- The press mapping was genuinely read off the page rather than guessed, and four of six arms match exactly. Checked one by one: `roll` (`RunView.tsx:385-391`) reproduces `StepPanel`'s button at `:1436-1441` including the `keyPrefix` — `key` is `${phase.id}#${index}` (`:1412`) so `u${state.unit}:${key}` and `u${unit}:${phase.id}#${index}` are the same string; `carry-on` → `run.completeStep(phase, index)` matches `:1509` for the non-closing manual case; `close` → `run.closeAndEnter(phase, index)` matches `ClosingStep`'s primary at `:1664`; `enter` → `run.enterUnit()` matches both `:784` and `:1729`; `undo` → `run.undo()` matches `:1318`; `move` → `run.takeMove(m.id, m.label)` matches `:2242`.
+- The report's correction of the brief's one-argument `declareSubject` to the real `(phase, index, subjectType)` (`useRun.ts:502`) is right, and it sources `phase`/`index` from `run.activeStep` as the page's own Declare button does (`:1482`).
+- `close`'s page-side gates really are pre-guaranteed: `ClosingStep`'s `blocked` is `run.blockingObligations` (`:1604`) which `offerOf` refuses via `input.owed &gt; 0`, and its `points` are `step.confirm` which `offerOf` refuses when non-empty — so `allTicked` is trivially true when the offer hands out `close`.
+- Risk 2 (the `drove` route) clears: `sync.drove(news.from, news.ref, ...)` (`RunView.tsx:409`) sits *inside* the `news.run !== runId` guard at `:371`, so a reply is never sent for a run this page is not holding; `to`/`ref` are the incoming drive's own; `SyncProvider.tsx:241` forwards to the same `socketRef.current` that `openLive` created and that delivered the drive. The socket test asserts the exact `{"t":"drove","to","ref","ok","say"}` frames.
+- Risk 3 (seq staleness) clears: `useRun` returns a fresh object literal (`useRun.ts:1108`), so the effect re-runs every render and the closure always holds the current `run`. `currentOffer`'s deps cover every field `offerOf` reads — `events.length`, `started`, `readOnly`, `state`, `pending`, `activeStep`, `moves`, `canUndo`, `blockingObligations.length`, `receipts.length`, `pack` — and I checked the identity-stability trap the new publish-effect dep could have opened: `state` (`useRun.ts:213`), `activeStep` (`:422`), `moves` (`:605`) and `blockingObligations` (`:1103`) are all `useMemo`'d, so `currentOffer` does not churn per render and the 800 ms debounce at `RunView.tsx:265` is not perpetually restarted.
+- Risk 4 (`seen`) clears: the clearing effect is declared before the subscribing one, so on a run-id change React runs the clear first; and the `news.run !== runId` filter means a run-A ref cannot even reach `takePress` while run B is held.
+- Tests assert both halves — every case checks the `Verdict` and whether the `vi.fn()` act was or was not called (`takePress.test.ts:17-18`, `:24-25`, `:32-33`, `:42-43`).
+- The two out-of-list edits are genuinely minimal and behavior-preserving. `LibraryView.tsx:97` narrows `news.kind === "run"` to the two variants that carry a `Kind`; I checked every emitted gesture kind (`gestures.ts:84,99,121,150,162,171,175` plus `"rolled"`/`"setup"` at `RunView.tsx:468,492,862`) and none is `"run"`, so nothing that used to reload stops reloading. `Members.test.tsx:58` adds one mock field.
+
+### Issues
+
+#### Critical (Must Fix)
+None.
+
+#### Important (Should Fix)
+1. **`carry-on` drives the wrong function on a unit-closing manual step.** `offer.ts:81-85` hands out `primary: { id: "carry-on" }` for *any* `manual` step with an empty checklist, including one with `closesUnit: true`. But the page routes that exact step to `ClosingStep` (`RunView.tsx:1490-1492`, via `closesUnit` at `packages/engine/src/flow.ts:123-125`), whose button calls `run.closeAndEnter` (`:1664`) — not `completeStep`. The deck's `carry-on` arm calls `run.completeStep(active.phase, active.index)` (`RunView.tsx:393`). The two are not equivalent: `closeAndEnter` writes `stopClocksEvents` + `UnitFinalized` + step completion + `UnitEntered` + the next unit's clock (`useRun.ts:522-536`), while `completeStep` writes only the step-completion events. A deck press would leave the run with a closed step and no `UnitFinalized`/`UnitEntered` — a state the page itself can never produce. Compounding it, that manual branch returns before `offer.ts:92`'s `input.owed &gt; 0` check, so the press also bypasses `ClosingStep`'s "Settle what is owed first" gate (`RunView.tsx:1661-1662`). The offer's shape predates this task, but this task is what makes it press a button; and `offer.ts` is no longer off-limits, since the fix round already amended it. Fix at the source (`offer.ts` should emit `close` for any `closesUnit(step)`, and apply the `owed` check before the manual branch) or route `carry-on` through `closesUnit` in the act.
+2. **An `answer` press is taken against an offer that is not asking for one** (plan-mandated, labeled). `takePress.ts:60-64` accepts `press: "answer"` whenever `press.answer` is a non-empty object; it never consults `at.offer.presets` or `at.offer.primary`. The act (`RunView.tsx:403-406`) only guards `if (!active) return`. So with a `rollTable` step active at seq N, a deck sending `{press:"answer", answer:{x:1}}` gets `{ok:true}` and `run.declareSubject(phase, index, "")` runs — which is `completeStep(phase, index, [{t:"SubjectDeclared", subjectType:""}])` (`useRun.ts:502-505`), completing the roll step without ever rolling and writing an empty subject the page's own Declare button refuses (`disabled={!declared}`, `RunView.tsx:1482`). The brief's Step 3 omitted the check, so this is the plan's defect as much as the implementer's, but the shipped code is what a deck can reach. Gate the `answer` arm on `at.offer.presets` carrying a `declareSubject` preset, and treat a blank `subject` as `{ ok:false, say:"That answer was empty." }`.
+3. **A deck can take a finalizing move the page disables.** `currentOffer.moves` is `run.moves.map(m =&gt; ({ id, label }))` unfiltered (`RunView.tsx:207`), and `takePress` allows anything in `offer.moves` (`takePress.ts:50-54`). The page's own move button is `disabled={held}` where `held = Boolean(move.finalizes) &amp;&amp; owed &gt; 0` (`RunView.tsx:2236,2242`). So with an obligation outstanding, a deck can press a unit-closing move the page refuses. Same class as #1: the offer's mapping predates the task, the pressability is new. Filter `held` moves out of the offer's `moves`.
+
+#### Minor (Nice to Have)
+- **A throwing act eats the verdict and re-arms the press.** `takePress.ts:41,52,58,62` call `act.*()` *before* `settle(...)`, so an exception escapes with the `seen` entry unwritten — `sync.drove` (`RunView.tsx:409`) is never reached (the deck waits on silence) and a retry with the same `ref` re-attempts the act, which is a double-press path if the act was partly applied. It also starves the rest of the bus: `bus.ts:30-32` is a bare `for (const l of listeners) l(news)` with no try/catch, so later subscribers miss that news. Settling before acting, or wrapping the act, would close both.
+- **`between`'s `pending` gate is stricter than the page's.** `RunView.tsx:229` uses `run.pending === null`; the page's ternary tests `run.pending?.request` (`:777`). A run with a non-null `pending` that carries no `request` still shows its Enter button but offers the deck nothing. Conservative, not a false-allow, and consistent with `offerOf`'s `settled` input — worth a line of comment rather than a change.
+- **`seen` is keyed on `ref` alone.** `takePress.ts:27` ignores `press.from`, so two decks using colliding ref strings (a per-deck counter, say) would have the second deck's first press answered with the first deck's verdict and nothing pressed. The brief specified ref-only keying; a `${from}:${ref}` key costs nothing.
+- **`driveSeen` grows without bound** for the life of a run id (`RunView.tsx:356-359`). Harmless at deck volumes, but nothing ever evicts.
+- **The drive effect re-subscribes on every render** (`RunView.tsx:412` deps include the whole `run`, a fresh literal per `useRun.ts:1108`). Not a leak and not a double-press — React runs the cleanup before the new subscribe, and only one listener is ever registered — merely a Set delete/add per render. The report's concern 4 is accurate and the honest call was to follow the brief.
+- **Concern 2 of the report is confirmed and unfixed:** a per-contestant move (`RunView.tsx:2262`, four arguments including `c.id`) cannot be driven, because `Offer.moves` carries no contestant. Correctly scoped to the offer's shape, not this task.
+
+### Assessment
+**Task quality:** Needs fixes
+**Reasoning:** The wiring, routing, `seq` discipline and `seen` handling are all correct and carefully sourced from the page's own buttons, but three press paths let a deck do something the page's own button refuses or does differently — a unit-closing manual step driven by `completeStep` instead of `closeAndEnter`, an `answer` press accepted against a roll step, and a held finalizing move — and the first two can leave the run in a state the page cannot produce.</result>
+<usage><subagent_tokens>110326</subagent_tokens><tool_uses>28</tool_uses><duration_ms>304780</duration_ms></usage>
+</task-notification>
+
+---
+
+having an easy way to mark all the tasks/checkboxes as completed from stream deck would be another good widget to have
+
+---
+
+<task-notification>
+<task-id>ae071fb43e06ea3e7</task-id>
+<tool-use-id>toolu_01DUWsGKXuWKD2v71SJw7WQ3</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\ae071fb43e06ea3e7.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 9: the page takes the press" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Working tree clean, report file untracked by git isn't relevant here (not requested to commit it separately).
+
+Status: DONE
+Commit: 01cedc3 — fix(run): a deck may press only what the page would
+Tests: 639/639 passing (apps/web/src); the three-file targeted run (offer.test.ts, takePress.test.ts, RunView.offer.test.tsx) 26/26 passing; typecheck clean
+Concerns: none new; all five findings closed (carry-on/close routing via engine's closesUnit+checklistOf, owed checked before any step branch, answer gated on a declareSubject preset, held finalizing moves filtered from offer.moves via a shared heldMove helper, act throws settle as "That press failed.", seen keyed by from+ref). Finding 3 has a unit test rather than an integration one — RunView.offer.test.tsx's fixture can't produce an obligation alongside a finalizing move without authoring pack/log fixtures well beyond this fix's scope; reasoning recorded in the report. Pending-gate strictness, seen eviction, the drive effect's re-subscribe-per-render, and per-contestant moves were left alone per the ruling.
+Report: C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-9-report.md (round 2 fix report appended)</result>
+<usage><subagent_tokens>282292</subagent_tokens><tool_uses>53</tool_uses><duration_ms>549269</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>ac24e5545a2637877</task-id>
+<tool-use-id>toolu_017ZfWjRxW4ERGvSB4AoCjNU</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\ac24e5545a2637877.output</output-file>
+<status>completed</status>
+<summary>Agent "Re-review Task 9 fix round 1" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>### Finding Verdicts
+
+**Important 1 — `carry-on` on a unit-closing manual step.** ADDRESSED — `apps/web/src/run/offer.ts:91` moves the `owed &gt; 0` gate above every step-kind branch (`closesUnit`, `manual`, `PRESSABLE`), and `offer.ts:98-101` adds a `closesUnit(step)` branch (imported from `@runlog/engine`, confirmed identical to `flow.ts:123-125`: `step.kind === "finalizeUnit" || (step.kind === "manual" &amp;&amp; step.closesUnit === true)`) that emits `{ id: "close", ... }` — not `carry-on` — with `checklistOf(step)` routing a non-empty checklist/confirm to `needsPage` first. Confirmed `id === "close"` drives `run.closeAndEnter` and `id === "carry-on"` drives `run.completeStep` in `RunView.tsx:404-408` (wired in the prior round). New tests at `offer.test.ts:171-192` assert both the `close` id and the owed-blocks-close case directly.
+
+**Important 2 — `answer` taken against an offer not asking for one.** ADDRESSED — `apps/web/src/run/takePress.ts:487-489`: gates on `at.offer.presets.some((p) =&gt; p.kind === "declareSubject")` with `"The run is not asking for that."`, then blank-subject check `"That answer was empty."`, only then `act.answer`. Matches the ruling exactly. Tests at `takePress.test.ts` (new "refuses an answer…", "refuses a blank subject", "presses a valid subject…") cover all three branches.
+
+**Important 3 — a held finalizing move offered.** ADDRESSED — `RunView.tsx:91-93` defines `heldMove(move, owed) = Boolean(move.finalizes) &amp;&amp; owed &gt; 0`; `Moves`' button now reads `const held = heldMove(move, owed)` (`RunView.tsx:143`, `owed = run.blockingObligations.length` at line 2237) and `currentOffer`'s `moves` field filters with the identical call, `run.moves.filter((m) =&gt; !heldMove(m.move, run.blockingObligations.length))` (`RunView.tsx:120`). Both sites use the same `run.blockingObligations.length` — confirmed by direct inspection of the diff, not only by the added `heldMove` unit test in `RunView.offer.test.tsx:63-70`, which (as the report acknowledges) exercises the helper in isolation and does not itself prove the filter is wired into `currentOffer.moves` — the diff does.
+
+**Folded-in Minor 4 — a throwing act.** ADDRESSED — `takePress.ts`'s `take` helper (lines ~453-461 per diff) wraps all four act calls (`primary`, `move`, `undo`, `answer`) in try/catch, settling `{ ok: false, say: "That press failed." }` on throw, and the settled verdict still spends the ref (confirmed by the "settles a throw... and spends the ref" test, asserting `act.primary` called exactly once across two presses).
+
+**Folded-in Minor 5 — `seen` keyed on `ref` alone.** ADDRESSED — key changed to `` `${press.from}:${press.ref}` `` on both read (`at.seen.get(key)`) and write (`at.seen.set(key, verdict)`). New test "takes the same ref from two different decks as two presses" confirms `act.primary` called twice.
+
+### New Breakage in the Fix Diff
+
+None found. The owed-gate reordering in `offer.ts` only changes ordering relative to the `closesUnit`/`manual`/`PRESSABLE` branches (all now correctly gated); the pre-existing `TYPED` (declareSubject) branch's position relative to owed is untouched by this diff, so no new inconsistency was introduced there.
+
+### Out-of-Scope Observations
+
+- The `heldMove` regression test is a pure unit test of the helper, not an integration test through `currentOffer` or a rendered `Moves` button — acceptable per the ruling's stated fallback, but worth noting if a future refactor moves the filter's call site without a test catching the drift.
+- `offer.ts`'s TYPED (declareSubject) branch still returns before the owed check and is unaffected by "owed" — this mirrors the page's own declareSubject panel (not disabled by owed, per `RunView.tsx:1464-1500`), so it's consistent, not a defect, and untouched by this diff.
+
+### Verdict
+
+**Fix round:** All findings addressed, no new Critical/Important breakage.</result>
+<usage><subagent_tokens>97424</subagent_tokens><tool_uses>8</tool_uses><duration_ms>123229</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a7b7f4247a32468c7</task-id>
+<tool-use-id>toolu_017fi2AKurwTzFBZz18VxFK1</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a7b7f4247a32468c7.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 10: deck-attached note" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Status: complete
+Commit: `ac8d16c` — `feat(run): the table is told when a deck is on the run`
+Test summary: `npx vitest run apps/web/src` → 95 files / 641 tests passing; `npm run typecheck` clean. TDD RED confirmed for both `Toast.test.tsx` (missing module) and the new Members deck-row test (removed block, reran, restored).
+
+Concerns:
+- The brief claims `Members.tsx` already has an "Attached list" rendering `app`/`seat` rows via `useAttachedTools` — it doesn't; that markup exists only in `RunView.tsx`'s separate `Attached` component, and no earlier task touched `Members.tsx` for it. I added a new deck row to `Members.tsx`'s existing `row spread memberRow` list (styled like "The table"/per-person rows) rather than touching `RunView.tsx`'s `Attached` section, since the touch list restricts this task to `Members.tsx`. Flagged for reviewer confirmation.
+- Two brief deviations, both forced by the repo (no `@testing-library/user-event`, no `@testing-library/jest-dom` installed): the Toast test uses `element.click()` + `act` (matching `useConfirm.test.tsx`'s convention) instead of `userEvent.click`, and plain `.textContent` equality instead of `toHaveTextContent`.
+
+Report: `C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-10-report.md`</result>
+<usage><subagent_tokens>146267</subagent_tokens><tool_uses>78</tool_uses><duration_ms>536198</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a7b7f4247a32468c7</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a7b7f4247a32468c7.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 10: deck-attached note" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>The report append succeeded (the "changed on disk" note is just reflecting my own edits).
+
+Status: complete
+Commits: `ac8d16c` `feat(run): the table is told when a deck is on the run`; fix round 1/5 `6cb3483` `fix(run): the deck is listed where the tools are`
+Tests: `npx vitest run apps/web/src/run apps/web/src/ui` → 36 files / 228 tests passing; `npm run typecheck` clean.
+Concerns: none outstanding — the untested combination of a tool and a deck attached simultaneously (two `&lt;h3&gt;` lines in one panel) is noted in the report for the reviewer, but follows directly from the two independent, correctly-gated conditions.
+Report: `C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-10-report.md`</result>
+<usage><subagent_tokens>171125</subagent_tokens><tool_uses>101</tool_uses><duration_ms>788196</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a6515325c2d65ece5</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a6515325c2d65ece5.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 10 (spec + quality)" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Confirms the convention match exactly. Now I have everything needed to write the report.
+
+### Spec Compliance
+
+- ✅ Commit subjects exact: `ac8d16c feat(run): the table is told when a deck is on the run`, `6cb3483 fix(run): the deck is listed where the tools are` (report headers; matches required subjects).
+- ✅ `useToast` matches the brief's prescribed interface and Step-3 code verbatim — `apps/web/src/ui/Toast.tsx:12-27` (5s `window.setTimeout`, `role="status"`, no buttons).
+- ✅ Ruling 1 (effect deps): `apps/web/src/run/RunView.tsx:187-197` depends on `[decks, toast.show]`, not `toast`; `hadDecks` ref gates on rise only.
+- ✅ Ruling 2 (copy): toast text `"A Stream Deck is on this run."` / `` `${decks} Stream Decks are on this run.` `` — `RunView.tsx:195`. Attached row `"Stream Deck"` / `` `Stream Deck × ${decks}` `` — `RunView.tsx:2124`, no address.
+- ✅ Ruling 3 (`.toast` CSS): `apps/web/src/styles.css:7006-7029` uses existing tokens `--panel`, `--line`, `--text`, `--radius`, `--t-2` (all confirmed pre-existing, defined at `styles.css:29-130`), `position: fixed`, bottom-center, `role="status"` set in TSX not CSS, no transition (so no reduced-motion block needed — conditional satisfied).
+- ✅ Ruling 4 (top-level render): `{toast.node}` at `RunView.tsx:854` sits as a sibling right after the `.columns run` wrapper closes, before `&lt;RunRail`, alongside sibling overlays — not inside `.col main`/`.col side`.
+- ✅ Ruling 5 (fix round — deck row relocated): `Members.tsx`/`Members.test.tsx` net to zero change between `01cedc3` and `6cb3483` (`git diff 01cedc3..6cb3483 --stat` for both files returns nothing) — confirmed no leftover import, prop, or test. Deck row now lives in `Attached` (`RunView.tsx:2111-2127`), gated at the call site on `tools.length &gt; 0 || decks &gt; 0` (`RunView.tsx:849`), tested via a real `syncBus.emit({ kind: "tools", data: { decks } })` gesture in `RunView.offer.test.tsx:109-124` — confirmed `useAttachedDecks` (`useAttachedTools.ts:56-65`) is not mocked in that file (only `useApi` is mocked at `RunView.offer.test.tsx:32`), so the test genuinely exercises the hook.
+- ✅ Test conventions: `Toast.test.tsx` uses `element.click()` + `act`, `.textContent`, no `user-event`/`jest-dom` — matches `useConfirm.test.tsx:39,56,79`.
+- ⚠️ Cannot verify from diff: whether the toast actually fires with correct copy inside a live `RunView` session — no test (in this diff or found in the repo) exercises `useAttachedDecks` rising while `RunView` is mounted and asserts `toast.node`/the `"A Stream Deck is on this run."` copy appears. `Toast.tsx` is unit-tested standalone and the Attached-panel row is tested via a one-shot mount, but the wiring in `RunView.tsx:187-197` (the actual "table is told" behavior this task is named for) has no integration test.
+
+### Strengths
+- Clean net diff: the fix round's revert of `Members.tsx`/`Members.test.tsx` is exact, leaving zero trace (verified via `git diff 01cedc3..6cb3483 --stat` on those paths).
+- `useAttachedDecks` is exercised through its real subscription path in the new tests, not a mock — the strongest form of the required proof.
+- Comments in `Toast.tsx` and `RunView.tsx` explain the "why now" per the file's established voice, matching the brief's specific ask for the app's first toast.
+- Toast timer cleanup is correct: `useEffect` cleanup (`Toast.tsx:23`) clears `window.clearTimeout` on both unmount and on a text change, so no orphaned timer can fire after `RunView` unmounts.
+- `Attached`'s tool heading is correctly re-gated on `tools.length &gt; 0` (`RunView.tsx:2116`) to fix the pre-existing "On 0 games" nonsense the fix round found, with no evidence any existing test relied on the old unconditional heading.
+
+### Issues
+
+#### Critical (Must Fix)
+None.
+
+#### Important (Should Fix)
+- **Plan-mandated defect, labeled:** `useToast`'s effect keys off `text` (`Toast.tsx:14-19`), so calling `show()` twice with the *same* string is a no-op re-render in React (`Object.is` bail-out) — the timeout is not reset, violating the stated primitive contract "a second `show` restarts it." This is inherited verbatim from the brief's own Step-3 reference code (report confirms it's an exact copy), not an implementer deviation, but it's still a defect in the shipped primitive and untested (`Toast.test.tsx` only exercises a single `show`). It happens not to manifest at the one call site in `RunView.tsx` (each `toast.show` call there carries a distinct count string, and `hadDecks` prevents repeat calls at the same count), so it is latent rather than currently reachable — but `useToast` is an exported, reusable primitive and the bug will resurface the moment a second caller repeats identical text.
+- **No integration test for the toast's actual trigger inside `RunView`:** the task's headline behavior — the table sees a note pop up when `decks` rises — is proven only in pieces (`Toast.test.tsx` tests the primitive with a manually-clicked button; `RunView.offer.test.tsx`'s new tests assert the Attached-panel row, not the toast). No test emits a `tools` gesture that raises `decks` while `RunView` is mounted and checks for `screen.getByRole("status")` or the exact copy `"A Stream Deck is on this run."` This leaves the wiring at `RunView.tsx:187-197` — the actual feature commit is named for — unverified end-to-end.
+
+#### Minor (Nice to Have)
+- `Attached` (`RunView.tsx:2111`) has no internal null-guard for `tools.length === 0 &amp;&amp; decks === 0`; it relies entirely on the caller's gate at `RunView.tsx:849`. Harmless today (single call site, confirmed via `grep -n "&lt;Attached" RunView.tsx`), but the component's own contract ("returns null with no tools and no decks") is implicit rather than enforced, so a future second call site could silently render an empty panel (just the trailing `&lt;p className="muted small"&gt;` line) with no heading.
+- The rise-only toast logic interacts with `useAttachedDecks`'s existing reset-to-0-on-`runId`-change behavior (`useAttachedTools.ts:59`, unchanged by this diff): since `RunView` is keyed by `pack.id` not `runId` (`App.tsx:1345`), `hadDecks` (`RunView.tsx:194`) is not itself run-scoped — it is only incidentally zeroed via the transient `decks→0` render that `useAttachedDecks` produces on every run switch. This does make "switch to a 2-deck run, then a 1-deck run" stay silent through the transient zero and then correctly re-fire on subsequent rises (including back up to 2), so the mechanism holds together, but it also means switching into any run that already has a deck attached will announce "A Stream Deck is on this run." even though nothing just arrived — a quirk worth a code comment, not a fix, since it flows directly from `useAttachedDecks`'s own no-resync design (pre-existing, Task 6) rather than something Task 10 introduced.
+- Copy audit clean: no British spellings found in the added copy/comments; "A Stream Deck is on this run." reads as plain status, consistent with `status-copy-is-plain` and `no-preaching-in-ui` house rules (memory-file context, not this diff's own constraint list, but worth noting it doesn't conflict).
+
+### Assessment
+**Task quality:** Needs fixes
+**Reasoning:** The fix round correctly relocated the deck row per the controller's ruling and left a verifiably clean `Members.tsx`/`Members.test.tsx`, and every explicit ruling (1–4) is implemented to the letter with real, non-mocked coverage for the Attached-panel row. What's missing is proof of the feature's actual trigger path — no test shows the toast firing inside a mounted `RunView` — plus a latent (plan-mandated, not implementer-introduced) contract bug in `useToast` where identical repeated text fails to restart the timer. Neither is catastrophic, but "should fix" bars are crossed on both: one is a coverage gap on the task's namesake behavior, the other is a genuine spec violation in a shipped, reusable primitive.</result>
+<usage><subagent_tokens>96026</subagent_tokens><tool_uses>17</tool_uses><duration_ms>232179</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a7b7f4247a32468c7</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a7b7f4247a32468c7.output</output-file>
+<status>completed</status>
+<summary>Agent "Implement Task 10: deck-attached note" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Status: complete
+Commits: `ac8d16c` feat, `6cb3483` fix round 1, `7cb1967` fix round 2 — `fix(run): a second note restarts the clock, and the note is proven on the page`
+Tests: `npx vitest run apps/web/src/ui/Toast.test.tsx apps/web/src/run/RunView.offer.test.tsx` → 2 files / 9 tests passing; full `apps/web/src` 95/645 passing; `npm run typecheck` clean.
+Concerns: none outstanding; minors (Attached's caller-side gate, run-switch quirk) left untouched as instructed.
+Report: `C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-a\task-10-report.md`</result>
+<usage><subagent_tokens>200583</subagent_tokens><tool_uses>25</tool_uses><duration_ms>277303</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>aef93d42a26a2a446</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\aef93d42a26a2a446.output</output-file>
+<status>completed</status>
+<summary>Agent "Re-review Task 10 fix round 2" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>### Finding Verdicts
+- **`useToast` does not restart on identical text** — ADDRESSED. `apps/web/src/ui/Toast.tsx:18,24` — state now holds `{text, n}` and `show` uses a functional update `(prev) =&gt; ({text: next, n: (prev?.n ?? 0) + 1})`, so every call produces a new object identity even when `text` is unchanged. The effect is keyed on `[note]` (`Toast.tsx:19-23`), so it reliably reruns, its cleanup clears the in-flight `setTimeout` (line 22), and a fresh 5000ms timer is armed. Test added at `apps/web/src/ui/Toast.test.tsx:115-128` matches the ruling's exact scenario (show, +4s still visible, show again, +4s still visible [8s since first, 4s since second], +1.1s gone) and the arithmetic checks out against the fixed implementation.
+- **No test proves the toast fires inside a mounted `RunView`** — ADDRESSED. `apps/web/src/run/RunView.offer.test.tsx:137-156` emits the `tools` gesture via `syncBus.emit` with `decks: 1` against the existing `run1`/`renderRunView` harness, asserts one toast with the expected text, re-emits `decks: 1` and asserts still exactly one (no duplicate), then advances 5.1s and asserts zero. Verified this can't pass for the wrong reason: `apps/web/src/run/RunView.tsx:195-197` shows `hadDecks` gates `toast.show` on `decks &gt; hadDecks.current`, and `useAttachedDecks` (`apps/web/src/run/useAttachedTools.ts:56-68`) calls `setDecks(1)` on both emits — React bails on the identical-primitive update, so the effect genuinely doesn't re-fire on the second emit (not just an artifact of the test's own state). The `role="status"` collision with `BenchBar` is real (only one `className="toast"` exists in the codebase, confirmed by grep), and the fix's `.filter((el) =&gt; el.classList.contains("toast"))` correctly isolates it rather than coincidentally passing.
+
+### New Breakage in the Fix Diff
+None. Checked specifically for: stale text on the counter approach (ruled out — `show`'s functional update never closes over stale `prev`, and `node` always renders current `note.text`); cleanup clearing the previous timeout on every re-arm (confirmed — effect cleanup runs on every `note` identity change, including same-text re-shows); and the new integration test passing for a spurious reason (ruled out — `.toast` class is unique, and the "no duplicate" assertion is backed by real dedup logic at both the `useAttachedDecks` and `hadDecks` layers, not test-only coincidence).
+
+### Out-of-Scope Observations
+None — the diff is confined to `Toast.tsx`, `Toast.test.tsx`, and `RunView.offer.test.tsx`, matching the "Files touched this round" list in the report.
+
+### Tests
+Report names the covering tests (`Toast.test.tsx`, `RunView.offer.test.tsx`) with RED→GREEN transcripts for both findings, a scoped run (`2 passed / 9 passed`), a full-suite sanity check (95 files / 645 tests), and `npm run typecheck` clean, run both before and after commit. Claims match the diff content; no discrepancy found.
+
+### Verdict
+**Fix round:** All findings addressed, no new Critical/Important breakage.</result>
+<usage><subagent_tokens>77422</subagent_tokens><tool_uses>8</tool_uses><duration_ms>76344</duration_ms></usage>
+</task-notification>
