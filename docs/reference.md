@@ -26,6 +26,7 @@ A complete, self-contained description of a dice-driven creative-practice game. 
 | `homepage` | `string` | - | Where to find out more. |
 | `category` | `string` | - | What kind of thing this is, in a word or two, for a marketplace to group by: everyday, games, craft, fitness, cooking, writing… |
 | `tags` | `string`[] | - | Free tags for a marketplace to filter by: the game it is for, the hobby, the shape of play. Short, and in the words a person would search for. |
+| `use` | `object`[] | - | Tables written elsewhere, folded into this pack's own before anything rolls. A pack that borrows a hundred good results does not fork them: a fix to the set is a fix everywhere it is used. Resolved as the pack is loaded, so nothing downstream ever sees a reference. |
 | `marks` | map of `object` | - | The tags this pack's entries carry that anything outside the pack may match on, declared so they can be relied upon. Entry tags are free strings; a pack that declares its marks is promising these ones will not quietly be renamed, and the linter says so when an entry carries a tag that was never declared. Absent, tags go on being free and nothing checks them. |
 | `requires` | `object`[] | - | What a person needs before playing, shown in the marketplace and the rulebook: the game and a system that runs it, mods or training packs, a wheel, a kitchen, supplies. Mark the ones that are nice to have `optional`; results can `need` those and be drawn again for a player who lacks them. |
 | `license` | `object` | yes | Licensing, and whether the app may share this pack's text. |
@@ -52,6 +53,15 @@ A complete, self-contained description of a dice-driven creative-practice game. 
 | `fixtures` | `object`[] | - | Self-tests shipped with the pack. |
 | `issue` | `object` | - | Marks this copy as issued to one person. Covered by the signature, so removing it invalidates that. |
 | `signature` | `object` | - | Evidence of who produced this pack. Does not restrict copying, nothing can, since the app must read every word to play it, but proves the contents are unaltered since the author signed them. |
+
+## `pack.use[]`
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `from` | `string` | yes | The shared table set, by id. |
+| `as` | `string` | yes | The table id it becomes here, which is what a phase or a move rolls on. |
+| `variant` | `string` | - | Which pitch of it to use. Absent, the set's own default. |
+| `merge` | `replace` \| `append` | - | `replace` uses the borrowed entries alone; `append` puts them after this pack's own table of that id, which is how a pack keeps its results and borrows more. Default: `"replace"`. |
 
 ## `pack.marks.*`
 

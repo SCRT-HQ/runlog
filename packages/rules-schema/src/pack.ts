@@ -1086,6 +1086,25 @@ export const Pack = z
       .max(12)
       .optional()
       .describe("Free tags for a marketplace to filter by: the game it is for, the hobby, the shape of play. Short, and in the words a person would search for."),
+    use: z
+      .array(
+        z
+          .object({
+            from: PackId.describe("The shared table set, by id."),
+            as: z.string().min(1).max(60).describe("The table id it becomes here, which is what a phase or a move rolls on."),
+            variant: z.string().min(1).max(60).optional().describe("Which pitch of it to use. Absent, the set's own default."),
+            merge: z
+              .enum(["replace", "append"])
+              .default("replace")
+              .describe("`replace` uses the borrowed entries alone; `append` puts them after this pack's own table of that id, which is how a pack keeps its results and borrows more."),
+          })
+          .strict(),
+      )
+      .max(20)
+      .optional()
+      .describe(
+        "Tables written elsewhere, folded into this pack's own before anything rolls. A pack that borrows a hundred good results does not fork them: a fix to the set is a fix everywhere it is used. Resolved as the pack is loaded, so nothing downstream ever sees a reference.",
+      ),
     marks: z
       .record(
         z.string().min(1).max(40),

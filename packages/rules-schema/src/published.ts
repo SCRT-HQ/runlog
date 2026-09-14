@@ -1,6 +1,7 @@
 import { SCHEMA_VERSION } from "./pack.ts";
 import { SETUP_SCHEMA_VERSION } from "./setup.ts";
 import { MAPPING_SCHEMA_VERSION } from "./mapping.ts";
+import { SHARED_TABLES_SCHEMA_VERSION } from "./shared-tables.ts";
 
 /**
  * Where the published JSON Schemas live.
@@ -19,7 +20,7 @@ import { MAPPING_SCHEMA_VERSION } from "./mapping.ts";
 const HOME = "https://runlog.scrthq.com/schema";
 
 /** Which major version of each format this build reads. */
-const VERSIONS = { pack: SCHEMA_VERSION, setup: SETUP_SCHEMA_VERSION, mapping: MAPPING_SCHEMA_VERSION } as const;
+const VERSIONS = { pack: SCHEMA_VERSION, setup: SETUP_SCHEMA_VERSION, mapping: MAPPING_SCHEMA_VERSION, tables: SHARED_TABLES_SCHEMA_VERSION } as const;
 
 export type SchemaKind = keyof typeof VERSIONS;
 
