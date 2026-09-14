@@ -10,7 +10,7 @@
 # again and what the menus read, the item is what gets used. `item.named`
 # will not touch a key item tied to an event, so the tool does both.
 #
-# Not in it: levelling. That is Melina's accord rather than an item, and
+# Not in it: leveling. That is Melina's accord rather than an item, and
 # no flag for it exists in the tool's data. Until one is found with the
 # event logger, a run that means to level should start somewhere Melina
 # will meet it.
