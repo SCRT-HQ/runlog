@@ -55,7 +55,7 @@ const syncOf = (available: boolean, enabled: boolean): Sync => ({
   last: null,
   syncNow: () => {},
   setPackSync: async () => {},
-  gesture: () => {},
+  gesture: () => false,
 });
 
 const runOf = (extra: Partial<StoredRun> = {}): StoredRun => ({

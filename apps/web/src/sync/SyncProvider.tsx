@@ -35,8 +35,14 @@ export interface Sync {
   last: Report | null;
   syncNow: () => void;
   setPackSync: (id: string, on: boolean) => Promise<void>;
-  /** Pass a gesture to everyone watching a run; nothing happens when the socket is down. */
-  gesture: (id: string, kind: string, data?: Record<string, unknown>) => void;
+  /**
+   * Pass a gesture to everyone watching a run.
+   *
+   * Answers whether it went. For dice in the air the answer does not
+   * matter and is ignored; for handing a setup out it is the difference
+   * between telling somebody it happened and telling them the truth.
+   */
+  gesture: (id: string, kind: string, data?: Record<string, unknown>) => boolean;
 }
 
 const off: Sync = {
@@ -47,7 +53,7 @@ const off: Sync = {
   last: null,
   syncNow: () => {},
   setPackSync: async () => {},
-  gesture: () => {},
+  gesture: () => false,
 };
 
 export const SyncContext = createContext<Sync>(off);
@@ -217,9 +223,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
               await markPackSync(id, on);
               syncBus.localChange("pack", id);
             },
-            gesture: (id, kind, data) => {
-              socketRef.current?.gesture(id, kind, data);
-            },
+            gesture: (id, kind, data) => socketRef.current?.gesture(id, kind, data) ?? false,
           }
         : off,
     [available, enabled, active, status, last],
