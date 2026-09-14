@@ -21,13 +21,14 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.soundclash
-version: "0.1.0"
+version: "0.2.0"
 title: Soundclash
 author: Runlog
 description: >-
-  A mechanic called on every transition. Pick a style, and each Round says
-  what the next mix has to do: double-drop it, swap the bass, cut it in by
-  hand, jump twenty BPM. One press ends the Round and calls the next one.
+  A pack for DJs to add a bit of controlled chaos to their set. A mechanic 
+  called on every transition. Pick a style, and each Round says what the 
+  next mix has to do: double-drop it, swap the bass, cut it in by hand, 
+  jump twenty BPM. One press ends the Round and calls the next one.
 
 category: music
 tags: [dj, turntables, mixing, stream, practice]
