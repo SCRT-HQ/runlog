@@ -12,15 +12,17 @@ const sheet = (runId: string | null, rolling?: { auto: boolean; seeded: boolean;
   renderToStaticMarkup(<SettingsDialog runId={runId} race={false} alerts={DEFAULT_ALERTS} onAlerts={() => {}} onClose={() => {}} {...(rolling ? { rolling } : {})} />);
 
 describe("the settings sheet", () => {
-  it("holds every choice about this device on one tab, with the theme among them", () => {
+  it("holds every choice about this device on one tab, the theme excepted", () => {
     const html = sheet("run-1", { auto: false, seeded: false, onAuto: () => {} });
     expect(html).toContain("This device");
     expect(html).toContain("Widgets");
-    expect(html).toContain("Theme");
     expect(html).toContain("Alerts");
     expect(html).toContain("Roll for me, without asking");
     expect(html).toContain("carry on by itself");
     expect(html).toContain("Esc");
+    // The theme moved to the account menu, where trying one does not mean
+    // opening and shutting a dialog to see what it did.
+    expect(html).not.toContain("Theme");
   });
 
   it("has no widgets tab outside a run, since the widgets follow one", () => {
