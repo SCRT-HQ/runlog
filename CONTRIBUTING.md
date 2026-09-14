@@ -16,10 +16,13 @@ npm run dev          # the app, on localhost
 npm test             # the whole suite
 npm run typecheck    # all four projects
 npm run check:packs  # every shipped pack, --strict
+npm run format       # prettier, over everything it owns
 npm run build        # static output in apps/web/dist
 ```
 
 CI runs the same commands. If they pass locally they pass there.
+
+`npm install` also installs the git hooks, through husky's `prepare` script. There are two, and both are in `.husky/` where you can read them: `pre-commit` formats the files you staged, and `pre-push` checks that a pack you changed says so in its version. Neither is a gate. A hook is skipped by `npm ci --ignore-scripts`, walked past by `--no-verify`, and absent until somebody installs; CI asks both questions again and that is what decides.
 
 `.npmrc` asks npm not to install a package version younger than a week, so a compromised release has time to be noticed before it reaches anyone here. npm 11.10 and later enforce it; an older npm ignores the line.
 
@@ -121,6 +124,7 @@ Packs carry their own license, and the app honors it: a pack marked `redistribut
 - **Name things for the general case.** This began as a companion to one music game and the pull toward its vocabulary is constant. `unit`, `subject`, `run`, never `room`, `track`, `bar`.
 - **Report, do not resolve.** Contradictions between rules, disagreements with the environment, honor-system checks: show the player what is in tension and let them rule on it. These games want human judgment, and a tool that silently decides is one people stop trusting.
 - **Show the working.** Anything derived (a targeting result especially) carries its derivation, and the UI renders it.
+- **Formatting is not a decision.** Prettier settles it, from `.prettierrc.json`, and `npm run format` is the whole of it. Three things are deliberately not its business, and `.prettierignore` says why at each one: `packs/`, which are documents rather than code and are written one line per table entry; `*.md`, which belongs to markdownlint and its rule that a paragraph is one line; and `hosted/pages/`, which are templates with a substitution step and legal copy that a person checks.
 
 ### How it looks
 
