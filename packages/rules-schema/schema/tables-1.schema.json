@@ -1,0 +1,1842 @@
+{
+  "$id": "https://runlog.scrthq.com/schema/tables-1.schema.json",
+  "title": "Runlog shared tables (schema version 1)",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "tables",
+      "description": "What this document is. A pack says nothing; this says `tables`."
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991,
+      "description": "The format's major version, as a pack carries one."
+    },
+    "id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$",
+      "description": "Reverse-domain id: `com.example.tables.elden-curses`."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Semantic version. Entries changing changes this, or nobody holding it is offered the new ones."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "description": "What the set is called."
+    },
+    "author": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "description": {
+      "description": "What is in it, and who it is for.",
+      "type": "string",
+      "maxLength": 2000
+    },
+    "defaultVariant": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60,
+      "description": "The variant used when a pack or a run does not name one."
+    },
+    "variants": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 60
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "What this pitch of the table is called, where somebody is choosing between them."
+          },
+          "description": {
+            "description": "Who it is for and how hard it is, in a line.",
+            "type": "string",
+            "maxLength": 500
+          },
+          "roll": {
+            "type": "string",
+            "pattern": "^([1-9]\\d*)?d([1-9]\\d*)([+-]\\d+)?$",
+            "description": "What is rolled. The entries must cover its whole range, as in a pack's own table."
+          },
+          "entries": {
+            "minItems": 1,
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                  "description": "Unique within this table. Referenced by saved runs, so avoid renaming."
+                },
+                "title": {
+                  "description": "Short heading, when the entry has a name of its own.",
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The rules text shown to the player, verbatim. This is what they read and obey."
+                },
+                "triggers": {
+                  "description": "Mechanical consequences of this result.",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "on": {
+                        "type": "string",
+                        "enum": [
+                          "immediately",
+                          "onEnterUnit",
+                          "onDeclareSubject",
+                          "afterWork",
+                          "onFinalize",
+                          "onDeclareRunOver",
+                          "onRunEnd",
+                          "onTimerExpired"
+                        ],
+                        "description": "The lifecycle point at which this fires."
+                      },
+                      "do": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "description": "Actions to run, in order, when it fires."
+                      },
+                      "when": {
+                        "description": "Only fire if every one of these still holds at trigger time.",
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "label": {
+                        "description": "How the pending obligation is described to the player.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "on",
+                      "do"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Behavior attached to a result, optionally deferred to a later point in the unit or run."
+                  }
+                },
+                "requires": {
+                  "description": "Conditions that must ALL hold for this result to make sense. When one fails the dice are thrown again, up to a few times, the way they are for a result the run lacks a requirement for. Use it where a result has no referent yet rather than where it is merely hard: `unitIndex: { gte: 2 }` on a result that sends somebody back to where the last one started. Note the asymmetry these games insist on: impossibility justifies a re-roll, difficulty never does.",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "grants": {
+                  "description": "States applied to the relevant subject on resolution. Shorthand for an applyState trigger.",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                    "description": "A stable identifier, unique within its collection. Letters, digits, dot, dash and underscore; must start with a letter or digit. Ids appear in saved runs, so renaming one breaks existing logs."
+                  }
+                },
+                "tags": {
+                  "description": "Free tags, for cross-referencing and for filtering results out in some modes.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "points": {
+                  "description": "What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone.",
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "needs": {
+                  "description": "Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here: a barbell movement for someone without a barbell, an oven dish in a kitchen without one.",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                    "description": "A stable identifier, unique within its collection. Letters, digits, dot, dash and underscore; must start with a letter or digit. Ids appear in saved runs, so renaming one breaks existing logs."
+                  }
+                },
+                "range": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Lowest roll that selects this entry, inclusive."
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Highest roll that selects this entry, inclusive."
+                    }
+                  ],
+                  "items": false,
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "description": "The inclusive roll range this entry owns. Across the table these must tile the dice range exactly, with no gaps and no overlaps."
+                }
+              },
+              "required": [
+                "id",
+                "text",
+                "range"
+              ],
+              "additionalProperties": false,
+              "description": "One result in a lookup table."
+            },
+            "description": "The results, each owning a span of the roll."
+          }
+        },
+        "required": [
+          "title",
+          "roll",
+          "entries"
+        ],
+        "additionalProperties": false
+      },
+      "description": "The same table pitched more than one way, by a short name: `gentle`, `harsh`."
+    },
+    "license": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "An SPDX identifier where there is one, else whatever name the terms go by."
+        },
+        "redistributable": {
+          "type": "boolean",
+          "description": "Whether somebody may pass this on."
+        }
+      },
+      "required": [
+        "id",
+        "redistributable"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "id",
+    "version",
+    "title",
+    "defaultVariant",
+    "variants"
+  ],
+  "additionalProperties": false,
+  "description": "Tables written once and used by any pack: the same set pitched several ways, so a pack can choose one and a run can choose another.",
+  "$defs": {
+    "__schema0": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "roll",
+              "description": "Roll dice and remember the total under a name."
+            },
+            "dice": {
+              "type": "string",
+              "pattern": "^([1-9]\\d*)?d([1-9]\\d*)([+-]\\d+)?$",
+              "description": "What to roll, e.g. d6."
+            },
+            "into": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name to bind the total to, so a later branch can test it."
+            },
+            "label": {
+              "description": "Shown to the player when prompting for the roll.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "do",
+            "dice",
+            "into"
+          ],
+          "additionalProperties": false,
+          "description": "Roll dice and remember the total under a name."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "rollOn",
+              "description": "Roll on another table and resolve whatever comes up."
+            },
+            "table": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Id of the table to roll on."
+            },
+            "times": {
+              "description": "How many times to roll. Defaults to 1.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "timesFrom": {
+              "description": "Name a total bound earlier with `roll … into`; that many times, instead of `times`. How a pack rolls for how many to roll.",
+              "type": "string",
+              "minLength": 1
+            },
+            "choose": {
+              "description": "With times > 1: `one` lets the player pick a single result to apply, `all` applies every result. Defaults to `all`.",
+              "type": "string",
+              "enum": [
+                "one",
+                "all"
+              ]
+            },
+            "into": {
+              "description": "Name to bind the rolled total to.",
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "do",
+            "table"
+          ],
+          "additionalProperties": false,
+          "description": "Roll on another table and resolve whatever comes up."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "branch",
+              "description": "Choose between action lists based on a value bound earlier."
+            },
+            "on": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of a value bound earlier by roll or prompt."
+            },
+            "cases": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "in": {
+                    "description": "Match when the bound value is exactly one of these numbers.",
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "is": {
+                    "description": "Match when the bound value satisfies this comparison.",
+                    "type": "object",
+                    "properties": {
+                      "eq": {
+                        "description": "Matches only this exact value.",
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "gte": {
+                        "description": "Matches values greater than or equal to this.",
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "lte": {
+                        "description": "Matches values less than or equal to this.",
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "gteCounter": {
+                        "description": "Matches values greater than or equal to this counter's current value.",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                      },
+                      "lteCounter": {
+                        "description": "Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number.",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                      },
+                      "gteResource": {
+                        "description": "Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen.",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                      },
+                      "lteResource": {
+                        "description": "Matches values less than or equal to this resource's current value.",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "then": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "description": "Actions to run when this case matches. The first matching case wins."
+                  }
+                },
+                "required": [
+                  "then"
+                ],
+                "additionalProperties": false,
+                "description": "One arm of a branch. Provide either `in` for exact values or `is` for a range."
+              },
+              "description": "Cases tested in order; the first match wins."
+            },
+            "else": {
+              "description": "Actions to run when no case matches.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema0"
+              }
+            }
+          },
+          "required": [
+            "do",
+            "on",
+            "cases"
+          ],
+          "additionalProperties": false,
+          "description": "Choose between action lists based on a value bound earlier."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "prompt",
+              "description": "Put a question to the player and remember the answer."
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "chooseSubject",
+                "chooseValue",
+                "chooseState",
+                "confirm",
+                "text"
+              ],
+              "description": "What kind of answer is wanted: a subject, one of `options`, a state, a yes/no, or free text."
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The question shown to the player."
+            },
+            "into": {
+              "description": "Name to bind the answer to.",
+              "type": "string",
+              "minLength": 1
+            },
+            "options": {
+              "description": "The choices offered, for kind `chooseValue`.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "eligibleOnly": {
+              "description": "For kind `chooseSubject`: restrict the list to currently targetable subjects.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "do",
+            "kind",
+            "label"
+          ],
+          "additionalProperties": false,
+          "description": "Put a question to the player and remember the answer."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "resolveTarget",
+              "description": "Pick which earlier subject a consequence lands on."
+            },
+            "from": {
+              "default": "currentRoll",
+              "description": "How to pick: `currentRoll` reads the roll that triggered this against the pack's targeting bands, `event` uses the fallback roll for consequences not tied to a band, `choice` lets the player decide.",
+              "type": "string",
+              "enum": [
+                "currentRoll",
+                "event",
+                "choice"
+              ]
+            },
+            "into": {
+              "description": "Name to bind the chosen subject to. Also always available as targetSubject.",
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "do"
+          ],
+          "additionalProperties": false,
+          "description": "Pick which earlier subject a consequence lands on, using the pack's targeting strategy. Required before any action that hits `targetSubject`."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "applyState",
+              "description": "Attach a persistent state to a subject or to the run."
+            },
+            "state": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Id of the declared state to attach."
+            },
+            "to": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "thisSubject",
+                  "description": "The subject being made in the current unit."
+                },
+                {
+                  "type": "string",
+                  "const": "targetSubject",
+                  "description": "The subject picked by the most recent resolveTarget action."
+                },
+                {
+                  "type": "string",
+                  "const": "allSubjects",
+                  "description": "Every subject in the run, including the current one."
+                },
+                {
+                  "type": "string",
+                  "const": "allPriorSubjects",
+                  "description": "Every completed subject, excluding the one in the current unit."
+                },
+                {
+                  "type": "string",
+                  "const": "run",
+                  "description": "The run itself, for run-scoped states and flags."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "var": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                      "description": "Name a previous prompt or resolveTarget bound the subject to."
+                    }
+                  },
+                  "required": [
+                    "var"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A subject chosen earlier in this action list and stored under a name."
+                }
+              ],
+              "description": "Who receives the state."
+            }
+          },
+          "required": [
+            "do",
+            "state",
+            "to"
+          ],
+          "additionalProperties": false,
+          "description": "Attach a persistent state to a subject or to the run."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "removeState",
+              "description": "Clear a persistent state."
+            },
+            "state": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Id of the state to clear."
+            },
+            "to": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "thisSubject",
+                  "description": "The subject being made in the current unit."
+                },
+                {
+                  "type": "string",
+                  "const": "targetSubject",
+                  "description": "The subject picked by the most recent resolveTarget action."
+                },
+                {
+                  "type": "string",
+                  "const": "allSubjects",
+                  "description": "Every subject in the run, including the current one."
+                },
+                {
+                  "type": "string",
+                  "const": "allPriorSubjects",
+                  "description": "Every completed subject, excluding the one in the current unit."
+                },
+                {
+                  "type": "string",
+                  "const": "run",
+                  "description": "The run itself, for run-scoped states and flags."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "var": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                      "description": "Name a previous prompt or resolveTarget bound the subject to."
+                    }
+                  },
+                  "required": [
+                    "var"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A subject chosen earlier in this action list and stored under a name."
+                }
+              ],
+              "description": "Who loses the state."
+            }
+          },
+          "required": [
+            "do",
+            "state",
+            "to"
+          ],
+          "additionalProperties": false,
+          "description": "Clear a persistent state."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "removeSubject",
+              "description": "Take a subject out of the run."
+            },
+            "to": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "thisSubject",
+                  "description": "The subject being made in the current unit."
+                },
+                {
+                  "type": "string",
+                  "const": "targetSubject",
+                  "description": "The subject picked by the most recent resolveTarget action."
+                },
+                {
+                  "type": "string",
+                  "const": "allSubjects",
+                  "description": "Every subject in the run, including the current one."
+                },
+                {
+                  "type": "string",
+                  "const": "allPriorSubjects",
+                  "description": "Every completed subject, excluding the one in the current unit."
+                },
+                {
+                  "type": "string",
+                  "const": "run",
+                  "description": "The run itself, for run-scoped states and flags."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "var": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                      "description": "Name a previous prompt or resolveTarget bound the subject to."
+                    }
+                  },
+                  "required": [
+                    "var"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A subject chosen earlier in this action list and stored under a name."
+                }
+              ],
+              "description": "Which subject leaves play."
+            }
+          },
+          "required": [
+            "do",
+            "to"
+          ],
+          "additionalProperties": false,
+          "description": "Take a subject out of the run. Its unit still happened, but the subject plays no further part."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "ban",
+              "description": "Forbid declaring further subjects of a given type."
+            },
+            "subjectType": {
+              "description": "A literal subject type to forbid, when it is known up front.",
+              "type": "string"
+            },
+            "from": {
+              "description": "Take the forbidden type from this subject's declared type instead of naming it.",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "thisSubject",
+                  "description": "The subject being made in the current unit."
+                },
+                {
+                  "type": "string",
+                  "const": "targetSubject",
+                  "description": "The subject picked by the most recent resolveTarget action."
+                },
+                {
+                  "type": "string",
+                  "const": "allSubjects",
+                  "description": "Every subject in the run, including the current one."
+                },
+                {
+                  "type": "string",
+                  "const": "allPriorSubjects",
+                  "description": "Every completed subject, excluding the one in the current unit."
+                },
+                {
+                  "type": "string",
+                  "const": "run",
+                  "description": "The run itself, for run-scoped states and flags."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "var": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                      "description": "Name a previous prompt or resolveTarget bound the subject to."
+                    }
+                  },
+                  "required": [
+                    "var"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A subject chosen earlier in this action list and stored under a name."
+                }
+              ]
+            },
+            "label": {
+              "description": "How to describe the ban to the player.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "do"
+          ],
+          "additionalProperties": false,
+          "description": "Forbid declaring further subjects of a given type for the rest of the run."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "forceUnit",
+              "description": "Queue mandatory extra units before the run may end."
+            },
+            "count": {
+              "description": "How many extra units to queue. Defaults to 1.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          },
+          "required": [
+            "do"
+          ],
+          "additionalProperties": false,
+          "description": "Queue mandatory extra units; the run cannot end while any remain."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "rewind",
+              "description": "Send the player back: when this unit closes, the run enters an earlier unit again instead of the next one."
+            },
+            "count": {
+              "description": "How many units back. Defaults to 1: the previous unit is played again. Never before the first.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          },
+          "required": [
+            "do"
+          ],
+          "additionalProperties": false,
+          "description": "Send the player back a unit or more, played again from its start, at the close of the current one."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "extraRoll",
+              "description": "Owe extra rolls on a table's step: the step is rolled again until they are paid."
+            },
+            "table": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Id of the table whose step rolls again."
+            },
+            "count": {
+              "description": "How many extra rolls. Defaults to 1.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "unit": {
+              "description": "Which unit owes them: `next` (the default) for \"the next Stage rolls two Setbacks\", `current` when the step has not happened yet this unit.",
+              "type": "string",
+              "enum": [
+                "current",
+                "next"
+              ]
+            }
+          },
+          "required": [
+            "do",
+            "table"
+          ],
+          "additionalProperties": false,
+          "description": "Owe extra rolls on a table's step, this unit or the next; the flow keeps the step open until they are made."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "modCounter",
+              "description": "Adjust a counter."
+            },
+            "counter": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Id of the counter to change."
+            },
+            "by": {
+              "description": "Amount to add; negative subtracts.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "set": {
+              "description": "Absolute value to set, overriding `by`.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "setFrom": {
+              "description": "Set it to a value bound earlier, a roll's total or a prompt's answer, by name. Overrides `by` and `set`.",
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "do",
+            "counter"
+          ],
+          "additionalProperties": false,
+          "description": "Adjust a counter."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "modResource",
+              "description": "Adjust a resource."
+            },
+            "resource": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Id of the resource to change."
+            },
+            "by": {
+              "description": "Amount to add; negative spends.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "set": {
+              "description": "Absolute value to set, overriding `by`.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "setFrom": {
+              "description": "Set it to a value bound earlier, a roll's total or a prompt's answer, by name. Overrides `by` and `set`.",
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "do",
+            "resource"
+          ],
+          "additionalProperties": false,
+          "description": "Adjust a resource, clamped to its declared min and max."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "grantCard",
+              "description": "Draw cards into the player's hand."
+            },
+            "deck": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Id of the deck to draw from."
+            },
+            "count": {
+              "description": "How many to draw. Defaults to 1.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "do",
+            "deck"
+          ],
+          "additionalProperties": false,
+          "description": "Draw cards into the player's hand."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "discardCard",
+              "description": "Discard cards from hand without resolving them."
+            },
+            "deck": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Id of the deck the discarded card belongs to."
+            },
+            "count": {
+              "description": "How many to discard. Defaults to 1.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "do",
+            "deck"
+          ],
+          "additionalProperties": false,
+          "description": "Discard cards from hand without resolving them."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "startTimer",
+              "description": "Start a countdown the player must work against."
+            },
+            "minutes": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 600,
+              "description": "Duration in minutes."
+            },
+            "label": {
+              "description": "What the timer is for.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "do",
+            "minutes"
+          ],
+          "additionalProperties": false,
+          "description": "Start a countdown the player must work against."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "note",
+              "description": "Give the player an instruction to carry out by hand."
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The instruction shown to the player."
+            },
+            "persistent": {
+              "description": "Keep it on screen for the rest of the run rather than clearing it once acknowledged.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "do",
+            "text"
+          ],
+          "additionalProperties": false,
+          "description": "Give the player an instruction to carry out by hand, tracked as an obligation they tick off. Use this for anything the engine cannot do itself."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "setFlag",
+              "description": "Set a boolean flag that predicates can later test."
+            },
+            "flag": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Name of the flag."
+            },
+            "value": {
+              "description": "Value to set. Defaults to true.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "do",
+            "flag"
+          ],
+          "additionalProperties": false,
+          "description": "Set a boolean flag that predicates can later test."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "endRunAttempt",
+              "description": "Try to end the run."
+            }
+          },
+          "required": [
+            "do"
+          ],
+          "additionalProperties": false,
+          "description": "Try to end the run. It may be refused, by queued forced units or by a trigger that fires on the attempt."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "do": {
+              "type": "string",
+              "const": "when",
+              "description": "Run actions conditionally on run state."
+            },
+            "all": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "description": "Every predicate must hold."
+            },
+            "then": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "description": "Actions to run when the conditions hold."
+            },
+            "else": {
+              "description": "Actions to run when they do not.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema0"
+              }
+            }
+          },
+          "required": [
+            "do",
+            "all",
+            "then"
+          ],
+          "additionalProperties": false,
+          "description": "Run actions conditionally on run state."
+        }
+      ],
+      "description": "One step of behavior. The vocabulary is closed on purpose: packs are data, never code."
+    },
+    "__schema1": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "ask": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The yes/no question to put to the player, phrased so that yes means true."
+            }
+          },
+          "required": [
+            "ask"
+          ],
+          "additionalProperties": false,
+          "description": "Ask the player. Use this for anything about the work itself, which the engine cannot inspect, whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "unitIndex": {
+              "type": "object",
+              "properties": {
+                "eq": {
+                  "description": "Matches only this exact value.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gte": {
+                  "description": "Matches values greater than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "lte": {
+                  "description": "Matches values less than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gteCounter": {
+                  "description": "Matches values greater than or equal to this counter's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteCounter": {
+                  "description": "Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteResource": {
+                  "description": "Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteResource": {
+                  "description": "Matches values less than or equal to this resource's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                }
+              },
+              "additionalProperties": false,
+              "description": "A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated."
+            }
+          },
+          "required": [
+            "unitIndex"
+          ],
+          "additionalProperties": false,
+          "description": "Tests the current unit's number, counting from 1."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "subjectCount": {
+              "type": "object",
+              "properties": {
+                "eq": {
+                  "description": "Matches only this exact value.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gte": {
+                  "description": "Matches values greater than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "lte": {
+                  "description": "Matches values less than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gteCounter": {
+                  "description": "Matches values greater than or equal to this counter's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteCounter": {
+                  "description": "Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteResource": {
+                  "description": "Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteResource": {
+                  "description": "Matches values less than or equal to this resource's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                }
+              },
+              "additionalProperties": false,
+              "description": "A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated."
+            }
+          },
+          "required": [
+            "subjectCount"
+          ],
+          "additionalProperties": false,
+          "description": "Tests how many subjects exist, including removed ones."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "eligibleTargets": {
+              "type": "object",
+              "properties": {
+                "eq": {
+                  "description": "Matches only this exact value.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gte": {
+                  "description": "Matches values greater than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "lte": {
+                  "description": "Matches values less than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gteCounter": {
+                  "description": "Matches values greater than or equal to this counter's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteCounter": {
+                  "description": "Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteResource": {
+                  "description": "Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteResource": {
+                  "description": "Matches values less than or equal to this resource's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                }
+              },
+              "additionalProperties": false,
+              "description": "A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated."
+            }
+          },
+          "required": [
+            "eligibleTargets"
+          ],
+          "additionalProperties": false,
+          "description": "Tests how many subjects are currently targetable: completed, still in play, and not made untargetable by a state."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "counter": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Which declared counter to read."
+            },
+            "is": {
+              "type": "object",
+              "properties": {
+                "eq": {
+                  "description": "Matches only this exact value.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gte": {
+                  "description": "Matches values greater than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "lte": {
+                  "description": "Matches values less than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gteCounter": {
+                  "description": "Matches values greater than or equal to this counter's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteCounter": {
+                  "description": "Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteResource": {
+                  "description": "Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteResource": {
+                  "description": "Matches values less than or equal to this resource's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                }
+              },
+              "additionalProperties": false,
+              "description": "The comparison the counter's value must satisfy."
+            }
+          },
+          "required": [
+            "counter",
+            "is"
+          ],
+          "additionalProperties": false,
+          "description": "Tests a counter's current value."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "resource": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Which declared resource to read."
+            },
+            "is": {
+              "type": "object",
+              "properties": {
+                "eq": {
+                  "description": "Matches only this exact value.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gte": {
+                  "description": "Matches values greater than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "lte": {
+                  "description": "Matches values less than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gteCounter": {
+                  "description": "Matches values greater than or equal to this counter's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteCounter": {
+                  "description": "Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteResource": {
+                  "description": "Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteResource": {
+                  "description": "Matches values less than or equal to this resource's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                }
+              },
+              "additionalProperties": false,
+              "description": "The comparison the resource's value must satisfy."
+            }
+          },
+          "required": [
+            "resource",
+            "is"
+          ],
+          "additionalProperties": false,
+          "description": "Tests a resource's current value."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "clockRan": {
+              "type": "string",
+              "minLength": 1,
+              "description": "`unit` for the current unit's own clock, or a clock's label."
+            },
+            "is": {
+              "type": "object",
+              "properties": {
+                "eq": {
+                  "description": "Matches only this exact value.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gte": {
+                  "description": "Matches values greater than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "lte": {
+                  "description": "Matches values less than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gteCounter": {
+                  "description": "Matches values greater than or equal to this counter's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteCounter": {
+                  "description": "Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteResource": {
+                  "description": "Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteResource": {
+                  "description": "Matches values less than or equal to this resource's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                }
+              },
+              "additionalProperties": false,
+              "description": "The comparison, in minutes, the clock's live elapsed time must satisfy."
+            }
+          },
+          "required": [
+            "clockRan",
+            "is"
+          ],
+          "additionalProperties": false,
+          "description": "Tests how long a clock has run, live: while it is still going and after it has stopped. Works for a stopwatch or a timer. False if no such clock exists in the current unit."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "clockRanOver": {
+              "type": "string",
+              "minLength": 1,
+              "description": "`unit` for the current unit's own clock, or a clock's label."
+            },
+            "is": {
+              "type": "object",
+              "properties": {
+                "eq": {
+                  "description": "Matches only this exact value.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gte": {
+                  "description": "Matches values greater than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "lte": {
+                  "description": "Matches values less than or equal to this.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "gteCounter": {
+                  "description": "Matches values greater than or equal to this counter's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteCounter": {
+                  "description": "Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteResource": {
+                  "description": "Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "lteResource": {
+                  "description": "Matches values less than or equal to this resource's current value.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                }
+              },
+              "additionalProperties": false,
+              "description": "The comparison, in minutes, the timer's overrun must satisfy."
+            }
+          },
+          "required": [
+            "clockRanOver",
+            "is"
+          ],
+          "additionalProperties": false,
+          "description": "Tests how far a timer has run past its length, in minutes. False for a stopwatch, and false if no such clock exists in the current unit."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "flag": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Which flag to read."
+            },
+            "is": {
+              "description": "Expected value. Defaults to true.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "flag"
+          ],
+          "additionalProperties": false,
+          "description": "Tests a boolean flag set by a setFlag action."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "subjectHasState": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Which declared state to look for."
+            },
+            "of": {
+              "description": "Whose state to check. Defaults to thisSubject.",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "thisSubject",
+                  "description": "The subject being made in the current unit."
+                },
+                {
+                  "type": "string",
+                  "const": "targetSubject",
+                  "description": "The subject picked by the most recent resolveTarget action."
+                },
+                {
+                  "type": "string",
+                  "const": "allSubjects",
+                  "description": "Every subject in the run, including the current one."
+                },
+                {
+                  "type": "string",
+                  "const": "allPriorSubjects",
+                  "description": "Every completed subject, excluding the one in the current unit."
+                },
+                {
+                  "type": "string",
+                  "const": "run",
+                  "description": "The run itself, for run-scoped states and flags."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "var": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                      "description": "Name a previous prompt or resolveTarget bound the subject to."
+                    }
+                  },
+                  "required": [
+                    "var"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A subject chosen earlier in this action list and stored under a name."
+                }
+              ]
+            }
+          },
+          "required": [
+            "subjectHasState"
+          ],
+          "additionalProperties": false,
+          "description": "Tests whether a subject, or the run, currently carries a state."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "priorSubjectTagged": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The tag to search for among completed subjects."
+            }
+          },
+          "required": [
+            "priorSubjectTagged"
+          ],
+          "additionalProperties": false,
+          "description": "Tests whether any earlier subject was created from an entry carrying this tag, for results that only make sense once something of a given kind exists."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "modeIs": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                "description": "A stable identifier, unique within its collection. Letters, digits, dot, dash and underscore; must start with a letter or digit. Ids appear in saved runs, so renaming one breaks existing logs."
+              },
+              "description": "Mode ids in which this holds true."
+            }
+          },
+          "required": [
+            "modeIs"
+          ],
+          "additionalProperties": false,
+          "description": "Tests which mode the run is being played in."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "phaseDone": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+              "description": "Id of a phase in the flow."
+            }
+          },
+          "required": [
+            "phaseDone"
+          ],
+          "additionalProperties": false,
+          "description": "True once the named phase has been completed in the current unit. This is how a move that records an outcome is kept off the screen until there is something to have an outcome about."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "not": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "not"
+          ],
+          "additionalProperties": false,
+          "description": "True when the inner predicate is false."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "allOf": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema1"
+              }
+            }
+          },
+          "required": [
+            "allOf"
+          ],
+          "additionalProperties": false,
+          "description": "True only when every listed predicate holds."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "anyOf": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema1"
+              }
+            }
+          },
+          "required": [
+            "anyOf"
+          ],
+          "additionalProperties": false,
+          "description": "True when at least one listed predicate holds."
+        }
+      ],
+      "description": "A condition evaluated against run state, or a question put to the player."
+    }
+  }
+}

@@ -2,6 +2,7 @@ import { parse as parseYaml } from "yaml";
 import { parsePack, type ParseResult } from "./parse.ts";
 import { parseSetup, looksLikeSetup, type SetupResult } from "./setup.ts";
 import { parseMapping, looksLikeMapping, type MappingResult } from "./mapping.ts";
+import { parseSharedTables, looksLikeSharedTables, type SharedTablesResult } from "./shared-tables.ts";
 
 /**
  * Loading packs from text.
@@ -69,11 +70,12 @@ export function loadSetupText(text: string, format: PackFormat): SetupResult {
  * is why `kind` is required on a setup: the new thing declares itself,
  * and the old thing does not have to be changed to keep working.
  */
-export function whichKind(text: string, format: PackFormat): "pack" | "setup" | "mapping" | "unreadable" {
+export function whichKind(text: string, format: PackFormat): "pack" | "setup" | "mapping" | "tables" | "unreadable" {
   try {
     const raw = format === "yaml" ? parseYaml(text) : JSON.parse(text);
     if (looksLikeSetup(raw)) return "setup";
     if (looksLikeMapping(raw)) return "mapping";
+    if (looksLikeSharedTables(raw)) return "tables";
     return "pack";
   } catch {
     return "unreadable";
@@ -95,4 +97,19 @@ export function loadMappingText(text: string, format: PackFormat): MappingResult
     };
   }
   return parseMapping(raw);
+}
+
+/** A shared table set from text, the same way as the others. */
+export function loadSharedTablesText(text: string, format: PackFormat): SharedTablesResult {
+  let raw: unknown;
+  try {
+    raw = format === "yaml" ? parseYaml(text) : JSON.parse(text);
+  } catch (cause) {
+    return {
+      ok: false,
+      tables: null,
+      diagnostics: [{ level: "error", code: `parse/${format}`, path: "", message: cause instanceof Error ? cause.message : String(cause) }],
+    };
+  }
+  return parseSharedTables(raw);
 }

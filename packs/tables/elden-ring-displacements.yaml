@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=../../packages/rules-schema/schema/tables-1.schema.json
+
+# Tables written once, for any pack that wants them.
+#
+# Displacement is the most copied idea in this game and the most tedious
+# to write: every author who wants it sits down with a map and types out
+# the same graces. Doing that once means a fix to one of them is a fix
+# everywhere, instead of a fix to one fork.
+#
+# Two pitches of the same idea, because the person who wrote it plays it
+# harsh and somebody else does not. A pack chooses one, and a run can
+# choose the other without either of them forking anything.
+
+kind: tables
+schemaVersion: 1
+id: com.scrthq.runlog.tables.elden-ring-displacements
+version: "1.0.0"
+title: Displacements
+author: Runlog
+description: >-
+  Being put somewhere else. The gentle set stays in the places you were
+  probably going anyway; the harsh set does not care where you were going.
+
+defaultVariant: gentle
+
+variants:
+  gentle:
+    title: Displacements, gentle
+    description: Somewhere inconvenient, not somewhere fatal.
+    roll: d6
+    entries:
+      - { id: dg-church, range: [1, 1], text: "Church of Elleh.", tags: [displacement] }
+      - { id: dg-gatefront, range: [2, 2], text: "Gatefront Ruins.", tags: [displacement] }
+      - { id: dg-agheel, range: [3, 3], text: "Agheel Lake North.", tags: [displacement] }
+      - { id: dg-saintsbridge, range: [4, 4], text: "Saintsbridge.", tags: [displacement] }
+      - { id: dg-murkwater, range: [5, 5], text: "Murkwater Coast.", tags: [displacement] }
+      - { id: dg-stormhill, range: [6, 6], text: "Stormhill Shack.", tags: [displacement] }
+
+  harsh:
+    title: Displacements, harsh
+    description: Somewhere you were not going, and would not have gone.
+    roll: d6
+    entries:
+      - { id: dh-caelid, range: [1, 1], text: "Smoldering Church, in Caelid.", tags: [displacement] }
+      - { id: dh-caelem, range: [2, 2], text: "Caelem Ruins.", tags: [displacement] }
+      - { id: dh-siofra, range: [3, 3], text: "Siofra River Well Depths.", tags: [displacement] }
+      - { id: dh-dragonbarrow, range: [4, 4], text: "Dragonbarrow West.", tags: [displacement] }
+      - { id: dh-liurnia, range: [5, 5], text: "Laskyar Ruins, in the lake.", tags: [displacement] }
+      - { id: dh-weeping, range: [6, 6], text: "Bridge of Sacrifice, the far side.", tags: [displacement] }
+
+license:
+  id: MIT
+  redistributable: true
