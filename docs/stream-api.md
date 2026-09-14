@@ -410,6 +410,95 @@ The operation names are the tool's, not ours. This end sends only what a profile
 
 Names are the compatibility story between versions of one program, and say nothing between programs: two tools for two games could easily both have a `warp.position`. That is what `tool` is for.
 
+## Driving a run from a deck: `wss://…/ws?token=<jwt>&as=deck`
+
+Everything above reads, or writes only through an ask. A deck presses the same buttons the page does: primary, a move, undo, an answer. It needs a signed-in account rather than a key — the app's own sign-in, the CLI's `runlog login`, or a client of its own that has been through the same WorkOS sign-in — and driving a run from a deck is part of Plus where plans are on. The token here is that account's access token, not a link's token or a stream key; those open the plain watcher and scene sockets described above, never a deck.
+
+A deck names no run at connect: it is told what is open to it and picks. Only a run some other device is actively holding open ever appears, and pressing never reaches further than that.
+
+### The runs it may press
+
+On attach, and again whenever the set changes, the server sends the runs held open to this account on a writing device:
+
+```json
+{ "t": "runs", "runs": [{ "id": "01RUN", "name": "Thursday", "packTitle": "Forfeits", "held": true }] }
+```
+
+`name` and `packTitle` are left out where the run has none. A run that nothing is holding open drops off this list rather than being marked otherwise, so an empty `runs` reads as nothing open right now.
+
+### Watching one
+
+```json
+{ "t": "watch", "id": "01RUN" }
+```
+
+From then on this run's `{ "t": "changed", "id": "01RUN", "seq": 42 }` rings on the same socket, exactly as it does for a watcher, and `seq` is what a press must carry.
+
+### Pressing
+
+```json
+{ "t": "drive", "run": "01RUN", "seq": 42, "ref": "cli-1758000000000", "press": "primary" }
+```
+
+| `press` | Does |
+| --- | --- |
+| `primary` | The one button the page would show first: rolling a table, carrying on, closing the unit, entering the next one. |
+| `move` | One of the run's moves, named by id in a `move` field. |
+| `undo` | Takes back the last result, where there is one to take back. |
+| `answer` | Answers what the run is asking for: `{ "subject": "Bowl 3" }` for a step that wants a name typed, or `{ "ticks": "all" }` for a step with a checklist, which ticks everything on it and presses the step's own finish button in the one press. |
+
+`seq` names the offer a press was drawn from — the run's `events.length` at the moment it was shown — so a press made against last minute's state cannot land on whatever the run has moved on to since. `ref` is the caller's own; a press whose `ref` has been sent before on this connection settles to the same verdict rather than being taken twice.
+
+### The verdict
+
+```json
+{ "t": "drove", "ref": "cli-1758000000000", "ok": true }
+{ "t": "drove", "ref": "cli-1758000000000", "ok": false, "say": "That moved on." }
+```
+
+It comes from the page holding the run wherever one is there to answer, since only that device knows what the press did. The server answers instead when there is nowhere for the press to go, or the press is not this account's to make:
+
+| `say` | From |
+| --- | --- |
+| `That run is not yours to press.` | The server; the run is not this account's, or has been deleted. |
+| `That run has ended.` | The server. |
+| `Driving a run from a deck is part of Plus.` | The server, where plans are on and the account is not. |
+| `Nothing is holding that run.` | The server; no device has it open to write to. |
+| `That moved on.` | The page; the press named a `seq` that is no longer current. |
+| *(the offer's own `needsPage`, or)* `There is nothing to press.` | The page; `primary` pressed while the offer has none. |
+| `That is not on offer.` | The page; `move` named an id the run is not offering. |
+| `There is nothing to take back.` | The page; `undo` with nothing to undo. |
+| `The run is not asking for that.` | The page; `answer` sent for a preset the current step does not have. |
+| `That answer was empty.` | The page; a `subject` typed as nothing. |
+| `This run does not know that press.` | The page; a `press` value that is none of the above. |
+| `That press failed.` | The page; the press was on offer and got taken, and failed for a reason of its own with nothing to say about it. |
+
+### What the page offers
+
+The device holding the run publishes what a deck may press beside `control`, in its snapshot:
+
+```json
+{
+  "offer": {
+    "seq": 42,
+    "primary": { "id": "roll", "label": "Draw the weather", "kind": "rollTable" },
+    "moves": [{ "id": "died", "label": "Died" }],
+    "undo": { "what": "A dry wind from the east." },
+    "needsPage": null,
+    "presets": []
+  }
+}
+```
+
+| Field | What it is |
+| --- | --- |
+| `seq` | The offer's own `events.length`; the `seq` a press against it must carry. |
+| `primary` | What a bare `primary` press takes: `id` is `roll`, `carry-on`, `close` or `enter`; `label` and `kind` are the step's own words. Null where nothing may be pressed without being asked something first. |
+| `moves` | The moves a `move` press may name, by id and label. A move that would close the unit while something is still owed is left off rather than offered and refused. |
+| `undo` | `{ "what": "…" }`, the last result in words, where there is one to take back; null otherwise. |
+| `needsPage` | Why `primary` is null, in words a key face can show, such as "Draw the weather on the page"; null where nothing needs it. |
+| `presets` | Steps that take a typed or ticked answer instead of a bare press: `{ "kind": "declareSubject", "label": "…", "suggestions": […] }`, answered with `{ "subject": "…" }`, `suggestions` left out where the run has none; or `{ "kind": "checklist", "label": "Tick everything and …", "items": 4 }`, answered with `{ "ticks": "all" }`. |
+
 ## Politeness
 
 Poll no faster than every five seconds; the socket exists so you need not, and a widget is one reader on one machine, never one per viewer. Keep the token out of anything you publish: whoever has it can watch, and a widget pasted into a shared overlay carries it. If it gets out, **Stop sharing** and share again; the old token is dead the moment you do. Nothing here writes to the run except an ask, and an ask only asks.

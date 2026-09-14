@@ -32,6 +32,7 @@
     "cdk": "npm run cdk -w hosted/infra --",
     "overlay": "tsx hosted/scripts/overlay.ts",
     "dev": "npm run dev -w apps/web --",
+    "drive": "node --experimental-strip-types scripts/drive.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
