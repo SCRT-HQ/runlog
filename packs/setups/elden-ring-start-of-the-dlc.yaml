@@ -1,0 +1,42 @@
+# Shadow of the Erdtree, from its first grace.
+#
+# The DLC starts a long way into the game, behind Mohg, and a run that
+# means to play it should not have to play the base game first. This
+# unlocks its maps and puts the player at Gravesite Plain, which is the
+# grace you wake at on the other side of the cocoon.
+#
+# The warp is the whole point and also the loudest thing any setup here
+# does: everything else changes what you are holding, and this moves
+# you. It happens when the tool attaches, so attach it where you are
+# willing to be moved from.
+#
+# Deliberately only the two. What to take in is a separate sentence, and
+# there is a separate loadout for it: pick this and Give Scadutree
+# Blessings together and you arrive levelled for the place.
+#
+# Without the DLC the tool refuses both rather than failing the run.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.start-of-the-dlc
+version: "1.0.0"
+title: Start of the DLC
+author: Runlog
+description: >-
+  Shadow of the Erdtree from its first grace. The DLC's maps are
+  unlocked and the player is put at Gravesite Plain, so a run can begin
+  there instead of earning its way to the cocoon.
+
+tool: TarnishedTool
+
+ops:
+  - { op: action.invoke, args: { action: UnlockMainGameMaps }, once: true }
+  - { op: action.invoke, args: { action: UnlockAllMainGameGraces }, once: true }
+  - { op: action.invoke, args: { action: UnlockDlcMaps }, once: true }
+  - { op: warp.grace, args: { name: Gravesite Plain, area: Gravesite Plain }, once: true }
+
+license:
+  id: MIT
+  redistributable: true
