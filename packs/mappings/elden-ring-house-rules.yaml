@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=../../packages/rules-schema/schema/mapping-1.schema.json
+
+# A mapping, which is its own document.
+#
+# The profile beside this one has a hundred and forty rules and every one
+# of them names an entry in one pack. That is right for what it does: each
+# curse in that pack does its own particular thing, and nothing but a rule
+# per entry will say so.
+#
+# This is the other half, and the half that travels. It fires on marks,
+# which any pack can declare, so it works on the next Elden Ring pack
+# somebody writes without a line of it changing. It is a house rule: what
+# this table does about a kind of result, rather than about a result.
+
+kind: mapping
+schemaVersion: 1
+id: com.scrthq.runlog.mappings.elden-ring-house-rules
+version: "1.0.0"
+title: House rules
+author: Runlog
+description: >-
+  What this table does about a kind of result rather than a particular
+  one. Being moved pays a fare, a curse costs a little, and a blessing
+  hands back an arc. Fits any Elden Ring pack that declares the marks.
+
+tool: TarnishedTool
+
+# Where it has been tried. A note for a chooser, not a restriction: it
+# fires on any pack carrying the marks it names.
+packs:
+  - com.scrthq.runlog.elden-ring-tarnishedtool
+
+rules:
+  # Being put somewhere else costs a walk back, and the walk is the
+  # punishment rather than the poverty. Fifty thousand is the fare.
+  - mark: displacement
+    label: The fare for being moved
+    ops:
+      - { op: runes.give, args: { amount: 50000 } }
+
+  # A curse already does its own thing, whatever that is in this pack.
+  # This is the table's surcharge on top, and it is small on purpose:
+  # anything that stacks on every curse has to be survivable at four in a
+  # row, because four in a row happens.
+  - mark: curse
+    label: A curse costs something
+    ops:
+      - { op: runes.give, args: { amount: -2000 } }
+
+  # And the other way. An arc is worth having and worth nothing if you
+  # are dead, which is the right shape for a reward here.
+  - mark: blessing
+    label: A blessing hands back an arc
+    ops:
+      - { op: item.named, args: { name: Rune Arc, quantity: 1 } }
+
+license:
+  id: MIT
+  redistributable: true

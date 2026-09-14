@@ -1,0 +1,169 @@
+{
+  "$id": "https://runlog.scrthq.com/schema/mapping-1.schema.json",
+  "title": "Runlog mapping (schema version 1)",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "mapping",
+      "description": "What this document is. A pack says nothing, a setup says `setup`, this says `mapping`."
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991,
+      "description": "The format's major version, as a pack carries one."
+    },
+    "id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$",
+      "description": "Reverse-domain id: `com.example.mappings.elden-ring`."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Semantic version. A mapping that changes what it does changes this."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "description": "What it is called, on a card and in a chooser."
+    },
+    "author": {
+      "description": "Who wrote it. A mapping travels on its own, so this is the only credit it carries.",
+      "type": "string",
+      "maxLength": 120
+    },
+    "description": {
+      "description": "What playing under it is like, in a line or two.",
+      "type": "string",
+      "maxLength": 2000
+    },
+    "tool": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "The tool this is for, by the name that tool calls itself when it attaches."
+    },
+    "packs": {
+      "description": "Packs the author wrote this against, so a chooser can offer the likely ones first. Not a restriction: a mapping fires on any pack carrying the marks it names.",
+      "maxItems": 50,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 128,
+        "pattern": "^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$",
+        "description": "Globally unique pack identifier in reverse-DNS form, e.g. com.example.my-game. Use a domain you control so two packs never collide in a player's library."
+      }
+    },
+    "rules": {
+      "minItems": 1,
+      "maxItems": 500,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "mark": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "description": "The mark this fires on. Any pack that declares it and carries it will set this off."
+          },
+          "label": {
+            "description": "What to call this rule in a list, where the mark alone is not enough.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "for": {
+            "description": "Seconds it lasts. Absent and without `until`, it does not come off.",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 86400
+          },
+          "until": {
+            "description": "Lasts until the unit it landed in closes.",
+            "type": "string",
+            "const": "unit"
+          },
+          "to": {
+            "description": "One seat's name, or absent for everybody at the table.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "ops": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "description": "The operation, in the tool's own words: `speffect.apply`, `runes.give`. A tool refuses by name anything its build does not have."
+                },
+                "args": {
+                  "description": "What the operation takes. Its shape is the tool's business, not this format's.",
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "op"
+              ],
+              "additionalProperties": false
+            },
+            "description": "What to do when it fires, in order."
+          }
+        },
+        "required": [
+          "mark",
+          "ops"
+        ],
+        "additionalProperties": false
+      },
+      "description": "The rules, in order. Every one that matches fires."
+    },
+    "license": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "An SPDX identifier where there is one, else whatever name the terms go by."
+        },
+        "redistributable": {
+          "type": "boolean",
+          "description": "Whether somebody may pass this on."
+        }
+      },
+      "required": [
+        "id",
+        "redistributable"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "id",
+    "version",
+    "title",
+    "tool",
+    "rules"
+  ],
+  "additionalProperties": false,
+  "description": "What a tool attached to the game should do about what the dice said, bound to the marks a pack declares rather than to one pack's entries, so one mapping fits every pack for the same game."
+}
