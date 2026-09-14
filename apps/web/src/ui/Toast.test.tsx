@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { useToast } from "./Toast.tsx";
 
 /**
@@ -11,6 +11,11 @@ import { useToast } from "./Toast.tsx";
  * that the text shows up where it is read out, `role="status"`, and that
  * it does not linger once whatever it was reporting is old news.
  */
+
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 function Probe() {
   const toast = useToast();
@@ -30,6 +35,20 @@ describe("a note that goes away", () => {
     expect(screen.getByRole("status").textContent).toBe("Stream Deck on Thursday");
     await act(() => vi.advanceTimersByTimeAsync(6000));
     expect(screen.queryByRole("status")).toBeNull();
-    vi.useRealTimers();
+  });
+
+  it("restarts the clock when the same words are shown again", async () => {
+    vi.useFakeTimers();
+    render(<Probe />);
+    await act(async () => void screen.getByText("go").click());
+    await act(() => vi.advanceTimersByTimeAsync(4000));
+    // Not yet five seconds since the first show.
+    expect(screen.getByRole("status")).toBeTruthy();
+    await act(async () => void screen.getByText("go").click());
+    await act(() => vi.advanceTimersByTimeAsync(4000));
+    // Eight seconds since the first show, but only four since the second.
+    expect(screen.getByRole("status")).toBeTruthy();
+    await act(() => vi.advanceTimersByTimeAsync(1100));
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });

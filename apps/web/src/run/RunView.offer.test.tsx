@@ -123,6 +123,36 @@ describe("the offer rides along with the snapshot", () => {
     await renderRunView({ putSnapshot, shared: false });
     expect(screen.queryByText(/Stream Deck/)).toBeNull();
   });
+
+  /**
+   * The toast fires on the way up, once, and then goes: a second `tools`
+   * gesture that does not raise the count is not a second arrival, and
+   * the note is not still on screen five seconds after the one that was.
+   *
+   * The bench strip is also `role="status"` (it says "Test run"), so the
+   * toast is picked out by its own class rather than by role alone.
+   */
+  it("tells the table a deck arrived, once, and lets the note go", async () => {
+    const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+    await renderRunView({ putSnapshot, shared: false });
+    const at = "2026-09-14T00:00:00.000Z";
+    const notes = () => screen.getAllByRole("status").filter((el) => el.classList.contains("toast"));
+
+    act(() => {
+      syncBus.emit({ t: "gesture", id: "run1", kind: "tools", data: { tools: [], count: 0, decks: 1 }, at });
+    });
+    expect(notes()).toHaveLength(1);
+    expect(notes()[0]!.textContent).toBe("A Stream Deck is on this run.");
+
+    act(() => {
+      syncBus.emit({ t: "gesture", id: "run1", kind: "tools", data: { tools: [], count: 0, decks: 1 }, at });
+    });
+    // Still exactly one: the count did not rise, so no second note.
+    expect(notes()).toHaveLength(1);
+
+    await act(() => vi.advanceTimersByTimeAsync(5100));
+    expect(notes()).toHaveLength(0);
+  });
 });
 
 /**
