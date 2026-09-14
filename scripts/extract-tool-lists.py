@@ -31,10 +31,19 @@ graces = sorted({(r[2].strip(), r[1].strip()) for r in rows("Graces") if len(r) 
 
 # Everything `item.named` will match against, in the same order the tool
 # builds its own pool. Key items only where the tool hands them over
-# without an event behind them, which is the ones with no event id.
+# without an event behind them: the rest are tied to an event flag, and
+# handing one over without the event is how a quest breaks.
+#
+# Which ones those are is column five, the tool's own `NeedsEvent`, and
+# not column six. This read column six -- "has an event id" -- which is
+# nearly the same set and not the same set: it left out eight key items
+# the tool gives quite happily, and offered `Rold Medallion`, which the
+# tool refuses. A name this list offers that the tool refuses is the
+# exact failure the list exists to prevent, so it reads the flag the
+# tool reads.
 ITEMS = ["Consumables", "UpgradeMaterials", "CraftingMaterials", "CrystalTears", "Talismans", "Armor", "Arrows", "PotsAndPerfumes", "Sorceries", "Incantations"]
 items = {r[2].strip() for key in ITEMS for r in rows(key) if len(r) >= 3}
-items |= {r[2].strip() for r in rows("KeyItems") if len(r) >= 7 and r[6].strip() in ("-1", "")}
+items |= {r[2].strip() for r in rows("KeyItems") if len(r) >= 6 and r[5].strip() != "1"}
 
 # Weapons carry how far they reinforce: the ordinary ones to +25, the
 # ones on somber stones to +10. The panel holds the level to that.
