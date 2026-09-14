@@ -334,3 +334,7 @@ I removed the Seeded mode since the UI lets you enter a seed regardless of mode,
 ---
 
 why wouldn't just sharing the seed to others result in the same thing as enabling mode.seeded?
+
+---
+
+yes
