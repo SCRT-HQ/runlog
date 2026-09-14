@@ -28,6 +28,17 @@ export interface BillingStore {
   seenWebhook(eventId: string, at: string): Promise<boolean>;
 }
 
+/**
+ * What a person has: what Stripe granted them, and what a WorkOS feature
+ * flag on their session grants: a flag named like a feature counts as
+ * that feature. The flags are remembered per person so a rule that reads
+ * someone else's standing (the fee on a sale, for the publisher) sees them.
+ */
+export async function grantsOf(billing: Pick<BillingStore, "entitlements" | "flags">, sub: string, flags?: string[]): Promise<string[]> {
+  const [bought, kept] = await Promise.all([billing.entitlements(sub), billing.flags(sub)]);
+  return [...new Set([...bought, ...kept, ...(flags ?? [])])];
+}
+
 const WEBHOOK_DAYS = 7;
 const expiresAfter = (at: string, days: number) => Math.floor(new Date(at).getTime() / 1000) + days * 86400;
 

@@ -22,7 +22,7 @@ import { sesMailer, type Mailer } from "./email.js";
 import { fingerprintOf, verifyProof } from "./proof.js";
 import { apiGatewayPoster, dynamoLive, notifier, teller, type Notify, type Tell } from "./live.js";
 import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, type RaceStore } from "./races.js";
-import { dynamoBilling, type BillingStore } from "./billing.js";
+import { dynamoBilling, grantsOf as grantsOfStore, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
 import { dynamoGuilds, guildsAllowed, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
 import { handleInteraction, kindOf, threadHears, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
@@ -1278,16 +1278,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // Who you are, and what is known here about you. Reading it is also
   // being seen: the profile row is created on first sight and its
   // `lastSeenAt` moves every time.
-  /**
-   * What a person has: what Stripe granted them, and what a WorkOS feature
-   * flag on their session grants: a flag named like a feature counts as
-   * that feature. The flags are remembered per person so a rule that reads
-   * someone else's standing (the fee on a sale, for the publisher) sees them.
-   */
-  const grantsOf = async (sub: string, flags?: string[]): Promise<string[]> => {
-    const [bought, kept] = await Promise.all([deps.billing.entitlements(sub), deps.billing.flags(sub)]);
-    return [...new Set([...bought, ...kept, ...(flags ?? [])])];
-  };
+  // The one entitlement check, shared with ws.ts's `entitled`: what Stripe
+  // granted plus what a WorkOS feature flag on the session grants, bound
+  // to this request's billing store.
+  const grantsOf = (sub: string, flags?: string[]): Promise<string[]> => grantsOfStore(deps.billing, sub, flags);
   // ---- the invitations waiting for this account, so nobody needs the mail ----
   // Found by the address the profile holds, which is what an invitation is
   // addressed to; an account whose profile has no address yet has nothing

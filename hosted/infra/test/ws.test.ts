@@ -1091,3 +1091,41 @@ describe("a deck's press", () => {
     expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r3", ok: false, say: "That run is not yours to press." });
   });
 });
+
+describe("driving is part of Plus", () => {
+  it("refuses a press without Plus, and says so", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster, entitled: async () => false };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "s1", seq: 1, ref: "r1", press: "primary" }) }), d);
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r1", ok: false, say: "Driving a run from a deck is part of Plus." });
+    expect(posted.some(([id]) => id === "page")).toBe(false);
+  });
+
+  it("lets a deck watch without Plus", async () => {
+    // The runs list still arrives: reading is not gated, and a deck that
+    // cannot press must still be able to show what is going on.
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster, entitled: async () => false };
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    expect(posted.some(([, data]) => JSON.parse(data)["t"] === "runs")).toBe(true);
+  });
+});

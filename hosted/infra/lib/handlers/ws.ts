@@ -5,6 +5,7 @@ import { apiGatewayPoster, type Poster } from "./live.js";
 import { dynamoLive, type LiveStore } from "./live.js";
 import { dynamoStore, type Ask, type Store } from "./store.js";
 import { dynamoRaces, type RaceStore } from "./races.js";
+import { dynamoBilling, grantsOf } from "./billing.js";
 import { annotate } from "./xray.js";
 import { randomBytes } from "node:crypto";
 
@@ -40,6 +41,11 @@ export interface WsDeps {
   races: Pick<RaceStore, "getRace">;
   verify: (authorization: string | undefined) => Promise<Caller>;
   now?: () => string;
+  /**
+   * Whether this account may drive a run from outside it. Absent where
+   * plans are off, which is the same answer as yes.
+   */
+  entitled?: (sub: string) => Promise<boolean>;
 }
 
 interface WsResult {
@@ -466,6 +472,7 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     const session = await deps.store.getSession(run);
     if (!session || session.meta.deletedAt || session.meta.ownerSub !== conn.sub) return refuse("That run is not yours to press.");
     if (session.meta.endedAt) return refuse("That run has ended.");
+    if (deps.entitled && !(await deps.entitled(conn.sub))) return refuse("Driving a run from a deck is part of Plus.");
 
     const writers = (await deps.live.watchers(run)).filter(writes);
     if (writers.length === 0) return refuse("Nothing is holding that run.");
@@ -658,6 +665,21 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
 
 /* ---- the Lambda ---------------------------------------------------------- */
 
+/**
+ * The plan flag's name, read the same `STRIPE_FEATURES` json api.ts reads
+ * so a relabeled flag means the same thing on both sides of the socket.
+ * Mirrors api.ts's `featuresFromEnv`, narrowed to the one feature a press
+ * cares about.
+ */
+function plusFeatureFromEnv(raw: string | undefined): string {
+  try {
+    const parsed = JSON.parse(raw ?? "{}") as Record<string, unknown>;
+    return typeof parsed["plus"] === "string" && parsed["plus"] ? (parsed["plus"] as string) : "plus";
+  } catch {
+    return "plus";
+  }
+}
+
 let deps: WsDeps | undefined;
 
 export async function handler(event: WsEvent): Promise<WsResult> {
@@ -665,12 +687,20 @@ export async function handler(event: WsEvent): Promise<WsResult> {
     const clientId = process.env["WORKOS_CLIENT_ID"] ?? "";
     const cliClientId = process.env["WORKOS_CLI_CLIENT_ID"] ?? "";
     const table = process.env["TABLE_NAME"] ?? "";
+    const gates = process.env["RUNLOG_GATES"] === "on";
+    const plusFeature = plusFeatureFromEnv(process.env["STRIPE_FEATURES"]);
+    const billing = dynamoBilling({ table });
     deps = {
       live: dynamoLive({ table }),
       store: dynamoStore({ table, bucket: process.env["BUCKET_NAME"] ?? "" }),
       races: dynamoRaces({ table }),
       verify: (authorization) => verifyToken(authorization, [clientId, cliClientId]),
       ...(process.env["WS_ENDPOINT"] ? { poster: apiGatewayPoster(process.env["WS_ENDPOINT"]) } : {}),
+      // No token flags are in hand at drive time, only `conn.sub`: the
+      // kept flags `billing.flags(sub)` do the work a token flag would on
+      // the API side, and `/api/me` refreshes those on every call the app
+      // makes, so a comped account is comped here too.
+      ...(gates ? { entitled: async (sub: string) => (await grantsOf(billing, sub)).includes(plusFeature) } : {}),
     };
   }
   try {
