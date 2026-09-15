@@ -327,6 +327,24 @@ export function loadoutFor(profile: ControlProfile, had = false): { frame: strin
   );
 }
 
+/**
+ * One setup file's operations, handed over once and nothing more.
+ *
+ * A warp, a gift, a switch thrown for a moment: the press says do this
+ * now, not this is what the run is played under from here. So the
+ * operations travel with the press rather than being read off the run,
+ * and the run's own setup is neither rebuilt nor written to. The id and
+ * the title are the setup file's own, which is what a tool writes in its
+ * log, and they are also what a later revert would name.
+ *
+ * Nothing is held back: `had` is false because there is no record of who
+ * has had this and no intention of keeping one. A gift sent twice was
+ * sent twice on purpose, by somebody pressing the key twice.
+ */
+export function commandFor(ops: ControlOp[], id: string, title: string): { frame: string; gave: boolean } | null {
+  return frameOf(ops, id, title, false);
+}
+
 function frameOf(all: ControlOp[], id: string, label: string, had: boolean): { frame: string; gave: boolean } | null {
   const ops = all.filter((o) => !(o.once && had));
   if (ops.length === 0) return null;

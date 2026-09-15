@@ -127,10 +127,13 @@ The kinds:
 | `counter` | A tally the pack shows moved: a death counted, a streak sent back to zero. Hidden counters are not told. | `counter`, its id; `label`, in the pack's words; `value`, where it is now; `was`, where it was. |
 | `unit-closed` | A unit was finalized. | `unit`, the one closed; `unitsDone`, how many so far. |
 | `run-ended` | The run ended. | `ending`, its name; `unitsDone`. |
+| `command` | The run's owner handed the attached tool one setup file's operations, once: a warp, a handful of runes, a rule switched on for a minute. | `id` and `title`, the setup file's own; `ops`, the operations in the tool's own vocabulary, each `{ "op": "…", "args": { … } }`. |
 | `ask` | Something outside asked the run for a move or a roll (see Asks below). Sent by the server. | `ask`, its id; `kind`, `move` or `roll`; `move`, the move's id; `name` and `via` as given; `policy`, `ask` or `auto`. |
 | `asked` | The host answered an ask. Sent by the server. | The same fields, plus `accepted`, true or false, and `reason` when declined. |
 
 `rolled` is sent by whichever device threw, so a plugin can play the same throw. The rest are sent by the run's owner's device after each move, whichever device made it, so a table speaks with one voice; they say what happened in words a listener without the pack can use, and a result's `n` lets a listener drop one it has already shown. Words are for showing: match on `tableId` and `entryId`, or on a tag, for anything that acts on a result, since the text changes whenever its author edits it. An undo says nothing: what it unmade is not there when the state is next read. Others may follow the same shape; ignore kinds you do not know. A gesture is not a move, so a `changed` message does not follow it; the move it belongs to rings on its own once the result is written. The socket closes when the link is revoked, and after a while idle; reconnect with a small backoff. Nothing may be sent on it; a message from a plugin is dropped.
+
+A `command` is the run owner's to send and nobody else's, and it leaves the run's own setup alone: the terms and the loadout a tool is handed when it attaches are unchanged by it, so a tool that reconnects a minute later is handed exactly what it would have been handed before the press.
 
 ## The whole run: `GET /api/public/runs/<runId>?t=<token>`
 

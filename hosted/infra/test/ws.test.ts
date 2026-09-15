@@ -949,6 +949,155 @@ describe("telling the listeners", () => {
       expect(posted).toEqual([]);
     });
 
+    /**
+     * A command is the other thing a press can mean: one setup file's
+     * operations, once, now. A warp, a gift, a rule on for a minute. The
+     * run is not played under them, so nothing about the run changes and
+     * nothing is written down.
+     */
+    it("hands a command's operations to the tool, tells the table, and writes nothing", async () => {
+      const { live, posted, d } = attached();
+      await live.connect("tool", "public:shared", "", { control: true, seat: "Mira", run: "shared" });
+      await live.watch("tool", "shared", "public:shared", "", { control: true, seat: "Mira", run: "shared" });
+      await live.connect("host", "user_1", "");
+      await live.watch("host", "shared", "", "");
+      await live.connect("watcher", "user_2", "");
+      await live.watch("watcher", "shared", "", "");
+      posted.length = 0;
+      patched.length = 0;
+      const ops = [{ op: "warp.position", args: { block: 60, x: 1, y: 2, z: 3 } }];
+      const r = await route(
+        {
+          requestContext: { routeKey: "$default", connectionId: "host" },
+          body: JSON.stringify({
+            t: "gesture",
+            id: "shared",
+            kind: "command",
+            data: { id: "com.example.setups.warp", title: "To the next boss", ops },
+          }),
+        },
+        d,
+      );
+      expect(r.statusCode).toBe(200);
+      // The tool is told in operations, under the setup file's own id and
+      // title, so a person reading its log sees the thing that was
+      // pressed rather than an anonymous effect.
+      expect(JSON.parse(posted.find(([c]) => c === "tool")![1])).toEqual({
+        t: "apply",
+        id: "com.example.setups.warp",
+        label: "To the next boss",
+        each: true,
+        ops,
+      });
+      // The table is told in words, and the device that pressed is not
+      // told what it already knows.
+      expect(JSON.parse(posted.find(([c]) => c === "watcher")![1])).toMatchObject({ t: "gesture", kind: "command" });
+      expect(posted.map(([c]) => c)).not.toContain("host");
+      // The run is untouched: a command is not its terms and not its
+      // loadout, so a tool reconnecting a minute later is handed exactly
+      // what it would have been handed before the press.
+      expect(patched).toEqual([]);
+    });
+
+    it("takes a command from the owner and from nobody else", async () => {
+      const { live, posted, d } = attached();
+      await live.connect("tool", "public:shared", "", { control: true, run: "shared" });
+      await live.watch("tool", "shared", "public:shared", "", { control: true, run: "shared" });
+      // user_2 is at the table and is not whose run it is.
+      await live.connect("other", "user_2", "");
+      await live.watch("other", "shared", "", "");
+      posted.length = 0;
+      const r = await route(
+        {
+          requestContext: { routeKey: "$default", connectionId: "other" },
+          body: JSON.stringify({
+            t: "gesture",
+            id: "shared",
+            kind: "command",
+            data: { id: "com.example.setups.warp", title: "To the next boss", ops: [{ op: "warp.position" }] },
+          }),
+        },
+        d,
+      );
+      expect(r.statusCode).toBe(200);
+      // Not even the words, since a command one player cannot send is not
+      // something the table should be shown happening.
+      expect(posted).toEqual([]);
+    });
+
+    /**
+     * The operations come off a key press rather than out of the run's
+     * own profile, so they are read the way the profile is: a frame that
+     * is not what it claims to be is dropped whole, and quietly, as
+     * every other bad frame on this socket is.
+     */
+    it("drops a command that is not one, rather than sending half of it", async () => {
+      const { live, posted, d } = attached();
+      await live.connect("tool", "public:shared", "", { control: true, run: "shared" });
+      await live.watch("tool", "shared", "public:shared", "", { control: true, run: "shared" });
+      await live.connect("host", "user_1", "");
+      await live.watch("host", "shared", "", "");
+      await live.connect("watcher", "user_2", "");
+      await live.watch("watcher", "shared", "", "");
+      const bad: unknown[] = [
+        {},
+        { id: "c", title: "T" },
+        { id: "c", title: "T", ops: [] },
+        { id: "c", title: "T", ops: "warp.position" },
+        { id: "c", title: "T", ops: [{ args: {} }] },
+        { id: "c", title: "T", ops: [{ op: 7 }] },
+        { id: "c", title: "T", ops: [{ op: "x".repeat(65) }] },
+        { id: "c", title: "T", ops: [{ op: "warp.position", args: [1] }] },
+        { id: "", title: "T", ops: [{ op: "warp.position" }] },
+        { id: "c", title: "x".repeat(81), ops: [{ op: "warp.position" }] },
+        { id: "c", title: "T", ops: Array.from({ length: 65 }, () => ({ op: "warp" })) },
+      ];
+      for (const data of bad) {
+        posted.length = 0;
+        const r = await route(
+          {
+            requestContext: { routeKey: "$default", connectionId: "host" },
+            body: JSON.stringify({ t: "gesture", id: "shared", kind: "command", data }),
+          },
+          d,
+        );
+        expect(r.statusCode).toBe(200);
+        expect(posted).toEqual([]);
+      }
+    });
+
+    it("says nothing to a tool the run's profile was not written for, and still tells the table", async () => {
+      const forOne = { control: { tool: "TarnishedTool", rows: [{ tag: "curse", ops: [{ op: "speffect.apply", args: { id: 1 } }] }] } };
+      const { live, posted, d } = attached(memoryLive(), forOne);
+      await live.connect("tool", "public:shared", "", { control: true, run: "shared" });
+      await live.watch("tool", "shared", "public:shared", "", { control: true, run: "shared" });
+      await route(
+        { requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "hello", app: "SomethingElse" }) },
+        d,
+      );
+      await live.connect("host", "user_1", "");
+      await live.watch("host", "shared", "", "");
+      await live.connect("watcher", "user_2", "");
+      await live.watch("watcher", "shared", "", "");
+      posted.length = 0;
+      await route(
+        {
+          requestContext: { routeKey: "$default", connectionId: "host" },
+          body: JSON.stringify({
+            t: "gesture",
+            id: "shared",
+            kind: "command",
+            data: { id: "com.example.setups.warp", title: "To the next boss", ops: [{ op: "warp.position" }] },
+          }),
+        },
+        d,
+      );
+      // The words are no use to a program, and the operations are a
+      // different program's vocabulary, so it hears neither.
+      expect(posted.filter(([c]) => c === "tool")).toEqual([]);
+      expect(JSON.parse(posted.find(([c]) => c === "watcher")![1])).toMatchObject({ t: "gesture", kind: "command" });
+    });
+
     it("says nothing where the host has not switched asks on, since attaching is not permission", async () => {
       const { live, posted, d } = attached();
       await live.connect("tool", "public:open", "", { control: true, run: "open" });
