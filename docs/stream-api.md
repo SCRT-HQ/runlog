@@ -456,7 +456,7 @@ From then on this run's `{ "t": "changed", "id": "01RUN", "seq": 42 }` rings on 
 | `primary` | The one button the page would show first: rolling a table, carrying on, closing the unit, entering the next one, or rolling what the game is owed. |
 | `move` | One of the run's moves, named by id in a `move` field. |
 | `undo` | Takes back the last result, where there is one to take back. |
-| `answer` | Answers what the run is asking for: `{ "subject": "Bowl 3" }` for a step that wants a name typed, or `{ "ticks": "all" }` for a step with a checklist, which ticks everything on it and presses the step's own finish button in the one press. `{ "setup": "<id>" }` sets the run's setup to that one, by an id from the offer's `setups`, and hands it out to everything attached. |
+| `answer` | Answers what the run is asking for: `{ "subject": "Bowl 3" }` for a step that wants a name typed, or `{ "ticks": "all" }` for a step with a checklist, which ticks everything on it and presses the step's own finish button in the one press. `{ "setup": "<id>" }` sets the run's setup to that one, by an id from the offer's `setups`, and hands it out to everything attached. `{ "command": "<id>" }` sends that file's operations as the `command` gesture above, by an id from the offer's `commands`. |
 
 Four of the page's own controls ride in an `answer` too, since that is the only field of a press the server passes through. `{ "tracker": "<id>", "by": 1 }` moves a tally or a dial from the offer's `trackers` by that much, or `{ "to": 4 }` sets it to that number; the run clamps either to its own floor and ceiling. `{ "clock": "<id>", "do": "pause" }`, with `resume` or `stop`, presses the buttons under the offer's `clock`. `{ "autoRoll": true }` has the app throw the dice itself, or `false` to hand them back. `{ "finish": true }` ends the run where the offer carries an `ending`.
 
@@ -489,6 +489,8 @@ It comes from the page holding the run wherever one is there to answer, since on
 | `The run is not asking for that.` | The page; `answer` sent for a preset the current step does not have. |
 | `That answer was empty.` | The page; a `subject` typed as nothing. |
 | `That setup is not here.` | The page; a `setup` named an id the run is not offering. |
+| `That command is not here.` | The page; a `command` named an id the run is not offering. |
+| `The run is not synced.` | The page; a `command` on a page whose socket is down, so nothing reached the tool. |
 | `That tracker is not here.` | The page; a `tracker` named an id the run is not offering. |
 | `That clock is not here.` | The page; a `clock` named an id the run is not offering. |
 | `That clock is not running.` | The page; `pause` on a clock that is already paused. |
@@ -512,6 +514,7 @@ The device holding the run publishes what a deck may press beside `control`, in 
     "needsPage": null,
     "presets": [],
     "setups": [{ "id": "com.example.setups.starter", "title": "Starter" }],
+    "commands": [{ "id": "com.example.setups.starter", "title": "Starter" }],
     "trackers": [{ "id": "glaze", "kind": "resource", "label": "Glaze", "value": 3, "max": 6 }],
     "clock": { "id": "u4:unit", "label": "Day 4", "status": "running" },
     "autoRoll": false,
@@ -529,6 +532,7 @@ The device holding the run publishes what a deck may press beside `control`, in 
 | `needsPage` | Why `primary` is null, in words a key face can show, such as "Draw the weather on the page"; null where nothing needs it. |
 | `presets` | Steps that take a typed or ticked answer instead of a bare press: `{ "kind": "declareSubject", "label": "…", "suggestions": […] }`, answered with `{ "subject": "…" }`, `suggestions` left out where the run has none; or `{ "kind": "checklist", "label": "Tick everything and …", "items": 4 }`, answered with `{ "ticks": "all" }`. |
 | `setups` | The setups this run could be played under, by id and title, answered with `{ "setup": "<id>" }`. Empty where the pack names no tool, since a setup is written for one tool and nothing else is offered it, and empty on a run nobody is playing. |
+| `commands` | The same setups again, the ones a `{ "command": "<id>" }` press may name. The two lists hold the same ids, so a deck can lay out an apply key and a command key for one file without asking which a title is good for. Empty on a run nobody is playing. |
 | `trackers` | The tallies and the dials the run's Trackers panel shows, each with its `kind` (`counter` or `resource`), its label, where it stands and its ceiling, `max` null where it has none. A tally the pack hides, and one kept per racer on a board, are both left off, since neither is on the panel either. |
 | `clock` | The clock the page's own Pause, Resume and Stop act on: the one running, or else one paused and waiting to be started again, by id, label and `status`. Null where none is. |
 | `autoRoll` | Whether the page is throwing the dice itself. |

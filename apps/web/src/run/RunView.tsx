@@ -434,6 +434,11 @@ export function RunView({
       // Id and title only: a key face shows the title, and a press names
       // the id. What the setup actually does stays here, where the run is.
       setups: offeredSetups.map((s) => ({ id: s.id, title: s.title })),
+      // The same list, offered the other way round: handed to the tool
+      // once instead of taken on by the run. One list, because a setup
+      // file is one document either way; which of the two a key does is
+      // the key's own business.
+      commands: offeredSetups.map((s) => ({ id: s.id, title: s.title })),
       trackers: trackersOf(pack, run.state ?? null),
       // The one clock the page's own Pause and Stop act on. A unit runs
       // one at a time in practice, and where it somehow runs two, the one
@@ -796,6 +801,23 @@ export function RunView({
             // saved profile and would otherwise hand out the one before.
             await run.setSetup(chose(picked));
             sync.gesture(runId, "setup");
+          },
+          command: (id) => {
+            const picked = offeredSetups.find((s) => s.id === id);
+            if (!picked) throw new Error("That command is not here.");
+            // The file's own operations, as written, rather than the run's
+            // combined profile: the whole point is that the run is left
+            // where it was, so nothing is read from it and nothing is
+            // written to it. The server hands them on and forgets them.
+            //
+            // Synchronous, unlike the setup above, because there is no
+            // write to wait for -- and because the refusal below has to
+            // reach `takePress` rather than a promise nobody is holding.
+            const sent = sync.gesture(runId, "command", { id: picked.id, title: picked.title, ops: picked.ops });
+            // A deck pressed a key on a page whose socket is down. Nothing
+            // went anywhere, and the deck is told so rather than left to
+            // read silence as success.
+            if (!sent) throw new Error("The run is not synced.");
           },
         },
       );

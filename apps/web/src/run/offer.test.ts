@@ -18,6 +18,7 @@ const base = {
   between: null,
   finishLabel: null,
   setups: [],
+  commands: [],
   trackers: [],
   clock: null,
   autoRoll: false,
@@ -81,6 +82,20 @@ describe("offerOf", () => {
   it("offers no setup on a run that is not live", () => {
     const offer = offerOf({ ...base, live: false, setups: [{ id: "com.example.setups.starter", title: "Starter" }] });
     expect(offer.setups).toEqual([]);
+  });
+
+  /*
+   * Task 28b: the same files again, as things to hand the tool once. A
+   * list of their own, so a deck knows which ids either key may name.
+   */
+  it("carries the commands a key may hand the tool", () => {
+    const offer = offerOf({ ...base, commands: [{ id: "com.example.setups.starter", title: "Starter" }] });
+    expect(offer.commands).toEqual([{ id: "com.example.setups.starter", title: "Starter" }]);
+  });
+
+  it("offers no command on a run that is not live", () => {
+    const offer = offerOf({ ...base, live: false, commands: [{ id: "com.example.setups.starter", title: "Starter" }] });
+    expect(offer.commands).toEqual([]);
   });
 
   // Review finding: moves and undo escaped the live gate, and they are

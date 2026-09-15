@@ -10,6 +10,7 @@ const offer: Offer = {
   needsPage: null,
   presets: [],
   setups: [],
+  commands: [],
   trackers: [],
   clock: null,
   autoRoll: false,
@@ -21,6 +22,7 @@ const acts = () => ({
   undo: vi.fn(),
   answer: vi.fn(),
   setup: vi.fn(),
+  command: vi.fn(),
   tracker: vi.fn(),
   clock: vi.fn(),
   autoRoll: vi.fn(),
@@ -209,6 +211,51 @@ describe("takePress", () => {
       act,
     );
     expect(out).toEqual({ ok: false, say: "That setup is not here." });
+  });
+
+  /*
+   * Task 28b: a key hands the tool one file's operations and leaves the
+   * run under whatever it was already playing. Checked against its own
+   * list, and refused in its own words, so a deck can tell which of the
+   * two keys it pressed was the one the run would not take.
+   */
+  it("hands over a command the run is offering", () => {
+    const act = acts();
+    const offering = { ...offer, commands: [{ id: "com.example.setups.starter", title: "Starter" }] };
+    const out = takePress(
+      { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { command: "com.example.setups.starter" } },
+      { seq: 42, offer: offering, seen: new Map() },
+      act,
+    );
+    expect(out).toEqual({ ok: true });
+    expect(act.command).toHaveBeenCalledWith("com.example.setups.starter");
+    expect(act.setup).not.toHaveBeenCalled();
+  });
+
+  it("refuses a command this run is not offering", () => {
+    const act = acts();
+    const offering = { ...offer, commands: [{ id: "com.example.setups.starter", title: "Starter" }] };
+    const out = takePress(
+      { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { command: "com.example.setups.other" } },
+      { seq: 42, offer: offering, seen: new Map() },
+      act,
+    );
+    expect(out).toEqual({ ok: false, say: "That command is not here." });
+    expect(act.command).not.toHaveBeenCalled();
+  });
+
+  it("says what a command threw, so a page with no socket can say so", () => {
+    const act = acts();
+    act.command.mockImplementation(() => {
+      throw new Error("The run is not synced.");
+    });
+    const offering = { ...offer, commands: [{ id: "com.example.setups.starter", title: "Starter" }] };
+    const out = takePress(
+      { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { command: "com.example.setups.starter" } },
+      { seq: 42, offer: offering, seen: new Map() },
+      act,
+    );
+    expect(out).toEqual({ ok: false, say: "The run is not synced." });
   });
 
   it("refuses ticking everything where nothing is asking a list", () => {
