@@ -163,7 +163,12 @@ export function offerOf(input: OfferInput): Offer {
   // the panel's own button rather than going dim: the one press that
   // settles it is the one on the key. Moves, undo and the dials stay on
   // offer, the way the page leaves them on screen beside it.
-  if (input.due.length > 0) {
+  //
+  // Settled only, so a throw already asked for is answered first, by the
+  // roll branch further down. Firing a trigger begins a block of its own,
+  // and `begin` writes over whatever was pending: offered mid-throw, this
+  // press would throw the run's own dice request away.
+  if (input.settled && input.due.length > 0) {
     const first = input.due[0]!;
     return { ...bare, primary: { id: "owed", label: first.label, kind: first.kind }, needsPage: null };
   }

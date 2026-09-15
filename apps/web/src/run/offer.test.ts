@@ -162,6 +162,28 @@ describe("offerOf", () => {
     expect(offer.primary).toEqual({ id: "roll", label: "Roll the Weather", kind: "rollTable" });
   });
 
+  /*
+   * Fix round 1: firing a trigger begins a block of its own, and `begin`
+   * writes over whatever was pending, so this press offered mid-throw
+   * would have thrown the run's own dice request away.
+   */
+  it("offers the roll a step is waiting on before what the game is owed", () => {
+    const offer = offerOf({
+      ...base,
+      due: [overheating],
+      settled: false,
+      request: { kind: "roll", label: "Roll the Weather" },
+      step: { kind: "rollTable" } as never,
+      stepLabel: "Roll the Weather",
+    });
+    expect(offer.primary).toEqual({ id: "roll", label: "Roll the Weather", kind: "rollTable" });
+  });
+
+  it("offers what the game is owed once the dice have landed", () => {
+    const offer = offerOf({ ...base, due: [overheating], step: { kind: "rollTable" } as never, stepLabel: "Roll the Weather" });
+    expect(offer.primary).toEqual({ id: "owed", label: "The Kiln overheats: Roll d100", kind: "threshold" });
+  });
+
   it("offers nothing the game is owed on a run nobody is playing", () => {
     const offer = offerOf({ ...base, live: false, due: [overheating] });
     expect(offer.primary).toBeNull();
