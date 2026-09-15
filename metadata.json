@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2HC40VRMZVVKDSRZTTZG61E",
+  "strategy": "manual-commit",
+  "branch": "the-deck-arrives",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "packages/session/tsconfig.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 6870,
+    "cache_creation_tokens": 998128,
+    "cache_read_tokens": 174435712,
+    "output_tokens": 413526,
+    "api_call_count": 375
+  }
+}
