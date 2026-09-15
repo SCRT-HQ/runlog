@@ -33,6 +33,42 @@ const mode = Object.keys(kiln.modes)[0]!;
 const current: { api: Api | null } = { api: null };
 vi.mock("../sync/useApi.ts", () => ({ useApi: () => current.api }));
 
+/**
+ * A setup, and a shipped profile naming the tool it was written for.
+ *
+ * Neither ships for the demo pack: every setup in the repository is
+ * written for a tool this pack has never heard of, and a profile for it
+ * would be a file with nothing to say. So both are stood in for, and
+ * what is tested is the path from the offer to the run's record rather
+ * than what any particular tool does about it.
+ *
+ * The holder is hoisted because a mock factory is evaluated before this
+ * file's own body, and the pack's id is only known once it is loaded.
+ * Nothing reads it until an effect runs, by which time it is filled in.
+ */
+const stood = vi.hoisted(() => ({
+  pack: "",
+  tool: "DemoTool",
+  setup: {
+    kind: "setup" as const,
+    schemaVersion: 1,
+    id: "com.example.setups.starter",
+    version: "1.0.0",
+    title: "Starter",
+    tool: "DemoTool",
+    ops: [{ op: "player.give", args: { thing: "clay" } }],
+  },
+}));
+vi.mock("../control/builtin.ts", async (original) => ({
+  ...(await original<typeof import("../control/builtin.ts")>()),
+  builtins: async () => [{ id: "demo", title: "Demo", pack: stood.pack, profile: { tool: stood.tool } }],
+}));
+vi.mock("../control/setups.ts", async (original) => ({
+  ...(await original<typeof import("../control/setups.ts")>()),
+  setupsHere: async () => [stood.setup],
+}));
+stood.pack = kiln.id;
+
 afterEach(() => {
   current.api = null;
   cleanup();
@@ -68,7 +104,7 @@ const toTheChecklist = (at: string) => [
  * Sync, as a press needs it: the socket is not here, so `drove` is a spy
  * and everything else is the off value the app itself falls back to.
  */
-const syncWith = (drove: Sync["drove"]): Sync => ({
+const syncWith = (drove: Sync["drove"], gesture: Sync["gesture"] = () => false): Sync => ({
   available: true,
   enabled: true,
   setEnabled: () => {},
@@ -76,7 +112,7 @@ const syncWith = (drove: Sync["drove"]): Sync => ({
   last: null,
   syncNow: () => {},
   setPackSync: async () => {},
-  gesture: () => false,
+  gesture,
   drove,
 });
 
@@ -86,6 +122,7 @@ async function renderRunView({
   decksAttached = 0,
   rest = () => [],
   drove = () => {},
+  gesture,
 }: {
   putSnapshot: Api["putSnapshot"];
   shared: boolean;
@@ -94,6 +131,8 @@ async function renderRunView({
   rest?: (at: string) => RunEvent[];
   /** The verdict this device sends back, for the tests about pressing. */
   drove?: Sync["drove"];
+  /** The word this device sends out, for the test about handing a setup out. */
+  gesture?: Sync["gesture"];
 }) {
   current.api = { putSnapshot, myRaces: async () => [] } as unknown as Api;
   const store = memoryRunStore();
@@ -120,7 +159,7 @@ async function renderRunView({
   // already ticking by the time it asks.
   vi.useFakeTimers();
   render(
-    <SyncContext.Provider value={syncWith(drove)}>
+    <SyncContext.Provider value={syncWith(drove, gesture)}>
       <RunView pack={kiln} store={store} bench={{ from: "test", onLeave: () => {} }} />
     </SyncContext.Provider>,
   );
@@ -131,6 +170,7 @@ async function renderRunView({
       syncBus.emit({ t: "gesture", id: runId, kind: "tools", data: { tools: [], count: 0, decks: decksAttached }, at });
     });
   }
+  return store;
 }
 
 describe("the offer rides along with the snapshot", () => {
@@ -156,6 +196,19 @@ describe("the offer rides along with the snapshot", () => {
     const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
     await renderRunView({ putSnapshot, shared: false, decksAttached: 1 });
     expect(screen.getByText("Stream Deck")).toBeTruthy();
+  });
+
+  /*
+   * Task 16a: what the run could be played under rides along, so a key
+   * face can carry the title and a press can name the id.
+   */
+  it("publishes the setups this run could be played under", async () => {
+    const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+    await renderRunView({ putSnapshot, shared: true });
+    await vi.advanceTimersByTimeAsync(900);
+    expect(putSnapshot.mock.calls.at(-1)![1]).toMatchObject({
+      offer: { setups: [{ id: "com.example.setups.starter", title: "Starter" }] },
+    });
   });
 
   it("counts more than one deck", async () => {
@@ -242,6 +295,57 @@ describe("a press from a deck", () => {
     await flush();
 
     expect(drove).toHaveBeenCalledWith("deck1", "r1", true, undefined, 2);
+  });
+
+  /*
+   * Task 16a: a key puts the run under a setup and hands it out, which is
+   * the picker in Settings and the button beside it in one press. The
+   * gesture goes out after the write, since the server builds what an
+   * attached tool is sent from the run's saved profile.
+   */
+  it("puts the run under a setup on offer, and hands it out", async () => {
+    const gesture = vi.fn<Sync["gesture"]>(() => true);
+    const store = await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, gesture });
+
+    await act(async () => {
+      syncBus.emit({
+        t: "drive",
+        from: "deck1",
+        run: "run1",
+        seq: 1,
+        ref: "r3",
+        press: "answer",
+        answer: { setup: "com.example.setups.starter" },
+      });
+      await Promise.resolve();
+    });
+    await flush();
+
+    expect((await store.loadRun("run1"))?.setup).toMatchObject({
+      from: [{ id: "com.example.setups.starter", title: "Starter", version: "1.0.0" }],
+      ops: [{ op: "player.give" }],
+    });
+    expect(gesture).toHaveBeenCalledWith("run1", "setup");
+  });
+
+  it("refuses a setup the run is not offering", async () => {
+    const drove = vi.fn<Sync["drove"]>();
+    await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, drove });
+
+    await act(async () => {
+      syncBus.emit({
+        t: "drive",
+        from: "deck1",
+        run: "run1",
+        seq: 1,
+        ref: "r4",
+        press: "answer",
+        answer: { setup: "com.example.setups.nowhere" },
+      });
+      await Promise.resolve();
+    });
+
+    expect(drove).toHaveBeenCalledWith("deck1", "r4", false, "That setup is not here.", 1);
   });
 
   it("refuses a press made against a seq the run has moved past", async () => {

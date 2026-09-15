@@ -451,7 +451,7 @@ From then on this run's `{ "t": "changed", "id": "01RUN", "seq": 42 }` rings on 
 | `primary` | The one button the page would show first: rolling a table, carrying on, closing the unit, entering the next one. |
 | `move` | One of the run's moves, named by id in a `move` field. |
 | `undo` | Takes back the last result, where there is one to take back. |
-| `answer` | Answers what the run is asking for: `{ "subject": "Bowl 3" }` for a step that wants a name typed, or `{ "ticks": "all" }` for a step with a checklist, which ticks everything on it and presses the step's own finish button in the one press. |
+| `answer` | Answers what the run is asking for: `{ "subject": "Bowl 3" }` for a step that wants a name typed, or `{ "ticks": "all" }` for a step with a checklist, which ticks everything on it and presses the step's own finish button in the one press. `{ "setup": "<id>" }` sets the run's setup to that one, by an id from the offer's `setups`, and hands it out to everything attached. |
 
 `seq` names the offer a press was drawn from — the run's `events.length` at the moment it was shown — so a press made against last minute's state cannot land on whatever the run has moved on to since. `ref` is the caller's own; a press whose `ref` has been sent before on this connection settles to the same verdict rather than being taken twice.
 
@@ -481,6 +481,7 @@ It comes from the page holding the run wherever one is there to answer, since on
 | `There is nothing to take back.` | The page; `undo` with nothing to undo. |
 | `The run is not asking for that.` | The page; `answer` sent for a preset the current step does not have. |
 | `That answer was empty.` | The page; a `subject` typed as nothing. |
+| `That setup is not here.` | The page; a `setup` named an id the run is not offering. |
 | `This run does not know that press.` | The page; a `press` value that is none of the above. |
 | `That press failed.` | The page; the press was on offer and got taken, and failed for a reason of its own with nothing to say about it. |
 
@@ -496,7 +497,8 @@ The device holding the run publishes what a deck may press beside `control`, in 
     "moves": [{ "id": "died", "label": "Died" }],
     "undo": { "what": "A dry wind from the east." },
     "needsPage": null,
-    "presets": []
+    "presets": [],
+    "setups": [{ "id": "com.example.setups.starter", "title": "Starter" }]
   }
 }
 ```
@@ -509,6 +511,7 @@ The device holding the run publishes what a deck may press beside `control`, in 
 | `undo` | `{ "what": "…" }`, the last result in words, where there is one to take back; null otherwise. |
 | `needsPage` | Why `primary` is null, in words a key face can show, such as "Draw the weather on the page"; null where nothing needs it. |
 | `presets` | Steps that take a typed or ticked answer instead of a bare press: `{ "kind": "declareSubject", "label": "…", "suggestions": […] }`, answered with `{ "subject": "…" }`, `suggestions` left out where the run has none; or `{ "kind": "checklist", "label": "Tick everything and …", "items": 4 }`, answered with `{ "ticks": "all" }`. |
+| `setups` | The setups this run could be played under, by id and title, answered with `{ "setup": "<id>" }`. Empty where the pack names no tool, since a setup is written for one tool and nothing else is offered it, and empty on a run nobody is playing. |
 
 ## Politeness
 

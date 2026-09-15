@@ -15,7 +15,7 @@ import {
   scoreOf,
   unitPhases,
 } from "@runlog/engine";
-import type { Pack } from "@runlog/rules-schema";
+import type { Pack, Setup } from "@runlog/rules-schema";
 import {
   checklistOf,
   closesUnit,
@@ -75,7 +75,8 @@ import { entryTextOf, paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
 import { offerOf } from "./offer.ts";
 import { takePress, type Verdict } from "./takePress.ts";
 import { isEmpty, tidy, type ControlProfile } from "../control/profile.ts";
-import { chosenFrom, withChosen, type ChosenSetup } from "../control/setups.ts";
+import { chose, chosenFrom, forTool, setupsHere, withChosen, type ChosenSetup } from "../control/setups.ts";
+import { builtins } from "../control/builtin.ts";
 import { SetupPicker } from "./SetupPicker.tsx";
 import { lifecycleGestures, marksOf, type LifecycleMarks } from "./gestures.ts";
 import { useRace } from "./useRace.ts";
@@ -288,6 +289,26 @@ export function RunView({
   const racing = useMemo(() => (run.moderated ? (run.state?.contestants ?? []) : []), [run.moderated, run.state]);
 
   /**
+   * The setups this run could be played under, found the way `HandOut`
+   * finds them: the pack's shipped profile names the tool, and every
+   * setup written for that tool is on offer. Empty until they are read,
+   * and empty for good where the pack names no tool, which is the same
+   * answer the picker in Settings gives.
+   */
+  const [offeredSetups, setOfferedSetups] = useState<Setup[]>([]);
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      const tool = (await builtins()).find((b) => b.pack === pack.id)?.profile.tool;
+      const all = await setupsHere();
+      if (live) setOfferedSetups(forTool(all, tool));
+    })();
+    return () => {
+      live = false;
+    };
+  }, [pack.id]);
+
+  /**
    * What a deck may press, right now: one value for the snapshot this
    * device publishes and for the drive this device takes, so a press is
    * always checked against the same offer it was shown.
@@ -347,6 +368,9 @@ export function RunView({
       // Done. Nothing where the step has no list, because there is then
       // no list to tick and the primary is the press.
       finishLabel: run.activeStep && checklistOf(run.activeStep.step).length > 0 ? finishWords(pack, run.activeStep.step) : null,
+      // Id and title only: a key face shows the title, and a press names
+      // the id. What the setup actually does stays here, where the run is.
+      setups: offeredSetups.map((s) => ({ id: s.id, title: s.title })),
     });
   }, [
     run.events.length,
@@ -360,6 +384,7 @@ export function RunView({
     run.canUndo,
     run.blockingObligations.length,
     receipts.length,
+    offeredSetups,
     pack,
   ]);
   useEffect(() => {
@@ -609,6 +634,17 @@ export function RunView({
             }
             run.declareSubject(active.phase, active.index, String(a["subject"] ?? ""));
           },
+          setup: async (id) => {
+            const picked = offeredSetups.find((s) => s.id === id);
+            if (!picked) throw new Error("That setup is not here.");
+            // Both halves of what Settings does in two presses: the run is
+            // played under this from here on, and everyone attached now
+            // gets it. The word goes out only once the write has landed,
+            // because the server builds what a tool is sent from the run's
+            // saved profile and would otherwise hand out the one before.
+            await run.setSetup(chose(picked));
+            sync.gesture(runId, "setup");
+          },
         },
       );
       if (!verdict.ok) {
@@ -626,7 +662,7 @@ export function RunView({
         timer: window.setTimeout(() => settleVerdict(eventCount.current), HELD_VERDICT_MS),
       };
     });
-  }, [run, currentOffer, sync, pack, settleVerdict, answer]);
+  }, [run, currentOffer, sync, pack, settleVerdict, answer, offeredSetups]);
   const seen = useRef<number | null>(null);
   // How many answers this view has given, and how many it had given when
   // the last receipt was issued: what a step that came back with the run
