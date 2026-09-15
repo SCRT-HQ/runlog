@@ -693,6 +693,7 @@ export const MoveDef = z
       .optional()
       .describe("Conditions that must ALL hold for the move to be offered. Omit to make it always available."),
     oncePerRun: z.boolean().default(false).describe("Whether the move is spent after a single use."),
+    oncePerUnit: z.boolean().default(false).describe("Whether the move is spent for the rest of the unit after a single use."),
     do: z.array(Action).min(1).describe("What happens when the player takes it."),
     finalizes: z
       .boolean()
