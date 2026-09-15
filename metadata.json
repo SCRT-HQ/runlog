@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2HC09PXEDNS7H97J5KHVFH3",
+  "strategy": "manual-commit",
+  "branch": "the-deck-arrives",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "streamdeck/src/state.test.ts",
+    "streamdeck/src/state.ts",
+    "vitest.config.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 6804,
+    "cache_creation_tokens": 993700,
+    "cache_read_tokens": 172031388,
+    "output_tokens": 409707,
+    "api_call_count": 372,
+    "subagent_tokens": {
+      "input_tokens": 160,
+      "cache_creation_tokens": 188557,
+      "cache_read_tokens": 8438175,
+      "output_tokens": 61504,
+      "api_call_count": 80
+    }
+  }
+}
