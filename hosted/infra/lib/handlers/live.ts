@@ -42,7 +42,7 @@ export interface Attached {
   /**
    * A socket that presses rather than draws: a deck, signed in as the
    * account, holding no run of its own. Marked so a press is never
-   * forwarded to one — two decks on one account must not look to each
+   * forwarded to one: two decks on one account must not look to each
    * other like somewhere a press could land.
    */
   deck?: boolean;
