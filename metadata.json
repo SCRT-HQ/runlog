@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2HA2HF8JATG17WW3WQ5ET15",
+  "strategy": "manual-commit",
+  "branch": "the-deck-arrives",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "hosted/infra/env/example.json",
+    "hosted/infra/lib/api-stack.ts",
+    "hosted/infra/lib/config.ts",
+    "hosted/infra/lib/handlers/api.ts",
+    "hosted/infra/lib/handlers/ws.ts",
+    "hosted/infra/test/api.test.ts",
+    "hosted/infra/test/handlers.test.ts",
+    "hosted/infra/test/site.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 6240,
+    "cache_creation_tokens": 940851,
+    "cache_read_tokens": 151264062,
+    "output_tokens": 376926,
+    "api_call_count": 345,
+    "subagent_tokens": {
+      "input_tokens": 258,
+      "cache_creation_tokens": 323018,
+      "cache_read_tokens": 12556224,
+      "output_tokens": 79883,
+      "api_call_count": 129
+    }
+  }
+}
