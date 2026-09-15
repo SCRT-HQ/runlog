@@ -5,7 +5,7 @@ import { faceImage, measure, wrap } from "./face";
 function drawn(title: string): { lines: string[]; size: number } {
   const svg = Buffer.from(faceImage({ title, tone: "live" }).split(",")[1]!, "base64").toString("utf8");
   return {
-    lines: [...svg.matchAll(/<tspan[^>]*>([^<]*)<\/tspan>/g)].map((m) => m[1]!),
+    lines: [...svg.matchAll(/<text class="t"[^>]*>([^<]*)<[/]text>/g)].map((m) => m[1]!),
     size: Number(/font-size="(\d+)" font-weight/.exec(svg)![1]),
   };
 }
@@ -28,7 +28,7 @@ describe("faceImage", () => {
       faceImage({ title: "Name the bowl on the page before the kiln is lit", tone: "refuse" }).split(",")[1]!,
       "base64",
     ).toString("utf8");
-    expect((svg.match(/<tspan/g) ?? []).length).toBe(3);
+    expect((svg.match(/<text class="t"/g) ?? []).length).toBe(3);
     expect(svg).toContain("…");
     // The whole phrase is still there for a tooltip to read.
     expect(svg).toContain("<title>Name the bowl on the page before the kiln is lit</title>");

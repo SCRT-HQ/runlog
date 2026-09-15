@@ -122,7 +122,17 @@ export function faceImage(face: Face): string {
   const t = TONE[face.tone];
   const { lines, size } = typeset(face.title);
   const top = 72 - ((lines.length - 1) * size * 1.15) / 2 + (face.when ? -8 : 0);
-  const spans = lines.map((l, i) => `<tspan x="72" y="${(top + i * size * 1.15).toFixed(1)}">${esc(l)}</tspan>`).join("");
+  // One positioned <text> per line, baseline given outright: the software
+  // draws SVG with a renderer that honors x and y on a text element and
+  // little else - a tspan with its own position, or a dominant-baseline,
+  // left every title off the key while the small line beneath it showed.
+  // 0.36em is where the middle of a semibold sans sits above its baseline.
+  const spans = lines
+    .map(
+      (l, i) =>
+        `<text class="t" x="72" y="${(top + i * size * 1.15 + size * 0.36).toFixed(1)}" text-anchor="middle" font-size="${size}" font-weight="600" fill="${t.ink}" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif">${esc(l)}</text>`,
+    )
+    .join("");
   const when = face.when
     ? `<text x="72" y="128" text-anchor="middle" font-size="12" fill="${t.edge}" font-family="ui-monospace, Menlo, Consolas, monospace">${esc(face.when.slice(0, 18))}</text>`
     : "";
@@ -133,7 +143,7 @@ export function faceImage(face: Face): string {
     `<title>${esc(face.title)}</title>` +
     `<rect width="144" height="144" rx="14" fill="${t.ground}"/>` +
     `<rect x="3" y="3" width="138" height="138" rx="12" fill="none" stroke="${t.edge}" stroke-width="3"/>` +
-    `<text text-anchor="middle" dominant-baseline="middle" font-size="${size}" font-weight="600" fill="${t.ink}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${spans}</text>` +
+    spans +
     when +
     `</svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg, "utf8").toString("base64")}`;
