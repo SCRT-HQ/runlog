@@ -778,6 +778,7 @@ function deps(store = memoryStore(), extra: Partial<Deps> = {}): Deps {
     },
     env: "test",
     cliClientId: "client_cli_test",
+    deckClientId: "client_deck_test",
     now: () => "2026-09-06T12:00:00.000Z",
     appUrl: "https://runlog.test/",
     token: () => `tok${(tokens += 1)}`,
@@ -849,6 +850,12 @@ describe("who is asking", () => {
     const { status, body } = await call(request("GET", "/api/auth/cli", { token: null }));
     expect(status).toBe(200);
     expect(body).toEqual({ clientId: "client_cli_test", issuer: "https://api.workos.com" });
+  });
+
+  it("tells the stream deck plugin which WorkOS client to sign in with, to anyone", async () => {
+    const { status, body } = await call(request("GET", "/api/auth/deck", { token: null }));
+    expect(status).toBe(200);
+    expect(body).toEqual({ clientId: "client_deck_test", issuer: "https://api.workos.com" });
   });
 
   it("says what is on sale, to anyone: every tier, unless a release gate holds it back", async () => {
