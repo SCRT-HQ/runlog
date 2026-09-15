@@ -20,7 +20,7 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-tarnishedtool
-version: "3.3.2"
+version: "3.4.0"
 title: "Elden Ring: TarnishedTool"
 author: Runlog
 description: >-
@@ -1733,6 +1733,10 @@ moves:
     label: I settled it
     when: anytime
     description: The objective is done. Draw what it was worth.
+    # A scene has one objective in it, so settling is one press. Left open
+    # it was pressed for every boss and every hunt the runner happened to
+    # finish, and a scene paid out seven blessings.
+    oncePerUnit: true
     available:
       - { unitIndex: { gte: 1 } }
     do:

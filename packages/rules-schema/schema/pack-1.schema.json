@@ -2406,6 +2406,11 @@
             "description": "Whether the move is spent after a single use.",
             "type": "boolean"
           },
+          "oncePerUnit": {
+            "default": false,
+            "description": "Whether the move is spent for the rest of the unit after a single use.",
+            "type": "boolean"
+          },
           "do": {
             "minItems": 1,
             "type": "array",

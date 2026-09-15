@@ -779,6 +779,19 @@ export function testPredicates(
 export type Placement = "anytime" | "betweenUnits" | "beforeEnding";
 
 /**
+ * The key a once-per-unit move is recorded under, keyed by the unit it was
+ * taken in.
+ *
+ * A once-per-run move is recorded under `move:<id>` and never comes back. This
+ * is the counter trigger's arrangement instead: the record names the unit, so
+ * the next unit looks for a key nothing has written yet and the move is on
+ * offer again.
+ */
+export function moveUnitKey(id: string, unit: number): string {
+  return `move:${id}:u${unit}`;
+}
+
+/**
  * Moves the player may take right now.
  *
  * Everything the player initiates rather than has done to them: spending a
@@ -809,6 +822,7 @@ export function availableMoves(
     if (dropped.has(id)) continue;
     if (move.when !== "anytime" && !places.has(move.when)) continue;
     if (move.oncePerRun && state.firedOnce.includes(`move:${id}`)) continue;
+    if (move.oncePerUnit && state.firedOnce.includes(moveUnitKey(id, state.unit))) continue;
     const frame: Frame = {
       pack,
       state,
@@ -829,7 +843,7 @@ export function availableMoves(
   return out;
 }
 
-/** Take a move, recording that it was used so a once-per-run one is spent. */
+/** Take a move, recording that it was used so a once-per-run or once-per-unit one is spent. */
 export function executeMove(pack: Pack, state: RunState, moveId: string, ctx: ExecContext): ExecResult {
   const move = pack.moves?.[moveId];
   if (!move) return { status: "done", events: [] };
@@ -837,6 +851,9 @@ export function executeMove(pack: Pack, state: RunState, moveId: string, ctx: Ex
   try {
     runActions(frame, move.do, ctx.keyPrefix ?? `move:${moveId}`);
     frame.events.push({ t: "TriggerFired", at: ctx.now, key: `move:${moveId}` });
+    // The unit-keyed record is written only where a move asks for it, so a log
+    // carries the extra line for the packs that limit a move and for no others.
+    if (move.oncePerUnit) frame.events.push({ t: "TriggerFired", at: ctx.now, key: moveUnitKey(moveId, state.unit) });
     return { status: "done", events: frame.events };
   } catch (e) {
     if (e instanceof NeedInput) {
