@@ -232,7 +232,7 @@ describe("attaching as a deck", () => {
     expect(await d.live.connection("c9")).not.toMatchObject({ deck: true });
   });
 
-  it("tells a deck which runs are held the moment it attaches", async () => {
+  it("tells a deck which runs are held when it says hello", async () => {
     const live = memoryLive();
     const posted: Array<[string, string]> = [];
     const poster: Poster = {
@@ -247,6 +247,9 @@ describe("attaching as a deck", () => {
     const d = { ...deps(live), poster };
 
     await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    // Nothing at connect: the gateway would refuse the post.
+    expect(posted).toEqual([]);
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "hello" }) }), d);
 
     const line = JSON.parse(posted.find(([id]) => id === "deck1")![1]);
     expect(line).toEqual({ t: "runs", runs: [{ id: "s1", name: "Thursday", packTitle: "The Long Kiln", held: true }] });
@@ -271,7 +274,8 @@ describe("attaching as a deck", () => {
       },
     };
 
-    const res = await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    const res = await route(ev("$default", "deck1", { body: JSON.stringify({ t: "hello" }) }), d);
 
     expect(res.statusCode).toBe(200);
     expect(posted).toEqual([]);
@@ -1280,6 +1284,7 @@ describe("driving is part of Plus", () => {
     };
     const d = { ...deps(live), poster, entitled: async () => false };
     await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "hello" }) }), d);
     expect(posted.some(([, data]) => JSON.parse(data)["t"] === "runs")).toBe(true);
   });
 });

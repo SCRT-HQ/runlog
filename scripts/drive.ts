@@ -36,6 +36,8 @@ ws.addEventListener("close", () => {
   console.log("socket closed");
 });
 ws.addEventListener("error", (event) => console.log((event as ErrorEvent).message ?? String(event)));
+// A deck speaks first; the list of held runs is the answer.
+ws.addEventListener("open", () => ws.send(JSON.stringify({ t: "hello" })));
 
 ws.addEventListener("message", (event) => {
   const m = JSON.parse(String(event.data)) as Record<string, unknown>;
