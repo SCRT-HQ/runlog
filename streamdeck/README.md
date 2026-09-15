@@ -15,6 +15,8 @@ Runlog is a referee and run log for dice-driven games: it draws the tables, keep
 
 Do the next thing and Metric also sit on a dial on a Stream Deck +.
 
+The plugin also ships laid-out profiles — one per deck, and one per bundled pack — built from the pack files by `npm run profiles`.
+
 ## What it needs
 
 - The Stream Deck app, 7.1 or later, on macOS 12 or Windows 10 and up.

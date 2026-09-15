@@ -15,6 +15,20 @@
   ],
   "Nodejs": { "Version": "24", "Debug": "enabled" },
   "CodePath": "bin/plugin.js",
+  "Profiles": [
+    { "Name": "profiles/runlog-xl", "DeviceType": 2, "Readonly": false, "DontAutoSwitchWhenInstalled": true, "AutoInstall": true },
+    { "Name": "profiles/runlog-sd", "DeviceType": 0, "Readonly": false, "DontAutoSwitchWhenInstalled": true, "AutoInstall": true },
+    { "Name": "profiles/runlog-mini", "DeviceType": 1, "Readonly": false, "DontAutoSwitchWhenInstalled": true, "AutoInstall": true },
+    { "Name": "profiles/runlog-plus", "DeviceType": 7, "Readonly": false, "DontAutoSwitchWhenInstalled": true, "AutoInstall": true },
+    { "Name": "profiles/demo-xl", "DeviceType": 2, "Readonly": false, "DontAutoSwitchWhenInstalled": true, "AutoInstall": true },
+    { "Name": "profiles/demo-sd", "DeviceType": 0, "Readonly": false, "DontAutoSwitchWhenInstalled": true, "AutoInstall": true },
+    { "Name": "profiles/demo-mini", "DeviceType": 1, "Readonly": false, "DontAutoSwitchWhenInstalled": true, "AutoInstall": true },
+    { "Name": "profiles/demo-plus", "DeviceType": 7, "Readonly": false, "DontAutoSwitchWhenInstalled": true, "AutoInstall": true },
+    { "Name": "profiles/elden-ring-xl", "DeviceType": 2, "Readonly": false, "DontAutoSwitchWhenInstalled": true, "AutoInstall": true },
+    { "Name": "profiles/elden-ring-sd", "DeviceType": 0, "Readonly": false, "DontAutoSwitchWhenInstalled": true, "AutoInstall": true },
+    { "Name": "profiles/elden-ring-mini", "DeviceType": 1, "Readonly": false, "DontAutoSwitchWhenInstalled": true, "AutoInstall": true },
+    { "Name": "profiles/elden-ring-plus", "DeviceType": 7, "Readonly": false, "DontAutoSwitchWhenInstalled": true, "AutoInstall": true }
+  ],
   "Actions": [
     {
       "Name": "Do the next thing",
