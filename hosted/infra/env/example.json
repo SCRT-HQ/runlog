@@ -4,6 +4,7 @@
   "retain": true,
   "workosClientId": "client_01EXAMPLEEXAMPLEEXAMPLE",
   "workosCliClientId": "client_01EXAMPLEEXAMPLECLI00",
+  "workosDeckClientId": "client_01EXAMPLEEXAMPLEDECK",
   "email": {
     "from": "Runlog <noreply@example.com>",
     "region": "us-east-1",
