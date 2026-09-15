@@ -55,6 +55,7 @@ jobs:
             cli
             packs
             hosted
+            deck
             ci
             docs
             deps
