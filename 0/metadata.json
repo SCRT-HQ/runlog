@@ -1,0 +1,607 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2J97APJXVZV9R6FC190VW8B",
+  "session_id": "e72ee5b1-7270-4fac-abcc-53994b037403",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-15T10:18:58.686944Z",
+  "branch": "the-deck-commands-key",
+  "checkpoints_count": 1,
+  "save_step_count": 7,
+  "files_touched": [
+    "apps/web/src/guide/pages/stream-deck.mdx",
+    "streamdeck/README.md",
+    "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/elden-ring-mini.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/elden-ring-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/elden-ring-sd.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/elden-ring-xl.streamDeckProfile",
+    "streamdeck/design/layouts.mjs",
+    "streamdeck/design/profiles.mjs",
+    "streamdeck/design/profiles.test.mjs",
+    "streamdeck/src/glyphs.ts",
+    "streamdeck/src/plugin.test.ts",
+    "streamdeck/src/plugin.ts",
+    "streamdeck/src/state.test.ts",
+    "streamdeck/src/state.ts"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-fable-5-1",
+  "turn_id": "4acbf76233e8",
+  "checkpoint_transcript_start": 9093,
+  "transcript_lines_at_start": 9093,
+  "compact_transcript_start": 1055,
+  "token_usage": {
+    "input_tokens": 102,
+    "cache_creation_tokens": 5530,
+    "cache_read_tokens": 4324204,
+    "output_tokens": 2632,
+    "api_call_count": 6,
+    "subagent_tokens": {
+      "input_tokens": 72,
+      "cache_creation_tokens": 64740,
+      "cache_read_tokens": 4238341,
+      "output_tokens": 16429,
+      "api_call_count": 36
+    }
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_014vhhQ4NijiY1xqXGLsYL8M",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:brainstorming"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "8a84e461a26e",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 38,
+        "end": 39,
+        "entry_ids": [
+          "5f676ba2-4bdc-40fc-97e1-e8decf04d118"
+        ],
+        "tool_use_id": "toolu_014vhhQ4NijiY1xqXGLsYL8M"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_014vhhQ4NijiY1xqXGLsYL8M"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:brainstorming",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01RUnUDwYs3FN6XtJsVEN7mB",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "avoid-ai-writing"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "8a84e461a26e",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 490,
+        "end": 491,
+        "entry_ids": [
+          "137ac9f1-0696-490a-a25d-2ff8fc0bc931"
+        ],
+        "tool_use_id": "toolu_01RUnUDwYs3FN6XtJsVEN7mB"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01RUnUDwYs3FN6XtJsVEN7mB"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: avoid-ai-writing",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01GfffjihkW2AiHBpNVYy9yr",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "artifact-design"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "4bd81f48a3d5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 542,
+        "end": 543,
+        "entry_ids": [
+          "58835be2-d8b8-4fbd-9274-28d0f2e5b0f4"
+        ],
+        "tool_use_id": "toolu_01GfffjihkW2AiHBpNVYy9yr"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01GfffjihkW2AiHBpNVYy9yr"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: artifact-design",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_013rMgomGXH39A7HBYx7ys5H",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:writing-plans"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "4bd81f48a3d5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 660,
+        "end": 661,
+        "entry_ids": [
+          "e12e2ed1-0c4e-404c-91f5-8b234bb9b28b"
+        ],
+        "tool_use_id": "toolu_013rMgomGXH39A7HBYx7ys5H"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_013rMgomGXH39A7HBYx7ys5H"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:writing-plans",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01KpuJi5MYaqZz28zq8QsQwy",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:subagent-driven-development"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "4bd81f48a3d5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 951,
+        "end": 952,
+        "entry_ids": [
+          "4c40a089-bd95-4d0e-b3f7-30592a1ef14e"
+        ],
+        "tool_use_id": "toolu_01KpuJi5MYaqZz28zq8QsQwy"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01KpuJi5MYaqZz28zq8QsQwy"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:subagent-driven-development",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01CjUjhVENDWngK7gGeMhNUy",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:systematic-debugging"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "24bf0308d75b",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 2314,
+        "end": 2315,
+        "entry_ids": [
+          "0b4bf8b1-e18b-49df-ab60-029810a49b2f"
+        ],
+        "tool_use_id": "toolu_01CjUjhVENDWngK7gGeMhNUy"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01CjUjhVENDWngK7gGeMhNUy"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:systematic-debugging",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_0142ZxFFzHWozd2Vwy2Q1ENs",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:finishing-a-development-branch"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "30bfe7fcf8b6",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 2536,
+        "end": 2537,
+        "entry_ids": [
+          "9fd26905-90d1-4e55-a2b5-3f294ec68484"
+        ],
+        "tool_use_id": "toolu_0142ZxFFzHWozd2Vwy2Q1ENs"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_0142ZxFFzHWozd2Vwy2Q1ENs"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:finishing-a-development-branch",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 180
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-15T10:18:58.0658582Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 259,
+    "human_modified": 5905,
+    "human_removed": 0,
+    "total_committed": 259,
+    "total_lines_changed": 6164,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 144441,
+      "agent_lines_removed": 23321
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 144441,
+      "agent_lines_removed": 23321
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 9308,
+      "user_lines_removed": 10416,
+      "agent_lines_added": 144298,
+      "agent_lines_removed": 23178,
+      "user_added_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 6,
+        "apps/web/src/run/RunView.offer.test.tsx": 53,
+        "apps/web/src/run/RunView.tsx": 22,
+        "apps/web/src/run/offer.test.ts": 15,
+        "apps/web/src/run/offer.ts": 22,
+        "apps/web/src/run/takePress.test.ts": 47,
+        "apps/web/src/run/takePress.ts": 12,
+        "docs/stream-api.md": 547,
+        "hosted/infra/lib/handlers/control.ts": 456,
+        "hosted/infra/lib/handlers/ws.ts": 861,
+        "hosted/infra/test/ws.test.ts": 1466,
+        "packages/cli/src/bin.ts": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/README.md": 10,
+        "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/account.js": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/metric.html": 67,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/next.html": 32,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/run.html": 1,
+        "streamdeck/design/actions/next.svg": 4,
+        "streamdeck/design/export.mjs": 2,
+        "streamdeck/src/actions/base.test.ts": 137,
+        "streamdeck/src/actions/base.ts": 1,
+        "streamdeck/src/actions/metric.test.ts": 20,
+        "streamdeck/src/actions/metric.ts": 42,
+        "streamdeck/src/face.test.ts": 8,
+        "streamdeck/src/face.ts": 26,
+        "streamdeck/src/plugin.test.ts": 84,
+        "streamdeck/src/plugin.ts": 212,
+        "streamdeck/src/state.test.ts": 384,
+        "streamdeck/src/state.ts": 356,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        ".prettierignore": 1,
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 12,
+        "docs/stream-api.md": 540,
+        "hosted/infra/lib/handlers/control.ts": 438,
+        "hosted/infra/lib/handlers/ws.ts": 781,
+        "hosted/infra/test/ws.test.ts": 1317,
+        "packages/cli/src/bin.ts": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/README.md": 16,
+        "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json": 348,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/account.js": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/connect.html": 9,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/metric.html": 112,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/next.html": 32,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/run.html": 1,
+        "streamdeck/design/actions/next.svg": 4,
+        "streamdeck/design/export.mjs": 54,
+        "streamdeck/package.json": 1,
+        "streamdeck/src/actions/base.test.ts": 164,
+        "streamdeck/src/actions/base.ts": 49,
+        "streamdeck/src/actions/metric.test.ts": 110,
+        "streamdeck/src/actions/metric.ts": 95,
+        "streamdeck/src/actions/next.test.ts": 4,
+        "streamdeck/src/face.test.ts": 202,
+        "streamdeck/src/face.ts": 118,
+        "streamdeck/src/plugin.test.ts": 163,
+        "streamdeck/src/plugin.ts": 245,
+        "streamdeck/src/state.test.ts": 633,
+        "streamdeck/src/state.ts": 551,
+        "tsconfig.base.json": 19,
+        "vitest.config.ts": 2
+      }
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 7584,
+      "user_lines_removed": 6222,
+      "agent_lines_added": 145259,
+      "agent_lines_removed": 25501,
+      "user_added_per_file": {
+        ".prettierignore": 1,
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 12,
+        "packages/cli/src/bin.ts": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/README.md": 16,
+        "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json": 348,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/account.js": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/autoroll.html": 13,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/clock.html": 13,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/connect.html": 9,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/finish.html": 13,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/metric.html": 46,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/next.html": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/open.html": 39,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/run.html": 1,
+        "streamdeck/design/actions/autoroll.svg": 10,
+        "streamdeck/design/actions/clock.svg": 5,
+        "streamdeck/design/actions/finish.svg": 5,
+        "streamdeck/design/actions/next.svg": 1,
+        "streamdeck/design/actions/open.svg": 6,
+        "streamdeck/design/export.mjs": 54,
+        "streamdeck/design/profiles.mjs": 477,
+        "streamdeck/design/profiles.test.mjs": 279,
+        "streamdeck/package.json": 1,
+        "streamdeck/src/actions/autoroll.test.ts": 60,
+        "streamdeck/src/actions/autoroll.ts": 22,
+        "streamdeck/src/actions/base.test.ts": 28,
+        "streamdeck/src/actions/base.ts": 49,
+        "streamdeck/src/actions/clock.test.ts": 93,
+        "streamdeck/src/actions/clock.ts": 62,
+        "streamdeck/src/actions/finish.test.ts": 73,
+        "streamdeck/src/actions/finish.ts": 43,
+        "streamdeck/src/actions/metric.test.ts": 94,
+        "streamdeck/src/actions/metric.ts": 60,
+        "streamdeck/src/actions/next.test.ts": 4,
+        "streamdeck/src/actions/open.test.ts": 130,
+        "streamdeck/src/actions/open.ts": 60,
+        "streamdeck/src/face.test.ts": 202,
+        "streamdeck/src/face.ts": 118,
+        "streamdeck/src/glyphs.ts": 28,
+        "streamdeck/src/plugin.test.ts": 85,
+        "streamdeck/src/plugin.ts": 63,
+        "streamdeck/src/profiles.ts": 46,
+        "streamdeck/src/state.test.ts": 257,
+        "streamdeck/src/state.ts": 210,
+        "tests/no-em-dashes.test.ts": 31,
+        "tsconfig.base.json": 19,
+        "vitest.config.ts": 2
+      },
+      "user_removed_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 6,
+        "apps/web/src/run/RunView.offer.test.tsx": 53,
+        "apps/web/src/run/RunView.tsx": 22,
+        "apps/web/src/run/offer.test.ts": 15,
+        "apps/web/src/run/offer.ts": 22,
+        "apps/web/src/run/takePress.test.ts": 47,
+        "apps/web/src/run/takePress.ts": 12,
+        "packages/cli/src/bin.ts": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/README.md": 10,
+        "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/account.js": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/autoroll.html": 13,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/clock.html": 13,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/finish.html": 13,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/metric.html": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/next.html": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/open.html": 39,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/run.html": 1,
+        "streamdeck/design/actions/autoroll.svg": 10,
+        "streamdeck/design/actions/clock.svg": 5,
+        "streamdeck/design/actions/finish.svg": 5,
+        "streamdeck/design/actions/next.svg": 1,
+        "streamdeck/design/actions/open.svg": 6,
+        "streamdeck/design/export.mjs": 2,
+        "streamdeck/design/profiles.mjs": 477,
+        "streamdeck/design/profiles.test.mjs": 279,
+        "streamdeck/src/actions/autoroll.test.ts": 60,
+        "streamdeck/src/actions/autoroll.ts": 22,
+        "streamdeck/src/actions/base.test.ts": 1,
+        "streamdeck/src/actions/base.ts": 1,
+        "streamdeck/src/actions/clock.test.ts": 93,
+        "streamdeck/src/actions/clock.ts": 62,
+        "streamdeck/src/actions/finish.test.ts": 73,
+        "streamdeck/src/actions/finish.ts": 43,
+        "streamdeck/src/actions/metric.test.ts": 4,
+        "streamdeck/src/actions/metric.ts": 7,
+        "streamdeck/src/actions/open.test.ts": 130,
+        "streamdeck/src/actions/open.ts": 60,
+        "streamdeck/src/face.test.ts": 8,
+        "streamdeck/src/face.ts": 26,
+        "streamdeck/src/glyphs.ts": 28,
+        "streamdeck/src/plugin.test.ts": 6,
+        "streamdeck/src/plugin.ts": 30,
+        "streamdeck/src/profiles.ts": 46,
+        "streamdeck/src/state.test.ts": 8,
+        "streamdeck/src/state.ts": 15,
+        "tests/no-em-dashes.test.ts": 31,
+        "tsconfig.base.json": 19
+      }
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 8034,
+      "user_lines_removed": 9082,
+      "agent_lines_added": 146478,
+      "agent_lines_removed": 25358,
+      "user_added_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 6,
+        "apps/web/src/run/RunView.offer.test.tsx": 90,
+        "apps/web/src/run/RunView.tsx": 46,
+        "apps/web/src/run/offer.test.ts": 15,
+        "apps/web/src/run/offer.ts": 22,
+        "apps/web/src/run/takePress.test.ts": 47,
+        "apps/web/src/run/takePress.ts": 12,
+        "docs/stream-api.md": 547,
+        "hosted/infra/lib/handlers/control.ts": 456,
+        "hosted/infra/lib/handlers/ws.ts": 861,
+        "hosted/infra/test/ws.test.ts": 1466,
+        "packages/cli/src/bin.ts": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/README.md": 10,
+        "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/account.js": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/metric.html": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/next.html": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/run.html": 1,
+        "streamdeck/design/actions/next.svg": 1,
+        "streamdeck/design/export.mjs": 2,
+        "streamdeck/src/actions/base.test.ts": 1,
+        "streamdeck/src/actions/base.ts": 1,
+        "streamdeck/src/actions/metric.test.ts": 4,
+        "streamdeck/src/actions/metric.ts": 7,
+        "streamdeck/src/face.test.ts": 8,
+        "streamdeck/src/face.ts": 26,
+        "streamdeck/src/plugin.test.ts": 6,
+        "streamdeck/src/plugin.ts": 30,
+        "streamdeck/src/state.test.ts": 8,
+        "streamdeck/src/state.ts": 15
+      },
+      "user_removed_per_file": {
+        ".prettierignore": 1,
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 12,
+        "apps/web/src/run/RunView.offer.test.tsx": 1,
+        "docs/stream-api.md": 540,
+        "hosted/infra/lib/handlers/control.ts": 438,
+        "hosted/infra/lib/handlers/ws.ts": 781,
+        "hosted/infra/test/ws.test.ts": 1317,
+        "packages/cli/src/bin.ts": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/README.md": 16,
+        "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json": 348,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/account.js": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/connect.html": 9,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/metric.html": 46,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/next.html": 1,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/run.html": 1,
+        "streamdeck/design/actions/next.svg": 1,
+        "streamdeck/design/export.mjs": 54,
+        "streamdeck/package.json": 1,
+        "streamdeck/src/actions/base.test.ts": 28,
+        "streamdeck/src/actions/base.ts": 49,
+        "streamdeck/src/actions/metric.test.ts": 94,
+        "streamdeck/src/actions/metric.ts": 60,
+        "streamdeck/src/actions/next.test.ts": 4,
+        "streamdeck/src/face.test.ts": 202,
+        "streamdeck/src/face.ts": 118,
+        "streamdeck/src/plugin.test.ts": 85,
+        "streamdeck/src/plugin.ts": 63,
+        "streamdeck/src/state.test.ts": 257,
+        "streamdeck/src/state.ts": 210,
+        "vitest.config.ts": 2
+      }
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 3330,
+      "user_lines_removed": 3076,
+      "agent_lines_added": 145176,
+      "agent_lines_removed": 26408,
+      "user_added_per_file": {
+        "docs/stream-api.md": 547,
+        "hosted/infra/lib/handlers/control.ts": 456,
+        "hosted/infra/lib/handlers/ws.ts": 861,
+        "hosted/infra/test/ws.test.ts": 1466
+      },
+      "user_removed_per_file": {
+        "docs/stream-api.md": 540,
+        "hosted/infra/lib/handlers/control.ts": 438,
+        "hosted/infra/lib/handlers/ws.ts": 781,
+        "hosted/infra/test/ws.test.ts": 1317
+      }
+    }
+  ]
+}
