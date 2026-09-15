@@ -1,10 +1,10 @@
-import streamDeck, { action, type DialRotateEvent } from "@elgato/streamdeck";
+import streamDeck, { action, type DialDownEvent, type DialRotateEvent, type KeyDownEvent, type KeyUpEvent } from "@elgato/streamdeck";
 
 import { store } from "../plugin.ts";
-import { metricFace, type DeckState, type Face, type MetricField } from "../state.ts";
-import { RunlogAction } from "./base.ts";
+import { metricFace, metricPress, type DeckState, type Face, type MetricField, type MetricPress } from "../state.ts";
+import { HOLD_MS, HoldTimer, RunlogAction } from "./base.ts";
 
-export type MetricSettings = { field?: MetricField };
+export type MetricSettings = { field?: MetricField; press?: MetricPress };
 
 /** The fields a dial cycles through. A counter or resource is the run's own and is not on this wheel. */
 const FIELDS = ["score", "unit", "clock", "latest", "leader"] as const;
@@ -15,18 +15,58 @@ export function nextField(field: MetricField, by: number): MetricField {
   return FIELDS[(i + by + FIELDS.length) % FIELDS.length]!;
 }
 
-/** A number from the run: the score, the unit, a clock, the last result, the leader. */
+/**
+ * A number from the run: the score, the unit, a clock, the last result, the leader.
+ *
+ * Set to a counter or a resource it is a key as well as a readout: a tap
+ * steps the run's own tracker, a hold takes one back off. The five fixed
+ * fields are the run's arithmetic rather than a number anybody keeps by
+ * hand, so a press on one of those is refused here rather than sent.
+ */
 @action({ UUID: "com.scrthq.runlog.metric" })
 export class Metric extends RunlogAction<MetricSettings> {
+  private holds = new HoldTimer();
+
   face(state: DeckState, settings: MetricSettings, now: number): Face {
     return settings.field ? metricFace(state, settings.field, now) : { title: "Set up", tone: "dim" };
+  }
+
+  /** The way down is only the start of the clock: this key acts on the way back up. */
+  override onKeyDown(ev: KeyDownEvent<MetricSettings>): void {
+    this.holds.down(ev.action.id);
+  }
+
+  override async onKeyUp(ev: KeyUpEvent<MetricSettings>): Promise<void> {
+    const { field, press } = ev.payload.settings;
+    const p = metricPress(store.state, field, press, (this.holds.up(ev.action.id) ?? 0) >= HOLD_MS);
+    if (!p) {
+      await ev.action.showAlert();
+      return;
+    }
+    await this.send(ev.action, p);
+  }
+
+  /**
+   * Pressing the dial steps the field it is on by one.
+   *
+   * One up whatever the key was set to: a dial has no hold of its own to
+   * take one back with, and a number it can only be pushed to is a dial
+   * that does the same thing twice.
+   */
+  override async onDialDown(ev: DialDownEvent<MetricSettings>): Promise<void> {
+    const p = metricPress(store.state, ev.payload.settings.field, { kind: "step" }, false);
+    if (!p) {
+      await ev.action.showAlert();
+      return;
+    }
+    await this.send(ev.action, p);
   }
 
   /** Rotating a dial steps its field and redraws at once. */
   override async onDialRotate(ev: DialRotateEvent<MetricSettings>): Promise<void> {
     const field = nextField(ev.payload.settings.field ?? "score", Math.sign(ev.payload.ticks));
-    await ev.action.setSettings({ field });
-    await this.draw(ev.action, { field });
+    await ev.action.setSettings({ ...ev.payload.settings, field });
+    await this.draw(ev.action, { ...ev.payload.settings, field });
   }
 
   /** The fixed fields are known to the inspector; the counters and resources are the run's own. */

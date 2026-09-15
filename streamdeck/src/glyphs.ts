@@ -6,8 +6,14 @@
  * square, which is what `face.ts` scales them down from.
  */
 export const GLYPHS: Record<string, string> = {
+  autoroll:
+    '<rect x="18" y="62" width="52" height="52" rx="12" fill="none" stroke="#ffffff" stroke-width="11"/> <circle cx="44" cy="88" r="8" fill="#ffffff"/> <rect x="78" y="62" width="52" height="52" rx="12" fill="none" stroke="#ffffff" stroke-width="11"/> <circle cx="94" cy="78" r="7" fill="#ffffff"/> <circle cx="114" cy="98" r="7" fill="#ffffff"/> <path d="M26 46 A60 60 0 0 1 118 46" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round"/> <path d="M104 32 H132 L118 60 Z" fill="#ffffff"/>',
+  clock:
+    '<circle cx="72" cy="72" r="48" fill="none" stroke="#ffffff" stroke-width="12"/> <path d="M72 42 V74 H100" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>',
   connect:
     '<path d="M89 51 A34 34 0 1 1 55 51" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round"/> <path d="M72 20 L72 64" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round"/>',
+  finish:
+    '<path d="M38 22 V126" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/> <path d="M38 30 H114 L96 58 L114 86 H38 Z" fill="#ffffff"/>',
   metric:
     '<g fill="#ffffff"> <rect x="26" y="76" width="24" height="42" rx="7"/> <rect x="60" y="50" width="24" height="68" rx="7"/> <rect x="94" y="26" width="24" height="92" rx="7"/> </g>',
   next: '<path d="M46 26 L118 72 L46 118 Z" fill="#ffffff"/>',

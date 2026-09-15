@@ -25,7 +25,7 @@ const repo = join(here, "..", "..");
 
 const MANIFEST = JSON.parse(readFileSync(join(plugin, "manifest.json"), "utf8"));
 
-/** Everything a key on one of these may be: our nine actions, and the app's two turns. */
+/** Everything a key on one of these may be: our twelve actions, and the app's two turns. */
 const ALLOWED = new Set([...MANIFEST.Actions.map((a) => a.UUID), "com.elgato.streamdeck.page.next", "com.elgato.streamdeck.page.previous"]);
 
 /** Every action on every page of a built profile, with the page and position it sits at. */
@@ -180,7 +180,7 @@ describe("the profiles we ship", () => {
         } else if (action.UUID === "com.scrthq.runlog.setup") {
           expect(Object.keys(settings.setup).sort(), where).toEqual(["id", "title"]);
         } else if (action.UUID === "com.scrthq.runlog.open") {
-          expect(["run", "guide", "rules"], where).toContain(settings.target);
+          expect(["run", "guide", "rules", "newrun", "dock"], where).toContain(settings.target);
         } else {
           expect(settings, where).toEqual({});
         }

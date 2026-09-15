@@ -73,6 +73,25 @@ describe("pressing the open key", () => {
     expect(mock.opened).toEqual(["https://runlog.scrthq.com/packs/demo/docs"]);
   });
 
+  it("opens the dock at the address the page copies", async () => {
+    await press("dock");
+    expect(mock.opened).toEqual(["https://runlog.scrthq.com/dock/controls/s1"]);
+  });
+
+  it("opens a new run, which asks nothing of the one the deck is on", async () => {
+    mock.state = { runs: [], pinned: null, snapshot: null };
+    await press("newrun");
+    expect(mock.opened).toEqual(["https://runlog.scrthq.com/create"]);
+  });
+
+  it("alerts for the dock when the deck is following no run", async () => {
+    const alerts: string[] = [];
+    mock.state = { runs: [{ id: "s1" }, { id: "s2" }], pinned: null, snapshot: null };
+    await press("dock", alerts);
+    expect(mock.opened).toEqual([]);
+    expect(alerts).toEqual(["alert"]);
+  });
+
   it("opens the copy of Runlog the deck is pointed at", async () => {
     mock.base = "https://runlog.dev.scrthq.com";
     await press("guide");

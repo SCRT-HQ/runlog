@@ -118,7 +118,7 @@ function turn(id, which) {
 }
 
 /**
- * The keys a pack adds to the generic nine.
+ * The keys a pack adds to the generic fourteen.
  *
  * Its moves first, because those are what somebody presses; then the
  * numbers it keeps; then the setups for whatever tool it is driven by.

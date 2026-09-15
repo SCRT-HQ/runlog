@@ -408,6 +408,34 @@
       "Controllers": ["Keypad"],
       "States": [{ "Image": "imgs/keys/open" }],
       "PropertyInspectorPath": "ui/open.html"
+    },
+    {
+      "Name": "Clock",
+      "UUID": "com.scrthq.runlog.clock",
+      "Icon": "imgs/actions/clock",
+      "Tooltip": "The run's clock. Press to pause or resume it, hold to stop it.",
+      "Controllers": ["Keypad", "Encoder"],
+      "Encoder": { "layout": "$B1" },
+      "States": [{ "Image": "imgs/keys/clock" }],
+      "PropertyInspectorPath": "ui/clock.html"
+    },
+    {
+      "Name": "Keep rolling for me",
+      "UUID": "com.scrthq.runlog.autoroll",
+      "Icon": "imgs/actions/autoroll",
+      "Tooltip": "Hands the dice to the run, and takes them back.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/autoroll" }],
+      "PropertyInspectorPath": "ui/autoroll.html"
+    },
+    {
+      "Name": "Finish the run",
+      "UUID": "com.scrthq.runlog.finish",
+      "Icon": "imgs/actions/finish",
+      "Tooltip": "Ends the run. Hold it: a press does nothing.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/finish" }],
+      "PropertyInspectorPath": "ui/finish.html"
     }
   ]
 }

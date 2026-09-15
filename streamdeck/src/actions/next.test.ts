@@ -34,6 +34,10 @@ const offer: Offer = {
   needsPage: "Tick the list on the page",
   presets: [],
   setups: [],
+  trackers: [],
+  clock: null,
+  autoRoll: false,
+  ending: null,
 };
 
 /** A deck signed in, connected, following one run, on the step this offer describes. */

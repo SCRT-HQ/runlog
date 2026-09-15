@@ -7,8 +7,8 @@ import { RunlogAction } from "./base.ts";
 export type OpenSettings = { target?: OpenTarget };
 
 /**
- * Opens a page in the streamer's browser: the run, the guide, or the
- * pack's rules.
+ * Opens a page in the streamer's browser: the run, its dock, a new run,
+ * the guide, or the pack's rules.
  *
  * The only key that does not press anything. Every address is built off
  * the plugin's own base, so a deck pointed at a copy of Runlog opens that
@@ -36,9 +36,19 @@ export class Open extends RunlogAction<OpenSettings> {
     // The guide is readable whatever the deck is holding, so it is answered
     // before anything is asked of the run.
     if (target === "guide") return `${base}/guide/stream-deck`;
+    // Starting a run asks nothing of the one the deck is on, the way the
+    // guide does not.
+    if (target === "newrun") return `${base}/create`;
     if (target === "run") {
       const run = attachedRun(store.state);
       return run ? `${base}/run/${encodeURIComponent(run)}` : null;
+    }
+    if (target === "dock") {
+      // The dock's own address, from `apps/web/src/dock/route.ts`: the run's
+      // remote on a page of its own, for a streaming app to keep beside the
+      // preview.
+      const run = attachedRun(store.state);
+      return run ? `${base}/dock/controls/${encodeURIComponent(run)}` : null;
     }
     if (target === "rules") {
       // The docs drawer's own address, which opens the pack's summary.

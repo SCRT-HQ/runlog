@@ -36,10 +36,15 @@ export const DEVICES = {
  * dice are waiting, and Press takes the primary whatever it is, so the two
  * say different things about the same moment.
  *
- * The two Open keys come last because nothing on the deck needs them
- * mid-scene: one puts the run in the browser, the other the guide.
+ * The clock and the dice the run throws for itself sit with the presses,
+ * because both are things somebody reaches for while a scene is running.
  *
- * Eleven keys, which is more than a Mini or a + has room for. They page.
+ * The two Open keys come last but one because nothing on the deck needs
+ * them mid-scene: one puts the run in the browser, the other the guide.
+ * Finish is last of all, as far from a hand mid-scene as the layout goes,
+ * and it takes a hold on top of that.
+ *
+ * Fourteen keys, which is more than a Mini or a + has room for. They page.
  */
 export const BASE = [
   { action: "connect" },
@@ -47,12 +52,15 @@ export const BASE = [
   { action: "next" },
   { action: "roll" },
   { action: "undo" },
+  { action: "clock" },
+  { action: "autoroll" },
   { action: "metric", settings: { field: "score" } },
   { action: "metric", settings: { field: "unit" } },
   { action: "metric", settings: { field: "clock" } },
   { action: "press", settings: { target: { kind: "roll" } } },
   { action: "open", settings: { target: "run" } },
   { action: "open", settings: { target: "guide" } },
+  { action: "finish" },
 ];
 
 /**

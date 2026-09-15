@@ -11,6 +11,8 @@
       <select id="target">
         <option value="">Set up</option>
         <option value="run">The run</option>
+        <option value="dock">The dock</option>
+        <option value="newrun">A new run</option>
         <option value="guide">The guide</option>
         <option value="rules">The rules</option>
       </select>
@@ -19,8 +21,9 @@
     <div id="runlog-account"></div>
     <script src="account.js"></script>
     <script>
-      // Three pages, all of them at the address in the account block: the
-      // run the deck is following, the guide, and the pack's own rules.
+      // Five pages, all of them at the address in the account block: the
+      // run the deck is following, its dock, a new run, the guide, and the
+      // pack's own rules.
       (() => {
         const { streamDeckClient } = SDPIComponents;
         const target = document.getElementById("target");

@@ -30,7 +30,7 @@ vi.mock("../plugin.ts", () => ({
   },
 }));
 
-const { RunlogAction } = await import("./base.ts");
+const { HoldTimer, RunlogAction } = await import("./base.ts");
 
 /** An action that does nothing but press, so only `send` is under test. */
 class Probe extends RunlogAction {
@@ -133,5 +133,32 @@ describe("a press waiting on the server's verdict", () => {
     await new Probe().press(k);
     expect(k.told).toEqual(["alert"]);
     expect(mock.listeners.size).toBe(0);
+  });
+});
+
+// Task 24b: the software sends a key down and a key up and nothing in
+// between, so how long a key was held is the plugin's own arithmetic.
+describe("telling a hold from a tap", () => {
+  it("reports how long the key was down", () => {
+    const holds = new HoldTimer();
+    holds.down("a1", 1000);
+    expect(holds.up("a1", 1700)).toBe(700);
+  });
+
+  it("gives nothing for a key whose press did not start here", () => {
+    const holds = new HoldTimer();
+    expect(holds.up("a1", 1700)).toBeNull();
+    // And the same key twice: the first up is the whole of that press.
+    holds.down("a1", 1000);
+    expect(holds.up("a1", 1100)).toBe(100);
+    expect(holds.up("a1", 1200)).toBeNull();
+  });
+
+  it("times two keys of the same action apart", () => {
+    const holds = new HoldTimer();
+    holds.down("a1", 1000);
+    holds.down("a2", 1500);
+    expect(holds.up("a2", 1600)).toBe(100);
+    expect(holds.up("a1", 1900)).toBe(900);
   });
 });

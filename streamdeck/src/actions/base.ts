@@ -27,6 +27,37 @@ export type JsonObject = { [key: string]: JsonValue };
 /** How long a press waits for the server's verdict before giving up on it. */
 const VERDICT_MS = 5000;
 
+/** How long a key is held before it counts as a hold rather than a tap. */
+export const HOLD_MS = 600;
+
+/** How long the Finish key is held, which is longer because the run ends. */
+export const FINISH_HOLD_MS = 1500;
+
+/**
+ * A key that tells a hold from a tap.
+ *
+ * The software sends a key down and a key up and nothing in between, so
+ * the length of a press is the plugin's own arithmetic: `down` on the way
+ * down, `up` on the way back for how long it was. A key that times a press
+ * this way has to act on the way up rather than the way down, which is the
+ * one thing that makes it feel different from every other key on the deck.
+ */
+export class HoldTimer {
+  private at = new Map<string, number>();
+
+  down(id: string, now = Date.now()): void {
+    this.at.set(id, now);
+  }
+
+  /** How long this key was held, or null where the press did not start here - a redraw mid-press, a plugin restart. */
+  up(id: string, now = Date.now()): number | null {
+    const at = this.at.get(id);
+    if (at === undefined) return null;
+    this.at.delete(id);
+    return now - at;
+  }
+}
+
 /** Either kind of placed action - a key on the grid, or a dial on a Stream Deck +. */
 export type Placed<S extends JsonObject> = DialAction<S> | KeyAction<S>;
 
