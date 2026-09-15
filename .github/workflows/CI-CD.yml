@@ -110,6 +110,25 @@ jobs:
 
       - run: npm run build
 
+  # The Stream Deck plugin: its own workspace, built and validated on its
+  # own, since neither the build nor the manifest shape has anything to do
+  # with the app's suite above. Nothing is packed or published here; that
+  # is Task 13's job.
+  Deck:
+    name: Stream Deck plugin
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup Node and run npm ci
+        uses: ./.github/actions/npm-ci
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - run: npm run build -w streamdeck
+      - run: npx --workspace streamdeck streamdeck validate com.scrthq.runlog.sdPlugin
+
   InfraTest:
     name: Test the hosting
     runs-on: ubuntu-latest
@@ -265,11 +284,12 @@ jobs:
     name: Checks
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [Test, InfraTest, Diff]
+    needs: [Test, Deck, InfraTest, Diff]
     if: ${{ always() && (github.event_name == 'pull_request' || github.event_name == 'merge_group') }}
     steps:
       - env:
           TEST: ${{ needs.Test.result }}
+          DECK: ${{ needs.Deck.result }}
           INFRA: ${{ needs.InfraTest.result }}
           DIFF: ${{ needs.Diff.result }}
           EVENT: ${{ github.event_name }}
@@ -277,9 +297,10 @@ jobs:
           DEPENDABOT: ${{ github.actor == 'dependabot[bot]' }}
         run: |
           set -euo pipefail
-          echo "Test: $TEST; hosting tests: $INFRA; diffs: $DIFF ($EVENT)"
+          echo "Test: $TEST; deck: $DECK; hosting tests: $INFRA; diffs: $DIFF ($EVENT)"
           ok=true
           [ "$TEST" = "success" ] || { echo "::error::the app's checks did not pass ($TEST)"; ok=false; }
+          [ "$DECK" = "success" ] || { echo "::error::the stream deck plugin's checks did not pass ($DECK)"; ok=false; }
           [ "$INFRA" = "success" ] || { echo "::error::the hosting's checks did not pass ($INFRA)"; ok=false; }
           case "$DIFF" in
             success) ;;

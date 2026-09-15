@@ -1,0 +1,67 @@
+{
+  "Name": "Runlog",
+  "Version": "0.1.0.0",
+  "Author": "Secret Headquarters, LLC",
+  "Description": "Run a Runlog run from the deck: the next press, the moves on offer, undo, and the run's numbers on your keys.",
+  "Category": "Runlog",
+  "CategoryIcon": "imgs/category",
+  "Icon": "imgs/plugin",
+  "UUID": "com.scrthq.runlog",
+  "SDKVersion": 3,
+  "Software": { "MinimumVersion": "7.1" },
+  "OS": [
+    { "Platform": "mac", "MinimumVersion": "12" },
+    { "Platform": "windows", "MinimumVersion": "10" }
+  ],
+  "Nodejs": { "Version": "24", "Debug": "enabled" },
+  "CodePath": "bin/plugin.js",
+  "Actions": [
+    {
+      "Name": "Do the next thing",
+      "UUID": "com.scrthq.runlog.next",
+      "Icon": "imgs/actions/next",
+      "Tooltip": "Presses whatever the run is waiting on.",
+      "Controllers": ["Keypad", "Encoder"],
+      "Encoder": { "layout": "$B1" },
+      "States": [{ "Image": "imgs/actions/next" }],
+      "PropertyInspectorPath": "ui/next.html"
+    },
+    {
+      "Name": "Press",
+      "UUID": "com.scrthq.runlog.press",
+      "Icon": "imgs/actions/press",
+      "Tooltip": "One move, the waiting roll, or a preset answer.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/actions/press" }],
+      "PropertyInspectorPath": "ui/press.html"
+    },
+    {
+      "Name": "Undo",
+      "UUID": "com.scrthq.runlog.undo",
+      "Icon": "imgs/actions/undo",
+      "Tooltip": "Takes back the last result.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/actions/undo" }],
+      "PropertyInspectorPath": "ui/undo.html"
+    },
+    {
+      "Name": "Run",
+      "UUID": "com.scrthq.runlog.run",
+      "Icon": "imgs/actions/run",
+      "Tooltip": "Which run the deck is on. Press to switch.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/actions/run" }],
+      "PropertyInspectorPath": "ui/run.html"
+    },
+    {
+      "Name": "Metric",
+      "UUID": "com.scrthq.runlog.metric",
+      "Icon": "imgs/actions/metric",
+      "Tooltip": "A number from the run: score, unit, clock, last result.",
+      "Controllers": ["Keypad", "Encoder"],
+      "Encoder": { "layout": "$B1" },
+      "States": [{ "Image": "imgs/actions/metric" }],
+      "PropertyInspectorPath": "ui/metric.html"
+    }
+  ]
+}

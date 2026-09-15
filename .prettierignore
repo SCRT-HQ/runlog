@@ -5,6 +5,7 @@
 **/cdk.out/
 **/stage/
 **/node_modules/
+streamdeck/com.scrthq.runlog.sdPlugin/bin/
 packages/rules-schema/schema/
 apps/web/dist/
 docs/reference.md
