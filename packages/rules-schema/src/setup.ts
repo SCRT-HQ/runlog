@@ -98,7 +98,7 @@ export const SETUP_SCHEMA_VERSION = 1;
  *
  * Two gates rather than the pack's three: a version, and a shape. There
  * is no coherence pass because there is nothing here to be incoherent
- * about — a setup refers to nothing but its tool's vocabulary, and only
+ * about: a setup refers to nothing but its tool's vocabulary, and only
  * that tool can say whether it knows a name.
  */
 export function parseSetup(input: unknown): SetupResult {
