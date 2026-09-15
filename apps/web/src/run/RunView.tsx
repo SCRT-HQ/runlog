@@ -11,6 +11,7 @@ import {
   formatClock,
   formatScore,
   handsFree as handsFreeIn,
+  liveClocks,
   nextUnit,
   scoreOf,
   unitPhases,
@@ -72,7 +73,7 @@ import { clearPendingRaceCode, pendingRaceCode } from "../share/IncomingRace.tsx
 import { PlanError } from "../sync/client.ts";
 import { liveLinkOf } from "../live/route.ts";
 import { entryTextOf, paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
-import { offerOf } from "./offer.ts";
+import { offerOf, type OfferInput } from "./offer.ts";
 import { takePress, type Verdict } from "./takePress.ts";
 import { isEmpty, tidy, type ControlProfile } from "../control/profile.ts";
 import { chose, chosenFrom, forTool, setupsHere, withChosen, type ChosenSetup } from "../control/setups.ts";
@@ -312,16 +313,58 @@ export function RunView({
    */
   const [offeredSetups, setOfferedSetups] = useState<Setup[]>([]);
   useEffect(() => {
-    let live = true;
+    let alive = true;
     void (async () => {
       const tool = (await builtins()).find((b) => b.pack === pack.id)?.profile.tool;
       const all = await setupsHere();
-      if (live) setOfferedSetups(forTool(all, tool));
+      if (alive) setOfferedSetups(forTool(all, tool));
     })();
     return () => {
-      live = false;
+      alive = false;
     };
   }, [pack.id]);
+
+  /**
+   * `handsFree`, `live` and the closing step, ahead of the two things that
+   * read them. The offer below says whether the run may end here, in the
+   * words of the page's own Finish button; the drive effect further down
+   * presses that button, and the page's own carry-on, when a deck asks for
+   * either. The full account of hands-free is further down still, where
+   * `begun` and the carry-on timer read these.
+   */
+  const handsFree = run.state ? handsFreeIn(pack, run.state) : false;
+  const live = run.state?.status === "active" && !run.readOnly;
+  const closingStep = run.activeStep && closesUnit(run.activeStep.step) ? run.activeStep : null;
+  const closing = closesTheUnit({
+    handsFree,
+    live: Boolean(live),
+    settled,
+    step: closingStep?.step ?? null,
+    owed: run.blockingObligations.length,
+    thresholds: run.thresholds.length,
+    globals: run.globals.length,
+  });
+
+  /**
+   * What the game is owed, in the words the panel below puts on its own
+   * buttons. Held here rather than in the offer because the offer is given
+   * what is on offer and not the pack to read it from, and held apart from
+   * `currentOffer` because a press has to find the trigger again by key.
+   *
+   * The same order the panel draws them in, so the key face and the screen
+   * agree on which one is next.
+   */
+  const due = useMemo(
+    () => [
+      ...run.thresholds.map((t) => ({
+        id: t.key,
+        label: `${t.label}: ${thresholdWords(pack, t.counter, t.index)}`,
+        kind: "threshold" as const,
+      })),
+      ...run.globals.map((g) => ({ id: g.key, label: `${g.label}: ${globalWords(pack, g.index)}`, kind: "global" as const })),
+    ],
+    [run.thresholds, run.globals, pack],
+  );
 
   /**
    * What a deck may press, right now: one value for the snapshot this
@@ -359,6 +402,7 @@ export function RunView({
       canUndo: run.canUndo,
       lastResult: run.state?.outcomes.at(-1) ? entryTextOf(pack, run.state.outcomes.at(-1)!) : null,
       owed: run.blockingObligations.length,
+      due,
       // Held to the step's own table, the way the card holds them: a
       // step that constrains what may be named suggests only from there.
       suggestions: run.state
@@ -390,6 +434,17 @@ export function RunView({
       // Id and title only: a key face shows the title, and a press names
       // the id. What the setup actually does stays here, where the run is.
       setups: offeredSetups.map((s) => ({ id: s.id, title: s.title })),
+      trackers: trackersOf(pack, run.state ?? null),
+      // The one clock the page's own Pause and Stop act on. A unit runs
+      // one at a time in practice, and where it somehow runs two, the one
+      // ticking is the one anybody means; a paused clock is offered so the
+      // key that paused it can start it again.
+      clock: clockOf(run.state ?? null),
+      autoRoll: run.autoRoll,
+      // The page's own Finish button, on the same condition it appears
+      // under: the closing step, its receipts read, and a run the engine
+      // says may end. Offered in that button's words, not a key's own.
+      ending: closing && closingStep && run.canEnd.ok ? { label: `Finish the ${pack.vocabulary.run.one.toLowerCase()}` } : null,
     });
   }, [
     run.events.length,
@@ -402,9 +457,14 @@ export function RunView({
     racing,
     run.canUndo,
     run.blockingObligations.length,
+    due,
     receipts.length,
     settled,
     offeredSetups,
+    run.autoRoll,
+    run.canEnd.ok,
+    closing,
+    closingStep,
     pack,
   ]);
   useEffect(() => {
@@ -602,29 +662,10 @@ export function RunView({
   );
 
   /**
-   * `handsFree`, `closing` and `carryOn`, hoisted ahead of the drive effect
-   * below: a deck's carry-on press calls the same `carryOn` the page's own
-   * button does, not a second path through `run.completeStep`, and that
-   * function has to exist before the effect that closes over it. The full
-   * account of hands-free is further down, where `begun` and the carry-on
-   * timer read these.
-   */
-  const handsFree = run.state ? handsFreeIn(pack, run.state) : false;
-  const live = run.state?.status === "active" && !run.readOnly;
-  const closingStep = run.activeStep && closesUnit(run.activeStep.step) ? run.activeStep : null;
-  const closing = closesTheUnit({
-    handsFree,
-    live: Boolean(live),
-    settled,
-    step: closingStep?.step ?? null,
-    owed: run.blockingObligations.length,
-    thresholds: run.thresholds.length,
-    globals: run.globals.length,
-  });
-
-  /**
    * Carry on: clear the receipt, and where that is also the end of the
-   * unit, close it and enter the next in the same press.
+   * unit, close it and enter the next in the same press. Hoisted ahead of
+   * the drive effect below, which presses the same function the page's own
+   * button does rather than a second path through `run.completeStep`.
    */
   const carryOn = useCallback(() => {
     setReceipts([]);
@@ -659,6 +700,21 @@ export function RunView({
             const id = currentOffer.primary?.id;
             if (id === "enter") {
               run.enterUnit();
+              return;
+            }
+            if (id === "owed") {
+              // The button the "The game has your number" panel would show
+              // first, pressed the way that panel presses it. The offer
+              // named it from `due`, so the same first entry names it here.
+              const first = due[0];
+              if (!first) return;
+              if (first.kind === "threshold") {
+                const t = run.thresholds.find((x) => x.key === first.id);
+                if (t) run.fireThreshold(t);
+              } else {
+                const g = run.globals.find((x) => x.key === first.id);
+                if (g) run.fireGlobal(g);
+              }
               return;
             }
             if (!active) return;
@@ -704,6 +760,32 @@ export function RunView({
             }
             run.declareSubject(active.phase, active.index, String(a["subject"] ?? ""));
           },
+          tracker: (id, move) => {
+            const it = currentOffer.trackers.find((t) => t.id === id);
+            if (!it) return;
+            // A number to land on becomes the distance to it, because that
+            // is what both of the run's own functions take. Nothing to
+            // move is nothing to write: a dial already at four, set to
+            // four, would otherwise put a correction in the log saying the
+            // tally was wrong when it was not.
+            const by = "by" in move ? move.by : move.to - it.value;
+            if (by === 0) return;
+            if (it.kind === "counter") run.nudgeCounter(id, by);
+            else run.turnResource(id, by);
+          },
+          clock: (id, doing) => {
+            if (doing === "pause") run.pauseClock(id);
+            else if (doing === "resume") run.resumeClock(id);
+            else run.stopClock(id);
+          },
+          autoRoll: (on) => run.setAutoRoll(on),
+          finish: () => {
+            if (!closing || !closingStep || !run.canEnd.ok) return;
+            // The page's own Finish button, to the letter: the receipts go
+            // and the closing step ends the run in the same press.
+            setReceipts([]);
+            run.finish(closingStep.phase, closingStep.index);
+          },
           setup: async (id) => {
             const picked = offeredSetups.find((s) => s.id === id);
             if (!picked) throw new Error("That setup is not here.");
@@ -732,7 +814,7 @@ export function RunView({
         timer: window.setTimeout(() => settleVerdict(eventCount.current), threw ? DICE_VERDICT_MS : HELD_VERDICT_MS),
       };
     });
-  }, [run, currentOffer, sync, pack, settleVerdict, offeredSetups, carryOn, settled]);
+  }, [run, currentOffer, due, sync, pack, settleVerdict, offeredSetups, carryOn, settled, closing, closingStep]);
   const seen = useRef<number | null>(null);
   // How many answers this view has given, and how many it had given when
   // the last receipt was issued: what a step that came back with the run
@@ -1881,7 +1963,11 @@ function ClosingStep({
 }) {
   const { phase, step, index } = active;
   const v = pack.vocabulary;
-  const blocked = run.blockingObligations;
+  // What stands in the way of closing: what the player owes, and what the
+  // game is owed. A counter that crossed its threshold used to ride into
+  // the next scene from this very button, because only the obligations
+  // were counted here and the threshold was a panel further down the page.
+  const blocked = run.blockingObligations.length + run.thresholds.length + run.globals.length;
   const points = step.kind === "manual" ? (step.checklist ?? []) : step.kind === "finalizeUnit" ? (step.confirm ?? []) : [];
   const constraints = step.kind === "manual" ? constraintLines(pack, state, step.constrainedBy) : [];
   /*
@@ -1938,14 +2024,10 @@ function ClosingStep({
         <button
           className="primary big"
           onClick={(e) =>
-            blocked.length > 0
-              ? nudgeOwed(e.currentTarget)
-              : allTicked
-                ? run.closeAndEnter(phase, index)
-                : nudgeFirstUnticked(e.currentTarget)
+            blocked > 0 ? nudgeOwed(e.currentTarget) : allTicked ? run.closeAndEnter(phase, index) : nudgeFirstUnticked(e.currentTarget)
           }
         >
-          {blocked.length > 0 ? "Settle what is owed first" : allTicked ? finishWords(pack, step) : "Tick what you honored"}
+          {blocked > 0 ? "Settle what is owed first" : allTicked ? finishWords(pack, step) : "Tick what you honored"}
         </button>
         <button
           className="ghost big"
@@ -1958,7 +2040,7 @@ function ClosingStep({
                 : undefined
           }
           onClick={(e) =>
-            blocked.length > 0 ? nudgeOwed(e.currentTarget) : allTicked ? run.finish(phase, index) : nudgeFirstUnticked(e.currentTarget)
+            blocked > 0 ? nudgeOwed(e.currentTarget) : allTicked ? run.finish(phase, index) : nudgeFirstUnticked(e.currentTarget)
           }
         >
           Finish
@@ -1976,6 +2058,11 @@ function BetweenUnits({ pack, run, state }: { pack: Pack; run: ReturnType<typeof
   // Saved and has nothing to do, and typing again makes it Save again.
   const kept = note.trim() !== "" && state.journal[state.unit] === note;
   const keep = () => note.trim() && !kept && run.writeJournal(state.unit, note);
+  // A threshold the game reached, or a trigger it arrived at, still waiting
+  // to be rolled. The unit closed with one pending and the next one opened
+  // over the top of it, so the onward button points at the panel instead.
+  // The same answer a deck gets, whose Next carries that roll.
+  const held = run.thresholds.length + run.globals.length;
 
   return (
     <section className="panel runStep">
@@ -2006,8 +2093,8 @@ function BetweenUnits({ pack, run, state }: { pack: Pack; run: ReturnType<typeof
           Not the big button the step cards use: this card is a pause, not
           a step, and the choice below it is as much the point as going on. */}
       <div className="primaryAction">
-        <button className="primary" onClick={run.enterUnit}>
-          Enter {v.unit.one} {state.unit + 1}
+        <button className="primary" onClick={(e) => (held > 0 ? nudgeOwed(e.currentTarget) : run.enterUnit())}>
+          {held > 0 ? "Settle what is owed first" : `Enter ${v.unit.one} ${state.unit + 1}`}
         </button>
         <span className="muted small">
           {state.unit >= pack.unit.min ? countMade(pack, state) : `at least ${pack.unit.min} needed before you can stop`}
@@ -2764,6 +2851,56 @@ function Board({
 }
 
 /**
+ * The tallies this run shows: not the ones the pack hides, and not the
+ * ones kept per racer while there is a board to keep them on.
+ *
+ * A tally kept per racer belongs on the scoreboard, next to the name it
+ * belongs to. Keeping a run-wide copy here as well showed a nought beside
+ * somebody's two, and there was nothing anybody could do with either.
+ * Alone, there is no board and it is the run's as usual.
+ *
+ * Read by the panel below and by the offer a deck is given, which have to
+ * list the same tallies.
+ */
+function shownCounters(pack: Pack, state: RunState) {
+  const racing = state.contestants.length > 0;
+  return Object.entries(pack.counters ?? {}).filter(([, c]) => !c.hidden && !(racing && c.per === "contestant"));
+}
+
+/** The dials and the tallies a deck may turn, as the panel below lists them. */
+export function trackersOf(pack: Pack, state: RunState | null): OfferInput["trackers"] {
+  if (!state) return [];
+  return [
+    ...Object.entries(pack.resources ?? {}).map(([id, def]) => ({
+      id,
+      kind: "resource" as const,
+      label: def.label,
+      value: state.resources[id] ?? def.initial,
+      max: def.max ?? null,
+    })),
+    ...shownCounters(pack, state).map(([id, def]) => ({
+      id,
+      kind: "counter" as const,
+      label: def.label,
+      value: state.counters[id] ?? def.initial,
+      max: def.max ?? null,
+    })),
+  ];
+}
+
+/**
+ * The clock a deck's Pause, Resume and Stop act on: the one running, or
+ * else one paused and waiting to be started again. A stopped clock is a
+ * record of how long something took and there is nothing left to press.
+ */
+export function clockOf(state: RunState | null): OfferInput["clock"] {
+  if (!state) return null;
+  const ticking = liveClocks(state);
+  const it = ticking.find((c) => c.status === "running") ?? ticking.find((c) => c.status === "paused");
+  return it ? { id: it.id, label: it.label, status: it.status } : null;
+}
+
+/**
  * The dials and the tallies, side by side.
  *
  * A resource is a setting somebody chose and a counter is a tally of
@@ -2784,13 +2921,8 @@ function Trackers({
   onNudge?: (counter: string, by: number) => void;
   onTurn?: (resource: string, by: number) => void;
 }) {
-  // A tally kept per racer belongs on the scoreboard, next to the name
-  // it belongs to. Keeping a run-wide copy here as well showed a nought
-  // beside somebody's two, and there was nothing anybody could do with
-  // either. Alone, there is no board and it is the run's as usual.
-  const racing = state.contestants.length > 0;
   const resources = Object.entries(pack.resources ?? {});
-  const counters = Object.entries(pack.counters ?? {}).filter(([, c]) => !c.hidden && !(racing && c.per === "contestant"));
+  const counters = shownCounters(pack, state);
   const cards = state.hand;
   if (resources.length + counters.length + cards.length === 0) return null;
 

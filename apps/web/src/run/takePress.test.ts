@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { takePress } from "./takePress.ts";
+import type { Offer } from "./offer.ts";
 
-const offer = {
+const offer: Offer = {
   seq: 42,
   primary: { id: "roll" as const, label: "Roll", kind: "rollTable" },
   moves: [{ id: "died", label: "I died" }],
@@ -9,8 +10,22 @@ const offer = {
   needsPage: null,
   presets: [],
   setups: [],
+  trackers: [],
+  clock: null,
+  autoRoll: false,
+  ending: null,
 };
-const acts = () => ({ primary: vi.fn(), move: vi.fn(), undo: vi.fn(), answer: vi.fn(), setup: vi.fn() });
+const acts = () => ({
+  primary: vi.fn(),
+  move: vi.fn(),
+  undo: vi.fn(),
+  answer: vi.fn(),
+  setup: vi.fn(),
+  tracker: vi.fn(),
+  clock: vi.fn(),
+  autoRoll: vi.fn(),
+  finish: vi.fn(),
+});
 
 describe("takePress", () => {
   it("presses the primary and says so", () => {
@@ -206,5 +221,120 @@ describe("takePress", () => {
     );
     expect(out).toEqual({ ok: false, say: "The run is not asking for that." });
     expect(act.answer).not.toHaveBeenCalled();
+  });
+});
+
+/*
+ * Task 24a: the four things on the page that are not the step. Each rides
+ * in the answer, because that is the only field of a press the server
+ * passes through, and each is checked against the offer the way a move is.
+ */
+describe("the dials, the clock, the dice and the ending", () => {
+  const glaze = { id: "glaze", kind: "resource" as const, label: "Glaze", value: 3, max: 6 };
+  const ticking = { id: "u4:unit", label: "Day 4", status: "running" as const };
+  const press = (answer: Record<string, unknown>, at: typeof offer, act: ReturnType<typeof acts>) =>
+    takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer }, { seq: 42, offer: at, seen: new Map() }, act);
+
+  it("turns a dial by a step", () => {
+    const act = acts();
+    expect(press({ tracker: "glaze", by: -1 }, { ...offer, trackers: [glaze] }, act)).toEqual({ ok: true });
+    expect(act.tracker).toHaveBeenCalledWith("glaze", { by: -1 });
+  });
+
+  it("turns a dial to a number", () => {
+    const act = acts();
+    expect(press({ tracker: "glaze", to: 5 }, { ...offer, trackers: [glaze] }, act)).toEqual({ ok: true });
+    expect(act.tracker).toHaveBeenCalledWith("glaze", { to: 5 });
+  });
+
+  it("refuses a tracker the run is not offering", () => {
+    const act = acts();
+    expect(press({ tracker: "kiln", by: 1 }, { ...offer, trackers: [glaze] }, act)).toEqual({
+      ok: false,
+      say: "That tracker is not here.",
+    });
+    expect(act.tracker).not.toHaveBeenCalled();
+  });
+
+  // A tracker named with nothing to move it by is not a press: the run
+  // will not guess which way a key meant to turn it.
+  it("refuses a tracker with neither a step nor a number", () => {
+    const act = acts();
+    expect(press({ tracker: "glaze" }, { ...offer, trackers: [glaze] }, act)).toEqual({
+      ok: false,
+      say: "This run does not know that press.",
+    });
+    expect(act.tracker).not.toHaveBeenCalled();
+  });
+
+  it("pauses and stops the clock the run is offering", () => {
+    const act = acts();
+    expect(press({ clock: "u4:unit", do: "pause" }, { ...offer, clock: ticking }, act)).toEqual({ ok: true });
+    expect(act.clock).toHaveBeenCalledWith("u4:unit", "pause");
+    const stopping = acts();
+    expect(press({ clock: "u4:unit", do: "stop" }, { ...offer, clock: ticking }, stopping)).toEqual({ ok: true });
+    expect(stopping.clock).toHaveBeenCalledWith("u4:unit", "stop");
+  });
+
+  it("starts a paused clock again", () => {
+    const act = acts();
+    expect(press({ clock: "u4:unit", do: "resume" }, { ...offer, clock: { ...ticking, status: "paused" } }, act)).toEqual({ ok: true });
+    expect(act.clock).toHaveBeenCalledWith("u4:unit", "resume");
+  });
+
+  it("refuses a clock the run is not offering", () => {
+    const act = acts();
+    expect(press({ clock: "u4:unit", do: "pause" }, offer, act)).toEqual({ ok: false, say: "That clock is not here." });
+    expect(press({ clock: "u9:unit", do: "pause" }, { ...offer, clock: ticking }, act)).toEqual({
+      ok: false,
+      say: "That clock is not here.",
+    });
+    expect(act.clock).not.toHaveBeenCalled();
+  });
+
+  it("refuses pausing a clock that is already paused, and resuming one that is running", () => {
+    const act = acts();
+    expect(press({ clock: "u4:unit", do: "pause" }, { ...offer, clock: { ...ticking, status: "paused" } }, act)).toEqual({
+      ok: false,
+      say: "That clock is not running.",
+    });
+    expect(press({ clock: "u4:unit", do: "resume" }, { ...offer, clock: ticking }, act)).toEqual({
+      ok: false,
+      say: "That clock is not paused.",
+    });
+    expect(act.clock).not.toHaveBeenCalled();
+  });
+
+  // The page offers a running clock or a paused one and never a stopped
+  // one, so this is the press that arrives from an offer read before the
+  // timer ran out: it is told what happened rather than stopping it twice.
+  it("refuses stopping a clock that has stopped", () => {
+    const act = acts();
+    expect(press({ clock: "u4:unit", do: "stop" }, { ...offer, clock: { ...ticking, status: "done" } }, act)).toEqual({
+      ok: false,
+      say: "That clock has stopped.",
+    });
+    expect(act.clock).not.toHaveBeenCalled();
+  });
+
+  it("sets the dice to roll themselves, and to what they already were", () => {
+    const act = acts();
+    expect(press({ autoRoll: true }, offer, act)).toEqual({ ok: true });
+    expect(act.autoRoll).toHaveBeenCalledWith(true);
+    const off = acts();
+    expect(press({ autoRoll: false }, offer, off)).toEqual({ ok: true });
+    expect(off.autoRoll).toHaveBeenCalledWith(false);
+  });
+
+  it("ends the run where the page would offer to", () => {
+    const act = acts();
+    expect(press({ finish: true }, { ...offer, ending: { label: "Finish the firing" } }, act)).toEqual({ ok: true });
+    expect(act.finish).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses to end a run that is not at its ending", () => {
+    const act = acts();
+    expect(press({ finish: true }, offer, act)).toEqual({ ok: false, say: "The run cannot end here." });
+    expect(act.finish).not.toHaveBeenCalled();
   });
 });

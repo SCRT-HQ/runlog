@@ -16,7 +16,7 @@ import { pointOf } from "./evidence.ts";
  */
 export interface Offer {
   seq: number;
-  primary: { id: "roll" | "carry-on" | "close" | "enter"; label: string; kind: string } | null;
+  primary: { id: "roll" | "carry-on" | "close" | "enter" | "owed"; label: string; kind: string } | null;
   moves: Array<{ id: string; label: string }>;
   undo: { what: string } | null;
   /** Why a deck cannot press this, in words a key face can carry. */
@@ -24,6 +24,14 @@ export interface Offer {
   presets: Array<{ kind: string; label: string; suggestions?: string[]; items?: number }>;
   /** The setups a key may apply to this run, by id and title. */
   setups: Array<{ id: string; title: string }>;
+  /** The tallies and the dials, as the Trackers panel lists them. */
+  trackers: Array<{ id: string; kind: "counter" | "resource"; label: string; value: number; max: number | null }>;
+  /** The clock the page's Pause, Resume and Stop act on, where one is ticking. */
+  clock: { id: string; label: string; status: "running" | "paused" | "done" } | null;
+  /** Whether the app is throwing the dice itself. */
+  autoRoll: boolean;
+  /** The ending the page would offer, in the words of its own button. */
+  ending: { label: string } | null;
 }
 
 export interface OfferInput {
@@ -44,6 +52,16 @@ export interface OfferInput {
   lastResult: string | null;
   /** Obligations standing in the way. */
   owed: number;
+  /**
+   * What the *game* is owed: a counter that has crossed its threshold, a
+   * trigger the run has arrived at, each with the key that fires it and the
+   * words the page's own button carries.
+   *
+   * Handed in rather than worked out here, for the reason the trackers are:
+   * naming a trigger takes the pack, and this function is given what is on
+   * offer rather than the pack to read it from.
+   */
+  due: Array<{ id: string; label: string; kind: "threshold" | "global" }>;
   /** What the run would suggest for a subject, where it suggests anything. */
   suggestions: string[];
   /** What the page's between-units button says, or null when the run is not between units. */
@@ -62,6 +80,19 @@ export interface OfferInput {
    * shipped profiles and the shelf, neither of which this function has.
    */
   setups: Array<{ id: string; title: string }>;
+  /**
+   * Every tally and every dial the run keeps, worked out by the page for
+   * the reason the setups are: which of them the page draws depends on the
+   * pack and on who is at the table, and the panel that draws them is the
+   * one home for that.
+   */
+  trackers: Offer["trackers"];
+  /** The clock the page's own buttons act on, or null while none is. */
+  clock: Offer["clock"];
+  /** Whether this device is throwing the dice for the player. */
+  autoRoll: boolean;
+  /** What the page's Finish button says, where the page is showing one. */
+  ending: Offer["ending"];
 }
 
 /**
@@ -81,7 +112,17 @@ const TYPED = new Set(["declareSubject"]);
 export function offerOf(input: OfferInput): Offer {
   const moves = input.moves;
   const undo = input.canUndo && input.lastResult ? { what: input.lastResult } : null;
-  const bare = { seq: input.seq, moves, undo, presets: [] as Offer["presets"], setups: input.setups };
+  const bare = {
+    seq: input.seq,
+    moves,
+    undo,
+    presets: [] as Offer["presets"],
+    setups: input.setups,
+    trackers: input.trackers,
+    clock: input.clock,
+    autoRoll: input.autoRoll,
+    ending: input.ending,
+  };
 
   // A run nobody is playing -- not started, read-only, ended -- offers
   // nothing at all, moves and undo included. They used to ride out on
@@ -90,13 +131,57 @@ export function offerOf(input: OfferInput): Offer {
   // let anyone touch. The setups go with them: what a finished run was
   // played under is a record of what happened, and a key that could
   // rewrite it from another room is worse than no key.
-  if (!input.live) return { ...bare, moves: [], undo: null, setups: [], primary: null, needsPage: "Open the run on the page" };
+  //
+  // The dials, the clock, the dice setting and the ending are held back for
+  // the same reason, and held back rather than merely refused: a key face
+  // drawn from an offer should go dim on a run nobody is playing rather
+  // than show a tally somebody can press and be told no.
+  if (!input.live)
+    return {
+      ...bare,
+      moves: [],
+      undo: null,
+      setups: [],
+      trackers: [],
+      clock: null,
+      autoRoll: false,
+      ending: null,
+      primary: null,
+      needsPage: "Open the run on the page",
+    };
 
   // The receipts of the step's own throws sit on the page, waiting to be
   // read, before anything about the step itself -- what it is, whether it
   // closes the unit -- comes into it. No presets: the checklist and the
   // between-units button are both still behind this same screen.
   if (input.receipts) return { ...bare, primary: { id: "carry-on", label: "Carry on", kind: "receipt" }, needsPage: null };
+
+  // What the game is owed is the press, ahead of anything that would carry
+  // the run forward. A counter threshold left pending rode into the next
+  // scene in a live run, out of the page's own closing card and out of a
+  // deck's Next, because neither door counted it. So the Next key offers
+  // the panel's own button rather than going dim: the one press that
+  // settles it is the one on the key. Moves, undo and the dials stay on
+  // offer, the way the page leaves them on screen beside it.
+  //
+  // Settled only, so a throw already asked for is answered first, by the
+  // roll branch further down. Firing a trigger begins a block of its own,
+  // and `begin` writes over whatever was pending: offered mid-throw, this
+  // press would throw the run's own dice request away.
+  if (input.settled && input.due.length > 0) {
+    const first = input.due[0]!;
+    return { ...bare, primary: { id: "owed", label: first.label, kind: first.kind }, needsPage: null };
+  }
+
+  // What the player owes stops the same doors, checked here rather than
+  // after the step's own kind: entering the next unit carries the debt
+  // into it, and the between-units button below used to walk straight
+  // past this. A step still waiting on dice is left to the branch that
+  // handles it -- nobody is being asked to judge anything mid-throw --
+  // and a typed step keeps its preset, which answers the step rather than
+  // moving the run on.
+  if (input.owed > 0 && input.settled && !(input.step && TYPED.has(input.step.kind)))
+    return { ...bare, primary: null, needsPage: "Something is owed; settle it on the page" };
 
   if (!input.step) {
     if (input.between) return { ...bare, primary: { id: "enter", label: input.between, kind: "between" }, needsPage: null };
@@ -125,11 +210,6 @@ export function offerOf(input: OfferInput): Offer {
       needsPage: `${label} on the page`,
       presets: [{ kind, label, ...(input.suggestions.length > 0 ? { suggestions: input.suggestions } : {}) }],
     };
-
-  // Owed blocks every bare press but a typed step's own preset: the page
-  // would refuse the same close or carry-on until it is settled, checked
-  // once here rather than separately for every kind that reaches this far.
-  if (input.owed > 0) return { ...bare, primary: null, needsPage: "Something is owed; settle it on the page" };
 
   /*
    * Ticking the whole list and pressing the step's own button, for a key
