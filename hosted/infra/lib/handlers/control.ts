@@ -314,7 +314,7 @@ export function setupFor(profile: ControlProfile, had = false): { frame: string;
  * Its own effect, because it is the one part of the setup with a button
  * that re-sends it. A tool applying an id it already holds takes the old
  * one off first, so a single effect carrying both would mean pressing
- * Hand it out reverted the pack's terms and re-applied them — and the
+ * Hand it out reverted the pack's terms and re-applied them, and the
  * gifts among them, which is the thing the whole `once` record exists to
  * stop.
  */
