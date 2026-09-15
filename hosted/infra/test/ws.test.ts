@@ -252,7 +252,34 @@ describe("attaching as a deck", () => {
     await route(ev("$default", "deck1", { body: JSON.stringify({ t: "hello" }) }), d);
 
     const line = JSON.parse(posted.find(([id]) => id === "deck1")![1]);
-    expect(line).toEqual({ t: "runs", runs: [{ id: "s1", name: "Thursday", packTitle: "The Long Kiln", held: true }] });
+    expect(line).toEqual({ t: "runs", runs: [{ id: "s1", name: "Thursday", packTitle: "The Long Kiln", held: true }], any: true });
+  });
+
+  it("says whether the account has any synced run at all", async () => {
+    const base = deps();
+    const posted: Array<[string, string]> = [];
+    const d: WsDeps = {
+      ...base,
+      // This account's manifest is empty: nothing it owns has ever synced.
+      store: {
+        ...base.store,
+        async manifest() {
+          return { packs: [], licenses: [], sessions: [] };
+        },
+      },
+      poster: {
+        async post(connectionId, data) {
+          posted.push([connectionId, data]);
+          return "sent";
+        },
+      },
+    };
+
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "hello" }) }), d);
+
+    const line = JSON.parse(posted.find(([id]) => id === "deck1")![1]);
+    expect(line).toEqual({ t: "runs", runs: [], any: false });
   });
 
   it("still attaches a deck when its run list cannot be built", async () => {
