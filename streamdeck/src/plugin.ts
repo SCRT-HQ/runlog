@@ -4,6 +4,7 @@ import { Connect } from "./actions/connect.ts";
 import { Metric } from "./actions/metric.ts";
 import { Next } from "./actions/next.ts";
 import { Press } from "./actions/press.ts";
+import { Roll } from "./actions/roll.ts";
 import { pin, Run, runsForInspector } from "./actions/run.ts";
 import { Setup } from "./actions/setup.ts";
 import { Undo } from "./actions/undo.ts";
@@ -183,7 +184,7 @@ streamDeck.settings.onDidReceiveGlobalSettings<Globals>((ev) => applyGlobals(ev.
 // puts a refused key back to what it was saying.
 setInterval(() => store.dispatch({ t: "tick" }), 1000);
 
-for (const a of [new Next(), new Press(), new Undo(), new Run(), new Metric(), new Connect(), new Setup()]) {
+for (const a of [new Next(), new Press(), new Roll(), new Undo(), new Run(), new Metric(), new Connect(), new Setup()]) {
   streamDeck.actions.registerAction(a);
 }
 

@@ -36,6 +36,15 @@
       "PropertyInspectorPath": "ui/press.html"
     },
     {
+      "Name": "Roll",
+      "UUID": "com.scrthq.runlog.roll",
+      "Icon": "imgs/actions/roll",
+      "Tooltip": "Throws the dice the run is waiting on.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/roll" }],
+      "PropertyInspectorPath": "ui/roll.html"
+    },
+    {
       "Name": "Undo",
       "UUID": "com.scrthq.runlog.undo",
       "Icon": "imgs/actions/undo",

@@ -11,6 +11,7 @@ import {
   attachedRun,
   idleDeadline,
   setupFace,
+  rollFace,
   IDLE_OFF_MS,
   type DeckState,
   type Offer,
@@ -231,6 +232,31 @@ describe("what the setup key says", () => {
       tone: "dim",
       when: "Not here",
     });
+  });
+});
+
+// Task 19b: a dedicated key for the roll alone, sending what Press's roll
+// target sends today.
+describe("what the roll key says", () => {
+  it("is loading before the offer lands", () => {
+    const s = open();
+    expect(rollFace(s)).toEqual({ title: "Loading…", tone: "dim" });
+  });
+
+  it("is live when a roll is on offer", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
+    expect(rollFace(s)).toEqual({ title: "Roll the Weather", tone: "live", when: "Roll" });
+  });
+
+  it("says there is nothing to roll when the offer waits on something else", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, primary: { id: "carry-on", label: "Carry on", kind: "move" } } } }, T);
+    expect(rollFace(s)).toEqual({ title: "Nothing to roll", tone: "dim" });
   });
 });
 

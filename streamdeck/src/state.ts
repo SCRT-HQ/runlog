@@ -275,6 +275,17 @@ export function pressFace(state: DeckState, target: PressTarget): Face {
   return p ? { title: target.value, tone: "live", when: p.label } : { title: target.value, tone: "dim", when: "Not now" };
 }
 
+/** What the dedicated Roll key says: the waiting roll, in its own words, or nothing to roll. */
+export function rollFace(state: DeckState): Face {
+  const c = common(state) ?? flashed(state);
+  if (c) return c;
+  const offer = state.snapshot?.offer;
+  if (!offer) return { title: "Loading…", tone: "dim" };
+  return offer.primary?.id === "roll"
+    ? { title: offer.primary.label, tone: "live", when: "Roll" }
+    : { title: "Nothing to roll", tone: "dim" };
+}
+
 /** What the setup key says: what it applies and hands out, whether that is on offer, or nothing chosen at all. */
 export function setupFace(state: DeckState, setup?: { id: string; title: string }): Face {
   const c = common(state) ?? flashed(state);
