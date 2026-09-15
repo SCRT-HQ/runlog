@@ -23,6 +23,7 @@ export default defineConfig({
       "apps/*/src/**/*.test.{ts,tsx}",
       // Build-time modules live beside the config they serve, not in src.
       "apps/*/*.test.ts",
+      "streamdeck/src/**/*.test.ts",
       "tests/**/*.test.ts",
     ],
     environment: "node",

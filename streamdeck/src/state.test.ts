@@ -1,0 +1,384 @@
+import { describe, expect, it } from "vitest";
+import {
+  initial,
+  reduce,
+  nextFace,
+  nextPress,
+  runFace,
+  undoFace,
+  metricFace,
+  connectFace,
+  attachedRun,
+  idleDeadline,
+  setupFace,
+  rollFace,
+  IDLE_OFF_MS,
+  type DeckState,
+  type Offer,
+} from "./state";
+
+const held = (id: string, name = "Thursday") => ({ id, name, packTitle: "The Long Kiln" });
+const offer: Offer = {
+  seq: 42,
+  primary: { id: "roll", label: "Roll the Weather", kind: "rollTable" },
+  moves: [],
+  undo: { what: "A dry wind." },
+  needsPage: null,
+  presets: [],
+  setups: [],
+};
+const T = 1_000_000;
+
+// Signed in and switched on: the two things that had to be true before a
+// key could say anything about a run, now that the socket is a state the
+// streamer enters rather than a consequence of being configured.
+const live = (): DeckState => reduce(reduce(initial(), { t: "session", state: "ok" }, T), { t: "on", on: true }, T);
+const open = (runs = [held("s1")]): DeckState => {
+  const s = reduce(live(), { t: "socket", state: "open" }, T);
+  return reduce(s, { t: "runs", runs, any: true }, T);
+};
+
+describe("what the keys say", () => {
+  it("asks for a sign-in before anything else", () => {
+    expect(nextFace(initial(), {})).toEqual({ title: "Sign in", tone: "dim" });
+  });
+  it("is offline with a session and no socket", () => {
+    const s = live();
+    expect(nextFace(s, {})).toEqual({ title: "Offline", tone: "dim" });
+  });
+  it("tells nothing synced from nothing open", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    expect(nextFace(reduce(s, { t: "runs", runs: [], any: false }, T), {})).toEqual({ title: "Not synced", tone: "dim" });
+    expect(nextFace(reduce(s, { t: "runs", runs: [], any: true }, T), {})).toEqual({ title: "No run open", tone: "dim" });
+  });
+  it("attaches to the only held run without being asked", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    expect(attachedRun(s)).toBe("s1");
+    expect(runFace(s)).toEqual({ title: "Thursday", tone: "live", when: "The Long Kiln" });
+  });
+  it("asks to pick between two, and a pin decides", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1"), held("s2", "Friday")], any: true }, T);
+    expect(nextFace(s, {})).toEqual({ title: "Pick a run", tone: "dim" });
+    expect(attachedRun(reduce(s, { t: "pin", id: "s2" }, T))).toBe("s2");
+  });
+  it("a pinned run that ended says so rather than drifting", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "pin", id: "s1" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s2", "Friday")], any: true }, T);
+    expect(nextFace(s, {})).toEqual({ title: "That run has ended", tone: "dim" });
+  });
+  it("draws the offer's primary, and the reason when there is none", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
+    expect(nextFace(s, {})).toEqual({ title: "Roll the Weather", tone: "live" });
+    expect(undoFace(s)).toEqual({ title: "Undo", tone: "live" });
+    const blocked = reduce(
+      s,
+      { t: "snapshot", snapshot: { offer: { ...offer, primary: null, needsPage: "Name the bowl on the page" } } },
+      T,
+    );
+    expect(nextFace(blocked, {})).toEqual({ title: "Name the bowl on the page", tone: "refuse" });
+  });
+  it("says Undo either way, and dims it when there is nothing to take back", () => {
+    let s = open();
+    s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, undo: null } } }, T);
+    expect(undoFace(s)).toEqual({ title: "Undo", tone: "dim" });
+  });
+  it("flashes a refusal for three seconds, then goes back", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
+    s = reduce(s, { t: "drove", ref: "r1", ok: false, say: "That moved on." }, T);
+    expect(nextFace(s, {})).toEqual({ title: "That moved on.", tone: "refuse" });
+    expect(nextFace(reduce(s, { t: "tick" }, T + 3001), {})).toEqual({ title: "Roll the Weather", tone: "live" });
+  });
+  it("ticks a running clock from the snapshot's own time", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    const at = new Date(T).toISOString();
+    s = reduce(
+      s,
+      {
+        t: "snapshot",
+        snapshot: { at, clocks: [{ id: "u4", label: "Day 4", kind: "timer", seconds: 600, status: "running", elapsedMs: 10_000 }] },
+      },
+      T,
+    );
+    // Ruling 4 amends this case: a running timer clock's face also carries
+    // a fraction (elapsed / total) for a dial's indicator — 15s of 600s.
+    expect(metricFace(s, "clock", T + 5_000)).toEqual({ title: "9:45", tone: "live", when: "Day 4", fraction: 0.025 });
+  });
+
+  // Controller ruling 1: a `drove` that carries `seq` is the freshest seq
+  // source, so the next press is not stale; one without `seq` leaves the
+  // held offer's seq alone.
+  it("keeps a driven verdict's seq, but only when it carries one", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
+    const driven = reduce(s, { t: "drove", ref: "r1", ok: true, seq: 43 }, T);
+    expect(driven.snapshot?.offer?.seq).toBe(43);
+    const untouched = reduce(s, { t: "drove", ref: "r1", ok: true }, T);
+    expect(untouched.snapshot?.offer?.seq).toBe(42);
+  });
+
+  // Controller ruling 4: a running timer clock carries a fraction so a
+  // dial's indicator can draw it.
+  it("gives a running timer's face a fraction for the dial", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    const at = new Date(T).toISOString();
+    s = reduce(
+      s,
+      {
+        t: "snapshot",
+        snapshot: { at, clocks: [{ id: "u4", label: "Day 4", kind: "timer", seconds: 600, status: "running", elapsedMs: 0 }] },
+      },
+      T,
+    );
+    expect(metricFace(s, "clock", T + 15_000).fraction).toBe(0.025);
+  });
+
+  // Controller ruling 3: the tick reaches a dial holding a running clock,
+  // but does nothing to a deck with nothing counting down.
+  it("re-ticks a running clock but not an idle deck", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    const at = new Date(T).toISOString();
+    const running = reduce(
+      s,
+      {
+        t: "snapshot",
+        snapshot: { at, clocks: [{ id: "u4", label: "Day 4", kind: "timer", seconds: 600, status: "running", elapsedMs: 0 }] },
+      },
+      T,
+    );
+    expect(reduce(running, { t: "tick" }, T + 1000)).not.toBe(running);
+
+    const idle = reduce(
+      s,
+      {
+        t: "snapshot",
+        snapshot: { at, clocks: [{ id: "u4", label: "Day 4", kind: "timer", seconds: 600, status: "paused", elapsedMs: 0 }] },
+      },
+      T,
+    );
+    expect(reduce(idle, { t: "tick" }, T + 1000)).toBe(idle);
+    expect(reduce(s, { t: "tick" }, T + 1000)).toBe(s);
+  });
+});
+
+// Task 18: a dedicated key applies a setup and hands it out to the tool -
+// the offer names which setups the run could hand out.
+describe("what the setup key says", () => {
+  it("says Set up with nothing chosen, whether or not the offer has landed", () => {
+    const s = open();
+    expect(setupFace(s, undefined)).toEqual({ title: "Set up", tone: "dim" });
+  });
+
+  it("is loading before the offer lands, once a setup is chosen", () => {
+    const s = open();
+    expect(setupFace(s, { id: "leveling", title: "Leveling" })).toEqual({ title: "Loading…", tone: "dim" });
+  });
+
+  it("is live when the setup is on offer", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, setups: [{ id: "leveling", title: "Leveling" }] } } }, T);
+    expect(setupFace(s, { id: "leveling", title: "Leveling" })).toEqual({
+      title: "Leveling",
+      tone: "live",
+      when: "Apply setup",
+    });
+  });
+
+  it("is dim when the setup is not on offer", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
+    expect(setupFace(s, { id: "leveling", title: "Leveling" })).toEqual({
+      title: "Leveling",
+      tone: "dim",
+      when: "Not here",
+    });
+  });
+
+  // The 16b review's Critical: an older page's offer may not name any
+  // setups at all, and the unguarded `.some` this replaces would have thrown.
+  it("guards an offer that names no setups at all", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    const bare = { ...offer } as Partial<Offer>;
+    delete bare.setups;
+    s = reduce(s, { t: "snapshot", snapshot: { offer: bare as Offer } }, T);
+    expect(setupFace(s, { id: "leveling", title: "Leveling" })).toEqual({
+      title: "Leveling",
+      tone: "dim",
+      when: "Not here",
+    });
+  });
+});
+
+// Task 19b: a dedicated key for the roll alone, sending what Press's roll
+// target sends today.
+describe("what the roll key says", () => {
+  it("is loading before the offer lands", () => {
+    const s = open();
+    expect(rollFace(s)).toEqual({ title: "Loading…", tone: "dim" });
+  });
+
+  it("is live when a roll is on offer", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
+    expect(rollFace(s)).toEqual({ title: "Roll the Weather", tone: "live", when: "Roll" });
+  });
+
+  it("says there is nothing to roll when the offer waits on something else", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, primary: { id: "carry-on", label: "Carry on", kind: "move" } } } }, T);
+    expect(rollFace(s)).toEqual({ title: "Nothing to roll", tone: "dim" });
+  });
+});
+
+// Controller amendment A: the socket is a state the streamer enters. A key
+// that depends on the connection says so, and says what to do about it.
+describe("what the keys say while the deck is off", () => {
+  it("starts off, and every key names the connection before the run", () => {
+    const s = reduce(initial(), { t: "session", state: "ok" }, T);
+    expect(s.on).toBe(false);
+    const off = { title: "Not connected", tone: "dim", when: "press Connect" };
+    expect(nextFace(s, {})).toEqual(off);
+    expect(undoFace(s)).toEqual(off);
+    expect(runFace(s)).toEqual(off);
+    expect(metricFace(s, "score", T)).toEqual(off);
+  });
+  it("asks for a sign-in ahead of the connection", () => {
+    expect(nextFace(initial(), {})).toEqual({ title: "Sign in", tone: "dim" });
+    expect(nextFace(reduce(initial(), { t: "session", state: "expired" }, T), {})).toEqual({ title: "Sign in again", tone: "dim" });
+  });
+  it("drops the run it was holding when it goes off, and keeps the pin", () => {
+    let s = reduce(open(), { t: "pin", id: "s1" }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
+    s = reduce(s, { t: "on", on: false }, T);
+    expect(s).toMatchObject({ on: false, socket: "closed", runs: [], attached: null, snapshot: null, pinned: "s1" });
+  });
+  it("remembers whether it went off by itself, and forgets when turned back on", () => {
+    const idled = reduce(open(), { t: "on", on: false, idle: true }, T);
+    expect(idled.idleOff).toBe(true);
+    expect(reduce(idled, { t: "on", on: true }, T).idleOff).toBe(false);
+    expect(reduce(open(), { t: "on", on: false }, T).idleOff).toBe(false);
+  });
+});
+
+// Controller amendment A: the Connect key is the one key that reports the
+// connection itself rather than what it is carrying.
+describe("what the Connect key says", () => {
+  it("asks for a sign-in first", () => {
+    expect(connectFace(initial())).toEqual({ title: "Sign in", tone: "dim" });
+    expect(connectFace(reduce(initial(), { t: "session", state: "expired" }, T))).toEqual({ title: "Sign in again", tone: "dim" });
+  });
+  it("says Connect when off, and names the idle timer when that is why", () => {
+    expect(connectFace(reduce(initial(), { t: "session", state: "ok" }, T))).toEqual({ title: "Connect", tone: "dim" });
+    expect(connectFace(reduce(open(), { t: "on", on: false, idle: true }, T))).toEqual({
+      title: "Connect",
+      tone: "dim",
+      when: "went idle",
+    });
+  });
+  it("is connecting while the socket is opening, and while it reports offline", () => {
+    expect(connectFace(reduce(live(), { t: "socket", state: "connecting" }, T))).toEqual({ title: "Connecting", tone: "dim" });
+    expect(connectFace(live())).toEqual({ title: "Connecting", tone: "dim" });
+  });
+  it("says Disconnect once the socket is open, whatever the Run key would say", () => {
+    expect(connectFace(open())).toEqual({ title: "Disconnect", tone: "live" });
+    const s = reduce(reduce(live(), { t: "socket", state: "open" }, T), { t: "runs", runs: [], any: true }, T);
+    expect(connectFace(s)).toEqual({ title: "Disconnect", tone: "live" });
+    expect(connectFace(open([held("s1"), held("s2", "Friday")]))).toEqual({ title: "Disconnect", tone: "live" });
+  });
+});
+
+// Controller amendment A: a deck holding nothing for half an hour closes
+// its own socket rather than sitting on one all night.
+describe("when an idle connection gives up", () => {
+  it("counts down only while it is on, open, and holding nothing", () => {
+    const idle = reduce(reduce(live(), { t: "socket", state: "open" }, T), { t: "runs", runs: [], any: false }, T);
+    expect(idleDeadline(idle, T)).toBe(T + IDLE_OFF_MS);
+    expect(IDLE_OFF_MS).toBe(30 * 60_000);
+  });
+  it("does not count down while a run is held", () => {
+    expect(idleDeadline(open(), T)).toBeNull();
+  });
+  it("does not count down while off, or while the socket is still opening", () => {
+    expect(idleDeadline(reduce(initial(), { t: "session", state: "ok" }, T), T)).toBeNull();
+    expect(idleDeadline(reduce(live(), { t: "socket", state: "connecting" }, T), T)).toBeNull();
+  });
+});
+
+// The follow key takes the two decisions the page offers as presets, unless
+// the streamer ticked *Stop at decisions* and kept the reading for themselves.
+describe("what the follow key takes", () => {
+  const asking = (presets: Offer["presets"], needsPage: string): DeckState =>
+    reduce(open(), { t: "snapshot", snapshot: { offer: { ...offer, primary: null, needsPage, presets } } }, T);
+  const ticking = asking([{ kind: "checklist", label: "Tick everything and Next", items: 2 }], "Tick the list on the page");
+  const naming = asking(
+    [{ kind: "declareSubject", label: "Name what you are going for", suggestions: ["A tall bowl", "A wide bowl"] }],
+    "Name the bowl on the page",
+  );
+
+  it("presses the primary ahead of any preset", () => {
+    const s = reduce(
+      open(),
+      { t: "snapshot", snapshot: { offer: { ...offer, presets: [{ kind: "checklist", label: "Tick", items: 1 }] } } },
+      T,
+    );
+    expect(nextPress(s, {})).toEqual({ press: "primary" });
+    expect(nextFace(s, {})).toEqual({ title: "Roll the Weather", tone: "live" });
+  });
+
+  it("ticks a checklist and presses the step's own button", () => {
+    expect(nextPress(ticking, {})).toEqual({ press: "answer", answer: { ticks: "all" } });
+    expect(nextFace(ticking, {})).toEqual({ title: "Tick everything and Next", tone: "live" });
+  });
+
+  it("takes the first suggestion for a declaration", () => {
+    expect(nextPress(naming, {})).toEqual({ press: "answer", answer: { subject: "A tall bowl" } });
+    expect(nextFace(naming, {})).toEqual({ title: "A tall bowl", tone: "live", when: "Name what you are going for" });
+  });
+
+  it("leaves a declaration with nothing to suggest to the page", () => {
+    const bare = asking([{ kind: "declareSubject", label: "Name what you are going for" }], "Name the bowl on the page");
+    expect(nextPress(bare, {})).toBeNull();
+    expect(nextFace(bare, {})).toEqual({ title: "Name the bowl on the page", tone: "refuse" });
+  });
+
+  it("stops at both where the key was told to", () => {
+    expect(nextPress(ticking, { stop: true })).toBeNull();
+    expect(nextPress(naming, { stop: true })).toBeNull();
+    expect(nextFace(ticking, { stop: true })).toEqual({ title: "Tick the list on the page", tone: "refuse" });
+    expect(nextFace(naming, { stop: true })).toEqual({ title: "Name the bowl on the page", tone: "refuse" });
+  });
+
+  it("has nothing to take before a snapshot lands", () => {
+    expect(nextPress(open(), {})).toBeNull();
+  });
+});

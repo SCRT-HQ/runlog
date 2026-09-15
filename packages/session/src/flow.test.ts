@@ -1,5 +1,9 @@
+import { mkdtempSync, statSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { deviceFlow, renew, type FlowDeps } from "./account.ts";
+import { deviceFlow, renew, type FlowDeps } from "./flow.ts";
+import { configDir, forgetSession, readSession, writeSession } from "./store.ts";
 
 const jwt = (exp: number) => `h.${Buffer.from(JSON.stringify({ exp, sub: "user_1" })).toString("base64url")}.s`;
 
@@ -108,5 +112,27 @@ describe("renewing a session", () => {
     await expect(
       renew({ clientId: "c", issuer: "https://api.workos.test", accessToken: "old", refreshToken: "r1", expiresAt: "" }, w.deps),
     ).rejects.toThrow("lapsed");
+  });
+});
+
+describe("keeping a session on disk", () => {
+  it("keeps a session where only the owner can read it", () => {
+    const dir = mkdtempSync(join(tmpdir(), "session-"));
+    writeSession(dir, { clientId: "c", issuer: "i", accessToken: "a", refreshToken: "r", expiresAt: "2030-01-01T00:00:00.000Z" });
+    expect(readSession(dir)?.refreshToken).toBe("r");
+    if (process.platform !== "win32") expect(statSync(join(dir, "session.json")).mode & 0o777).toBe(0o600);
+    forgetSession(dir);
+    expect(readSession(dir)).toBeNull();
+  });
+
+  it("resolves the same directory the CLI always used, for `runlog`", () => {
+    // Computed the old way, from account.ts before this package existed:
+    // RUNLOG_CONFIG_DIR aside, %APPDATA%\runlog on Windows, else
+    // $XDG_CONFIG_HOME/runlog or ~/.config/runlog.
+    const old =
+      process.platform === "win32"
+        ? join(process.env["APPDATA"] ?? join(homedir(), "AppData", "Roaming"), "runlog")
+        : join(process.env["XDG_CONFIG_HOME"] ?? join(homedir(), ".config"), "runlog");
+    expect(configDir("runlog")).toBe(old);
   });
 });

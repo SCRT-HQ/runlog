@@ -13,6 +13,7 @@
   "dependencies": {
     "@runlog/rules-schema": "0.1.0",
     "yaml": "^2.9.0",
-    "@runlog/engine": "0.1.0"
+    "@runlog/engine": "0.1.0",
+    "@runlog/session": "*"
   }
 }
