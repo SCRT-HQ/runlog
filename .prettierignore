@@ -52,3 +52,8 @@ apps/web/src/control/lists/
 # only what counsel has confirmed. Reformatting them buys nothing and
 # puts a diff through text that is checked by a person, not a parser.
 hosted/pages/
+
+# Git worktrees for a second branch checked out beside this one. Each is
+# its own checkout with its own copy of everything above; formatting
+# them from here would be the same churn twice.
+.worktrees/
