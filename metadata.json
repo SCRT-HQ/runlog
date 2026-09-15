@@ -1,0 +1,39 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2HG3VNQQ5B9FDKNE7HC0PCK",
+  "strategy": "manual-commit",
+  "branch": "the-deck-arrives",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json",
+    "streamdeck/src/actions/metric.ts",
+    "streamdeck/src/actions/next.ts",
+    "streamdeck/src/actions/press.ts",
+    "streamdeck/src/actions/run.ts",
+    "streamdeck/src/actions/undo.ts",
+    "streamdeck/src/plugin.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 7636,
+    "cache_creation_tokens": 1063397,
+    "cache_read_tokens": 206249971,
+    "output_tokens": 454238,
+    "api_call_count": 413,
+    "subagent_tokens": {
+      "input_tokens": 36,
+      "cache_creation_tokens": 110529,
+      "cache_read_tokens": 1769508,
+      "output_tokens": 11466,
+      "api_call_count": 18
+    }
+  }
+}
