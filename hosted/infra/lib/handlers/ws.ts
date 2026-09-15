@@ -53,6 +53,8 @@ interface WsResult {
   body?: string;
 }
 
+type HeldRun = { id: string; name?: string; packTitle?: string; held: true };
+
 /**
  * A socket opened by something that drives a game rather than draws a
  * scoreboard.
@@ -106,21 +108,27 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
    * The newest twenty are considered, because an account's manifest is
    * every run it has ever played and a deck's picker is a short list.
    */
-  const heldRuns = async (sub: string) => {
+  const heldRuns = async (sub: string): Promise<{ runs: HeldRun[]; any: boolean }> => {
     const { sessions } = await deps.store.manifest(sub);
     const mine = sessions
       .filter((p) => p.role === "owner" && !p.deletedAt && !p.endedAt)
-      .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
-      .slice(0, 20);
-    const held = await Promise.all(mine.map(async (p) => ((await deps.live.watchers(p.id)).some(writes) ? p : null)));
-    return held
-      .filter((p): p is (typeof mine)[number] => p !== null)
-      .map((p) => ({
-        id: p.id,
-        ...(p.name ? { name: p.name } : {}),
-        ...(p.packTitle ? { packTitle: p.packTitle } : {}),
-        held: true as const,
-      }));
+      .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0));
+    const recent = mine.slice(0, 20);
+    const held = await Promise.all(recent.map(async (p) => ((await deps.live.watchers(p.id)).some(writes) ? p : null)));
+    return {
+      // `any` is the difference between an account whose runs are all local
+      // and one that has nothing open: the key says "Not synced" for the
+      // first and "No run open" for the second, and only this end can tell.
+      any: mine.length > 0,
+      runs: held
+        .filter((p): p is (typeof recent)[number] => p !== null)
+        .map((p) => ({
+          id: p.id,
+          ...(p.name ? { name: p.name } : {}),
+          ...(p.packTitle ? { packTitle: p.packTitle } : {}),
+          held: true as const,
+        })),
+    };
   };
 
   /**
@@ -138,7 +146,7 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     try {
       const decks = only ? [{ connectionId: only }] : await deps.live.decksOf(sub);
       if (decks.length === 0) return;
-      const line = JSON.stringify({ t: "runs", runs: await heldRuns(sub) });
+      const line = JSON.stringify({ t: "runs", ...(await heldRuns(sub)) });
       for (const d of decks) {
         if ((await poster.post(d.connectionId, line)) === "gone") await deps.live.disconnect(d.connectionId);
       }
@@ -746,6 +754,7 @@ export async function handler(event: WsEvent): Promise<WsResult> {
   if (!deps) {
     const clientId = process.env["WORKOS_CLIENT_ID"] ?? "";
     const cliClientId = process.env["WORKOS_CLI_CLIENT_ID"] ?? "";
+    const deckClientId = process.env["WORKOS_DECK_CLIENT_ID"] ?? "";
     const table = process.env["TABLE_NAME"] ?? "";
     const gates = process.env["RUNLOG_GATES"] === "on";
     const plusFeature = featuresFromEnv(process.env["STRIPE_FEATURES"]).plus;
@@ -754,7 +763,7 @@ export async function handler(event: WsEvent): Promise<WsResult> {
       live: dynamoLive({ table }),
       store: dynamoStore({ table, bucket: process.env["BUCKET_NAME"] ?? "" }),
       races: dynamoRaces({ table }),
-      verify: (authorization) => verifyToken(authorization, [clientId, cliClientId]),
+      verify: (authorization) => verifyToken(authorization, [clientId, cliClientId, deckClientId]),
       ...(process.env["WS_ENDPOINT"] ? { poster: apiGatewayPoster(process.env["WS_ENDPOINT"]) } : {}),
       // No token flags are in hand at drive time, only `conn.sub`: the
       // kept flags `billing.flags(sub)` do the work a token flag would on

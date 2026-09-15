@@ -57,6 +57,13 @@ export interface EnvConfig {
    */
   workosCliClientId: string;
   /**
+   * The WorkOS application the Stream Deck plugin signs in with, through
+   * the device flow. Public, a client of its own for the same reason the
+   * CLI's is: its session policy and its redirects are neither the
+   * browser's nor the terminal's.
+   */
+  workosDeckClientId: string;
+  /**
    * Where invitations are sent from. The verified SES identity lives in a
    * region of its own (core-infra put it in us-west-2), so both are named.
    */
@@ -268,6 +275,7 @@ export function envConfig(name: EnvName): EnvConfig {
     retain: bool(c["retain"], "retain"),
     workosClientId: str(c["workosClientId"], "workosClientId"),
     workosCliClientId: str(c["workosCliClientId"], "workosCliClientId"),
+    workosDeckClientId: str(c["workosDeckClientId"], "workosDeckClientId"),
     email: {
       from: str(email["from"], "email.from"),
       region: str(email["region"], "email.region"),

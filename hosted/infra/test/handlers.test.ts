@@ -778,6 +778,7 @@ function deps(store = memoryStore(), extra: Partial<Deps> = {}): Deps {
     },
     env: "test",
     cliClientId: "client_cli_test",
+    deckClientId: "client_deck_test",
     now: () => "2026-09-06T12:00:00.000Z",
     appUrl: "https://runlog.test/",
     token: () => `tok${(tokens += 1)}`,
@@ -849,6 +850,12 @@ describe("who is asking", () => {
     const { status, body } = await call(request("GET", "/api/auth/cli", { token: null }));
     expect(status).toBe(200);
     expect(body).toEqual({ clientId: "client_cli_test", issuer: "https://api.workos.com" });
+  });
+
+  it("tells the stream deck plugin which WorkOS client to sign in with, to anyone", async () => {
+    const { status, body } = await call(request("GET", "/api/auth/deck", { token: null }));
+    expect(status).toBe(200);
+    expect(body).toEqual({ clientId: "client_deck_test", issuer: "https://api.workos.com" });
   });
 
   it("says what is on sale, to anyone: every tier, unless a release gate holds it back", async () => {
@@ -1723,6 +1730,29 @@ describe("who is asking", () => {
     // Revoked: the link is dead.
     expect((await call(request("DELETE", "/api/sessions/01RUN/public"), d)).body).toEqual({ shared: false });
     expect((await call(request("GET", "/api/public/runs/01RUN?t=livetok", { token: null }), d)).body).toEqual({ found: false });
+  });
+
+  it("a member reads the snapshot as the metrics document", async () => {
+    const d = deps();
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(
+      request("PUT", "/api/sessions/01RUN/snapshot", {
+        body: { snapshot: { v: 1, unit: 4, offer: { seq: 9 }, paper: { big: true }, control: { tool: "x" } } },
+      }),
+      d,
+    );
+    const res = await call(request("GET", "/api/sessions/01RUN/snapshot"), d);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ ready: true, unit: 4, offer: { seq: 9 } });
+    expect(res.body["paper"]).toBeUndefined();
+    expect(res.body["control"]).toBeUndefined();
+  });
+
+  it("answers a stranger's GET of the snapshot the same as anything else on a session that is not theirs", async () => {
+    const d = deps();
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    const stranger = { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) };
+    expect((await call(request("GET", "/api/sessions/01RUN/snapshot"), stranger)).body).toEqual({ found: false });
   });
 
   /**

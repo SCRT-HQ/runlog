@@ -298,6 +298,8 @@ export interface Deps {
   env: string;
   /** The WorkOS client the command line signs in with; public, handed to `runlog login`. */
   cliClientId?: string;
+  /** The WorkOS client the Stream Deck plugin signs in with; public, handed to the plugin's device flow. */
+  deckClientId?: string;
   now?: () => string;
   mailer?: Mailer;
   /** Where the app is, for the links in mail. */
@@ -589,6 +591,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // package serves dev and production alike.
   if (method === "GET" && path === "/api/auth/cli") {
     return json(200, { clientId: deps.cliClientId ?? null, issuer: "https://api.workos.com" });
+  }
+
+  // Same, for the Stream Deck plugin: its own device flow, its own client.
+  if (method === "GET" && path === "/api/auth/deck") {
+    return json(200, { clientId: deps.deckClientId ?? null, issuer: "https://api.workos.com" });
   }
 
   /**
@@ -2681,6 +2688,27 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     }
     // ---- the snapshot the owner's device keeps for strangers who may not hold the pack ----
     if (sub === "/snapshot") {
+      /**
+       * The owner writes it; any member may read it back as the metrics
+       * document. A deck reads here on its own sign-in, since a watch key is
+       * for a scene and a deck is a person. `paper` is the pack's text and
+       * `control` is the profile: neither is a number, and a key draws
+       * numbers.
+       */
+      if (method === "GET") {
+        const m = found.meta;
+        const snap = await store.getSnapshot(id);
+        const {
+          paper: _paper,
+          control: _control,
+          ...doc
+        } = metricsOf(
+          { id: m.id, packId: m.packId, packTitle: m.packTitle ?? null, name: m.name ?? null, endedAt: m.endedAt ?? null },
+          snap,
+          now(),
+        );
+        return json(200, doc);
+      }
       if (method !== "PUT") return json(410, { error: ROUTE_GONE });
       if (me.role !== "owner") return json(422, { error: "only the owner writes the snapshot" });
       const body = parse(event);
@@ -2898,6 +2926,7 @@ function depsFromEnv(selfArn?: string): Deps {
   const jobArn = process.env["DISCORD_JOB_ARN"] ?? selfArn;
   const clientId = process.env["WORKOS_CLIENT_ID"] ?? "";
   const cliClientId = process.env["WORKOS_CLI_CLIENT_ID"] ?? "";
+  const deckClientId = process.env["WORKOS_DECK_CLIENT_ID"] ?? "";
   return {
     store: dynamoStore({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
     races: dynamoRaces({ table: process.env["TABLE_NAME"] ?? "" }),
@@ -2997,8 +3026,8 @@ function depsFromEnv(selfArn?: string): Deps {
       const value = await secrets(process.env["STRIPE_WEBHOOK_SECRET_SECRET"] ?? "");
       return looksLike("webhook-secret", value) ? value : null;
     },
-    // Tokens from the browser's client and the command line's are both ours.
-    verify: (authorization) => verifyToken(authorization, [clientId, cliClientId]),
+    // Tokens from the browser's client, the command line's and the deck's are all ours.
+    verify: (authorization) => verifyToken(authorization, [clientId, cliClientId, deckClientId]),
     env: process.env["RUNLOG_ENV"] ?? "",
     // A view becomes a CloudWatch metric by way of the embedded metric
     // format: one log line that CloudWatch reads as a count, under the
@@ -3056,6 +3085,7 @@ function depsFromEnv(selfArn?: string): Deps {
         }),
       ),
     ...(cliClientId ? { cliClientId } : {}),
+    ...(deckClientId ? { deckClientId } : {}),
     // A timer's deadline is kept by EventBridge Scheduler, which invokes
     // the job function at the moment; without a group and a role to
     // invoke it, a timer that ran out waits for the next press.
