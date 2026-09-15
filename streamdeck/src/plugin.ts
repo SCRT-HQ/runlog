@@ -4,12 +4,12 @@ import { Connect } from "./actions/connect.ts";
 import { Metric } from "./actions/metric.ts";
 import { Next } from "./actions/next.ts";
 import { Press } from "./actions/press.ts";
-import { Run } from "./actions/run.ts";
+import { pin, Run, runsForInspector } from "./actions/run.ts";
 import { Undo } from "./actions/undo.ts";
 import { loadSession, normalizeBase, signIn, signOut, type Account } from "./session.ts";
 import { openWire } from "./socket.ts";
 import { makeStore } from "./store.ts";
-import { idleDeadline } from "./state.ts";
+import { idleDeadline, type DeckState } from "./state.ts";
 
 /** Where Runlog lives when the streamer has not said otherwise. */
 const DEFAULT_API = "https://runlog.scrthq.com";
@@ -27,6 +27,43 @@ let apiBase = DEFAULT_API;
 
 export const store = makeStore();
 export const wire = openWire((): Account => ({ apiBase }), store);
+
+/**
+ * The profile a deck is switched to once a run attaches.
+ *
+ * Not wired into the manifest yet: `streamdeck validate` refuses a
+ * `Profiles` entry without the `.streamDeckProfile` file behind it, and
+ * that file can only come from exporting the laid-out profile in the
+ * Stream Deck app. Once `profiles/Runlog.streamDeckProfile` exists, the
+ * manifest gains `Profiles: [{ Name: "Runlog", DeviceType: 0, Readonly: false, DontAutoSwitchWhenInstalled: true }]`.
+ * Until then the switch below fails quietly, which is correct for a copy
+ * without the profile.
+ */
+const PROFILE_NAME = "Runlog";
+
+/**
+ * Attaching switches the deck to the Runlog profile. It is the one
+ * attach feedback that works on every model, a six-key Mini included,
+ * and it puts the run's keys under the streamer's hand the moment a run
+ * starts. Only on a change from nothing to something: a snapshot landing
+ * is not a reason to yank the deck away from whatever it was showing.
+ */
+let wasAttached: string | null = null;
+store.subscribe((s) => {
+  if (s.attached && !wasAttached)
+    for (const d of streamDeck.devices) void streamDeck.profiles.switchToProfile(d.id, PROFILE_NAME).catch(() => {});
+  wasAttached = s.attached;
+});
+
+// The Run inspector's list is only as fresh as the last appear; a run
+// starting or ending while the picker is open moves it without the
+// streamer closing and reopening the page.
+let lastRuns: DeckState["runs"] | null = null;
+store.subscribe((s) => {
+  if (s.runs === lastRuns) return;
+  lastRuns = s.runs;
+  if (streamDeck.ui.action) void streamDeck.ui.sendToPropertyInspector({ t: "runs", runs: runsForInspector(s.runs), pinned: s.pinned });
+});
 
 /**
  * Switching the deck on.
@@ -58,7 +95,10 @@ export async function sayWho(): Promise<void> {
 
 function applyGlobals(g: Globals): void {
   apiBase = normalizeBase(g.apiBase ?? "") || DEFAULT_API;
-  if (g.pinned !== undefined) store.dispatch({ t: "pin", id: g.pinned });
+  // Only on a change: this fires from the plugin's own write of a pin as
+  // much as from another surface's, and a pin already applied locally
+  // should not force the run's snapshot to reload for nothing.
+  if (g.pinned !== undefined && g.pinned !== store.state.pinned) store.dispatch({ t: "pin", id: g.pinned });
 }
 
 async function readGlobals(): Promise<void> {
@@ -97,8 +137,11 @@ function codeFromLines(): (line: string) => void {
   };
 }
 
-streamDeck.ui.onSendToPlugin<{ t?: string }>(async (ev) => {
+streamDeck.ui.onSendToPlugin<{ t?: string; id?: string | null }>(async (ev) => {
   switch (ev.payload?.t) {
+    case "pin":
+      await pin(ev.payload?.id ?? null);
+      break;
     case "signin":
       try {
         streamDeck.logger.info("sign-in: starting the device flow");

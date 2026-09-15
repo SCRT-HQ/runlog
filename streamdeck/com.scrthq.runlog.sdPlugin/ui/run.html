@@ -7,7 +7,44 @@
   </head>
 
   <body>
+    <sdpi-item label="Run">
+      <select id="run"></select>
+    </sdpi-item>
+
     <div id="runlog-account"></div>
     <script src="account.js"></script>
+    <script>
+      // The held runs are the plugin's own list, named and packed; picking
+      // one here pins it the same way pressing the key cycles to it. Pinning
+      // is global settings, not a per-key setting, so it goes to the plugin
+      // rather than through setSettings.
+      (() => {
+        const { streamDeckClient } = SDPIComponents;
+        const run = document.getElementById("run");
+
+        const option = (value, label) => {
+          const o = document.createElement("option");
+          o.value = value ?? "";
+          o.textContent = label;
+          return o;
+        };
+
+        const label = (r) => (r.name && r.packTitle ? `${r.name} — ${r.packTitle}` : (r.name ?? r.packTitle ?? r.id));
+
+        const fill = (runs, pinned) => {
+          run.replaceChildren(option(null, "None"), ...runs.map((r) => option(r.id, label(r))));
+          run.value = pinned ?? "";
+        };
+
+        run.addEventListener("change", () => {
+          streamDeckClient.send("sendToPlugin", { t: "pin", id: run.value || null });
+        });
+
+        streamDeckClient.sendToPropertyInspector.subscribe(({ payload }) => {
+          if (payload?.t === "runs") fill(payload.runs ?? [], payload.pinned ?? null);
+        });
+        fill([], null);
+      })();
+    </script>
   </body>
 </html>
