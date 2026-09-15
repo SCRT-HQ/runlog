@@ -1,0 +1,333 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2HXEGZK8C81H2QAYDDSAZRQ",
+  "session_id": "e72ee5b1-7270-4fac-abcc-53994b037403",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-15T06:53:11.2909072Z",
+  "branch": "the-deck-arrives",
+  "checkpoints_count": 1,
+  "save_step_count": 2,
+  "files_touched": [
+    "streamdeck/src/actions/base.ts",
+    "streamdeck/src/session.test.ts",
+    "streamdeck/src/session.ts"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-fable-5-1",
+  "turn_id": "058d7b422bc2",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 13265,
+    "cache_creation_tokens": 1555085,
+    "cache_read_tokens": 300210476,
+    "output_tokens": 672084,
+    "api_call_count": 648,
+    "subagent_tokens": {
+      "input_tokens": 28,
+      "cache_creation_tokens": 61742,
+      "cache_read_tokens": 1404561,
+      "output_tokens": 4979,
+      "api_call_count": 14
+    }
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_014vhhQ4NijiY1xqXGLsYL8M",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:brainstorming"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "8a84e461a26e",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 38,
+        "end": 39,
+        "entry_ids": [
+          "5f676ba2-4bdc-40fc-97e1-e8decf04d118"
+        ],
+        "tool_use_id": "toolu_014vhhQ4NijiY1xqXGLsYL8M"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_014vhhQ4NijiY1xqXGLsYL8M"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:brainstorming",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01RUnUDwYs3FN6XtJsVEN7mB",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "avoid-ai-writing"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "8a84e461a26e",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 490,
+        "end": 491,
+        "entry_ids": [
+          "137ac9f1-0696-490a-a25d-2ff8fc0bc931"
+        ],
+        "tool_use_id": "toolu_01RUnUDwYs3FN6XtJsVEN7mB"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01RUnUDwYs3FN6XtJsVEN7mB"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: avoid-ai-writing",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01GfffjihkW2AiHBpNVYy9yr",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "artifact-design"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "4bd81f48a3d5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 542,
+        "end": 543,
+        "entry_ids": [
+          "58835be2-d8b8-4fbd-9274-28d0f2e5b0f4"
+        ],
+        "tool_use_id": "toolu_01GfffjihkW2AiHBpNVYy9yr"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01GfffjihkW2AiHBpNVYy9yr"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: artifact-design",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_013rMgomGXH39A7HBYx7ys5H",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:writing-plans"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "4bd81f48a3d5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 660,
+        "end": 661,
+        "entry_ids": [
+          "e12e2ed1-0c4e-404c-91f5-8b234bb9b28b"
+        ],
+        "tool_use_id": "toolu_013rMgomGXH39A7HBYx7ys5H"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_013rMgomGXH39A7HBYx7ys5H"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:writing-plans",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01KpuJi5MYaqZz28zq8QsQwy",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:subagent-driven-development"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "4bd81f48a3d5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 951,
+        "end": 952,
+        "entry_ids": [
+          "4c40a089-bd95-4d0e-b3f7-30592a1ef14e"
+        ],
+        "tool_use_id": "toolu_01KpuJi5MYaqZz28zq8QsQwy"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01KpuJi5MYaqZz28zq8QsQwy"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:subagent-driven-development",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01CjUjhVENDWngK7gGeMhNUy",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:systematic-debugging"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "24bf0308d75b",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 2314,
+        "end": 2315,
+        "entry_ids": [
+          "0b4bf8b1-e18b-49df-ab60-029810a49b2f"
+        ],
+        "tool_use_id": "toolu_01CjUjhVENDWngK7gGeMhNUy"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01CjUjhVENDWngK7gGeMhNUy"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:systematic-debugging",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_0142ZxFFzHWozd2Vwy2Q1ENs",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:finishing-a-development-branch"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "30bfe7fcf8b6",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 2536,
+        "end": 2537,
+        "entry_ids": [
+          "9fd26905-90d1-4e55-a2b5-3f294ec68484"
+        ],
+        "tool_use_id": "toolu_0142ZxFFzHWozd2Vwy2Q1ENs"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_0142ZxFFzHWozd2Vwy2Q1ENs"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:finishing-a-development-branch",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 135
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-15T06:53:10.5672848Z",
+    "agent_lines": 0,
+    "agent_removed": 22,
+    "human_added": 72,
+    "human_modified": 155,
+    "human_removed": 0,
+    "total_committed": 214,
+    "total_lines_changed": 249,
+    "agent_percentage": 8.835341365461847,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 8378,
+      "user_lines_removed": 9105,
+      "agent_lines_added": 132413,
+      "agent_lines_removed": 113425,
+      "user_added_per_file": {
+        ".github/workflows/CI-CD.yml": 3,
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/streaming.mdx": 1,
+        "apps/web/src/run/RequestPanel.test.tsx": 102,
+        "apps/web/src/run/RequestPanel.tsx": 36,
+        "apps/web/src/run/RunView.offer.test.tsx": 107,
+        "apps/web/src/run/RunView.tsx": 3132,
+        "apps/web/src/run/offer.test.ts": 62,
+        "apps/web/src/run/offer.ts": 34,
+        "apps/web/src/run/takePress.test.ts": 41,
+        "apps/web/src/run/takePress.ts": 11,
+        "apps/web/src/sync/SyncProvider.tsx": 12,
+        "apps/web/src/sync/SyncProvider.visibility.test.tsx": 138,
+        "package-lock.json": 2,
+        "package.json": 2,
+        "packages/cli/package.json": 1,
+        "packages/cli/src/account.test.ts": 112,
+        "packages/cli/src/account.ts": 167,
+        "packages/cli/src/bin.ts": 1,
+        "packages/cli/tsconfig.json": 1,
+        "packages/engine/tsconfig.json": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        ".github/workflows/CI-CD.yml": 44,
+        ".github/workflows/pr-title.yml": 1,
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages.ts": 9,
+        "apps/web/src/guide/pages/streaming.mdx": 1,
+        "apps/web/src/run/RequestPanel.tsx": 15,
+        "apps/web/src/run/RunView.offer.test.tsx": 3,
+        "apps/web/src/run/RunView.tsx": 3028,
+        "apps/web/src/run/offer.ts": 5,
+        "apps/web/src/run/takePress.test.ts": 1,
+        "apps/web/src/sync/SyncProvider.tsx": 8,
+        "package-lock.json": 1558,
+        "package.json": 4,
+        "packages/cli/package.json": 2,
+        "packages/cli/src/account.ts": 4,
+        "packages/cli/src/bin.ts": 1,
+        "packages/cli/tsconfig.json": 4,
+        "packages/engine/tsconfig.json": 4,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "tsconfig.base.json": 19,
+        "vitest.config.ts": 1
+      }
+    }
+  ]
+}
