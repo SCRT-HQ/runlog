@@ -21,6 +21,8 @@ export interface Acts {
   undo: () => void;
   answer: (answer: Record<string, unknown>) => void;
   setup: (id: string) => void | Promise<void>;
+  /** Hand the attached tool one setup's operations, leaving the run alone. */
+  command: (id: string) => void | Promise<void>;
   /** Move a tally or a dial, by a step or to a number. */
   tracker: (id: string, move: { by: number } | { to: number }) => void;
   clock: (id: string, doing: "pause" | "resume" | "stop") => void;
@@ -95,6 +97,16 @@ export function takePress(press: Press, at: { seq: number; offer: Offer; seen: M
       if (typeof named === "string") {
         if (!at.offer.setups.some((s) => s.id === named)) return settle({ ok: false, say: "That setup is not here." });
         return settle(take(() => act.setup(named)));
+      }
+      // The other thing a setup file can mean: hand it to the tool now
+      // and leave the run under what it was already being played under.
+      // Named by id from its own list, because the two lists hold the
+      // same ids and a deck laying out both kinds of key checks each
+      // press against the list the key was drawn from.
+      const command = press.answer?.["command"];
+      if (typeof command === "string") {
+        if (!at.offer.commands.some((c) => c.id === command)) return settle({ ok: false, say: "That command is not here." });
+        return settle(take(() => act.command(command)));
       }
       /*
        * The four things on the page that are not the step: a tally or a

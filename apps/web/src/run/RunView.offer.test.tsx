@@ -5,9 +5,10 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { loadPackText } from "@runlog/rules-schema";
+import type { Setup } from "@runlog/rules-schema";
 import type { Clock, RunEvent, RunState } from "@runlog/engine";
 import type { Api } from "../sync/client.ts";
-import { clockOf, heldMove, perRacer, RunView, trackersOf } from "./RunView.tsx";
+import { clockOf, fitsTheWire, heldMove, perRacer, RunView, trackersOf } from "./RunView.tsx";
 import { memoryRunStore } from "./store.ts";
 import { syncBus } from "../sync/bus.ts";
 import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
@@ -349,6 +350,59 @@ describe("a press from a deck", () => {
   });
 
   /*
+   * Task 28b: the other thing a key can do with a setup file. The
+   * operations go out as they were written and the run is left exactly
+   * where it was, which is what the stored run is read for: a setup
+   * still unset is the difference between this press and the one above.
+   */
+  it("hands the tool a command, and leaves the run's own setup alone", async () => {
+    const gesture = vi.fn<Sync["gesture"]>(() => true);
+    const store = await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, gesture });
+
+    await act(async () => {
+      syncBus.emit({
+        t: "drive",
+        from: "deck1",
+        run: "run1",
+        seq: 1,
+        ref: "r8",
+        press: "answer",
+        answer: { command: "com.example.setups.starter" },
+      });
+      await Promise.resolve();
+    });
+    await flush();
+
+    expect(gesture).toHaveBeenCalledWith("run1", "command", {
+      id: "com.example.setups.starter",
+      title: "Starter",
+      ops: [{ op: "player.give", args: { thing: "clay" } }],
+    });
+    expect(gesture).not.toHaveBeenCalledWith("run1", "setup");
+    expect((await store.loadRun("run1"))?.setup).toBeFalsy();
+  });
+
+  it("refuses a command the run is not offering", async () => {
+    const drove = vi.fn<Sync["drove"]>();
+    await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, drove });
+
+    await act(async () => {
+      syncBus.emit({
+        t: "drive",
+        from: "deck1",
+        run: "run1",
+        seq: 1,
+        ref: "r9",
+        press: "answer",
+        answer: { command: "com.example.setups.nowhere" },
+      });
+      await Promise.resolve();
+    });
+
+    expect(drove).toHaveBeenCalledWith("deck1", "r9", false, "That command is not here.", 1);
+  });
+
+  /*
    * Task 24a: a key turns one of the run's own tallies. The demo pack
    * keeps a Calm streak, so the press has something real to move: the
    * correction lands in the log the way the panel's own + writes it, and
@@ -463,6 +517,41 @@ describe("perRacer", () => {
     expect(perRacer({ per: "contestant" }, [])).toBe(false);
     expect(perRacer({ per: "table" }, [1, 2])).toBe(false);
     expect(perRacer({}, [1, 2])).toBe(false);
+  });
+});
+
+/*
+ * Fix round 1: the server reads a command gesture to its own bounds and
+ * drops the whole frame where a file is past any of them, with a bare 200
+ * this page cannot read anything into. So the bounds are held to here as
+ * well, tested one at a time against what the server actually takes.
+ */
+describe("fitsTheWire", () => {
+  const file = (over: Partial<Setup>): Setup => ({ ...stood.setup, ...over });
+  const give = { op: "player.give" };
+
+  it("takes a setup written the ordinary way", () => {
+    expect(fitsTheWire(file({}))).toBe(true);
+  });
+
+  it("refuses a title longer than the server reads", () => {
+    expect(fitsTheWire(file({ title: "t".repeat(80) }))).toBe(true);
+    expect(fitsTheWire(file({ title: "t".repeat(81) }))).toBe(false);
+  });
+
+  it("refuses more operations than the server reads", () => {
+    expect(fitsTheWire(file({ ops: Array.from({ length: 64 }, () => give) }))).toBe(true);
+    expect(fitsTheWire(file({ ops: Array.from({ length: 65 }, () => give) }))).toBe(false);
+  });
+
+  it("refuses an operation named longer than the server reads", () => {
+    expect(fitsTheWire(file({ ops: [{ op: "o".repeat(64) }] }))).toBe(true);
+    expect(fitsTheWire(file({ ops: [{ op: "o".repeat(65) }] }))).toBe(false);
+  });
+
+  it("refuses a file with nothing to do and one with no id", () => {
+    expect(fitsTheWire(file({ ops: [] }))).toBe(false);
+    expect(fitsTheWire(file({ id: "" }))).toBe(false);
   });
 });
 
