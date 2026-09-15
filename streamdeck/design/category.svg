@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144" role="img" aria-label="Runlog">
-  <!-- The mark again, monochrome on nothing, which is what the action list wants. -->
+  <!-- The mark again, monochrome on nothing: the action list draws its own ground. -->
   <g fill="#ffffff">
     <rect x="18" y="18" width="48" height="48" rx="8"/>
     <rect x="78" y="18" width="48" height="48" rx="8"/>
