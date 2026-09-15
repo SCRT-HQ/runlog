@@ -10,6 +10,13 @@ function drawn(title: string): { lines: string[]; size: number } {
   };
 }
 
+/** The `when` line a face draws, with the font size it drew it at. */
+function whenLine(when: string): { text: string; size: number } {
+  const svg = Buffer.from(faceImage({ title: "Weather", tone: "live", when }).split(",")[1]!, "base64").toString("utf8");
+  const m = /<text x="72" y="126"[^>]*font-size="(\d+)"[^>]*>([^<]*)<\/text>/.exec(svg)!;
+  return { size: Number(m[1]), text: m[2]! };
+}
+
 describe("faceImage", () => {
   it("is a base64 svg data uri, never raw svg", () => {
     const uri = faceImage({ title: "Roll the Weather", tone: "live" });
@@ -70,6 +77,23 @@ describe("faceImage", () => {
     );
     expect(svg).toContain("2:14");
     expect(svg).not.toContain("0.5");
+  });
+  it("leaves a short when line alone", () => {
+    expect(whenLine("Deaths")).toEqual({ text: "Deaths", size: 18 });
+  });
+  it("cuts a when line at a word boundary that leaves six characters or more", () => {
+    // "Scenes" is six characters and fits; adding "before" would run past
+    // the 11-character budget, so the word-boundary cut wins over a
+    // mid-word character cut ("Scenes befo…").
+    expect(whenLine("Scenes before a warp").text).toBe("Scenes…");
+  });
+  it("never keeps more than 11 characters of a when line, plus the ellipsis", () => {
+    const { text } = whenLine("press Connect");
+    expect(text.endsWith("…")).toBe(true);
+    expect(text.replace("…", "").length).toBeLessThanOrEqual(11);
+  });
+  it("draws the when line at font-size 18", () => {
+    expect(whenLine("press Connect").size).toBe(18);
   });
 });
 

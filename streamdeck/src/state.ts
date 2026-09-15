@@ -184,13 +184,15 @@ function attachedName(state: DeckState): Face | null {
  * It is the one key that has something to say while the deck is off, so it
  * skips the "Not connected" every other key stops at and names the state it
  * is actually in - down by choice, down by the idle timer, or on its way up.
+ * Once the socket is open it says **Disconnect**, one press away from off -
+ * which run that carries, if any, is the Run key's business, not this one's.
  */
 export function connectFace(state: DeckState): Face {
   if (state.session === "none") return { title: "Sign in", tone: "dim" };
   if (state.session === "expired") return { title: "Sign in again", tone: "dim" };
-  if (!state.on) return state.idleOff ? { title: "Idle · press to connect", tone: "dim" } : { title: "Offline", tone: "dim" };
-  if (state.socket === "connecting") return { title: "Connecting", tone: "dim" };
-  return held(state) ?? attachedName(state) ?? { title: "Connected", tone: "live" };
+  if (!state.on) return { title: "Connect", tone: "dim", when: state.idleOff ? "went idle" : undefined };
+  if (state.socket !== "open") return { title: "Connecting", tone: "dim" };
+  return { title: "Disconnect", tone: "live" };
 }
 
 /**

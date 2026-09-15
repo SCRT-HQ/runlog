@@ -59,6 +59,32 @@ const LINE = 144 - 2 * 8;
 const MAX_LINES = 3;
 
 /**
+ * The `when` line's own type: 18px monospace, a flat 0.6em per glyph rather
+ * than the title's per-glyph measurement. 128px at 18px holds 11 characters
+ * (128 / (18 * 0.6) = 11.85); a twelfth never fits.
+ */
+const WHEN_SIZE = 18;
+const WHEN_MAX = 11;
+
+/**
+ * Fit `when` to `WHEN_MAX` characters. A word boundary that still leaves at
+ * least six characters reads better than a stub, so that is tried first;
+ * otherwise the cut falls back to characters. Either way an "…" marks what
+ * was cut, and nothing kept ever runs past `WHEN_MAX`.
+ */
+function ellipsizeWhen(text: string): string {
+  if (text.length <= WHEN_MAX) return text;
+  let cut = "";
+  for (const word of text.split(" ")) {
+    const next = cut ? `${cut} ${word}` : word;
+    if (next.length > WHEN_MAX) break;
+    cut = next;
+  }
+  if (cut.length < 6) cut = text.slice(0, WHEN_MAX);
+  return `${cut}…`;
+}
+
+/**
  * Greedy word wrap by measured width: pack words onto a line up to `width`
  * px at `size`, at most `lines` lines. A word too wide for a line of its
  * own is broken by characters and carries on below. The last line gets an
@@ -121,7 +147,7 @@ function typeset(text: string): { lines: string[]; size: number } {
 export function faceImage(face: Face): string {
   const t = TONE[face.tone];
   const { lines, size } = typeset(face.title);
-  const top = 72 - ((lines.length - 1) * size * 1.15) / 2 + (face.when ? -8 : 0);
+  const top = 72 - ((lines.length - 1) * size * 1.15) / 2 + (face.when ? -10 : 0);
   // One positioned <text> per line, baseline given outright: the software
   // draws SVG with a renderer that honors x and y on a text element and
   // little else - a tspan with its own position, or a dominant-baseline,
@@ -134,7 +160,7 @@ export function faceImage(face: Face): string {
     )
     .join("");
   const when = face.when
-    ? `<text x="72" y="128" text-anchor="middle" font-size="12" fill="${t.edge}" font-family="ui-monospace, Menlo, Consolas, monospace">${esc(face.when.slice(0, 18))}</text>`
+    ? `<text x="72" y="126" text-anchor="middle" font-size="${WHEN_SIZE}" fill="${t.edge}" font-family="ui-monospace, Menlo, Consolas, monospace">${esc(ellipsizeWhen(face.when))}</text>`
     : "";
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">` +

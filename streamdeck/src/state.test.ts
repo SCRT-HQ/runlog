@@ -297,20 +297,23 @@ describe("what the Connect key says", () => {
     expect(connectFace(initial())).toEqual({ title: "Sign in", tone: "dim" });
     expect(connectFace(reduce(initial(), { t: "session", state: "expired" }, T))).toEqual({ title: "Sign in again", tone: "dim" });
   });
-  it("is offline when off, and says so differently when it went off by itself", () => {
-    expect(connectFace(reduce(initial(), { t: "session", state: "ok" }, T))).toEqual({ title: "Offline", tone: "dim" });
-    expect(connectFace(reduce(open(), { t: "on", on: false, idle: true }, T))).toEqual({ title: "Idle · press to connect", tone: "dim" });
+  it("says Connect when off, and names the idle timer when that is why", () => {
+    expect(connectFace(reduce(initial(), { t: "session", state: "ok" }, T))).toEqual({ title: "Connect", tone: "dim" });
+    expect(connectFace(reduce(open(), { t: "on", on: false, idle: true }, T))).toEqual({
+      title: "Connect",
+      tone: "dim",
+      when: "went idle",
+    });
   });
-  it("is connecting while the socket is opening", () => {
+  it("is connecting while the socket is opening, and while it reports offline", () => {
     expect(connectFace(reduce(live(), { t: "socket", state: "connecting" }, T))).toEqual({ title: "Connecting", tone: "dim" });
+    expect(connectFace(live())).toEqual({ title: "Connecting", tone: "dim" });
   });
-  it("names the run once it has one", () => {
-    expect(connectFace(open())).toEqual({ title: "Thursday", tone: "live", when: "The Long Kiln" });
-  });
-  it("says what every other key says when it is open and holding nothing", () => {
+  it("says Disconnect once the socket is open, whatever the Run key would say", () => {
+    expect(connectFace(open())).toEqual({ title: "Disconnect", tone: "live" });
     const s = reduce(reduce(live(), { t: "socket", state: "open" }, T), { t: "runs", runs: [], any: true }, T);
-    expect(connectFace(s)).toEqual({ title: "No run open", tone: "dim" });
-    expect(connectFace(open([held("s1"), held("s2", "Friday")]))).toEqual({ title: "Pick a run", tone: "dim" });
+    expect(connectFace(s)).toEqual({ title: "Disconnect", tone: "live" });
+    expect(connectFace(open([held("s1"), held("s2", "Friday")]))).toEqual({ title: "Disconnect", tone: "live" });
   });
 });
 
