@@ -2,7 +2,7 @@
 // (closest, querySelector, focus) that renderToStaticMarkup cannot give us.
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { nudgeFirstUnticked } from "./nudge.ts";
+import { nudgeFirstUnticked, nudgeOwed } from "./nudge.ts";
 
 /**
  * The button that finishes a step is never dimmed while a box is unticked;
@@ -49,5 +49,51 @@ describe("nudgeFirstUnticked", () => {
     nudgeFirstUnticked(button);
     // The only unticked box is outside this step, so nothing is focused.
     expect(document.activeElement).not.toBe(document.querySelector("input"));
+  });
+});
+
+/**
+ * Task 25: the closing button is held by what the game is owed as well as
+ * by what the player owes, and pressing it has to reach either panel. The
+ * page draws "The game has your number" above the obligations, so the one
+ * it reaches first is the one it takes.
+ */
+describe("nudgeOwed", () => {
+  Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ?? (() => {});
+
+  const page = (panels: string) => {
+    document.body.innerHTML = `
+      <div class="main">
+        <section class="panel runStep finalize"><button id="close">Settle what is owed first</button></section>
+        ${panels}
+      </div>
+    `;
+    return document.querySelector<HTMLButtonElement>("#close")!;
+  };
+
+  it("takes the player to what the game is owed", () => {
+    const close = page(`<section class="panel threshold"><button class="primary" id="fire">Roll d100</button></section>`);
+    nudgeOwed(close);
+    expect(document.activeElement).toBe(document.querySelector("#fire"));
+  });
+
+  it("takes the thresholds panel over the obligations below it", () => {
+    const close = page(`
+      <section class="panel threshold"><button class="primary" id="fire">Roll d100</button></section>
+      <section class="panel owed"><button class="primary" id="settle">Apply it</button></section>
+    `);
+    nudgeOwed(close);
+    expect(document.activeElement).toBe(document.querySelector("#fire"));
+  });
+
+  it("still takes the obligations where that is all there is", () => {
+    const close = page(`<section class="panel owed"><button class="primary" id="settle">Apply it</button></section>`);
+    nudgeOwed(close);
+    expect(document.activeElement).toBe(document.querySelector("#settle"));
+  });
+
+  it("does nothing where neither panel is on the page", () => {
+    const close = page("");
+    expect(() => nudgeOwed(close)).not.toThrow();
   });
 });

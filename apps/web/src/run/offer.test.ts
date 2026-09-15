@@ -13,6 +13,7 @@ const base = {
   canUndo: false,
   lastResult: null,
   owed: 0,
+  due: [],
   suggestions: [],
   between: null,
   finishLabel: null,
@@ -101,6 +102,70 @@ describe("offerOf", () => {
     const offer = offerOf({ ...base, step: { kind: "finalizeUnit" } as never, stepLabel: "Close Day 4", owed: 1 });
     expect(offer.primary).toBeNull();
     expect(offer.needsPage).toBe("Something is owed; settle it on the page");
+  });
+
+  /*
+   * Task 25: a counter threshold left pending was carried into the next
+   * scene, out of the page's own closing button and out of a deck's Next.
+   * What the game is owed is now the press rather than a dim key.
+   */
+  const overheating = { id: "calm#0", label: "The Kiln overheats: Roll d100", kind: "threshold" as const };
+
+  it("offers what the game is owed, in the words of the page's own button", () => {
+    const offer = offerOf({ ...base, due: [overheating], step: { kind: "finalizeUnit" } as never, stepLabel: "Close Day 4" });
+    expect(offer.primary).toEqual({ id: "owed", label: "The Kiln overheats: Roll d100", kind: "threshold" });
+    expect(offer.needsPage).toBeNull();
+    expect(offer.presets).toEqual([]);
+  });
+
+  it("takes the first of them, and leaves the moves and the undo on offer", () => {
+    const offer = offerOf({
+      ...base,
+      due: [overheating, { id: "g#0", label: "The Cooling: Roll d10", kind: "global" }],
+      moves: [{ id: "died", label: "Died" }],
+      canUndo: true,
+      lastResult: "A dry wind from the east.",
+    });
+    expect(offer.primary).toMatchObject({ id: "owed", kind: "threshold" });
+    expect(offer.moves).toEqual([{ id: "died", label: "Died" }]);
+    expect(offer.undo).toEqual({ what: "A dry wind from the east." });
+  });
+
+  it("will not enter the next unit with something the game is owed", () => {
+    const offer = offerOf({ ...base, due: [overheating], between: "Enter Day 5" });
+    expect(offer.primary).toMatchObject({ id: "owed" });
+  });
+
+  it("will not enter the next unit with something owed", () => {
+    const offer = offerOf({ ...base, between: "Enter Day 5", owed: 1 });
+    expect(offer.primary).toBeNull();
+    expect(offer.needsPage).toBe("Something is owed; settle it on the page");
+  });
+
+  // The two carve-outs, kept as they were: a typed step still offers the
+  // preset that answers it, and a step waiting on dice is still a throw
+  // rather than a decision, whatever is owed elsewhere on the page.
+  it("leaves a typed step its own preset with something owed", () => {
+    const offer = offerOf({ ...base, step: { kind: "declareSubject" } as never, stepLabel: "Name the bowl", owed: 1 });
+    expect(offer.presets).toEqual([{ kind: "declareSubject", label: "Name the bowl" }]);
+  });
+
+  it("still throws the dice a step is waiting on with something owed", () => {
+    const offer = offerOf({
+      ...base,
+      settled: false,
+      request: { kind: "roll", label: "Roll the Weather" },
+      step: { kind: "rollTable" } as never,
+      stepLabel: "Roll the Weather",
+      owed: 1,
+    });
+    expect(offer.primary).toEqual({ id: "roll", label: "Roll the Weather", kind: "rollTable" });
+  });
+
+  it("offers nothing the game is owed on a run nobody is playing", () => {
+    const offer = offerOf({ ...base, live: false, due: [overheating] });
+    expect(offer.primary).toBeNull();
+    expect(offer.needsPage).toBe("Open the run on the page");
   });
 
   // Controller ruling: a manual step with nothing to confirm asks nothing,

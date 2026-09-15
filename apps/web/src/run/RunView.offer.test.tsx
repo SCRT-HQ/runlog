@@ -381,6 +381,42 @@ describe("a press from a deck", () => {
     expect(drove).toHaveBeenCalledWith("deck1", "r6", false, "That tracker is not here.", 1);
   });
 
+  /*
+   * Task 25: a counter that crossed its threshold was carried into the
+   * next scene, because the way on was offered over the top of it. The
+   * demo pack overheats at five calm Stages, so a log that stands the
+   * tally at five has the game owed something real. The Next key now
+   * carries that roll, and pressing it puts the trigger's own ask on the
+   * page the way the panel's button does.
+   */
+  const overheated = (at: string) => [{ id: "e2", t: "CounterChanged" as const, at, counter: "calm", set: 5 }];
+
+  it("offers what the game is owed instead of the way on", async () => {
+    const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+    await renderRunView({ putSnapshot, shared: true, rest: overheated });
+    await vi.advanceTimersByTimeAsync(900);
+    expect(putSnapshot.mock.calls.at(-1)![1]).toMatchObject({
+      offer: { primary: { id: "owed", kind: "threshold", label: expect.stringMatching(/^The Kiln overheats: /) } },
+    });
+  });
+
+  it("fires what the game is owed when a deck presses it", async () => {
+    const drove = vi.fn<Sync["drove"]>();
+    await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, drove, rest: overheated });
+
+    await act(async () => {
+      syncBus.emit({ t: "drive", from: "deck1", run: "run1", seq: 2, ref: "r7", press: "primary" });
+      await Promise.resolve();
+    });
+    await flush();
+
+    // The trigger rolls on a table, so what the press leaves on screen is
+    // the same ask the panel's own button would have left there.
+    expect(document.querySelector(".panel.request")).toBeTruthy();
+    await act(() => vi.advanceTimersByTimeAsync(1600));
+    expect(drove).toHaveBeenCalledWith("deck1", "r7", true, undefined, 2);
+  });
+
   it("refuses a press made against a seq the run has moved past", async () => {
     const drove = vi.fn<Sync["drove"]>();
     await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, drove });

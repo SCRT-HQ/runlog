@@ -450,7 +450,7 @@ From then on this run's `{ "t": "changed", "id": "01RUN", "seq": 42 }` rings on 
 
 | `press` | Does |
 | --- | --- |
-| `primary` | The one button the page would show first: rolling a table, carrying on, closing the unit, entering the next one. |
+| `primary` | The one button the page would show first: rolling a table, carrying on, closing the unit, entering the next one, or rolling what the game is owed. |
 | `move` | One of the run's moves, named by id in a `move` field. |
 | `undo` | Takes back the last result, where there is one to take back. |
 | `answer` | Answers what the run is asking for: `{ "subject": "Bowl 3" }` for a step that wants a name typed, or `{ "ticks": "all" }` for a step with a checklist, which ticks everything on it and presses the step's own finish button in the one press. `{ "setup": "<id>" }` sets the run's setup to that one, by an id from the offer's `setups`, and hands it out to everything attached. |
@@ -520,7 +520,7 @@ The device holding the run publishes what a deck may press beside `control`, in 
 | Field | What it is |
 | --- | --- |
 | `seq` | The offer's own `events.length`; the `seq` a press against it must carry. |
-| `primary` | What a bare `primary` press takes: `id` is `roll`, `carry-on`, `close` or `enter`; `label` and `kind` are the step's own words. Null where nothing may be pressed without being asked something first. While the page is waiting on a roll, `primary` is that roll. Pressing it throws the app's own dice on the page the way its own **Roll for me** button does, logged as a machine roll: the tray flies, the total lands, and the verdict comes once it has. The receipts of a step's own throws are a press too, waiting on the page's **Carry on**: `id: "carry-on"`, `kind: "receipt"`. |
+| `primary` | What a bare `primary` press takes: `id` is `roll`, `carry-on`, `close`, `enter` or `owed`; `label` and `kind` are the step's own words. `owed` is what the game is owed, a counter's threshold or one of the pack's own triggers, in the words of the button the page shows for it; pressing it rolls that trigger, and nothing that carries the run forward is offered until it has been. Null where nothing may be pressed without being asked something first. While the page is waiting on a roll, `primary` is that roll. Pressing it throws the app's own dice on the page the way its own **Roll for me** button does, logged as a machine roll: the tray flies, the total lands, and the verdict comes once it has. The receipts of a step's own throws are a press too, waiting on the page's **Carry on**: `id: "carry-on"`, `kind: "receipt"`. |
 | `moves` | The moves a `move` press may name, by id and label. A move that would close the unit while something is still owed is left off rather than offered and refused. |
 | `undo` | `{ "what": "…" }`, the last result in words, where there is one to take back; null otherwise. |
 | `needsPage` | Why `primary` is null, in words a key face can show, such as "Draw the weather on the page"; null where nothing needs it. |
