@@ -195,6 +195,29 @@ export function perRacer(move: { per?: string }, racing: { length: number }): bo
 }
 
 /**
+ * Whether a setup would survive the wire as a command.
+ *
+ * A command's operations travel in the gesture rather than being built
+ * from the run, so the server reads them the way it reads anything that
+ * arrives from outside: one field past its bound makes the whole frame
+ * nothing. It drops that frame with a bare 200, which this page cannot
+ * tell from a command delivered, so a file the server would refuse is
+ * kept off the offer instead. A key that cannot work is better missing
+ * than pressed to no effect.
+ *
+ * The bounds are the server's own, not this format's, and they are the
+ * tighter of the two: a setup may run to 200 operations and a 120
+ * character title where a command may not. `args` is not checked, because
+ * anything parsed as a setup has it as an object already.
+ */
+export function fitsTheWire(setup: Setup): boolean {
+  if (setup.id.length === 0 || setup.id.length > 200) return false;
+  if (setup.title.length > 80) return false;
+  if (setup.ops.length === 0 || setup.ops.length > 64) return false;
+  return setup.ops.every((o) => o.op.length > 0 && o.op.length <= 64);
+}
+
+/**
  * Playing a run.
  *
  * Every noun on screen comes from the pack's vocabulary, and every step comes
@@ -437,8 +460,9 @@ export function RunView({
       // The same list, offered the other way round: handed to the tool
       // once instead of taken on by the run. One list, because a setup
       // file is one document either way; which of the two a key does is
-      // the key's own business.
-      commands: offeredSetups.map((s) => ({ id: s.id, title: s.title })),
+      // the key's own business. Less whatever the server would drop on
+      // the way, which `fitsTheWire` is the one account of.
+      commands: offeredSetups.filter(fitsTheWire).map((s) => ({ id: s.id, title: s.title })),
       trackers: trackersOf(pack, run.state ?? null),
       // The one clock the page's own Pause and Stop act on. A unit runs
       // one at a time in practice, and where it somehow runs two, the one
