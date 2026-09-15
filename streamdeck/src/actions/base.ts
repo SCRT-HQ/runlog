@@ -38,6 +38,8 @@ export type Placed<S extends JsonObject> = DialAction<S> | KeyAction<S>;
  */
 export abstract class RunlogAction<S extends JsonObject = JsonObject> extends SingletonAction<S> {
   private unsub: (() => void) | null = null;
+  /** What each placement last said, so a change is logged once and a redraw that says the same thing is not. */
+  private said = new Map<string, string>();
 
   /** What this action says, given everything the plugin knows. */
   abstract face(state: DeckState, settings: S, now: number): Face;
@@ -69,6 +71,10 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
 
   protected async draw(action: Placed<S>, settings: S): Promise<void> {
     const face = this.face(store.state, settings, Date.now());
+    if (this.said.get(action.id) !== face.title) {
+      this.said.set(action.id, face.title);
+      streamDeck.logger.info(`${this.manifestId ?? "?"} now says "${face.title}" for ${JSON.stringify(settings)}`);
+    }
     if (action.isKey()) {
       await action.setImage(faceImage(face));
       await action.setTitle("");
