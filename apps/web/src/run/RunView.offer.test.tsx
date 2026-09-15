@@ -5,9 +5,9 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { loadPackText } from "@runlog/rules-schema";
-import type { RunEvent } from "@runlog/engine";
+import type { Clock, RunEvent, RunState } from "@runlog/engine";
 import type { Api } from "../sync/client.ts";
-import { heldMove, perRacer, RunView } from "./RunView.tsx";
+import { clockOf, heldMove, perRacer, RunView, trackersOf } from "./RunView.tsx";
 import { memoryRunStore } from "./store.ts";
 import { syncBus } from "../sync/bus.ts";
 import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
@@ -348,6 +348,75 @@ describe("a press from a deck", () => {
     expect(drove).toHaveBeenCalledWith("deck1", "r4", false, "That setup is not here.", 1);
   });
 
+  /*
+   * Task 24a: a key turns one of the run's own tallies. The demo pack
+   * keeps a Calm streak, so the press has something real to move: the
+   * correction lands in the log the way the panel's own + writes it, and
+   * the verdict names the seq the two events moved the run to.
+   */
+  it("nudges a tally the run is offering", async () => {
+    const drove = vi.fn<Sync["drove"]>();
+    const store = await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, drove });
+
+    await act(async () => {
+      syncBus.emit({ t: "drive", from: "deck1", run: "run1", seq: 1, ref: "r5", press: "answer", answer: { tracker: "calm", by: 1 } });
+      await Promise.resolve();
+    });
+    await flush();
+
+    const saved = ((await store.loadRun("run1"))?.events ?? []) as RunEvent[];
+    expect(saved.some((e) => e.t === "CounterChanged" && e.counter === "calm" && e.by === 1)).toBe(true);
+    expect(drove).toHaveBeenCalledWith("deck1", "r5", true, undefined, 3);
+  });
+
+  it("refuses a tracker the run is not offering", async () => {
+    const drove = vi.fn<Sync["drove"]>();
+    await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, drove });
+
+    await act(async () => {
+      syncBus.emit({ t: "drive", from: "deck1", run: "run1", seq: 1, ref: "r6", press: "answer", answer: { tracker: "kiln", by: 1 } });
+      await Promise.resolve();
+    });
+
+    expect(drove).toHaveBeenCalledWith("deck1", "r6", false, "That tracker is not here.", 1);
+  });
+
+  /*
+   * Task 25: a counter that crossed its threshold was carried into the
+   * next scene, because the way on was offered over the top of it. The
+   * demo pack overheats at five calm Stages, so a log that stands the
+   * tally at five has the game owed something real. The Next key now
+   * carries that roll, and pressing it puts the trigger's own ask on the
+   * page the way the panel's button does.
+   */
+  const overheated = (at: string) => [{ id: "e2", t: "CounterChanged" as const, at, counter: "calm", set: 5 }];
+
+  it("offers what the game is owed instead of the way on", async () => {
+    const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+    await renderRunView({ putSnapshot, shared: true, rest: overheated });
+    await vi.advanceTimersByTimeAsync(900);
+    expect(putSnapshot.mock.calls.at(-1)![1]).toMatchObject({
+      offer: { primary: { id: "owed", kind: "threshold", label: expect.stringMatching(/^The Kiln overheats: /) } },
+    });
+  });
+
+  it("fires what the game is owed when a deck presses it", async () => {
+    const drove = vi.fn<Sync["drove"]>();
+    await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, drove, rest: overheated });
+
+    await act(async () => {
+      syncBus.emit({ t: "drive", from: "deck1", run: "run1", seq: 2, ref: "r7", press: "primary" });
+      await Promise.resolve();
+    });
+    await flush();
+
+    // The trigger rolls on a table, so what the press leaves on screen is
+    // the same ask the panel's own button would have left there.
+    expect(document.querySelector(".panel.request")).toBeTruthy();
+    await act(() => vi.advanceTimersByTimeAsync(1600));
+    expect(drove).toHaveBeenCalledWith("deck1", "r7", true, undefined, 2);
+  });
+
   it("refuses a press made against a seq the run has moved past", async () => {
     const drove = vi.fn<Sync["drove"]>();
     await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, drove });
@@ -394,5 +463,58 @@ describe("perRacer", () => {
     expect(perRacer({ per: "contestant" }, [])).toBe(false);
     expect(perRacer({ per: "table" }, [1, 2])).toBe(false);
     expect(perRacer({}, [1, 2])).toBe(false);
+  });
+});
+
+/*
+ * Task 24a: what a deck is offered to turn, and which clock its Pause
+ * acts on. Both are rules rather than rendering, and both are read by the
+ * offer and by a panel, so they are tested as rules against the demo
+ * pack's own dial and tally.
+ */
+describe("trackersOf", () => {
+  const standing = (over: Partial<RunState>) =>
+    ({ contestants: [], counters: {}, resources: {}, clocks: [], ...over }) as unknown as RunState;
+
+  it("lists the dials and then the tallies, where each stands", () => {
+    expect(trackersOf(kiln, standing({ resources: { glaze: 2 }, counters: { calm: 3 } }))).toEqual([
+      { id: "glaze", kind: "resource", label: "Glaze", value: 2, max: 6 },
+      { id: "calm", kind: "counter", label: "Calm streak", value: 3, max: null },
+      { id: "setbacksSuffered", kind: "counter", label: "Setbacks suffered", value: 0, max: null },
+    ]);
+  });
+
+  it("falls back to what the pack starts each at", () => {
+    expect(trackersOf(kiln, standing({}))).toMatchObject([
+      { id: "glaze", value: 3 },
+      { id: "calm", value: 0 },
+      { id: "setbacksSuffered", value: 0 },
+    ]);
+  });
+
+  it("offers nothing without a run to read", () => {
+    expect(trackersOf(kiln, null)).toEqual([]);
+  });
+});
+
+describe("clockOf", () => {
+  const clock = (id: string, status: Clock["status"]) => ({ id, label: id, status }) as unknown as Clock;
+  const with_ = (clocks: Clock[]) => ({ clocks }) as unknown as RunState;
+
+  it("takes the clock that is running over one that is paused", () => {
+    expect(clockOf(with_([clock("u3:unit", "paused"), clock("u4:unit", "running")]))).toEqual({
+      id: "u4:unit",
+      label: "u4:unit",
+      status: "running",
+    });
+  });
+
+  it("takes a paused clock where none is running, so the key that paused it can start it again", () => {
+    expect(clockOf(with_([clock("u4:unit", "paused")]))).toMatchObject({ id: "u4:unit", status: "paused" });
+  });
+
+  it("offers none where every clock has stopped", () => {
+    expect(clockOf(with_([clock("u4:unit", "done")]))).toBeNull();
+    expect(clockOf(null)).toBeNull();
   });
 });
