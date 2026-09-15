@@ -2988,3 +2988,84 @@ what does pressing Settled do from the Stream Deck?
 ---
 
 Can we have a dedicated key for Apply Setup instead of another action under Press?
+
+---
+
+We should have a dedicated button for "Roll for me" as well. Currently, when pressing Roll in the Press button, it just shows the dice results immediately, there is no roll animation like I see if I click the button in the UI.
+
+---
+
+What button will advance the step if Settled does not? Next becomes disabled when I finish a roll. I want the equivalent of clicking Carry On here when pressing Next on this page: [Image #132]
+
+---
+
+<task-notification>
+<task-id>a1db9381e1e9da35f</task-id>
+<tool-use-id>toolu_012BWF46M29peFiQ8FgjKiFG</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a1db9381e1e9da35f.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 16b: setup press key" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result># Review: `feat(deck): a press key hands out a setup` (2a5a126..c22d386, commit c22d386)
+
+## Spec compliance
+
+| Constraint | Status | Evidence |
+|---|---|---|
+| `PressTarget` gains `{ kind: "setup"; id; title }` | ✅ | `streamdeck/src/state.ts:74` |
+| `Offer.setups` typed `{ id, title }[]` | ✅ | `streamdeck/src/state.ts:26` |
+| Optional-safe: code tolerates `offer.setups` being `undefined` from an older page | ❌ | `streamdeck/src/state.ts:279` calls `offer.setups.some(...)` with no `?? []` guard — throws a `TypeError` if a page hasn't shipped `setups` yet. Contrast `streamdeck/src/actions/press.ts:40` (`offer?.setups ?? []`) and `ui/press.html:78` (`payload.setups ?? []`), which are both guarded correctly. |
+| `pressFace` live/dim behavior for a setup target | ✅ (logic correct) | `streamdeck/src/state.ts:278-282`; matches brief's exact `when` strings ("Apply setup" / "Not here") |
+| Tests in `state.test.ts` | ✅ | `streamdeck/src/state.test.ts:342-366`, both live and dim cases |
+| `press.ts` `onKeyDown` sends exactly `{ press: "answer", answer: { setup: target.id } }` | ✅ | `streamdeck/src/actions/press.ts:35` |
+| `onPropertyInspectorDidAppear` sends `setups: offer?.setups ?? []` alongside moves/presets | ✅ | `streamdeck/src/actions/press.ts:37-41` |
+| Test in `press.test.ts` | ✅ | `streamdeck/src/actions/press.test.ts:223-238` |
+| `ui/press.html`: setup group after presets, value `{ kind: "setup", id, title }`, labeled by title | ✅ | `ui/press.html:40` |
+| Current-selection matching handles a setup by `id` | ✅ | `ui/press.html:55-62` (`stripValue` reduces a setup to `{ kind: "setup", id }`); also correctly added a `t === null` guard needed because matching now runs `stripValue` on every option including the null-valued "Set up" entry |
+| Account block intact | ✅ | `ui/press.html:17-18` unchanged |
+| No `streamDeckClient.on` | ✅ | not present anywhere in the file |
+| Manifest: only Press `Tooltip` changed, exact text | ✅ | `manifest.json` diff is a single-line hunk; new text is byte-identical to the brief's: "One move, the waiting roll, a preset answer, or a setup to hand out." |
+| `stream-deck.mdx` gains one sentence | ✅ | one sentence added to the Press bullet, plain voice, American English, no private-pack names (uses generic "your library" language) |
+| `streamdeck/README.md` gains one clause | ✅ | ", or a setup to hand out" added to the Press line |
+| Commit subject exact | ✅ | `feat(deck): a press key hands out a setup` |
+| No trailers/footers | ⚠️ (not a fault of this task) | Commit carries an `Entire-Checkpoint: …` trailer, but this is present on every commit in this branch's history (confirmed across 15 preceding `feat(deck)`/`fix(deck)` commits) — clearly an ambient tooling checkpoint marker, not something this implementer added. No `Co-Authored-By`/session-link footer is present. |
+
+## Verification run (against clean commit c22d386, isolated from the other implementer's uncommitted edits to `face.ts`/`state.ts` in the shared working tree)
+
+- `npx vitest run streamdeck apps/web/src/guide` — 9 files, 81 tests, all passed.
+- `npm run typecheck` — clean.
+- `npm run lint:docs` — 0 issues.
+- `npx --workspace streamdeck streamdeck validate com.scrthq.runlog.sdPlugin` — passed (run against the main checkout's existing built `bin/plugin.js`, since rebuilding inside a scratch worktree hit an unrelated path-resolution artifact of my junction-based node_modules setup, not a defect in this diff).
+- `npm run format:check` — also run (not required by the task list) and passed clean at c22d386.
+
+Note: at the start of this review, running these commands in the shared working tree surfaced two failures (`face.test.ts`, `state.test.ts` undo-face expectation) — both traced to another agent's uncommitted WIP on `streamdeck/src/face.ts` and the `undoFace` function in `streamdeck/src/state.ts`, unrelated to this diff. Confirmed clean by testing the pristine c22d386 tree in isolation.
+
+## Strengths
+
+- The `press.html` rewrite of `stripValue`/`show()` is a genuine correctness fix, not just an addition: switching the match from raw string equality to per-option `stripValue` comparison is what lets a setup option match by `id` alone (so a renamed setup still matches a saved target), and the implementer correctly noticed and handled the new edge case this creates — `stripValue(null)` for the "Set up" placeholder option, which the old code never routed through `stripValue`.
+- `press.ts`'s `onPropertyInspectorDidAppear` and `onKeyDown` are exact, minimal, literal matches to the brief's specified payloads.
+- Test additions are scoped exactly to the new behavior (no scope creep), and fixture updates in `next.test.ts`/`state.test.ts` are the minimum needed to keep the type change compiling.
+- Docs changes are single-sentence/single-clause, in the existing voice, with no restatement elsewhere.
+
+## Issues
+
+**Critical**
+- `streamdeck/src/state.ts:279` — `offer.setups.some((s) =&gt; s.id === target.id)` is not defensive against `offer.setups` being `undefined`, despite the brief explicitly calling this out as a requirement ("optional-safe: an older page may publish no `setups` — check the code tolerates `undefined`"). Since `Snapshot`/`Offer` values arrive over the wire via an unchecked cast (`streamdeck/src/socket.ts:65`, `(await res.json()) as never`), an older page's snapshot genuinely can omit `setups` at runtime regardless of the TS type. Any deck with a Press key configured to a setup target, connected to a page that hasn't deployed the `setups` field, throws inside `pressFace`, which `RunlogAction.draw`/`redrawAll` (`streamdeck/src/actions/base.ts:73,93`) calls with no surrounding try/catch — breaking that key's redraw. Fix: `(offer.setups ?? []).some(...)`.
+
+**Important**
+- None beyond the above.
+
+**Minor**
+- None worth flagging; the `Entire-Checkpoint` trailer is pre-existing tooling behavior across the whole branch, not something introduced by this task.
+
+## Assessment
+
+**Task quality: Needs fixes.**
+
+The implementation is otherwise tight and faithful to the brief — exact payload shapes, exact tooltip text, correct id-based matching in the property inspector, and every required test present and passing against the clean commit. The one defect is not cosmetic: it's a direct miss of an explicit, called-out brief requirement (runtime tolerance for `offer.setups` being absent), and it produces a real crash path for a plausible deployment sequencing scenario (plugin ships ahead of the page). A one-line fix (`(offer.setups ?? []).some(...)` at `streamdeck/src/state.ts:279`) closes the gap; nothing else in the diff needs to change.</result>
+<usage><subagent_tokens>118426</subagent_tokens><tool_uses>37</tool_uses><duration_ms>399547</duration_ms></usage>
+</task-notification>
+
+---
+
+and in case it's not queued already, Metrics button still shows no metrics in the button display. It does give me the drop-down list of available metrics, but no actual data for them.
