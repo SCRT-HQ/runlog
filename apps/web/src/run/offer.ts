@@ -22,6 +22,8 @@ export interface Offer {
   /** Why a deck cannot press this, in words a key face can carry. */
   needsPage: string | null;
   presets: Array<{ kind: string; label: string; suggestions?: string[]; items?: number }>;
+  /** The setups a key may apply to this run, by id and title. */
+  setups: Array<{ id: string; title: string }>;
 }
 
 export interface OfferInput {
@@ -50,6 +52,14 @@ export interface OfferInput {
    * offered in the words the page uses for it.
    */
   finishLabel: string | null;
+  /**
+   * The setups this run could hand out, in the words the picker uses.
+   *
+   * Worked out by the page rather than here: a setup is written against
+   * the tool a run is talking to, and finding those means reading the
+   * shipped profiles and the shelf, neither of which this function has.
+   */
+  setups: Array<{ id: string; title: string }>;
 }
 
 /**
@@ -69,14 +79,16 @@ const TYPED = new Set(["declareSubject"]);
 export function offerOf(input: OfferInput): Offer {
   const moves = input.moves;
   const undo = input.canUndo && input.lastResult ? { what: input.lastResult } : null;
-  const bare = { seq: input.seq, moves, undo, presets: [] as Offer["presets"] };
+  const bare = { seq: input.seq, moves, undo, presets: [] as Offer["presets"], setups: input.setups };
 
   // A run nobody is playing -- not started, read-only, ended -- offers
   // nothing at all, moves and undo included. They used to ride out on
   // `bare`, and `takePress` reads only those two fields when it takes a
   // move or an undo, so a deck could move a run the page itself would not
-  // let anyone touch.
-  if (!input.live) return { ...bare, moves: [], undo: null, primary: null, needsPage: "Open the run on the page" };
+  // let anyone touch. The setups go with them: what a finished run was
+  // played under is a record of what happened, and a key that could
+  // rewrite it from another room is worse than no key.
+  if (!input.live) return { ...bare, moves: [], undo: null, setups: [], primary: null, needsPage: "Open the run on the page" };
   if (!input.step) {
     if (input.between) return { ...bare, primary: { id: "enter", label: input.between, kind: "between" }, needsPage: null };
     return { ...bare, primary: null, needsPage: null };

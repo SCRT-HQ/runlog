@@ -15,6 +15,7 @@ const base = {
   suggestions: [],
   between: null,
   finishLabel: null,
+  setups: [],
 };
 
 describe("offerOf", () => {
@@ -40,6 +41,21 @@ describe("offerOf", () => {
     const offer = offerOf({ ...base, live: false, step: { kind: "rollTable" } as never, stepLabel: "Roll" });
     expect(offer.primary).toBeNull();
     expect(offer.needsPage).toBe("Open the run on the page");
+  });
+
+  /*
+   * Task 16a: a key may put the run under one of the setups the page
+   * would offer. They are handed in rather than worked out here, so all
+   * this asks is that they reach the deck the way they were given.
+   */
+  it("carries the setups the run could be played under", () => {
+    const offer = offerOf({ ...base, setups: [{ id: "com.example.setups.starter", title: "Starter" }] });
+    expect(offer.setups).toEqual([{ id: "com.example.setups.starter", title: "Starter" }]);
+  });
+
+  it("offers no setup on a run that is not live", () => {
+    const offer = offerOf({ ...base, live: false, setups: [{ id: "com.example.setups.starter", title: "Starter" }] });
+    expect(offer.setups).toEqual([]);
   });
 
   // Review finding: moves and undo escaped the live gate, and they are
