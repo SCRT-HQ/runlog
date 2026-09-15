@@ -89,11 +89,11 @@
           save();
         });
         press.addEventListener("change", () => {
-          onPress = press.value === "set" ? { kind: "set", value: Number(value.value) || 0 } : { kind: "step" };
+          onPress = press.value === "set" ? { kind: "set", value: Math.round(Number(value.value) || 0) } : { kind: "step" };
           save();
         });
         value.addEventListener("change", () => {
-          onPress = { kind: "set", value: Number(value.value) || 0 };
+          onPress = { kind: "set", value: Math.round(Number(value.value) || 0) };
           save();
         });
 

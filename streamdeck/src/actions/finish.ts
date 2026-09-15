@@ -1,4 +1,4 @@
-import { action, type KeyDownEvent, type KeyUpEvent } from "@elgato/streamdeck";
+import { action, type KeyDownEvent, type KeyUpEvent, type WillDisappearEvent } from "@elgato/streamdeck";
 
 import { store } from "../plugin.ts";
 import { finishFace, finishPress, type DeckState, type Face } from "../state.ts";
@@ -33,5 +33,11 @@ export class Finish extends RunlogAction {
       return;
     }
     await this.send(ev.action, p);
+  }
+
+  /** A key gone mid-hold leaves nothing here to time: clear its entry along with the shared cleanup. */
+  override onWillDisappear(ev: WillDisappearEvent): void {
+    this.holds.clear(ev.action.id);
+    super.onWillDisappear(ev);
   }
 }

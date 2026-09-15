@@ -620,6 +620,14 @@ describe("where else the open key points", () => {
 
   it("says what is missing first, as the run and the rules do", () => {
     expect(openFace(initial(), "dock")).toEqual({ title: "Sign in", tone: "dim" });
-    expect(openFace(open([held("s1"), held("s2", "Friday")]), "newrun")).toEqual({ title: "Pick a run", tone: "dim" });
+  });
+
+  it("answers newrun beside guide, without waiting on a run to attach to", () => {
+    expect(openFace(initial(), "newrun")).toEqual({ title: "A new run", tone: "deck", when: "in a browser" });
+    expect(openFace(open([held("s1"), held("s2", "Friday")]), "newrun")).toEqual({
+      title: "A new run",
+      tone: "deck",
+      when: "in a browser",
+    });
   });
 });

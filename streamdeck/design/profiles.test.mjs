@@ -101,6 +101,20 @@ describe("the profiles we ship", () => {
     }
   });
 
+  it("matches the profiles committed under the plugin, byte for byte", () => {
+    // A `.streamDeckProfile` is generated and committed rather than built at
+    // install time, so a layout change that nobody regenerated for leaves a
+    // stale zip sitting next to the source that no longer agrees with it.
+    // Comparing the built bytes against what is on disk is what catches
+    // that, rather than the shape checks above passing on a file nobody
+    // actually ships.
+    for (const { spec, built } of all) {
+      const path = join(plugin, "profiles", `${spec.slug}-${spec.device}.streamDeckProfile`);
+      const committed = readFileSync(path);
+      expect(committed.equals(container(built)), `${spec.slug}-${spec.device}`).toBe(true);
+    }
+  });
+
   it("keeps the slug Elden Ring's profile shipped under", () => {
     // Its file name says the tool as well as the game; its slug does not,
     // and changing that now would rename the profile on every deck that
@@ -195,9 +209,9 @@ describe("the profiles we ship", () => {
         expect(wheels, `${spec.slug}-${spec.device}`).toHaveLength(0);
         continue;
       }
-      // Only Next and Metric declare `Encoder` in the manifest.
+      // Only Next, Metric and Clock declare `Encoder` in the manifest.
       for (const { action } of wheels) {
-        expect(["com.scrthq.runlog.next", "com.scrthq.runlog.metric"]).toContain(action.UUID);
+        expect(["com.scrthq.runlog.next", "com.scrthq.runlog.metric", "com.scrthq.runlog.clock"]).toContain(action.UUID);
       }
     }
   });

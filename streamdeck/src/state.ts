@@ -28,16 +28,25 @@ export interface Offer {
   /** Why a deck cannot press this, in words a key face can carry. */
   needsPage: string | null;
   presets: Array<{ kind: string; label: string; suggestions?: string[]; items?: number }>;
-  /** The setups the run could hand out, empty where the run names no tool or is not live. */
-  setups: Array<{ id: string; title: string }>;
-  /** The counters and resources this run will take a change to, from a deck as from the page. */
-  trackers: Array<{ id: string; kind: "counter" | "resource"; label: string; value: number; max: number | null }>;
-  /** The clock a deck may pause, resume or stop, or nothing where the run keeps none. */
-  clock: { id: string; label: string; status: "running" | "paused" | "done" } | null;
-  /** Whether the run is rolling for itself rather than waiting on a press. */
-  autoRoll: boolean;
-  /** How the run would end if it were finished now, or nothing while it cannot be. */
-  ending: { label: string } | null;
+  /**
+   * The setups the run could hand out, empty where the run names no tool or is
+   * not live, and absent from an older page's offer entirely.
+   */
+  setups?: Array<{ id: string; title: string }>;
+  /**
+   * The counters and resources this run will take a change to, from a deck
+   * as from the page - absent from an older page's offer entirely.
+   */
+  trackers?: Array<{ id: string; kind: "counter" | "resource"; label: string; value: number; max: number | null }>;
+  /**
+   * The clock a deck may pause, resume or stop, or nothing where the run
+   * keeps none - absent from an older page's offer entirely.
+   */
+  clock?: { id: string; label: string; status: "running" | "paused" | "done" } | null;
+  /** Whether the run is rolling for itself rather than waiting on a press, or absent from an older page's offer. */
+  autoRoll?: boolean;
+  /** How the run would end if it were finished now, or nothing while it cannot be, or absent from an older page's offer. */
+  ending?: { label: string } | null;
 }
 
 export type SessionState = "none" | "expired" | "ok";
@@ -364,6 +373,9 @@ const OPEN_LABELS: Record<Exclude<OpenTarget, "guide">, string> = {
 export function openFace(state: DeckState, target?: OpenTarget): Face {
   if (!target) return { title: "Set up", tone: "dim" };
   if (target === "guide") return { title: "Guide", tone: "deck", when: "in a browser" };
+  // `newrun` opens `/create`, which needs no run to already be held, so it
+  // is answered beside `guide` rather than waiting on `common()`.
+  if (target === "newrun") return { title: OPEN_LABELS.newrun, tone: "deck", when: "in a browser" };
   const c = common(state);
   if (c) return c;
   return { title: OPEN_LABELS[target], tone: "deck", when: "in a browser" };

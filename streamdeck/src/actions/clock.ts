@@ -1,4 +1,11 @@
-import { action, type DialDownEvent, type KeyDownEvent, type KeyUpEvent, type TouchTapEvent } from "@elgato/streamdeck";
+import {
+  action,
+  type DialDownEvent,
+  type KeyDownEvent,
+  type KeyUpEvent,
+  type TouchTapEvent,
+  type WillDisappearEvent,
+} from "@elgato/streamdeck";
 
 import { store } from "../plugin.ts";
 import { clockFace, clockPress, type DeckState, type Face } from "../state.ts";
@@ -45,5 +52,11 @@ export class Clock extends RunlogAction {
 
   override async onTouchTap(ev: TouchTapEvent): Promise<void> {
     await this.take(ev.action, false);
+  }
+
+  /** A key gone mid-hold leaves nothing here to time: clear its entry along with the shared cleanup. */
+  override onWillDisappear(ev: WillDisappearEvent<JsonObject>): void {
+    this.holds.clear(ev.action.id);
+    super.onWillDisappear(ev);
   }
 }

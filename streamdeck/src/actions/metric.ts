@@ -1,4 +1,11 @@
-import streamDeck, { action, type DialDownEvent, type DialRotateEvent, type KeyDownEvent, type KeyUpEvent } from "@elgato/streamdeck";
+import streamDeck, {
+  action,
+  type DialDownEvent,
+  type DialRotateEvent,
+  type KeyDownEvent,
+  type KeyUpEvent,
+  type WillDisappearEvent,
+} from "@elgato/streamdeck";
 
 import { store } from "../plugin.ts";
 import { metricFace, metricPress, type DeckState, type Face, type MetricField, type MetricPress } from "../state.ts";
@@ -78,5 +85,11 @@ export class Metric extends RunlogAction<MetricSettings> {
       counters: snap?.counters?.map((c) => ({ id: c.id, label: c.label })) ?? [],
       resources: snap?.resources?.map((r) => ({ id: r.id, label: r.label })) ?? [],
     });
+  }
+
+  /** A key gone mid-hold leaves nothing here to time: clear its entry along with the shared cleanup. */
+  override onWillDisappear(ev: WillDisappearEvent<MetricSettings>): void {
+    this.holds.clear(ev.action.id);
+    super.onWillDisappear(ev);
   }
 }

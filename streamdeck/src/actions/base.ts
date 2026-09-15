@@ -56,6 +56,11 @@ export class HoldTimer {
     this.at.delete(id);
     return now - at;
   }
+
+  /** Drops a pending entry without reading it - a key gone from the deck mid-hold has no `up` coming. */
+  clear(id: string): void {
+    this.at.delete(id);
+  }
 }
 
 /** Either kind of placed action - a key on the grid, or a dial on a Stream Deck +. */

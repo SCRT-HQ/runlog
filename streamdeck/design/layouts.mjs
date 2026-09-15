@@ -66,15 +66,17 @@ export const BASE = [
 /**
  * What the four dials on a + carry.
  *
- * Only Next and Metric declare `Encoder` in the manifest, so these are the
- * only two that can sit here at all. They repeat on every page of a +
- * profile: paging moves the keys, and a clock you can no longer see because
- * you turned to the moves is a dial doing nobody any good.
+ * Next, Metric and Clock declare `Encoder` in the manifest, so those three
+ * are what can sit here at all. They repeat on every page of a + profile:
+ * paging moves the keys, and a clock you can no longer see because you
+ * turned to the moves is a dial doing nobody any good. The clock is the
+ * action rather than the metric's readout of it, so turning to it and
+ * pressing the dial pauses or resumes rather than doing nothing.
  */
 export const DIALS = [
   { action: "next" },
   { action: "metric", settings: { field: "score" } },
-  { action: "metric", settings: { field: "clock" } },
+  { action: "clock" },
   { action: "metric", settings: { field: "unit" } },
 ];
 
