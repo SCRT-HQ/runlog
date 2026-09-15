@@ -2804,3 +2804,15 @@ Also, I am still not seeing metrics displayed in the key on the Metrics button.
 ---
 
 It would also be great to have a button to apply a setup on press.
+
+---
+
+Metrics still doesn't work
+
+Setup sounds good.
+
+Design sounds good. We should increase the font size be remain aware of the square button frame and overflow (use multiple lines for long phrases)
+
+---
+
+Additional: When I change my browser tab away from the Run, my Stream Deck also disconnects. How can we prevent that from happening? Streamers often won't have their browser front and center or even visible sometimes, depending on how many monitors they have
