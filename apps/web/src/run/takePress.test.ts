@@ -8,8 +8,9 @@ const offer = {
   undo: null,
   needsPage: null,
   presets: [],
+  setups: [],
 };
-const acts = () => ({ primary: vi.fn(), move: vi.fn(), undo: vi.fn(), answer: vi.fn() });
+const acts = () => ({ primary: vi.fn(), move: vi.fn(), undo: vi.fn(), answer: vi.fn(), setup: vi.fn() });
 
 describe("takePress", () => {
   it("presses the primary and says so", () => {
@@ -154,6 +155,45 @@ describe("takePress", () => {
     );
     expect(out).toEqual({ ok: true });
     expect(act.answer).toHaveBeenCalledWith({ ticks: "all" });
+  });
+
+  /*
+   * Task 16a: a key applies a setup. It is on offer whatever the step is
+   * doing, because it is not an answer to the step -- it is the picker in
+   * Settings and the button beside it, pressed from the deck.
+   */
+  it("applies a setup the run is offering", () => {
+    const act = acts();
+    const offering = { ...offer, setups: [{ id: "com.example.setups.starter", title: "Starter" }] };
+    const out = takePress(
+      { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { setup: "com.example.setups.starter" } },
+      { seq: 42, offer: offering, seen: new Map() },
+      act,
+    );
+    expect(out).toEqual({ ok: true });
+    expect(act.setup).toHaveBeenCalledWith("com.example.setups.starter");
+  });
+
+  it("refuses a setup this run is not offering", () => {
+    const act = acts();
+    const offering = { ...offer, setups: [{ id: "com.example.setups.starter", title: "Starter" }] };
+    const out = takePress(
+      { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { setup: "com.example.setups.other" } },
+      { seq: 42, offer: offering, seen: new Map() },
+      act,
+    );
+    expect(out).toEqual({ ok: false, say: "That setup is not here." });
+    expect(act.setup).not.toHaveBeenCalled();
+  });
+
+  it("refuses a setup on a run that is offering none", () => {
+    const act = acts();
+    const out = takePress(
+      { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { setup: "com.example.setups.starter" } },
+      { seq: 42, offer, seen: new Map() },
+      act,
+    );
+    expect(out).toEqual({ ok: false, say: "That setup is not here." });
   });
 
   it("refuses ticking everything where nothing is asking a list", () => {
