@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2J40X0DJ6EP3WBMVNDNR0NF",
+  "strategy": "manual-commit",
+  "branch": "the-deck-turns-the-dials",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "apps/web/src/run/RunView.offer.test.tsx",
+    "apps/web/src/run/RunView.tsx",
+    "apps/web/src/run/nudge.test.ts",
+    "apps/web/src/run/nudge.ts",
+    "apps/web/src/run/offer.test.ts",
+    "apps/web/src/run/offer.ts",
+    "docs/stream-api.md",
+    "streamdeck/src/state.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 15079,
+    "cache_creation_tokens": 1686903,
+    "cache_read_tokens": 342465822,
+    "output_tokens": 743440,
+    "api_call_count": 730,
+    "subagent_tokens": {
+      "input_tokens": 234,
+      "cache_creation_tokens": 264490,
+      "cache_read_tokens": 14580107,
+      "output_tokens": 57798,
+      "api_call_count": 117
+    }
+  }
+}
