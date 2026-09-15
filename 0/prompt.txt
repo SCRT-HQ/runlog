@@ -1,0 +1,241 @@
+<task-notification>
+<task-id>a3c0508786cb2e33b</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a3c0508786cb2e33b.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 17: measured faces" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Now I have all the evidence needed to write the final report.
+
+## Spec compliance
+
+- **`undoFace`** (`streamdeck/src/state.ts:287-293`, committed at 063f20d): ✅. `{ title: "Undo", tone: "live" }` when `offer.undo` exists, `{ title: "Undo", tone: "dim" }` otherwise, no `when` field on either branch. `common()`/`flashed()` gating (lines 288-289) is byte-identical to the prior version. `state.test.ts` has exactly the two required cases: the live case folded into the existing "draws the offer's primary…" test (`expect(undoFace(s)).toEqual({ title: "Undo", tone: "live" })`) and a new dedicated dim case ("says Undo either way, and dims it when there is nothing to take back").
+
+- **`measure(text, size)` glyph table** (`streamdeck/src/face.ts:31-45`): ✅, verified character-by-character against the brief: `ijl'.,:;!|` + space → 0.28 (line 32); `ftrI` → 0.36 (line 33); `mw` → 0.85 (line 34); `MW` → 0.92 (line 35); `…` → 0.9 (line 36); fallback digits/lowercase 0.55, capitals-other-than-I 0.68, else 0.6 (lines 40-43). Verbatim match.
+
+- **Sizes/width** (`face.ts:58-59, 109`): ✅. `SCALE = [40, 34, 30, 26, 22]`; `LINE = 144 - 2*8 = 128`; comment correctly explains the 8px padding / 3px stroke reasoning from the brief.
+
+- **`typeset` picks largest fitting size, ≤3 lines, whole words** (`face.ts:109-119`): ✅. `SCALE.find(whole)` returns the first (largest) size at which `wrap` reproduces every word unbroken; falls back to 22 otherwise.
+
+- **Character-break only at 22px, &gt;3 lines ellipsizes the third** (`face.ts:67-96`): ✅ by construction — breaking only triggers when no size in `SCALE` keeps the word whole, so it only fires at the last (22) entry; the ellipsis logic trims the final line until `measure(last + "…", size) &lt;= width`.
+
+- **`&lt;title&gt;` keeps full text**: ✅, unchanged (`` `&lt;title&gt;${esc(face.title)}&lt;/title&gt;` ``).
+
+- **Nothing draws past x=8/136; report's calibration table**: ✅. Report table covers all ten brief phrases plus an extra ("Undo"); reported min x = 9, max x = 134 across all rows — inside the required [6, 138] bound and inside the target 8/136 band. Spot-checked several em sums by hand (Undo@40 → 93.2, 4/10@40 → 90.0, WWWWW@26 → 119.6, "connected"@26 → 123.8) and they match the report's numbers, so the table is trustworthy, not fabricated.
+
+- **Scratch script not in commit**: ✅. No `calibrate*` file anywhere in the tree; diff stat (`git show 063f20d --stat`) lists only the 5 expected files.
+
+- **`face.test.ts` matches the brief's five cases**: ✅. All five present: `measure("iii",40) &lt; measure("WWW",40)`; "Not connected" → 2 lines, size ≥ 26; "Draw what is wrong with the world" → 3 lines, every line ≤ 128 measured; a 40-char word breaks and ends in "…"; "4/10" → 40px.
+
+- **Guide (`stream-deck.mdx:27`, at 063f20d)**: ✅. Reads "It is lit when there is something to take back and dim when there is not." — no claim about showing what would be undone. (Note: the on-disk copy of this file has since moved further, adding an "Apply setup" action to line 3 — that's the other implementer's concurrent WIP, not part of 063f20d, and is out of scope per your instructions.)
+
+- **Commit subject**: ✅ exact match: `feat(deck): undo says undo, and the faces measure their words`.
+
+- **No trailers/footers**: ❌ (context-dependent). `git show -s --format='%B' 063f20d` shows a trailing `Entire-Checkpoint: 01M2HTY7XGNPGAG0J61EAQAYBH` line. This is not a Claude/attribution trailer — it appears on nearly every commit in this branch's recent history (`c22d386`, `2a5a126`, `3b5e06d`, `15c4f95`, `c0545397` all carry it; only `90a6487`, outside the reviewed range, lacks it), so it reads as an artifact of whatever session-checkpoint tooling made the commit rather than something the implementer typed. Still, it's a literal trailer on the commit the brief said to keep clean.
+
+- **No scratch files / no `package.json` or lockfile changes**: ✅, confirmed via `git show 063f20d --stat` and the diff.
+
+- **Comments in the file's voice, American English, no AI filler**: ✅. New comments (measure-table doc, wrap doc, undoFace comment) use the file's existing register — dry, hyphen-separated clauses, no em dashes (grepped for U+2014/U+2013, none found), no British spellings.
+
+## Verification performed
+
+- `npx vitest run streamdeck apps/web/src/guide` — ran it myself while the tree was still clean: 9 files, 87 tests passed, matching the report exactly.
+- `npm run typecheck` — I ran this too, but partway through my review another implementer's process started writing directly to `streamdeck/src/state.ts`, `face.ts`, `face.test.ts`, `press.ts`, `manifest.json`, and `press.html` (confirmed by `git status` going from clean to a 7-file dirty diff mid-session, plus a new untracked `streamdeck/src/actions/setup.ts`). The typecheck failure I got (`TS2322` on `state.test.ts:191/203`, a `"setup"` kind not assignable to `PressTarget`) traces to that live edit stripping the `"setup"` case out of `state.ts` — I confirmed via `git show 063f20d:streamdeck/src/state.ts` that the committed task-17 tree still has `{ kind: "setup"; id; title }` in the `PressTarget` union and a matching `pressFace` branch, and that this code is untouched by (and pre-dates) task 17's diff (identical between `c22d386` and `063f20d`). So per your fallback instruction: the typecheck failure is the other implementer's WIP, not this task's; the committed 063f20d tree is internally type-consistent by inspection. I did not run `lint:docs`, `format:check`, or `build -w streamdeck` live once contamination was confirmed, since those would read the same now-dirty files and give misleading results.
+- No other importers of `wrap`/`measure` exist besides `face.test.ts` (checked via `git grep` at 063f20d), so the `wrap` signature change (width/lines now trailing, size now required) is self-contained and safe.
+
+## Strengths
+
+- The glyph-table and padding math is reproduced verbatim from the brief, and the calibration numbers in the report check out under hand recomputation — this wasn't just invented to look plausible.
+- The character-break/ellipsis logic is structurally guaranteed to only kick in at the smallest scale step (22px), which is exactly what the brief specifies, achieved as an emergent property of `SCALE.find` rather than a special-cased "if size === 22" branch — cleaner than the brief's own phrasing suggests.
+- `undoFace` and the guide edit are minimal, surgical diffs that don't touch unrelated gating logic.
+- Test rewrite (`drawn()` helper) moved tests off brittle character-count assertions onto measured-width assertions, in the spirit of the brief's own critique of the old scale.
+
+## Issues
+
+**Critical:** none.
+
+**Important:** none — the one live-run failure (typecheck) is attributable to confirmed concurrent edits outside the reviewed range, not to this diff.
+
+**Minor:**
+- The commit carries an `Entire-Checkpoint: …` trailer, which literally violates "no trailers/footers," though it's evidently tooling-injected and present on essentially every other commit in this line of work (before and after this task), so it's likely not something the implementer controls or should be blamed for. Worth a one-line flag to whoever owns the checkpoint tooling if a truly trailer-free commit is required.
+
+## Assessment
+
+**Task quality: Approved**
+
+The diff meets every binding constraint that's actually within task 17's scope: `undoFace` matches spec exactly with correct tests, the glyph table and padding math are verbatim-correct against the brief and cross-checked by hand against the report's calibration numbers, `typeset`/`wrap` implement the largest-fits/break-only-at-22/ellipsize-third behavior precisely, the guide no longer overclaims what Undo shows, and the commit is scoped cleanly (no scratch files, no package/lockfile drift, correct subject). The only blemish is a tooling-inserted `Entire-Checkpoint` trailer that appears to be systemic to this repo's commit pipeline rather than something this task introduced. The one test failure I personally observed (typecheck) was caused by another implementer's edits landing in the working tree mid-review — confirmed by `git status` diffing to dirty during my session — and traced back to code outside the c22d386..063f20d range; the committed tree itself is internally consistent by direct inspection via `git show`.</result>
+<usage><subagent_tokens>100897</subagent_tokens><tool_uses>23</tool_uses><duration_ms>349356</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a46cde8e23d58f3ee</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a46cde8e23d58f3ee.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 19b: Roll key" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>This confirms `rollFace` is consistent with the sibling `pressFace`'s roll-branch logic, just with the added `when: "Roll"` field the brief specifies. Everything checks out.
+
+## Spec compliance
+
+- ✅ `roll.ts`: `@action({ UUID: "com.scrthq.runlog.roll" })`, no settings (`extends RunlogAction` with no generic), `face()` → `rollFace(state)`. `streamdeck/src/actions/roll.ts:7-13`.
+- ✅ `onKeyDown` sends `{ press: "primary" }` only when `store.state.snapshot?.offer?.primary?.id === "roll"`, else `showAlert()` and nothing sent. `streamdeck/src/actions/roll.ts:15-20` (`!== "roll"` guard, early return after alert).
+- ✅ Registered in `plugin.ts`: import at `streamdeck/src/plugin.ts:6`, instantiated in the action array at `streamdeck/src/plugin.ts:304` (`new Roll()`), placed between `Press` and `Undo`.
+- ✅ `roll.test.ts` covers both paths plus a no-offer case (3 tests): sends when on offer, alerts when a different id is offered, alerts with no offer at all. `streamdeck/src/actions/roll.test.ts:222-242`.
+- ✅ `rollFace`: `common() ?? flashed()` first, no offer → `{ title: "Loading…", tone: "dim" }`, `primary.id === "roll"` → `{ title: primary.label, tone: "live", when: "Roll" }`, else → `{ title: "Nothing to roll", tone: "dim" }`. `streamdeck/src/state.ts:403-412`. Tests for all three branches in `streamdeck/src/state.test.ts:355-376`.
+- ✅ Manifest: eighth action added exactly as specified (Name, UUID, Icon, Tooltip, Keypad-only Controllers, key state image, PI path) — `streamdeck/com.scrthq.runlog.sdPlugin/manifest.json:38-46`. Diff confirms nothing else in the file changed (9 insertions, 0 deletions, pure block addition).
+- ✅ `ui/roll.html` is byte-identical in shape to `ui/undo.html` — account block + `account.js`, no `streamDeckClient.on` (grepped the whole `ui/` dir, no hits anywhere, roll.html included).
+- ✅ `design/actions/roll.svg` — die face (rounded-square case + 5 pips), same `viewBox="0 0 144 144"`, `stroke-width="12"` case convention as `press.svg`/`setup.svg`, mono `#ffffff`, in the family.
+- ✅ PNG assets exist with correct dimensions verified via IHDR bytes: `imgs/actions/roll.png` 20×20, `roll@2x.png` 40×40, `imgs/keys/roll.png` 72×72, `roll@2x.png` 144×144.
+- ✅ `stream-deck.mdx`: one short Roll paragraph at line 27, action count "seven"→"eight" and Roll named in the list at line 3 (one home per fact — not restated elsewhere in the file). `README.md` gets exactly one bullet line. Press's own description (line 26) is untouched, still naming "the roll that is waiting."
+- ✅ Plain voice, American English, no private pack names in the new prose (checked all added lines).
+- ✅ Commit subject exactly `feat(deck): roll is a key of its own`; body has no `Co-Authored-By`/`Claude-Session` lines, only the hook's own `Entire-Checkpoint:` trailer.
+- ✅ All required checks pass when run directly: `npx vitest run streamdeck apps/web/src/guide` (11 files, 97/97 passing), `npm run typecheck` (clean across all 8 project references), `npm run lint:docs` (0 issues), `npm run format:check` (clean), `npx --workspace streamdeck streamdeck validate com.scrthq.runlog.sdPlugin` (✔ Validation successful).
+
+## Strengths
+
+- `roll.ts` and `rollFace` are minimal, structurally identical in shape to the existing `Undo`/`undoFace` pair, with no invented behavior beyond the brief.
+- Test coverage is precise: three `onKeyDown` cases (on-offer, wrong-offer, no-offer) and three `rollFace` cases (loading, live, nothing-to-roll), mirroring the existing suite's style exactly.
+- Diff is surgical — the manifest edit is a pure insertion, Press's description and behavior are untouched, and no unrelated files were touched.
+
+## Issues
+
+None found — Critical, Important, and Minor are all empty.
+
+## Assessment
+
+**Task quality: Approved.** Every binding constraint in the brief is met exactly, all five required verification commands pass cleanly when re-run independently, and the diff contains nothing beyond what the brief asked for — no manifest drift, no Press behavior change, no doc duplication. This is a clean, self-contained task with no follow-up needed.</result>
+<usage><subagent_tokens>86701</subagent_tokens><tool_uses>20</tool_uses><duration_ms>134033</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a157c7385bafa16f5</task-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a157c7385bafa16f5.output</output-file>
+<status>completed</status>
+<summary>Agent "Plan B Task 8: sign-in and session" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>This is a stale notification from a background command I ran earlier in this now-finished task (an unrelated `find` lookup that returned exit 1 because it found no matches — harmless). Task 8 is already complete and committed.
+
+I also notice the working directory has switched to a git worktree (`C:\Users\xbox\ScrtGit\sbm-ui\.worktrees\the-deck-throws`), which is unrelated to the Task 8 work I just finished on the `the-deck-arrives` branch. No action needed from me here — reporting status only.
+
+Task 8 status recap: complete, commit `ef4356c feat(deck): the plugin signs in and keeps its session to itself`, all checks clean, report filed at `C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-b\task-8-report.md`, with two flagged items (the `tsconfig.json` deviation and the Task-10 rollup bundling landmine) already documented there for the controller's review.</result>
+<usage><subagent_tokens>146022</subagent_tokens><tool_uses>62</tool_uses><duration_ms>16328674</duration_ms></usage>
+</task-notification>
+
+---
+
+[Image #134] I'm now seeing metrics in a good size font! The bottom text with the metric name and other buttons with bottom text are all still very small though. I think it's mainly just metrics that have the issue. For the Connect button, I think we should show the either "Connect" (when disconnected) or "Disconnect" (when connected) -- showing the run name makes the button easy to confuse with the Run button
+
+---
+
+this only happens via stream deck control, normal UI control is still perfectly fine
+
+---
+
+<task-notification>
+<task-id>a3f239349823abe6b</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a3f239349823abe6b.output</output-file>
+<status>completed</status>
+<summary>Agent "Final review: the-deck-arrives" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>I have everything I need. Here is the review.
+
+---
+
+## Summary
+
+`the-deck-arrives` adds a well-built Stream Deck plugin: 29 commits, ~5,300 added lines, eight actions, and a clean separation between a pure reducer (`state.ts`) and a thin SDK shell. All six verification commands pass — 105 tests across 12 files, typecheck, `lint:docs` (0 issues/93 files), `format:check`, `npm run build -w streamdeck`, and `streamdeck validate` reports **Validation successful**. The architecture is the best part of this branch: every key face is a pure function of one state object, and `state.test.ts` has a case per face. The socket's generation counter, with tests for a superseded dial, a retired close, and a late snapshot, catches a class of reconnect bug that normally ships.
+
+Two things stop it. First, `bearer()` has no single-flight guard around a **rotating** refresh token, so two overlapping calls — routine during play — produce a spurious "Sign in again" mid-run. Second, **the branch is four commits behind `origin/main`, and those four commits (#291–#294) are the page half this plugin presses against**: `offer.setups` and `takePress`'s `setup` branch exist only on main. The merge is clean (`git merge-tree` produces a tree with no conflicts), but nothing here has been built or tested against what will actually ship. Note also that the review diff `e4c50ac..b6e8b06` is misleading — `e4c50ac` is not an ancestor of HEAD (merge-base is `ecb2fc2`), so the ~718 deletions it shows in `apps/web/src/run/` are main's work, not reverts on this branch. I reviewed against `ecb2fc2..b6e8b06`.
+
+## Findings
+
+### Critical
+
+**1. Concurrent renewal burns the rotating refresh token — `streamdeck/src/session.ts:70-84`**
+
+`bearer()` reads the session off disk, and if `needsRenewal` is true calls `renew()` with no guard. Two callers can be in flight at once: `openWire.open()` (`socket.ts:86`) and `fetchSnapshot()` (`socket.ts:59`), and `fetchSnapshot` fires on every `changed` ring. Two rings in the same turn — a roll that publishes twice — both read the same `refreshToken` and both POST it. WorkOS rotates on every renewal, so the second is refused. In `fetchSnapshot` that silently drops a snapshot (recoverable). In `open()` the refusal returns `null`, which dispatches `{ t: "session", state: "expired" }` (`socket.ts:93`) and `reduce` resets to `initial()` — the whole deck goes to **Sign in again** while the session is in fact fine. Where the issuer treats refresh-token reuse as a compromise signal, it becomes a real sign-out mid-stream.
+
+The 60-second `RENEW_MARGIN_MS` against a 1-hour token means this window opens once an hour of active play. Smallest fix — share the in-flight promise:
+
+```ts
+let renewing: Promise&lt;string | null&gt; | null = null;
+export async function bearer(_account: Account): Promise&lt;string | null&gt; {
+  const session = loadSession();
+  if (!session) return null;
+  if (!needsRenewal(session, Date.now())) return session.accessToken;
+  renewing ??= renew(session)
+    .then((r) =&gt; (writeSession(dir(), r), r.accessToken))
+    .catch(() =&gt; null)
+    .finally(() =&gt; { renewing = null; });
+  return renewing;
+}
+```
+
+`session.test.ts:49` already proves rotation is written back; add a case that fires two `bearer()` calls and asserts `fetch` was called once.
+
+**2. The branch does not carry the page half it presses — needs `origin/main` merged in**
+
+`streamdeck/src/actions/setup.ts:22` sends `{ press: "answer", answer: { setup: id } }`, and `state.ts:26` declares `setups` on the mirrored `Offer`. On this branch, `apps/web/src/run/offer.ts` has no `setups` field and `takePress.ts` has no `setup` branch — an Apply setup press would fall through to the `declareSubject` check and come back *"The run is not asking for that."* On `e4c50ac` both exist (`offer.ts:26`, `takePress.ts:89-94`). Merge `origin/main` before opening so CI runs against the real pair. The merge itself is clean.
+
+### Important
+
+**3. `redrawAll` swallows nothing and catches nothing — `streamdeck/src/actions/base.ts:100-102`**
+
+```ts
+for (const a of this.actions) void a.getSettings&lt;S&gt;().then((s) =&gt; this.draw(a, s));
+```
+
+No `.catch`. `draw()` guards only the key branch (`base.ts:81-88`); `this.face(...)` at line 73 and `await action.setFeedback(feedback)` at line 96 are both unguarded, and `face()` reads a snapshot cast `as never` straight off the wire (`socket.ts:65`) with no validation. The SDK installs `process.once("uncaughtException")` (`dist/plugin/logging/index.js:27`) — `once`, so the first rejection is logged and the second takes the plugin down. Add `.catch((e) =&gt; streamDeck.logger.error(...))` on line 101 and move the dial branch inside the existing try.
+
+**4. Every inspector depends on a third-party CDN at load — all eight `ui/*.html`, e.g. `press.html:6`**
+
+`&lt;script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"&gt;`, with no `integrity` and no version beyond `v4`. Offline, or if that host is down, `const { streamDeckClient } = SDPIComponents;` throws before anything renders — the account block, the run picker, the field picker and the setup picker are all dead, so the streamer cannot even sign in. For a Marketplace plugin, vendor the file into `ui/` (it is one JS file, no build) or at minimum pin an exact release with `integrity` + `crossorigin`.
+
+**5. `base.ts` and `plugin.ts` have no tests, and both hold logic that fails silently**
+
+- `send()` (`base.ts:113-141`) is the only thing between a press and the streamer knowing what happened: `showOk` on a verdict, `showAlert` on a refusal, the `VERDICT_MS` fallback alert, and the cancel-on-deck-off. None of it is exercised — the action tests mock `../plugin.ts` so the subscription never receives a flash.
+- `codeFromLines()` (`plugin.ts:132-140`) parses `packages/session/src/flow.ts:104-105`'s exact output with `/^ {2}Open {2}(\S+)$/` and `/^ {2}Code {2}(\S.*)$/`. It matches today, but `flow.ts` is shared with the CLI; reword either line and the sign-in code never reaches the inspector, with nothing to catch it. Export it and assert it against real `deviceFlow` `say` output.
+- `connect.ts` and `undo.ts` have no press test, unlike the other six actions.
+
+### Minor
+
+6. `streamdeck/package.json:1` has no `"name"` and no `"private": true`, unlike every other workspace.
+7. Every build prints `TS5096: allowImportingTsExtensions can only be used when noEmit or emitDeclarationOnly is set`. Noise that trains people to ignore the build's warnings.
+8. `streamdeck/src/face.ts:1` imports `from "./state"` with no `.ts`; the other eleven modules all use `./state.ts`.
+9. `rollup.config.mjs:38` — `include: ["src/**/*.ts", "../packages/**/src/**/*.ts"]` type-checks every package in the repo during the deck build. Only `packages/session` is imported; narrow it.
+10. `CI-CD.yml:509` hard-codes `streamdeck/dist/com.scrthq.runlog.streamDeckPlugin`. I traced `@elgato/cli` 1.9.0 (`bin/streamdeck.mjs`, `cd()` strips `.sdPlugin`) and the name is right — but the Deck job never packs, so the first proof is a release that either works or fails at `gh release create`. Use `streamdeck/dist/*.streamDeckPlugin`, or add a pack step to the Deck job.
+11. `base.ts:52` and `:76-78` log the face title and `JSON.stringify(settings)` at `info` — the pack's own words (move labels, run names, pack titles, a declared subject) go into the plugin log. No token is logged, which is the part that matters, but worth knowing before sending logs to Elgato support.
+12. `base.ts:57` unsubscribes on `this.actions.length === 0`. `actions` is the *visible* set; if the disappearing action is still counted there, the subscription is never released. Harmless, but the intent deserves an assertion.
+13. `press.html:62` saves the typed answer on `change`, so a value typed and left without blurring is lost.
+14. `packages/session/src/store.ts:12` drops the `darwin` branch the plan specified (`~/Library/Application Support`). I checked `e4c50ac:packages/cli/src/account.ts:58` — the CLI had no darwin branch either, so this is a faithful move and no macOS session is stranded. Flagging only because it departs from the written plan.
+15. `writeSession` (`store.ts:39-48`) is a non-atomic `writeFileSync`; a crash mid-write leaves an unreadable session and a forced re-sign-in. Temp-then-rename removes it.
+16. `pin()` (`run.ts:47`) read-modify-writes global settings, which can clobber an `apiBase` the inspector is writing at the same moment.
+
+## What is good
+
+- **`state.ts`.** Every face is a pure function of one reducer's state, with a test per case. This is what makes the whole branch reviewable, and the `?? []` guard in `setupFace` for an older page's offer is exactly the right instinct.
+- **The generation counter in `socket.ts`**, with tests named for a superseded dial's refusal, a retired socket's close, and a snapshot that arrives after its connection is gone.
+- **Token handling.** The session is a 0600 file, never in global settings (which the inspector web view reads), and the rotated refresh token is written back — with a test whose name says why.
+- **No redraw storms.** `tick` returns the identical object when nothing is moving, so an idle deck redraws zero times and a running clock exactly once a second.
+- **Cross-boundary shapes all check out** against `e4c50ac:hosted/infra/lib/handlers/ws.ts`: `hello` is what makes the server send the runs list (`ws.ts:284`), `from` is added server-side (`ws.ts:545`, so the plugin is right to omit it), and the `drove` verdict's optional `seq` is honored on both ends.
+- **No pack text reaches `innerHTML`** — the inspectors build options with `createElement` + `textContent` throughout.
+- **Docs.** Plain, American English, no marketing; I checked each claim in `stream-deck.mdx` against the code (eight actions, the dial pair, the thirty-minute idle-off, the three-second refusal, *Not synced* vs *No run open*) and every one holds. The `/guide/stream-deck` path form matches the convention in `docs/README.md`.
+- **Private-pack boundary is clean.** The only pack vocabulary in the diff is the demo pack the plan itself uses (The Long Kiln, Roll the Weather, bowls) plus `kiln` as a design-system color name.
+
+One housekeeping note: while I was reviewing, `streamdeck/src/face.ts` and `face.test.ts` changed in the working tree (the `when` line grown to 18px with a new `ellipsizeWhen`). That work is not in `b6e8b06`; I re-ran the face tests against it (20 pass) but reviewed the commit.
+
+## Verdict
+
+**Needs fixes first.** Finding 1 is four lines and prevents a spurious sign-out mid-stream; finding 2 is a merge. Findings 3–5 are worth doing in the same pass. Everything else can follow.</result>
+<usage><subagent_tokens>226700</subagent_tokens><tool_uses>57</tool_uses><duration_ms>750968</duration_ms></usage>
+</task-notification>
+
+---
+
+what about the issue with the Deck connection dying when the active browser tab is changed away from the run?
