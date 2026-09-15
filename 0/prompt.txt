@@ -2709,3 +2709,82 @@ Concerns:
 Full report written to `C:\Users\xbox\ScrtGit\sbm-ui\.superpowers\sdd\2026-09-14-the-deck-drives-plan-b\task-14a-report.md`.</result>
 <usage><subagent_tokens>142865</subagent_tokens><tool_uses>70</tool_uses><duration_ms>548469</duration_ms></usage>
 </task-notification>
+
+---
+
+[Image #131] I am trying to progress through a turn using the Stream Deck's Press to Roll and Settled press buttons but it seems to just endlessly make me continue rolling?
+
+---
+
+<task-notification>
+<task-id>a06a0bd3bf2c8551f</task-id>
+<tool-use-id>toolu_01DhanBXL2gFCA2uMhToJ1cm</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a06a0bd3bf2c8551f.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Plan B Task 13" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result># Task 13 review: `d70d2d7` — icons, the guide page, and the packed plugin
+
+## Spec compliance
+
+| Constraint | Status | Evidence |
+|---|---|---|
+| Guide/README claims true of `streamdeck/src` (mostly) | ⚠️ | See Issues — one overclaim found |
+| `IDLE_OFF_MS` = 30 min, deck following a run never idles off | ✅ | `streamdeck/src/state.ts:83` `IDLE_OFF_MS = 30 * 60_000`; `idleDeadline` (line ~228) returns `null` while `runs.length &gt; 0`. Guide `stream-deck.mdx:236` matches exactly, including the literal string `Idle · press to connect` (`state.ts:189`). |
+| Run key cycles held runs, settings pin one, pin beats following | ✅ | `streamdeck/src/actions/run.ts` `nextPin`/`pin`; `state.ts` `held()` "That run has ended" when pinned run is gone. Guide `stream-deck.mdx:244` matches. |
+| Keys say "Not connected"/"press Connect" when off; "Not synced"/"No run open"/"Pick a run" | ⚠️ | `held()`/`common()` (`state.ts:155-175`) match for the **off** case and the run-availability cases, but the guide overclaims for the **connecting** case — see Issues (Important). |
+| Follow key is "Do the next thing" | ✅ | `streamdeck/com.scrthq.runlog.sdPlugin/manifest.json` Action `Name: "Do the next thing"`; `next.ts`. |
+| Press covers move / waiting roll / preset | ✅ | `state.ts` `PressTarget` type; `press.ts` `onKeyDown`. |
+| Metric fields and the dial | ✅ | `metric.ts` `FIELDS = ["score","unit","clock","latest","leader"]`, `nextField`; guide lists the same five for the dial plus counters/resources for the key. |
+| Plus gates pressing on the server, not the plugin | ✅ | No "plus"/"plan" string anywhere in `streamdeck/src` (`grep` empty); `docs/stream-api.md:477` shows the server-side refusal. Guide (`Note` block) and README both phrase this as "where plans are switched on," never claiming the plugin enforces it. |
+| Sign-in is device flow, code+link, in every key's settings | ✅ | `session.ts` `signIn`/`deviceFlow`; all six `ui/*.html` include `&lt;div id="runlog-account"&gt;` + `account.js`, which renders the code/link block (`ui/account.js:20-27`). |
+| Guide voice matches `dock.mdx`; no marketing language, no "In today's…" | ✅ | No hits for seamless/powerful/effortless/leverage/etc. or British spellings in the diff (`grep` empty). Short factual paragraphs, matches `dock.mdx` register. |
+| One home per fact — `docs/stream-api.md` points at guide, doesn't restate it | ⚠️ | Added text does not restate the guide's content, but is two sentences, not the "one sentence" the resolution specified (`docs/stream-api.md:419`). Minor. |
+| Guide registered in `pages.ts`, linked from `streaming.mdx` | ✅ | `apps/web/src/guide/pages.ts` new `P("stream-deck", …)` entry; `streaming.mdx:281` "Where to go next" item 3. |
+| Private pack boundary | ✅ | Only pack-name string in the whole diff is `packs/sketches/elden-ring-tarnishedtool.yaml`, an unchanged context line in `package.json`'s pre-existing `test:packs` script (not introduced by this diff, and not the private pack per memory — it's a public sketches pack referenced in commit history). No new pack names/titles added. |
+| Manifest sizes match Elgato's schema | ✅ | Verified PNG headers directly: plugin 256/512, category 28/56, action icons 20/40, key images 72/144, all correct. |
+| `streamdeck validate` passes | ✅ | Ran it myself: `✔ Validation successful`. |
+| `States[].Image` points at existing files; nothing else in manifest changed | ✅ | `git diff` on `manifest.json` shows only the six `States[].Image` value changes, nothing else. |
+| CI: pack step in `Release` job before "Tag and publish", uses `npm-ci` composite | ✅ | `.github/workflows/CI-CD.yml:474-484`, `uses: ./.github/actions/npm-ci` with the shared `env.NODE_VERSION` (22), same as every other job. |
+| `--version "${next#v}.0"` produces valid `x.y.z.0` | ✅ | Confirmed with a dry run (`--version "0.0.999.0"` accepted, packed as `0.0.999.0`). |
+| `.streamDeckPlugin` asset matches what `pack --output dist` writes | ✅ | Dry run confirms the CLI always writes `streamdeck/dist/com.scrthq.runlog.streamDeckPlugin` regardless of version — exact literal match to the `gh release create` asset list. |
+| `Deck` PR-time job unchanged | ✅ | Diff only touches its preceding comment; steps identical. |
+| YAML valid | ✅ | `js-yaml` parses both `CI-CD.yml` and `pr-title.yml` cleanly. |
+| `deck` added to `pr-title.yml` scopes, after `hosted` | ✅ | `.github/workflows/pr-title.yml:52`. |
+| `@resvg/resvg-js` pinned exact at root; `export.mjs` deterministic and small; `npm run icons -w streamdeck` exists | ✅ | `package.json` `"@resvg/resvg-js": "2.6.2"` (no range); `export.mjs` is 62 lines, no randomness; `streamdeck/package.json` has `"icons": "node design/export.mjs"`. |
+| SVG palette: ground `#151311`, celadon `#9fd3b6`/`#3b5f4c`, kiln `#e0a94f` for Undo only; action/category mono-white | ✅ | `export.mjs` `GROUND`/`ACCENT`/`WARN` match exactly; `key(svg, name === "undo" ? WARN : ACCENT)` restricts kiln to Undo's key face. `mark.svg`'s kiln stroke is a faithful recolor of the app's real `apps/web/public/icon.svg` (same four-square shape/opacity pattern), which the resolution explicitly told the implementer to reuse. |
+| No Claude trailers/footers; subject exact | ✅ | `git log -1 --format=%B d70d2d7` → subject `feat(deck): icons, the guide page, and the packed plugin`, no Claude/session lines. (One non-Claude `Entire-Checkpoint:` trailer is present — likely appended by session tooling, not the implementer's writing, and not a Claude trailer — noted below.) |
+| `npx vitest run streamdeck apps/web/src/guide` | ✅ | 7 files, 63 tests, all pass (ran myself). |
+| `npm run typecheck` | ✅ | Exit 0, no errors (ran myself). |
+| `npm run lint:docs` | ✅ | 0 issues, 39 files (ran myself). |
+| `npm run format:check` | ✅ | Passes cleanly, including `.worktrees/`/`bin.ts` exclusion already in `.prettierignore` (ran myself). |
+
+## Strengths
+
+- Every behavioral claim was cross-checked against `streamdeck/src` before writing, and it shows: the implementer traced each guide sentence to a specific function/constant (`held()`, `connectFace`, `FIELDS`, `IDLE_OFF_MS`, `FLASH_MS`), and the report's own citations check out against the actual code.
+- Deviated from the brief twice, correctly, with documented reasoning: swapped `@resvg/resvg-cli` (doesn't exist) for `@resvg/resvg-js`, and split key images into `imgs/keys/` since one PNG can't be both 20px and 72px. Both are verified correct.
+- The icon-export pipeline (`design/export.mjs`) is a clean single-source-of-truth design — one white glyph per action, recolored/inset once for the key face and once for the action-list icon, rather than maintaining two drawings per glyph.
+- Explicitly declined to document `switchToProfile`'s profile-switch behavior because it fails silently today (no `.streamDeckProfile` shipped) — a real instance of not writing something that isn't true yet.
+- CI change is well-scoped and matches the actual `@elgato/cli` flags (confirmed via `--help`), not guessed.
+
+## Issues
+
+**Critical:** none found.
+
+**Important:**
+- `apps/web/src/guide/pages/stream-deck.mdx:238` — "Every other key says **Not connected**, with _press Connect_ beneath it, until the connection is open." This overclaims. Per `streamdeck/src/state.ts`, `common()` returns `"Not connected"`/`"press Connect"` only while `state.on === false`. Once Connect has been pressed (`on: true`) but the socket hasn't reached `"open"` yet, `held()` (state.ts:155) returns `{ title: "Offline", tone: "dim" }` — no `"press Connect"` subtitle. So there's a real intermediate state ("Offline") the sentence doesn't account for; "until the connection is open" is not true of the code as written.
+
+**Minor:**
+- `docs/stream-api.md:419` — the addition is two sentences ("…says what its keys do." / "What follows is for a deck of your own making.") where the controller's resolution asked for one. The second sentence doesn't restate the guide, so it doesn't violate "one home per fact," but it's a literal miss on the stated constraint.
+- `streamdeck/design/category.svg:2` comment ("…which is what the action list wants.") uses the user's flagged `, which is &lt;gloss&gt;` tic. Only one instance, in a source comment rather than guide prose, but worth a pass if this file gets touched again.
+- The guide states "Runlog's plugin is in the Stream Deck Marketplace" (`stream-deck.mdx:226`) and the README links to the guide as if live — both true only after the (deliberately out-of-scope) Marketplace submission lands. Self-flagged by the implementer in the report; reasonable to ship docs for the imminent end state, but worth confirming before this merges if the submission timeline is uncertain.
+- Undo glyph's arrowhead sits over the arc's end rather than growing tangentially out of it — self-flagged as the weakest of the six icons; reads fine at both sizes but worth a second pass on a real key.
+- Commit carries a non-Claude `Entire-Checkpoint:` trailer, which isn't a Claude trailer (satisfies the literal binding constraint) but does contradict the resolution's "No trailers, no footer" — almost certainly appended by session tooling rather than authored by the implementer.
+
+## Assessment
+
+**Task quality: Approved**
+
+This is careful, well-verified work: nearly every claim in the guide and README traces to a specific line in `streamdeck/src`, the manifest and icon pipeline are correct against Elgato's actual schema (verified independently), `streamdeck validate` passes, all specified checks pass when I ran them myself, and the CI packaging step is grounded in the real `@elgato/cli` behavior rather than guesswork. The one real defect — the guide's "Not connected… until the connection is open" sentence glossing over the code's separate "Offline" state during connecting — is a genuine, specific overclaim per the review's own attention lens, but it's a one-line wording fix, not a structural problem, and everything else the constraint asked me to check (idle timeout, run cycling/pinning, Press/Undo/Metric semantics, the Plus/server-side gate, device-flow sign-in, private-pack boundary, manifest sizes, CI wiring, no Claude trailers) holds up. Nothing here requires more than a targeted line edit before merge.</result>
+<usage><subagent_tokens>150844</subagent_tokens><tool_uses>51</tool_uses><duration_ms>457811</duration_ms></usage>
+</task-notification>
