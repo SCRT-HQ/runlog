@@ -109,6 +109,13 @@ A WebSocket that says when the run moves, so a plugin need not poll hard. It acc
 
 `seq` climbs with every move. On a message, fetch the metrics again. The socket carries no state of its own; it only rings.
 
+The gateway drops a socket that sits ten minutes without a frame in either direction, so a client waiting out a quiet Play step should send a small one now and then to hold the line open:
+
+| `t` | Does |
+| --- | --- |
+| `ping` | Sent by a client to keep an idle socket open. Answered `{ "t": "pong" }`, to the sender alone. |
+| `pong` | The server's answer to a `ping`. Ignored; nothing reads it. |
+
 The socket also carries **gestures**: things happening at the table that are not moves, passed straight through and stored nowhere:
 
 ```json

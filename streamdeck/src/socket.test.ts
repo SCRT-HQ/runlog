@@ -177,6 +177,65 @@ describe("the wire", () => {
     }
   });
 
+  // API Gateway drops a socket idle for ten minutes either way; a ping every
+  // four minutes keeps a quiet Play step from costing a reconnect.
+  it("pings every four minutes while open, stops on close, and ignores a pong", async () => {
+    vi.useFakeTimers();
+    try {
+      const store = makeStore();
+      const wire = openWire({ apiBase: "https://api.test" }, store, deps());
+      wire.connect();
+      await vi.advanceTimersByTimeAsync(0);
+      const socket = FakeSocket.last;
+      socket.onopen?.();
+      socket.sent.length = 0;
+
+      await vi.advanceTimersByTimeAsync(4 * 60_000);
+      expect(socket.sent).toEqual([JSON.stringify({ t: "ping" })]);
+
+      // A pong back is not acted on.
+      const dispatch = vi.spyOn(store, "dispatch");
+      dispatch.mockClear();
+      socket.onmessage?.({ data: JSON.stringify({ t: "pong" }) });
+      expect(dispatch).not.toHaveBeenCalled();
+
+      wire.disconnect();
+      socket.sent.length = 0;
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      expect(socket.sent).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // A timer from a socket that reconnect has already superseded must not
+  // send, the same as any other handler tied to a retired generation.
+  it("silences a superseded socket's keepalive timer", async () => {
+    vi.useFakeTimers();
+    try {
+      const store = makeStore();
+      const wire = openWire({ apiBase: "https://api.test" }, store, deps());
+      wire.connect();
+      await vi.advanceTimersByTimeAsync(0);
+      const first = FakeSocket.last;
+      first.onopen?.();
+      first.sent.length = 0;
+
+      wire.disconnect();
+      wire.connect();
+      await vi.advanceTimersByTimeAsync(0);
+      const second = FakeSocket.last;
+      second.onopen?.();
+      second.sent.length = 0;
+
+      await vi.advanceTimersByTimeAsync(4 * 60_000);
+      expect(first.sent).toEqual([]);
+      expect(second.sent).toEqual([JSON.stringify({ t: "ping" })]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // The address is joined onto, so a pasted trailing slash must not double up.
   it("drops a trailing slash from the address before joining anything onto it", async () => {
     const store = makeStore();

@@ -333,6 +333,39 @@ describe("a socket on a stream key", () => {
   });
 });
 
+describe("keepalive", () => {
+  it("answers a ping with a pong to the sender alone, before any other branch", async () => {
+    const d = deps();
+    const posted: Array<[string, string]> = [];
+    d.poster = {
+      async post(connectionId, data) {
+        posted.push([connectionId, data]);
+        return "sent";
+      },
+    };
+    await route(ev("$connect", "c1", { queryStringParameters: { token: "good" } }), d);
+    expect((await route(ev("$default", "c1", { body: JSON.stringify({ t: "ping" }) }), d)).statusCode).toBe(200);
+    expect(posted).toEqual([["c1", JSON.stringify({ t: "pong" })]]);
+    // No watch, no store write: a heartbeat is not news to anyone.
+    expect(await d.live.watchers("shared")).toEqual([]);
+    expect(patched).toEqual([]);
+  });
+
+  it("ignores a pong from a client", async () => {
+    const d = deps();
+    const posted: Array<[string, string]> = [];
+    d.poster = {
+      async post(connectionId, data) {
+        posted.push([connectionId, data]);
+        return "sent";
+      },
+    };
+    await route(ev("$connect", "c1", { queryStringParameters: { token: "good" } }), d);
+    expect((await route(ev("$default", "c1", { body: JSON.stringify({ t: "pong" }) }), d)).statusCode).toBe(200);
+    expect(posted).toEqual([]);
+  });
+});
+
 describe("watching", () => {
   it("lets a member watch a session, and tells a non-member nothing", async () => {
     const d = deps();

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   backoffMs,
   openLive,
@@ -233,5 +233,37 @@ describe("the live socket", () => {
     await tick();
     expect(FakeSocket.all).toHaveLength(1);
     live.close();
+  });
+
+  // API Gateway drops a socket idle for ten minutes either way; a ping
+  // every four minutes keeps a quiet Play step from costing a reconnect.
+  it("pings every four minutes while open, stops on close, and ignores a pong", async () => {
+    FakeSocket.all = [];
+    vi.useFakeTimers();
+    try {
+      const live = openLive({
+        url: async () => "wss://runlog.example/ws?token=t1",
+        onChanged: () => {},
+        WebSocketImpl: FakeSocket as unknown as typeof WebSocket,
+      });
+      live.watch("s1");
+      await vi.advanceTimersByTimeAsync(0);
+      const socket = FakeSocket.all[0]!;
+      socket.onopen?.();
+      socket.sent.length = 0;
+
+      await vi.advanceTimersByTimeAsync(4 * 60_000);
+      expect(socket.sent).toEqual([JSON.stringify({ t: "ping" })]);
+
+      // The server's answer to our own ping is not acted on.
+      socket.onmessage?.({ data: JSON.stringify({ t: "pong" }) });
+
+      live.close();
+      socket.sent.length = 0;
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      expect(socket.sent).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
