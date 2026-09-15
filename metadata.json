@@ -22,13 +22,6 @@
     "cache_creation_tokens": 1723172,
     "cache_read_tokens": 355158326,
     "output_tokens": 761573,
-    "api_call_count": 751,
-    "subagent_tokens": {
-      "input_tokens": 214,
-      "cache_creation_tokens": 297889,
-      "cache_read_tokens": 9998581,
-      "output_tokens": 71957,
-      "api_call_count": 107
-    }
+    "api_call_count": 751
   }
 }

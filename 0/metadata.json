@@ -3,10 +3,10 @@
   "checkpoint_id": "01M2J5ARQS3TT0VFXJTJD9G0GM",
   "session_id": "e72ee5b1-7270-4fac-abcc-53994b037403",
   "strategy": "manual-commit",
-  "created_at": "2026-09-15T09:11:06.0557576Z",
+  "created_at": "2026-09-15T09:11:34.099848Z",
   "branch": "the-deck-comes-laid-out",
   "checkpoints_count": 3,
-  "save_step_count": 4,
+  "save_step_count": 1,
   "files_touched": [
     "streamdeck/src/face.test.ts",
     "streamdeck/src/face.ts"
@@ -20,14 +20,7 @@
     "cache_creation_tokens": 1723172,
     "cache_read_tokens": 355158326,
     "output_tokens": 761573,
-    "api_call_count": 751,
-    "subagent_tokens": {
-      "input_tokens": 214,
-      "cache_creation_tokens": 297889,
-      "cache_read_tokens": 9998581,
-      "output_tokens": 71957,
-      "api_call_count": 107
-    }
+    "api_call_count": 751
   },
   "skill_events_version": 1,
   "skill_events": [
@@ -253,73 +246,15 @@
     "turn_count": 164
   },
   "initial_attribution": {
-    "calculated_at": "2026-09-15T09:11:05.2269928Z",
+    "calculated_at": "2026-09-15T09:11:33.2745852Z",
     "agent_lines": 0,
-    "agent_removed": 17,
-    "human_added": 183,
-    "human_modified": 485,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 598,
     "human_removed": 0,
-    "total_committed": 572,
-    "total_lines_changed": 685,
-    "agent_percentage": 2.4817518248175183,
+    "total_committed": 598,
+    "total_lines_changed": 598,
+    "agent_percentage": 0,
     "metric_version": 2
-  },
-  "prompt_attributions": [
-    {
-      "checkpoint_number": 2,
-      "user_lines_added": 0,
-      "user_lines_removed": 0,
-      "agent_lines_added": 0,
-      "agent_lines_removed": 0
-    },
-    {
-      "checkpoint_number": 3,
-      "user_lines_added": 4124,
-      "user_lines_removed": 3740,
-      "agent_lines_added": 139752,
-      "agent_lines_removed": 122125,
-      "user_added_per_file": {
-        "apps/web/src/run/RunView.offer.test.tsx": 520,
-        "apps/web/src/run/RunView.tsx": 3264,
-        "apps/web/src/run/takePress.test.ts": 340
-      },
-      "user_removed_per_file": {
-        "apps/web/src/run/RunView.offer.test.tsx": 398,
-        "apps/web/src/run/RunView.tsx": 3132,
-        "apps/web/src/run/takePress.test.ts": 210
-      }
-    },
-    {
-      "checkpoint_number": 4,
-      "user_lines_added": 3149,
-      "user_lines_removed": 3001,
-      "agent_lines_added": 140916,
-      "agent_lines_removed": 122918,
-      "user_added_per_file": {
-        "calib-scratch.mjs": 38,
-        "packages/rules-schema/schema/mapping-1.schema.json": 169,
-        "packages/rules-schema/schema/setup-1.schema.json": 117,
-        "packages/rules-schema/schema/tables-1.schema.json": 1842,
-        "packages/rules-schema/src/dice.test.ts": 52,
-        "streamdeck/com.scrthq.runlog.sdPlugin/ui/next.html": 32,
-        "streamdeck/design/actions/next.svg": 4,
-        "streamdeck/src/face.ts": 70,
-        "streamdeck/src/state.test.ts": 415,
-        "streamdeck/src/state.ts": 391,
-        "tsconfig.base.json": 19
-      },
-      "user_removed_per_file": {
-        "packages/rules-schema/schema/mapping-1.schema.json": 169,
-        "packages/rules-schema/schema/setup-1.schema.json": 117,
-        "packages/rules-schema/schema/tables-1.schema.json": 1842,
-        "packages/rules-schema/src/dice.test.ts": 52,
-        "streamdeck/com.scrthq.runlog.sdPlugin/ui/next.html": 32,
-        "streamdeck/design/actions/next.svg": 4,
-        "streamdeck/src/face.ts": 26,
-        "streamdeck/src/state.test.ts": 384,
-        "streamdeck/src/state.ts": 356,
-        "tsconfig.base.json": 19
-      }
-    }
-  ]
+  }
 }
