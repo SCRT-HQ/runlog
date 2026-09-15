@@ -4,7 +4,8 @@
     "customConditions": ["node"],
     "module": "ES2022",
     "moduleResolution": "Bundler",
-    "noImplicitOverride": true
+    "noImplicitOverride": true,
+    "allowImportingTsExtensions": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]
