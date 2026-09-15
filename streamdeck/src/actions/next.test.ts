@@ -26,7 +26,15 @@ vi.mock("../plugin.ts", () => ({
 const { Next } = await import("./next.ts");
 
 const T = 1_000_000;
-const offer: Offer = { seq: 42, primary: null, moves: [], undo: null, needsPage: "Tick the list on the page", presets: [] };
+const offer: Offer = {
+  seq: 42,
+  primary: null,
+  moves: [],
+  undo: null,
+  needsPage: "Tick the list on the page",
+  presets: [],
+  setups: [],
+};
 
 /** A deck signed in, connected, following one run, on the step this offer describes. */
 const on = (presets: Offer["presets"]): DeckState => {

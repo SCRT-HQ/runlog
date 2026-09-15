@@ -30,7 +30,7 @@
       "Name": "Press",
       "UUID": "com.scrthq.runlog.press",
       "Icon": "imgs/actions/press",
-      "Tooltip": "One move, the waiting roll, or a preset answer.",
+      "Tooltip": "One move, the waiting roll, a preset answer, or a setup to hand out.",
       "Controllers": ["Keypad"],
       "States": [{ "Image": "imgs/keys/press" }],
       "PropertyInspectorPath": "ui/press.html"

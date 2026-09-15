@@ -10,6 +10,7 @@ import {
   connectFace,
   attachedRun,
   idleDeadline,
+  pressFace,
   IDLE_OFF_MS,
   type DeckState,
   type Offer,
@@ -23,6 +24,7 @@ const offer: Offer = {
   undo: { what: "A dry wind." },
   needsPage: null,
   presets: [],
+  setups: [],
 };
 const T = 1_000_000;
 
@@ -170,6 +172,34 @@ describe("what the keys say", () => {
     );
     expect(reduce(idle, { t: "tick" }, T + 1000)).toBe(idle);
     expect(reduce(s, { t: "tick" }, T + 1000)).toBe(s);
+  });
+});
+
+// Task 16b: a Press key set to a setup applies it and hands it out to the
+// tool - the offer names which setups the run could hand out.
+describe("what the press key says for a setup", () => {
+  it("is live when the setup is on offer", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, setups: [{ id: "leveling", title: "Leveling" }] } } }, T);
+    expect(pressFace(s, { kind: "setup", id: "leveling", title: "Leveling" })).toEqual({
+      title: "Leveling",
+      tone: "live",
+      when: "Apply setup",
+    });
+  });
+
+  it("is dim when the setup is not on offer", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
+    expect(pressFace(s, { kind: "setup", id: "leveling", title: "Leveling" })).toEqual({
+      title: "Leveling",
+      tone: "dim",
+      when: "Not here",
+    });
   });
 });
 

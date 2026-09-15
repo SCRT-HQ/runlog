@@ -22,6 +22,8 @@ export interface Offer {
   /** Why a deck cannot press this, in words a key face can carry. */
   needsPage: string | null;
   presets: Array<{ kind: string; label: string; suggestions?: string[]; items?: number }>;
+  /** The setups the run could hand out, empty where the run names no tool or is not live. */
+  setups: Array<{ id: string; title: string }>;
 }
 
 export type SessionState = "none" | "expired" | "ok";
@@ -65,7 +67,11 @@ export interface Face {
   /** 0-1, set only for a running timer clock so a dial's indicator can draw it. */
   fraction?: number;
 }
-export type PressTarget = { kind: "roll" } | { kind: "move"; id: string } | { kind: "answer"; preset: string; value: string };
+export type PressTarget =
+  | { kind: "roll" }
+  | { kind: "move"; id: string }
+  | { kind: "answer"; preset: string; value: string }
+  | { kind: "setup"; id: string; title: string };
 export type MetricField = "score" | "unit" | "clock" | "latest" | "leader" | { counter: string } | { resource: string };
 export type DeckEvent =
   | { t: "session"; state: SessionState }
@@ -268,6 +274,11 @@ export function pressFace(state: DeckState, target: PressTarget): Face {
   if (target.kind === "move") {
     const m = offer.moves.find((x) => x.id === target.id);
     return m ? { title: m.label, tone: "live" } : { title: "Not on offer", tone: "dim" };
+  }
+  if (target.kind === "setup") {
+    return offer.setups.some((s) => s.id === target.id)
+      ? { title: target.title, tone: "live", when: "Apply setup" }
+      : { title: target.title, tone: "dim", when: "Not here" };
   }
   const p = offer.presets.find((x) => x.kind === target.preset);
   return p ? { title: target.value, tone: "live", when: p.label } : { title: target.value, tone: "dim", when: "Not now" };

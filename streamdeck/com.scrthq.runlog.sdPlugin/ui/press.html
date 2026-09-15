@@ -33,24 +33,33 @@
           return o;
         };
 
-        const fill = (moves, presets) => {
+        const fill = (moves, presets, setups) => {
           target.replaceChildren(option(null, "Set up"), option({ kind: "roll" }, "The waiting roll"));
           for (const m of moves) target.appendChild(option({ kind: "move", id: m.id }, m.label));
           for (const p of presets) target.appendChild(option({ kind: "answer", preset: p.kind, value: "" }, p.label));
+          for (const s of setups) target.appendChild(option({ kind: "setup", id: s.id, title: s.title }, s.title));
           show();
         };
 
         const show = () => {
           const chosen = current ? JSON.stringify(stripValue(current)) : "null";
-          const match = [...target.options].find((o) => o.value === chosen);
+          const match = [...target.options].find((o) => JSON.stringify(stripValue(JSON.parse(o.value))) === chosen);
           if (match) target.value = match.value;
           const isAnswer = current?.kind === "answer";
           answerRow.style.display = isAnswer ? "" : "none";
           answer.value = isAnswer ? (current.value ?? "") : "";
         };
 
-        // A preset option is identified by its kind; the value is typed beside it.
-        const stripValue = (t) => (t.kind === "answer" ? { kind: "answer", preset: t.preset, value: "" } : t);
+        // A preset option is identified by its kind, with the value typed beside it; a
+        // setup option is identified by its id, so a renamed setup still matches.
+        const stripValue = (t) =>
+          t === null
+            ? null
+            : t.kind === "answer"
+              ? { kind: "answer", preset: t.preset, value: "" }
+              : t.kind === "setup"
+                ? { kind: "setup", id: t.id }
+                : t;
 
         const save = () => streamDeckClient.setSettings(current ? { target: current } : {});
 
@@ -66,13 +75,13 @@
         });
 
         streamDeckClient.sendToPropertyInspector.subscribe(({ payload }) => {
-          if (payload?.t === "offer") fill(payload.moves ?? [], payload.presets ?? []);
+          if (payload?.t === "offer") fill(payload.moves ?? [], payload.presets ?? [], payload.setups ?? []);
         });
         void streamDeckClient.getSettings().then(({ settings }) => {
           current = settings?.target ?? null;
           show();
         });
-        fill([], []);
+        fill([], [], []);
       })();
     </script>
   </body>
