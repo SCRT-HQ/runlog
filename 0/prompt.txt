@@ -1486,3 +1486,11 @@ If this event is something the user would act on now, send a PushNotification. R
 <summary>Monitor event: "PR #288 checks → merge → Deploy Dev result"</summary>
 <event>[Monitor timed out — re-arm if needed.]</event>
 </task-notification>
+
+---
+
+I've reauthenticated the CLI. Shouldn't we be caching refresh tokens to prevent having to reauthorize the device, considering it's device flow?
+
+---
+
+tab reloaded
