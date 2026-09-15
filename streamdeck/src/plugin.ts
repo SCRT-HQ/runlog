@@ -2,6 +2,7 @@ import streamDeck from "@elgato/streamdeck";
 
 import { AutoRoll } from "./actions/autoroll.ts";
 import { Clock } from "./actions/clock.ts";
+import { Command } from "./actions/command.ts";
 import { Connect } from "./actions/connect.ts";
 import { Finish } from "./actions/finish.ts";
 import { Metric } from "./actions/metric.ts";
@@ -227,6 +228,7 @@ for (const a of [
   new Metric(),
   new Connect(),
   new Setup(),
+  new Command(),
   new Open(),
   new Clock(),
   new AutoRoll(),
