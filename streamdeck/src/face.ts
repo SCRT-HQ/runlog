@@ -59,12 +59,14 @@ const LINE = 144 - 2 * 8;
 const MAX_LINES = 3;
 
 /**
- * The `when` line's own type: 18px monospace, a flat 0.6em per glyph rather
- * than the title's per-glyph measurement. 128px at 18px holds 11 characters
- * (128 / (18 * 0.6) = 11.85); a twelfth never fits.
+ * The `when` line's own type: 16px monospace, a flat 0.6em per glyph rather
+ * than the title's per-glyph measurement. 128px at 16px holds 13 characters
+ * (128 / (16 * 0.6) = 13.33); a fourteenth never fits. 18px held only
+ * eleven, which cut "press Connect" - the one instruction on the key that
+ * has to be read whole - down to "press Conne…".
  */
-const WHEN_SIZE = 18;
-const WHEN_MAX = 11;
+const WHEN_SIZE = 16;
+const WHEN_MAX = 13;
 
 /**
  * Fit `when` to `WHEN_MAX` characters. A word boundary that still leaves at

@@ -79,21 +79,26 @@ describe("faceImage", () => {
     expect(svg).not.toContain("0.5");
   });
   it("leaves a short when line alone", () => {
-    expect(whenLine("Deaths")).toEqual({ text: "Deaths", size: 18 });
+    expect(whenLine("Deaths")).toEqual({ text: "Deaths", size: 16 });
+  });
+  it("holds the whole of the key's one instruction", () => {
+    // Thirteen characters, which is the budget exactly. At 18px it came
+    // out "press Conne…", which is not an instruction.
+    expect(whenLine("press Connect").text).toBe("press Connect");
   });
   it("cuts a when line at a word boundary that leaves six characters or more", () => {
-    // "Scenes" is six characters and fits; adding "before" would run past
-    // the 11-character budget, so the word-boundary cut wins over a
-    // mid-word character cut ("Scenes befo…").
-    expect(whenLine("Scenes before a warp").text).toBe("Scenes…");
+    // "Scenes before" is thirteen characters and fits; adding "a" runs
+    // past the budget. So the cut lands on the word boundary rather than
+    // mid-word.
+    expect(whenLine("Scenes before a warp").text).toBe("Scenes before…");
   });
-  it("never keeps more than 11 characters of a when line, plus the ellipsis", () => {
-    const { text } = whenLine("press Connect");
+  it("never keeps more than 13 characters of a when line, plus the ellipsis", () => {
+    const { text } = whenLine("Whatever the pack calls it");
     expect(text.endsWith("…")).toBe(true);
-    expect(text.replace("…", "").length).toBeLessThanOrEqual(11);
+    expect(text.replace("…", "").length).toBeLessThanOrEqual(13);
   });
-  it("draws the when line at font-size 18", () => {
-    expect(whenLine("press Connect").size).toBe(18);
+  it("draws the when line at font-size 16", () => {
+    expect(whenLine("press Connect").size).toBe(16);
   });
 });
 
