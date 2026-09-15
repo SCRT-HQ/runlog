@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144" role="img" aria-label="Open in the browser">
+  <!-- Out of here and into the browser: a box with its corner open, and the arrow leaving through it. -->
+  <path d="M86 42 H34 A12 12 0 0 0 22 54 V110 A12 12 0 0 0 34 122 H98 A12 12 0 0 0 110 110 V68" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+  <path d="M72 72 L116 28" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+  <path d="M84 24 H120 V60" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

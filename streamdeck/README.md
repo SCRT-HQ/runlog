@@ -1,21 +1,22 @@
 # Runlog for Stream Deck
 
-Runlog is a referee and run log for dice-driven games: it draws the tables, keeps the score and the clocks, and remembers what happened. This plugin puts a run on the deck's keys — the press the run is waiting on, a move, undo, and a number from the run on each key.
+Runlog is a referee and run log for dice-driven games: it draws the tables, keeps the score and the clocks, and remembers what happened. This plugin puts a run on the deck's keys: the press the run is waiting on, a move, undo, and a number from the run on each key.
 
 ## The keys
 
-- **Connect** — opens the connection to your Runlog account, and closes it again.
-- **Run** — names the run the deck is on; press to cycle through the runs you have open, or pick one in its settings.
-- **Do the next thing** — presses whatever the run is waiting on, in the step's own words.
-- **Press** — one move, the roll that is waiting, or a preset answer, set in the key's settings.
-- **Roll** — throws the dice the run is waiting on.
-- **Apply setup** — changes the run's loadout to a setup from your library and hands it out to the tool.
-- **Undo** — takes back the last result.
-- **Metric** — one number from the run: the score, the unit, a clock, the last result, the leader, or a counter or resource the pack keeps.
+- **Connect** opens the connection to your Runlog account, and closes it again.
+- **Run** names the run the deck is on; press to cycle through the runs you have open, or pick one in its settings.
+- **Next action** presses whatever the run is waiting on, in the step's own words.
+- **Press** takes one move, the roll that is waiting, or a preset answer, set in the key's settings.
+- **Roll** throws the dice the run is waiting on.
+- **Apply setup** changes the run's loadout to a setup from your library and hands it out to the tool.
+- **Undo** takes back the last result.
+- **Metric** shows one number from the run: the score, the unit, a clock, the last result, the leader, or a counter or resource the pack keeps.
+- **Open in the browser** opens the run, the guide, or the pack's rules in your default browser.
 
-Do the next thing and Metric also sit on a dial on a Stream Deck +.
+Next action and Metric also sit on a dial on a Stream Deck +.
 
-The plugin also ships laid-out profiles — one per deck, and one per bundled pack — built from the pack files by `npm run profiles`.
+The plugin also ships laid-out profiles, one per deck and one per bundled pack, built from the pack files by `npm run profiles`.
 
 ## What it needs
 

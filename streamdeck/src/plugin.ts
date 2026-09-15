@@ -3,6 +3,7 @@ import streamDeck from "@elgato/streamdeck";
 import { Connect } from "./actions/connect.ts";
 import { Metric } from "./actions/metric.ts";
 import { Next } from "./actions/next.ts";
+import { Open } from "./actions/open.ts";
 import { Press } from "./actions/press.ts";
 import { Roll } from "./actions/roll.ts";
 import { pin, Run, runsForInspector } from "./actions/run.ts";
@@ -25,10 +26,19 @@ const DEFAULT_API = "https://runlog.scrthq.com";
  */
 type Globals = { apiBase?: string; pinned?: string | null };
 
-let apiBase = DEFAULT_API;
+let base = DEFAULT_API;
+
+/**
+ * Where Runlog is, for a key that has to name an address rather than
+ * press through the wire. The normalized global setting, so a deck
+ * pointed at a copy of the app opens that copy pages.
+ */
+export function apiBase(): string {
+  return base;
+}
 
 export const store = makeStore();
-export const wire = openWire((): Account => ({ apiBase }), store);
+export const wire = openWire((): Account => ({ apiBase: base }), store);
 
 /**
  * The profile a deck is switched to once a run attaches.
@@ -92,11 +102,11 @@ export function turnOff(idle = false): void {
 
 /** Tells whichever inspector is open where it is pointed and whether anyone is signed in. */
 export async function sayWho(): Promise<void> {
-  await streamDeck.ui.sendToPropertyInspector({ t: "who", signedIn: loadSession() !== null, apiBase });
+  await streamDeck.ui.sendToPropertyInspector({ t: "who", signedIn: loadSession() !== null, apiBase: base });
 }
 
 function applyGlobals(g: Globals): void {
-  apiBase = normalizeBase(g.apiBase ?? "") || DEFAULT_API;
+  base = normalizeBase(g.apiBase ?? "") || DEFAULT_API;
   // Only on a change: this fires from the plugin's own write of a pin as
   // much as from another surface's, and a pin already applied locally
   // should not force the run's snapshot to reload for nothing.
@@ -161,18 +171,18 @@ streamDeck.ui.onSendToPlugin<{ t?: string; id?: string | null }>(async (ev) => {
     case "signin":
       try {
         streamDeck.logger.info("sign-in: starting the device flow");
-        await signIn({ apiBase }, codeFromLines(), () => {});
+        await signIn({ apiBase: base }, codeFromLines(), () => {});
         store.dispatch({ t: "session", state: "ok" });
         streamDeck.logger.info("sign-in: done");
         // Signed in is not connected: the streamer presses Connect.
-        await streamDeck.ui.sendToPropertyInspector({ t: "who", name: "you", signedIn: true, apiBase });
+        await streamDeck.ui.sendToPropertyInspector({ t: "who", name: "you", signedIn: true, apiBase: base });
       } catch (e) {
         // The reason goes back to the inspector, not only to the log: the
         // streamer is looking at the button they pressed, and a status line
         // that flips back to "Not signed in" tells them nothing.
         const error = e instanceof Error ? e.message : "unknown";
         streamDeck.logger.error(`sign-in: failed (${error})`);
-        await streamDeck.ui.sendToPropertyInspector({ t: "who", signedIn: false, apiBase, error });
+        await streamDeck.ui.sendToPropertyInspector({ t: "who", signedIn: false, apiBase: base, error });
       }
       break;
     case "signout":
@@ -180,7 +190,7 @@ streamDeck.ui.onSendToPlugin<{ t?: string; id?: string | null }>(async (ev) => {
       signOut();
       store.dispatch({ t: "session", state: "none" });
       streamDeck.logger.info("signed out");
-      await streamDeck.ui.sendToPropertyInspector({ t: "who", signedIn: false, apiBase });
+      await streamDeck.ui.sendToPropertyInspector({ t: "who", signedIn: false, apiBase: base });
       break;
     case "reconnect":
       turnOff();
@@ -198,7 +208,7 @@ streamDeck.settings.onDidReceiveGlobalSettings<Globals>((ev) => applyGlobals(ev.
 // puts a refused key back to what it was saying.
 setInterval(() => store.dispatch({ t: "tick" }), 1000);
 
-for (const a of [new Next(), new Press(), new Roll(), new Undo(), new Run(), new Metric(), new Connect(), new Setup()]) {
+for (const a of [new Next(), new Press(), new Roll(), new Undo(), new Run(), new Metric(), new Connect(), new Setup(), new Open()]) {
   streamDeck.actions.registerAction(a);
 }
 

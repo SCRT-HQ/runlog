@@ -12,6 +12,7 @@ import {
   idleDeadline,
   setupFace,
   rollFace,
+  openFace,
   IDLE_OFF_MS,
   type DeckState,
   type Offer,
@@ -57,7 +58,7 @@ describe("what the keys say", () => {
     s = reduce(s, { t: "socket", state: "open" }, T);
     s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
     expect(attachedRun(s)).toBe("s1");
-    expect(runFace(s)).toEqual({ title: "Thursday", tone: "live", when: "The Long Kiln" });
+    expect(runFace(s)).toEqual({ title: "Thursday", tone: "deck", when: "The Long Kiln" });
   });
   it("asks to pick between two, and a pin decides", () => {
     let s = live();
@@ -79,7 +80,7 @@ describe("what the keys say", () => {
     s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
     s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
     expect(nextFace(s, {})).toEqual({ title: "Roll the Weather", tone: "live" });
-    expect(undoFace(s)).toEqual({ title: "Undo", tone: "live" });
+    expect(undoFace(s)).toEqual({ title: "Undo", tone: "undo" });
     const blocked = reduce(
       s,
       { t: "snapshot", snapshot: { offer: { ...offer, primary: null, needsPage: "Name the bowl on the page" } } },
@@ -115,8 +116,8 @@ describe("what the keys say", () => {
       T,
     );
     // Ruling 4 amends this case: a running timer clock's face also carries
-    // a fraction (elapsed / total) for a dial's indicator — 15s of 600s.
-    expect(metricFace(s, "clock", T + 5_000)).toEqual({ title: "9:45", tone: "live", when: "Day 4", fraction: 0.025 });
+    // a fraction (elapsed / total) for a dial's indicator: 15s of 600s.
+    expect(metricFace(s, "clock", T + 5_000)).toEqual({ title: "9:45", tone: "readout", when: "Day 4", fraction: 0.025 });
   });
 
   // Controller ruling 1: a `drove` that carries `seq` is the freshest seq
@@ -201,7 +202,7 @@ describe("what the setup key says", () => {
     s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, setups: [{ id: "leveling", title: "Leveling" }] } } }, T);
     expect(setupFace(s, { id: "leveling", title: "Leveling" })).toEqual({
       title: "Leveling",
-      tone: "live",
+      tone: "deck",
       when: "Apply setup",
     });
   });
@@ -260,6 +261,36 @@ describe("what the roll key says", () => {
   });
 });
 
+// Task 23: one key, three pages. The guide is the one target that needs
+// nothing of the deck; the run and the rules name what it is holding.
+describe("what the open key says", () => {
+  it("says Set up with no target chosen", () => {
+    expect(openFace(open(), undefined)).toEqual({ title: "Set up", tone: "dim" });
+  });
+
+  it("offers the guide signed out, off, and with nothing held", () => {
+    const guide = { title: "Guide", tone: "deck", when: "in the browser" };
+    expect(openFace(initial(), "guide")).toEqual(guide);
+    expect(openFace(reduce(initial(), { t: "session", state: "ok" }, T), "guide")).toEqual(guide);
+    expect(openFace(open(), "guide")).toEqual(guide);
+  });
+
+  it("names the run and the rules once the deck is following one", () => {
+    expect(openFace(open(), "run")).toEqual({ title: "Open the run", tone: "deck", when: "in the browser" });
+    expect(openFace(open(), "rules")).toEqual({ title: "Rules", tone: "deck", when: "in the browser" });
+  });
+
+  it("says what is missing for the run and the rules, as every key does", () => {
+    expect(openFace(initial(), "run")).toEqual({ title: "Sign in", tone: "dim" });
+    expect(openFace(reduce(initial(), { t: "session", state: "ok" }, T), "rules")).toEqual({
+      title: "Not connected",
+      tone: "dim",
+      when: "press Connect",
+    });
+    expect(openFace(open([held("s1"), held("s2", "Friday")]), "run")).toEqual({ title: "Pick a run", tone: "dim" });
+  });
+});
+
 // Controller amendment A: the socket is a state the streamer enters. A key
 // that depends on the connection says so, and says what to do about it.
 describe("what the keys say while the deck is off", () => {
@@ -310,10 +341,10 @@ describe("what the Connect key says", () => {
     expect(connectFace(live())).toEqual({ title: "Connecting", tone: "dim" });
   });
   it("says Disconnect once the socket is open, whatever the Run key would say", () => {
-    expect(connectFace(open())).toEqual({ title: "Disconnect", tone: "live" });
+    expect(connectFace(open())).toEqual({ title: "Disconnect", tone: "deck" });
     const s = reduce(reduce(live(), { t: "socket", state: "open" }, T), { t: "runs", runs: [], any: true }, T);
-    expect(connectFace(s)).toEqual({ title: "Disconnect", tone: "live" });
-    expect(connectFace(open([held("s1"), held("s2", "Friday")]))).toEqual({ title: "Disconnect", tone: "live" });
+    expect(connectFace(s)).toEqual({ title: "Disconnect", tone: "deck" });
+    expect(connectFace(open([held("s1"), held("s2", "Friday")]))).toEqual({ title: "Disconnect", tone: "deck" });
   });
 });
 

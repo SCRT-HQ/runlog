@@ -142,6 +142,9 @@ function turn(id, which) {
  * pack at all, which is `forTool` in `apps/web/src/control/setups.ts`, and
  * they are ordered by title the way the app's own picker orders them. A
  * pack with no shipped control profile names no tool and gets none.
+ *
+ * Last, a key that opens the pack's rules in the browser: a pack profile
+ * is the one place that key has a pack to open.
  */
 export function packKeys(pack, setups) {
   const keys = [];
@@ -151,6 +154,7 @@ export function packKeys(pack, setups) {
   }
   for (const id of Object.keys(pack.resources ?? {})) keys.push({ action: "metric", settings: { field: { resource: id } } });
   for (const setup of setups) keys.push({ action: "setup", settings: { setup: { id: setup.id, title: setup.title } } });
+  keys.push({ action: "open", settings: { target: "rules" } });
   return keys;
 }
 
@@ -380,9 +384,9 @@ export function specs() {
       const parsed = loadPackText(readFileSync(join(repo, layout.pack), "utf8"), "yaml");
       if (!parsed.ok) throw new Error(`${layout.pack} did not load`);
       const pack = parsed.pack;
-      // Named for Runlog first, so the three sort together in a list that
-      // already has the streamer's own profiles in it.
-      name = `Runlog — ${pack.title}`;
+      // The pack's own title, and nothing else: the Stream Deck app already
+      // says which plugin a profile came with.
+      name = pack.title;
       keys = [...BASE, ...packKeys(pack, setupsFor(toolFor(pack.id)))];
     }
     for (const device of Object.keys(DEVICES)) out.push({ slug: layout.slug, device, name, keys });

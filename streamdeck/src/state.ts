@@ -34,6 +34,8 @@ export interface HeldRun {
   packTitle?: string;
 }
 export interface Snapshot {
+  /** The run as the server knows it, which is where the pack's id travels. */
+  run?: { id?: string; packId?: string };
   unit?: number;
   words?: { unit: string };
   score?: { text: string };
@@ -59,7 +61,19 @@ export interface DeckState {
   snapshot: Snapshot | null;
   flash: { ref: string; ok: boolean; say?: string; until: number } | null;
 }
-export type Tone = "live" | "dim" | "refuse";
+/**
+ * How a face is drawn, by what the key is for rather than by how it feels.
+ *
+ * `live` is a key that moves the run - Next, Roll, Press - and it is the
+ * only one that takes the celadon edge. `undo` is the same lit face with
+ * the kiln edge, because taking a result back is the consequence the
+ * second accent is for. `readout` is a Metric key, which is a number
+ * rather than a button: the app's own ground, a hairline, and lit ink.
+ * `deck` is the furniture - Connect, Run, Open, Apply setup - lit, but
+ * without an accent claiming it does something to the run. `dim` and
+ * `refuse` are states rather than families and belong to every key.
+ */
+export type Tone = "live" | "dim" | "refuse" | "undo" | "readout" | "deck";
 export interface Face {
   title: string;
   tone: Tone;
@@ -175,7 +189,7 @@ function common(state: DeckState): Face | null {
 function attachedName(state: DeckState): Face | null {
   const run = state.runs.find((r) => r.id === state.attached);
   if (!run) return null;
-  return { title: run.name ?? run.packTitle ?? run.id, tone: "live", ...(run.packTitle && run.name ? { when: run.packTitle } : {}) };
+  return { title: run.name ?? run.packTitle ?? run.id, tone: "deck", ...(run.packTitle && run.name ? { when: run.packTitle } : {}) };
 }
 
 /**
@@ -192,7 +206,7 @@ export function connectFace(state: DeckState): Face {
   if (state.session === "expired") return { title: "Sign in again", tone: "dim" };
   if (!state.on) return { title: "Connect", tone: "dim", when: state.idleOff ? "went idle" : undefined };
   if (state.socket !== "open") return { title: "Connecting", tone: "dim" };
-  return { title: "Disconnect", tone: "live" };
+  return { title: "Disconnect", tone: "deck" };
 }
 
 /**
@@ -297,7 +311,7 @@ export function setupFace(state: DeckState, setup?: { id: string; title: string 
   if (!offer) return { title: "Loading…", tone: "dim" };
   // `?? []`: an older page's offer may not name any setups at all.
   return (offer.setups ?? []).some((s) => s.id === setup.id)
-    ? { title: setup.title, tone: "live", when: "Apply setup" }
+    ? { title: setup.title, tone: "deck", when: "Apply setup" }
     : { title: setup.title, tone: "dim", when: "Not here" };
 }
 
@@ -307,7 +321,26 @@ export function undoFace(state: DeckState): Face {
   const undo = state.snapshot?.offer?.undo;
   // The key says "Undo" either way: what it would take back is the run's
   // business, and a key too small to read it is no help at the table.
-  return undo ? { title: "Undo", tone: "live" } : { title: "Undo", tone: "dim" };
+  return undo ? { title: "Undo", tone: "undo" } : { title: "Undo", tone: "dim" };
+}
+
+/** Where the Open key points, chosen in its settings. */
+export type OpenTarget = "run" | "guide" | "rules";
+
+/**
+ * What the Open key says: the page it would put in front of the streamer.
+ *
+ * The guide is the one target that needs nothing - no account, no
+ * connection, no run - so it skips the gating every other key stops at.
+ * The run and the pack's rules both name something the deck is holding,
+ * so they say what is missing the way the rest of the deck does.
+ */
+export function openFace(state: DeckState, target?: OpenTarget): Face {
+  if (!target) return { title: "Set up", tone: "dim" };
+  if (target === "guide") return { title: "Guide", tone: "deck", when: "in the browser" };
+  const c = common(state);
+  if (c) return c;
+  return { title: target === "run" ? "Open the run" : "Rules", tone: "deck", when: "in the browser" };
 }
 
 export function runFace(state: DeckState): Face {
@@ -333,24 +366,26 @@ export function metricFace(state: DeckState, field: MetricField, now: number): F
   if (c) return c;
   const snap = state.snapshot;
   if (!snap) return { title: "Loading…", tone: "dim" };
-  if (field === "score") return { title: snap.score?.text ?? "—", tone: "live", when: "Score" };
-  if (field === "unit") return { title: String(snap.unit ?? "—"), tone: "live", when: snap.words?.unit ?? "Unit" };
-  if (field === "latest") return { title: snap.latest?.text ?? "—", tone: "live" };
+  if (field === "score") return { title: snap.score?.text ?? "–", tone: "readout", when: "Score" };
+  if (field === "unit") return { title: String(snap.unit ?? "–"), tone: "readout", when: snap.words?.unit ?? "Unit" };
+  if (field === "latest") return { title: snap.latest?.text ?? "–", tone: "readout" };
   if (field === "leader") {
     const top = snap.standings?.[0];
-    return top ? { title: top.name, tone: "live", when: `${top.points} pts` } : { title: "—", tone: "dim", when: "Leader" };
+    return top ? { title: top.name, tone: "readout", when: `${top.points} pts` } : { title: "–", tone: "dim", when: "Leader" };
   }
   if (field === "clock") {
     const clock = snap.clocks?.find((x) => x.status === "running") ?? snap.clocks?.[0];
-    if (!clock || !snap.at) return { title: "—", tone: "dim", when: "Clock" };
+    if (!clock || !snap.at) return { title: "–", tone: "dim", when: "Clock" };
     const running = clock.kind === "timer" && clock.status === "running" && clock.seconds !== null;
     const fraction = running ? clockElapsedMs(clock, snap.at, now) / (clock.seconds! * 1000) : undefined;
-    return { title: clockText(clock, snap.at, now), tone: "live", when: clock.label, ...(fraction !== undefined ? { fraction } : {}) };
+    return { title: clockText(clock, snap.at, now), tone: "readout", when: clock.label, ...(fraction !== undefined ? { fraction } : {}) };
   }
   if ("counter" in field) {
     const x = snap.counters?.find((k) => k.id === field.counter);
-    return x ? { title: String(x.value), tone: "live", when: x.label } : { title: "—", tone: "dim" };
+    return x ? { title: String(x.value), tone: "readout", when: x.label } : { title: "–", tone: "dim" };
   }
   const r = snap.resources?.find((k) => k.id === field.resource);
-  return r ? { title: r.max === null ? String(r.value) : `${r.value}/${r.max}`, tone: "live", when: r.label } : { title: "—", tone: "dim" };
+  return r
+    ? { title: r.max === null ? String(r.value) : `${r.value}/${r.max}`, tone: "readout", when: r.label }
+    : { title: "–", tone: "dim" };
 }

@@ -31,7 +31,7 @@
   ],
   "Actions": [
     {
-      "Name": "Do the next thing",
+      "Name": "Next action",
       "UUID": "com.scrthq.runlog.next",
       "Icon": "imgs/actions/next",
       "Tooltip": "Presses whatever the run is waiting on, and takes the decisions unless told to stop.",
@@ -103,6 +103,15 @@
       "Controllers": ["Keypad"],
       "States": [{ "Image": "imgs/keys/setup" }],
       "PropertyInspectorPath": "ui/setup.html"
+    },
+    {
+      "Name": "Open in the browser",
+      "UUID": "com.scrthq.runlog.open",
+      "Icon": "imgs/actions/open",
+      "Tooltip": "Opens the run, the guide, or the pack's rules in your browser.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/open" }],
+      "PropertyInspectorPath": "ui/open.html"
     }
   ]
 }

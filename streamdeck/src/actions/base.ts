@@ -9,6 +9,7 @@ import streamDeck, {
 } from "@elgato/streamdeck";
 
 import { faceImage } from "../face.ts";
+import { GLYPHS } from "../glyphs.ts";
 import { sayWho, store, wire } from "../plugin.ts";
 import type { DeckState, Face } from "../state.ts";
 
@@ -43,6 +44,17 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
 
   /** What this action says, given everything the plugin knows. */
   abstract face(state: DeckState, settings: S, now: number): Face;
+
+  /**
+   * The drawing this action wears in the corner of its keys.
+   *
+   * By the last word of the UUID, which is the name its SVG is filed under
+   * in `design/actions`: one home for the pairing, and a new action gets
+   * its glyph by being named after its drawing rather than by a table.
+   */
+  private glyph(): string | undefined {
+    return GLYPHS[this.manifestId?.split(".").pop() ?? ""];
+  }
 
   override async onWillAppear(ev: WillAppearEvent<S>): Promise<void> {
     this.unsub ??= store.subscribe(() => this.redrawAll());
@@ -84,7 +96,7 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
         );
       }
       if (action.isKey()) {
-        await action.setImage(faceImage(face));
+        await action.setImage(faceImage(face, this.glyph()));
         await action.setTitle("");
       } else if (action.isDial()) {
         // The `$B1` layout's progress bar is the `indicator` key; it only

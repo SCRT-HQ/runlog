@@ -2,7 +2,7 @@ import { deviceFlow } from "@runlog/session";
 import { describe, expect, it, vi } from "vitest";
 
 /**
- * `plugin.ts` is the whole plugin: it registers eight actions, opens a wire
+ * `plugin.ts` is the whole plugin: it registers nine actions, opens a wire
  * and dials the Stream Deck software the moment it is imported. The SDK and
  * the two modules that reach outside are faked so importing it here does
  * nothing but build the module, and `sent` is what an inspector would have

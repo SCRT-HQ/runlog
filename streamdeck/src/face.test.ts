@@ -102,6 +102,55 @@ describe("faceImage", () => {
   });
 });
 
+describe("a tone per family of key", () => {
+  const svgOf = (face: Parameters<typeof faceImage>[0], glyph?: string) =>
+    Buffer.from(faceImage(face, glyph).split(",")[1]!, "base64").toString("utf8");
+  const frame = (svg: string) => /<rect x="3"[^>]*stroke="([^"]+)" stroke-width="([\d.]+)"/.exec(svg)!;
+
+  it("gives the celadon edge to a key that moves the run, and to nothing else", () => {
+    expect(frame(svgOf({ title: "Roll", tone: "live" }))[1]).toBe("#8cc3a6");
+    for (const tone of ["deck", "readout", "undo", "dim"] as const) {
+      expect(frame(svgOf({ title: "Roll", tone }))[1], tone).not.toBe("#8cc3a6");
+    }
+  });
+  it("draws undo lit, with the kiln edge a refusal uses", () => {
+    const undo = svgOf({ title: "Undo", tone: "undo" });
+    expect(frame(undo)[1]).toBe(frame(svgOf({ title: "No", tone: "refuse" }))[1]);
+    // The lit ground and the lit ink, so it reads as a key with something
+    // to do rather than as a key that has just refused.
+    expect(undo).toContain('fill="#1e2f27"');
+    expect(undo).toContain('fill="#e7eae6"');
+  });
+  it("draws a readout on the dark ground, with a hairline and a legible label", () => {
+    const svg = svgOf({ title: "4/10", tone: "readout", when: "Flasks" });
+    expect(svg).toContain('<rect width="144" height="144" rx="14" fill="#151311"/>');
+    expect(Number(frame(svg)[2])).toBeLessThan(3);
+    // The label sits on the ground, not on the edge color, which at this
+    // tone is too dark to read anything in.
+    expect(/y="126"[^>]*fill="([^"]+)"/.exec(svg)![1]).toBe("#8d958f");
+  });
+  it("draws the furniture lit but unaccented", () => {
+    const svg = svgOf({ title: "Disconnect", tone: "deck" });
+    expect(frame(svg)[1]).toBe("#2f3733");
+    expect(svg).toContain('fill="#e7eae6"');
+  });
+
+  it("wears its action's glyph in the corner, in the tone's own color", () => {
+    const glyph = '<path d="M46 26 L118 72 L46 118 Z" fill="#ffffff"/>';
+    const svg = svgOf({ title: "Roll", tone: "live" }, glyph);
+    const g = /<g transform="translate\((\d+) (\d+)\) scale\(([\d.]+)\)" opacity="([\d.]+)">(.*?)<\/g>/.exec(svg)!;
+    expect([g[1], g[2]]).toEqual(["8", "8"]);
+    expect(Number(g[3]) * 144).toBeCloseTo(18);
+    expect(g[4]).toBe("0.7");
+    // White is the drawing's own; a key wears it in the tone's color.
+    expect(g[5]).not.toContain("#ffffff");
+    expect(g[5]).toContain("#8cc3a6");
+  });
+  it("draws no corner at all for an action with no glyph", () => {
+    expect(svgOf({ title: "Roll", tone: "live" })).not.toContain("<g transform");
+  });
+});
+
 describe("measure", () => {
   it("tells narrow glyphs from wide ones", () => {
     expect(measure("iii", 40)).toBeLessThan(measure("WWW", 40));
@@ -119,6 +168,12 @@ describe("wrap", () => {
     const out = wrap("Name the bowl", 22);
     expect(out).toEqual(["Name the", "bowl"]);
     for (const l of out) expect(measure(l, 22)).toBeLessThanOrEqual(128);
+  });
+  it("breaks a hyphenated word at the hyphen, and keeps the hyphen", () => {
+    // Seen on a deck: "Bare-handed" drew as "Bare-hande" over "d". The
+    // hyphen is a break the word already has, so it is the one to take.
+    expect(wrap("Bare-handed", 34)).toEqual(["Bare-", "handed"]);
+    expect(drawn("Bare-handed").lines).toEqual(["Bare-", "handed"]);
   });
   it("breaks a single word wider than the line instead of looping", () => {
     const out = wrap("Supercalifragilisticexpialidocious", 22);

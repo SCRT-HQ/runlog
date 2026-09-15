@@ -8,14 +8,22 @@ import type { Face, Tone } from "./state.ts";
  * rejects a raw SVG string despite the documentation. 144 square is the
  * @2x size; the software scales it to any key.
  *
- * The palette is the app's own: celadon for a live key, kiln for a
- * refusal, the muted ink for a key with nothing to do. System sans, since
- * a font in an SVG would have to travel as base64 on every redraw.
+ * The palette is the app's own: celadon for a key that moves the run,
+ * kiln for a refusal and for undo, the muted ink for a key with nothing
+ * to do. System sans, since a font in an SVG would have to travel as
+ * base64 on every redraw.
+ *
+ * `stroke` is the frame's width, and `quiet` the color of the `when` line
+ * and the corner glyph where the edge is too dark to read them in - which
+ * is a readout, whose frame is a hairline rather than an accent.
  */
-const TONE: Record<Tone, { ground: string; ink: string; edge: string }> = {
+const TONE: Record<Tone, { ground: string; ink: string; edge: string; stroke?: number; quiet?: string }> = {
   live: { ground: "#1e2f27", ink: "#e7eae6", edge: "#8cc3a6" },
   dim: { ground: "#1b201d", ink: "#8d958f", edge: "#2f3733" },
   refuse: { ground: "#33211a", ink: "#e7eae6", edge: "#dd8f63" },
+  undo: { ground: "#1e2f27", ink: "#e7eae6", edge: "#dd8f63" },
+  deck: { ground: "#1b201d", ink: "#e7eae6", edge: "#2f3733" },
+  readout: { ground: "#151311", ink: "#e7eae6", edge: "#2f3733", stroke: 1, quiet: "#8d958f" },
 };
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -92,6 +100,21 @@ function ellipsizeWhen(text: string): string {
  * own is broken by characters and carries on below. The last line gets an
  * ellipsis if any text was left over.
  */
+/**
+ * The longest head of a hyphenated word that still fits, hyphen included,
+ * or nothing where the word has no hyphen with anything in front of it.
+ */
+function hyphenated(word: string, size: number, width: number): string {
+  let cut = "";
+  for (let i = 1; i < word.length - 1; i++) {
+    if (word[i] !== "-") continue;
+    const head = word.slice(0, i + 1);
+    if (measure(head, size) > width) break;
+    cut = head;
+  }
+  return cut;
+}
+
 export function wrap(text: string, size: number, width = LINE, lines = MAX_LINES): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   const out: string[] = [];
@@ -99,10 +122,15 @@ export function wrap(text: string, size: number, width = LINE, lines = MAX_LINES
   while (i < words.length && out.length < lines) {
     const word = words[i]!;
     if (measure(word, size) > width) {
-      let cut = "";
-      for (const ch of word) {
-        if (measure(cut + ch, size) > width) break;
-        cut += ch;
+      // A hyphen is already a break somebody wrote into the word, so it is
+      // the one to use: "Bare-handed" reads as "Bare-" and "handed", not
+      // as "Bare-hande" and "d". The hyphen stays on the line it ends.
+      let cut = hyphenated(word, size, width);
+      if (cut === "") {
+        for (const ch of word) {
+          if (measure(cut + ch, size) > width) break;
+          cut += ch;
+        }
       }
       // One glyph always goes, or a face narrower than its own type would
       // loop here forever.
@@ -146,8 +174,27 @@ function typeset(text: string): { lines: string[]; size: number } {
   return { lines: wrap(text, size), size };
 }
 
-export function faceImage(face: Face): string {
+/**
+ * The corner glyph: 18px square, 8px in from the top and the left.
+ *
+ * The action's own drawing, so a key says which key it is while the title
+ * says what it would do. The drawings are 144 square (`design/actions`),
+ * so the scale is 18/144; they are drawn in white, and the white is
+ * swapped for the tone's quiet color the way `design/export.mjs` swaps it
+ * for the key images. 70% opacity keeps it a mark rather than a second
+ * thing to read - the title is the thing to read.
+ */
+const GLYPH_PX = 18;
+const GLYPH_AT = 8;
+
+function corner(glyph: string, color: string): string {
+  const scale = (GLYPH_PX / 144).toFixed(5);
+  return `<g transform="translate(${GLYPH_AT} ${GLYPH_AT}) scale(${scale})" opacity="0.7">${glyph.replaceAll("#ffffff", color)}</g>`;
+}
+
+export function faceImage(face: Face, glyph?: string): string {
   const t = TONE[face.tone];
+  const quiet = t.quiet ?? t.edge;
   const { lines, size } = typeset(face.title);
   const top = 72 - ((lines.length - 1) * size * 1.15) / 2 + (face.when ? -10 : 0);
   // One positioned <text> per line, baseline given outright: the software
@@ -162,7 +209,7 @@ export function faceImage(face: Face): string {
     )
     .join("");
   const when = face.when
-    ? `<text x="72" y="126" text-anchor="middle" font-size="${WHEN_SIZE}" fill="${t.edge}" font-family="ui-monospace, Menlo, Consolas, monospace">${esc(ellipsizeWhen(face.when))}</text>`
+    ? `<text x="72" y="126" text-anchor="middle" font-size="${WHEN_SIZE}" fill="${quiet}" font-family="ui-monospace, Menlo, Consolas, monospace">${esc(ellipsizeWhen(face.when))}</text>`
     : "";
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">` +
@@ -170,7 +217,8 @@ export function faceImage(face: Face): string {
     // thing even when the drawn lines above cut it short.
     `<title>${esc(face.title)}</title>` +
     `<rect width="144" height="144" rx="14" fill="${t.ground}"/>` +
-    `<rect x="3" y="3" width="138" height="138" rx="12" fill="none" stroke="${t.edge}" stroke-width="3"/>` +
+    `<rect x="3" y="3" width="138" height="138" rx="12" fill="none" stroke="${t.edge}" stroke-width="${t.stroke ?? 3}"/>` +
+    (glyph ? corner(glyph, quiet) : "") +
     spans +
     when +
     `</svg>`;

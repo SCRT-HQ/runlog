@@ -25,7 +25,7 @@ const repo = join(here, "..", "..");
 
 const MANIFEST = JSON.parse(readFileSync(join(plugin, "manifest.json"), "utf8"));
 
-/** Everything a key on one of these may be: our eight actions, and the app's two turns. */
+/** Everything a key on one of these may be: our nine actions, and the app's two turns. */
 const ALLOWED = new Set([...MANIFEST.Actions.map((a) => a.UUID), "com.elgato.streamdeck.page.next", "com.elgato.streamdeck.page.previous"]);
 
 /** Every action on every page of a built profile, with the page and position it sits at. */
@@ -123,6 +123,8 @@ describe("the profiles we ship", () => {
           if (settings.target.kind === "move") expect(typeof settings.target.id, where).toBe("string");
         } else if (action.UUID === "com.scrthq.runlog.setup") {
           expect(Object.keys(settings.setup).sort(), where).toEqual(["id", "title"]);
+        } else if (action.UUID === "com.scrthq.runlog.open") {
+          expect(["run", "guide", "rules"], where).toContain(settings.target);
         } else {
           expect(settings, where).toEqual({});
         }
@@ -176,6 +178,17 @@ describe("the profiles we ship", () => {
         // that stopped naming this tool would otherwise vanish unremarked.
         for (const id of setups) expect(chosen).toContain(`com.scrthq.runlog.setups.${id}`);
       });
+    }
+  });
+
+  it("gives every profile the run and the guide, and only a pack's the rules", () => {
+    for (const { spec, built } of all) {
+      const targets = placed(built)
+        .filter((p) => p.action.UUID === "com.scrthq.runlog.open")
+        .map((p) => p.action.Settings.target)
+        .sort();
+      const want = spec.slug === "runlog" ? ["guide", "run"] : ["guide", "rules", "run"];
+      expect(targets, `${spec.slug}-${spec.device}`).toEqual(want);
     }
   });
 
