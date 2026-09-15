@@ -1,0 +1,39 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2J2KKX0RV9MK9441BBXG6P5",
+  "strategy": "manual-commit",
+  "branch": "no-em-dashes",
+  "checkpoints_count": 5,
+  "files_touched": [
+    "apps/web/src/run/ControlSettings.tsx",
+    "apps/web/src/run/useReachable.ts",
+    "apps/web/src/storage/who.ts",
+    "docs/stream-api.md",
+    "hosted/infra/lib/handlers/control.ts",
+    "hosted/infra/lib/handlers/live.ts",
+    "packages/rules-schema/src/setup.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 14517,
+    "cache_creation_tokens": 1638728,
+    "cache_read_tokens": 327846636,
+    "output_tokens": 721360,
+    "api_call_count": 704,
+    "subagent_tokens": {
+      "input_tokens": 362,
+      "cache_creation_tokens": 453361,
+      "cache_read_tokens": 20794363,
+      "output_tokens": 98066,
+      "api_call_count": 181
+    }
+  }
+}
