@@ -1,15 +1,15 @@
 /**
  * A deck, in about forty lines, for anyone who has not got one.
  *
- * Signs in with the CLI's own saved session, renewing it if it is close to
- * expiry the way `runlog`'s own `api()` does, then attaches as a deck,
- * watches the run it is told is held, and presses the primary on it
- * whenever Enter is struck. It is the smallest thing that exercises the
- * whole path, and it is what the plugin will do.
+ * Signs in with the CLI's own saved session through `runlog`'s own `bearer`,
+ * which renews it when it is close to expiry and writes the renewed session
+ * back, since the issuer retires the old refresh token on every renewal.
+ * Then it attaches as a deck, watches the run it is told is held, and
+ * presses the primary on it whenever Enter is struck. It is the smallest
+ * thing that exercises the whole path, and it is what the plugin will do.
  */
-import { credentials, renew } from "../packages/cli/src/account.ts";
+import { bearer, credentials } from "../packages/cli/src/account.ts";
 
-const RENEW_MARGIN_MS = 60_000;
 // RUNLOG_WS=wss://runlog.dev.scrthq.com reaches the dev copy instead.
 const base = process.env["RUNLOG_WS"] ?? "wss://runlog.scrthq.com";
 
@@ -17,10 +17,7 @@ async function tokenFromSession(): Promise<string> {
   const override = process.argv[2];
   if (override) return override;
   const creds = credentials();
-  if (creds?.session) {
-    const lapsing = !creds.session.expiresAt || Date.parse(creds.session.expiresAt) - Date.now() < RENEW_MARGIN_MS;
-    return lapsing ? (await renew(creds.session)).accessToken : creds.session.accessToken;
-  }
+  if (creds?.session) return bearer(creds);
   console.error("Run `npm run runlog -- login` first: the socket needs a signed-in session, not a key.");
   process.exit(1);
 }

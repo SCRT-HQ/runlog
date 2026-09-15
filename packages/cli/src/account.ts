@@ -287,7 +287,7 @@ export async function renew(session: Session, deps: FlowDeps = realDeps): Promis
  * The bearer to send: the key, or the session's access token, renewed first
  * when it is about to lapse. `force` renews regardless, after a 401.
  */
-async function bearer(creds: Credentials, force = false, deps: FlowDeps = realDeps): Promise<string> {
+export async function bearer(creds: Credentials, force = false, deps: FlowDeps = realDeps): Promise<string> {
   if (creds.key) return creds.key;
   if (!creds.session) throw new Error("not signed in: run `runlog login`");
   const lapsing = !creds.session.expiresAt || Date.parse(creds.session.expiresAt) - deps.now() < RENEW_MARGIN_MS;
