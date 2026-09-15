@@ -21,11 +21,11 @@ export class Press extends RunlogAction<PressSettings> {
     }
     if (target.kind === "roll") await this.send(ev.action, { press: "primary" });
     else if (target.kind === "move") await this.send(ev.action, { press: "move", move: target.id });
-    else
-      await this.send(ev.action, {
-        press: "answer",
-        answer: { [target.preset === "declareSubject" ? "subject" : target.preset]: target.value },
-      });
+    // The two presets answer in the page's own words: a subject is the
+    // typed value, and a list is ticked whole - `takePress` takes
+    // `{ ticks: "all" }` and nothing else for it.
+    else if (target.preset === "checklist") await this.send(ev.action, { press: "answer", answer: { ticks: "all" } });
+    else await this.send(ev.action, { press: "answer", answer: { subject: target.value } });
   }
 
   /** The inspector cannot know the pack's own words, so the run's offer is handed to it. */
