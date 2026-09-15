@@ -16,7 +16,7 @@
  */
 export interface Offer {
   seq: number;
-  primary: { id: "roll" | "carry-on" | "close" | "enter"; label: string; kind: string } | null;
+  primary: { id: "roll" | "carry-on" | "close" | "enter" | "owed"; label: string; kind: string } | null;
   moves: Array<{ id: string; label: string }>;
   undo: { what: string } | null;
   /** Why a deck cannot press this, in words a key face can carry. */

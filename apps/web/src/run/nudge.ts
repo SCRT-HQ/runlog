@@ -22,9 +22,13 @@ export function nudgeFirstUnticked(from: HTMLElement): void {
  * a thing is owed and gives no way to reach it, and an obligation that came
  * due at the close was not even on the screen to settle. Pressing the button
  * takes the player to the debt.
+ *
+ * What the game is owed counts as a debt here too, and comes first where
+ * both are on the page: the thresholds panel is drawn above the obligations,
+ * and this takes whichever of the two the page put first.
  */
 export function nudgeOwed(from: HTMLElement): void {
-  const owed = from.closest(".main, body")?.querySelector<HTMLElement>(".panel.owed");
+  const owed = from.closest(".main, body")?.querySelector<HTMLElement>(".panel.threshold, .panel.owed");
   if (!owed) return;
   owed.scrollIntoView({ block: "nearest", behavior: "smooth" });
   owed.querySelector<HTMLButtonElement>("button.primary")?.focus();
