@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { an, rollDice } from "@runlog/rules-schema";
+import { an } from "@runlog/rules-schema";
 import { ClockPanel } from "./ClockPanel.tsx";
 import { SettingsDialog } from "./SettingsDialog.tsx";
 import { ControlPanel, openControlsWindow, RemoteControls } from "./ControlPanel.tsx";
@@ -43,7 +43,7 @@ import { Checklist, checklistDone, ticksToFinish } from "./Checklist.tsx";
 import { evidenceFor, pointOf } from "./evidence.ts";
 import { Receipt, type RollReceipt } from "./Receipt.tsx";
 import { closesTheUnit, startsItself } from "./handsFree.ts";
-import { toDisplayDice, type RolledDie } from "../rolling.ts";
+import { type RolledDie } from "../rolling.ts";
 import { useSync } from "../sync/SyncProvider.tsx";
 import { syncBus } from "../sync/bus.ts";
 import { DiceCurtain, rolledOf, type RolledGesture } from "../dice/DiceCurtain.tsx";
@@ -172,6 +172,15 @@ export function heldMove(move: { finalizes?: boolean }, owed: number): boolean {
  * it is sent with whatever the run reads at anyway.
  */
 const HELD_VERDICT_MS = 1500;
+
+/**
+ * The same wait, for a press whose whole effect was to start the dice.
+ *
+ * Nothing is appended until they land and the total has been read, which
+ * is the tray's flight and a beat after it -- longer than the wait above,
+ * so the ordinary one would report "done" over dice still in the air.
+ */
+const DICE_VERDICT_MS = 6000;
 
 /**
  * Whether a move is asked of each racer rather than of the table: the pack
@@ -547,6 +556,16 @@ export function RunView({
   const answered = useRef(0);
 
   /**
+   * A roll asked for by a deck, counted rather than carried out here.
+   *
+   * The request panel is the only place dice are thrown, so a press goes
+   * to it as a number that has gone up. Anything this side did instead
+   * would put a total on screen with no throw in front of it, which is
+   * the one thing the panel is written not to do.
+   */
+  const [machineRoll, setMachineRoll] = useState(0);
+
+  /**
    * Answering whatever the engine is waiting on: the page's own request
    * panel calls this, and so does a deck's roll press, because a machine
    * roll is the same answer either way.
@@ -588,6 +607,9 @@ export function RunView({
     const active = run.activeStep;
     return syncBus.subscribe((news) => {
       if (news.t !== "drive" || news.run !== runId) return;
+      // Whether all this press did was put dice in the air. The verdict
+      // for one of those has longer to wait; see `DICE_VERDICT_MS`.
+      let threw = false;
       const verdict = takePress(
         news,
         { seq: run.events.length, offer: currentOffer, seen: driveSeen.current },
@@ -602,10 +624,11 @@ export function RunView({
             const request = run.pending?.request;
             if (id === "roll" && request?.kind === "roll") {
               // The step already began -- hands-free, or a press before
-              // this one -- and is only waiting on dice. A deck throws
-              // them the same way the page's own "Roll for me" does.
-              const { total, dice: values } = rollDice(request.dice, Math.random);
-              answer(request.key, total, true, toDisplayDice(request.dice, values, total), Math.floor(Math.random() * 4294967296));
+              // this one -- and is only waiting on dice. The panel's own
+              // "Roll for me" is pressed, so the dice fly on screen and
+              // the engine hears the total once they have landed.
+              setMachineRoll((n) => n + 1);
+              threw = true;
             } else if (id === "roll" && active.step.kind === "rollTable") {
               const table = pack.tables[active.step.table];
               run.begin({
@@ -659,10 +682,10 @@ export function RunView({
         to: news.from,
         ref: news.ref,
         was: run.events.length,
-        timer: window.setTimeout(() => settleVerdict(eventCount.current), HELD_VERDICT_MS),
+        timer: window.setTimeout(() => settleVerdict(eventCount.current), threw ? DICE_VERDICT_MS : HELD_VERDICT_MS),
       };
     });
-  }, [run, currentOffer, sync, pack, settleVerdict, answer, offeredSetups]);
+  }, [run, currentOffer, sync, pack, settleVerdict, offeredSetups]);
   const seen = useRef<number | null>(null);
   // How many answers this view has given, and how many it had given when
   // the last receipt was issued: what a step that came back with the run
@@ -1009,7 +1032,14 @@ export function RunView({
           {run.pending?.request ? (
             // The next thing the game is waiting on comes beneath the
             // receipts of the rolls before it, which stay where they are.
-            <RequestPanel request={run.pending.request} pack={pack} state={state} onAnswer={answer} onCancel={run.abandonPending} />
+            <RequestPanel
+              request={run.pending.request}
+              pack={pack}
+              state={state}
+              onAnswer={answer}
+              onCancel={run.abandonPending}
+              machineRoll={machineRoll}
+            />
           ) : receipts.length > 0 ? null : state.status === "ended" ? (
             <Ended pack={pack} state={state} />
           ) : state.unit === 0 ? (
