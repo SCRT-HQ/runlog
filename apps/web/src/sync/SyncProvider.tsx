@@ -20,8 +20,8 @@ import { createEngine, storageDb, type Engine, type Report, type SyncStatus } fr
  *
  * When it is on, a pass runs at sign-in, when the tab comes back, when the
  * network does, and two seconds after the last local change. While this
- * device has a run open and the tab is visible it also holds a socket to
- * the server that says "changed" when another device moves, and syncs at
+ * device has a run open it also holds a socket to the server, hidden tab
+ * or not, that says "changed" when another device moves, and syncs at
  * once; a poll every ten seconds stands in while the socket is down, and
  * every minute as a backstop while it is up.
  */
@@ -130,17 +130,19 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     const onWake = () => void run();
 
     /**
-     * The doorbell: one socket while the page is visible and a run is
-     * open, watching that run. A "changed" for it is a sync now; the poll
-     * slows to a backstop while the socket is up and takes over when it
-     * is not. Nothing here decides anything: a nudge is a fetch.
+     * The doorbell: one socket for as long as a run is open, watching that
+     * run, hidden tab or not. A deck presses through this page, and a
+     * hidden tab is exactly where a streamer keeps it: behind OBS, behind
+     * the game, on another monitor. A "changed" for it is a sync now; the
+     * poll slows to a backstop while the socket is up and takes over when
+     * it is not. Nothing here decides anything: a nudge is a fetch.
      */
     let socket: LiveSocket | null = null;
     let socketOpen = false;
     let lastPoll = Date.now();
     const watchCurrent = () => socket?.watch(lastActive()?.runId ?? null);
     const openSocket = () => {
-      if (socket || !lastActive() || document.visibilityState !== "visible") return;
+      if (socket || !lastActive()) return;
       socket = openLive({
         url: async () => socketUrl(base, await account.getAccessToken()),
         onChanged: (changed) => {
@@ -173,8 +175,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       socketOpen = false;
     };
     const onVisibleSocket = () => {
+      // Hidden does nothing: the socket is not the poll. A tab hidden at
+      // mount still gets its open once a run arrives, from here or from
+      // the poll's own openSocket() call as a backstop.
       if (document.visibilityState === "visible") openSocket();
-      else closeSocket();
     };
 
     void run();
