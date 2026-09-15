@@ -29,6 +29,7 @@ const config = (over: Partial<EnvConfig> = {}): EnvConfig => ({
   retain: true,
   workosClientId: "client_test",
   workosCliClientId: "client_cli_test",
+  workosDeckClientId: "client_deck_test",
   email: { from: "Runlog <noreply@example.com>", region: "us-west-2", identity: "example.com" },
   gates: false,
   stripe: {

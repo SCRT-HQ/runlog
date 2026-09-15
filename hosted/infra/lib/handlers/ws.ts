@@ -754,6 +754,7 @@ export async function handler(event: WsEvent): Promise<WsResult> {
   if (!deps) {
     const clientId = process.env["WORKOS_CLIENT_ID"] ?? "";
     const cliClientId = process.env["WORKOS_CLI_CLIENT_ID"] ?? "";
+    const deckClientId = process.env["WORKOS_DECK_CLIENT_ID"] ?? "";
     const table = process.env["TABLE_NAME"] ?? "";
     const gates = process.env["RUNLOG_GATES"] === "on";
     const plusFeature = featuresFromEnv(process.env["STRIPE_FEATURES"]).plus;
@@ -762,7 +763,7 @@ export async function handler(event: WsEvent): Promise<WsResult> {
       live: dynamoLive({ table }),
       store: dynamoStore({ table, bucket: process.env["BUCKET_NAME"] ?? "" }),
       races: dynamoRaces({ table }),
-      verify: (authorization) => verifyToken(authorization, [clientId, cliClientId]),
+      verify: (authorization) => verifyToken(authorization, [clientId, cliClientId, deckClientId]),
       ...(process.env["WS_ENDPOINT"] ? { poster: apiGatewayPoster(process.env["WS_ENDPOINT"]) } : {}),
       // No token flags are in hand at drive time, only `conn.sub`: the
       // kept flags `billing.flags(sub)` do the work a token flag would on

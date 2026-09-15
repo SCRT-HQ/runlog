@@ -24,6 +24,7 @@ const config = (over: Partial<EnvConfig> = {}): EnvConfig => ({
   retain: true,
   workosClientId: "client_test",
   workosCliClientId: "client_cli_test",
+  workosDeckClientId: "client_deck_test",
   email: { from: "Runlog <noreply@example.com>", region: "us-west-2", identity: "example.com" },
   gates: false,
   stripe: {
@@ -118,6 +119,7 @@ describe("the API", () => {
     expect(live!.Properties.Environment.Variables).toMatchObject({
       RUNLOG_GATES: "off",
       STRIPE_FEATURES: expect.stringContaining("plus"),
+      WORKOS_DECK_CLIENT_ID: "client_deck_test",
     });
   });
 
@@ -155,7 +157,13 @@ describe("the API", () => {
     template.hasResourceProperties("AWS::Lambda::Function", {
       Runtime: "nodejs24.x",
       Architectures: ["arm64"],
-      Environment: { Variables: Match.objectLike({ WORKOS_CLIENT_ID: "client_test", WORKOS_CLI_CLIENT_ID: "client_cli_test" }) },
+      Environment: {
+        Variables: Match.objectLike({
+          WORKOS_CLIENT_ID: "client_test",
+          WORKOS_CLI_CLIENT_ID: "client_cli_test",
+          WORKOS_DECK_CLIENT_ID: "client_deck_test",
+        }),
+      },
     });
   });
 
