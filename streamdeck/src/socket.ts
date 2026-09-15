@@ -1,5 +1,5 @@
 import type { Account } from "./session.ts";
-import { bearer as realBearer } from "./session.ts";
+import { bearer as realBearer, normalizeBase } from "./session.ts";
 import type { Store } from "./store.ts";
 import { attachedRun } from "./state.ts";
 
@@ -41,6 +41,13 @@ export function openWire(account: Account | (() => Account), store: Store, deps:
   let wanted = false;
   let attempt = 0;
   let watching: string | null = null;
+  // Which dialing attempt is the live one. A real close is asynchronous, so
+  // Reconnect - close, then dial again - leaves the old socket's handlers
+  // queued behind the new socket's. Each attempt captures the number it was
+  // given and any handler whose number has moved on does nothing: no state
+  // dispatched from a socket nobody is using, and no backoff reopen racing
+  // the connect that replaced it.
+  let generation = 0;
   const currentAccount = (): Account => (typeof account === "function" ? account() : account);
 
   const fetchSnapshot = async (run: string) => {
@@ -48,7 +55,7 @@ export function openWire(account: Account | (() => Account), store: Store, deps:
     const token = await deps.bearer(acct);
     if (!token) return;
     try {
-      const res = await deps.fetch(`${acct.apiBase}/api/sessions/${encodeURIComponent(run)}/snapshot`, {
+      const res = await deps.fetch(`${normalizeBase(acct.apiBase)}/api/sessions/${encodeURIComponent(run)}/snapshot`, {
         headers: { authorization: `Bearer ${token}` },
       });
       if (res.ok) store.dispatch({ t: "snapshot", snapshot: (await res.json()) as never });
@@ -70,23 +77,27 @@ export function openWire(account: Account | (() => Account), store: Store, deps:
 
   const open = async () => {
     if (!wanted) return;
+    const mine = ++generation;
     const acct = currentAccount();
     const token = await deps.bearer(acct);
     if (!token) {
       store.dispatch({ t: "session", state: "expired" });
       return;
     }
+    if (mine !== generation) return;
     store.dispatch({ t: "socket", state: "connecting" });
-    const wsBase = acct.apiBase.replace(/^http/, "ws");
+    const wsBase = normalizeBase(acct.apiBase).replace(/^http/, "ws");
     const ws = new deps.WebSocket(`${wsBase}/ws?token=${encodeURIComponent(token)}&as=deck`);
     socket = ws;
     ws.onopen = () => {
+      if (mine !== generation) return;
       attempt = 0;
       watching = null;
       store.dispatch({ t: "socket", state: "open" });
       ws.send(JSON.stringify({ t: "hello" }));
     };
     ws.onmessage = (e) => {
+      if (mine !== generation) return;
       let m: unknown;
       try {
         m = JSON.parse(String(e.data));
@@ -111,11 +122,7 @@ export function openWire(account: Account | (() => Account), store: Store, deps:
         });
     };
     ws.onclose = () => {
-      // A close arriving after a newer socket took over - Reconnect closes and
-      // dials again, and a real close is asynchronous - is about a socket
-      // nobody is using. Letting it through would report the live one as down
-      // and then open a third.
-      if (socket !== null && socket !== ws) return;
+      if (mine !== generation) return;
       socket = null;
       store.dispatch({ t: "socket", state: "closed" });
       if (wanted) setTimeout(() => void open(), backoffMs(attempt++, deps.random));
@@ -129,7 +136,13 @@ export function openWire(account: Account | (() => Account), store: Store, deps:
     },
     disconnect() {
       wanted = false;
-      socket?.close();
+      // Retiring the generation first: whatever this socket does on its way
+      // down is no longer anybody's business.
+      generation++;
+      const going = socket;
+      socket = null;
+      store.dispatch({ t: "socket", state: "closed" });
+      going?.close();
     },
     press(p) {
       const run = attachedRun(store.state);

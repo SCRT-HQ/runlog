@@ -4,12 +4,14 @@ import { openWire } from "./socket.ts";
 
 class FakeSocket {
   static last: FakeSocket;
+  static made = 0;
   sent: string[] = [];
   onopen: (() => void) | null = null;
   onmessage: ((e: { data: string }) => void) | null = null;
   onclose: (() => void) | null = null;
   constructor(public url: string) {
     FakeSocket.last = this;
+    FakeSocket.made++;
   }
   send(d: string) {
     this.sent.push(d);
@@ -138,5 +140,54 @@ describe("the wire", () => {
     expect(store.state.socket).toBe("open");
     stale.onclose?.();
     expect(store.state.socket).toBe("open");
+  });
+
+  // The window Reconnect actually opens: the old socket is still closing while
+  // the new one is being dialed, so its close lands with nothing newer assigned
+  // yet. It must neither report the connection down nor start a second dial
+  // beside the one already running.
+  it("lets a retired socket close without reporting a drop or dialing again", async () => {
+    vi.useFakeTimers();
+    try {
+      const store = makeStore();
+      const wire = openWire({ apiBase: "https://api.test" }, store, deps());
+      wire.connect();
+      await vi.advanceTimersByTimeAsync(0);
+      const first = FakeSocket.last;
+      first.onopen?.();
+      expect(store.state.socket).toBe("open");
+
+      wire.disconnect();
+      wire.connect();
+      await vi.advanceTimersByTimeAsync(0);
+      const second = FakeSocket.last;
+      second.onopen?.();
+      const made = FakeSocket.made;
+
+      // The first socket finally finishes closing, long after it was retired.
+      first.onclose?.();
+      expect(store.state.socket).toBe("open");
+
+      // No backoff reopen was scheduled by that close.
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(FakeSocket.made).toBe(made);
+      expect(store.state.socket).toBe("open");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // The address is joined onto, so a pasted trailing slash must not double up.
+  it("drops a trailing slash from the address before joining anything onto it", async () => {
+    const store = makeStore();
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ ready: true }))) as never;
+    const wire = openWire(() => ({ apiBase: "https://api.test/" }), store, { ...deps(), fetch });
+    wire.connect();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(FakeSocket.last.url).toBe("wss://api.test/ws?token=tok&as=deck");
+    FakeSocket.last.onopen?.();
+    FakeSocket.last.onmessage?.({ data: JSON.stringify({ t: "runs", runs: [{ id: "s1" }], any: true }) });
+    await new Promise((r) => setTimeout(r, 0));
+    expect((fetch as unknown as { mock: { calls: string[][] } }).mock.calls[0]?.[0]).toBe("https://api.test/api/sessions/s1/snapshot");
   });
 });

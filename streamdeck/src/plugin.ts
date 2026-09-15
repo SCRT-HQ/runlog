@@ -6,7 +6,7 @@ import { Next } from "./actions/next.ts";
 import { Press } from "./actions/press.ts";
 import { Run } from "./actions/run.ts";
 import { Undo } from "./actions/undo.ts";
-import { loadSession, signIn, signOut, type Account } from "./session.ts";
+import { loadSession, normalizeBase, signIn, signOut, type Account } from "./session.ts";
 import { openWire } from "./socket.ts";
 import { makeStore } from "./store.ts";
 import { idleDeadline } from "./state.ts";
@@ -57,7 +57,7 @@ export async function sayWho(): Promise<void> {
 }
 
 function applyGlobals(g: Globals): void {
-  apiBase = g.apiBase?.trim() || DEFAULT_API;
+  apiBase = normalizeBase(g.apiBase ?? "") || DEFAULT_API;
   if (g.pinned !== undefined) store.dispatch({ t: "pin", id: g.pinned });
 }
 
@@ -108,8 +108,12 @@ streamDeck.ui.onSendToPlugin<{ t?: string }>(async (ev) => {
         // Signed in is not connected: the streamer presses Connect.
         await streamDeck.ui.sendToPropertyInspector({ t: "who", name: "you", signedIn: true, apiBase });
       } catch (e) {
-        streamDeck.logger.error(`sign-in: failed (${e instanceof Error ? e.message : "unknown"})`);
-        await streamDeck.ui.sendToPropertyInspector({ t: "who", signedIn: false, apiBase });
+        // The reason goes back to the inspector, not only to the log: the
+        // streamer is looking at the button they pressed, and a status line
+        // that flips back to "Not signed in" tells them nothing.
+        const error = e instanceof Error ? e.message : "unknown";
+        streamDeck.logger.error(`sign-in: failed (${error})`);
+        await streamDeck.ui.sendToPropertyInspector({ t: "who", signedIn: false, apiBase, error });
       }
       break;
     case "signout":

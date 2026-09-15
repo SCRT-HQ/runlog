@@ -5,6 +5,18 @@ export interface Account {
 }
 
 /**
+ * The address without its trailing slash.
+ *
+ * Every caller joins a path onto it, and a streamer who pastes the address
+ * out of a browser bar brings the slash with them - which would ask for
+ * `//api/...` and dial `//ws`. Trimmed wherever the base is used, rather
+ * than trusted to have been cleaned on the way in.
+ */
+export function normalizeBase(apiBase: string): string {
+  return apiBase.trim().replace(/\/+$/, "");
+}
+
+/**
  * The deck's session, kept in a file of the plugin's own.
  *
  * Not in Stream Deck's global settings: those are handed to the property
@@ -35,7 +47,7 @@ export function signOut(): void {
 }
 
 async function clientOf(account: Account): Promise<{ clientId: string; issuer: string }> {
-  const res = await fetch(`${account.apiBase}/api/auth/deck`);
+  const res = await fetch(`${normalizeBase(account.apiBase)}/api/auth/deck`);
   const body = (await res.json()) as { clientId?: string | null; issuer?: string };
   if (!body.clientId) throw new Error("this copy of Runlog has no sign-in for a deck");
   return { clientId: body.clientId, issuer: body.issuer ?? "https://api.workos.com" };

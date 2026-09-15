@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readSession, writeSession } from "@runlog/session";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { __setSessionDirForTests, bearer, loadSession, signIn, signOut } from "./session.ts";
+import { __setSessionDirForTests, bearer, loadSession, normalizeBase, signIn, signOut } from "./session.ts";
 
 const jwt = (exp: number) => `h.${Buffer.from(JSON.stringify({ exp })).toString("base64url")}.s`;
 
@@ -101,5 +101,18 @@ describe("the deck's session", () => {
     expect(loadSession()).toBeNull();
     expect(await bearer({ apiBase: "https://api.test" })).toBeNull();
     expect(readSession(dir)).toBeNull();
+  });
+});
+
+// A streamer pastes the address out of a browser bar, slash and all, and
+// every caller joins a path onto it.
+describe("the address a path is joined onto", () => {
+  it("loses its trailing slashes and its whitespace", () => {
+    expect(normalizeBase("https://runlog.dev.scrthq.com/")).toBe("https://runlog.dev.scrthq.com");
+    expect(normalizeBase("  https://runlog.scrthq.com///  ")).toBe("https://runlog.scrthq.com");
+  });
+  it("leaves an address that is already clean alone", () => {
+    expect(normalizeBase("https://runlog.scrthq.com")).toBe("https://runlog.scrthq.com");
+    expect(normalizeBase("http://localhost:5173")).toBe("http://localhost:5173");
   });
 });

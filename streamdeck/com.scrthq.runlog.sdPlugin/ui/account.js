@@ -51,7 +51,10 @@
     }
     if (payload.t === "who") {
       el("runlog-code-row").style.display = "none";
-      el("runlog-who").textContent = payload.signedIn ? "Signed in" : "Not signed in";
+      const signedIn = payload.signedIn ? "Signed in" : "Not signed in";
+      // A sign-in that failed says why, and keeps saying it until the next
+      // time the plugin reports who is signed in.
+      el("runlog-who").textContent = payload.error ? `${signedIn} — ${payload.error}` : signedIn;
     }
   });
 })();

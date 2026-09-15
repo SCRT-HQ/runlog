@@ -22,6 +22,9 @@ type JsonPrimitive = boolean | number | string | null | undefined;
 type JsonValue = JsonObject | JsonPrimitive | JsonValue[];
 export type JsonObject = { [key: string]: JsonValue };
 
+/** How long a press waits for the server's verdict before giving up on it. */
+const VERDICT_MS = 5000;
+
 /** Either kind of placed action - a key on the grid, or a dial on a Stream Deck +. */
 export type Placed<S extends JsonObject> = DialAction<S> | KeyAction<S>;
 
@@ -77,17 +80,42 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
     for (const a of this.actions) void a.getSettings<S>().then((s) => this.draw(a, s));
   }
 
-  /** A press, with the flash the server's answer will turn into. */
+  /**
+   * A press, with the flash the server's answer will turn into.
+   *
+   * The wait is bounded two ways, because a verdict that never comes would
+   * otherwise leave a listener on the store for the life of the plugin: the
+   * deck going off ends it silently, and a press still unanswered after
+   * {@link VERDICT_MS} ends it with the alert - a press that vanished should
+   * say so rather than nothing.
+   */
   protected async send(action: Placed<S>, p: Parameters<typeof wire.press>[0]): Promise<void> {
     const ref = wire.press(p);
     if (!ref) {
       await action.showAlert();
       return;
     }
-    const off = store.subscribe((s) => {
-      if (s.flash?.ref !== ref) return;
+    let off: (() => void) | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const stop = (): boolean => {
+      if (off === null) return false;
+      if (timer) clearTimeout(timer);
       off();
-      void (s.flash.ok && action.isKey() ? action.showOk() : action.showAlert());
+      off = null;
+      return true;
+    };
+    off = store.subscribe((s) => {
+      if (!s.on) {
+        stop();
+        return;
+      }
+      if (s.flash?.ref !== ref) return;
+      const ok = s.flash.ok;
+      if (!stop()) return;
+      void (ok && action.isKey() ? action.showOk() : action.showAlert());
     });
+    timer = setTimeout(() => {
+      if (stop()) void action.showAlert();
+    }, VERDICT_MS);
   }
 }
