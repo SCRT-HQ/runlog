@@ -20,7 +20,7 @@
       "Name": "Do the next thing",
       "UUID": "com.scrthq.runlog.next",
       "Icon": "imgs/actions/next",
-      "Tooltip": "Presses whatever the run is waiting on.",
+      "Tooltip": "Presses whatever the run is waiting on, and takes the decisions unless told to stop.",
       "Controllers": ["Keypad", "Encoder"],
       "Encoder": { "layout": "$B1" },
       "States": [{ "Image": "imgs/keys/next" }],

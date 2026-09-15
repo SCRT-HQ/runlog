@@ -54,10 +54,34 @@ export function wrap(text: string, width = 10, lines = 3): string[] {
   return out;
 }
 
+/**
+ * The type scale, biggest first, with the line width each size holds.
+ *
+ * A 144px face with 12px either side leaves 120px for the title, which is
+ * roughly seven characters at 40, nine at 30 and twelve at 22. A title
+ * takes the first step it fits in whole; one too long for the last step is
+ * wrapped to it anyway and ellipsized on the last line rather than drawn
+ * over the frame.
+ */
+const SCALE = [
+  { size: 40, width: 7, lines: 1 },
+  { size: 30, width: 9, lines: 2 },
+  { size: 22, width: 12, lines: 3 },
+] as const;
+
+/** Whether wrapping at this step keeps every word of the phrase. */
+function whole(text: string, step: (typeof SCALE)[number]): boolean {
+  return wrap(text, step.width, step.lines).join(" ") === text.split(/\s+/).filter(Boolean).join(" ");
+}
+
+function typeset(text: string): { lines: string[]; size: number } {
+  const step = SCALE.find((s) => whole(text, s)) ?? SCALE[SCALE.length - 1]!;
+  return { lines: wrap(text, step.width, step.lines), size: step.size };
+}
+
 export function faceImage(face: Face): string {
   const t = TONE[face.tone];
-  const lines = wrap(face.title);
-  const size = lines.length === 1 && face.title.length <= 6 ? 34 : 20;
+  const { lines, size } = typeset(face.title);
   const top = 72 - ((lines.length - 1) * size * 1.15) / 2 + (face.when ? -8 : 0);
   const spans = lines.map((l, i) => `<tspan x="72" y="${(top + i * size * 1.15).toFixed(1)}">${esc(l)}</tspan>`).join("");
   const when = face.when

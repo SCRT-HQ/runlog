@@ -209,12 +209,52 @@ function flashed(state: DeckState): Face | null {
   return { title: state.flash.say ?? "No", tone: "refuse" };
 }
 
-export function nextFace(state: DeckState): Face {
+/** What the follow key was told about decisions. Re-exported by `actions/next.ts`. */
+export type NextSettings = { stop?: boolean };
+
+/**
+ * The decision the follow key takes for the streamer, or nothing.
+ *
+ * A checklist first, then a declaration with something to suggest: the two
+ * the page publishes as presets. Placing the key and leaving *Stop at
+ * decisions* unticked is the streamer choosing to skip the reading, which
+ * is the rule `apps/web/src/run/handsFree.ts` asks for - a decision is
+ * skipped only where somebody chose to skip it.
+ */
+function decision(offer: Offer, settings: NextSettings): Offer["presets"][number] | null {
+  if (settings.stop) return null;
+  const list = offer.presets.find((p) => p.kind === "checklist");
+  if (list) return list;
+  return offer.presets.find((p) => p.kind === "declareSubject" && (p.suggestions?.[0] ?? "") !== "") ?? null;
+}
+
+/** What one press of the follow key sends, or nothing for it to send. */
+export function nextPress(
+  state: DeckState,
+  settings: NextSettings,
+): { press: "primary" } | { press: "answer"; answer: Record<string, string> } | null {
+  const offer = state.snapshot?.offer;
+  if (!offer) return null;
+  if (offer.primary) return { press: "primary" };
+  const d = decision(offer, settings);
+  if (!d) return null;
+  // The words the page takes for each preset, from `takePress.ts`.
+  return d.kind === "checklist"
+    ? { press: "answer", answer: { ticks: "all" } }
+    : { press: "answer", answer: { subject: d.suggestions![0]! } };
+}
+
+export function nextFace(state: DeckState, settings: NextSettings): Face {
   const c = common(state) ?? flashed(state);
   if (c) return c;
   const offer = state.snapshot?.offer;
   if (!offer) return { title: "Loading…", tone: "dim" };
   if (offer.primary) return { title: offer.primary.label, tone: "live" };
+  // What the key would take, in the page's own words: the checklist's
+  // button, or the name it would declare with the ask beneath it.
+  const d = decision(offer, settings);
+  if (d?.kind === "checklist") return { title: d.label, tone: "live" };
+  if (d) return { title: d.suggestions![0]!, tone: "live", when: d.label };
   return { title: offer.needsPage ?? "Nothing to press", tone: offer.needsPage ? "refuse" : "dim" };
 }
 

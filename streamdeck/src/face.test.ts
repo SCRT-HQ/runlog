@@ -14,12 +14,29 @@ describe("faceImage", () => {
     expect(svg).not.toContain("<Bowl>");
     expect(svg).toContain("&lt;Bowl&gt; &amp; &quot;Kiln&quot;");
   });
-  it("wraps a long label onto three lines and no more", () => {
-    const svg = Buffer.from(faceImage({ title: "Name the bowl on the page please", tone: "refuse" }).split(",")[1]!, "base64").toString(
-      "utf8",
-    );
+  it("wraps a long label onto three lines and no more, ellipsized rather than clipped", () => {
+    const svg = Buffer.from(
+      faceImage({ title: "Name the bowl on the page before the kiln is lit", tone: "refuse" }).split(",")[1]!,
+      "base64",
+    ).toString("utf8");
     expect((svg.match(/<tspan/g) ?? []).length).toBe(3);
     expect(svg).toContain("…");
+    // The whole phrase is still there for a tooltip to read.
+    expect(svg).toContain("<title>Name the bowl on the page before the kiln is lit</title>");
+  });
+  it("puts a thirty-character phrase on three lines, none wider than the line", () => {
+    const title = "Tick everything and Next Round";
+    expect(title.length).toBe(30);
+    const svg = Buffer.from(faceImage({ title, tone: "live" }).split(",")[1]!, "base64").toString("utf8");
+    const lines = [...svg.matchAll(/<tspan[^>]*>([^<]*)<\/tspan>/g)].map((m) => m[1]!);
+    expect(lines.length).toBe(3);
+    for (const l of lines) expect(l.length).toBeLessThanOrEqual(12);
+    expect(svg).toContain('font-size="22"');
+  });
+  it("gives a one-word title the largest type", () => {
+    const svg = Buffer.from(faceImage({ title: "Roll", tone: "live" }).split(",")[1]!, "base64").toString("utf8");
+    expect(svg).toContain('font-size="40"');
+    expect((svg.match(/<tspan/g) ?? []).length).toBe(1);
   });
   it("draws the when line but not the fraction", () => {
     const svg = Buffer.from(faceImage({ title: "Weather", tone: "live", when: "2:14", fraction: 0.5 }).split(",")[1]!, "base64").toString(

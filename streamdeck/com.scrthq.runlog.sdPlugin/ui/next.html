@@ -7,7 +7,26 @@
   </head>
 
   <body>
+    <sdpi-item label="Decisions">
+      <input id="stop" type="checkbox" />
+      <label for="stop">Stop at decisions</label>
+    </sdpi-item>
+
     <div id="runlog-account"></div>
     <script src="account.js"></script>
+    <script>
+      // Unticked, the key ticks a checklist and takes a declaration's first
+      // suggestion; ticked, it leaves both to the page.
+      (() => {
+        const { streamDeckClient } = SDPIComponents;
+        const stop = document.getElementById("stop");
+
+        stop.addEventListener("change", () => streamDeckClient.setSettings(stop.checked ? { stop: true } : {}));
+
+        void streamDeckClient.getSettings().then(({ settings }) => {
+          stop.checked = settings?.stop === true;
+        });
+      })();
+    </script>
   </body>
 </html>
