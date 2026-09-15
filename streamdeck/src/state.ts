@@ -288,7 +288,9 @@ export function undoFace(state: DeckState): Face {
   const c = common(state) ?? flashed(state);
   if (c) return c;
   const undo = state.snapshot?.offer?.undo;
-  return undo ? { title: "Undo", tone: "live", when: undo.what } : { title: "Nothing to undo", tone: "dim" };
+  // The key says "Undo" either way: what it would take back is the run's
+  // business, and a key too small to read it is no help at the table.
+  return undo ? { title: "Undo", tone: "live" } : { title: "Undo", tone: "dim" };
 }
 
 export function runFace(state: DeckState): Face {

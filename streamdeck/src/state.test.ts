@@ -78,13 +78,18 @@ describe("what the keys say", () => {
     s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
     s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
     expect(nextFace(s, {})).toEqual({ title: "Roll the Weather", tone: "live" });
-    expect(undoFace(s)).toEqual({ title: "Undo", tone: "live", when: "A dry wind." });
+    expect(undoFace(s)).toEqual({ title: "Undo", tone: "live" });
     const blocked = reduce(
       s,
       { t: "snapshot", snapshot: { offer: { ...offer, primary: null, needsPage: "Name the bowl on the page" } } },
       T,
     );
     expect(nextFace(blocked, {})).toEqual({ title: "Name the bowl on the page", tone: "refuse" });
+  });
+  it("says Undo either way, and dims it when there is nothing to take back", () => {
+    let s = open();
+    s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, undo: null } } }, T);
+    expect(undoFace(s)).toEqual({ title: "Undo", tone: "dim" });
   });
   it("flashes a refusal for three seconds, then goes back", () => {
     let s = live();

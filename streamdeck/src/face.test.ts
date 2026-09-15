@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { faceImage, wrap } from "./face";
+import { faceImage, measure, wrap } from "./face";
+
+/** The lines a face draws, with the size it drew them at. */
+function drawn(title: string): { lines: string[]; size: number } {
+  const svg = Buffer.from(faceImage({ title, tone: "live" }).split(",")[1]!, "base64").toString("utf8");
+  return {
+    lines: [...svg.matchAll(/<tspan[^>]*>([^<]*)<\/tspan>/g)].map((m) => m[1]!),
+    size: Number(/font-size="(\d+)" font-weight/.exec(svg)![1]),
+  };
+}
 
 describe("faceImage", () => {
   it("is a base64 svg data uri, never raw svg", () => {
@@ -24,25 +33,36 @@ describe("faceImage", () => {
     // The whole phrase is still there for a tooltip to read.
     expect(svg).toContain("<title>Name the bowl on the page before the kiln is lit</title>");
   });
-  it("puts a thirty-character phrase on three lines, none wider than the line", () => {
-    const title = "Tick everything and Next Round";
-    expect(title.length).toBe(30);
-    const svg = Buffer.from(faceImage({ title, tone: "live" }).split(",")[1]!, "base64").toString("utf8");
-    const lines = [...svg.matchAll(/<tspan[^>]*>([^<]*)<\/tspan>/g)].map((m) => m[1]!);
+  it("puts a long phrase on three lines, none wider than the frame", () => {
+    const { lines, size } = drawn("Draw what is wrong with the world");
     expect(lines.length).toBe(3);
-    for (const l of lines) expect(l.length).toBeLessThanOrEqual(10);
-    expect(svg).toContain('font-size="22"');
+    for (const l of lines) expect(measure(l, size)).toBeLessThanOrEqual(128);
+  });
+  it("measures a status rather than counting it", () => {
+    // Nine narrow letters: a count of ten sent "connected" to 22, a
+    // measurement keeps it four steps up.
+    const { lines, size } = drawn("Not connected");
+    expect(lines).toEqual(["Not", "connected"]);
+    expect(size).toBeGreaterThanOrEqual(26);
   });
   it("gives a one-word title the largest type that holds it", () => {
-    const svg = Buffer.from(faceImage({ title: "Enter", tone: "live" }).split(",")[1]!, "base64").toString("utf8");
-    expect(svg).toContain('font-size="40"');
-    expect((svg.match(/<tspan/g) ?? []).length).toBe(1);
+    const { lines, size } = drawn("Enter");
+    expect(lines).toEqual(["Enter"]);
+    expect(size).toBe(40);
+  });
+  it("keeps a metric at the largest type", () => {
+    expect(drawn("4/10").size).toBe(40);
   });
   it("steps a word too wide for the largest size down rather than over the frame", () => {
-    const svg = Buffer.from(faceImage({ title: "Offline", tone: "dim" }).split(",")[1]!, "base64").toString("utf8");
-    expect(svg).toContain('font-size="30"');
-    expect((svg.match(/<tspan/g) ?? []).length).toBe(1);
-    expect(svg).not.toContain("…");
+    const { lines, size } = drawn("Reconnect");
+    expect(lines).toEqual(["Reconnect"]);
+    expect(size).toBeLessThan(40);
+    expect(measure("Reconnect", size)).toBeLessThanOrEqual(128);
+  });
+  it("breaks a single word too long for any size and ellipsizes it", () => {
+    const { lines } = drawn("a".repeat(40));
+    expect(lines.length).toBe(3);
+    expect(lines[2]!.endsWith("…")).toBe(true);
   });
   it("draws the when line but not the fraction", () => {
     const svg = Buffer.from(faceImage({ title: "Weather", tone: "live", when: "2:14", fraction: 0.5 }).split(",")[1]!, "base64").toString(
@@ -53,23 +73,32 @@ describe("faceImage", () => {
   });
 });
 
+describe("measure", () => {
+  it("tells narrow glyphs from wide ones", () => {
+    expect(measure("iii", 40)).toBeLessThan(measure("WWW", 40));
+  });
+  it("scales with the size", () => {
+    expect(measure("Undo", 44)).toBeCloseTo(measure("Undo", 22) * 2);
+  });
+});
+
 describe("wrap", () => {
   it("keeps short text on one line", () => {
-    expect(wrap("Roll")).toEqual(["Roll"]);
+    expect(wrap("Roll", 40)).toEqual(["Roll"]);
   });
-  it("fits words exactly at the width without spilling a line", () => {
-    // "Name the bowl" is 13 chars, one over the default width of 12 -
-    // "bowl" moves to the next line rather than overflow the first.
-    expect(wrap("Name the bowl", 13)).toEqual(["Name the bowl"]);
+  it("moves a word down rather than spill the line", () => {
+    const out = wrap("Name the bowl", 22);
+    expect(out).toEqual(["Name the", "bowl"]);
+    for (const l of out) expect(measure(l, 22)).toBeLessThanOrEqual(128);
   });
-  it("cuts a single word longer than the width instead of looping", () => {
-    const out = wrap("Supercalifragilisticexpialidocious", 12, 3);
-    expect(out.length).toBeGreaterThan(0);
-    expect(out.length).toBeLessThanOrEqual(3);
-    expect(out[out.length - 1]!.endsWith("…")).toBe(true);
+  it("breaks a single word wider than the line instead of looping", () => {
+    const out = wrap("Supercalifragilisticexpialidocious", 22);
+    expect(out.length).toBe(3);
+    expect(out.join("")).toBe("Supercalifragilisticexpialidocious");
+    for (const l of out) expect(measure(l, 22)).toBeLessThanOrEqual(128);
   });
   it("never returns more lines than asked", () => {
-    const out = wrap("one two three four five six seven eight nine ten", 8, 3);
+    const out = wrap("one two three four five six seven eight nine ten", 22);
     expect(out.length).toBeLessThanOrEqual(3);
     expect(out[out.length - 1]!.endsWith("…")).toBe(true);
   });
