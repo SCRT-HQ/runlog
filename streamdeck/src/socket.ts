@@ -23,6 +23,13 @@ function backoffMs(attempt: number, random: () => number): number {
 }
 
 /**
+ * API Gateway drops a socket that sits ten minutes without a frame either
+ * way; four minutes leaves room to spare under a quiet Play step where
+ * nobody presses a key.
+ */
+const KEEPALIVE_MS = 4 * 60_000;
+
+/**
  * One socket to Runlog, as a deck.
  *
  * It attaches signed in and names no run; the server pushes the held
@@ -48,6 +55,10 @@ export function openWire(account: Account | (() => Account), store: Store, deps:
   // dispatched from a socket nobody is using, and no backoff reopen racing
   // the connect that replaced it.
   let generation = 0;
+  // Cleared on close and on disconnect, so a superseded socket's timer
+  // never outlives it: the generation guard inside the tick would already
+  // stop it sending, but an interval nobody clears just keeps firing.
+  let keepalive: ReturnType<typeof setInterval> | null = null;
   const currentAccount = (): Account => (typeof account === "function" ? account() : account);
 
   const fetchSnapshot = async (run: string) => {
@@ -103,6 +114,12 @@ export function openWire(account: Account | (() => Account), store: Store, deps:
       watching = null;
       store.dispatch({ t: "socket", state: "open" });
       ws.send(JSON.stringify({ t: "hello" }));
+      keepalive = setInterval(() => {
+        // A tick from a socket this generation has moved on from is
+        // silent, the same as any other handler here.
+        if (mine !== generation) return;
+        ws.send(JSON.stringify({ t: "ping" }));
+      }, KEEPALIVE_MS);
     };
     ws.onmessage = (e) => {
       if (mine !== generation) return;
@@ -114,6 +131,8 @@ export function openWire(account: Account | (() => Account), store: Store, deps:
       }
       if (typeof m !== "object" || m === null) return;
       const msg = m as Record<string, unknown>;
+      // A pong answers our own ping; there is nothing to do with it.
+      if (msg["t"] === "pong") return;
       if (msg["t"] === "runs" && Array.isArray(msg["runs"])) {
         const runs = msg["runs"].filter(
           (r): r is { id: string } => typeof r === "object" && r !== null && typeof (r as Record<string, unknown>)["id"] === "string",
@@ -131,6 +150,10 @@ export function openWire(account: Account | (() => Account), store: Store, deps:
     };
     ws.onclose = () => {
       if (mine !== generation) return;
+      if (keepalive) {
+        clearInterval(keepalive);
+        keepalive = null;
+      }
       socket = null;
       store.dispatch({ t: "socket", state: "closed" });
       if (wanted) setTimeout(() => void open(), backoffMs(attempt++, deps.random));
@@ -147,6 +170,10 @@ export function openWire(account: Account | (() => Account), store: Store, deps:
       // Retiring the generation first: whatever this socket does on its way
       // down is no longer anybody's business.
       generation++;
+      if (keepalive) {
+        clearInterval(keepalive);
+        keepalive = null;
+      }
       const going = socket;
       socket = null;
       store.dispatch({ t: "socket", state: "closed" });

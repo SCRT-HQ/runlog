@@ -136,6 +136,13 @@ export function backoffMs(attempt: number, random: () => number = Math.random): 
   return Math.round(base * (0.8 + random() * 0.4));
 }
 
+/**
+ * API Gateway drops a socket that sits ten minutes without a frame either
+ * way; four minutes leaves room to spare under a quiet Play step where
+ * nobody is pressing anything.
+ */
+export const KEEPALIVE_MS = 4 * 60_000;
+
 /** What came down the socket, if it is the one thing we understand. */
 export function parseChanged(data: unknown): Changed | null {
   if (typeof data !== "string") return null;
@@ -163,6 +170,14 @@ export function openLive(opts: LiveOptions): LiveSocket {
   let closed = false;
   let open = false;
   let cancelWait: (() => void) | null = null;
+  let keepalive: ReturnType<typeof setInterval> | null = null;
+
+  const stopKeepalive = () => {
+    if (keepalive) {
+      clearInterval(keepalive);
+      keepalive = null;
+    }
+  };
 
   const setOpen = (value: boolean) => {
     if (open === value) return;
@@ -198,9 +213,16 @@ export function openLive(opts: LiveOptions): LiveSocket {
       attempt = 0;
       setOpen(true);
       send();
+      keepalive = setInterval(() => {
+        if (ws !== socket) return;
+        ws.send(JSON.stringify({ t: "ping" }));
+      }, KEEPALIVE_MS);
     };
     ws.onmessage = (event) => {
       const data = (event as MessageEvent).data;
+      // The server's answer to our own ping. Nothing to do with it; it
+      // exists so the frame travels, not the payload.
+      if (data === JSON.stringify({ t: "pong" })) return;
       const changed = parseChanged(data);
       if (changed) {
         opts.onChanged(changed);
@@ -216,6 +238,7 @@ export function openLive(opts: LiveOptions): LiveSocket {
     };
     ws.onclose = () => {
       if (ws !== socket) return;
+      stopKeepalive();
       socket = null;
       setOpen(false);
       schedule();
@@ -256,6 +279,7 @@ export function openLive(opts: LiveOptions): LiveSocket {
       closed = true;
       cancelWait?.();
       cancelWait = null;
+      stopKeepalive();
       const s = socket;
       socket = null;
       setOpen(false);
