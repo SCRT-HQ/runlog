@@ -18,18 +18,36 @@ export default defineConfig({
     __RUNLOG_SHA__: JSON.stringify(""),
   },
   test: {
-    include: [
-      "packages/*/src/**/*.test.ts",
-      "apps/*/src/**/*.test.{ts,tsx}",
-      // Build-time modules live beside the config they serve, not in src.
-      "apps/*/*.test.ts",
-      "streamdeck/src/**/*.test.ts",
-      // The plugin's design scripts, which live beside what they generate.
-      "streamdeck/design/**/*.test.mjs",
-      "tests/**/*.test.ts",
-    ],
     environment: "node",
     // Tells storage that a test run has nobody signed in; see tests/setup.ts.
     setupFiles: ["./tests/setup.ts"],
+    // @elgato/streamdeck rotates a shared logs/<uuid>.N.log file on import, so its
+    // action tests race each other under file parallelism (ENOENT or EPERM on the
+    // rename). Everything else stays parallel; the plugin's tests run one file at a time.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "default",
+          include: [
+            "packages/*/src/**/*.test.ts",
+            "apps/*/src/**/*.test.{ts,tsx}",
+            // Build-time modules live beside the config they serve, not in src.
+            "apps/*/*.test.ts",
+            // The plugin's design scripts, which live beside what they generate.
+            "streamdeck/design/**/*.test.mjs",
+            "tests/**/*.test.ts",
+          ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "streamdeck",
+          include: ["streamdeck/src/**/*.test.ts"],
+          fileParallelism: false,
+        },
+      },
+    ],
   },
 });
