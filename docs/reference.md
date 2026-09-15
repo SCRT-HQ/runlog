@@ -639,6 +639,7 @@ An optional move the player may choose to make.
 | `description` | `string` | - | What the move does, in the player's words. |
 | `available` | [Predicate](#predicate)[] | - | Conditions that must ALL hold for the move to be offered. Omit to make it always available. |
 | `oncePerRun` | `boolean` | - | Whether the move is spent after a single use. Default: `false`. |
+| `oncePerUnit` | `boolean` | - | Whether the move is spent for the rest of the unit after a single use. Default: `false`. |
 | `do` | [Action](#action)[] | yes | What happens when the player takes it. |
 | `finalizes` | `boolean` | - | Taking this move also closes the current unit: the rest of its flow is recorded as done and the unit is finalized. For moves that are outcomes, like landed or missed, so the player is not asked to close the unit a second time. |
 | `per` | `table` \| `contestant` | - | Who takes it. `table` is the default and is the whole run: one press, one outcome, everybody's. `contestant` is one racer's, offered once per name on the roster, and what it does is recorded against them: their counter moves, not the run's. Only meaningful in a moderated mode, where there is a roster to offer it to; elsewhere it is the table's as usual. Default: `"table"`. |

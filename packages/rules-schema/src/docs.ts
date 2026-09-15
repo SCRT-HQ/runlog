@@ -507,6 +507,7 @@ export function rulebookDoc(pack: Pack): Doc {
         [
           whenInWords(m.when, n),
           m.oncePerRun ? `once per ${n.run}` : "",
+          m.oncePerUnit ? `once per ${n.unit}` : "",
           m.available?.length ? `if ${conditionsInWords(pack, m.available)}` : "",
         ]
           .filter(Boolean)
@@ -590,7 +591,9 @@ export function referenceDoc(pack: Pack): Doc {
     b.h(2, "Moves");
     b.list(
       moves.map((m) =>
-        sentence(`${m.label} (${whenInWords(m.when, n)}${m.oncePerRun ? `, once per ${n.run}` : ""}): ${actionsInWords(pack, m.do)}`),
+        sentence(
+          `${m.label} (${whenInWords(m.when, n)}${m.oncePerRun ? `, once per ${n.run}` : ""}${m.oncePerUnit ? `, once per ${n.unit}` : ""}): ${actionsInWords(pack, m.do)}`,
+        ),
       ),
     );
   }
