@@ -80,21 +80,27 @@ export function openWire(account: Account, store: Store, deps: WireDeps = realDe
       ws.send(JSON.stringify({ t: "hello" }));
     };
     ws.onmessage = (e) => {
-      let m: Record<string, unknown>;
+      let m: unknown;
       try {
-        m = JSON.parse(String(e.data)) as Record<string, unknown>;
+        m = JSON.parse(String(e.data));
       } catch {
         return;
       }
-      if (m["t"] === "runs" && Array.isArray(m["runs"])) store.dispatch({ t: "runs", runs: m["runs"] as never, any: m["any"] === true });
-      else if (m["t"] === "changed" && m["id"] === watching && watching) void fetchSnapshot(watching);
-      else if (m["t"] === "drove" && typeof m["ref"] === "string")
+      if (typeof m !== "object" || m === null) return;
+      const msg = m as Record<string, unknown>;
+      if (msg["t"] === "runs" && Array.isArray(msg["runs"])) {
+        const runs = msg["runs"].filter(
+          (r): r is { id: string } => typeof r === "object" && r !== null && typeof (r as Record<string, unknown>)["id"] === "string",
+        );
+        store.dispatch({ t: "runs", runs: runs as never, any: msg["any"] === true });
+      } else if (msg["t"] === "changed" && msg["id"] === watching && watching) void fetchSnapshot(watching);
+      else if (msg["t"] === "drove" && typeof msg["ref"] === "string")
         store.dispatch({
           t: "drove",
-          ref: m["ref"],
-          ok: m["ok"] === true,
-          ...(typeof m["say"] === "string" ? { say: m["say"] } : {}),
-          ...(typeof m["seq"] === "number" ? { seq: m["seq"] } : {}),
+          ref: msg["ref"],
+          ok: msg["ok"] === true,
+          ...(typeof msg["say"] === "string" ? { say: msg["say"] } : {}),
+          ...(typeof msg["seq"] === "number" ? { seq: msg["seq"] } : {}),
         });
     };
     ws.onclose = () => {

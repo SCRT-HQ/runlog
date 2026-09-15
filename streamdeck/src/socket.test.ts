@@ -88,6 +88,31 @@ describe("the wire", () => {
     expect(store.state.snapshot?.offer?.seq).toBe(5);
   });
 
+  it("drops a null or bare-value frame without throwing or dispatching", async () => {
+    const store = makeStore();
+    const wire = openWire({ apiBase: "https://api.test" }, store, deps());
+    wire.connect();
+    await new Promise((r) => setTimeout(r, 0));
+    FakeSocket.last.onopen?.();
+    const dispatch = vi.spyOn(store, "dispatch");
+    dispatch.mockClear();
+    expect(() => FakeSocket.last.onmessage?.({ data: "null" })).not.toThrow();
+    expect(() => FakeSocket.last.onmessage?.({ data: "42" })).not.toThrow();
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it("drops malformed entries from a runs frame before dispatching", async () => {
+    const store = makeStore();
+    const wire = openWire({ apiBase: "https://api.test" }, store, deps());
+    wire.connect();
+    await new Promise((r) => setTimeout(r, 0));
+    FakeSocket.last.onopen?.();
+    FakeSocket.last.onmessage?.({
+      data: JSON.stringify({ t: "runs", runs: [{ id: "s1" }, 7, null, { name: "no id" }], any: true }),
+    });
+    expect(store.state.runs).toEqual([{ id: "s1" }]);
+  });
+
   it("goes back to Sign in again when the bearer is refused", async () => {
     const store = makeStore();
     const wire = openWire({ apiBase: "https://api.test" }, store, { ...deps(), bearer: async () => null });
