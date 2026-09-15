@@ -2681,6 +2681,27 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     }
     // ---- the snapshot the owner's device keeps for strangers who may not hold the pack ----
     if (sub === "/snapshot") {
+      /**
+       * The owner writes it; any member may read it back as the metrics
+       * document. A deck reads here on its own sign-in, since a watch key is
+       * for a scene and a deck is a person. `paper` is the pack's text and
+       * `control` is the profile: neither is a number, and a key draws
+       * numbers.
+       */
+      if (method === "GET") {
+        const m = found.meta;
+        const snap = await store.getSnapshot(id);
+        const {
+          paper: _paper,
+          control: _control,
+          ...doc
+        } = metricsOf(
+          { id: m.id, packId: m.packId, packTitle: m.packTitle ?? null, name: m.name ?? null, endedAt: m.endedAt ?? null },
+          snap,
+          now(),
+        );
+        return json(200, doc);
+      }
       if (method !== "PUT") return json(410, { error: ROUTE_GONE });
       if (me.role !== "owner") return json(422, { error: "only the owner writes the snapshot" });
       const body = parse(event);
