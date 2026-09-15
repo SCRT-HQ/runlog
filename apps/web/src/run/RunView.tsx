@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { an } from "@runlog/rules-schema";
+import { an, rollDice } from "@runlog/rules-schema";
 import { ClockPanel } from "./ClockPanel.tsx";
 import { SettingsDialog } from "./SettingsDialog.tsx";
 import { ControlPanel, openControlsWindow, RemoteControls } from "./ControlPanel.tsx";
@@ -43,7 +43,7 @@ import { Checklist, checklistDone, ticksToFinish } from "./Checklist.tsx";
 import { evidenceFor, pointOf } from "./evidence.ts";
 import { Receipt, type RollReceipt } from "./Receipt.tsx";
 import { closesTheUnit, startsItself } from "./handsFree.ts";
-import type { RolledDie } from "../rolling.ts";
+import { toDisplayDice, type RolledDie } from "../rolling.ts";
 import { useSync } from "../sync/SyncProvider.tsx";
 import { syncBus } from "../sync/bus.ts";
 import { DiceCurtain, rolledOf, type RolledGesture } from "../dice/DiceCurtain.tsx";
@@ -292,69 +292,76 @@ export function RunView({
    * device publishes and for the drive this device takes, so a press is
    * always checked against the same offer it was shown.
    */
-  const currentOffer = useMemo(
-    () =>
-      offerOf({
-        seq: run.events.length,
-        live: Boolean(run.started) && !run.readOnly && run.state?.status !== "ended",
-        settled: run.pending === null,
-        step: run.activeStep?.step ?? null,
-        stepLabel: run.state ? activeStepLabel(pack, run.activeStep) : null,
-        // A held move -- finalizing, with something still owed -- is the
-        // page's own button disabled; a deck sees the same offer the page
-        // would show, so it is left off rather than pressed and refused.
-        // A move the page splits into a button per racer is left off for
-        // the same reason: it is not one press on the page either.
-        moves: run.moves
-          .filter((m) => !heldMove(m.move, run.blockingObligations.length) && !perRacer(m.move, racing))
-          .map((m) => ({ id: m.id, label: m.move.label })),
-        canUndo: run.canUndo,
-        lastResult: run.state?.outcomes.at(-1) ? entryTextOf(pack, run.state.outcomes.at(-1)!) : null,
-        owed: run.blockingObligations.length,
-        // Held to the step's own table, the way the card holds them: a
-        // step that constrains what may be named suggests only from there.
-        suggestions: run.state
-          ? subjectSuggestions(pack, run.state, run.activeStep ? constrainedByOf(run.activeStep.step) : undefined).slice(0, 8)
-          : [],
-        // The same button the page itself would show between units: nothing
-        // else is waiting to be read or answered first, and there is
-        // nowhere left to go but the unit ahead. Ended, unstarted, watching,
-        // still asked something, or a receipt still on screen -- none of
-        // those has a between-units button on the page, so none of them has
-        // one here.
-        between:
-          run.state &&
-          Boolean(run.started) &&
-          !run.readOnly &&
-          run.state.status !== "ended" &&
-          run.pending === null &&
-          receipts.length === 0 &&
-          !run.activeStep
-            ? run.state.unit === 0
-              ? `Enter ${pack.vocabulary.unit.one} 1`
-              : `Enter ${pack.vocabulary.unit.one} ${run.state.unit + 1}`
-            : null,
-        // What the step's own button says with every box ticked, in the
-        // card's words: the closing card's Next, or the manual card's
-        // Done. Nothing where the step has no list, because there is then
-        // no list to tick and the primary is the press.
-        finishLabel: run.activeStep && checklistOf(run.activeStep.step).length > 0 ? finishWords(pack, run.activeStep.step) : null,
-      }),
-    [
-      run.events.length,
-      run.started,
-      run.readOnly,
-      run.state,
-      run.pending,
-      run.activeStep,
-      run.moves,
-      racing,
-      run.canUndo,
-      run.blockingObligations.length,
-      receipts.length,
-      pack,
-    ],
-  );
+  const currentOffer = useMemo(() => {
+    const stepLabel = run.state ? activeStepLabel(pack, run.activeStep) : null;
+    return offerOf({
+      seq: run.events.length,
+      live: Boolean(run.started) && !run.readOnly && run.state?.status !== "ended",
+      settled: run.pending === null,
+      step: run.activeStep?.step ?? null,
+      stepLabel,
+      // What the engine itself is waiting on, not what the step is: a
+      // pending roll is nobody being asked to judge anything, so a deck
+      // may throw the dice the same way the page's own button does.
+      request: run.pending?.request
+        ? run.pending.request.kind === "roll"
+          ? { kind: "roll", label: run.pending.request.label ?? stepLabel ?? "" }
+          : { kind: "other" }
+        : null,
+      // A held move -- finalizing, with something still owed -- is the
+      // page's own button disabled; a deck sees the same offer the page
+      // would show, so it is left off rather than pressed and refused.
+      // A move the page splits into a button per racer is left off for
+      // the same reason: it is not one press on the page either.
+      moves: run.moves
+        .filter((m) => !heldMove(m.move, run.blockingObligations.length) && !perRacer(m.move, racing))
+        .map((m) => ({ id: m.id, label: m.move.label })),
+      canUndo: run.canUndo,
+      lastResult: run.state?.outcomes.at(-1) ? entryTextOf(pack, run.state.outcomes.at(-1)!) : null,
+      owed: run.blockingObligations.length,
+      // Held to the step's own table, the way the card holds them: a
+      // step that constrains what may be named suggests only from there.
+      suggestions: run.state
+        ? subjectSuggestions(pack, run.state, run.activeStep ? constrainedByOf(run.activeStep.step) : undefined).slice(0, 8)
+        : [],
+      // The same button the page itself would show between units: nothing
+      // else is waiting to be read or answered first, and there is
+      // nowhere left to go but the unit ahead. Ended, unstarted, watching,
+      // still asked something, or a receipt still on screen -- none of
+      // those has a between-units button on the page, so none of them has
+      // one here.
+      between:
+        run.state &&
+        Boolean(run.started) &&
+        !run.readOnly &&
+        run.state.status !== "ended" &&
+        run.pending === null &&
+        receipts.length === 0 &&
+        !run.activeStep
+          ? run.state.unit === 0
+            ? `Enter ${pack.vocabulary.unit.one} 1`
+            : `Enter ${pack.vocabulary.unit.one} ${run.state.unit + 1}`
+          : null,
+      // What the step's own button says with every box ticked, in the
+      // card's words: the closing card's Next, or the manual card's
+      // Done. Nothing where the step has no list, because there is then
+      // no list to tick and the primary is the press.
+      finishLabel: run.activeStep && checklistOf(run.activeStep.step).length > 0 ? finishWords(pack, run.activeStep.step) : null,
+    });
+  }, [
+    run.events.length,
+    run.started,
+    run.readOnly,
+    run.state,
+    run.pending,
+    run.activeStep,
+    run.moves,
+    racing,
+    run.canUndo,
+    run.blockingObligations.length,
+    receipts.length,
+    pack,
+  ]);
   useEffect(() => {
     if (!api || !publishing || !run.record || !run.state) return;
     const record = run.record;
@@ -511,6 +518,34 @@ export function RunView({
     [],
   );
 
+  const awaiting = useRef<Omit<RollReceipt, "outcomes"> | null>(null);
+  const answered = useRef(0);
+
+  /**
+   * Answering whatever the engine is waiting on: the page's own request
+   * panel calls this, and so does a deck's roll press, because a machine
+   * roll is the same answer either way.
+   */
+  const answer = useCallback(
+    (key: string, value: string | number | boolean, machineRolled?: boolean, dice?: RolledDie[], seed?: number) => {
+      const request = run.pending?.request;
+      answered.current += 1;
+      if (request?.kind === "roll" && typeof value === "number") {
+        awaiting.current = {
+          dice: dice ?? null,
+          total: value,
+          label: request.label ?? null,
+          notation: request.dice,
+          table: pack.tables[request.purpose] ? request.purpose : null,
+          machineRolled: machineRolled === true,
+          ...(seed !== undefined ? { seed } : {}),
+        };
+      }
+      run.answer(key, value, machineRolled);
+    },
+    [run],
+  );
+
   /**
    * A press from a deck, taken here because this is the device holding the
    * run. What the deck may press is the offer this device published; what
@@ -539,7 +574,14 @@ export function RunView({
               return;
             }
             if (!active) return;
-            if (id === "roll" && active.step.kind === "rollTable") {
+            const request = run.pending?.request;
+            if (id === "roll" && request?.kind === "roll") {
+              // The step already began -- hands-free, or a press before
+              // this one -- and is only waiting on dice. A deck throws
+              // them the same way the page's own "Roll for me" does.
+              const { total, dice: values } = rollDice(request.dice, Math.random);
+              answer(request.key, total, true, toDisplayDice(request.dice, values, total), Math.floor(Math.random() * 4294967296));
+            } else if (id === "roll" && active.step.kind === "rollTable") {
               const table = pack.tables[active.step.table];
               run.begin({
                 kind: "table",
@@ -584,14 +626,12 @@ export function RunView({
         timer: window.setTimeout(() => settleVerdict(eventCount.current), HELD_VERDICT_MS),
       };
     });
-  }, [run, currentOffer, sync, pack, settleVerdict]);
+  }, [run, currentOffer, sync, pack, settleVerdict, answer]);
   const seen = useRef<number | null>(null);
-  const awaiting = useRef<Omit<RollReceipt, "outcomes"> | null>(null);
   // How many answers this view has given, and how many it had given when
   // the last receipt was issued: what a step that came back with the run
   // had already resolved is shown as such, not as a throw just made.
   const committedSeen = useRef(0);
-  const answered = useRef(0);
   const receipted = useRef(0);
   // What the run has resolved, counting what the block in flight has
   // resolved ahead of the log: a d100 lands on its line before the d6 it
@@ -772,26 +812,6 @@ export function RunView({
   useEffect(() => {
     setPane("now");
   }, [stepNow]);
-
-  const answer = useCallback(
-    (key: string, value: string | number | boolean, machineRolled?: boolean, dice?: RolledDie[], seed?: number) => {
-      const request = run.pending?.request;
-      answered.current += 1;
-      if (request?.kind === "roll" && typeof value === "number") {
-        awaiting.current = {
-          dice: dice ?? null,
-          total: value,
-          label: request.label ?? null,
-          notation: request.dice,
-          table: pack.tables[request.purpose] ? request.purpose : null,
-          machineRolled: machineRolled === true,
-          ...(seed !== undefined ? { seed } : {}),
-        };
-      }
-      run.answer(key, value, machineRolled);
-    },
-    [run],
-  );
 
   // Reading the saved run is asynchronous. Offering to start a new one before
   // it arrives would invite the player to overwrite a run already in progress.
