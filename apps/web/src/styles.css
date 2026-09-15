@@ -6901,6 +6901,32 @@ html[data-pip="controls"] body {
   }
 }
 
+/* ---- a deck laid out from a pack --------------------------------------- */
+/*
+ * On a marketplace card, folded away behind a word: a Stream Deck is a
+ * thing some readers own and most do not, and the card is there to say what
+ * the pack is. Open, it is four decks to choose from, laid out as chips
+ * rather than the menu rows the panel gives buttons by default.
+ */
+.deckProfiles {
+  align-self: flex-start;
+}
+.deckProfiles .rowMenuPanel {
+  left: 0;
+  right: auto;
+  min-width: 13rem;
+  gap: 0.45rem;
+  padding: 0.5rem 0.6rem;
+}
+.deckProfiles .rowMenuPanel p {
+  margin: 0;
+}
+.deckProfiles .rowMenuPanel .options button {
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
 /*
  * A phone's width is the scarce thing on it. The page keeps a thumb's
  * margin and no more, and what sits inside the page follows: a panel that
