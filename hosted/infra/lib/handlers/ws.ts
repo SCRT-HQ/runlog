@@ -203,9 +203,10 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     } catch {
       return { statusCode: 401, body: "sign in first" };
     }
-    const deck = deckOf(event);
-    await deps.live.connect(connectionId, caller.sub, now(), deck);
-    if (deck) await tellDecks(caller.sub, connectionId);
+    // A deck is answered once it speaks, below: the gateway refuses a post
+    // to a connection whose $connect has not yet returned, and a refusal
+    // here would read as the deck having gone.
+    await deps.live.connect(connectionId, caller.sub, now(), deckOf(event));
     return { statusCode: 200 };
   }
 
@@ -263,6 +264,19 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
   }
   if (!message || typeof message !== "object") return { statusCode: 400, body: "an object" };
   const m = message as Record<string, unknown>;
+
+  /**
+   * A deck saying it is here.
+   *
+   * The one thing a deck asks for. It cannot be told at connect, since the
+   * gateway takes no post for a connection until $connect has answered, so
+   * the list it needs to pick a run comes the moment it speaks, and again
+   * whenever the set of held runs changes.
+   */
+  if (conn.deck && m["t"] === "hello") {
+    await tellDecks(conn.sub, connectionId);
+    return { statusCode: 200 };
+  }
 
   /**
    * A tool saying what it is and what it can do.

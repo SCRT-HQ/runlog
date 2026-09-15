@@ -418,7 +418,13 @@ A deck names no run at connect: it is told what is open to it and picks. Only a 
 
 ### The runs it may press
 
-On attach, and again whenever the set changes, the server sends the runs held open to this account on a writing device:
+A deck speaks first:
+
+```json
+{ "t": "hello" }
+```
+
+The answer, and again whenever the set changes, is the runs held open to this account on a writing device:
 
 ```json
 { "t": "runs", "runs": [{ "id": "01RUN", "name": "Thursday", "packTitle": "Forfeits", "held": true }] }
