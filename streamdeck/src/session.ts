@@ -33,6 +33,7 @@ export function sessionDir(): string {
 let dirOverride: string | null = null;
 export function __setSessionDirForTests(dir: string | null): void {
   dirOverride = dir;
+  renewing = null;
 }
 function dir(): string {
   return dirOverride ?? sessionDir();
@@ -66,19 +67,35 @@ export async function signIn(account: Account, say: (line: string) => void, open
   return session;
 }
 
+/**
+ * The renewal in flight, if there is one.
+ *
+ * WorkOS rotates the refresh token, so a second POST with the token the
+ * first one just spent is refused - and the deck's two callers, the socket
+ * opening and the snapshot fetch, ask for a bearer at the same moment. They
+ * share the one renewal instead: whoever asks first starts it, everyone
+ * else waits on it, and the file is written once.
+ */
+let renewing: Promise<string | null> | null = null;
+
 /** The bearer to send, renewed first when it is about to lapse; null means sign in. */
-export async function bearer(_account: Account): Promise<string | null> {
+export function bearer(_account: Account): Promise<string | null> {
   const session = loadSession();
-  if (!session) return null;
-  if (!needsRenewal(session, Date.now())) return session.accessToken;
-  try {
-    const renewed = await renew(session);
-    writeSession(dir(), renewed);
-    return renewed.accessToken;
-  } catch {
-    // A refresh the issuer refused is a session that is over. Leave the
-    // file so a retry after a network blip is not a full sign-in, and
-    // let the caller read the null as "Sign in again".
-    return null;
-  }
+  if (!session) return Promise.resolve(null);
+  if (!needsRenewal(session, Date.now())) return Promise.resolve(session.accessToken);
+  renewing ??= renew(session)
+    .then((renewed) => {
+      writeSession(dir(), renewed);
+      return renewed.accessToken;
+    })
+    .catch(() => {
+      // A refresh the issuer refused is a session that is over. Leave the
+      // file so a retry after a network blip is not a full sign-in, and
+      // let the caller read the null as "Sign in again".
+      return null;
+    })
+    .finally(() => {
+      renewing = null;
+    });
+  return renewing;
 }

@@ -70,35 +70,46 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
   }
 
   protected async draw(action: Placed<S>, settings: S): Promise<void> {
-    const face = this.face(store.state, settings, Date.now());
-    if (this.said.get(action.id) !== face.title) {
-      this.said.set(action.id, face.title);
-      streamDeck.logger.info(
-        `${this.manifestId ?? "?"} ${action.id} (${action.controllerType}) now says "${face.title}" for ${JSON.stringify(settings)}`,
-      );
-    }
-    if (action.isKey()) {
-      try {
+    // The whole redraw is inside the try, the face included: a state a
+    // face was not written for, an image the software will not take, a
+    // dial that went away mid-write. The SDK's uncaughtException handler
+    // is registered `once`, so the second throw anywhere in here would be
+    // the plugin's last.
+    try {
+      const face = this.face(store.state, settings, Date.now());
+      if (this.said.get(action.id) !== face.title) {
+        this.said.set(action.id, face.title);
+        streamDeck.logger.info(
+          `${this.manifestId ?? "?"} ${action.id} (${action.controllerType}) now says "${face.title}" for ${JSON.stringify(settings)}`,
+        );
+      }
+      if (action.isKey()) {
         await action.setImage(faceImage(face));
         await action.setTitle("");
-      } catch (error) {
-        // The software answers nothing on a bad image; a throw here is the
-        // only word of it there is, and it is worth a line in the log.
-        streamDeck.logger.error(`could not draw ${action.id}: ${String(error)}`);
+      } else if (action.isDial()) {
+        // The `$B1` layout's progress bar is the `indicator` key; it only
+        // has something to show for a running timer's fraction, controller
+        // ruling 4 - anything else leaves it out rather than drawing an
+        // empty bar.
+        const feedback: FeedbackPayload = { title: face.when ?? "", value: face.title };
+        if (face.fraction !== undefined) feedback.indicator = { value: Math.round(face.fraction * 100) };
+        await action.setFeedback(feedback);
       }
-    } else if (action.isDial()) {
-      // The `$B1` layout's progress bar is the `indicator` key; it only
-      // has something to show for a running timer's fraction, controller
-      // ruling 4 - anything else leaves it out rather than drawing an
-      // empty bar.
-      const feedback: FeedbackPayload = { title: face.when ?? "", value: face.title };
-      if (face.fraction !== undefined) feedback.indicator = { value: Math.round(face.fraction * 100) };
-      await action.setFeedback(feedback);
+    } catch (error) {
+      // The software answers nothing on a bad image; a throw here is the
+      // only word of it there is, and it is worth a line in the log.
+      streamDeck.logger.error(`could not draw ${action.id}: ${String(error)}`);
     }
   }
 
   private redrawAll(): void {
-    for (const a of this.actions) void a.getSettings<S>().then((s) => this.draw(a, s));
+    // The settings read can reject too, and a rejection with nothing on it
+    // is an unhandled one.
+    for (const a of this.actions)
+      void a
+        .getSettings<S>()
+        .then((s) => this.draw(a, s))
+        .catch((error) => streamDeck.logger.error(`could not redraw ${a.id}: ${String(error)}`));
   }
 
   /**

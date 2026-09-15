@@ -68,6 +68,50 @@ describe("the deck's session", () => {
     expect(readSession(dir)?.refreshToken).toBe("r2");
   });
 
+  it("renews once when two callers ask at the same moment, since the refresh token rotates", async () => {
+    const dir = useTempDir();
+    writeSession(dir, {
+      clientId: "client_deck",
+      issuer: "https://api.workos.test",
+      accessToken: "stale",
+      refreshToken: "r1",
+      expiresAt: new Date(0).toISOString(),
+    });
+    // The second POST would carry the token the first one just spent, and
+    // WorkOS refuses that - which is the deck thrown to "Sign in again"
+    // for nothing. So this counts the calls, not just the answers.
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ access_token: jwt(9999999999), refresh_token: "r2" })));
+    vi.stubGlobal("fetch", fetch);
+
+    const [first, second] = await Promise.all([bearer({ apiBase: "https://api.test" }), bearer({ apiBase: "https://api.test" })]);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(first).toBe(jwt(9999999999));
+    expect(second).toBe(first);
+    expect(readSession(dir)?.refreshToken).toBe("r2");
+  });
+
+  it("starts a fresh renewal after the shared one settles", async () => {
+    const dir = useTempDir();
+    writeSession(dir, {
+      clientId: "client_deck",
+      issuer: "https://api.workos.test",
+      accessToken: "stale",
+      refreshToken: "r1",
+      expiresAt: new Date(0).toISOString(),
+    });
+    // The token this hands back has already lapsed, so the second ask
+    // needs a renewal of its own: the in-flight promise is shared, not
+    // cached.
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ access_token: jwt(1), refresh_token: "r2" })));
+    vi.stubGlobal("fetch", fetch);
+
+    await bearer({ apiBase: "https://api.test" });
+    await bearer({ apiBase: "https://api.test" });
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it("leaves the file alone when a renewal is refused, since a network blip is not a sign-out", async () => {
     const dir = useTempDir();
     writeSession(dir, {
