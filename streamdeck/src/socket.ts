@@ -51,14 +51,18 @@ export function openWire(account: Account | (() => Account), store: Store, deps:
   const currentAccount = (): Account => (typeof account === "function" ? account() : account);
 
   const fetchSnapshot = async (run: string) => {
+    // The same rule as the socket handlers: numbers taken at the start, and
+    // an answer that arrives after the connection it was asked for is gone
+    // belongs to nobody.
+    const mine = generation;
     const acct = currentAccount();
     const token = await deps.bearer(acct);
-    if (!token) return;
+    if (!token || mine !== generation) return;
     try {
       const res = await deps.fetch(`${normalizeBase(acct.apiBase)}/api/sessions/${encodeURIComponent(run)}/snapshot`, {
         headers: { authorization: `Bearer ${token}` },
       });
-      if (res.ok) store.dispatch({ t: "snapshot", snapshot: (await res.json()) as never });
+      if (res.ok && mine === generation) store.dispatch({ t: "snapshot", snapshot: (await res.json()) as never });
     } catch {
       /* the next ring tries again */
     }
@@ -80,11 +84,15 @@ export function openWire(account: Account | (() => Account), store: Store, deps:
     const mine = ++generation;
     const acct = currentAccount();
     const token = await deps.bearer(acct);
+    // Before any dispatch, not after the token check: a refusal belonging to
+    // a dial that has been superseded would otherwise report the session
+    // lapsed and reset the state out from under the connection that replaced
+    // it. A superseded connect touches nothing.
+    if (mine !== generation) return;
     if (!token) {
       store.dispatch({ t: "session", state: "expired" });
       return;
     }
-    if (mine !== generation) return;
     store.dispatch({ t: "socket", state: "connecting" });
     const wsBase = normalizeBase(acct.apiBase).replace(/^http/, "ws");
     const ws = new deps.WebSocket(`${wsBase}/ws?token=${encodeURIComponent(token)}&as=deck`);

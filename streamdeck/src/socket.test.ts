@@ -190,4 +190,66 @@ describe("the wire", () => {
     await new Promise((r) => setTimeout(r, 0));
     expect((fetch as unknown as { mock: { calls: string[][] } }).mock.calls[0]?.[0]).toBe("https://api.test/api/sessions/s1/snapshot");
   });
+
+  // A dial that has been superseded must not report a lapsed session: `reduce`
+  // takes that verdict as a full reset, which would tear down the connection
+  // that replaced it.
+  it("swallows a late refusal from a dial that has been superseded", async () => {
+    const store = makeStore();
+    let refuse: (token: string | null) => void = () => {};
+    let firstDial = true;
+    const wire = openWire({ apiBase: "https://api.test" }, store, {
+      ...deps(),
+      bearer: async () => {
+        if (!firstDial) return "tok";
+        firstDial = false;
+        return new Promise<string | null>((r) => (refuse = r));
+      },
+    });
+
+    wire.connect(); // the first dial's token never comes back
+    await new Promise((r) => setTimeout(r, 0));
+    wire.disconnect();
+    wire.connect(); // the second dial gets one straight away
+    await new Promise((r) => setTimeout(r, 0));
+    FakeSocket.last.onopen?.();
+    expect(store.state.socket).toBe("open");
+
+    refuse(null); // and now the first dial finally hears "no"
+    await new Promise((r) => setTimeout(r, 0));
+    expect(store.state.session).toBe("none");
+    expect(store.state.socket).toBe("open");
+  });
+
+  // Same rule for the snapshot the doorbell asks for: an answer that lands
+  // after the connection it was asked for is gone belongs to nobody.
+  it("drops a snapshot that arrives after the connection it was fetched for", async () => {
+    const store = makeStore();
+    let land: (res: Response) => void = () => {};
+    let firstFetch = true;
+    const wire = openWire({ apiBase: "https://api.test" }, store, {
+      ...deps(),
+      fetch: (async () => {
+        if (!firstFetch) return new Response(JSON.stringify({ fresh: true }));
+        firstFetch = false;
+        return new Promise<Response>((r) => (land = r));
+      }) as never,
+    });
+
+    wire.connect();
+    await new Promise((r) => setTimeout(r, 0));
+    FakeSocket.last.onopen?.();
+    // Holding a run starts the snapshot fetch that is about to be orphaned.
+    FakeSocket.last.onmessage?.({ data: JSON.stringify({ t: "runs", runs: [{ id: "s1" }], any: true }) });
+    await new Promise((r) => setTimeout(r, 0));
+
+    wire.disconnect();
+    wire.connect();
+    await new Promise((r) => setTimeout(r, 0));
+    FakeSocket.last.onopen?.();
+
+    land(new Response(JSON.stringify({ stale: true })));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(store.state.snapshot).toBeNull();
+  });
 });
