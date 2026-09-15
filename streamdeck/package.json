@@ -1,4 +1,6 @@
 {
+  "name": "@runlog/streamdeck",
+  "private": true,
   "scripts": {
     "build": "rollup -c",
     "icons": "node design/export.mjs",

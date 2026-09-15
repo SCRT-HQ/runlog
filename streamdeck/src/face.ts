@@ -1,4 +1,4 @@
-import type { Face, Tone } from "./state";
+import type { Face, Tone } from "./state.ts";
 
 /**
  * A key face as SVG.

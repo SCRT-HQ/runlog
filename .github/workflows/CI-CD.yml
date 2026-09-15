@@ -506,7 +506,7 @@ jobs:
             --notes-file RELEASE_NOTES.md \
             --latest \
             CHANGELOG.md \
-            streamdeck/dist/com.scrthq.runlog.streamDeckPlugin
+            streamdeck/dist/*.streamDeckPlugin
 
           {
             echo "### Released ${{ steps.release.outputs.next }}"
