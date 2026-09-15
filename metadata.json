@@ -1,0 +1,52 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2J7G9N9QVFRTRYEYRXC7ZTX",
+  "strategy": "manual-commit",
+  "branch": "the-deck-comes-laid-out",
+  "checkpoints_count": 5,
+  "files_touched": [
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/demo-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/elden-ring-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/forfeits-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/ladder-work-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/practice-room-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/rocket-league-ladder-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/rocket-league-showdown-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/run-of-show-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/runlog-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/soundclash-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/twenty-five-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/ui/metric.html",
+    "streamdeck/design/layouts.mjs",
+    "streamdeck/design/profiles.test.mjs",
+    "streamdeck/src/actions/base.ts",
+    "streamdeck/src/actions/clock.ts",
+    "streamdeck/src/actions/finish.ts",
+    "streamdeck/src/actions/metric.ts",
+    "streamdeck/src/state.test.ts",
+    "streamdeck/src/state.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 16034,
+    "cache_creation_tokens": 2372078,
+    "cache_read_tokens": 368700150,
+    "output_tokens": 779365,
+    "api_call_count": 773,
+    "subagent_tokens": {
+      "input_tokens": 262,
+      "cache_creation_tokens": 623449,
+      "cache_read_tokens": 18941359,
+      "output_tokens": 77229,
+      "api_call_count": 131
+    }
+  }
+}
