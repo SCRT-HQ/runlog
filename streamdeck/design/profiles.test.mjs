@@ -25,7 +25,7 @@ const repo = join(here, "..", "..");
 
 const MANIFEST = JSON.parse(readFileSync(join(plugin, "manifest.json"), "utf8"));
 
-/** Everything a key on one of these may be: our twelve actions, and the app's two turns. */
+/** Everything a key on one of these may be: our thirteen actions, and the app's two turns. */
 const ALLOWED = new Set([...MANIFEST.Actions.map((a) => a.UUID), "com.elgato.streamdeck.page.next", "com.elgato.streamdeck.page.previous"]);
 
 /** Every action on every page of a built profile, with the page and position it sits at. */
@@ -193,6 +193,8 @@ describe("the profiles we ship", () => {
           if (settings.target.kind === "move") expect(typeof settings.target.id, where).toBe("string");
         } else if (action.UUID === "com.scrthq.runlog.setup") {
           expect(Object.keys(settings.setup).sort(), where).toEqual(["id", "title"]);
+        } else if (action.UUID === "com.scrthq.runlog.command") {
+          expect(Object.keys(settings.command).sort(), where).toEqual(["id", "title"]);
         } else if (action.UUID === "com.scrthq.runlog.open") {
           expect(["run", "guide", "rules", "newrun", "dock"], where).toContain(settings.target);
         } else {
@@ -242,11 +244,15 @@ describe("the profiles we ship", () => {
         const resources = settings.filter((s) => typeof s.field === "object" && "resource" in s.field).map((s) => s.field.resource);
         expect(resources.sort()).toEqual(Object.keys(pack.pack.resources).sort());
 
-        const chosen = settings.filter((s) => s.setup).map((s) => s.setup.id);
-        expect(chosen.sort()).toEqual(shippedFor(tool).sort());
+        const chosenSetups = settings.filter((s) => s.setup).map((s) => s.setup.id);
+        const chosenCommands = settings.filter((s) => s.command).map((s) => s.command.id);
+        expect([...chosenSetups, ...chosenCommands].sort()).toEqual(shippedFor(tool).sort());
         // The loadouts, at least, and by id rather than by count: a setup
         // that stopped naming this tool would otherwise vanish unremarked.
-        for (const id of setups) expect(chosen).toContain(`com.scrthq.runlog.setups.${id}`);
+        for (const id of setups) expect(chosenSetups).toContain(`com.scrthq.runlog.setups.${id}`);
+        // Start of the DLC warps the player, so it is a Command key rather
+        // than an Apply-setup one.
+        expect(chosenCommands).toEqual(["com.scrthq.runlog.setups.start-of-the-dlc"]);
       });
     }
   });

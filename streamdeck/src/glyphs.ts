@@ -10,6 +10,8 @@ export const GLYPHS: Record<string, string> = {
     '<rect x="18" y="62" width="52" height="52" rx="12" fill="none" stroke="#ffffff" stroke-width="11"/> <circle cx="44" cy="88" r="8" fill="#ffffff"/> <rect x="78" y="62" width="52" height="52" rx="12" fill="none" stroke="#ffffff" stroke-width="11"/> <circle cx="94" cy="78" r="7" fill="#ffffff"/> <circle cx="114" cy="98" r="7" fill="#ffffff"/> <path d="M26 46 A60 60 0 0 1 118 46" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round"/> <path d="M104 32 H132 L118 60 Z" fill="#ffffff"/>',
   clock:
     '<circle cx="72" cy="72" r="48" fill="none" stroke="#ffffff" stroke-width="12"/> <path d="M72 42 V74 H100" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>',
+  command:
+    '<rect x="26" y="26" width="92" height="92" rx="20" fill="none" stroke="#ffffff" stroke-width="12"/> <path d="M78 40 L52 82 L68 82 L62 108 L94 62 L76 62 Z" fill="#ffffff"/>',
   connect:
     '<path d="M89 51 A34 34 0 1 1 55 51" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round"/> <path d="M72 20 L72 64" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round"/>',
   finish:

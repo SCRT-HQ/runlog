@@ -34,6 +34,12 @@ export interface Offer {
    */
   setups?: Array<{ id: string; title: string }>;
   /**
+   * The setups the run could send a tool once, without touching the run's
+   * own setup - empty where the run names no tool or is not live, and
+   * absent from an older page's offer entirely.
+   */
+  commands?: Array<{ id: string; title: string }>;
+  /**
    * The counters and resources this run will take a change to, from a deck
    * as from the page - absent from an older page's offer entirely.
    */
@@ -340,6 +346,19 @@ export function setupFace(state: DeckState, setup?: { id: string; title: string 
   return (offer.setups ?? []).some((s) => s.id === setup.id)
     ? { title: setup.title, tone: "deck", when: "Apply setup" }
     : { title: setup.title, tone: "dim", when: "Not here" };
+}
+
+/** What the Command key says: the setup it would send the tool once, whether that is on offer, or nothing chosen at all. */
+export function commandFace(state: DeckState, command?: { id: string; title: string }): Face {
+  const c = common(state) ?? flashed(state);
+  if (c) return c;
+  if (!command) return { title: "Set up", tone: "dim" };
+  const offer = state.snapshot?.offer;
+  if (!offer) return { title: "Loading…", tone: "dim" };
+  // `?? []`: an older page's offer may not name any commands at all.
+  return (offer.commands ?? []).some((x) => x.id === command.id)
+    ? { title: command.title, tone: "live", when: "Send to tool" }
+    : { title: command.title, tone: "dim", when: "Not here" };
 }
 
 export function undoFace(state: DeckState): Face {

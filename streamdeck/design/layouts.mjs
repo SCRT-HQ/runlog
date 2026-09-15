@@ -100,3 +100,17 @@ export const SKETCHES = "packs/sketches";
  * rule existed and keeps the name it shipped under.
  */
 export const SLUGS = { "elden-ring-tarnishedtool": "elden-ring" };
+
+/**
+ * A setup a pack's profile puts on a Command key rather than an Apply-setup one.
+ *
+ * A setup that moves the player is a different kind of press from one that
+ * only changes what they are holding: it happens once, it does not touch
+ * the run's own setup, and it is worth a key that says so rather than one
+ * that says "Apply setup" about a warp. `Warp` at the front of the title is
+ * how an author says so on purpose; a `warp.*` op is how the tool says so
+ * whether the author thought to name it that or not.
+ */
+export function isWarp(setup) {
+  return setup.title.startsWith("Warp") || (setup.ops ?? []).some((op) => op.op.startsWith("warp."));
+}
