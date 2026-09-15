@@ -73,7 +73,7 @@ export interface LiveSnapshot {
    * is waiting to be rolled, and the moves on offer by id and label.
    *
    * Offered, not declared. Whether a move is available depends on the
-   * pack's conditions and on what has already been spent once per run, so
+   * pack's conditions and on what has already been spent, so
    * only a device holding the pack and the log can say; the server has
    * neither and answers a chat bot from this. Absent from snapshots
    * written before it was carried.

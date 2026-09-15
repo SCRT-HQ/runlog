@@ -13,6 +13,7 @@ import {
   openNotes,
   availableMoves,
   executeMove,
+  moveUnitKey,
   type AnswerValue,
   type ExecResult,
 } from "./execute.ts";
@@ -544,6 +545,7 @@ describe("moves offered at a point in the flow", () => {
       always: {
         label: "Always",
         oncePerRun: false,
+        oncePerUnit: false,
         per: "table" as const,
         when: "anytime" as const,
         do: [{ do: "note" as const, text: "x" }],
@@ -551,6 +553,7 @@ describe("moves offered at a point in the flow", () => {
       between: {
         label: "Between",
         oncePerRun: false,
+        oncePerUnit: false,
         per: "table" as const,
         when: "betweenUnits" as const,
         do: [{ do: "note" as const, text: "x" }],
@@ -558,6 +561,7 @@ describe("moves offered at a point in the flow", () => {
       ending: {
         label: "Ending",
         oncePerRun: false,
+        oncePerUnit: false,
         per: "table" as const,
         when: "beforeEnding" as const,
         do: [{ do: "note" as const, text: "x" }],
@@ -588,5 +592,69 @@ describe("moves offered at a point in the flow", () => {
   it("still accepts a single placement", () => {
     const ids = availableMoves(packWithMoves, state, "beforeEnding").map((m) => m.id);
     expect(new Set(ids)).toEqual(new Set(["always", "ending"]));
+  });
+});
+
+/**
+ * A move a pack allows once in a unit.
+ *
+ * Reported from a stream: a sketch's "I settled it" is `anytime` and draws a
+ * blessing every press, and one scene paid out seven of them. Once per run is
+ * too blunt for that, the move is meant to come back; what it is not meant to
+ * do is come back in the same scene.
+ */
+describe("a move that is once per unit", () => {
+  const packWithLimit = {
+    ...kiln,
+    moves: {
+      settle: {
+        label: "Settle",
+        oncePerRun: false,
+        oncePerUnit: true,
+        per: "table" as const,
+        when: "anytime" as const,
+        do: [{ do: "note" as const, text: "settled" }],
+      },
+      free: {
+        label: "Free",
+        oncePerRun: false,
+        oncePerUnit: false,
+        per: "table" as const,
+        when: "anytime" as const,
+        do: [{ do: "note" as const, text: "free" }],
+      },
+    },
+  };
+  const opening: RunEvent[] = [ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" }), ev("UnitEntered")];
+  const offered = (log: RunEvent[]) => availableMoves(packWithLimit, reduce(packWithLimit, log), "anytime").map((m) => m.id);
+
+  it("records the unit it was taken in", () => {
+    const state = reduce(packWithLimit, opening);
+    const taken = executeMove(packWithLimit, state, "settle", ctx());
+    expect(taken.status).toBe("done");
+    expect(taken.events).toContainEqual(expect.objectContaining({ t: "TriggerFired", key: moveUnitKey("settle", state.unit) }));
+  });
+
+  it("is not offered again in the unit it was taken in", () => {
+    const state = reduce(packWithLimit, opening);
+    const spent = [...opening, ev("TriggerFired", { key: moveUnitKey("settle", state.unit) })];
+    expect(offered(spent)).toEqual(["free"]);
+  });
+
+  it("is offered again in the next unit", () => {
+    const state = reduce(packWithLimit, opening);
+    const nextUnit = [...opening, ev("TriggerFired", { key: moveUnitKey("settle", state.unit) }), ev("UnitFinalized"), ev("UnitEntered")];
+    expect(new Set(offered(nextUnit))).toEqual(new Set(["settle", "free"]));
+  });
+
+  it("leaves a move without the limit on offer", () => {
+    const state = reduce(packWithLimit, opening);
+    const spent = [...opening, ev("TriggerFired", { key: "move:free" }), ev("TriggerFired", { key: moveUnitKey("free", state.unit) })];
+    expect(offered(spent)).toContain("free");
+  });
+
+  it("writes no unit record for a move without the limit", () => {
+    const taken = executeMove(packWithLimit, reduce(packWithLimit, opening), "free", ctx());
+    expect(taken.events.filter((e) => e.t === "TriggerFired").map((e) => (e as { key: string }).key)).toEqual(["move:free"]);
   });
 });
