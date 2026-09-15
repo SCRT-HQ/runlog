@@ -39,12 +39,16 @@ function write(svg, out, size) {
 
 /** What a drawing is, with the document around it and the notes in it taken off. */
 function body(svg) {
-  return svg
-    .replace(/^[\s\S]*?<svg[^>]*>/, "")
-    .replace(/<\/svg>\s*$/, "")
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  let inner = svg.replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+  // To a fixed point, so a comment left behind by removing another (one
+  // that had `<!--` inside it) goes too. These are our own drawings, but
+  // the markup ends up inside every key face, and a scanner is right to
+  // want the pass to finish what it starts.
+  for (let before = ""; before !== inner;) {
+    before = inner;
+    inner = inner.replace(/<!--[\s\S]*?-->/g, "");
+  }
+  return inner.replace(/\s+/g, " ").trim();
 }
 
 /** A white glyph, in the app's colors on the app's ground, inset so the key has a margin. */
