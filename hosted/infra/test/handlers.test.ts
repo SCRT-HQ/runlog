@@ -1725,6 +1725,29 @@ describe("who is asking", () => {
     expect((await call(request("GET", "/api/public/runs/01RUN?t=livetok", { token: null }), d)).body).toEqual({ found: false });
   });
 
+  it("a member reads the snapshot as the metrics document", async () => {
+    const d = deps();
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(
+      request("PUT", "/api/sessions/01RUN/snapshot", {
+        body: { snapshot: { v: 1, unit: 4, offer: { seq: 9 }, paper: { big: true }, control: { tool: "x" } } },
+      }),
+      d,
+    );
+    const res = await call(request("GET", "/api/sessions/01RUN/snapshot"), d);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ ready: true, unit: 4, offer: { seq: 9 } });
+    expect(res.body["paper"]).toBeUndefined();
+    expect(res.body["control"]).toBeUndefined();
+  });
+
+  it("answers a stranger's GET of the snapshot the same as anything else on a session that is not theirs", async () => {
+    const d = deps();
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    const stranger = { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) };
+    expect((await call(request("GET", "/api/sessions/01RUN/snapshot"), stranger)).body).toEqual({ found: false });
+  });
+
   /**
    * The bug: sharing minted a token every time it was called, and only the
    * hash is kept, so the old link could not be repeated and everyone
