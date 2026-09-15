@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144" role="img" aria-label="Keep rolling for me">
+  <!-- Two dice, and the loop that keeps throwing them. -->
+  <rect x="18" y="62" width="52" height="52" rx="12" fill="none" stroke="#ffffff" stroke-width="11"/>
+  <circle cx="44" cy="88" r="8" fill="#ffffff"/>
+  <rect x="78" y="62" width="52" height="52" rx="12" fill="none" stroke="#ffffff" stroke-width="11"/>
+  <circle cx="94" cy="78" r="7" fill="#ffffff"/>
+  <circle cx="114" cy="98" r="7" fill="#ffffff"/>
+  <path d="M26 46 A60 60 0 0 1 118 46" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round"/>
+  <path d="M104 32 H132 L118 60 Z" fill="#ffffff"/>
+</svg>

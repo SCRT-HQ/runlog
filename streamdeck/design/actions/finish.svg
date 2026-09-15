@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144" role="img" aria-label="Finish the run">
+  <!-- A flag on its pole: the press a run ends on. -->
+  <path d="M38 22 V126" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+  <path d="M38 30 H114 L96 58 L114 86 H38 Z" fill="#ffffff"/>
+</svg>

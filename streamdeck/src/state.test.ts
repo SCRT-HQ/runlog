@@ -12,6 +12,14 @@ import {
   idleDeadline,
   setupFace,
   rollFace,
+  openFace,
+  clockFace,
+  clockPress,
+  autoRollFace,
+  autoRollPress,
+  finishFace,
+  finishPress,
+  metricPress,
   IDLE_OFF_MS,
   type DeckState,
   type Offer,
@@ -26,6 +34,10 @@ const offer: Offer = {
   needsPage: null,
   presets: [],
   setups: [],
+  trackers: [],
+  clock: null,
+  autoRoll: false,
+  ending: null,
 };
 const T = 1_000_000;
 
@@ -57,7 +69,7 @@ describe("what the keys say", () => {
     s = reduce(s, { t: "socket", state: "open" }, T);
     s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
     expect(attachedRun(s)).toBe("s1");
-    expect(runFace(s)).toEqual({ title: "Thursday", tone: "live", when: "The Long Kiln" });
+    expect(runFace(s)).toEqual({ title: "Thursday", tone: "deck", when: "The Long Kiln" });
   });
   it("asks to pick between two, and a pin decides", () => {
     let s = live();
@@ -79,7 +91,7 @@ describe("what the keys say", () => {
     s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
     s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
     expect(nextFace(s, {})).toEqual({ title: "Roll the Weather", tone: "live" });
-    expect(undoFace(s)).toEqual({ title: "Undo", tone: "live" });
+    expect(undoFace(s)).toEqual({ title: "Undo", tone: "undo" });
     const blocked = reduce(
       s,
       { t: "snapshot", snapshot: { offer: { ...offer, primary: null, needsPage: "Name the bowl on the page" } } },
@@ -115,8 +127,8 @@ describe("what the keys say", () => {
       T,
     );
     // Ruling 4 amends this case: a running timer clock's face also carries
-    // a fraction (elapsed / total) for a dial's indicator — 15s of 600s.
-    expect(metricFace(s, "clock", T + 5_000)).toEqual({ title: "9:45", tone: "live", when: "Day 4", fraction: 0.025 });
+    // a fraction (elapsed / total) for a dial's indicator: 15s of 600s.
+    expect(metricFace(s, "clock", T + 5_000)).toEqual({ title: "9:45", tone: "readout", when: "Day 4", fraction: 0.025 });
   });
 
   // Controller ruling 1: a `drove` that carries `seq` is the freshest seq
@@ -201,7 +213,7 @@ describe("what the setup key says", () => {
     s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, setups: [{ id: "leveling", title: "Leveling" }] } } }, T);
     expect(setupFace(s, { id: "leveling", title: "Leveling" })).toEqual({
       title: "Leveling",
-      tone: "live",
+      tone: "deck",
       when: "Apply setup",
     });
   });
@@ -260,6 +272,36 @@ describe("what the roll key says", () => {
   });
 });
 
+// Task 23: one key, three pages. The guide is the one target that needs
+// nothing of the deck; the run and the rules name what it is holding.
+describe("what the open key says", () => {
+  it("says Set up with no target chosen", () => {
+    expect(openFace(open(), undefined)).toEqual({ title: "Set up", tone: "dim" });
+  });
+
+  it("offers the guide signed out, off, and with nothing held", () => {
+    const guide = { title: "Guide", tone: "deck", when: "in a browser" };
+    expect(openFace(initial(), "guide")).toEqual(guide);
+    expect(openFace(reduce(initial(), { t: "session", state: "ok" }, T), "guide")).toEqual(guide);
+    expect(openFace(open(), "guide")).toEqual(guide);
+  });
+
+  it("names the run and the rules once the deck is following one", () => {
+    expect(openFace(open(), "run")).toEqual({ title: "Open the run", tone: "deck", when: "in a browser" });
+    expect(openFace(open(), "rules")).toEqual({ title: "Rules", tone: "deck", when: "in a browser" });
+  });
+
+  it("says what is missing for the run and the rules, as every key does", () => {
+    expect(openFace(initial(), "run")).toEqual({ title: "Sign in", tone: "dim" });
+    expect(openFace(reduce(initial(), { t: "session", state: "ok" }, T), "rules")).toEqual({
+      title: "Not connected",
+      tone: "dim",
+      when: "press Connect",
+    });
+    expect(openFace(open([held("s1"), held("s2", "Friday")]), "run")).toEqual({ title: "Pick a run", tone: "dim" });
+  });
+});
+
 // Controller amendment A: the socket is a state the streamer enters. A key
 // that depends on the connection says so, and says what to do about it.
 describe("what the keys say while the deck is off", () => {
@@ -310,10 +352,10 @@ describe("what the Connect key says", () => {
     expect(connectFace(live())).toEqual({ title: "Connecting", tone: "dim" });
   });
   it("says Disconnect once the socket is open, whatever the Run key would say", () => {
-    expect(connectFace(open())).toEqual({ title: "Disconnect", tone: "live" });
+    expect(connectFace(open())).toEqual({ title: "Disconnect", tone: "deck" });
     const s = reduce(reduce(live(), { t: "socket", state: "open" }, T), { t: "runs", runs: [], any: true }, T);
-    expect(connectFace(s)).toEqual({ title: "Disconnect", tone: "live" });
-    expect(connectFace(open([held("s1"), held("s2", "Friday")]))).toEqual({ title: "Disconnect", tone: "live" });
+    expect(connectFace(s)).toEqual({ title: "Disconnect", tone: "deck" });
+    expect(connectFace(open([held("s1"), held("s2", "Friday")]))).toEqual({ title: "Disconnect", tone: "deck" });
   });
 });
 
@@ -380,5 +422,212 @@ describe("what the follow key takes", () => {
 
   it("has nothing to take before a snapshot lands", () => {
     expect(nextPress(open(), {})).toBeNull();
+  });
+});
+
+// Task 24b: the offer carries the trackers a deck may move, the clock it
+// may turn over, who is throwing the dice, and how the run would end.
+const withOffer = (extra: Partial<Offer>, snapshot: Record<string, unknown> = {}): DeckState => {
+  let s = live();
+  s = reduce(s, { t: "socket", state: "open" }, T);
+  s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+  return reduce(s, { t: "snapshot", snapshot: { ...snapshot, offer: { ...offer, ...extra } } }, T);
+};
+
+/** A run keeping one timer, as the snapshot and the offer each describe it. */
+const ticking = (status: "running" | "paused" | "done", elapsedMs = 0) =>
+  withOffer(
+    { clock: { id: "u4", label: "Day 4", status } },
+    {
+      at: new Date(T).toISOString(),
+      clocks: [{ id: "u4", label: "Day 4", kind: "timer", seconds: 600, status, elapsedMs }],
+    },
+  );
+
+/** An offer with one of the four new fields left off it, as an older page would publish. */
+const older = (drop: keyof Offer): DeckState => {
+  const bare = { ...offer } as Partial<Offer>;
+  delete bare[drop];
+  let s = live();
+  s = reduce(s, { t: "socket", state: "open" }, T);
+  s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+  return reduce(s, { t: "snapshot", snapshot: { offer: bare as Offer } }, T);
+};
+
+describe("what the clock key says", () => {
+  it("is loading before the offer lands", () => {
+    expect(clockFace(open(), T)).toEqual({ title: "Loading…", tone: "dim" });
+  });
+
+  it("says there is no clock where the run keeps none", () => {
+    expect(clockFace(withOffer({ clock: null }), T)).toEqual({ title: "No clock", tone: "dim" });
+  });
+
+  it("counts a running clock down, lit, with the bar a dial draws", () => {
+    expect(clockFace(ticking("running"), T + 15_000)).toEqual({
+      title: "9:45",
+      tone: "live",
+      when: "Day 4",
+      fraction: 0.025,
+    });
+  });
+
+  it("keeps a paused clock's time on the face and says it is paused", () => {
+    expect(clockFace(ticking("paused", 15_000), T + 60_000)).toEqual({ title: "9:45", tone: "dim", when: "paused" });
+  });
+
+  it("says nothing is left of a clock that is done", () => {
+    expect(clockFace(ticking("done", 600_000), T)).toEqual({ title: "0:00", tone: "dim", when: "done" });
+  });
+
+  it("guards an older page, whose offer names no clock at all", () => {
+    expect(clockFace(older("clock"), T)).toEqual({ title: "No clock", tone: "dim" });
+  });
+});
+
+describe("what the clock key presses", () => {
+  it("pauses a running clock and resumes a paused one", () => {
+    expect(clockPress(ticking("running"), false)).toEqual({ press: "answer", answer: { clock: "u4", do: "pause" } });
+    expect(clockPress(ticking("paused"), false)).toEqual({ press: "answer", answer: { clock: "u4", do: "resume" } });
+  });
+
+  it("stops it when it is held", () => {
+    expect(clockPress(ticking("running"), true)).toEqual({ press: "answer", answer: { clock: "u4", do: "stop" } });
+  });
+
+  it("presses nothing with no clock, or one that has already run out", () => {
+    expect(clockPress(withOffer({ clock: null }), false)).toBeNull();
+    expect(clockPress(ticking("done", 600_000), true)).toBeNull();
+    expect(clockPress(open(), false)).toBeNull();
+  });
+});
+
+describe("what the keep-rolling key says", () => {
+  it("is loading before the offer lands", () => {
+    expect(autoRollFace(open())).toEqual({ title: "Loading…", tone: "dim" });
+  });
+
+  it("names who is throwing the dice, and says the press switches it", () => {
+    expect(autoRollFace(withOffer({ autoRoll: true }))).toEqual({
+      title: "Rolling for you",
+      tone: "live",
+      when: "press to switch",
+    });
+    expect(autoRollFace(withOffer({ autoRoll: false }))).toEqual({
+      title: "Roll by hand",
+      tone: "deck",
+      when: "press to switch",
+    });
+  });
+
+  it("sends the other setting, and nothing before an offer lands", () => {
+    expect(autoRollPress(withOffer({ autoRoll: false }))).toEqual({ press: "answer", answer: { autoRoll: true } });
+    expect(autoRollPress(withOffer({ autoRoll: true }))).toEqual({ press: "answer", answer: { autoRoll: false } });
+    expect(autoRollPress(open())).toBeNull();
+  });
+
+  it("takes an older page, which says nothing about it, for rolling by hand", () => {
+    expect(autoRollFace(older("autoRoll")).title).toBe("Roll by hand");
+    expect(autoRollPress(older("autoRoll"))).toEqual({ press: "answer", answer: { autoRoll: true } });
+  });
+});
+
+describe("what the finish key says", () => {
+  it("is loading before the offer lands", () => {
+    expect(finishFace(open())).toEqual({ title: "Loading…", tone: "dim" });
+  });
+
+  it("says not yet while the run has no ending to take", () => {
+    expect(finishFace(withOffer({ ending: null }))).toEqual({ title: "Not yet", tone: "dim" });
+    expect(finishPress(withOffer({ ending: null }))).toBeNull();
+    expect(finishFace(older("ending"))).toEqual({ title: "Not yet", tone: "dim" });
+  });
+
+  it("carries the ending on the kiln edge, and asks to be held", () => {
+    const s = withOffer({ ending: { label: "Call it a night" } });
+    expect(finishFace(s)).toEqual({ title: "Call it a night", tone: "refuse", when: "hold to finish" });
+    expect(finishPress(s)).toEqual({ press: "answer", answer: { finish: true } });
+  });
+});
+
+describe("what a metric key presses", () => {
+  const trackers: Offer["trackers"] = [
+    { id: "hits", kind: "counter", label: "Hits", value: 3, max: null },
+    { id: "flasks", kind: "resource", label: "Flasks", value: 2, max: 4 },
+  ];
+  const keeping = withOffer({ trackers });
+
+  it("steps a counter up by one on a tap", () => {
+    expect(metricPress(keeping, { counter: "hits" }, undefined, false)).toEqual({
+      press: "answer",
+      answer: { tracker: "hits", by: 1 },
+    });
+    expect(metricPress(keeping, { counter: "hits" }, { kind: "step" }, false)).toEqual({
+      press: "answer",
+      answer: { tracker: "hits", by: 1 },
+    });
+  });
+
+  it("puts it at the number the key was set to", () => {
+    expect(metricPress(keeping, { resource: "flasks" }, { kind: "set", value: 4 }, false)).toEqual({
+      press: "answer",
+      answer: { tracker: "flasks", to: 4 },
+    });
+  });
+
+  it("takes one back off on a hold, whichever way the key was set", () => {
+    expect(metricPress(keeping, { counter: "hits" }, { kind: "step" }, true)).toEqual({
+      press: "answer",
+      answer: { tracker: "hits", by: -1 },
+    });
+    expect(metricPress(keeping, { resource: "flasks" }, { kind: "set", value: 4 }, true)).toEqual({
+      press: "answer",
+      answer: { tracker: "flasks", by: -1 },
+    });
+  });
+
+  it("presses nothing for the fields that are the run's own arithmetic", () => {
+    for (const field of ["score", "unit", "clock", "latest", "leader"] as const) {
+      expect(metricPress(keeping, field, undefined, false), field).toBeNull();
+    }
+    expect(metricPress(keeping, undefined, undefined, false)).toBeNull();
+  });
+
+  it("presses nothing for a tracker this run does not keep, or under the other kind's name", () => {
+    expect(metricPress(keeping, { counter: "runes" }, undefined, false)).toBeNull();
+    expect(metricPress(keeping, { resource: "hits" }, undefined, false)).toBeNull();
+    expect(metricPress(older("trackers"), { counter: "hits" }, undefined, false)).toBeNull();
+    expect(metricPress(open(), { counter: "hits" }, undefined, false)).toBeNull();
+  });
+});
+
+// Task 24b: a threshold or a global roll the run is owed arrives as the
+// primary, and the follow key takes it like any other.
+describe("what the follow key does with an owed press", () => {
+  it("draws its label and presses the primary", () => {
+    const s = withOffer({ primary: { id: "owed", label: "Take the level-up", kind: "owed" } });
+    expect(nextFace(s, {})).toEqual({ title: "Take the level-up", tone: "live" });
+    expect(nextPress(s, {})).toEqual({ press: "primary" });
+  });
+});
+
+// Task 24b: the Open key gains the dock and a new run.
+describe("where else the open key points", () => {
+  it("names the dock and a new run once the deck is following one", () => {
+    expect(openFace(open(), "dock")).toEqual({ title: "The dock", tone: "deck", when: "in a browser" });
+    expect(openFace(open(), "newrun")).toEqual({ title: "A new run", tone: "deck", when: "in a browser" });
+  });
+
+  it("says what is missing first, as the run and the rules do", () => {
+    expect(openFace(initial(), "dock")).toEqual({ title: "Sign in", tone: "dim" });
+  });
+
+  it("answers newrun beside guide, without waiting on a run to attach to", () => {
+    expect(openFace(initial(), "newrun")).toEqual({ title: "A new run", tone: "deck", when: "in a browser" });
+    expect(openFace(open([held("s1"), held("s2", "Friday")]), "newrun")).toEqual({
+      title: "A new run",
+      tone: "deck",
+      when: "in a browser",
+    });
   });
 });

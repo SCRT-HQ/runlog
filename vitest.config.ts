@@ -24,6 +24,8 @@ export default defineConfig({
       // Build-time modules live beside the config they serve, not in src.
       "apps/*/*.test.ts",
       "streamdeck/src/**/*.test.ts",
+      // The plugin's design scripts, which live beside what they generate.
+      "streamdeck/design/**/*.test.mjs",
       "tests/**/*.test.ts",
     ],
     environment: "node",

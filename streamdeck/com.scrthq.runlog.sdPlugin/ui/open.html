@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+  <head lang="en">
+    <title>Open in the browser Settings</title>
+    <meta charset="utf-8" />
+    <script src="sdpi-components.js"></script>
+  </head>
+
+  <body>
+    <sdpi-item label="Open">
+      <select id="target">
+        <option value="">Set up</option>
+        <option value="run">The run</option>
+        <option value="dock">The dock</option>
+        <option value="newrun">A new run</option>
+        <option value="guide">The guide</option>
+        <option value="rules">The rules</option>
+      </select>
+    </sdpi-item>
+
+    <div id="runlog-account"></div>
+    <script src="account.js"></script>
+    <script>
+      // Five pages, all of them at the address in the account block: the
+      // run the deck is following, its dock, a new run, the guide, and the
+      // pack's own rules.
+      (() => {
+        const { streamDeckClient } = SDPIComponents;
+        const target = document.getElementById("target");
+
+        target.addEventListener("change", () => streamDeckClient.setSettings(target.value ? { target: target.value } : {}));
+
+        void streamDeckClient.getSettings().then(({ settings }) => {
+          target.value = settings?.target ?? "";
+        });
+      })();
+    </script>
+  </body>
+</html>
