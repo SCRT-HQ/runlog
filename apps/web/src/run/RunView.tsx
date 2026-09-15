@@ -291,6 +291,12 @@ export function RunView({
    */
   const [receipts, setReceipts] = useState<RollReceipt[]>([]);
 
+  // The step is done once nothing more is asked; its receipts wait to be
+  // read, unless this device asked them not to. Declared here, ahead of
+  // `currentOffer` below, because the offer a deck sees has to show the
+  // same receipts the page does.
+  const settled = receipts.length > 0 && !run.pending?.request;
+
   // Who is on the board, read here as `Moves` reads it: the offer has to
   // split a move the same way the panel does. Held by a memo because the
   // offer is, and an empty roster built afresh on every render would
@@ -328,6 +334,10 @@ export function RunView({
       seq: run.events.length,
       live: Boolean(run.started) && !run.readOnly && run.state?.status !== "ended",
       settled: run.pending === null,
+      // The receipts of the step's own throws, waiting on the page's own
+      // Carry on: a deck sees the same thing the page shows, not a fresh
+      // read of the engine underneath it.
+      receipts: settled,
       step: run.activeStep?.step ?? null,
       stepLabel,
       // What the engine itself is waiting on, not what the step is: a
@@ -393,6 +403,7 @@ export function RunView({
     run.canUndo,
     run.blockingObligations.length,
     receipts.length,
+    settled,
     offeredSetups,
     pack,
   ]);
@@ -591,6 +602,36 @@ export function RunView({
   );
 
   /**
+   * `handsFree`, `closing` and `carryOn`, hoisted ahead of the drive effect
+   * below: a deck's carry-on press calls the same `carryOn` the page's own
+   * button does, not a second path through `run.completeStep`, and that
+   * function has to exist before the effect that closes over it. The full
+   * account of hands-free is further down, where `begun` and the carry-on
+   * timer read these.
+   */
+  const handsFree = run.state ? handsFreeIn(pack, run.state) : false;
+  const live = run.state?.status === "active" && !run.readOnly;
+  const closingStep = run.activeStep && closesUnit(run.activeStep.step) ? run.activeStep : null;
+  const closing = closesTheUnit({
+    handsFree,
+    live: Boolean(live),
+    settled,
+    step: closingStep?.step ?? null,
+    owed: run.blockingObligations.length,
+    thresholds: run.thresholds.length,
+    globals: run.globals.length,
+  });
+
+  /**
+   * Carry on: clear the receipt, and where that is also the end of the
+   * unit, close it and enter the next in the same press.
+   */
+  const carryOn = useCallback(() => {
+    setReceipts([]);
+    if (closing && closingStep) run.closeAndEnter(closingStep.phase, closingStep.index);
+  }, [closing, closingStep, run]);
+
+  /**
    * A press from a deck, taken here because this is the device holding the
    * run. What the deck may press is the offer this device published; what
    * happens when it does is the same function the page's own button calls.
@@ -638,6 +679,12 @@ export function RunView({
                 label: table?.title ?? active.step.table,
                 completes: { phase: active.phase, index: active.index },
               });
+            } else if (id === "carry-on" && currentOffer.primary?.kind === "receipt") {
+              // The receipts of the step's own throws are waiting on the
+              // page's own Carry on, not the engine's completeStep: where
+              // the step also closes the unit, the page's callback closes
+              // and enters the next one in the same press.
+              carryOn();
             } else if (id === "carry-on") {
               run.completeStep(active.phase, active.index);
             } else if (id === "close") {
@@ -685,7 +732,7 @@ export function RunView({
         timer: window.setTimeout(() => settleVerdict(eventCount.current), threw ? DICE_VERDICT_MS : HELD_VERDICT_MS),
       };
     });
-  }, [run, currentOffer, sync, pack, settleVerdict, offeredSetups]);
+  }, [run, currentOffer, sync, pack, settleVerdict, offeredSetups, carryOn, settled]);
   const seen = useRef<number | null>(null);
   // How many answers this view has given, and how many it had given when
   // the last receipt was issued: what a step that came back with the run
@@ -768,9 +815,6 @@ export function RunView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run.events.length, run.state]);
 
-  // The step is done once nothing more is asked; its receipts wait to be
-  // read, unless this device asked them not to.
-  const settled = receipts.length > 0 && !run.pending?.request;
   const lastReceipt = receipts[receipts.length - 1] ?? null;
 
   /* ---------------------------------------------------------------- *
@@ -782,12 +826,11 @@ export function RunView({
    * is left is the result on screen and a button to move past it, which
    * is the whole interface for a game played with both hands busy.
    *
-   * Everything that genuinely asks still stops. `closing` below is
-   * false the moment a confirmation, a checklist or something owed
-   * stands between the player and the end of the unit.
+   * Everything that genuinely asks still stops. `closing` is false the
+   * moment a confirmation, a checklist or something owed stands between
+   * the player and the end of the unit. It and `handsFree` are declared
+   * above, ahead of the drive effect that presses `carryOn`.
    * ---------------------------------------------------------------- */
-  const handsFree = run.state ? handsFreeIn(pack, run.state) : false;
-  const live = run.state?.status === "active" && !run.readOnly;
 
   /**
    * A step that asks nothing, started without being asked to start it.
@@ -814,31 +857,6 @@ export function RunView({
       completes: { phase: active.phase, index: active.index },
     });
   }, [handsFree, live, run.activeStep, run.pending, receipts.length, pack, run]);
-
-  /**
-   * Whether reading this result is also what closes the unit: hands-free,
-   * settled, and the only thing standing after it is a closing step that
-   * asks for no confirmation.
-   */
-  const closingStep = run.activeStep && closesUnit(run.activeStep.step) ? run.activeStep : null;
-  const closing = closesTheUnit({
-    handsFree,
-    live: Boolean(live),
-    settled,
-    step: closingStep?.step ?? null,
-    owed: run.blockingObligations.length,
-    thresholds: run.thresholds.length,
-    globals: run.globals.length,
-  });
-
-  /**
-   * Carry on: clear the receipt, and where that is also the end of the
-   * unit, close it and enter the next in the same press.
-   */
-  const carryOn = useCallback(() => {
-    setReceipts([]);
-    if (closing && closingStep) run.closeAndEnter(closingStep.phase, closingStep.index);
-  }, [closing, closingStep, run]);
 
   useEffect(() => {
     // A receipt that closes the unit is never dismissed by the clock:

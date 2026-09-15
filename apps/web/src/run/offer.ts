@@ -33,6 +33,8 @@ export interface OfferInput {
   live: boolean;
   /** Nothing more is being asked of this step. */
   settled: boolean;
+  /** The step's own receipts are waiting to be read, and nothing more is asked. */
+  receipts: boolean;
   step: Step | null;
   stepLabel: string | null;
   /** What the engine is waiting on, when it is waiting on anything at all. */
@@ -89,6 +91,13 @@ export function offerOf(input: OfferInput): Offer {
   // played under is a record of what happened, and a key that could
   // rewrite it from another room is worse than no key.
   if (!input.live) return { ...bare, moves: [], undo: null, setups: [], primary: null, needsPage: "Open the run on the page" };
+
+  // The receipts of the step's own throws sit on the page, waiting to be
+  // read, before anything about the step itself -- what it is, whether it
+  // closes the unit -- comes into it. No presets: the checklist and the
+  // between-units button are both still behind this same screen.
+  if (input.receipts) return { ...bare, primary: { id: "carry-on", label: "Carry on", kind: "receipt" }, needsPage: null };
+
   if (!input.step) {
     if (input.between) return { ...bare, primary: { id: "enter", label: input.between, kind: "between" }, needsPage: null };
     return { ...bare, primary: null, needsPage: null };
