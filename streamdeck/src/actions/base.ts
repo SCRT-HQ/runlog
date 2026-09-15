@@ -73,11 +73,19 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
     const face = this.face(store.state, settings, Date.now());
     if (this.said.get(action.id) !== face.title) {
       this.said.set(action.id, face.title);
-      streamDeck.logger.info(`${this.manifestId ?? "?"} now says "${face.title}" for ${JSON.stringify(settings)}`);
+      streamDeck.logger.info(
+        `${this.manifestId ?? "?"} ${action.id} (${action.controllerType}) now says "${face.title}" for ${JSON.stringify(settings)}`,
+      );
     }
     if (action.isKey()) {
-      await action.setImage(faceImage(face));
-      await action.setTitle("");
+      try {
+        await action.setImage(faceImage(face));
+        await action.setTitle("");
+      } catch (error) {
+        // The software answers nothing on a bad image; a throw here is the
+        // only word of it there is, and it is worth a line in the log.
+        streamDeck.logger.error(`could not draw ${action.id}: ${String(error)}`);
+      }
     } else if (action.isDial()) {
       // The `$B1` layout's progress bar is the `indicator` key; it only
       // has something to show for a running timer's fraction, controller
