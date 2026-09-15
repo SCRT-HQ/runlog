@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144" role="img" aria-label="Runlog">
+  <!-- The app's own mark, in the app's palette: four squares, three of them filled, and one that went another way. -->
+  <rect width="144" height="144" rx="27" fill="#151311"/>
+  <g fill="#9fd3b6">
+    <rect x="31" y="31" width="36" height="36" rx="6"/>
+    <rect x="77" y="31" width="36" height="36" rx="6" opacity="0.55"/>
+    <rect x="31" y="77" width="36" height="36" rx="6" opacity="0.55"/>
+  </g>
+  <rect x="77" y="77" width="36" height="36" rx="6" fill="none" stroke="#e0a94f" stroke-width="5"/>
+</svg>

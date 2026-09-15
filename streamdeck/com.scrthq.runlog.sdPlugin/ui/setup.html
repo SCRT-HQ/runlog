@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+  <head lang="en">
+    <title>Apply Setup Settings</title>
+    <meta charset="utf-8" />
+    <script src="sdpi-components.js"></script>
+  </head>
+
+  <body>
+    <sdpi-item label="Setup">
+      <select id="setup"></select>
+    </sdpi-item>
+
+    <div id="runlog-account"></div>
+    <script src="account.js"></script>
+    <script>
+      // The setups are your library for the pack's tool, so they come from
+      // the plugin on every appear rather than being listed here.
+      (() => {
+        const { streamDeckClient } = SDPIComponents;
+        const setup = document.getElementById("setup");
+        let current = null;
+
+        const option = (value, label) => {
+          const o = document.createElement("option");
+          o.value = JSON.stringify(value);
+          o.textContent = label;
+          return o;
+        };
+
+        const fill = (setups) => {
+          setup.replaceChildren(option(null, "Set up"), ...setups.map((s) => option({ id: s.id, title: s.title }, s.title)));
+          show();
+        };
+
+        // A setup option is identified by its id, so a renamed setup still matches.
+        const show = () => {
+          const chosen = current?.id ?? null;
+          const match = [...setup.options].find((o) => (JSON.parse(o.value)?.id ?? null) === chosen);
+          if (match) setup.value = match.value;
+        };
+
+        setup.addEventListener("change", () => {
+          current = JSON.parse(setup.value);
+          streamDeckClient.setSettings(current ? { setup: current } : {});
+        });
+
+        streamDeckClient.sendToPropertyInspector.subscribe(({ payload }) => {
+          if (payload?.t === "setups") fill(payload.setups ?? []);
+        });
+        void streamDeckClient.getSettings().then(({ settings }) => {
+          current = settings?.setup ?? null;
+          show();
+        });
+        fill([]);
+      })();
+    </script>
+  </body>
+</html>

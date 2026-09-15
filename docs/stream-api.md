@@ -416,6 +416,8 @@ Everything above reads, or writes only through an ask. A deck presses the same b
 
 A deck names no run at connect: it is told what is open to it and picks. Only a run some other device is actively holding open ever appears, and pressing never reaches further than that.
 
+For an Elgato Stream Deck there is nothing to write: the Runlog plugin does all of this, and the guide's [A Stream Deck at the table](https://runlog.scrthq.com/guide/stream-deck) says what its keys do.
+
 ### The runs it may press
 
 A deck speaks first:

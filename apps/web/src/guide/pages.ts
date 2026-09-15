@@ -22,6 +22,7 @@ import Streaming from "./pages/streaming.mdx";
 import StreamAddress from "./pages/stream-address.mdx";
 import Obs from "./pages/obs.mdx";
 import Dock from "./pages/dock.mdx";
+import StreamDeck from "./pages/stream-deck.mdx";
 import StreamElements from "./pages/streamelements.mdx";
 import StreamerBot from "./pages/streamer-bot.mdx";
 import Control from "./pages/control.mdx";
@@ -144,6 +145,14 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   ),
   P("obs", "With others", "Streaming", "OBS Studio and Streamlabs", "A browser source, field by field, with sizes and a line of CSS.", Obs),
   P("dock", "With others", "Streaming", "A dock for the controls", "The run's remote beside the preview in OBS.", Dock),
+  P(
+    "stream-deck",
+    "With others",
+    "Streaming",
+    "A Stream Deck at the table",
+    "The plugin: connect, the run, the next press, undo, a number on a dial.",
+    StreamDeck,
+  ),
   P("streamelements", "With others", "Streaming", "StreamElements", "A custom widget that reads the run's numbers.", StreamElements),
   P("streamer-bot", "With others", "Streaming", "Streamer.bot, Aitum and Lumia", "A dice alert and a !score command.", StreamerBot),
   P("tiktok", "With others", "Streaming", "TikTok Live", "LIVE Studio's Link source or OBS, and a gift that asks the run.", TikTok),

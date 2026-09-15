@@ -3,9 +3,15 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, configure, render, screen, waitFor } from "@testing-library/react";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { SetupPicker } from "./SetupPicker.tsx";
+
+// The picker draws nothing until it has read the built-in profiles and the
+// setups on the shelf, and every wait below is for that read. A second is
+// the library's default and it is not enough of one on a busy worker: the
+// whole suite running at once was already failing this file's first find.
+configure({ asyncUtilTimeout: 5000 });
 
 /**
  * Choosing what a run starts under, where the run starts.

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144" role="img" aria-label="Undo">
+  <!-- Back the way it came: an arc around the bottom, with the head over the end it came from. -->
+  <path d="M42 67 A32 32 0 1 0 102 67" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round"/>
+  <path d="M42 28 L63 71 L21 71 Z" fill="#ffffff"/>
+</svg>
