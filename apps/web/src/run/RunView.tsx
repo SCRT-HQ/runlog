@@ -195,6 +195,29 @@ export function perRacer(move: { per?: string }, racing: { length: number }): bo
 }
 
 /**
+ * Whether a setup would survive the wire as a command.
+ *
+ * A command's operations travel in the gesture rather than being built
+ * from the run, so the server reads them the way it reads anything that
+ * arrives from outside: one field past its bound makes the whole frame
+ * nothing. It drops that frame with a bare 200, which this page cannot
+ * tell from a command delivered, so a file the server would refuse is
+ * kept off the offer instead. A key that cannot work is better missing
+ * than pressed to no effect.
+ *
+ * The bounds are the server's own, not this format's, and they are the
+ * tighter of the two: a setup may run to 200 operations and a 120
+ * character title where a command may not. `args` is not checked, because
+ * anything parsed as a setup has it as an object already.
+ */
+export function fitsTheWire(setup: Setup): boolean {
+  if (setup.id.length === 0 || setup.id.length > 200) return false;
+  if (setup.title.length > 80) return false;
+  if (setup.ops.length === 0 || setup.ops.length > 64) return false;
+  return setup.ops.every((o) => o.op.length > 0 && o.op.length <= 64);
+}
+
+/**
  * Playing a run.
  *
  * Every noun on screen comes from the pack's vocabulary, and every step comes
@@ -434,6 +457,12 @@ export function RunView({
       // Id and title only: a key face shows the title, and a press names
       // the id. What the setup actually does stays here, where the run is.
       setups: offeredSetups.map((s) => ({ id: s.id, title: s.title })),
+      // The same list, offered the other way round: handed to the tool
+      // once instead of taken on by the run. One list, because a setup
+      // file is one document either way; which of the two a key does is
+      // the key's own business. Less whatever the server would drop on
+      // the way, which `fitsTheWire` is the one account of.
+      commands: offeredSetups.filter(fitsTheWire).map((s) => ({ id: s.id, title: s.title })),
       trackers: trackersOf(pack, run.state ?? null),
       // The one clock the page's own Pause and Stop act on. A unit runs
       // one at a time in practice, and where it somehow runs two, the one
@@ -796,6 +825,23 @@ export function RunView({
             // saved profile and would otherwise hand out the one before.
             await run.setSetup(chose(picked));
             sync.gesture(runId, "setup");
+          },
+          command: (id) => {
+            const picked = offeredSetups.find((s) => s.id === id);
+            if (!picked) throw new Error("That command is not here.");
+            // The file's own operations, as written, rather than the run's
+            // combined profile: the whole point is that the run is left
+            // where it was, so nothing is read from it and nothing is
+            // written to it. The server hands them on and forgets them.
+            //
+            // Synchronous, unlike the setup above, because there is no
+            // write to wait for -- and because the refusal below has to
+            // reach `takePress` rather than a promise nobody is holding.
+            const sent = sync.gesture(runId, "command", { id: picked.id, title: picked.title, ops: picked.ops });
+            // A deck pressed a key on a page whose socket is down. Nothing
+            // went anywhere, and the deck is told so rather than left to
+            // read silence as success.
+            if (!sent) throw new Error("The run is not synced.");
           },
         },
       );

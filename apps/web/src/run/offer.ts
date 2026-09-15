@@ -24,6 +24,15 @@ export interface Offer {
   presets: Array<{ kind: string; label: string; suggestions?: string[]; items?: number }>;
   /** The setups a key may apply to this run, by id and title. */
   setups: Array<{ id: string; title: string }>;
+  /**
+   * The same list again, as things a key may hand the tool once.
+   *
+   * A field of its own rather than a flag on `setups`, because a deck
+   * lays both kinds of key out from what it is given: an apply key and a
+   * command key for the same file are two faces, and a deck should not
+   * have to guess which of the two a title is good for.
+   */
+  commands: Array<{ id: string; title: string }>;
   /** The tallies and the dials, as the Trackers panel lists them. */
   trackers: Array<{ id: string; kind: "counter" | "resource"; label: string; value: number; max: number | null }>;
   /** The clock the page's Pause, Resume and Stop act on, where one is ticking. */
@@ -81,6 +90,13 @@ export interface OfferInput {
    */
   setups: Array<{ id: string; title: string }>;
   /**
+   * The same setups again, offered as commands. Handed in beside them
+   * rather than copied from them here, because what a page has to hand
+   * the tool is the file's own operations, and this function is given
+   * titles and ids alone.
+   */
+  commands: Array<{ id: string; title: string }>;
+  /**
    * Every tally and every dial the run keeps, worked out by the page for
    * the reason the setups are: which of them the page draws depends on the
    * pack and on who is at the table, and the panel that draws them is the
@@ -118,6 +134,7 @@ export function offerOf(input: OfferInput): Offer {
     undo,
     presets: [] as Offer["presets"],
     setups: input.setups,
+    commands: input.commands,
     trackers: input.trackers,
     clock: input.clock,
     autoRoll: input.autoRoll,
@@ -132,6 +149,10 @@ export function offerOf(input: OfferInput): Offer {
   // played under is a record of what happened, and a key that could
   // rewrite it from another room is worse than no key.
   //
+  // The commands go with them. Nothing they do is written to the run, but
+  // a run nobody is playing has no tool to hand them to that anybody at
+  // this table asked for.
+  //
   // The dials, the clock, the dice setting and the ending are held back for
   // the same reason, and held back rather than merely refused: a key face
   // drawn from an offer should go dim on a run nobody is playing rather
@@ -142,6 +163,7 @@ export function offerOf(input: OfferInput): Offer {
       moves: [],
       undo: null,
       setups: [],
+      commands: [],
       trackers: [],
       clock: null,
       autoRoll: false,

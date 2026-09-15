@@ -1,5 +1,5 @@
 import { hashToken, verify as verifyToken, type Caller } from "./auth.js";
-import { askFor, fits, framesForGesture, loadoutFor, profileOf, setupFor } from "./control.js";
+import { askFor, commandFor, fits, framesForGesture, loadoutFor, profileOf, setupFor, type ControlOp } from "./control.js";
 import { askAllowed } from "./asking.js";
 import { apiGatewayPoster, type Poster } from "./live.js";
 import { dynamoLive, type LiveStore } from "./live.js";
@@ -92,6 +92,36 @@ function deckOf(event: WsEvent): { deck: true } | undefined {
  */
 function writes(w: { sub: string; control?: boolean; deck?: boolean }): boolean {
   return !w.control && !w.deck && !w.sub.startsWith("public:") && !w.sub.startsWith("stream:");
+}
+
+/**
+ * A command's own operations, read out of the gesture defensively.
+ *
+ * Everything else a tool is told comes from the run's profile, which the
+ * owner's own device wrote. This comes off a key press, so it is read the
+ * way the profile is read: anything that is not what it claims to be
+ * makes the whole command nothing, rather than being repaired into
+ * something nobody asked for. A press that says a hundred operations is
+ * not a press somebody meant.
+ */
+function commandOf(data: Record<string, unknown>): { id: string; title: string; ops: ControlOp[] } | null {
+  const id = data["id"];
+  const title = data["title"];
+  const raw = data["ops"];
+  if (typeof id !== "string" || id.length === 0 || id.length > 200) return null;
+  if (typeof title !== "string" || title.length > 80) return null;
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > 64) return null;
+  const ops: ControlOp[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+    const row = entry as Record<string, unknown>;
+    const op = row["op"];
+    const args = row["args"];
+    if (typeof op !== "string" || op.length === 0 || op.length > 64) return null;
+    if (args !== undefined && (typeof args !== "object" || args === null || Array.isArray(args))) return null;
+    ops.push({ op, ...(args ? { args: args as Record<string, unknown> } : {}) });
+  }
+  return { id, title, ops };
 }
 
 export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
@@ -679,6 +709,56 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
       // attach. `termsGiven` is left alone, because the terms did not
       // move.
       await deps.store.updateSession(id, now(), { loadoutGiven: [...new Set(gave)] });
+      return { statusCode: 200 };
+    }
+
+    /**
+     * A command: one setup file's operations, handed over and no more.
+     *
+     * The setup above rebuilds what the run is played under and writes
+     * down who got what. This is the other thing a press can mean: do
+     * this now. A warp to the next boss, a handful of runes, a rule
+     * switched on for a minute. The operations travel in the gesture
+     * because the whole point is that the run is unchanged by them: the
+     * terms it was started under and the loadout it is played under are
+     * still the ones a tool reconnecting in a minute will be handed, and
+     * nothing here is written to the session.
+     *
+     * The owner's alone, and for the same reason the setup is. Handing
+     * one player the keys to warp the other three is not something an
+     * ordinary gesture should be able to do.
+     */
+    if (kind === "command") {
+      if (session?.meta.ownerSub !== conn.sub) return { statusCode: 200 };
+      const command = commandOf(data as Record<string, unknown>);
+      if (!command || !poster) return { statusCode: 200 };
+      const watchers = await deps.live.watchers(id);
+      const attached = watchers.filter((w) => w.control);
+      const profile = attached.length > 0 ? profileOf((await deps.store.getSnapshot(id))?.snapshot) : null;
+      // One frame for all of them: the operations came in the gesture, so
+      // unlike a loadout there is nothing about a particular tool that
+      // could change what it is handed.
+      const frame = commandFor(command.ops, command.id, command.title);
+      await Promise.all(
+        watchers.map(async (w) => {
+          // The table hears it in words and a tool hears it in
+          // operations, which is the same split the run's own effects
+          // travel under. A tool the profile is not written for hears
+          // nothing at all: the words would be no use to it and the
+          // operations are not its vocabulary.
+          let out = w.connectionId === connectionId ? null : line;
+          if (w.control) {
+            if (!frame || !profile || !fits(profile, w.app)) return;
+            out = frame.frame;
+          }
+          if (!out) return;
+          try {
+            if ((await poster.post(w.connectionId, out)) === "gone") await deps.live.disconnect(w.connectionId);
+          } catch (error) {
+            console.error("live: could not hand over a command", error);
+          }
+        }),
+      );
       return { statusCode: 200 };
     }
 
