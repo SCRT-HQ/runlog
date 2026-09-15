@@ -2,6 +2,7 @@ import streamDeck, {
   SingletonAction,
   type DialAction,
   type DidReceiveSettingsEvent,
+  type FeedbackPayload,
   type KeyAction,
   type WillAppearEvent,
   type WillDisappearEvent,
@@ -72,7 +73,13 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
       await action.setImage(faceImage(face));
       await action.setTitle("");
     } else if (action.isDial()) {
-      await action.setFeedback({ title: face.when ?? "", value: face.title });
+      // The `$B1` layout's progress bar is the `indicator` key; it only
+      // has something to show for a running timer's fraction, controller
+      // ruling 4 - anything else leaves it out rather than drawing an
+      // empty bar.
+      const feedback: FeedbackPayload = { title: face.when ?? "", value: face.title };
+      if (face.fraction !== undefined) feedback.indicator = { value: Math.round(face.fraction * 100) };
+      await action.setFeedback(feedback);
     }
   }
 

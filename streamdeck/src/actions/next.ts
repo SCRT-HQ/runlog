@@ -1,4 +1,4 @@
-import { action, type KeyDownEvent, type TouchTapEvent } from "@elgato/streamdeck";
+import { action, type DialDownEvent, type KeyDownEvent, type TouchTapEvent } from "@elgato/streamdeck";
 
 import { nextFace, type DeckState, type Face } from "../state.ts";
 import { RunlogAction } from "./base.ts";
@@ -15,6 +15,10 @@ export class Next extends RunlogAction {
   }
 
   override async onTouchTap(ev: TouchTapEvent): Promise<void> {
+    await this.send(ev.action, { press: "primary" });
+  }
+
+  override async onDialDown(ev: DialDownEvent): Promise<void> {
     await this.send(ev.action, { press: "primary" });
   }
 }

@@ -141,6 +141,35 @@ describe("what the keys say", () => {
     );
     expect(metricFace(s, "clock", T + 15_000).fraction).toBe(0.025);
   });
+
+  // Controller ruling 3: the tick reaches a dial holding a running clock,
+  // but does nothing to a deck with nothing counting down.
+  it("re-ticks a running clock but not an idle deck", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    const at = new Date(T).toISOString();
+    const running = reduce(
+      s,
+      {
+        t: "snapshot",
+        snapshot: { at, clocks: [{ id: "u4", label: "Day 4", kind: "timer", seconds: 600, status: "running", elapsedMs: 0 }] },
+      },
+      T,
+    );
+    expect(reduce(running, { t: "tick" }, T + 1000)).not.toBe(running);
+
+    const idle = reduce(
+      s,
+      {
+        t: "snapshot",
+        snapshot: { at, clocks: [{ id: "u4", label: "Day 4", kind: "timer", seconds: 600, status: "paused", elapsedMs: 0 }] },
+      },
+      T,
+    );
+    expect(reduce(idle, { t: "tick" }, T + 1000)).toBe(idle);
+    expect(reduce(s, { t: "tick" }, T + 1000)).toBe(s);
+  });
 });
 
 // Controller amendment A: the socket is a state the streamer enters. A key

@@ -137,8 +137,16 @@ export function reduce(state: DeckState, event: DeckEvent, now: number): DeckSta
       if (event.seq === undefined || !state.snapshot?.offer) return { ...state, flash };
       return { ...state, flash, snapshot: { ...state.snapshot, offer: { ...state.snapshot.offer, seq: event.seq } } };
     }
-    case "tick":
-      return state.flash && state.flash.until <= now ? { ...state, flash: null } : state;
+    case "tick": {
+      const expired = state.flash !== null && state.flash.until <= now;
+      // Controller ruling 3: a dial redraws every second while a clock is
+      // running, so its remaining time keeps moving between snapshots. An
+      // idle deck has nothing that changes on the tick, so it stays the
+      // same object and nothing redraws.
+      const running = state.snapshot?.clocks?.some((c) => c.status === "running") ?? false;
+      if (!expired && !running) return state;
+      return expired ? { ...state, flash: null } : { ...state };
+    }
   }
 }
 
