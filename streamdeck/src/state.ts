@@ -337,10 +337,10 @@ export type OpenTarget = "run" | "guide" | "rules";
  */
 export function openFace(state: DeckState, target?: OpenTarget): Face {
   if (!target) return { title: "Set up", tone: "dim" };
-  if (target === "guide") return { title: "Guide", tone: "deck", when: "in the browser" };
+  if (target === "guide") return { title: "Guide", tone: "deck", when: "in a browser" };
   const c = common(state);
   if (c) return c;
-  return { title: target === "run" ? "Open the run" : "Rules", tone: "deck", when: "in the browser" };
+  return { title: target === "run" ? "Open the run" : "Rules", tone: "deck", when: "in a browser" };
 }
 
 export function runFace(state: DeckState): Face {

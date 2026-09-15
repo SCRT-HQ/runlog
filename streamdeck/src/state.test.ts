@@ -269,15 +269,15 @@ describe("what the open key says", () => {
   });
 
   it("offers the guide signed out, off, and with nothing held", () => {
-    const guide = { title: "Guide", tone: "deck", when: "in the browser" };
+    const guide = { title: "Guide", tone: "deck", when: "in a browser" };
     expect(openFace(initial(), "guide")).toEqual(guide);
     expect(openFace(reduce(initial(), { t: "session", state: "ok" }, T), "guide")).toEqual(guide);
     expect(openFace(open(), "guide")).toEqual(guide);
   });
 
   it("names the run and the rules once the deck is following one", () => {
-    expect(openFace(open(), "run")).toEqual({ title: "Open the run", tone: "deck", when: "in the browser" });
-    expect(openFace(open(), "rules")).toEqual({ title: "Rules", tone: "deck", when: "in the browser" });
+    expect(openFace(open(), "run")).toEqual({ title: "Open the run", tone: "deck", when: "in a browser" });
+    expect(openFace(open(), "rules")).toEqual({ title: "Rules", tone: "deck", when: "in a browser" });
   });
 
   it("says what is missing for the run and the rules, as every key does", () => {

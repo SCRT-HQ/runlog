@@ -22,7 +22,7 @@ const TONE: Record<Tone, { ground: string; ink: string; edge: string; stroke?: n
   dim: { ground: "#1b201d", ink: "#8d958f", edge: "#2f3733" },
   refuse: { ground: "#33211a", ink: "#e7eae6", edge: "#dd8f63" },
   undo: { ground: "#1e2f27", ink: "#e7eae6", edge: "#dd8f63" },
-  deck: { ground: "#1b201d", ink: "#e7eae6", edge: "#2f3733" },
+  deck: { ground: "#1b201d", ink: "#e7eae6", edge: "#2f3733", quiet: "#8d958f" },
   readout: { ground: "#151311", ink: "#e7eae6", edge: "#2f3733", stroke: 1, quiet: "#8d958f" },
 };
 
