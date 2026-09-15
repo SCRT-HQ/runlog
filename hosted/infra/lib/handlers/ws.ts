@@ -304,6 +304,24 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
   const m = message as Record<string, unknown>;
 
   /**
+   * A keepalive from either kind of connection.
+   *
+   * API Gateway drops a socket that sits ten minutes without a frame in
+   * either direction, well inside the length of a quiet Play step. A ping
+   * gets a pong back, to the sender alone, before any other branch and
+   * with no watch or store write: a heartbeat is not news to anyone but
+   * the connection that sent it. The two-hour cap on a connection is not
+   * worked around here; that is what the reconnect on the other end is
+   * for.
+   */
+  if (m["t"] === "ping") {
+    const poster = deps.poster;
+    if (poster) await poster.post(connectionId, JSON.stringify({ t: "pong" }));
+    return { statusCode: 200 };
+  }
+  if (m["t"] === "pong") return { statusCode: 200 };
+
+  /**
    * A deck saying it is here.
    *
    * The one thing a deck asks for. It cannot be told at connect, since the
