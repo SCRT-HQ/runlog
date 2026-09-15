@@ -7,9 +7,73 @@
   </head>
 
   <body>
-    <!--
-        Learn more about property inspector components at https://sdpi-components.dev/docs/components
-    -->
-    <h2>Press</h2>
+    <sdpi-item label="Press">
+      <select id="target"></select>
+    </sdpi-item>
+    <sdpi-item id="answer-row" label="Answer" style="display: none">
+      <input id="answer" type="text" />
+    </sdpi-item>
+
+    <div id="runlog-account"></div>
+    <script src="account.js"></script>
+    <script>
+      // The moves and presets are the pack's own words, so they come from the
+      // plugin on every appear rather than being listed here.
+      (() => {
+        const { streamDeckClient } = SDPIComponents;
+        const target = document.getElementById("target");
+        const answer = document.getElementById("answer");
+        const answerRow = document.getElementById("answer-row");
+        let current = null;
+
+        const option = (value, label) => {
+          const o = document.createElement("option");
+          o.value = JSON.stringify(value);
+          o.textContent = label;
+          return o;
+        };
+
+        const fill = (moves, presets) => {
+          target.replaceChildren(option(null, "Set up"), option({ kind: "roll" }, "The waiting roll"));
+          for (const m of moves) target.appendChild(option({ kind: "move", id: m.id }, m.label));
+          for (const p of presets) target.appendChild(option({ kind: "answer", preset: p.kind, value: "" }, p.label));
+          show();
+        };
+
+        const show = () => {
+          const chosen = current ? JSON.stringify(stripValue(current)) : "null";
+          const match = [...target.options].find((o) => o.value === chosen);
+          if (match) target.value = match.value;
+          const isAnswer = current?.kind === "answer";
+          answerRow.style.display = isAnswer ? "" : "none";
+          answer.value = isAnswer ? (current.value ?? "") : "";
+        };
+
+        // A preset option is identified by its kind; the value is typed beside it.
+        const stripValue = (t) => (t.kind === "answer" ? { kind: "answer", preset: t.preset, value: "" } : t);
+
+        const save = () => streamDeckClient.setSettings(current ? { target: current } : {});
+
+        target.addEventListener("change", () => {
+          current = JSON.parse(target.value);
+          show();
+          save();
+        });
+        answer.addEventListener("change", () => {
+          if (current?.kind !== "answer") return;
+          current = { ...current, value: answer.value };
+          save();
+        });
+
+        streamDeckClient.sendToPropertyInspector.subscribe(({ payload }) => {
+          if (payload?.t === "offer") fill(payload.moves ?? [], payload.presets ?? []);
+        });
+        void streamDeckClient.getSettings().then(({ settings }) => {
+          current = settings?.target ?? null;
+          show();
+        });
+        fill([], []);
+      })();
+    </script>
   </body>
 </html>

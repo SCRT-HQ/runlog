@@ -7,9 +7,61 @@
   </head>
 
   <body>
-    <!--
-        Learn more about property inspector components at https://sdpi-components.dev/docs/components
-    -->
-    <h2>Metric</h2>
+    <sdpi-item label="Show">
+      <select id="field"></select>
+    </sdpi-item>
+
+    <div id="runlog-account"></div>
+    <script src="account.js"></script>
+    <script>
+      // Five fields every pack has, then whatever counters and resources the
+      // attached run is keeping - those come from the plugin on every appear.
+      (() => {
+        const { streamDeckClient } = SDPIComponents;
+        const field = document.getElementById("field");
+        const FIXED = [
+          ["score", "Score"],
+          ["unit", "Unit"],
+          ["clock", "Clock"],
+          ["latest", "Last result"],
+          ["leader", "Leader"],
+        ];
+        let current = null;
+
+        const option = (value, label) => {
+          const o = document.createElement("option");
+          o.value = JSON.stringify(value);
+          o.textContent = label;
+          return o;
+        };
+
+        const fill = (counters, resources) => {
+          field.replaceChildren(option(null, "Set up"), ...FIXED.map(([v, l]) => option(v, l)));
+          for (const c of counters) field.appendChild(option({ counter: c.id }, c.label));
+          for (const r of resources) field.appendChild(option({ resource: r.id }, r.label));
+          show();
+        };
+
+        const show = () => {
+          const chosen = JSON.stringify(current ?? null);
+          const match = [...field.options].find((o) => o.value === chosen);
+          if (match) field.value = match.value;
+        };
+
+        field.addEventListener("change", () => {
+          current = JSON.parse(field.value);
+          streamDeckClient.setSettings(current ? { field: current } : {});
+        });
+
+        streamDeckClient.sendToPropertyInspector.subscribe(({ payload }) => {
+          if (payload?.t === "fields") fill(payload.counters ?? [], payload.resources ?? []);
+        });
+        void streamDeckClient.getSettings().then(({ settings }) => {
+          current = settings?.field ?? null;
+          show();
+        });
+        fill([], []);
+      })();
+    </script>
   </body>
 </html>

@@ -120,4 +120,23 @@ describe("the wire", () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(store.state.session).toBe("expired");
   });
+
+  // Reconnect closes and dials again; a real close lands after the new socket
+  // is already up, and must not report the live one as down.
+  it("ignores a close from a socket that has already been replaced", async () => {
+    const store = makeStore();
+    const wire = openWire({ apiBase: "https://api.test" }, store, deps());
+    wire.connect();
+    await new Promise((r) => setTimeout(r, 0));
+    const stale = FakeSocket.last;
+    wire.disconnect();
+    wire.connect();
+    await new Promise((r) => setTimeout(r, 0));
+    const live = FakeSocket.last;
+    expect(live).not.toBe(stale);
+    live.onopen?.();
+    expect(store.state.socket).toBe("open");
+    stale.onclose?.();
+    expect(store.state.socket).toBe("open");
+  });
 });

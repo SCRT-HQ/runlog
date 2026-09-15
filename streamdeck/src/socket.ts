@@ -31,19 +31,24 @@ function backoffMs(attempt: number, random: () => number): number {
  * signed-in route, which is where the offer is. A press names the run
  * and the offer's `seq`, so the page can refuse one the run has moved
  * past.
+ *
+ * The account may be a getter, resolved again on every connect and every
+ * fetch: the address is a setting the streamer can change, and the one that
+ * counts is the one it reads when the streamer presses Connect.
  */
-export function openWire(account: Account, store: Store, deps: WireDeps = realDeps()): Wire {
+export function openWire(account: Account | (() => Account), store: Store, deps: WireDeps = realDeps()): Wire {
   let socket: WebSocket | null = null;
   let wanted = false;
   let attempt = 0;
   let watching: string | null = null;
-  const wsBase = account.apiBase.replace(/^http/, "ws");
+  const currentAccount = (): Account => (typeof account === "function" ? account() : account);
 
   const fetchSnapshot = async (run: string) => {
-    const token = await deps.bearer(account);
+    const acct = currentAccount();
+    const token = await deps.bearer(acct);
     if (!token) return;
     try {
-      const res = await deps.fetch(`${account.apiBase}/api/sessions/${encodeURIComponent(run)}/snapshot`, {
+      const res = await deps.fetch(`${acct.apiBase}/api/sessions/${encodeURIComponent(run)}/snapshot`, {
         headers: { authorization: `Bearer ${token}` },
       });
       if (res.ok) store.dispatch({ t: "snapshot", snapshot: (await res.json()) as never });
@@ -65,12 +70,14 @@ export function openWire(account: Account, store: Store, deps: WireDeps = realDe
 
   const open = async () => {
     if (!wanted) return;
-    const token = await deps.bearer(account);
+    const acct = currentAccount();
+    const token = await deps.bearer(acct);
     if (!token) {
       store.dispatch({ t: "session", state: "expired" });
       return;
     }
     store.dispatch({ t: "socket", state: "connecting" });
+    const wsBase = acct.apiBase.replace(/^http/, "ws");
     const ws = new deps.WebSocket(`${wsBase}/ws?token=${encodeURIComponent(token)}&as=deck`);
     socket = ws;
     ws.onopen = () => {
@@ -104,6 +111,11 @@ export function openWire(account: Account, store: Store, deps: WireDeps = realDe
         });
     };
     ws.onclose = () => {
+      // A close arriving after a newer socket took over - Reconnect closes and
+      // dials again, and a real close is asynchronous - is about a socket
+      // nobody is using. Letting it through would report the live one as down
+      // and then open a third.
+      if (socket !== null && socket !== ws) return;
       socket = null;
       store.dispatch({ t: "socket", state: "closed" });
       if (wanted) setTimeout(() => void open(), backoffMs(attempt++, deps.random));

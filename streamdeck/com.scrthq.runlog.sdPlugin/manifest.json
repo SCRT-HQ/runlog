@@ -54,6 +54,15 @@
       "PropertyInspectorPath": "ui/run.html"
     },
     {
+      "Name": "Connect",
+      "UUID": "com.scrthq.runlog.connect",
+      "Icon": "imgs/actions/connect",
+      "Tooltip": "Connects the deck to your Runlog account, and disconnects it again.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/actions/connect" }],
+      "PropertyInspectorPath": "ui/connect.html"
+    },
+    {
       "Name": "Metric",
       "UUID": "com.scrthq.runlog.metric",
       "Icon": "imgs/actions/metric",

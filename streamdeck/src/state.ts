@@ -45,6 +45,10 @@ export interface Snapshot {
 }
 export interface DeckState {
   session: SessionState;
+  /** Whether the streamer has switched the deck on. No socket while false. */
+  on: boolean;
+  /** Whether the last time it went off, it was the idle timer rather than a press. */
+  idleOff: boolean;
   socket: SocketState;
   runs: HeldRun[];
   any: boolean;
@@ -65,6 +69,7 @@ export type PressTarget = { kind: "roll" } | { kind: "move"; id: string } | { ki
 export type MetricField = "score" | "unit" | "clock" | "latest" | "leader" | { counter: string } | { resource: string };
 export type DeckEvent =
   | { t: "session"; state: SessionState }
+  | { t: "on"; on: boolean; idle?: boolean }
   | { t: "socket"; state: SocketState }
   | { t: "runs"; runs: HeldRun[]; any: boolean }
   | { t: "pin"; id: string | null }
@@ -74,8 +79,22 @@ export type DeckEvent =
 
 const FLASH_MS = 3000;
 
+/** How long a connection that is holding nothing waits before closing itself. */
+export const IDLE_OFF_MS = 30 * 60_000;
+
 export function initial(): DeckState {
-  return { session: "none", socket: "closed", runs: [], any: false, pinned: null, attached: null, snapshot: null, flash: null };
+  return {
+    session: "none",
+    on: false,
+    idleOff: false,
+    socket: "closed",
+    runs: [],
+    any: false,
+    pinned: null,
+    attached: null,
+    snapshot: null,
+    flash: null,
+  };
 }
 
 export function attachedRun(state: DeckState): string | null {
@@ -87,6 +106,12 @@ export function reduce(state: DeckState, event: DeckEvent, now: number): DeckSta
   switch (event.t) {
     case "session":
       return event.state === "ok" ? { ...state, session: "ok" } : { ...initial(), session: event.state, pinned: state.pinned };
+    case "on":
+      // Going off is a full stop: no socket, nothing held, nothing to draw
+      // a number from. The pin is a preference, not a holding, and stays.
+      return event.on
+        ? { ...state, on: true, idleOff: false }
+        : { ...state, on: false, idleOff: event.idle === true, socket: "closed", runs: [], attached: null, snapshot: null };
     case "socket":
       return event.state === "open"
         ? { ...state, socket: "open" }
@@ -117,15 +142,58 @@ export function reduce(state: DeckState, event: DeckEvent, now: number): DeckSta
   }
 }
 
-/** The state every key shares before any of them has something of its own to say. */
-function common(state: DeckState): Face | null {
-  if (state.session === "none") return { title: "Sign in", tone: "dim" };
-  if (state.session === "expired") return { title: "Sign in again", tone: "dim" };
+/** What a key says about the run once the deck is signed in and switched on. */
+function held(state: DeckState): Face | null {
   if (state.socket !== "open") return { title: "Offline", tone: "dim" };
   if (state.pinned && !state.runs.some((r) => r.id === state.pinned)) return { title: "That run has ended", tone: "dim" };
   if (state.runs.length === 0) return state.any ? { title: "No run open", tone: "dim" } : { title: "Not synced", tone: "dim" };
   if (!state.attached) return { title: "Pick a run", tone: "dim" };
   return null;
+}
+
+/** The state every key shares before any of them has something of its own to say. */
+function common(state: DeckState): Face | null {
+  if (state.session === "none") return { title: "Sign in", tone: "dim" };
+  if (state.session === "expired") return { title: "Sign in again", tone: "dim" };
+  // A key that depends on the connection says to make it first: the state
+  // on top, the thing to do about it beneath.
+  if (!state.on) return { title: "Not connected", tone: "dim", when: "press Connect" };
+  return held(state);
+}
+
+/** The run a deck is following, named, or nothing. */
+function attachedName(state: DeckState): Face | null {
+  const run = state.runs.find((r) => r.id === state.attached);
+  if (!run) return null;
+  return { title: run.name ?? run.packTitle ?? run.id, tone: "live", ...(run.packTitle && run.name ? { when: run.packTitle } : {}) };
+}
+
+/**
+ * The Connect key, which reports the connection rather than the run behind it.
+ *
+ * It is the one key that has something to say while the deck is off, so it
+ * skips the "Not connected" every other key stops at and names the state it
+ * is actually in - down by choice, down by the idle timer, or on its way up.
+ */
+export function connectFace(state: DeckState): Face {
+  if (state.session === "none") return { title: "Sign in", tone: "dim" };
+  if (state.session === "expired") return { title: "Sign in again", tone: "dim" };
+  if (!state.on) return state.idleOff ? { title: "Idle · press to connect", tone: "dim" } : { title: "Offline", tone: "dim" };
+  if (state.socket === "connecting") return { title: "Connecting", tone: "dim" };
+  return held(state) ?? attachedName(state) ?? { title: "Connected", tone: "live" };
+}
+
+/**
+ * When a connection that is holding nothing should close itself.
+ *
+ * `since` is when it last had nothing to follow. Null means the clock is not
+ * running at all - a deck following a live run never times out, however long
+ * the stream goes, and a deck that is off or still dialing has nothing to
+ * give up on.
+ */
+export function idleDeadline(state: DeckState, since: number): number | null {
+  if (!state.on || state.socket !== "open" || state.runs.length > 0) return null;
+  return since + IDLE_OFF_MS;
 }
 
 function flashed(state: DeckState): Face | null {
@@ -165,12 +233,7 @@ export function undoFace(state: DeckState): Face {
 }
 
 export function runFace(state: DeckState): Face {
-  if (state.session !== "ok") return common(state)!;
-  if (state.socket !== "open") return { title: "Offline", tone: "dim" };
-  const run = state.runs.find((r) => r.id === state.attached);
-  if (run)
-    return { title: run.name ?? run.packTitle ?? run.id, tone: "live", ...(run.packTitle && run.name ? { when: run.packTitle } : {}) };
-  return common(state) ?? { title: "Pick a run", tone: "dim" };
+  return common(state) ?? attachedName(state) ?? { title: "Pick a run", tone: "dim" };
 }
 
 /** How far a clock has moved since the snapshot that reported it, in ms. */
