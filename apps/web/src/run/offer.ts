@@ -24,6 +24,14 @@ export interface Offer {
   presets: Array<{ kind: string; label: string; suggestions?: string[]; items?: number }>;
   /** The setups a key may apply to this run, by id and title. */
   setups: Array<{ id: string; title: string }>;
+  /** The tallies and the dials, as the Trackers panel lists them. */
+  trackers: Array<{ id: string; kind: "counter" | "resource"; label: string; value: number; max: number | null }>;
+  /** The clock the page's Pause, Resume and Stop act on, where one is ticking. */
+  clock: { id: string; label: string; status: "running" | "paused" | "done" } | null;
+  /** Whether the app is throwing the dice itself. */
+  autoRoll: boolean;
+  /** The ending the page would offer, in the words of its own button. */
+  ending: { label: string } | null;
 }
 
 export interface OfferInput {
@@ -62,6 +70,19 @@ export interface OfferInput {
    * shipped profiles and the shelf, neither of which this function has.
    */
   setups: Array<{ id: string; title: string }>;
+  /**
+   * Every tally and every dial the run keeps, worked out by the page for
+   * the reason the setups are: which of them the page draws depends on the
+   * pack and on who is at the table, and the panel that draws them is the
+   * one home for that.
+   */
+  trackers: Offer["trackers"];
+  /** The clock the page's own buttons act on, or null while none is. */
+  clock: Offer["clock"];
+  /** Whether this device is throwing the dice for the player. */
+  autoRoll: boolean;
+  /** What the page's Finish button says, where the page is showing one. */
+  ending: Offer["ending"];
 }
 
 /**
@@ -81,7 +102,17 @@ const TYPED = new Set(["declareSubject"]);
 export function offerOf(input: OfferInput): Offer {
   const moves = input.moves;
   const undo = input.canUndo && input.lastResult ? { what: input.lastResult } : null;
-  const bare = { seq: input.seq, moves, undo, presets: [] as Offer["presets"], setups: input.setups };
+  const bare = {
+    seq: input.seq,
+    moves,
+    undo,
+    presets: [] as Offer["presets"],
+    setups: input.setups,
+    trackers: input.trackers,
+    clock: input.clock,
+    autoRoll: input.autoRoll,
+    ending: input.ending,
+  };
 
   // A run nobody is playing -- not started, read-only, ended -- offers
   // nothing at all, moves and undo included. They used to ride out on
@@ -90,7 +121,24 @@ export function offerOf(input: OfferInput): Offer {
   // let anyone touch. The setups go with them: what a finished run was
   // played under is a record of what happened, and a key that could
   // rewrite it from another room is worse than no key.
-  if (!input.live) return { ...bare, moves: [], undo: null, setups: [], primary: null, needsPage: "Open the run on the page" };
+  //
+  // The dials, the clock, the dice setting and the ending are held back for
+  // the same reason, and held back rather than merely refused: a key face
+  // drawn from an offer should go dim on a run nobody is playing rather
+  // than show a tally somebody can press and be told no.
+  if (!input.live)
+    return {
+      ...bare,
+      moves: [],
+      undo: null,
+      setups: [],
+      trackers: [],
+      clock: null,
+      autoRoll: false,
+      ending: null,
+      primary: null,
+      needsPage: "Open the run on the page",
+    };
 
   // The receipts of the step's own throws sit on the page, waiting to be
   // read, before anything about the step itself -- what it is, whether it

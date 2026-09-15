@@ -17,7 +17,14 @@ const base = {
   between: null,
   finishLabel: null,
   setups: [],
+  trackers: [],
+  clock: null,
+  autoRoll: false,
+  ending: null,
 };
+
+const glaze = { id: "glaze", kind: "resource" as const, label: "Glaze", value: 3, max: 6 };
+const calm = { id: "calm", kind: "counter" as const, label: "Calm streak", value: 2, max: null };
 
 describe("offerOf", () => {
   it("offers the roll when a table is waiting", () => {
@@ -259,5 +266,81 @@ describe("offerOf", () => {
       finishLabel: "Done",
     });
     expect(offer.presets[0]).toMatchObject({ items: 1 });
+  });
+});
+
+/*
+ * Task 24a: the four things on the page that are not the step. Each is
+ * handed in by the page, so all this asks of the offer is that it carries
+ * them through while the run is being played and holds them back while it
+ * is not -- the same live gate the moves, the undo and the setups are
+ * under, for the same reason.
+ */
+describe("the dials, the clock, the dice and the ending", () => {
+  it("carries the tallies and the dials the page shows", () => {
+    const offer = offerOf({ ...base, trackers: [glaze, calm] });
+    expect(offer.trackers).toEqual([glaze, calm]);
+  });
+
+  it("carries the clock the page's own buttons act on", () => {
+    const offer = offerOf({ ...base, clock: { id: "u4:unit", label: "Day 4", status: "running" } });
+    expect(offer.clock).toEqual({ id: "u4:unit", label: "Day 4", status: "running" });
+  });
+
+  it("says whether the app is throwing the dice", () => {
+    expect(offerOf({ ...base, autoRoll: true }).autoRoll).toBe(true);
+    expect(offerOf({ ...base }).autoRoll).toBe(false);
+  });
+
+  it("carries the ending in the words of the page's own button", () => {
+    const offer = offerOf({ ...base, ending: { label: "Finish the firing" } });
+    expect(offer.ending).toEqual({ label: "Finish the firing" });
+  });
+
+  it("offers none of the four on a run that is not live", () => {
+    const offer = offerOf({
+      ...base,
+      live: false,
+      trackers: [glaze, calm],
+      clock: { id: "u4:unit", label: "Day 4", status: "running" },
+      autoRoll: true,
+      ending: { label: "Finish the firing" },
+    });
+    expect(offer.trackers).toEqual([]);
+    expect(offer.clock).toBeNull();
+    expect(offer.autoRoll).toBe(false);
+    expect(offer.ending).toBeNull();
+  });
+
+  // The receipts of a step's own throws are a screen the page puts over
+  // the step, not a run in another state: a dial is still a dial behind
+  // it, and the run's Finish button is on that very screen.
+  it("goes on offering them while the receipts wait to be read", () => {
+    const offer = offerOf({
+      ...base,
+      receipts: true,
+      trackers: [glaze],
+      clock: { id: "u4:unit", label: "Day 4", status: "paused" },
+      ending: { label: "Finish the firing" },
+    });
+    expect(offer.trackers).toEqual([glaze]);
+    expect(offer.clock).toEqual({ id: "u4:unit", label: "Day 4", status: "paused" });
+    expect(offer.ending).toEqual({ label: "Finish the firing" });
+  });
+
+  // And behind a step that is still asking something: a deck turning a
+  // dial is not answering the step, so what the step wants does not
+  // decide whether the dial may be turned.
+  it("goes on offering them on a step that wants the page", () => {
+    const offer = offerOf({
+      ...base,
+      step: { kind: "declareSubject" } as never,
+      stepLabel: "Name the bowl",
+      trackers: [calm],
+      autoRoll: true,
+    });
+    expect(offer.needsPage).toBe("Name the bowl on the page");
+    expect(offer.trackers).toEqual([calm]);
+    expect(offer.autoRoll).toBe(true);
   });
 });

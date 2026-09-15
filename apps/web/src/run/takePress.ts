@@ -21,6 +21,11 @@ export interface Acts {
   undo: () => void;
   answer: (answer: Record<string, unknown>) => void;
   setup: (id: string) => void | Promise<void>;
+  /** Move a tally or a dial, by a step or to a number. */
+  tracker: (id: string, move: { by: number } | { to: number }) => void;
+  clock: (id: string, doing: "pause" | "resume" | "stop") => void;
+  autoRoll: (on: boolean) => void;
+  finish: () => void;
 }
 
 /**
@@ -90,6 +95,54 @@ export function takePress(press: Press, at: { seq: number; offer: Offer; seen: M
       if (typeof named === "string") {
         if (!at.offer.setups.some((s) => s.id === named)) return settle({ ok: false, say: "That setup is not here." });
         return settle(take(() => act.setup(named)));
+      }
+      /*
+       * The four things on the page that are not the step: a tally or a
+       * dial, the unit's clock, the dice setting, and the end of the run.
+       * None of them answers what the step is asking, so each is checked
+       * against the offer on its own and taken ahead of the presets below,
+       * the way a setup is.
+       */
+      const tracker = press.answer?.["tracker"];
+      if (typeof tracker === "string") {
+        if (!at.offer.trackers.some((t) => t.id === tracker)) return settle({ ok: false, say: "That tracker is not here." });
+        // How far to move it, or where to land it: a pair of − and + keys
+        // sends `by`, a key that stands for a value sends `to`. What either
+        // comes to against the run's own floor and ceiling is the act's to
+        // settle, exactly as the panel's own buttons leave it to the run.
+        const by = press.answer?.["by"];
+        const to = press.answer?.["to"];
+        if (typeof by === "number" && Number.isInteger(by)) return settle(take(() => act.tracker(tracker, { by })));
+        if (typeof to === "number" && Number.isInteger(to)) return settle(take(() => act.tracker(tracker, { to })));
+        return settle({ ok: false, say: "This run does not know that press." });
+      }
+      const clock = press.answer?.["clock"];
+      if (typeof clock === "string") {
+        const doing = press.answer?.["do"];
+        const ticking = at.offer.clock;
+        if (!ticking || ticking.id !== clock) return settle({ ok: false, say: "That clock is not here." });
+        if (doing !== "pause" && doing !== "resume" && doing !== "stop")
+          return settle({ ok: false, say: "This run does not know that press." });
+        // Each of the three means something only from where the clock
+        // already is. The page shows one button or the other for that
+        // reason; a deck holding all three at once is told which it was.
+        if (doing === "pause" && ticking.status !== "running") return settle({ ok: false, say: "That clock is not running." });
+        if (doing === "resume" && ticking.status !== "paused") return settle({ ok: false, say: "That clock is not paused." });
+        if (doing === "stop" && ticking.status === "done") return settle({ ok: false, say: "That clock has stopped." });
+        return settle(take(() => act.clock(clock, doing)));
+      }
+      // Throwing the dice for the player is a setting rather than an
+      // answer, so nothing here refuses it: a key that only ever sends
+      // `true` is as good as one that toggles, and setting it to what it
+      // already is leaves the run where it was.
+      const auto = press.answer?.["autoRoll"];
+      if (typeof auto === "boolean") return settle(take(() => act.autoRoll(auto)));
+      // The end of the run, which the page offers only from its closing
+      // step and only where the run may actually end. The offer carries
+      // that button's own words, so a key face can say them.
+      if (press.answer?.["finish"] === true) {
+        if (!at.offer.ending) return settle({ ok: false, say: "The run cannot end here." });
+        return settle(take(() => act.finish()));
       }
       // Tick everything this step waits for and press its own button. The
       // offer says whether there is a list to tick; the act says whether
