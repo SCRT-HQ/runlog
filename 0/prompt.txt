@@ -4074,3 +4074,13 @@ let's do it
 </result>
 <usage><subagent_tokens>141328</subagent_tokens><tool_uses>70</tool_uses><duration_ms>451960</duration_ms></usage>
 </task-notification>
+
+---
+
+<task-notification>
+<task-id>bgn0y4yoa</task-id>
+<tool-use-id>toolu_016qkqPLMtc4tuMb56kbZtzf</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\e72ee5b1-7270-4fac-abcc-53994b037403\tasks\bgn0y4yoa.output</output-file>
+<status>completed</status>
+<summary>Background command "Wait for PR #300 to merge or a check to fail" completed (exit code 0)</summary>
+</task-notification>
