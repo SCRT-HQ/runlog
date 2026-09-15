@@ -3114,3 +3114,21 @@ Concerns:
 - The doc still advises decks to retry after "a few seconds"; with a 6 s fallback a retry mid-flight gets the same `ref` answered twice. Pre-existing path, flagged not changed.</result>
 <usage><subagent_tokens>130440</subagent_tokens><tool_uses>62</tool_uses><duration_ms>662049</duration_ms></usage>
 </task-notification>
+
+---
+
+<task-notification>
+<task-id>ab08711ccbbc7876a</task-id>
+<tool-use-id>toolu_01XN7UittF5XRTqTyDZiU5vn</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\ab08711ccbbc7876a.output</output-file>
+<status>completed</status>
+<summary>Agent "Task 18: Apply setup key" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Task 18 complete.
+
+status: DONE
+commit sha: `8af7f41a3b1c94cdfabf606a36762d1627636864`
+test summary: `npx vitest run streamdeck apps/web/src/guide` — 10 files, 91 tests passed; typecheck, lint:docs, format:check, streamdeck build, and `streamdeck validate` all passed clean.
+concerns: none</result>
+<usage><subagent_tokens>142260</subagent_tokens><tool_uses>77</tool_uses><duration_ms>477889</duration_ms></usage>
+</task-notification>

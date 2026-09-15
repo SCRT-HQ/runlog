@@ -5,22 +5,9 @@
   "branch": "the-deck-arrives",
   "checkpoints_count": 2,
   "files_touched": [
-    "apps/web/src/guide/pages/stream-deck.mdx",
-    "streamdeck/README.md",
-    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/setup.png",
-    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/setup@2x.png",
-    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/keys/setup.png",
-    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/keys/setup@2x.png",
     "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json",
     "streamdeck/com.scrthq.runlog.sdPlugin/ui/press.html",
-    "streamdeck/com.scrthq.runlog.sdPlugin/ui/setup.html",
-    "streamdeck/design/actions/setup.svg",
-    "streamdeck/src/actions/press.test.ts",
     "streamdeck/src/actions/press.ts",
-    "streamdeck/src/actions/setup.test.ts",
-    "streamdeck/src/actions/setup.ts",
-    "streamdeck/src/plugin.ts",
-    "streamdeck/src/state.test.ts",
     "streamdeck/src/state.ts"
   ],
   "sessions": [
@@ -33,17 +20,10 @@
     }
   ],
   "token_usage": {
-    "input_tokens": 12659,
-    "cache_creation_tokens": 1497464,
-    "cache_read_tokens": 286387853,
-    "output_tokens": 646068,
-    "api_call_count": 615,
-    "subagent_tokens": {
-      "input_tokens": 178,
-      "cache_creation_tokens": 177328,
-      "cache_read_tokens": 8919733,
-      "output_tokens": 57058,
-      "api_call_count": 89
-    }
+    "input_tokens": 12693,
+    "cache_creation_tokens": 1498919,
+    "cache_read_tokens": 287174678,
+    "output_tokens": 647414,
+    "api_call_count": 617
   }
 }

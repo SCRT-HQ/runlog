@@ -3,46 +3,26 @@
   "checkpoint_id": "01M2HVMKGFFHT76JRJ4H33P5RB",
   "session_id": "e72ee5b1-7270-4fac-abcc-53994b037403",
   "strategy": "manual-commit",
-  "created_at": "2026-09-15T06:21:33.4112626Z",
+  "created_at": "2026-09-15T06:22:51.8573146Z",
   "branch": "the-deck-arrives",
   "checkpoints_count": 2,
-  "save_step_count": 3,
+  "save_step_count": 1,
   "files_touched": [
-    "apps/web/src/guide/pages/stream-deck.mdx",
-    "streamdeck/README.md",
-    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/setup.png",
-    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/setup@2x.png",
-    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/keys/setup.png",
-    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/keys/setup@2x.png",
     "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json",
     "streamdeck/com.scrthq.runlog.sdPlugin/ui/press.html",
-    "streamdeck/com.scrthq.runlog.sdPlugin/ui/setup.html",
-    "streamdeck/design/actions/setup.svg",
-    "streamdeck/src/actions/press.test.ts",
     "streamdeck/src/actions/press.ts",
-    "streamdeck/src/actions/setup.test.ts",
-    "streamdeck/src/actions/setup.ts",
-    "streamdeck/src/plugin.ts",
-    "streamdeck/src/state.test.ts",
     "streamdeck/src/state.ts"
   ],
   "agent": "Claude Code",
   "model": "claude-fable-5-1",
-  "turn_id": "795fe6f71b88",
+  "turn_id": "b1f6015a32c4",
   "compact_transcript_start": 0,
   "token_usage": {
-    "input_tokens": 12659,
-    "cache_creation_tokens": 1497464,
-    "cache_read_tokens": 286387853,
-    "output_tokens": 646068,
-    "api_call_count": 615,
-    "subagent_tokens": {
-      "input_tokens": 178,
-      "cache_creation_tokens": 177328,
-      "cache_read_tokens": 8919733,
-      "output_tokens": 57058,
-      "api_call_count": 89
-    }
+    "input_tokens": 12693,
+    "cache_creation_tokens": 1498919,
+    "cache_read_tokens": 287174678,
+    "output_tokens": 647414,
+    "api_call_count": 617
   },
   "skill_events_version": 1,
   "skill_events": [
@@ -268,15 +248,15 @@
     "turn_count": 124
   },
   "initial_attribution": {
-    "calculated_at": "2026-09-15T06:21:32.6801451Z",
-    "agent_lines": 182,
-    "agent_removed": 60,
-    "human_added": 0,
+    "calculated_at": "2026-09-15T06:22:51.1613032Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 182,
     "human_modified": 544,
     "human_removed": 0,
     "total_committed": 726,
-    "total_lines_changed": 786,
-    "agent_percentage": 30.788804071246815,
+    "total_lines_changed": 752,
+    "agent_percentage": 0,
     "metric_version": 2
   },
   "prompt_attributions": [
@@ -284,22 +264,8 @@
       "checkpoint_number": 2,
       "user_lines_added": 0,
       "user_lines_removed": 0,
-      "agent_lines_added": 0,
-      "agent_lines_removed": 0
-    },
-    {
-      "checkpoint_number": 3,
-      "user_lines_added": 3222,
-      "user_lines_removed": 3028,
-      "agent_lines_added": 133652,
-      "agent_lines_removed": 115579,
-      "user_added_per_file": {
-        "apps/web/src/run/RequestPanel.test.tsx": 102,
-        "apps/web/src/run/RunView.tsx": 3120
-      },
-      "user_removed_per_file": {
-        "apps/web/src/run/RunView.tsx": 3028
-      }
+      "agent_lines_added": 133979,
+      "agent_lines_removed": 115813
     }
   ]
 }
