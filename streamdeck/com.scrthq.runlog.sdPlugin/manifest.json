@@ -23,7 +23,7 @@
       "Tooltip": "Presses whatever the run is waiting on.",
       "Controllers": ["Keypad", "Encoder"],
       "Encoder": { "layout": "$B1" },
-      "States": [{ "Image": "imgs/actions/next" }],
+      "States": [{ "Image": "imgs/keys/next" }],
       "PropertyInspectorPath": "ui/next.html"
     },
     {
@@ -32,7 +32,7 @@
       "Icon": "imgs/actions/press",
       "Tooltip": "One move, the waiting roll, or a preset answer.",
       "Controllers": ["Keypad"],
-      "States": [{ "Image": "imgs/actions/press" }],
+      "States": [{ "Image": "imgs/keys/press" }],
       "PropertyInspectorPath": "ui/press.html"
     },
     {
@@ -41,7 +41,7 @@
       "Icon": "imgs/actions/undo",
       "Tooltip": "Takes back the last result.",
       "Controllers": ["Keypad"],
-      "States": [{ "Image": "imgs/actions/undo" }],
+      "States": [{ "Image": "imgs/keys/undo" }],
       "PropertyInspectorPath": "ui/undo.html"
     },
     {
@@ -50,7 +50,7 @@
       "Icon": "imgs/actions/run",
       "Tooltip": "Which run the deck is on. Press to switch.",
       "Controllers": ["Keypad"],
-      "States": [{ "Image": "imgs/actions/run" }],
+      "States": [{ "Image": "imgs/keys/run" }],
       "PropertyInspectorPath": "ui/run.html"
     },
     {
@@ -59,7 +59,7 @@
       "Icon": "imgs/actions/connect",
       "Tooltip": "Connects the deck to your Runlog account, and disconnects it again.",
       "Controllers": ["Keypad"],
-      "States": [{ "Image": "imgs/actions/connect" }],
+      "States": [{ "Image": "imgs/keys/connect" }],
       "PropertyInspectorPath": "ui/connect.html"
     },
     {
@@ -69,7 +69,7 @@
       "Tooltip": "A number from the run: score, unit, clock, last result.",
       "Controllers": ["Keypad", "Encoder"],
       "Encoder": { "layout": "$B1" },
-      "States": [{ "Image": "imgs/actions/metric" }],
+      "States": [{ "Image": "imgs/keys/metric" }],
       "PropertyInspectorPath": "ui/metric.html"
     }
   ]

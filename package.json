@@ -38,6 +38,7 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@resvg/resvg-js": "2.6.2",
     "@types/node": "^24.0.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",

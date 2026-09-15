@@ -1,0 +1,41 @@
+# A Stream Deck at the table
+
+Runlog's plugin is in the Stream Deck Marketplace, under **Runlog**. Install it and six actions appear in the action list: Connect, Run, Do the next thing, Press, Undo, and Metric. It needs the Stream Deck app at 7.1 or later.
+
+## Signing in
+
+Every key's settings carry the same account block: the Runlog address, **Sign in**, **Sign out**, **Reconnect**, and a line saying who is signed in. Leave the address alone unless you run a copy of your own.
+
+**Sign in** shows a code and a link. Open the link in a browser, type the code, and you are signed in on the deck; the plugin keeps that sign-in in a file of its own, not in the settings the pages read. Signing in is not connecting: press Connect after.
+
+## Connect
+
+**Connect** opens the connection, and pressing it again closes it. Nothing is open until you press it, and a connection holding no run closes itself after thirty minutes — the key then says _Idle · press to connect_. A deck that is following a run stays up however long the stream goes.
+
+Every other key says **Not connected**, with _press Connect_ beneath it, until the connection is open.
+
+## The run the deck is on
+
+The deck presses through the page that holds the run, so it only ever sees a run that is synced to your account and open on a page somewhere: the app in a browser tab, a [dock](#guide/dock), or a browser source. With nothing synced the keys say **Not synced**; with runs synced but none open, **No run open**.
+
+**Run** names the run the deck is following. Press it to cycle through the runs open to you and pin the next one; its settings list the same runs by name. A pin holds: a pinned run that ends says **That run has ended** rather than moving the deck to whichever run went next. Where one run is open and nothing is pinned, the deck follows that one; where several are open and none is pinned, the keys say **Pick a run**.
+
+## The keys
+
+- **Do the next thing** presses whatever the run is waiting on — rolling the table, carrying on, closing the unit, entering the next — and carries the step's own words.
+- **Press** does the one thing you pick in its settings: a move the pack offers, the roll that is waiting, or a preset answer.
+- **Undo** takes back the last result, and says underneath what it would take back.
+- **Metric** shows one number and nothing else: the score, the unit, a clock, the last result, the leader, or a counter or resource the pack keeps.
+
+On a Stream Deck +, Do the next thing and Metric sit on a dial as well as a key. Turning a Metric dial steps through the score, the unit, the clock, the last result and the leader, and a running clock redraws every second.
+
+A press the run has moved past, or one the page has to take, comes back refused: the key says why for three seconds, then goes back to what it was saying.
+
+## Keeping the page awake
+
+Chrome discards tabs it thinks nobody is looking at, and a discarded tab is a run the deck can no longer see. Keep the run in an OBS dock or a browser source, or exempt Runlog from Memory Saver in the browser's settings.
+
+<Note>
+  Where plans are switched on, pressing a run from a deck is part of Plus. Watching one — the run's name and its numbers on your keys — is
+  not.
+</Note>
