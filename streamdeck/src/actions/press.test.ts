@@ -39,19 +39,3 @@ describe("pressing a preset key", () => {
     expect(mock.pressed).toEqual([{ press: "answer", answer: { subject: "A tall bowl" } }]);
   });
 });
-
-// Task 16b: a Press key set to a setup applies it and hands it out to the
-// tool in one act.
-describe("pressing a setup key", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    mock.pressed = [];
-  });
-  afterEach(() => vi.useRealTimers());
-
-  it("answers with the setup it was set to", async () => {
-    const settings = { target: { kind: "setup", id: "leveling", title: "Leveling" } };
-    await new Press().onKeyDown({ action: key(), payload: { settings } } as never);
-    expect(mock.pressed).toEqual([{ press: "answer", answer: { setup: "leveling" } }]);
-  });
-});

@@ -10,7 +10,7 @@ import {
   connectFace,
   attachedRun,
   idleDeadline,
-  pressFace,
+  setupFace,
   IDLE_OFF_MS,
   type DeckState,
   type Offer,
@@ -180,15 +180,25 @@ describe("what the keys say", () => {
   });
 });
 
-// Task 16b: a Press key set to a setup applies it and hands it out to the
-// tool - the offer names which setups the run could hand out.
-describe("what the press key says for a setup", () => {
+// Task 18: a dedicated key applies a setup and hands it out to the tool -
+// the offer names which setups the run could hand out.
+describe("what the setup key says", () => {
+  it("says Set up with nothing chosen, whether or not the offer has landed", () => {
+    const s = open();
+    expect(setupFace(s, undefined)).toEqual({ title: "Set up", tone: "dim" });
+  });
+
+  it("is loading before the offer lands, once a setup is chosen", () => {
+    const s = open();
+    expect(setupFace(s, { id: "leveling", title: "Leveling" })).toEqual({ title: "Loading…", tone: "dim" });
+  });
+
   it("is live when the setup is on offer", () => {
     let s = live();
     s = reduce(s, { t: "socket", state: "open" }, T);
     s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
     s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, setups: [{ id: "leveling", title: "Leveling" }] } } }, T);
-    expect(pressFace(s, { kind: "setup", id: "leveling", title: "Leveling" })).toEqual({
+    expect(setupFace(s, { id: "leveling", title: "Leveling" })).toEqual({
       title: "Leveling",
       tone: "live",
       when: "Apply setup",
@@ -200,7 +210,23 @@ describe("what the press key says for a setup", () => {
     s = reduce(s, { t: "socket", state: "open" }, T);
     s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
     s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
-    expect(pressFace(s, { kind: "setup", id: "leveling", title: "Leveling" })).toEqual({
+    expect(setupFace(s, { id: "leveling", title: "Leveling" })).toEqual({
+      title: "Leveling",
+      tone: "dim",
+      when: "Not here",
+    });
+  });
+
+  // The 16b review's Critical: an older page's offer may not name any
+  // setups at all, and the unguarded `.some` this replaces would have thrown.
+  it("guards an offer that names no setups at all", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    const bare = { ...offer } as Partial<Offer>;
+    delete bare.setups;
+    s = reduce(s, { t: "snapshot", snapshot: { offer: bare as Offer } }, T);
+    expect(setupFace(s, { id: "leveling", title: "Leveling" })).toEqual({
       title: "Leveling",
       tone: "dim",
       when: "Not here",

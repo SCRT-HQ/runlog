@@ -7,7 +7,8 @@ Runlog is a referee and run log for dice-driven games: it draws the tables, keep
 - **Connect** — opens the connection to your Runlog account, and closes it again.
 - **Run** — names the run the deck is on; press to cycle through the runs you have open, or pick one in its settings.
 - **Do the next thing** — presses whatever the run is waiting on, in the step's own words.
-- **Press** — one move, the roll that is waiting, a preset answer, or a setup to hand out, set in the key's settings.
+- **Press** — one move, the roll that is waiting, or a preset answer, set in the key's settings.
+- **Apply setup** — changes the run's loadout to a setup from your library and hands it out to the tool.
 - **Undo** — takes back the last result.
 - **Metric** — one number from the run: the score, the unit, a clock, the last result, the leader, or a counter or resource the pack keeps.
 

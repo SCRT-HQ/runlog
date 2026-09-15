@@ -67,11 +67,7 @@ export interface Face {
   /** 0-1, set only for a running timer clock so a dial's indicator can draw it. */
   fraction?: number;
 }
-export type PressTarget =
-  | { kind: "roll" }
-  | { kind: "move"; id: string }
-  | { kind: "answer"; preset: string; value: string }
-  | { kind: "setup"; id: string; title: string };
+export type PressTarget = { kind: "roll" } | { kind: "move"; id: string } | { kind: "answer"; preset: string; value: string };
 export type MetricField = "score" | "unit" | "clock" | "latest" | "leader" | { counter: string } | { resource: string };
 export type DeckEvent =
   | { t: "session"; state: SessionState }
@@ -275,13 +271,21 @@ export function pressFace(state: DeckState, target: PressTarget): Face {
     const m = offer.moves.find((x) => x.id === target.id);
     return m ? { title: m.label, tone: "live" } : { title: "Not on offer", tone: "dim" };
   }
-  if (target.kind === "setup") {
-    return offer.setups.some((s) => s.id === target.id)
-      ? { title: target.title, tone: "live", when: "Apply setup" }
-      : { title: target.title, tone: "dim", when: "Not here" };
-  }
   const p = offer.presets.find((x) => x.kind === target.preset);
   return p ? { title: target.value, tone: "live", when: p.label } : { title: target.value, tone: "dim", when: "Not now" };
+}
+
+/** What the setup key says: what it applies and hands out, whether that is on offer, or nothing chosen at all. */
+export function setupFace(state: DeckState, setup?: { id: string; title: string }): Face {
+  const c = common(state) ?? flashed(state);
+  if (c) return c;
+  if (!setup) return { title: "Set up", tone: "dim" };
+  const offer = state.snapshot?.offer;
+  if (!offer) return { title: "Loading…", tone: "dim" };
+  // `?? []`: an older page's offer may not name any setups at all.
+  return (offer.setups ?? []).some((s) => s.id === setup.id)
+    ? { title: setup.title, tone: "live", when: "Apply setup" }
+    : { title: setup.title, tone: "dim", when: "Not here" };
 }
 
 export function undoFace(state: DeckState): Face {

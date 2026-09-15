@@ -30,7 +30,7 @@
       "Name": "Press",
       "UUID": "com.scrthq.runlog.press",
       "Icon": "imgs/actions/press",
-      "Tooltip": "One move, the waiting roll, a preset answer, or a setup to hand out.",
+      "Tooltip": "One move, the waiting roll, or a preset answer.",
       "Controllers": ["Keypad"],
       "States": [{ "Image": "imgs/keys/press" }],
       "PropertyInspectorPath": "ui/press.html"
@@ -71,6 +71,15 @@
       "Encoder": { "layout": "$B1" },
       "States": [{ "Image": "imgs/keys/metric" }],
       "PropertyInspectorPath": "ui/metric.html"
+    },
+    {
+      "Name": "Apply setup",
+      "UUID": "com.scrthq.runlog.setup",
+      "Icon": "imgs/actions/setup",
+      "Tooltip": "Changes the run's loadout to this setup and hands it out to the tool.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/setup" }],
+      "PropertyInspectorPath": "ui/setup.html"
     }
   ]
 }
