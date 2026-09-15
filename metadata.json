@@ -1,0 +1,71 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2J35N96QGSRTKCE6WSGEWZ3",
+  "strategy": "manual-commit",
+  "branch": "the-deck-comes-laid-out",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "apps/web/src/guide/pages/stream-deck.mdx",
+    "streamdeck/README.md",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/open.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/open@2x.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/keys/open.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/keys/open@2x.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/demo-mini.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/demo-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/demo-sd.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/demo-xl.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/elden-ring-mini.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/elden-ring-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/elden-ring-sd.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/elden-ring-xl.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/runlog-mini.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/runlog-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/runlog-sd.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/runlog-xl.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/ui/account.js",
+    "streamdeck/com.scrthq.runlog.sdPlugin/ui/next.html",
+    "streamdeck/com.scrthq.runlog.sdPlugin/ui/open.html",
+    "streamdeck/com.scrthq.runlog.sdPlugin/ui/run.html",
+    "streamdeck/design/actions/next.svg",
+    "streamdeck/design/actions/open.svg",
+    "streamdeck/design/export.mjs",
+    "streamdeck/design/layouts.mjs",
+    "streamdeck/design/profiles.mjs",
+    "streamdeck/design/profiles.test.mjs",
+    "streamdeck/src/actions/base.ts",
+    "streamdeck/src/actions/open.test.ts",
+    "streamdeck/src/actions/open.ts",
+    "streamdeck/src/face.test.ts",
+    "streamdeck/src/face.ts",
+    "streamdeck/src/glyphs.ts",
+    "streamdeck/src/plugin.test.ts",
+    "streamdeck/src/plugin.ts",
+    "streamdeck/src/state.test.ts",
+    "streamdeck/src/state.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 232,
+    "cache_creation_tokens": 20252,
+    "cache_read_tokens": 6033509,
+    "output_tokens": 7859,
+    "api_call_count": 11,
+    "subagent_tokens": {
+      "input_tokens": 404,
+      "cache_creation_tokens": 284938,
+      "cache_read_tokens": 30801213,
+      "output_tokens": 93335,
+      "api_call_count": 202
+    }
+  }
+}

@@ -1,0 +1,434 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2J35N96QGSRTKCE6WSGEWZ3",
+  "session_id": "e72ee5b1-7270-4fac-abcc-53994b037403",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-15T08:33:13.0795694Z",
+  "branch": "the-deck-comes-laid-out",
+  "checkpoints_count": 3,
+  "save_step_count": 9,
+  "files_touched": [
+    "apps/web/src/guide/pages/stream-deck.mdx",
+    "streamdeck/README.md",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/open.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/open@2x.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/keys/open.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/keys/open@2x.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/demo-mini.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/demo-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/demo-sd.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/demo-xl.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/elden-ring-mini.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/elden-ring-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/elden-ring-sd.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/elden-ring-xl.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/runlog-mini.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/runlog-plus.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/runlog-sd.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/profiles/runlog-xl.streamDeckProfile",
+    "streamdeck/com.scrthq.runlog.sdPlugin/ui/account.js",
+    "streamdeck/com.scrthq.runlog.sdPlugin/ui/next.html",
+    "streamdeck/com.scrthq.runlog.sdPlugin/ui/open.html",
+    "streamdeck/com.scrthq.runlog.sdPlugin/ui/run.html",
+    "streamdeck/design/actions/next.svg",
+    "streamdeck/design/actions/open.svg",
+    "streamdeck/design/export.mjs",
+    "streamdeck/design/layouts.mjs",
+    "streamdeck/design/profiles.mjs",
+    "streamdeck/design/profiles.test.mjs",
+    "streamdeck/src/actions/base.ts",
+    "streamdeck/src/actions/open.test.ts",
+    "streamdeck/src/actions/open.ts",
+    "streamdeck/src/face.test.ts",
+    "streamdeck/src/face.ts",
+    "streamdeck/src/glyphs.ts",
+    "streamdeck/src/plugin.test.ts",
+    "streamdeck/src/plugin.ts",
+    "streamdeck/src/state.test.ts",
+    "streamdeck/src/state.ts"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-fable-5-1",
+  "turn_id": "423e732a5685",
+  "checkpoint_transcript_start": 7682,
+  "transcript_lines_at_start": 7682,
+  "compact_transcript_start": 899,
+  "token_usage": {
+    "input_tokens": 232,
+    "cache_creation_tokens": 20252,
+    "cache_read_tokens": 6033509,
+    "output_tokens": 7859,
+    "api_call_count": 11,
+    "subagent_tokens": {
+      "input_tokens": 404,
+      "cache_creation_tokens": 284938,
+      "cache_read_tokens": 30801213,
+      "output_tokens": 93335,
+      "api_call_count": 202
+    }
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_014vhhQ4NijiY1xqXGLsYL8M",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:brainstorming"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "8a84e461a26e",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 38,
+        "end": 39,
+        "entry_ids": [
+          "5f676ba2-4bdc-40fc-97e1-e8decf04d118"
+        ],
+        "tool_use_id": "toolu_014vhhQ4NijiY1xqXGLsYL8M"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_014vhhQ4NijiY1xqXGLsYL8M"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:brainstorming",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01RUnUDwYs3FN6XtJsVEN7mB",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "avoid-ai-writing"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "8a84e461a26e",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 490,
+        "end": 491,
+        "entry_ids": [
+          "137ac9f1-0696-490a-a25d-2ff8fc0bc931"
+        ],
+        "tool_use_id": "toolu_01RUnUDwYs3FN6XtJsVEN7mB"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01RUnUDwYs3FN6XtJsVEN7mB"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: avoid-ai-writing",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01GfffjihkW2AiHBpNVYy9yr",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "artifact-design"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "4bd81f48a3d5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 542,
+        "end": 543,
+        "entry_ids": [
+          "58835be2-d8b8-4fbd-9274-28d0f2e5b0f4"
+        ],
+        "tool_use_id": "toolu_01GfffjihkW2AiHBpNVYy9yr"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01GfffjihkW2AiHBpNVYy9yr"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: artifact-design",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_013rMgomGXH39A7HBYx7ys5H",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:writing-plans"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "4bd81f48a3d5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 660,
+        "end": 661,
+        "entry_ids": [
+          "e12e2ed1-0c4e-404c-91f5-8b234bb9b28b"
+        ],
+        "tool_use_id": "toolu_013rMgomGXH39A7HBYx7ys5H"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_013rMgomGXH39A7HBYx7ys5H"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:writing-plans",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01KpuJi5MYaqZz28zq8QsQwy",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:subagent-driven-development"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "4bd81f48a3d5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 951,
+        "end": 952,
+        "entry_ids": [
+          "4c40a089-bd95-4d0e-b3f7-30592a1ef14e"
+        ],
+        "tool_use_id": "toolu_01KpuJi5MYaqZz28zq8QsQwy"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01KpuJi5MYaqZz28zq8QsQwy"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:subagent-driven-development",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01CjUjhVENDWngK7gGeMhNUy",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:systematic-debugging"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "24bf0308d75b",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 2314,
+        "end": 2315,
+        "entry_ids": [
+          "0b4bf8b1-e18b-49df-ab60-029810a49b2f"
+        ],
+        "tool_use_id": "toolu_01CjUjhVENDWngK7gGeMhNUy"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01CjUjhVENDWngK7gGeMhNUy"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:systematic-debugging",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_0142ZxFFzHWozd2Vwy2Q1ENs",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:finishing-a-development-branch"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "30bfe7fcf8b6",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 2536,
+        "end": 2537,
+        "entry_ids": [
+          "9fd26905-90d1-4e55-a2b5-3f294ec68484"
+        ],
+        "tool_use_id": "toolu_0142ZxFFzHWozd2Vwy2Q1ENs"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_0142ZxFFzHWozd2Vwy2Q1ENs"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:finishing-a-development-branch",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 152
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-15T08:33:12.2375416Z",
+    "agent_lines": 905,
+    "agent_removed": 47,
+    "human_added": 250,
+    "human_modified": 1897,
+    "human_removed": 0,
+    "total_committed": 3052,
+    "total_lines_changed": 3099,
+    "agent_percentage": 30.719586963536628,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 137221,
+      "agent_lines_removed": 119055
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 137221,
+      "agent_lines_removed": 119055
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 137221,
+      "agent_lines_removed": 119055
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 137221,
+      "agent_lines_removed": 119055
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 4424,
+      "user_lines_removed": 4445,
+      "agent_lines_added": 137745,
+      "agent_lines_removed": 119579,
+      "user_added_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/run/ControlSettings.tsx": 1,
+        "apps/web/src/run/useReachable.ts": 2,
+        "apps/web/src/storage/who.ts": 3,
+        "docs/stream-api.md": 2,
+        "hosted/infra/lib/handlers/control.ts": 1,
+        "hosted/infra/lib/handlers/live.ts": 1,
+        "packages/cli/src/bin.ts": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packages/rules-schema/src/setup.ts": 1,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 2,
+        "apps/web/src/run/ControlSettings.tsx": 1,
+        "apps/web/src/run/useReachable.ts": 2,
+        "apps/web/src/storage/who.ts": 3,
+        "docs/stream-api.md": 2,
+        "hosted/infra/lib/handlers/control.ts": 1,
+        "hosted/infra/lib/handlers/live.ts": 1,
+        "packages/cli/src/bin.ts": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packages/rules-schema/src/setup.ts": 1,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/README.md": 2,
+        "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json": 14,
+        "streamdeck/package.json": 1,
+        "tsconfig.base.json": 19,
+        "vitest.config.ts": 2
+      }
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 139398,
+      "agent_lines_removed": 121334
+    },
+    {
+      "checkpoint_number": 9,
+      "user_lines_added": 2199,
+      "user_lines_removed": 2199,
+      "agent_lines_added": 139797,
+      "agent_lines_removed": 121137,
+      "user_added_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "tsconfig.base.json": 19
+      }
+    },
+    {
+      "checkpoint_number": 10,
+      "user_lines_added": 4045,
+      "user_lines_removed": 3740,
+      "agent_lines_added": 139583,
+      "agent_lines_removed": 121722,
+      "user_added_per_file": {
+        "apps/web/src/run/RunView.offer.test.tsx": 484,
+        "apps/web/src/run/RunView.tsx": 3221,
+        "apps/web/src/run/takePress.test.ts": 340
+      },
+      "user_removed_per_file": {
+        "apps/web/src/run/RunView.offer.test.tsx": 398,
+        "apps/web/src/run/RunView.tsx": 3132,
+        "apps/web/src/run/takePress.test.ts": 210
+      }
+    }
+  ]
+}
