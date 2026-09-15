@@ -4,6 +4,7 @@
   "scripts": {
     "build": "rollup -c",
     "icons": "node design/export.mjs",
+    "profiles": "node design/profiles.mjs",
     "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.scrthq.runlog\""
   },
   "type": "module",

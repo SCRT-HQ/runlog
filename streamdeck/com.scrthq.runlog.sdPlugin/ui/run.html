@@ -29,7 +29,7 @@
           return o;
         };
 
-        const label = (r) => (r.name && r.packTitle ? `${r.name} — ${r.packTitle}` : (r.name ?? r.packTitle ?? r.id));
+        const label = (r) => (r.name && r.packTitle ? `${r.name} (${r.packTitle})` : (r.name ?? r.packTitle ?? r.id));
 
         const fill = (runs, pinned) => {
           run.replaceChildren(option(null, "None"), ...runs.map((r) => option(r.id, label(r))));

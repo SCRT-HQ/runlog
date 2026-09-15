@@ -6,6 +6,7 @@
 **/stage/
 **/node_modules/
 streamdeck/com.scrthq.runlog.sdPlugin/bin/
+streamdeck/com.scrthq.runlog.sdPlugin/profiles/
 packages/rules-schema/schema/
 apps/web/dist/
 docs/reference.md

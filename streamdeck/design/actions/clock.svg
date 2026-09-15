@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144" role="img" aria-label="Clock">
+  <!-- A plain clock face: the rim, and the two hands off the middle. -->
+  <circle cx="72" cy="72" r="48" fill="none" stroke="#ffffff" stroke-width="12"/>
+  <path d="M72 42 V74 H100" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

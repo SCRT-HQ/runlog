@@ -16,14 +16,37 @@
  */
 export interface Offer {
   seq: number;
+  /**
+   * The one press the run is waiting on.
+   *
+   * `owed` is a threshold or a global roll the run owes, which a deck
+   * presses like any other primary: the page decides what it turns into.
+   */
   primary: { id: "roll" | "carry-on" | "close" | "enter" | "owed"; label: string; kind: string } | null;
   moves: Array<{ id: string; label: string }>;
   undo: { what: string } | null;
   /** Why a deck cannot press this, in words a key face can carry. */
   needsPage: string | null;
   presets: Array<{ kind: string; label: string; suggestions?: string[]; items?: number }>;
-  /** The setups the run could hand out, empty where the run names no tool or is not live. */
-  setups: Array<{ id: string; title: string }>;
+  /**
+   * The setups the run could hand out, empty where the run names no tool or is
+   * not live, and absent from an older page's offer entirely.
+   */
+  setups?: Array<{ id: string; title: string }>;
+  /**
+   * The counters and resources this run will take a change to, from a deck
+   * as from the page - absent from an older page's offer entirely.
+   */
+  trackers?: Array<{ id: string; kind: "counter" | "resource"; label: string; value: number; max: number | null }>;
+  /**
+   * The clock a deck may pause, resume or stop, or nothing where the run
+   * keeps none - absent from an older page's offer entirely.
+   */
+  clock?: { id: string; label: string; status: "running" | "paused" | "done" } | null;
+  /** Whether the run is rolling for itself rather than waiting on a press, or absent from an older page's offer. */
+  autoRoll?: boolean;
+  /** How the run would end if it were finished now, or nothing while it cannot be, or absent from an older page's offer. */
+  ending?: { label: string } | null;
 }
 
 export type SessionState = "none" | "expired" | "ok";
@@ -34,6 +57,8 @@ export interface HeldRun {
   packTitle?: string;
 }
 export interface Snapshot {
+  /** The run as the server knows it, which is where the pack's id travels. */
+  run?: { id?: string; packId?: string };
   unit?: number;
   words?: { unit: string };
   score?: { text: string };
@@ -59,7 +84,19 @@ export interface DeckState {
   snapshot: Snapshot | null;
   flash: { ref: string; ok: boolean; say?: string; until: number } | null;
 }
-export type Tone = "live" | "dim" | "refuse";
+/**
+ * How a face is drawn, by what the key is for rather than by how it feels.
+ *
+ * `live` is a key that moves the run - Next, Roll, Press - and it is the
+ * only one that takes the celadon edge. `undo` is the same lit face with
+ * the kiln edge, because taking a result back is the consequence the
+ * second accent is for. `readout` is a Metric key, which is a number
+ * rather than a button: the app's own ground, a hairline, and lit ink.
+ * `deck` is the furniture - Connect, Run, Open, Apply setup - lit, but
+ * without an accent claiming it does something to the run. `dim` and
+ * `refuse` are states rather than families and belong to every key.
+ */
+export type Tone = "live" | "dim" | "refuse" | "undo" | "readout" | "deck";
 export interface Face {
   title: string;
   tone: Tone;
@@ -69,6 +106,10 @@ export interface Face {
 }
 export type PressTarget = { kind: "roll" } | { kind: "move"; id: string } | { kind: "answer"; preset: string; value: string };
 export type MetricField = "score" | "unit" | "clock" | "latest" | "leader" | { counter: string } | { resource: string };
+/** What a short press of an adjustable Metric key does: step it up by one, or put it at a number. */
+export type MetricPress = { kind: "step" } | { kind: "set"; value: number };
+/** The answer form of a press, which is how everything but the primary and undo goes over the wire. */
+export type AnswerPress = { press: "answer"; answer: Record<string, unknown> };
 export type DeckEvent =
   | { t: "session"; state: SessionState }
   | { t: "on"; on: boolean; idle?: boolean }
@@ -175,7 +216,7 @@ function common(state: DeckState): Face | null {
 function attachedName(state: DeckState): Face | null {
   const run = state.runs.find((r) => r.id === state.attached);
   if (!run) return null;
-  return { title: run.name ?? run.packTitle ?? run.id, tone: "live", ...(run.packTitle && run.name ? { when: run.packTitle } : {}) };
+  return { title: run.name ?? run.packTitle ?? run.id, tone: "deck", ...(run.packTitle && run.name ? { when: run.packTitle } : {}) };
 }
 
 /**
@@ -192,7 +233,7 @@ export function connectFace(state: DeckState): Face {
   if (state.session === "expired") return { title: "Sign in again", tone: "dim" };
   if (!state.on) return { title: "Connect", tone: "dim", when: state.idleOff ? "went idle" : undefined };
   if (state.socket !== "open") return { title: "Connecting", tone: "dim" };
-  return { title: "Disconnect", tone: "live" };
+  return { title: "Disconnect", tone: "deck" };
 }
 
 /**
@@ -297,7 +338,7 @@ export function setupFace(state: DeckState, setup?: { id: string; title: string 
   if (!offer) return { title: "Loading…", tone: "dim" };
   // `?? []`: an older page's offer may not name any setups at all.
   return (offer.setups ?? []).some((s) => s.id === setup.id)
-    ? { title: setup.title, tone: "live", when: "Apply setup" }
+    ? { title: setup.title, tone: "deck", when: "Apply setup" }
     : { title: setup.title, tone: "dim", when: "Not here" };
 }
 
@@ -307,7 +348,37 @@ export function undoFace(state: DeckState): Face {
   const undo = state.snapshot?.offer?.undo;
   // The key says "Undo" either way: what it would take back is the run's
   // business, and a key too small to read it is no help at the table.
-  return undo ? { title: "Undo", tone: "live" } : { title: "Undo", tone: "dim" };
+  return undo ? { title: "Undo", tone: "undo" } : { title: "Undo", tone: "dim" };
+}
+
+/** Where the Open key points, chosen in its settings. */
+export type OpenTarget = "run" | "guide" | "rules" | "newrun" | "dock";
+
+/** What each page is called on the key, the guide aside. */
+const OPEN_LABELS: Record<Exclude<OpenTarget, "guide">, string> = {
+  run: "Open the run",
+  rules: "Rules",
+  newrun: "A new run",
+  dock: "The dock",
+};
+
+/**
+ * What the Open key says: the page it would put in front of the streamer.
+ *
+ * The guide is the one target that needs nothing - no account, no
+ * connection, no run - so it skips the gating every other key stops at.
+ * The rest name something the deck is holding, so they say what is missing
+ * the way the rest of the deck does.
+ */
+export function openFace(state: DeckState, target?: OpenTarget): Face {
+  if (!target) return { title: "Set up", tone: "dim" };
+  if (target === "guide") return { title: "Guide", tone: "deck", when: "in a browser" };
+  // `newrun` opens `/create`, which needs no run to already be held, so it
+  // is answered beside `guide` rather than waiting on `common()`.
+  if (target === "newrun") return { title: OPEN_LABELS.newrun, tone: "deck", when: "in a browser" };
+  const c = common(state);
+  if (c) return c;
+  return { title: OPEN_LABELS[target], tone: "deck", when: "in a browser" };
 }
 
 export function runFace(state: DeckState): Face {
@@ -333,24 +404,148 @@ export function metricFace(state: DeckState, field: MetricField, now: number): F
   if (c) return c;
   const snap = state.snapshot;
   if (!snap) return { title: "Loading…", tone: "dim" };
-  if (field === "score") return { title: snap.score?.text ?? "—", tone: "live", when: "Score" };
-  if (field === "unit") return { title: String(snap.unit ?? "—"), tone: "live", when: snap.words?.unit ?? "Unit" };
-  if (field === "latest") return { title: snap.latest?.text ?? "—", tone: "live" };
+  if (field === "score") return { title: snap.score?.text ?? "–", tone: "readout", when: "Score" };
+  if (field === "unit") return { title: String(snap.unit ?? "–"), tone: "readout", when: snap.words?.unit ?? "Unit" };
+  if (field === "latest") return { title: snap.latest?.text ?? "–", tone: "readout" };
   if (field === "leader") {
     const top = snap.standings?.[0];
-    return top ? { title: top.name, tone: "live", when: `${top.points} pts` } : { title: "—", tone: "dim", when: "Leader" };
+    return top ? { title: top.name, tone: "readout", when: `${top.points} pts` } : { title: "–", tone: "dim", when: "Leader" };
   }
   if (field === "clock") {
     const clock = snap.clocks?.find((x) => x.status === "running") ?? snap.clocks?.[0];
-    if (!clock || !snap.at) return { title: "—", tone: "dim", when: "Clock" };
+    if (!clock || !snap.at) return { title: "–", tone: "dim", when: "Clock" };
     const running = clock.kind === "timer" && clock.status === "running" && clock.seconds !== null;
     const fraction = running ? clockElapsedMs(clock, snap.at, now) / (clock.seconds! * 1000) : undefined;
-    return { title: clockText(clock, snap.at, now), tone: "live", when: clock.label, ...(fraction !== undefined ? { fraction } : {}) };
+    return { title: clockText(clock, snap.at, now), tone: "readout", when: clock.label, ...(fraction !== undefined ? { fraction } : {}) };
   }
   if ("counter" in field) {
     const x = snap.counters?.find((k) => k.id === field.counter);
-    return x ? { title: String(x.value), tone: "live", when: x.label } : { title: "—", tone: "dim" };
+    return x ? { title: String(x.value), tone: "readout", when: x.label } : { title: "–", tone: "dim" };
   }
   const r = snap.resources?.find((k) => k.id === field.resource);
-  return r ? { title: r.max === null ? String(r.value) : `${r.value}/${r.max}`, tone: "live", when: r.label } : { title: "—", tone: "dim" };
+  return r
+    ? { title: r.max === null ? String(r.value) : `${r.value}/${r.max}`, tone: "readout", when: r.label }
+    : { title: "–", tone: "dim" };
+}
+
+/**
+ * The tracker a Metric key would move, or nothing where it cannot move one.
+ *
+ * Only a counter or a resource: the score, the unit, a clock, the last
+ * result and the leader are the run's own arithmetic and a key set to one
+ * of those is a readout. The offer names which trackers the run will take a
+ * change to, so a key set to a number this run does not keep presses
+ * nothing rather than being refused on the way out. `?? []` for an older
+ * page, whose offer names none at all.
+ */
+function trackerOf(state: DeckState, field: MetricField | undefined): string | null {
+  if (!field || typeof field === "string") return null;
+  const id = "counter" in field ? field.counter : field.resource;
+  const kind = "counter" in field ? "counter" : "resource";
+  const offer = state.snapshot?.offer;
+  return (offer?.trackers ?? []).some((t) => t.id === id && t.kind === kind) ? id : null;
+}
+
+/**
+ * What one press of a Metric key sends, or nothing for it to send.
+ *
+ * A short press does what the key was set to: one up, or straight to a
+ * number. A hold takes one back off, whichever way it was set, because a
+ * key that can only count up is a key you have to reach past to the page
+ * the first time you miscount.
+ */
+export function metricPress(
+  state: DeckState,
+  field: MetricField | undefined,
+  press: MetricPress | undefined,
+  long: boolean,
+): AnswerPress | null {
+  const tracker = trackerOf(state, field);
+  if (!tracker) return null;
+  if (long) return { press: "answer", answer: { tracker, by: -1 } };
+  return press?.kind === "set"
+    ? { press: "answer", answer: { tracker, to: press.value } }
+    : { press: "answer", answer: { tracker, by: 1 } };
+}
+
+/**
+ * What the Clock key says: the run's clock, and what pressing it would do.
+ *
+ * The same arithmetic a Metric key set to the clock draws, in the tone of a
+ * key that moves something rather than a readout. A paused clock keeps its
+ * time on the face and says so underneath; a clock that has run out says
+ * the same thing the page does.
+ */
+export function clockFace(state: DeckState, now: number): Face {
+  const c = common(state) ?? flashed(state);
+  if (c) return c;
+  const snap = state.snapshot;
+  if (!snap?.offer) return { title: "Loading…", tone: "dim" };
+  // `?? null` for an older page, which names no clock on its offer at all.
+  const clock = snap.offer.clock ?? null;
+  if (!clock) return { title: "No clock", tone: "dim" };
+  if (clock.status === "done") return { title: "0:00", tone: "dim", when: "done" };
+  const kept = snap.clocks?.find((x) => x.id === clock.id);
+  if (!kept || !snap.at) return { title: "–", tone: "dim", when: clock.label };
+  const text = clockText(kept, snap.at, now);
+  if (clock.status === "paused") return { title: text, tone: "dim", when: "paused" };
+  const counting = kept.kind === "timer" && kept.seconds !== null;
+  const fraction = counting ? clockElapsedMs(kept, snap.at, now) / (kept.seconds! * 1000) : undefined;
+  return { title: text, tone: "live", when: clock.label, ...(fraction !== undefined ? { fraction } : {}) };
+}
+
+/** What one press of the Clock key sends: the stop on a hold, the pause or the resume on a tap. */
+export function clockPress(state: DeckState, long: boolean): AnswerPress | null {
+  const clock = state.snapshot?.offer?.clock;
+  if (!clock || clock.status === "done") return null;
+  if (long) return { press: "answer", answer: { clock: clock.id, do: "stop" } };
+  return { press: "answer", answer: { clock: clock.id, do: clock.status === "running" ? "pause" : "resume" } };
+}
+
+/**
+ * What the Keep rolling key says: who is throwing the dice.
+ *
+ * The same words either way underneath, because twenty characters is not
+ * room for two different sentences and the key is a switch: what it says on
+ * top is the state, and pressing it is the other one.
+ */
+export function autoRollFace(state: DeckState): Face {
+  const c = common(state) ?? flashed(state);
+  if (c) return c;
+  const offer = state.snapshot?.offer;
+  if (!offer) return { title: "Loading…", tone: "dim" };
+  // `?? false` for an older page: a run that says nothing about this is one
+  // rolling by hand.
+  return (offer.autoRoll ?? false)
+    ? { title: "Rolling for you", tone: "live", when: "press to switch" }
+    : { title: "Roll by hand", tone: "deck", when: "press to switch" };
+}
+
+/** What one press of the Keep rolling key sends: the other setting. */
+export function autoRollPress(state: DeckState): AnswerPress | null {
+  const offer = state.snapshot?.offer;
+  if (!offer) return null;
+  return { press: "answer", answer: { autoRoll: !(offer.autoRoll ?? false) } };
+}
+
+/**
+ * What the Finish key says: how the run would end, or that it cannot yet.
+ *
+ * The kiln edge, which is the accent for a press there is no coming back
+ * from, and the hold is the other half of the same guard: a run does not
+ * end because somebody brushed a key mid-scene.
+ */
+export function finishFace(state: DeckState): Face {
+  const c = common(state) ?? flashed(state);
+  if (c) return c;
+  const offer = state.snapshot?.offer;
+  if (!offer) return { title: "Loading…", tone: "dim" };
+  // `?? null` for an older page, whose offer says nothing about an ending.
+  const ending = offer.ending ?? null;
+  return ending ? { title: ending.label, tone: "refuse", when: "hold to finish" } : { title: "Not yet", tone: "dim" };
+}
+
+/** What a held Finish key sends, or nothing where the run has no ending to take. */
+export function finishPress(state: DeckState): AnswerPress | null {
+  return state.snapshot?.offer?.ending ? { press: "answer", answer: { finish: true } } : null;
 }
