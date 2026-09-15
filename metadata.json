@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2J7TT9ENTK281H8RBQ4EC0F",
+  "strategy": "manual-commit",
+  "branch": "the-deck-comes-laid-out",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "streamdeck/design/export.mjs"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 16424,
+    "cache_creation_tokens": 2386392,
+    "cache_read_tokens": 378810639,
+    "output_tokens": 788757,
+    "api_call_count": 788,
+    "subagent_tokens": {
+      "input_tokens": 140,
+      "cache_creation_tokens": 167319,
+      "cache_read_tokens": 6750547,
+      "output_tokens": 35376,
+      "api_call_count": 70
+    }
+  }
+}
