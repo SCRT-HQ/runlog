@@ -3,7 +3,7 @@
   "checkpoint_id": "01M2HW0F8HFZS7SZNRGEH1STJK",
   "session_id": "e72ee5b1-7270-4fac-abcc-53994b037403",
   "strategy": "manual-commit",
-  "created_at": "2026-09-15T06:28:01.9274908Z",
+  "created_at": "2026-09-15T06:29:16.6025824Z",
   "branch": "the-deck-throws",
   "checkpoints_count": 3,
   "save_step_count": 1,
@@ -15,14 +15,16 @@
   ],
   "agent": "Claude Code",
   "model": "claude-fable-5-1",
-  "turn_id": "d9e7da501816",
-  "compact_transcript_start": 0,
+  "turn_id": "40251c5f5d36",
+  "checkpoint_transcript_start": 6725,
+  "transcript_lines_at_start": 6725,
+  "compact_transcript_start": 784,
   "token_usage": {
-    "input_tokens": 12825,
-    "cache_creation_tokens": 1510335,
-    "cache_read_tokens": 289576916,
-    "output_tokens": 651089,
-    "api_call_count": 623
+    "input_tokens": 68,
+    "cache_creation_tokens": 5679,
+    "cache_read_tokens": 1632137,
+    "output_tokens": 3004,
+    "api_call_count": 4
   },
   "skill_events_version": 1,
   "skill_events": [
@@ -248,7 +250,7 @@
     "turn_count": 127
   },
   "initial_attribution": {
-    "calculated_at": "2026-09-15T06:28:01.3820607Z",
+    "calculated_at": "2026-09-15T06:29:16.0733558Z",
     "agent_lines": 0,
     "agent_removed": 130,
     "human_added": 196,
@@ -258,5 +260,14 @@
     "total_lines_changed": 3711,
     "agent_percentage": 3.503098895176502,
     "metric_version": 2
-  }
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 133999,
+      "agent_lines_removed": 115833
+    }
+  ]
 }
