@@ -27,7 +27,7 @@ import { fileURLToPath } from "node:url";
 
 import { loadPackText, loadSetupText } from "@runlog/rules-schema";
 
-import { BASE, DEMO, DEVICES, DIALS, SKETCHES, SLUGS } from "./layouts.mjs";
+import { BASE, DEMO, DEVICES, DIALS, isWarp, SKETCHES, SLUGS } from "./layouts.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const plugin = join(here, "..", "com.scrthq.runlog.sdPlugin");
@@ -132,6 +132,9 @@ function turn(id, which) {
  * they are ordered by title the way the app's own picker orders them. A
  * pack with no shipped control profile names no tool and gets none.
  *
+ * A setup `isWarp` gets a Command key instead of an Apply-setup one: its
+ * operations go to the tool once, and the run's own setup is untouched.
+ *
  * Last, a key that opens the pack's rules in the browser: a pack profile
  * is the one place that key has a pack to open.
  */
@@ -142,7 +145,13 @@ export function packKeys(pack, setups) {
     if (!counter.hidden) keys.push({ action: "metric", settings: { field: { counter: id } } });
   }
   for (const id of Object.keys(pack.resources ?? {})) keys.push({ action: "metric", settings: { field: { resource: id } } });
-  for (const setup of setups) keys.push({ action: "setup", settings: { setup: { id: setup.id, title: setup.title } } });
+  for (const setup of setups) {
+    keys.push(
+      isWarp(setup)
+        ? { action: "command", settings: { command: { id: setup.id, title: setup.title } } }
+        : { action: "setup", settings: { setup: { id: setup.id, title: setup.title } } },
+    );
+  }
   keys.push({ action: "open", settings: { target: "rules" } });
   return keys;
 }

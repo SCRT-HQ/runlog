@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144" role="img" aria-label="Command">
+  <!-- A setup's operations, sent once: the case, and the bolt going out. -->
+  <rect x="26" y="26" width="92" height="92" rx="20" fill="none" stroke="#ffffff" stroke-width="12"/>
+  <path d="M78 40 L52 82 L68 82 L62 108 L94 62 L76 62 Z" fill="#ffffff"/>
+</svg>

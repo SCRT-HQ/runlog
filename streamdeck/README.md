@@ -11,6 +11,7 @@ Runlog is a referee and run log for dice-driven games: it draws the tables, keep
 - **Roll** throws the dice the run is waiting on.
 - **Keep rolling for me** hands the dice to the run so it throws them itself, and takes them back again.
 - **Apply setup** changes the run's loadout to a setup from your library and hands it out to the tool.
+- **Command** sends a setup's operations to the tool once, without changing the run's own setup.
 - **Undo** takes back the last result.
 - **Metric** shows one number from the run: the score, the unit, a clock, the last result, the leader, or a counter or resource the pack keeps. Set to a counter or a resource it presses too: a tap steps it, a hold takes one back off.
 - **Clock** counts the run's clock down. Press to pause or resume it, hold to stop it.

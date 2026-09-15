@@ -401,6 +401,15 @@
       "PropertyInspectorPath": "ui/setup.html"
     },
     {
+      "Name": "Command",
+      "UUID": "com.scrthq.runlog.command",
+      "Icon": "imgs/actions/command",
+      "Tooltip": "Sends a setup's operations to the tool once, leaving the run's setup alone.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/command" }],
+      "PropertyInspectorPath": "ui/command.html"
+    },
+    {
       "Name": "Open in the browser",
       "UUID": "com.scrthq.runlog.open",
       "Icon": "imgs/actions/open",

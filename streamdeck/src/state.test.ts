@@ -11,6 +11,7 @@ import {
   attachedRun,
   idleDeadline,
   setupFace,
+  commandFace,
   rollFace,
   openFace,
   clockFace,
@@ -241,6 +242,58 @@ describe("what the setup key says", () => {
     s = reduce(s, { t: "snapshot", snapshot: { offer: bare as Offer } }, T);
     expect(setupFace(s, { id: "leveling", title: "Leveling" })).toEqual({
       title: "Leveling",
+      tone: "dim",
+      when: "Not here",
+    });
+  });
+});
+
+// Task 28c: a key that sends a setup's operations to the tool once, without
+// touching the run's own setup.
+describe("what the command key says", () => {
+  it("says Set up with nothing chosen, whether or not the offer has landed", () => {
+    const s = open();
+    expect(commandFace(s, undefined)).toEqual({ title: "Set up", tone: "dim" });
+  });
+
+  it("is loading before the offer lands, once a command is chosen", () => {
+    const s = open();
+    expect(commandFace(s, { id: "warp", title: "Start of the DLC" })).toEqual({ title: "Loading…", tone: "dim" });
+  });
+
+  it("is live when the command is on offer", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, commands: [{ id: "warp", title: "Start of the DLC" }] } } }, T);
+    expect(commandFace(s, { id: "warp", title: "Start of the DLC" })).toEqual({
+      title: "Start of the DLC",
+      tone: "live",
+      when: "Send to tool",
+    });
+  });
+
+  it("is dim when the command is not on offer", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
+    expect(commandFace(s, { id: "warp", title: "Start of the DLC" })).toEqual({
+      title: "Start of the DLC",
+      tone: "dim",
+      when: "Not here",
+    });
+  });
+
+  it("guards an offer that names no commands at all", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    const bare = { ...offer } as Partial<Offer>;
+    delete bare.commands;
+    s = reduce(s, { t: "snapshot", snapshot: { offer: bare as Offer } }, T);
+    expect(commandFace(s, { id: "warp", title: "Start of the DLC" })).toEqual({
+      title: "Start of the DLC",
       tone: "dim",
       when: "Not here",
     });
