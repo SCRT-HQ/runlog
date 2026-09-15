@@ -128,14 +128,28 @@ store.subscribe((state) => {
   }, deadline - now);
 });
 
-/** The device flow's two lines, as the inspector needs them: the page and the code. */
-function codeFromLines(): (line: string) => void {
+/**
+ * The device flow's two lines, as the inspector needs them: the page and the code.
+ *
+ * `deviceFlow` writes for a terminal, two spaces and a label per line.
+ * Exported so a test can hold this against the lines the flow actually
+ * says - the inspector shows nothing at all if the two stop matching,
+ * and nothing at all is a sign-in that looks like it hung.
+ */
+export function codeFromLines(): (line: string) => void {
   let code: string | null = null;
   let url: string | null = null;
+  let sent = false;
   return (line) => {
     code = /^ {2}Code {2}(\S.*)$/.exec(line)?.[1]?.trim() ?? code;
     url = /^ {2}Open {2}(\S+)$/.exec(line)?.[1] ?? url;
-    if (code && url) void streamDeck.ui.sendToPropertyInspector({ t: "code", code, url });
+    // Once. The flow keeps talking after those two lines - a blank, then
+    // what a terminal should do while it waits - and every line after them
+    // still has both halves in hand.
+    if (code && url && !sent) {
+      sent = true;
+      void streamDeck.ui.sendToPropertyInspector({ t: "code", code, url });
+    }
   };
 }
 
