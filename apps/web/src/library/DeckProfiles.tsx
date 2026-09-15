@@ -28,20 +28,38 @@ export function DeckProfiles({ load }: { load: () => Promise<string> }) {
   const [pack, setPack] = useState<Pack | null>(null);
   /** Set once the pack has been read and has nothing of its own to lay out. */
   const [nothing, setNothing] = useState(false);
+  /** Set where the pack could not be read at all, which is a different answer. */
+  const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState<DeviceId | null>(null);
+  /** Whether a read is in flight, so opening twice does not fetch twice. */
+  const reading = useRef(false);
   useDismiss(root, open, () => setOpen(false));
 
   if (nothing) return null;
 
+  /**
+   * Read the pack, once.
+   *
+   * Three answers, and they are not the same. A pack that reads and has
+   * moves, counters or resources gets the decks. A pack that reads and has
+   * none of them has nothing a profile could carry, so the row goes: there
+   * is nothing to offer and no fault to report. A pack that could not be
+   * read at all, a fetch that did not answer or text that does not parse,
+   * says so and stays where it is, because a row that vanished would tell
+   * somebody this pack has no keys when nobody knows whether it does.
+   */
   const read = async () => {
-    if (pack) return;
+    if (pack || failed || reading.current) return;
+    reading.current = true;
     try {
       const parsed = loadPackText(await load(), "yaml");
-      if (parsed.ok && hasKeys(parsed.pack)) setPack(parsed.pack);
+      if (!parsed.ok) setFailed(true);
+      else if (hasKeys(parsed.pack)) setPack(parsed.pack);
       else setNothing(true);
     } catch {
-      // Nothing to read: a priced listing, or a fetch that did not answer.
-      setNothing(true);
+      setFailed(true);
+    } finally {
+      reading.current = false;
     }
   };
 
@@ -79,7 +97,9 @@ export function DeckProfiles({ load }: { load: () => Promise<string> }) {
     >
       <summary title="A profile for your Stream Deck, laid out from this pack">Stream Deck profile</summary>
       <div className="rowMenuPanel">
-        {pack === null ? (
+        {failed ? (
+          <p className="muted small">Could not read the pack.</p>
+        ) : pack === null ? (
           <p className="muted small">Loading…</p>
         ) : (
           <>
@@ -87,7 +107,7 @@ export function DeckProfiles({ load }: { load: () => Promise<string> }) {
             <div className="options">
               {DEVICE_IDS.map((device) => (
                 <button key={device} className="chip pick" disabled={busy !== null} onClick={() => void download(device)}>
-                  {DEVICES[device].label}
+                  {busy === device ? "Building…" : DEVICES[device].label}
                 </button>
               ))}
             </div>

@@ -417,8 +417,10 @@ export function MarketplaceView({
                       ))}
                     </div>
                   )}
-                  {/* A deck laid out from this pack, for anybody who has one. */}
-                  {e.price === "free" && <DeckProfiles load={e.load} />}
+                  {/* A deck laid out from this pack, for anybody who has one.
+                      A pack, and a free one: a setup is not laid out on a deck,
+                      and a priced listing has no text to read until it is bought. */}
+                  {e.kind === "pack" && e.price === "free" && <DeckProfiles load={e.load} />}
                   <footer className="marketCardFoot">
                     <div className="marketCardFootLeft">
                       <button
