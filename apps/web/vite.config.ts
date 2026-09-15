@@ -46,6 +46,7 @@ export default defineConfig(({ mode }) => {
       alias: {
         "@runlog/rules-schema": fileURLToPath(new URL("../../packages/rules-schema/src/index.ts", import.meta.url)),
         "@runlog/engine": fileURLToPath(new URL("../../packages/engine/src/index.ts", import.meta.url)),
+        "@runlog/deck-profiles": fileURLToPath(new URL("../../packages/deck-profiles/src/index.ts", import.meta.url)),
         // The font files, by alias, so src/fonts.css can name exactly the
         // latin subsets it wants without a path into node_modules.
         "@font-literata": fileURLToPath(new URL("../../node_modules/@fontsource-variable/literata/files", import.meta.url)),

@@ -1,0 +1,12 @@
+{
+  "name": "@runlog/deck-profiles",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@runlog/rules-schema": "0.1.0"
+  }
+}

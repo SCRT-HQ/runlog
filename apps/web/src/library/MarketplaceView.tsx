@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { useDocDrawer } from "../docs/DocDrawer.tsx";
+import { DeckProfiles } from "./DeckProfiles.tsx";
 import {
   facets,
   FEATURES,
@@ -416,6 +417,10 @@ export function MarketplaceView({
                       ))}
                     </div>
                   )}
+                  {/* A deck laid out from this pack, for anybody who has one.
+                      A pack, and a free one: a setup is not laid out on a deck,
+                      and a priced listing has no text to read until it is bought. */}
+                  {e.kind === "pack" && e.price === "free" && <DeckProfiles load={e.load} />}
                   <footer className="marketCardFoot">
                     <div className="marketCardFootLeft">
                       <button
