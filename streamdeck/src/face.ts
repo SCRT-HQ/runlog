@@ -13,17 +13,25 @@ import type { Face, Tone } from "./state.ts";
  * to do. System sans, since a font in an SVG would have to travel as
  * base64 on every redraw.
  *
+ * The grounds carry the family, because an edge 3px wide is not enough to
+ * tell six kinds of key apart across a deck at arm's length: celadon-tinted
+ * where the key moves the run, kiln-tinted for undo and for a refusal,
+ * neutral and a shade lighter for the furniture, near-black under a readout
+ * so the number floats. Every ink clears 4.5:1 on its own ground and every
+ * `when` line clears 3:1, which `face.test.ts` checks rather than trusts.
+ *
  * `stroke` is the frame's width, and `quiet` the color of the `when` line
- * and the corner glyph where the edge is too dark to read them in - which
- * is a readout, whose frame is a hairline rather than an accent.
+ * and the corner glyph where the edge is too dark to read them in - a
+ * readout, the furniture, and a key with nothing to do, whose frames are
+ * hairlines and near-grounds rather than accents.
  */
 const TONE: Record<Tone, { ground: string; ink: string; edge: string; stroke?: number; quiet?: string }> = {
-  live: { ground: "#1e2f27", ink: "#e7eae6", edge: "#8cc3a6" },
-  dim: { ground: "#1b201d", ink: "#8d958f", edge: "#2f3733" },
+  live: { ground: "#243d31", ink: "#e7eae6", edge: "#8cc3a6" },
+  dim: { ground: "#1b201d", ink: "#8d958f", edge: "#2f3733", quiet: "#8d958f" },
   refuse: { ground: "#33211a", ink: "#e7eae6", edge: "#dd8f63" },
-  undo: { ground: "#1e2f27", ink: "#e7eae6", edge: "#dd8f63" },
-  deck: { ground: "#1b201d", ink: "#e7eae6", edge: "#2f3733", quiet: "#8d958f" },
-  readout: { ground: "#151311", ink: "#e7eae6", edge: "#2f3733", stroke: 1, quiet: "#8d958f" },
+  undo: { ground: "#3a2a1f", ink: "#e7eae6", edge: "#dd8f63" },
+  deck: { ground: "#262b28", ink: "#e7eae6", edge: "#2f3733", quiet: "#8d958f" },
+  readout: { ground: "#121413", ink: "#e7eae6", edge: "#2f3733", stroke: 1, quiet: "#8d958f" },
 };
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -156,47 +164,83 @@ export function wrap(text: string, size: number, width = LINE, lines = MAX_LINES
 }
 
 /**
- * The type scale, biggest first. Every step gets the same three lines and
- * the same 128px; what changes is how much of a phrase that holds. A title
- * takes the first step that keeps every word whole; one too long for the
- * last step is wrapped to it anyway and ellipsized rather than drawn over
- * the frame.
+ * The type scale, biggest first. A title takes the first step that keeps
+ * every word whole in the room it has; one too long for the last step is
+ * wrapped to it anyway and ellipsized rather than drawn over the frame.
  */
 const SCALE = [40, 34, 30, 26, 22] as const;
 
-/** Whether wrapping at this size keeps every word of the phrase. */
-function whole(text: string, size: number): boolean {
-  return wrap(text, size).join(" ") === text.split(/\s+/).filter(Boolean).join(" ");
-}
+/** Baseline to baseline, as a multiple of the size. */
+const LEADING = 1.15;
 
-function typeset(text: string): { lines: string[]; size: number } {
-  const size = SCALE.find((s) => whole(text, s)) ?? SCALE[SCALE.length - 1]!;
-  return { lines: wrap(text, size), size };
+/**
+ * The box the title is centered in: top, bottom, and so the room between.
+ *
+ * Height used to be nobody's business, since three lines at any size were
+ * assumed to fit. They do not: "Give Great Runes" came out three lines of
+ * 40px and sat on top of the `when` line under it. So the box shrinks for
+ * whatever else the key is wearing. A glyph holds the top 36px (8px in,
+ * 28px square); a `when` line holds everything below 100, which leaves its
+ * 16px band at y=126 clear; with neither, the title has 18 to 126 and sits
+ * centered on the key the way it always did.
+ */
+function box(when: boolean, glyph: boolean): { top: number; bottom: number } {
+  return { top: glyph ? 36 : when ? 20 : 18, bottom: when ? 100 : glyph ? 116 : 126 };
 }
 
 /**
- * The corner glyph: 18px square, 8px in from the top and the left.
+ * How many lines of this size the room holds, never more than `MAX_LINES`
+ * and never fewer than one: a key with a glyph and a `when` line has room
+ * for two lines of 26, and drawing a third would put it through the band
+ * below. One line always draws, even where it overhangs, because a key with
+ * nothing on it says less than a key with a cut title.
+ */
+function roomFor(size: number, room: number): number {
+  return Math.max(1, Math.min(MAX_LINES, Math.floor(room / (size * LEADING))));
+}
+
+/** Whether wrapping at this size keeps every word of the phrase. */
+function whole(text: string, size: number, lines: number): boolean {
+  return wrap(text, size, LINE, lines).join(" ") === text.split(/\s+/).filter(Boolean).join(" ");
+}
+
+/**
+ * The lines, the size, and where the middle of the first line sits. The
+ * size is the largest whose lines fit the room as well as the width.
+ */
+function typeset(text: string, has: { when?: boolean; glyph?: boolean } = {}): { lines: string[]; size: number; top: number } {
+  const { top, bottom } = box(has.when === true, has.glyph === true);
+  const room = bottom - top;
+  const size = SCALE.find((s) => whole(text, s, roomFor(s, room))) ?? SCALE[SCALE.length - 1]!;
+  const lines = wrap(text, size, LINE, roomFor(size, room));
+  return { lines, size, top: (top + bottom) / 2 - ((lines.length - 1) * size * LEADING) / 2 };
+}
+
+/**
+ * The corner glyph: 28px square, 8px in from the top and the left.
  *
  * The action's own drawing, so a key says which key it is while the title
  * says what it would do. The drawings are 144 square (`design/actions`),
- * so the scale is 18/144; they are drawn in white, and the white is
+ * so the scale is 28/144; they are drawn in white, and the white is
  * swapped for the tone's quiet color the way `design/export.mjs` swaps it
- * for the key images. 70% opacity keeps it a mark rather than a second
- * thing to read - the title is the thing to read.
+ * for the key images.
+ *
+ * 18px at 70% was a smudge on a deck across the room. 28px at 85% is a
+ * mark you can name at arm's length and still not read before the title,
+ * and the title now starts below it rather than behind it.
  */
-const GLYPH_PX = 18;
+const GLYPH_PX = 28;
 const GLYPH_AT = 8;
 
 function corner(glyph: string, color: string): string {
   const scale = (GLYPH_PX / 144).toFixed(5);
-  return `<g transform="translate(${GLYPH_AT} ${GLYPH_AT}) scale(${scale})" opacity="0.7">${glyph.replaceAll("#ffffff", color)}</g>`;
+  return `<g transform="translate(${GLYPH_AT} ${GLYPH_AT}) scale(${scale})" opacity="0.85">${glyph.replaceAll("#ffffff", color)}</g>`;
 }
 
 export function faceImage(face: Face, glyph?: string): string {
   const t = TONE[face.tone];
   const quiet = t.quiet ?? t.edge;
-  const { lines, size } = typeset(face.title);
-  const top = 72 - ((lines.length - 1) * size * 1.15) / 2 + (face.when ? -10 : 0);
+  const { lines, size, top } = typeset(face.title, { when: face.when !== undefined, glyph: glyph !== undefined });
   // One positioned <text> per line, baseline given outright: the software
   // draws SVG with a renderer that honors x and y on a text element and
   // little else - a tspan with its own position, or a dominant-baseline,
@@ -205,7 +249,7 @@ export function faceImage(face: Face, glyph?: string): string {
   const spans = lines
     .map(
       (l, i) =>
-        `<text class="t" x="72" y="${(top + i * size * 1.15 + size * 0.36).toFixed(1)}" text-anchor="middle" font-size="${size}" font-weight="600" fill="${t.ink}" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif">${esc(l)}</text>`,
+        `<text class="t" x="72" y="${(top + i * size * LEADING + size * 0.36).toFixed(1)}" text-anchor="middle" font-size="${size}" font-weight="600" fill="${t.ink}" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif">${esc(l)}</text>`,
     )
     .join("");
   const when = face.when
