@@ -4,8 +4,8 @@
  * Everything this app keeps on the device lived in one database with one
  * name. That is right for a copy on disk, where there are no accounts at
  * all, and wrong the moment a browser has been signed in to something:
- * signing out cleared nothing, so the next person to open the app — or
- * the same person on a phone that had never signed in — saw whatever the
+ * signing out cleared nothing, so the next person to open the app, or
+ * the same person on a phone that had never signed in, saw whatever the
  * last account had synced down, packs included.
  *
  * So the database is named for whoever is looking at it, and signed out
@@ -15,7 +15,7 @@
  * ## What this deliberately does not do
  *
  * It does not put the site in the name. IndexedDB is scoped to an origin
- * by the browser — scheme, host and port — so `runlog.example.com` and
+ * by the browser (scheme, host and port), so `runlog.example.com` and
  * `runlog.dev.example.com` already cannot see each other's databases, and
  * neither can http and https on the same host. Putting the host in the
  * name would add a part that can never vary, and imply a protection that

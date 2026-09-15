@@ -622,7 +622,7 @@ export function ControlSettings({
           <ul className="muted small">
             {said.map((c, i) => (
               <li key={i}>
-                <strong>{c.where}</strong> — {c.says}
+                <strong>{c.where}</strong>: {c.says}
               </li>
             ))}
           </ul>

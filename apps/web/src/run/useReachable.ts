@@ -7,8 +7,8 @@ import { rememberWatchKey, watchKeyHere } from "./watchKey.ts";
 /**
  * A run makes itself reachable, so an address copied from it works.
  *
- * Every stream address a run hands out — a widget in a scene, the socket a
- * tool dials, the live page — needs two things the server issues: the run
+ * Every stream address a run hands out (a widget in a scene, the socket a
+ * tool dials, the live page) needs two things the server issues: the run
  * open to watchers, and a watch key on the account. Both used to be asked
  * for by hand, in two different panels, and neither said much about the
  * other. So the ordinary way to arrive here was to copy an address that
