@@ -30,13 +30,19 @@ describe("faceImage", () => {
     const svg = Buffer.from(faceImage({ title, tone: "live" }).split(",")[1]!, "base64").toString("utf8");
     const lines = [...svg.matchAll(/<tspan[^>]*>([^<]*)<\/tspan>/g)].map((m) => m[1]!);
     expect(lines.length).toBe(3);
-    for (const l of lines) expect(l.length).toBeLessThanOrEqual(12);
+    for (const l of lines) expect(l.length).toBeLessThanOrEqual(10);
     expect(svg).toContain('font-size="22"');
   });
-  it("gives a one-word title the largest type", () => {
-    const svg = Buffer.from(faceImage({ title: "Roll", tone: "live" }).split(",")[1]!, "base64").toString("utf8");
+  it("gives a one-word title the largest type that holds it", () => {
+    const svg = Buffer.from(faceImage({ title: "Enter", tone: "live" }).split(",")[1]!, "base64").toString("utf8");
     expect(svg).toContain('font-size="40"');
     expect((svg.match(/<tspan/g) ?? []).length).toBe(1);
+  });
+  it("steps a word too wide for the largest size down rather than over the frame", () => {
+    const svg = Buffer.from(faceImage({ title: "Offline", tone: "dim" }).split(",")[1]!, "base64").toString("utf8");
+    expect(svg).toContain('font-size="30"');
+    expect((svg.match(/<tspan/g) ?? []).length).toBe(1);
+    expect(svg).not.toContain("…");
   });
   it("draws the when line but not the fraction", () => {
     const svg = Buffer.from(faceImage({ title: "Weather", tone: "live", when: "2:14", fraction: 0.5 }).split(",")[1]!, "base64").toString(

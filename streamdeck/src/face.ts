@@ -57,16 +57,17 @@ export function wrap(text: string, width = 10, lines = 3): string[] {
 /**
  * The type scale, biggest first, with the line width each size holds.
  *
- * A 144px face with 12px either side leaves 120px for the title, which is
- * roughly seven characters at 40, nine at 30 and twelve at 22. A title
- * takes the first step it fits in whole; one too long for the last step is
- * wrapped to it anyway and ellipsized on the last line rather than drawn
- * over the frame.
+ * A 144px face with 12px either side leaves 120px for the title. The system
+ * sans averages about 0.55em a glyph at these weights, so 120px is five
+ * characters at 40, seven at 30 and ten at 22 - the frame decides the width,
+ * not the other way about. A title takes the first step it fits in whole;
+ * one too long for the last step is wrapped to it anyway and ellipsized on
+ * the last line rather than drawn over the frame.
  */
 const SCALE = [
-  { size: 40, width: 7, lines: 1 },
-  { size: 30, width: 9, lines: 2 },
-  { size: 22, width: 12, lines: 3 },
+  { size: 40, width: 5, lines: 1 },
+  { size: 30, width: 7, lines: 2 },
+  { size: 22, width: 10, lines: 3 },
 ] as const;
 
 /** Whether wrapping at this step keeps every word of the phrase. */

@@ -64,6 +64,12 @@ describe("pressing the follow key", () => {
     expect(mock.pressed).toEqual([{ press: "answer", answer: { subject: "A tall bowl" } }]);
   });
 
+  it("takes the same decision from a touch tap as from the dial under it", async () => {
+    mock.state = on([{ kind: "checklist", label: "Tick everything and Next", items: 2 }]);
+    await new Next().onTouchTap({ action: key(), payload: { settings: {} } } as never);
+    expect(mock.pressed).toEqual([{ press: "answer", answer: { ticks: "all" } }]);
+  });
+
   it("presses the primary and lets the page refuse it where it was told to stop", async () => {
     mock.state = on([{ kind: "checklist", label: "Tick everything and Next", items: 2 }]);
     await new Next().onKeyDown({ action: key(), payload: { settings: { stop: true } } } as never);
