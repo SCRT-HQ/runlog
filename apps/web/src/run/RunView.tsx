@@ -15,7 +15,7 @@ import {
   scoreOf,
   unitPhases,
 } from "@runlog/engine";
-import type { Pack } from "@runlog/rules-schema";
+import type { Pack, Setup } from "@runlog/rules-schema";
 import {
   checklistOf,
   closesUnit,
@@ -43,7 +43,7 @@ import { Checklist, checklistDone, ticksToFinish } from "./Checklist.tsx";
 import { evidenceFor, pointOf } from "./evidence.ts";
 import { Receipt, type RollReceipt } from "./Receipt.tsx";
 import { closesTheUnit, startsItself } from "./handsFree.ts";
-import type { RolledDie } from "../rolling.ts";
+import { type RolledDie } from "../rolling.ts";
 import { useSync } from "../sync/SyncProvider.tsx";
 import { syncBus } from "../sync/bus.ts";
 import { DiceCurtain, rolledOf, type RolledGesture } from "../dice/DiceCurtain.tsx";
@@ -75,7 +75,8 @@ import { entryTextOf, paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
 import { offerOf } from "./offer.ts";
 import { takePress, type Verdict } from "./takePress.ts";
 import { isEmpty, tidy, type ControlProfile } from "../control/profile.ts";
-import { chosenFrom, withChosen, type ChosenSetup } from "../control/setups.ts";
+import { chose, chosenFrom, forTool, setupsHere, withChosen, type ChosenSetup } from "../control/setups.ts";
+import { builtins } from "../control/builtin.ts";
 import { SetupPicker } from "./SetupPicker.tsx";
 import { lifecycleGestures, marksOf, type LifecycleMarks } from "./gestures.ts";
 import { useRace } from "./useRace.ts";
@@ -171,6 +172,15 @@ export function heldMove(move: { finalizes?: boolean }, owed: number): boolean {
  * it is sent with whatever the run reads at anyway.
  */
 const HELD_VERDICT_MS = 1500;
+
+/**
+ * The same wait, for a press whose whole effect was to start the dice.
+ *
+ * Nothing is appended until they land and the total has been read, which
+ * is the tray's flight and a beat after it -- longer than the wait above,
+ * so the ordinary one would report "done" over dice still in the air.
+ */
+const DICE_VERDICT_MS = 6000;
 
 /**
  * Whether a move is asked of each racer rather than of the table: the pack
@@ -281,6 +291,12 @@ export function RunView({
    */
   const [receipts, setReceipts] = useState<RollReceipt[]>([]);
 
+  // The step is done once nothing more is asked; its receipts wait to be
+  // read, unless this device asked them not to. Declared here, ahead of
+  // `currentOffer` below, because the offer a deck sees has to show the
+  // same receipts the page does.
+  const settled = receipts.length > 0 && !run.pending?.request;
+
   // Who is on the board, read here as `Moves` reads it: the offer has to
   // split a move the same way the panel does. Held by a memo because the
   // offer is, and an empty roster built afresh on every render would
@@ -288,73 +304,109 @@ export function RunView({
   const racing = useMemo(() => (run.moderated ? (run.state?.contestants ?? []) : []), [run.moderated, run.state]);
 
   /**
+   * The setups this run could be played under, found the way `HandOut`
+   * finds them: the pack's shipped profile names the tool, and every
+   * setup written for that tool is on offer. Empty until they are read,
+   * and empty for good where the pack names no tool, which is the same
+   * answer the picker in Settings gives.
+   */
+  const [offeredSetups, setOfferedSetups] = useState<Setup[]>([]);
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      const tool = (await builtins()).find((b) => b.pack === pack.id)?.profile.tool;
+      const all = await setupsHere();
+      if (live) setOfferedSetups(forTool(all, tool));
+    })();
+    return () => {
+      live = false;
+    };
+  }, [pack.id]);
+
+  /**
    * What a deck may press, right now: one value for the snapshot this
    * device publishes and for the drive this device takes, so a press is
    * always checked against the same offer it was shown.
    */
-  const currentOffer = useMemo(
-    () =>
-      offerOf({
-        seq: run.events.length,
-        live: Boolean(run.started) && !run.readOnly && run.state?.status !== "ended",
-        settled: run.pending === null,
-        step: run.activeStep?.step ?? null,
-        stepLabel: run.state ? activeStepLabel(pack, run.activeStep) : null,
-        // A held move -- finalizing, with something still owed -- is the
-        // page's own button disabled; a deck sees the same offer the page
-        // would show, so it is left off rather than pressed and refused.
-        // A move the page splits into a button per racer is left off for
-        // the same reason: it is not one press on the page either.
-        moves: run.moves
-          .filter((m) => !heldMove(m.move, run.blockingObligations.length) && !perRacer(m.move, racing))
-          .map((m) => ({ id: m.id, label: m.move.label })),
-        canUndo: run.canUndo,
-        lastResult: run.state?.outcomes.at(-1) ? entryTextOf(pack, run.state.outcomes.at(-1)!) : null,
-        owed: run.blockingObligations.length,
-        // Held to the step's own table, the way the card holds them: a
-        // step that constrains what may be named suggests only from there.
-        suggestions: run.state
-          ? subjectSuggestions(pack, run.state, run.activeStep ? constrainedByOf(run.activeStep.step) : undefined).slice(0, 8)
-          : [],
-        // The same button the page itself would show between units: nothing
-        // else is waiting to be read or answered first, and there is
-        // nowhere left to go but the unit ahead. Ended, unstarted, watching,
-        // still asked something, or a receipt still on screen -- none of
-        // those has a between-units button on the page, so none of them has
-        // one here.
-        between:
-          run.state &&
-          Boolean(run.started) &&
-          !run.readOnly &&
-          run.state.status !== "ended" &&
-          run.pending === null &&
-          receipts.length === 0 &&
-          !run.activeStep
-            ? run.state.unit === 0
-              ? `Enter ${pack.vocabulary.unit.one} 1`
-              : `Enter ${pack.vocabulary.unit.one} ${run.state.unit + 1}`
-            : null,
-        // What the step's own button says with every box ticked, in the
-        // card's words: the closing card's Next, or the manual card's
-        // Done. Nothing where the step has no list, because there is then
-        // no list to tick and the primary is the press.
-        finishLabel: run.activeStep && checklistOf(run.activeStep.step).length > 0 ? finishWords(pack, run.activeStep.step) : null,
-      }),
-    [
-      run.events.length,
-      run.started,
-      run.readOnly,
-      run.state,
-      run.pending,
-      run.activeStep,
-      run.moves,
-      racing,
-      run.canUndo,
-      run.blockingObligations.length,
-      receipts.length,
-      pack,
-    ],
-  );
+  const currentOffer = useMemo(() => {
+    const stepLabel = run.state ? activeStepLabel(pack, run.activeStep) : null;
+    return offerOf({
+      seq: run.events.length,
+      live: Boolean(run.started) && !run.readOnly && run.state?.status !== "ended",
+      settled: run.pending === null,
+      // The receipts of the step's own throws, waiting on the page's own
+      // Carry on: a deck sees the same thing the page shows, not a fresh
+      // read of the engine underneath it.
+      receipts: settled,
+      step: run.activeStep?.step ?? null,
+      stepLabel,
+      // What the engine itself is waiting on, not what the step is: a
+      // pending roll is nobody being asked to judge anything, so a deck
+      // may throw the dice the same way the page's own button does.
+      request: run.pending?.request
+        ? run.pending.request.kind === "roll"
+          ? { kind: "roll", label: run.pending.request.label ?? stepLabel ?? "" }
+          : { kind: "other" }
+        : null,
+      // A held move -- finalizing, with something still owed -- is the
+      // page's own button disabled; a deck sees the same offer the page
+      // would show, so it is left off rather than pressed and refused.
+      // A move the page splits into a button per racer is left off for
+      // the same reason: it is not one press on the page either.
+      moves: run.moves
+        .filter((m) => !heldMove(m.move, run.blockingObligations.length) && !perRacer(m.move, racing))
+        .map((m) => ({ id: m.id, label: m.move.label })),
+      canUndo: run.canUndo,
+      lastResult: run.state?.outcomes.at(-1) ? entryTextOf(pack, run.state.outcomes.at(-1)!) : null,
+      owed: run.blockingObligations.length,
+      // Held to the step's own table, the way the card holds them: a
+      // step that constrains what may be named suggests only from there.
+      suggestions: run.state
+        ? subjectSuggestions(pack, run.state, run.activeStep ? constrainedByOf(run.activeStep.step) : undefined).slice(0, 8)
+        : [],
+      // The same button the page itself would show between units: nothing
+      // else is waiting to be read or answered first, and there is
+      // nowhere left to go but the unit ahead. Ended, unstarted, watching,
+      // still asked something, or a receipt still on screen -- none of
+      // those has a between-units button on the page, so none of them has
+      // one here.
+      between:
+        run.state &&
+        Boolean(run.started) &&
+        !run.readOnly &&
+        run.state.status !== "ended" &&
+        run.pending === null &&
+        receipts.length === 0 &&
+        !run.activeStep
+          ? run.state.unit === 0
+            ? `Enter ${pack.vocabulary.unit.one} 1`
+            : `Enter ${pack.vocabulary.unit.one} ${run.state.unit + 1}`
+          : null,
+      // What the step's own button says with every box ticked, in the
+      // card's words: the closing card's Next, or the manual card's
+      // Done. Nothing where the step has no list, because there is then
+      // no list to tick and the primary is the press.
+      finishLabel: run.activeStep && checklistOf(run.activeStep.step).length > 0 ? finishWords(pack, run.activeStep.step) : null,
+      // Id and title only: a key face shows the title, and a press names
+      // the id. What the setup actually does stays here, where the run is.
+      setups: offeredSetups.map((s) => ({ id: s.id, title: s.title })),
+    });
+  }, [
+    run.events.length,
+    run.started,
+    run.readOnly,
+    run.state,
+    run.pending,
+    run.activeStep,
+    run.moves,
+    racing,
+    run.canUndo,
+    run.blockingObligations.length,
+    receipts.length,
+    settled,
+    offeredSetups,
+    pack,
+  ]);
   useEffect(() => {
     if (!api || !publishing || !run.record || !run.state) return;
     const record = run.record;
@@ -511,6 +563,74 @@ export function RunView({
     [],
   );
 
+  const awaiting = useRef<Omit<RollReceipt, "outcomes"> | null>(null);
+  const answered = useRef(0);
+
+  /**
+   * A roll asked for by a deck, counted rather than carried out here.
+   *
+   * The request panel is the only place dice are thrown, so a press goes
+   * to it as a number that has gone up. Anything this side did instead
+   * would put a total on screen with no throw in front of it, which is
+   * the one thing the panel is written not to do.
+   */
+  const [machineRoll, setMachineRoll] = useState(0);
+
+  /**
+   * Answering whatever the engine is waiting on: the page's own request
+   * panel calls this, and so does a deck's roll press, because a machine
+   * roll is the same answer either way.
+   */
+  const answer = useCallback(
+    (key: string, value: string | number | boolean, machineRolled?: boolean, dice?: RolledDie[], seed?: number) => {
+      const request = run.pending?.request;
+      answered.current += 1;
+      if (request?.kind === "roll" && typeof value === "number") {
+        awaiting.current = {
+          dice: dice ?? null,
+          total: value,
+          label: request.label ?? null,
+          notation: request.dice,
+          table: pack.tables[request.purpose] ? request.purpose : null,
+          machineRolled: machineRolled === true,
+          ...(seed !== undefined ? { seed } : {}),
+        };
+      }
+      run.answer(key, value, machineRolled);
+    },
+    [run],
+  );
+
+  /**
+   * `handsFree`, `closing` and `carryOn`, hoisted ahead of the drive effect
+   * below: a deck's carry-on press calls the same `carryOn` the page's own
+   * button does, not a second path through `run.completeStep`, and that
+   * function has to exist before the effect that closes over it. The full
+   * account of hands-free is further down, where `begun` and the carry-on
+   * timer read these.
+   */
+  const handsFree = run.state ? handsFreeIn(pack, run.state) : false;
+  const live = run.state?.status === "active" && !run.readOnly;
+  const closingStep = run.activeStep && closesUnit(run.activeStep.step) ? run.activeStep : null;
+  const closing = closesTheUnit({
+    handsFree,
+    live: Boolean(live),
+    settled,
+    step: closingStep?.step ?? null,
+    owed: run.blockingObligations.length,
+    thresholds: run.thresholds.length,
+    globals: run.globals.length,
+  });
+
+  /**
+   * Carry on: clear the receipt, and where that is also the end of the
+   * unit, close it and enter the next in the same press.
+   */
+  const carryOn = useCallback(() => {
+    setReceipts([]);
+    if (closing && closingStep) run.closeAndEnter(closingStep.phase, closingStep.index);
+  }, [closing, closingStep, run]);
+
   /**
    * A press from a deck, taken here because this is the device holding the
    * run. What the deck may press is the offer this device published; what
@@ -528,6 +648,9 @@ export function RunView({
     const active = run.activeStep;
     return syncBus.subscribe((news) => {
       if (news.t !== "drive" || news.run !== runId) return;
+      // Whether all this press did was put dice in the air. The verdict
+      // for one of those has longer to wait; see `DICE_VERDICT_MS`.
+      let threw = false;
       const verdict = takePress(
         news,
         { seq: run.events.length, offer: currentOffer, seen: driveSeen.current },
@@ -539,7 +662,15 @@ export function RunView({
               return;
             }
             if (!active) return;
-            if (id === "roll" && active.step.kind === "rollTable") {
+            const request = run.pending?.request;
+            if (id === "roll" && request?.kind === "roll") {
+              // The step already began -- hands-free, or a press before
+              // this one -- and is only waiting on dice. The panel's own
+              // "Roll for me" is pressed, so the dice fly on screen and
+              // the engine hears the total once they have landed.
+              setMachineRoll((n) => n + 1);
+              threw = true;
+            } else if (id === "roll" && active.step.kind === "rollTable") {
               const table = pack.tables[active.step.table];
               run.begin({
                 kind: "table",
@@ -548,6 +679,12 @@ export function RunView({
                 label: table?.title ?? active.step.table,
                 completes: { phase: active.phase, index: active.index },
               });
+            } else if (id === "carry-on" && currentOffer.primary?.kind === "receipt") {
+              // The receipts of the step's own throws are waiting on the
+              // page's own Carry on, not the engine's completeStep: where
+              // the step also closes the unit, the page's callback closes
+              // and enters the next one in the same press.
+              carryOn();
             } else if (id === "carry-on") {
               run.completeStep(active.phase, active.index);
             } else if (id === "close") {
@@ -567,6 +704,17 @@ export function RunView({
             }
             run.declareSubject(active.phase, active.index, String(a["subject"] ?? ""));
           },
+          setup: async (id) => {
+            const picked = offeredSetups.find((s) => s.id === id);
+            if (!picked) throw new Error("That setup is not here.");
+            // Both halves of what Settings does in two presses: the run is
+            // played under this from here on, and everyone attached now
+            // gets it. The word goes out only once the write has landed,
+            // because the server builds what a tool is sent from the run's
+            // saved profile and would otherwise hand out the one before.
+            await run.setSetup(chose(picked));
+            sync.gesture(runId, "setup");
+          },
         },
       );
       if (!verdict.ok) {
@@ -581,17 +729,15 @@ export function RunView({
         to: news.from,
         ref: news.ref,
         was: run.events.length,
-        timer: window.setTimeout(() => settleVerdict(eventCount.current), HELD_VERDICT_MS),
+        timer: window.setTimeout(() => settleVerdict(eventCount.current), threw ? DICE_VERDICT_MS : HELD_VERDICT_MS),
       };
     });
-  }, [run, currentOffer, sync, pack, settleVerdict]);
+  }, [run, currentOffer, sync, pack, settleVerdict, offeredSetups, carryOn, settled]);
   const seen = useRef<number | null>(null);
-  const awaiting = useRef<Omit<RollReceipt, "outcomes"> | null>(null);
   // How many answers this view has given, and how many it had given when
   // the last receipt was issued: what a step that came back with the run
   // had already resolved is shown as such, not as a throw just made.
   const committedSeen = useRef(0);
-  const answered = useRef(0);
   const receipted = useRef(0);
   // What the run has resolved, counting what the block in flight has
   // resolved ahead of the log: a d100 lands on its line before the d6 it
@@ -669,9 +815,6 @@ export function RunView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run.events.length, run.state]);
 
-  // The step is done once nothing more is asked; its receipts wait to be
-  // read, unless this device asked them not to.
-  const settled = receipts.length > 0 && !run.pending?.request;
   const lastReceipt = receipts[receipts.length - 1] ?? null;
 
   /* ---------------------------------------------------------------- *
@@ -683,12 +826,11 @@ export function RunView({
    * is left is the result on screen and a button to move past it, which
    * is the whole interface for a game played with both hands busy.
    *
-   * Everything that genuinely asks still stops. `closing` below is
-   * false the moment a confirmation, a checklist or something owed
-   * stands between the player and the end of the unit.
+   * Everything that genuinely asks still stops. `closing` is false the
+   * moment a confirmation, a checklist or something owed stands between
+   * the player and the end of the unit. It and `handsFree` are declared
+   * above, ahead of the drive effect that presses `carryOn`.
    * ---------------------------------------------------------------- */
-  const handsFree = run.state ? handsFreeIn(pack, run.state) : false;
-  const live = run.state?.status === "active" && !run.readOnly;
 
   /**
    * A step that asks nothing, started without being asked to start it.
@@ -715,31 +857,6 @@ export function RunView({
       completes: { phase: active.phase, index: active.index },
     });
   }, [handsFree, live, run.activeStep, run.pending, receipts.length, pack, run]);
-
-  /**
-   * Whether reading this result is also what closes the unit: hands-free,
-   * settled, and the only thing standing after it is a closing step that
-   * asks for no confirmation.
-   */
-  const closingStep = run.activeStep && closesUnit(run.activeStep.step) ? run.activeStep : null;
-  const closing = closesTheUnit({
-    handsFree,
-    live: Boolean(live),
-    settled,
-    step: closingStep?.step ?? null,
-    owed: run.blockingObligations.length,
-    thresholds: run.thresholds.length,
-    globals: run.globals.length,
-  });
-
-  /**
-   * Carry on: clear the receipt, and where that is also the end of the
-   * unit, close it and enter the next in the same press.
-   */
-  const carryOn = useCallback(() => {
-    setReceipts([]);
-    if (closing && closingStep) run.closeAndEnter(closingStep.phase, closingStep.index);
-  }, [closing, closingStep, run]);
 
   useEffect(() => {
     // A receipt that closes the unit is never dismissed by the clock:
@@ -772,26 +889,6 @@ export function RunView({
   useEffect(() => {
     setPane("now");
   }, [stepNow]);
-
-  const answer = useCallback(
-    (key: string, value: string | number | boolean, machineRolled?: boolean, dice?: RolledDie[], seed?: number) => {
-      const request = run.pending?.request;
-      answered.current += 1;
-      if (request?.kind === "roll" && typeof value === "number") {
-        awaiting.current = {
-          dice: dice ?? null,
-          total: value,
-          label: request.label ?? null,
-          notation: request.dice,
-          table: pack.tables[request.purpose] ? request.purpose : null,
-          machineRolled: machineRolled === true,
-          ...(seed !== undefined ? { seed } : {}),
-        };
-      }
-      run.answer(key, value, machineRolled);
-    },
-    [run],
-  );
 
   // Reading the saved run is asynchronous. Offering to start a new one before
   // it arrives would invite the player to overwrite a run already in progress.
@@ -953,7 +1050,14 @@ export function RunView({
           {run.pending?.request ? (
             // The next thing the game is waiting on comes beneath the
             // receipts of the rolls before it, which stay where they are.
-            <RequestPanel request={run.pending.request} pack={pack} state={state} onAnswer={answer} onCancel={run.abandonPending} />
+            <RequestPanel
+              request={run.pending.request}
+              pack={pack}
+              state={state}
+              onAnswer={answer}
+              onCancel={run.abandonPending}
+              machineRoll={machineRoll}
+            />
           ) : receipts.length > 0 ? null : state.status === "ended" ? (
             <Ended pack={pack} state={state} />
           ) : state.unit === 0 ? (

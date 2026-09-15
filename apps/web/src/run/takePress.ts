@@ -20,6 +20,7 @@ export interface Acts {
   move: (id: string) => void;
   undo: () => void;
   answer: (answer: Record<string, unknown>) => void;
+  setup: (id: string) => void | Promise<void>;
 }
 
 /**
@@ -80,6 +81,16 @@ export function takePress(press: Press, at: { seq: number; offer: Offer; seen: M
       return settle(take(() => act.undo()));
     }
     case "answer": {
+      // Play on under a different setup: the page's own picker and its
+      // "Hand it out" in one press, which is what a key on a deck is for.
+      // It rides in the answer because that is the only field of a press
+      // the server passes through, and it names a setup by id, so it is
+      // checked against the offer the way a move is.
+      const named = press.answer?.["setup"];
+      if (typeof named === "string") {
+        if (!at.offer.setups.some((s) => s.id === named)) return settle({ ok: false, say: "That setup is not here." });
+        return settle(take(() => act.setup(named)));
+      }
       // Tick everything this step waits for and press its own button. The
       // offer says whether there is a list to tick; the act says whether
       // one of its boxes is beyond a deck, and throws its own words if so.

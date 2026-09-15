@@ -5,8 +5,10 @@ const base = {
   seq: 42,
   live: true,
   settled: true,
+  receipts: false,
   step: null,
   stepLabel: null,
+  request: null,
   moves: [],
   canUndo: false,
   lastResult: null,
@@ -14,6 +16,7 @@ const base = {
   suggestions: [],
   between: null,
   finishLabel: null,
+  setups: [],
 };
 
 describe("offerOf", () => {
@@ -39,6 +42,37 @@ describe("offerOf", () => {
     const offer = offerOf({ ...base, live: false, step: { kind: "rollTable" } as never, stepLabel: "Roll" });
     expect(offer.primary).toBeNull();
     expect(offer.needsPage).toBe("Open the run on the page");
+  });
+
+  // Task 20: the deck's Next used to go dim exactly where the page shows
+  // the step's receipts, because the offer knew nothing of them. Now it
+  // sees what the page shows: Carry on.
+  it("offers carry-on for the receipts waiting to be read", () => {
+    const offer = offerOf({ ...base, receipts: true, step: { kind: "rollTable" } as never, stepLabel: "Roll the Weather" });
+    expect(offer.primary).toEqual({ id: "carry-on", label: "Carry on", kind: "receipt" });
+    expect(offer.needsPage).toBeNull();
+    expect(offer.presets).toEqual([]);
+  });
+
+  it("offers nothing for the receipts on a run that is not live", () => {
+    const offer = offerOf({ ...base, live: false, receipts: true, step: { kind: "rollTable" } as never, stepLabel: "Roll" });
+    expect(offer.primary).toBeNull();
+    expect(offer.needsPage).toBe("Open the run on the page");
+  });
+
+  /*
+   * Task 16a: a key may put the run under one of the setups the page
+   * would offer. They are handed in rather than worked out here, so all
+   * this asks is that they reach the deck the way they were given.
+   */
+  it("carries the setups the run could be played under", () => {
+    const offer = offerOf({ ...base, setups: [{ id: "com.example.setups.starter", title: "Starter" }] });
+    expect(offer.setups).toEqual([{ id: "com.example.setups.starter", title: "Starter" }]);
+  });
+
+  it("offers no setup on a run that is not live", () => {
+    const offer = offerOf({ ...base, live: false, setups: [{ id: "com.example.setups.starter", title: "Starter" }] });
+    expect(offer.setups).toEqual([]);
   });
 
   // Review finding: moves and undo escaped the live gate, and they are
@@ -125,6 +159,34 @@ describe("offerOf", () => {
     const offer = offerOf({ ...base, settled: false, step: { kind: "rollTable" } as never, stepLabel: "Roll the Weather" });
     expect(offer.primary).toBeNull();
     expect(offer.needsPage).toBe("Roll the Weather on the page");
+  });
+
+  // Live testing, 2026-09-14: the follow key died exactly at a roll step,
+  // because an unsettled step was always sent back to the page. A pending
+  // roll is nobody being asked to judge anything, only to throw dice, and a
+  // deck can do that the same way the page's own "Roll for me" does.
+  it("offers the roll when the page is waiting on one", () => {
+    const offer = offerOf({
+      ...base,
+      settled: false,
+      step: { kind: "rollTable" } as never,
+      stepLabel: "Roll the Weather",
+      request: { kind: "roll", label: "Draw a curse" },
+    });
+    expect(offer.primary).toEqual({ id: "roll", label: "Draw a curse", kind: "rollTable" });
+    expect(offer.needsPage).toBeNull();
+  });
+
+  it("still sends an unsettled step back to the page when it is waiting on something else", () => {
+    const offer = offerOf({
+      ...base,
+      settled: false,
+      step: { kind: "declareSubject" } as never,
+      stepLabel: "Name the bowl",
+      request: { kind: "other" },
+    });
+    expect(offer.primary).toBeNull();
+    expect(offer.needsPage).toBe("Name the bowl on the page");
   });
 
   // Controller ruling: between units, the page's own button is the primary
