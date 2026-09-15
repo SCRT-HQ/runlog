@@ -23,17 +23,22 @@ export function RequestPanel({
   state,
   onAnswer,
   onCancel,
+  machineRoll,
 }: {
   request: InputRequest;
   pack: Pack;
   state: RunState;
   onAnswer: (key: string, value: string | number | boolean, machineRolled?: boolean, dice?: RolledDie[], seed?: number) => void;
   onCancel: () => void;
+  /** Bumped by a press from outside, which presses "Roll for me" here. See `RollRequest`. */
+  machineRoll?: number;
 }) {
   return (
     <section className="panel request">
       <h3 className="sectionTitle">The game is waiting on you</h3>
-      {request.kind === "roll" && <RollRequest request={request} table={pack.tables[request.purpose] ?? null} onAnswer={onAnswer} />}
+      {request.kind === "roll" && (
+        <RollRequest request={request} table={pack.tables[request.purpose] ?? null} onAnswer={onAnswer} machineRoll={machineRoll} />
+      )}
       {request.kind === "ask" && (
         <YesNo
           label={request.question}
@@ -55,11 +60,19 @@ function RollRequest({
   request,
   table,
   onAnswer,
+  machineRoll,
 }: {
   request: Extract<InputRequest, { kind: "roll" }>;
   /** The table this roll is for, when it is a table's own roll rather than an action's. */
   table: Table | null;
   onAnswer: (key: string, value: number, machineRolled?: boolean, dice?: RolledDie[], seed?: number) => void;
+  /**
+   * A count that goes up when something away from the page asks for the
+   * roll: a key on a deck. Each new number presses "Roll for me" here,
+   * so the dice fly and the total is read the way they are for anyone
+   * sitting at the page.
+   */
+  machineRoll?: number;
 }) {
   const [typed, setTyped] = useState("");
   // The table, opened beside the pad. A line pressed puts its number on
@@ -113,6 +126,27 @@ function RollRequest({
 
   const submit = () => ok && onAnswer(request.key, value);
 
+  const rollForMe = () => {
+    // A convenience, not the default -- and flagged as machine-rolled,
+    // so the log never claims you threw a die you did not throw.
+    if (!dice) return;
+    const { total, dice: values } = rollDice(request.dice, Math.random);
+    // The value is decided here; the seed is only how the dice fly.
+    setSettled(false);
+    setThrown({ total, dice: toDisplayDice(request.dice, values, total), seed: Math.floor(Math.random() * 4294967296) });
+    setRollId((n) => n + 1);
+  };
+
+  // A roll asked for from a deck presses the button rather than sending
+  // the answer in: there is one way dice are thrown here, and a number
+  // that appeared without one being thrown is not a roll anybody saw. A
+  // number arriving while `thrown` is set is let go -- the dice are
+  // already in the air, and a throw is not restarted mid-flight.
+  useEffect(() => {
+    if (machineRoll && !thrown) rollForMe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [machineRoll]);
+
   return (
     <div className="rollRequest">
       <p className="askLabel">
@@ -134,20 +168,7 @@ function RollRequest({
         <button className="primary" disabled={!ok || !!thrown} onClick={submit}>
           Enter
         </button>
-        <button
-          className="ghost"
-          disabled={!!thrown}
-          onClick={() => {
-            // A convenience, not the default -- and flagged as machine-rolled,
-            // so the log never claims you threw a die you did not throw.
-            if (!dice) return;
-            const { total, dice: values } = rollDice(request.dice, Math.random);
-            // The value is decided here; the seed is only how the dice fly.
-            setSettled(false);
-            setThrown({ total, dice: toDisplayDice(request.dice, values, total), seed: Math.floor(Math.random() * 4294967296) });
-            setRollId((n) => n + 1);
-          }}
-        >
+        <button className="ghost" disabled={!!thrown} onClick={rollForMe}>
           {thrown ? "Rolling…" : "Roll for me"}
         </button>
         {lines.length > 0 && (
