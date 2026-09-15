@@ -33,6 +33,8 @@ export interface OfferInput {
   settled: boolean;
   step: Step | null;
   stepLabel: string | null;
+  /** What the engine is waiting on, when it is waiting on anything at all. */
+  request: { kind: "roll"; label: string } | { kind: "other" } | null;
   moves: Array<{ id: string; label: string }>;
   canUndo: boolean;
   lastResult: string | null;
@@ -86,8 +88,14 @@ export function offerOf(input: OfferInput): Offer {
 
   // An unsettled step is still being asked something, the same reasoning
   // `closesTheUnit` uses to refuse an unsettled unit: it is not yet a bare
-  // press for a key to make.
-  if (!input.settled) return { ...bare, primary: null, needsPage: `${label} on the page` };
+  // press for a key to make. A pending roll is the one exception: nobody is
+  // being asked to judge anything, only to throw dice, and a deck can throw
+  // them the same way the page's own "Roll for me" does.
+  if (!input.settled) {
+    if (input.request?.kind === "roll")
+      return { ...bare, primary: { id: "roll", label: input.request.label, kind: "rollTable" }, needsPage: null };
+    return { ...bare, primary: null, needsPage: `${label} on the page` };
+  }
 
   if (TYPED.has(kind))
     return {

@@ -504,7 +504,7 @@ The device holding the run publishes what a deck may press beside `control`, in 
 | Field | What it is |
 | --- | --- |
 | `seq` | The offer's own `events.length`; the `seq` a press against it must carry. |
-| `primary` | What a bare `primary` press takes: `id` is `roll`, `carry-on`, `close` or `enter`; `label` and `kind` are the step's own words. Null where nothing may be pressed without being asked something first. |
+| `primary` | What a bare `primary` press takes: `id` is `roll`, `carry-on`, `close` or `enter`; `label` and `kind` are the step's own words. Null where nothing may be pressed without being asked something first. While the page is waiting on a roll, `primary` is that roll, and pressing it rolls the app's own dice for you, logged as a machine roll. |
 | `moves` | The moves a `move` press may name, by id and label. A move that would close the unit while something is still owed is left off rather than offered and refused. |
 | `undo` | `{ "what": "…" }`, the last result in words, where there is one to take back; null otherwise. |
 | `needsPage` | Why `primary` is null, in words a key face can show, such as "Draw the weather on the page"; null where nothing needs it. |

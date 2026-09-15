@@ -7,6 +7,7 @@ const base = {
   settled: true,
   step: null,
   stepLabel: null,
+  request: null,
   moves: [],
   canUndo: false,
   lastResult: null,
@@ -125,6 +126,34 @@ describe("offerOf", () => {
     const offer = offerOf({ ...base, settled: false, step: { kind: "rollTable" } as never, stepLabel: "Roll the Weather" });
     expect(offer.primary).toBeNull();
     expect(offer.needsPage).toBe("Roll the Weather on the page");
+  });
+
+  // Live testing, 2026-09-14: the follow key died exactly at a roll step,
+  // because an unsettled step was always sent back to the page. A pending
+  // roll is nobody being asked to judge anything, only to throw dice, and a
+  // deck can do that the same way the page's own "Roll for me" does.
+  it("offers the roll when the page is waiting on one", () => {
+    const offer = offerOf({
+      ...base,
+      settled: false,
+      step: { kind: "rollTable" } as never,
+      stepLabel: "Roll the Weather",
+      request: { kind: "roll", label: "Draw a curse" },
+    });
+    expect(offer.primary).toEqual({ id: "roll", label: "Draw a curse", kind: "rollTable" });
+    expect(offer.needsPage).toBeNull();
+  });
+
+  it("still sends an unsettled step back to the page when it is waiting on something else", () => {
+    const offer = offerOf({
+      ...base,
+      settled: false,
+      step: { kind: "declareSubject" } as never,
+      stepLabel: "Name the bowl",
+      request: { kind: "other" },
+    });
+    expect(offer.primary).toBeNull();
+    expect(offer.needsPage).toBe("Name the bowl on the page");
   });
 
   // Controller ruling: between units, the page's own button is the primary
