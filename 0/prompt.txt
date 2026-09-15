@@ -1,0 +1,49 @@
+<task-notification>
+<task-id>a6aa94e9ac441d35a</task-id>
+<tool-use-id>toolu_01FDcWmNPFdrR1dLkvC1TnZm</tool-use-id>
+<output-file>C:\Users\xbox\AppData\Local\Temp\claude\C--Users-xbox-ScrtGit-sbm-ui\9994f719-da1d-46a6-aff1-a95b696e89ae\tasks\a6aa94e9ac441d35a.output</output-file>
+<status>completed</status>
+<summary>Agent "Review Task 14a: deck rolls" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result># Review: Task 14a — "a deck rolls the dice the page is waiting on"
+
+**Spec compliance**
+
+| Constraint | Status | Evidence |
+|---|---|---|
+| Deck path goes through the `answer` wrapper, matching the page's "Roll for me" exactly | ✅ | `apps/web/src/run/RunView.tsx:582-583` calls `rollDice(request.dice, Math.random)` then `answer(request.key, total, true, toDisplayDice(request.dice, values, total), Math.floor(Math.random() * 4294967296))`. `RequestPanel.tsx:144-147` does the identical sequence with the identical arg order into `onAnswer`, and `RunView.tsx:976` wires `onAnswer={answer}` — same local wrapper both routes call, never `run.answer` directly. |
+| `offerOf`: pending roll → `primary: { id: "roll", label, kind: "rollTable" }`, `needsPage: null`; other pending → old `needsPage`; settled unchanged; `!live` wins first | ✅ | `apps/web/src/run/offer.ts:94-98` (roll branch), `:79` (`!input.live` short-circuit precedes step/settled logic entirely), settled branches (`:100+`) untouched in the diff. |
+| 198-line `RunView.tsx` diff is a behavior-preserving move of `answer`/`awaiting`/`answered` | ✅ | Diffed the removed block (old ~329-347) against the added block (new 521-547) — byte-identical function body and `[run]` deps; `awaiting`/`answered` `useRef` declarations are likewise identical, just relocated. No hook is called conditionally in this file before the `!run.hydrated` early return (`RunView.tsx:818`), so hook order stays stable across renders. Nothing else in the surrounding code (`settleVerdict`, `waiting`, `pane` effects) was touched beyond the move. |
+| Effect dependency array includes `answer` | ✅ | `RunView.tsx:300`: `}, [run, currentOffer, sync, pack, settleVerdict, answer]);` |
+| Docs: exactly one sentence added to `primary` row, no duplication | ✅ | `docs/stream-api.md:507`, single occurrence confirmed via grep across the file. |
+| Tests: `offer.test.ts` covers roll-pending→primary and other-pending→needsPage; base fixture gained `request: null` | ✅ | `offer.test.ts:373` (`request: null` in `base`), `:399-409` (roll case), `:411-421` (other case). |
+| Skipping `RunView.offer.test.tsx` integration case is justified | ✅ | Verified independently: `packs/demo/pack.yaml:425-451` shows both `rollTable` steps ("Kiln Check", "Constraint") are `skipWhen: unitIndex lte 1`, and the file's only fixture (`toTheChecklist`, `RunView.offer.test.tsx:58-65`) stops at the first unit's checklist step. Reaching a live roll step needs a hand-authored unit-1 close + unit-2 entry sequence — a real authoring/correctness cost, and the brief's fallback ("otherwise say why") explicitly allows this. |
+| Commit subject exact, no trailers/footers | ✅ | `git log -1 --format=%B HEAD` → subject line `fix(run): a deck rolls the dice the page is waiting on` followed only by a plain-prose body, no trailers. |
+| Prose style matches file, no AI filler | ✅ | New comments ("nobody is being asked to judge anything, only to throw dice", "the same way the page's own 'Roll for me' does") match the file's existing voice; grep for common AI-tell vocabulary in added lines returned nothing. |
+
+**Verification run myself**
+- `npx vitest run apps/web/src/run` → 34 files, 243 tests, all passed.
+- `npm run typecheck` → clean across all six project references.
+- `npm run lint:docs` → 0 issues, 17 files.
+- Confirmed `npm run lint` genuinely does not exist in this checkout (no root or `apps/web` script, no ESLint config) — the report's flag on this is accurate, not an excuse.
+
+**Strengths**
+- The roll-pending exception in `offer.ts` is a minimal, surgical addition inside the existing unsettled branch — it doesn't touch the settled, typed, owed, or closesUnit logic at all.
+- The `RunView.tsx` reorder is genuinely just a move; the diff noise (198 lines) is proportional to relocating one callback and two refs, not to actual behavior change.
+- The report's reasoning for skipping the integration test is falsifiable and was independently verified against the pack YAML and the test fixture, not just taken on faith.
+- Deck path reuses `toDisplayDice`/`rollDice` from the exact same import sources as `RequestPanel`, avoiding drift between the two "Roll for me" implementations.
+
+**Issues**
+
+*Critical:* none.
+
+*Important:* none.
+
+*Minor:*
+- None found. The one thing worth a human's attention (not a defect) is the `npm run lint` gap the report flags — that's a pre-existing repo/tooling state issue, not something this task introduced or should have fixed.
+
+**Assessment**: `Task quality: Approved`
+
+The diff does exactly what the brief specifies: `offerOf` grows one well-scoped exception for pending rolls, the deck's roll press is byte-for-byte the same operation as the page's "Roll for me" button routed through the same `answer` wrapper, the `RunView.tsx` reshuffle is a verified no-op move to satisfy TS use-before-declaration (confirmed by diffing the moved blocks and checking hook-order stability), tests and docs match the brief's exact wording, and the commit message is clean. Both required verification commands pass with output matching the implementer's report, and the one deviation from the brief (no integration test in `RunView.offer.test.tsx`) is backed by a checkable, correct claim about the demo pack's `skipWhen` rules rather than hand-waving.</result>
+<usage><subagent_tokens>95993</subagent_tokens><tool_uses>23</tool_uses><duration_ms>179218</duration_ms></usage>
+</task-notification>

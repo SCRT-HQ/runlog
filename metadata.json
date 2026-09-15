@@ -1,0 +1,57 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2HN1B4MV69HG1GGJD95GASX",
+  "strategy": "manual-commit",
+  "branch": "the-deck-arrives",
+  "checkpoints_count": 4,
+  "files_touched": [
+    ".github/workflows/CI-CD.yml",
+    ".github/workflows/pr-title.yml",
+    "apps/web/src/guide/pages.ts",
+    "apps/web/src/guide/pages/streaming.mdx",
+    "docs/stream-api.md",
+    "package-lock.json",
+    "package.json",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/connect.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/connect@2x.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/metric.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/metric@2x.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/next.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/next@2x.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/press.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/press@2x.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/run.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/run@2x.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/undo.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/actions/undo@2x.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/category.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/category@2x.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/plugin.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/imgs/plugin@2x.png",
+    "streamdeck/com.scrthq.runlog.sdPlugin/manifest.json",
+    "streamdeck/package.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 9661,
+    "cache_creation_tokens": 1270605,
+    "cache_read_tokens": 253948003,
+    "output_tokens": 530578,
+    "api_call_count": 496,
+    "subagent_tokens": {
+      "input_tokens": 356,
+      "cache_creation_tokens": 396580,
+      "cache_read_tokens": 18912482,
+      "output_tokens": 88715,
+      "api_call_count": 178
+    }
+  }
+}
