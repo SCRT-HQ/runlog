@@ -9,6 +9,7 @@ import { Roll } from "./actions/roll.ts";
 import { pin, Run, runsForInspector } from "./actions/run.ts";
 import { Setup } from "./actions/setup.ts";
 import { Undo } from "./actions/undo.ts";
+import { profileFor } from "./profiles.ts";
 import { loadSession, normalizeBase, signIn, signOut, type Account } from "./session.ts";
 import { openWire } from "./socket.ts";
 import { makeStore } from "./store.ts";
@@ -24,9 +25,12 @@ const DEFAULT_API = "https://runlog.scrthq.com";
  * handed to the property inspector, which is a web view, so the session
  * never comes near them. It lives in a file of the plugin's own.
  */
-type Globals = { apiBase?: string; pinned?: string | null };
+type Globals = { apiBase?: string; pinned?: string | null; switchProfiles?: boolean };
 
 let base = DEFAULT_API;
+
+/** Whether attaching to a run moves the deck to that run's profile. Unset is on. */
+let switchProfiles = true;
 
 /**
  * Where Runlog is, for a key that has to name an address rather than
@@ -41,30 +45,30 @@ export const store = makeStore();
 export const wire = openWire((): Account => ({ apiBase: base }), store);
 
 /**
- * The profile a deck is switched to once a run attaches.
+ * Attaching moves the deck to the profile laid out for the run's pack.
  *
- * Not wired into the manifest yet: `streamdeck validate` refuses a
- * `Profiles` entry without the `.streamDeckProfile` file behind it, and
- * that file can only come from exporting the laid-out profile in the
- * Stream Deck app. Once `profiles/Runlog.streamDeckProfile` exists, the
- * manifest gains `Profiles: [{ Name: "Runlog", DeviceType: 0, Readonly: false, DontAutoSwitchWhenInstalled: true }]`.
- * Until then the switch below fails quietly, which is correct for a copy
- * without the profile.
+ * It is the one attach feedback that works on every model, a six-key Mini
+ * included, and it puts the pack's own moves under the streamer's hand the
+ * moment a run starts. A pack's profile is not installed until this asks
+ * for it, which is what keeps forty profiles out of a new install's list.
+ *
+ * On the first snapshot of an attach rather than on the attach itself: the
+ * pack's id travels with the snapshot, and the run's is not known until one
+ * lands. Once per attach after that, since a snapshot landing is not a
+ * reason to yank the deck away from wherever the streamer has gone since.
  */
-const PROFILE_NAME = "Runlog";
-
-/**
- * Attaching switches the deck to the Runlog profile. It is the one
- * attach feedback that works on every model, a six-key Mini included,
- * and it puts the run's keys under the streamer's hand the moment a run
- * starts. Only on a change from nothing to something: a snapshot landing
- * is not a reason to yank the deck away from whatever it was showing.
- */
-let wasAttached: string | null = null;
+let switchedFor: string | null = null;
 store.subscribe((s) => {
-  if (s.attached && !wasAttached)
-    for (const d of streamDeck.devices) void streamDeck.profiles.switchToProfile(d.id, PROFILE_NAME).catch(() => {});
-  wasAttached = s.attached;
+  if (!s.attached) {
+    switchedFor = null;
+    return;
+  }
+  if (!switchProfiles || switchedFor === s.attached || !s.snapshot) return;
+  switchedFor = s.attached;
+  for (const d of streamDeck.devices) {
+    const name = profileFor(s.snapshot.run?.packId, d.type);
+    if (name) void streamDeck.profiles.switchToProfile(d.id, name).catch(() => {});
+  }
 });
 
 // The Run inspector's list is only as fresh as the last appear; a run
@@ -107,6 +111,9 @@ export async function sayWho(): Promise<void> {
 
 function applyGlobals(g: Globals): void {
   base = normalizeBase(g.apiBase ?? "") || DEFAULT_API;
+  // Unset is on: a deck that has never opened Connect's settings still
+  // lands on the run's profile.
+  switchProfiles = g.switchProfiles !== false;
   // Only on a change: this fires from the plugin's own write of a pin as
   // much as from another surface's, and a pin already applied locally
   // should not force the run's snapshot to reload for nothing.

@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText, loadSetupText } from "@runlog/rules-schema";
 
-import { DEVICES } from "./layouts.mjs";
-import { container, profile, specs } from "./profiles.mjs";
+import { DEVICES, SKETCHES, SLUGS } from "./layouts.mjs";
+import { container, layouts, profile, specs, table } from "./profiles.mjs";
 
 /**
  * The profiles the plugin ships, held against the packs they were written
@@ -45,12 +45,68 @@ function placed(built) {
 const all = specs().map((spec) => ({ spec, built: profile(spec) }));
 
 describe("the profiles we ship", () => {
+  it("lays one out for the generic keys and one for every pack that ships", () => {
+    // The demo pack and every sketch, by the slug each takes from its file
+    // name. Written out rather than read from the folder a second time: this
+    // is the list, and a sketch that stopped parsing would otherwise drop
+    // off it without a word.
+    expect(layouts().map((l) => l.slug)).toEqual([
+      "runlog",
+      "demo",
+      "elden-ring",
+      "forfeits",
+      "ladder-work",
+      "practice-room",
+      "rocket-league-ladder",
+      "rocket-league-showdown",
+      "run-of-show",
+      "soundclash",
+      "twenty-five",
+    ]);
+    const sketches = readdirSync(join(repo, SKETCHES)).filter((f) => f.endsWith(".yaml"));
+    expect(layouts()).toHaveLength(sketches.length + 2);
+    expect(all).toHaveLength(layouts().length * Object.keys(DEVICES).length);
+    expect(all).toHaveLength(44);
+  });
+
   it("is one per pack per device, and the manifest lists every one", () => {
     expect(all.map(({ spec }) => `${spec.slug}-${spec.device}`)).toEqual(MANIFEST.Profiles.map((p) => p.Name.replace("profiles/", "")));
     for (const p of MANIFEST.Profiles) {
       const device = p.Name.split("-").pop();
       expect(p.DeviceType, `${p.Name} should be laid out for the device it names`).toBe(DEVICES[device].type);
     }
+  });
+
+  it("installs the generic four with the plugin and a pack's four on demand", () => {
+    // Forty profiles arriving on the day somebody installs the plugin is a
+    // profile list nobody can find their own work in. A pack's four are
+    // installed the first time a deck follows a run of that pack, and never
+    // switch themselves on the way in: the plugin says when.
+    for (const p of MANIFEST.Profiles) {
+      const generic = p.Name.startsWith("profiles/runlog-");
+      expect(p.AutoInstall, `${p.Name}`).toBe(generic);
+      expect(p.DontAutoSwitchWhenInstalled, `${p.Name}`).toBe(true);
+    }
+    expect(MANIFEST.Profiles.filter((p) => p.AutoInstall)).toHaveLength(4);
+  });
+
+  it("hands the plugin a table of the names rather than letting it guess them", () => {
+    // `src/profiles.ts` is written by the generator and read at run time. If
+    // it is behind the packs on disk the plugin asks for a profile that is
+    // not in the package, and the switch does nothing anybody can see.
+    const written = readFileSync(join(here, "..", "src", "profiles.ts"), "utf8");
+    expect(written.replace(/\r\n/g, "\n")).toBe(table().replace(/\r\n/g, "\n"));
+    for (const layout of layouts()) {
+      if (layout.pack) expect(written).toContain(`"${layout.pack.id}": "${layout.slug}"`);
+    }
+  });
+
+  it("keeps the slug Elden Ring's profile shipped under", () => {
+    // Its file name says the tool as well as the game; its slug does not,
+    // and changing that now would rename the profile on every deck that
+    // already has it.
+    expect(SLUGS["elden-ring-tarnishedtool"]).toBe("elden-ring");
+    expect(layouts().find((l) => l.slug === "elden-ring").pack.id).toBe("com.scrthq.runlog.elden-ring-tarnishedtool");
   });
 
   it("builds the same bytes twice, so regenerating is not a diff", () => {

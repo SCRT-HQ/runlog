@@ -16,7 +16,7 @@ Runlog is a referee and run log for dice-driven games: it draws the tables, keep
 
 Next action and Metric also sit on a dial on a Stream Deck +.
 
-The plugin also ships laid-out profiles, one per deck and one per bundled pack, built from the pack files by `npm run profiles`.
+The plugin also ships laid-out profiles, one per deck for the generic keys and one per deck for every pack it bundles, built from the pack files by `npm run profiles`. The Runlog profile installs with the plugin; a pack's arrives the first time the deck follows a run of that pack, and the deck switches to it unless Connect's settings say not to.
 
 ## What it needs
 

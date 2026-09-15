@@ -1,16 +1,18 @@
 /**
  * The profiles the plugin ships: a deck laid out before anybody touches it.
  *
- * Twelve `.streamDeckProfile` files, three layouts across four decks. One is
- * generic - the keys any run wants, whatever pack it is playing - and the
- * other two are written against a pack, with its moves on keys, its
+ * Forty-four `.streamDeckProfile` files, eleven layouts across four decks.
+ * One is generic - the keys any run wants, whatever pack it is playing -
+ * and the rest are written against a pack, with its moves on keys, its
  * counters and resources on the numbers, and the setups for its tool ready
  * to hand out. Nothing is typed in here: the ids come out of the pack files
  * through the same loader the app and the CLI use, so a renamed move
  * changes the profile on the next run of this script rather than going
  * quietly dead on somebody's deck.
  *
- * `npm run profiles -w streamdeck`. Nothing at run time depends on this.
+ * `npm run profiles -w streamdeck`. It also writes `src/profiles.ts`, which
+ * is the one thing here the plugin reads at run time: the table that turns a
+ * run's pack into the profile to switch a deck to.
  *
  * The container is a zip whose single top-level entry is a
  * `<UUID>.sdProfile/` folder. That is not documented anywhere; it is what
@@ -20,12 +22,12 @@
  */
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadPackText, loadSetupText } from "@runlog/rules-schema";
 
-import { BASE, DEVICES, DIALS } from "./layouts.mjs";
+import { BASE, DEMO, DEVICES, DIALS, SKETCHES, SLUGS } from "./layouts.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const plugin = join(here, "..", "com.scrthq.runlog.sdPlugin");
@@ -58,19 +60,6 @@ const TURNS = {
   next: { Name: "Next Page", UUID: "com.elgato.streamdeck.page.next" },
   previous: { Name: "Previous Page", UUID: "com.elgato.streamdeck.page.previous" },
 };
-
-/**
- * The three layouts, and the pack each is written against.
- *
- * Only the demo pack and the Elden Ring sketch are here, and deliberately:
- * a profile names a pack's moves out loud, and the packs that ship are the
- * only ones whose words belong in a file we hand to strangers.
- */
-const LAYOUTS = [
-  { slug: "runlog", name: "Runlog", pack: null },
-  { slug: "demo", pack: "packs/demo/pack.yaml" },
-  { slug: "elden-ring", pack: "packs/sketches/elden-ring-tarnishedtool.yaml" },
-];
 
 /**
  * Stable ids, so regenerating a profile is not a diff.
@@ -374,24 +363,90 @@ function setupsFor(tool) {
   return out.sort((a, b) => a.title.localeCompare(b.title));
 }
 
-/** The twelve profiles, named and keyed, ready to be laid out on a grid. */
-export function specs() {
-  const out = [];
-  for (const layout of LAYOUTS) {
-    let name = layout.name;
-    let keys = BASE;
-    if (layout.pack) {
-      const parsed = loadPackText(readFileSync(join(repo, layout.pack), "utf8"), "yaml");
-      if (!parsed.ok) throw new Error(`${layout.pack} did not load`);
-      const pack = parsed.pack;
-      // The pack's own title, and nothing else: the Stream Deck app already
-      // says which plugin a profile came with.
-      name = pack.title;
-      keys = [...BASE, ...packKeys(pack, setupsFor(toolFor(pack.id)))];
-    }
-    for (const device of Object.keys(DEVICES)) out.push({ slug: layout.slug, device, name, keys });
+/**
+ * The layouts, in the order the manifest lists them: generic, demo, sketches.
+ *
+ * Every pack that ships gets one. Forty profiles auto-installing on a deck
+ * would be forty entries in somebody's profile list on the day they install
+ * the plugin, so a pack's four wait in the package and the plugin asks for
+ * the one it needs; `main` writes the table it asks through.
+ *
+ * A sketch that no longer parses is left out rather than throwing. It is a
+ * file in the repository with its own tests, and a broken one should fail
+ * there rather than stop every other profile being written.
+ */
+export function layouts() {
+  const sketches = readdirSync(join(repo, SKETCHES))
+    .filter((f) => f.endsWith(".yaml"))
+    .sort()
+    .map((f) => ({ slug: SLUGS[basename(f, ".yaml")] ?? basename(f, ".yaml"), file: `${SKETCHES}/${f}` }));
+
+  const out = [{ slug: "runlog", name: "Runlog", pack: null }];
+  for (const { slug, file } of [DEMO, ...sketches]) {
+    const parsed = loadPackText(readFileSync(join(repo, file), "utf8"), "yaml");
+    if (!parsed.ok) continue;
+    // The pack's own title, and nothing else: the Stream Deck app already
+    // says which plugin a profile came with.
+    out.push({ slug, name: parsed.pack.title, pack: parsed.pack });
   }
   return out;
+}
+
+/** The forty-four profiles, named and keyed, ready to be laid out on a grid. */
+export function specs() {
+  const out = [];
+  for (const layout of layouts()) {
+    const keys = layout.pack ? [...BASE, ...packKeys(layout.pack, setupsFor(toolFor(layout.pack.id)))] : BASE;
+    for (const device of Object.keys(DEVICES)) out.push({ slug: layout.slug, device, name: layout.name, keys });
+  }
+  return out;
+}
+
+/**
+ * The table the plugin switches through, as a module it can import.
+ *
+ * The plugin never spells a profile name out. A pack renamed here, or a
+ * sketch added to the repository, moves this file on the next run of the
+ * generator, and the two stay one thing rather than two lists that drift.
+ */
+export function table(list = layouts()) {
+  const packs = list.filter((l) => l.pack).map((l) => `  "${l.pack.id}": "${l.slug}",`);
+  const decks = Object.entries(DEVICES).map(([device, { type }]) => `  ${type}: "${device}",`);
+  return `/**
+ * Which profile a run's pack is laid out in, and what each deck is called.
+ *
+ * Written by \`design/profiles.mjs\`: run \`npm run profiles -w streamdeck\`
+ * and commit what moves. Editing it by hand renames a profile the plugin
+ * asks for without renaming the file behind it, and the switch then does
+ * nothing at all.
+ */
+
+/** The slug of the profile laid out for each pack the plugin ships. */
+export const PACK_PROFILES: Record<string, string> = {
+${packs.join("\n")}
+};
+
+/** What a profile name calls each deck, by the SDK's \`DeviceType\`. */
+export const DEVICE_PROFILES: Record<number, string> = {
+${decks.join("\n")}
+};
+
+/** The layout a run gets where its pack ships none, which is every Marketplace pack. */
+export const GENERIC_PROFILE = "runlog";
+
+/**
+ * The profile to put a deck on for a run of this pack.
+ *
+ * \`null\` for a deck nothing here is laid out for - a Pedal, a Neo - which is
+ * a deck to leave alone rather than one to push the generic layout onto.
+ */
+export function profileFor(packId: string | undefined, device: number): string | null {
+  const deck = DEVICE_PROFILES[device];
+  if (deck === undefined) return null;
+  const slug = (packId === undefined ? undefined : PACK_PROFILES[packId]) ?? GENERIC_PROFILE;
+  return \`profiles/\${slug}-\${deck}\`;
+}
+`;
 }
 
 function main() {
@@ -402,14 +457,18 @@ function main() {
   for (const spec of specs()) {
     const file = `${spec.slug}-${spec.device}`;
     writeFileSync(join(dir, `${file}.streamDeckProfile`), container(profile(spec)));
-    written.push({ name: `profiles/${file}`, type: DEVICES[spec.device].type });
+    // The generic four come with the plugin; a pack's four are installed the
+    // first time a deck follows a run of that pack.
+    written.push({ name: `profiles/${file}`, type: DEVICES[spec.device].type, auto: spec.slug === "runlog" });
   }
+
+  writeFileSync(join(here, "..", "src", "profiles.ts"), table());
 
   // The manifest is edited by hand - a generator that rewrites it fights the
   // formatter over every other line - so the one thing checked here is that
   // it still lists what was just written, in the same order.
-  const listed = (MANIFEST.Profiles ?? []).map((p) => `${p.Name}:${p.DeviceType}`).join(" ");
-  const expected = written.map((p) => `${p.name}:${p.type}`).join(" ");
+  const listed = (MANIFEST.Profiles ?? []).map((p) => `${p.Name}:${p.DeviceType}:${p.AutoInstall}`).join(" ");
+  const expected = written.map((p) => `${p.name}:${p.type}:${p.auto}`).join(" ");
   if (listed !== expected) throw new Error(`manifest.json lists\n  ${listed}\nbut this wrote\n  ${expected}`);
 
   console.log(`${written.length} profiles written to ${dir}`);
