@@ -57,3 +57,8 @@ hosted/pages/
 # its own checkout with its own copy of everything above; formatting
 # them from here would be the same churn twice.
 .worktrees/
+
+# sdpi-components v4, vendored so the inspector works offline. Somebody
+# else's minified release file; it is replaced by downloading the next
+# one, not by editing this copy.
+streamdeck/com.scrthq.runlog.sdPlugin/ui/sdpi-components.js

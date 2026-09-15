@@ -8,6 +8,12 @@
  *
  * Drop `<div id="runlog-account"></div>` on the page, then load this after
  * sdpi-components.js.
+ *
+ * That script sits beside this one - sdpi-components v4.0.1, downloaded
+ * from https://sdpi-components.dev/releases/v4/sdpi-components.js and
+ * shipped in the plugin, because an inspector that fetches its own
+ * components off the internet has no sign-in button when the internet is
+ * not there. Replace it by downloading the next release over it.
  */
 (() => {
   const mount = document.getElementById("runlog-account");
