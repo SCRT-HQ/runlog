@@ -46,9 +46,25 @@ const freeEntry: MarketplaceEntry = {
   load: async () => "",
 };
 
+const setupEntry: MarketplaceEntry = {
+  id: "com.example.setup",
+  version: "1.0.0",
+  title: "A Loadout",
+  category: "everyday",
+  tags: [],
+  features: [],
+  requires: [],
+  players: 1,
+  blurb: "everyday · solo",
+  kind: "setup",
+  price: "free",
+  source: "listing",
+  load: async () => "",
+};
+
 vi.mock("./marketplace.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./marketplace.ts")>();
-  return { ...actual, loadMarketplace: vi.fn(async () => [ownedEntry, freeEntry]) };
+  return { ...actual, loadMarketplace: vi.fn(async () => [ownedEntry, freeEntry, setupEntry]) };
 });
 
 afterEach(cleanup);
@@ -77,5 +93,18 @@ describe("the marketplace card's footer", () => {
     if (!card) throw new Error("no card rendered for the free pack");
     expect(within(card).getByRole("button", { name: "Add to my packs" })).toBeTruthy();
     expect(within(card).queryByText("In your packs")).toBeNull();
+  });
+
+  it("offers a deck to a pack and not to a setup", async () => {
+    // A setup is what a tool is set to while a run lasts. It has no moves,
+    // no counters and no resources, so there is nothing to lay out on keys.
+    render(<MarketplaceView mine={new Set()} onAdd={async () => {}} onOpen={() => {}} onBack={() => {}} />);
+
+    const pack = (await screen.findByText("Free Pack")).closest("article");
+    expect(within(pack!).getByText("Stream Deck profile")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Setups/ }));
+    const setup = (await screen.findByText("A Loadout")).closest("article");
+    expect(within(setup!).queryByText("Stream Deck profile")).toBeNull();
   });
 });

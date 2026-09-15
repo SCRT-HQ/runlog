@@ -11,6 +11,7 @@ export default defineConfig({
       "@runlog/rules-schema": fileURLToPath(new URL("./packages/rules-schema/src/index.ts", import.meta.url)),
       "@runlog/engine": fileURLToPath(new URL("./packages/engine/src/index.ts", import.meta.url)),
       "@runlog/container": fileURLToPath(new URL("./packages/container/src/index.ts", import.meta.url)),
+      "@runlog/deck-profiles": fileURLToPath(new URL("./packages/deck-profiles/src/index.ts", import.meta.url)),
     },
   },
   define: {
