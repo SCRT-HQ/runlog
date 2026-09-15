@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2HW0F8HFZS7SZNRGEH1STJK",
+  "strategy": "manual-commit",
+  "branch": "the-deck-throws",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "apps/web/src/run/RunView.tsx",
+    "apps/web/src/run/offer.test.ts",
+    "apps/web/src/run/offer.ts",
+    "docs/stream-api.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 12825,
+    "cache_creation_tokens": 1510335,
+    "cache_read_tokens": 289576916,
+    "output_tokens": 651089,
+    "api_call_count": 623
+  }
+}
