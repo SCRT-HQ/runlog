@@ -5,6 +5,7 @@ const base = {
   seq: 42,
   live: true,
   settled: true,
+  receipts: false,
   step: null,
   stepLabel: null,
   request: null,
@@ -39,6 +40,22 @@ describe("offerOf", () => {
 
   it("offers nothing on a run that is not live", () => {
     const offer = offerOf({ ...base, live: false, step: { kind: "rollTable" } as never, stepLabel: "Roll" });
+    expect(offer.primary).toBeNull();
+    expect(offer.needsPage).toBe("Open the run on the page");
+  });
+
+  // Task 20: the deck's Next used to go dim exactly where the page shows
+  // the step's receipts, because the offer knew nothing of them. Now it
+  // sees what the page shows: Carry on.
+  it("offers carry-on for the receipts waiting to be read", () => {
+    const offer = offerOf({ ...base, receipts: true, step: { kind: "rollTable" } as never, stepLabel: "Roll the Weather" });
+    expect(offer.primary).toEqual({ id: "carry-on", label: "Carry on", kind: "receipt" });
+    expect(offer.needsPage).toBeNull();
+    expect(offer.presets).toEqual([]);
+  });
+
+  it("offers nothing for the receipts on a run that is not live", () => {
+    const offer = offerOf({ ...base, live: false, receipts: true, step: { kind: "rollTable" } as never, stepLabel: "Roll" });
     expect(offer.primary).toBeNull();
     expect(offer.needsPage).toBe("Open the run on the page");
   });
