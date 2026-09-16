@@ -1,5 +1,3 @@
-import type { Setup } from "@runlog/rules-schema";
-
 /**
  * The decks we lay a profile out for, and the keys every profile opens with.
  *
@@ -115,7 +113,12 @@ export const DIALS: Key[] = [
  * that says "Apply setup" about a warp. `Warp` at the front of the title is
  * how an author says so on purpose; a `warp.*` op is how the tool says so
  * whether the author thought to name it that or not.
+ *
+ * The operations are optional because a run's offer carries none: a setup
+ * reaches a deck as an id and a title, so the title is the only half of
+ * this that travels. A pack read off disk hands over the whole file and
+ * gets both halves.
  */
-export function isWarp(setup: Setup): boolean {
+export function isWarp(setup: { title: string; ops?: Array<{ op: string }> }): boolean {
   return setup.title.startsWith("Warp") || (setup.ops ?? []).some((op) => op.op.startsWith("warp."));
 }

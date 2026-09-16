@@ -683,4 +683,12 @@ describe("where else the open key points", () => {
       when: "in a browser",
     });
   });
+
+  it("names this pack's profile, and says it goes to the app rather than a browser", () => {
+    expect(openFace(open(), "profile")).toEqual({ title: "This pack's profile", tone: "deck", when: "to import" });
+    // Gated like the run: there is no pack to lay one out from until the
+    // deck is following one.
+    expect(openFace(initial(), "profile")).toEqual({ title: "Sign in", tone: "dim" });
+    expect(openFace(open([held("s1"), held("s2", "Friday")]), "profile")).toEqual({ title: "Pick a run", tone: "dim" });
+  });
 });

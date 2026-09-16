@@ -15,6 +15,7 @@
         <option value="newrun">A new run</option>
         <option value="guide">The guide</option>
         <option value="rules">The rules</option>
+        <option value="profile">This pack's profile</option>
       </select>
     </sdpi-item>
 
@@ -23,7 +24,9 @@
     <script>
       // Five pages, all of them at the address in the account block: the
       // run the deck is following, its dock, a new run, the guide, and the
-      // pack's own rules.
+      // pack's own rules. The sixth is not a page: it builds a profile for
+      // this pack from the run the deck is on and hands it to the Stream
+      // Deck app to import.
       (() => {
         const { streamDeckClient } = SDPIComponents;
         const target = document.getElementById("target");

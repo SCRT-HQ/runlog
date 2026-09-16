@@ -16,11 +16,11 @@ Runlog is a referee and run log for dice-driven games: it draws the tables, keep
 - **Metric** shows one number from the run: the score, the unit, a clock, the last result, the leader, or a counter or resource the pack keeps. Set to a counter or a resource it presses too: a tap steps it, a hold takes one back off.
 - **Clock** counts the run's clock down. Press to pause or resume it, hold to stop it.
 - **Finish the run** ends the run, held rather than pressed.
-- **Open in the browser** opens the run, its dock, a new run, the guide, or the pack's rules in your default browser.
+- **Open in the browser** opens the run, its dock, a new run, the guide, or the pack's rules in your default browser. Set to this pack's profile it opens nothing: it builds a profile for the pack the deck is following and hands it to the Stream Deck app to import.
 
 Next action, Metric and Clock also sit on a dial on a Stream Deck +.
 
-The plugin also ships laid-out profiles, one per deck for the generic keys and one per deck for every pack it bundles, built from the pack files by `npm run profiles`. The Runlog profile installs with the plugin; a pack's arrives the first time the deck follows a run of that pack, and the deck switches to it unless Connect's settings say not to.
+The plugin also ships laid-out profiles, one per deck for the generic keys and one per deck for every pack it bundles, built from the pack files by `npm run profiles`. The Runlog profile installs with the plugin; a pack's arrives the first time the deck follows a run of that pack, and the deck switches to it unless Connect's settings say not to. A pack the plugin bundles none for gets one built from the run itself, the first time the deck follows a run of it, and handed to the Stream Deck app to import.
 
 ## What it needs
 

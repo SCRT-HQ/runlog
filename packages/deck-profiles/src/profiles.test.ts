@@ -5,7 +5,19 @@ import { loadPackText, loadSetupText, type Pack, type Setup } from "@runlog/rule
 
 import { PACK_PROFILES } from "../../../streamdeck/src/profiles.ts";
 import { DEVICES, DEVICE_IDS } from "./layouts.ts";
-import { container, hasKeys, paginate, profile, specs, type Built, type StoredAction } from "./profiles.ts";
+import {
+  container,
+  fromOffer,
+  fromPack,
+  hasKeys,
+  packKeys,
+  paginate,
+  profile,
+  specs,
+  specsFor,
+  type Built,
+  type StoredAction,
+} from "./profiles.ts";
 
 /**
  * The generator, held against the packs it reads and the grids its output
@@ -266,6 +278,64 @@ describe("a deck laid out for a pack", () => {
     const demo = shipped.find((l) => l.slug === "demo")!.pack!;
     expect(specs(demo, [], "xl")).toEqual([{ slug: demo.id, device: "xl", name: demo.title, keys: expect.anything() }]);
     expect(specs(null, []).map((s) => `${s.slug}-${s.device}`)).toEqual(["runlog-xl", "runlog-sd", "runlog-mini", "runlog-plus"]);
+  });
+
+  it("lays a run's own offer out the way it lays the pack file out", () => {
+    // The plugin follows runs, not packs. A pack from the Marketplace is
+    // not on the deck's disk and never will be, so a profile for it is
+    // built from what the run publishes about itself: the moves, the
+    // trackers, and the setups for the tool. The two adapters are held
+    // against each other here, because the day they disagree is the day a
+    // key built from a run presses something the shipped profile does not.
+    const demo = shipped.find((l) => l.slug === "demo")!.pack!;
+    const setup = (id: string, title: string): Setup => ({
+      kind: "setup",
+      schemaVersion: 1,
+      id: `com.example.setups.${id}`,
+      version: "1.0.0",
+      title,
+      tool: "ExampleTool",
+      ops: [{ op: "flag.set", args: { name: id } }],
+    });
+    // One of each, because which key a setup takes is the one thing the
+    // two adapters have to agree about: a warp goes to a Command key and
+    // everything else to an Apply setup key.
+    const setups = [setup("starter", "Starter kit"), setup("summit", "Warp to the summit")];
+
+    // The offer as the page publishes it: every setup in `setups`, and the
+    // same list again in `commands` less whatever the wire would drop,
+    // which is nothing here. A hidden counter is published by neither.
+    const shown = Object.entries(demo.counters ?? {}).filter(([, c]) => !c.hidden);
+    const offer = {
+      moves: Object.keys(demo.moves ?? {}).map((id) => ({ id, label: id })),
+      trackers: [
+        ...shown.map(([id]) => ({ id, kind: "counter" as const, label: id })),
+        ...Object.keys(demo.resources ?? {}).map((id) => ({ id, kind: "resource" as const, label: id })),
+      ],
+      setups: setups.map(({ id, title }) => ({ id, title })),
+      commands: setups.map(({ id, title }) => ({ id, title })),
+    };
+
+    expect(packKeys(fromOffer(offer))).toEqual(packKeys(fromPack(demo, setups)));
+    // And the same profile, byte for byte, under the same name and slug.
+    const named = { slug: demo.id, name: demo.title };
+    expect([...container(profile(specsFor(fromOffer(offer), named, "xl")[0]!))]).toEqual([
+      ...container(profile(specs(demo, setups, "xl")[0]!)),
+    ]);
+  });
+
+  it("gives a setup on both of the offer's lists one key, not two", () => {
+    // `commands` on a run's offer is not the warps: it is every setup
+    // again, offered the other way round. A profile has to pick one key
+    // per setup, so the ones that read as warps become Command keys and
+    // the rest Apply setup keys, and nothing is laid down twice.
+    const both = [
+      { id: "com.example.setups.starter", title: "Starter kit" },
+      { id: "com.example.setups.summit", title: "Warp to the summit" },
+    ];
+    const keyed = fromOffer({ setups: both, commands: both });
+    expect(keyed.setups.map((s) => s.id)).toEqual(["com.example.setups.starter"]);
+    expect(keyed.commands.map((s) => s.id)).toEqual(["com.example.setups.summit"]);
   });
 
   it("builds the same bytes twice, so regenerating is not a diff", () => {
