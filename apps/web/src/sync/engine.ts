@@ -144,6 +144,7 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
            */
           const seenTail = Math.max(before, local.seq ?? 0);
           let serverTail = theirs?.seq ?? 0;
+          let answered = true;
           let incoming: SessionEvent[] = [];
           let role = local.role;
           let members = local.members;
@@ -200,6 +201,10 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
                 members = got.members;
                 shared = got.session.shared;
                 asks = got.session.asks ?? null;
+              } else {
+                // Asked and not answered: the gap has not been looked at,
+                // so the counter is not written down as seen.
+                answered = false;
               }
             }
             if (theirs) role = theirs.role;
@@ -233,8 +238,10 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
            * while the server handed back nothing behind it. Written even
            * when nothing else about the run moved, because it is what the
            * next pass reads to know the gap has already been looked at.
+           * Only after a fetch that answered: one that did not leaves the
+           * counter for the next pass to ask about again.
            */
-          const caughtUp = Math.max(tailSeq(merged), serverTail);
+          const caughtUp = answered ? Math.max(tailSeq(merged), serverTail) : tailSeq(merged);
           const changed =
             aboutTheRun ||
             merged.length !== local.events.length ||

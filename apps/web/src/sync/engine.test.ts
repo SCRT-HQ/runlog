@@ -478,6 +478,26 @@ describe("the sync engine", () => {
     expect(news.filter((n) => n.t === "pulled" && n.kind === "run")).toEqual([]);
   });
 
+  it("does not write a counter down as seen when the fetch behind it went unanswered", async () => {
+    const local = fakeDb();
+    const server = fakeApi();
+    local.runs.set("r1", run("r1", "2026-01-02", [started("r1"), move("m1")]));
+    const engine = createEngine(server.api, local.db);
+    await engine.sync();
+    server.sessions.get("r1")!.meta.seq = 4;
+    local.runs.set("r1", { ...local.runs.get("r1")!, members: [{ sub: "user", role: "owner", joinedAt: "2026-01-02" }] });
+    // The session answers the manifest but not the fetch.
+    const api = { ...server.api, getSession: async () => null };
+    const quiet = createEngine(api, local.db);
+    await quiet.sync();
+    // The gap was not looked at, so the next pass asks again.
+    expect(local.runs.get("r1")!.seq).toBe(2);
+    server.calls.length = 0;
+    await engine.sync();
+    expect(server.calls).toContain("getSession r1 after 2");
+    expect(local.runs.get("r1")!.seq).toBe(4);
+  });
+
   /**
    * The bug this guards: the server keeps its tombstone for a pack deleted
    * anywhere, and this device purged its own copy passes ago. With nothing

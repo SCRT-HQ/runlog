@@ -72,11 +72,12 @@ export async function stampIds(runId: string, events: readonly RunEvent[]): Prom
  * By id, because that is what a shared log keeps each event once by: the
  * same events carrying numbers a device has not seen yet are still the
  * same events, and a page told about them has nothing to redraw and
- * nothing in flight to drop.
+ * nothing in flight to drop. An event without an id cannot be matched,
+ * so a log holding one is never the same as another.
  */
 export function sameLog(a: readonly RunEvent[], b: readonly RunEvent[]): boolean {
   if (a.length !== b.length) return false;
-  return a.every((e, i) => e.id === b[i]!.id);
+  return a.every((e, i) => e.id !== undefined && e.id === b[i]!.id);
 }
 
 /** The last name the log gave the run, for the server's list. */
