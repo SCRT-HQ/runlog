@@ -80,19 +80,23 @@ export function useAttachedDecks(runId: string | null): number {
  * Which accounts have a deck on this run.
  *
  * The count says a deck is here; this says whose, which is what the
- * people panel needs to put the mark on the right row. An account with
- * two decks appears once. An older server sends no such field and this
- * stays empty, which draws every row unlit rather than wrongly.
+ * people panel needs to put the mark on the right row, and what the
+ * deck toast needs to name who. An account with two decks appears once.
+ *
+ * Null until a `tools` gesture has actually carried the field, which is
+ * not the same as an empty list: a server older than #318 never sends
+ * `deckSubs` at all, and a caller that cannot tell the two apart would
+ * read "nobody" where the honest answer is "unknown".
  */
-export function useAttachedDeckSubs(runId: string | null): string[] {
-  const [subs, setSubs] = useState<string[]>([]);
+export function useAttachedDeckSubs(runId: string | null): string[] | null {
+  const [subs, setSubs] = useState<string[] | null>(null);
   useEffect(() => {
-    setSubs([]);
+    setSubs(null);
     if (!runId) return;
     return syncBus.subscribe((news) => {
       if (news.t !== "gesture" || news.id !== runId || news.kind !== "tools") return;
       const list = (news.data as { deckSubs?: unknown }).deckSubs;
-      setSubs(Array.isArray(list) ? list.filter((s): s is string => typeof s === "string" && s !== "") : []);
+      if (Array.isArray(list)) setSubs(list.filter((s): s is string => typeof s === "string" && s !== ""));
     });
   }, [runId]);
   return subs;
