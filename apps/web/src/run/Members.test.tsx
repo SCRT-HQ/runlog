@@ -28,12 +28,14 @@ vi.mock("../sync/useApi.ts", () => ({ useApi: () => current.api }));
  * The run's reachability, stood in for.
  *
  * `useReachable` reads the watch key from `localStorage`, which this
- * environment does not have, so every address would be unfinished and
- * every copy button disabled. What is under test is the row, not the
- * minting, so the key is simply said to be there.
+ * environment does not have, so every address would be unfinished. What is
+ * under test is the row, not the minting, so the key is simply said to be
+ * there.
  */
 const reach = vi.hoisted(() => ({ key: "watchkey" as string | null }));
-vi.mock("./useReachable.ts", () => ({ useReachable: () => ({ link: null, key: reach.key, working: false }) }));
+vi.mock("./useReachable.ts", () => ({
+  useReachable: () => ({ link: null, key: reach.key, working: false, mint: async () => reach.key }),
+}));
 
 /**
  * The live link this device remembers, stood in for.
@@ -170,7 +172,7 @@ describe("people at the table", () => {
    * address and a note saying to add a seat by hand.
    */
   it("offers an address for the table and one for each person", () => {
-    const html = panel(twoOf(), syncOf(true, true));
+    const html = panel(twoOf({ shared: true }), syncOf(true, true));
     expect(html).toContain("The table");
     // One for the table and one each, and none for somebody with no name
     // to put in a seat.
@@ -265,19 +267,33 @@ describe("people at the table", () => {
   });
 
   /**
-   * An address cannot be finished without a watch key. The button says so
-   * and refuses rather than putting an unfinished address on the
-   * clipboard.
+   * A key made on another device cannot be shown on this one, and the
+   * server keeps only a hash of it. The button used to go gray and blame
+   * sharing, which was a different thing and was usually already on. It
+   * offers a new key instead, and says on the way in what that costs.
    */
-  it("refuses to copy an address it cannot finish", () => {
+  it("still copies where this device never held the key", () => {
     reach.key = null;
     try {
-      const html = panel(twoOf(), syncOf(true, true));
-      expect(html).toContain("Open this run to watchers to get an address");
-      expect(html).toContain("disabled");
+      const html = panel(twoOf({ shared: true }), syncOf(true, true));
+      expect(html).toContain("Copy connection address (this device will need a new watch key)");
+      expect(html).not.toContain("Open this run to watchers to get an address");
+      expect(html).not.toContain("disabled");
     } finally {
       reach.key = "watchkey";
     }
+  });
+
+  /**
+   * The one thing a press cannot fix: the socket resolves a watch key to a
+   * run of yours that is open to watchers, so a closed run refuses the
+   * connection whatever key it carries.
+   */
+  it("refuses while the run is closed to watchers", () => {
+    const html = panel(twoOf(), syncOf(true, true));
+    expect(html).toContain('title="Share the run first"');
+    expect(html).toContain("disabled");
+    expect(html).not.toContain("Copy connection address");
   });
 
   /**

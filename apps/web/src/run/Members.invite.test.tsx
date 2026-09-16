@@ -11,6 +11,7 @@ import type { Api } from "../sync/client.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { rememberLiveLink } from "../live/route.ts";
 import { forgetProfile } from "../sync/useProfile.ts";
+import { forgetWatchKey, watchKeyHere } from "./watchKey.ts";
 import { Members } from "./Members.tsx";
 
 /**
@@ -23,7 +24,34 @@ import { Members } from "./Members.tsx";
 
 const current: { api: Api | null } = { api: null };
 vi.mock("../sync/useApi.ts", () => ({ useApi: () => current.api }));
-vi.mock("./useReachable.ts", () => ({ useReachable: () => ({ link: null, key: "watchkey", working: false }) }));
+
+/**
+ * The run's reachability, stood in for, with a real mint under it.
+ *
+ * The hook talks to the server on mount, which these tests do not answer;
+ * what they do press is the minting, so that goes through the same helper
+ * the hook uses and writes the key down the same way.
+ */
+const reach = vi.hoisted(() => ({ key: "watchkey" as string | null }));
+vi.mock("./useReachable.ts", () => ({
+  useReachable: (api: Api | null) => ({
+    link: null,
+    key: reach.key,
+    working: false,
+    mint: async () => {
+      if (!api) return null;
+      try {
+        const { mintWatchKey } = await import("./watchKey.ts");
+        const made = await mintWatchKey(api);
+        reach.key = made.key;
+        return made.key;
+      } catch {
+        // What the hook does: a refused mint is an answer, not a throw.
+        return null;
+      }
+    },
+  }),
+}));
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const loaded = loadPackText(readFileSync(join(repoRoot, "packs/demo/pack.yaml"), "utf8"), "yaml");
@@ -116,8 +144,10 @@ beforeEach(() => {
 
 afterEach(() => {
   current.api = null;
+  reach.key = "watchkey";
   rememberLiveLink("run-1", null);
   forgetProfile();
+  forgetWatchKey();
   cleanup();
 });
 
@@ -214,5 +244,150 @@ describe("the live link", () => {
     expect(stopped).toEqual(["run-1"]);
     expect(screen.queryByRole("button", { name: "Stop sharing" })).toBeNull();
     expect(screen.getByText("The link is dead; anyone holding it sees nothing now.")).toBeTruthy();
+  });
+});
+
+/**
+ * The address a tool dials, from a device that never minted the key.
+ *
+ * The server keeps a hash of the key and nothing else, so a browser that
+ * did not make it cannot be handed it. The button used to go gray and
+ * blame sharing. It makes a new key instead, once the cost of that has
+ * been said out loud.
+ */
+describe("an address from a device with no key", () => {
+  const shared = () => runOf({ shared: true });
+  const unfinished = "Copy connection address (this device will need a new watch key)";
+
+  it("asks, mints, remembers, and copies an address with the new key", async () => {
+    reach.key = null;
+    const minted: string[] = [];
+    await show(
+      {
+        mintStreamKey: (async (kind: string) => {
+          minted.push(kind);
+          return { key: "fresh-key", keys: { watch: { at: 1 } } };
+        }) as unknown as Api["mintStreamKey"],
+      },
+      shared(),
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: unfinished })[0]!);
+    await flush(1);
+    expect(screen.getByRole("alertdialog").textContent).toContain("Make a new watch key?");
+    expect(screen.getByRole("alertdialog").textContent).toContain("replaces the old one everywhere it is pasted");
+
+    fireEvent.click(screen.getByRole("button", { name: "Make a new key" }));
+    await flush();
+
+    expect(minted).toEqual(["watch"]);
+    expect(watchKeyHere()).toBe("fresh-key");
+    expect(written.length).toBe(1);
+    expect(written[0]).toContain("k=fresh-key");
+    expect(written[0]).toContain("run=run-1");
+  });
+
+  it("mints nothing and copies nothing when the question is refused", async () => {
+    reach.key = null;
+    const minted: string[] = [];
+    await show(
+      {
+        mintStreamKey: (async (kind: string) => {
+          minted.push(kind);
+          return { key: "fresh-key", keys: {} };
+        }) as unknown as Api["mintStreamKey"],
+      },
+      shared(),
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: unfinished })[0]!);
+    await flush(1);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await flush();
+
+    expect(minted).toEqual([]);
+    expect(written).toEqual([]);
+    expect(watchKeyHere()).toBeNull();
+  });
+
+  /**
+   * A refused mint is worth saying out loud. The press asked a question,
+   * got a yes, and then nothing would have happened on screen at all.
+   */
+  it("says so when the server will not make one, and copies nothing", async () => {
+    reach.key = null;
+    await show(
+      {
+        mintStreamKey: (async () => {
+          throw new Error("no");
+        }) as unknown as Api["mintStreamKey"],
+      },
+      shared(),
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: unfinished })[0]!);
+    await flush(1);
+    fireEvent.click(screen.getByRole("button", { name: "Make a new key" }));
+    await flush();
+
+    expect(screen.getByRole("status").textContent).toBe("Could not make a watch key.");
+    expect(written).toEqual([]);
+    expect(watchKeyHere()).toBeNull();
+  });
+
+  /**
+   * The question closes on the press and the mint runs on past it. A
+   * second press used to ask again and mint again, putting out the key
+   * the first press was still copying.
+   */
+  it("mints once while one is in flight, and comes back when it settles", async () => {
+    reach.key = null;
+    const minted: string[] = [];
+    let settle!: (made: { key: string; keys: Record<string, never> }) => void;
+    await show(
+      {
+        mintStreamKey: (async (kind: string) => {
+          minted.push(kind);
+          return await new Promise((resolve) => {
+            settle = resolve as typeof settle;
+          });
+        }) as unknown as Api["mintStreamKey"],
+      },
+      shared(),
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: unfinished })[0]!);
+    await flush(1);
+    fireEvent.click(screen.getByRole("button", { name: "Make a new key" }));
+    await flush(2);
+
+    const gray = screen.getAllByRole("button", { name: unfinished });
+    expect(gray.every((b) => b.hasAttribute("disabled"))).toBe(true);
+    fireEvent.click(gray[0]!);
+    fireEvent.click(gray[1]!);
+    await flush(2);
+    expect(minted).toEqual(["watch"]);
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+
+    settle({ key: "fresh-key", keys: {} });
+    await flush();
+
+    expect(minted).toEqual(["watch"]);
+    expect(written).toEqual([expect.stringContaining("k=fresh-key")]);
+    const back = screen.getAllByRole("button", { name: "Copy connection address" });
+    expect(back.every((b) => b.hasAttribute("disabled"))).toBe(false);
+  });
+
+  /** With a key in hand nothing is asked: it copies, and says so. */
+  it("copies straight off where the key is here", async () => {
+    const minted: string[] = [];
+    await show({ mintStreamKey: (async () => minted.push("watch")) as unknown as Api["mintStreamKey"] }, shared());
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Copy connection address" })[0]!);
+    await flush();
+
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(minted).toEqual([]);
+    expect(written[0]).toContain("k=watchkey");
   });
 });

@@ -16,6 +16,8 @@ import type { AttachedTool } from "./useAttachedTools.ts";
 import { CheckGlyph, CopyGlyph, DeckGlyph, PlugGlyph, XGlyph } from "./glyphs.tsx";
 import { useDismiss } from "../ui/useDismiss.ts";
 import { useToast } from "../ui/Toast.tsx";
+import { useConfirm } from "../ui/useConfirm.tsx";
+import { newKeyQuestion } from "./watchKey.ts";
 
 /**
  * The account behind a connection, as the server names it.
@@ -175,6 +177,21 @@ export function Members({
   const { profile } = useProfile();
   const reach = useReachable(api, run);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  // Replacing a watch key puts the old one out everywhere, so it is asked
+  // for first; see useConfirm.
+  const { dialog, ask } = useConfirm();
+  const toast = useToast();
+  /**
+   * A mint in flight.
+   *
+   * The question closes the moment it is answered and `mint()` runs on
+   * past it, so the buttons were live again while the key was still being
+   * made. A second press asked again and minted again, putting out the
+   * key the first press was in the middle of copying. The state grays the
+   * buttons; the ref holds the line for a press that beats the re-render.
+   */
+  const [minting, setMinting] = useState(false);
+  const mintInFlight = useRef(false);
   const owner = run.role === "owner";
 
   /**
@@ -198,9 +215,35 @@ export function Members({
    * Here rather than only behind Settings because this is the list of
    * who is playing, and setting a tool up is a thing you do per person
    * while looking at exactly that.
+   *
+   * A device that did not mint the key does not have it, and the server
+   * keeps only a hash, so there is no address to finish and no way to
+   * fetch one. Making a new key is the only way through; it costs the
+   * old one, so it is asked for and not done quietly.
    */
   const copyAddress = async (seat: string | undefined, id: string) => {
-    const address = controlAddress({ key: reach.key, runId: run.runId, seat });
+    if (mintInFlight.current) return;
+    let key = reach.key;
+    if (!key) {
+      if (!(await ask(newKeyQuestion(false)))) return;
+      if (mintInFlight.current) return;
+      mintInFlight.current = true;
+      setMinting(true);
+      try {
+        key = await reach.mint();
+      } finally {
+        mintInFlight.current = false;
+        setMinting(false);
+      }
+      if (!key) {
+        // The server would not: gated, or nothing to reach. Nothing was
+        // replaced and nothing is copied, and that is worth saying, since
+        // the press otherwise looks like it did nothing at all.
+        toast.show("Could not make a watch key.");
+        return;
+      }
+    }
+    const address = controlAddress({ key, runId: run.runId, seat });
     try {
       await navigator.clipboard.writeText(address);
       setCopiedAddress(id);
@@ -216,7 +259,6 @@ export function Members({
   const [busy, setBusy] = useState(false);
   const [inviting, setInviting] = useState(false);
   const inviteButton = useRef<HTMLButtonElement>(null);
-  const toast = useToast();
   const [liveLink, setLiveLink] = useState<string | null>(() => liveLinkOf(run.runId));
   const [liveNote, setLiveNote] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -383,13 +425,24 @@ export function Members({
    */
   const strayDecks = deckSubs.filter((s) => !members.some((m) => m.sub === accountOf(s))).length;
 
-  const copyLabel = reach.key ? "Copy connection address" : "Open this run to watchers to get an address";
+  /**
+   * Whether an address copied from here would be let in.
+   *
+   * The socket resolves a watch key to a run of the account's that is
+   * open to watchers, so a closed run refuses the connection whatever
+   * key it carries. That is the one thing the button cannot fix by
+   * pressing it, so it is the one thing it refuses over. The run opens
+   * itself on load, and `reach.link` is the first to know.
+   */
+  const reachable = shared || Boolean(reach.link);
+  const copyLabel = reach.key ? "Copy connection address" : "Copy connection address (this device will need a new watch key)";
+  const copyTitle = reachable ? copyLabel : "Share the run first";
   const copyButton = (seat: string | undefined, id: string) => (
     <button
       className="ghost tiny iconButton"
-      title={copyLabel}
-      aria-label={copyLabel}
-      disabled={!reach.key}
+      title={copyTitle}
+      aria-label={copyTitle}
+      disabled={!reachable || minting}
       onClick={() => void copyAddress(seat, id)}
     >
       {copiedAddress === id ? <CheckGlyph /> : <CopyGlyph />}
@@ -586,6 +639,7 @@ export function Members({
         {inviting && (
           <InviteDialog people={people} redistributable={pack.license.redistributable} noun={noun} onSend={invite} onClose={closeInvite} />
         )}
+        {dialog}
         {toast.node}
       </div>
     </details>
