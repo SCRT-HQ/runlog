@@ -294,7 +294,7 @@ export interface Queues {
 }
 
 /**
- * The keys a pack adds to the generic thirteen, in two queues.
+ * The keys a pack adds to the generic twelve, in two queues.
  *
  * `drive` is what somebody presses: its moves first, because those are what
  * a hand reaches for mid-scene, then the setups for whatever tool the pack

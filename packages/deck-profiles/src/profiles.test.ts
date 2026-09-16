@@ -251,7 +251,7 @@ describe("a deck laid out for a pack", () => {
     };
     const key = (action: string) => ({ action });
     const pages = framedPages(frame, [key("a"), key("b"), key("c")], []);
-    // Three cells and three keys, and two pages of them all the same.
+    // Three cells and three keys, and two pages of the keys, then the utility page.
     expect(pages.map((p) => [p.back, p.more, Object.keys(p.keys)])).toEqual([
       [false, true, ["0,0", "0,1"]],
       [true, true, ["0,1"]],

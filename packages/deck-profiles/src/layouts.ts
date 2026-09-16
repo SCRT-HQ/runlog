@@ -113,7 +113,7 @@ export const UTILITY: Key[] = [
  *
  * `extras` are the base keys this frame has no cell for. Each queue takes
  * them either side of the pack's own: `first` is what a deck that cannot
- * pin all thirteen still opens on, and `last` is what waits behind the
+ * pin all twelve still opens on, and `last` is what waits behind the
  * pack, because a key nobody presses mid-scene is worth less than a move.
  */
 export interface Queued {
