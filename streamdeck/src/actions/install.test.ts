@@ -185,7 +185,9 @@ describe("pressing the install key", () => {
     expect(oks).toEqual(["ok"]);
     expect(mock.opened).toHaveLength(1);
     // And the key says so, through the flash every other key uses.
-    expect(mock.dispatched).toEqual([{ t: "drove", ref: "imported-as-copy", ok: true }]);
+    // The ref names the key that was pressed, so a second Install key set
+    // to another pack is not made to say what happened on this one.
+    expect(mock.dispatched).toEqual([{ t: "drove", ref: "imported-as-copy:a1", ok: true }]);
     expect(mock.logged.filter((l) => l.includes("name this one a copy"))).toHaveLength(1);
   });
 

@@ -4,7 +4,7 @@ import { hasProfileFor, installedFor, installedProfiles } from "../installed.ts"
 import { fetchPack, libraryPacks, type LibraryPack } from "../library.ts";
 import { apiBase, store } from "../plugin.ts";
 import { buildFor, buildForPack, install } from "../profiles-on-demand.ts";
-import { installFace, IMPORTED_AS_COPY, type DeckState, type Face } from "../state.ts";
+import { importedAsCopy, installFace, type DeckState, type Face } from "../state.ts";
 import { RunlogAction } from "./base.ts";
 
 export type InstallSettings = { pack?: { id: string; title: string } };
@@ -25,8 +25,8 @@ export type InstallSettings = { pack?: { id: string; title: string } };
  */
 @action({ UUID: "com.scrthq.runlog.install" })
 export class Install extends RunlogAction<InstallSettings> {
-  face(state: DeckState, settings: InstallSettings): Face {
-    return installFace(state, settings.pack);
+  face(state: DeckState, settings: InstallSettings, _now: number, on: string): Face {
+    return installFace(state, settings.pack, on);
   }
 
   override async onKeyDown(ev: KeyDownEvent<InstallSettings>): Promise<void> {
@@ -54,7 +54,7 @@ export class Install extends RunlogAction<InstallSettings> {
     // holds what it held when the key went down.
     if (installedFor(pack, installedProfiles()) !== null) {
       streamDeck.logger.info(`profile: ${pack.id} already had one, so the app will name this one a copy`);
-      store.dispatch({ t: "drove", ref: IMPORTED_AS_COPY, ok: true });
+      store.dispatch({ t: "drove", ref: importedAsCopy(ev.action.id), ok: true });
     }
     await ev.action.showOk();
   }

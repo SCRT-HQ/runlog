@@ -348,6 +348,34 @@ describe("what the deck remembers about a pack's setups", () => {
     ]);
   });
 
+  it("writes both of the things it keeps, whichever of them moved", async () => {
+    // One snapshot moves both: the pack is handed a profile and marked
+    // offered, and the run names its setups. Each write is a read of the
+    // whole settings and a write of the whole settings back, so two of
+    // them in flight would drop each other's field, and a pack that lost
+    // its offered entry is offered again on the next launch.
+    mock.wrote = [];
+    mock.handed = [];
+    store.dispatch({ t: "runs", runs: [], any: false });
+    store.dispatch({ t: "runs", runs: [{ id: "r15" }], any: true });
+    store.dispatch({
+      t: "snapshot",
+      snapshot: {
+        run: { id: "r15", packId: "com.example.kiln-road" },
+        offer: { setups: [{ id: "s3", title: "Starter kit" }], commands: [] },
+      } as never,
+    });
+
+    expect(mock.handed).toEqual(["built-2", "built-7"]);
+    await vi.waitFor(() => expect(mock.wrote.length).toBeGreaterThanOrEqual(2));
+    for (const written of mock.wrote) {
+      expect(written.profilesOffered).toContain("com.example.kiln-road");
+      expect((written.setupsSeen as Record<string, unknown>)["com.example.kiln-road"]).toEqual([
+        { id: "s3", title: "Starter kit", warp: false },
+      ]);
+    }
+  });
+
   it("writes nothing again for a snapshot that names the same setups", async () => {
     mock.wrote = [];
     store.dispatch({

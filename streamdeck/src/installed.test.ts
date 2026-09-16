@@ -103,10 +103,18 @@ describe("which of the two profiles a pack has", () => {
     expect(installedFor({ id: "com.scrthq.runlog.soundclash", title: "Soundclash" }, profiles)).toBe("shipped");
   });
 
-  it("is the shipped one even where the title matches as well", () => {
-    // Both rules answer for this pack. The shipped one is the answer that
-    // matters: it is the profile the deck can be put on.
-    expect(installedFor({ id: "com.scrthq.runlog.soundclash", title: "Soundclash" }, profiles)).not.toBe("imported");
+  it("is the shipped one even where another profile answers the title rule", () => {
+    // The awkward pair: the plugin's own profile has been copied, so its
+    // name no longer reads as the pack's title, and a profile the streamer
+    // imported is sitting there under the title instead. Both rules answer,
+    // and the shipped one has to win: it is the profile the deck can be put
+    // on, so there is nothing here to leave the deck alone for.
+    expect(
+      installedFor({ id: "com.scrthq.runlog.soundclash", title: "Soundclash" }, [
+        { name: "Soundclash copy", installedBy: "com.scrthq.runlog", preconfigured: "profiles/soundclash-plus" },
+        { name: "Soundclash" },
+      ]),
+    ).toBe("shipped");
   });
 
   it("is the imported one where the streamer brought it themselves", () => {

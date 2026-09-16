@@ -25,7 +25,13 @@ function shippedSetups(packId: string): Handed[] {
   let tool: string | undefined;
   for (const file of readdirSync(profiles).filter((f) => f.endsWith(".json"))) {
     const written = JSON.parse(readFileSync(join(profiles, file), "utf8")) as { pack?: string; tool?: string };
-    if (written.pack === packId) tool = written.tool;
+    // The first match, the way the generator's own `toolFor` takes it: two
+    // control profiles for one pack would otherwise be read differently
+    // here and there, and the comparison below would be of two packs.
+    if (written.pack === packId) {
+      tool = written.tool;
+      break;
+    }
   }
   if (!tool) return [];
   const dir = join(repo, "packs", "setups");

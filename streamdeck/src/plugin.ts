@@ -96,12 +96,43 @@ let switchedFor: string | null = null;
  */
 const offered = new Set<string>();
 
-/** Writes the pack into the offered list, keeping whatever else is in the settings. */
+/**
+ * The one write of what the plugin keeps about packs, one at a time.
+ *
+ * Both of the things written here move on the first snapshot of an attach:
+ * the pack is marked offered and the run's setups are recorded. Each write
+ * is a read of the whole settings and a write of the whole settings back,
+ * so two of them in flight at once would each carry a copy of the settings
+ * from before the other and whichever landed second would drop the other's
+ * field. A pack that lost its `profilesOffered` entry that way is offered
+ * again on the next launch, which is the prompt this is all here to stop.
+ *
+ * So one writer, and both fields rebuilt from what is in memory every time
+ * rather than carried over from the read. `pending` is the chain the calls
+ * queue on: a second call waits for the first to land before it reads, so
+ * what it reads already has the first one's write in it.
+ */
+let pending: Promise<void> = Promise.resolve();
+
+function writeGlobals(): Promise<void> {
+  pending = pending
+    .then(async () => {
+      const settings = await streamDeck.settings.getGlobalSettings<Globals>();
+      await streamDeck.settings.setGlobalSettings({ ...settings, profilesOffered: [...offered], setupsSeen: allSeen() });
+    })
+    // A write that went wrong must not take the chain down with it: every
+    // call after it would queue on a rejected promise and never run.
+    .catch((error: unknown) => {
+      streamDeck.logger.error(`settings: could not be written (${String(error)})`);
+    });
+  return pending;
+}
+
+/** Writes the pack into the offered list, and whatever else has moved with it. */
 async function markOffered(packId: string): Promise<void> {
   if (offered.has(packId)) return;
   offered.add(packId);
-  const settings = await streamDeck.settings.getGlobalSettings<Globals>();
-  await streamDeck.settings.setGlobalSettings({ ...settings, profilesOffered: [...offered] });
+  await writeGlobals();
 }
 
 store.subscribe((s) => {
@@ -177,10 +208,7 @@ store.subscribe((s) => {
   lastSnapshot = s.snapshot;
   const packId = s.snapshot?.run?.packId;
   if (!packId || !remember(packId, setupsInOffer(s.snapshot?.offer))) return;
-  void (async () => {
-    const settings = await streamDeck.settings.getGlobalSettings<Globals>();
-    await streamDeck.settings.setGlobalSettings({ ...settings, setupsSeen: allSeen() });
-  })();
+  void writeGlobals();
 });
 
 // The Run inspector's list is only as fresh as the last appear; a run

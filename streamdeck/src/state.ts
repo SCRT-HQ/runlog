@@ -425,11 +425,15 @@ export function openFace(state: DeckState, target?: OpenTarget): Face {
  *
  * A flash is normally the server's verdict on a press and carries the ref
  * the press went out under. This one is the deck talking to itself, so it
- * takes a ref of its own and is marked as having gone fine: {@link flashed}
- * only speaks for a refusal, so every other key on the deck reads it and
- * says nothing.
+ * takes a ref of its own. Two things keep it to the one key that raised it:
+ * it is marked as having gone fine, and {@link flashed} speaks only for a
+ * refusal, so nothing else on the deck says a word about it; and the ref
+ * names the key that was pressed, so a second Install key set to another
+ * pack is not made to say what happened on the first.
  */
-export const IMPORTED_AS_COPY = "imported-as-copy";
+export function importedAsCopy(actionId: string): string {
+  return `imported-as-copy:${actionId}`;
+}
 
 /**
  * What the Install a profile key says: the pack it would build one for.
@@ -438,13 +442,14 @@ export const IMPORTED_AS_COPY = "imported-as-copy";
  * fetched off the account, so a deck that is following nothing at all still
  * has something to press, and the key says which pack it would hand over.
  *
- * After a hand-over for a pack that already had a profile, it says so for
- * three seconds. The Stream Deck app does not replace a profile it already
- * has: it keeps both and calls the second one "copy", and this key is the
- * only place the streamer would hear about it.
+ * After a hand-over for a pack that already had a profile, the key that was
+ * pressed says so for three seconds. The Stream Deck app does not replace a
+ * profile it already has: it keeps both and calls the second one "copy",
+ * and this key is the only place the streamer would hear about it. `on` is
+ * that key's own id, which is what tells its flash from another one's.
  */
-export function installFace(state: DeckState, pack?: { id: string; title: string }): Face {
-  if (state.flash?.ref === IMPORTED_AS_COPY) return { title: "Imported as a copy", tone: "refuse" };
+export function installFace(state: DeckState, pack?: { id: string; title: string }, on?: string): Face {
+  if (on !== undefined && state.flash?.ref === importedAsCopy(on)) return { title: "Imported as a copy", tone: "refuse" };
   if (!pack) return { title: "Set up", tone: "dim" };
   return { title: pack.title, tone: "deck", when: "to import" };
 }
