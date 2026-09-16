@@ -180,7 +180,7 @@ describe("a deck laid out for a pack", () => {
     // the plugin cannot read draws "Set up" for ever and says nothing
     // about why.
     const fields = new Set(["score", "unit", "clock", "latest", "leader"]);
-    const kinds = new Set(["roll", "move", "answer"]);
+    const kinds = new Set(["move", "answer"]);
     for (const { spec, built } of all) {
       for (const { action } of placed(built)) {
         const settings = action.Settings;

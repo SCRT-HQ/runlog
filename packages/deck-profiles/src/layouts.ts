@@ -55,10 +55,7 @@ export interface Key {
  *
  * Connect first because nothing else does anything until it has been
  * pressed, then the run it is on, then the three presses somebody reaches
- * for mid-scene, then the numbers. The dedicated Roll key and the Press key
- * set to the waiting roll are both here on purpose: Roll is lit only while
- * dice are waiting, and Press takes the primary whatever it is, so the two
- * say different things about the same moment.
+ * for mid-scene, then the numbers.
  *
  * The clock and the dice the run throws for itself sit with the presses,
  * because both are things somebody reaches for while a scene is running.
@@ -68,7 +65,7 @@ export interface Key {
  * Finish is last of all, as far from a hand mid-scene as the layout goes,
  * and it takes a hold on top of that.
  *
- * Fourteen keys, which is more than a Mini or a + has room for. They page.
+ * Thirteen keys, which is more than a Mini or a + has room for. They page.
  */
 export const BASE: Key[] = [
   { action: "connect" },
@@ -81,7 +78,6 @@ export const BASE: Key[] = [
   { action: "metric", settings: { field: "score" } },
   { action: "metric", settings: { field: "unit" } },
   { action: "metric", settings: { field: "clock" } },
-  { action: "press", settings: { target: { kind: "roll" } } },
   { action: "open", settings: { target: "run" } },
   { action: "open", settings: { target: "guide" } },
   { action: "finish" },

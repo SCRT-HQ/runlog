@@ -1,12 +1,12 @@
 import streamDeck, { action, type KeyDownEvent } from "@elgato/streamdeck";
 
 import { store } from "../plugin.ts";
-import { pressFace, type DeckState, type Face, type PressTarget } from "../state.ts";
+import { pressFace, isPressTarget, type DeckState, type Face, type StoredPressTarget } from "../state.ts";
 import { RunlogAction } from "./base.ts";
 
-export type PressSettings = { target?: PressTarget };
+export type PressSettings = { target?: StoredPressTarget };
 
-/** One move, the waiting roll, or a preset answer - whichever the key was set to. */
+/** One move or a preset answer, whichever the key was set to. */
 @action({ UUID: "com.scrthq.runlog.press" })
 export class Press extends RunlogAction<PressSettings> {
   face(state: DeckState, settings: PressSettings): Face {
@@ -15,12 +15,14 @@ export class Press extends RunlogAction<PressSettings> {
 
   override async onKeyDown(ev: KeyDownEvent<PressSettings>): Promise<void> {
     const target = ev.payload.settings.target;
-    if (!target) {
+    // A stale `{ kind: "roll" }` from before this key dropped the roll
+    // option, or anything else the plugin no longer reads, alerts like a
+    // key with nothing set at all.
+    if (!target || !isPressTarget(target)) {
       await ev.action.showAlert();
       return;
     }
-    if (target.kind === "roll") await this.send(ev.action, { press: "primary" });
-    else if (target.kind === "move") await this.send(ev.action, { press: "move", move: target.id });
+    if (target.kind === "move") await this.send(ev.action, { press: "move", move: target.id });
     // The two presets answer in the page's own words: a subject is the
     // typed value, and a list is ticked whole - `takePress` takes
     // `{ ticks: "all" }` and nothing else for it.
