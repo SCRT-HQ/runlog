@@ -139,6 +139,17 @@ async function bundledEntry(load: () => Promise<string>, bench: boolean): Promis
 let cached: Promise<MarketplaceEntry[]> | null = null;
 
 /**
+ * The ids of the packs that ship in the app, filled as the bundle is read.
+ *
+ * `source` cannot answer "did this one ship with us": a listing wins over
+ * the bundle's copy of the same id, and the platform seeds the built-ins
+ * into the feed, so on a hosted copy the shipped packs come back as
+ * listings. Anything that means the shelf rather than the marketplace
+ * asks `shippedIds` and keeps whichever entry won.
+ */
+const SHIPPED = new Set<string>();
+
+/**
  * Every marketplace entry, with its header read; the text itself stays lazy.
  *
  * `testing` says whether a `bench: true` entry (the pack under
@@ -156,7 +167,10 @@ export function loadMarketplace(opts: { testing?: boolean } = {}): Promise<Marke
       const entries: MarketplaceEntry[] = [];
       for (const load of Object.values(files)) {
         const entry = await bundledEntry(load, false);
-        if (entry) entries.push(entry);
+        if (entry) {
+          entries.push(entry);
+          SHIPPED.add(entry.id);
+        }
       }
       for (const load of Object.values(benchFiles)) {
         const entry = await bundledEntry(load, true);
@@ -178,6 +192,12 @@ export function loadMarketplace(opts: { testing?: boolean } = {}): Promise<Marke
     })();
   }
   return cached.then((entries) => withTesting(entries, opts.testing));
+}
+
+/** The ids of the packs that ship in the app; see `SHIPPED` for why `source` will not do. */
+export async function shippedIds(): Promise<ReadonlySet<string>> {
+  await loadMarketplace();
+  return SHIPPED;
 }
 
 /**

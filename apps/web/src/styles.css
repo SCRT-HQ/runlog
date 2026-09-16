@@ -5971,17 +5971,31 @@ html[data-pip="controls"] body {
   align-items: center;
   padding: 1.5rem 0 2rem;
 }
+/* One short line now, so it can be read across a room. */
 .welcomeHero h2 {
-  font-size: clamp(1.9rem, 3.4vw, 2.7rem);
-  line-height: 1.15;
-  margin: 0 0 0.6rem;
+  font-size: clamp(2.2rem, 4vw, 3.1rem);
+  line-height: 1.1;
+  margin: 0 0 0.5rem;
   text-wrap: balance;
+}
+/* Between the headline and the body: larger than the lede, smaller than the h2. */
+.welcomeTagline {
+  font-size: var(--t-5);
+  line-height: 1.35;
+  color: var(--accent);
+  margin: 0 0 0.9rem;
+  max-width: 38rem;
 }
 .welcomeLede {
   font-size: var(--t-4);
   line-height: 1.55;
   max-width: 38rem;
   margin: 0;
+}
+/* The log and the row of chips that says whose run it is. */
+.welcomeShow {
+  display: grid;
+  gap: 0.6rem;
 }
 .welcomeCtas {
   display: flex;
@@ -6097,200 +6111,112 @@ html[data-pip="controls"] body {
   color: var(--muted);
   font-size: var(--t-3);
 }
-.welcomeReasons {
+/* A section that says one thing: words on the left, one visual on the right. */
+.welcomeSplit {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 2.5rem;
-  margin: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
 }
-.welcomeReasons > div {
-  padding: 0.9rem 0;
-  border-bottom: 1px solid var(--line);
-}
-.welcomeReasons dt {
-  font-weight: 600;
-  font-size: 1.05rem;
-}
-.welcomeReasons dd {
-  margin: 0.25rem 0 0;
-  color: var(--muted);
+.welcomeSplit > div > p,
+.welcomeSplit > p,
+.welcomeProse {
+  margin: 0 0 0.8rem;
+  max-width: 36rem;
   font-size: var(--t-3);
+  line-height: 1.6;
 }
-.welcomeReasons code {
+.welcomeSplit > div > p:last-child,
+.welcomeSplit > p:last-child,
+.welcomeProse {
+  margin-bottom: 0;
+}
+.welcomeProse code {
   font-family: var(--mono);
   font-size: 0.85em;
-  color: var(--text);
 }
-.welcomePlans {
+/* A drawing of the stream widgets, from their own styles: the panels as a
+   scene would stack them, with the caption saying what it is. */
+.welcomeWidget {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+.welcomeWidget .widgetBody {
+  min-width: 0;
+}
+.welcomeExcerpt {
+  align-self: start;
+}
+/* The shelf: one card per pack that ships, its title and its own line.
+   Three across, so the nine that ship make three full rows and no card is
+   left over on the end of one. */
+.welcomePacks {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 0.8rem;
+  gap: 0.8rem;
 }
-.welcomePlans h4 {
-  margin: 0 0 0.3rem;
-  font-size: 1.05rem;
-}
-.welcomePlans p {
-  margin: 0;
-  color: var(--muted);
-  font-size: var(--t-3);
-}
-/* The persona: the word in the heading that says who the page is for. A
-   click turns it; the arrow beside it opens the list. The word turns over
-   in place, the old one sliding up and out, the new one in beneath. */
-.persona {
-  white-space: nowrap;
-  position: relative;
-  display: inline;
-}
-.personaWord {
-  font: inherit;
-  color: var(--accent);
-  background: none;
-  border: 0;
-  padding: 0 0.05em;
-  margin: 0;
-  cursor: pointer;
-  border-bottom: 2px solid var(--accent);
-  line-height: 1;
-}
-.personaWord:hover,
-.personaWord:focus-visible,
-.personaWord[aria-expanded="true"] {
-  border-bottom-style: dotted;
-}
-.personaWord:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
-  border-radius: 2px;
-}
-.personaRoll {
-  display: inline-grid;
-  overflow: hidden;
-  vertical-align: bottom;
-}
-.personaRoll > span {
-  grid-area: 1 / 1;
-  display: block;
-}
-.personaLeaving {
-  animation: personaOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-.personaArriving {
-  animation: personaIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-@keyframes personaOut {
-  from {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateY(-105%);
-    opacity: 0;
+@media (max-width: 900px) {
+  .welcomePacks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@keyframes personaIn {
-  from {
-    transform: translateY(105%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
+@media (max-width: 560px) {
+  .welcomePacks {
+    grid-template-columns: 1fr;
   }
 }
-.personaMore {
-  width: 0.5em;
-  height: 0.5em;
-  margin-left: 0.12em;
-  vertical-align: baseline;
-  color: var(--muted);
-}
-.personaWord:hover .personaMore,
-.personaWord[aria-expanded="true"] .personaMore {
-  color: var(--accent);
-}
-.personaList {
-  position: absolute;
-  left: 0;
-  top: calc(100% + 0.4rem);
-  z-index: 5;
-  min-width: 24rem;
-  margin: 0;
-  padding: 0.3rem;
-  list-style: none;
-  background: var(--panel);
+.welcomePack {
+  display: grid;
+  gap: 0.3rem;
+  align-content: start;
+  padding: 0.8rem 0.9rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-  font-family: var(--serif);
-  font-size: var(--t-3);
-  font-weight: 400;
-  line-height: 1.3;
-  letter-spacing: 0;
-  white-space: normal;
-}
-.personaList li button {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0 1rem;
-  align-items: baseline;
-  width: 100%;
-  text-align: left;
-  font: inherit;
+  background: var(--panel);
   color: var(--text);
-  background: none;
-  border: 0;
-  border-radius: calc(var(--radius) - 2px);
-  padding: 0.4rem 0.6rem;
+  text-decoration: none;
+}
+@media (hover: hover) {
+  .welcomePack:hover {
+    border-color: var(--accent-dim);
+  }
+}
+/* The persona chips: whose run the log is, under the log. A row of small
+   buttons rather than a word that turns, so a reader can see at once that
+   the example is one of several and reach for their own. */
+.personaChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.personaChip {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--muted);
   cursor: pointer;
 }
-.personaList li button:hover,
-.personaList li button:focus-visible {
-  background: var(--line);
-  outline: none;
-}
-.personaList li[aria-selected="true"] button .personaListNoun {
+.personaChip[aria-pressed="true"] {
+  border-color: var(--accent);
   color: var(--accent);
 }
-.personaListNoun,
-.personaListPack {
-  white-space: nowrap;
-}
-.personaListPack {
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  color: var(--muted);
-}
-@media (max-width: 480px) {
-  .personaList {
-    min-width: min(24rem, calc(100vw - 2.5rem));
-  }
-  .personaListPack {
-    display: none;
+@media (hover: hover) {
+  .personaChip:hover {
+    border-color: var(--accent-dim);
+    color: var(--accent);
   }
 }
-.welcomeClosingLine {
-  animation: personaIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .personaLeaving,
-  .personaArriving,
-  .welcomeClosingLine {
-    animation: none;
-  }
-  .personaLeaving {
-    display: none;
-  }
+.personaChip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .welcomeClosing {
   margin: 3.5rem 0 1rem;
   text-align: center;
-}
-.welcomeClosing h3 {
-  font-size: 1.8rem;
-  margin: 0 0 0.5rem;
 }
 .welcomeClosing .welcomeCtas {
   justify-content: center;
@@ -6303,8 +6229,7 @@ html[data-pip="controls"] body {
 @media (max-width: 760px) {
   .welcomeHero,
   .welcomeSteps,
-  .welcomeReasons,
-  .welcomePlans {
+  .welcomeSplit {
     grid-template-columns: 1fr;
   }
   .welcomeHero {
