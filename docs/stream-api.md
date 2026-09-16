@@ -8,7 +8,7 @@ For the widgets that draw these numbers, and how to put them in OBS, Streamlabs,
 
 ## Getting a link
 
-In the run, under **People at the table**, **Share a live link** (part of Plus where plans are on). The link is `https://runlog.scrthq.com/r/<runId>?t=<token>`. Take `<runId>` and `<token>` from it. **Stop sharing** kills the token; share again and a new one is minted.
+In the run, under **People at the table**, **Share link** (part of Plus where plans are on). The link is `https://runlog.scrthq.com/r/<runId>?t=<token>`. Take `<runId>` and `<token>` from it. **Stop sharing** kills the token; share again and a new one is minted.
 
 ## The numbers: `GET /api/public/runs/<runId>/metrics?t=<token>`
 

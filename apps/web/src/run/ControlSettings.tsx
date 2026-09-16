@@ -9,7 +9,8 @@ import { chosenFrom, creditLine } from "../control/setups.ts";
 import { HandOut } from "./HandOut.tsx";
 import { Ops } from "./Ops.tsx";
 import { listsFor, type Lists } from "../control/lists.ts";
-import { rememberWatchKey, watchKeyHere } from "./watchKey.ts";
+import { mintWatchKey, newKeyQuestion, watchKeyHere } from "./watchKey.ts";
+import { useConfirm } from "../ui/useConfirm.tsx";
 import { controlAddress } from "./controlAddress.ts";
 import { liveLinkOf, rememberLiveLink } from "../live/route.ts";
 import {
@@ -94,6 +95,8 @@ export function ControlSettings({
   // Whichever knows: this panel if it minted one, else the run.
   const key = made ?? reach?.key ?? null;
   const [busy, setBusy] = useState(false);
+  // A second key puts the first one out, so it is asked for; see useConfirm.
+  const { dialog, ask } = useConfirm();
   /** So a failed mint is not retried on every render. */
   const asked = useRef(false);
   /**
@@ -221,8 +224,7 @@ export function ControlSettings({
     if (!api) return;
     setBusy(true);
     try {
-      const made = await api.mintStreamKey("watch");
-      rememberWatchKey(made.key);
+      const made = await mintWatchKey(api);
       setKey(made.key);
       setKeys(made.keys);
       setNote(null);
@@ -251,6 +253,12 @@ export function ControlSettings({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, key, keys.watch]);
+
+  /** Asked only where there is one to lose: the first key costs nothing. */
+  const replaceKey = async () => {
+    if (keys.watch && !(await ask(newKeyQuestion(key !== null)))) return;
+    await makeKey();
+  };
 
   const exportFile = () => {
     const text = JSON.stringify(tidy(profile), null, 2);
@@ -285,6 +293,7 @@ export function ControlSettings({
 
   return (
     <>
+      {dialog}
       <h3 className="sectionTitle">
         Control <span className="muted">what a tool does about the dice</span>
       </h3>
@@ -355,7 +364,7 @@ export function ControlSettings({
               className={key ? "ghost tiny" : "primary tiny"}
               disabled={busy}
               title={keys.watch ? "Puts the old one out, wherever it is in use" : undefined}
-              onClick={() => void makeKey()}
+              onClick={() => void replaceKey()}
             >
               {keys.watch ? "New watch key" : "Make a watch key"}
             </button>

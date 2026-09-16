@@ -1308,9 +1308,19 @@ p {
   margin-left: 0;
   white-space: nowrap;
 }
-/* Inviting and sharing sit at the rows' rhythm, not in a block below them. */
+/*
+ * Inviting and sharing sit at the rows' rhythm, not in a block below them.
+ *
+ * Three at once, in a side column 17rem wide: the gap and the buttons'
+ * sides are trimmed so they hold one line there. Narrower than that and
+ * `padRow` wraps them, which beats a row running out of the column.
+ */
 .members .memberActions {
   margin-top: 0;
+  gap: 0.4rem;
+}
+.members .memberActions .ghost.small {
+  padding: 0.25rem 0.35rem;
 }
 /* The right of the row: marks then buttons, on the one line. */
 .memberRow .padRow {
