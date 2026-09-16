@@ -94,6 +94,10 @@ store.subscribe((s) => {
       if (built) {
         offered.add(packId);
         install(built.file);
+        // The app asks about the profile it was just handed; asking about
+        // the generic one in the same breath would be two prompts for one
+        // attach, and the generic layout is the smaller of the two.
+        continue;
       }
     }
     void streamDeck.profiles.switchToProfile(d.id, name).catch(() => {});

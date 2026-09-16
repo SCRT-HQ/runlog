@@ -1,7 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cwd } from "node:process";
-import { pathToFileURL } from "node:url";
 
 import streamDeck from "@elgato/streamdeck";
 import { container, fromOffer, laysOut, profile, specsFor, type DeviceId } from "@runlog/deck-profiles";
@@ -70,8 +69,16 @@ export function buildFor(state: DeckState, device: number): { file: string; byte
   return { file, bytes };
 }
 
-/** Hands the file to whatever opens a `.streamDeckProfile`, which is the Stream Deck app. */
+/**
+ * Hands the file to the Stream Deck app by its own door.
+ *
+ * A `file:` URL through `openUrl` goes to the OS opener and the app never
+ * hears of it (seen on an XL: the file was written, nothing was imported).
+ * Double-clicking a `.streamDeckProfile` is turned by the app's own handler
+ * into `streamdeck://app/openfile/<path>`, which is the link it acts on, so
+ * that is the link to send.
+ */
 export function install(file: string): void {
-  streamDeck.system.openUrl(pathToFileURL(file).href);
+  streamDeck.system.openUrl(`streamdeck://app/openfile/${encodeURIComponent(file)}`);
   streamDeck.logger.info("profile: handed to the Stream Deck app to import");
 }

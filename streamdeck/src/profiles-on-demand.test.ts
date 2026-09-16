@@ -134,7 +134,7 @@ describe("a profile built from the run the deck is on", () => {
     install(built.file);
 
     expect(mock.opened).toHaveLength(1);
-    expect(mock.opened[0]!.startsWith("file:///")).toBe(true);
+    expect(mock.opened[0]!.startsWith("streamdeck://app/openfile/")).toBe(true);
     expect(decodeURIComponent(mock.opened[0]!)).toContain("com.example.ember-trail-xl.streamDeckProfile");
     // One line for the build and one for the hand-over, and no more.
     expect(mock.logged).toHaveLength(2);

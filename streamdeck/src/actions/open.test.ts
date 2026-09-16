@@ -147,7 +147,7 @@ describe("pressing the open key", () => {
     // to whatever opens a `.streamDeckProfile`.
     expect(mock.wrote).toHaveLength(1);
     expect(mock.opened).toHaveLength(1);
-    expect(mock.opened[0]!.startsWith("file:///")).toBe(true);
+    expect(mock.opened[0]!.startsWith("streamdeck://app/openfile/")).toBe(true);
     expect(decodeURIComponent(mock.opened[0]!)).toContain("demo-xl.streamDeckProfile");
   });
 

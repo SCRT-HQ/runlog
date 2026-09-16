@@ -144,14 +144,15 @@ describe("the profile the deck lands on when a run attaches", () => {
     expect(mock.switched).toHaveLength(2);
   });
 
-  it("puts a run of a pack it ships no layout for on the generic profile", () => {
+  it("hands a run of a pack it ships no layout for its own profile, and not the generic one", () => {
     drop();
     mock.switched = [];
+    mock.handed = [];
     attach("r2", "com.example.bought");
-    expect(mock.switched).toEqual([
-      ["deck-xl", "profiles/runlog-xl"],
-      ["deck-plus", "profiles/runlog-plus"],
-    ]);
+    // The app asks about the profile it was just handed; the generic one
+    // is not offered in the same breath.
+    expect(mock.handed).toEqual(["built-2", "built-7"]);
+    expect(mock.switched).toEqual([]);
   });
 
   it("leaves the deck where it is when the setting is off", () => {
@@ -175,8 +176,7 @@ describe("the profile the deck lands on when a run attaches", () => {
     mock.handed = [];
     drop();
     attach("r5", "com.example.ember-trail");
-    // One per deck it has a grid for, and the generic profile after, which
-    // is what the deck stands on until the streamer answers the prompt.
+    // One per deck it has a grid for.
     expect(mock.handed).toEqual(["built-2", "built-7"]);
 
     // Once per pack per launch. The Stream Deck app's import prompt is the
