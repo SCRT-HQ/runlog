@@ -13,6 +13,7 @@ import { ThemeMenu } from "../theme/ThemeMenu.tsx";
 import { usePublicRun } from "./usePublic.ts";
 import type { LiveRoute } from "./route.ts";
 import { linkTo } from "../route.ts";
+import { runTitle, useTitle } from "../title.ts";
 
 /**
  * A run watched by its link, by anyone.
@@ -84,6 +85,8 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
       live = false;
     };
   }, [api]);
+
+  useTitle(snapshot ? runTitle(snapshot.runName, snapshot.packTitle) : (got?.run.packTitle ?? null));
 
   const bar = (
     <LiveBar title={got?.run.packTitle ?? snapshot?.packTitle ?? null} packId={got?.run.packId ?? null} listed={Boolean(got?.listing)} />

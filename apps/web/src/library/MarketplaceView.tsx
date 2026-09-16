@@ -14,6 +14,7 @@ import {
 } from "./marketplace.ts";
 import type { ListingKind } from "@runlog/rules-schema";
 import { useHosted } from "../hosted/HostedProvider.tsx";
+import { useTitle } from "../title.ts";
 
 /**
  * The marketplace, laid out as a market: cards in a grid, a sidebar to narrow
@@ -55,6 +56,7 @@ export function MarketplaceView({
   onOpen: (id: string) => void;
   onBack: () => void;
 }) {
+  useTitle("Marketplace");
   const [entries, setEntries] = useState<MarketplaceEntry[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const drawer = useDocDrawer();
