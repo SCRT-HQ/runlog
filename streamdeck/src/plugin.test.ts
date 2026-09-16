@@ -279,21 +279,27 @@ describe("the profile the deck lands on when a run attaches", () => {
     mock.installed = [];
   });
 
-  it("leaves a pack it ships a profile for alone when the streamer imported one of their own", () => {
-    // The app names a second profile for the same pack "copy" rather than
-    // replacing the first, so asking it for the shipped one would leave the
-    // streamer two lists of the same keys and take the deck off the one
-    // they arranged.
+  it("switches to a shipped profile even when the streamer imported one of their own", async () => {
+    // The shipped profile is in the plugin's manifest whether or not the
+    // streamer separately imported a copy under the same title, so the
+    // switch has a target to reach either way.
     mock.handed = [];
     mock.switched = [];
     mock.logged = [];
+    mock.wrote = [];
     mock.installed = [{ name: "Soundclash" }];
     drop();
     attach("r12", "com.scrthq.runlog.soundclash", "Soundclash");
 
-    expect(mock.switched).toEqual([]);
+    expect(mock.switched).toEqual([
+      ["deck-xl", "profiles/soundclash-xl"],
+      ["deck-plus", "profiles/soundclash-plus"],
+    ]);
     expect(mock.handed).toEqual([]);
-    expect(mock.logged.filter((l) => l.includes("has a profile of its own installed, leaving the deck where it is"))).toHaveLength(1);
+    expect(mock.logged.filter((l) => l.includes("leaving the deck where it is"))).toHaveLength(0);
+    // Still marked offered, so the folder is not read again for this pack.
+    await vi.waitFor(() => expect(mock.wrote).not.toHaveLength(0));
+    expect(mock.wrote.at(-1)!.profilesOffered).toContain("com.scrthq.runlog.soundclash");
     mock.installed = [];
   });
 
@@ -308,6 +314,32 @@ describe("the profile the deck lands on when a run attaches", () => {
       ["deck-plus", "profiles/soundclash-plus"],
     ]);
     mock.installed = [];
+  });
+
+  it("switches again when the Run key moves the deck to a run of a different shipped pack", () => {
+    // The Run key does not attach and detach; it pins a different one of
+    // the runs already held, the same shape as a picker choice.
+    mock.switched = [];
+    drop();
+    store.dispatch({ t: "runs", runs: [{ id: "r16" }, { id: "r17" }], any: true });
+    store.dispatch({ t: "pin", id: "r16" });
+    store.dispatch({ t: "snapshot", snapshot: { run: { id: "r16", packId: "com.scrthq.runlog.forfeits" } } });
+    expect(mock.switched).toEqual([
+      ["deck-xl", "profiles/forfeits-xl"],
+      ["deck-plus", "profiles/forfeits-plus"],
+    ]);
+
+    mock.switched = [];
+    store.dispatch({ t: "pin", id: "r17" });
+    store.dispatch({ t: "snapshot", snapshot: { run: { id: "r17", packId: "com.scrthq.runlog.soundclash" } } });
+    expect(mock.switched).toEqual([
+      ["deck-xl", "profiles/soundclash-xl"],
+      ["deck-plus", "profiles/soundclash-plus"],
+    ]);
+
+    // Unpinned again, so a later test's single held run attaches on its
+    // own the way the rest of this file expects.
+    store.dispatch({ t: "pin", id: null });
   });
 });
 
