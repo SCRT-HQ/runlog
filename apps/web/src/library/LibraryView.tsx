@@ -9,6 +9,7 @@ import { SetupShelf } from "./SetupShelf.tsx";
 import { scoresOf } from "../run/scores.ts";
 import { byLastOpened, openedAt } from "./opened.ts";
 import { DocMenu } from "../docs/DocMenu.tsx";
+import { DeckProfiles } from "./DeckProfiles.tsx";
 import { HomeStrip } from "./HomeStrip.tsx";
 import { PackServers } from "./PackServers.tsx";
 import { useGuildVaults } from "./useGuildVaults.ts";
@@ -221,6 +222,7 @@ export function LibraryView({
                   </button>
                 )}
                 <DocMenu compact pack={() => loadPackText(p.source, p.record?.format ?? "yaml").pack} at={{ section: "packs", id: p.id }} />
+                <DeckProfiles load={() => Promise.resolve(p.source)} format={p.record?.format ?? "yaml"} />
                 {/*
                   The one thing anybody came here to do, and it looked
                   like the four things beside it. Documents, Test, Every

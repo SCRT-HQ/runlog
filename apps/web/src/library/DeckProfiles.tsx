@@ -22,7 +22,7 @@ import { useDismiss } from "../ui/useDismiss.ts";
  * fetching twenty packs to decide whether to draw twenty rows nobody asked
  * for is a page that costs what it does not spend.
  */
-export function DeckProfiles({ load }: { load: () => Promise<string> }) {
+export function DeckProfiles({ load, format = "yaml" }: { load: () => Promise<string>; format?: "yaml" | "json" }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDetailsElement>(null);
   const [pack, setPack] = useState<Pack | null>(null);
@@ -52,7 +52,7 @@ export function DeckProfiles({ load }: { load: () => Promise<string> }) {
     if (pack || failed || reading.current) return;
     reading.current = true;
     try {
-      const parsed = loadPackText(await load(), "yaml");
+      const parsed = loadPackText(await load(), format);
       if (!parsed.ok) setFailed(true);
       else if (hasKeys(parsed.pack)) setPack(parsed.pack);
       else setNothing(true);
