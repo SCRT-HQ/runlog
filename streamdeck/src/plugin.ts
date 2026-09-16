@@ -14,7 +14,7 @@ import { Roll } from "./actions/roll.ts";
 import { pin, Run, runsForInspector } from "./actions/run.ts";
 import { Setup } from "./actions/setup.ts";
 import { Undo } from "./actions/undo.ts";
-import { hasProfileFor, installedProfiles } from "./installed.ts";
+import { installedFor, installedProfiles } from "./installed.ts";
 import { buildFor, install } from "./profiles-on-demand.ts";
 import { PACK_PROFILES, profileFor } from "./profiles.ts";
 import { allSeen, loadSeen, remember, setupsInOffer, type SeenSetup } from "./seen.ts";
@@ -77,6 +77,13 @@ export const wire = openWire((): Account => ({ apiBase: base }), store);
  * app to import before the switch. Once per pack, for good: the app's
  * import prompt is the streamer's to answer, and asking again on every
  * launch fills their list with copies of the one profile.
+ *
+ * And the app's own folder is read first, for either kind of pack. A
+ * streamer who already imported a profile for this pack has one the plugin
+ * cannot switch to and must not hand over again: the app keeps both copies
+ * and names the second one, so asking for the shipped profile would leave
+ * them two lists of the same keys and take the deck off the one they
+ * arranged.
  */
 let switchedFor: string | null = null;
 
@@ -105,18 +112,28 @@ store.subscribe((s) => {
   if (!switchProfiles || switchedFor === s.attached || !s.snapshot) return;
   switchedFor = s.attached;
   const packId = s.snapshot.run?.packId;
-  const build = packId !== undefined && PACK_PROFILES[packId] === undefined && !offered.has(packId);
-  if (build) {
+  const ships = packId !== undefined && PACK_PROFILES[packId] !== undefined;
+  const build = packId !== undefined && !ships && !offered.has(packId);
+  if (packId !== undefined && (ships || build)) {
     const pack = { id: packId, ...(s.snapshot.run?.packTitle ? { title: s.snapshot.run.packTitle } : {}) };
-    if (hasProfileFor(pack, installedProfiles())) {
-      // The streamer already has one, imported on some earlier launch or
-      // from the pack's own page. Handing over another would leave them a
-      // second copy of a profile they may have rearranged since.
-      streamDeck.logger.info(`profile: ${packId} already has one in the Stream Deck app`);
-      void markOffered(packId);
-      // And nothing is switched: a profile somebody imported is not in this
-      // plugin's manifest, so it cannot be switched to, and pushing the
-      // generic layout instead would take the deck off the pack's own keys.
+    const held = installedFor(pack, installedProfiles());
+    // Either kind counts as offered: nothing should hand this pack a
+    // profile again on a later attach.
+    if (held !== null) void markOffered(packId);
+    if (held === "imported") {
+      // The streamer has a profile of their own for this pack, under the
+      // pack's own name: imported off the pack's page, off the Install key,
+      // off a file somebody sent them. Nothing more is handed over, because
+      // the app keeps both and calls the second one "copy" rather than
+      // replacing the first. And nothing is switched: a profile somebody
+      // imported is not in this plugin's manifest, so it cannot be switched
+      // to, and asking the app for the shipped one instead would install a
+      // second copy and take the deck off the keys they arranged.
+      streamDeck.logger.info(
+        ships
+          ? `profile: ${packId} has a profile of its own installed, leaving the deck where it is`
+          : `profile: ${packId} already has one in the Stream Deck app`,
+      );
       return;
     }
   }

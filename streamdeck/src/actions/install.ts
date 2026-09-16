@@ -1,10 +1,10 @@
 import streamDeck, { action, type KeyDownEvent } from "@elgato/streamdeck";
 
-import { hasProfileFor, installedProfiles } from "../installed.ts";
+import { hasProfileFor, installedFor, installedProfiles } from "../installed.ts";
 import { fetchPack, libraryPacks, type LibraryPack } from "../library.ts";
 import { apiBase, store } from "../plugin.ts";
 import { buildFor, buildForPack, install } from "../profiles-on-demand.ts";
-import { installFace, type DeckState, type Face } from "../state.ts";
+import { installFace, IMPORTED_AS_COPY, type DeckState, type Face } from "../state.ts";
 import { RunlogAction } from "./base.ts";
 
 export type InstallSettings = { pack?: { id: string; title: string } };
@@ -25,8 +25,8 @@ export type InstallSettings = { pack?: { id: string; title: string } };
  */
 @action({ UUID: "com.scrthq.runlog.install" })
 export class Install extends RunlogAction<InstallSettings> {
-  face(_state: DeckState, settings: InstallSettings): Face {
-    return installFace(settings.pack);
+  face(state: DeckState, settings: InstallSettings): Face {
+    return installFace(state, settings.pack);
   }
 
   override async onKeyDown(ev: KeyDownEvent<InstallSettings>): Promise<void> {
@@ -49,6 +49,13 @@ export class Install extends RunlogAction<InstallSettings> {
       return;
     }
     install(built.file);
+    // Read after the hand-over, which is the same answer as before it: the
+    // app asks the streamer before it imports anything, so the folder still
+    // holds what it held when the key went down.
+    if (installedFor(pack, installedProfiles()) !== null) {
+      streamDeck.logger.info(`profile: ${pack.id} already had one, so the app will name this one a copy`);
+      store.dispatch({ t: "drove", ref: IMPORTED_AS_COPY, ok: true });
+    }
     await ev.action.showOk();
   }
 

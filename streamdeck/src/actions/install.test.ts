@@ -16,6 +16,8 @@ const mock = vi.hoisted(() => ({
   /** The packs the account is holding, and the profiles the app already has. */
   packs: [] as Array<{ id: string; title: string }>,
   installed: [] as Array<{ name: string }>,
+  /** Every event the key pushed into the store, which is how it flashes. */
+  dispatched: [] as Array<Record<string, unknown>>,
   /** The pack file the account answers with, or nothing and the reason why. */
   pack: null as { id: string; title: string } | null,
   why: "unsynced" as string,
@@ -47,7 +49,9 @@ vi.mock("../plugin.ts", () => ({
     get state() {
       return mock.state;
     },
-    dispatch: () => {},
+    dispatch: (e: Record<string, unknown>) => {
+      mock.dispatched.push(e);
+    },
     subscribe: () => () => {},
   },
   sayWho: async () => {},
@@ -64,6 +68,8 @@ vi.mock("../library.ts", () => ({
 vi.mock("../installed.ts", () => ({
   installedProfiles: () => mock.installed,
   hasProfileFor: (pack: { title?: string }, profiles: Array<{ name: string }>) => profiles.some((p) => p.name === pack.title),
+  installedFor: (pack: { title?: string }, profiles: Array<{ name: string }>) =>
+    profiles.some((p) => p.name === pack.title) ? "imported" : null,
 }));
 // The generator writes a file beside the plugin; what comes out of it is
 // `profiles-on-demand.test.ts`, and what is held here is that it was asked.
@@ -107,6 +113,8 @@ describe("pressing the install key", () => {
     mock.state = { snapshot: null };
     mock.pack = null;
     mock.why = "unsynced";
+    mock.dispatched = [];
+    mock.installed = [];
   });
 
   it("alerts with no pack chosen, and says so in the log", async () => {
@@ -164,6 +172,29 @@ describe("pressing the install key", () => {
 
     expect(mock.fetched).toEqual(["com.example.ember-trail"]);
     expect(oks).toEqual(["ok"]);
+  });
+
+  it("says the app will make a copy where the pack already had a profile", async () => {
+    mock.state = onRun("com.example.ember-trail");
+    mock.installed = [{ name: "Ember Trail" }];
+    const oks: string[] = [];
+    await press({ id: "com.example.ember-trail", title: "Ember Trail" }, [], oks);
+
+    // Handed over all the same: the second picker is there to reinstall,
+    // and the app is the one that decides what to call what it imports.
+    expect(oks).toEqual(["ok"]);
+    expect(mock.opened).toHaveLength(1);
+    // And the key says so, through the flash every other key uses.
+    expect(mock.dispatched).toEqual([{ t: "drove", ref: "imported-as-copy", ok: true }]);
+    expect(mock.logged.filter((l) => l.includes("name this one a copy"))).toHaveLength(1);
+  });
+
+  it("says nothing of the sort where the pack had none", async () => {
+    mock.state = onRun("com.example.ember-trail");
+    const oks: string[] = [];
+    await press({ id: "com.example.ember-trail", title: "Ember Trail" }, [], oks);
+    expect(oks).toEqual(["ok"]);
+    expect(mock.dispatched).toEqual([]);
   });
 
   it("says so in the log for a deck it lays nothing out for", async () => {

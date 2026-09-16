@@ -20,7 +20,7 @@ const mock = vi.hoisted(() => ({
   settings: {} as Record<string, unknown>,
   wrote: [] as Array<Record<string, unknown>>,
   /** The profiles the Stream Deck app is pretending to already have. */
-  installed: [] as Array<{ name: string }>,
+  installed: [] as Array<{ name: string; shipped?: boolean }>,
   /** Every line the plugin logged. */
   logged: [] as string[],
   /** The plugin's own listener for a change to the global settings. */
@@ -81,7 +81,11 @@ vi.mock("./profiles-on-demand.ts", () => ({
 // about a pack that already has one.
 vi.mock("./installed.ts", () => ({
   installedProfiles: () => mock.installed,
-  hasProfileFor: (pack: { title?: string }, profiles: Array<{ name: string }>) => profiles.some((p) => p.name === pack.title),
+  installedFor: (pack: { title?: string }, profiles: Array<{ name: string; shipped?: boolean }>) => {
+    const found = profiles.find((p) => p.name === pack.title);
+    if (!found) return null;
+    return found.shipped ? "shipped" : "imported";
+  },
 }));
 // Never the real session file: this test signs nobody in and must not read
 // the deck's own rotating token off disk.
@@ -272,6 +276,37 @@ describe("the profile the deck lands on when a run attaches", () => {
     await vi.waitFor(() => expect(mock.wrote).not.toHaveLength(0));
     expect(mock.wrote.at(-1)!.profilesOffered).toContain("com.example.quarry-road");
 
+    mock.installed = [];
+  });
+
+  it("leaves a pack it ships a profile for alone when the streamer imported one of their own", () => {
+    // The app names a second profile for the same pack "copy" rather than
+    // replacing the first, so asking it for the shipped one would leave the
+    // streamer two lists of the same keys and take the deck off the one
+    // they arranged.
+    mock.handed = [];
+    mock.switched = [];
+    mock.logged = [];
+    mock.installed = [{ name: "Soundclash" }];
+    drop();
+    attach("r12", "com.scrthq.runlog.soundclash", "Soundclash");
+
+    expect(mock.switched).toEqual([]);
+    expect(mock.handed).toEqual([]);
+    expect(mock.logged.filter((l) => l.includes("has a profile of its own installed, leaving the deck where it is"))).toHaveLength(1);
+    mock.installed = [];
+  });
+
+  it("switches to a shipped profile the plugin installed itself, which is no copy at all", () => {
+    mock.switched = [];
+    mock.installed = [{ name: "Soundclash", shipped: true }];
+    drop();
+    attach("r13", "com.scrthq.runlog.soundclash", "Soundclash");
+
+    expect(mock.switched).toEqual([
+      ["deck-xl", "profiles/soundclash-xl"],
+      ["deck-plus", "profiles/soundclash-plus"],
+    ]);
     mock.installed = [];
   });
 });

@@ -23,7 +23,9 @@ import {
   finishFace,
   finishPress,
   metricPress,
+  FLASH_MS,
   IDLE_OFF_MS,
+  IMPORTED_AS_COPY,
   type DeckState,
   type Offer,
 } from "./state";
@@ -371,7 +373,7 @@ describe("what the open key says", () => {
 // about the connection.
 describe("what the install key says", () => {
   it("names the pack it would build a profile for", () => {
-    expect(installFace({ id: "com.example.ember-trail", title: "Ember Trail" })).toEqual({
+    expect(installFace(initial(), { id: "com.example.ember-trail", title: "Ember Trail" })).toEqual({
       title: "Ember Trail",
       tone: "deck",
       when: "to import",
@@ -379,7 +381,32 @@ describe("what the install key says", () => {
   });
 
   it("says Set up with no pack chosen", () => {
-    expect(installFace(undefined)).toEqual({ title: "Set up", tone: "dim" });
+    expect(installFace(initial(), undefined)).toEqual({ title: "Set up", tone: "dim" });
+  });
+
+  it("says the app made a copy, for as long as any other key holds a flash", () => {
+    // The Stream Deck app keeps both profiles and names the second one, so
+    // the key is where the streamer hears that they now have two.
+    const copied = reduce(initial(), { t: "drove", ref: IMPORTED_AS_COPY, ok: true }, T);
+    expect(installFace(copied, { id: "com.example.ember-trail", title: "Ember Trail" })).toEqual({
+      title: "Imported as a copy",
+      tone: "refuse",
+    });
+
+    // And it is a flash like any other: three seconds, then the key says
+    // what it said before.
+    expect(installFace(reduce(copied, { t: "tick" }, T + FLASH_MS), { id: "com.example.ember-trail", title: "Ember Trail" })).toEqual({
+      title: "Ember Trail",
+      tone: "deck",
+      when: "to import",
+    });
+  });
+
+  it("is a flash no other key on the deck answers", () => {
+    // Marked as having gone fine, so the refusal face every other key wears
+    // for a flash is not raised by this one.
+    const copied = reduce(live(), { t: "drove", ref: IMPORTED_AS_COPY, ok: true }, T);
+    expect(rollFace(copied).title).toBe(rollFace(live()).title);
   });
 });
 
