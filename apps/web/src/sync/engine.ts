@@ -131,6 +131,19 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
           const stamped = await stampIds(local.runId, local.events as RunEvent[]);
           const pending = pendingEvents(stamped);
           const before = tailSeq(stamped);
+          /**
+           * How far along the server's counter this device has already
+           * caught up: the log's own last number, or the counter the
+           * manifest showed when a fetch came back with nothing behind it.
+           *
+           * The two part company after an undo, which takes an event out of
+           * the log and leaves the session's counter where it was. That gap
+           * is legitimate and permanent. Read as "somebody else has moved",
+           * it had this device fetch nothing every pass, for as long as the
+           * run was open.
+           */
+          const seenTail = Math.max(before, local.seq ?? 0);
+          let serverTail = theirs?.seq ?? 0;
           let incoming: SessionEvent[] = [];
           let role = local.role;
           let members = local.members;
@@ -169,7 +182,6 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
           } else {
             // How far the server's log goes: the manifest's word, or the
             // append's, whichever is later.
-            let serverTail = theirs?.seq ?? 0;
             if (pending.length > 0) {
               const sent = await api.appendEvents(local.runId, pending);
               incoming = sent.appended;
@@ -178,9 +190,10 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
               const renamed = pending.some((e) => e.t === "RunRenamed");
               if (renamed) await api.patchSession(local.runId, { name: nameFrom(stamped) ?? "" });
             }
-            // Anything numbered past what was here and not among what just
-            // came back is somebody else's: fetch from where this device was.
-            if (serverTail > before + incoming.length) {
+            // Anything numbered past what this device has caught up to and
+            // not among what just came back is somebody else's: fetch from
+            // where this device's log ends.
+            if (serverTail > seenTail + incoming.length) {
               const got = await api.getSession(local.runId, before);
               if (got) {
                 incoming = [...incoming, ...got.events];
@@ -205,18 +218,34 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
            * the run was left out of the news, and news with nothing in it is
            * dropped. Storage said `owner` while the screen still said
            * nothing, and the panel that waits on a role waited for a reload.
+           *
+           * By value, never by identity: every fetch hands back a fresh
+           * members list, and a new object saying the old thing is not news.
            */
           const aboutTheRun =
-            members !== local.members ||
+            JSON.stringify(members ?? null) !== JSON.stringify(local.members ?? null) ||
             role !== local.role ||
             shared !== local.shared ||
             JSON.stringify(asks ?? null) !== JSON.stringify(local.asks ?? null);
-          const changed = aboutTheRun || merged.length !== local.events.length || tailSeq(merged) !== before || stamped !== local.events;
+          /**
+           * Where the server's counter stands as far as this device knows:
+           * its own log's last number, or the counter the manifest showed
+           * while the server handed back nothing behind it. Written even
+           * when nothing else about the run moved, because it is what the
+           * next pass reads to know the gap has already been looked at.
+           */
+          const caughtUp = Math.max(tailSeq(merged), serverTail);
+          const changed =
+            aboutTheRun ||
+            merged.length !== local.events.length ||
+            tailSeq(merged) !== before ||
+            stamped !== local.events ||
+            caughtUp !== (local.seq ?? 0);
           if (changed) {
             await db.saveRun({
               ...local,
               events: merged,
-              seq: tailSeq(merged),
+              seq: caughtUp,
               ...(role ? { role } : {}),
               ...(members ? { members } : {}),
               ...(typeof shared === "boolean" ? { shared } : {}),
@@ -338,7 +367,14 @@ export function createEngine(api: Api, db: SyncDb, now: () => string = () => new
         pulledPacks.push(id);
         pulled += 1;
       }
+      // A row here to drop, or nothing to do. The server keeps its
+      // tombstone for a pack deleted anywhere, and a device that purged its
+      // own copy passes ago has nothing left to forget: planned again every
+      // pass, it was a delete against storage for a row already gone and a
+      // "pack arrived" for every tombstone the account held, every pass.
+      const here = new Set(allPacks.map((p) => p.id));
       for (const id of packPlan.forgetLocal) {
+        if (!here.has(id)) continue;
         await db.purgePack(id);
         await db.forgetSyncState(id);
         pulledPacks.push(id);

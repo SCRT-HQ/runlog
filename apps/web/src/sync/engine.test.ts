@@ -441,6 +441,79 @@ describe("the sync engine", () => {
     expect(news).toContainEqual({ t: "pulled", kind: "run", ids: ["r1"] });
   });
 
+  /**
+   * The bug this guards: an undo leaves the session's counter past the last
+   * event the log holds, which is legitimate and stays that way. The engine
+   * read the gap as "somebody else has moved", fetched, got no events back
+   * but a fresh members list, took that list as news because it was a new
+   * object, saved the run and told the app one had arrived. The page
+   * answered by dropping the roll in flight, and the save asked for another
+   * pass: a run that re-pulled every two seconds and could not be played.
+   */
+  it("catches up to a server counter past the last event, and stops asking about it", async () => {
+    const local = fakeDb();
+    const server = fakeApi();
+    local.runs.set("r1", run("r1", "2026-01-02", [started("r1"), move("m1")]));
+    const engine = createEngine(server.api, local.db);
+    await engine.sync();
+    // What an undo leaves behind: the counter moved on, the log did not.
+    server.sessions.get("r1")!.meta.seq = 4;
+    // And the members this device was already told about, so that nothing
+    // about the run is new either.
+    local.runs.set("r1", { ...local.runs.get("r1")!, members: [{ sub: "user", role: "owner", joinedAt: "2026-01-02" }] });
+    news.length = 0;
+    server.calls.length = 0;
+
+    const first = await engine.sync();
+    expect(server.calls).toContain("getSession r1 after 2");
+    expect(first.pulled).toBe(0);
+    expect(news.filter((n) => n.t === "pulled" && n.kind === "run")).toEqual([]);
+    // The counter is what the device has caught up to now, gap and all.
+    expect(local.runs.get("r1")!.seq).toBe(4);
+
+    server.calls.length = 0;
+    const second = await engine.sync();
+    expect(server.calls.filter((c) => c.startsWith("getSession"))).toEqual([]);
+    expect(second.pulled).toBe(0);
+    expect(news.filter((n) => n.t === "pulled" && n.kind === "run")).toEqual([]);
+  });
+
+  /**
+   * The bug this guards: the server keeps its tombstone for a pack deleted
+   * anywhere, and this device purged its own copy passes ago. With nothing
+   * left here to forget, the plan still said "forget it" on every pass: a
+   * delete against storage for a row already gone, and a "pack arrived" for
+   * every tombstone the account held, every two seconds.
+   */
+  it("leaves a pack the server buried and this device no longer has alone", async () => {
+    const local = fakeDb();
+    const server = fakeApi();
+    const purged: string[] = [];
+    const db: SyncDb = {
+      ...local.db,
+      purgePack: async (id) => {
+        purged.push(id);
+        return local.db.purgePack(id);
+      },
+    };
+    server.packs.set("gone", {
+      id: "gone",
+      title: "gone",
+      version: "1",
+      format: "yaml",
+      filename: "gone.yaml",
+      importedAt: "2026-01-01",
+      updatedAt: "2026-01-04",
+      hash: "h",
+      source: "",
+      deletedAt: "2026-01-04",
+    } as RemotePack & { deletedAt: string });
+
+    await createEngine(server.api, db).sync();
+    expect(purged).toEqual([]);
+    expect(news.filter((n) => n.t === "pulled" && n.kind === "pack")).toEqual([]);
+  });
+
   it("gives an old log ids the same way twice, so a second device adds nothing twice", async () => {
     const legacy = [
       { t: "RunStarted", at: "2026-01-01", packId: "kiln", packVersion: "1", mode: "std" },
