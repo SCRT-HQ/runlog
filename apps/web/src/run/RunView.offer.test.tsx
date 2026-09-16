@@ -124,10 +124,13 @@ async function renderRunView({
   rest = () => [],
   drove = () => {},
   gesture,
+  bench = true,
 }: {
   putSnapshot: Api["putSnapshot"];
   shared: boolean;
   decksAttached?: number;
+  /** Off for the one test that wants the panels the bench keeps out. */
+  bench?: boolean;
   /** What the run has done since it started, for a test that needs a step. */
   rest?: (at: string) => RunEvent[];
   /** The verdict this device sends back, for the tests about pressing. */
@@ -135,7 +138,14 @@ async function renderRunView({
   /** The word this device sends out, for the test about handing a setup out. */
   gesture?: Sync["gesture"];
 }) {
-  current.api = { putSnapshot, myRaces: async () => [] } as unknown as Api;
+  current.api = {
+    putSnapshot,
+    myRaces: async () => [],
+    asks: async () => [],
+    reactions: async () => [],
+    listInvites: async () => [],
+    people: async () => [],
+  } as unknown as Api;
   const store = memoryRunStore();
   const runId = "run1";
   const at = "2026-09-14T00:00:00.000Z";
@@ -161,7 +171,7 @@ async function renderRunView({
   vi.useFakeTimers();
   render(
     <SyncContext.Provider value={syncWith(drove, gesture)}>
-      <RunView pack={kiln} store={store} bench={{ from: "test", onLeave: () => {} }} />
+      <RunView pack={kiln} store={store} bench={bench ? { from: "test", onLeave: () => {} } : undefined} />
     </SyncContext.Provider>,
   );
   await flush();
@@ -190,13 +200,16 @@ describe("the offer rides along with the snapshot", () => {
   });
 
   /**
-   * The Attached panel says a deck is on the same way it says a tool is:
-   * named where a tool would be, nothing where there is neither.
+   * A deck used to get a heading of its own in the Attached panel, which
+   * said how many were on and never whose. The people panel draws one row
+   * a person with a mark for the deck, so the heading went and the panel
+   * is about tools again.
    */
-  it("lists a deck in the Attached panel, and says nothing where there is none", async () => {
+  it("leaves a deck to the people panel rather than heading the Attached panel with it", async () => {
     const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
     await renderRunView({ putSnapshot, shared: false, decksAttached: 1 });
-    expect(screen.getByText("Stream Deck")).toBeTruthy();
+    // By heading: the arrival toast says "Stream Deck" too, and that stays.
+    expect(screen.queryByRole("heading", { name: /Stream Deck/ })).toBeNull();
   });
 
   /*
@@ -212,16 +225,23 @@ describe("the offer rides along with the snapshot", () => {
     });
   });
 
-  it("counts more than one deck", async () => {
-    const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
-    await renderRunView({ putSnapshot, shared: false, decksAttached: 3 });
-    expect(screen.getByText("Stream Deck × 3")).toBeTruthy();
-  });
-
   it("says nothing in the Attached panel with no tool and no deck", async () => {
     const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
     await renderRunView({ putSnapshot, shared: false });
     expect(screen.queryByText(/Stream Deck/)).toBeNull();
+  });
+
+  /**
+   * Who is here is the first thing in the side column, above the board
+   * and everything else. It used to be the last panel of nine, which on a
+   * phone is a scroll away from the run.
+   */
+  it("puts the people panel at the top of the side column, above the board", async () => {
+    const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+    await renderRunView({ putSnapshot, shared: false, bench: false });
+    const people = screen.getByText("at the table");
+    const board = screen.getByText("the board");
+    expect(people.compareDocumentPosition(board) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   /**
