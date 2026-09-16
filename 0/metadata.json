@@ -1,0 +1,1055 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2M29A7MHQQACX8TRC167KMC",
+  "session_id": "e72ee5b1-7270-4fac-abcc-53994b037403",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-16T02:56:14.318474Z",
+  "branch": "the-run-stops-re-pulling",
+  "checkpoints_count": 8,
+  "save_step_count": 33,
+  "files_touched": [
+    "apps/web/src/sync/engine.test.ts",
+    "apps/web/src/sync/engine.ts",
+    "apps/web/src/sync/log.test.ts",
+    "apps/web/src/sync/log.ts"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-fable-5-1",
+  "turn_id": "ccbc321e6b8b",
+  "checkpoint_transcript_start": 10541,
+  "transcript_lines_at_start": 10541,
+  "compact_transcript_start": 1208,
+  "token_usage": {
+    "input_tokens": 1596,
+    "cache_creation_tokens": 1938417,
+    "cache_read_tokens": 47898460,
+    "output_tokens": 52661,
+    "api_call_count": 63,
+    "subagent_tokens": {
+      "input_tokens": 280,
+      "cache_creation_tokens": 387138,
+      "cache_read_tokens": 13325784,
+      "output_tokens": 70097,
+      "api_call_count": 140
+    }
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_014vhhQ4NijiY1xqXGLsYL8M",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:brainstorming"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "8a84e461a26e",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 38,
+        "end": 39,
+        "entry_ids": [
+          "5f676ba2-4bdc-40fc-97e1-e8decf04d118"
+        ],
+        "tool_use_id": "toolu_014vhhQ4NijiY1xqXGLsYL8M"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_014vhhQ4NijiY1xqXGLsYL8M"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:brainstorming",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01RUnUDwYs3FN6XtJsVEN7mB",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "avoid-ai-writing"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "8a84e461a26e",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 490,
+        "end": 491,
+        "entry_ids": [
+          "137ac9f1-0696-490a-a25d-2ff8fc0bc931"
+        ],
+        "tool_use_id": "toolu_01RUnUDwYs3FN6XtJsVEN7mB"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01RUnUDwYs3FN6XtJsVEN7mB"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: avoid-ai-writing",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01GfffjihkW2AiHBpNVYy9yr",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "artifact-design"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "4bd81f48a3d5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 542,
+        "end": 543,
+        "entry_ids": [
+          "58835be2-d8b8-4fbd-9274-28d0f2e5b0f4"
+        ],
+        "tool_use_id": "toolu_01GfffjihkW2AiHBpNVYy9yr"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01GfffjihkW2AiHBpNVYy9yr"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: artifact-design",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_013rMgomGXH39A7HBYx7ys5H",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:writing-plans"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "4bd81f48a3d5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 660,
+        "end": 661,
+        "entry_ids": [
+          "e12e2ed1-0c4e-404c-91f5-8b234bb9b28b"
+        ],
+        "tool_use_id": "toolu_013rMgomGXH39A7HBYx7ys5H"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_013rMgomGXH39A7HBYx7ys5H"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:writing-plans",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01KpuJi5MYaqZz28zq8QsQwy",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:subagent-driven-development"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "4bd81f48a3d5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 951,
+        "end": 952,
+        "entry_ids": [
+          "4c40a089-bd95-4d0e-b3f7-30592a1ef14e"
+        ],
+        "tool_use_id": "toolu_01KpuJi5MYaqZz28zq8QsQwy"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01KpuJi5MYaqZz28zq8QsQwy"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:subagent-driven-development",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01CjUjhVENDWngK7gGeMhNUy",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:systematic-debugging"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "24bf0308d75b",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 2314,
+        "end": 2315,
+        "entry_ids": [
+          "0b4bf8b1-e18b-49df-ab60-029810a49b2f"
+        ],
+        "tool_use_id": "toolu_01CjUjhVENDWngK7gGeMhNUy"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01CjUjhVENDWngK7gGeMhNUy"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:systematic-debugging",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_0142ZxFFzHWozd2Vwy2Q1ENs",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:finishing-a-development-branch"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "30bfe7fcf8b6",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 2536,
+        "end": 2537,
+        "entry_ids": [
+          "9fd26905-90d1-4e55-a2b5-3f294ec68484"
+        ],
+        "tool_use_id": "toolu_0142ZxFFzHWozd2Vwy2Q1ENs"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_0142ZxFFzHWozd2Vwy2Q1ENs"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:finishing-a-development-branch",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 216
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-16T02:56:13.1004814Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 286,
+    "human_modified": 1310,
+    "human_removed": 0,
+    "total_committed": 1460,
+    "total_lines_changed": 1596,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 148098,
+      "agent_lines_removed": 26978
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 148098,
+      "agent_lines_removed": 26978
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 148756,
+      "agent_lines_removed": 29734
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 148756,
+      "agent_lines_removed": 29734
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 4487,
+      "user_lines_removed": 4469,
+      "agent_lines_added": 148756,
+      "agent_lines_removed": 29734,
+      "user_added_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "packages/cli/src/bin.ts": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19,
+        "vitest.config.ts": 28
+      },
+      "user_removed_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "packages/cli/src/bin.ts": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19,
+        "vitest.config.ts": 10
+      }
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 1677,
+      "user_lines_removed": 1495,
+      "agent_lines_added": 148891,
+      "agent_lines_removed": 30560,
+      "user_added_per_file": {
+        "apps/web/src/sync/socket.test.ts": 33,
+        "apps/web/src/sync/socket.ts": 24,
+        "docs/stream-api.md": 7,
+        "hosted/infra/lib/handlers/ws.ts": 18,
+        "hosted/infra/test/ws.test.ts": 1499,
+        "streamdeck/src/socket.test.ts": 59,
+        "streamdeck/src/socket.ts": 27,
+        "vitest.config.ts": 10
+      },
+      "user_removed_per_file": {
+        "apps/web/src/sync/socket.test.ts": 1,
+        "hosted/infra/test/ws.test.ts": 1466,
+        "vitest.config.ts": 28
+      }
+    },
+    {
+      "checkpoint_number": 9,
+      "user_lines_added": 13477,
+      "user_lines_removed": 13382,
+      "agent_lines_added": 148877,
+      "agent_lines_removed": 45895,
+      "user_added_per_file": {
+        "docs/reference.md": 1957,
+        "packages/engine/src/execute.test.ts": 660,
+        "packages/engine/src/execute.ts": 1057,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/pack-1.schema.json": 5662,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packs/sketches/elden-ring-tarnishedtool.yaml": 2013
+      },
+      "user_removed_per_file": {
+        "docs/reference.md": 1956,
+        "packages/engine/src/execute.test.ts": 592,
+        "packages/engine/src/execute.ts": 1040,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/pack-1.schema.json": 5657,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packs/sketches/elden-ring-tarnishedtool.yaml": 2009
+      }
+    },
+    {
+      "checkpoint_number": 10,
+      "user_lines_added": 1670,
+      "user_lines_removed": 1474,
+      "agent_lines_added": 148877,
+      "agent_lines_removed": 45895,
+      "user_added_per_file": {
+        "apps/web/src/sync/socket.test.ts": 33,
+        "apps/web/src/sync/socket.ts": 24,
+        "docs/stream-api.md": 7,
+        "hosted/infra/lib/handlers/ws.ts": 18,
+        "hosted/infra/test/ws.test.ts": 1499,
+        "packages/cli/src/bin.ts": 1,
+        "packages/engine/src/snapshot.ts": 1,
+        "packages/rules-schema/src/docs.ts": 1,
+        "streamdeck/src/socket.test.ts": 59,
+        "streamdeck/src/socket.ts": 27
+      },
+      "user_removed_per_file": {
+        "apps/web/src/sync/socket.test.ts": 1,
+        "hosted/infra/test/ws.test.ts": 1466,
+        "packages/cli/src/bin.ts": 1,
+        "packages/engine/src/snapshot.ts": 1,
+        "packages/rules-schema/src/docs.ts": 4,
+        "packages/rules-schema/src/pack.ts": 1
+      }
+    },
+    {
+      "checkpoint_number": 11,
+      "user_lines_added": 18524,
+      "user_lines_removed": 17946,
+      "agent_lines_added": 149040,
+      "agent_lines_removed": 30560,
+      "user_added_per_file": {
+        "apps/web/package.json": 40,
+        "apps/web/src/guide/pages/stream-deck.mdx": 1,
+        "apps/web/src/library/DeckProfiles.test.tsx": 80,
+        "apps/web/src/library/DeckProfiles.tsx": 99,
+        "apps/web/src/library/MarketplaceView.tsx": 3,
+        "apps/web/src/styles.css": 7056,
+        "apps/web/src/sync/socket.test.ts": 1,
+        "apps/web/vite.config.ts": 58,
+        "package-lock.json": 9554,
+        "package.json": 65,
+        "packages/cli/src/bin.ts": 1,
+        "packages/deck-profiles/package.json": 12,
+        "packages/deck-profiles/src/index.ts": 31,
+        "packages/deck-profiles/src/layouts.ts": 121,
+        "packages/deck-profiles/src/plugin.test.ts": 31,
+        "packages/deck-profiles/src/plugin.ts": 41,
+        "packages/deck-profiles/src/profiles.test.ts": 288,
+        "packages/deck-profiles/src/profiles.ts": 318,
+        "packages/deck-profiles/src/sha1.test.ts": 33,
+        "packages/deck-profiles/src/sha1.ts": 94,
+        "packages/deck-profiles/src/zip.ts": 86,
+        "packages/deck-profiles/tsconfig.json": 7,
+        "streamdeck/design/layouts.mjs": 29,
+        "streamdeck/design/profiles.mjs": 177,
+        "streamdeck/design/profiles.test.mjs": 139,
+        "streamdeck/package.json": 28,
+        "streamdeck/rollup.config.mjs": 49,
+        "streamdeck/src/profiles.ts": 46,
+        "vitest.config.ts": 36
+      },
+      "user_removed_per_file": {
+        "apps/web/package.json": 39,
+        "apps/web/src/guide/pages/stream-deck.mdx": 1,
+        "apps/web/src/styles.css": 7030,
+        "apps/web/src/sync/socket.test.ts": 33,
+        "apps/web/src/sync/socket.ts": 24,
+        "apps/web/vite.config.ts": 57,
+        "docs/stream-api.md": 7,
+        "hosted/infra/lib/handlers/ws.ts": 18,
+        "package-lock.json": 9541,
+        "package.json": 65,
+        "packages/cli/src/bin.ts": 1,
+        "streamdeck/design/layouts.mjs": 116,
+        "streamdeck/design/profiles.mjs": 486,
+        "streamdeck/design/profiles.test.mjs": 285,
+        "streamdeck/package.json": 27,
+        "streamdeck/rollup.config.mjs": 49,
+        "streamdeck/src/profiles.ts": 46,
+        "streamdeck/src/socket.test.ts": 59,
+        "streamdeck/src/socket.ts": 27,
+        "vitest.config.ts": 35
+      }
+    },
+    {
+      "checkpoint_number": 12,
+      "user_lines_added": 4459,
+      "user_lines_removed": 4462,
+      "agent_lines_added": 148876,
+      "agent_lines_removed": 36962,
+      "user_added_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 1,
+        "apps/web/src/library/MarketplaceView.tsx": 3,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      }
+    },
+    {
+      "checkpoint_number": 13,
+      "user_lines_added": 20901,
+      "user_lines_removed": 20036,
+      "agent_lines_added": 149190,
+      "agent_lines_removed": 46622,
+      "user_added_per_file": {
+        "apps/web/package.json": 40,
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 1,
+        "apps/web/src/library/DeckProfiles.test.tsx": 149,
+        "apps/web/src/library/DeckProfiles.tsx": 119,
+        "apps/web/src/library/MarketplaceView.test.tsx": 110,
+        "apps/web/src/library/MarketplaceView.tsx": 5,
+        "apps/web/src/styles.css": 7056,
+        "apps/web/vite.config.ts": 58,
+        "package-lock.json": 9554,
+        "package.json": 65,
+        "packages/deck-profiles/package.json": 12,
+        "packages/deck-profiles/src/index.ts": 31,
+        "packages/deck-profiles/src/layouts.ts": 121,
+        "packages/deck-profiles/src/plugin.test.ts": 31,
+        "packages/deck-profiles/src/plugin.ts": 41,
+        "packages/deck-profiles/src/profiles.test.ts": 288,
+        "packages/deck-profiles/src/profiles.ts": 318,
+        "packages/deck-profiles/src/sha1.test.ts": 33,
+        "packages/deck-profiles/src/sha1.ts": 94,
+        "packages/deck-profiles/src/zip.ts": 86,
+        "packages/deck-profiles/tsconfig.json": 7,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/design/layouts.mjs": 29,
+        "streamdeck/design/profiles.mjs": 177,
+        "streamdeck/design/profiles.test.mjs": 139,
+        "streamdeck/package.json": 28,
+        "streamdeck/rollup.config.mjs": 49,
+        "streamdeck/src/profiles.ts": 46,
+        "vitest.config.ts": 1
+      },
+      "user_removed_per_file": {
+        "apps/web/package.json": 39,
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 1,
+        "apps/web/src/library/MarketplaceView.test.tsx": 81,
+        "apps/web/src/styles.css": 7030,
+        "apps/web/vite.config.ts": 57,
+        "package-lock.json": 9541,
+        "package.json": 65,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/design/layouts.mjs": 116,
+        "streamdeck/design/profiles.mjs": 486,
+        "streamdeck/design/profiles.test.mjs": 285,
+        "streamdeck/package.json": 27,
+        "streamdeck/rollup.config.mjs": 49,
+        "streamdeck/src/profiles.ts": 46
+      }
+    },
+    {
+      "checkpoint_number": 14,
+      "user_lines_added": 18681,
+      "user_lines_removed": 17822,
+      "agent_lines_added": 149196,
+      "agent_lines_removed": 55175,
+      "user_added_per_file": {
+        "apps/web/package.json": 40,
+        "apps/web/src/library/DeckProfiles.test.tsx": 149,
+        "apps/web/src/library/DeckProfiles.tsx": 119,
+        "apps/web/src/library/MarketplaceView.test.tsx": 110,
+        "apps/web/src/styles.css": 7056,
+        "apps/web/vite.config.ts": 58,
+        "package-lock.json": 9554,
+        "package.json": 65,
+        "packages/deck-profiles/package.json": 12,
+        "packages/deck-profiles/src/index.ts": 31,
+        "packages/deck-profiles/src/layouts.ts": 121,
+        "packages/deck-profiles/src/plugin.test.ts": 31,
+        "packages/deck-profiles/src/plugin.ts": 41,
+        "packages/deck-profiles/src/profiles.test.ts": 288,
+        "packages/deck-profiles/src/profiles.ts": 318,
+        "packages/deck-profiles/src/sha1.test.ts": 33,
+        "packages/deck-profiles/src/sha1.ts": 94,
+        "packages/deck-profiles/src/zip.ts": 86,
+        "packages/deck-profiles/tsconfig.json": 7,
+        "streamdeck/design/layouts.mjs": 29,
+        "streamdeck/design/profiles.mjs": 177,
+        "streamdeck/design/profiles.test.mjs": 139,
+        "streamdeck/package.json": 28,
+        "streamdeck/rollup.config.mjs": 49,
+        "streamdeck/src/profiles.ts": 46
+      },
+      "user_removed_per_file": {
+        "apps/web/package.json": 39,
+        "apps/web/src/library/MarketplaceView.test.tsx": 81,
+        "apps/web/src/styles.css": 7030,
+        "apps/web/vite.config.ts": 57,
+        "package-lock.json": 9541,
+        "package.json": 65,
+        "streamdeck/design/layouts.mjs": 116,
+        "streamdeck/design/profiles.mjs": 486,
+        "streamdeck/design/profiles.test.mjs": 285,
+        "streamdeck/package.json": 27,
+        "streamdeck/rollup.config.mjs": 49,
+        "streamdeck/src/profiles.ts": 46
+      }
+    },
+    {
+      "checkpoint_number": 15,
+      "user_lines_added": 2245,
+      "user_lines_removed": 2245,
+      "agent_lines_added": 150055,
+      "agent_lines_removed": 55175,
+      "user_added_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      }
+    },
+    {
+      "checkpoint_number": 16,
+      "user_lines_added": 2245,
+      "user_lines_removed": 2245,
+      "agent_lines_added": 150055,
+      "agent_lines_removed": 55175,
+      "user_added_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      }
+    },
+    {
+      "checkpoint_number": 17,
+      "user_lines_added": 2245,
+      "user_lines_removed": 2245,
+      "agent_lines_added": 150055,
+      "agent_lines_removed": 55175,
+      "user_added_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      }
+    },
+    {
+      "checkpoint_number": 18,
+      "user_lines_added": 2245,
+      "user_lines_removed": 2245,
+      "agent_lines_added": 150055,
+      "agent_lines_removed": 55175,
+      "user_added_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      }
+    },
+    {
+      "checkpoint_number": 19,
+      "user_lines_added": 2270,
+      "user_lines_removed": 2216,
+      "agent_lines_added": 150055,
+      "agent_lines_removed": 55175,
+      "user_added_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 1,
+        "apps/web/src/library/LibraryView.test.tsx": 53,
+        "apps/web/src/library/LibraryView.tsx": 2,
+        "packages/cli/src/bin.ts": 1,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203
+      },
+      "user_removed_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 1,
+        "apps/web/src/library/LibraryView.test.tsx": 1,
+        "packages/cli/src/bin.ts": 1,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203
+      }
+    },
+    {
+      "checkpoint_number": 20,
+      "user_lines_added": 4461,
+      "user_lines_removed": 4515,
+      "agent_lines_added": 150109,
+      "agent_lines_removed": 55626,
+      "user_added_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 1,
+        "apps/web/src/library/LibraryView.test.tsx": 1,
+        "packages/cli/src/bin.ts": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 1,
+        "apps/web/src/library/LibraryView.test.tsx": 53,
+        "apps/web/src/library/LibraryView.tsx": 2,
+        "packages/cli/src/bin.ts": 1,
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      }
+    },
+    {
+      "checkpoint_number": 21,
+      "user_lines_added": 2291,
+      "user_lines_removed": 2218,
+      "agent_lines_added": 150055,
+      "agent_lines_removed": 55175,
+      "user_added_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 1,
+        "apps/web/src/library/DeckProfiles.test.tsx": 19,
+        "apps/web/src/library/DeckProfiles.tsx": 2,
+        "apps/web/src/library/LibraryView.test.tsx": 53,
+        "apps/web/src/library/LibraryView.tsx": 2,
+        "packages/cli/src/bin.ts": 1,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203
+      },
+      "user_removed_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 1,
+        "apps/web/src/library/DeckProfiles.tsx": 2,
+        "apps/web/src/library/LibraryView.test.tsx": 1,
+        "packages/cli/src/bin.ts": 1,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203
+      }
+    },
+    {
+      "checkpoint_number": 22,
+      "user_lines_added": 960,
+      "user_lines_removed": 527,
+      "agent_lines_added": 150128,
+      "agent_lines_removed": 55645,
+      "user_added_per_file": {
+        "apps/web/src/guide/pages/stream-deck.mdx": 2,
+        "apps/web/src/library/DeckProfiles.tsx": 2,
+        "apps/web/src/library/LibraryView.test.tsx": 1,
+        "packages/cli/src/bin.ts": 1,
+        "packages/deck-profiles/src/index.ts": 5,
+        "packages/deck-profiles/src/layouts.ts": 124,
+        "packages/deck-profiles/src/profiles.test.ts": 358,
+        "packages/deck-profiles/src/profiles.ts": 107,
+        "streamdeck/README.md": 2,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/open.html": 4,
+        "streamdeck/src/actions/open.test.ts": 33,
+        "streamdeck/src/actions/open.ts": 17,
+        "streamdeck/src/plugin.test.ts": 49,
+        "streamdeck/src/plugin.ts": 23,
+        "streamdeck/src/profiles-on-demand.test.ts": 142,
+        "streamdeck/src/profiles-on-demand.ts": 74,
+        "streamdeck/src/state.test.ts": 8,
+        "streamdeck/src/state.ts": 8
+      },
+      "user_removed_per_file": {
+        "apps/web/src/guide/pages/stream-deck.mdx": 2,
+        "apps/web/src/library/DeckProfiles.test.tsx": 19,
+        "apps/web/src/library/DeckProfiles.tsx": 2,
+        "apps/web/src/library/LibraryView.test.tsx": 53,
+        "apps/web/src/library/LibraryView.tsx": 2,
+        "packages/cli/src/bin.ts": 1,
+        "packages/deck-profiles/src/layouts.ts": 121,
+        "packages/deck-profiles/src/profiles.test.ts": 288,
+        "packages/deck-profiles/src/profiles.ts": 29,
+        "streamdeck/README.md": 2,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/open.html": 1,
+        "streamdeck/src/actions/open.ts": 1,
+        "streamdeck/src/plugin.ts": 3,
+        "streamdeck/src/state.ts": 3
+      }
+    },
+    {
+      "checkpoint_number": 23,
+      "user_lines_added": 2911,
+      "user_lines_removed": 2911,
+      "agent_lines_added": 150561,
+      "agent_lines_removed": 55681,
+      "user_added_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "packages/deck-profiles/src/layouts.ts": 124,
+        "packages/deck-profiles/src/profiles.test.ts": 358,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/src/profiles-on-demand.test.ts": 142,
+        "streamdeck/src/profiles-on-demand.ts": 74
+      },
+      "user_removed_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "packages/deck-profiles/src/layouts.ts": 124,
+        "packages/deck-profiles/src/profiles.test.ts": 358,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/src/profiles-on-demand.test.ts": 142,
+        "streamdeck/src/profiles-on-demand.ts": 74
+      }
+    },
+    {
+      "checkpoint_number": 24,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 148334,
+      "agent_lines_removed": 53454
+    },
+    {
+      "checkpoint_number": 25,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 148334,
+      "agent_lines_removed": 53454
+    },
+    {
+      "checkpoint_number": 26,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 147883,
+      "agent_lines_removed": 53400
+    },
+    {
+      "checkpoint_number": 27,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 147883,
+      "agent_lines_removed": 53400
+    },
+    {
+      "checkpoint_number": 28,
+      "user_lines_added": 708,
+      "user_lines_removed": 628,
+      "agent_lines_added": 150582,
+      "agent_lines_removed": 56179,
+      "user_added_per_file": {
+        "packages/deck-profiles/src/layouts.ts": 124,
+        "packages/deck-profiles/src/profiles.test.ts": 358,
+        "streamdeck/src/profiles-on-demand.test.ts": 142,
+        "streamdeck/src/profiles-on-demand.ts": 84
+      },
+      "user_removed_per_file": {
+        "packages/deck-profiles/src/layouts.ts": 121,
+        "packages/deck-profiles/src/profiles.test.ts": 288,
+        "streamdeck/src/profiles-on-demand.test.ts": 142,
+        "streamdeck/src/profiles-on-demand.ts": 77
+      }
+    },
+    {
+      "checkpoint_number": 29,
+      "user_lines_added": 708,
+      "user_lines_removed": 628,
+      "agent_lines_added": 150582,
+      "agent_lines_removed": 56179,
+      "user_added_per_file": {
+        "packages/deck-profiles/src/layouts.ts": 124,
+        "packages/deck-profiles/src/profiles.test.ts": 358,
+        "streamdeck/src/profiles-on-demand.test.ts": 142,
+        "streamdeck/src/profiles-on-demand.ts": 84
+      },
+      "user_removed_per_file": {
+        "packages/deck-profiles/src/layouts.ts": 121,
+        "packages/deck-profiles/src/profiles.test.ts": 288,
+        "streamdeck/src/profiles-on-demand.test.ts": 142,
+        "streamdeck/src/profiles-on-demand.ts": 77
+      }
+    },
+    {
+      "checkpoint_number": 30,
+      "user_lines_added": 2245,
+      "user_lines_removed": 2245,
+      "agent_lines_added": 150663,
+      "agent_lines_removed": 56180,
+      "user_added_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      }
+    },
+    {
+      "checkpoint_number": 31,
+      "user_lines_added": 2245,
+      "user_lines_removed": 2245,
+      "agent_lines_added": 150663,
+      "agent_lines_removed": 56180,
+      "user_added_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      }
+    },
+    {
+      "checkpoint_number": 32,
+      "user_lines_added": 2245,
+      "user_lines_removed": 2245,
+      "agent_lines_added": 150663,
+      "agent_lines_removed": 56180,
+      "user_added_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      }
+    },
+    {
+      "checkpoint_number": 33,
+      "user_lines_added": 2245,
+      "user_lines_removed": 2245,
+      "agent_lines_added": 150663,
+      "agent_lines_removed": 56180,
+      "user_added_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      },
+      "user_removed_per_file": {
+        "packages/rules-schema/schema/mapping-1.schema.json": 169,
+        "packages/rules-schema/schema/setup-1.schema.json": 117,
+        "packages/rules-schema/schema/tables-1.schema.json": 1842,
+        "packages/rules-schema/src/dice.test.ts": 52,
+        "streamdeck/src/profiles.ts": 46,
+        "tsconfig.base.json": 19
+      }
+    },
+    {
+      "checkpoint_number": 34,
+      "user_lines_added": 2514,
+      "user_lines_removed": 2585,
+      "agent_lines_added": 150437,
+      "agent_lines_removed": 55954,
+      "user_added_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 2,
+        "apps/web/src/run/useRun.pulled.test.tsx": 91,
+        "apps/web/src/run/useRun.ts": 21,
+        "apps/web/src/storage/db.ts": 6,
+        "apps/web/src/sync/engine.test.ts": 73,
+        "apps/web/src/sync/engine.ts": 43,
+        "apps/web/src/sync/log.ts": 13,
+        "packages/deck-profiles/src/layouts.ts": 3,
+        "packages/deck-profiles/src/profiles.test.ts": 1,
+        "packages/deck-profiles/src/profiles.ts": 32,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/README.md": 2,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/open.html": 1,
+        "streamdeck/src/actions/open.test.ts": 1,
+        "streamdeck/src/actions/open.ts": 1,
+        "streamdeck/src/plugin.test.ts": 5,
+        "streamdeck/src/plugin.ts": 3,
+        "streamdeck/src/state.ts": 3
+      },
+      "user_removed_per_file": {
+        "apps/web/public/icon.svg": 10,
+        "apps/web/src/guide/pages/stream-deck.mdx": 2,
+        "apps/web/src/run/useRun.ts": 1,
+        "apps/web/src/storage/db.ts": 1,
+        "apps/web/src/sync/engine.ts": 7,
+        "packages/deck-profiles/src/index.ts": 6,
+        "packages/deck-profiles/src/layouts.ts": 6,
+        "packages/deck-profiles/src/profiles.test.ts": 71,
+        "packages/deck-profiles/src/profiles.ts": 113,
+        "packs/profiles/elden-ring-tarnishedtool.json": 2203,
+        "streamdeck/.gitignore": 1,
+        "streamdeck/README.md": 2,
+        "streamdeck/com.scrthq.runlog.sdPlugin/ui/open.html": 4,
+        "streamdeck/src/actions/open.test.ts": 39,
+        "streamdeck/src/actions/open.ts": 17,
+        "streamdeck/src/plugin.test.ts": 54,
+        "streamdeck/src/plugin.ts": 32,
+        "streamdeck/src/state.test.ts": 8,
+        "streamdeck/src/state.ts": 8
+      }
+    }
+  ]
+}
