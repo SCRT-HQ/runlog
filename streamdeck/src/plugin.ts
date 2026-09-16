@@ -83,13 +83,18 @@ store.subscribe((s) => {
   switchedFor = s.attached;
   const packId = s.snapshot.run?.packId;
   const build = packId !== undefined && PACK_PROFILES[packId] === undefined && !offered.has(packId);
-  if (build) offered.add(packId);
   for (const d of streamDeck.devices) {
     const name = profileFor(packId, d.type);
     if (!name) continue;
     if (build) {
+      // Marked offered only once a deck has actually been handed a file,
+      // so a run attached while no deck was plugged in still gets its
+      // profile when one is.
       const built = buildFor(s, d.type);
-      if (built) install(built.file);
+      if (built) {
+        offered.add(packId);
+        install(built.file);
+      }
     }
     void streamDeck.profiles.switchToProfile(d.id, name).catch(() => {});
   }

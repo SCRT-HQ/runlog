@@ -68,7 +68,12 @@ describe("pressing the open key", () => {
     mock.opened = [];
     mock.wrote = [];
     mock.base = "https://runlog.scrthq.com";
-    mock.state = { runs: [{ id: "s1" }], pinned: null, snapshot: { run: { id: "s1", packId: "demo" } } };
+    mock.state = {
+      runs: [{ id: "s1" }],
+      pinned: null,
+      // A move on offer, so the pack has something of its own to lay out.
+      snapshot: { run: { id: "s1", packId: "demo" }, offer: { moves: [{ id: "settle", label: "Settle" }] } },
+    };
   });
 
   it("opens the run the deck is following", async () => {

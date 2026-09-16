@@ -4,7 +4,7 @@ import { cwd } from "node:process";
 import { pathToFileURL } from "node:url";
 
 import streamDeck from "@elgato/streamdeck";
-import { container, fromOffer, profile, specsFor, type DeviceId } from "@runlog/deck-profiles";
+import { container, fromOffer, laysOut, profile, specsFor, type DeviceId } from "@runlog/deck-profiles";
 
 import { DEVICE_PROFILES } from "./profiles.ts";
 import type { DeckState } from "./state.ts";
@@ -56,6 +56,9 @@ export function buildFor(state: DeckState, device: number): { file: string; byte
 
   const slug = slugFor(run.packId);
   const keyed = fromOffer(state.snapshot?.offer ?? {});
+  // A pack with nothing to lay out gets no file: the generic profile the
+  // deck already switched to is that layout.
+  if (!laysOut(keyed)) return null;
   const spec = specsFor(keyed, { slug, name: run.packTitle ?? run.packId }, deck)[0]!;
   const bytes = container(profile(spec));
 

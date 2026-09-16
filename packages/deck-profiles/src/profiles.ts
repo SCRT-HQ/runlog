@@ -260,10 +260,13 @@ export function packKeys(keyed: Keyed): Key[] {
  * layout with a Rules key on the end, which is a download that gives
  * somebody nothing the plugin did not already install.
  */
+/** Whether a layout has anything of the pack's own on it, or is the common keys alone. */
+export function laysOut(keyed: Keyed): boolean {
+  return keyed.moves.length > 0 || keyed.counters.length > 0 || keyed.resources.length > 0;
+}
+
 export function hasKeys(pack: Pack): boolean {
-  return (
-    Object.keys(pack.moves ?? {}).length > 0 || Object.keys(pack.counters ?? {}).length > 0 || Object.keys(pack.resources ?? {}).length > 0
-  );
+  return laysOut(fromPack(pack, []));
 }
 
 /** One page's worth of keys, and whether it keeps room for a turn at either end. */

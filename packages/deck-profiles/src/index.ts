@@ -17,6 +17,7 @@ export {
   fromPack,
   GENERIC,
   hasKeys,
+  laysOut,
   packKeys,
   paginate,
   profile,
