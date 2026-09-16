@@ -9,10 +9,11 @@
  * what lets both callers be the same code rather than two that drift.
  */
 
-export { BASE, DEVICE_IDS, DEVICES, DIALS, isWarp, type Device, type DeviceId, type Key } from "./layouts.ts";
+export { BASE, DEVICE_IDS, DEVICES, DIALS, FRAMES, isWarp, type Device, type DeviceId, type Frame, type Key } from "./layouts.ts";
 export { ACTION_NAMES, PAGE_PLUGIN, PLUGIN, TURNS } from "./plugin.ts";
 export {
   container,
+  framedPages,
   fromOffer,
   fromPack,
   GENERIC,
@@ -21,18 +22,22 @@ export {
   packKeys,
   paginate,
   profile,
+  queuesFor,
   specs,
   specsFor,
   stableId,
   type Built,
   type Controller,
+  type FramedPage,
   type Keyed,
   type Laid,
   type Offered,
   type Page,
   type PageFile,
   type ProfileSpec,
+  type Queues,
   type RootFile,
   type StoredAction,
+  type Zones,
 } from "./profiles.ts";
 export { zip, type ZipEntry } from "./zip.ts";

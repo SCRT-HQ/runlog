@@ -66,6 +66,8 @@ export interface Key {
  * and it takes a hold on top of that.
  *
  * Thirteen keys, which is more than a Mini or a + has room for. They page.
+ * This order is what a deck too small for a frame lays down; the XL and
+ * the Stream Deck spread the same thirteen over the zones below.
  */
 export const BASE: Key[] = [
   { action: "connect" },
@@ -82,6 +84,116 @@ export const BASE: Key[] = [
   { action: "open", settings: { target: "guide" } },
   { action: "finish" },
 ];
+
+/**
+ * A deck laid out in zones: what stays put, and the cells that page.
+ *
+ * `fixed` is the frame proper, the keys in the same cell on every page of
+ * the profile. The two pools are the free cells either side of it, each in
+ * the order it fills, and each fed by a queue of its own: `drive` is what a
+ * hand presses, `numbers` is what an eye reads.
+ *
+ * `extras` are the base keys this frame has no cell for; they go at the
+ * front of their queue, so a deck that cannot pin all thirteen still opens
+ * on them.
+ */
+export interface Frame {
+  /** A key and the cell it holds on every page. Cells are `"column,row"`. */
+  fixed: Array<{ key: Key; at: string }>;
+  /**
+   * Where a pack's Open rules key sits.
+   *
+   * Only a pack profile has one. The generic profile has the cell as the
+   * first free one on the numbers side rather than a hole in the frame.
+   */
+  rules?: string;
+  /** The base keys the frame leaves out, at the front of their queues. */
+  extras: { drive: Key[]; numbers: Key[] };
+  /** The free cells on the left, in fill order. */
+  drive: string[];
+  /** The free cells on the right, in fill order. */
+  numbers: string[];
+  /**
+   * Where a page turn goes on a page that needs one.
+   *
+   * Both are ordinary free cells on every other page, which is how a
+   * layout that fits does not grow a turn pointing at nothing.
+   */
+  turns: { next: string; previous: string };
+}
+
+/**
+ * The XL and the Stream Deck, laid out by where a hand rests.
+ *
+ * Both put the driving keys under the left hand and the numbers under the
+ * right eye, and both keep that arrangement on every page: the moves and
+ * the trackers a pack brings page through the free cells, and Next, Roll
+ * and Undo stay where the thumb left them.
+ *
+ * The second row is the trio pressed mid-scene, so the hand finds it
+ * without looking, with Connect and the run above it. Finish sits in the
+ * far bottom corner, as far from that hand as the grid goes, and it takes
+ * a hold on top of that.
+ *
+ * The Mini and the + have no frame here on purpose. Six keys and eight are
+ * fewer than the thirteen every profile opens with, so anything pinned
+ * down would be a cell the pack's own keys never get; those two lay
+ * {@link BASE} down in order and page.
+ */
+export const FRAMES: Partial<Record<DeviceId, Frame>> = {
+  // Eight by four. The top row is the run and the numbers it works out,
+  // the second the trio, and the six cells under the trio are the pack's
+  // to fill. The right two thirds below the top row are all numbers.
+  xl: {
+    fixed: [
+      { key: { action: "connect" }, at: "0,0" },
+      { key: { action: "run" }, at: "1,0" },
+      { key: { action: "open", settings: { target: "run" } }, at: "2,0" },
+      { key: { action: "open", settings: { target: "guide" } }, at: "3,0" },
+      { key: { action: "metric", settings: { field: "score" } }, at: "4,0" },
+      { key: { action: "metric", settings: { field: "unit" } }, at: "5,0" },
+      { key: { action: "metric", settings: { field: "clock" } }, at: "6,0" },
+      { key: { action: "next" }, at: "0,1" },
+      { key: { action: "roll" }, at: "1,1" },
+      { key: { action: "undo" }, at: "2,1" },
+      { key: { action: "clock" }, at: "3,1" },
+      { key: { action: "autoroll" }, at: "0,2" },
+      { key: { action: "finish" }, at: "0,3" },
+    ],
+    rules: "7,0",
+    extras: { drive: [], numbers: [] },
+    drive: ["1,2", "2,2", "3,2", "1,3", "2,3", "3,3"],
+    numbers: ["4,1", "5,1", "6,1", "7,1", "4,2", "5,2", "6,2", "7,2", "4,3", "5,3", "6,3", "7,3"],
+    turns: { next: "7,3", previous: "6,3" },
+  },
+  // Five by three. Two of the fifteen cells are all the room there is for
+  // numbers beside the frame, so the clock's readout and the two Open keys
+  // queue rather than pin, and the pack's own keys take what is left.
+  sd: {
+    fixed: [
+      { key: { action: "connect" }, at: "0,0" },
+      { key: { action: "run" }, at: "1,0" },
+      { key: { action: "autoroll" }, at: "2,0" },
+      { key: { action: "clock" }, at: "3,0" },
+      { key: { action: "metric", settings: { field: "score" } }, at: "4,0" },
+      { key: { action: "next" }, at: "0,1" },
+      { key: { action: "roll" }, at: "1,1" },
+      { key: { action: "undo" }, at: "2,1" },
+      { key: { action: "metric", settings: { field: "unit" } }, at: "4,1" },
+      { key: { action: "finish" }, at: "0,2" },
+    ],
+    extras: {
+      drive: [
+        { action: "open", settings: { target: "run" } },
+        { action: "open", settings: { target: "guide" } },
+      ],
+      numbers: [{ action: "metric", settings: { field: "clock" } }],
+    },
+    drive: ["3,1", "1,2", "2,2", "3,2"],
+    numbers: ["4,2"],
+    turns: { next: "4,2", previous: "3,2" },
+  },
+};
 
 /**
  * What the four dials on a + carry.
