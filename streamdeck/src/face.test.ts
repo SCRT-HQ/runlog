@@ -23,12 +23,15 @@ function block(d: { size: number; ys: number[] }): { top: number; bottom: number
   return { top: band(d.ys[0]!, d.size).top, bottom: band(d.ys[d.ys.length - 1]!, d.size).bottom };
 }
 
-/** The `when` line a face draws, with the font size it drew it at. */
-function whenLine(when: string): { text: string; size: number } {
-  const svg = svgOf({ title: "Weather", tone: "live", when });
-  const m = /<text x="72" y="126"[^>]*font-size="(\d+)"[^>]*>([^<]*)<\/text>/.exec(svg)!;
-  return { size: Number(m[1]), text: m[2]! };
+/** The caption a face draws, top line first, with the size and the baselines. */
+function caption(when: string, title = "Weather"): { lines: string[]; size: number; ys: number[] } {
+  const svg = svgOf({ title, tone: "live", when });
+  const spans = [...svg.matchAll(/<text class="w" x="72" y="([\d.]+)"[^>]*font-size="(\d+)"[^>]*>([^<]*)</g)];
+  return { lines: spans.map((s) => s[3]!), size: Number(spans[0]![2]), ys: spans.map((s) => Number(s[1])) };
 }
+
+/** How far a caption line's ink reaches, the way {@link band} works it for a title. */
+const whenBand = (y: number) => band(y, 16);
 
 describe("faceImage", () => {
   it("is a base64 svg data uri, never raw svg", () => {
@@ -91,27 +94,60 @@ describe("faceImage", () => {
     expect(svg).toContain("2:14");
     expect(svg).not.toContain("0.5");
   });
-  it("leaves a short when line alone", () => {
-    expect(whenLine("Deaths")).toEqual({ text: "Deaths", size: 16 });
+  it("leaves a short when line alone, on the bottom line", () => {
+    expect(caption("Deaths")).toEqual({ lines: ["Deaths"], size: 16, ys: [126] });
   });
   it("holds the whole of the key's one instruction", () => {
-    // Thirteen characters, which is the budget exactly. At 18px it came
-    // out "press Conne…", which is not an instruction.
-    expect(whenLine("press Connect").text).toBe("press Connect");
-  });
-  it("cuts a when line at a word boundary that leaves six characters or more", () => {
-    // "Scenes before" is thirteen characters and fits; adding "a" runs
-    // past the budget. So the cut lands on the word boundary rather than
-    // mid-word.
-    expect(whenLine("Scenes before a warp").text).toBe("Scenes before…");
-  });
-  it("never keeps more than 13 characters of a when line, plus the ellipsis", () => {
-    const { text } = whenLine("Whatever the pack calls it");
-    expect(text.endsWith("…")).toBe(true);
-    expect(text.replace("…", "").length).toBeLessThanOrEqual(13);
+    // At 18px it came out "press Conne…", which is not an instruction.
+    expect(caption("press Connect").lines).toEqual(["press Connect"]);
   });
   it("draws the when line at font-size 16", () => {
-    expect(whenLine("press Connect").size).toBe(16);
+    expect(caption("press Connect").size).toBe(16);
+  });
+  it("keeps every when line inside the frame's width", () => {
+    for (const line of caption("Whatever the pack calls it", "3").lines) expect(measure(line, 16)).toBeLessThanOrEqual(128);
+  });
+});
+
+describe("a caption of more than one line", () => {
+  // The tracker on the deck that started this: a long name over a short
+  // number, cut to "Objectives p…" while two thirds of the key stood empty.
+  const LONG = "Whatever the pack calls it, at whatever length it likes";
+
+  it("wraps a tracker's name over a number rather than cutting it", () => {
+    const c = caption("Objectives per scene", "3");
+    expect(c.lines).toEqual(["Objectives per", "scene"]);
+    expect(c.lines.join("")).not.toContain("…");
+    expect(c.ys).toEqual([108, 126]);
+  });
+  it("keeps the number at the largest type beside a caption of its own", () => {
+    const d = drawn("3", { when: "Objectives per scene" });
+    expect(d.lines).toEqual(["3"]);
+    expect(d.size).toBe(40);
+  });
+  it("cuts on the third line and never draws a fourth", () => {
+    const c = caption(LONG, "3");
+    expect(c.lines.length).toBe(3);
+    expect(c.lines[2]!.endsWith("…")).toBe(true);
+    expect(c.ys).toEqual([90, 108, 126]);
+    for (const line of c.lines) expect(measure(line, 16)).toBeLessThanOrEqual(128);
+  });
+  it("hands the caption's lines back to a title that needs the room", () => {
+    const beside = caption(LONG, "Give Great Runes");
+    expect(beside.lines.length).toBeLessThan(caption(LONG, "3").lines.length);
+    // The title had first call on the room and came out whole.
+    const d = drawn("Give Great Runes", { when: LONG });
+    expect(d.lines.join(" ")).toBe("Give Great Runes");
+  });
+  it("leaves the title clear of however many lines the caption took", () => {
+    for (const title of ["3", "Give Great Runes", "Not connected"])
+      for (const when of ["Deaths", "Objectives per scene", LONG]) {
+        const c = caption(when, title);
+        const d = drawn(title, { when });
+        const where = `${title} / ${when}`;
+        expect(block(d).bottom, where).toBeLessThanOrEqual(whenBand(c.ys[0]!).top);
+        expect(whenBand(c.ys[c.ys.length - 1]!).bottom, where).toBeLessThanOrEqual(136);
+      }
   });
 });
 
@@ -181,7 +217,7 @@ describe("a tone per family of key", () => {
 
   it("gives the celadon edge to a key that moves the run, and to nothing else", () => {
     expect(frame(svgOf({ title: "Roll", tone: "live" }))[1]).toBe("#8cc3a6");
-    for (const tone of ["deck", "readout", "undo", "dim"] as const) {
+    for (const tone of ["deck", "readout", "undo", "dim", "link", "end"] as const) {
       expect(frame(svgOf({ title: "Roll", tone }))[1], tone).not.toBe("#8cc3a6");
     }
   });
@@ -247,13 +283,13 @@ function contrast(a: string, b: string): number {
 }
 
 describe("grounds a deck can tell apart", () => {
-  const TONES = ["live", "dim", "refuse", "undo", "deck", "readout"] as const satisfies readonly Tone[];
+  const TONES = ["live", "dim", "refuse", "undo", "deck", "readout", "link", "end"] as const satisfies readonly Tone[];
   const parts = (tone: Tone) => {
     const svg = svgOf({ title: "Give", tone, when: "2:14" });
     return {
       ground: /<rect width="144" height="144" rx="14" fill="([^"]+)"/.exec(svg)![1]!,
       ink: /<text class="t"[^>]*fill="([^"]+)"/.exec(svg)![1]!,
-      quiet: /<text x="72" y="126"[^>]*fill="([^"]+)"/.exec(svg)![1]!,
+      quiet: /<text class="w" x="72" y="126"[^>]*fill="([^"]+)"/.exec(svg)![1]!,
     };
   };
 
@@ -268,6 +304,12 @@ describe("grounds a deck can tell apart", () => {
     expect(parts("readout").ground).toBe("#121413");
     expect(parts("dim").ground).toBe("#1b201d");
     expect(parts("refuse").ground).toBe("#33211a");
+  });
+  it("gives the connection and the ending grounds nothing else wears", () => {
+    // Connect and Finish were furniture on a deck of furniture: slate blue
+    // for the connection while it is up, wine for the key that ends the run.
+    expect(parts("link").ground).toBe("#1e2e3e");
+    expect(parts("end").ground).toBe("#3a1c24");
   });
   it("gives no two families the same ground", () => {
     const grounds = TONES.map((t) => parts(t).ground);
