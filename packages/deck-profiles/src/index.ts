@@ -27,6 +27,7 @@ export {
   type Built,
   type Controller,
   type Keyed,
+  type Laid,
   type Offered,
   type Page,
   type PageFile,

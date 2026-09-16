@@ -176,6 +176,20 @@ export interface Offered {
 }
 
 /**
+ * The pack's own layout, as the snapshot publishes it beside the offer.
+ *
+ * Mirrored from `packages/engine/src/snapshot.ts`. It is the pack rather
+ * than the moment: every move the pack declares, gated or not, and every
+ * tracker it keeps, whether or not the run would take one right now. Absent
+ * from an older page, which is what the fallback to the offer is for.
+ */
+export interface Laid {
+  moves?: Array<{ id: string }>;
+  counters?: Array<{ id: string }>;
+  resources?: Array<{ id: string }>;
+}
+
+/**
  * The pack read off disk, as keys.
  *
  * A hidden counter is left out. `packages/engine/src/snapshot.ts` does not
@@ -213,14 +227,20 @@ export function fromPack(pack: Pack, setups: Setup[]): Keyed {
  * operations, so a warp that only declares itself in its ops lands on an
  * Apply setup key. Both keys reach the same tool with the same document;
  * one writes the run's setup on the way.
+ *
+ * The moves and the numbers come from the snapshot's `layout` where it has
+ * one. The offer is the state's view: a move behind a gate that is shut, or
+ * a tracker the step does not take, is not in it, so two builds a minute
+ * apart came out different profiles. The layout is the pack, so they do not.
+ * A page too old to publish one leaves the offer as the only thing to read.
  */
-export function fromOffer(offer: Offered): Keyed {
+export function fromOffer(offer: Offered, layout?: Laid | null): Keyed {
   const trackers = offer.trackers ?? [];
   const warps = new Set((offer.commands ?? []).filter((s) => isWarp(s)).map((s) => s.id));
   return {
-    moves: (offer.moves ?? []).map(({ id }) => ({ id })),
-    counters: trackers.filter((t) => t.kind === "counter").map(({ id }) => ({ id })),
-    resources: trackers.filter((t) => t.kind === "resource").map(({ id }) => ({ id })),
+    moves: (layout?.moves ?? offer.moves ?? []).map(({ id }) => ({ id })),
+    counters: (layout?.counters ?? trackers.filter((t) => t.kind === "counter")).map(({ id }) => ({ id })),
+    resources: (layout?.resources ?? trackers.filter((t) => t.kind === "resource")).map(({ id }) => ({ id })),
     setups: (offer.setups ?? []).filter((s) => !warps.has(s.id)).map(({ id, title }) => ({ id, title })),
     commands: (offer.commands ?? []).filter((s) => warps.has(s.id)).map(({ id, title }) => ({ id, title })),
   };

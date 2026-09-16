@@ -5,6 +5,7 @@ import { Clock } from "./actions/clock.ts";
 import { Command } from "./actions/command.ts";
 import { Connect } from "./actions/connect.ts";
 import { Finish } from "./actions/finish.ts";
+import { Install } from "./actions/install.ts";
 import { Metric } from "./actions/metric.ts";
 import { Next } from "./actions/next.ts";
 import { Open } from "./actions/open.ts";
@@ -13,6 +14,7 @@ import { Roll } from "./actions/roll.ts";
 import { pin, Run, runsForInspector } from "./actions/run.ts";
 import { Setup } from "./actions/setup.ts";
 import { Undo } from "./actions/undo.ts";
+import { hasProfileFor, installedProfiles } from "./installed.ts";
 import { buildFor, install } from "./profiles-on-demand.ts";
 import { PACK_PROFILES, profileFor } from "./profiles.ts";
 import { loadSession, normalizeBase, signIn, signOut, type Account } from "./session.ts";
@@ -30,7 +32,7 @@ const DEFAULT_API = "https://runlog.scrthq.com";
  * handed to the property inspector, which is a web view, so the session
  * never comes near them. It lives in a file of the plugin's own.
  */
-type Globals = { apiBase?: string; pinned?: string | null; switchProfiles?: boolean };
+type Globals = { apiBase?: string; pinned?: string | null; switchProfiles?: boolean; profilesOffered?: string[] };
 
 let base = DEFAULT_API;
 
@@ -65,14 +67,28 @@ export const wire = openWire((): Account => ({ apiBase: base }), store);
  * A pack the plugin ships no layout for would land on the generic profile
  * with none of its own moves on it. That snapshot has everything a layout
  * is built from, so one is built from the run and handed to the Stream Deck
- * app to import before the switch. Once per pack per launch: the app's
- * import prompt is the streamer's to answer, and asking again every time a
- * run of that pack attaches is a prompt nobody asked for twice.
+ * app to import before the switch. Once per pack, for good: the app's
+ * import prompt is the streamer's to answer, and asking again on every
+ * launch fills their list with copies of the one profile.
  */
 let switchedFor: string | null = null;
 
-/** The packs a profile has been built and handed over for since the plugin launched. */
+/**
+ * The packs a profile has been built and handed over for.
+ *
+ * In the global settings rather than in memory, so a plugin restart does
+ * not offer the same pack again. The Open key's "This pack's profile" and
+ * the Install a profile key are the ways to ask for one again.
+ */
 const offered = new Set<string>();
+
+/** Writes the pack into the offered list, keeping whatever else is in the settings. */
+async function markOffered(packId: string): Promise<void> {
+  if (offered.has(packId)) return;
+  offered.add(packId);
+  const settings = await streamDeck.settings.getGlobalSettings<Globals>();
+  await streamDeck.settings.setGlobalSettings({ ...settings, profilesOffered: [...offered] });
+}
 
 store.subscribe((s) => {
   if (!s.attached) {
@@ -83,6 +99,20 @@ store.subscribe((s) => {
   switchedFor = s.attached;
   const packId = s.snapshot.run?.packId;
   const build = packId !== undefined && PACK_PROFILES[packId] === undefined && !offered.has(packId);
+  if (build) {
+    const pack = { id: packId, ...(s.snapshot.run?.packTitle ? { title: s.snapshot.run.packTitle } : {}) };
+    if (hasProfileFor(pack, installedProfiles())) {
+      // The streamer already has one, imported on some earlier launch or
+      // from the pack's own page. Handing over another would leave them a
+      // second copy of a profile they may have rearranged since.
+      streamDeck.logger.info(`profile: ${packId} already has one in the Stream Deck app`);
+      void markOffered(packId);
+      // And nothing is switched: a profile somebody imported is not in this
+      // plugin's manifest, so it cannot be switched to, and pushing the
+      // generic layout instead would take the deck off the pack's own keys.
+      return;
+    }
+  }
   for (const d of streamDeck.devices) {
     const name = profileFor(packId, d.type);
     if (!name) continue;
@@ -92,7 +122,7 @@ store.subscribe((s) => {
       // profile when one is.
       const built = buildFor(s, d.type);
       if (built) {
-        offered.add(packId);
+        void markOffered(packId!);
         install(built.file);
         // The app asks about the profile it was just handed; asking about
         // the generic one in the same breath would be two prompts for one
@@ -147,6 +177,10 @@ function applyGlobals(g: Globals): void {
   // Unset is on: a deck that has never opened Connect's settings still
   // lands on the run's profile.
   switchProfiles = g.switchProfiles !== false;
+  // Added to rather than replaced: this fires from the plugin's own write
+  // as well as from another surface's, and a pack marked offered a moment
+  // ago must not be dropped by a settings event that crossed it.
+  for (const id of g.profilesOffered ?? []) offered.add(id);
   // Only on a change: this fires from the plugin's own write of a pin as
   // much as from another surface's, and a pin already applied locally
   // should not force the run's snapshot to reload for nothing.
@@ -262,6 +296,7 @@ for (const a of [
   new Clock(),
   new AutoRoll(),
   new Finish(),
+  new Install(),
 ]) {
   streamDeck.actions.registerAction(a);
 }

@@ -2,7 +2,7 @@ import { deviceFlow } from "@runlog/session";
 import { describe, expect, it, vi } from "vitest";
 
 /**
- * `plugin.ts` is the whole plugin: it registers thirteen actions, opens a wire
+ * `plugin.ts` is the whole plugin: it registers fourteen actions, opens a wire
  * and dials the Stream Deck software the moment it is imported. The SDK and
  * the two modules that reach outside are faked so importing it here does
  * nothing but build the module, and `sent` is what an inspector would have
@@ -16,6 +16,13 @@ const mock = vi.hoisted(() => ({
   switched: [] as Array<[string, string]>,
   /** Every profile built from a run and handed to the Stream Deck app. */
   handed: [] as string[],
+  /** The global settings as the software holds them, and every write of them. */
+  settings: {} as Record<string, unknown>,
+  wrote: [] as Array<Record<string, unknown>>,
+  /** The profiles the Stream Deck app is pretending to already have. */
+  installed: [] as Array<{ name: string }>,
+  /** Every line the plugin logged. */
+  logged: [] as string[],
   /** The plugin's own listener for a change to the global settings. */
   globals: (_: { settings: Record<string, unknown> }) => {},
 }));
@@ -23,7 +30,13 @@ vi.mock("@elgato/streamdeck", () => {
   class SingletonAction {}
   return {
     default: {
-      logger: { setLevel: () => {}, info: () => {}, error: () => {} },
+      logger: {
+        setLevel: () => {},
+        info: (line: string) => {
+          mock.logged.push(line);
+        },
+        error: () => {},
+      },
       ui: {
         action: null,
         onSendToPlugin: () => {},
@@ -32,7 +45,11 @@ vi.mock("@elgato/streamdeck", () => {
         },
       },
       settings: {
-        getGlobalSettings: async () => ({}),
+        getGlobalSettings: async () => mock.settings,
+        setGlobalSettings: async (value: Record<string, unknown>) => {
+          mock.settings = value;
+          mock.wrote.push(value);
+        },
         onDidReceiveGlobalSettings: (fn: (ev: { settings: Record<string, unknown> }) => void) => {
           mock.globals = fn;
         },
@@ -58,6 +75,13 @@ vi.mock("./profiles-on-demand.ts", () => ({
   install: (file: string) => {
     mock.handed.push(file);
   },
+}));
+// The Stream Deck app's own profile folder, faked: what is read off a real
+// one is `installed.test.ts`, and what is held here is what the plugin does
+// about a pack that already has one.
+vi.mock("./installed.ts", () => ({
+  installedProfiles: () => mock.installed,
+  hasProfileFor: (pack: { title?: string }, profiles: Array<{ name: string }>) => profiles.some((p) => p.name === pack.title),
 }));
 // Never the real session file: this test signs nobody in and must not read
 // the deck's own rotating token off disk.
@@ -119,9 +143,9 @@ describe("the sign-in code the inspector shows", () => {
  * nothing switches until one lands.
  */
 describe("the profile the deck lands on when a run attaches", () => {
-  const attach = (id: string, packId?: string) => {
+  const attach = (id: string, packId?: string, packTitle?: string) => {
     store.dispatch({ t: "runs", runs: [{ id }], any: true });
-    store.dispatch({ t: "snapshot", snapshot: { run: { id, ...(packId ? { packId } : {}) } } });
+    store.dispatch({ t: "snapshot", snapshot: { run: { id, ...(packId ? { packId } : {}), ...(packTitle ? { packTitle } : {}) } } });
   };
   const drop = () => store.dispatch({ t: "runs", runs: [], any: false });
 
@@ -208,5 +232,46 @@ describe("the profile the deck lands on when a run attaches", () => {
     expect(mock.handed).toEqual([]);
 
     mock.globals({ settings: { switchProfiles: true } });
+  });
+
+  it("writes the pack into the settings, so a restart does not offer it again", async () => {
+    mock.handed = [];
+    mock.wrote = [];
+    drop();
+    attach("r9", "com.example.the-long-road");
+    expect(mock.handed).toEqual(["built-2", "built-7"]);
+
+    // The write is a round trip through the software, so it lands a tick later.
+    await vi.waitFor(() => expect(mock.wrote).not.toHaveLength(0));
+    expect(mock.wrote.at(-1)!.profilesOffered).toContain("com.example.the-long-road");
+
+    // And a pack the settings arrive already naming is not offered, which
+    // is what a restart looks like from here.
+    mock.handed = [];
+    mock.globals({ settings: { profilesOffered: ["com.example.marsh-light"] } });
+    drop();
+    attach("r10", "com.example.marsh-light");
+    expect(mock.handed).toEqual([]);
+  });
+
+  it("leaves a pack alone when the Stream Deck app already has a profile under its title", async () => {
+    mock.handed = [];
+    mock.switched = [];
+    mock.wrote = [];
+    mock.logged = [];
+    mock.installed = [{ name: "Quarry Road" }];
+    drop();
+    attach("r11", "com.example.quarry-road", "Quarry Road");
+
+    // Nothing built, nothing handed over, and the deck left where it is: a
+    // profile somebody imported is not one this plugin can switch to.
+    expect(mock.handed).toEqual([]);
+    expect(mock.switched).toEqual([]);
+    expect(mock.logged.filter((l) => l.includes("already has one"))).toHaveLength(1);
+    // And marked offered, so the folder is not read again for this pack.
+    await vi.waitFor(() => expect(mock.wrote).not.toHaveLength(0));
+    expect(mock.wrote.at(-1)!.profilesOffered).toContain("com.example.quarry-road");
+
+    mock.installed = [];
   });
 });

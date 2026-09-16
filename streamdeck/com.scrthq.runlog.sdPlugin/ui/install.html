@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+  <head lang="en">
+    <title>Install a profile Settings</title>
+    <meta charset="utf-8" />
+    <script src="sdpi-components.js"></script>
+  </head>
+
+  <body>
+    <sdpi-item label="Packs without a profile">
+      <select id="without"></select>
+    </sdpi-item>
+
+    <sdpi-item label="Packs with one (import again)">
+      <select id="with"></select>
+    </sdpi-item>
+    <sdpi-item>
+      <small>The app keeps the old one; delete it there.</small>
+    </sdpi-item>
+
+    <div id="runlog-account"></div>
+    <script src="account.js"></script>
+    <script>
+      // The library is the account's, so it comes from the plugin on every
+      // appear rather than being listed here. It arrives split: the packs
+      // the Stream Deck app has no profile for, and the packs it does.
+      // Picking in either select sets the key, and the other one clears.
+      (() => {
+        const { streamDeckClient } = SDPIComponents;
+        const without = document.getElementById("without");
+        const withOne = document.getElementById("with");
+        const selects = [without, withOne];
+        let current = null;
+        let lists = { without: [], with: [] };
+
+        const option = (value, label) => {
+          const o = document.createElement("option");
+          o.value = JSON.stringify(value);
+          o.textContent = label;
+          return o;
+        };
+
+        const fill = (payload) => {
+          lists = { without: payload.without ?? [], with: payload.with ?? [] };
+          draw();
+        };
+
+        const draw = () => {
+          // The pack the key is set to belongs in the picker whether or not
+          // the library has arrived. Without it the settings read as unset
+          // while the key on the deck is naming a pack, and the library is
+          // a round trip to the account away.
+          const listed = [...lists.without, ...lists.with].some((p) => p.id === current?.id);
+          const first = current && !listed ? [current, ...lists.without] : lists.without;
+          without.replaceChildren(option(null, "Set up"), ...first.map((p) => option(p, p.title)));
+          withOne.replaceChildren(option(null, "Set up"), ...lists.with.map((p) => option(p, p.title)));
+          show();
+        };
+
+        // A pack option is identified by its id, so a renamed pack still matches.
+        const show = () => {
+          const chosen = current?.id ?? null;
+          for (const select of selects) {
+            const match = [...select.options].find((o) => (JSON.parse(o.value)?.id ?? null) === chosen);
+            select.value = match ? match.value : select.options[0]?.value;
+          }
+        };
+
+        for (const select of selects) {
+          select.addEventListener("change", () => {
+            current = JSON.parse(select.value);
+            streamDeckClient.setSettings(current ? { pack: current } : {});
+            draw();
+          });
+        }
+
+        streamDeckClient.sendToPropertyInspector.subscribe(({ payload }) => {
+          if (payload?.t === "packs") fill(payload);
+        });
+        void streamDeckClient.getSettings().then(({ settings }) => {
+          current = settings?.pack ?? null;
+          draw();
+        });
+        draw();
+      })();
+    </script>
+  </body>
+</html>

@@ -75,6 +75,15 @@ export interface Snapshot {
   resources?: Array<{ id: string; label: string; value: number; max: number | null }>;
   at?: string;
   offer?: Offer;
+  /**
+   * The pack's own moves and numbers, whatever the run is waiting on, for a
+   * deck laying out keys. Absent from an older page, which leaves the offer.
+   */
+  layout?: {
+    moves: Array<{ id: string; label: string }>;
+    counters: Array<{ id: string; label: string }>;
+    resources: Array<{ id: string; label: string }>;
+  };
 }
 export interface DeckState {
   session: SessionState;
@@ -403,6 +412,18 @@ export function openFace(state: DeckState, target?: OpenTarget): Face {
   if (c) return c;
   if (target === "profile") return { title: OPEN_LABELS.profile, tone: "deck", when: "to import" };
   return { title: OPEN_LABELS[target], tone: "deck", when: "in a browser" };
+}
+
+/**
+ * What the Install a profile key says: the pack it would build one for.
+ *
+ * It asks nothing of the run. The pack is picked in the key's settings and
+ * fetched off the account, so a deck that is following nothing at all still
+ * has something to press, and the key says which pack it would hand over.
+ */
+export function installFace(pack?: { id: string; title: string }): Face {
+  if (!pack) return { title: "Set up", tone: "dim" };
+  return { title: pack.title, tone: "deck", when: "to import" };
 }
 
 export function runFace(state: DeckState): Face {

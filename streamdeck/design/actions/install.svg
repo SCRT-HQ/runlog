@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144" role="img" aria-label="Install a profile">
+  <!-- Into the tray: the arrow comes down, the tray takes it. -->
+  <path d="M72 22 V82" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+  <path d="M44 56 L72 84 L100 56" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M24 94 V110 A12 12 0 0 0 36 122 H108 A12 12 0 0 0 120 110 V94" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+</svg>
