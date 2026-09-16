@@ -7,11 +7,12 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { loadPackText } from "@runlog/rules-schema";
 import type { Setup } from "@runlog/rules-schema";
 import type { Clock, RunEvent, RunState } from "@runlog/engine";
-import type { Api } from "../sync/client.ts";
+import type { Api, SessionMember } from "../sync/client.ts";
 import { clockOf, fitsTheWire, heldMove, perRacer, RunView, trackersOf } from "./RunView.tsx";
 import { memoryRunStore } from "./store.ts";
 import { syncBus } from "../sync/bus.ts";
 import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
+import { AccountContext, type Account } from "../auth/Account.tsx";
 
 /**
  * The offer rides along with the snapshot.
@@ -117,6 +118,26 @@ const syncWith = (drove: Sync["drove"], gesture: Sync["gesture"] = () => false):
   drove,
 });
 
+/** A signed-in account, for the tests about the deck toast naming who. */
+const signedInAs = (id: string): Account => ({
+  status: "signed-in",
+  user: {
+    object: "user",
+    id,
+    email: `${id}@example.com`,
+    emailVerified: true,
+    firstName: null,
+    lastName: null,
+    profilePictureUrl: null,
+    createdAt: "2026-01-01T00:00:00Z",
+    updatedAt: "2026-01-01T00:00:00Z",
+    lastSignInAt: null,
+    externalId: undefined,
+  },
+  signOut: () => {},
+  getAccessToken: async () => "token",
+});
+
 async function renderRunView({
   putSnapshot,
   shared,
@@ -125,6 +146,8 @@ async function renderRunView({
   drove = () => {},
   gesture,
   bench = true,
+  members,
+  account,
 }: {
   putSnapshot: Api["putSnapshot"];
   shared: boolean;
@@ -137,6 +160,10 @@ async function renderRunView({
   drove?: Sync["drove"];
   /** The word this device sends out, for the test about handing a setup out. */
   gesture?: Sync["gesture"];
+  /** Who is at the table, for the tests about naming a deck's arrival. */
+  members?: SessionMember[];
+  /** Who is signed in on this device, for the "You" and unsigned-in tests. */
+  account?: Account;
 }) {
   current.api = {
     putSnapshot,
@@ -162,6 +189,7 @@ async function renderRunView({
     updatedAt: at,
     role: "player",
     shared,
+    ...(members ? { members } : {}),
   });
   store.setActiveRunFor(kiln.id, runId);
 
@@ -170,9 +198,11 @@ async function renderRunView({
   // already ticking by the time it asks.
   vi.useFakeTimers();
   render(
-    <SyncContext.Provider value={syncWith(drove, gesture)}>
-      <RunView pack={kiln} store={store} bench={bench ? { from: "test", onLeave: () => {} } : undefined} />
-    </SyncContext.Provider>,
+    <AccountContext.Provider value={account ?? { status: "local" }}>
+      <SyncContext.Provider value={syncWith(drove, gesture)}>
+        <RunView pack={kiln} store={store} bench={bench ? { from: "test", onLeave: () => {} } : undefined} />
+      </SyncContext.Provider>
+    </AccountContext.Provider>,
   );
   await flush();
 
@@ -272,6 +302,74 @@ describe("the offer rides along with the snapshot", () => {
 
     await act(() => vi.advanceTimersByTimeAsync(5100));
     expect(notes()).toHaveLength(0);
+  });
+
+  /**
+   * Task 49: the toast names who, the same way the people panel does,
+   * once the server sends `deckSubs` alongside the count (#318).
+   */
+  describe("the deck toast names who", () => {
+    const at = "2026-09-14T00:00:00.000Z";
+    const notes = () => screen.getAllByRole("status").filter((el) => el.classList.contains("toast"));
+
+    it("names a member at the table", async () => {
+      const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+      await renderRunView({
+        putSnapshot,
+        shared: false,
+        members: [{ sub: "user_ASH", name: "Ash", role: "player", joinedAt: at }],
+      });
+
+      act(() => {
+        syncBus.emit({ t: "gesture", id: "run1", kind: "tools", data: { tools: [], count: 0, decks: 1, deckSubs: ["user_ASH"] }, at });
+      });
+      expect(notes()).toHaveLength(1);
+      expect(notes()[0]!.textContent).toBe("Ash connected their Stream Deck.");
+    });
+
+    it("says You for the viewer's own account", async () => {
+      const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+      await renderRunView({ putSnapshot, shared: false, account: signedInAs("user_ME") });
+
+      act(() => {
+        syncBus.emit({ t: "gesture", id: "run1", kind: "tools", data: { tools: [], count: 0, decks: 1, deckSubs: ["user_ME"] }, at });
+      });
+      expect(notes()).toHaveLength(1);
+      expect(notes()[0]!.textContent).toBe("You connected your Stream Deck.");
+    });
+
+    it("says Someone for a sub the member list does not show", async () => {
+      const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+      await renderRunView({ putSnapshot, shared: false });
+
+      act(() => {
+        syncBus.emit({ t: "gesture", id: "run1", kind: "tools", data: { tools: [], count: 0, decks: 1, deckSubs: ["user_GHOST"] }, at });
+      });
+      expect(notes()).toHaveLength(1);
+      expect(notes()[0]!.textContent).toBe("Someone connected a Stream Deck.");
+    });
+
+    it("says nothing for a repeat of the same set", async () => {
+      const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+      await renderRunView({
+        putSnapshot,
+        shared: false,
+        members: [{ sub: "user_ASH", name: "Ash", role: "player", joinedAt: at }],
+      });
+
+      act(() => {
+        syncBus.emit({ t: "gesture", id: "run1", kind: "tools", data: { tools: [], count: 0, decks: 1, deckSubs: ["user_ASH"] }, at });
+      });
+      expect(notes()).toHaveLength(1);
+      await act(() => vi.advanceTimersByTimeAsync(5100));
+      expect(notes()).toHaveLength(0);
+
+      act(() => {
+        syncBus.emit({ t: "gesture", id: "run1", kind: "tools", data: { tools: [], count: 0, decks: 1, deckSubs: ["user_ASH"] }, at });
+      });
+      // The same set again names nobody new, so no toast comes back.
+      expect(notes()).toHaveLength(0);
+    });
   });
 
   /*

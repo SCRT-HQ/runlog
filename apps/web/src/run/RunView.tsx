@@ -87,6 +87,7 @@ import { RunRail, type Pane } from "./RunRail.tsx";
 import { useEnterMoves } from "../ui/useEnterMoves.ts";
 import { useConfirm } from "../ui/useConfirm.tsx";
 import { useToast } from "../ui/Toast.tsx";
+import { accountOf, nameOf } from "./names.ts";
 
 /**
  * The active step's own heading, the same word the page shows above it.
@@ -159,6 +160,16 @@ function tickEverythingAndFinish(pack: Pack, run: ReturnType<typeof useRun>, act
  */
 function finishWords(pack: Pack, step: ActiveStep["step"]): string {
   return closesUnit(step) ? `Next ${pack.vocabulary.unit.one.toLowerCase()}` : "Done";
+}
+
+/**
+ * A list of names read as one phrase: one alone, two joined by "and",
+ * more with commas and "and" before the last. What the deck toast reads
+ * when more than one account's deck arrives in the same beat.
+ */
+function joinWords(words: string[]): string {
+  if (words.length <= 2) return words.join(" and ");
+  return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
 }
 
 /**
@@ -286,21 +297,59 @@ export function RunView({
    * here. Neither is the other's business, so either is enough.
    */
   const decks = useAttachedDecks(run.record?.runId ?? null);
+  // Whose decks, not just how many: the toast below names them, and the
+  // people panel's rows want the same list. Read here, ahead of the
+  // toast, rather than down with the rest of the attached-tool state.
+  const deckSubs = useAttachedDeckSubs(run.record?.runId ?? null);
   const shared = Boolean(!remote && run.record && run.record.role !== "viewer" && (run.record.shared || liveLinkOf(run.record.runId)));
   const publishing = shared || decks > 0;
 
   /**
    * The table is told when a deck arrives, since nothing else on screen
-   * says so. `hadDecks` fires the note only on the way up: a deck leaving
-   * is not worth interrupting for, and the people panel already says
-   * whose are on at rest.
+   * says so, and told who: the same lookup the people panel uses turns
+   * the account into a name, "You" for the viewer's own, "Someone" for
+   * an account the member list does not show.
+   *
+   * Diffed by account rather than by count, so two devices signed into
+   * the same account attaching one after another are still one arrival
+   * each: `hadDeckSubs` keeps the set of accounts already named. A deck
+   * leaving is not worth interrupting for, and the people panel already
+   * says whose are on at rest.
+   *
+   * A server older than #318 never sends `deckSubs`, which `deckSubs`
+   * being null (rather than empty) says: the count is all there is then,
+   * and `hadDecks` fires the old toast the way it always did.
    */
   const toast = useToast();
   const hadDecks = useRef(0);
+  const hadDeckSubs = useRef<Set<string>>(new Set());
   useEffect(() => {
-    if (decks > hadDecks.current) toast.show(decks === 1 ? "A Stream Deck is on this run." : `${decks} Stream Decks are on this run.`);
+    if (deckSubs === null) {
+      if (decks > hadDecks.current) toast.show(decks === 1 ? "A Stream Deck is on this run." : `${decks} Stream Decks are on this run.`);
+      hadDecks.current = decks;
+      return;
+    }
+    const seen = hadDeckSubs.current;
+    const arrived = deckSubs.filter((s) => !seen.has(s));
+    hadDeckSubs.current = new Set(deckSubs);
     hadDecks.current = decks;
-  }, [decks, toast.show]);
+    if (arrived.length === 0) return;
+    const members = run.record?.members ?? [];
+    const words = arrived.map((s) => (accountOf(s) === me ? "You" : (nameOf(s, members) ?? "Someone")));
+    // One arrival names itself; more than one is said together, since the
+    // toast shows one line at a time and a second `show` would only push
+    // the first name off before anyone read it.
+    if (words.length === 1) {
+      const who = words[0]!;
+      // An unnamed arrival owns nothing to point a possessive at, so it
+      // gets the plain article instead: "Someone connected a Stream
+      // Deck.", not "their Stream Deck."
+      const deck = who === "You" ? "your Stream Deck" : who === "Someone" ? "a Stream Deck" : "their Stream Deck";
+      toast.show(`${who} connected ${deck}.`);
+    } else {
+      toast.show(`${joinWords(words)} connected their Stream Decks.`);
+    }
+  }, [decks, deckSubs, toast.show, run.record?.members, me]);
   // The race this run is in, if any: the side column's panel and the snapshot both read it.
   const raceView = useRace(run.record, run.state, run.events);
 
@@ -593,8 +642,6 @@ export function RunView({
   const reachable = useReachable(api, run.record ?? null);
   // Whose games this run is holding the other end of, for the badge below.
   const tools = useAttachedTools(run.record?.runId ?? null);
-  // Which accounts have a deck on the run, for the people panel's rows.
-  const deckSubs = useAttachedDeckSubs(run.record?.runId ?? null);
   // The roller is fetched while the run opens, not when the first die is thrown.
   useEffect(() => preloadDice3d(), []);
   // Someone else's throw at this table, played here for whoever is not throwing.
@@ -1235,7 +1282,7 @@ export function RunView({
 
         <div className="col side">
           {/* Who is here, first: a row a person, with what they have plugged in. */}
-          {run.record && !bench && <Members pack={pack} run={run.record} tools={tools} deckSubs={deckSubs} />}
+          {run.record && !bench && <Members pack={pack} run={run.record} tools={tools} deckSubs={deckSubs ?? []} />}
           {state.status === "ended" && <Scores pack={pack} run={run} state={state} />}
           {run.moderated && <Scoreboard run={run} state={state} pack={pack} tools={tools} />}
           {!run.moderated && tools.length > 0 && <Attached tools={tools} />}
