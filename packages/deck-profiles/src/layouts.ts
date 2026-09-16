@@ -60,14 +60,17 @@ export interface Key {
  * The clock and the dice the run throws for itself sit with the presses,
  * because both are things somebody reaches for while a scene is running.
  *
- * The two Open keys come last but one because nothing on the deck needs
- * them mid-scene: one puts the run in the browser, the other the guide.
- * Finish is last of all, as far from a hand mid-scene as the layout goes,
- * and it takes a hold on top of that.
+ * The Open key comes last but one because nothing on the deck needs it
+ * mid-scene: it puts the run in the browser. Finish is last of all, as far
+ * from a hand mid-scene as the layout goes, and it takes a hold on top of
+ * that.
  *
- * Thirteen keys, which is more than a Mini or a + has room for. They page.
+ * Every key here is about the run in hand. The ones that are not are
+ * {@link UTILITY}, on a page of their own at the end of every profile.
+ *
+ * Twelve keys, which is more than a Mini or a + has room for. They page.
  * This order is what a deck too small for a frame lays down; the XL and
- * the Stream Deck spread the same thirteen over the zones below.
+ * the Stream Deck spread the same twelve over the zones below.
  */
 export const BASE: Key[] = [
   { action: "connect" },
@@ -81,8 +84,23 @@ export const BASE: Key[] = [
   { action: "metric", settings: { field: "unit" } },
   { action: "metric", settings: { field: "clock" } },
   { action: "open", settings: { target: "run" } },
-  { action: "open", settings: { target: "guide" } },
   { action: "finish" },
+];
+
+/**
+ * The keys that are not about the run in hand.
+ *
+ * Install a profile, the guide, a new run and the dock: none of them reads
+ * anything off the run the deck is following, and none of them is pressed
+ * mid-scene. They sit on the last page of every profile, so every deck has
+ * them without anybody adding a key by hand, and so page one stays the
+ * run's.
+ */
+export const UTILITY: Key[] = [
+  { action: "install" },
+  { action: "open", settings: { target: "guide" } },
+  { action: "open", settings: { target: "newrun" } },
+  { action: "open", settings: { target: "dock" } },
 ];
 
 /**
@@ -124,8 +142,8 @@ export interface Frame {
   /**
    * Where a page turn goes on a page that needs one.
    *
-   * Both are ordinary free cells on every other page, which is how a
-   * layout that fits does not grow a turn pointing at nothing.
+   * Every profile ends on the utility page, so every page ahead of it
+   * spends the next cell and the utility page spends only the one back.
    */
   turns: { next: string; previous: string };
 }
@@ -143,8 +161,12 @@ export interface Frame {
  * far bottom corner, as far from that hand as the grid goes, and it takes
  * a hold on top of that.
  *
+ * Neither frame carries the guide: it is on the utility page at the end of
+ * every profile with the rest of {@link UTILITY}, which is why the cell it
+ * used to hold on an XL is now the first the pack's own keys fill.
+ *
  * The Mini and the + have no frame here on purpose. Six keys and eight are
- * fewer than the thirteen every profile opens with, so anything pinned
+ * fewer than the twelve every profile opens with, so anything pinned
  * down would be a cell the pack's own keys never get; those two lay
  * {@link BASE} down in order and page.
  */
@@ -157,7 +179,6 @@ export const FRAMES: Partial<Record<DeviceId, Frame>> = {
       { key: { action: "connect" }, at: "0,0" },
       { key: { action: "run" }, at: "1,0" },
       { key: { action: "open", settings: { target: "run" } }, at: "2,0" },
-      { key: { action: "open", settings: { target: "guide" } }, at: "3,0" },
       { key: { action: "metric", settings: { field: "score" } }, at: "4,0" },
       { key: { action: "metric", settings: { field: "unit" } }, at: "5,0" },
       { key: { action: "metric", settings: { field: "clock" } }, at: "6,0" },
@@ -170,7 +191,9 @@ export const FRAMES: Partial<Record<DeviceId, Frame>> = {
     ],
     rules: "7,0",
     extras: { drive: { first: [], last: [] }, numbers: { first: [], last: [] } },
-    drive: ["1,2", "2,2", "3,2", "1,3", "2,3", "3,3"],
+    // The guide left the frame for the utility page, so 3,0 is the first
+    // free cell a pack's keys fill rather than a pinned one.
+    drive: ["3,0", "1,2", "2,2", "3,2", "1,3", "2,3", "3,3"],
     numbers: ["4,1", "5,1", "6,1", "7,1", "4,2", "5,2", "6,2", "7,2", "4,3", "5,3", "6,3", "7,3"],
     turns: { next: "7,3", previous: "6,3" },
   },
@@ -191,10 +214,7 @@ export const FRAMES: Partial<Record<DeviceId, Frame>> = {
     extras: {
       drive: {
         first: [{ action: "autoroll" }, { action: "clock" }],
-        last: [
-          { action: "open", settings: { target: "run" } },
-          { action: "open", settings: { target: "guide" } },
-        ],
+        last: [{ action: "open", settings: { target: "run" } }],
       },
       numbers: {
         first: [],

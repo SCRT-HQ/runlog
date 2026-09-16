@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { DEVICES, container, fromPack, profile } from "@runlog/deck-profiles";
+import { DEVICES, container, fromPack, profile, shippedName } from "@runlog/deck-profiles";
 
 import { SKETCHES, SLUGS } from "./layouts.mjs";
 import { layouts, profileSpecs, setupsFor, setupsTable, table, toolFor } from "./profiles.mjs";
@@ -103,15 +103,20 @@ describe("the profiles we ship", () => {
     }
   });
 
-  it("names each profile after the pack it was laid out from", () => {
-    // What the Stream Deck app calls it in somebody's list. The pack's own
-    // title and nothing else: the app already says which plugin a profile
-    // came with.
+  it("names each profile after the pack it was laid out from, and marks it as ours", () => {
+    // What the Stream Deck app calls it in somebody's list: the pack's own
+    // title with the shipped mark after it. The mark is what lets one of
+    // these sit beside a profile of the same pack the streamer imported;
+    // the app cannot replace a profile on import, and two under one name
+    // leaves the second called "<title> copy". A download and the Install
+    // key keep the bare title, which `packages/deck-profiles` holds.
     for (const layout of layouts()) {
       const named = all.filter(({ spec }) => spec.slug === layout.slug);
       expect(named).toHaveLength(4);
-      for (const { built } of named) expect(built.files["manifest.json"].Name).toBe(layout.pack ? layout.pack.title : "Runlog");
+      const expected = layout.pack ? shippedName(layout.pack.title) : "Runlog";
+      for (const { built } of named) expect(built.files["manifest.json"].Name).toBe(expected);
     }
+    expect(shippedName("The Long Kiln")).toBe("The Long Kiln (Runlog)");
   });
 
   it("keeps the slug Elden Ring's profile shipped under", () => {

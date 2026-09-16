@@ -1,6 +1,6 @@
 import type { Pack } from "@runlog/rules-schema";
 
-import { BASE, DEVICE_IDS, DEVICES, DIALS, FRAMES, isWarp, type DeviceId, type Frame, type Key } from "./layouts.ts";
+import { BASE, DEVICE_IDS, DEVICES, DIALS, FRAMES, UTILITY, isWarp, type DeviceId, type Frame, type Key } from "./layouts.ts";
 import { ACTION_NAMES, PAGE_PLUGIN, PLUGIN, TURNS } from "./plugin.ts";
 import { joined, sha1, utf8 } from "./sha1.ts";
 import { zip, type ZipEntry } from "./zip.ts";
@@ -96,6 +96,24 @@ export interface ProfileSpec {
 
 /** The generic layout, which is what a pack with nothing of its own gets. */
 export const GENERIC = { slug: "runlog", name: "Runlog" };
+
+/**
+ * What the Stream Deck app calls a profile the plugin ships for a pack.
+ *
+ * A shipped profile is one the plugin declares in its manifest, and those
+ * are the only ones it can switch a deck to. An import is not: importing
+ * one under a name the app already has leaves both, the second called
+ * "<title> copy". So the shipped one takes a name of its own and the two
+ * sit in the list as themselves.
+ *
+ * A download off a pack's page, and a profile the Install key builds, keep
+ * the bare title: those are the streamer's own copy, named the way they
+ * asked for it. The generic profile is not a pack's and does not come
+ * through here.
+ */
+export function shippedName(title: string): string {
+  return `${title} (Runlog)`;
+}
 
 /**
  * Stable ids, so regenerating a profile is not a diff.
@@ -346,14 +364,18 @@ export interface Page {
  * every page with more behind it spends its last on a way on. The last page
  * spends neither, so a layout that fits exactly does not grow a turn key
  * pointing at nothing.
+ *
+ * `trailing` says a page of somebody else's follows these, which is what
+ * the utility page is: every page cut here then spends a cell on the way
+ * on, including the last.
  */
-export function paginate(keys: Key[], capacity: number): Page[] {
+export function paginate(keys: Key[], capacity: number, trailing = false): Page[] {
   const pages: Page[] = [];
   let i = 0;
   while (i < keys.length) {
     const back = pages.length > 0 ? 1 : 0;
     let room = capacity - back;
-    const more = keys.length - i > room;
+    const more = trailing || keys.length - i > room;
     if (more) room -= 1;
     pages.push({ back: back === 1, more, keys: keys.slice(i, i + room) });
     i += room;
@@ -378,9 +400,9 @@ export interface FramedPage {
  * keeps a pack with forty moves and two counters from paging through half
  * an empty deck.
  *
- * The turns are cut out of the pools the way {@link paginate} keeps its
- * first and last slot: only on the pages that need them. A layout that
- * fits on one page uses both cells for keys.
+ * Every one of these pages has a page after it, because the utility page
+ * ends the profile, so every one spends the next cell. The utility page
+ * itself spends the one back and no more.
  *
  * A page that took no key at all ends the run. Neither frame here can
  * reach that, but this is exported, and a frame whose pools are all turn
@@ -414,23 +436,32 @@ export function framedPages(frame: Frame, drive: Key[], numbers: Key[]): FramedP
       return { keys, d: i, n: j };
     };
 
-    // What is left over once the page is filled to the brim says whether
-    // it needs a way on, and a page that needs one is filled again with
-    // that cell spent. Taking a cell away can only leave more behind, so
-    // the second fill never turns the answer back around.
-    const brim = fill(false);
-    const wants = brim.d < drive.length || brim.n < numbers.length;
-    const spent = wants ? fill(true) : brim;
+    // The way on is always spent: the utility page follows whatever the
+    // queues did here.
+    const page = fill(true);
+    pages.push({ back, more: true, keys: page.keys });
+    const left = page.d < drive.length || page.n < numbers.length;
     // A page that takes no key once it has paid for the turn is a page
-    // that cannot page: keep what fit and stop, rather than hand out a
-    // way on to a page that would be as empty as this one.
-    const page = wants && spent.d === d && spent.n === n ? brim : spent;
-    const more = wants && page !== brim;
-    pages.push({ back, more, keys: page.keys });
+    // that cannot page: keep what fit and go to the utility page, rather
+    // than cut another as empty as this one.
+    const stuck = page.d === d && page.n === n;
     d = page.d;
     n = page.n;
-    if (!more) return pages;
+    if (!left || stuck) break;
   }
+
+  // The last page of every profile: the frame, the keys that are not about
+  // the run, and the way back. Nothing spills onto the numbers side, which
+  // leaves the page as sparse as what is on it.
+  const keys: Record<string, Key> = {};
+  for (const { key, at } of frame.fixed) keys[at] = key;
+  let u = 0;
+  for (const cell of frame.drive) {
+    if (cell === frame.turns.previous) continue;
+    if (u < UTILITY.length) keys[cell] = UTILITY[u++]!;
+  }
+  pages.push({ back: true, more: false, keys });
+  return pages;
 }
 
 /** Row-major: the app names a position column first, and the top-left one is `0,0`. */
@@ -465,9 +496,15 @@ export function profile({ slug, device, name, keys, zones }: ProfileSpec, ids: (
   // A framed deck keeps its own cells for the turns; a sequential one
   // spends its first slot going back and its last going on.
   const turns = zones ? zones.frame.turns : { previous: at(0, columns), next: at(capacity - 1, columns) };
+  // Both paths end on the utility page. A deck with no frame gets it as
+  // one more cut page, so it pays for the way back like any other.
   const cut = zones
     ? framedPages(zones.frame, zones.drive, zones.numbers)
-    : paginate(keys, capacity).map((page) => ({ back: page.back, more: page.more, keys: sequential(page, columns) }));
+    : [...paginate(keys, capacity, true), { back: true, more: false, keys: UTILITY }].map((page) => ({
+        back: page.back,
+        more: page.more,
+        keys: sequential(page, columns),
+      }));
 
   const files: Record<string, PageFile | RootFile> = {};
   const pageIds: string[] = [];

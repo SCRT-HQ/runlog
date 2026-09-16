@@ -127,6 +127,22 @@ describe("which of the two profiles a pack has", () => {
     expect(installedFor({ id: "com.example.salt-and-signal", title: "Salt and Signal" }, profiles)).toBe("imported");
   });
 
+  it("tells a shipped profile from an import of the same pack, now the two are named apart", () => {
+    // A profile the plugin installs is named "<title> (Runlog)" so it can
+    // sit beside one the streamer imported without either becoming a copy.
+    // Which is which is still read off the manifest rather than the name:
+    // the plugin's own is the one a deck can be switched to.
+    const pack = { id: "com.scrthq.runlog.long-kiln", title: "The Long Kiln" };
+    const ours = { name: "The Long Kiln (Runlog)", installedBy: "com.scrthq.runlog", preconfigured: "profiles/demo-xl" };
+    const theirs = { name: "The Long Kiln" };
+    expect(installedFor(pack, [ours, theirs])).toBe("shipped");
+    expect(installedFor(pack, [ours])).toBe("shipped");
+    expect(installedFor(pack, [theirs])).toBe("imported");
+    // And the shipped name is not read as an import of some other pack that
+    // happens to share the title: the mark is part of the name.
+    expect(installedFor({ id: "com.example.long-road", title: "The Long Kiln" }, [ours])).toBe(null);
+  });
+
   it("is neither where nothing in the folder is for the pack", () => {
     expect(installedFor({ id: "com.example.long-road", title: "The Long Road" }, profiles)).toBe(null);
     expect(installedFor({ id: "com.scrthq.runlog.forfeits", title: "Forfeits" }, profiles)).toBe(null);
