@@ -1261,9 +1261,59 @@ p {
   grid-template-columns: 1fr auto;
   align-items: center;
 }
-/* So a long unbroken name wraps in its track rather than pushing out of it. */
+/*
+ * One row a person, whatever the name is.
+ *
+ * The left track keeps its own width so the marks and the buttons on the
+ * right never move, and a name longer than the track is cut with an
+ * ellipsis rather than wrapping onto a second line.
+ */
 .row.memberRow > :first-child {
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The right of the row: marks then buttons, on the one line. */
+.memberRow .padRow {
+  margin-top: 0;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+}
+.toolIcons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.toolIcon {
+  display: inline-flex;
+  line-height: 0;
+}
+/* Plugged in: the celadon the app uses for "fine", at full strength. */
+.toolIcon.lit {
+  color: var(--accent);
+  opacity: 1;
+}
+/*
+ * Not plugged in: there, so the row does not jump, but out of the way.
+ *
+ * The muted ink at half. There is no token for a disabled control's color
+ * to borrow: the rule for a disabled button uses `--muted` at full
+ * strength and drops the fill instead, which a glyph with no fill cannot
+ * do. A quarter of the ink was invisible on the two light looks, where
+ * the muted ink is already close to the panel.
+ */
+.toolIcon.dim {
+  color: var(--muted);
+  opacity: 0.5;
+}
+/* A button that is only its glyph: square, and no wider than one. */
+.ghost.tiny.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  line-height: 0;
 }
 /* Your own seat, marked: the accent's wash behind it and a chip that says so. */
 .memberRow.me {

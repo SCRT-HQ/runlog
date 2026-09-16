@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Pack } from "@runlog/rules-schema";
 import { useAccount } from "../auth/Account.tsx";
 import { useApi } from "../sync/useApi.ts";
@@ -11,6 +11,28 @@ import type { StoredRun } from "../storage/db.ts";
 import { useProfile } from "../sync/useProfile.ts";
 import { useReachable } from "./useReachable.ts";
 import { controlAddress } from "./controlAddress.ts";
+import { isEmpty, type ControlProfile } from "../control/profile.ts";
+import type { AttachedTool } from "./useAttachedTools.ts";
+import { CheckGlyph, CopyGlyph, DeckGlyph, PlugGlyph, XGlyph } from "./glyphs.tsx";
+
+/**
+ * The account behind a connection, as the server names it.
+ *
+ * A tool dials on a watch key rather than signing in, so its connection
+ * is named for the key's owner with a prefix. A deck signs in and is
+ * named plainly. Stripping the prefix lets both be held against the
+ * member list.
+ */
+const accountOf = (sub: string) => (sub.startsWith("stream:") ? sub.slice("stream:".length) : sub);
+
+/** One mark in a member's row: what is plugged in, lit or not. */
+function ToolIcon({ lit, label, children }: { lit: boolean; label: string; children: ReactNode }) {
+  return (
+    <span className={`toolIcon ${lit ? "lit" : "dim"}`} role="img" title={label} aria-label={label}>
+      {children}
+    </span>
+  );
+}
 
 /**
  * Who is at the table, and how to ask someone else.
@@ -21,8 +43,24 @@ import { controlAddress } from "./controlAddress.ts";
  * the people this account has played with offered as the address is typed.
  * Nothing here is available without an account, and the panel says so
  * rather than showing controls that cannot work.
+ *
+ * What is attached comes in as props rather than from the socket here:
+ * the run screen is already listening for it, and one listener answering
+ * every panel beats three of them counting the same decks.
  */
-export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
+export function Members({
+  pack,
+  run,
+  tools = [],
+  deckSubs = [],
+}: {
+  pack: Pack;
+  run: StoredRun;
+  /** The tools on the run's games, as the server last said. */
+  tools?: AttachedTool[];
+  /** The accounts with a deck on this run. */
+  deckSubs?: string[];
+}) {
   const account = useAccount();
   const api = useApi();
   const hosted = useHosted();
@@ -149,6 +187,57 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
     }
   };
 
+  /**
+   * Whether this run has rules for a tool at all.
+   *
+   * The run's own control profile is what the server reads to decide
+   * what an attached tool is told, so an empty one means nothing custom
+   * can reach a game and the plug is not worth a column. A profile the
+   * app ships for the pack counts for nothing until somebody picks it
+   * into the run.
+   */
+  const supportsTool = !isEmpty(run.control as ControlProfile | undefined);
+
+  /**
+   * The tool on the table, which is one that named no seat.
+   *
+   * It belongs to the table and to nobody's row, the owner's included: a
+   * tool dialed on the table's address is playing the run rather than a
+   * seat in it, and lighting the owner as well would read as two tools
+   * where there is one.
+   */
+  const tableTool = tools.find((t) => !t.seat);
+
+  /** The tool on this person's game, by the seat its address named. */
+  const toolOf = (m: SessionMember): AttachedTool | undefined => {
+    const seat = (m.name ?? "").trim().toLowerCase();
+    return seat ? tools.find((t) => (t.seat ?? "").trim().toLowerCase() === seat) : undefined;
+  };
+
+  /**
+   * Decks on accounts the member list does not show.
+   *
+   * A deck signs in on its own account, which need not be one the run
+   * knows about: a run nobody has been invited to lists one person, and
+   * the count used to be the only sign a second deck was on at all. So
+   * what no row can carry is said in a line under the rows rather than
+   * dropped.
+   */
+  const strayDecks = deckSubs.filter((s) => !members.some((m) => m.sub === accountOf(s))).length;
+
+  const copyLabel = reach.key ? "Copy connection address" : "Open this run to watchers to get an address";
+  const copyButton = (seat: string | undefined, id: string) => (
+    <button
+      className="ghost tiny iconButton"
+      title={copyLabel}
+      aria-label={copyLabel}
+      disabled={!reach.key}
+      onClick={() => void copyAddress(seat, id)}
+    >
+      {copiedAddress === id ? <CheckGlyph /> : <CopyGlyph />}
+    </button>
+  );
+
   const pending = invites.filter((i) => !i.accepted);
   const react = (emoji: string) => {
     if (reactedAt > Date.now()) return;
@@ -223,47 +312,64 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
               <strong>The table</strong>
               <span className="muted small"> · everyone</span>
             </span>
-            <button
-              className="ghost tiny"
-              title="The address a tool dials to reach this run without saying who it is playing"
-              onClick={() => void copyAddress(undefined, "table")}
-            >
-              {copiedAddress === "table" ? "Copied" : "Copy address"}
-            </button>
+            <span className="padRow">
+              {/* No deck here: a deck belongs to a person, not to the table. */}
+              {supportsTool && (
+                <span className="toolIcons">
+                  <ToolIcon lit={Boolean(tableTool)} label={tableTool ? `${tableTool.app ?? "Tool"} connected` : "No tool connected"}>
+                    <PlugGlyph />
+                  </ToolIcon>
+                </span>
+              )}
+              {copyButton(undefined, "table")}
+            </span>
           </div>
         )}
-        {members.map((m) => (
-          <div key={m.sub} className={`row spread memberRow${m.sub === me ? " me" : ""}`} aria-current={m.sub === me ? "true" : undefined}>
-            <span>
-              <strong>{m.name ?? (m.sub === me ? "You" : "Somebody")}</strong>
-              <span className="muted small"> · {m.role}</span>
-              {m.sub === me && <span className="chip you">you</span>}
-            </span>
-            <span className="padRow">
-              {owner && m.name && (
-                <button
-                  className="ghost tiny"
-                  title={`The address a tool on ${m.name}'s game dials, so rules meant for them reach them`}
-                  onClick={() => void copyAddress(m.name, m.sub)}
-                >
-                  {copiedAddress === m.sub ? "Copied" : "Copy address"}
-                </button>
-              )}
-              {owner && m.role !== "owner" && (
-                <button
-                  className="ghost tiny"
-                  title="Remove them from this run"
-                  onClick={() => void api.removeMember(run.runId, m.sub).then(refresh, () => {})}
-                >
-                  Remove
-                </button>
-              )}
-            </span>
-          </div>
-        ))}
-        {owner && !reach.key && (
+        {members.map((m) => {
+          const deck = deckSubs.some((s) => accountOf(s) === m.sub);
+          const tool = toolOf(m);
+          return (
+            <div
+              key={m.sub}
+              className={`row spread memberRow${m.sub === me ? " me" : ""}`}
+              aria-current={m.sub === me ? "true" : undefined}
+            >
+              <span>
+                <strong>{m.name ?? (m.sub === me ? "You" : "Somebody")}</strong>
+                <span className="muted small"> · {m.role}</span>
+                {m.sub === me && <span className="chip you">you</span>}
+              </span>
+              <span className="padRow">
+                <span className="toolIcons">
+                  <ToolIcon lit={deck} label={deck ? "Stream Deck connected" : "No Stream Deck connected"}>
+                    <DeckGlyph />
+                  </ToolIcon>
+                  {supportsTool && (
+                    <ToolIcon lit={Boolean(tool)} label={tool ? `${tool.app ?? "Tool"} connected` : "No tool connected"}>
+                      <PlugGlyph />
+                    </ToolIcon>
+                  )}
+                </span>
+                {owner && m.name && copyButton(m.name, m.sub)}
+                {owner && m.role !== "owner" && (
+                  <button
+                    className="ghost tiny iconButton"
+                    title="Remove them from this run"
+                    aria-label="Remove them from this run"
+                    onClick={() => void api.removeMember(run.runId, m.sub).then(refresh, () => {})}
+                  >
+                    <XGlyph />
+                  </button>
+                )}
+              </span>
+            </div>
+          );
+        })}
+        {strayDecks > 0 && (
           <p className="muted small">
-            An address needs a watch key, and this device has not made one yet. Opening this {noun} to watchers below makes one.
+            {strayDecks === 1
+              ? "A Stream Deck not at the table is on this run."
+              : `${strayDecks} Stream Decks not at the table are on this run.`}
           </p>
         )}
 
@@ -299,6 +405,7 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && void invite()}
                 aria-label="Email address to invite"
+                title="They get a link by email, sign in, and the run appears on their devices. A watcher sees every move and makes none."
               />
               <datalist id="runlog-people">
                 {people
@@ -329,9 +436,6 @@ export function Members({ pack, run }: { pack: Pack; run: StoredRun }) {
                 .
               </p>
             )}
-            <p className="muted small">
-              They get a link by email, sign in, and the run appears on their devices. A watcher sees every move and makes none.
-            </p>
 
             <h4 className="stepLabel">A live link</h4>
             {shared && liveLink ? (

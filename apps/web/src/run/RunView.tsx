@@ -68,7 +68,7 @@ import { bestOf, placeOf, scoresOf, type ScoredRun } from "./scores.ts";
 import { RacePanel } from "./RacePanel.tsx";
 import { useApi } from "../sync/useApi.ts";
 import { useReachable } from "./useReachable.ts";
-import { useAttachedDecks, useAttachedTools, toolFor, type AttachedTool } from "./useAttachedTools.ts";
+import { useAttachedDeckSubs, useAttachedDecks, useAttachedTools, toolFor, type AttachedTool } from "./useAttachedTools.ts";
 import { ulid } from "../storage/ids.ts";
 import { clearPendingRaceCode, pendingRaceCode } from "../share/IncomingRace.tsx";
 import { PlanError } from "../sync/client.ts";
@@ -291,8 +291,8 @@ export function RunView({
   /**
    * The table is told when a deck arrives, since nothing else on screen
    * says so. `hadDecks` fires the note only on the way up: a deck leaving
-   * is not worth interrupting for, and the Attached panel already says
-   * how many are on at rest.
+   * is not worth interrupting for, and the people panel already says
+   * whose are on at rest.
    */
   const toast = useToast();
   const hadDecks = useRef(0);
@@ -592,6 +592,8 @@ export function RunView({
   const reachable = useReachable(api, run.record ?? null);
   // Whose games this run is holding the other end of, for the badge below.
   const tools = useAttachedTools(run.record?.runId ?? null);
+  // Which accounts have a deck on the run, for the people panel's rows.
+  const deckSubs = useAttachedDeckSubs(run.record?.runId ?? null);
   // The roller is fetched while the run opens, not when the first die is thrown.
   useEffect(() => preloadDice3d(), []);
   // Someone else's throw at this table, played here for whoever is not throwing.
@@ -1231,9 +1233,11 @@ export function RunView({
         </div>
 
         <div className="col side">
+          {/* Who is here, first: a row a person, with what they have plugged in. */}
+          {run.record && !bench && <Members pack={pack} run={run.record} tools={tools} deckSubs={deckSubs} />}
           {state.status === "ended" && <Scores pack={pack} run={run} state={state} />}
           {run.moderated && <Scoreboard run={run} state={state} pack={pack} tools={tools} />}
-          {!run.moderated && (tools.length > 0 || decks > 0) && <Attached tools={tools} decks={decks} />}
+          {!run.moderated && tools.length > 0 && <Attached tools={tools} />}
           {run.roles.length > 0 && <Roles pack={pack} run={run} state={state} />}
           {/* A pack whose units make nothing has no board; the panel would
               say "nothing made yet" for the whole run. */}
@@ -1248,7 +1252,6 @@ export function RunView({
           />
           {run.record && api && !bench && <RacePanel pack={pack} race={raceView} />}
           {run.record && !bench && api && <Asks pack={pack} run={run} record={run.record} />}
-          {run.record && !bench && <Members pack={pack} run={run.record} />}
         </div>
       </div>
       {toast.node}
@@ -2498,30 +2501,21 @@ export function Scores({ pack, run, state }: { pack: Pack; run: ReturnType<typeo
  * on a roster, which told the one case that matters least and the one
  * that matters most exactly the same thing. A tool that says which seat
  * it is playing is a tool somebody can be told about by name.
+ *
+ * Decks are not named here any more: the people panel draws one row a
+ * person with a mark for the deck, which says whose as well as how many.
  */
-function Attached({ tools, decks }: { tools: AttachedTool[]; decks: number }) {
+function Attached({ tools }: { tools: AttachedTool[] }) {
   const named = tools.map((t) => t.app).filter((a): a is string => Boolean(a));
   const seated = tools.map((t) => t.seat).filter((s): s is string => Boolean(s));
   const whose = seated.length > 0 ? seated.join(", ") : tools.length === 1 ? "your game" : `${tools.length} games`;
   return (
     <section className="panel">
-      {tools.length > 0 && (
-        <h3 className="sectionTitle">
-          On {whose}{" "}
-          <span className="muted">{named.length > 0 ? named.join(", ") : tools.length === 1 ? "a tool" : `${tools.length} tools`}</span>
-        </h3>
-      )}
-      {/* A deck signs in rather than taking a line to paste, so it gets no
-          address beside it -- just its own count, the way a tool gets its
-          own line. */}
-      {decks > 0 && <h3 className="sectionTitle">{decks === 1 ? "Stream Deck" : `Stream Deck × ${decks}`}</h3>}
-      {/* About a tool on somebody's game, so it is said only where there
-          is one: a deck presses buttons, it does not hear the dice. */}
-      {tools.length > 0 && (
-        <p className="muted small">
-          Listening, so what the dice say happens in the game. Results still read the same with nothing attached.
-        </p>
-      )}
+      <h3 className="sectionTitle">
+        On {whose}{" "}
+        <span className="muted">{named.length > 0 ? named.join(", ") : tools.length === 1 ? "a tool" : `${tools.length} tools`}</span>
+      </h3>
+      <p className="muted small">Listening, so what the dice say happens in the game. Results still read the same with nothing attached.</p>
     </section>
   );
 }
