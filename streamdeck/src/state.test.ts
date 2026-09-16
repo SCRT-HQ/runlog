@@ -95,14 +95,14 @@ describe("what the keys say", () => {
     s = reduce(s, { t: "socket", state: "open" }, T);
     s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
     s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
-    expect(nextFace(s, {})).toEqual({ title: "Roll the Weather", tone: "live" });
+    expect(nextFace(s, {})).toEqual({ title: "Roll the Weather", tone: "live", when: "Next action" });
     expect(undoFace(s)).toEqual({ title: "Undo", tone: "undo" });
     const blocked = reduce(
       s,
       { t: "snapshot", snapshot: { offer: { ...offer, primary: null, needsPage: "Name the bowl on the page" } } },
       T,
     );
-    expect(nextFace(blocked, {})).toEqual({ title: "Name the bowl on the page", tone: "refuse" });
+    expect(nextFace(blocked, {})).toEqual({ title: "Name the bowl on the page", tone: "refuse", when: "Next action" });
   });
   it("says Undo either way, and dims it when there is nothing to take back", () => {
     let s = open();
@@ -116,7 +116,7 @@ describe("what the keys say", () => {
     s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
     s = reduce(s, { t: "drove", ref: "r1", ok: false, say: "That moved on." }, T);
     expect(nextFace(s, {})).toEqual({ title: "That moved on.", tone: "refuse" });
-    expect(nextFace(reduce(s, { t: "tick" }, T + 3001), {})).toEqual({ title: "Roll the Weather", tone: "live" });
+    expect(nextFace(reduce(s, { t: "tick" }, T + 3001), {})).toEqual({ title: "Roll the Weather", tone: "live", when: "Next action" });
   });
   it("ticks a running clock from the snapshot's own time", () => {
     let s = live();
@@ -467,14 +467,21 @@ describe("what the Connect key says", () => {
     });
   });
   it("is connecting while the socket is opening, and while it reports offline", () => {
-    expect(connectFace(reduce(live(), { t: "socket", state: "connecting" }, T))).toEqual({ title: "Connecting", tone: "dim" });
-    expect(connectFace(live())).toEqual({ title: "Connecting", tone: "dim" });
+    expect(connectFace(reduce(live(), { t: "socket", state: "connecting" }, T))).toEqual({ title: "Connecting", tone: "link" });
+    expect(connectFace(live())).toEqual({ title: "Connecting", tone: "link" });
+  });
+  it("lights the key blue only once the deck is on", () => {
+    // On a full deck it was furniture, and the one key whose whole job is
+    // to report the connection read like the ones around it.
+    expect(connectFace(reduce(initial(), { t: "session", state: "ok" }, T)).tone).toBe("dim");
+    expect(connectFace(live()).tone).toBe("link");
+    expect(connectFace(open()).tone).toBe("link");
   });
   it("says Disconnect once the socket is open, whatever the Run key would say", () => {
-    expect(connectFace(open())).toEqual({ title: "Disconnect", tone: "deck" });
+    expect(connectFace(open())).toEqual({ title: "Disconnect", tone: "link" });
     const s = reduce(reduce(live(), { t: "socket", state: "open" }, T), { t: "runs", runs: [], any: true }, T);
-    expect(connectFace(s)).toEqual({ title: "Disconnect", tone: "deck" });
-    expect(connectFace(open([held("s1"), held("s2", "Friday")]))).toEqual({ title: "Disconnect", tone: "deck" });
+    expect(connectFace(s)).toEqual({ title: "Disconnect", tone: "link" });
+    expect(connectFace(open([held("s1"), held("s2", "Friday")]))).toEqual({ title: "Disconnect", tone: "link" });
   });
 });
 
@@ -513,34 +520,41 @@ describe("what the follow key takes", () => {
       T,
     );
     expect(nextPress(s, {})).toEqual({ press: "primary" });
-    expect(nextFace(s, {})).toEqual({ title: "Roll the Weather", tone: "live" });
+    expect(nextFace(s, {})).toEqual({ title: "Roll the Weather", tone: "live", when: "Next action" });
   });
 
   it("ticks a checklist and presses the step's own button", () => {
     expect(nextPress(ticking, {})).toEqual({ press: "answer", answer: { ticks: "all" } });
-    expect(nextFace(ticking, {})).toEqual({ title: "Tick everything and Next", tone: "live" });
+    expect(nextFace(ticking, {})).toEqual({ title: "Tick everything and Next", tone: "live", when: "Next action" });
   });
 
   it("takes the first suggestion for a declaration", () => {
     expect(nextPress(naming, {})).toEqual({ press: "answer", answer: { subject: "A tall bowl" } });
-    expect(nextFace(naming, {})).toEqual({ title: "A tall bowl", tone: "live", when: "Name what you are going for" });
+    expect(nextFace(naming, {})).toEqual({ title: "A tall bowl", tone: "live", when: "Next action" });
   });
 
   it("leaves a declaration with nothing to suggest to the page", () => {
     const bare = asking([{ kind: "declareSubject", label: "Name what you are going for" }], "Name the bowl on the page");
     expect(nextPress(bare, {})).toBeNull();
-    expect(nextFace(bare, {})).toEqual({ title: "Name the bowl on the page", tone: "refuse" });
+    expect(nextFace(bare, {})).toEqual({ title: "Name the bowl on the page", tone: "refuse", when: "Next action" });
   });
 
   it("stops at both where the key was told to", () => {
     expect(nextPress(ticking, { stop: true })).toBeNull();
     expect(nextPress(naming, { stop: true })).toBeNull();
-    expect(nextFace(ticking, { stop: true })).toEqual({ title: "Tick the list on the page", tone: "refuse" });
-    expect(nextFace(naming, { stop: true })).toEqual({ title: "Name the bowl on the page", tone: "refuse" });
+    expect(nextFace(ticking, { stop: true })).toEqual({ title: "Tick the list on the page", tone: "refuse", when: "Next action" });
+    expect(nextFace(naming, { stop: true })).toEqual({ title: "Name the bowl on the page", tone: "refuse", when: "Next action" });
   });
 
   it("has nothing to take before a snapshot lands", () => {
     expect(nextPress(open(), {})).toBeNull();
+  });
+
+  it("says which key it is whatever it is offering", () => {
+    // The line under the title used to be the decision's label, which was
+    // blank as often as it was useful. The key's own name never is.
+    const faces = [nextFace(open(), {}), nextFace(ticking, {}), nextFace(naming, {}), nextFace(ticking, { stop: true })];
+    for (const f of faces) expect(f.when).toBe("Next action");
   });
 });
 
@@ -662,10 +676,12 @@ describe("what the finish key says", () => {
     expect(finishFace(older("ending"))).toEqual({ title: "Not yet", tone: "dim" });
   });
 
-  it("carries the ending on the kiln edge, and asks to be held", () => {
+  it("carries the ending on a ground of its own, and asks to be held", () => {
     const s = withOffer({ ending: { label: "Call it a night" } });
-    expect(finishFace(s)).toEqual({ title: "Call it a night", tone: "refuse", when: "hold to finish" });
+    expect(finishFace(s)).toEqual({ title: "Call it a night", tone: "end", when: "hold to finish" });
     expect(finishPress(s)).toEqual({ press: "answer", answer: { finish: true } });
+    // The color is on the key only while the press would land.
+    expect(finishFace(withOffer({ ending: null })).tone).toBe("dim");
   });
 });
 
@@ -725,7 +741,7 @@ describe("what a metric key presses", () => {
 describe("what the follow key does with an owed press", () => {
   it("draws its label and presses the primary", () => {
     const s = withOffer({ primary: { id: "owed", label: "Take the level-up", kind: "owed" } });
-    expect(nextFace(s, {})).toEqual({ title: "Take the level-up", tone: "live" });
+    expect(nextFace(s, {})).toEqual({ title: "Take the level-up", tone: "live", when: "Next action" });
     expect(nextPress(s, {})).toEqual({ press: "primary" });
   });
 });
