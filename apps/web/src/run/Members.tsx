@@ -18,16 +18,7 @@ import { useDismiss } from "../ui/useDismiss.ts";
 import { useToast } from "../ui/Toast.tsx";
 import { useConfirm } from "../ui/useConfirm.tsx";
 import { newKeyQuestion } from "./watchKey.ts";
-
-/**
- * The account behind a connection, as the server names it.
- *
- * A tool dials on a watch key rather than signing in, so its connection
- * is named for the key's owner with a prefix. A deck signs in and is
- * named plainly. Stripping the prefix lets both be held against the
- * member list.
- */
-const accountOf = (sub: string) => (sub.startsWith("stream:") ? sub.slice("stream:".length) : sub);
+import { accountOf } from "./names.ts";
 
 /** One mark in a member's row: what is plugged in, lit or not. */
 function ToolIcon({ lit, label, children }: { lit: boolean; label: string; children: ReactNode }) {
