@@ -1,5 +1,7 @@
+// @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,6 +37,20 @@ const shelf = (records: StoredPack[]): LibraryPack[] =>
   records.map((r) => ({ id: r.id, title: r.title, sub: `from your file, v${r.version}`, source: r.source, record: r }));
 
 const noop = () => {};
+
+/** jsdom has no `URL.createObjectURL`; stand it in and say what was asked of it. */
+function objectUrls(): string[] {
+  const made: string[] = [];
+  Object.assign(URL, {
+    createObjectURL: (blob: Blob) => {
+      made.push(blob.type);
+      return "blob:deck";
+    },
+    revokeObjectURL: () => {},
+  });
+  return made;
+}
+
 const paint = (packs: LibraryPack[], withReplace = true) =>
   renderToStaticMarkup(
     <LibraryView
@@ -51,6 +67,8 @@ const paint = (packs: LibraryPack[], withReplace = true) =>
       {...(withReplace ? { onReplace: noop } : {})}
     />,
   );
+
+afterEach(cleanup);
 
 describe("a pack's row", () => {
   it("offers to take a newer file of a pack that is yours, and says the runs stay", () => {
@@ -81,5 +99,39 @@ describe("a pack's row", () => {
     const html = paint(shelf([record({})]));
     expect(html).toContain("Load a pack from a file");
     expect(html).toContain('accept=".yaml,.yml,.json,.rlpack"');
+  });
+});
+
+describe("a Stream Deck profile from a library pack", () => {
+  it("shows the row and builds the download with the demo pack", async () => {
+    const made = objectUrls();
+    const clicks: string[] = [];
+    const press = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      clicks.push(this.download);
+    });
+    try {
+      render(
+        <LibraryView
+          packs={shelf([record({})])}
+          activeId=""
+          onOpen={noop}
+          onContinue={noop}
+          onStartAnother={noop}
+          onForgetRun={noop}
+          onForgetPack={noop}
+          onFile={noop}
+          onSyncToggle={noop}
+          onMarketplace={noop}
+          onReplace={noop}
+        />,
+      );
+      fireEvent.click(screen.getByText("Stream Deck profile"));
+      await waitFor(() => screen.getByRole("button", { name: "Mini" }));
+      fireEvent.click(screen.getByRole("button", { name: "Mini" }));
+      await waitFor(() => expect(clicks).toEqual(["com.scrthq.runlog.long-kiln-mini.streamDeckProfile"]));
+      expect(made).toEqual(["application/zip"]);
+    } finally {
+      press.mockRestore();
+    }
   });
 });
