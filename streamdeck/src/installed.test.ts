@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { hasProfileFor, installedFor, installedProfiles, profilesDir, withoutCopies } from "./installed.ts";
+import { hasProfileFor, installedFor, installedProfiles, profilesDir, profilesReadable, withoutCopies } from "./installed.ts";
 
 /**
  * Reading the Stream Deck app's own profile folder.
@@ -46,6 +46,14 @@ describe("the profiles the Stream Deck app already has", () => {
   it("is no profiles at all where there is no folder to read", () => {
     expect(installedProfiles(join(root, "nowhere"))).toEqual([]);
     expect(installedProfiles(null)).toEqual([]);
+  });
+
+  it("says whether the folder could be read at all, which no profiles does not", () => {
+    // An empty list is both a machine with nothing imported and a folder
+    // that will not open, and the caller treats those two differently.
+    expect(profilesReadable(root)).toBe(true);
+    expect(profilesReadable(join(root, "nowhere"))).toBe(false);
+    expect(profilesReadable(null)).toBe(false);
   });
 
   it("names a folder under the app's own tree, or nothing on a platform it does not run on", () => {

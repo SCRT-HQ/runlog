@@ -14,7 +14,7 @@ import { Roll } from "./actions/roll.ts";
 import { pin, Run, runsForInspector } from "./actions/run.ts";
 import { Setup } from "./actions/setup.ts";
 import { Undo } from "./actions/undo.ts";
-import { installedFor, installedProfiles } from "./installed.ts";
+import { installedFor, installedProfiles, profilesReadable } from "./installed.ts";
 import { buildFor, install } from "./profiles-on-demand.ts";
 import { PACK_PROFILES, profileFor } from "./profiles.ts";
 import { allSeen, loadSeen, remember, setupsInOffer, type SeenSetup } from "./seen.ts";
@@ -74,30 +74,33 @@ export const wire = openWire((): Account => ({ apiBase: base }), store);
  * A pack the plugin ships no layout for would land on the generic profile
  * with none of its own moves on it. That snapshot has everything a layout
  * is built from, so one is built from the run and handed to the Stream Deck
- * app to import before the switch. Once per pack, for good: the app's
- * import prompt is the streamer's to answer, and asking again on every
- * launch fills their list with copies of the one profile.
+ * app to import instead of the switch.
  *
- * And the app's own folder is read first, for either kind of pack. For a
- * pack this ships no layout for, a profile the streamer already imported
- * under the pack's title is one the plugin cannot switch to and must not
- * hand another copy of: the app keeps both and calls the second one
- * "copy", so asking for the on-demand build again would leave them two
- * lists of the same keys. A pack this ships a profile for switches
- * regardless of what the folder holds: the shipped profile is in the
- * plugin's manifest whether or not the streamer separately imported one
- * under the same title, so the switch always has a target to reach, and
- * the app installs the shipped profile itself the first time one is asked
- * for.
+ * What decides that for a pack with no shipped layout is the app's own
+ * folder, read on every attach. A profile under the pack's title is one
+ * the plugin cannot switch to and must not hand another copy of, because
+ * the app keeps both and calls the second one "copy", so the deck is left
+ * where it is. No profile under that title is a profile to build, whether
+ * or not one was handed over on an earlier launch: a streamer who said no
+ * to the import prompt, or deleted the profile since, is offered it again
+ * rather than left on the generic layout for good.
+ *
+ * A pack this ships a profile for switches regardless of what the folder
+ * holds: the shipped profile is in the plugin's manifest whether or not
+ * the streamer separately imported one under the same title, so the switch
+ * always has a target to reach, and the app installs the shipped profile
+ * itself the first time one is asked for.
  */
 let switchedFor: string | null = null;
 
 /**
  * The packs a profile has been built and handed over for.
  *
- * In the global settings rather than in memory, so a plugin restart does
- * not offer the same pack again. The Open key's "This pack's profile" and
- * the Install a profile key are the ways to ask for one again.
+ * In the global settings rather than in memory, so it survives a restart.
+ * It is the fallback for a machine whose profile folder cannot be read at
+ * all: there, nothing can tell a pack the streamer already has a profile
+ * for from one they do not, so the offer is made once per pack rather than
+ * on every attach. Everywhere else the folder itself is the record.
  */
 const offered = new Set<string>();
 
@@ -149,22 +152,32 @@ store.subscribe((s) => {
   switchedFor = s.attached;
   const packId = s.snapshot.run?.packId;
   const ships = packId !== undefined && PACK_PROFILES[packId] !== undefined;
-  const build = packId !== undefined && !ships && !offered.has(packId);
-  if (packId !== undefined && (ships || build)) {
+  let build = false;
+  if (packId !== undefined) {
     const pack = { id: packId, ...(s.snapshot.run?.packTitle ? { title: s.snapshot.run.packTitle } : {}) };
-    const held = installedFor(pack, installedProfiles());
-    // Either kind counts as offered: nothing should hand this pack a
-    // profile again on a later attach.
-    if (held !== null) void markOffered(packId);
-    // Only a pack with no shipped profile stops here on an import: its
-    // on-demand build is not in this plugin's manifest either, so handing
-    // it over on top of an import the streamer already has would just be a
-    // second copy. A pack the plugin ships a profile for switches anyway,
-    // because the shipped profile is in the manifest whether or not the
-    // streamer separately imported one under the same title.
-    if (held === "imported" && !ships) {
+    if (ships) {
+      // Either kind of profile in the folder counts as offered, so nothing
+      // hands this pack a build later; the switch happens all the same.
+      if (installedFor(pack, installedProfiles()) !== null) void markOffered(packId);
+    } else if (!profilesReadable()) {
+      // Nothing to read, so what the streamer has is unknowable. Offer the
+      // build once per pack rather than handing a deck the same file on
+      // every attach for ever.
+      build = !offered.has(packId);
+    } else if (installedFor(pack, installedProfiles()) === "imported") {
+      // The streamer has this pack's profile already. It is not in the
+      // plugin's manifest, so it cannot be switched to, and a second
+      // import is kept beside the first as a copy rather than replacing
+      // it. So the deck stays where it is, and the generic profile is not
+      // offered as a consolation.
+      void markOffered(packId);
       streamDeck.logger.info(`profile: ${packId} already has one in the Stream Deck app`);
       return;
+    } else {
+      // The app has no profile under this pack's title, whatever was
+      // handed over on an earlier launch: one the streamer said no to, or
+      // deleted since, is one to build again.
+      build = true;
     }
   }
   for (const d of streamDeck.devices) {
@@ -183,6 +196,9 @@ store.subscribe((s) => {
         // attach, and the generic layout is the smaller of the two.
         continue;
       }
+      // Nothing to lay out: a pack with no keys of its own, or a deck this
+      // lays nothing out for. The generic profile is already that layout.
+      streamDeck.logger.info(`profile: nothing to build for ${packId} on this deck, switching to ${name}`);
     }
     void streamDeck.profiles.switchToProfile(d.id, name).catch(() => {});
   }
