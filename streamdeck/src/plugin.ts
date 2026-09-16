@@ -14,9 +14,10 @@ import { Roll } from "./actions/roll.ts";
 import { pin, Run, runsForInspector } from "./actions/run.ts";
 import { Setup } from "./actions/setup.ts";
 import { Undo } from "./actions/undo.ts";
-import { hasProfileFor, installedProfiles } from "./installed.ts";
+import { installedFor, installedProfiles } from "./installed.ts";
 import { buildFor, install } from "./profiles-on-demand.ts";
 import { PACK_PROFILES, profileFor } from "./profiles.ts";
+import { allSeen, loadSeen, remember, setupsInOffer, type SeenSetup } from "./seen.ts";
 import { loadSession, normalizeBase, signIn, signOut, type Account } from "./session.ts";
 import { openWire } from "./socket.ts";
 import { makeStore } from "./store.ts";
@@ -32,7 +33,13 @@ const DEFAULT_API = "https://runlog.scrthq.com";
  * handed to the property inspector, which is a web view, so the session
  * never comes near them. It lives in a file of the plugin's own.
  */
-type Globals = { apiBase?: string; pinned?: string | null; switchProfiles?: boolean; profilesOffered?: string[] };
+type Globals = {
+  apiBase?: string;
+  pinned?: string | null;
+  switchProfiles?: boolean;
+  profilesOffered?: string[];
+  setupsSeen?: Record<string, SeenSetup[]>;
+};
 
 let base = DEFAULT_API;
 
@@ -70,6 +77,13 @@ export const wire = openWire((): Account => ({ apiBase: base }), store);
  * app to import before the switch. Once per pack, for good: the app's
  * import prompt is the streamer's to answer, and asking again on every
  * launch fills their list with copies of the one profile.
+ *
+ * And the app's own folder is read first, for either kind of pack. A
+ * streamer who already imported a profile for this pack has one the plugin
+ * cannot switch to and must not hand over again: the app keeps both copies
+ * and names the second one, so asking for the shipped profile would leave
+ * them two lists of the same keys and take the deck off the one they
+ * arranged.
  */
 let switchedFor: string | null = null;
 
@@ -82,12 +96,43 @@ let switchedFor: string | null = null;
  */
 const offered = new Set<string>();
 
-/** Writes the pack into the offered list, keeping whatever else is in the settings. */
+/**
+ * The one write of what the plugin keeps about packs, one at a time.
+ *
+ * Both of the things written here move on the first snapshot of an attach:
+ * the pack is marked offered and the run's setups are recorded. Each write
+ * is a read of the whole settings and a write of the whole settings back,
+ * so two of them in flight at once would each carry a copy of the settings
+ * from before the other and whichever landed second would drop the other's
+ * field. A pack that lost its `profilesOffered` entry that way is offered
+ * again on the next launch, which is the prompt this is all here to stop.
+ *
+ * So one writer, and both fields rebuilt from what is in memory every time
+ * rather than carried over from the read. `pending` is the chain the calls
+ * queue on: a second call waits for the first to land before it reads, so
+ * what it reads already has the first one's write in it.
+ */
+let pending: Promise<void> = Promise.resolve();
+
+function writeGlobals(): Promise<void> {
+  pending = pending
+    .then(async () => {
+      const settings = await streamDeck.settings.getGlobalSettings<Globals>();
+      await streamDeck.settings.setGlobalSettings({ ...settings, profilesOffered: [...offered], setupsSeen: allSeen() });
+    })
+    // A write that went wrong must not take the chain down with it: every
+    // call after it would queue on a rejected promise and never run.
+    .catch((error: unknown) => {
+      streamDeck.logger.error(`settings: could not be written (${String(error)})`);
+    });
+  return pending;
+}
+
+/** Writes the pack into the offered list, and whatever else has moved with it. */
 async function markOffered(packId: string): Promise<void> {
   if (offered.has(packId)) return;
   offered.add(packId);
-  const settings = await streamDeck.settings.getGlobalSettings<Globals>();
-  await streamDeck.settings.setGlobalSettings({ ...settings, profilesOffered: [...offered] });
+  await writeGlobals();
 }
 
 store.subscribe((s) => {
@@ -98,18 +143,28 @@ store.subscribe((s) => {
   if (!switchProfiles || switchedFor === s.attached || !s.snapshot) return;
   switchedFor = s.attached;
   const packId = s.snapshot.run?.packId;
-  const build = packId !== undefined && PACK_PROFILES[packId] === undefined && !offered.has(packId);
-  if (build) {
+  const ships = packId !== undefined && PACK_PROFILES[packId] !== undefined;
+  const build = packId !== undefined && !ships && !offered.has(packId);
+  if (packId !== undefined && (ships || build)) {
     const pack = { id: packId, ...(s.snapshot.run?.packTitle ? { title: s.snapshot.run.packTitle } : {}) };
-    if (hasProfileFor(pack, installedProfiles())) {
-      // The streamer already has one, imported on some earlier launch or
-      // from the pack's own page. Handing over another would leave them a
-      // second copy of a profile they may have rearranged since.
-      streamDeck.logger.info(`profile: ${packId} already has one in the Stream Deck app`);
-      void markOffered(packId);
-      // And nothing is switched: a profile somebody imported is not in this
-      // plugin's manifest, so it cannot be switched to, and pushing the
-      // generic layout instead would take the deck off the pack's own keys.
+    const held = installedFor(pack, installedProfiles());
+    // Either kind counts as offered: nothing should hand this pack a
+    // profile again on a later attach.
+    if (held !== null) void markOffered(packId);
+    if (held === "imported") {
+      // The streamer has a profile of their own for this pack, under the
+      // pack's own name: imported off the pack's page, off the Install key,
+      // off a file somebody sent them. Nothing more is handed over, because
+      // the app keeps both and calls the second one "copy" rather than
+      // replacing the first. And nothing is switched: a profile somebody
+      // imported is not in this plugin's manifest, so it cannot be switched
+      // to, and asking the app for the shipped one instead would install a
+      // second copy and take the deck off the keys they arranged.
+      streamDeck.logger.info(
+        ships
+          ? `profile: ${packId} has a profile of its own installed, leaving the deck where it is`
+          : `profile: ${packId} already has one in the Stream Deck app`,
+      );
       return;
     }
   }
@@ -132,6 +187,28 @@ store.subscribe((s) => {
     }
     void streamDeck.profiles.switchToProfile(d.id, name).catch(() => {});
   }
+});
+
+/**
+ * The setups a run published, kept for a profile built without one.
+ *
+ * The Install key can build a profile for any pack on the account without
+ * a run open anywhere, and the pack file it reads names no setups: a setup
+ * is written for a tool rather than for a pack. The plugin ships a table
+ * of the ones written in this repository, which says nothing about a pack
+ * from the Marketplace or one somebody wrote themselves. The run does, on
+ * every snapshot, so that is where they are read.
+ *
+ * Written to the global settings only when the set moved, which is the
+ * first snapshot of a run and then not again.
+ */
+let lastSnapshot: DeckState["snapshot"] = null;
+store.subscribe((s) => {
+  if (s.snapshot === lastSnapshot) return;
+  lastSnapshot = s.snapshot;
+  const packId = s.snapshot?.run?.packId;
+  if (!packId || !remember(packId, setupsInOffer(s.snapshot?.offer))) return;
+  void writeGlobals();
 });
 
 // The Run inspector's list is only as fresh as the last appear; a run
@@ -181,6 +258,9 @@ function applyGlobals(g: Globals): void {
   // as well as from another surface's, and a pack marked offered a moment
   // ago must not be dropped by a settings event that crossed it.
   for (const id of g.profilesOffered ?? []) offered.add(id);
+  // Added to for the same reason: a setup seen a moment ago must survive a
+  // settings event that crossed the write of it.
+  loadSeen(g.setupsSeen);
   // Only on a change: this fires from the plugin's own write of a pin as
   // much as from another surface's, and a pin already applied locally
   // should not force the run's snapshot to reload for nothing.

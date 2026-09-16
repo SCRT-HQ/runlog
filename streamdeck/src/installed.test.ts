@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { hasProfileFor, installedProfiles, profilesDir, withoutCopies } from "./installed.ts";
+import { hasProfileFor, installedFor, installedProfiles, profilesDir, withoutCopies } from "./installed.ts";
 
 /**
  * Reading the Stream Deck app's own profile folder.
@@ -91,5 +91,44 @@ describe("whether a pack already has a profile", () => {
     expect(
       hasProfileFor({ id: "com.scrthq.runlog.soundclash" }, [{ name: "Something else", preconfigured: "profiles/soundclash-xl" }]),
     ).toBe(false);
+  });
+});
+
+describe("which of the two profiles a pack has", () => {
+  const profiles = installedProfiles(root);
+
+  it("is the shipped one where the plugin put it there itself", () => {
+    // The one the plugin may switch a deck to: it is in the manifest, under
+    // the name the plugin asked the app to install it under.
+    expect(installedFor({ id: "com.scrthq.runlog.soundclash", title: "Soundclash" }, profiles)).toBe("shipped");
+  });
+
+  it("is the shipped one even where another profile answers the title rule", () => {
+    // The awkward pair: the plugin's own profile has been copied, so its
+    // name no longer reads as the pack's title, and a profile the streamer
+    // imported is sitting there under the title instead. Both rules answer,
+    // and the shipped one has to win: it is the profile the deck can be put
+    // on, so there is nothing here to leave the deck alone for.
+    expect(
+      installedFor({ id: "com.scrthq.runlog.soundclash", title: "Soundclash" }, [
+        { name: "Soundclash copy", installedBy: "com.scrthq.runlog", preconfigured: "profiles/soundclash-plus" },
+        { name: "Soundclash" },
+      ]),
+    ).toBe("shipped");
+  });
+
+  it("is the imported one where the streamer brought it themselves", () => {
+    // A pack the plugin ships a layout for, whose profile the streamer
+    // imported off its page rather than letting the plugin install it.
+    // Nothing records where it came from, so the name is the rule.
+    expect(installedFor({ id: "com.scrthq.runlog.forfeits", title: "Ember Trail" }, profiles)).toBe("imported");
+    // And for a pack the plugin ships nothing for, which is every other way
+    // one of these arrives.
+    expect(installedFor({ id: "com.example.salt-and-signal", title: "Salt and Signal" }, profiles)).toBe("imported");
+  });
+
+  it("is neither where nothing in the folder is for the pack", () => {
+    expect(installedFor({ id: "com.example.long-road", title: "The Long Road" }, profiles)).toBe(null);
+    expect(installedFor({ id: "com.scrthq.runlog.forfeits", title: "Forfeits" }, profiles)).toBe(null);
   });
 });

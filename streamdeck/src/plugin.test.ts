@@ -20,7 +20,7 @@ const mock = vi.hoisted(() => ({
   settings: {} as Record<string, unknown>,
   wrote: [] as Array<Record<string, unknown>>,
   /** The profiles the Stream Deck app is pretending to already have. */
-  installed: [] as Array<{ name: string }>,
+  installed: [] as Array<{ name: string; shipped?: boolean }>,
   /** Every line the plugin logged. */
   logged: [] as string[],
   /** The plugin's own listener for a change to the global settings. */
@@ -81,7 +81,11 @@ vi.mock("./profiles-on-demand.ts", () => ({
 // about a pack that already has one.
 vi.mock("./installed.ts", () => ({
   installedProfiles: () => mock.installed,
-  hasProfileFor: (pack: { title?: string }, profiles: Array<{ name: string }>) => profiles.some((p) => p.name === pack.title),
+  installedFor: (pack: { title?: string }, profiles: Array<{ name: string; shipped?: boolean }>) => {
+    const found = profiles.find((p) => p.name === pack.title);
+    if (!found) return null;
+    return found.shipped ? "shipped" : "imported";
+  },
 }));
 // Never the real session file: this test signs nobody in and must not read
 // the deck's own rotating token off disk.
@@ -273,5 +277,115 @@ describe("the profile the deck lands on when a run attaches", () => {
     expect(mock.wrote.at(-1)!.profilesOffered).toContain("com.example.quarry-road");
 
     mock.installed = [];
+  });
+
+  it("leaves a pack it ships a profile for alone when the streamer imported one of their own", () => {
+    // The app names a second profile for the same pack "copy" rather than
+    // replacing the first, so asking it for the shipped one would leave the
+    // streamer two lists of the same keys and take the deck off the one
+    // they arranged.
+    mock.handed = [];
+    mock.switched = [];
+    mock.logged = [];
+    mock.installed = [{ name: "Soundclash" }];
+    drop();
+    attach("r12", "com.scrthq.runlog.soundclash", "Soundclash");
+
+    expect(mock.switched).toEqual([]);
+    expect(mock.handed).toEqual([]);
+    expect(mock.logged.filter((l) => l.includes("has a profile of its own installed, leaving the deck where it is"))).toHaveLength(1);
+    mock.installed = [];
+  });
+
+  it("switches to a shipped profile the plugin installed itself, which is no copy at all", () => {
+    mock.switched = [];
+    mock.installed = [{ name: "Soundclash", shipped: true }];
+    drop();
+    attach("r13", "com.scrthq.runlog.soundclash", "Soundclash");
+
+    expect(mock.switched).toEqual([
+      ["deck-xl", "profiles/soundclash-xl"],
+      ["deck-plus", "profiles/soundclash-plus"],
+    ]);
+    mock.installed = [];
+  });
+});
+
+/**
+ * The setups a run publishes, kept for a profile built without one.
+ *
+ * A pack from the Marketplace names its setups in the offer and nowhere
+ * else the deck can reach, so what a run says is written into the global
+ * settings and read back on the next launch.
+ */
+describe("what the deck remembers about a pack's setups", () => {
+  it("writes what a run offered into the settings, warps and all", async () => {
+    mock.wrote = [];
+    store.dispatch({ t: "runs", runs: [], any: false });
+    store.dispatch({ t: "runs", runs: [{ id: "r14" }], any: true });
+    store.dispatch({
+      t: "snapshot",
+      snapshot: {
+        run: { id: "r14", packId: "com.example.marsh-light" },
+        offer: {
+          setups: [
+            { id: "s1", title: "Starter kit" },
+            { id: "s2", title: "Warp to the camp" },
+          ],
+          commands: [
+            { id: "s1", title: "Starter kit" },
+            { id: "s2", title: "Warp to the camp" },
+          ],
+        },
+      } as never,
+    });
+
+    await vi.waitFor(() => expect(mock.wrote.some((w) => w.setupsSeen)).toBe(true));
+    const seen = mock.wrote.findLast((w) => w.setupsSeen)!.setupsSeen as Record<string, unknown>;
+    expect(seen["com.example.marsh-light"]).toEqual([
+      { id: "s1", title: "Starter kit", warp: false },
+      { id: "s2", title: "Warp to the camp", warp: true },
+    ]);
+  });
+
+  it("writes both of the things it keeps, whichever of them moved", async () => {
+    // One snapshot moves both: the pack is handed a profile and marked
+    // offered, and the run names its setups. Each write is a read of the
+    // whole settings and a write of the whole settings back, so two of
+    // them in flight would drop each other's field, and a pack that lost
+    // its offered entry is offered again on the next launch.
+    mock.wrote = [];
+    mock.handed = [];
+    store.dispatch({ t: "runs", runs: [], any: false });
+    store.dispatch({ t: "runs", runs: [{ id: "r15" }], any: true });
+    store.dispatch({
+      t: "snapshot",
+      snapshot: {
+        run: { id: "r15", packId: "com.example.kiln-road" },
+        offer: { setups: [{ id: "s3", title: "Starter kit" }], commands: [] },
+      } as never,
+    });
+
+    expect(mock.handed).toEqual(["built-2", "built-7"]);
+    await vi.waitFor(() => expect(mock.wrote.length).toBeGreaterThanOrEqual(2));
+    for (const written of mock.wrote) {
+      expect(written.profilesOffered).toContain("com.example.kiln-road");
+      expect((written.setupsSeen as Record<string, unknown>)["com.example.kiln-road"]).toEqual([
+        { id: "s3", title: "Starter kit", warp: false },
+      ]);
+    }
+  });
+
+  it("writes nothing again for a snapshot that names the same setups", async () => {
+    mock.wrote = [];
+    store.dispatch({
+      t: "snapshot",
+      snapshot: {
+        run: { id: "r14", packId: "com.example.marsh-light" },
+        offer: { setups: [{ id: "s1", title: "Starter kit" }], commands: [{ id: "s2", title: "Warp to the camp" }] },
+      } as never,
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mock.wrote.filter((w) => w.setupsSeen)).toEqual([]);
   });
 });

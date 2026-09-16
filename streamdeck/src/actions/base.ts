@@ -78,8 +78,14 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
   /** What each placement last said, so a change is logged once and a redraw that says the same thing is not. */
   private said = new Map<string, string>();
 
-  /** What this action says, given everything the plugin knows. */
-  abstract face(state: DeckState, settings: S, now: number): Face;
+  /**
+   * What this action says, given everything the plugin knows.
+   *
+   * `on` is the id of the placement being drawn, for the one key that says
+   * something about itself rather than about the run: an Install key that
+   * just handed a profile over. Every other action ignores it.
+   */
+  abstract face(state: DeckState, settings: S, now: number, on: string): Face;
 
   /**
    * The drawing this action wears in the corner of its keys.
@@ -98,7 +104,7 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
 
   override async onWillAppear(ev: WillAppearEvent<S>): Promise<void> {
     this.unsub ??= store.subscribe(() => this.redrawAll());
-    const face = this.face(store.state, ev.payload.settings, Date.now());
+    const face = this.face(store.state, ev.payload.settings, Date.now(), ev.action.id);
     // What a key came up saying, which is the only way to read the deck from
     // a log. Once per placement, not once per redraw.
     streamDeck.logger.info(`appeared: ${this.manifestId ?? "?"} says "${face.title}"`);
@@ -128,7 +134,7 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
     // is registered `once`, so the second throw anywhere in here would be
     // the plugin's last.
     try {
-      const face = this.face(store.state, settings, Date.now());
+      const face = this.face(store.state, settings, Date.now(), action.id);
       if (this.said.get(action.id) !== face.title) {
         this.said.set(action.id, face.title);
         streamDeck.logger.info(
