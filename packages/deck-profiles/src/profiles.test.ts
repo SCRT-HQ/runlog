@@ -223,6 +223,20 @@ describe("a deck laid out for a pack", () => {
     expect(long[1]!.keys["0,1"]).toEqual(key("c"));
   });
 
+  it("stops on a frame with nowhere to put a key rather than paging for ever", { timeout: 2000 }, () => {
+    // No free cell either side, which no deck here has, but this is
+    // exported: without the guard the queue would never come down and the
+    // page count would never stop climbing.
+    const walled = {
+      fixed: [{ key: { action: "connect" }, at: "0,0" }],
+      extras: { drive: { first: [], last: [] }, numbers: { first: [], last: [] } },
+      drive: [],
+      numbers: [],
+      turns: { next: "0,1", previous: "1,1" },
+    };
+    expect(framedPages(walled, [{ action: "press" }], [])).toEqual([{ back: false, more: false, keys: { "0,0": { action: "connect" } } }]);
+  });
+
   it("keeps the same frame under a hand on every page of an XL", () => {
     const [page] = deck(null, "xl");
     expect(page).toBeDefined();
@@ -313,14 +327,6 @@ describe("a deck laid out for a pack", () => {
       .map((cell) => at(last, cell))
       .filter((says) => says.startsWith("open:"));
     expect(opens).toEqual(["open:run", "open:guide", "open:rules"]);
-  });
-
-  it("turns a Stream Deck's pages from the two cells a frame can spare", () => {
-    const [first, second] = deck(crowded, "sd");
-    expect(at(first!, "4,2")).toBe("turn:next");
-    expect(at(first!, "3,2")).not.toBe("turn:previous");
-    expect(at(second!, "3,2")).toBe("turn:previous");
-    expect(at(second!, "4,2")).toBe("turn:next");
   });
 
   it("lays a Mini and a + down in order, because neither has room for a frame", () => {

@@ -370,6 +370,10 @@ export interface FramedPage {
  * The turns are cut out of the pools the way {@link paginate} keeps its
  * first and last slot: only on the pages that need them. A layout that
  * fits on one page uses both cells for keys.
+ *
+ * A page that took no key at all ends the run. Neither frame here can
+ * reach that, but this is exported, and a frame whose pools are all turn
+ * cells would otherwise page for ever.
  */
 export function framedPages(frame: Frame, drive: Key[], numbers: Key[]): FramedPage[] {
   const pages: FramedPage[] = [];
@@ -403,9 +407,14 @@ export function framedPages(frame: Frame, drive: Key[], numbers: Key[]): FramedP
     // it needs a way on, and a page that needs one is filled again with
     // that cell spent. Taking a cell away can only leave more behind, so
     // the second fill never turns the answer back around.
-    let page = fill(false);
-    const more = page.d < drive.length || page.n < numbers.length;
-    if (more) page = fill(true);
+    const brim = fill(false);
+    const wants = brim.d < drive.length || brim.n < numbers.length;
+    const spent = wants ? fill(true) : brim;
+    // A page that takes no key once it has paid for the turn is a page
+    // that cannot page: keep what fit and stop, rather than hand out a
+    // way on to a page that would be as empty as this one.
+    const page = wants && spent.d === d && spent.n === n ? brim : spent;
+    const more = wants && page !== brim;
     pages.push({ back, more, keys: page.keys });
     d = page.d;
     n = page.n;
