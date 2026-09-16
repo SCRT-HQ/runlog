@@ -509,6 +509,42 @@ describe("the held-run list is pushed when it changes", () => {
   });
 
   /**
+   * The page draws a row per person, so a count is not enough: it has to
+   * know which of the people at the table has the deck. An account with
+   * two decks is still one person, so the names are deduplicated.
+   */
+  it("names the accounts whose decks are on the run, once each", async () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    const d = { ...deps(live), poster };
+    const decks: Array<[string, string]> = [
+      ["deck1", "user_1"],
+      ["deck2", "user_1"],
+      ["deck3", "user_2"],
+    ];
+    for (const [id, sub] of decks) {
+      await live.connect(id, sub, "", { deck: true, run: "s1" });
+      await live.watch(id, "s1", sub, "", { deck: true, run: "s1" });
+    }
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    posted.length = 0;
+
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    const said = posted
+      .filter(([id]) => id === "page")
+      .map(([, l]) => JSON.parse(l) as { kind?: string; data?: { decks?: number; deckSubs?: string[] } })
+      .filter((l) => l.kind === "tools");
+    expect(said.at(-1)?.data?.decks).toBe(3);
+    expect([...(said.at(-1)?.data?.deckSubs ?? [])].sort()).toEqual(["user_1", "user_2"]);
+  });
+
+  /**
    * Review finding: a deck moving to another run told only the run it
    * arrived at, so the page it left went on drawing a deck that had gone
    * and publishing a snapshot for it for the rest of the evening.
@@ -788,7 +824,8 @@ describe("telling the listeners", () => {
           .map(([, l]) => JSON.parse(l) as { kind?: string; data?: { tools?: unknown[]; count?: number } });
       const said = toWatcher().filter((g) => g.kind === "tools");
       expect(said.at(-1)?.data?.count).toBe(1);
-      expect(said.at(-1)?.data?.tools).toEqual([{ seat: "Mira", app: "TarnishedTool" }]);
+      // Whose, as well as what: the page hangs each tool on a row.
+      expect(said.at(-1)?.data?.tools).toEqual([{ seat: "Mira", app: "TarnishedTool", sub: "stream:user_1" }]);
 
       // And when it goes, so the badge does not outlive the tool.
       await route({ requestContext: { routeKey: "$disconnect", connectionId: "tool" } }, d);

@@ -256,14 +256,23 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
    * hour ago, or miss one that is about to be sent a curse, and there is
    * no cheap way to notice you missed it. A list is idempotent; a delta is
    * a thing to keep in step.
+   *
+   * Whose, as well as what. The page draws a row per person, so it needs
+   * to tell a deck on one account from a deck on another, and a tool on
+   * somebody's game from one on the table. `tools`, `count` and `decks`
+   * stay exactly as they were, for pages built before this.
    */
   const tellWhoIsAttached = async (run: string): Promise<void> => {
     const poster = deps.poster;
     if (!poster) return;
     const watching = await deps.live.watchers(run);
-    const tools = watching.filter((w) => w.control).map((w) => ({ ...(w.seat ? { seat: w.seat } : {}), ...(w.app ? { app: w.app } : {}) }));
+    const tools = watching
+      .filter((w) => w.control)
+      .map((w) => ({ ...(w.seat ? { seat: w.seat } : {}), ...(w.app ? { app: w.app } : {}), ...(w.sub ? { sub: w.sub } : {}) }));
     const decks = watching.filter((w) => w.deck).length;
-    const line = JSON.stringify({ t: "gesture", id: run, kind: "tools", data: { tools, count: tools.length, decks }, at: now() });
+    // One account with two decks is one name in the list, not two.
+    const deckSubs = [...new Set(watching.filter((w) => w.deck && w.sub).map((w) => w.sub))];
+    const line = JSON.stringify({ t: "gesture", id: run, kind: "tools", data: { tools, count: tools.length, decks, deckSubs }, at: now() });
     for (const w of watching) {
       // A tool is told in operations, never in words about itself.
       if (w.control) continue;

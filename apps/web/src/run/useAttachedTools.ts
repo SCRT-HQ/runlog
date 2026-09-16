@@ -5,6 +5,14 @@ import { syncBus } from "../sync/bus.ts";
 export interface AttachedTool {
   seat?: string;
   app?: string;
+  /**
+   * The account the tool's connection is on, as the server names it.
+   *
+   * A tool dials on a watch key rather than signing in, so this is the
+   * key's owner in the server's own form and not a bare account id. It
+   * tells a tool on somebody's game from one on the table.
+   */
+  sub?: string;
 }
 
 /**
@@ -38,6 +46,7 @@ export function useAttachedTools(runId: string | null): AttachedTool[] {
           .map((t) => ({
             ...(typeof t["seat"] === "string" && t["seat"] ? { seat: t["seat"] } : {}),
             ...(typeof t["app"] === "string" && t["app"] ? { app: t["app"] } : {}),
+            ...(typeof t["sub"] === "string" && t["sub"] ? { sub: t["sub"] } : {}),
           })),
       );
     });
@@ -65,6 +74,28 @@ export function useAttachedDecks(runId: string | null): number {
     });
   }, [runId]);
   return decks;
+}
+
+/**
+ * Which accounts have a deck on this run.
+ *
+ * The count says a deck is here; this says whose, which is what the
+ * people panel needs to put the mark on the right row. An account with
+ * two decks appears once. An older server sends no such field and this
+ * stays empty, which draws every row unlit rather than wrongly.
+ */
+export function useAttachedDeckSubs(runId: string | null): string[] {
+  const [subs, setSubs] = useState<string[]>([]);
+  useEffect(() => {
+    setSubs([]);
+    if (!runId) return;
+    return syncBus.subscribe((news) => {
+      if (news.t !== "gesture" || news.id !== runId || news.kind !== "tools") return;
+      const list = (news.data as { deckSubs?: unknown }).deckSubs;
+      setSubs(Array.isArray(list) ? list.filter((s): s is string => typeof s === "string" && s !== "") : []);
+    });
+  }, [runId]);
+  return subs;
 }
 
 /**
