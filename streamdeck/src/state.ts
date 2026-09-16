@@ -311,18 +311,28 @@ export function nextPress(
     : { press: "answer", answer: { subject: d.suggestions![0]! } };
 }
 
+/**
+ * What the follow key always says underneath, whatever it is offering.
+ *
+ * The line beneath a title moves with the run on every other key, which
+ * left this one blank as often as not. It is the key's own name instead:
+ * on a deck of twelve, the streamer needs to know which key this is more
+ * than they need the decision's label, which the page is already showing.
+ */
+const NEXT_WHEN = "Next action";
+
 export function nextFace(state: DeckState, settings: NextSettings): Face {
   const c = common(state) ?? flashed(state);
   if (c) return c;
   const offer = state.snapshot?.offer;
-  if (!offer) return { title: "Loading…", tone: "dim" };
-  if (offer.primary) return { title: offer.primary.label, tone: "live" };
+  if (!offer) return { title: "Loading…", tone: "dim", when: NEXT_WHEN };
+  if (offer.primary) return { title: offer.primary.label, tone: "live", when: NEXT_WHEN };
   // What the key would take, in the page's own words: the checklist's
-  // button, or the name it would declare with the ask beneath it.
+  // button, or the first name it would declare.
   const d = decision(offer, settings);
-  if (d?.kind === "checklist") return { title: d.label, tone: "live" };
-  if (d) return { title: d.suggestions![0]!, tone: "live", when: d.label };
-  return { title: offer.needsPage ?? "Nothing to press", tone: offer.needsPage ? "refuse" : "dim" };
+  if (d?.kind === "checklist") return { title: d.label, tone: "live", when: NEXT_WHEN };
+  if (d) return { title: d.suggestions![0]!, tone: "live", when: NEXT_WHEN };
+  return { title: offer.needsPage ?? "Nothing to press", tone: offer.needsPage ? "refuse" : "dim", when: NEXT_WHEN };
 }
 
 export function pressFace(state: DeckState, target: StoredPressTarget): Face {
