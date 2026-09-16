@@ -81,11 +81,12 @@ export function installedProfiles(dir: string | null = profilesDir()): Installed
  *
  * Importing a profile the app already has does not replace it: it keeps
  * both and calls the new one "<title> copy", and importing again on top of
- * that gives "<title> copy copy". So the suffix comes off before the name
- * is compared, however many of them there are.
+ * that gives "<title> copy copy" or "<title> copy 2" depending on where the
+ * app has got to. So the suffix comes off before the name is compared,
+ * numbered or not and however many of them there are.
  */
 export function withoutCopies(name: string): string {
-  return name.replace(/(?:\s+copy)+$/i, "").trim();
+  return name.replace(/(?:\s+copy(?:\s+\d+)?)+$/i, "").trim();
 }
 
 /**

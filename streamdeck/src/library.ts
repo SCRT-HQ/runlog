@@ -22,16 +22,23 @@ export interface LibraryPack {
   title: string;
 }
 
-/** A GET on the signed-in API, or `null` for anything that did not come back as JSON. */
-async function get<T>(base: string, path: string): Promise<T | null> {
+/**
+ * A GET on the signed-in API, with the status it came back on.
+ *
+ * The status is kept because a pack route answers 410 for one the account
+ * deleted and 200 for one it never had, and a caller that only saw `null`
+ * would tell the streamer the same wrong thing about both. Status 0 is
+ * nobody signed in, or nothing that answered at all.
+ */
+async function get<T>(base: string, path: string): Promise<{ status: number; body: T | null }> {
   const token = await bearer({ apiBase: base });
-  if (!token) return null;
+  if (!token) return { status: 0, body: null };
   try {
     const res = await fetch(`${normalizeBase(base)}${path}`, { headers: { authorization: `Bearer ${token}` } });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
+    if (!res.ok) return { status: res.status, body: null };
+    return { status: res.status, body: (await res.json()) as T };
   } catch {
-    return null;
+    return { status: 0, body: null };
   }
 }
 
@@ -43,7 +50,7 @@ async function get<T>(base: string, path: string): Promise<T | null> {
  * from a server older than this and nothing a picker could name.
  */
 export async function libraryPacks(base: string): Promise<LibraryPack[]> {
-  const body = await get<{ packs?: Array<{ id?: string; title?: string; deletedAt?: string }> }>(base, "/api/sync/manifest");
+  const { body } = await get<{ packs?: Array<{ id?: string; title?: string; deletedAt?: string }> }>(base, "/api/sync/manifest");
   return (body?.packs ?? [])
     .filter((p): p is { id: string; title: string } => typeof p.id === "string" && typeof p.title === "string" && !p.deletedAt)
     .map(({ id, title }) => ({ id, title }))
@@ -51,20 +58,50 @@ export async function libraryPacks(base: string): Promise<LibraryPack[]> {
 }
 
 /**
- * One pack off the account, parsed.
+ * Why a pack did not come back, in the words the log should carry.
  *
- * `null` for a pack the account has not synced, which is a pack that lives
- * only in the browser that imported it: the route answers `found: false`
- * and there is no file to lay anything out from. Also for a pack whose
- * source will not parse, which the app would refuse to run either.
+ * Four things look the same from a key that only knows it got nothing, and
+ * only one of them is fixed by building the profile from the pack's library
+ * card instead. Telling a streamer to go there when the source is malformed
+ * or the server is down sends them somewhere that cannot help.
  */
-export async function fetchPack(base: string, id: string): Promise<Pack | null> {
-  const body = await get<{ found?: boolean; pack?: { source?: string; format?: PackFormat } }>(
+export type NoPack = "unsynced" | "deleted" | "unreadable" | "unreachable";
+
+/** What each of them reads as in the log, after the pack's id. */
+const SAY: Record<NoPack, string> = {
+  unsynced: "is not synced to this account, so there is no pack file to lay out",
+  deleted: "was deleted from this account",
+  unreadable: "has a source that will not parse",
+  unreachable: "could not be read from the account",
+};
+
+/** One pack off the account, parsed, or why it did not come back. */
+export type FetchedPack = { ok: true; pack: Pack } | { ok: false; why: NoPack; say: string };
+
+const no = (why: NoPack): FetchedPack => ({ ok: false, why, say: SAY[why] });
+
+/**
+ * One pack off the account.
+ *
+ * `unsynced` is a pack that lives only in the browser that imported it: the
+ * route answers `found: true` for everything the account holds, so a plain
+ * 200 that found nothing means the account never had it. `deleted` is the
+ * route's own 410, which is a tombstone rather than an absence. Anything
+ * else that did not answer, refused, or answered something unparseable is
+ * `unreachable`, and a source the loader turns down is `unreadable`.
+ */
+export async function fetchPack(base: string, id: string): Promise<FetchedPack> {
+  const { status, body } = await get<{ found?: boolean; pack?: { source?: string; format?: PackFormat } }>(
     base,
     `/api/packs/${encodeURIComponent(id)}`,
   );
-  const source = body?.found === true ? body.pack?.source : undefined;
-  if (!source) return null;
-  const parsed = loadPackText(source, body?.pack?.format ?? "yaml");
-  return parsed.ok ? parsed.pack : null;
+  if (status === 410) return no("deleted");
+  if (status !== 200 || !body) return no("unreachable");
+  if (body.found !== true) return no("unsynced");
+  const source = body.pack?.source;
+  // Found, with nothing in it: a row the account holds whose file never
+  // landed. Not the streamer's library card to go to, so not `unsynced`.
+  if (!source) return no("unreachable");
+  const parsed = loadPackText(source, body.pack?.format ?? "yaml");
+  return parsed.ok ? { ok: true, pack: parsed.pack } : no("unreadable");
 }

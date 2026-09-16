@@ -57,8 +57,13 @@ describe("the profiles the Stream Deck app already has", () => {
     expect(withoutCopies("Ember Trail")).toBe("Ember Trail");
     expect(withoutCopies("Ember Trail copy")).toBe("Ember Trail");
     expect(withoutCopies("Ember Trail copy copy copy")).toBe("Ember Trail");
+    // Numbered, which is the other shape the app gives one.
+    expect(withoutCopies("Ember Trail copy 2")).toBe("Ember Trail");
+    expect(withoutCopies("Ember Trail copy copy 3")).toBe("Ember Trail");
     // Not a word in the middle, and not a profile somebody named that.
     expect(withoutCopies("Copy of the rules")).toBe("Copy of the rules");
+    // A number that is not a copy count stays where it is.
+    expect(withoutCopies("Ember Trail 2")).toBe("Ember Trail 2");
   });
 });
 

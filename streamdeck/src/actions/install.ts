@@ -31,11 +31,18 @@ export class Install extends RunlogAction<InstallSettings> {
   override async onKeyDown(ev: KeyDownEvent<InstallSettings>): Promise<void> {
     const pack = ev.payload.settings.pack;
     if (!pack) {
+      streamDeck.logger.info("profile: the install key has no pack set");
       await ev.action.showAlert();
       return;
     }
     const device = ev.action.device.type;
-    const built = store.state.snapshot?.run?.packId === pack.id ? buildFor(store.state, device) : await this.fromLibrary(pack.id, device);
+    // The run first where the deck is on one of this pack: its snapshot
+    // carries the setups, which the pack file does not. It comes back with
+    // nothing where the run has published no layout and no offer yet, and
+    // the pack file covers exactly that, so the fall-through is not a
+    // failure path.
+    const fromRun = store.state.snapshot?.run?.packId === pack.id ? buildFor(store.state, device) : null;
+    const built = fromRun ?? (await this.fromLibrary(pack.id, device));
     if (!built) {
       await ev.action.showAlert();
       return;
@@ -44,17 +51,28 @@ export class Install extends RunlogAction<InstallSettings> {
     await ev.action.showOk();
   }
 
-  /** The pack off the account, laid out. `null` for a pack the account has not synced. */
+  /**
+   * The pack off the account, laid out.
+   *
+   * `null` with a line in the log saying which of the ways it went: a pack
+   * the account never synced is the one the guide answers, by sending
+   * somebody to that pack's library card, and telling them to go there when
+   * the source is malformed or the server is down helps nobody.
+   */
   private async fromLibrary(id: string, device: number): Promise<{ file: string; bytes: Uint8Array } | null> {
-    const pack = await fetchPack(apiBase(), id);
-    if (!pack) {
-      // A pack that lives only in the browser that imported it. Its own
-      // library card builds the profile, which is where the guide sends
-      // somebody who lands here.
-      streamDeck.logger.info(`profile: ${id} is not synced to this account, so there is no pack file to lay out`);
+    const found = await fetchPack(apiBase(), id);
+    if (!found.ok) {
+      streamDeck.logger.info(`profile: ${id} ${found.say}`);
       return null;
     }
-    return buildForPack(pack, device);
+    const built = buildForPack(found.pack, device);
+    if (!built) {
+      // A Pedal or a Neo, which this package lays no grid out for, or a
+      // pack with no moves and no numbers of its own: the generic profile
+      // the plugin installs is already that layout.
+      streamDeck.logger.info(`profile: nothing to lay out for ${id} on this deck`);
+    }
+    return built;
   }
 
   /**

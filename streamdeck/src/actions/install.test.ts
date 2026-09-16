@@ -16,8 +16,9 @@ const mock = vi.hoisted(() => ({
   /** The packs the account is holding, and the profiles the app already has. */
   packs: [] as Array<{ id: string; title: string }>,
   installed: [] as Array<{ name: string }>,
-  /** The pack file the account answers with, or nothing for one it has not synced. */
+  /** The pack file the account answers with, or nothing and the reason why. */
   pack: null as { id: string; title: string } | null,
+  why: "unsynced" as string,
   fetched: [] as string[],
 }));
 vi.mock("@elgato/streamdeck", () => ({
@@ -57,7 +58,7 @@ vi.mock("../library.ts", () => ({
   libraryPacks: async () => mock.packs,
   fetchPack: async (_base: string, id: string) => {
     mock.fetched.push(id);
-    return mock.pack;
+    return mock.pack ? { ok: true, pack: mock.pack } : { ok: false, why: mock.why, say: `${mock.why} here` };
   },
 }));
 vi.mock("../installed.ts", () => ({
@@ -105,13 +106,15 @@ describe("pressing the install key", () => {
     mock.fetched = [];
     mock.state = { snapshot: null };
     mock.pack = null;
+    mock.why = "unsynced";
   });
 
-  it("alerts with no pack chosen", async () => {
+  it("alerts with no pack chosen, and says so in the log", async () => {
     const alerts: string[] = [];
     await press(undefined, alerts);
     expect(alerts).toEqual(["alert"]);
     expect(mock.opened).toEqual([]);
+    expect(mock.logged.filter((l) => l.includes("no pack set"))).toHaveLength(1);
   });
 
   it("builds from the run where the deck is on one of that pack", async () => {
@@ -137,13 +140,44 @@ describe("pressing the install key", () => {
     expect(decodeURIComponent(mock.opened[0]!)).toContain("com.example.ember-trail-xl.streamDeckProfile");
   });
 
-  it("alerts and says why for a pack the account has not synced", async () => {
+  it("alerts and says which way it went wrong, not just that it did", async () => {
+    for (const why of ["unsynced", "deleted", "unreadable", "unreachable"]) {
+      mock.logged = [];
+      mock.why = why;
+      const alerts: string[] = [];
+      await press({ id: "com.example.only-here", title: "Only Here" }, alerts);
+
+      expect(alerts).toEqual(["alert"]);
+      expect(mock.opened).toEqual([]);
+      expect(mock.logged.filter((l) => l.includes(why))).toHaveLength(1);
+    }
+  });
+
+  it("falls back to the pack file when the run has nothing to lay out yet", async () => {
+    // Attached to a run of this pack, but its snapshot names no pack at
+    // all yet, so the run build comes back with nothing. The pack file
+    // covers exactly that.
+    mock.state = { snapshot: { run: { id: "s1", packId: "com.example.ember-trail" }, offer: {} } };
+    mock.pack = { id: "com.example.ember-trail", title: "Ember Trail", moves: { "push-on": {} } } as never;
+    const oks: string[] = [];
+    await press({ id: "com.example.ember-trail", title: "Ember Trail" }, [], oks);
+
+    expect(mock.fetched).toEqual(["com.example.ember-trail"]);
+    expect(oks).toEqual(["ok"]);
+  });
+
+  it("says so in the log for a deck it lays nothing out for", async () => {
+    // A Pedal: the generator has no grid for it, so a press has nothing to
+    // hand over and the log says why rather than the key alerting in silence.
+    mock.pack = { id: "com.example.ember-trail", title: "Ember Trail", moves: { "push-on": {} } } as never;
     const alerts: string[] = [];
-    await press({ id: "com.example.only-here", title: "Only Here" }, alerts);
+    await new Install().onKeyDown({
+      action: { ...key(alerts, []), device: { type: 5 } },
+      payload: { settings: { pack: { id: "com.example.ember-trail", title: "Ember Trail" } } },
+    } as never);
 
     expect(alerts).toEqual(["alert"]);
-    expect(mock.opened).toEqual([]);
-    expect(mock.logged.filter((l) => l.includes("not synced"))).toHaveLength(1);
+    expect(mock.logged.filter((l) => l.includes("nothing to lay out"))).toHaveLength(1);
   });
 });
 

@@ -31,6 +31,7 @@
         const withOne = document.getElementById("with");
         const selects = [without, withOne];
         let current = null;
+        let lists = { without: [], with: [] };
 
         const option = (value, label) => {
           const o = document.createElement("option");
@@ -39,9 +40,20 @@
           return o;
         };
 
-        const fill = (lists) => {
-          without.replaceChildren(option(null, "Set up"), ...(lists.without ?? []).map((p) => option(p, p.title)));
-          withOne.replaceChildren(option(null, "Set up"), ...(lists.with ?? []).map((p) => option(p, p.title)));
+        const fill = (payload) => {
+          lists = { without: payload.without ?? [], with: payload.with ?? [] };
+          draw();
+        };
+
+        const draw = () => {
+          // The pack the key is set to belongs in the picker whether or not
+          // the library has arrived. Without it the settings read as unset
+          // while the key on the deck is naming a pack, and the library is
+          // a round trip to the account away.
+          const listed = [...lists.without, ...lists.with].some((p) => p.id === current?.id);
+          const first = current && !listed ? [current, ...lists.without] : lists.without;
+          without.replaceChildren(option(null, "Set up"), ...first.map((p) => option(p, p.title)));
+          withOne.replaceChildren(option(null, "Set up"), ...lists.with.map((p) => option(p, p.title)));
           show();
         };
 
@@ -58,7 +70,7 @@
           select.addEventListener("change", () => {
             current = JSON.parse(select.value);
             streamDeckClient.setSettings(current ? { pack: current } : {});
-            show();
+            draw();
           });
         }
 
@@ -67,9 +79,9 @@
         });
         void streamDeckClient.getSettings().then(({ settings }) => {
           current = settings?.pack ?? null;
-          show();
+          draw();
         });
-        fill({});
+        draw();
       })();
     </script>
   </body>

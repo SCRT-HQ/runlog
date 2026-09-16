@@ -82,20 +82,42 @@ describe("one pack off the account", () => {
   it("parses the source the route answers with", async () => {
     mock.answer = () => json({ found: true, pack: { id: "com.scrthq.runlog.long-kiln", format: "yaml", source: SOURCE } });
 
-    const pack = await fetchPack("https://runlog.test", "com.scrthq.runlog.long-kiln");
-    expect(pack?.title).toBe("The Long Kiln");
-    expect(Object.keys(pack?.moves ?? {}).length).toBeGreaterThan(0);
+    const found = await fetchPack("https://runlog.test", "com.scrthq.runlog.long-kiln");
+    expect(found.ok).toBe(true);
+    expect(found.ok && found.pack.title).toBe("The Long Kiln");
+    expect(found.ok && Object.keys(found.pack.moves ?? {}).length).toBeGreaterThan(0);
     expect(mock.asked[0]!.url).toBe("https://runlog.test/api/packs/com.scrthq.runlog.long-kiln");
   });
 
-  it("is nothing for a pack the account has not synced", async () => {
+  // Four ways to come back with nothing, and only the first of them is
+  // answered by building the profile from the pack's library card. A key
+  // that could not tell them apart sent everybody there.
+  it("says a pack the account has not synced is unsynced", async () => {
     mock.answer = () => json({ found: false });
-    expect(await fetchPack("https://runlog.test", "com.example.only-here")).toBe(null);
+    const found = await fetchPack("https://runlog.test", "com.example.only-here");
+    expect(found).toMatchObject({ ok: false, why: "unsynced" });
+    expect(!found.ok && found.say).toContain("not synced");
   });
 
-  it("is nothing for a source that will not parse", async () => {
+  it("says a pack the account deleted is deleted", async () => {
+    mock.answer = () => new Response(JSON.stringify({ deletedAt: "2026-09-15T00:00:00.000Z" }), { status: 410 });
+    expect(await fetchPack("https://runlog.test", "com.example.gone")).toMatchObject({ ok: false, why: "deleted" });
+  });
+
+  it("says a source that will not parse is unreadable", async () => {
     mock.answer = () => json({ found: true, pack: { format: "yaml", source: "not: a pack" } });
-    expect(await fetchPack("https://runlog.test", "com.example.broken")).toBe(null);
+    expect(await fetchPack("https://runlog.test", "com.example.broken")).toMatchObject({ ok: false, why: "unreadable" });
+  });
+
+  it("says a route that refused, a row with no file, and nobody signed in are unreachable", async () => {
+    mock.answer = () => new Response("nope", { status: 500 });
+    expect(await fetchPack("https://runlog.test", "com.example.ember-trail")).toMatchObject({ ok: false, why: "unreachable" });
+
+    mock.answer = () => json({ found: true, pack: {} });
+    expect(await fetchPack("https://runlog.test", "com.example.ember-trail")).toMatchObject({ ok: false, why: "unreachable" });
+
+    mock.token = null;
+    expect(await fetchPack("https://runlog.test", "com.example.ember-trail")).toMatchObject({ ok: false, why: "unreachable" });
   });
 
   it("escapes an id that would not sit in an address as it is", async () => {
