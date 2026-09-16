@@ -409,10 +409,9 @@ export function Members({
    * this device's sync switch, which is the thing to offer.
    */
   const reached = run.role !== undefined;
-  const company = members.some((m) => m.sub !== me) || pending.length > 0;
 
   return (
-    <details className="panel people members" open={company}>
+    <details className="panel people members" open>
       {heading}
       <div className="peopleBody">
         {!reached && sync.available && !sync.enabled && (

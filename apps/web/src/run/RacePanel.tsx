@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Pack } from "@runlog/rules-schema";
 import { formatClock } from "@runlog/engine";
 import type { RaceView } from "./useRace.ts";
+import { SidePanel } from "./SidePanel.tsx";
 
 /**
  * The leaderboard, the code, and the two things the one who started the
@@ -18,10 +19,14 @@ export function RacePanel({ pack, race }: { pack: Pack; race: RaceView }) {
   const ended = Boolean(meta.endedAt);
 
   return (
-    <section className="panel racePanel">
-      <h3 className="sectionTitle">
-        Race{meta.name ? ` · ${meta.name}` : ""} <span className="muted">{ended ? "ended" : `${race.race.entries.length} racing`}</span>
-      </h3>
+    <SidePanel
+      className="racePanel"
+      title={
+        <>
+          Race{meta.name ? ` · ${meta.name}` : ""} <span className="muted">{ended ? "ended" : `${race.race.entries.length} racing`}</span>
+        </>
+      }
+    >
       <ol className="raceBoard">
         {race.standings.map(({ entry, place, me }) => {
           const p = entry.progress;
@@ -95,6 +100,6 @@ export function RacePanel({ pack, race }: { pack: Pack; race: RaceView }) {
         </>
       )}
       {note && <p className="muted small">{note}</p>}
-    </section>
+    </SidePanel>
   );
 }
