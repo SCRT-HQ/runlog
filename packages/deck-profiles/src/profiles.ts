@@ -1,6 +1,6 @@
 import type { Pack, Setup } from "@runlog/rules-schema";
 
-import { BASE, DEVICE_IDS, DEVICES, DIALS, isWarp, type DeviceId, type Key } from "./layouts.ts";
+import { BASE, DEVICE_IDS, DEVICES, DIALS, FRAMES, isWarp, type DeviceId, type Frame, type Key } from "./layouts.ts";
 import { ACTION_NAMES, PAGE_PLUGIN, PLUGIN, TURNS } from "./plugin.ts";
 import { joined, sha1, utf8 } from "./sha1.ts";
 import { zip, type ZipEntry } from "./zip.ts";
@@ -75,6 +75,13 @@ export interface Built {
   files: Record<string, PageFile | RootFile>;
 }
 
+/** A frame filled for one profile: the cells that stay put, and the two queues that page. */
+export interface Zones {
+  frame: Frame;
+  drive: Key[];
+  numbers: Key[];
+}
+
 /** One profile to build: a pack's keys, for one deck, under one name. */
 export interface ProfileSpec {
   /** What names the file and seeds its ids. Stable: renaming it renames the profile. */
@@ -83,6 +90,8 @@ export interface ProfileSpec {
   /** What the Stream Deck app calls the profile in somebody's list. */
   name: string;
   keys: Key[];
+  /** How this deck arranges those keys, where it is one with a frame. The rest lay `keys` down in order. */
+  zones?: Zones;
 }
 
 /** The generic layout, which is what a pack with nothing of its own gets. */
@@ -246,31 +255,54 @@ export function fromOffer(offer: Offered, layout?: Laid | null): Keyed {
   };
 }
 
+/** The key that opens a pack's rules, which is the one key only a pack profile carries. */
+const RULES: Key = { action: "open", settings: { target: "rules" } };
+
+/** A pack's keys, split by the hand that wants them: presses on one side, numbers on the other. */
+export interface Queues {
+  drive: Key[];
+  numbers: Key[];
+}
+
 /**
- * The keys a pack adds to the generic thirteen.
+ * The keys a pack adds to the generic thirteen, in two queues.
  *
- * Its moves first, because those are what somebody presses; then the
- * numbers it keeps; then the setups for whatever tool it is driven by.
+ * `drive` is what somebody presses: its moves first, because those are what
+ * a hand reaches for mid-scene, then the setups for whatever tool the pack
+ * is driven by, which are occasional. The setups and the commands are one
+ * run of keys ordered by title, which is the order the app's own picker
+ * lists them in, so a warp sits where its name puts it rather than at the
+ * end of the deck.
  *
- * The setups and the commands are laid down as one run of keys ordered by
- * title, which is the order the app's own picker lists them in, so a warp
- * sits where its name puts it rather than at the end of the deck.
- *
- * Last, a key that opens the pack's rules in the browser: a pack profile
- * is the one place that key has a pack to open.
+ * `numbers` is what somebody reads: the counters the pack shows, then its
+ * resources. Both of those are keys as well, which is why the deck marks
+ * them with a stepper rather than the readout's bars, but a hand goes to
+ * them between scenes rather than mid-press.
  */
-export function packKeys(keyed: Keyed): Key[] {
-  const keys: Key[] = [];
-  for (const { id } of keyed.moves) keys.push({ action: "press", settings: { target: { kind: "move", id } } });
-  for (const { id } of keyed.counters) keys.push({ action: "metric", settings: { field: { counter: id } } });
-  for (const { id } of keyed.resources) keys.push({ action: "metric", settings: { field: { resource: id } } });
+export function queuesFor(keyed: Keyed): Queues {
+  const drive: Key[] = keyed.moves.map(({ id }) => ({ action: "press", settings: { target: { kind: "move", id } } }));
   const handed: Array<{ title: string; key: Key }> = [
     ...keyed.setups.map((s) => ({ title: s.title, key: { action: "setup", settings: { setup: { id: s.id, title: s.title } } } })),
     ...keyed.commands.map((s) => ({ title: s.title, key: { action: "command", settings: { command: { id: s.id, title: s.title } } } })),
   ];
-  for (const { key } of handed.sort((a, b) => a.title.localeCompare(b.title))) keys.push(key);
-  keys.push({ action: "open", settings: { target: "rules" } });
-  return keys;
+  for (const { key } of handed.sort((a, b) => a.title.localeCompare(b.title))) drive.push(key);
+
+  const numbers: Key[] = [];
+  for (const { id } of keyed.counters) numbers.push({ action: "metric", settings: { field: { counter: id } } });
+  for (const { id } of keyed.resources) numbers.push({ action: "metric", settings: { field: { resource: id } } });
+
+  return { drive, numbers };
+}
+
+/**
+ * The same keys as one run, which is what a deck with no frame lays down.
+ *
+ * Last of all, a key that opens the pack's rules in the browser: a pack
+ * profile is the one place that key has a pack to open.
+ */
+export function packKeys(keyed: Keyed): Key[] {
+  const { drive, numbers } = queuesFor(keyed);
+  return [...drive, ...numbers, RULES];
 }
 
 /**
@@ -318,8 +350,96 @@ export function paginate(keys: Key[], capacity: number): Page[] {
   return pages;
 }
 
+/** One page of a framed layout: what sits in each cell, and which turns it needs. */
+export interface FramedPage {
+  back: boolean;
+  more: boolean;
+  keys: Record<string, Key>;
+}
+
+/**
+ * The two queues poured into a frame, a page at a time.
+ *
+ * Each pool takes its own queue first. Whatever cells are left over in a
+ * pool are cells whose queue has run dry, so the other queue spills into
+ * them: the moves keep coming down the right once the numbers are done,
+ * and the numbers come down the left once the moves are. That is what
+ * keeps a pack with forty moves and two counters from paging through half
+ * an empty deck.
+ *
+ * The turns are cut out of the pools the way {@link paginate} keeps its
+ * first and last slot: only on the pages that need them. A layout that
+ * fits on one page uses both cells for keys.
+ *
+ * A page that took no key at all ends the run. Neither frame here can
+ * reach that, but this is exported, and a frame whose pools are all turn
+ * cells would otherwise page for ever.
+ */
+export function framedPages(frame: Frame, drive: Key[], numbers: Key[]): FramedPage[] {
+  const pages: FramedPage[] = [];
+  let d = 0;
+  let n = 0;
+  for (;;) {
+    const back = pages.length > 0;
+    const fill = (more: boolean): { keys: Record<string, Key>; d: number; n: number } => {
+      const turns = new Set([...(back ? [frame.turns.previous] : []), ...(more ? [frame.turns.next] : [])]);
+      const keys: Record<string, Key> = {};
+      for (const { key, at } of frame.fixed) keys[at] = key;
+      let i = d;
+      let j = n;
+      const spare: { drive: string[]; numbers: string[] } = { drive: [], numbers: [] };
+      for (const cell of frame.drive) {
+        if (turns.has(cell)) continue;
+        if (i < drive.length) keys[cell] = drive[i++]!;
+        else spare.drive.push(cell);
+      }
+      for (const cell of frame.numbers) {
+        if (turns.has(cell)) continue;
+        if (j < numbers.length) keys[cell] = numbers[j++]!;
+        else spare.numbers.push(cell);
+      }
+      for (const cell of spare.drive) if (j < numbers.length) keys[cell] = numbers[j++]!;
+      for (const cell of spare.numbers) if (i < drive.length) keys[cell] = drive[i++]!;
+      return { keys, d: i, n: j };
+    };
+
+    // What is left over once the page is filled to the brim says whether
+    // it needs a way on, and a page that needs one is filled again with
+    // that cell spent. Taking a cell away can only leave more behind, so
+    // the second fill never turns the answer back around.
+    const brim = fill(false);
+    const wants = brim.d < drive.length || brim.n < numbers.length;
+    const spent = wants ? fill(true) : brim;
+    // A page that takes no key once it has paid for the turn is a page
+    // that cannot page: keep what fit and stop, rather than hand out a
+    // way on to a page that would be as empty as this one.
+    const page = wants && spent.d === d && spent.n === n ? brim : spent;
+    const more = wants && page !== brim;
+    pages.push({ back, more, keys: page.keys });
+    d = page.d;
+    n = page.n;
+    if (!more) return pages;
+  }
+}
+
 /** Row-major: the app names a position column first, and the top-left one is `0,0`. */
 const at = (slot: number, columns: number) => `${slot % columns},${Math.floor(slot / columns)}`;
+
+/** The cells of a page, top row first and left to right, which is the order they are written in. */
+function ordered(keys: Record<string, Key>): string[] {
+  return Object.keys(keys).sort((a, b) => {
+    const [ac, ar] = a.split(",").map(Number) as [number, number];
+    const [bc, br] = b.split(",").map(Number) as [number, number];
+    return ar - br || ac - bc;
+  });
+}
+
+/** A sequential page as cells, so both paths hand the writer the same thing. */
+function sequential(page: Page, columns: number): Record<string, Key> {
+  const keys: Record<string, Key> = {};
+  for (const [n, key] of page.keys.entries()) keys[at((page.back ? 1 : 0) + n, columns)] = key;
+  return keys;
+}
 
 /**
  * One profile, as a set of files, before anything is zipped.
@@ -328,10 +448,15 @@ const at = (slot: number, columns: number) => `${slot % columns},${Math.floor(sl
  * compare what came out; the default derives them from the profile's own
  * name and is what the committed files are built with.
  */
-export function profile({ slug, device, name, keys }: ProfileSpec, ids: (name: string) => string = stableId): Built {
+export function profile({ slug, device, name, keys, zones }: ProfileSpec, ids: (name: string) => string = stableId): Built {
   const { model, columns, rows, dials } = DEVICES[device];
   const capacity = columns * rows;
-  const cut = paginate(keys, capacity);
+  // A framed deck keeps its own cells for the turns; a sequential one
+  // spends its first slot going back and its last going on.
+  const turns = zones ? zones.frame.turns : { previous: at(0, columns), next: at(capacity - 1, columns) };
+  const cut = zones
+    ? framedPages(zones.frame, zones.drive, zones.numbers)
+    : paginate(keys, capacity).map((page) => ({ back: page.back, more: page.more, keys: sequential(page, columns) }));
 
   const files: Record<string, PageFile | RootFile> = {};
   const pageIds: string[] = [];
@@ -340,12 +465,11 @@ export function profile({ slug, device, name, keys }: ProfileSpec, ids: (name: s
     pageIds.push(id);
 
     const actions: Record<string, StoredAction> = {};
-    if (page.back) actions[at(0, columns)] = turn(ids(`${slug}/${device}/page/${index}/back`), "previous");
-    for (const [n, key] of page.keys.entries()) {
-      const slot = (page.back ? 1 : 0) + n;
-      actions[at(slot, columns)] = entry(ids(`${slug}/${device}/page/${index}/key/${n}`), key);
+    if (page.back) actions[turns.previous] = turn(ids(`${slug}/${device}/page/${index}/back`), "previous");
+    for (const cell of ordered(page.keys)) {
+      actions[cell] = entry(ids(`${slug}/${device}/page/${index}/key/${cell}`), page.keys[cell]!);
     }
-    if (page.more) actions[at(capacity - 1, columns)] = turn(ids(`${slug}/${device}/page/${index}/more`), "next");
+    if (page.more) actions[turns.next] = turn(ids(`${slug}/${device}/page/${index}/more`), "next");
 
     const controllers: Controller[] = [{ Type: "Keypad", Actions: actions }];
     if (dials > 0) {
@@ -403,7 +527,32 @@ export function container({ folder, files }: Built): Uint8Array {
  */
 export function specsFor(keyed: Keyed | null, named: { slug: string; name: string }, device?: DeviceId): ProfileSpec[] {
   const keys = keyed ? [...BASE, ...packKeys(keyed)] : [...BASE];
-  return (device ? [device] : DEVICE_IDS).map((d) => ({ slug: named.slug, device: d, name: named.name, keys }));
+  return (device ? [device] : DEVICE_IDS).map((d) => {
+    const spec: ProfileSpec = { slug: named.slug, device: d, name: named.name, keys };
+    const frame = FRAMES[d];
+    return frame ? { ...spec, zones: zonesFor(frame, keyed) } : spec;
+  });
+}
+
+/**
+ * One deck's frame, with the keys of this profile poured into its queues.
+ *
+ * The frame's extras go either side of the pack's own keys: what a hand
+ * wants mid-scene ahead of them, the rest behind. The Rules key is a pack's
+ * alone: a frame with a cell for it pins it there, one without leaves it at
+ * the very end of the drive queue, and the generic profile, which has no
+ * rules to open, hands the cell back as the first free one on the numbers
+ * side.
+ */
+function zonesFor(frame: Frame, keyed: Keyed | null): Zones {
+  const queues = keyed ? queuesFor(keyed) : { drive: [], numbers: [] };
+  const drive = [...frame.extras.drive.first, ...queues.drive, ...frame.extras.drive.last];
+  const numbers = [...frame.extras.numbers.first, ...queues.numbers, ...frame.extras.numbers.last];
+  // No cell of its own: the Rules key waits at the back of the drive queue.
+  if (frame.rules === undefined) return { frame, drive: keyed ? [...drive, RULES] : drive, numbers };
+  // Nothing to open: the cell is the first free one on the numbers side.
+  if (keyed === null) return { frame: { ...frame, numbers: [frame.rules, ...frame.numbers] }, drive, numbers };
+  return { frame: { ...frame, fixed: [...frame.fixed, { key: RULES, at: frame.rules }] }, drive, numbers };
 }
 
 /**

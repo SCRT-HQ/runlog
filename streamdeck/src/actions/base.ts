@@ -87,8 +87,12 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
    * By the last word of the UUID, which is the name its SVG is filed under
    * in `design/actions`: one home for the pairing, and a new action gets
    * its glyph by being named after its drawing rather than by a table.
+   *
+   * The settings come in because one action can be two things on a key:
+   * Metric set to a counter is a number somebody steps, and it says so in
+   * the corner. An action that is one thing ignores them.
    */
-  private glyph(): string | undefined {
+  protected glyph(_settings: S): string | undefined {
     return GLYPHS[this.manifestId?.split(".").pop() ?? ""];
   }
 
@@ -132,7 +136,7 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
         );
       }
       if (action.isKey()) {
-        await action.setImage(faceImage(face, this.glyph()));
+        await action.setImage(faceImage(face, this.glyph(settings)));
         await action.setTitle("");
       } else if (action.isDial()) {
         // The `$B1` layout's progress bar is the `indicator` key; it only
