@@ -349,7 +349,7 @@ export function LiveView({
             <section className="panel">
               <h3 className="sectionTitle">The board</h3>
               {s.subjects.map((sub) => (
-                <div key={sub.id} className={`row spread${moved.struck.has(sub.id) ? " struck" : ""}`}>
+                <div key={sub.id} className={`row spread boardRow${moved.struck.has(sub.id) ? " struck" : ""}`}>
                   <span>
                     <span className="idx">#{sub.id}</span> {sub.name ?? `${s.words.unit} ${sub.id}`}
                     {sub.type && sub.type !== sub.name && <span className="muted"> · {sub.type}</span>}

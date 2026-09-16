@@ -1760,6 +1760,19 @@ button:disabled,
   gap: 0.5rem;
   justify-content: space-between;
 }
+/* The watcher's board: the text wraps, the status stays on the line. A
+   flex row wraps as a whole, so a long description pushed "done" onto a
+   line of its own; a grid gives each cell its own column. */
+.boardRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 0.6rem;
+}
+.boardRow > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .subjectRow.gone {
   opacity: 0.45;
   text-decoration: line-through;
