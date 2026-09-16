@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Pack } from "@runlog/rules-schema";
 import { useAccount } from "../auth/Account.tsx";
 import { useApi } from "../sync/useApi.ts";
@@ -14,6 +14,8 @@ import { controlAddress } from "./controlAddress.ts";
 import { isEmpty, type ControlProfile } from "../control/profile.ts";
 import type { AttachedTool } from "./useAttachedTools.ts";
 import { CheckGlyph, CopyGlyph, DeckGlyph, PlugGlyph, XGlyph } from "./glyphs.tsx";
+import { useDismiss } from "../ui/useDismiss.ts";
+import { useToast } from "../ui/Toast.tsx";
 
 /**
  * The account behind a connection, as the server names it.
@@ -31,6 +33,108 @@ function ToolIcon({ lit, label, children }: { lit: boolean; label: string; child
     <span className={`toolIcon ${lit ? "lit" : "dim"}`} role="img" title={label} aria-label={label}>
       {children}
     </span>
+  );
+}
+
+/**
+ * Asking somebody to the table: an address, and what they come as.
+ *
+ * A sheet rather than a block in the panel, because the panel is a list of
+ * who is here and a form pushed the list off the screen. Built the way the
+ * settings sheet and the name gate are: a veil, a panel, and the shared
+ * dismiss hook for Escape and a press outside.
+ */
+function InviteDialog({
+  people,
+  redistributable,
+  noun,
+  onSend,
+  onClose,
+}: {
+  /** Addresses this account has played with, offered as the address is typed. */
+  people: Person[];
+  /** Whether the pack travels with the invitation. */
+  redistributable: boolean;
+  /** What the pack calls a run. */
+  noun: string;
+  /** Ask the server. It resolves when the invitation went, and rejects with what to say. */
+  onSend: (to: string, role: "player" | "viewer") => Promise<void>;
+  onClose: () => void;
+}) {
+  const sheet = useRef<HTMLElement>(null);
+  const field = useRef<HTMLInputElement>(null);
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"player" | "viewer">("player");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  useDismiss(sheet, true, onClose);
+  useEffect(() => {
+    field.current?.focus();
+  }, []);
+
+  const send = () => {
+    const to = email.trim();
+    if (!to || busy) return;
+    setBusy(true);
+    setNote(null);
+    void onSend(to, role)
+      .then(onClose, (error: unknown) =>
+        setNote(error instanceof Error && error.message ? error.message : "That did not send. Try again in a moment."),
+      )
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <div className="veil" role="presentation">
+      <section ref={sheet} className="panel termsGate inviteDialog" role="dialog" aria-modal="true" aria-labelledby="inviteTitle">
+        <h2 id="inviteTitle">Invite someone</h2>
+        {!redistributable && (
+          <p className="muted small">
+            This pack is marked not for redistribution, so its text does not travel with the invitation: whoever you invite needs their own
+            copy of the pack to open the {noun}.
+          </p>
+        )}
+        <div className="inviteForm">
+          <input
+            ref={field}
+            className="textInput"
+            type="email"
+            list="runlog-people"
+            placeholder="their email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setNote(null);
+            }}
+            onKeyDown={(e) => e.key === "Enter" && send()}
+            aria-label="Email address to invite"
+            title="They get a link by email, sign in, and the run appears on their devices. A watcher sees every move and makes none."
+          />
+          <datalist id="runlog-people">
+            {people
+              .filter((p) => p.email)
+              .map((p) => (
+                <option key={p.sub} value={p.email!}>
+                  {p.name ?? p.email}
+                </option>
+              ))}
+          </datalist>
+          <select value={role} onChange={(e) => setRole(e.target.value === "viewer" ? "viewer" : "player")} aria-label="Role">
+            <option value="player">plays</option>
+            <option value="viewer">watches</option>
+          </select>
+        </div>
+        {note && <p className="muted small">{note}</p>}
+        <div className="padRow">
+          <button className="ghost small" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="primary" disabled={!email.trim() || busy} onClick={send}>
+            {busy ? "Sending…" : "Send"}
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -109,10 +213,10 @@ export function Members({
 
   const [invites, setInvites] = useState<Invite[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"player" | "viewer">("player");
   const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
+  const [inviting, setInviting] = useState(false);
+  const inviteButton = useRef<HTMLButtonElement>(null);
+  const toast = useToast();
   const [liveLink, setLiveLink] = useState<string | null>(() => liveLinkOf(run.runId));
   const [liveNote, setLiveNote] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -169,23 +273,77 @@ export function Members({
     );
   }
 
-  const invite = async () => {
-    const to = email.trim();
-    if (!to || busy) return;
-    setBusy(true);
-    setNote(null);
+  /** Send one invitation. Rejecting keeps the sheet open with what went wrong. */
+  const invite = async (to: string, role: "player" | "viewer") => {
     try {
       await api.createInvite(run.runId, to, role);
-      setEmail("");
-      setNote(`Sent to ${to}. The link works for seven days.`);
-      refresh();
     } catch (error) {
-      if (error instanceof PlanError) setUpgrade(error.message);
-      else setNote(error instanceof Error && error.message ? error.message : "That did not send. Try again in a moment.");
-    } finally {
-      setBusy(false);
+      // What the plan allows is the panel's business: the notice under the
+      // buttons carries the link to what each plan has.
+      if (error instanceof PlanError) {
+        setUpgrade(error.message);
+        return;
+      }
+      throw error;
     }
+    toast.show(`Sent to ${to}. The link works for seven days.`);
+    refresh();
   };
+
+  /** Close the sheet and put the cursor back on the button that opened it. */
+  const closeInvite = () => {
+    setInviting(false);
+    inviteButton.current?.focus();
+  };
+
+  /** Put the live link on the clipboard, and say so for a moment. */
+  const copyLive = (link: string) => {
+    void navigator.clipboard?.writeText(link).then(
+      () => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2000);
+      },
+      () => {},
+    );
+  };
+
+  /** Open the run to watchers and copy the link, so one press does both. */
+  const share = () => {
+    setBusy(true);
+    setLiveNote(null);
+    void api
+      .shareRun(run.runId)
+      .then(({ link }) => {
+        // Already open keeps the link it has; the server cannot repeat one,
+        // so what this device remembers is the link.
+        if (link) rememberLiveLink(run.runId, link);
+        const made = link ?? liveLinkOf(run.runId);
+        setLiveLink(made);
+        if (made) copyLive(made);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof PlanError) setUpgrade(error.message);
+        else setLiveNote(error instanceof Error && error.message ? error.message : "That could not be done just now.");
+      })
+      .finally(() => setBusy(false));
+  };
+
+  /** Kill the link. */
+  const stopSharing = () => {
+    setBusy(true);
+    void api
+      .unshareRun(run.runId)
+      .then(() => {
+        rememberLiveLink(run.runId, null);
+        setLiveLink(null);
+        setLiveNote("The link is dead; anyone holding it sees nothing now.");
+      })
+      .catch((error: unknown) => setLiveNote(error instanceof Error && error.message ? error.message : "That could not be done just now."))
+      .finally(() => setBusy(false));
+  };
+
+  /** What the live link is, said on the button rather than under it. */
+  const liveTitle = "Anyone with this link watches the run as it happens, with no account.";
 
   /**
    * Whether this run has rules for a tool at all.
@@ -251,10 +409,9 @@ export function Members({
    * this device's sync switch, which is the thing to offer.
    */
   const reached = run.role !== undefined;
-  const company = members.some((m) => m.sub !== me) || pending.length > 0;
 
   return (
-    <details className="panel people members" open={company}>
+    <details className="panel people members" open>
       {heading}
       <div className="peopleBody">
         {!reached && sync.available && !sync.enabled && (
@@ -334,9 +491,12 @@ export function Members({
               className={`row spread memberRow${m.sub === me ? " me" : ""}`}
               aria-current={m.sub === me ? "true" : undefined}
             >
-              <span>
-                <strong>{m.name ?? (m.sub === me ? "You" : "Somebody")}</strong>
-                <span className="muted small"> · {m.role}</span>
+              {/* The name is what gives when the row is narrow; the chip is not. */}
+              <span className="memberWho">
+                <span className="memberName">
+                  <strong>{m.name ?? (m.sub === me ? "You" : "Somebody")}</strong>
+                  <span className="muted small"> · {m.role}</span>
+                </span>
                 {m.sub === me && <span className="chip you">you</span>}
               </span>
               <span className="padRow">
@@ -373,157 +533,60 @@ export function Members({
           </p>
         )}
 
-        {owner && (
+        {owner && pending.length > 0 && (
           <>
-            {pending.length > 0 && (
-              <>
-                <h4 className="stepLabel">Invited, not yet here</h4>
-                {pending.map((i) => (
-                  <div key={i.token} className="row spread memberRow">
-                    <span className="mono small">{i.email}</span>
-                    <button className="ghost tiny" onClick={() => void api.revokeInvite(run.runId, i.token).then(refresh, () => {})}>
-                      Withdraw
-                    </button>
-                  </div>
-                ))}
-              </>
-            )}
-            <h4 className="stepLabel">Invite someone</h4>
-            {!pack.license.redistributable && (
-              <p className="muted small">
-                This pack is marked not for redistribution, so its text does not travel with the invitation: whoever you invite needs their
-                own copy of the pack to open the run.
-              </p>
-            )}
-            <div className="inviteForm">
-              <input
-                className="textInput"
-                type="email"
-                list="runlog-people"
-                placeholder="their email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && void invite()}
-                aria-label="Email address to invite"
-                title="They get a link by email, sign in, and the run appears on their devices. A watcher sees every move and makes none."
-              />
-              <datalist id="runlog-people">
-                {people
-                  .filter((p) => p.email)
-                  .map((p) => (
-                    <option key={p.sub} value={p.email!}>
-                      {p.name ?? p.email}
-                    </option>
-                  ))}
-              </datalist>
-              <select value={role} onChange={(e) => setRole(e.target.value === "viewer" ? "viewer" : "player")} aria-label="Role">
-                <option value="player">plays</option>
-                <option value="viewer">watches</option>
-              </select>
-              <button className="primary" disabled={!email.trim() || busy} onClick={() => void invite()}>
-                {busy ? "Sending…" : "Send"}
-              </button>
-            </div>
-            {note && <p className="muted small">{note}</p>}
-            {upgrade && (
-              <p className="notice">
-                {upgrade}. Subscribe from your profile, under Plan
-                {hosted?.links.pricing ? (
-                  <>
-                    ; <a href={hosted.links.pricing}>what each plan has</a>
-                  </>
-                ) : null}
-                .
-              </p>
-            )}
-
-            <h4 className="stepLabel">A live link</h4>
-            {shared && liveLink ? (
-              <>
-                <div className="inviteForm">
-                  <input
-                    className="textInput mono small"
-                    readOnly
-                    value={liveLink}
-                    aria-label="The live link"
-                    onFocus={(e) => e.currentTarget.select()}
-                  />
-                  <button
-                    className="ghost tiny"
-                    onClick={() => {
-                      void navigator.clipboard?.writeText(liveLink).then(
-                        () => {
-                          setCopied(true);
-                          setTimeout(() => setCopied(false), 1500);
-                        },
-                        () => {},
-                      );
-                    }}
-                  >
-                    {copied ? "Copied" : "Copy"}
-                  </button>
-                  <button
-                    className="ghost tiny"
-                    disabled={busy}
-                    onClick={() => {
-                      setBusy(true);
-                      void api
-                        .unshareRun(run.runId)
-                        .then(() => {
-                          rememberLiveLink(run.runId, null);
-                          setLiveLink(null);
-                          setLiveNote("The link is dead; anyone holding it sees nothing now.");
-                        })
-                        .catch((error: unknown) =>
-                          setLiveNote(error instanceof Error && error.message ? error.message : "That could not be done just now."),
-                        )
-                        .finally(() => setBusy(false));
-                    }}
-                  >
-                    Stop sharing
-                  </button>
-                </div>
-                <p className="muted small">
-                  Anyone with the link watches this {pack.vocabulary.run.one.toLowerCase()} as it happens, with no account.{" "}
-                  {pack.license.redistributable
-                    ? "They see the whole thing, the pack's paper included."
-                    : "The pack's text is not for redistribution, so they see the state and the log by reference, never the rules."}
-                </p>
-              </>
-            ) : (
-              <>
-                <button
-                  className="ghost tiny"
-                  disabled={busy}
-                  onClick={() => {
-                    setBusy(true);
-                    setLiveNote(null);
-                    void api
-                      .shareRun(run.runId)
-                      .then(({ link }) => {
-                        // Already open keeps the link it has; the server cannot
-                        // repeat one, so what this device remembers is the link.
-                        if (link) rememberLiveLink(run.runId, link);
-                        setLiveLink(link ?? liveLinkOf(run.runId));
-                      })
-                      .catch((error: unknown) => {
-                        if (error instanceof PlanError) setUpgrade(error.message);
-                        else setLiveNote(error instanceof Error && error.message ? error.message : "That could not be done just now.");
-                      })
-                      .finally(() => setBusy(false));
-                  }}
-                >
-                  Share a live link
+            <p className="muted small">Invited, not yet here</p>
+            {pending.map((i) => (
+              <div key={i.token} className="row spread memberRow">
+                <span className="mono small">{i.email}</span>
+                <button className="ghost tiny" onClick={() => void api.revokeInvite(run.runId, i.token).then(refresh, () => {})}>
+                  Withdraw
                 </button>
-                <p className="muted small">
-                  A link anyone can open, no account, to watch this {pack.vocabulary.run.one.toLowerCase()} as it happens. You can stop
-                  sharing at any time.
-                </p>
-              </>
-            )}
-            {liveNote && <p className="muted small">{liveNote}</p>}
+              </div>
+            ))}
           </>
         )}
+        {(owner || Boolean(shared && liveLink)) && (
+          <div className="row padRow memberActions">
+            {owner && (
+              <button ref={inviteButton} className="ghost small" onClick={() => setInviting(true)}>
+                Invite someone
+              </button>
+            )}
+            {shared && liveLink ? (
+              <button className="ghost small" title={liveTitle} onClick={() => copyLive(liveLink)}>
+                {copied ? "Copied" : "Copy live link"}
+              </button>
+            ) : (
+              owner && (
+                <button className="ghost small" title={liveTitle} disabled={busy} onClick={share}>
+                  Share a live link
+                </button>
+              )
+            )}
+            {owner && shared && liveLink && (
+              <button className="ghost small" disabled={busy} onClick={stopSharing}>
+                Stop sharing
+              </button>
+            )}
+          </div>
+        )}
+        {upgrade && (
+          <p className="notice">
+            {upgrade}. Subscribe from your profile, under Plan
+            {hosted?.links.pricing ? (
+              <>
+                ; <a href={hosted.links.pricing}>what each plan has</a>
+              </>
+            ) : null}
+            .
+          </p>
+        )}
+        {liveNote && <p className="muted small">{liveNote}</p>}
+        {inviting && (
+          <InviteDialog people={people} redistributable={pack.license.redistributable} noun={noun} onSend={invite} onClose={closeInvite} />
+        )}
+        {toast.node}
       </div>
     </details>
   );
