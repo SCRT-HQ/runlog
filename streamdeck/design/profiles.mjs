@@ -11,9 +11,11 @@
  * app and the CLI use, so a renamed move changes the profile on the next
  * run of this script rather than going quietly dead on somebody's deck.
  *
- * `npm run profiles -w streamdeck`. It also writes `src/profiles.ts`, which
- * is the one thing here the plugin reads at run time: the table that turns a
- * run's pack into the profile to switch a deck to.
+ * `npm run profiles -w streamdeck`. It also writes the two tables the
+ * plugin reads at run time: `src/profiles.ts`, which turns a run's pack
+ * into the profile to switch a deck to, and `src/setups.ts`, which is the
+ * setups each pack's tool ships so a profile built from a pack file carries
+ * the same keys as one built from a run.
  */
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
@@ -21,6 +23,7 @@ import { fileURLToPath } from "node:url";
 
 import { DEVICES, container, profile, specs } from "@runlog/deck-profiles";
 import { loadPackText, loadSetupText } from "@runlog/rules-schema";
+import { format, resolveConfig } from "prettier";
 
 import { DEMO, SKETCHES, SLUGS } from "./layouts.mjs";
 
@@ -32,7 +35,7 @@ const repo = join(here, "..", "..");
 const MANIFEST = JSON.parse(readFileSync(join(plugin, "manifest.json"), "utf8"));
 
 /** The tool a pack is driven by, from the shipped control profile written for it. */
-function toolFor(packId) {
+export function toolFor(packId) {
   const dir = join(repo, "packs", "profiles");
   for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
     // Read as JSON rather than through the app's reader: that one wants the
@@ -46,7 +49,7 @@ function toolFor(packId) {
 }
 
 /** Every setup written for a tool, by title, the way the app's picker lists them. */
-function setupsFor(tool) {
+export function setupsFor(tool) {
   if (!tool) return [];
   const dir = join(repo, "packs", "setups");
   const out = [];
@@ -149,7 +152,59 @@ export function profileFor(packId: string | undefined, device: number): string |
 `;
 }
 
-function main() {
+/**
+ * The setups shipped for each pack's tool, as a module the plugin can import.
+ *
+ * A profile built from a pack file rather than from a run has no offer to
+ * read the setups off, and the pack file names none: a setup is written for
+ * a tool, not for a pack. So the same list the shipped profiles are laid
+ * out from is written out here too, and the two paths lay out one deck.
+ *
+ * Cut down to what a key needs. The id and the title name it; the
+ * operations are kept by name alone, and only one of each name, because
+ * the one thing read off them is whether a `warp.` is in there.
+ *
+ * Run through the formatter rather than spaced by hand: a setup with a
+ * dozen operations is a line the formatter would break, and a generated
+ * file that does not come out of the generator formatted is one the format
+ * check fails on.
+ */
+export async function setupsTable(list = layouts()) {
+  const packs = [];
+  for (const layout of list) {
+    if (!layout.pack) continue;
+    const setups = setupsFor(toolFor(layout.pack.id));
+    if (setups.length === 0) continue;
+    const rows = setups.map((s) => {
+      const ops = [...new Set(s.ops.map((o) => o.op))].map((op) => `{ op: ${JSON.stringify(op)} }`);
+      return `    { id: ${JSON.stringify(s.id)}, title: ${JSON.stringify(s.title)}, ops: [${ops.join(", ")}] },`;
+    });
+    packs.push(`  ${JSON.stringify(layout.pack.id)}: [\n${rows.join("\n")}\n  ],`);
+  }
+
+  const text = `/**
+ * The setups shipped for each pack's tool, for a profile built without a run.
+ *
+ * Written by \`design/profiles.mjs\`: run \`npm run profiles -w streamdeck\`
+ * and commit what moves. Edit the setups under \`packs/setups\`, not this
+ * file.
+ *
+ * Only what a key is named from and the operations by name, which is all it
+ * takes to tell a warp from a setup. A pack whose tool ships no setups, and
+ * a pack that names no tool at all, is not in here.
+ */
+
+/** The shipped setups for each pack, by pack id. */
+export const PACK_SETUPS: Record<string, Array<{ id: string; title: string; ops: Array<{ op: string }> }>> = {
+${packs.join("\n")}
+};
+`;
+
+  const file = join(here, "..", "src", "setups.ts");
+  return await format(text, { ...(await resolveConfig(file)), filepath: file });
+}
+
+async function main() {
   const dir = join(plugin, "profiles");
   mkdirSync(dir, { recursive: true });
 
@@ -163,6 +218,7 @@ function main() {
   }
 
   writeFileSync(join(here, "..", "src", "profiles.ts"), table());
+  writeFileSync(join(here, "..", "src", "setups.ts"), await setupsTable());
 
   // The manifest is edited by hand - a generator that rewrites it fights the
   // formatter over every other line - so the one thing checked here is that
@@ -174,4 +230,4 @@ function main() {
   console.log(`${written.length} profiles written to ${dir}`);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+if (process.argv[1] === fileURLToPath(import.meta.url)) await main();

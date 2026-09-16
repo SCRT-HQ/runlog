@@ -275,3 +275,54 @@ describe("the profile the deck lands on when a run attaches", () => {
     mock.installed = [];
   });
 });
+
+/**
+ * The setups a run publishes, kept for a profile built without one.
+ *
+ * A pack from the Marketplace names its setups in the offer and nowhere
+ * else the deck can reach, so what a run says is written into the global
+ * settings and read back on the next launch.
+ */
+describe("what the deck remembers about a pack's setups", () => {
+  it("writes what a run offered into the settings, warps and all", async () => {
+    mock.wrote = [];
+    store.dispatch({ t: "runs", runs: [], any: false });
+    store.dispatch({ t: "runs", runs: [{ id: "r14" }], any: true });
+    store.dispatch({
+      t: "snapshot",
+      snapshot: {
+        run: { id: "r14", packId: "com.example.marsh-light" },
+        offer: {
+          setups: [
+            { id: "s1", title: "Starter kit" },
+            { id: "s2", title: "Warp to the camp" },
+          ],
+          commands: [
+            { id: "s1", title: "Starter kit" },
+            { id: "s2", title: "Warp to the camp" },
+          ],
+        },
+      } as never,
+    });
+
+    await vi.waitFor(() => expect(mock.wrote.some((w) => w.setupsSeen)).toBe(true));
+    const seen = mock.wrote.findLast((w) => w.setupsSeen)!.setupsSeen as Record<string, unknown>;
+    expect(seen["com.example.marsh-light"]).toEqual([
+      { id: "s1", title: "Starter kit", warp: false },
+      { id: "s2", title: "Warp to the camp", warp: true },
+    ]);
+  });
+
+  it("writes nothing again for a snapshot that names the same setups", async () => {
+    mock.wrote = [];
+    store.dispatch({
+      t: "snapshot",
+      snapshot: {
+        run: { id: "r14", packId: "com.example.marsh-light" },
+        offer: { setups: [{ id: "s1", title: "Starter kit" }], commands: [{ id: "s2", title: "Warp to the camp" }] },
+      } as never,
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mock.wrote.filter((w) => w.setupsSeen)).toEqual([]);
+  });
+});

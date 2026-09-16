@@ -3,10 +3,12 @@ import { join } from "node:path";
 import { cwd } from "node:process";
 
 import streamDeck from "@elgato/streamdeck";
-import { container, fromOffer, fromPack, laysOut, profile, specsFor, type DeviceId, type Keyed } from "@runlog/deck-profiles";
+import { container, fromOffer, fromPack, laysOut, profile, specsFor, type DeviceId, type Handed, type Keyed } from "@runlog/deck-profiles";
 import type { Pack } from "@runlog/rules-schema";
 
 import { DEVICE_PROFILES } from "./profiles.ts";
+import { seenSetups } from "./seen.ts";
+import { PACK_SETUPS } from "./setups.ts";
 import type { DeckState } from "./state.ts";
 
 /**
@@ -92,15 +94,42 @@ export function buildFor(state: DeckState, device: number): { file: string; byte
 }
 
 /**
+ * A pack read off the account, as keys, with every setup that can be named for it.
+ *
+ * A setup is written for a tool rather than for a pack, so the pack file
+ * names none and the two paths to a profile would otherwise lay out
+ * different decks: one built from a run has Apply setup and Command keys
+ * on it and one built from the file had neither. Two sources put them
+ * back. The shipped table is the setups written in this repository, which
+ * is what the profile in the package is laid out from; the deck's own
+ * memory is what it has seen a run of this pack offer, which is the only
+ * place a Marketplace pack's setups are named.
+ *
+ * The shipped ones win where both name a setup: they carry their whole
+ * operation list, and a remembered one carries a flag instead.
+ */
+export function keyedForPack(pack: Pack): Keyed {
+  const shipped = PACK_SETUPS[pack.id] ?? [];
+  const named = new Set(shipped.map((s) => s.id));
+  // A remembered setup has no operations to read, so a warp is handed the
+  // one `isWarp` looks for: the run called it a command, and that is the
+  // record of it.
+  const seen: Handed[] = seenSetups(pack.id)
+    .filter((s) => !named.has(s.id))
+    .map(({ id, title, warp }) => ({ id, title, ops: warp ? [{ op: "warp.seen" }] : [] }));
+  streamDeck.logger.info(`profile: ${pack.id} setups from the shipped table (${shipped.length}) and the deck's memory (${seen.length})`);
+  return fromPack(pack, [...shipped, ...seen]);
+}
+
+/**
  * The profile for a pack read off the account, written to a file.
  *
- * No setups on it. Those are a library of the browser's, kept per tool
- * rather than per pack, and the account's own copy of the pack says nothing
- * about them. A profile built this way has the pack's moves and numbers;
- * one built from a run the deck is following has the setups too.
+ * The same keys as one built from a run of the pack, setups and all: the
+ * moves and the numbers come off the pack file, and the setups off
+ * {@link keyedForPack}'s two sources.
  */
 export function buildForPack(pack: Pack, device: number): { file: string; bytes: Uint8Array } | null {
-  return write(fromPack(pack, []), { id: pack.id, title: pack.title }, device, "the pack");
+  return write(keyedForPack(pack), { id: pack.id, title: pack.title }, device, "the pack");
 }
 
 /**

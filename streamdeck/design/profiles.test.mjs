@@ -2,10 +2,11 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { DEVICES, container, profile } from "@runlog/deck-profiles";
+import { DEVICES, container, fromPack, profile } from "@runlog/deck-profiles";
 
 import { SKETCHES, SLUGS } from "./layouts.mjs";
-import { layouts, profileSpecs, table } from "./profiles.mjs";
+import { layouts, profileSpecs, setupsFor, setupsTable, table, toolFor } from "./profiles.mjs";
+import { PACK_SETUPS } from "../src/setups.ts";
 
 /**
  * The generator as a script: which packs it reads, what it writes beside
@@ -83,6 +84,14 @@ describe("the profiles we ship", () => {
     }
   });
 
+  it("hands the plugin the setups each pack's tool ships, for a profile built without a run", async () => {
+    // `src/setups.ts` is written by the generator too, and read at run time
+    // by the Install key. Behind the setups on disk, it lays out a deck
+    // missing a page of keys the shipped profile has.
+    const written = readFileSync(join(here, "..", "src", "setups.ts"), "utf8");
+    expect(written.replace(/\r\n/g, "\n")).toBe((await setupsTable()).replace(/\r\n/g, "\n"));
+  });
+
   it("matches the profiles committed under the plugin, byte for byte", () => {
     // A `.streamDeckProfile` is generated and committed rather than built at
     // install time, so a layout change that nobody regenerated for leaves a
@@ -135,5 +144,20 @@ describe("the profiles we ship", () => {
         expect(settings.filter((s) => s.command).map((s) => s.command.id)).toEqual(["com.scrthq.runlog.setups.start-of-the-dlc"]);
       });
     }
+
+    it("is the same split the table hands the plugin for a build off the pack file", () => {
+      // The two paths to a profile for this pack: the shipped one, laid out
+      // from the setup files, and the Install key's, laid out from the
+      // table. They have to agree on which setups there are and which of
+      // them are commands, or a streamer who imported the second is missing
+      // keys the first has.
+      const pack = layouts().find((l) => l.slug === "elden-ring").pack;
+      const fromTable = fromPack(pack, PACK_SETUPS[pack.id]);
+      const fromFiles = fromPack(pack, setupsFor(toolFor(pack.id)));
+      expect(fromTable.setups).toEqual(fromFiles.setups);
+      expect(fromTable.commands).toEqual(fromFiles.commands);
+      expect(fromTable.setups.length).toBeGreaterThan(0);
+      expect(fromTable.commands).toEqual([{ id: "com.scrthq.runlog.setups.start-of-the-dlc", title: "Start of the DLC" }]);
+    });
   });
 });

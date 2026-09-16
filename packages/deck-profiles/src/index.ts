@@ -41,6 +41,7 @@ export {
   type Built,
   type Controller,
   type FramedPage,
+  type Handed,
   type Keyed,
   type Laid,
   type Offered,

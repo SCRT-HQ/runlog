@@ -17,6 +17,7 @@ import { Undo } from "./actions/undo.ts";
 import { hasProfileFor, installedProfiles } from "./installed.ts";
 import { buildFor, install } from "./profiles-on-demand.ts";
 import { PACK_PROFILES, profileFor } from "./profiles.ts";
+import { allSeen, loadSeen, remember, setupsInOffer, type SeenSetup } from "./seen.ts";
 import { loadSession, normalizeBase, signIn, signOut, type Account } from "./session.ts";
 import { openWire } from "./socket.ts";
 import { makeStore } from "./store.ts";
@@ -32,7 +33,13 @@ const DEFAULT_API = "https://runlog.scrthq.com";
  * handed to the property inspector, which is a web view, so the session
  * never comes near them. It lives in a file of the plugin's own.
  */
-type Globals = { apiBase?: string; pinned?: string | null; switchProfiles?: boolean; profilesOffered?: string[] };
+type Globals = {
+  apiBase?: string;
+  pinned?: string | null;
+  switchProfiles?: boolean;
+  profilesOffered?: string[];
+  setupsSeen?: Record<string, SeenSetup[]>;
+};
 
 let base = DEFAULT_API;
 
@@ -134,6 +141,31 @@ store.subscribe((s) => {
   }
 });
 
+/**
+ * The setups a run published, kept for a profile built without one.
+ *
+ * The Install key can build a profile for any pack on the account without
+ * a run open anywhere, and the pack file it reads names no setups: a setup
+ * is written for a tool rather than for a pack. The plugin ships a table
+ * of the ones written in this repository, which says nothing about a pack
+ * from the Marketplace or one somebody wrote themselves. The run does, on
+ * every snapshot, so that is where they are read.
+ *
+ * Written to the global settings only when the set moved, which is the
+ * first snapshot of a run and then not again.
+ */
+let lastSnapshot: DeckState["snapshot"] = null;
+store.subscribe((s) => {
+  if (s.snapshot === lastSnapshot) return;
+  lastSnapshot = s.snapshot;
+  const packId = s.snapshot?.run?.packId;
+  if (!packId || !remember(packId, setupsInOffer(s.snapshot?.offer))) return;
+  void (async () => {
+    const settings = await streamDeck.settings.getGlobalSettings<Globals>();
+    await streamDeck.settings.setGlobalSettings({ ...settings, setupsSeen: allSeen() });
+  })();
+});
+
 // The Run inspector's list is only as fresh as the last appear; a run
 // starting or ending while the picker is open moves it without the
 // streamer closing and reopening the page.
@@ -181,6 +213,9 @@ function applyGlobals(g: Globals): void {
   // as well as from another surface's, and a pack marked offered a moment
   // ago must not be dropped by a settings event that crossed it.
   for (const id of g.profilesOffered ?? []) offered.add(id);
+  // Added to for the same reason: a setup seen a moment ago must survive a
+  // settings event that crossed the write of it.
+  loadSeen(g.setupsSeen);
   // Only on a change: this fires from the plugin's own write of a pin as
   // much as from another surface's, and a pin already applied locally
   // should not force the run's snapshot to reload for nothing.
