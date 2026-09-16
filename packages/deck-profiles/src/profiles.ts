@@ -144,40 +144,111 @@ function turn(id: string, which: "next" | "previous"): StoredAction {
 }
 
 /**
- * The keys a pack adds to the generic fourteen.
+ * What a layout is built from: ids on one side, nothing about where they came from.
  *
- * Its moves first, because those are what somebody presses; then the
- * numbers it keeps; then the setups for whatever tool it is driven by.
+ * A pack file has all of this and more; a run's own offer has exactly this
+ * and nothing else, which is the point. The plugin follows runs, not packs,
+ * so a deck that has never seen the pack file can still lay one out from
+ * what the run publishes about itself.
+ */
+export interface Keyed {
+  moves: Array<{ id: string }>;
+  counters: Array<{ id: string }>;
+  resources: Array<{ id: string }>;
+  /** Setups the run would take on, which is what an Apply setup key does. */
+  setups: Array<{ id: string; title: string }>;
+  /** Setups handed to the tool once, which is what a Command key does. */
+  commands: Array<{ id: string; title: string }>;
+}
+
+/**
+ * A run's offer, as much of it as a layout reads.
+ *
+ * Mirrored from `apps/web/src/run/offer.ts` the way `streamdeck/src/state.ts`
+ * mirrors the whole of it: this package is imported by a browser as well as
+ * by Node and takes nothing from either app.
+ */
+export interface Offered {
+  moves?: Array<{ id: string }>;
+  trackers?: Array<{ id: string; kind: "counter" | "resource" }>;
+  setups?: Array<{ id: string; title: string }>;
+  commands?: Array<{ id: string; title: string }>;
+}
+
+/**
+ * The pack read off disk, as keys.
  *
  * A hidden counter is left out. `packages/engine/src/snapshot.ts` does not
  * publish one, so a key set to it would say nothing for ever, and hidden
  * is the pack saying it is bookkeeping rather than a number to watch.
  *
  * The setups are the tool's, not the pack's: a setup names a tool and no
- * pack at all, which is `forTool` in `apps/web/src/control/setups.ts`, and
- * they are ordered by title the way the app's own picker orders them. A
+ * pack at all, which is `forTool` in `apps/web/src/control/setups.ts`. A
  * pack with no control profile written for it names no tool and gets none.
+ * A setup `isWarp` goes to `commands` instead: its operations reach the
+ * tool once, and the run's own setup is untouched.
+ */
+export function fromPack(pack: Pack, setups: Setup[]): Keyed {
+  return {
+    moves: Object.keys(pack.moves ?? {}).map((id) => ({ id })),
+    counters: Object.entries(pack.counters ?? {})
+      .filter(([, counter]) => !counter.hidden)
+      .map(([id]) => ({ id })),
+    resources: Object.keys(pack.resources ?? {}).map((id) => ({ id })),
+    setups: setups.filter((s) => !isWarp(s)).map(({ id, title }) => ({ id, title })),
+    commands: setups.filter((s) => isWarp(s)).map(({ id, title }) => ({ id, title })),
+  };
+}
+
+/**
+ * The run the deck is following, as keys.
  *
- * A setup `isWarp` gets a Command key instead of an Apply-setup one: its
- * operations go to the tool once, and the run's own setup is untouched.
+ * The offer's own `commands` is not the warps: it is every setup again,
+ * less whatever the wire would drop, because which of the two a key does is
+ * the key's own business on the page. A profile has to choose one key per
+ * setup, so the warps are taken as the commands and the rest as the setups,
+ * and a setup left in both lists is not given a key twice.
+ *
+ * `isWarp` reads a title here rather than a file: the offer carries no
+ * operations, so a warp that only declares itself in its ops lands on an
+ * Apply setup key. Both keys reach the same tool with the same document;
+ * one writes the run's setup on the way.
+ */
+export function fromOffer(offer: Offered): Keyed {
+  const trackers = offer.trackers ?? [];
+  const warps = new Set((offer.commands ?? []).filter((s) => isWarp(s)).map((s) => s.id));
+  return {
+    moves: (offer.moves ?? []).map(({ id }) => ({ id })),
+    counters: trackers.filter((t) => t.kind === "counter").map(({ id }) => ({ id })),
+    resources: trackers.filter((t) => t.kind === "resource").map(({ id }) => ({ id })),
+    setups: (offer.setups ?? []).filter((s) => !warps.has(s.id)).map(({ id, title }) => ({ id, title })),
+    commands: (offer.commands ?? []).filter((s) => warps.has(s.id)).map(({ id, title }) => ({ id, title })),
+  };
+}
+
+/**
+ * The keys a pack adds to the generic fourteen.
+ *
+ * Its moves first, because those are what somebody presses; then the
+ * numbers it keeps; then the setups for whatever tool it is driven by.
+ *
+ * The setups and the commands are laid down as one run of keys ordered by
+ * title, which is the order the app's own picker lists them in, so a warp
+ * sits where its name puts it rather than at the end of the deck.
  *
  * Last, a key that opens the pack's rules in the browser: a pack profile
  * is the one place that key has a pack to open.
  */
-export function packKeys(pack: Pack, setups: Setup[]): Key[] {
+export function packKeys(keyed: Keyed): Key[] {
   const keys: Key[] = [];
-  for (const id of Object.keys(pack.moves ?? {})) keys.push({ action: "press", settings: { target: { kind: "move", id } } });
-  for (const [id, counter] of Object.entries(pack.counters ?? {})) {
-    if (!counter.hidden) keys.push({ action: "metric", settings: { field: { counter: id } } });
-  }
-  for (const id of Object.keys(pack.resources ?? {})) keys.push({ action: "metric", settings: { field: { resource: id } } });
-  for (const setup of setups) {
-    keys.push(
-      isWarp(setup)
-        ? { action: "command", settings: { command: { id: setup.id, title: setup.title } } }
-        : { action: "setup", settings: { setup: { id: setup.id, title: setup.title } } },
-    );
-  }
+  for (const { id } of keyed.moves) keys.push({ action: "press", settings: { target: { kind: "move", id } } });
+  for (const { id } of keyed.counters) keys.push({ action: "metric", settings: { field: { counter: id } } });
+  for (const { id } of keyed.resources) keys.push({ action: "metric", settings: { field: { resource: id } } });
+  const handed: Array<{ title: string; key: Key }> = [
+    ...keyed.setups.map((s) => ({ title: s.title, key: { action: "setup", settings: { setup: { id: s.id, title: s.title } } } })),
+    ...keyed.commands.map((s) => ({ title: s.title, key: { action: "command", settings: { command: { id: s.id, title: s.title } } } })),
+  ];
+  for (const { key } of handed.sort((a, b) => a.title.localeCompare(b.title))) keys.push(key);
   keys.push({ action: "open", settings: { target: "rules" } });
   return keys;
 }
@@ -189,10 +260,13 @@ export function packKeys(pack: Pack, setups: Setup[]): Key[] {
  * layout with a Rules key on the end, which is a download that gives
  * somebody nothing the plugin did not already install.
  */
+/** Whether a layout has anything of the pack's own on it, or is the common keys alone. */
+export function laysOut(keyed: Keyed): boolean {
+  return keyed.moves.length > 0 || keyed.counters.length > 0 || keyed.resources.length > 0;
+}
+
 export function hasKeys(pack: Pack): boolean {
-  return (
-    Object.keys(pack.moves ?? {}).length > 0 || Object.keys(pack.counters ?? {}).length > 0 || Object.keys(pack.resources ?? {}).length > 0
-  );
+  return laysOut(fromPack(pack, []));
 }
 
 /** One page's worth of keys, and whether it keeps room for a turn at either end. */
@@ -302,17 +376,24 @@ export function container({ folder, files }: Built): Uint8Array {
 }
 
 /**
+ * The profiles for one layout, one per deck, or just the deck named.
+ *
+ * `keyed` null is the generic layout: the keys any run wants, whatever pack
+ * it is playing, and it takes the generic name and slug with it.
+ */
+export function specsFor(keyed: Keyed | null, named: { slug: string; name: string }, device?: DeviceId): ProfileSpec[] {
+  const keys = keyed ? [...BASE, ...packKeys(keyed)] : [...BASE];
+  return (device ? [device] : DEVICE_IDS).map((d) => ({ slug: named.slug, device: d, name: named.name, keys }));
+}
+
+/**
  * The profiles for one pack, one per deck, or just the deck named.
  *
- * `pack` null is the generic layout: the keys any run wants, whatever pack
- * it is playing. The slug a profile takes here is the pack's own id, which
- * is what a download from a pack's page is named after; the shipped
- * forty-four are written under the short slugs their files are named by,
- * so `design/profiles.mjs` puts its own slug on each spec before building.
+ * The slug a profile takes here is the pack's own id, which is what a
+ * download from a pack's page is named after; the shipped forty-four are
+ * written under the short slugs their files are named by, so
+ * `design/profiles.mjs` puts its own slug on each spec before building.
  */
 export function specs(pack: Pack | null, setups: Setup[], device?: DeviceId): ProfileSpec[] {
-  const keys = pack ? [...BASE, ...packKeys(pack, setups)] : [...BASE];
-  const slug = pack ? pack.id : GENERIC.slug;
-  const name = pack ? pack.title : GENERIC.name;
-  return (device ? [device] : DEVICE_IDS).map((d) => ({ slug, device: d, name, keys }));
+  return specsFor(pack && fromPack(pack, setups), pack ? { slug: pack.id, name: pack.title } : GENERIC, device);
 }

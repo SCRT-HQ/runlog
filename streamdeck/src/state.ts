@@ -63,8 +63,8 @@ export interface HeldRun {
   packTitle?: string;
 }
 export interface Snapshot {
-  /** The run as the server knows it, which is where the pack's id travels. */
-  run?: { id?: string; packId?: string };
+  /** The run as the server knows it, which is where the pack's id and title travel. */
+  run?: { id?: string; packId?: string; packTitle?: string };
   unit?: number;
   words?: { unit: string };
   score?: { text: string };
@@ -371,7 +371,7 @@ export function undoFace(state: DeckState): Face {
 }
 
 /** Where the Open key points, chosen in its settings. */
-export type OpenTarget = "run" | "guide" | "rules" | "newrun" | "dock";
+export type OpenTarget = "run" | "guide" | "rules" | "newrun" | "dock" | "profile";
 
 /** What each page is called on the key, the guide aside. */
 const OPEN_LABELS: Record<Exclude<OpenTarget, "guide">, string> = {
@@ -379,6 +379,7 @@ const OPEN_LABELS: Record<Exclude<OpenTarget, "guide">, string> = {
   rules: "Rules",
   newrun: "A new run",
   dock: "The dock",
+  profile: "This pack's profile",
 };
 
 /**
@@ -388,6 +389,9 @@ const OPEN_LABELS: Record<Exclude<OpenTarget, "guide">, string> = {
  * connection, no run - so it skips the gating every other key stops at.
  * The rest name something the deck is holding, so they say what is missing
  * the way the rest of the deck does.
+ *
+ * `profile` is gated like `run` and says something else beneath: it hands
+ * the Stream Deck app a file rather than putting a page in a browser.
  */
 export function openFace(state: DeckState, target?: OpenTarget): Face {
   if (!target) return { title: "Set up", tone: "dim" };
@@ -397,6 +401,7 @@ export function openFace(state: DeckState, target?: OpenTarget): Face {
   if (target === "newrun") return { title: OPEN_LABELS.newrun, tone: "deck", when: "in a browser" };
   const c = common(state);
   if (c) return c;
+  if (target === "profile") return { title: OPEN_LABELS.profile, tone: "deck", when: "to import" };
   return { title: OPEN_LABELS[target], tone: "deck", when: "in a browser" };
 }
 

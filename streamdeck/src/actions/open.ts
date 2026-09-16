@@ -1,6 +1,7 @@
 import streamDeck, { action, type KeyDownEvent } from "@elgato/streamdeck";
 
 import { apiBase, store } from "../plugin.ts";
+import { buildFor, install } from "../profiles-on-demand.ts";
 import { attachedRun, openFace, type DeckState, type Face, type OpenTarget } from "../state.ts";
 import { RunlogAction } from "./base.ts";
 
@@ -8,7 +9,8 @@ export type OpenSettings = { target?: OpenTarget };
 
 /**
  * Opens a page in the streamer's browser: the run, its dock, a new run,
- * the guide, or the pack's rules.
+ * the guide, or the pack's rules. Or hands over a profile for the pack the
+ * deck is following, built from the run it is on.
  *
  * The only key that does not press anything. Every address is built off
  * the plugin's own base, so a deck pointed at a copy of Runlog opens that
@@ -21,6 +23,20 @@ export class Open extends RunlogAction<OpenSettings> {
   }
 
   override async onKeyDown(ev: KeyDownEvent<OpenSettings>): Promise<void> {
+    // The profile is a file rather than an address: it is laid out for the
+    // deck the key is on, written beside the plugin, and handed to the
+    // Stream Deck app, which asks the streamer whether to import it.
+    if (ev.payload.settings.target === "profile") {
+      const built = buildFor(store.state, ev.action.device.type);
+      if (!built) {
+        await ev.action.showAlert();
+        return;
+      }
+      install(built.file);
+      await ev.action.showOk();
+      return;
+    }
+
     const url = this.url(ev.payload.settings.target);
     if (!url) {
       await ev.action.showAlert();
