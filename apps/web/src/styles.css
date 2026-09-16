@@ -1274,6 +1274,44 @@ p {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The panel in less room: the rows and the reactions at the app's small text. */
+.members .memberRow,
+.members .reactRow {
+  font-size: 0.86rem;
+}
+.members .reactButton {
+  font-size: 1rem;
+  padding: 0.15rem 0.45rem;
+}
+/*
+ * The left of a person's row: the name gives, the chip does not.
+ *
+ * As one ellipsizing box the chip that says which row is yours was cut to
+ * "yo...". The name has a track of its own to lose letters from, and the
+ * chip keeps its width beside it.
+ */
+.memberRow .memberWho {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
+}
+.memberRow .memberName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.memberRow .chip.you {
+  flex: none;
+  margin-left: 0;
+  white-space: nowrap;
+}
+/* Inviting and sharing sit at the rows' rhythm, not in a block below them. */
+.members .memberActions {
+  margin-top: 0;
+}
 /* The right of the row: marks then buttons, on the one line. */
 .memberRow .padRow {
   margin-top: 0;
@@ -1345,10 +1383,6 @@ p {
   color: var(--text);
   font: inherit;
 }
-.members .stepLabel {
-  margin-top: 0.8rem;
-}
-
 /* A watcher's column: everything shown, nothing pressable. */
 .col.wide.watching .panel:not(.log) button,
 .col.wide.watching .panel:not(.log) input,
@@ -3336,26 +3370,35 @@ select.textInput {
   font-size: 0.95rem;
 }
 
-/* Who is at the table, folded when it is only you. */
-.people {
-  padding: 0;
-}
-.people > summary {
+/*
+ * Every panel in the side column folds.
+ *
+ * The title is the handle, the triangle after it says which way, and the
+ * browser's own marker is off so the two never show at once. Written once
+ * here rather than per panel: People, Asks and Scores each grew their own
+ * copy of this, and the three had drifted apart.
+ */
+details.panel > summary {
   list-style: none;
   cursor: pointer;
 }
-.people > summary::-webkit-details-marker {
+details.panel > summary::-webkit-details-marker {
   display: none;
 }
-.people > summary .sectionTitle {
+details.panel > summary .sectionTitle {
   margin-bottom: 0;
 }
-.people > summary .sectionTitle::after {
+details.panel > summary .sectionTitle::after {
   content: " ▸";
   color: var(--muted);
 }
-.people[open] > summary .sectionTitle::after {
+details.panel[open] > summary .sectionTitle::after {
   content: " ▾";
+}
+
+/* Who is at the table. */
+.people {
+  padding: 0;
 }
 .people > .peopleBody {
   padding-top: 0.75rem;
@@ -3364,19 +3407,6 @@ select.textInput {
 /* What chat asked of the run, and the host's answer: the same shape as People. */
 .asks {
   padding: 0;
-}
-.asks > summary {
-  list-style: none;
-  cursor: pointer;
-}
-.asks > summary::-webkit-details-marker {
-  display: none;
-}
-.asks > summary .sectionTitle::after {
-  content: " ▸";
-}
-.asks[open] > summary .sectionTitle::after {
-  content: " ▾";
 }
 .asks > .asksBody {
   padding-top: 0.75rem;
@@ -3430,13 +3460,6 @@ select.textInput {
   margin: 0.15rem 0;
 }
 
-/* What this run made, once it has ended, against what came before. */
-.scores > summary {
-  list-style: none;
-}
-.scores > summary::-webkit-details-marker {
-  display: none;
-}
 .headerActions > .danger {
   margin-left: 0.75rem;
 }
@@ -5096,6 +5119,17 @@ a.plan {
 .nameGate .inviteForm input {
   flex: 1;
   min-width: 12rem;
+}
+/* Asking somebody to the table: an address, a role, and the two buttons. */
+.inviteDialog {
+  width: min(100%, 28rem);
+}
+.inviteDialog .inviteForm {
+  align-items: center;
+}
+.inviteDialog .padRow {
+  justify-content: flex-end;
+  margin-top: 0;
 }
 /* The run's settings: one dialog, its sections ruled like the side column's. */
 .settingsDialog {

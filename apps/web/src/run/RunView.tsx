@@ -62,6 +62,7 @@ import { globalWords, owedOn, settleWords, settlingFor, stillOwed, thresholdWord
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
+import { SidePanel } from "./SidePanel.tsx";
 import { Asks } from "./Asks.tsx";
 import { RunRow, onDay } from "./RunRow.tsx";
 import { bestOf, placeOf, scoresOf, type ScoredRun } from "./scores.ts";
@@ -2457,10 +2458,7 @@ export function Scores({ pack, run, state }: { pack: Pack; run: ReturnType<typeo
   const past = rows.filter((r) => r.runId !== mine.runId).slice(0, 5);
 
   return (
-    <details className="panel scores" open>
-      <summary>
-        <h3 className="sectionTitle">Scores</h3>
-      </summary>
+    <SidePanel className="scores" title="Scores">
       <div className="row spread">
         <span>
           <strong>{mine.text}</strong> <span className="muted small">this run</span>
@@ -2480,7 +2478,7 @@ export function Scores({ pack, run, state }: { pack: Pack; run: ReturnType<typeo
           <span className="muted num">{r.text}</span>
         </div>
       ))}
-    </details>
+    </SidePanel>
   );
 }
 
@@ -2510,13 +2508,16 @@ function Attached({ tools }: { tools: AttachedTool[] }) {
   const seated = tools.map((t) => t.seat).filter((s): s is string => Boolean(s));
   const whose = seated.length > 0 ? seated.join(", ") : tools.length === 1 ? "your game" : `${tools.length} games`;
   return (
-    <section className="panel">
-      <h3 className="sectionTitle">
-        On {whose}{" "}
-        <span className="muted">{named.length > 0 ? named.join(", ") : tools.length === 1 ? "a tool" : `${tools.length} tools`}</span>
-      </h3>
+    <SidePanel
+      title={
+        <>
+          On {whose}{" "}
+          <span className="muted">{named.length > 0 ? named.join(", ") : tools.length === 1 ? "a tool" : `${tools.length} tools`}</span>
+        </>
+      }
+    >
       <p className="muted small">Listening, so what the dice say happens in the game. Results still read the same with nothing attached.</p>
-    </section>
+    </SidePanel>
   );
 }
 
@@ -2542,10 +2543,13 @@ function Scoreboard({ run, state, pack, tools }: { run: ReturnType<typeof useRun
   /** The tallies the pack keeps per racer, which is what this board carries for each of them. */
   const theirs = Object.entries(pack.counters ?? {}).filter(([, def]) => def.per === "contestant" && !def.hidden);
   return (
-    <section className="panel">
-      <h3 className="sectionTitle">
-        Scoreboard <span className="muted">{state.contestants.length} racing</span>
-      </h3>
+    <SidePanel
+      title={
+        <>
+          Scoreboard <span className="muted">{state.contestants.length} racing</span>
+        </>
+      }
+    >
       {run.standings.length === 0 && <p className="muted small">Nobody on the roster yet.</p>}
       {run.standings.map((s) => (
         <div key={s.contestant.id} className="row spread">
@@ -2631,7 +2635,7 @@ function Scoreboard({ run, state, pack, tools }: { run: ReturnType<typeof useRun
           </button>
         </div>
       )}
-    </section>
+    </SidePanel>
   );
 }
 
@@ -2708,10 +2712,13 @@ function Moves({ run, pack, state }: { run: ReturnType<typeof useRun>; pack: Pac
 function Roles({ pack, run, state }: { pack: Pack; run: ReturnType<typeof useRun>; state: RunState }) {
   const v = pack.vocabulary;
   return (
-    <section className="panel">
-      <h3 className="sectionTitle">
-        At the table <span className="muted">{state.players} players</span>
-      </h3>
+    <SidePanel
+      title={
+        <>
+          At the table <span className="muted">{state.players} players</span>
+        </>
+      }
+    >
       <div className="roleList">
         {run.roles.map((r) => (
           <div key={r.id} className="row spread roleRow">
@@ -2723,7 +2730,7 @@ function Roles({ pack, run, state }: { pack: Pack; run: ReturnType<typeof useRun
           </div>
         ))}
       </div>
-    </section>
+    </SidePanel>
   );
 }
 
@@ -2765,10 +2772,13 @@ function Board({
   };
 
   return (
-    <section className="panel">
-      <h3 className="sectionTitle">
-        {v.subject.many} <span className="muted">the board</span>
-      </h3>
+    <SidePanel
+      title={
+        <>
+          {v.subject.many} <span className="muted">the board</span>
+        </>
+      }
+    >
       {state.subjects.length === 0 && <p className="muted small">Nothing made yet.</p>}
       {state.subjects.map((s) => (
         <div key={s.id} className={`row subjectRow ${s.removed ? "gone" : ""}`}>
@@ -2891,7 +2901,7 @@ function Board({
           ))}
         </div>
       )}
-    </section>
+    </SidePanel>
   );
 }
 
@@ -2972,8 +2982,7 @@ function Trackers({
   if (resources.length + counters.length + cards.length === 0) return null;
 
   return (
-    <section className="panel">
-      <h3 className="sectionTitle">Trackers</h3>
+    <SidePanel title="Trackers">
       {resources.map(([id, def]) => {
         const value = state.resources[id] ?? def.initial;
         const max = def.max ?? Math.max(value, 10);
@@ -3068,7 +3077,7 @@ function Trackers({
           })}
         </>
       )}
-    </section>
+    </SidePanel>
   );
 }
 

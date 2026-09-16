@@ -5,6 +5,7 @@ import { syncBus } from "../sync/bus.ts";
 import type { Ask } from "../sync/client.ts";
 import type { StoredRun } from "../storage/db.ts";
 import type { useRun } from "./useRun.ts";
+import { SidePanel } from "./SidePanel.tsx";
 
 /**
  * What the outside asked of this run, and the host's answer.
@@ -117,12 +118,14 @@ export function Asks({ pack, run, record }: { pack: Pack; run: ReturnType<typeof
     .reverse();
 
   return (
-    <details className="panel asks" open={open.length > 0}>
-      <summary>
-        <h3 className="sectionTitle">
+    <SidePanel
+      className="asks"
+      title={
+        <>
           Asks <span className="muted">from chat{open.length > 0 ? ` · ${open.length} waiting` : ""}</span>
-        </h3>
-      </summary>
+        </>
+      }
+    >
       <div className="asksBody">
         {open.length === 0 && recent.length === 0 && (
           <p className="muted small">Taking asks{policy === "auto" ? ", and acting on them as they land" : ""}. None yet.</p>
@@ -155,6 +158,6 @@ export function Asks({ pack, run, record }: { pack: Pack; run: ReturnType<typeof
           </div>
         )}
       </div>
-    </details>
+    </SidePanel>
   );
 }

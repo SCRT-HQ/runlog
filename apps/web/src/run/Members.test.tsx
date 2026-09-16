@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadPackText } from "@runlog/rules-schema";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
@@ -34,6 +34,20 @@ vi.mock("../sync/useApi.ts", () => ({ useApi: () => current.api }));
  */
 const reach = vi.hoisted(() => ({ key: "watchkey" as string | null }));
 vi.mock("./useReachable.ts", () => ({ useReachable: () => ({ link: null, key: reach.key, working: false }) }));
+
+/**
+ * The live link this device remembers, stood in for.
+ *
+ * It lives in `localStorage`, which this environment does not have, and
+ * whether there is one decides which of the sharing buttons the panel
+ * draws.
+ */
+const live = vi.hoisted(() => ({ link: null as string | null }));
+vi.mock("../live/route.ts", async (original) => ({
+  ...(await original<typeof import("../live/route.ts")>()),
+  liveLinkOf: () => live.link,
+  rememberLiveLink: () => {},
+}));
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const loaded = loadPackText(readFileSync(join(repoRoot, "packs/demo/pack.yaml"), "utf8"), "yaml");
@@ -176,6 +190,22 @@ describe("people at the table", () => {
   });
 
   /**
+   * The owner's own row, on a run the server lists nobody for.
+   *
+   * That row is built here rather than taken from the server, and it
+   * carries the account id the sign-in gave. The deck signs in too, and
+   * the server names its connection by the `sub` on the token it sent,
+   * which is that same account id: the mark lights.
+   */
+  it("lights the owner's own row for a deck on the owner's account", () => {
+    const html = panel(runOf({ role: "owner" }), syncOf(true, true), {} as Api, { deckSubs: ["user_ME"] });
+    expect(rowOf(html, "You")).toContain("Stream Deck connected");
+    expect(rowOf(html, "You")).toContain("toolIcon lit");
+    // On a row of its own, so nothing is said about a deck nobody is holding.
+    expect(html).not.toContain("not at the table");
+  });
+
+  /**
    * The plug is about a custom tool, and a run with no rules for one has
    * nothing to say about it. So the column appears only where the run
    * carries a control profile.
@@ -220,15 +250,18 @@ describe("people at the table", () => {
   });
 
   /**
-   * Two lines of explaining went: a watch key is minted with the run now,
-   * and what an invitation does belongs on the box you type into.
+   * The panel is the list of who is here. Everything that asks a question
+   * moved behind a button: the form to the sheet, the link to the
+   * clipboard, and both paragraphs to the buttons' own titles.
    */
   it("says none of it in paragraphs any more", () => {
     const html = panel(twoOf(), syncOf(true, true));
     expect(html).not.toContain("An address needs a watch key");
-    expect(html).toContain('title="They get a link by email, sign in, and the run appears on their devices.');
-    // Once, on the input, and nowhere as a sentence under it.
-    expect(html.match(/They get a link by email/g)?.length ?? 0).toBe(1);
+    expect(html).not.toContain("They get a link by email");
+    expect(html).not.toContain('placeholder="their email"');
+    expect(html).not.toContain('aria-label="The live link"');
+    expect(html).not.toContain("watches this firing as it happens");
+    expect(html).not.toContain("Invited, not yet here");
   });
 
   /**
@@ -247,12 +280,17 @@ describe("people at the table", () => {
     }
   });
 
-  it("is folded when it is only you, and open when somebody else is at the table", () => {
+  /**
+   * It used to fold itself when the table was one person, which hid the
+   * one panel a solo streamer wants open. Open every time now, and still
+   * a `details` anybody can fold by hand.
+   */
+  it("is open whether or not anybody else is at the table", () => {
     const alone = panel(
       runOf({ role: "owner", members: [{ sub: "user_ME", role: "owner", joinedAt: "2026-01-01T00:00:00Z" }] }),
       syncOf(true, true),
     );
-    expect(alone).not.toMatch(/<details[^>]*\sopen/);
+    expect(alone).toMatch(/<details[^>]*\sopen/);
     expect(alone).not.toContain("Reaching your account");
     const company = panel(
       runOf({
@@ -266,5 +304,63 @@ describe("people at the table", () => {
     );
     expect(company).toMatch(/<details[^>]*\sopen/);
     expect(company).toContain("Jo");
+  });
+
+  /** The chip that says which row is yours, whole: it used to be cut to "yo...". */
+  it("keeps the chip on your own row out of the name's track", () => {
+    const html = panel(twoOf(), syncOf(true, true));
+    expect(html).toContain('<span class="chip you">you</span>');
+    expect(html).toContain('<span class="memberName">');
+  });
+});
+
+/**
+ * Inviting and sharing, as three buttons under the rows.
+ *
+ * Which of them the panel draws is a question about who you are and
+ * whether the run is open to watchers; what each one does is in
+ * Members.invite.test.tsx, where there is a browser to press them in.
+ */
+describe("the buttons under the table", () => {
+  afterEach(() => {
+    live.link = null;
+  });
+
+  it("offers inviting and a link to share while the run is closed", () => {
+    const html = panel(twoOf(), syncOf(true, true));
+    expect(html).toContain(">Invite someone</button>");
+    expect(html).toContain(">Share a live link</button>");
+    expect(html).not.toContain("Copy live link");
+    expect(html).not.toContain("Stop sharing");
+    expect(html).toContain('title="Anyone with this link watches the run as it happens, with no account."');
+  });
+
+  it("offers copying and stopping once the run is open to watchers", () => {
+    live.link = "https://runlog.test/#run/run-1?t=tok";
+    const html = panel(twoOf({ shared: true }), syncOf(true, true));
+    expect(html).toContain(">Invite someone</button>");
+    expect(html).toContain(">Copy live link</button>");
+    expect(html).toContain(">Stop sharing</button>");
+    expect(html).not.toContain("Share a live link");
+  });
+
+  /** Somebody who is not the owner can pass the link on, and nothing else. */
+  it("gives a player the copy and none of the rest", () => {
+    live.link = "https://runlog.test/#run/run-1?t=tok";
+    const html = panel(twoOf({ role: "player", shared: true }), syncOf(true, true));
+    expect(html).toContain(">Copy live link</button>");
+    expect(html).not.toContain("Invite someone");
+    expect(html).not.toContain("Stop sharing");
+  });
+
+  it("gives a player nothing at all where there is no link to pass on", () => {
+    const html = panel(twoOf({ role: "player" }), syncOf(true, true));
+    expect(html).not.toContain("memberActions");
+  });
+
+  /** An invitation not yet taken up is a small label and its rows, not a heading. */
+  it("labels the invitations quietly", () => {
+    const html = panel(twoOf(), syncOf(true, true));
+    expect(html).not.toContain("stepLabel");
   });
 });
