@@ -1,4 +1,4 @@
-import type { Pack, Setup } from "@runlog/rules-schema";
+import type { Pack } from "@runlog/rules-schema";
 
 import { BASE, DEVICE_IDS, DEVICES, DIALS, FRAMES, isWarp, type DeviceId, type Frame, type Key } from "./layouts.ts";
 import { ACTION_NAMES, PAGE_PLUGIN, PLUGIN, TURNS } from "./plugin.ts";
@@ -199,6 +199,17 @@ export interface Laid {
 }
 
 /**
+ * As much of a setup as a layout reads.
+ *
+ * A setup off disk is a whole file: a tool, a version, a license and up to
+ * two hundred operations. A setup the deck remembered off a run it followed
+ * is two fields and whether the run called it a command. Both name one key,
+ * so both are taken here, and the operations are optional because only one
+ * of the two has any.
+ */
+export type Handed = { id: string; title: string; ops?: Array<{ op: string }> };
+
+/**
  * The pack read off disk, as keys.
  *
  * A hidden counter is left out. `packages/engine/src/snapshot.ts` does not
@@ -211,7 +222,7 @@ export interface Laid {
  * A setup `isWarp` goes to `commands` instead: its operations reach the
  * tool once, and the run's own setup is untouched.
  */
-export function fromPack(pack: Pack, setups: Setup[]): Keyed {
+export function fromPack(pack: Pack, setups: Handed[]): Keyed {
   return {
     moves: Object.keys(pack.moves ?? {}).map((id) => ({ id })),
     counters: Object.entries(pack.counters ?? {})
@@ -563,6 +574,6 @@ function zonesFor(frame: Frame, keyed: Keyed | null): Zones {
  * written under the short slugs their files are named by, so
  * `design/profiles.mjs` puts its own slug on each spec before building.
  */
-export function specs(pack: Pack | null, setups: Setup[], device?: DeviceId): ProfileSpec[] {
+export function specs(pack: Pack | null, setups: Handed[], device?: DeviceId): ProfileSpec[] {
   return specsFor(pack && fromPack(pack, setups), pack ? { slug: pack.id, name: pack.title } : GENERIC, device);
 }

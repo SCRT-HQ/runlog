@@ -23,7 +23,9 @@ import {
   finishFace,
   finishPress,
   metricPress,
+  FLASH_MS,
   IDLE_OFF_MS,
+  importedAsCopy,
   type DeckState,
   type Offer,
 } from "./state";
@@ -371,7 +373,7 @@ describe("what the open key says", () => {
 // about the connection.
 describe("what the install key says", () => {
   it("names the pack it would build a profile for", () => {
-    expect(installFace({ id: "com.example.ember-trail", title: "Ember Trail" })).toEqual({
+    expect(installFace(initial(), { id: "com.example.ember-trail", title: "Ember Trail" }, "key-1")).toEqual({
       title: "Ember Trail",
       tone: "deck",
       when: "to import",
@@ -379,7 +381,43 @@ describe("what the install key says", () => {
   });
 
   it("says Set up with no pack chosen", () => {
-    expect(installFace(undefined)).toEqual({ title: "Set up", tone: "dim" });
+    expect(installFace(initial(), undefined, "key-1")).toEqual({ title: "Set up", tone: "dim" });
+  });
+
+  it("says the app made a copy, for as long as any other key holds a flash", () => {
+    // The Stream Deck app keeps both profiles and names the second one, so
+    // the key is where the streamer hears that they now have two.
+    const pack = { id: "com.example.ember-trail", title: "Ember Trail" };
+    const copied = reduce(initial(), { t: "drove", ref: importedAsCopy("key-1"), ok: true }, T);
+    expect(installFace(copied, pack, "key-1")).toEqual({ title: "Imported as a copy", tone: "refuse" });
+
+    // And it is a flash like any other: three seconds, then the key says
+    // what it said before.
+    expect(installFace(reduce(copied, { t: "tick" }, T + FLASH_MS), pack, "key-1")).toEqual({
+      title: "Ember Trail",
+      tone: "deck",
+      when: "to import",
+    });
+  });
+
+  it("says it on the key that was pressed and on no other", () => {
+    // Two Install keys on one deck, set to two packs. The one nobody
+    // pressed goes on naming its own pack.
+    const copied = reduce(initial(), { t: "drove", ref: importedAsCopy("key-1"), ok: true }, T);
+    expect(installFace(copied, { id: "com.example.salt-and-signal", title: "Salt and Signal" }, "key-2")).toEqual({
+      title: "Salt and Signal",
+      tone: "deck",
+      when: "to import",
+    });
+    // And a key with no pack set still says so rather than the copy line.
+    expect(installFace(copied, undefined, "key-2")).toEqual({ title: "Set up", tone: "dim" });
+  });
+
+  it("is a flash no other key on the deck answers", () => {
+    // Marked as having gone fine, so the refusal face every other key wears
+    // for a flash is not raised by this one.
+    const copied = reduce(live(), { t: "drove", ref: importedAsCopy("key-1"), ok: true }, T);
+    expect(rollFace(copied).title).toBe(rollFace(live()).title);
   });
 });
 

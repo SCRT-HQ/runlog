@@ -1,10 +1,10 @@
 import streamDeck, { action, type KeyDownEvent } from "@elgato/streamdeck";
 
-import { hasProfileFor, installedProfiles } from "../installed.ts";
+import { hasProfileFor, installedFor, installedProfiles } from "../installed.ts";
 import { fetchPack, libraryPacks, type LibraryPack } from "../library.ts";
 import { apiBase, store } from "../plugin.ts";
 import { buildFor, buildForPack, install } from "../profiles-on-demand.ts";
-import { installFace, type DeckState, type Face } from "../state.ts";
+import { importedAsCopy, installFace, type DeckState, type Face } from "../state.ts";
 import { RunlogAction } from "./base.ts";
 
 export type InstallSettings = { pack?: { id: string; title: string } };
@@ -17,15 +17,16 @@ export type InstallSettings = { pack?: { id: string; title: string } };
  * any pack the account has synced: the list comes off the library, the pack
  * file comes off the account, and neither needs a run open anywhere.
  *
- * A run of the chosen pack is still the better source where there is one.
- * The snapshot carries the setups for the pack's tool, and the account's
- * copy of the pack file does not, so a profile built from a run has Apply
- * setup keys on it and one built from the file has moves and numbers alone.
+ * A run of the chosen pack is still the better source where there is one:
+ * its offer names the setups for the pack's tool, which is the one place a
+ * pack from the Marketplace names them at all. Without a run they come off
+ * the shipped table and off what the deck has seen on earlier runs of the
+ * pack, so both paths lay out the same keys.
  */
 @action({ UUID: "com.scrthq.runlog.install" })
 export class Install extends RunlogAction<InstallSettings> {
-  face(_state: DeckState, settings: InstallSettings): Face {
-    return installFace(settings.pack);
+  face(state: DeckState, settings: InstallSettings, _now: number, on: string): Face {
+    return installFace(state, settings.pack, on);
   }
 
   override async onKeyDown(ev: KeyDownEvent<InstallSettings>): Promise<void> {
@@ -36,11 +37,11 @@ export class Install extends RunlogAction<InstallSettings> {
       return;
     }
     const device = ev.action.device.type;
-    // The run first where the deck is on one of this pack: its snapshot
-    // carries the setups, which the pack file does not. It comes back with
-    // nothing where the run has published no layout and no offer yet, and
-    // the pack file covers exactly that, so the fall-through is not a
-    // failure path.
+    // The run first where the deck is on one of this pack: its offer names
+    // the setups first-hand rather than from a table or a memory. It comes
+    // back with nothing where the run has published no layout and no offer
+    // yet, and the pack file covers exactly that, so the fall-through is
+    // not a failure path.
     const fromRun = store.state.snapshot?.run?.packId === pack.id ? buildFor(store.state, device) : null;
     const built = fromRun ?? (await this.fromLibrary(pack.id, device));
     if (!built) {
@@ -48,6 +49,13 @@ export class Install extends RunlogAction<InstallSettings> {
       return;
     }
     install(built.file);
+    // Read after the hand-over, which is the same answer as before it: the
+    // app asks the streamer before it imports anything, so the folder still
+    // holds what it held when the key went down.
+    if (installedFor(pack, installedProfiles()) !== null) {
+      streamDeck.logger.info(`profile: ${pack.id} already had one, so the app will name this one a copy`);
+      store.dispatch({ t: "drove", ref: importedAsCopy(ev.action.id), ok: true });
+    }
     await ev.action.showOk();
   }
 

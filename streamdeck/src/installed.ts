@@ -90,21 +90,36 @@ export function withoutCopies(name: string): string {
 }
 
 /**
- * Whether the app already holds a profile for this pack.
+ * Which profile the app already holds for this pack, if either.
  *
- * Two rules, and the name is the first of them: every profile this builds
- * is named for the pack, and a pack's title is what a streamer would see in
- * the app's list. Second, for a pack the plugin ships a layout for, the
- * manifest name the plugin asked the app to install under. Nothing reads
- * the keys inside: a Press key names a move and not the pack it came from,
- * and the one key that does name a pack, Open set to the rules, is on the
- * generic profile too.
+ * `"shipped"` is the one the plugin installed itself, recognized by the
+ * manifest name it asked the app to install under and by the plugin that
+ * put it there. That is the profile the plugin may switch a deck to, so it
+ * is looked for first.
+ *
+ * `"imported"` is one the streamer imported: off the pack's own page, off
+ * the Install key, off a file somebody sent them. Nothing records where it
+ * came from, so the name is the rule, and every profile this builds is
+ * named for the pack. It is not in the plugin's manifest and so cannot be
+ * switched to; handing over another leaves the streamer two.
+ *
+ * Nothing reads the keys inside: a Press key names a move and not the pack
+ * it came from, and the one key that does name a pack, Open set to the
+ * rules, is on the generic profile too.
  */
-export function hasProfileFor(pack: { id: string; title?: string }, profiles: InstalledProfile[]): boolean {
-  const title = pack.title?.trim();
+export function installedFor(pack: { id: string; title?: string }, profiles: InstalledProfile[]): "shipped" | "imported" | null {
   const shipped = PACK_PROFILES[pack.id];
-  return profiles.some((p) => {
-    if (title && withoutCopies(p.name) === title) return true;
-    return p.installedBy === PLUGIN_UUID && shipped !== undefined && (p.preconfigured ?? "").startsWith(`profiles/${shipped}-`);
-  });
+  if (shipped !== undefined) {
+    const ours = (p: InstalledProfile): boolean =>
+      p.installedBy === PLUGIN_UUID && (p.preconfigured ?? "").startsWith(`profiles/${shipped}-`);
+    if (profiles.some(ours)) return "shipped";
+  }
+  const title = pack.title?.trim();
+  if (title && profiles.some((p) => withoutCopies(p.name) === title)) return "imported";
+  return null;
+}
+
+/** Whether the app already holds a profile for this pack, of either kind. */
+export function hasProfileFor(pack: { id: string; title?: string }, profiles: InstalledProfile[]): boolean {
+  return installedFor(pack, profiles) !== null;
 }

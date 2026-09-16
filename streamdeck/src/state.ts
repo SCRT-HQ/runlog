@@ -141,7 +141,8 @@ export type DeckEvent =
   | { t: "drove"; ref: string; ok: boolean; say?: string; seq?: number }
   | { t: "tick" };
 
-const FLASH_MS = 3000;
+/** How long a key says what just happened before going back to what it was saying. */
+export const FLASH_MS = 3000;
 
 /** How long a connection that is holding nothing waits before closing itself. */
 export const IDLE_OFF_MS = 30 * 60_000;
@@ -420,13 +421,35 @@ export function openFace(state: DeckState, target?: OpenTarget): Face {
 }
 
 /**
+ * The flash an Install key raises for itself, which no other key answers.
+ *
+ * A flash is normally the server's verdict on a press and carries the ref
+ * the press went out under. This one is the deck talking to itself, so it
+ * takes a ref of its own. Two things keep it to the one key that raised it:
+ * it is marked as having gone fine, and {@link flashed} speaks only for a
+ * refusal, so nothing else on the deck says a word about it; and the ref
+ * names the key that was pressed, so a second Install key set to another
+ * pack is not made to say what happened on the first.
+ */
+export function importedAsCopy(actionId: string): string {
+  return `imported-as-copy:${actionId}`;
+}
+
+/**
  * What the Install a profile key says: the pack it would build one for.
  *
  * It asks nothing of the run. The pack is picked in the key's settings and
  * fetched off the account, so a deck that is following nothing at all still
  * has something to press, and the key says which pack it would hand over.
+ *
+ * After a hand-over for a pack that already had a profile, the key that was
+ * pressed says so for three seconds. The Stream Deck app does not replace a
+ * profile it already has: it keeps both and calls the second one "copy",
+ * and this key is the only place the streamer would hear about it. `on` is
+ * that key's own id, which is what tells its flash from another one's.
  */
-export function installFace(pack?: { id: string; title: string }): Face {
+export function installFace(state: DeckState, pack?: { id: string; title: string }, on?: string): Face {
+  if (on !== undefined && state.flash?.ref === importedAsCopy(on)) return { title: "Imported as a copy", tone: "refuse" };
   if (!pack) return { title: "Set up", tone: "dim" };
   return { title: pack.title, tone: "deck", when: "to import" };
 }
