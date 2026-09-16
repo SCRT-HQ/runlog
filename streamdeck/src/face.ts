@@ -75,32 +75,20 @@ const LINE = 144 - 2 * 8;
 const MAX_LINES = 3;
 
 /**
- * The `when` line's own type: 16px monospace, a flat 0.6em per glyph rather
- * than the title's per-glyph measurement. 128px at 16px holds 13 characters
- * (128 / (16 * 0.6) = 13.33); a fourteenth never fits. 18px held only
- * eleven, which cut "press Connect" - the one instruction on the key that
- * has to be read whole - down to "press Conne…".
+ * The caption's own type: 16px monospace, on baselines 18px apart.
+ *
+ * It used to be one line cut to thirteen characters, which turned a tracker
+ * called "Objectives per scene" into "Objectives p…" over a number with
+ * half the key to itself. It is measured like the title now, and takes up
+ * to three lines where the title leaves the room for them.
+ *
+ * 18px is the 16px type with a little lead. Three lines of it reach from a
+ * baseline at 90 to the one at 126, and the lowest descender lands at 129,
+ * inside the 136 the frame's 8px margin leaves.
  */
 const WHEN_SIZE = 16;
-const WHEN_MAX = 13;
-
-/**
- * Fit `when` to `WHEN_MAX` characters. A word boundary that still leaves at
- * least six characters reads better than a stub, so that is tried first;
- * otherwise the cut falls back to characters. Either way an "…" marks what
- * was cut, and nothing kept ever runs past `WHEN_MAX`.
- */
-function ellipsizeWhen(text: string): string {
-  if (text.length <= WHEN_MAX) return text;
-  let cut = "";
-  for (const word of text.split(" ")) {
-    const next = cut ? `${cut} ${word}` : word;
-    if (next.length > WHEN_MAX) break;
-    cut = next;
-  }
-  if (cut.length < 6) cut = text.slice(0, WHEN_MAX);
-  return `${cut}…`;
-}
+const WHEN_LINE = 18;
+const WHEN_LINES = 3;
 
 /**
  * Greedy word wrap by measured width: pack words onto a line up to `width`
@@ -164,6 +152,15 @@ export function wrap(text: string, size: number, width = LINE, lines = MAX_LINES
 }
 
 /**
+ * The caption's lines: the same word-first, hyphen-fallback breaking the
+ * title gets, at the caption's size, and an "…" on the last line where the
+ * text did not fit whole.
+ */
+export function wrapWhen(text: string, lines = WHEN_LINES): string[] {
+  return wrap(text, WHEN_SIZE, LINE, lines);
+}
+
+/**
  * The type scale, biggest first. A title takes the first step that keeps
  * every word whole in the room it has; one too long for the last step is
  * wrapped to it anyway and ellipsized rather than drawn over the frame.
@@ -180,12 +177,14 @@ const LEADING = 1.15;
  * assumed to fit. They do not: "Give Great Runes" came out three lines of
  * 40px and sat on top of the `when` line under it. So the box shrinks for
  * whatever else the key is wearing. A glyph holds the top 36px (8px in,
- * 28px square); a `when` line holds everything below 100, which leaves its
- * 16px band at y=126 clear; with neither, the title has 18 to 126 and sits
- * centered on the key the way it always did.
+ * 28px square); one caption line holds everything below 100, which leaves
+ * its 16px band at y=126 clear, and each line above that takes another
+ * `WHEN_LINE`; with neither, the title has 18 to 126 and sits centered on
+ * the key the way it always did.
  */
-function box(when: boolean, glyph: boolean): { top: number; bottom: number } {
-  return { top: glyph ? 36 : when ? 20 : 18, bottom: when ? 100 : glyph ? 116 : 126 };
+function box(whenLines: number, glyph: boolean): { top: number; bottom: number } {
+  const when = whenLines > 0;
+  return { top: glyph ? 36 : when ? 20 : 18, bottom: when ? 100 - (whenLines - 1) * WHEN_LINE : glyph ? 116 : 126 };
 }
 
 /**
@@ -205,11 +204,29 @@ function whole(text: string, size: number, lines: number): boolean {
 }
 
 /**
+ * The caption, on as many lines as the title can spare.
+ *
+ * The title has priority: the caption asks for up to three lines and gives
+ * them back one at a time until some size in the scale holds the title
+ * whole in the room that is left. A number like "3" spares all three; a
+ * title like "Give Great Runes" spares one, and the caption is cut to it.
+ */
+function whenLines(text: string | undefined, title: string, glyph: boolean): string[] {
+  if (text === undefined) return [];
+  const want = wrapWhen(text);
+  for (let n = want.length; n > 1; n--) {
+    const { top, bottom } = box(n, glyph);
+    if (SCALE.some((s) => whole(title, s, roomFor(s, bottom - top)))) return wrapWhen(text, n);
+  }
+  return wrapWhen(text, 1);
+}
+
+/**
  * The lines, the size, and where the middle of the first line sits. The
  * size is the largest whose lines fit the room as well as the width.
  */
-function typeset(text: string, has: { when?: boolean; glyph?: boolean } = {}): { lines: string[]; size: number; top: number } {
-  const { top, bottom } = box(has.when === true, has.glyph === true);
+function typeset(text: string, has: { when?: number; glyph?: boolean } = {}): { lines: string[]; size: number; top: number } {
+  const { top, bottom } = box(has.when ?? 0, has.glyph === true);
   const room = bottom - top;
   const size = SCALE.find((s) => whole(text, s, roomFor(s, room))) ?? SCALE[SCALE.length - 1]!;
   const lines = wrap(text, size, LINE, roomFor(size, room));
@@ -240,7 +257,8 @@ function corner(glyph: string, color: string): string {
 export function faceImage(face: Face, glyph?: string): string {
   const t = TONE[face.tone];
   const quiet = t.quiet ?? t.edge;
-  const { lines, size, top } = typeset(face.title, { when: face.when !== undefined, glyph: glyph !== undefined });
+  const caption = whenLines(face.when, face.title, glyph !== undefined);
+  const { lines, size, top } = typeset(face.title, { when: caption.length, glyph: glyph !== undefined });
   // One positioned <text> per line, baseline given outright: the software
   // draws SVG with a renderer that honors x and y on a text element and
   // little else - a tspan with its own position, or a dominant-baseline,
@@ -252,9 +270,14 @@ export function faceImage(face: Face, glyph?: string): string {
         `<text class="t" x="72" y="${(top + i * size * LEADING + size * 0.36).toFixed(1)}" text-anchor="middle" font-size="${size}" font-weight="600" fill="${t.ink}" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif">${esc(l)}</text>`,
     )
     .join("");
-  const when = face.when
-    ? `<text x="72" y="126" text-anchor="middle" font-size="${WHEN_SIZE}" fill="${quiet}" font-family="ui-monospace, Menlo, Consolas, monospace">${esc(ellipsizeWhen(face.when))}</text>`
-    : "";
+  // The caption sits on the bottom line whatever its height, so a key with
+  // one line reads where it always did and the extra lines grow upward.
+  const when = caption
+    .map(
+      (l, i) =>
+        `<text class="w" x="72" y="${126 - (caption.length - 1 - i) * WHEN_LINE}" text-anchor="middle" font-size="${WHEN_SIZE}" fill="${quiet}" font-family="ui-monospace, Menlo, Consolas, monospace">${esc(l)}</text>`,
+    )
+    .join("");
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">` +
     // The full label, unwrapped, so a tooltip (or a test) sees the whole
