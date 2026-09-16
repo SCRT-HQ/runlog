@@ -3,24 +3,23 @@ import { useCallback, useEffect, useState } from "react";
 import { countView } from "../hosted/beacon.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 import { Footer } from "../hosted/Footer.tsx";
-import { PersonaSwitcher } from "./PersonaSwitcher.tsx";
-import { otherVocabularies, savePersona, savedPersona, type Persona } from "./personas.ts";
+import { loadMarketplace, shippedIds, type MarketplaceEntry } from "../library/marketplace.ts";
+import { PersonaChips } from "./PersonaChips.tsx";
+import { savePersona, savedPersona, type Persona } from "./personas.ts";
 import { appPath, baseOf, setSkipWelcome, skipWelcome } from "./route.ts";
 import { useTitle } from "../title.ts";
 
 /**
- * The welcome page: what Runlog is, and why, at the bare address.
+ * The welcome page: what Runlog is, in one line, at the bare address.
  *
  * Part of the app rather than of any hosted wrapper, so every copy has
  * it: the hosted one, the public one, one served from the command line.
  * It says the same thing everywhere and points at the app under `play`.
- * What differs by copy is only the pricing, which a hosted copy names
- * and the rest leave out, and the footer, which only a hosted copy has.
  * A person who has read it once can choose to skip it from then on.
  *
- * The examples on it are one person's: the heading says who, and the run
- * in the specimen, the lede's first scene, the vocabulary the reasons cite
- * and the last line all follow (see personas.ts). The reader picks who.
+ * The headline is the definition and never changes. What changes is the
+ * log beside it, which is one person's run: the chips under it say whose,
+ * and the excerpt further down follows the same choice (see personas.ts).
  */
 export function WelcomeView() {
   useTitle(null);
@@ -43,7 +42,29 @@ export function WelcomeView() {
     },
     [storage],
   );
-  const [wordsTwo, wordsThree] = otherVocabularies(persona, 2) as [string, string];
+  // The end of the log, which is where the line marked `heat` falls: the
+  // result that reaches back, which is what the section is about. Starting
+  // at the top would only repeat the specimen in the hero above it.
+  const excerpt = persona.log.slice(-3);
+
+  // The shelf, from the same source the marketplace reads: the packs that
+  // ship, in the marketplace's own order. By id rather than by `source`,
+  // because the platform seeds the built-ins into the feed and a listing
+  // wins over the bundle's copy, so on a hosted copy they come back as
+  // listings. Loaded after the first paint, and where the marketplace
+  // cannot be read the strip is simply empty.
+  const [shelf, setShelf] = useState<MarketplaceEntry[]>([]);
+  useEffect(() => {
+    let live = true;
+    void Promise.all([loadMarketplace({ testing: false }), shippedIds()])
+      .then(([all, shipped]) => {
+        if (live) setShelf(all.filter((entry) => shipped.has(entry.id)));
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
 
   // A hash typed or pasted onto this page (a live link, a guide page) is a
   // same-document change the browser does not reload for: go to the app.
@@ -90,269 +111,187 @@ export function WelcomeView() {
       <main className="welcomeMain">
         <section className="welcomeHero">
           <div className="welcomeWords">
-            {/*
-              The headline's first lines never change; only the last word
-              does, so the eye has one place to look while the persona
-              rolls. The break keeps the wrapping the same for every word.
-            */}
-            <h2>
-              A referee and a run log for gamifying the things you already do as
-              <br />
-              <PersonaSwitcher persona={persona} onChange={choose} />.
-            </h2>
+            <h2>Runlog is a constraint engine.</h2>
+            <p className="welcomeTagline">Runlog controls the rules. You control the outcome.</p>
             <p className="welcomeLede">
-              A challenge run where the dice draw the next twist, a day at the wheel, a house cleaned like a dungeon, a kitchen under
-              constraint. Runlog reads a <em>pack</em>, a small file of tables, states and steps, and becomes that game: it rolls,
-              remembers, reaches back, and writes the log, so your hands stay on the work and the twist is on screen for whoever is
-              watching.
+              Pick a pack, press Roll, and the dice hand you the next constraint: a curse on the region, a rule for the next transition, a
+              limit on the next block of work. Runlog keeps it honest, keeps the score, and writes it all down, on stream or on your own.
             </p>
             <p className="welcomeCtas">
               <a className="primary" href={play}>
                 Play
               </a>
-              <a className="ghost" href={linkTo("#guide/start", play)}>
-                Read the guide
-              </a>
               <a className="ghost" href={linkTo("#marketplace", play)}>
                 See the packs
               </a>
             </p>
-            <p className="muted small">Free, no account needed, works offline. Open source under MIT.</p>
+            <p className="muted small">Free. No account. Open source under MIT.</p>
           </div>
 
-          <figure className="specimen" aria-label="A run log, as Runlog writes it" key={persona.id}>
-            <figcaption className="muted small">
-              <a href={linkTo(`#marketplace/${persona.packId}`, play)}>{persona.packTitle}</a> · {persona.mode} · {persona.at}
-            </figcaption>
-            <ol className="specimenLog">
-              {persona.log.map((line, i) => (
-                <li key={i} className={line.heat ? "heat" : undefined}>
-                  <span className="where">{line.where}</span>
-                  <span className="roll">{line.roll}</span>
-                  <p>{line.text}</p>
-                </li>
-              ))}
-            </ol>
-            <div className="specimenState">
-              {persona.state.map((entry) => (
-                <span key={entry.label}>
-                  <b>{entry.label}</b> {entry.value}
-                </span>
-              ))}
-              <span className="clock">{persona.clock}</span>
+          <div className="welcomeShow">
+            <figure className="specimen" aria-label="A run log, as Runlog writes it" key={persona.id}>
+              <figcaption className="muted small">
+                <a href={linkTo(`#marketplace/${persona.packId}`, play)}>{persona.packTitle}</a> · {persona.mode} · {persona.at}
+              </figcaption>
+              <ol className="specimenLog">
+                {persona.log.map((line, i) => (
+                  <li key={i} className={line.heat ? "heat" : undefined}>
+                    <span className="where">{line.where}</span>
+                    <span className="roll">{line.roll}</span>
+                    <p>{line.text}</p>
+                  </li>
+                ))}
+              </ol>
+              <div className="specimenState">
+                {persona.state.map((entry) => (
+                  <span key={entry.label}>
+                    <b>{entry.label}</b> {entry.value}
+                  </span>
+                ))}
+                <span className="clock">{persona.clock}</span>
+              </div>
+            </figure>
+            <PersonaChips persona={persona} onChange={choose} />
+          </div>
+        </section>
+
+        <section className="welcomeSection">
+          <h3 className="sectionTitle">Three moves</h3>
+          <ol className="welcomeSteps">
+            <li>
+              <span className="idx">1</span>
+              <div>
+                <h4>Pick a pack.</h4>
+                <p>
+                  Nine come free: challenge packs for games people already stream, a called mechanic for a DJ set, a day in blocks for
+                  focused work. Or write your own; the Designer does it without a file.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span className="idx">2</span>
+              <div>
+                <h4>Press Roll.</h4>
+                <p>The dice choose the next constraint. Your own dice count too: roll them and type what they said.</p>
+              </div>
+            </li>
+            <li>
+              <span className="idx">3</span>
+              <div>
+                <h4>Play what comes.</h4>
+                <p>Runlog applies it, times it, and remembers what reaches back into earlier work. The log writes itself.</p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <section className="welcomeSection">
+          <h3 className="sectionTitle">On your stream</h3>
+          <div className="welcomeSplit">
+            <div>
+              <p>
+                Paste one address into OBS, Streamlabs or StreamElements and the roll lands where chat can see it. Nothing for viewers to
+                install. Chat can be the roster, and a race on the same seed puts another channel on the leaderboard beside you.
+              </p>
+              <p>
+                Crowd Control lets chat push the buttons. Runlog decides what the run says happens next, and whether it counted. They work{" "}
+                <a href={linkTo("#guide/stream-why", play)}>side by side</a>.
+              </p>
             </div>
-          </figure>
+            {/*
+              A drawing of the widget, not a photograph of one: the guide has
+              no screenshot of a scoreboard over a game, and a made-up one
+              would be a promise the app had not kept. These are the widget's
+              own styles with placeholder rows in them, and the caption says
+              so. The rows are hidden from assistive tech, which would
+              otherwise read out invented names and scores as if they were a
+              run; the figure's label and the caption say what it is instead.
+            */}
+            <figure className="welcomeWidget" aria-label="The scoreboard and twist widgets, as a drawing">
+              <div className="widgetBody" aria-hidden="true">
+                <div className="widgetTitle muted small">Scoreboard · 3 racing</div>
+                <ol className="widgetBoard">
+                  <li className="me">
+                    <span className="place">#1</span>
+                    <span className="who">Vex</span>
+                    <span className="num">7</span>
+                  </li>
+                  <li>
+                    <span className="place">#2</span>
+                    <span className="who">Marrow</span>
+                    <span className="num">5</span>
+                  </li>
+                  <li>
+                    <span className="place">#3</span>
+                    <span className="who">Quill</span>
+                    <span className="num">2</span>
+                  </li>
+                </ol>
+              </div>
+              <div className="widgetBody" aria-hidden="true">
+                <ul className="widgetTicker">
+                  <li className="rolled">
+                    <span className="tickMark">d12 → 5</span>
+                    <span className="tickText">Inverted controls, until the round is called.</span>
+                  </li>
+                </ul>
+              </div>
+              <figcaption className="muted small">The scoreboard and twist widgets, drawn from the app's own styles.</figcaption>
+            </figure>
+          </div>
         </section>
 
-        <section>
-          <h3 className="sectionTitle">
-            How it goes <span className="muted">three moves</span>
-          </h3>
-          <ol className="welcomeSteps">
-            <li>
-              <span className="idx">1</span>
-              <div>
-                <h4>Pick a pack, or write one</h4>
-                <p>
-                  Nine come free: a penalty wheel for any stream, challenge packs for games people already play, a called mechanic on every
-                  DJ transition, deliberate practice, a rehearsal run segment by segment, a training log, and a day in blocks of twenty-five
-                  minutes. The Designer writes new ones without touching a file.
-                </p>
-              </div>
-            </li>
-            <li>
-              <span className="idx">2</span>
-              <div>
-                <h4>Play the run</h4>
-                <p>
-                  Each unit of the game, a {persona.unit} here, walks its steps: roll on a table, take what comes, declare what you are
-                  making, make it. Runlog keeps the states, counters, timers and deferred results, and applies the consequences that land on
-                  earlier work. It never judges the work itself; it cannot see it.
-                </p>
-              </div>
-            </li>
-            <li>
-              <span className="idx">3</span>
-              <div>
-                <h4>Keep the log</h4>
-                <p>
-                  Every roll and its reasoning is written down. Export the run, print the pack's paper, share a live link so people can
-                  watch it happen, or race a friend on another device with the same seed.
-                </p>
-              </div>
-            </li>
-          </ol>
+        <section className="welcomeSection">
+          <h3 className="sectionTitle">It remembers</h3>
+          <div className="welcomeSplit">
+            <p>
+              A result that reaches back an hour. A counter that keeps running under everything. "After you finish, roll a d6." Runlog
+              applies it and writes it down, so the log is something you can export, print, or race a friend on with the same seed.
+            </p>
+            <figure className="specimen welcomeExcerpt" key={persona.id} aria-label="Three lines from the log">
+              <ol className="specimenLog">
+                {excerpt.map((line, i) => (
+                  <li key={i} className={line.heat ? "heat" : undefined}>
+                    <span className="where">{line.where}</span>
+                    <span className="roll">{line.roll}</span>
+                    <p>{line.text}</p>
+                  </li>
+                ))}
+              </ol>
+            </figure>
+          </div>
         </section>
 
-        <section>
-          <h3 className="sectionTitle">
-            On a stream <span className="muted">a twist on screen in minutes, and it remembers</span>
-          </h3>
-          <ol className="welcomeSteps">
-            <li>
-              <span className="idx">1</span>
-              <div>
-                <h4>Pick the game</h4>
-                <p>
-                  A challenge pack for the game you already stream, or one of your own: a handicap every region, a curse that lands on the
-                  whole roster, a target worth points to whoever settles it first. Chat can be the roster; nobody in it needs an account.
-                </p>
-              </div>
-            </li>
-            <li>
-              <span className="idx">2</span>
-              <div>
-                <h4>Paste one address</h4>
-                <p>
-                  Share a live link, copy a widget's address, paste it into a browser source in OBS, Streamlabs or StreamElements. No
-                  plugin, no download, nothing for viewers to install. The scoreboard, the clock, the latest twist, each on a page of its
-                  own.
-                </p>
-              </div>
-            </li>
-            <li>
-              <span className="idx">3</span>
-              <div>
-                <h4>Let the dice run it</h4>
-                <p>
-                  The dice land where chat can see them. The log remembers what came up and whether it was done, the scoreboard keeps the
-                  standings, and a race on the same seed puts another channel on the leaderboard beside you.
-                </p>
-              </div>
-            </li>
-          </ol>
-          <p className="muted small">
-            A wheel forgets the spin. A virtual tabletop wants a map, tokens and an evening of setup before anyone rolls. A chaos platform
-            hands the controls to chat. Runlog is the referee, and anything can be the hand that acts:{" "}
-            <a href={linkTo("#guide/stream-why", play)}>what it is for on a stream, what it needs, and what to compare</a>.
+        <section className="welcomeSection">
+          <h3 className="sectionTitle">Yours</h3>
+          <p className="welcomeProse">
+            Everything runs in the browser, and nothing leaves your device unless you sign in. Sign in and your runs, packs and license keys
+            follow you. The app, the engine and the pack format are MIT; <code>npx @scrthq/runlog serve</code> puts the whole thing on a
+            local port.
           </p>
         </section>
 
         <section>
           <h3 className="sectionTitle">
-            Why Runlog <span className="muted">what it carries, if you would rather not</span>
+            The packs <span className="muted">nine free, and a marketplace</span>
           </h3>
-          <dl className="welcomeReasons">
-            <div>
-              <dt>Minutes, not an evening.</dt>
-              <dd>
-                No map, no tokens, no character sheets, no plugin. Open the app and a first run is a minute away, with no account. A widget
-                on a scene is a live link and one address pasted into a browser source.
-              </dd>
-            </div>
-            <div>
-              <dt>It does not know your game</dt>
-              <dd>
-                Every noun on screen comes from the pack's own vocabulary: {persona.vocabulary}, {wordsTwo}, {wordsThree}. One app, any game
-                of rounds, dice and consequences.
-              </dd>
-            </div>
-            <div>
-              <dt>The bookkeeping, carried for you.</dt>
-              <dd>
-                Results that reach back and damage something you made an hour ago. States that pile up. Counters running in the background.
-                "After you finish, roll a d6." Runlog remembers, applies and writes down all of it. Your own dice still count: roll them and
-                type what they said.
-              </dd>
-            </div>
-            <div>
-              <dt>Yours first.</dt>
-              <dd>
-                Everything runs in the browser and nothing leaves your device unless you sign in. Sign in and your runs, packs and license
-                keys follow you; sign out and they are still on the shelf.
-              </dd>
-            </div>
-            <div>
-              <dt>A table with company.</dt>
-              <dd>
-                Invite people into a run as players or watchers, on their own devices. Moderate a room of contestants from chat with a live
-                scoreboard, no accounts for them. Share a link anyone can watch, put widgets on a stream, throw dice everyone sees land,
-                race another device on the same seed.
-              </dd>
-            </div>
-            <div>
-              <dt>Paper included.</dt>
-              <dd>
-                A rulebook, a quick start, a reference card, a run log sheet and a marketplace summary, all written from the pack as it is,
-                as PDF, HTML and Markdown. A signed release carries your name.
-              </dd>
-            </div>
-            <div>
-              <dt>Sell it your way.</dt>
-              <dd>
-                Seal a copy for a buyer from your own hands, for free, forever. Or list it in the marketplace and let it handle the sale,
-                the delivery and the ledger for five percent.
-              </dd>
-            </div>
-            <div>
-              <dt>Open, and yours to run.</dt>
-              <dd>
-                The app, the engine, the format and the command line are MIT. <code>npx @scrthq/runlog serve</code> puts the whole app on a
-                local port with nothing else installed.
-              </dd>
-            </div>
-            <div>
-              <dt>Dice you can read.</dt>
-              <dd>
-                Every roll shows its working: the notation, the numbers, the range it fell in. The value is decided before the dice move, so
-                a seeded run replays exactly and a watcher sees the same throw.
-              </dd>
-            </div>
-          </dl>
+          <div className="welcomePacks">
+            {shelf.map((entry) => (
+              <a className="welcomePack" key={entry.id} href={linkTo(`#marketplace/${entry.id}`, play)}>
+                <strong>{entry.title}</strong>
+                {entry.description && <span className="muted small">{firstSentence(entry.description)}</span>}
+              </a>
+            ))}
+          </div>
         </section>
 
-        {hosted?.links.pricing ? (
-          <section>
-            <h3 className="sectionTitle">
-              What it costs <span className="muted">the app is free; what needs a server is what you pay for</span>
-            </h3>
-            <div className="welcomePlans">
-              <div>
-                <h4>Free</h4>
-                <p>Every pack, every mode, the Designer, the command line, sync between your own devices, moderated play on one device.</p>
-              </div>
-              <div>
-                <h4>
-                  Plus <span className="muted small">$4 a month</span>
-                </h4>
-                <p>People in your runs on their own devices, races across devices, live links and stream widgets.</p>
-              </div>
-              <div>
-                <h4>
-                  Publisher <span className="muted small">5% of a sale</span>
-                </h4>
-                <p>List packs in the marketplace, paid through your own Stripe account, with a ledger. Or 0% with hosted licensing.</p>
-              </div>
-            </div>
-            <p className="muted small">
-              <a href={hosted.links.pricing}>The whole of it, on the pricing page.</a>{" "}
-              {hosted.features.billing
-                ? "Subscribe from your profile in the app."
-                : "Not switched on yet: everything in Plus is free for everyone while Runlog is in preview."}
-            </p>
-          </section>
-        ) : (
-          <section>
-            <h3 className="sectionTitle">
-              What it costs <span className="muted">nothing, here</span>
-            </h3>
-            <p className="muted">
-              This copy is the plain app: no account, no server, no fee. The hosted copy at{" "}
-              <a href="https://runlog.scrthq.com/">runlog.scrthq.com</a> adds accounts, sync, tables with company and the marketplace.
-            </p>
-          </section>
-        )}
-
         <section className="welcomeClosing">
-          <h3 key={persona.id} className="welcomeClosingLine">
-            {persona.closing}
-          </h3>
           <p className="welcomeCtas">
             <a className="primary" href={play}>
               Play
             </a>
-            <a className="ghost" href={linkTo("#guide/design", play)}>
-              Write a pack
+            <a className="ghost" href={linkTo("#guide/start", play)}>
+              Read the guide
             </a>
           </p>
           <label
@@ -384,4 +323,18 @@ export function WelcomeView() {
       )}
     </div>
   );
+}
+
+/**
+ * The first sentence of a pack's description, the period kept.
+ *
+ * A card takes one line about the pack, not the pack's whole blurb: the
+ * descriptions run from one sentence to four, and printing all of them
+ * made the strip taller than every section above it and every card a
+ * different height.
+ */
+function firstSentence(text: string): string {
+  const trimmed = text.trim();
+  const end = trimmed.search(/\.(\s|$)/);
+  return end === -1 ? trimmed : trimmed.slice(0, end + 1);
 }
