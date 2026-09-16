@@ -93,10 +93,18 @@ export const BASE: Key[] = [
  * the order it fills, and each fed by a queue of its own: `drive` is what a
  * hand presses, `numbers` is what an eye reads.
  *
- * `extras` are the base keys this frame has no cell for; they go at the
- * front of their queue, so a deck that cannot pin all thirteen still opens
- * on them.
+ * `extras` are the base keys this frame has no cell for. Each queue takes
+ * them either side of the pack's own: `first` is what a deck that cannot
+ * pin all thirteen still opens on, and `last` is what waits behind the
+ * pack, because a key nobody presses mid-scene is worth less than a move.
  */
+export interface Queued {
+  /** Ahead of the pack's keys. */
+  first: Key[];
+  /** Behind them, and ahead of a pack's Open rules key. */
+  last: Key[];
+}
+
 export interface Frame {
   /** A key and the cell it holds on every page. Cells are `"column,row"`. */
   fixed: Array<{ key: Key; at: string }>;
@@ -107,8 +115,8 @@ export interface Frame {
    * first free one on the numbers side rather than a hole in the frame.
    */
   rules?: string;
-  /** The base keys the frame leaves out, at the front of their queues. */
-  extras: { drive: Key[]; numbers: Key[] };
+  /** The base keys the frame leaves out, before and behind the pack's own in each queue. */
+  extras: { drive: Queued; numbers: Queued };
   /** The free cells on the left, in fill order. */
   drive: string[];
   /** The free cells on the right, in fill order. */
@@ -161,36 +169,43 @@ export const FRAMES: Partial<Record<DeviceId, Frame>> = {
       { key: { action: "finish" }, at: "0,3" },
     ],
     rules: "7,0",
-    extras: { drive: [], numbers: [] },
+    extras: { drive: { first: [], last: [] }, numbers: { first: [], last: [] } },
     drive: ["1,2", "2,2", "3,2", "1,3", "2,3", "3,3"],
     numbers: ["4,1", "5,1", "6,1", "7,1", "4,2", "5,2", "6,2", "7,2", "4,3", "5,3", "6,3", "7,3"],
     turns: { next: "7,3", previous: "6,3" },
   },
-  // Five by three. Two of the fifteen cells are all the room there is for
-  // numbers beside the frame, so the clock's readout and the two Open keys
-  // queue rather than pin, and the pack's own keys take what is left.
+  // Five by three, where a pinned key is a cell the pack never gets. Seven
+  // are worth pinning: the run, the trio, Finish, and the score. Everything
+  // else queues, the keys a hand wants mid-scene ahead of the pack's own
+  // and the rest behind them.
   sd: {
     fixed: [
       { key: { action: "connect" }, at: "0,0" },
       { key: { action: "run" }, at: "1,0" },
-      { key: { action: "autoroll" }, at: "2,0" },
-      { key: { action: "clock" }, at: "3,0" },
       { key: { action: "metric", settings: { field: "score" } }, at: "4,0" },
       { key: { action: "next" }, at: "0,1" },
       { key: { action: "roll" }, at: "1,1" },
       { key: { action: "undo" }, at: "2,1" },
-      { key: { action: "metric", settings: { field: "unit" } }, at: "4,1" },
       { key: { action: "finish" }, at: "0,2" },
     ],
     extras: {
-      drive: [
-        { action: "open", settings: { target: "run" } },
-        { action: "open", settings: { target: "guide" } },
-      ],
-      numbers: [{ action: "metric", settings: { field: "clock" } }],
+      drive: {
+        first: [{ action: "autoroll" }, { action: "clock" }],
+        last: [
+          { action: "open", settings: { target: "run" } },
+          { action: "open", settings: { target: "guide" } },
+        ],
+      },
+      numbers: {
+        first: [],
+        last: [
+          { action: "metric", settings: { field: "unit" } },
+          { action: "metric", settings: { field: "clock" } },
+        ],
+      },
     },
-    drive: ["3,1", "1,2", "2,2", "3,2"],
-    numbers: ["4,2"],
+    drive: ["2,0", "3,0", "3,1", "1,2", "2,2", "3,2"],
+    numbers: ["4,1", "4,2"],
     turns: { next: "4,2", previous: "3,2" },
   },
 };

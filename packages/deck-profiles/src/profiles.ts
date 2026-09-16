@@ -267,12 +267,12 @@ export interface Queues {
 /**
  * The keys a pack adds to the generic thirteen, in two queues.
  *
- * `drive` is what somebody presses: the setups for whatever tool the pack
- * is driven by, then its moves. The setups and the commands are one run of
- * keys ordered by title, which is the order the app's own picker lists them
- * in, so a warp sits where its name puts it rather than at the end of the
- * deck; they come before the moves because a setup is what a scene opens
- * with and a move is pressed all the way through it.
+ * `drive` is what somebody presses: its moves first, because those are what
+ * a hand reaches for mid-scene, then the setups for whatever tool the pack
+ * is driven by, which are occasional. The setups and the commands are one
+ * run of keys ordered by title, which is the order the app's own picker
+ * lists them in, so a warp sits where its name puts it rather than at the
+ * end of the deck.
  *
  * `numbers` is what somebody reads: the counters the pack shows, then its
  * resources. Both of those are keys as well, which is why the deck marks
@@ -280,12 +280,12 @@ export interface Queues {
  * them between scenes rather than mid-press.
  */
 export function queuesFor(keyed: Keyed): Queues {
+  const drive: Key[] = keyed.moves.map(({ id }) => ({ action: "press", settings: { target: { kind: "move", id } } }));
   const handed: Array<{ title: string; key: Key }> = [
     ...keyed.setups.map((s) => ({ title: s.title, key: { action: "setup", settings: { setup: { id: s.id, title: s.title } } } })),
     ...keyed.commands.map((s) => ({ title: s.title, key: { action: "command", settings: { command: { id: s.id, title: s.title } } } })),
   ];
-  const drive = handed.sort((a, b) => a.title.localeCompare(b.title)).map(({ key }) => key);
-  for (const { id } of keyed.moves) drive.push({ action: "press", settings: { target: { kind: "move", id } } });
+  for (const { key } of handed.sort((a, b) => a.title.localeCompare(b.title))) drive.push(key);
 
   const numbers: Key[] = [];
   for (const { id } of keyed.counters) numbers.push({ action: "metric", settings: { field: { counter: id } } });
@@ -528,16 +528,17 @@ export function specsFor(keyed: Keyed | null, named: { slug: string; name: strin
 /**
  * One deck's frame, with the keys of this profile poured into its queues.
  *
- * The frame's own extras go at the front, so a deck that has no cell for
- * the guide still opens on it. The Rules key is a pack's alone: a frame
- * with a cell for it pins it there, one without leaves it at the end of the
- * drive queue, and the generic profile, which has no rules to open, hands
- * the cell back as the first free one on the numbers side.
+ * The frame's extras go either side of the pack's own keys: what a hand
+ * wants mid-scene ahead of them, the rest behind. The Rules key is a pack's
+ * alone: a frame with a cell for it pins it there, one without leaves it at
+ * the very end of the drive queue, and the generic profile, which has no
+ * rules to open, hands the cell back as the first free one on the numbers
+ * side.
  */
 function zonesFor(frame: Frame, keyed: Keyed | null): Zones {
   const queues = keyed ? queuesFor(keyed) : { drive: [], numbers: [] };
-  const drive = [...frame.extras.drive, ...queues.drive];
-  const numbers = [...frame.extras.numbers, ...queues.numbers];
+  const drive = [...frame.extras.drive.first, ...queues.drive, ...frame.extras.drive.last];
+  const numbers = [...frame.extras.numbers.first, ...queues.numbers, ...frame.extras.numbers.last];
   // No cell of its own: the Rules key waits at the back of the drive queue.
   if (frame.rules === undefined) return { frame, drive: keyed ? [...drive, RULES] : drive, numbers };
   // Nothing to open: the cell is the first free one on the numbers side.

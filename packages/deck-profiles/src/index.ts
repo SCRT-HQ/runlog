@@ -9,7 +9,19 @@
  * what lets both callers be the same code rather than two that drift.
  */
 
-export { BASE, DEVICE_IDS, DEVICES, DIALS, FRAMES, isWarp, type Device, type DeviceId, type Frame, type Key } from "./layouts.ts";
+export {
+  BASE,
+  DEVICE_IDS,
+  DEVICES,
+  DIALS,
+  FRAMES,
+  isWarp,
+  type Device,
+  type DeviceId,
+  type Frame,
+  type Key,
+  type Queued,
+} from "./layouts.ts";
 export { ACTION_NAMES, PAGE_PLUGIN, PLUGIN, TURNS } from "./plugin.ts";
 export {
   container,

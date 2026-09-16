@@ -184,7 +184,7 @@ describe("a deck laid out for a pack", () => {
     // eye's, and a turn cell at either end of the eye's.
     const frame = {
       fixed: [{ key: { action: "connect" }, at: "0,0" }],
-      extras: { drive: [], numbers: [] },
+      extras: { drive: { first: [], last: [] }, numbers: { first: [], last: [] } },
       drive: ["0,1", "0,2"],
       numbers: ["1,1", "1,2"],
       turns: { next: "1,2", previous: "1,1" },
@@ -275,15 +275,44 @@ describe("a deck laid out for a pack", () => {
   it("queues what a Stream Deck has no cell to pin", () => {
     const [page] = deck(null, "sd");
     expect(deck(null, "sd")).toHaveLength(1);
-    // Five by three has no room for all thirteen, so the two Open keys
-    // head the drive queue and the clock's readout heads the numbers.
-    expect(at(page!, "3,1")).toBe("open:run");
-    expect(at(page!, "1,2")).toBe("open:guide");
+    // Five by three has room to pin seven keys and no more, so the rest
+    // queue: the two a hand wants mid-scene first.
+    expect(at(page!, "2,0")).toBe("autoroll");
+    expect(at(page!, "3,0")).toBe("clock");
+    // The readouts queue behind whatever the pack keeps, which is nothing
+    // in the generic profile.
+    expect(at(page!, "4,1")).toBe("metric:unit");
     expect(at(page!, "4,2")).toBe("metric:clock");
     // And the frame is still the frame.
     expect(at(page!, "0,1")).toBe("next");
     expect(at(page!, "4,0")).toBe("metric:score");
     expect(at(page!, "0,2")).toBe("finish");
+  });
+
+  it("gives a Stream Deck the pack's own keys ahead of the keys nobody presses mid-scene", () => {
+    const demo = shipped.find((l) => l.slug === "demo")!.pack!;
+    const [page] = deck(fromPack(demo, []), "sd");
+    // The pack's first move takes the first free cell after the two the
+    // hand wants, and its first number takes the first free number cell.
+    expect(at(page!, "3,1")).toBe(`press:${Object.keys(demo.moves ?? {})[0]}`);
+    const shownCounters = Object.entries(demo.counters ?? {}).filter(([, c]) => !c.hidden);
+    expect(at(page!, "4,1")).toBe(`metric:${shownCounters[0]![0]}`);
+  });
+
+  it("turns a Stream Deck's pages from the two cells a frame can spare", () => {
+    const pages = deck(crowded, "sd");
+    const [first, second] = pages;
+    expect(at(first!, "4,2")).toBe("turn:next");
+    expect(at(first!, "3,2")).not.toBe("turn:previous");
+    expect(at(second!, "3,2")).toBe("turn:previous");
+    expect(at(second!, "4,2")).toBe("turn:next");
+    // The Open keys wait behind every move the pack has, and the rules
+    // behind them, so the last page is where all three land.
+    const last = pages[pages.length - 1]!;
+    const opens = Object.keys(last)
+      .map((cell) => at(last, cell))
+      .filter((says) => says.startsWith("open:"));
+    expect(opens).toEqual(["open:run", "open:guide", "open:rules"]);
   });
 
   it("turns a Stream Deck's pages from the two cells a frame can spare", () => {
@@ -306,7 +335,8 @@ describe("a deck laid out for a pack", () => {
   it("frames every base key or queues it, and never both", () => {
     for (const [device, frame] of Object.entries(FRAMES)) {
       const said = (key: { action: string; settings?: Record<string, unknown> }) => JSON.stringify(key);
-      const held = [...frame.fixed.map((f) => said(f.key)), ...frame.extras.drive.map(said), ...frame.extras.numbers.map(said)];
+      const queued = [...frame.extras.drive.first, ...frame.extras.drive.last, ...frame.extras.numbers.first, ...frame.extras.numbers.last];
+      const held = [...frame.fixed.map((f) => said(f.key)), ...queued.map(said)];
       expect(held.sort(), device).toEqual(BASE.map(said).sort());
     }
   });
