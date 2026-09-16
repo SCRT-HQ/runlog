@@ -324,6 +324,43 @@ describe("a deck laid out for a pack", () => {
     ]);
   });
 
+  it("lays out the pack's whole layout where the snapshot carries one, not the moment's offer", () => {
+    // The offer is the state's view: a move behind a shut gate is not in
+    // it, and a profile built from it would be missing a key until the
+    // next time somebody built one. The layout is the pack itself.
+    const keyed = fromOffer(
+      {
+        moves: [{ id: "push-on" }],
+        trackers: [{ id: "marks", kind: "counter" }],
+        setups: [{ id: "com.example.setups.starter", title: "Starter kit" }],
+      },
+      {
+        moves: [{ id: "push-on" }, { id: "hold" }],
+        counters: [{ id: "marks" }, { id: "scars" }],
+        resources: [{ id: "stock" }],
+      },
+    );
+
+    expect(keyed.moves.map((m) => m.id)).toEqual(["push-on", "hold"]);
+    expect(keyed.counters.map((c) => c.id)).toEqual(["marks", "scars"]);
+    expect(keyed.resources.map((r) => r.id)).toEqual(["stock"]);
+    // The setups are the offer's either way: a layout carries none.
+    expect(keyed.setups.map((s) => s.id)).toEqual(["com.example.setups.starter"]);
+  });
+
+  it("reads the offer alone where a page publishes no layout", () => {
+    const offer = {
+      moves: [{ id: "push-on" }],
+      trackers: [
+        { id: "marks", kind: "counter" as const },
+        { id: "stock", kind: "resource" as const },
+      ],
+    };
+    expect(fromOffer(offer)).toEqual(fromOffer(offer, null));
+    expect(fromOffer(offer).moves.map((m) => m.id)).toEqual(["push-on"]);
+    expect(fromOffer(offer).resources.map((r) => r.id)).toEqual(["stock"]);
+  });
+
   it("gives a setup on both of the offer's lists one key, not two", () => {
     // `commands` on a run's offer is not the warps: it is every setup
     // again, offered the other way round. A profile has to pick one key

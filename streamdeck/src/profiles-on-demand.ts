@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { cwd } from "node:process";
 
 import streamDeck from "@elgato/streamdeck";
-import { container, fromOffer, laysOut, profile, specsFor, type DeviceId } from "@runlog/deck-profiles";
+import { container, fromOffer, laysOut, profile, specsFor, type DeviceId, type Keyed } from "@runlog/deck-profiles";
 
 import { DEVICE_PROFILES } from "./profiles.ts";
 import type { DeckState } from "./state.ts";
@@ -14,11 +14,11 @@ import type { DeckState } from "./state.ts";
  * The plugin ships one for every pack in the repository. A pack from the
  * Marketplace was not there when the plugin was packed, so its run puts the
  * deck on the generic layout and none of the pack's own moves reach a key.
- * Everything a profile is laid out from is already in the offer the deck is
- * holding, though: the moves, the trackers, and the setups for the tool. So
- * the same generator the shipped forty-four came out of runs here, on the
- * run rather than on a pack file, and what comes out is handed to the
- * Stream Deck app to import.
+ * Everything a profile is laid out from is already in the snapshot the deck
+ * is holding, though: the pack's moves and numbers in the layout, and the
+ * setups for the tool in the offer. So the same generator the shipped
+ * forty-four came out of runs here, on the run rather than on a pack file,
+ * and what comes out is handed to the Stream Deck app to import.
  *
  * Handed over, not installed. A plugin may only switch to a profile it
  * declares in its manifest, and a pack nobody had heard of when the plugin
@@ -43,30 +43,51 @@ export function slugFor(packId: string): string {
 }
 
 /**
- * The profile for the run the deck is on, written to a file.
+ * A laid-out pack, written to a file beside the plugin.
  *
- * `null` where there is nothing to build from: no snapshot, no pack id, or
- * a deck this package lays nothing out for, which is a Pedal or a Neo.
+ * `null` for a layout with nothing of the pack's own on it, and for a deck
+ * this package lays nothing out for, which is a Pedal or a Neo: the generic
+ * profile is already that layout, and a file of it gives nobody anything
+ * the plugin did not install.
  */
-export function buildFor(state: DeckState, device: number): { file: string; bytes: Uint8Array } | null {
-  const run = state.snapshot?.run;
+function write(
+  keyed: Keyed,
+  pack: { id: string; title?: string },
+  device: number,
+  from: string,
+): { file: string; bytes: Uint8Array } | null {
   const deck = DEVICE_PROFILES[device] as DeviceId | undefined;
-  if (!run?.packId || deck === undefined) return null;
+  if (deck === undefined || !laysOut(keyed)) return null;
 
-  const slug = slugFor(run.packId);
-  const keyed = fromOffer(state.snapshot?.offer ?? {});
-  // A pack with nothing to lay out gets no file: the generic profile the
-  // deck already switched to is that layout.
-  if (!laysOut(keyed)) return null;
-  const spec = specsFor(keyed, { slug, name: run.packTitle ?? run.packId }, deck)[0]!;
+  const slug = slugFor(pack.id);
+  const spec = specsFor(keyed, { slug, name: pack.title ?? pack.id }, deck)[0]!;
   const bytes = container(profile(spec));
 
   const dir = join(cwd(), ...FOLDER);
   mkdirSync(dir, { recursive: true });
   const file = join(dir, `${slug}-${deck}.streamDeckProfile`);
   writeFileSync(file, bytes);
-  streamDeck.logger.info(`profile: built ${slug}-${deck} from the run`);
+  streamDeck.logger.info(`profile: built ${slug}-${deck} from ${from}`);
   return { file, bytes };
+}
+
+/**
+ * The profile for the run the deck is on, written to a file.
+ *
+ * The keys are the pack's, not the moment's: the snapshot's `layout` names
+ * every move and number the pack has, and the offer is read for the setups
+ * and the commands, which the layout does not carry. A page too old to
+ * publish a layout leaves the offer as the only thing to read, and the
+ * profile is then as narrow as whatever the run was waiting on.
+ *
+ * `null` where there is nothing to build from: no snapshot, no pack id, or
+ * a deck this package lays nothing out for.
+ */
+export function buildFor(state: DeckState, device: number): { file: string; bytes: Uint8Array } | null {
+  const run = state.snapshot?.run;
+  if (!run?.packId) return null;
+  const keyed = fromOffer(state.snapshot?.offer ?? {}, state.snapshot?.layout);
+  return write(keyed, { id: run.packId, ...(run.packTitle ? { title: run.packTitle } : {}) }, device, "the run");
 }
 
 /**

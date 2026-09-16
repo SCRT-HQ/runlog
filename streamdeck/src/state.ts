@@ -75,6 +75,15 @@ export interface Snapshot {
   resources?: Array<{ id: string; label: string; value: number; max: number | null }>;
   at?: string;
   offer?: Offer;
+  /**
+   * The pack's own moves and numbers, whatever the run is waiting on, for a
+   * deck laying out keys. Absent from an older page, which leaves the offer.
+   */
+  layout?: {
+    moves: Array<{ id: string; label: string }>;
+    counters: Array<{ id: string; label: string }>;
+    resources: Array<{ id: string; label: string }>;
+  };
 }
 export interface DeckState {
   session: SessionState;
