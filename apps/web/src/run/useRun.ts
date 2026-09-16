@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Action, Pack, Phase } from "@runlog/rules-schema";
 import { ulid } from "../storage/ids.ts";
 import { syncBus } from "../sync/bus.ts";
-import { reconcile, stampIds } from "../sync/log.ts";
+import { reconcile, sameLog, stampIds } from "../sync/log.ts";
 import { NEW_RUN } from "./active.ts";
 import { deviceRunStore, type RunStore } from "./store.ts";
 import { drawAgainEvents, drawIsLast, type LastDraw } from "./redraw.ts";
@@ -119,6 +119,15 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     forgetActive,
   } = store;
   const [events, setEvents] = useState<RunEvent[]>([]);
+  /**
+   * The log as the screen holds it, for the readers that run outside a
+   * render: a pull arrives on a promise, where a closure over `events`
+   * would hold whatever the log was when the subscription was made.
+   */
+  const eventsRef = useRef<RunEvent[]>([]);
+  useEffect(() => {
+    eventsRef.current = events;
+  }, [events]);
   /**
    * Reading from IndexedDB is asynchronous, so there is a moment before the
    * saved run arrives. Showing setup during it would offer to start a new run
@@ -252,6 +261,10 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
    * same run. Whole-log, like `loadEvents`; anything half-done here is
    * dropped, because the log is the truth and a pull mid-move is rare.
    *
+   * Rare, though, is the point: a pull that brought no event is not a pull
+   * mid-move at all, and the log the page already holds stands, block in
+   * flight and all.
+   *
    * A device with no run for this pack yet takes whatever arrived, which
    * is how a second device picks up where the first one was: the first
    * pass after sign-in lands here, and the pack opens on the run in play.
@@ -265,6 +278,13 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
       if (id && !news.ids.includes(id)) return;
       if (!id && choosingRef.current) return;
       void currentRun(pack.id).then((saved) => {
+        if (saved && saved.runId === id && sameLog(saved.events as RunEvent[], eventsRef.current)) {
+          // Nothing about the log moved: a pass that only wrote numbers or
+          // caught up with the server's counter. Reloading it anyway is
+          // what threw away the roll a player had in the air, every pass.
+          setActiveRunFor(pack.id, saved.runId);
+          return;
+        }
         if (!saved || saved.runId !== id) {
           name(saved?.runId ?? null);
           setEvents((saved?.events as RunEvent[]) ?? []);
