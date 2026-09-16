@@ -1274,6 +1274,44 @@ p {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The panel in less room: the rows and the reactions at the app's small text. */
+.members .memberRow,
+.members .reactRow {
+  font-size: 0.86rem;
+}
+.members .reactButton {
+  font-size: 1rem;
+  padding: 0.15rem 0.45rem;
+}
+/*
+ * The left of a person's row: the name gives, the chip does not.
+ *
+ * As one ellipsizing box the chip that says which row is yours was cut to
+ * "yo...". The name has a track of its own to lose letters from, and the
+ * chip keeps its width beside it.
+ */
+.memberRow .memberWho {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
+}
+.memberRow .memberName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.memberRow .chip.you {
+  flex: none;
+  margin-left: 0;
+  white-space: nowrap;
+}
+/* Inviting and sharing sit at the rows' rhythm, not in a block below them. */
+.members .memberActions {
+  margin-top: 0;
+}
 /* The right of the row: marks then buttons, on the one line. */
 .memberRow .padRow {
   margin-top: 0;
@@ -1345,10 +1383,6 @@ p {
   color: var(--text);
   font: inherit;
 }
-.members .stepLabel {
-  margin-top: 0.8rem;
-}
-
 /* A watcher's column: everything shown, nothing pressable. */
 .col.wide.watching .panel:not(.log) button,
 .col.wide.watching .panel:not(.log) input,
@@ -5096,6 +5130,17 @@ a.plan {
 .nameGate .inviteForm input {
   flex: 1;
   min-width: 12rem;
+}
+/* Asking somebody to the table: an address, a role, and the two buttons. */
+.inviteDialog {
+  width: min(100%, 28rem);
+}
+.inviteDialog .inviteForm {
+  align-items: center;
+}
+.inviteDialog .padRow {
+  justify-content: flex-end;
+  margin-top: 0;
 }
 /* The run's settings: one dialog, its sections ruled like the side column's. */
 .settingsDialog {
