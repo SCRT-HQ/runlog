@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { cwd } from "node:process";
 
 import streamDeck from "@elgato/streamdeck";
-import { container, fromOffer, laysOut, profile, specsFor, type DeviceId, type Keyed } from "@runlog/deck-profiles";
+import { container, fromOffer, fromPack, laysOut, profile, specsFor, type DeviceId, type Keyed } from "@runlog/deck-profiles";
+import type { Pack } from "@runlog/rules-schema";
 
 import { DEVICE_PROFILES } from "./profiles.ts";
 import type { DeckState } from "./state.ts";
@@ -88,6 +89,18 @@ export function buildFor(state: DeckState, device: number): { file: string; byte
   if (!run?.packId) return null;
   const keyed = fromOffer(state.snapshot?.offer ?? {}, state.snapshot?.layout);
   return write(keyed, { id: run.packId, ...(run.packTitle ? { title: run.packTitle } : {}) }, device, "the run");
+}
+
+/**
+ * The profile for a pack read off the account, written to a file.
+ *
+ * No setups on it. Those are a library of the browser's, kept per tool
+ * rather than per pack, and the account's own copy of the pack says nothing
+ * about them. A profile built this way has the pack's moves and numbers;
+ * one built from a run the deck is following has the setups too.
+ */
+export function buildForPack(pack: Pack, device: number): { file: string; bytes: Uint8Array } | null {
+  return write(fromPack(pack, []), { id: pack.id, title: pack.title }, device, "the pack");
 }
 
 /**

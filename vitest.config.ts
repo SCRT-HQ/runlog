@@ -8,6 +8,11 @@ export default defineConfig({
   plugins: [{ enforce: "pre", ...mdx({ jsxImportSource: "react", remarkPlugins: [remarkGfm] }) }],
   resolve: {
     alias: {
+      // The loader's own entry, before the package's: an alias matches by
+      // prefix, so the bare one would swallow the subpath. The plugin
+      // imports it that way to keep the signing and the container out of
+      // its one bundled file.
+      "@runlog/rules-schema/load": fileURLToPath(new URL("./packages/rules-schema/src/load.ts", import.meta.url)),
       "@runlog/rules-schema": fileURLToPath(new URL("./packages/rules-schema/src/index.ts", import.meta.url)),
       "@runlog/engine": fileURLToPath(new URL("./packages/engine/src/index.ts", import.meta.url)),
       "@runlog/container": fileURLToPath(new URL("./packages/container/src/index.ts", import.meta.url)),

@@ -5,6 +5,7 @@ import { Clock } from "./actions/clock.ts";
 import { Command } from "./actions/command.ts";
 import { Connect } from "./actions/connect.ts";
 import { Finish } from "./actions/finish.ts";
+import { Install } from "./actions/install.ts";
 import { Metric } from "./actions/metric.ts";
 import { Next } from "./actions/next.ts";
 import { Open } from "./actions/open.ts";
@@ -295,6 +296,7 @@ for (const a of [
   new Clock(),
   new AutoRoll(),
   new Finish(),
+  new Install(),
 ]) {
   streamDeck.actions.registerAction(a);
 }
