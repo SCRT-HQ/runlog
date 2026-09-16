@@ -7,6 +7,7 @@ import streamDeck, {
   type WillDisappearEvent,
 } from "@elgato/streamdeck";
 
+import { GLYPHS } from "../glyphs.ts";
 import { store } from "../plugin.ts";
 import { metricFace, metricPress, type DeckState, type Face, type MetricField, type MetricPress } from "../state.ts";
 import { HOLD_MS, HoldTimer, RunlogAction } from "./base.ts";
@@ -36,6 +37,17 @@ export class Metric extends RunlogAction<MetricSettings> {
 
   face(state: DeckState, settings: MetricSettings, now: number): Face {
     return settings.field ? metricFace(state, settings.field, now) : { title: "Set up", tone: "dim" };
+  }
+
+  /**
+   * The bars for a number the run works out, the stepper for one somebody keeps.
+   *
+   * A counter or a resource is a key as much as a readout, and a deck full
+   * of numbers gives no other sign of which ones a press does anything to.
+   * The tone stays `readout` either way: the corner is the difference.
+   */
+  protected override glyph(settings: MetricSettings): string | undefined {
+    return typeof settings.field === "object" ? GLYPHS["counter"] : super.glyph(settings);
   }
 
   /** The way down is only the start of the clock: this key acts on the way back up. */

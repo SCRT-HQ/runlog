@@ -14,6 +14,8 @@ export const GLYPHS: Record<string, string> = {
     '<rect x="26" y="26" width="92" height="92" rx="20" fill="none" stroke="#ffffff" stroke-width="12"/> <path d="M78 40 L52 82 L68 82 L62 108 L94 62 L76 62 Z" fill="#ffffff"/>',
   connect:
     '<path d="M89 51 A34 34 0 1 1 55 51" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round"/> <path d="M72 20 L72 64" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round"/>',
+  counter:
+    '<g fill="#ffffff"> <rect x="67" y="26" width="10" height="34" rx="5"/> <rect x="55" y="38" width="34" height="10" rx="5"/> <rect x="26" y="75" width="92" height="18" rx="7"/> <rect x="55" y="108" width="34" height="10" rx="5"/> </g>',
   finish:
     '<path d="M38 22 V126" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/> <path d="M38 30 H114 L96 58 L114 86 H38 Z" fill="#ffffff"/>',
   install:
