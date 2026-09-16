@@ -82,7 +82,7 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
             keep the window on a second screen.
             {token
               ? " A streaming app needs the address with the live link's token in it, since its own browser holds none of this device's runs; the plain address is for a window here."
-              : " Share a live link under People at the table first: a streaming app needs the address with the link's token in it, since its own browser holds none of this device's runs."}
+              : " Share link under People at the table first: a streaming app needs the address with the link's token in it, since its own browser holds none of this device's runs."}
           </p>
           <div className="padRow">
             <label className="toggle" title={WIDGET_BACKGROUNDS.find((b) => b.bg === bg)?.what}>

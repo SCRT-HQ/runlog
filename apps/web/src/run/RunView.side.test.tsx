@@ -22,7 +22,9 @@ import { RunView } from "./RunView.tsx";
 
 const current: { api: Api | null } = { api: null };
 vi.mock("../sync/useApi.ts", () => ({ useApi: () => current.api }));
-vi.mock("./useReachable.ts", () => ({ useReachable: () => ({ link: null, key: "watchkey", working: false }) }));
+vi.mock("./useReachable.ts", () => ({
+  useReachable: () => ({ link: null, key: "watchkey", working: false, mint: async () => "watchkey" }),
+}));
 // The shipped setups and profiles are read from disk on a timer of their
 // own, which outlives a test that only cares about the column's shape.
 vi.mock("../control/setups.ts", async (original) => ({

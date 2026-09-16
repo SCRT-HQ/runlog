@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { DiceCurtain, rolledOf } from "../dice/DiceCurtain.tsx";
 import { modeDoc, summaryDoc, type Doc } from "@runlog/rules-schema";
-import { DocMenu } from "../docs/DocMenu.tsx";
 import { useDocDrawer, type DocTab } from "../docs/DocDrawer.tsx";
 import { useAccount } from "../auth/Account.tsx";
 import { useApi } from "../sync/useApi.ts";
@@ -205,9 +204,13 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
                 Docs
               </button>
             )}
-            {pack ? (
-              <DocMenu compact pack={pack} />
-            ) : (
+            {/*
+              One way to the paper, not two. Docs and the Documents menu
+              sat side by side in this row and opened the same drawer; the
+              button is the one that works whether or not the pack's text
+              travels, so it is the one that stays.
+            */}
+            {!pack && (
               <span className="muted small">
                 {got.listing
                   ? "The pack is in the marketplace; the run shows what the dice drew, not the rules."

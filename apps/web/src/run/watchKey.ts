@@ -1,3 +1,5 @@
+import type { Api, StreamKeys } from "../sync/client.ts";
+import type { Question } from "../ui/useConfirm.tsx";
 import { onWhoChanged } from "../storage/who.ts";
 
 /**
@@ -54,4 +56,34 @@ export function forgetWatchKey(): void {
   } catch {
     /* nothing to do: it was never written */
   }
+}
+
+/**
+ * Making a key, in one place.
+ *
+ * Two panels mint one and both have to remember it in the same breath: a
+ * key minted and not written down is the worst of the three states, since
+ * the account then has a key whose value nothing knows.
+ */
+export async function mintWatchKey(api: Api): Promise<{ key: string; keys: StreamKeys }> {
+  const made = await api.mintStreamKey("watch");
+  rememberWatchKey(made.key);
+  return made;
+}
+
+/**
+ * What making another one costs, asked the same way wherever it is asked.
+ *
+ * `here` is whether this device holds the key already. Where it does not,
+ * the question has to say why a new one is the only way out, because from
+ * the outside it looks like the app is throwing away a key it has.
+ */
+export function newKeyQuestion(here: boolean): Question {
+  const replaces =
+    "Making a new one replaces the old one everywhere it is pasted: widgets in a scene, and tools dialed with the old address.";
+  return {
+    ask: "Make a new watch key?",
+    detail: here ? replaces : `This device does not have the watch key, and the server cannot hand it back. ${replaces}`,
+    confirm: "Make a new key",
+  };
 }

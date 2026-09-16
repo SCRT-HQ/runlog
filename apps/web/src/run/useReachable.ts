@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Api } from "../sync/client.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { liveLinkOf, rememberLiveLink } from "../live/route.ts";
-import { rememberWatchKey, watchKeyHere } from "./watchKey.ts";
+import { mintWatchKey, watchKeyHere } from "./watchKey.ts";
 
 /**
  * A run makes itself reachable, so an address copied from it works.
@@ -50,6 +50,15 @@ export interface Reachable {
   key: string | null;
   /** Still asking the server, so an address is not unfinished, it is unfinished *yet*. */
   working: boolean;
+  /**
+   * Make a key this device can finish an address with, and keep it.
+   *
+   * For the one case nothing else answers: the account has a key, minted
+   * somewhere else, and the server keeps only a hash of it. Whoever calls
+   * this asks first, because it puts the old key out. Answers the new key,
+   * or null if the server would not.
+   */
+  mint: () => Promise<string | null>;
 }
 
 export function useReachable(api: Api | null, record: StoredRun | null): Reachable {
@@ -92,10 +101,9 @@ export function useReachable(api: Api | null, record: StoredRun | null): Reachab
         // Only where there is none. A second mint puts the first one out,
         // wherever it is in use, and nobody asked for that.
         if (!keys.watch) {
-          const made = await api.mintStreamKey("watch");
-          // Remembered, which is the whole point of minting it. Without
-          // this the account has a key nothing can name.
-          rememberWatchKey(made.key);
+          // Remembered as it is made, which is the whole point. Without
+          // that the account has a key nothing can name.
+          const made = await mintWatchKey(api);
           setKey(made.key);
         }
       } catch {
@@ -106,5 +114,18 @@ export function useReachable(api: Api | null, record: StoredRun | null): Reachab
     })();
   }, [api, record]);
 
-  return { link, key, working };
+  const mint = useCallback(async () => {
+    if (!api) return null;
+    try {
+      const made = await mintWatchKey(api);
+      setKey(made.key);
+      return made.key;
+    } catch {
+      // Refused, gated, or offline. Nothing was replaced, so there is
+      // nothing to undo; the caller keeps whatever it had.
+      return null;
+    }
+  }, [api]);
+
+  return { link, key, working, mint };
 }
