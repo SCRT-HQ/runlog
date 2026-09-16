@@ -14,6 +14,8 @@ const mock = vi.hoisted(() => ({
   devices: [] as Array<{ id: string; type: number }>,
   /** Every profile switch asked for, in order. */
   switched: [] as Array<[string, string]>,
+  /** Every profile built from a run and handed to the Stream Deck app. */
+  handed: [] as string[],
   /** The plugin's own listener for a change to the global settings. */
   globals: (_: { settings: Record<string, unknown> }) => {},
 }));
@@ -49,6 +51,14 @@ vi.mock("@elgato/streamdeck", () => {
   };
 });
 vi.mock("./socket.ts", () => ({ openWire: () => ({ connect: () => {}, disconnect: () => {}, press: () => null }) }));
+// Nothing here writes a profile beside the plugin or opens one: what this
+// holds is when the plugin asks for a build, not what comes out of it.
+vi.mock("./profiles-on-demand.ts", () => ({
+  buildFor: (_state: unknown, device: number) => ({ file: `built-${device}`, bytes: new Uint8Array() }),
+  install: (file: string) => {
+    mock.handed.push(file);
+  },
+}));
 // Never the real session file: this test signs nobody in and must not read
 // the deck's own rotating token off disk.
 vi.mock("./session.ts", () => ({
@@ -159,5 +169,44 @@ describe("the profile the deck lands on when a run attaches", () => {
       ["deck-xl", "profiles/forfeits-xl"],
       ["deck-plus", "profiles/forfeits-plus"],
     ]);
+  });
+
+  it("builds one from the run for a pack it ships none for, and hands it over", () => {
+    mock.handed = [];
+    drop();
+    attach("r5", "com.example.ember-trail");
+    // One per deck it has a grid for, and the generic profile after, which
+    // is what the deck stands on until the streamer answers the prompt.
+    expect(mock.handed).toEqual(["built-2", "built-7"]);
+
+    // Once per pack per launch. The Stream Deck app's import prompt is the
+    // streamer's to answer, and another run of the same pack asking again
+    // is a prompt nobody asked for twice.
+    mock.handed = [];
+    drop();
+    attach("r6", "com.example.ember-trail");
+    expect(mock.handed).toEqual([]);
+  });
+
+  it("builds nothing for a pack it already ships a profile for", () => {
+    mock.handed = [];
+    mock.switched = [];
+    drop();
+    attach("r7", "com.scrthq.runlog.soundclash");
+    expect(mock.handed).toEqual([]);
+    expect(mock.switched).toEqual([
+      ["deck-xl", "profiles/soundclash-xl"],
+      ["deck-plus", "profiles/soundclash-plus"],
+    ]);
+  });
+
+  it("builds nothing at all when the setting is off", () => {
+    mock.globals({ settings: { switchProfiles: false } });
+    mock.handed = [];
+    drop();
+    attach("r8", "com.example.salt-and-signal");
+    expect(mock.handed).toEqual([]);
+
+    mock.globals({ settings: { switchProfiles: true } });
   });
 });

@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 const mock = vi.hoisted(() => ({
   opened: [] as string[],
+  wrote: [] as string[],
   base: "https://runlog.scrthq.com",
   state: { runs: [], pinned: null, snapshot: null } as Record<string, unknown>,
 }));
@@ -18,9 +19,19 @@ vi.mock("@elgato/streamdeck", () => ({
         mock.opened.push(url);
       },
     },
+    logger: { info: () => {} },
   },
   action: () => (target: unknown) => target,
   SingletonAction: class {},
+}));
+// The profile target writes a file beside the plugin and hands it over. The
+// build itself is `profiles-on-demand.ts`; what this holds is that the key
+// reaches it and that what comes back goes out as the file's own URL.
+vi.mock("node:fs", () => ({
+  mkdirSync: () => {},
+  writeFileSync: (file: string) => {
+    mock.wrote.push(file);
+  },
 }));
 vi.mock("../plugin.ts", () => ({
   store: {
@@ -39,6 +50,8 @@ const { Open } = await import("./open.ts");
 
 const key = (alerts: string[]) => ({
   id: "a1",
+  // The deck this key is on, which is the deck a profile is laid out for.
+  device: { type: 2 },
   isKey: () => true,
   isDial: () => false,
   showAlert: async () => {
@@ -53,6 +66,7 @@ const press = async (target: string | undefined, alerts: string[] = []) =>
 describe("pressing the open key", () => {
   beforeEach(() => {
     mock.opened = [];
+    mock.wrote = [];
     mock.base = "https://runlog.scrthq.com";
     mock.state = { runs: [{ id: "s1" }], pinned: null, snapshot: { run: { id: "s1", packId: "demo" } } };
   });
@@ -118,6 +132,25 @@ describe("pressing the open key", () => {
     const alerts: string[] = [];
     mock.state = { runs: [{ id: "s1" }], pinned: null, snapshot: null };
     await press("rules", alerts);
+    expect(mock.opened).toEqual([]);
+    expect(alerts).toEqual(["alert"]);
+  });
+
+  it("builds this pack's profile and hands it to the Stream Deck app", async () => {
+    await press("profile");
+    // Not an address: a file laid out for the deck the key is on, offered
+    // to whatever opens a `.streamDeckProfile`.
+    expect(mock.wrote).toHaveLength(1);
+    expect(mock.opened).toHaveLength(1);
+    expect(mock.opened[0]!.startsWith("file:///")).toBe(true);
+    expect(decodeURIComponent(mock.opened[0]!)).toContain("demo-xl.streamDeckProfile");
+  });
+
+  it("alerts for the profile until a snapshot names the pack", async () => {
+    const alerts: string[] = [];
+    mock.state = { runs: [{ id: "s1" }], pinned: null, snapshot: null };
+    await press("profile", alerts);
+    expect(mock.wrote).toEqual([]);
     expect(mock.opened).toEqual([]);
     expect(alerts).toEqual(["alert"]);
   });

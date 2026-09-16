@@ -13,7 +13,8 @@ import { Roll } from "./actions/roll.ts";
 import { pin, Run, runsForInspector } from "./actions/run.ts";
 import { Setup } from "./actions/setup.ts";
 import { Undo } from "./actions/undo.ts";
-import { profileFor } from "./profiles.ts";
+import { buildFor, install } from "./profiles-on-demand.ts";
+import { PACK_PROFILES, profileFor } from "./profiles.ts";
 import { loadSession, normalizeBase, signIn, signOut, type Account } from "./session.ts";
 import { openWire } from "./socket.ts";
 import { makeStore } from "./store.ts";
@@ -60,8 +61,19 @@ export const wire = openWire((): Account => ({ apiBase: base }), store);
  * pack's id travels with the snapshot, and the run's is not known until one
  * lands. Once per attach after that, since a snapshot landing is not a
  * reason to yank the deck away from wherever the streamer has gone since.
+ *
+ * A pack the plugin ships no layout for would land on the generic profile
+ * with none of its own moves on it. That snapshot has everything a layout
+ * is built from, so one is built from the run and handed to the Stream Deck
+ * app to import before the switch. Once per pack per launch: the app's
+ * import prompt is the streamer's to answer, and asking again every time a
+ * run of that pack attaches is a prompt nobody asked for twice.
  */
 let switchedFor: string | null = null;
+
+/** The packs a profile has been built and handed over for since the plugin launched. */
+const offered = new Set<string>();
+
 store.subscribe((s) => {
   if (!s.attached) {
     switchedFor = null;
@@ -69,9 +81,17 @@ store.subscribe((s) => {
   }
   if (!switchProfiles || switchedFor === s.attached || !s.snapshot) return;
   switchedFor = s.attached;
+  const packId = s.snapshot.run?.packId;
+  const build = packId !== undefined && PACK_PROFILES[packId] === undefined && !offered.has(packId);
+  if (build) offered.add(packId);
   for (const d of streamDeck.devices) {
-    const name = profileFor(s.snapshot.run?.packId, d.type);
-    if (name) void streamDeck.profiles.switchToProfile(d.id, name).catch(() => {});
+    const name = profileFor(packId, d.type);
+    if (!name) continue;
+    if (build) {
+      const built = buildFor(s, d.type);
+      if (built) install(built.file);
+    }
+    void streamDeck.profiles.switchToProfile(d.id, name).catch(() => {});
   }
 });
 
