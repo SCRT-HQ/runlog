@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { faceImage } from "../face.ts";
+import { GLYPHS } from "../glyphs.ts";
+import { initial } from "../state.ts";
+import type { MetricSettings } from "./metric.ts";
+
 // `metric.ts` pulls in `../plugin.ts` (through `store`), which registers
 // every action - a real import here would load the whole plugin just to
 // reach a pure function. `nextField` touches none of it.
@@ -106,5 +111,36 @@ describe("pressing a metric key", () => {
     const settings = { field: "score", press: { kind: "set", value: 9 } };
     await new Metric().onDialRotate({ action: dial, payload: { settings, ticks: 1 } } as never);
     expect(written).toEqual([{ field: "unit", press: { kind: "set", value: 9 } }]);
+  });
+});
+
+/** The corner of a key set to this field, as the markup the face drew there. */
+function corner(field: MetricSettings["field"]): string {
+  const metric = new Metric();
+  const settings: MetricSettings = field === undefined ? {} : { field };
+  // `glyph` is the base class's, protected because only an action calls it.
+  const reach = metric as unknown as { glyph(s: MetricSettings): string | undefined };
+  const image = faceImage(metric.face(initial(), settings, 0), reach.glyph(settings));
+  const svg = Buffer.from(image.split(",")[1]!, "base64").toString("utf8");
+  return /<g transform="translate\(8 8\)[^>]*>(.*)<\/g>/.exec(svg)?.[1] ?? "";
+}
+
+/** The quiet ink a corner is drawn in on the tones a Metric key takes. */
+const drawn = (name: string) => GLYPHS[name]!.replaceAll("#ffffff", "#8d958f");
+
+describe("the drawing in a Metric key's corner", () => {
+  it("is the stepper for a number somebody keeps by hand", () => {
+    expect(corner({ counter: "hits" })).toBe(drawn("counter"));
+    expect(corner({ resource: "clay" })).toBe(drawn("counter"));
+  });
+
+  it("is the bars for a number the run works out", () => {
+    for (const field of ["score", "unit", "clock", "latest", "leader"] as const) {
+      expect(corner(field), field).toBe(drawn("metric"));
+    }
+  });
+
+  it("draws the two differently, which is the whole point of the pair", () => {
+    expect(corner({ counter: "hits" })).not.toBe(corner("score"));
   });
 });
