@@ -346,11 +346,17 @@ export function pressFace(state: DeckState, target: StoredPressTarget): Face {
   const c = common(state) ?? flashed(state);
   if (c) return c;
   const offer = state.snapshot?.offer;
-  if (!offer) return { title: "Loading…", tone: "dim" };
+  // What a move key says underneath while it has nothing to press, so a
+  // dim key is not four words about the run with nothing saying which key
+  // it is. The pack's own layout names every move, gated or not; a page
+  // too old to publish one leaves the key's own name.
+  const move = isPressTarget(target) && target.kind === "move" ? target.id : null;
+  const named = move === null ? undefined : (state.snapshot?.layout?.moves.find((x) => x.id === move)?.label ?? "Press");
+  if (!offer) return { title: "Loading…", tone: "dim", ...(named ? { when: named } : {}) };
   if (!isPressTarget(target)) return { title: "Set up", tone: "dim" };
   if (target.kind === "move") {
     const m = offer.moves.find((x) => x.id === target.id);
-    return m ? { title: m.label, tone: "live" } : { title: "Not on offer", tone: "dim" };
+    return m ? { title: m.label, tone: "live" } : { title: "Not on offer", tone: "dim", when: named };
   }
   const p = offer.presets.find((x) => x.kind === target.preset);
   return p ? { title: target.value, tone: "live", when: p.label } : { title: target.value, tone: "dim", when: "Not now" };
@@ -361,19 +367,19 @@ export function rollFace(state: DeckState): Face {
   const c = common(state) ?? flashed(state);
   if (c) return c;
   const offer = state.snapshot?.offer;
-  if (!offer) return { title: "Loading…", tone: "dim" };
+  if (!offer) return { title: "Loading…", tone: "dim", when: "Roll" };
   return offer.primary?.id === "roll"
     ? { title: offer.primary.label, tone: "live", when: "Roll" }
-    : { title: "Nothing to roll", tone: "dim" };
+    : { title: "Nothing to roll", tone: "dim", when: "Roll" };
 }
 
 /** What the setup key says: what it applies and hands out, whether that is on offer, or nothing chosen at all. */
 export function setupFace(state: DeckState, setup?: { id: string; title: string }): Face {
   const c = common(state) ?? flashed(state);
   if (c) return c;
-  if (!setup) return { title: "Set up", tone: "dim" };
+  if (!setup) return { title: "Set up", tone: "dim", when: "Apply setup" };
   const offer = state.snapshot?.offer;
-  if (!offer) return { title: "Loading…", tone: "dim" };
+  if (!offer) return { title: "Loading…", tone: "dim", when: "Apply setup" };
   // `?? []`: an older page's offer may not name any setups at all.
   return (offer.setups ?? []).some((s) => s.id === setup.id)
     ? { title: setup.title, tone: "deck", when: "Apply setup" }
@@ -384,9 +390,9 @@ export function setupFace(state: DeckState, setup?: { id: string; title: string 
 export function commandFace(state: DeckState, command?: { id: string; title: string }): Face {
   const c = common(state) ?? flashed(state);
   if (c) return c;
-  if (!command) return { title: "Set up", tone: "dim" };
+  if (!command) return { title: "Set up", tone: "dim", when: "Command" };
   const offer = state.snapshot?.offer;
-  if (!offer) return { title: "Loading…", tone: "dim" };
+  if (!offer) return { title: "Loading…", tone: "dim", when: "Command" };
   // `?? []`: an older page's offer may not name any commands at all.
   return (offer.commands ?? []).some((x) => x.id === command.id)
     ? { title: command.title, tone: "live", when: "Send to tool" }
@@ -570,10 +576,10 @@ export function clockFace(state: DeckState, now: number): Face {
   const c = common(state) ?? flashed(state);
   if (c) return c;
   const snap = state.snapshot;
-  if (!snap?.offer) return { title: "Loading…", tone: "dim" };
+  if (!snap?.offer) return { title: "Loading…", tone: "dim", when: "Clock" };
   // `?? null` for an older page, which names no clock on its offer at all.
   const clock = snap.offer.clock ?? null;
-  if (!clock) return { title: "No clock", tone: "dim" };
+  if (!clock) return { title: "No clock", tone: "dim", when: "Clock" };
   if (clock.status === "done") return { title: "0:00", tone: "dim", when: "done" };
   const kept = snap.clocks?.find((x) => x.id === clock.id);
   if (!kept || !snap.at) return { title: "–", tone: "dim", when: clock.label };
@@ -592,23 +598,26 @@ export function clockPress(state: DeckState, long: boolean): AnswerPress | null 
   return { press: "answer", answer: { clock: clock.id, do: clock.status === "running" ? "pause" : "resume" } };
 }
 
+/** What the Keep rolling key always says underneath, whichever way it is set. */
+const AUTO_ROLL_WHEN = "Keep rolling";
+
 /**
  * What the Keep rolling key says: who is throwing the dice.
  *
- * The same words either way underneath, because twenty characters is not
- * room for two different sentences and the key is a switch: what it says on
- * top is the state, and pressing it is the other one.
+ * The key's own name underneath, whichever way it is set: what it says on
+ * top is the state, which changes with the run, so the line under it is
+ * what says which key this is on a deck of twelve.
  */
 export function autoRollFace(state: DeckState): Face {
   const c = common(state) ?? flashed(state);
   if (c) return c;
   const offer = state.snapshot?.offer;
-  if (!offer) return { title: "Loading…", tone: "dim" };
+  if (!offer) return { title: "Loading…", tone: "dim", when: AUTO_ROLL_WHEN };
   // `?? false` for an older page: a run that says nothing about this is one
   // rolling by hand.
   return (offer.autoRoll ?? false)
-    ? { title: "Rolling for you", tone: "live", when: "press to switch" }
-    : { title: "Roll by hand", tone: "deck", when: "press to switch" };
+    ? { title: "Rolling for you", tone: "live", when: AUTO_ROLL_WHEN }
+    : { title: "Roll by hand", tone: "deck", when: AUTO_ROLL_WHEN };
 }
 
 /** What one press of the Keep rolling key sends: the other setting. */
@@ -630,10 +639,10 @@ export function finishFace(state: DeckState): Face {
   const c = common(state) ?? flashed(state);
   if (c) return c;
   const offer = state.snapshot?.offer;
-  if (!offer) return { title: "Loading…", tone: "dim" };
+  if (!offer) return { title: "Loading…", tone: "dim", when: "Finish" };
   // `?? null` for an older page, whose offer says nothing about an ending.
   const ending = offer.ending ?? null;
-  return ending ? { title: ending.label, tone: "end", when: "hold to finish" } : { title: "Not yet", tone: "dim" };
+  return ending ? { title: ending.label, tone: "end", when: "hold to finish" } : { title: "Not yet", tone: "dim", when: "Finish" };
 }
 
 /** What a held Finish key sends, or nothing where the run has no ending to take. */

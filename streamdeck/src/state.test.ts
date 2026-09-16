@@ -203,12 +203,12 @@ describe("what the keys say", () => {
 describe("what the setup key says", () => {
   it("says Set up with nothing chosen, whether or not the offer has landed", () => {
     const s = open();
-    expect(setupFace(s, undefined)).toEqual({ title: "Set up", tone: "dim" });
+    expect(setupFace(s, undefined)).toEqual({ title: "Set up", tone: "dim", when: "Apply setup" });
   });
 
   it("is loading before the offer lands, once a setup is chosen", () => {
     const s = open();
-    expect(setupFace(s, { id: "leveling", title: "Leveling" })).toEqual({ title: "Loading…", tone: "dim" });
+    expect(setupFace(s, { id: "leveling", title: "Leveling" })).toEqual({ title: "Loading…", tone: "dim", when: "Apply setup" });
   });
 
   it("is live when the setup is on offer", () => {
@@ -257,12 +257,12 @@ describe("what the setup key says", () => {
 describe("what the command key says", () => {
   it("says Set up with nothing chosen, whether or not the offer has landed", () => {
     const s = open();
-    expect(commandFace(s, undefined)).toEqual({ title: "Set up", tone: "dim" });
+    expect(commandFace(s, undefined)).toEqual({ title: "Set up", tone: "dim", when: "Command" });
   });
 
   it("is loading before the offer lands, once a command is chosen", () => {
     const s = open();
-    expect(commandFace(s, { id: "warp", title: "Start of the DLC" })).toEqual({ title: "Loading…", tone: "dim" });
+    expect(commandFace(s, { id: "warp", title: "Start of the DLC" })).toEqual({ title: "Loading…", tone: "dim", when: "Command" });
   });
 
   it("is live when the command is on offer", () => {
@@ -308,7 +308,7 @@ describe("what the command key says", () => {
 describe("what the roll key says", () => {
   it("is loading before the offer lands", () => {
     const s = open();
-    expect(rollFace(s)).toEqual({ title: "Loading…", tone: "dim" });
+    expect(rollFace(s)).toEqual({ title: "Loading…", tone: "dim", when: "Roll" });
   });
 
   it("is live when a roll is on offer", () => {
@@ -324,7 +324,7 @@ describe("what the roll key says", () => {
     s = reduce(s, { t: "socket", state: "open" }, T);
     s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
     s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, primary: { id: "carry-on", label: "Carry on", kind: "move" } } } }, T);
-    expect(rollFace(s)).toEqual({ title: "Nothing to roll", tone: "dim" });
+    expect(rollFace(s)).toEqual({ title: "Nothing to roll", tone: "dim", when: "Roll" });
   });
 });
 
@@ -335,6 +335,31 @@ describe("what the press key says", () => {
     s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
     s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
     expect(pressFace(s, { kind: "roll" })).toEqual({ title: "Set up", tone: "dim" });
+  });
+
+  it("names the move it is set to while that move is not on offer", () => {
+    // A dim key saying only "Not on offer" says nothing about which of the
+    // pack's moves it is. The snapshot's layout names every one of them.
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    const layout = { moves: [{ id: "settle", label: "Settle in" }], counters: [], resources: [] };
+    s = reduce(s, { t: "snapshot", snapshot: { offer, layout } }, T);
+    expect(pressFace(s, { kind: "move", id: "settle" })).toEqual({ title: "Not on offer", tone: "dim", when: "Settle in" });
+    // A move the layout does not name either leaves the key's own name.
+    expect(pressFace(s, { kind: "move", id: "push-on" })).toEqual({ title: "Not on offer", tone: "dim", when: "Press" });
+  });
+
+  it("carries the same line while the offer has not landed", () => {
+    expect(pressFace(open(), { kind: "move", id: "settle" })).toEqual({ title: "Loading…", tone: "dim", when: "Press" });
+  });
+
+  it("says the move's own label, on its own, once it is on offer", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, moves: [{ id: "settle", label: "Settle in" }] } } }, T);
+    expect(pressFace(s, { kind: "move", id: "settle" })).toEqual({ title: "Settle in", tone: "live" });
   });
 });
 
@@ -589,11 +614,11 @@ const older = (drop: keyof Offer): DeckState => {
 
 describe("what the clock key says", () => {
   it("is loading before the offer lands", () => {
-    expect(clockFace(open(), T)).toEqual({ title: "Loading…", tone: "dim" });
+    expect(clockFace(open(), T)).toEqual({ title: "Loading…", tone: "dim", when: "Clock" });
   });
 
   it("says there is no clock where the run keeps none", () => {
-    expect(clockFace(withOffer({ clock: null }), T)).toEqual({ title: "No clock", tone: "dim" });
+    expect(clockFace(withOffer({ clock: null }), T)).toEqual({ title: "No clock", tone: "dim", when: "Clock" });
   });
 
   it("counts a running clock down, lit, with the bar a dial draws", () => {
@@ -614,7 +639,7 @@ describe("what the clock key says", () => {
   });
 
   it("guards an older page, whose offer names no clock at all", () => {
-    expect(clockFace(older("clock"), T)).toEqual({ title: "No clock", tone: "dim" });
+    expect(clockFace(older("clock"), T)).toEqual({ title: "No clock", tone: "dim", when: "Clock" });
   });
 });
 
@@ -637,19 +662,19 @@ describe("what the clock key presses", () => {
 
 describe("what the keep-rolling key says", () => {
   it("is loading before the offer lands", () => {
-    expect(autoRollFace(open())).toEqual({ title: "Loading…", tone: "dim" });
+    expect(autoRollFace(open())).toEqual({ title: "Loading…", tone: "dim", when: "Keep rolling" });
   });
 
-  it("names who is throwing the dice, and says the press switches it", () => {
+  it("names who is throwing the dice, over the key's own name", () => {
     expect(autoRollFace(withOffer({ autoRoll: true }))).toEqual({
       title: "Rolling for you",
       tone: "live",
-      when: "press to switch",
+      when: "Keep rolling",
     });
     expect(autoRollFace(withOffer({ autoRoll: false }))).toEqual({
       title: "Roll by hand",
       tone: "deck",
-      when: "press to switch",
+      when: "Keep rolling",
     });
   });
 
@@ -667,13 +692,13 @@ describe("what the keep-rolling key says", () => {
 
 describe("what the finish key says", () => {
   it("is loading before the offer lands", () => {
-    expect(finishFace(open())).toEqual({ title: "Loading…", tone: "dim" });
+    expect(finishFace(open())).toEqual({ title: "Loading…", tone: "dim", when: "Finish" });
   });
 
   it("says not yet while the run has no ending to take", () => {
-    expect(finishFace(withOffer({ ending: null }))).toEqual({ title: "Not yet", tone: "dim" });
+    expect(finishFace(withOffer({ ending: null }))).toEqual({ title: "Not yet", tone: "dim", when: "Finish" });
     expect(finishPress(withOffer({ ending: null }))).toBeNull();
-    expect(finishFace(older("ending"))).toEqual({ title: "Not yet", tone: "dim" });
+    expect(finishFace(older("ending"))).toEqual({ title: "Not yet", tone: "dim", when: "Finish" });
   });
 
   it("carries the ending on a ground of its own, and asks to be held", () => {
