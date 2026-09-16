@@ -125,6 +125,25 @@ describe("a Stream Deck profile from a pack's page", () => {
     }
   });
 
+  it("reads a pack kept as JSON when told the format is json", async () => {
+    const made = objectUrls();
+    const clicks: string[] = [];
+    const press = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      clicks.push(this.download);
+    });
+    try {
+      const json = JSON.stringify(YAML.parse(demo));
+      render(<DeckProfiles load={async () => json} format="json" />);
+      open();
+      await waitFor(() => screen.getByRole("button", { name: "Mini" }));
+      fireEvent.click(screen.getByRole("button", { name: "Mini" }));
+      await waitFor(() => expect(clicks).toEqual(["com.scrthq.runlog.long-kiln-mini.streamDeckProfile"]));
+      expect(made).toEqual(["application/zip"]);
+    } finally {
+      press.mockRestore();
+    }
+  });
+
   it("says so where the pack could not be read, and stays open about it", async () => {
     // A fetch that did not answer is not the same as a pack with nothing to
     // lay out. Hiding the row here would tell somebody this pack has no
