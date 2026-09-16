@@ -222,7 +222,7 @@ export function LibraryView({
                   </button>
                 )}
                 <DocMenu compact pack={() => loadPackText(p.source, p.record?.format ?? "yaml").pack} at={{ section: "packs", id: p.id }} />
-                <DeckProfiles load={() => Promise.resolve(p.source)} />
+                <DeckProfiles load={() => Promise.resolve(p.source)} format={p.record?.format ?? "yaml"} />
                 {/*
                   The one thing anybody came here to do, and it looked
                   like the four things beside it. Documents, Test, Every
