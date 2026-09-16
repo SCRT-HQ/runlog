@@ -78,12 +78,17 @@ export const wire = openWire((): Account => ({ apiBase: base }), store);
  * import prompt is the streamer's to answer, and asking again on every
  * launch fills their list with copies of the one profile.
  *
- * And the app's own folder is read first, for either kind of pack. A
- * streamer who already imported a profile for this pack has one the plugin
- * cannot switch to and must not hand over again: the app keeps both copies
- * and names the second one, so asking for the shipped profile would leave
- * them two lists of the same keys and take the deck off the one they
- * arranged.
+ * And the app's own folder is read first, for either kind of pack. For a
+ * pack this ships no layout for, a profile the streamer already imported
+ * under the pack's title is one the plugin cannot switch to and must not
+ * hand another copy of: the app keeps both and calls the second one
+ * "copy", so asking for the on-demand build again would leave them two
+ * lists of the same keys. A pack this ships a profile for switches
+ * regardless of what the folder holds: the shipped profile is in the
+ * plugin's manifest whether or not the streamer separately imported one
+ * under the same title, so the switch always has a target to reach, and
+ * the app installs the shipped profile itself the first time one is asked
+ * for.
  */
 let switchedFor: string | null = null;
 
@@ -151,20 +156,14 @@ store.subscribe((s) => {
     // Either kind counts as offered: nothing should hand this pack a
     // profile again on a later attach.
     if (held !== null) void markOffered(packId);
-    if (held === "imported") {
-      // The streamer has a profile of their own for this pack, under the
-      // pack's own name: imported off the pack's page, off the Install key,
-      // off a file somebody sent them. Nothing more is handed over, because
-      // the app keeps both and calls the second one "copy" rather than
-      // replacing the first. And nothing is switched: a profile somebody
-      // imported is not in this plugin's manifest, so it cannot be switched
-      // to, and asking the app for the shipped one instead would install a
-      // second copy and take the deck off the keys they arranged.
-      streamDeck.logger.info(
-        ships
-          ? `profile: ${packId} has a profile of its own installed, leaving the deck where it is`
-          : `profile: ${packId} already has one in the Stream Deck app`,
-      );
+    // Only a pack with no shipped profile stops here on an import: its
+    // on-demand build is not in this plugin's manifest either, so handing
+    // it over on top of an import the streamer already has would just be a
+    // second copy. A pack the plugin ships a profile for switches anyway,
+    // because the shipped profile is in the manifest whether or not the
+    // streamer separately imported one under the same title.
+    if (held === "imported" && !ships) {
+      streamDeck.logger.info(`profile: ${packId} already has one in the Stream Deck app`);
       return;
     }
   }
