@@ -127,7 +127,12 @@ export interface StoredRun {
    */
   events: unknown[];
   updatedAt: string;
-  /** The highest server sequence number in `events`; absent until the server has seen it. */
+  /**
+   * How far along the server's counter this device has caught up: the
+   * highest number in `events`, or the session counter where that stands
+   * higher, which it does for good once an undo has taken an event out.
+   * Absent until the server has seen the run.
+   */
   seq?: number;
   /** This account's part in it; absent for a run the server has never seen. */
   role?: "owner" | "player" | "viewer";

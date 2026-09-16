@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RunEvent } from "@runlog/engine";
-import { merge, nameFrom, pendingEvents, stampIds, tailSeq } from "./log.ts";
+import { merge, nameFrom, pendingEvents, sameLog, stampIds, tailSeq } from "./log.ts";
 
 const at = "2026-01-01T00:00:00Z";
 const ev = (id: string, seq?: number, t: RunEvent["t"] = "UnitEntered"): RunEvent =>
@@ -51,6 +51,20 @@ describe("a device's copy of a shared log", () => {
     expect((await stampIds("02RUN", old))[0]?.id).not.toBe(a[0]?.id);
     // Nothing missing: the same array back, so nothing is saved for nothing.
     expect(await stampIds("01RUN", a)).toBe(a);
+  });
+
+  it("calls two copies the same by id, and never a copy whose events have none", () => {
+    const a = [ev("a"), ev("b")];
+    expect(
+      sameLog(a, [
+        { ...a[0]!, seq: 1 },
+        { ...a[1]!, seq: 2 },
+      ]),
+    ).toBe(true);
+    expect(sameLog(a, [a[0]!])).toBe(false);
+    expect(sameLog(a, [a[1]!, a[0]!])).toBe(false);
+    const bare = a.map(({ id: _id, ...rest }) => rest as RunEvent);
+    expect(sameLog(bare, bare)).toBe(false);
   });
 
   it("reads the run's name off the log", () => {
