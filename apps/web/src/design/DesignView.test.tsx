@@ -70,6 +70,11 @@ describe("which pack the Designer opens on", () => {
     expect(container.textContent).toContain("Download");
   });
 
+  it("sets the tab to Design", async () => {
+    await mount(null);
+    expect(document.title.startsWith("Design")).toBe(true);
+  });
+
   it("replaces the draft and opens the editor once New pack is confirmed", async () => {
     await mount({ ...blankPack(), title: "Two-Line Days" });
     expect(container.textContent).toContain("Which pack?");

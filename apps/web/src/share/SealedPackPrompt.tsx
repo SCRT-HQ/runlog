@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { open, type ContainerHeader } from "@runlog/rules-schema";
+import { useTitle } from "../title.ts";
 
 /**
  * Opening a copy that was sold to somebody.
@@ -23,6 +24,7 @@ export function SealedPackPrompt({
   onOpened: (document: unknown, licenseKey: string) => void;
   onCancel: () => void;
 }) {
+  useTitle(null);
   const [key, setKey] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { GuidePageContext, guideComponents } from "./components.tsx";
 import { hrefFor } from "../route.ts";
 import { GUIDE_PAGES, GUIDE_PARTS, guidePage, guideSectionFromHash, guideSlugFromHash, type GuidePage } from "./pages.ts";
+import { useTitle } from "../title.ts";
 
 /**
  * The guide: how to use Runlog, in pages anyone can read without signing
@@ -32,12 +33,7 @@ export function GuideView({
   const sections = useSections(page);
   const inView = useInView(sections, page);
 
-  useEffect(() => {
-    document.title = `${page.title} · Runlog guide`;
-    return () => {
-      document.title = "Runlog";
-    };
-  }, [page]);
+  useTitle(`${page.title} · Guide`);
   // Land on the section the address names, once the page has its headings; at the top otherwise.
   useEffect(() => {
     const target = section ? document.getElementById(section) : null;
