@@ -8,7 +8,7 @@ import { loadPackText, loadSetupText, type Pack, type Setup } from "@runlog/rule
 import type { LiveSnapshot } from "@runlog/engine";
 
 import { PACK_PROFILES } from "../../../streamdeck/src/profiles.ts";
-import { BASE, DEVICES, DEVICE_IDS, FRAMES } from "./layouts.ts";
+import { BASE, DEVICES, DEVICE_IDS, FRAMES, UTILITY, type Key } from "./layouts.ts";
 import {
   container,
   framedPages,
@@ -18,11 +18,13 @@ import {
   packKeys,
   paginate,
   profile,
+  shippedName,
   specs,
   specsFor,
   type Built,
   type Keyed,
   type Laid,
+  type PageFile,
   type StoredAction,
 } from "./profiles.ts";
 
@@ -86,9 +88,19 @@ for (const file of ["packs/demo/pack.yaml", ...readdirSync(path("packs/sketches"
   if (slug) shipped.push({ slug, pack: parsed.pack, setups: setupsFor(toolFor(parsed.pack.id)) });
 }
 
-/** Every layout on every deck, built, with the slug it ships under. */
+/**
+ * Every layout on every deck, built, with the slug and the name it ships under.
+ *
+ * Both are the generator's: the slug is the file each pack is kept in, and
+ * the name is the shipped one, which is the pack's title and a mark saying
+ * where it came from so an import of the same pack is not turned into a
+ * copy. The generic profile is nobody's pack and keeps its own name.
+ */
 const all = shipped.flatMap(({ slug, pack, setups }) =>
-  specs(pack, setups).map((spec) => ({ spec: { ...spec, slug }, built: profile({ ...spec, slug }) })),
+  specs(pack, setups).map((spec) => {
+    const named = { ...spec, slug, name: pack ? shippedName(spec.name) : spec.name };
+    return { spec: named, built: profile(named) };
+  }),
 );
 
 /** Every action on every page of a built profile, with the page and position it sits at. */
@@ -177,6 +189,12 @@ describe("a deck laid out for a pack", () => {
     ]);
     // A layout that fits exactly grows no turn key pointing at nothing.
     expect(paginate(keys.slice(0, 6), 6)).toEqual([{ back: false, more: false, keys: keys.slice(0, 6) }]);
+    // With a page to follow, which on every profile is the utility page,
+    // the last page pays for the way on like any other.
+    expect(paginate(keys.slice(0, 6), 6, true)).toEqual([
+      { back: false, more: true, keys: keys.slice(0, 5) },
+      { back: true, more: true, keys: keys.slice(5, 6) },
+    ]);
   });
 
   it("spills one queue into the other's cells once that one has run dry", () => {
@@ -190,37 +208,77 @@ describe("a deck laid out for a pack", () => {
       turns: { next: "1,2", previous: "1,1" },
     };
     const key = (action: string) => ({ action });
+    // Every profile ends on the utility page, which is tested on its own
+    // below; what the queues did is the pages ahead of it.
+    const queued = (drive: Key[], numbers: Key[]) => framedPages(frame, drive, numbers).slice(0, -1);
 
-    // Nothing queued is still one page: the frame is the profile.
-    expect(framedPages(frame, [], [])).toEqual([{ back: false, more: false, keys: { "0,0": { action: "connect" } } }]);
+    // Nothing queued is still one page of its own: the frame is the profile.
+    expect(queued([], [])).toEqual([{ back: false, more: true, keys: { "0,0": key("connect") } }]);
 
     // Numbers done, moves keep coming down the right.
-    expect(framedPages(frame, [key("a"), key("b"), key("c")], [key("n")])).toEqual([
-      {
-        back: false,
-        more: false,
-        keys: { "0,0": key("connect"), "0,1": key("a"), "0,2": key("b"), "1,1": key("n"), "1,2": key("c") },
-      },
+    expect(queued([key("a"), key("b"), key("c")], [])).toEqual([
+      { back: false, more: true, keys: { "0,0": key("connect"), "0,1": key("a"), "0,2": key("b"), "1,1": key("c") } },
     ]);
 
     // Moves done, numbers keep coming down the left.
-    expect(framedPages(frame, [key("a")], [key("n"), key("o"), key("p")])).toEqual([
-      {
-        back: false,
-        more: false,
-        keys: { "0,0": key("connect"), "0,1": key("a"), "0,2": key("p"), "1,1": key("n"), "1,2": key("o") },
-      },
+    expect(queued([key("a")], [key("n"), key("o")])).toEqual([
+      { back: false, more: true, keys: { "0,0": key("connect"), "0,1": key("a"), "0,2": key("o"), "1,1": key("n") } },
     ]);
 
-    // More than the four free cells hold: the last one goes on paging, and
-    // the second page spends a cell coming back rather than going on.
-    const long = framedPages(frame, [key("a"), key("b"), key("c"), key("d")], [key("n"), key("o")]);
+    // More than the three cells a page can spare hold: the rest page, and
+    // the second page spends a cell coming back as well as one going on.
+    const long = queued([key("a"), key("b"), key("c"), key("d")], [key("n")]);
     expect(long.map((p) => [p.back, p.more])).toEqual([
       [false, true],
-      [true, false],
+      [true, true],
     ]);
     expect(Object.keys(long[0]!.keys).sort()).toEqual(["0,0", "0,1", "0,2", "1,1"]);
     expect(long[1]!.keys["0,1"]).toEqual(key("c"));
+  });
+
+  it("spends the way on even where the queues would have fitted without it", () => {
+    // Every page ahead of the utility page pays for a way on to it, so a
+    // frame filled to the brim pages one key earlier than the cells alone
+    // say. No frame the plugin ships is in that position: all forty-four
+    // profiles cut the same pages they did before the utility page, plus
+    // it. A frame changed until one is trips this, which is the point.
+    const frame = {
+      fixed: [],
+      extras: { drive: { first: [], last: [] }, numbers: { first: [], last: [] } },
+      drive: ["0,0", "0,1", "0,2"],
+      numbers: [],
+      turns: { next: "0,2", previous: "0,0" },
+    };
+    const key = (action: string) => ({ action });
+    const pages = framedPages(frame, [key("a"), key("b"), key("c")], []);
+    // Three cells and three keys, and two pages of the keys, then the utility page.
+    expect(pages.map((p) => [p.back, p.more, Object.keys(p.keys)])).toEqual([
+      [false, true, ["0,0", "0,1"]],
+      [true, true, ["0,1"]],
+      [true, false, ["0,1", "0,2"]],
+    ]);
+    expect(pages[1]!.keys["0,1"]).toEqual(key("c"));
+    expect(pages[2]!.keys["0,1"]).toEqual(UTILITY[0]);
+  });
+
+  it("ends on the keys that are not about the run, whatever the queues did", () => {
+    const frame = {
+      fixed: [{ key: { action: "connect" }, at: "0,0" }],
+      extras: { drive: { first: [], last: [] }, numbers: { first: [], last: [] } },
+      drive: ["0,1", "0,2"],
+      numbers: ["1,1", "1,2"],
+      turns: { next: "1,2", previous: "1,1" },
+    };
+    // Both queues empty and the utility page is still cut, with the frame
+    // on it, the first of the utility keys down the drive cells, nothing on
+    // the numbers side, and no way on from the last page of a profile.
+    const pages = framedPages(frame, [], []);
+    expect(pages).toHaveLength(2);
+    expect(pages[1]).toEqual({
+      back: true,
+      more: false,
+      keys: { "0,0": { action: "connect" }, "0,1": UTILITY[0], "0,2": UTILITY[1] },
+    });
   });
 
   it("stops on a frame with nowhere to put a key rather than paging for ever", { timeout: 2000 }, () => {
@@ -234,7 +292,12 @@ describe("a deck laid out for a pack", () => {
       numbers: [],
       turns: { next: "0,1", previous: "1,1" },
     };
-    expect(framedPages(walled, [{ action: "press" }], [])).toEqual([{ back: false, more: false, keys: { "0,0": { action: "connect" } } }]);
+    // One page of the frame, then the utility page, which has no cell to
+    // put a utility key in either.
+    expect(framedPages(walled, [{ action: "press" }], [])).toEqual([
+      { back: false, more: true, keys: { "0,0": { action: "connect" } } },
+      { back: true, more: false, keys: { "0,0": { action: "connect" } } },
+    ]);
   });
 
   it("keeps the same frame under a hand on every page of an XL", () => {
@@ -249,26 +312,57 @@ describe("a deck laid out for a pack", () => {
     expect(at(page!, "0,3")).toBe("finish");
     // The numbers the run works out, under the eye rather than the hand.
     expect(at(page!, "4,0")).toBe("metric:score");
-    // Thirteen keys on a deck with thirty-two cells: one page, no turns,
-    // and the cell a pack's rules would take left empty.
-    expect(deck(null, "xl")).toHaveLength(1);
+    // Nothing of a pack's queued, so the frame is the whole of page one,
+    // with the cell a pack's rules would take left empty and a way on to
+    // the utility page.
     expect(at(page!, "7,0")).toBe("");
+    expect(at(page!, "7,3")).toBe("turn:next");
+  });
+
+  it("ends an XL on the keys that are not about the run", () => {
+    const [first, second, ...rest] = deck(null, "xl");
+    expect(first).toBeDefined();
+    expect(rest).toHaveLength(0);
+    // The frame is the frame here too, and the utility keys fill the cells
+    // a pack's own would have.
+    expect(at(second!, "0,1")).toBe("next");
+    expect(at(second!, "3,0")).toBe("install");
+    expect(at(second!, "1,2")).toBe("open:guide");
+    expect(at(second!, "2,2")).toBe("open:newrun");
+    expect(at(second!, "3,2")).toBe("open:dock");
+    expect(at(second!, "6,3")).toBe("turn:previous");
+    expect(at(second!, "7,3")).toBe("");
+    // Nothing spills onto the numbers side: the page is the frame's own
+    // readouts and the four keys, and no more.
+    for (const cell of ["4,1", "5,1", "6,1", "7,1", "4,2", "5,2", "6,2", "7,2", "4,3", "5,3"]) {
+      expect(at(second!, cell), cell).toBe("");
+    }
   });
 
   it("gives an XL the pack's rules in the frame, its numbers right and its moves left", () => {
     const demo = shipped.find((l) => l.slug === "demo")!.pack!;
-    const [page] = deck(fromPack(demo, []), "xl");
+    const built = deck(fromPack(demo, []), "xl");
+    const [page] = built;
     expect(at(page!, "7,0")).toBe("open:rules");
     const shownCounters = Object.entries(demo.counters ?? {}).filter(([, c]) => !c.hidden);
     expect(at(page!, "4,1")).toBe(`metric:${shownCounters[0]![0]}`);
-    expect(at(page!, "1,2")).toBe(`press:${Object.keys(demo.moves ?? {})[0]}`);
+    // The cell the guide used to hold is the first the pack's moves fill.
+    expect(at(page!, "3,0")).toBe(`press:${Object.keys(demo.moves ?? {})[0]}`);
+    // The guide is on the last page with the rest of the utility keys, and
+    // the page ahead of it carries a way on to them.
+    const cells = Object.keys(page!);
+    expect(cells.filter((cell) => at(page!, cell) === "open:guide")).toEqual([]);
+    expect(at(page!, "7,3")).toBe("turn:next");
+    const last = built[built.length - 1]!;
+    expect(at(last, "3,0")).toBe("install");
+    expect(at(last, "1,2")).toBe("open:guide");
   });
 
   it("pages an XL under the same frame, and spills the moves right once the numbers are done", () => {
-    const [first, second, ...rest] = deck(crowded, "xl");
+    const [first, second, third, ...rest] = deck(crowded, "xl");
     expect(rest).toHaveLength(0);
-    // The frame is the frame on both pages.
-    for (const page of [first!, second!]) {
+    // The frame is the frame on every page, the utility one included.
+    for (const page of [first!, second!, third!]) {
       expect(at(page, "0,1")).toBe("next");
       expect(at(page, "0,3")).toBe("finish");
       expect(at(page, "4,0")).toBe("metric:score");
@@ -278,29 +372,43 @@ describe("a deck laid out for a pack", () => {
     // well as the left rather than leaving half the deck empty.
     expect(at(first!, "4,1")).toBe("metric:one");
     expect(at(first!, "5,1")).toBe("metric:two");
-    expect(at(first!, "6,1")).toBe("press:move6");
+    expect(at(first!, "6,1")).toBe("press:move7");
     expect(at(first!, "7,3")).toBe("turn:next");
-    // The way back sits beside where the way on was, and the last page
-    // grows no turn pointing at nothing.
+    // The way back sits beside where the way on is, and the last page,
+    // which is the utility page, grows no turn pointing at nothing.
     expect(at(second!, "6,3")).toBe("turn:previous");
-    expect(at(second!, "7,3")).toBe("");
+    expect(at(second!, "7,3")).toBe("turn:next");
+    expect(at(third!, "3,0")).toBe("install");
+    expect(at(third!, "6,3")).toBe("turn:previous");
+    expect(at(third!, "7,3")).toBe("");
   });
 
   it("queues what a Stream Deck has no cell to pin", () => {
-    const [page] = deck(null, "sd");
-    expect(deck(null, "sd")).toHaveLength(1);
+    const [page, second, ...rest] = deck(null, "sd");
+    expect(rest).toHaveLength(0);
     // Five by three has room to pin seven keys and no more, so the rest
     // queue: the two a hand wants mid-scene first.
     expect(at(page!, "2,0")).toBe("autoroll");
     expect(at(page!, "3,0")).toBe("clock");
     // The readouts queue behind whatever the pack keeps, which is nothing
-    // in the generic profile.
+    // in the generic profile. The second of them comes down the left,
+    // because the way on to the utility page has the last number cell.
     expect(at(page!, "4,1")).toBe("metric:unit");
-    expect(at(page!, "4,2")).toBe("metric:clock");
+    expect(at(page!, "1,2")).toBe("metric:clock");
+    expect(at(page!, "4,2")).toBe("turn:next");
     // And the frame is still the frame.
     expect(at(page!, "0,1")).toBe("next");
     expect(at(page!, "4,0")).toBe("metric:score");
     expect(at(page!, "0,2")).toBe("finish");
+    // The last page is the keys that are not about the run, in the cells a
+    // hand drives from, and nothing else.
+    expect(at(second!, "2,0")).toBe("install");
+    expect(at(second!, "3,0")).toBe("open:guide");
+    expect(at(second!, "3,1")).toBe("open:newrun");
+    expect(at(second!, "1,2")).toBe("open:dock");
+    expect(at(second!, "3,2")).toBe("turn:previous");
+    expect(at(second!, "4,2")).toBe("");
+    expect(at(second!, "4,1")).toBe("");
   });
 
   it("gives a Stream Deck the pack's own keys ahead of the keys nobody presses mid-scene", () => {
@@ -320,22 +428,53 @@ describe("a deck laid out for a pack", () => {
     expect(at(first!, "3,2")).not.toBe("turn:previous");
     expect(at(second!, "3,2")).toBe("turn:previous");
     expect(at(second!, "4,2")).toBe("turn:next");
-    // The Open keys wait behind every move the pack has, and the rules
-    // behind them, so the last page is where all three land.
-    const last = pages[pages.length - 1]!;
+    // The Open run key waits behind every move the pack has, and the rules
+    // behind it, so the last page of the pack's own is where both land.
+    const last = pages[pages.length - 2]!;
     const opens = Object.keys(last)
       .map((cell) => at(last, cell))
       .filter((says) => says.startsWith("open:"));
-    expect(opens).toEqual(["open:run", "open:guide", "open:rules"]);
+    expect(opens).toEqual(["open:run", "open:rules"]);
   });
 
   it("lays a Mini and a + down in order, because neither has room for a frame", () => {
     expect(FRAMES.mini).toBeUndefined();
     expect(FRAMES.plus).toBeUndefined();
-    const [page] = deck(null, "mini");
+    const mini = deck(null, "mini");
+    const [page] = mini;
     expect(at(page!, "0,0")).toBe("connect");
     expect(at(page!, "1,0")).toBe("run");
     expect(at(page!, "2,1")).toBe("turn:next");
+    // Both end on the utility page all the same: the way back, then the
+    // four keys that are not about the run.
+    const last = mini[mini.length - 1]!;
+    expect(["0,0", "1,0", "2,0", "0,1", "1,1", "2,1"].map((cell) => at(last, cell))).toEqual([
+      "turn:previous",
+      "install",
+      "open:guide",
+      "open:newrun",
+      "open:dock",
+      "",
+    ]);
+    const plus = deck(null, "plus");
+    const end = plus[plus.length - 1]!;
+    expect(["0,0", "1,0", "2,0", "3,0", "0,1"].map((cell) => at(end, cell))).toEqual([
+      "turn:previous",
+      "install",
+      "open:guide",
+      "open:newrun",
+      "open:dock",
+    ]);
+  });
+
+  it("repeats a +'s dials on the utility page, the way it does on every other", () => {
+    const built = profile(specsFor(null, { slug: "test", name: "Test" }, "plus")[0]!);
+    const wheels = Object.values(built.files)
+      .filter((file): file is PageFile => "Controllers" in file)
+      .map((file) => file.Controllers.find((c) => c.Type === "Encoder"))
+      .filter((c) => c !== undefined);
+    expect(wheels).toHaveLength(pages(built).length);
+    for (const wheel of wheels) expect(Object.keys(wheel.Actions ?? {})).toEqual(["0,0", "1,0", "2,0", "3,0"]);
   });
 
   it("frames every base key or queues it, and never both", () => {
@@ -344,6 +483,14 @@ describe("a deck laid out for a pack", () => {
       const queued = [...frame.extras.drive.first, ...frame.extras.drive.last, ...frame.extras.numbers.first, ...frame.extras.numbers.last];
       const held = [...frame.fixed.map((f) => said(f.key)), ...queued.map(said)];
       expect(held.sort(), device).toEqual(BASE.map(said).sort());
+      // And nothing the utility page carries is in the frame as well: the
+      // keys that are not about the run are on the last page and nowhere
+      // else.
+      const utility = new Set(UTILITY.map(said));
+      expect(
+        held.filter((key) => utility.has(key)),
+        device,
+      ).toEqual([]);
     }
   });
 
@@ -438,10 +585,11 @@ describe("a deck laid out for a pack", () => {
     }
   });
 
-  it("gives every profile the run and the guide, and only a pack's the rules", () => {
+  it("gives every profile the run, the guide, a new run and the dock, and only a pack's the rules", () => {
     for (const { spec, built } of all) {
-      // Once each, however many pages: a framed deck keeps its Open keys in
-      // the frame, so they are on every page of one.
+      // Once each, however many pages: a framed deck keeps its Open run key
+      // in the frame, so it is on every page of one, and the other three
+      // are on the utility page every profile ends with.
       const targets = [
         ...new Set(
           placed(built)
@@ -449,7 +597,28 @@ describe("a deck laid out for a pack", () => {
             .map((p) => (p.action.Settings as { target: string }).target),
         ),
       ].sort();
-      expect(targets, `${spec.slug}-${spec.device}`).toEqual(spec.slug === "runlog" ? ["guide", "run"] : ["guide", "rules", "run"]);
+      const common = ["dock", "guide", "newrun", "run"];
+      expect(targets, `${spec.slug}-${spec.device}`).toEqual(spec.slug === "runlog" ? common : [...common, "rules"].sort());
+    }
+  });
+
+  it("puts the keys that are not about the run on the last page of every profile", () => {
+    for (const { spec, built } of all) {
+      const last = pages(built).at(-1)!;
+      const said = Object.keys(last).map((cell) => at(last, cell));
+      expect(said, `${spec.slug}-${spec.device}`).toContain("install");
+      for (const target of ["guide", "newrun", "dock"]) {
+        expect(said, `${spec.slug}-${spec.device}`).toContain(`open:${target}`);
+      }
+      // The last page of a profile turns back and nowhere on.
+      expect(
+        said.filter((says) => says === "turn:next"),
+        `${spec.slug}-${spec.device}`,
+      ).toHaveLength(0);
+      // And the Install key is on that page alone, not scattered through
+      // the pack's own.
+      const installs = placed(built).filter((p) => p.action.UUID === "com.scrthq.runlog.install");
+      expect(installs, `${spec.slug}-${spec.device}`).toHaveLength(1);
     }
   });
 
@@ -505,6 +674,12 @@ describe("a deck laid out for a pack", () => {
       { slug: demo.id, device: "xl", name: demo.title, keys: expect.anything(), zones: expect.anything() },
     ]);
     expect(specs(null, []).map((s) => `${s.slug}-${s.device}`)).toEqual(["runlog-xl", "runlog-sd", "runlog-mini", "runlog-plus"]);
+    // A download and a build off the Install key take the bare title. The
+    // shipped one is marked, so the app holds both under their own names
+    // rather than calling the second "<title> copy".
+    expect(shippedName(demo.title)).toBe(`${demo.title} (Runlog)`);
+    expect(all.find(({ spec }) => spec.slug === "demo")!.spec.name).toBe(shippedName(demo.title));
+    expect(all.find(({ spec }) => spec.slug === "runlog")!.spec.name).toBe("Runlog");
   });
 
   it("lays a run's own offer out the way it lays the pack file out", () => {
