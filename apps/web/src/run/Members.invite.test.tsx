@@ -160,7 +160,9 @@ describe("inviting someone", () => {
       }) as unknown as Api["createInvite"],
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Invite someone" }));
+    fireEvent.click(screen.getByRole("button", { name: "Invite" }));
+    // The button is short because the row is; the sheet has the room to ask in full.
+    expect(screen.getByRole("dialog").querySelector("h2")?.textContent).toBe("Invite someone");
     const field = screen.getByLabelText("Email address to invite");
     expect(document.activeElement).toBe(field);
 
@@ -173,7 +175,7 @@ describe("inviting someone", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByRole("status").textContent).toBe("Sent to kel@example.com. The link works for seven days.");
     // Back where the press came from, so a keyboard is not left at the top.
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Invite someone" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Invite" }));
   });
 
   it("stays open, with what went wrong, when it did not send", async () => {
@@ -183,7 +185,7 @@ describe("inviting someone", () => {
       }) as Api["createInvite"],
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Invite someone" }));
+    fireEvent.click(screen.getByRole("button", { name: "Invite" }));
     fireEvent.change(screen.getByLabelText("Email address to invite"), { target: { value: "kel@example.com" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
@@ -194,7 +196,7 @@ describe("inviting someone", () => {
 
   it("closes on Escape", async () => {
     await show({});
-    fireEvent.click(screen.getByRole("button", { name: "Invite someone" }));
+    fireEvent.click(screen.getByRole("button", { name: "Invite" }));
     expect(screen.getByRole("dialog")).toBeTruthy();
     fireEvent.keyDown(document, { key: "Escape" });
     await flush(1);
@@ -203,7 +205,7 @@ describe("inviting someone", () => {
 
   it("sends nothing while the address is empty", async () => {
     await show({});
-    fireEvent.click(screen.getByRole("button", { name: "Invite someone" }));
+    fireEvent.click(screen.getByRole("button", { name: "Invite" }));
     expect(screen.getByRole("button", { name: "Send" }).hasAttribute("disabled")).toBe(true);
   });
 });
@@ -213,7 +215,7 @@ describe("the live link", () => {
     rememberLiveLink("run-1", LINK);
     await show({}, runOf({ shared: true }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Copy live link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
     await flush();
 
     expect(written).toEqual([LINK]);
@@ -224,7 +226,7 @@ describe("the live link", () => {
   it("shares and copies in the one press", async () => {
     await show({ shareRun: (async () => ({ link: LINK })) as Api["shareRun"] });
 
-    fireEvent.click(screen.getByRole("button", { name: "Share a live link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Share link" }));
     await flush();
 
     expect(written).toEqual([LINK]);

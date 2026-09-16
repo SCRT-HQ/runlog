@@ -344,28 +344,43 @@ describe("the buttons under the table", () => {
 
   it("offers inviting and a link to share while the run is closed", () => {
     const html = panel(twoOf(), syncOf(true, true));
-    expect(html).toContain(">Invite someone</button>");
-    expect(html).toContain(">Share a live link</button>");
-    expect(html).not.toContain("Copy live link");
+    expect(html).toContain(">Invite</button>");
+    expect(html).toContain(">Share link</button>");
+    expect(html).not.toContain("Copy link");
     expect(html).not.toContain("Stop sharing");
-    expect(html).toContain('title="Anyone with this link watches the run as it happens, with no account."');
+    expect(html).toContain('title="Open the run to anyone with the link, and copy it"');
   });
 
   it("offers copying and stopping once the run is open to watchers", () => {
     live.link = "https://runlog.test/#run/run-1?t=tok";
     const html = panel(twoOf({ shared: true }), syncOf(true, true));
-    expect(html).toContain(">Invite someone</button>");
-    expect(html).toContain(">Copy live link</button>");
+    expect(html).toContain(">Invite</button>");
+    expect(html).toContain(">Copy link</button>");
     expect(html).toContain(">Stop sharing</button>");
-    expect(html).not.toContain("Share a live link");
+    expect(html).not.toContain("Share link");
+  });
+
+  /**
+   * Short labels, full meaning in the titles: three buttons have to hold
+   * one line in a column 17rem wide, and "Invite someone to this run" is
+   * what the row cannot afford to spell out.
+   */
+  it("says the whole of it in the titles", () => {
+    live.link = "https://runlog.test/#run/run-1?t=tok";
+    const html = panel(twoOf({ shared: true }), syncOf(true, true));
+    expect(html).toContain('title="Invite someone to this run"');
+    expect(html).toContain('title="Anyone with this link watches the run as it happens, with no account."');
+    expect(html).toContain('title="Close the live link"');
+    // The sheet has the room, so it still asks in full.
+    expect(html).not.toContain("Invite someone</button>");
   });
 
   /** Somebody who is not the owner can pass the link on, and nothing else. */
   it("gives a player the copy and none of the rest", () => {
     live.link = "https://runlog.test/#run/run-1?t=tok";
     const html = panel(twoOf({ role: "player", shared: true }), syncOf(true, true));
-    expect(html).toContain(">Copy live link</button>");
-    expect(html).not.toContain("Invite someone");
+    expect(html).toContain(">Copy link</button>");
+    expect(html).not.toContain(">Invite</button>");
     expect(html).not.toContain("Stop sharing");
   });
 

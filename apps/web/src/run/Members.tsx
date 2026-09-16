@@ -602,23 +602,23 @@ export function Members({
         {(owner || Boolean(shared && liveLink)) && (
           <div className="row padRow memberActions">
             {owner && (
-              <button ref={inviteButton} className="ghost small" onClick={() => setInviting(true)}>
-                Invite someone
+              <button ref={inviteButton} className="ghost small" title="Invite someone to this run" onClick={() => setInviting(true)}>
+                Invite
               </button>
             )}
             {shared && liveLink ? (
               <button className="ghost small" title={liveTitle} onClick={() => copyLive(liveLink)}>
-                {copied ? "Copied" : "Copy live link"}
+                {copied ? "Copied" : "Copy link"}
               </button>
             ) : (
               owner && (
-                <button className="ghost small" title={liveTitle} disabled={busy} onClick={share}>
-                  Share a live link
+                <button className="ghost small" title="Open the run to anyone with the link, and copy it" disabled={busy} onClick={share}>
+                  Share link
                 </button>
               )
             )}
             {owner && shared && liveLink && (
-              <button className="ghost small" disabled={busy} onClick={stopSharing}>
+              <button className="ghost small" title="Close the live link" disabled={busy} onClick={stopSharing}>
                 Stop sharing
               </button>
             )}
