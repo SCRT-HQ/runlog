@@ -4671,3 +4671,7 @@ signing in hangs again, never succeeds. I've tried restarting the Stream Deck ap
 ---
 
 When I launched a new pack and connected the Stream Deck to it, the app told me it had a profile immediately and asked me for confirmation to install it. I added the "Open this pack's profile" button but it shows as disabled right now and it does nothing when I press it [Image #140] [Image #141]
+
+---
+
+the profile that was offered and installed seems very generic and was missing a lot of the pack specific buttons that we set up for Elden Ring TarnishedTool
