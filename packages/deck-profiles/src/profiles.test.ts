@@ -2,6 +2,10 @@ import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText, loadSetupText, type Pack, type Setup } from "@runlog/rules-schema";
+// A type and nothing else: it is erased, so the engine does not follow this
+// package into a browser. What it buys is the pin below, where the layout
+// the page publishes has to still be the layout a profile is laid out from.
+import type { LiveSnapshot } from "@runlog/engine";
 
 import { PACK_PROFILES } from "../../../streamdeck/src/profiles.ts";
 import { DEVICES, DEVICE_IDS } from "./layouts.ts";
@@ -16,6 +20,7 @@ import {
   specs,
   specsFor,
   type Built,
+  type Laid,
   type StoredAction,
 } from "./profiles.ts";
 
@@ -322,6 +327,62 @@ describe("a deck laid out for a pack", () => {
     expect([...container(profile(specsFor(fromOffer(offer), named, "xl")[0]!))]).toEqual([
       ...container(profile(specs(demo, setups, "xl")[0]!)),
     ]);
+  });
+
+  it("reads the layout the engine publishes, field for field", () => {
+    // `Laid` is a copy of the engine's shape, the way `Offered` is a copy
+    // of the offer's: this package is imported by a browser and takes
+    // nothing from either app at run time. The copy is only worth anything
+    // while it still matches, so the engine's own type is assigned to it
+    // here and a field renamed over there fails this.
+    const published: NonNullable<LiveSnapshot["layout"]> = {
+      moves: [{ id: "settle", label: "Settle" }],
+      counters: [{ id: "marks", label: "Marks" }],
+      resources: [{ id: "clay", label: "Clay" }],
+    };
+    const laid: Laid = published;
+
+    const keyed = fromOffer({}, laid);
+    expect(keyed.moves.map((m) => m.id)).toEqual(["settle"]);
+    expect(keyed.counters.map((c) => c.id)).toEqual(["marks"]);
+    expect(keyed.resources.map((r) => r.id)).toEqual(["clay"]);
+  });
+
+  it("lays out the pack's whole layout where the snapshot carries one, not the moment's offer", () => {
+    // The offer is the state's view: a move behind a shut gate is not in
+    // it, and a profile built from it would be missing a key until the
+    // next time somebody built one. The layout is the pack itself.
+    const keyed = fromOffer(
+      {
+        moves: [{ id: "push-on" }],
+        trackers: [{ id: "marks", kind: "counter" }],
+        setups: [{ id: "com.example.setups.starter", title: "Starter kit" }],
+      },
+      {
+        moves: [{ id: "push-on" }, { id: "hold" }],
+        counters: [{ id: "marks" }, { id: "scars" }],
+        resources: [{ id: "stock" }],
+      },
+    );
+
+    expect(keyed.moves.map((m) => m.id)).toEqual(["push-on", "hold"]);
+    expect(keyed.counters.map((c) => c.id)).toEqual(["marks", "scars"]);
+    expect(keyed.resources.map((r) => r.id)).toEqual(["stock"]);
+    // The setups are the offer's either way: a layout carries none.
+    expect(keyed.setups.map((s) => s.id)).toEqual(["com.example.setups.starter"]);
+  });
+
+  it("reads the offer alone where a page publishes no layout", () => {
+    const offer = {
+      moves: [{ id: "push-on" }],
+      trackers: [
+        { id: "marks", kind: "counter" as const },
+        { id: "stock", kind: "resource" as const },
+      ],
+    };
+    expect(fromOffer(offer)).toEqual(fromOffer(offer, null));
+    expect(fromOffer(offer).moves.map((m) => m.id)).toEqual(["push-on"]);
+    expect(fromOffer(offer).resources.map((r) => r.id)).toEqual(["stock"]);
   });
 
   it("gives a setup on both of the offer's lists one key, not two", () => {

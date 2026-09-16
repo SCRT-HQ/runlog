@@ -29,7 +29,12 @@ const config = {
     },
     typescript({
       mapRoot: isWatching ? "./" : undefined,
-      include: ["src/**/*.ts", "../packages/session/src/**/*.ts", "../packages/deck-profiles/src/**/*.ts"],
+      include: [
+        "src/**/*.ts",
+        "../packages/session/src/**/*.ts",
+        "../packages/deck-profiles/src/**/*.ts",
+        "../packages/rules-schema/src/**/*.ts",
+      ],
     }),
     nodeResolve({
       browser: false,

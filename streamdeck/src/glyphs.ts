@@ -16,6 +16,8 @@ export const GLYPHS: Record<string, string> = {
     '<path d="M89 51 A34 34 0 1 1 55 51" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round"/> <path d="M72 20 L72 64" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round"/>',
   finish:
     '<path d="M38 22 V126" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/> <path d="M38 30 H114 L96 58 L114 86 H38 Z" fill="#ffffff"/>',
+  install:
+    '<path d="M72 22 V82" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/> <path d="M44 56 L72 84 L100 56" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/> <path d="M24 94 V110 A12 12 0 0 0 36 122 H108 A12 12 0 0 0 120 110 V94" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>',
   metric:
     '<g fill="#ffffff"> <rect x="26" y="76" width="24" height="42" rx="7"/> <rect x="60" y="50" width="24" height="68" rx="7"/> <rect x="94" y="26" width="24" height="92" rx="7"/> </g>',
   next: '<path d="M46 26 L118 72 L46 118 Z" fill="#ffffff"/>',

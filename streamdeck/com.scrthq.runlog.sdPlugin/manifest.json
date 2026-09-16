@@ -445,6 +445,15 @@
       "Controllers": ["Keypad"],
       "States": [{ "Image": "imgs/keys/finish" }],
       "PropertyInspectorPath": "ui/finish.html"
+    },
+    {
+      "Name": "Install a profile",
+      "UUID": "com.scrthq.runlog.install",
+      "Icon": "imgs/actions/install",
+      "Tooltip": "Builds a profile for a pack you own and hands it to the Stream Deck app to import.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/install" }],
+      "PropertyInspectorPath": "ui/install.html"
     }
   ]
 }

@@ -30,6 +30,7 @@ export const ACTION_NAMES: Record<string, string> = {
   clock: "Clock",
   autoroll: "Keep rolling for me",
   finish: "Finish the run",
+  install: "Install a profile",
 };
 
 /** The app's own page turns, which are not ours and take none of our furniture. */

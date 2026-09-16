@@ -14,6 +14,7 @@ import {
   commandFace,
   rollFace,
   openFace,
+  installFace,
   clockFace,
   clockPress,
   autoRollFace,
@@ -352,6 +353,23 @@ describe("what the open key says", () => {
       when: "press Connect",
     });
     expect(openFace(open([held("s1"), held("s2", "Friday")]), "run")).toEqual({ title: "Pick a run", tone: "dim" });
+  });
+});
+
+// The one key that asks nothing of the run: the pack is picked in its
+// settings and read off the account, so the face is the pack and nothing
+// about the connection.
+describe("what the install key says", () => {
+  it("names the pack it would build a profile for", () => {
+    expect(installFace({ id: "com.example.ember-trail", title: "Ember Trail" })).toEqual({
+      title: "Ember Trail",
+      tone: "deck",
+      when: "to import",
+    });
+  });
+
+  it("says Set up with no pack chosen", () => {
+    expect(installFace(undefined)).toEqual({ title: "Set up", tone: "dim" });
   });
 });
 

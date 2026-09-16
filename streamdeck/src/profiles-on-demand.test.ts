@@ -98,6 +98,29 @@ describe("a profile built from the run the deck is on", () => {
     expect(text).toContain("Ember Trail");
   });
 
+  it("lays out the pack the snapshot publishes, not the moves the run happens to be offering", () => {
+    // The offer is what the step will take right now; the layout is the
+    // pack. A move behind a gate that is shut is in the second and not the
+    // first, and a profile is of the pack.
+    const snapshot = state({ packId: "com.example.ember-trail", packTitle: "Ember Trail" }) as {
+      snapshot: { layout?: unknown };
+    };
+    snapshot.snapshot.layout = {
+      moves: [
+        { id: "push-on", label: "Push on" },
+        { id: "hold", label: "Hold" },
+        { id: "make-camp", label: "Make camp" },
+      ],
+      counters: [{ id: "marks", label: "Marks" }],
+      resources: [{ id: "stock", label: "Stock" }],
+    };
+
+    const text = new TextDecoder().decode(buildFor(snapshot as never, 2)!.bytes);
+    expect(text).toContain("make-camp");
+    // And the setups still come off the offer, which is the only place they are.
+    expect(text).toContain("com.example.setups.starter");
+  });
+
   it("falls back to the pack's id where the run names no title", () => {
     const built = buildFor(state({ packId: "com.example.ember-trail" }), 2)!;
     expect(new TextDecoder().decode(built.bytes)).toContain("com.example.ember-trail");
