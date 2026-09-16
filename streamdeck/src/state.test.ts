@@ -13,6 +13,7 @@ import {
   setupFace,
   commandFace,
   rollFace,
+  pressFace,
   openFace,
   installFace,
   clockFace,
@@ -301,8 +302,7 @@ describe("what the command key says", () => {
   });
 });
 
-// Task 19b: a dedicated key for the roll alone, sending what Press's roll
-// target sends today.
+// Task 19b: a dedicated key for the roll alone, which is the only key that rolls.
 describe("what the roll key says", () => {
   it("is loading before the offer lands", () => {
     const s = open();
@@ -323,6 +323,16 @@ describe("what the roll key says", () => {
     s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
     s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, primary: { id: "carry-on", label: "Carry on", kind: "move" } } } }, T);
     expect(rollFace(s)).toEqual({ title: "Nothing to roll", tone: "dim" });
+  });
+});
+
+describe("what the press key says", () => {
+  it("says Set up, not a crash, for a stale roll target from before the key dropped it", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    s = reduce(s, { t: "snapshot", snapshot: { offer } }, T);
+    expect(pressFace(s, { kind: "roll" })).toEqual({ title: "Set up", tone: "dim" });
   });
 });
 

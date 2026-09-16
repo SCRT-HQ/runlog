@@ -119,7 +119,13 @@ export interface Face {
   /** 0-1, set only for a running timer clock so a dial's indicator can draw it. */
   fraction?: number;
 }
-export type PressTarget = { kind: "roll" } | { kind: "move"; id: string } | { kind: "answer"; preset: string; value: string };
+export type PressTarget = { kind: "move"; id: string } | { kind: "answer"; preset: string; value: string };
+/** A press target as it may still sit on disk: an older key's `kind: "roll"`, or any other shape the plugin no longer reads. */
+export type StoredPressTarget = PressTarget | { kind: string };
+/** Whether a stored press target is still a shape the plugin knows how to read. */
+export function isPressTarget(target: StoredPressTarget): target is PressTarget {
+  return target.kind === "move" || target.kind === "answer";
+}
 export type MetricField = "score" | "unit" | "clock" | "latest" | "leader" | { counter: string } | { resource: string };
 /** What a short press of an adjustable Metric key does: step it up by one, or put it at a number. */
 export type MetricPress = { kind: "step" } | { kind: "set"; value: number };
@@ -318,13 +324,12 @@ export function nextFace(state: DeckState, settings: NextSettings): Face {
   return { title: offer.needsPage ?? "Nothing to press", tone: offer.needsPage ? "refuse" : "dim" };
 }
 
-export function pressFace(state: DeckState, target: PressTarget): Face {
+export function pressFace(state: DeckState, target: StoredPressTarget): Face {
   const c = common(state) ?? flashed(state);
   if (c) return c;
   const offer = state.snapshot?.offer;
   if (!offer) return { title: "Loading…", tone: "dim" };
-  if (target.kind === "roll")
-    return offer.primary?.id === "roll" ? { title: offer.primary.label, tone: "live" } : { title: "Nothing to roll", tone: "dim" };
+  if (!isPressTarget(target)) return { title: "Set up", tone: "dim" };
   if (target.kind === "move") {
     const m = offer.moves.find((x) => x.id === target.id);
     return m ? { title: m.label, tone: "live" } : { title: "Not on offer", tone: "dim" };

@@ -34,7 +34,7 @@
         };
 
         const fill = (moves, presets) => {
-          target.replaceChildren(option(null, "Set up"), option({ kind: "roll" }, "The waiting roll"));
+          target.replaceChildren(option(null, "Set up"));
           for (const m of moves) target.appendChild(option({ kind: "move", id: m.id }, m.label));
           for (const p of presets) target.appendChild(option({ kind: "answer", preset: p.kind, value: "" }, p.label));
           show();
