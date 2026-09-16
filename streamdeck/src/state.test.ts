@@ -467,14 +467,21 @@ describe("what the Connect key says", () => {
     });
   });
   it("is connecting while the socket is opening, and while it reports offline", () => {
-    expect(connectFace(reduce(live(), { t: "socket", state: "connecting" }, T))).toEqual({ title: "Connecting", tone: "dim" });
-    expect(connectFace(live())).toEqual({ title: "Connecting", tone: "dim" });
+    expect(connectFace(reduce(live(), { t: "socket", state: "connecting" }, T))).toEqual({ title: "Connecting", tone: "link" });
+    expect(connectFace(live())).toEqual({ title: "Connecting", tone: "link" });
+  });
+  it("lights the key blue only once the deck is on", () => {
+    // On a full deck it was furniture, and the one key whose whole job is
+    // to report the connection read like the ones around it.
+    expect(connectFace(reduce(initial(), { t: "session", state: "ok" }, T)).tone).toBe("dim");
+    expect(connectFace(live()).tone).toBe("link");
+    expect(connectFace(open()).tone).toBe("link");
   });
   it("says Disconnect once the socket is open, whatever the Run key would say", () => {
-    expect(connectFace(open())).toEqual({ title: "Disconnect", tone: "deck" });
+    expect(connectFace(open())).toEqual({ title: "Disconnect", tone: "link" });
     const s = reduce(reduce(live(), { t: "socket", state: "open" }, T), { t: "runs", runs: [], any: true }, T);
-    expect(connectFace(s)).toEqual({ title: "Disconnect", tone: "deck" });
-    expect(connectFace(open([held("s1"), held("s2", "Friday")]))).toEqual({ title: "Disconnect", tone: "deck" });
+    expect(connectFace(s)).toEqual({ title: "Disconnect", tone: "link" });
+    expect(connectFace(open([held("s1"), held("s2", "Friday")]))).toEqual({ title: "Disconnect", tone: "link" });
   });
 });
 
@@ -669,10 +676,12 @@ describe("what the finish key says", () => {
     expect(finishFace(older("ending"))).toEqual({ title: "Not yet", tone: "dim" });
   });
 
-  it("carries the ending on the kiln edge, and asks to be held", () => {
+  it("carries the ending on a ground of its own, and asks to be held", () => {
     const s = withOffer({ ending: { label: "Call it a night" } });
-    expect(finishFace(s)).toEqual({ title: "Call it a night", tone: "refuse", when: "hold to finish" });
+    expect(finishFace(s)).toEqual({ title: "Call it a night", tone: "end", when: "hold to finish" });
     expect(finishPress(s)).toEqual({ press: "answer", answer: { finish: true } });
+    // The color is on the key only while the press would land.
+    expect(finishFace(withOffer({ ending: null })).tone).toBe("dim");
   });
 });
 

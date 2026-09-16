@@ -14,10 +14,12 @@ import type { Face, Tone } from "./state.ts";
  * base64 on every redraw.
  *
  * The grounds carry the family, because an edge 3px wide is not enough to
- * tell six kinds of key apart across a deck at arm's length: celadon-tinted
+ * tell the kinds of key apart across a deck at arm's length: celadon-tinted
  * where the key moves the run, kiln-tinted for undo and for a refusal,
  * neutral and a shade lighter for the furniture, near-black under a readout
- * so the number floats. Every ink clears 4.5:1 on its own ground and every
+ * so the number floats. Connect and Finish took grounds of their own, slate
+ * blue and wine, for the same reason: on a full deck they were furniture
+ * until you read them. Every ink clears 4.5:1 on its own ground and every
  * `when` line clears 3:1, which `face.test.ts` checks rather than trusts.
  *
  * `stroke` is the frame's width, and `quiet` the color of the `when` line
@@ -31,6 +33,8 @@ const TONE: Record<Tone, { ground: string; ink: string; edge: string; stroke?: n
   refuse: { ground: "#33211a", ink: "#e7eae6", edge: "#dd8f63" },
   undo: { ground: "#3a2a1f", ink: "#e7eae6", edge: "#dd8f63" },
   deck: { ground: "#262b28", ink: "#e7eae6", edge: "#2f3733", quiet: "#8d958f" },
+  link: { ground: "#1e2e3e", ink: "#cfe3f5", edge: "#6fa3cf" },
+  end: { ground: "#3a1c24", ink: "#f2d4d8", edge: "#c96a7a" },
   readout: { ground: "#121413", ink: "#e7eae6", edge: "#2f3733", stroke: 1, quiet: "#8d958f" },
 };
 

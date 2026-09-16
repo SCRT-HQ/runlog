@@ -107,11 +107,14 @@ export interface DeckState {
  * the kiln edge, because taking a result back is the consequence the
  * second accent is for. `readout` is a Metric key, which is a number
  * rather than a button: the app's own ground, a hairline, and lit ink.
- * `deck` is the furniture - Connect, Run, Open, Apply setup - lit, but
- * without an accent claiming it does something to the run. `dim` and
+ * `deck` is the furniture - Run, Open, Install a profile - lit, but
+ * without an accent claiming it does something to the run. `link` is the
+ * connection itself, blue while it is up, and `end` is the key that closes
+ * the run, on a wine ground nothing else wears: both were `deck` and were
+ * the hardest keys to pick out of a full deck at a glance. `dim` and
  * `refuse` are states rather than families and belong to every key.
  */
-export type Tone = "live" | "dim" | "refuse" | "undo" | "readout" | "deck";
+export type Tone = "live" | "dim" | "refuse" | "undo" | "readout" | "deck" | "link" | "end";
 export interface Face {
   title: string;
   tone: Tone;
@@ -249,13 +252,17 @@ function attachedName(state: DeckState): Face | null {
  * is actually in - down by choice, down by the idle timer, or on its way up.
  * Once the socket is open it says **Disconnect**, one press away from off -
  * which run that carries, if any, is the Run key's business, not this one's.
+ *
+ * The blue ground is the switch: the key is dim while the deck is off and
+ * lights as soon as the streamer has turned it on, so whether the deck is
+ * connected reads across the room without reading the word.
  */
 export function connectFace(state: DeckState): Face {
   if (state.session === "none") return { title: "Sign in", tone: "dim" };
   if (state.session === "expired") return { title: "Sign in again", tone: "dim" };
   if (!state.on) return { title: "Connect", tone: "dim", when: state.idleOff ? "went idle" : undefined };
-  if (state.socket !== "open") return { title: "Connecting", tone: "dim" };
-  return { title: "Disconnect", tone: "deck" };
+  if (state.socket !== "open") return { title: "Connecting", tone: "link" };
+  return { title: "Disconnect", tone: "link" };
 }
 
 /**
@@ -614,9 +621,10 @@ export function autoRollPress(state: DeckState): AnswerPress | null {
 /**
  * What the Finish key says: how the run would end, or that it cannot yet.
  *
- * The kiln edge, which is the accent for a press there is no coming back
- * from, and the hold is the other half of the same guard: a run does not
- * end because somebody brushed a key mid-scene.
+ * The wine ground, which no other key wears, and the hold, which is the
+ * other half of the same guard: a run does not end because somebody brushed
+ * a key mid-scene. It goes dim while there is no ending to take, so the
+ * color is on the key only when the press would land.
  */
 export function finishFace(state: DeckState): Face {
   const c = common(state) ?? flashed(state);
@@ -625,7 +633,7 @@ export function finishFace(state: DeckState): Face {
   if (!offer) return { title: "Loading…", tone: "dim" };
   // `?? null` for an older page, whose offer says nothing about an ending.
   const ending = offer.ending ?? null;
-  return ending ? { title: ending.label, tone: "refuse", when: "hold to finish" } : { title: "Not yet", tone: "dim" };
+  return ending ? { title: ending.label, tone: "end", when: "hold to finish" } : { title: "Not yet", tone: "dim" };
 }
 
 /** What a held Finish key sends, or nothing where the run has no ending to take. */

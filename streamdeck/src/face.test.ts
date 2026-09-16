@@ -217,7 +217,7 @@ describe("a tone per family of key", () => {
 
   it("gives the celadon edge to a key that moves the run, and to nothing else", () => {
     expect(frame(svgOf({ title: "Roll", tone: "live" }))[1]).toBe("#8cc3a6");
-    for (const tone of ["deck", "readout", "undo", "dim"] as const) {
+    for (const tone of ["deck", "readout", "undo", "dim", "link", "end"] as const) {
       expect(frame(svgOf({ title: "Roll", tone }))[1], tone).not.toBe("#8cc3a6");
     }
   });
@@ -283,7 +283,7 @@ function contrast(a: string, b: string): number {
 }
 
 describe("grounds a deck can tell apart", () => {
-  const TONES = ["live", "dim", "refuse", "undo", "deck", "readout"] as const satisfies readonly Tone[];
+  const TONES = ["live", "dim", "refuse", "undo", "deck", "readout", "link", "end"] as const satisfies readonly Tone[];
   const parts = (tone: Tone) => {
     const svg = svgOf({ title: "Give", tone, when: "2:14" });
     return {
@@ -304,6 +304,12 @@ describe("grounds a deck can tell apart", () => {
     expect(parts("readout").ground).toBe("#121413");
     expect(parts("dim").ground).toBe("#1b201d");
     expect(parts("refuse").ground).toBe("#33211a");
+  });
+  it("gives the connection and the ending grounds nothing else wears", () => {
+    // Connect and Finish were furniture on a deck of furniture: slate blue
+    // for the connection while it is up, wine for the key that ends the run.
+    expect(parts("link").ground).toBe("#1e2e3e");
+    expect(parts("end").ground).toBe("#3a1c24");
   });
   it("gives no two families the same ground", () => {
     const grounds = TONES.map((t) => parts(t).ground);
