@@ -19,6 +19,7 @@ import { usePlan } from "../sync/usePlan.ts";
 import { useInvites } from "../share/useInvites.ts";
 import { liveLinkOf } from "../live/route.ts";
 import { PROFILE_PAGES, profileHash, type ProfilePage } from "./route.ts";
+import { useTitle } from "../title.ts";
 import { DeviceSettings } from "../settings/DeviceSettings.tsx";
 import { useAlertSettings } from "../alerts/useAlerts.ts";
 import { linkTo } from "../route.ts";
@@ -113,6 +114,9 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
   const invitations = useInvites(api, true);
   // Whether the server tier is this account's to see, for the nav.
   const plan = usePlan();
+
+  const pageLabel = PROFILE_PAGES.find((p) => p.id === page)?.label;
+  useTitle(page === "profile" || !pageLabel ? "Profile" : `${pageLabel} · Profile`);
 
   /*
    * The device's settings need no account, so they are not behind the

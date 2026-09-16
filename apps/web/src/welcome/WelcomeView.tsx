@@ -6,6 +6,7 @@ import { Footer } from "../hosted/Footer.tsx";
 import { PersonaSwitcher } from "./PersonaSwitcher.tsx";
 import { otherVocabularies, savePersona, savedPersona, type Persona } from "./personas.ts";
 import { appPath, baseOf, setSkipWelcome, skipWelcome } from "./route.ts";
+import { useTitle } from "../title.ts";
 
 /**
  * The welcome page: what Runlog is, and why, at the bare address.
@@ -22,6 +23,7 @@ import { appPath, baseOf, setSkipWelcome, skipWelcome } from "./route.ts";
  * and the last line all follow (see personas.ts). The reader picks who.
  */
 export function WelcomeView() {
+  useTitle(null);
   const hosted = useHosted();
   const base = typeof location !== "undefined" ? baseOf(location.href) : "/";
   const play = appPath(base);

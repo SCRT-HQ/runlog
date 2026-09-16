@@ -11,6 +11,7 @@ import { StartFrom } from "./StartFrom.tsx";
 import { SignPanel } from "./SignPanel.tsx";
 import { DocsPanel } from "./DocsPanel.tsx";
 import { StructurePanel } from "./StructurePanel.tsx";
+import { useTitle } from "../title.ts";
 
 /**
  * Writing a pack without writing YAML.
@@ -57,6 +58,7 @@ const str = (v: unknown) => (typeof v === "string" ? v : "");
 const num = (v: unknown, fallback = 0) => (typeof v === "number" ? v : fallback);
 
 export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
+  useTitle("Design");
   // Replacing a draft is not undoable, so it is asked first; see useConfirm.
   const { dialog, ask } = useConfirm();
   const [draft, setDraft] = useState<Draft | null>(null);

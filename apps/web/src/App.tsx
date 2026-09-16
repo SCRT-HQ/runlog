@@ -27,6 +27,7 @@ import { widgetFromHash, type WidgetRoute } from "./widget/route.ts";
 import { dockFromHash, type DockRoute } from "./dock/route.ts";
 import { linkFromHash, stashLink } from "./connections/route.ts";
 import { WidgetView } from "./widget/WidgetView.tsx";
+import { useTitle } from "./title.ts";
 import { liveFromHash, type LiveRoute } from "./live/route.ts";
 import { addressForPlay, addressOf, appBase, goTo, runFromAddress, linkTo } from "./route.ts";
 import { LiveRunView } from "./live/LiveRunView.tsx";
@@ -1040,17 +1041,7 @@ export default function App() {
   if (widget) return <WidgetView route={widget} />;
   if (dock) {
     if (dockStatus === "open" && result.ok) return <RunView key={`dock:${result.pack.id}`} pack={result.pack} remote />;
-    return (
-      <main className="main remote">
-        <div className="pipPanel">
-          <p className="muted">
-            {dockStatus === "missing"
-              ? "This run is not on this device. Open it in the app here first, and the dock follows."
-              : "Opening the run…"}
-          </p>
-        </div>
-      </main>
-    );
+    return <DockWaiting status={dockStatus} />;
   }
   if (liveRoute) {
     return (
@@ -1351,7 +1342,24 @@ export default function App() {
   );
 }
 
+/** The dock before its run has arrived: not open yet, or not on this device. */
+function DockWaiting({ status }: { status: "opening" | "missing" | "open" }) {
+  useTitle("Dock");
+  return (
+    <main className="main remote">
+      <div className="pipPanel">
+        <p className="muted">
+          {status === "missing"
+            ? "This run is not on this device. Open it in the app here first, and the dock follows."
+            : "Opening the run…"}
+        </p>
+      </div>
+    </main>
+  );
+}
+
 function Diagnostics({ diagnostics }: { diagnostics: Diagnostic[] }) {
+  useTitle(null);
   return (
     <main className="diagnostics">
       <h2>This pack did not load</h2>

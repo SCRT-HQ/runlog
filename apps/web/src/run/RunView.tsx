@@ -38,6 +38,7 @@ import {
 import { useDocDrawer } from "../docs/DocDrawer.tsx";
 import { useRun, type ActiveStep } from "./useRun.ts";
 import type { RunStore } from "./store.ts";
+import { runTitle, useTitle } from "../title.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { RequestPanel } from "./RequestPanel.tsx";
 import { Checklist, checklistDone, ticksToFinish } from "./Checklist.tsx";
@@ -257,6 +258,10 @@ export function RunView({
       delete document.documentElement.dataset["pip"];
     };
   }, [remote]);
+
+  // The tab: the run in hand over the pack's own title, Play or Dock with
+  // none open. Hooked here, before any early return, as hooks must be.
+  useTitle(remote ? (run.state ? `${pack.title} dock` : "Dock") : run.state ? runTitle(run.state.name, pack.title) : "Play");
 
   // Sounds for what happens while nobody is looking at the screen. Hooked
   // here, before any early return, as hooks must be.

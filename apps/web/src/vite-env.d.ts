@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   readonly VITE_WORKOS_CLIENT_ID?: string;
   /** A hosted Runlog the dev server proxies /api and /ws to; see .env.example. */
   readonly VITE_RUNLOG_API_ORIGIN?: string;
+  /** Which hosted copy this build is, `dev` or `prd`; set by the deploy, absent locally. See title.ts. */
+  readonly VITE_RUNLOG_STAGE?: string;
 }
 
 interface ImportMeta {

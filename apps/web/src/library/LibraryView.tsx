@@ -13,6 +13,7 @@ import { DeckProfiles } from "./DeckProfiles.tsx";
 import { HomeStrip } from "./HomeStrip.tsx";
 import { PackServers } from "./PackServers.tsx";
 import { useGuildVaults } from "./useGuildVaults.ts";
+import { useTitle } from "../title.ts";
 
 /**
  * The library: your packs, newest-played first, each with its runs.
@@ -86,6 +87,7 @@ export function LibraryView({
   /** Open the run this account touched last, on this device or another. */
   onContinueLast?: (runId?: string) => void;
 }) {
+  useTitle("Packs");
   const [raceCode, setRaceCode] = useState("");
   // Which servers may play what, read once for the shelf; empty where
   // there is no bot behind this copy or nobody signed in.
