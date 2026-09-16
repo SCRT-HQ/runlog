@@ -4,7 +4,7 @@ import { store } from "../plugin.ts";
 import { rollFace, type DeckState, type Face } from "../state.ts";
 import { RunlogAction } from "./base.ts";
 
-/** Throws the dice the run is waiting on - Press's roll target, on a key of its own. */
+/** Throws the dice the run is waiting on; lit only while a roll is on offer. */
 @action({ UUID: "com.scrthq.runlog.roll" })
 export class Roll extends RunlogAction {
   face(state: DeckState): Face {

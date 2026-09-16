@@ -302,8 +302,7 @@ describe("what the command key says", () => {
   });
 });
 
-// Task 19b: a dedicated key for the roll alone, sending what Press's roll
-// target sends today.
+// Task 19b: a dedicated key for the roll alone, which is the only key that rolls.
 describe("what the roll key says", () => {
   it("is loading before the offer lands", () => {
     const s = open();
