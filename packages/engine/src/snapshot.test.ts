@@ -243,6 +243,26 @@ describe("a live snapshot", () => {
     expect(snapshotOf(kiln, state, events, "2026-01-01T00:00:05Z").race).toBeUndefined();
   });
 
+  it("lists the pack's full layout, not the state's offer", () => {
+    const state = reduce(kiln, events);
+    const snap = snapshotOf(kiln, state, events, "2026-01-01T00:00:05Z");
+    // The Firing has just started, so salvage is not offered (it takes
+    // unitIndex >= 2), but the layout is the pack's own, gate ignored.
+    expect(snap.asks?.moves.some((m) => m.id === "salvage")).toBe(false);
+    expect(snap.layout?.moves).toEqual(Object.entries(kiln.moves ?? {}).map(([id, m]) => ({ id, label: m.label })));
+    expect(snap.layout?.moves.some((m) => m.id === "salvage")).toBe(true);
+    expect(snap.layout?.counters).toEqual(Object.entries(kiln.counters ?? {}).map(([id, c]) => ({ id, label: c.label })));
+    expect(snap.layout?.resources).toEqual(Object.entries(kiln.resources ?? {}).map(([id, r]) => ({ id, label: r.label })));
+  });
+
+  it("leaves a hidden counter out of the layout", () => {
+    const hidden = { ...kiln, counters: { ...kiln.counters, calm: { ...kiln.counters!.calm!, hidden: true } } };
+    const state = reduce(hidden, events);
+    const snap = snapshotOf(hidden, state, events, "2026-01-01T00:00:05Z");
+    expect(snap.layout?.counters.some((c) => c.id === "calm")).toBe(false);
+    expect(snap.layout?.counters.some((c) => c.id === "setbacksSuffered")).toBe(true);
+  });
+
   it("keeps a clock moving from the moment the snapshot was taken", () => {
     const clock = {
       id: "c",

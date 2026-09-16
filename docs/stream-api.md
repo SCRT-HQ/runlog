@@ -71,6 +71,7 @@ What the fields mean:
 | `standings` | Contestants in a moderated run, by place. Empty when nobody is on the roster. |
 | `subjects` | What the run tracks (tracks, bowls, rooms: the pack's word), with their states and the results that hit them. |
 | `counters`, `resources` | The pack's counters, and its resources with their maximum and how the pack draws them. |
+| `layout` | The pack's moves, counters and resources, for a deck laying out keys; not the state's view. *newer* |
 | `clocks` | The clocks that are running, paused or just done. See below. |
 | `progress` | Units closed, and time elapsed on the run. `timed` says the run keeps time by unit clocks; without them, `elapsedMs` is wall time since the start, which the pages leave unshown. |
 | `score` | What the pack says this run scores, worded and ready to show: a label, the text, the number, and which way is better. With no score declared, units closed. |

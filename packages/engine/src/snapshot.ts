@@ -104,6 +104,19 @@ export interface LiveSnapshot {
   subjects: Array<{ id: number; name: string; type: string | null; states: string[]; finalized: boolean; hits?: string[] }>;
   counters: Array<{ id: string; label: string; value: number }>;
   resources: Array<{ id: string; label: string; value: number; max?: number; display?: "boxes" | "bar" | "number" }>;
+  /**
+   * The pack's own layout, not the run's: every move, every counter not
+   * hidden, every resource, in the pack's own order, whatever `available`
+   * or `oncePerRun` says and whatever the state has spent so far. `asks`
+   * is the offer at this moment; this is what a deck lays keys out for
+   * before a run has even started, built from the pack alone with no
+   * state read. Absent from snapshots written before it was carried.
+   */
+  layout?: {
+    moves: Array<{ id: string; label: string }>;
+    counters: Array<{ id: string; label: string }>;
+    resources: Array<{ id: string; label: string }>;
+  };
   clocks: Array<{
     id: string;
     label: string;
@@ -429,6 +442,16 @@ export function snapshotOf(
       ...(r.max !== undefined ? { max: r.max } : {}),
       ...(r.display ? { display: r.display } : {}),
     })),
+    // The pack's full layout, not the offer: a move stays listed however
+    // its `available` gate or `oncePerRun` reads right now, so a deck can
+    // lay out every key before a run has decided anything.
+    layout: {
+      moves: Object.entries(pack.moves ?? {}).map(([id, m]) => ({ id, label: m.label })),
+      counters: Object.entries(pack.counters ?? {})
+        .filter(([, c]) => !c.hidden)
+        .map(([id, c]) => ({ id, label: c.label })),
+      resources: Object.entries(pack.resources ?? {}).map(([id, r]) => ({ id, label: r.label })),
+    },
     clocks,
     progress: {
       unitsDone: progress.unitsDone,
