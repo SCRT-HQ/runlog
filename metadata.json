@@ -1,0 +1,38 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2KSZ3ZAEHGXANPQAC7EW6QC",
+  "strategy": "manual-commit",
+  "branch": "a-profile-from-the-run",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "packages/deck-profiles/src/index.ts",
+    "packages/deck-profiles/src/profiles.ts",
+    "streamdeck/.gitignore",
+    "streamdeck/src/actions/open.test.ts",
+    "streamdeck/src/plugin.ts",
+    "streamdeck/src/profiles-on-demand.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 268,
+    "cache_creation_tokens": 23673,
+    "cache_read_tokens": 11714069,
+    "output_tokens": 10261,
+    "api_call_count": 14,
+    "subagent_tokens": {
+      "input_tokens": 92,
+      "cache_creation_tokens": 82501,
+      "cache_read_tokens": 6051804,
+      "output_tokens": 17070,
+      "api_call_count": 46
+    }
+  }
+}
