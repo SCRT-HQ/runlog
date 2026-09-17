@@ -133,3 +133,95 @@ export async function closeParty(deps: PartyDeps, party: WatchParty, why: PartyC
   await deps.guilds.putParty(closed);
   return closed;
 }
+
+/**
+ * How often a party's card may be edited.
+ *
+ * The bot's own rope on a Discord call is a timeout, not a rate limiter,
+ * so this is the whole of what spaces the edits out: one per party per ten
+ * seconds, however fast the run moves.
+ */
+export const TICK_MS = 10_000;
+
+export interface PartyTickDeps extends PartyDeps {
+  /** Sleep, for the trailing edit; a test hands in a clock it moves itself. */
+  wait: (ms: number) => Promise<void>;
+}
+
+export type PartyTickOutcome = "edited" | "held" | "closed" | "quiet";
+
+/**
+ * A snapshot landed: bring each of this run's party cards up to date.
+ *
+ * Due, so it is edited now. Not due, so this call takes the tick, waits
+ * out what is left of it and edits with whatever the snapshot says by
+ * then: the latest snapshot wins, and a change nobody follows with
+ * another still lands on the next tick. A tick somebody else is holding
+ * is left to them.
+ */
+export async function tickParties(deps: PartyTickDeps, sessionId: string): Promise<Array<{ guildId: string; outcome: PartyTickOutcome }>> {
+  const open = (await deps.guilds.partiesOf(sessionId)).filter((p) => !p.closedAt);
+  if (open.length === 0) return [];
+  const read = async () => snapshotOfRun(await deps.store.getSnapshot(sessionId));
+  const out: Array<{ guildId: string; outcome: PartyTickOutcome }> = [];
+  for (const party of open) {
+    const first = await read();
+    if (!first) {
+      out.push({ guildId: party.guildId, outcome: "quiet" });
+      continue;
+    }
+    // The run being over is not made to wait: it is the last thing the
+    // card will ever say.
+    if (first.status === "ended") {
+      await closeParty(deps, party, "ended");
+      out.push({ guildId: party.guildId, outcome: "closed" });
+      continue;
+    }
+    const due = Date.parse(party.editedAt ?? party.openedAt) + TICK_MS;
+    const now = Date.parse(deps.now());
+    let outcome: PartyTickOutcome = "edited";
+    if (now < due) {
+      if (party.tickAt) {
+        out.push({ guildId: party.guildId, outcome: "quiet" });
+        continue;
+      }
+      if (!(await deps.guilds.claimPartyTick(sessionId, party.guildId, new Date(due).toISOString()))) {
+        out.push({ guildId: party.guildId, outcome: "quiet" });
+        continue;
+      }
+      await deps.wait(due - now);
+      outcome = "held";
+    }
+    const latest = (await read()) ?? first;
+    if (latest.status === "ended") {
+      await closeParty(deps, { ...party, tickAt: undefined }, "ended");
+      out.push({ guildId: party.guildId, outcome: "closed" });
+      continue;
+    }
+    const at = deps.now();
+    // Read again rather than reusing the row this loop started with: a
+    // handout may have landed on it while the tick was being waited out.
+    const fresh = (await deps.guilds.party(sessionId, party.guildId)) ?? party;
+    const card = partyCardFor({
+      snapshot: latest,
+      link: party.link,
+      openedByName: party.openedByName,
+      ...(fresh.handouts ? { handouts: fresh.handouts } : {}),
+    });
+    const edited = deps.rest && party.cardMessageId ? await deps.rest.editMessage(party.threadId, party.cardMessageId, card) : false;
+    if (!edited) {
+      // A card Discord will not edit is a card, or a thread, that somebody
+      // deleted. The party closes itself rather than trying forever.
+      await closeParty(deps, { ...party, tickAt: undefined }, "gone");
+      out.push({ guildId: party.guildId, outcome: "closed" });
+      continue;
+    }
+    // Written back over the row as it now is, not as it was when the loop
+    // read it, so a handout that landed during the wait is not dropped.
+    const next: WatchParty = { ...fresh, editedAt: at, updatedAt: at };
+    delete next.tickAt;
+    await deps.guilds.putParty(next);
+    out.push({ guildId: party.guildId, outcome });
+  }
+  return out;
+}

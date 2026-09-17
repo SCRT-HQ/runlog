@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { COMMANDS } from "../lib/handlers/discord/commands";
 import { handleInteraction, type InteractionDeps } from "../lib/handlers/discord/interactions";
-import { closeParty, openParty, type PartyDeps } from "../lib/handlers/discord/party";
+import { closeParty, openParty, TICK_MS, tickParties, type PartyDeps } from "../lib/handlers/discord/party";
 import { EPHEMERAL, InteractionType, ResponseType, type Interaction } from "../lib/handlers/discord/types";
 import type { Guild } from "../lib/handlers/guilds";
 import type { SessionMeta, Store } from "../lib/handlers/store";
@@ -370,5 +370,96 @@ describe("/run unwatch", () => {
     const { bot } = await botReady();
     const out = await handleInteraction(runSub("unwatch", [], { channel_id: "chan" }), bot);
     expect(out.data?.content).toBe("Say that in a watch party's thread.");
+  });
+});
+
+describe("keeping a party's card current", () => {
+  /** A clock the test moves, and a wait that moves it rather than sleeping. */
+  function clock(from = NOW) {
+    let ms = Date.parse(from);
+    return {
+      now: () => new Date(ms).toISOString(),
+      wait: async (by: number) => void (ms += by),
+      tick: (by: number) => void (ms += by),
+    };
+  }
+
+  it("edits each party's card once, and holds the next edit until the tick is up", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    c.tick(TICK_MS + 1_000);
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "edited" }]);
+    expect(rest.edits).toHaveLength(1);
+    // A second snapshot inside the window takes the tick and waits it out.
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "held" }]);
+    expect(rest.edits).toHaveLength(2);
+    // A third while that one is held changes nothing: the held edit carries the latest.
+    await guilds.putParty({ ...(await guilds.party("01RUN", "g1"))!, tickAt: c.now() });
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "quiet" }]);
+    expect(rest.edits).toHaveLength(2);
+  });
+
+  it("carries whatever the snapshot says when the held edit lands, not what it said when it was held", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    let held: Record<string, unknown> = { ...snapshot, unit: 1 };
+    const store = {
+      async getSession() {
+        return { meta: { id: "01RUN", ownerSub: "user_1", publicTokenHash: "hash", seq: 1 }, members: [] };
+      },
+      async getSnapshot() {
+        return { at: c.now(), snapshot: held };
+      },
+    } as unknown as Store;
+    const deps = {
+      store,
+      guilds,
+      rest,
+      now: c.now,
+      wait: async (by: number) => {
+        held = { ...snapshot, unit: 7 };
+        await c.wait(by);
+      },
+    };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    await tickParties(deps, "01RUN");
+    expect(JSON.stringify(rest.edits.at(-1)!.message)).toContain("Stage 7");
+  });
+
+  it("edits an ended run's card at once, without waiting out the tick", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    const ended = { store: runStore({}, { ...snapshot, status: "ended", ending: "Cooled" }), guilds, rest, now: c.now, wait: c.wait };
+    expect(await tickParties(ended, "01RUN")).toEqual([{ guildId: "g1", outcome: "closed" }]);
+    expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("ended");
+  });
+
+  it("closes a party whose card Discord would no longer edit", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    c.tick(TICK_MS + 1_000);
+    rest.down = true;
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "closed" }]);
+    expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("gone");
+  });
+
+  it("says nothing about a party that is closed already", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    await closeParty(deps, out.party, "byHand");
+    expect(await tickParties(deps, "01RUN")).toEqual([]);
   });
 });
