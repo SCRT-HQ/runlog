@@ -5223,6 +5223,9 @@ details.panel[open] > summary .sectionTitle::after {
 .guideSideHead h2 {
   margin: 0;
 }
+.guideContentsSummary {
+  display: none;
+}
 .guideToc {
   display: grid;
   gap: 1.1rem;
@@ -5619,6 +5622,19 @@ details.panel[open] > summary .sectionTitle::after {
     position: static;
     max-height: none;
     overflow: visible;
+  }
+  .guideContentsSummary {
+    display: list-item;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--panel);
+    color: var(--text);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .guideContents[open] .guideContentsSummary {
+    margin-bottom: 0.6rem;
   }
 }
 
