@@ -35,12 +35,19 @@ export function IconButton({
   className?: string;
   children?: ReactNode;
 }) {
+  // The type asks for a label; a value read at runtime can still arrive
+  // empty. An `aria-label=""` is worse than none, because it hides the
+  // button's own contents from the name without putting anything there,
+  // so the attribute is dropped and the mistake is said out loud where
+  // somebody is working.
+  const named = typeof label === "string" && label.trim() !== "";
+  if (!named && import.meta.env.DEV) console.error("IconButton: `label` is the button's only name and it is empty.");
   return (
     <button
       {...rest}
       type={type ?? "button"}
       className={controlClasses({ variant, size, emphasis }, className ? `iconButton ${className}` : "iconButton")}
-      aria-label={label}
+      aria-label={named ? label : undefined}
       title={title}
     >
       {children}

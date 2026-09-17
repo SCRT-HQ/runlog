@@ -319,13 +319,19 @@ p {
   text-decoration: none;
 }
 @media (hover: hover) {
-  .brand:hover h1 {
+  .brand:hover h1,
+  .brand:hover .brandName {
     color: var(--accent);
   }
 }
-.brand h1 {
+/* The app's mark is not a heading: the page under it has a title of its
+   own. The word is drawn the same either way, so the bars that are a page
+   in themselves can go on saying it with an h1. */
+.brand h1,
+.brand .brandName {
   font-size: var(--t-4);
   font-weight: 600;
+  line-height: 1.2;
 }
 .brand p {
   margin: 0;
@@ -969,11 +975,38 @@ p {
   gap: 0.6rem;
 }
 
-/* ---- one door to the library, from anywhere ----------------------------- */
-/* Marked as landed-on rather than reachable, the way a current page is. */
-.packNow[aria-current="page"] {
-  color: var(--muted);
-  border-color: var(--line-2);
+/* ---- the bar's nav ------------------------------------------------------ */
+/*
+ * The page you are on is selected, not pressed.
+ *
+ * Accent on the word and a rule under it, drawn as an inset shadow so the
+ * control keeps the height it had, and no fill. A filled button in this
+ * row is an action, and the only action in it is the way back to the run;
+ * a selected page that wore the same clothes would be indistinguishable
+ * from one.
+ */
+.topbarEnd > [aria-current="page"] {
+  color: var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+/*
+ * The way back says so in full where there is room and in one word where
+ * there is not. The long words are the button's name whichever is shown,
+ * so the short one is what is seen and never what is read.
+ */
+.backToRunShort {
+  display: none;
+}
+/* The doors the bar hands to the menu on a phone, kept together above the
+   account's own lines and ruled off from them. */
+.menuSections {
+  display: grid;
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--line);
+}
+.menuSections .accountItem[aria-current="page"] {
+  color: var(--accent);
 }
 
 /* ---- the library -------------------------------------------------------- */
@@ -986,9 +1019,6 @@ p {
 .libraryHead {
   display: grid;
   gap: 0.3rem;
-}
-.libraryHead h2 {
-  margin: 0;
 }
 .libraryHead p {
   margin: 0;
@@ -3175,7 +3205,8 @@ select.textInput {
   .topbar .brand {
     flex: 0 0 auto;
   }
-  .topbar .brand h1 {
+  .topbar .brand h1,
+  .topbar .brand .brandName {
     display: none;
   }
   /* The shelf joins the row of buttons rather than taking a row of its own. */
@@ -3184,13 +3215,17 @@ select.textInput {
     min-width: 0;
     margin-left: auto;
   }
-  .topbar .packNow[aria-current="page"] {
-    color: var(--text-muted);
-    border-color: var(--line-2);
+  /* One word for the way back, and the sentence in the tooltip. */
+  .topbar .backToRunLong {
+    display: none;
   }
-  /* Five things on one line at 360 pixels: nothing wraps, and a long label,
-     Back to the app where Designer was, gives up its end rather than the
-     row giving up its shape. */
+  .topbar .backToRunShort {
+    display: inline;
+  }
+  /* Everything on one line at 360 pixels: nothing wraps, and a label with
+     no room left gives up its end rather than the row giving up its
+     shape. Below 420 the bar hands Create and Guide to the menu, which is
+     what keeps the count down to four. */
   .topbar .topbarEnd {
     flex: 0 1 auto;
     min-width: 0;
@@ -3208,9 +3243,9 @@ select.textInput {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* Five things on one line at 360 pixels: the bar's controls take the
-     dense row's height and keep the control's size. A bar that has to fit
-     buys its room in pixels of height and padding, not in legibility. */
+  /* The bar's controls take the dense row's height and keep the control's
+     size. A bar that has to fit buys its room in pixels of height and
+     padding, not in legibility. */
   .topbar .topbarEnd .ghost,
   .topbar .topbarEnd .primary,
   .topbar .packNow {
@@ -7252,14 +7287,22 @@ html[data-pip="controls"] body {
 }
 
 /*
- * An icon button's target is the compact control, square, whatever the
- * mark inside it measures. Hit area and visible glyph are sized apart:
- * an eleven-pixel cross is fine to look at and impossible to press.
+ * An icon button's target is square, whatever the mark inside it
+ * measures. Hit area and visible glyph are sized apart: an eleven-pixel
+ * cross is fine to look at and impossible to press.
+ *
+ * Square at whatever size the button is, which is why the compact width
+ * sits on the compact button rather than on the base. On the base it was
+ * also cutting a default-size icon button down to the dense row's 32px,
+ * whichever size the caller asked for. The height comes from the
+ * control's own rules either way.
  */
 .iconButton {
-  min-width: var(--control-h-compact);
-  min-height: var(--control-h-compact);
+  min-width: var(--control-h);
   padding: var(--space-1);
+}
+.iconButton.tiny {
+  min-width: var(--control-h-compact);
 }
 
 /*

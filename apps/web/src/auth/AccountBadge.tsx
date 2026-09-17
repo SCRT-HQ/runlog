@@ -37,6 +37,25 @@ export interface MenuActions {
    * close it but its own toggle.
    */
   closeKey?: unknown;
+
+  /**
+   * Doors the bar could not hold, at the widths where it cannot hold them.
+   *
+   * On a phone the row is measured in single characters, and the mark, the
+   * way back to the run, the shelf and this menu fill it. Create and Guide
+   * come in here instead of onto a second row. The bar sends them only at
+   * those widths, so there is one of each door in the page and it is the
+   * one that can be reached.
+   */
+  sections?: MenuSection[];
+}
+
+/** A door the bar handed over, with whether it is the page you are on. */
+export interface MenuSection {
+  label: string;
+  hint?: string;
+  current?: boolean;
+  act: () => void;
 }
 
 export function AccountBadge(actions: MenuActions = {}) {
@@ -45,8 +64,32 @@ export function AccountBadge(actions: MenuActions = {}) {
   return <GuestMenu account={account} {...actions} />;
 }
 
+/** The doors the bar handed over, drawn as the menu's own lines. */
+function Sections({ sections, close }: { sections?: MenuSection[]; close: () => void }) {
+  if (!sections || sections.length === 0) return null;
+  return (
+    <div className="menuSections">
+      {sections.map((s) => (
+        <button
+          key={s.label}
+          role="menuitem"
+          className="accountItem"
+          aria-current={s.current ? "page" : undefined}
+          onClick={() => {
+            close();
+            s.act();
+          }}
+        >
+          <span>{s.label}</span>
+          {s.hint && <span className="muted small">{s.hint}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** The menu for somebody not signed in, or somewhere with nothing to sign into. */
-function GuestMenu({ account, onOpenProfile, closeKey }: MenuActions & { account: Exclude<Account, { status: "signed-in" }> }) {
+function GuestMenu({ account, onOpenProfile, closeKey, sections }: MenuActions & { account: Exclude<Account, { status: "signed-in" }> }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const rootRef = useRef<HTMLDetailsElement>(null);
@@ -61,6 +104,7 @@ function GuestMenu({ account, onOpenProfile, closeKey }: MenuActions & { account
         </span>
       </summary>
       <div className="accountPanel" role="menu">
+        <Sections sections={sections} close={close} />
         {account.status !== "local" && (
           <div className="menuDoors">
             <button
@@ -146,7 +190,7 @@ export function syncLabel(sync: Pick<Sync, "enabled" | "status" | "last">): stri
   }
 }
 
-function AccountMenu({ account, onOpenProfile, closeKey }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
+function AccountMenu({ account, onOpenProfile, closeKey, sections }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
   const { user, signOut } = account;
   const sync = useSync();
   const { profile } = useProfile();
@@ -199,6 +243,7 @@ function AccountMenu({ account, onOpenProfile, closeKey }: MenuActions & { accou
         </span>
       </summary>
       <div className="accountPanel" role="menu">
+        <Sections sections={sections} close={() => setOpen(false)} />
         {shown && shown !== label && (
           <div className="accountWho">
             <div className="accountName">{shown}</div>
