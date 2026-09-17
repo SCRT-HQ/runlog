@@ -1380,7 +1380,7 @@ export default function App() {
               }
             : {})}
           onAdd={async (entry) => {
-            await addFromMarketplace(entry.id);
+            if (!(await addFromMarketplace(entry.id))) throw new Error("The pack could not be added.");
           }}
           onOpen={(id) => {
             const p = imported.find((q) => q.id === id);
