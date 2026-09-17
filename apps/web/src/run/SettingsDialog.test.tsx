@@ -1,5 +1,8 @@
+// @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { act, useState } from "react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { DEFAULT_ALERTS } from "../alerts/settings.ts";
 import { SettingsDialog } from "./SettingsDialog.tsx";
 
@@ -53,5 +56,117 @@ describe("the settings sheet", () => {
     const html = sheet("run-1", { auto: false, seeded: true, onAuto: () => {} });
     expect(html).toContain("rolls from its seed");
     expect(html).not.toContain("Roll for me, without asking");
+  });
+});
+
+/**
+ * The sheet open over a run, in a page with controls behind it.
+ *
+ * Five presses of Shift+Tab from Close used to reach a button under the
+ * veil: the dialog said it was modal and the keyboard did not agree. What
+ * is asserted here is the agreement.
+ */
+function Page() {
+  const [open, setOpen] = useState(false);
+  return (
+    <main>
+      <button id="opener" onClick={() => setOpen(true)}>
+        Settings
+      </button>
+      <button id="behind">Behind</button>
+      {open && (
+        <SettingsDialog
+          runId="run-1"
+          race={false}
+          alerts={DEFAULT_ALERTS}
+          onAlerts={() => {}}
+          rolling={{ auto: false, seeded: false, onAuto: () => {} }}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </main>
+  );
+}
+
+const openSheet = async () => {
+  render(<Page />);
+  const opener = screen.getByText("Settings");
+  opener.focus();
+  await act(async () => void opener.click());
+};
+
+const press = (key: string, shiftKey = false) =>
+  act(async () => void window.dispatchEvent(new KeyboardEvent("keydown", { key, shiftKey, bubbles: true, cancelable: true })));
+
+const inside = () => screen.getByRole("dialog").contains(document.activeElement);
+
+afterEach(cleanup);
+
+describe("the settings sheet as a keyboard sees it", () => {
+  it("opens with Close under the fingers", async () => {
+    await openSheet();
+    expect(document.activeElement?.textContent).toBe("Close");
+  });
+
+  it("goes backwards from Close into the sheet, never to the page behind", async () => {
+    await openSheet();
+    for (let i = 0; i < 5; i++) {
+      await press("Tab", true);
+      expect(inside()).toBe(true);
+      expect(document.activeElement?.id).not.toBe("behind");
+    }
+  });
+
+  it("comes round from the last control to the first", async () => {
+    await openSheet();
+    const dialog = screen.getByRole("dialog");
+    const start = document.activeElement;
+    let steps = 0;
+    do {
+      await press("Tab");
+      expect(dialog.contains(document.activeElement)).toBe(true);
+      steps++;
+    } while (document.activeElement !== start && steps < 40);
+    // It came back round rather than running off the end of the sheet.
+    expect(document.activeElement).toBe(start);
+    expect(steps).toBeGreaterThan(1);
+  });
+
+  it("leaves the page behind it out of reach while it is open", async () => {
+    await openSheet();
+    expect(document.getElementById("behind")?.closest("[inert]")).not.toBeNull();
+    expect(document.getElementById("opener")?.closest("[inert]")).not.toBeNull();
+  });
+
+  it("closes on Escape and hands focus back to whatever opened it", async () => {
+    await openSheet();
+    await press("Escape");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement?.id).toBe("opener");
+    expect(document.getElementById("behind")?.closest("[inert]")).toBeNull();
+  });
+
+  it("closes on a click on the veil, and not on a click in the sheet", async () => {
+    await openSheet();
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(dialog);
+    expect(screen.queryByRole("dialog")).not.toBeNull();
+    fireEvent.click(dialog.parentElement as HTMLElement);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("walks its tabs with the arrow keys, one of them in the Tab order", async () => {
+    await openSheet();
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((t) => t.getAttribute("aria-selected"))).toEqual(["true", "false"]);
+    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual(["0", "-1"]);
+    await act(async () => void fireEvent.keyDown(tabs[0] as HTMLElement, { key: "ArrowRight" }));
+    expect(screen.getAllByRole("tab").map((t) => t.getAttribute("aria-selected"))).toEqual(["false", "true"]);
+    expect(document.activeElement?.textContent).toBe("Widgets");
+    // And the panel it names is the one on show.
+    const panel = screen.getByRole("tabpanel");
+    expect(panel.getAttribute("aria-labelledby")).toBe(tabs[1]?.id);
+    await act(async () => void fireEvent.keyDown(screen.getAllByRole("tab")[1] as HTMLElement, { key: "Home" }));
+    expect(document.activeElement?.textContent).toBe("This device");
   });
 });

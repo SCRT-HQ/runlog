@@ -673,14 +673,20 @@ p {
 }
 
 /* ---- seed bar ---------------------------------------------------------- */
+/*
+ * The family is named after the shorthand, as it is on `.primary`: `font:
+ * inherit` sets the family too, so a family named above it is thrown away
+ * and the button comes out in the page's reading face rather than the
+ * app's own voice.
+ */
 .ghost {
   padding: 0.25rem 0.7rem;
-  font-family: var(--mono);
   border-radius: 6px;
   border: 1px solid var(--line);
   background: transparent;
   color: var(--muted);
   font: inherit;
+  font-family: var(--mono);
   font-size: var(--t-1);
   cursor: pointer;
 }
@@ -5217,7 +5223,13 @@ a.plan {
   justify-content: flex-end;
   min-width: 11.5rem;
 }
-.settingsDialog > section {
+/* The chosen tab's panel: the sections it holds are spaced as they were
+   when they were the sheet's own children. */
+.settingsDialog .dialogPanel {
+  display: grid;
+  gap: 1.1rem;
+}
+.settingsDialog .dialogPanel > section {
   display: grid;
   gap: 0.5rem;
 }

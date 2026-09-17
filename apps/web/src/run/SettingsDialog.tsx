@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
+import { useFocusTrap } from "../ui/useFocusTrap.ts";
 import type { AlertSettings } from "../alerts/settings.ts";
 import { DeviceSettings } from "../settings/DeviceSettings.tsx";
 import { StreamSettings } from "./StreamPanel.tsx";
@@ -61,13 +62,11 @@ export function SettingsDialog({
   onClose: () => void;
 }) {
   const close = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLElement>(null);
   const [tab, setTab] = useState<Tab>("device");
-  useEffect(() => {
-    close.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // Close takes focus on open, as it always has, and now the rest of the
+  // page cannot be tabbed to while the sheet is up.
+  useFocusTrap(panel, true, onClose, close);
 
   /**
    * The tabs there are, which is a question about what this dialog was
@@ -93,21 +92,58 @@ export function SettingsDialog({
   // not leave the sheet blank.
   const at = tabs.some((t) => t.id === tab) ? tab : "device";
 
+  /**
+   * The tabs answer the arrow keys, and only the chosen one is in the Tab
+   * order, which is what a tab list is for: Tab is the way out of the
+   * strip rather than a walk through every tab in it.
+   */
+  const strip = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
+  const onTabKey = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const last = tabs.length - 1;
+    const to =
+      e.key === "ArrowRight"
+        ? index === last
+          ? 0
+          : index + 1
+        : e.key === "ArrowLeft"
+          ? index === 0
+            ? last
+            : index - 1
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? last
+              : -1;
+    const next = to < 0 ? undefined : tabs[to];
+    if (!next) return;
+    e.preventDefault();
+    setTab(next.id);
+    strip.current[next.id]?.focus();
+  };
+
   return (
     <div className="veil" role="presentation" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <section className="panel settingsDialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <section className="panel settingsDialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabIndex={-1} ref={panel}>
         <div className="dialogBar">
           <div className="dialogHead">
             <h2 id="settingsTitle">Settings</h2>
             {tabs.length > 1 && (
               <div className="dialogTabs" role="tablist" aria-label="Settings">
-                {tabs.map((t) => (
+                {tabs.map((t, i) => (
                   <button
                     key={t.id}
+                    type="button"
                     role="tab"
+                    id={`settingsTab-${t.id}`}
+                    aria-controls={`settingsPanel-${t.id}`}
                     aria-selected={at === t.id}
+                    tabIndex={at === t.id ? 0 : -1}
+                    ref={(el) => {
+                      strip.current[t.id] = el;
+                    }}
                     className={`chip pick ${at === t.id ? "on" : ""}`}
                     onClick={() => setTab(t.id)}
+                    onKeyDown={(e) => onTabKey(e, i)}
                   >
                     {t.label}
                   </button>
@@ -123,36 +159,43 @@ export function SettingsDialog({
           </div>
         </div>
 
-        {at === "device" && <DeviceSettings alerts={alerts} onAlerts={onAlerts} {...(rolling ? { rolling } : {})} />}
+        <div
+          className="dialogPanel"
+          {...(tabs.length > 1
+            ? { role: "tabpanel", id: `settingsPanel-${at}`, "aria-labelledby": `settingsTab-${at}`, tabIndex: -1 }
+            : {})}
+        >
+          {at === "device" && <DeviceSettings alerts={alerts} onAlerts={onAlerts} {...(rolling ? { rolling } : {})} />}
 
-        {at === "widgets" && runId !== null && (
-          <section>
-            <h3 className="sectionTitle">
-              Widgets <span className="muted">what a stream shows</span>
-            </h3>
-            <StreamSettings runId={runId} race={race} onControls={onControls} />
-          </section>
-        )}
+          {at === "widgets" && runId !== null && (
+            <section>
+              <h3 className="sectionTitle">
+                Widgets <span className="muted">what a stream shows</span>
+              </h3>
+              <StreamSettings runId={runId} race={race} onControls={onControls} />
+            </section>
+          )}
 
-        {at === "chat" && pack && record && (
-          <section>
-            <ChatSettings pack={pack} record={record} onAsks={onAsks} />
-          </section>
-        )}
+          {at === "chat" && pack && record && (
+            <section>
+              <ChatSettings pack={pack} record={record} onAsks={onAsks} />
+            </section>
+          )}
 
-        {at === "control" && pack && record && (
-          <section>
-            <ControlSettings
-              pack={pack}
-              record={record}
-              onControl={onControl}
-              {...(reachable ? { reachable } : {})}
-              {...(onSetup ? { onSetup } : {})}
-              {...(onHandOut ? { onHandOut } : {})}
-              {...(seats && seats.length > 0 ? { seats } : {})}
-            />
-          </section>
-        )}
+          {at === "control" && pack && record && (
+            <section>
+              <ControlSettings
+                pack={pack}
+                record={record}
+                onControl={onControl}
+                {...(reachable ? { reachable } : {})}
+                {...(onSetup ? { onSetup } : {})}
+                {...(onHandOut ? { onHandOut } : {})}
+                {...(seats && seats.length > 0 ? { seats } : {})}
+              />
+            </section>
+          )}
+        </div>
       </section>
     </div>
   );
