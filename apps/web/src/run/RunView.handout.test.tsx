@@ -84,6 +84,7 @@ async function table(members: Member[] = theirs, record: Partial<StoredRun> = {}
     reactions: async () => [],
     listInvites: async () => [],
     people: async () => [],
+    parties: async () => ({ parties: [], servers: [] }),
     streamKeys: async () => [],
     me: async () => ({ profile: null }),
   } as unknown as Api;

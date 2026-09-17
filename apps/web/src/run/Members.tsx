@@ -2,7 +2,16 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Pack } from "@runlog/rules-schema";
 import { useAccount } from "../auth/Account.tsx";
 import { useApi } from "../sync/useApi.ts";
-import { PlanError, REACTIONS, type Invite, type Person, type Reaction, type SessionMember } from "../sync/client.ts";
+import {
+  PlanError,
+  REACTIONS,
+  type Invite,
+  type PartyServer,
+  type PartyView,
+  type Person,
+  type Reaction,
+  type SessionMember,
+} from "../sync/client.ts";
 import { syncBus } from "../sync/bus.ts";
 import { liveLinkOf, rememberLiveLink } from "../live/route.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
@@ -18,6 +27,7 @@ import { useDismiss } from "../ui/useDismiss.ts";
 import { useToast } from "../ui/Toast.tsx";
 import { useConfirm } from "../ui/useConfirm.tsx";
 import { newKeyQuestion } from "./watchKey.ts";
+import { watchPartyState, type WatchPartyState } from "./watchParty.ts";
 import { accountOf } from "./names.ts";
 
 /** One mark in a member's row: what is plugged in, lit or not. */
@@ -274,6 +284,10 @@ export function Members({
   const shared = Boolean(liveLink) || run.shared === true;
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [reactedAt, setReactedAt] = useState(0);
+  const [parties, setParties] = useState<PartyView[]>([]);
+  const [servers, setServers] = useState<PartyServer[]>([]);
+  const [picking, setPicking] = useState(false);
+  const [partyNote, setPartyNote] = useState<string | null>(null);
 
   // What the watchers and the table sent: read when the panel opens, on
   // every pull of this run (the socket rings for a reaction), and every so
@@ -297,6 +311,31 @@ export function Members({
       off();
     };
   }, [api, shared, run.runId]);
+
+  // The run's parties, and the servers that could hold one. Read once the
+  // panel opens and again on every pull of this run, the way the reactions
+  // are: a party opened by /run watch in Discord shows here too.
+  useEffect(() => {
+    if (!api || !owner) return;
+    let live = true;
+    const read = () =>
+      void api.parties(run.runId).then(
+        (out) => {
+          if (!live) return;
+          setParties(out.parties);
+          setServers(out.servers);
+        },
+        () => {},
+      );
+    read();
+    const off = syncBus.subscribe((news) => {
+      if (news.t === "pulled" && news.kind === "run" && news.ids.includes(run.runId)) read();
+    });
+    return () => {
+      live = false;
+      off();
+    };
+  }, [api, owner, run.runId]);
 
   const refresh = () => {
     if (!api || !owner) return;
@@ -392,6 +431,30 @@ export function Members({
       .catch((error: unknown) => setLiveNote(error instanceof Error && error.message ? error.message : "That could not be done just now."))
       .finally(() => setBusy(false));
   };
+
+  /** Open a watch party in one server, and put its thread on the button. */
+  const openParty = (guildId: string) => {
+    setBusy(true);
+    setPartyNote(null);
+    setPicking(false);
+    void api
+      .openParty(run.runId, guildId, liveLink)
+      .then((party) => setParties((was) => [...was.filter((p) => p.guildId !== guildId), party]))
+      .catch((error: unknown) => setPartyNote(error instanceof Error && error.message ? error.message : "That could not be done just now."))
+      .finally(() => setBusy(false));
+  };
+
+  /** Close it: the card says the run went on, and the thread is left alone. */
+  const endParty = (guildId: string) => {
+    setBusy(true);
+    void api
+      .endParty(run.runId, guildId)
+      .then(() => setParties((was) => was.filter((p) => p.guildId !== guildId)))
+      .catch((error: unknown) => setPartyNote(error instanceof Error && error.message ? error.message : "That could not be done just now."))
+      .finally(() => setBusy(false));
+  };
+
+  const partyState: WatchPartyState = watchPartyState({ owner, shared, servers, parties });
 
   /** What the live link is, said on the button rather than under it. */
   const liveTitle = "Anyone with this link watches the run as it happens, with no account.";
@@ -631,8 +694,58 @@ export function Members({
                 Stop sharing
               </button>
             )}
+            {partyState.kind === "share-first" && (
+              <button className="ghost small" title="Share the run first" disabled>
+                Watch party
+              </button>
+            )}
+            {partyState.kind === "one" && (
+              <button
+                className="ghost small"
+                title={`Follow this run in ${partyState.server.name ?? "your server"}, in a Discord thread`}
+                disabled={busy}
+                onClick={() => openParty(partyState.server.guildId)}
+              >
+                Watch party
+              </button>
+            )}
+            {partyState.kind === "pick" && (
+              <button
+                className="ghost small"
+                title="Follow this run in one of your servers"
+                disabled={busy}
+                onClick={() => setPicking((p) => !p)}
+              >
+                Watch party
+              </button>
+            )}
+            {partyState.kind === "open" && (
+              <>
+                <a className="ghost small" href={partyState.party.threadUrl} target="_blank" rel="noreferrer">
+                  Open the thread
+                </a>
+                <button
+                  className="ghost small"
+                  title="Close the watch party"
+                  disabled={busy}
+                  onClick={() => endParty(partyState.party.guildId)}
+                >
+                  End party
+                </button>
+              </>
+            )}
           </div>
         )}
+        {picking && partyState.kind === "pick" && (
+          <div className="row padRow">
+            {partyState.servers.map((s) => (
+              <button key={s.guildId} className="ghost tiny" disabled={busy} onClick={() => openParty(s.guildId)}>
+                {s.name ?? s.guildId}
+              </button>
+            ))}
+          </div>
+        )}
+        {partyNote && <p className="muted small">{partyNote}</p>}
         {upgrade && (
           <p className="notice">
             {upgrade}. Subscribe from your profile, under Plan

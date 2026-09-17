@@ -1416,6 +1416,10 @@ p {
 .members .memberActions .ghost.small {
   padding: 0.25rem 0.35rem;
 }
+/* The thread's link wears the button, so it drops the underline with it. */
+.members .memberActions a.ghost {
+  text-decoration: none;
+}
 /* The right of the row: marks then buttons, on the one line. */
 .memberRow .padRow {
   margin-top: 0;
