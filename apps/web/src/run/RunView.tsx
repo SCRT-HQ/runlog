@@ -83,6 +83,7 @@ import { chose, chosenFrom, forTool, setupsHere, withChosen, type ChosenSetup } 
 import { builtins } from "../control/builtin.ts";
 import { SetupPicker } from "./SetupPicker.tsx";
 import { lifecycleGestures, marksOf, type LifecycleMarks } from "./gestures.ts";
+import { handoutLine, handoutOf } from "./handout.ts";
 import { useRace } from "./useRace.ts";
 import { RunRail, type Pane } from "./RunRail.tsx";
 import { useEnterMoves } from "../ui/useEnterMoves.ts";
@@ -671,6 +672,27 @@ export function RunView({
   }, [run.record?.runId]);
 
   /**
+   * The host handing a setup out, on everybody else's copy of the run.
+   *
+   * The press says so where it was made and nowhere else: a player whose
+   * game was just re-equipped had no way of knowing it, which is the
+   * whole of this. The server does not send the line back down the
+   * socket that sent it, and a second device signed into the same
+   * account is quiet too, since the press was this account's own.
+   */
+  const myName = nameOf(me ?? "", run.record?.members ?? []);
+  useEffect(() => {
+    const runId = run.record?.runId;
+    if (!runId) return;
+    return syncBus.subscribe((news) => {
+      if (news.t !== "gesture" || news.id !== runId) return;
+      if (news.from !== undefined && news.from === myName) return;
+      const said = handoutLine(news);
+      if (said) toast.show(said);
+    });
+  }, [run.record?.runId, myName, toast.show]);
+
+  /**
    * A deck's own presses, kept only long enough to answer a retry with
    * the same verdict; a run underneath it changing makes a ref from
    * before mean nothing, so it is emptied along with the run id.
@@ -892,8 +914,11 @@ export function RunView({
             // gets it. The word goes out only once the write has landed,
             // because the server builds what a tool is sent from the run's
             // saved profile and would otherwise hand out the one before.
-            await run.setSetup(chose(picked));
-            sync.gesture(runId, "setup");
+            const chosen = chose(picked);
+            await run.setSetup(chosen);
+            // What went out travels with the word, so the toast on every
+            // other screen at the table can name it.
+            sync.gesture(runId, "setup", handoutOf(chosen) ?? {});
           },
           command: (id) => {
             const picked = offeredSetups.find((s) => s.id === id);
@@ -1338,7 +1363,10 @@ export function RunView({
           onControl={run.setControl}
           reachable={reachable}
           onSetup={run.setSetup}
-          onHandOut={() => (run.record ? sync.gesture(run.record.runId, "setup") : false)}
+          onHandOut={(chosen) => {
+            const handed = handoutOf(chosen);
+            return run.record && handed ? sync.gesture(run.record.runId, "setup", handed) : false;
+          }}
           seats={(run.state?.contestants ?? []).map((c) => c.name)}
           onControls={() => {
             setSettingsOpen(false);

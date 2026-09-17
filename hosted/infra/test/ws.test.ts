@@ -158,6 +158,16 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
         // Somebody at the table who only watches.
         if (id === "viewed")
           return { meta: meta(id, "user_1"), members: [member("user_1"), { sub: "user_2", role: "viewer" as const, joinedAt: "" }] };
+        // The same run with a name on the owner's row, for the line the
+        // server stamps a sender's name onto.
+        if (id === "named")
+          return {
+            meta: meta(id, "user_1"),
+            members: [
+              { sub: "user_1", role: "owner" as const, joinedAt: "", name: "Mira" },
+              { sub: "user_2", role: "player" as const, joinedAt: "", name: "Ada" },
+            ],
+          };
         if (id === "s1") return { meta: { ...meta(id, "user_1"), packTitle: "The Long Kiln" }, members: [member("user_1")] };
         // Owned and membered by somebody else entirely, for the tests
         // that check a press is refused on a run that is not the caller's.
@@ -1006,6 +1016,70 @@ describe("telling the listeners", () => {
       // the terms' own record is not touched, because they did not move.
       expect(patched.at(-1)).toEqual(["shared", { loadoutGiven: ["Mira"] }]);
       expect(patched.map(([, p]) => p)).not.toContainEqual({ termsGiven: [] });
+    });
+
+    /**
+     * What was handed out, said in words to everyone at the table.
+     *
+     * The press re-equips every game attached and, until the gesture
+     * carried a title, said so only on the screen it was made from. The
+     * data travels the way every other gesture's does, to a player on
+     * their own copy, to somebody watching by the link, and to a seat;
+     * the tool hears the same press in operations, as it always has.
+     */
+    it("tells every watcher what was handed out, and the tool in operations", async () => {
+      const gift = {
+        control: {
+          setup: [
+            { op: "flag.set", args: { name: "player.noRoll", value: true } },
+            { op: "runes.give", args: { amount: 50000 }, once: true, chosen: true },
+          ],
+        },
+      };
+      const { live, posted, d } = attached(memoryLive(), gift);
+      await live.connect("tool", "public:named", "", { control: true, seat: "Ada", run: "named" });
+      await live.watch("tool", "named", "public:named", "", { control: true, seat: "Ada", run: "named" });
+      // A player at the table on their own copy, somebody watching by the
+      // link, and the same player's seat on the run's own page.
+      await live.connect("player", "user_2", "");
+      await live.watch("player", "named", "", "");
+      await live.connect("link", "public:named", "");
+      await live.watch("link", "named", "public:named", "");
+      await live.connect("seat", "user_2", "", { seated: true, run: "named" });
+      await live.watch("seat", "named", "", "", { seated: true, run: "named" });
+      await live.connect("host", "user_1", "");
+      await live.watch("host", "named", "", "");
+      posted.length = 0;
+
+      const r = await route(
+        {
+          requestContext: { routeKey: "$default", connectionId: "host" },
+          body: JSON.stringify({
+            t: "gesture",
+            id: "named",
+            kind: "setup",
+            data: { title: "Cleric", id: "com.example.setups.cleric" },
+          }),
+        },
+        d,
+      );
+      expect(r.statusCode).toBe(200);
+
+      // The same line for all three, the data as it was sent, and `from`
+      // stamped by the server off the sender's member row.
+      const line = {
+        t: "gesture",
+        id: "named",
+        kind: "setup",
+        data: { title: "Cleric", id: "com.example.setups.cleric" },
+        from: "Mira",
+        at: "2026-09-06T12:00:00.000Z",
+      };
+      for (const c of ["player", "link", "seat"]) expect(JSON.parse(posted.find(([id]) => id === c)![1])).toEqual(line);
+      // The tool hears the loadout, not the words.
+      expect(JSON.parse(posted.find(([c]) => c === "tool")![1])).toMatchObject({ t: "apply", id: "loadout" });
+      // And the device that pressed it is not told what it already knows.
+      expect(posted.map(([c]) => c)).not.toContain("host");
     });
 
     it("refuses to hand the loadout out for anybody but the owner", async () => {

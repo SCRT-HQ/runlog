@@ -135,6 +135,7 @@ The kinds:
 | `counter` | A tally the pack shows moved: a death counted, a streak sent back to zero. Hidden counters are not told. | `counter`, its id; `label`, in the pack's words; `value`, where it is now; `was`, where it was. |
 | `unit-closed` | A unit was finalized. | `unit`, the one closed; `unitsDone`, how many so far. |
 | `run-ended` | The run ended. | `ending`, its name; `unitsDone`. |
+| `setup` | The run's owner handed the run's loadout out again, to everything attached now. | `title`, the setup the run is played under, as a person would say it; `id`, its own, where a single setup was chosen. A tool is sent its loadout rather than this. |
 | `command` | The run's owner handed the attached tool one setup file's operations, once: a warp, a handful of runes, a rule switched on for a minute. | `id` and `title`, the setup file's own; `ops`, the operations in the tool's own vocabulary, each `{ "op": "…", "args": { … } }`. |
 | `ask` | Something outside asked the run for a move or a roll (see Asks below). Sent by the server. | `ask`, its id; `kind`, `move` or `roll`; `move`, the move's id; `name` and `via` as given; `policy`, `ask` or `auto`. |
 | `asked` | The host answered an ask. Sent by the server. | The same fields, plus `accepted`, true or false, and `reason` when declined. |

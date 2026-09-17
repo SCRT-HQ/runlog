@@ -5,7 +5,7 @@ import type { StreamKeys } from "../sync/client.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { CATALOGS, catalogFor, type ToolCatalog } from "../control/catalog.ts";
 import { builtins, forPack, type Builtin } from "../control/builtin.ts";
-import { chosenFrom, creditLine } from "../control/setups.ts";
+import { chosenFrom, creditLine, type ChosenSetup } from "../control/setups.ts";
 import { HandOut } from "./HandOut.tsx";
 import { Ops } from "./Ops.tsx";
 import { listsFor, type Lists } from "../control/lists.ts";
@@ -65,8 +65,8 @@ export function ControlSettings({
   onControl?: (control: unknown) => void | Promise<void>;
   /** Change which setup this run is played under. */
   onSetup?: (setup: unknown) => void | Promise<void>;
-  /** Hand the chosen setup to everyone attached now. */
-  onHandOut?: () => boolean;
+  /** Hand the chosen setup to everyone attached now, and tell the table what it was. */
+  onHandOut?: (chosen: ChosenSetup) => boolean;
 }) {
   const saved = (record?.control as ControlProfile | undefined) ?? undefined;
   /** The setup this run is played under, where one was chosen. */
