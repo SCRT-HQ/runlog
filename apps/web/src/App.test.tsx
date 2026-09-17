@@ -7,6 +7,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import App from "./App.tsx";
+import { DocDrawerProvider } from "./docs/DocDrawer.tsx";
 import { StructurePanel } from "./design/StructurePanel.tsx";
 import { RunView } from "./run/RunView.tsx";
 import { StartScreen } from "./run/StartScreen.tsx";
@@ -339,5 +340,66 @@ describe("the inspector", () => {
 
   it("renders the per-unit flow from the pack's phases", () => {
     expect(html).toContain("Fire the Stage");
+  });
+});
+
+/**
+ * The marketplace's two addresses, read on the way in.
+ *
+ * `#marketplace/<packId>` is one pack's page and `#marketplace/<packId>/docs`
+ * is a document over it. Both have to survive a reload, which is what
+ * rendering the app at the address and finding the same thing is.
+ */
+describe("a pack's address in the marketplace", () => {
+  const LADDER = "com.scrthq.runlog.ladder-work";
+
+  beforeEach(() => {
+    drafts.clear();
+    localStorage.clear();
+    history.replaceState(null, "", "/");
+  });
+  afterEach(cleanup);
+
+  /** The app at one address, left long enough for the catalog to be read off disk. */
+  async function openAt(hash: string) {
+    history.replaceState(null, "", hash);
+    // The drawer's provider lives above the app in main.tsx; a document
+    // opened by address needs it here for the same reason.
+    const view = render(
+      <DocDrawerProvider>
+        <App />
+      </DocDrawerProvider>,
+    );
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 500));
+    });
+    return view;
+  }
+
+  it("opens the marketplace on that pack, and on a reload opens it again", async () => {
+    for (const _pass of [1, 2]) {
+      await openAt(`#marketplace/${LADDER}`);
+      const page = document.querySelector("article.packPage");
+      expect(page).not.toBeNull();
+      expect(within(page as HTMLElement).getByRole("heading", { name: "Ladder Work" })).toBeTruthy();
+      // The page is where the grid was, not beside it.
+      expect(document.querySelector(".marketGrid")).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("opens a document over the page, and on a reload opens it again", async () => {
+    for (const _pass of [1, 2]) {
+      await openAt(`#marketplace/${LADDER}/docs`);
+      expect(screen.getByRole("dialog")).toBeTruthy();
+      expect(document.querySelector("article.packPage")).not.toBeNull();
+      cleanup();
+    }
+  });
+
+  it("goes back to the catalog with nothing after the address", async () => {
+    await openAt("#marketplace");
+    expect(document.querySelector(".marketGrid")).not.toBeNull();
+    expect(document.querySelector("article.packPage")).toBeNull();
   });
 });

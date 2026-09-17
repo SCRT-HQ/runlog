@@ -4708,6 +4708,73 @@ details.panel[open] > summary .sectionTitle::after {
   gap: 0.4rem;
   flex-wrap: wrap;
 }
+/* A card's title goes to the pack's page, and is a link about it rather than a link in prose. */
+.marketTitle a {
+  color: inherit;
+  text-decoration: none;
+}
+.marketTitle a:hover,
+.marketTitle a:focus-visible {
+  text-decoration: underline;
+}
+
+/*
+ * One pack's page, where the grid was.
+ *
+ * The four answers the card gave sit at the top in the same order and the
+ * same words, so arriving here is reading on rather than starting again.
+ * The sections under them are the things a card had no room for, each
+ * behind the label it is known by.
+ */
+.packPageTop {
+  display: flex;
+}
+.packPage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 44rem;
+}
+.packPageTitle {
+  font-size: var(--t-5);
+}
+.packPageTitle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0.25rem;
+}
+/* How to get it: the price, what is already yours, and the one thing to press. */
+.packPageGet {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  padding-top: 0.25rem;
+}
+.packPageBlock {
+  margin-top: 0.4rem;
+}
+.packPageBlock > .sectionTitle {
+  margin-bottom: 0.5rem;
+}
+.packPageBlock > p {
+  margin: 0;
+}
+.packPageModes {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+/* A mode's name is a name the author wrote, not an identifier, so it keeps the app's voice. */
+.packPageModes dt {
+  font-family: var(--font-ui);
+  font-weight: 600;
+}
+.packPageModes dd {
+  margin: 0.15rem 0 0;
+}
+.packPageDocs {
+  gap: 0.4rem;
+}
 .pill {
   padding: 0.1rem 0.55rem;
   border-radius: 999px;

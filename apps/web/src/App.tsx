@@ -225,7 +225,7 @@ export default function App() {
   const [liveRoute, setLiveRoute] = useState<LiveRoute | null>(() =>
     liveFromHash(typeof location !== "undefined" ? addressOf(location) : ""),
   );
-  /** A pack the marketplace opens on, from `#marketplace/<packId>`: a live page's "in the marketplace" link lands here. */
+  /** The pack whose page the marketplace is showing, from `#marketplace/<packId>`: a live page's "in the marketplace" link lands here. */
   const [marketplaceFocus, setMarketplaceFocus] = useState<string | null>(null);
   /** Which of the profile's four pages, from `#profile` or `#profile/<page>`. */
   const [profilePage, setProfilePage] = useState<ProfilePage>(
@@ -394,7 +394,22 @@ export default function App() {
    */
   const openMarketplace = useCallback(() => {
     setView("marketplace");
+    setMarketplaceFocus(null);
     goTo("#marketplace");
+  }, []);
+
+  /**
+   * A pack's page in the marketplace, or the catalog with null.
+   *
+   * The address is what says which of the two is showing, so it is written
+   * here and the view reads it back. Opening a page is pushed, because
+   * browser back out of a pack should be the catalog it was opened from;
+   * going back to the catalog replaces, so the page just left is not
+   * sitting one Back away waiting to be opened again.
+   */
+  const openMarketplacePack = useCallback((id: string | null) => {
+    setMarketplaceFocus(id);
+    goTo(id ? `#marketplace/${encodeURIComponent(id)}` : "#marketplace", id ? "push" : "replace");
   }, []);
 
   const openDesigner = () => {
@@ -1344,6 +1359,7 @@ export default function App() {
       ) : view === "marketplace" ? (
         <MarketplaceView
           focus={marketplaceFocus}
+          onPack={openMarketplacePack}
           mine={new Set(imported.map((p) => p.id))}
           bought={new Set(purchases.filter((p) => p.status === "fulfilled").map((p) => p.packId))}
           // What the library already worked out, by the marketplace id the
