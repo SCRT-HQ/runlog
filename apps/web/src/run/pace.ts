@@ -11,6 +11,14 @@ const KEY = "runlog:carryOn";
 /** How long a receipt stays before moving on by itself, when it does. */
 export const CARRY_ON_HOLD_MS = 1800;
 
+/**
+ * What a seeded run says about its dice: shown on the run's own Settings
+ * tab as a fact about the run, and beside the device's roll-for-me switch
+ * when this run has turned it into a fact rather than a choice, so a
+ * disabled switch is not mistaken for a broken one.
+ */
+export const SEEDED_ROLL_SENTENCE = "This run rolls from its seed, so everyone at it meets the same dice.";
+
 export function carriesOnByItself(): boolean {
   try {
     return localStorage.getItem(KEY) === "on";
