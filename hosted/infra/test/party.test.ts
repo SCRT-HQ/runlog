@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { COMMANDS } from "../lib/handlers/discord/commands";
 import { handleInteraction, type InteractionDeps } from "../lib/handlers/discord/interactions";
-import { closeParty, openParty, TICK_MS, tickParties, type PartyDeps } from "../lib/handlers/discord/party";
+import {
+  closeParty,
+  notePartyHandout,
+  openParty,
+  PARTY_HANDOUTS_KEPT,
+  TICK_MS,
+  tickParties,
+  type PartyDeps,
+} from "../lib/handlers/discord/party";
 import { EPHEMERAL, InteractionType, ResponseType, type Interaction } from "../lib/handlers/discord/types";
 import type { Guild } from "../lib/handlers/guilds";
 import type { SessionMeta, Store } from "../lib/handlers/store";
@@ -461,5 +469,80 @@ describe("keeping a party's card current", () => {
     if ("error" in out) throw new Error(out.error);
     await closeParty(deps, out.party, "byHand");
     expect(await tickParties(deps, "01RUN")).toEqual([]);
+  });
+});
+
+describe("a handout, on a run with a watch party", () => {
+  const handout = { title: "The kiln kit", id: "s1" };
+
+  it("goes onto each open party, newest last, and is told to the job", async () => {
+    const { guilds, guild, deps } = await ready();
+    const first = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in first) throw new Error(first.error);
+    const told: Array<{ sessionId: string }> = [];
+    const noted = await notePartyHandout({ guilds, now: () => NOW, party: async (job) => void told.push(job) }, "01RUN", handout);
+    expect(noted).toBe(1);
+    expect(told).toEqual([{ sessionId: "01RUN" }]);
+    expect((await guilds.party("01RUN", "g1"))?.handouts).toEqual([handout]);
+    await notePartyHandout({ guilds, now: () => NOW }, "01RUN", { title: "The starter kit", id: "s2" });
+    expect((await guilds.party("01RUN", "g1"))?.handouts).toEqual([handout, { title: "The starter kit", id: "s2" }]);
+  });
+
+  it("counts the same handout once, however often the button is pressed", async () => {
+    const { guilds, guild, deps } = await ready();
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    await notePartyHandout({ guilds, now: () => NOW }, "01RUN", handout);
+    await notePartyHandout({ guilds, now: () => NOW }, "01RUN", handout);
+    expect((await guilds.party("01RUN", "g1"))?.handouts).toEqual([handout]);
+  });
+
+  it("keeps the last few and no more", async () => {
+    const { guilds, guild, deps } = await ready();
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    for (let n = 0; n < PARTY_HANDOUTS_KEPT + 2; n += 1)
+      await notePartyHandout({ guilds, now: () => NOW }, "01RUN", { title: `Kit ${n}`, id: `s${n}` });
+    const held = (await guilds.party("01RUN", "g1"))!.handouts!;
+    expect(held).toHaveLength(PARTY_HANDOUTS_KEPT);
+    expect(held[0]?.title).toBe("Kit 2");
+  });
+
+  it("says nothing about a gesture that is not a handout, or a party that is closed", async () => {
+    const { guilds, guild, deps } = await ready();
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    expect(await notePartyHandout({ guilds, now: () => NOW }, "01RUN", { id: "s1" })).toBe(0);
+    expect(await notePartyHandout({ guilds, now: () => NOW }, "01RUN", { title: 7, id: "s1" })).toBe(0);
+    await closeParty(deps, out.party, "byHand");
+    expect(await notePartyHandout({ guilds, now: () => NOW }, "01RUN", handout)).toBe(0);
+  });
+
+  it("puts the handout on the card at the next tick", async () => {
+    const { guilds, rest, guild } = await ready();
+    let ms = Date.parse(NOW);
+    const deps = {
+      store: runStore(),
+      guilds,
+      rest,
+      now: () => new Date(ms).toISOString(),
+      wait: async (by: number) => void (ms += by),
+    };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    await notePartyHandout({ guilds, now: deps.now }, "01RUN", handout);
+    ms += TICK_MS + 1_000;
+    await tickParties(deps, "01RUN");
+    expect(JSON.stringify(rest.edits.at(-1)!.message)).toContain("The kiln kit");
+  });
+
+  it("shows nothing on a party opened after the handout, which has nothing to read it from", async () => {
+    const { guilds, rest, guild, deps } = await ready();
+    // Nothing is open, so the handout lands nowhere.
+    expect(await notePartyHandout({ guilds, now: () => NOW }, "01RUN", handout)).toBe(0);
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    expect(out.party.handouts).toBeUndefined();
+    expect(JSON.stringify(rest.posts.at(-1)!.message)).not.toContain("The kiln kit");
   });
 });

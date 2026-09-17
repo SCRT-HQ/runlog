@@ -225,3 +225,40 @@ export async function tickParties(deps: PartyTickDeps, sessionId: string): Promi
   }
   return out;
 }
+
+/** How many handouts a party's card carries: the last few, not a history. */
+export const PARTY_HANDOUTS_KEPT = 5;
+
+export interface PartyHandoutDeps {
+  /** Only the two rows this needs, so the socket takes no more of the store than it uses. */
+  guilds: Pick<GuildStore, "partiesOf" | "party" | "putParty">;
+  now: () => string;
+  /** Tell the job the card has something new to carry; absent, it rides on the next snapshot. */
+  party?: (job: { sessionId: string }) => Promise<void>;
+}
+
+/**
+ * The host handed the table something: write it onto every party open on
+ * this run, for the next tick's card.
+ *
+ * The gesture is read the way every gesture is read, defensively: what is
+ * not a title and an id is nothing, rather than something repaired into a
+ * line nobody meant. How many parties it landed on comes back, which is
+ * what a test and a log line want.
+ */
+export async function notePartyHandout(deps: PartyHandoutDeps, sessionId: string, gesture: unknown): Promise<number> {
+  if (typeof gesture !== "object" || gesture === null || Array.isArray(gesture)) return 0;
+  const row = gesture as Record<string, unknown>;
+  const title = typeof row["title"] === "string" ? row["title"].trim().slice(0, 100) : "";
+  const id = typeof row["id"] === "string" ? row["id"].trim().slice(0, 100) : "";
+  if (!title || !id) return 0;
+  const open = (await deps.guilds.partiesOf(sessionId)).filter((p) => !p.closedAt);
+  if (open.length === 0) return 0;
+  const at = deps.now();
+  for (const party of open) {
+    const had = (party.handouts ?? []).filter((h) => h.id !== id);
+    await deps.guilds.putParty({ ...party, handouts: [...had, { id, title }].slice(-PARTY_HANDOUTS_KEPT), updatedAt: at });
+  }
+  await deps.party?.({ sessionId });
+  return open.length;
+}

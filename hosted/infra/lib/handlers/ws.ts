@@ -5,9 +5,12 @@ import { apiGatewayPoster, type Poster } from "./live.js";
 import { dynamoLive, type LiveStore, type Watcher } from "./live.js";
 import { dynamoStore, type Ask, type Store } from "./store.js";
 import { dynamoRaces, type RaceStore } from "./races.js";
+import { dynamoGuilds } from "./guilds.js";
+import { notePartyHandout, type PartyHandoutDeps } from "./discord/party.js";
 import { dynamoBilling, featuresFromEnv, grantsOf } from "./billing.js";
 import { annotate } from "./xray.js";
 import { randomBytes } from "node:crypto";
+import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 
 /**
  * The socket's three moments.
@@ -46,6 +49,14 @@ export interface WsDeps {
    * plans are off, which is the same answer as yes.
    */
   entitled?: (sub: string) => Promise<boolean>;
+  /**
+   * The Discord rows a watch party is kept in. Only the party's own rows:
+   * the socket writes no more of Discord than the handout it heard.
+   * Absent where this copy has no bot.
+   */
+  guilds?: PartyHandoutDeps["guilds"];
+  /** Tell the Discord job a watch party's card has something new to carry. */
+  party?: (job: { sessionId: string }) => Promise<void>;
 }
 
 interface WsResult {
@@ -826,6 +837,21 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
       // attach. `termsGiven` is left alone, because the terms did not
       // move.
       await deps.store.updateSession(id, now(), { loadoutGiven: [...new Set(gave)] });
+      /**
+       * A watch party following this run says so on its next card.
+       *
+       * A handout never touches the log and never reaches a snapshot, so
+       * this is the one place a party can hear about it. Written after
+       * the loadout went out, like the record above it, and never on the
+       * way in: a gesture that went nowhere handed nothing to anybody.
+       */
+      if (deps.guilds) {
+        await notePartyHandout(
+          { guilds: deps.guilds, now, ...(deps.party ? { party: deps.party } : {}) },
+          id,
+          data as Record<string, unknown>,
+        );
+      }
       return { statusCode: 200 };
     }
 
@@ -958,6 +984,7 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
 /* ---- the Lambda ---------------------------------------------------------- */
 
 let deps: WsDeps | undefined;
+let lambdaClient: LambdaClient | undefined;
 
 export async function handler(event: WsEvent): Promise<WsResult> {
   if (!deps) {
@@ -979,6 +1006,22 @@ export async function handler(event: WsEvent): Promise<WsResult> {
       // the API side, and `/api/me` refreshes those on every call the app
       // makes, so a comped account is comped here too.
       ...(gates ? { entitled: async (sub: string) => (await grantsOf(billing, sub)).includes(plusFeature) } : {}),
+      // A handout is heard here and nowhere else, so this is where a
+      // watch party's card is told about one.
+      ...(process.env["DISCORD_JOB_FUNCTION"]
+        ? {
+            guilds: dynamoGuilds({ table, bucket: process.env["BUCKET_NAME"] ?? "" }),
+            party: async (job: { sessionId: string }) => {
+              await (lambdaClient ??= new LambdaClient({})).send(
+                new InvokeCommand({
+                  FunctionName: process.env["DISCORD_JOB_FUNCTION"],
+                  InvocationType: "Event",
+                  Payload: Buffer.from(JSON.stringify({ kind: "party", ...job })),
+                }),
+              );
+            },
+          }
+        : {}),
     };
   }
   try {
