@@ -5217,7 +5217,13 @@ a.plan {
   justify-content: flex-end;
   min-width: 11.5rem;
 }
-.settingsDialog > section {
+/* The chosen tab's panel: the sections it holds are spaced as they were
+   when they were the sheet's own children. */
+.settingsDialog .dialogPanel {
+  display: grid;
+  gap: 1.1rem;
+}
+.settingsDialog .dialogPanel > section {
   display: grid;
   gap: 0.5rem;
 }

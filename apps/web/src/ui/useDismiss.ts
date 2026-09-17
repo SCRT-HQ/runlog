@@ -1,4 +1,5 @@
 import { useEffect, type RefObject } from "react";
+import { useLayer } from "./layers.ts";
 
 /**
  * Closes something that popped open over the page.
@@ -10,13 +11,16 @@ import { useEffect, type RefObject } from "react";
  * way to close it but its own toggle.
  */
 export function useDismiss(ref: RefObject<HTMLElement | null>, open: boolean, onClose: () => void): void {
+  const top = useLayer(open);
   useEffect(() => {
     if (!open) return;
     const away = (e: PointerEvent) => {
       if (!ref.current?.contains(e.target as Node)) onClose();
     };
+    // Escape belongs to whatever opened last: a menu inside a dialog closes
+    // on the first press, and the dialog under it on the second.
     const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && top()) onClose();
     };
     document.addEventListener("pointerdown", away);
     document.addEventListener("keydown", key);
@@ -24,5 +28,5 @@ export function useDismiss(ref: RefObject<HTMLElement | null>, open: boolean, on
       document.removeEventListener("pointerdown", away);
       document.removeEventListener("keydown", key);
     };
-  }, [open, ref, onClose]);
+  }, [open, ref, onClose, top]);
 }

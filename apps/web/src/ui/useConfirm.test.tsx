@@ -122,3 +122,32 @@ describe("asking before something irreversible", () => {
     expect(resolved).toHaveBeenCalledWith(false);
   });
 });
+
+describe("a question that destroys something", () => {
+  it("puts focus on the safe answer, so a reflex cancels", async () => {
+    await open({ ask: "Discard this trial?", confirm: "Discard", destructive: true });
+    expect((document.activeElement as HTMLElement).textContent).toBe("Cancel");
+  });
+
+  it("does not let a bare Enter answer a dialog that has only just opened", async () => {
+    await open({ ask: "Discard this trial?", confirm: "Discard", destructive: true });
+    const early = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    await act(async () => void (document.activeElement as HTMLElement).dispatchEvent(early));
+    expect(early.defaultPrevented).toBe(true);
+    expect(answered()).toBe("not yet");
+    // A frame later it is a dialog somebody has seen, and Enter is theirs.
+    await act(async () => {
+      await new Promise((settle) => requestAnimationFrame(() => settle(undefined)));
+    });
+    const later = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    await act(async () => void (document.activeElement as HTMLElement).dispatchEvent(later));
+    expect(later.defaultPrevented).toBe(false);
+  });
+
+  it("keeps the page behind it out of the keyboard's reach", async () => {
+    await open({ ask: "Discard this trial?", confirm: "Discard", destructive: true });
+    expect(screen.getByText("Open").closest("[inert]")).not.toBeNull();
+    await act(async () => void screen.getByText("Cancel").click());
+    expect(screen.getByText("Open").closest("[inert]")).toBeNull();
+  });
+});
