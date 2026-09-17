@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { finishDeferred, finishMoved, finishTimer, route, type Deps } from "../lib/handlers/api";
 import type { TimerJob } from "../lib/handlers/discord/play";
 import {
+  normalizeHandle,
   SeqConflict,
   type ApiKey,
   type Ask,
@@ -423,6 +424,7 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
   const streamKeys = new Map<string, { sub: string; kind: "watch" | "press"; hash: string; madeAt: string }>();
   const nonces = new Set<string>();
   const claims = new Map<string, Claim>();
+  const handles = new Map<string, { sub: string; handle: string; at: string }>();
   const k = (sub: string, id: string) => `${sub}/${id}`;
   const mine = (sub: string) => (key: string) => key.startsWith(`${sub}/`);
   return {
@@ -441,6 +443,21 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
       };
       profiles.set(sub, profile);
       return profile;
+    },
+    async claimHandle(sub, handle, at) {
+      const key = normalizeHandle(handle);
+      if (!key) return "held";
+      const held = handles.get(key);
+      if (held && held.sub !== sub) return "taken";
+      handles.set(key, { sub, handle, at });
+      return "held";
+    },
+    async releaseHandle(sub, handle) {
+      const key = normalizeHandle(handle);
+      if (handles.get(key)?.sub === sub) handles.delete(key);
+    },
+    async handleOwner(handle) {
+      return handles.get(normalizeHandle(handle))?.sub ?? null;
     },
     async setMemberName(sessionId, sub, name) {
       const seat = sessions.get(sessionId)?.members.find((m) => m.sub === sub);
@@ -469,6 +486,8 @@ function memoryStore(): Store & { rows: Map<string, unknown>; exports: Map<strin
           n += 1;
         }
       }
+      const held = profiles.get(sub)?.handle;
+      if (held && handles.get(normalizeHandle(held))?.sub === sub) handles.delete(normalizeHandle(held));
       if (profiles.delete(sub)) n += 1;
       return n;
     },
@@ -985,6 +1004,65 @@ describe("who is asking", () => {
     await store.touchProfile("user_1", "2026-09-06T13:00:00.000Z", { handle: "ada-l" });
     const later = await call(request("GET", "/api/sessions/01RUN"), d);
     expect((later.body["members"] as SessionMember[]).map((m) => m.name)).toEqual(["ada-l"]);
+  });
+
+  it("holds a shown name for one account, and hands it on when the account lets it go", async () => {
+    const store = memoryStore();
+    const at = "2026-09-16T00:00:00.000Z";
+    // The store's own rule, on the normalized form: the same account may
+    // claim what it holds again, another account may not, and only the
+    // holder can let it go.
+    expect(await store.claimHandle("user_9", "Ada Lovelace", at)).toBe("held");
+    expect(await store.claimHandle("user_9", "ada  lovelace", at)).toBe("held");
+    expect(await store.claimHandle("user_8", "ADA LOVELACE", at)).toBe("taken");
+    expect(await store.handleOwner("ada lovelace")).toBe("user_9");
+    await store.releaseHandle("user_8", "Ada Lovelace");
+    expect(await store.handleOwner("Ada Lovelace")).toBe("user_9");
+    await store.releaseHandle("user_9", "Ada Lovelace");
+    expect(await store.handleOwner("Ada Lovelace")).toBeNull();
+
+    const d = deps(store);
+    const second = { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) };
+    const third = { ...d, verify: async () => ({ sub: "user_3", sid: "s3" }) };
+    expect((await call(request("PUT", "/api/me/profile", { body: { handle: "Kiln Keeper" } }), d)).status).toBe(200);
+
+    // The same name, spelled differently, belongs to somebody else: the
+    // answer is 409 and nothing of the asking account's is written.
+    const clash = await call(request("PUT", "/api/me/profile", { body: { name: "Ben", handle: "kiln  keeper" } }), second);
+    expect(clash.status).toBe(409);
+    expect(clash.body).toEqual({ error: "That name is taken." });
+    const kept = (await call(request("GET", "/api/me"), second)).body["profile"] as Profile;
+    expect(kept.handle).toBeUndefined();
+    expect(kept.name).toBeUndefined();
+
+    // The account's own name in another case is its own name.
+    expect((await call(request("PUT", "/api/me/profile", { body: { handle: "KILN KEEPER" } }), d)).status).toBe(200);
+    // Renaming lets the old name go, and the next account may have it.
+    expect((await call(request("PUT", "/api/me/profile", { body: { handle: "Ember" } }), d)).status).toBe(200);
+    expect((await call(request("PUT", "/api/me/profile", { body: { handle: "kiln keeper" } }), third)).status).toBe(200);
+    expect((await call(request("GET", "/api/me"), third)).body["profile"]).toMatchObject({ handle: "kiln keeper" });
+
+    // An account from before the rule, whose name another has since
+    // claimed, is told on the next read and asked for another.
+    await store.touchProfile("user_4", at, { handle: "ember" });
+    const fourth = { ...d, verify: async () => ({ sub: "user_4", sid: "s4" }) };
+    expect((await call(request("GET", "/api/me"), fourth)).body["handleTaken"]).toBe(true);
+    expect((await call(request("GET", "/api/me"), d)).body["handleTaken"]).toBe(false);
+
+    // A touch that says nothing about the name claims the name the
+    // account already has, where it is free: that is the backfill.
+    expect(await store.handleOwner("kiln keeper")).toBe("user_3");
+    await store.releaseHandle("user_3", "kiln keeper");
+    expect((await call(request("PUT", "/api/me/profile", { body: { email: "three@example.test" } }), third)).status).toBe(200);
+    expect(await store.handleOwner("Kiln Keeper")).toBe("user_3");
+    // The same touch by an account whose name somebody else holds is not
+    // turned away: the account keeps working until it picks another.
+    expect((await call(request("PUT", "/api/me/profile", { body: { email: "four@example.test" } }), fourth)).status).toBe(200);
+
+    // Deleting the account lets its name go.
+    expect((await call(request("DELETE", "/api/me"), d)).status).toBe(200);
+    expect(await store.handleOwner("Ember")).toBeNull();
+    expect((await call(request("PUT", "/api/me/profile", { body: { handle: "Ember" } }), fourth)).status).toBe(200);
   });
 
   it("runs a race: started with a code, joined by it, progress reported, ranked on the device", async () => {

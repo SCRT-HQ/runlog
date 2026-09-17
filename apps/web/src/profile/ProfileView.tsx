@@ -3,6 +3,7 @@ import { useAccount, type Account } from "../auth/Account.tsx";
 import { useSync, type Sync } from "../sync/SyncProvider.tsx";
 import {
   createApi,
+  SyncError,
   type Api,
   type ApiKey,
   type Claim,
@@ -200,7 +201,9 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
               licensesHere={licenses.length}
               onSaved={(p) => {
                 setProfile(p);
-                rememberProfile(p);
+                // Saved from Shown as: the server took the name, so it is
+                // this account's and the gate has nothing to ask about.
+                rememberProfile(p, false);
               }}
             />
           )}
@@ -729,7 +732,10 @@ function ShownAs({
                 setDraft(null);
                 setNote(p.handle ? `Others see you as ${p.handle}.` : `Others see you as ${p.name ?? "your account's name"}.`);
               })
-              .catch((error: unknown) => setNote(error instanceof Error && error.message ? error.message : "That name was not kept."))
+              .catch((error: unknown) => {
+                if (error instanceof SyncError && error.kind === "conflict") setNote("That name is taken.");
+                else setNote(error instanceof Error && error.message ? error.message : "That name was not kept.");
+              })
               .finally(() => setBusy(false));
           }}
         >

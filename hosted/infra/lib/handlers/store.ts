@@ -235,6 +235,16 @@ export function shownName(profile: Pick<Profile, "name" | "handle">): string | u
   return first || undefined;
 }
 
+/**
+ * The form a shown name is claimed under: trimmed, runs of whitespace
+ * collapsed to one space, NFKC, lowercased. "Ada Lovelace", "ada  lovelace"
+ * and "ADA LOVELACE" are one name, and one account holds it. The account
+ * keeps the form it typed; only the claim uses this.
+ */
+export function normalizeHandle(handle: string): string {
+  return handle.trim().replace(/\s+/g, " ").normalize("NFKC").toLowerCase();
+}
+
 /** A reaction from a watcher: one of a few emoji, a name if they gave one, and when. */
 export interface Reaction {
   emoji: string;
@@ -449,6 +459,16 @@ export interface Store {
   ): Promise<Profile>;
   /** Read a profile without touching it: somebody else's, for the name they are shown as. */
   getProfile(sub: string): Promise<Profile | null>;
+  /**
+   * Hold a shown name for this account, under its normalized form.
+   * "held" when the account has it, which includes claiming again what it
+   * already holds; "taken" when another account holds it.
+   */
+  claimHandle(sub: string, handle: string, at: string): Promise<"held" | "taken">;
+  /** Let a shown name go, and only where this account is the one holding it. */
+  releaseHandle(sub: string, handle: string): Promise<void>;
+  /** Which account holds a shown name, or null where nobody does. */
+  handleOwner(handle: string): Promise<string | null>;
   /** The features Stripe says this person has; none until billing exists. */
   entitlements(sub: string): Promise<string[]>;
   /** Everything under the person: rows and objects. Returns how many rows went. */
@@ -502,7 +522,8 @@ type Row = Record<string, unknown> & {
     | "apikeyhash"
     | "nonce"
     | "signkey"
-    | "claim";
+    | "claim"
+    | "handle";
   /** Where the body is in S3, for the kinds that have one. */
   key?: string;
   /** The license key itself, for a license row. Never in a manifest. */
@@ -581,6 +602,56 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       return strip(row) as unknown as Profile;
     },
 
+    // The claim rows live outside the person's partition, one row per
+    // normalized name, so the write that takes a name is the write that
+    // finds out whether anyone else has it.
+    async claimHandle(sub, handle, at) {
+      const key = normalizeHandle(handle);
+      if (!key) return "held";
+      try {
+        await ddb.send(
+          new PutCommand({
+            TableName: table,
+            Item: { pk: `HANDLE#${key}`, sk: "CLAIM", kind: "handle", sub, handle, at },
+            ConditionExpression: "attribute_not_exists(pk) OR #sub = :sub",
+            ExpressionAttributeNames: { "#sub": "sub" },
+            ExpressionAttributeValues: { ":sub": sub },
+          }),
+        );
+        return "held";
+      } catch (error) {
+        if ((error as { name?: string }).name === "ConditionalCheckFailedException") return "taken";
+        throw error;
+      }
+    },
+
+    async releaseHandle(sub, handle) {
+      const key = normalizeHandle(handle);
+      if (!key) return;
+      try {
+        await ddb.send(
+          new DeleteCommand({
+            TableName: table,
+            Key: { pk: `HANDLE#${key}`, sk: "CLAIM" },
+            ConditionExpression: "attribute_exists(pk) AND #sub = :sub",
+            ExpressionAttributeNames: { "#sub": "sub" },
+            ExpressionAttributeValues: { ":sub": sub },
+          }),
+        );
+      } catch (error) {
+        // Somebody else's claim, or none: either way there is nothing of
+        // this account's to let go.
+        if ((error as { name?: string }).name !== "ConditionalCheckFailedException") throw error;
+      }
+    },
+
+    async handleOwner(handle) {
+      const key = normalizeHandle(handle);
+      if (!key) return null;
+      const row = await get_(`HANDLE#${key}`, "CLAIM");
+      return typeof row?.["sub"] === "string" ? row["sub"] : null;
+    },
+
     async entitlements(sub) {
       const row = await get(sub, "ENTITLEMENTS");
       const features = row?.["features"];
@@ -589,10 +660,13 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
 
     async deleteUser(sub) {
       // What lives outside the partition but belongs to the person: the
-      // hash rows of their keys, and the public claims on their signing
-      // keys. Both go, or a deleted account could still act.
+      // hash rows of their keys, the public claims on their signing keys,
+      // and the shown name they hold. All go, or a deleted account could
+      // still act, or keep a name nobody else can take.
       for (const key of await store.listApiKeys(sub)) await store.revokeApiKey(sub, key.id);
       for (const c of await store.listClaims(sub)) await store.unclaim(sub, c.fingerprint);
+      const held = (await store.getProfile(sub))?.handle;
+      if (held) await store.releaseHandle(sub, held);
       const out = await ddb.send(
         new QueryCommand({
           TableName: table,
