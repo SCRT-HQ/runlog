@@ -4555,14 +4555,25 @@ describe("watch parties from the app", () => {
     expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("byHand");
   });
 
-  it("is the owner's to open, not a member's, though a member may read the list", async () => {
+  /**
+   * A thread is a place in somebody's server, and a private one is a
+   * place nobody else was let into. Being in the run is no reason to be
+   * told where either is, and nothing but the owner's own page asks.
+   */
+  it("is the owner's, and a member is told the same for reading as for opening", async () => {
     const { d, store } = await ready();
     await store.joinAs("01RUN", "user_2", "player", "Kel", "2026-09-06T12:00:00.000Z");
+    await call(request("POST", "/api/sessions/01RUN/parties", { body: { guildId: "g1" } }), d);
     const read = await call(request("GET", "/api/sessions/01RUN/parties", { token: "guest" }), d);
-    expect(read.status).toBe(200);
+    expect(read.status).toBe(422);
+    expect(read.body["error"]).toBe("only the owner opens a watch party");
+    expect(JSON.stringify(read.body)).not.toContain("thread_");
     const opened = await call(request("POST", "/api/sessions/01RUN/parties", { body: { guildId: "g1" }, token: "guest" }), d);
     expect(opened.status).toBe(422);
     expect(opened.body["error"]).toBe("only the owner opens a watch party");
+    const mine = await call(request("GET", "/api/sessions/01RUN/parties"), d);
+    expect(mine.status).toBe(200);
+    expect((mine.body["parties"] as Array<{ guildId: string }>).map((p) => p.guildId)).toEqual(["g1"]);
   });
 });
 

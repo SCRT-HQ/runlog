@@ -2847,6 +2847,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         ...(p.closedAt ? { closedAt: p.closedAt } : {}),
       });
       const mine = await guilds.guildsOf(caller.sub);
+      // Every one of these is the owner's: a party's thread is a place in
+      // somebody's server, and where a private one is, and who else is in
+      // the run is no reason to be told.
+      if (me.role !== "owner") return json(422, { error: "only the owner opens a watch party" });
       if (sub === "/parties" && method === "GET") {
         const held = await guilds.partiesOf(id);
         return json(200, {
@@ -2861,7 +2865,6 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
           servers: mine.map((g) => ({ guildId: g.guildId, ...(g.name ? { name: g.name } : {}), watchParties: g.watchParties ?? "off" })),
         });
       }
-      if (me.role !== "owner") return json(422, { error: "only the owner opens a watch party" });
       if (sub === "/parties" && method === "POST") {
         const body = parse(event);
         const guildId = isRecord(body) && str(body["guildId"]) ? body["guildId"] : "";

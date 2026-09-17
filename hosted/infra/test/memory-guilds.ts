@@ -9,7 +9,7 @@ import type {
   VerifyState,
   WatchParty,
 } from "../lib/handlers/guilds";
-import type { DiscordMessage, DiscordOAuth, DiscordRest } from "../lib/handlers/discord/rest";
+import type { DiscordMessage, DiscordOAuth, DiscordRest, EditOutcome } from "../lib/handlers/discord/rest";
 
 /** Discord, as a list of what was asked of it: threads made, messages posted, in order. */
 export function memoryDiscord(): DiscordRest & {
@@ -29,6 +29,8 @@ export function memoryDiscord(): DiscordRest & {
   roles: Array<{ id: string; name: string; color?: number }>;
   channels: Array<{ id: string; name: string }>;
   down: boolean;
+  /** Discord has no such message any more: an edit answers gone, where `down` only fails to land. */
+  lost: boolean;
 } {
   let n = 0;
   const me = {
@@ -63,6 +65,7 @@ export function memoryDiscord(): DiscordRest & {
     archived: [] as string[],
     followUps: [] as Array<{ token: string; message: DiscordMessage; privately: boolean }>,
     down: false,
+    lost: false,
     async editOriginal(_applicationId: string, token: string, message: DiscordMessage) {
       if (me.down) return false;
       me.originals.push({ token, message });
@@ -91,10 +94,11 @@ export function memoryDiscord(): DiscordRest & {
       me.posts.push({ channel, message, id });
       return id;
     },
-    async editMessage(channel: string, id: string, message: DiscordMessage) {
-      if (me.down) return false;
+    async editMessage(channel: string, id: string, message: DiscordMessage): Promise<EditOutcome> {
+      if (me.lost) return "gone";
+      if (me.down) return "failed";
       me.edits.push({ channel, id, message });
-      return true;
+      return "ok";
     },
     async deleteMessage(_channel: string, id: string) {
       if (me.down) return false;
