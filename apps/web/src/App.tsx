@@ -1436,6 +1436,7 @@ export default function App() {
             void sync.setPackSync(record.id, on);
           }}
           onMarketplace={openMarketplace}
+          onOpenSettings={() => openProfile("settings")}
           onUpdate={(record) => void updateFromMarketplace(record)}
           onReplace={(record, file) => void replaceFromFile(record, file)}
           {...(api
