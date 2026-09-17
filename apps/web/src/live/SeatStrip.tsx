@@ -1,5 +1,6 @@
 import type { Offer } from "../run/offer.ts";
 import type { SeatKind } from "../run/seats.ts";
+import { IconButton } from "../ui/IconButton.tsx";
 
 /**
  * What a seated player may press, from the offer the run's own page
@@ -68,23 +69,21 @@ export function SeatStrip({
           {offer.trackers.map((t) => (
             <div key={t.id} className="seatTracker">
               <span>{t.label}</span>
-              <button
-                className="ghost tiny"
+              <IconButton
                 disabled={!held}
-                aria-label={`${t.label} down one`}
+                label={`${t.label} down one`}
                 onClick={() => onPress({ press: "answer", answer: { tracker: t.id, by: -1 } })}
               >
                 −
-              </button>
+              </IconButton>
               <span className="num">{t.value}</span>
-              <button
-                className="ghost tiny"
+              <IconButton
                 disabled={!held}
-                aria-label={`${t.label} up one`}
+                label={`${t.label} up one`}
                 onClick={() => onPress({ press: "answer", answer: { tracker: t.id, by: 1 } })}
               >
                 +
-              </button>
+              </IconButton>
             </div>
           ))}
         </div>

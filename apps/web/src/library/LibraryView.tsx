@@ -14,6 +14,8 @@ import { HomeStrip } from "./HomeStrip.tsx";
 import { PackServers } from "./PackServers.tsx";
 import { useGuildVaults } from "./useGuildVaults.ts";
 import { useTitle } from "../title.ts";
+import { Button } from "../ui/Button.tsx";
+import { PageHeader } from "../ui/PageHeader.tsx";
 
 /**
  * The library: your packs, newest-played first, each with its runs.
@@ -138,51 +140,54 @@ export function LibraryView({
 
   return (
     <main className="main library">
-      <header className="libraryHead">
-        <h2>Your packs</h2>
-        <p className="muted">Newest played first. A pack's runs are beneath it; the one open on this device is marked.</p>
-        <div className="libraryActions">
-          <div className="libraryActionGroup">
-            <h3 className="sectionTitle">Add a pack</h3>
-            <div className="libraryActionGroupRow">
-              <button className="primary" onClick={onMarketplace}>
-                Get more packs
-              </button>
-              <label className="ghost fileButton">
-                Load a pack from a file
-                <input type="file" accept=".yaml,.yml,.json,.rlpack" onChange={(e) => onFile(e.target.files?.[0])} />
-              </label>
-            </div>
-          </div>
-          {onJoinRace && (
+      <PageHeader
+        className="libraryHead"
+        title="Your packs"
+        lead="Newest played first. A pack's runs are beneath it; the one open on this device is marked."
+        secondary={
+          <div className="libraryActions">
             <div className="libraryActionGroup">
-              <h3 className="sectionTitle">Join a race</h3>
-              <form
-                className="raceJoin"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (raceCode.trim().length >= 6) {
-                    onJoinRace(raceCode.trim());
-                    setRaceCode("");
-                  }
-                }}
-              >
-                <input
-                  className="textInput code"
-                  value={raceCode}
-                  placeholder="race code"
-                  maxLength={8}
-                  aria-label="A race code, six letters"
-                  onChange={(e) => setRaceCode(e.target.value.toUpperCase())}
-                />
-                <button className="ghost" type="submit" disabled={raceCode.trim().length < 6}>
-                  Join a race
-                </button>
-              </form>
+              <h3 className="sectionTitle">Add a pack</h3>
+              <div className="libraryActionGroupRow">
+                <Button variant="primary" onClick={onMarketplace}>
+                  Get more packs
+                </Button>
+                <label className="ghost fileButton">
+                  Load a pack from a file
+                  <input type="file" accept=".yaml,.yml,.json,.rlpack" onChange={(e) => onFile(e.target.files?.[0])} />
+                </label>
+              </div>
             </div>
-          )}
-        </div>
-      </header>
+            {onJoinRace && (
+              <div className="libraryActionGroup">
+                <h3 className="sectionTitle">Join a race</h3>
+                <form
+                  className="raceJoin"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (raceCode.trim().length >= 6) {
+                      onJoinRace(raceCode.trim());
+                      setRaceCode("");
+                    }
+                  }}
+                >
+                  <input
+                    className="textInput code"
+                    value={raceCode}
+                    placeholder="race code"
+                    maxLength={8}
+                    aria-label="A race code, six letters"
+                    onChange={(e) => setRaceCode(e.target.value.toUpperCase())}
+                  />
+                  <Button type="submit" disabled={raceCode.trim().length < 6}>
+                    Join a race
+                  </Button>
+                </form>
+              </div>
+            )}
+          </div>
+        }
+      />
 
       <HomeStrip
         packs={ordered}
@@ -220,13 +225,14 @@ export function LibraryView({
               </button>
               <div className="libraryPackActions">
                 {record && p.update && onUpdate && (
-                  <button
-                    className="ghost tiny update"
+                  <Button
+                    size="compact"
+                    className="update"
                     onClick={() => onUpdate(record)}
                     title={`The marketplace has v${p.update}; your ${v.run.many.toLowerCase()} are kept`}
                   >
                     Update to v{p.update}
-                  </button>
+                  </Button>
                 )}
                 <DocMenu compact pack={() => loadPackText(p.source, p.record?.format ?? "yaml").pack} at={{ section: "packs", id: p.id }} />
                 <DeckProfiles load={() => Promise.resolve(p.source)} format={p.record?.format ?? "yaml"} />
@@ -236,17 +242,17 @@ export function LibraryView({
                   server, Replace and Forget are all errands; starting is
                   the point of a shelf of packs.
                 */}
-                <button className="primary tiny" onClick={() => onStartAnother(p)}>
+                <Button variant="primary" size="compact" onClick={() => onStartAnother(p)}>
                   {mine.length > 0 ? `Start another ${v.run.one.toLowerCase()}` : `Start ${an(v.run.one.toLowerCase())}`}
-                </button>
+                </Button>
                 {onTest && (
-                  <button
-                    className="ghost tiny"
+                  <Button
+                    size="compact"
                     onClick={() => onTest(p)}
                     title={`Play ${p.title} in ${an(v.run.one.toLowerCase())} that is not saved`}
                   >
                     Test
-                  </button>
+                  </Button>
                 )}
                 {/* Where this pack may be played, answered at the shelf
                     rather than from each server's own page. */}
@@ -269,13 +275,14 @@ export function LibraryView({
                   </label>
                 )}
                 {record && (
-                  <button
-                    className="ghost tiny danger"
+                  <Button
+                    variant="danger"
+                    size="compact"
                     title={`Forget ${p.title} and its ${v.run.many.toLowerCase()}`}
                     onClick={() => onForgetPack(record)}
                   >
                     Forget pack
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -324,9 +331,9 @@ export function LibraryView({
                   </span>
                 </button>
                 <span className="runRowActions">
-                  <button className="ghost tiny" onClick={() => onTakeSeat(r)}>
+                  <Button size="compact" onClick={() => onTakeSeat(r)}>
                     Take your seat
-                  </button>
+                  </Button>
                 </span>
               </div>
             ))}

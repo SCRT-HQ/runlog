@@ -52,7 +52,9 @@ const show = async (profile: Profile, options: { taken?: boolean; api?: Partial<
   await flush();
 };
 
-const field = () => screen.getByLabelText("The name others see") as HTMLInputElement;
+// The box is named by the words above it now, a real label tied to it by
+// `for`, rather than by an `aria-label` nobody sees; see ui/Field.tsx.
+const field = () => screen.getByLabelText("Shown as") as HTMLInputElement;
 
 afterEach(() => {
   cleanup();
@@ -98,6 +100,6 @@ describe("the name gate", () => {
       handle: "Ember",
       handleSetAt: "2026-01-02T00:00:00Z",
     });
-    expect(screen.queryByLabelText("The name others see")).toBeNull();
+    expect(screen.queryByLabelText("Shown as")).toBeNull();
   });
 });
