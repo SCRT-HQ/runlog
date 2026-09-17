@@ -1,5 +1,5 @@
 import { useEffect, useRef, type RefObject } from "react";
-import { useLayer } from "./layers.ts";
+import { hasActiveModal, useLayer, useModalLayer } from "./layers.ts";
 
 /**
  * Holds a modal dialog's keyboard inside it.
@@ -72,12 +72,14 @@ function holdBackground(panel: HTMLElement): () => void {
 }
 
 /** Back where they were, or, if the dialog outlived it, to the page itself. */
-function giveFocusBack(opener: HTMLElement | null): void {
-  if (opener?.isConnected && typeof opener.focus === "function") {
-    opener.focus();
-    return;
+function giveFocusBack(opener: HTMLElement | null, pageOpener: HTMLElement | null): void {
+  for (const target of [opener, pageOpener]) {
+    if (target?.isConnected && !target.closest("[inert], [hidden], [aria-hidden='true']") && typeof target.focus === "function") {
+      target.focus();
+      if (document.activeElement === target) return;
+    }
   }
-  const landing = document.querySelector<HTMLElement>("main") ?? document.body;
+  const landing = document.querySelector<HTMLElement>("main:not([inert])") ?? document.body;
   if (!landing.hasAttribute("tabindex")) {
     landing.setAttribute("tabindex", "-1");
     landing.addEventListener("blur", () => landing.removeAttribute("tabindex"), { once: true });
@@ -92,8 +94,11 @@ export function useFocusTrap(
   onClose: () => void,
   /** What takes focus when it opens; the first control it holds, where this is absent. */
   initial?: RefObject<HTMLElement | null>,
+  /** Required account gates outrank ordinary dialogs and consume Escape without closing. */
+  options: { required?: boolean } = {},
 ): void {
-  const top = useLayer(open);
+  const priority = options.required ? "required" : "default";
+  const top = useLayer(open, priority);
   // Read at open rather than tracked, so a re-render cannot restart the
   // dialog by handing the effect a new object.
   const first = useRef(initial);
@@ -106,28 +111,51 @@ export function useFocusTrap(
    * the time effects run, and focus with it.
    */
   const opener = useRef<HTMLElement | null>(null);
+  const lastFocused = useRef<HTMLElement | null>(null);
+  const activated = useRef(false);
   if (open && opener.current === null && typeof document !== "undefined") {
     const held = document.activeElement as HTMLElement | null;
     opener.current = held && held !== document.body ? held : null;
   }
+  const { active, revision, pageOpener } = useModalLayer(open, priority, opener);
 
   useEffect(() => {
-    // Forgotten when it shuts rather than on the way out, so that a
-    // development build, which mounts every effect twice, does not throw
-    // the opener away between the two.
-    if (!open) {
-      opener.current = null;
-      return;
-    }
+    if (!open || !active) return;
     const box = panel.current;
     if (!box) return;
     const release = holdBackground(box);
-    (first.current?.current ?? focusables(box)[0] ?? box).focus();
+    const stops = focusables(box);
+    const resumed = lastFocused.current;
+    const named = first.current?.current;
+    const target =
+      activated.current && resumed && stops.includes(resumed) ? resumed : named && stops.includes(named) ? named : (stops[0] ?? box);
+    activated.current = true;
+    target.focus();
     return () => {
+      const held = document.activeElement as HTMLElement | null;
+      if (held && box.contains(held)) lastFocused.current = held;
       release();
-      giveFocusBack(opener.current);
     };
-  }, [open, panel]);
+  }, [active, open, panel, revision]);
+
+  useEffect(() => {
+    // Covered dialogs stay open, so this lifecycle cleanup runs only for a
+    // real close/unmount. Deferring lets the newly active covered modal take
+    // focus first; only the last modal returns to the page opener.
+    if (!open) {
+      opener.current = null;
+      lastFocused.current = null;
+      activated.current = false;
+      return;
+    }
+    return () => {
+      const returnTo = opener.current;
+      const pageReturnTo = pageOpener.current;
+      queueMicrotask(() => {
+        if (!hasActiveModal()) giveFocusBack(returnTo, pageReturnTo);
+      });
+    };
+  }, [open, pageOpener]);
 
   useEffect(() => {
     if (!open) return;
@@ -136,7 +164,7 @@ export function useFocusTrap(
       if (!box || !top()) return;
       if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
+        if (!options.required) onClose();
         return;
       }
       if (e.key !== "Tab") return;
@@ -152,5 +180,5 @@ export function useFocusTrap(
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, panel, onClose, top]);
+  }, [open, panel, onClose, options.required, top]);
 }

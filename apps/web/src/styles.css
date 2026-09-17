@@ -5746,6 +5746,9 @@ a.plan {
   background: color-mix(in srgb, var(--bg) 70%, transparent);
   backdrop-filter: blur(6px);
 }
+.requiredVeil {
+  z-index: 50;
+}
 .termsGate {
   max-width: 34rem;
   display: grid;

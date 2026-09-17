@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAccount } from "./Account.tsx";
 import { SyncError } from "../sync/client.ts";
 import { useApi } from "../sync/useApi.ts";
 import { rememberProfile, useProfile } from "../sync/useProfile.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 import { Field } from "../ui/Field.tsx";
+import { useFocusTrap } from "../ui/useFocusTrap.ts";
 
 /** The server's rule for a shown name, so the answer is known before the round trip. Whether one is free is the server's to say. */
 export const NAME_RULE = /^[\p{L}\p{N}][\p{L}\p{N} ._'-]{1,23}$/u;
@@ -35,6 +37,7 @@ export function NameGate() {
   const [draft, setDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const panel = useRef<HTMLElement>(null);
   const field = useRef<HTMLInputElement>(null);
 
   const asking =
@@ -44,6 +47,9 @@ export function NameGate() {
     profile !== null &&
     (!profile.handleSetAt || handleTaken) &&
     (!hosted?.termsVersion || profile.termsVersion === hosted.termsVersion);
+
+  const stayOpen = useCallback(() => {}, []);
+  useFocusTrap(panel, asking, stayOpen, field, { required: true });
 
   useEffect(() => {
     if (asking) field.current?.focus();
@@ -70,9 +76,9 @@ export function NameGate() {
       .finally(() => setBusy(false));
   };
 
-  return (
-    <div className="veil" role="presentation">
-      <section className="panel termsGate nameGate" role="dialog" aria-modal="true" aria-labelledby="nameTitle">
+  return createPortal(
+    <div className="veil requiredVeil" role="presentation">
+      <section ref={panel} className="panel termsGate nameGate" role="dialog" aria-modal="true" aria-labelledby="nameTitle" tabIndex={-1}>
         <h2 id="nameTitle">How should people see you?</h2>
         <p>
           The people you play with, race, or who watch a live link see this name. Your email address is never shown to anyone. You can
@@ -109,6 +115,7 @@ export function NameGate() {
           </button>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -35,7 +35,9 @@ async function openAppAt(address: string) {
       <App />
     </DocDrawerProvider>,
   );
-  return screen.findByRole("dialog");
+  const dialog = await screen.findByRole("dialog");
+  await waitFor(() => expect(document.body.style.overflow).toBe("hidden"));
+  return dialog;
 }
 
 beforeEach(() => {
