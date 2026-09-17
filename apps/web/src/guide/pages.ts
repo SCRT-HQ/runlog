@@ -207,7 +207,14 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
     "/link, /unlink, and roles a server gives only to linked members.",
     DiscordLinking,
   ),
-  P("discord-hosting", "With others", "Discord", "Hosting a run", "The thread, public or private, and the card's presses.", DiscordHosting),
+  P(
+    "discord-hosting",
+    "With others",
+    "Discord",
+    "Hosting a run",
+    "The thread, public or private, the card's presses, and watch parties.",
+    DiscordHosting,
+  ),
   P(
     "discord-together",
     "With others",
