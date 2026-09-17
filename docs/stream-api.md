@@ -546,6 +546,41 @@ The device holding the run publishes what a deck may press beside `control`, in 
 | `autoRoll` | Whether the page is throwing the dice itself. |
 | `ending` | `{ "label": "Finish the firing" }`, the words of the page's own Finish button, where the run is at its closing step and may end. Null everywhere else. |
 
+## Driving a run from a seat: `wss://…/ws?token=<jwt>&as=seat`
+
+The same press path, opened to somebody who is not the run's owner. A seat is a member of the run whose role is `player` and whose device has no copy of the pack: the app's watching page, on their own account, with a strip. It names no run at connect, asks to watch one with `{ "t": "watch", "id": "01RUN" }` the way any watcher does, and presses with the same `drive` message a deck sends.
+
+Three things differ from a deck.
+
+The press goes to the run's **owner's** page rather than to the caller's own device, because that is the device holding the pack and the log. Where none is open, the press is refused with `Nothing is holding that run.`, the same words a deck gets.
+
+The press arrives at that page carrying `seat`, the member's own name as the run holds it. The server stamps it; nothing the caller sends is read into it. The page checks it against the run's seating before it checks the offer, so a press that is not that seat's to make is refused whatever the run happens to be offering.
+
+A seat may ask whether the run is open:
+
+```json
+{ "t": "held", "id": "01RUN" }
+{ "t": "held", "id": "01RUN", "held": true }
+```
+
+The answer comes back on the same socket, again whenever a device takes the run up. A page closing is not something the server can address to a seat, so ask again on a timer.
+
+Driving from a seat is not gated on a plan. Inviting somebody to the table already asked the owner for one.
+
+| `say` | From |
+| --- | --- |
+| `That run is not yours to press.` | The server; the caller is not a player of that run. |
+| `That run is not the one this seat is on.` | The server; the seat is a player of that run, but the press names a run other than the one it last watched. |
+| `You are not at this table.` | The page; the seat's name is not one of the run's members. |
+| `It is not your turn to press that.` | The page; the mode's roles give this unit's actions to another seat. |
+| `The host presses that on this pack.` | The page; a solo or a moderated pack has one acting seat, the host's. |
+| `Taking a move back is the host's.` | The page; `press: "undo"`. |
+| `Handing out a setup is the host's.` | The page; an `answer` naming a `setup`. |
+| `Handing out a command is the host's.` | The page; an `answer` naming a `command`. |
+| `The clock is the host's.` | The page; an `answer` naming a `clock`. |
+| `Rolling for the table is the host's.` | The page; an `answer` naming `autoRoll`. |
+| `Ending the run is the host's.` | The page; an `answer` naming `finish`. |
+
 ## Politeness
 
 Poll no faster than every five seconds; the socket exists so you need not, and a widget is one reader on one machine, never one per viewer. Keep the token out of anything you publish: whoever has it can watch, and a widget pasted into a shared overlay carries it. If it gets out, **Stop sharing** and share again; the old token is dead the moment you do. Nothing here writes to the run except an ask, and an ask only asks.
