@@ -5781,6 +5781,38 @@ a.plan {
 .reactChip {
   font-size: 0.85rem;
 }
+/* The strip a seated player presses, above the board: the primary on its
+   own line, then the moves, then the tallies and dials one to a row with
+   their two small buttons beside the number. */
+.seatStrip > .primary {
+  margin-top: 0.6rem;
+  width: 100%;
+}
+.seatTrackers {
+  margin-top: 0.6rem;
+}
+.seatTracker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.88rem;
+}
+.seatTracker:first-child {
+  border-top: none;
+}
+/* The name gives way on a narrow rail; the controls and the number do not. */
+.seatTracker > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.seatTracker > .num {
+  font-family: var(--mono);
+  white-space: nowrap;
+  min-width: 1.5rem;
+  text-align: center;
+}
 .tableReact {
   margin: 0.25rem 0 0.5rem;
 }
