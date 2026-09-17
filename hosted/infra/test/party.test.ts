@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { COMMANDS } from "../lib/handlers/discord/commands";
 import { handleInteraction, type InteractionDeps } from "../lib/handlers/discord/interactions";
-import { closeParty, openParty, type PartyDeps } from "../lib/handlers/discord/party";
+import {
+  closeParty,
+  notePartyHandout,
+  openParty,
+  PARTY_HANDOUTS_KEPT,
+  TICK_MS,
+  tickParties,
+  type PartyDeps,
+} from "../lib/handlers/discord/party";
 import { EPHEMERAL, InteractionType, ResponseType, type Interaction } from "../lib/handlers/discord/types";
 import type { Guild } from "../lib/handlers/guilds";
 import type { SessionMeta, Store } from "../lib/handlers/store";
@@ -309,6 +317,20 @@ describe("/run watch", () => {
     expect((await guilds.party("01RUN", "g1"))?.link).toBe(LINK);
   });
 
+  it("posts the link it built from the parts it checked, never the string somebody pasted", async () => {
+    const { guilds, rest, bot } = await botReady();
+    await guilds.clearLiveLink("01RUN");
+    // The URL parser throws a newline away before it reads, so a link
+    // that passes every check can still carry a line of its own, and the
+    // bot would be the one saying it in somebody else's server.
+    const carried = `${LINK}&x=a
+@everyone`;
+    const out = await handleInteraction(runSub("watch", [{ name: "run", type: 3, value: carried }]), bot);
+    expect(out.data?.content).toContain("<#thread_1>");
+    expect((await guilds.party("01RUN", "g1"))?.link).toBe(LINK);
+    expect(JSON.stringify(rest.posts)).not.toContain("@everyone");
+  });
+
   it("passes a refusal from openParty straight through, to the person alone", async () => {
     const { bot } = await botReady();
     const out = await handleInteraction(
@@ -370,5 +392,230 @@ describe("/run unwatch", () => {
     const { bot } = await botReady();
     const out = await handleInteraction(runSub("unwatch", [], { channel_id: "chan" }), bot);
     expect(out.data?.content).toBe("Say that in a watch party's thread.");
+  });
+});
+
+describe("keeping a party's card current", () => {
+  /** A clock the test moves, and a wait that moves it rather than sleeping. */
+  function clock(from = NOW) {
+    let ms = Date.parse(from);
+    return {
+      now: () => new Date(ms).toISOString(),
+      wait: async (by: number) => void (ms += by),
+      tick: (by: number) => void (ms += by),
+    };
+  }
+
+  it("edits each party's card once, and holds the next edit until the tick is up", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    c.tick(TICK_MS + 1_000);
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "edited" }]);
+    expect(rest.edits).toHaveLength(1);
+    // A second snapshot inside the window takes the tick and waits it out.
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "held" }]);
+    expect(rest.edits).toHaveLength(2);
+    // A third while that one is held changes nothing: the held edit carries the latest.
+    await guilds.putParty({ ...(await guilds.party("01RUN", "g1"))!, tickAt: c.now() });
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "quiet" }]);
+    expect(rest.edits).toHaveLength(2);
+  });
+
+  it("carries whatever the snapshot says when the held edit lands, not what it said when it was held", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    let held: Record<string, unknown> = { ...snapshot, unit: 1 };
+    const store = {
+      async getSession() {
+        return { meta: { id: "01RUN", ownerSub: "user_1", publicTokenHash: "hash", seq: 1 }, members: [] };
+      },
+      async getSnapshot() {
+        return { at: c.now(), snapshot: held };
+      },
+    } as unknown as Store;
+    const deps = {
+      store,
+      guilds,
+      rest,
+      now: c.now,
+      wait: async (by: number) => {
+        held = { ...snapshot, unit: 7 };
+        await c.wait(by);
+      },
+    };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    await tickParties(deps, "01RUN");
+    expect(JSON.stringify(rest.edits.at(-1)!.message)).toContain("Stage 7");
+  });
+
+  it("edits an ended run's card at once, without waiting out the tick", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    const ended = { store: runStore({}, { ...snapshot, status: "ended", ending: "Cooled" }), guilds, rest, now: c.now, wait: c.wait };
+    expect(await tickParties(ended, "01RUN")).toEqual([{ guildId: "g1", outcome: "closed" }]);
+    expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("ended");
+  });
+
+  it("closes a party whose card Discord would no longer edit", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    c.tick(TICK_MS + 1_000);
+    rest.down = true;
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "closed" }]);
+    expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("gone");
+  });
+
+  it("waits out three parties' ticks at once, so a run watched from three servers fits in one tick", async () => {
+    const { guilds, rest } = await ready();
+    const c = clock();
+    let waiting = 0;
+    let most = 0;
+    const deps = {
+      store: runStore(),
+      guilds,
+      rest,
+      now: c.now,
+      // A wait that finishes on a turn of the event loop, so how many were
+      // in the air together is what the count says.
+      wait: async (by: number) => {
+        waiting += 1;
+        most = Math.max(most, waiting);
+        await new Promise((done) => setTimeout(done, 0));
+        waiting -= 1;
+        c.tick(by);
+      },
+    };
+    for (const guildId of ["g1", "g2", "g3"]) {
+      await guilds.claimGuild({ guildId, name: "The Kiln Room", ownerSub: "user_1", claimedAt: NOW });
+      const each = (await guilds.guild(guildId))!;
+      const out = await openParty(deps, { guild: each, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+      if ("error" in out) throw new Error(out.error);
+    }
+    expect((await tickParties(deps, "01RUN")).map((p) => p.outcome)).toEqual(["held", "held", "held"]);
+    expect(most).toBe(3);
+    expect(rest.edits).toHaveLength(3);
+  });
+
+  it("closes a party on a run that stopped being shared, since the link on its card is dead", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    const unshared = { store: runStore({ publicTokenHash: undefined }), guilds, rest, now: c.now, wait: c.wait };
+    expect(await tickParties(unshared, "01RUN")).toEqual([{ guildId: "g1", outcome: "closed" }]);
+    expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("gone");
+    // Nothing was drawn and nothing was said: there is no live card to
+    // put a dead link on.
+    expect(rest.edits).toEqual([]);
+    expect(rest.posts).toHaveLength(1);
+  });
+
+  it("says nothing about a party that is closed already", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    await closeParty(deps, out.party, "byHand");
+    expect(await tickParties(deps, "01RUN")).toEqual([]);
+  });
+});
+
+describe("a handout, on a run with a watch party", () => {
+  const handout = { title: "The kiln kit", id: "s1" };
+
+  it("goes onto each open party, newest last, and is told to the job", async () => {
+    const { guilds, guild, deps } = await ready();
+    const first = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in first) throw new Error(first.error);
+    const told: Array<{ sessionId: string }> = [];
+    const noted = await notePartyHandout({ guilds, now: () => NOW, party: async (job) => void told.push(job) }, "01RUN", handout);
+    expect(noted).toBe(1);
+    expect(told).toEqual([{ sessionId: "01RUN" }]);
+    expect((await guilds.party("01RUN", "g1"))?.handouts).toEqual([handout]);
+    await notePartyHandout({ guilds, now: () => NOW }, "01RUN", { title: "The starter kit", id: "s2" });
+    expect((await guilds.party("01RUN", "g1"))?.handouts).toEqual([handout, { title: "The starter kit", id: "s2" }]);
+  });
+
+  it("counts the same handout once, however often the button is pressed", async () => {
+    const { guilds, guild, deps } = await ready();
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    await notePartyHandout({ guilds, now: () => NOW }, "01RUN", handout);
+    await notePartyHandout({ guilds, now: () => NOW }, "01RUN", handout);
+    expect((await guilds.party("01RUN", "g1"))?.handouts).toEqual([handout]);
+  });
+
+  it("takes a handout the app sent without an id, which is what a run seeded from several setups sends", async () => {
+    const { guilds, guild, deps } = await ready();
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    expect(await notePartyHandout({ guilds, now: () => NOW }, "01RUN", { title: "The kiln kit and the starter kit" })).toBe(1);
+    // The title is what tells it from another, so pressing it twice is
+    // still the one handout.
+    await notePartyHandout({ guilds, now: () => NOW }, "01RUN", { title: "The kiln kit and the starter kit" });
+    expect((await guilds.party("01RUN", "g1"))?.handouts).toEqual([
+      { id: "The kiln kit and the starter kit", title: "The kiln kit and the starter kit" },
+    ]);
+  });
+
+  it("keeps the last few and no more", async () => {
+    const { guilds, guild, deps } = await ready();
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    for (let n = 0; n < PARTY_HANDOUTS_KEPT + 2; n += 1)
+      await notePartyHandout({ guilds, now: () => NOW }, "01RUN", { title: `Kit ${n}`, id: `s${n}` });
+    const held = (await guilds.party("01RUN", "g1"))!.handouts!;
+    expect(held).toHaveLength(PARTY_HANDOUTS_KEPT);
+    expect(held[0]?.title).toBe("Kit 2");
+  });
+
+  it("says nothing about a gesture that is not a handout, or a party that is closed", async () => {
+    const { guilds, guild, deps } = await ready();
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    expect(await notePartyHandout({ guilds, now: () => NOW }, "01RUN", { id: "s1" })).toBe(0);
+    expect(await notePartyHandout({ guilds, now: () => NOW }, "01RUN", { title: 7, id: "s1" })).toBe(0);
+    await closeParty(deps, out.party, "byHand");
+    expect(await notePartyHandout({ guilds, now: () => NOW }, "01RUN", handout)).toBe(0);
+  });
+
+  it("puts the handout on the card at the next tick", async () => {
+    const { guilds, rest, guild } = await ready();
+    let ms = Date.parse(NOW);
+    const deps = {
+      store: runStore(),
+      guilds,
+      rest,
+      now: () => new Date(ms).toISOString(),
+      wait: async (by: number) => void (ms += by),
+    };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    await notePartyHandout({ guilds, now: deps.now }, "01RUN", handout);
+    ms += TICK_MS + 1_000;
+    await tickParties(deps, "01RUN");
+    expect(JSON.stringify(rest.edits.at(-1)!.message)).toContain("The kiln kit");
+  });
+
+  it("shows nothing on a party opened after the handout, which has nothing to read it from", async () => {
+    const { guilds, rest, guild, deps } = await ready();
+    // Nothing is open, so the handout lands nowhere.
+    expect(await notePartyHandout({ guilds, now: () => NOW }, "01RUN", handout)).toBe(0);
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    expect(out.party.handouts).toBeUndefined();
+    expect(JSON.stringify(rest.posts.at(-1)!.message)).not.toContain("The kiln kit");
   });
 });

@@ -4,6 +4,7 @@ import { hashToken } from "../lib/handlers/auth";
 import { route, type WsDeps, type WsEvent } from "../lib/handlers/ws";
 import type { Race } from "../lib/handlers/races";
 import type { Ask, SessionMember, SessionMeta } from "../lib/handlers/store";
+import { memoryGuilds } from "./memory-guilds";
 
 /**
  * The socket is a doorbell: it carries a "changed" and nothing else. What
@@ -1776,5 +1777,58 @@ describe("a seat's press", () => {
     posted.length = 0;
     await route(ev("$default", "mine", { body: JSON.stringify({ t: "drove", to: "seat1", ref: "r7", ok: true }) }), d);
     expect(posted.filter(([id]) => id === "seat1")).toEqual([]);
+  });
+});
+
+describe("a handout on a run with a watch party", () => {
+  /** The owner's socket on a run the owner owns, with the party's rows behind it. */
+  function hosting(guilds: ReturnType<typeof memoryGuilds>, told: Array<{ sessionId: string }> = []) {
+    const live = memoryLive();
+    const d: WsDeps = {
+      ...deps(live),
+      poster: {
+        async post() {
+          return "sent" as const;
+        },
+      },
+      guilds,
+      party: async (job: { sessionId: string }) => void told.push(job),
+    };
+    return { live, d, told };
+  }
+
+  it("writes the title onto the party and tells the job, without touching the log", async () => {
+    const guilds = memoryGuilds();
+    await guilds.putParty({
+      sessionId: "shared",
+      guildId: "g1",
+      channelId: "chan",
+      threadId: "thread_1",
+      link: "https://runlog.test/r/shared?t=tok",
+      openedBy: "1001",
+      openedByName: "Mira",
+      openedAt: "2026-09-16T10:00:00.000Z",
+      updatedAt: "2026-09-16T10:00:00.000Z",
+    });
+    const { live, d, told } = hosting(guilds);
+    await live.connect("host", "user_1", "");
+    await live.watch("host", "shared", "", "");
+    await route(
+      ev("$default", "host", {
+        body: JSON.stringify({ t: "gesture", id: "shared", kind: "setup", data: { title: "The kiln kit", id: "s1" } }),
+      }),
+      d,
+    );
+    expect((await guilds.party("shared", "g1"))?.handouts).toEqual([{ id: "s1", title: "The kiln kit" }]);
+    expect(told).toEqual([{ sessionId: "shared" }]);
+  });
+
+  it("writes nothing for a gesture that is not a handout", async () => {
+    const guilds = memoryGuilds();
+    const { live, d } = hosting(guilds);
+    await live.connect("host", "user_1", "");
+    await live.watch("host", "shared", "", "");
+    await route(ev("$default", "host", { body: JSON.stringify({ t: "gesture", id: "shared", kind: "rolling", data: {} }) }), d);
+    expect(await guilds.partiesOf("shared")).toEqual([]);
   });
 });

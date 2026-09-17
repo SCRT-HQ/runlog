@@ -133,3 +133,142 @@ export async function closeParty(deps: PartyDeps, party: WatchParty, why: PartyC
   await deps.guilds.putParty(closed);
   return closed;
 }
+
+/**
+ * How often a party's card may be edited.
+ *
+ * The bot's own rope on a Discord call is a timeout, not a rate limiter,
+ * so this is the whole of what spaces the edits out: one per party per ten
+ * seconds, however fast the run moves.
+ */
+export const TICK_MS = 10_000;
+
+export interface PartyTickDeps extends PartyDeps {
+  /** Sleep, for the trailing edit; a test hands in a clock it moves itself. */
+  wait: (ms: number) => Promise<void>;
+}
+
+export type PartyTickOutcome = "edited" | "held" | "closed" | "quiet";
+
+/**
+ * A snapshot landed: bring each of this run's party cards up to date.
+ *
+ * Due, so it is edited now. Not due, so this call takes the tick, waits
+ * out what is left of it and edits with whatever the snapshot says by
+ * then: the latest snapshot wins, and a change nobody follows with
+ * another still lands on the next tick. A tick somebody else is holding
+ * is left to them.
+ */
+export async function tickParties(deps: PartyTickDeps, sessionId: string): Promise<Array<{ guildId: string; outcome: PartyTickOutcome }>> {
+  const open = (await deps.guilds.partiesOf(sessionId)).filter((p) => !p.closedAt);
+  if (open.length === 0) return [];
+  const read = async () => snapshotOfRun(await deps.store.getSnapshot(sessionId));
+  const found = await deps.store.getSession(sessionId);
+  // A run that stopped being shared, or went: the token every card's link
+  // carries is dead, so the parties close rather than go on drawing it.
+  // Nothing is said in the thread, which is what "gone" already means.
+  if (!found || found.meta.deletedAt || !found.meta.publicTokenHash) {
+    return Promise.all(
+      open.map(async (party) => {
+        await closeParty(deps, party, "gone");
+        return { guildId: party.guildId, outcome: "closed" as const };
+      }),
+    );
+  }
+  /**
+   * One party's turn, run beside the others rather than after them: a
+   * run watched from three servers holds one ten second wait between
+   * them all, and the job's thirty seconds are not three waits long.
+   */
+  const tickOne = async (party: WatchParty): Promise<PartyTickOutcome> => {
+    const first = await read();
+    if (!first) return "quiet";
+    // The run being over is not made to wait: it is the last thing the
+    // card will ever say.
+    if (first.status === "ended") {
+      await closeParty(deps, party, "ended");
+      return "closed";
+    }
+    const due = Date.parse(party.editedAt ?? party.openedAt) + TICK_MS;
+    const now = Date.parse(deps.now());
+    let outcome: PartyTickOutcome = "edited";
+    if (now < due) {
+      if (party.tickAt) return "quiet";
+      if (!(await deps.guilds.claimPartyTick(sessionId, party.guildId, new Date(due).toISOString()))) return "quiet";
+      await deps.wait(due - now);
+      outcome = "held";
+    }
+    const latest = (await read()) ?? first;
+    if (latest.status === "ended") {
+      await closeParty(deps, { ...party, tickAt: undefined }, "ended");
+      return "closed";
+    }
+    const at = deps.now();
+    // Read again rather than reusing the row this call started with: a
+    // handout may have landed on it while the tick was being waited out.
+    const fresh = (await deps.guilds.party(sessionId, party.guildId)) ?? party;
+    const card = partyCardFor({
+      snapshot: latest,
+      link: party.link,
+      openedByName: party.openedByName,
+      ...(fresh.handouts ? { handouts: fresh.handouts } : {}),
+    });
+    const edited = deps.rest && party.cardMessageId ? await deps.rest.editMessage(party.threadId, party.cardMessageId, card) : false;
+    if (!edited) {
+      // A card Discord will not edit is a card, or a thread, that somebody
+      // deleted. The party closes itself rather than trying forever.
+      await closeParty(deps, { ...party, tickAt: undefined }, "gone");
+      return "closed";
+    }
+    // Written back over the row as it now is, not as it was when this
+    // call read it, so a handout that landed during the wait is not
+    // dropped.
+    const next: WatchParty = { ...fresh, editedAt: at, updatedAt: at };
+    delete next.tickAt;
+    await deps.guilds.putParty(next);
+    return outcome;
+  };
+  return Promise.all(open.map(async (party) => ({ guildId: party.guildId, outcome: await tickOne(party) })));
+}
+
+/** How many handouts a party's card carries: the last few, not a history. */
+export const PARTY_HANDOUTS_KEPT = 5;
+
+export interface PartyHandoutDeps {
+  /** Only the two rows this needs, so the socket takes no more of the store than it uses. */
+  guilds: Pick<GuildStore, "partiesOf" | "party" | "putParty">;
+  now: () => string;
+  /** Tell the job the card has something new to carry; absent, it rides on the next snapshot. */
+  party?: (job: { sessionId: string }) => Promise<void>;
+}
+
+/**
+ * The host handed the table something: write it onto every party open on
+ * this run, for the next tick's card.
+ *
+ * The gesture is read the way every gesture is read, defensively: what
+ * carries no title is nothing, rather than something repaired into a line
+ * nobody meant. How many parties it landed on comes back, which is what a
+ * test and a log line want.
+ */
+export async function notePartyHandout(deps: PartyHandoutDeps, sessionId: string, gesture: unknown): Promise<number> {
+  if (typeof gesture !== "object" || gesture === null || Array.isArray(gesture)) return 0;
+  const row = gesture as Record<string, unknown>;
+  const title = typeof row["title"] === "string" ? row["title"].trim().slice(0, 100) : "";
+  const id = typeof row["id"] === "string" ? row["id"].trim().slice(0, 100) : "";
+  if (!title) return 0;
+  // What tells two handouts apart. The app leaves the id out where a run
+  // was seeded from more than one setup, since there is no single setup
+  // to name, and the table is told about that handout like any other; the
+  // title is what one is in that case.
+  const key = id || title;
+  const open = (await deps.guilds.partiesOf(sessionId)).filter((p) => !p.closedAt);
+  if (open.length === 0) return 0;
+  const at = deps.now();
+  for (const party of open) {
+    const had = (party.handouts ?? []).filter((h) => h.id !== key);
+    await deps.guilds.putParty({ ...party, handouts: [...had, { id: key, title }].slice(-PARTY_HANDOUTS_KEPT), updatedAt: at });
+  }
+  await deps.party?.({ sessionId });
+  return open.length;
+}

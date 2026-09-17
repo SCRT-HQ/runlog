@@ -4288,3 +4288,115 @@ describe("a run hosted in discord", () => {
     expect((await store.eventsAfter(id, 0)).filter((e) => e["t"] === "JournalWritten")).toHaveLength(2);
   });
 });
+
+describe("a snapshot with a watch party on it", () => {
+  const link = "https://runlog.test/r/01RUN?t=tok1";
+  const snap = {
+    v: 1,
+    at: "2026-09-06T12:00:00.000Z",
+    packId: "p",
+    packTitle: "The Pack",
+    runName: null,
+    mode: "Standard",
+    words: { run: "Run", unit: "Unit", units: "Units" },
+    status: "active",
+    ending: null,
+    unit: 1,
+    where: null,
+    step: null,
+    quoted: false,
+    standings: [],
+    contestants: 0,
+    subjects: [],
+    counters: [],
+    resources: [],
+    clocks: [],
+    progress: { unitsDone: 0, elapsedMs: 0, timed: false },
+    score: { label: "Units", text: "0", value: 0, better: "higher" },
+    forcedUnits: 0,
+    log: [],
+    latest: null,
+  };
+
+  it("keeps the link the page sent, once it matches the run's own token, and never one that does not", async () => {
+    const store = memoryStore();
+    const guilds = memoryGuilds();
+    const d = deps(store, { guilds });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    const shared = await call(request("POST", "/api/sessions/01RUN/public"), d);
+    const good = `https://runlog.test/r/01RUN?t=${String(shared.body["token"])}`;
+    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: snap, link: good } }), d);
+    expect(await guilds.liveLink("01RUN")).toBe(good);
+    await call(
+      request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: snap, link: "https://runlog.test/r/01RUN?t=made-up" } }),
+      d,
+    );
+    expect(await guilds.liveLink("01RUN")).toBe(good);
+    // The run's own token, hung off somewhere else entirely. The bot puts
+    // this string in a thread in a server it does not own, so where it
+    // points is checked as well as what it carries.
+    const away = `https://not-runlog.example/r/01RUN?t=${String(shared.body["token"])}`;
+    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: snap, link: away } }), d);
+    expect(await guilds.liveLink("01RUN")).toBe(good);
+    // The parser throws a newline away before it reads, so a link that
+    // passes every check can still carry a line of its own. What is kept
+    // is built from the parts that were checked, and carries nothing else.
+    await call(
+      request("PUT", "/api/sessions/01RUN/snapshot", {
+        body: {
+          snapshot: snap,
+          link: `${good}&x=a
+@everyone`,
+        },
+      }),
+      d,
+    );
+    expect(await guilds.liveLink("01RUN")).toBe(good);
+    // This copy's address, and another run's page.
+    await call(
+      request("PUT", "/api/sessions/01RUN/snapshot", {
+        body: { snapshot: snap, link: `https://runlog.test/r/01OTHER?t=${String(shared.body["token"])}` },
+      }),
+      d,
+    );
+    expect(await guilds.liveLink("01RUN")).toBe(good);
+  });
+
+  it("forgets the link when the run stops being shared, and tells the job so the parties close", async () => {
+    const store = memoryStore();
+    const guilds = memoryGuilds();
+    const jobs: Array<{ sessionId: string }> = [];
+    const d = deps(store, { guilds, party: async (job) => void jobs.push(job) });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await guilds.putLiveLink("01RUN", link, "2026-09-06T12:00:00.000Z");
+    await call(request("DELETE", "/api/sessions/01RUN/public"), d);
+    expect(await guilds.liveLink("01RUN")).toBeNull();
+    expect(jobs).toEqual([{ sessionId: "01RUN" }]);
+  });
+
+  it("sends the job a snapshot that a party is waiting on, and nothing where none is", async () => {
+    const store = memoryStore();
+    const guilds = memoryGuilds();
+    const jobs: Array<{ sessionId: string }> = [];
+    const d = deps(store, { guilds, party: async (job) => void jobs.push(job) });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: snap } }), d);
+    expect(jobs).toEqual([]);
+    // The page says this is the run's first snapshot, so the auto-open is considered.
+    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: snap, first: true } }), d);
+    expect(jobs).toEqual([{ sessionId: "01RUN" }]);
+    await guilds.putParty({
+      sessionId: "01RUN",
+      guildId: "g1",
+      channelId: "chan",
+      threadId: "thread_1",
+      link,
+      openedBy: "1001",
+      openedByName: "Mira",
+      openedAt: "2026-09-06T12:00:00.000Z",
+      updatedAt: "2026-09-06T12:00:00.000Z",
+    });
+    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: snap } }), d);
+    expect(jobs).toHaveLength(2);
+  });
+});

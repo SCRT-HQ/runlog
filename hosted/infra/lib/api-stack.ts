@@ -479,6 +479,11 @@ export class ApiStack extends Stack {
     });
     this.wsHandler = wsHandler;
     this.table.grantReadWriteData(wsHandler);
+
+    // The socket writes a handout onto a watch party and asks the job to
+    // redraw its card; that is the whole of what it does with Discord.
+    wsHandler.addEnvironment("DISCORD_JOB_FUNCTION", job.functionName);
+    job.grantInvoke(wsHandler);
     this.bucket.grantRead(wsHandler);
 
     /**
