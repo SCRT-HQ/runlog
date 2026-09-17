@@ -1,4 +1,5 @@
 import type { Offer } from "./offer.ts";
+import { seatMay, type Seating } from "./seats.ts";
 
 export interface Press {
   from: string;
@@ -6,6 +7,18 @@ export interface Press {
   seq: number;
   ref: string;
   press: string;
+  /**
+   * Who pressed it, where it was not the owner's own hand: a seated
+   * member's name, as the run's members hold it. For display, and for a
+   * moderated pack's roster, which goes by name. A deck carries none.
+   */
+  seat?: string;
+  /**
+   * The account behind that name, as the server read it off the token it
+   * verified. What the seat is actually looked up by; the name is only
+   * read where this is absent.
+   */
+  who?: string;
   move?: string;
   answer?: Record<string, unknown>;
 }
@@ -46,7 +59,11 @@ export interface Acts {
  * the deck is told the press failed rather than left waiting on one
  * that will never answer.
  */
-export function takePress(press: Press, at: { seq: number; offer: Offer; seen: Map<string, Verdict> }, act: Acts): Verdict {
+export function takePress(
+  press: Press,
+  at: { seq: number; offer: Offer; seen: Map<string, Verdict>; seating: Seating },
+  act: Acts,
+): Verdict {
   const key = `${press.from}:${press.ref}`;
   const already = at.seen.get(key);
   if (already) return already;
@@ -57,6 +74,14 @@ export function takePress(press: Press, at: { seq: number; offer: Offer; seen: M
   };
 
   if (press.seq !== at.seq) return settle({ ok: false, say: "That moved on." });
+
+  // A seat's press is checked against the table before the offer is read:
+  // a press that is not this seat's to make is refused in the same words
+  // whatever the run is offering at that moment.
+  if (press.seat || press.who) {
+    const said = seatMay(press, at.seating);
+    if (said) return settle(said);
+  }
 
   /**
    * Taking the press itself: a throw is still a press taken, not one left
