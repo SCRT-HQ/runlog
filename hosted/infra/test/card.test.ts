@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadPackText } from "@runlog/rules-schema";
 import { agenda, reduce, type Pending, type RunEvent } from "@runlog/engine";
-import { cardFor } from "../lib/handlers/discord/card";
+import type { LiveSnapshot } from "@runlog/engine";
+import { cardFor, partyCardFor, partyClosingLine } from "../lib/handlers/discord/card";
 
 /**
  * The table card, built from a run: what a choice among pieces says of
@@ -86,5 +87,120 @@ describe("the table card", () => {
     expect(options[0]!.description).toBe("Tall vase · [LK]");
     expect(options[1]!.description).toBe("Wide bowl");
     expect(options[2]!.description).toBe("undeclared");
+  });
+});
+
+const snapshot = (over: Partial<LiveSnapshot> = {}): LiveSnapshot =>
+  ({
+    v: 1,
+    at: "2026-09-16T10:00:00.000Z",
+    packId: "com.example.kiln",
+    packTitle: "The Long Kiln",
+    runName: "Thursday",
+    mode: "Standard Firing",
+    words: { run: "Firing", unit: "Stage", units: "Stages" },
+    status: "active",
+    ending: null,
+    unit: 3,
+    where: "Draw · Twist",
+    step: "Twist",
+    quoted: false,
+    standings: [],
+    contestants: 0,
+    subjects: [],
+    counters: [{ id: "c", label: "Cracks", value: 2 }],
+    resources: [],
+    clocks: [],
+    progress: { unitsDone: 2, elapsedMs: 0, timed: false },
+    score: { label: "Stages", text: "2 stages", value: 2, better: "higher" },
+    forcedUnits: 0,
+    log: [
+      { n: 9, unit: 3, where: "Stage 3, Twist", hit: null, text: "No music in the kiln room." },
+      { n: 8, unit: 3, where: "Stage 3, Weather", hit: null, text: "Rain on the roof." },
+      { n: 7, unit: 2, where: "Stage 2, Twist", hit: null, text: "The glaze runs." },
+      { n: 6, unit: 2, where: "Stage 2, Weather", hit: null, text: "Still air." },
+    ],
+    latest: { where: "Stage 3, Twist", text: "No music in the kiln room." },
+    ...over,
+  }) as LiveSnapshot;
+
+describe("a watch party's card", () => {
+  const link = "https://runlog.test/r/01RUN?t=livetok";
+
+  it("carries no presses at all", () => {
+    expect(partyCardFor({ snapshot: snapshot(), link, openedByName: "Mira" }).components).toEqual([]);
+  });
+
+  it("says the run, the pack, the unit, the latest result and the link", () => {
+    const card = partyCardFor({ snapshot: snapshot(), link, openedByName: "Mira" });
+    const embed = card.embeds[0]!;
+    expect(embed.title).toBe("Thursday · The Long Kiln · Standard Firing");
+    expect(embed.description).toContain("Stage 3");
+    expect(embed.description).toContain("Draw · Twist");
+    const field = (name: string) => embed.fields?.find((f) => f.name === name)?.value;
+    expect(field("Latest")).toBe("Stage 3, Twist: No music in the kiln room.");
+    expect(field("Watch it live")).toBe(link);
+    expect(embed.footer?.text).toBe("Opened by Mira · Runlog");
+  });
+
+  it("shows the last three log lines and no more", () => {
+    const lines = partyCardFor({ snapshot: snapshot(), link, openedByName: "Mira" }).embeds[0]!.fields!.find((f) => f.name === "The log")!;
+    expect(lines.value.split("\n")).toHaveLength(3);
+    expect(lines.value).toContain("No music in the kiln room.");
+    expect(lines.value).not.toContain("Still air.");
+  });
+
+  it("shows the scoreboard where the mode has one, and leaves it off where it has none", () => {
+    const plain = partyCardFor({ snapshot: snapshot(), link, openedByName: "Mira" }).embeds[0]!;
+    expect(plain.fields?.some((f) => f.name === "Standings")).toBe(false);
+    const scored = partyCardFor({
+      snapshot: snapshot({ standings: [{ name: "Kel", points: 4, place: 1, states: [] }], contestants: 1 }),
+      link,
+      openedByName: "Mira",
+    }).embeds[0]!;
+    expect(scored.fields?.find((f) => f.name === "Standings")?.value).toBe("#1 Kel · 4");
+  });
+
+  it("takes the run's ending when it is over", () => {
+    const card = partyCardFor({ snapshot: snapshot({ status: "ended", ending: "Cooled" }), link, openedByName: "Mira" });
+    expect(card.embeds[0]!.description).toBe("Ended · Cooled");
+    expect(card.embeds[0]!.color).toBe(0x6b7370);
+  });
+
+  it("says on the card itself that the run went on, for a party closed early", () => {
+    const card = partyCardFor({ snapshot: snapshot(), link, openedByName: "Mira", closed: "byHand" });
+    expect(card.embeds[0]!.fields?.find((f) => f.name === "The party is closed")?.value).toBe(
+      "The firing went on without it. This card is where it stood.",
+    );
+  });
+
+  it("words the closing line for the thread out of the run's own words", () => {
+    expect(partyClosingLine(snapshot({ status: "ended", ending: "Cooled" }))).toBe(
+      "The firing is over: Cooled. The card above is where it finished.",
+    );
+    expect(partyClosingLine(snapshot({ status: "ended", ending: null }))).toBe("The firing is over. The card above is where it finished.");
+  });
+
+  it("says what the host has handed out since the party opened, newest last", () => {
+    const card = partyCardFor({
+      snapshot: snapshot(),
+      link,
+      openedByName: "Mira",
+      handouts: [
+        { id: "s1", title: "The starter kit" },
+        { id: "s2", title: "The kiln kit" },
+      ],
+    });
+    expect(card.embeds[0]!.fields?.find((f) => f.name === "Handed out")?.value).toBe("The starter kit\nThe kiln kit");
+  });
+
+  it("has no handout field where nothing has been handed out", () => {
+    const card = partyCardFor({ snapshot: snapshot(), link, openedByName: "Mira", handouts: [] });
+    expect(card.embeds[0]!.fields?.some((f) => f.name === "Handed out")).toBe(false);
+  });
+
+  it("names no table the snapshot did not already name", () => {
+    const card = partyCardFor({ snapshot: snapshot(), link, openedByName: "Mira" });
+    expect(JSON.stringify(card)).not.toContain("tables");
   });
 });
