@@ -4338,6 +4338,20 @@ describe("a snapshot with a watch party on it", () => {
     const away = `https://not-runlog.example/r/01RUN?t=${String(shared.body["token"])}`;
     await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: snap, link: away } }), d);
     expect(await guilds.liveLink("01RUN")).toBe(good);
+    // The parser throws a newline away before it reads, so a link that
+    // passes every check can still carry a line of its own. What is kept
+    // is built from the parts that were checked, and carries nothing else.
+    await call(
+      request("PUT", "/api/sessions/01RUN/snapshot", {
+        body: {
+          snapshot: snap,
+          link: `${good}&x=a
+@everyone`,
+        },
+      }),
+      d,
+    );
+    expect(await guilds.liveLink("01RUN")).toBe(good);
     // This copy's address, and another run's page.
     await call(
       request("PUT", "/api/sessions/01RUN/snapshot", {

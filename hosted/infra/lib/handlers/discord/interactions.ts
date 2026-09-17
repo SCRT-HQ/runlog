@@ -460,13 +460,20 @@ function mayHost(i: Interaction, hostRoleId: string | undefined): boolean {
  * Null for anything that is not one of this copy's own links. Read with
  * `URL` rather than a pattern built out of the address, so a host with a
  * dot or a port in it needs no escaping.
+ *
+ * What comes back is built from the parts that were checked, never the
+ * string that came in. The parser throws away a tab or a newline before
+ * it reads, so a raw that passes every check here can still carry a line
+ * of its own after one; this link is posted in a thread in a server the
+ * bot does not own, where a second line is the bot saying it and a
+ * mention in it pings. The `t` parameter is the only one kept, because
+ * it is the only one a live link means anything by.
  */
 export function liveLinkOf(raw: string, appUrl: string): { sessionId: string; link: string } | null {
-  const link = raw.trim();
   let asked: URL;
   let home: URL;
   try {
-    asked = new URL(link);
+    asked = new URL(raw.trim());
     home = new URL(appUrl);
   } catch {
     return null;
@@ -474,7 +481,9 @@ export function liveLinkOf(raw: string, appUrl: string): { sessionId: string; li
   if (asked.origin !== home.origin) return null;
   const m = /^\/r\/([A-Za-z0-9_-]{1,64})$/.exec(asked.pathname);
   const token = asked.searchParams.get("t") ?? "";
-  return m && /^[A-Za-z0-9_-]{1,200}$/.test(token) ? { sessionId: m[1]!, link } : null;
+  if (!m || !/^[A-Za-z0-9_-]{1,200}$/.test(token)) return null;
+  const sessionId = m[1]!;
+  return { sessionId, link: `${home.origin}/r/${sessionId}?t=${token}` };
 }
 
 async function runCommand(

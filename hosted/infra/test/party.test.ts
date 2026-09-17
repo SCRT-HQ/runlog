@@ -317,6 +317,20 @@ describe("/run watch", () => {
     expect((await guilds.party("01RUN", "g1"))?.link).toBe(LINK);
   });
 
+  it("posts the link it built from the parts it checked, never the string somebody pasted", async () => {
+    const { guilds, rest, bot } = await botReady();
+    await guilds.clearLiveLink("01RUN");
+    // The URL parser throws a newline away before it reads, so a link
+    // that passes every check can still carry a line of its own, and the
+    // bot would be the one saying it in somebody else's server.
+    const carried = `${LINK}&x=a
+@everyone`;
+    const out = await handleInteraction(runSub("watch", [{ name: "run", type: 3, value: carried }]), bot);
+    expect(out.data?.content).toContain("<#thread_1>");
+    expect((await guilds.party("01RUN", "g1"))?.link).toBe(LINK);
+    expect(JSON.stringify(rest.posts)).not.toContain("@everyone");
+  });
+
   it("passes a refusal from openParty straight through, to the person alone", async () => {
     const { bot } = await botReady();
     const out = await handleInteraction(
