@@ -676,21 +676,32 @@ export function RunView({
    *
    * The press says so where it was made and nowhere else: a player whose
    * game was just re-equipped had no way of knowing it, which is the
-   * whole of this. The server does not send the line back down the
-   * socket that sent it, and a second device signed into the same
-   * account is quiet too, since the press was this account's own.
+   * whole of this.
+   *
+   * Whose press it was is asked of the run rather than of the line. Only
+   * the owner may hand a setup out, so the host's own copies have nothing
+   * to be told: the device that pressed is not sent the line at all, and
+   * another device on the same account would otherwise announce the press
+   * to the person who made it. Held against the account rather than the
+   * name on the line, because a shown name is only unique where somebody
+   * claimed a handle, and two players called Nate would have left one of
+   * them hearing nothing all run.
    */
-  const myName = nameOf(me ?? "", run.record?.members ?? []);
+  const hostSub = accountOf(run.record?.members?.find((m) => m.role === "owner")?.sub ?? "");
+  const hostName = nameOf(hostSub, run.record?.members ?? []);
   useEffect(() => {
     const runId = run.record?.runId;
-    if (!runId) return;
+    if (!runId || (me !== null && hostSub === me)) return;
     return syncBus.subscribe((news) => {
       if (news.t !== "gesture" || news.id !== runId) return;
-      if (news.from !== undefined && news.from === myName) return;
-      const said = handoutLine(news);
+      // The server stamps the sender's name on the line where the member
+      // row has one; the run's own roster is the fallback, and "The host"
+      // is what a table with no name for them says.
+      const who = news.from ?? hostName;
+      const said = handoutLine({ kind: news.kind, data: news.data, ...(who ? { from: who } : {}) });
       if (said) toast.show(said);
     });
-  }, [run.record?.runId, myName, toast.show]);
+  }, [run.record?.runId, hostSub, hostName, me, toast.show]);
 
   /**
    * A deck's own presses, kept only long enough to answer a retry with
@@ -1364,8 +1375,13 @@ export function RunView({
           reachable={reachable}
           onSetup={run.setSetup}
           onHandOut={(chosen) => {
-            const handed = handoutOf(chosen);
-            return run.record && handed ? sync.gesture(run.record.runId, "setup", handed) : false;
+            // The word goes out whatever it can be called. The gesture is
+            // what hands the loadout to an attached tool, so a run whose
+            // saved setup lost its credits still has something to hand
+            // out; a page that cannot name it says nothing, which is its
+            // own business.
+            if (!run.record) return false;
+            return sync.gesture(run.record.runId, "setup", handoutOf(chosen) ?? {});
           }}
           seats={(run.state?.contestants ?? []).map((c) => c.name)}
           onControls={() => {
