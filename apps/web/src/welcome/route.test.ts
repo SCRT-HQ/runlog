@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { appPath, baseOf, honestAddress, isAppPath, welcomePath, whereTo } from "./route.ts";
+import { HEADS } from "../route.ts";
 
 const at = (over: Partial<Parameters<typeof whereTo>[0]> = {}) => ({
   protocol: "https:",
@@ -27,6 +28,20 @@ describe("which page an address opens", () => {
     expect(whereTo(at({ pathname: "/runlog/play/profile", base: "/runlog/" }))).toBe("app");
     // A path the app does not answer to is not the app's.
     expect(whereTo(at({ pathname: "/nonsense" }))).toBe("welcome");
+  });
+
+  /*
+   * This list and `HEADS` in route.ts are kept by hand, one at the door
+   * and one inside. A section in one and not the other opens the welcome
+   * page and then has its address rewritten to the run, which is how the
+   * seated page arrived and what this stops happening again.
+   */
+  it("answers to every section the app spells as a path", () => {
+    for (const head of HEADS) {
+      expect(isAppPath(`/${head}`, "/"), head).toBe(true);
+      expect(whereTo(at({ pathname: `/${head}/01ABC` })), head).toBe("app");
+      expect(honestAddress({ protocol: "https:", pathname: `/${head}/01ABC`, base: "/", hash: "", search: "" }), head).toBeNull();
+    }
   });
 
   it("is the app for anyone who arrived with somewhere to go", () => {

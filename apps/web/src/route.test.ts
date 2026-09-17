@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addressForPlay, addressOf, hrefFor, linkTo, runFromAddress } from "./route.ts";
+import { addressForPlay, addressOf, hrefFor, linkTo, runFromAddress, seatFromAddress } from "./route.ts";
 
 /**
  * One address, two spellings: the hash the app reads, and the path the
@@ -18,6 +18,7 @@ describe("an address, as a hash and as a path", () => {
     ["#marketplace/dev.runlog.kiln/docs/rulebook", "/marketplace/dev.runlog.kiln/docs/rulebook"],
     ["#play", "/play"],
     ["#run/01ABC", "/run/01ABC"],
+    ["#seat/01ABC", "/seat/01ABC"],
     ["#run/01ABC?t=tok", "/run/01ABC?t=tok"],
     ["#widget/clock/01ABC?bg=none&t=tok", "/widget/clock/01ABC?bg=none&t=tok"],
     ["#dock/controls/01ABC", "/dock/controls/01ABC"],
@@ -78,6 +79,12 @@ describe("an address, as a hash and as a path", () => {
     expect(runFromAddress("#run/01ABC")).toBe("01ABC");
     expect(runFromAddress("#run/01ABC?t=tok")).toBeNull();
     expect(runFromAddress("#guide/start")).toBeNull();
+  });
+
+  it("tells a run played from a seat from a run of this device's own", () => {
+    expect(seatFromAddress("#seat/01ABC")).toBe("01ABC");
+    expect(seatFromAddress("#run/01ABC")).toBeNull();
+    expect(runFromAddress("#seat/01ABC")).toBeNull();
   });
 });
 
