@@ -390,6 +390,15 @@ describe("the settings page", () => {
     expect(html).toContain("account menu");
   });
 
+  it("keeps the setups somebody has, as their own section under the device's", () => {
+    const html = renderToStaticMarkup(<ProfileView page="settings" onBack={() => {}} />);
+    expect(html).toContain("Setups");
+    expect(html).toContain("Load a setup from a file");
+    // Under the device's settings rather than inside them: that pane is
+    // also the first tab of a run's settings, and it is preferences only.
+    expect(html.indexOf("Load a setup from a file")).toBeGreaterThan(html.indexOf("carry on by itself"));
+  });
+
   it("says nothing about a run's dice, because there is no run here", () => {
     // The seeded line belongs to an open run. On this page "roll for me"
     // means the default the next run starts with, and is always a choice.

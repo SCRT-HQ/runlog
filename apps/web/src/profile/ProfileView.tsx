@@ -22,6 +22,7 @@ import { liveLinkOf } from "../live/route.ts";
 import { PROFILE_PAGES, profileHash, type ProfilePage } from "./route.ts";
 import { useTitle } from "../title.ts";
 import { DeviceSettings } from "../settings/DeviceSettings.tsx";
+import { SetupsSection } from "./SetupsSection.tsx";
 import { useAlertSettings } from "../alerts/useAlerts.ts";
 import { linkTo } from "../route.ts";
 import { ConnectionsSection } from "../connections/ConnectionsSection.tsx";
@@ -1117,6 +1118,11 @@ function InviteFriend({ api }: { api: Api | null }) {
  *
  * No `rolling`, because there is no run here. "Roll for me" then means
  * what it says on the tin: the default the next run starts with.
+ *
+ * The setups somebody keeps are under it, as their own section rather
+ * than inside `DeviceSettings`: that pane is also the first tab of a
+ * run's settings, and it is device preferences only. Keeping a setup is
+ * managing a document, which is what this page is for.
  */
 function SettingsPage() {
   const [alerts, setAlerts] = useAlertSettings();
@@ -1129,6 +1135,7 @@ function SettingsPage() {
         <p className="muted small">The theme is in the account menu, where it can be tried and put back without opening anything.</p>
         <DeviceSettings alerts={alerts} onAlerts={setAlerts} />
       </section>
+      <SetupsSection />
     </div>
   );
 }

@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { SetupShelf } from "./SetupShelf.tsx";
+import { SetupsSection } from "./SetupsSection.tsx";
 import type { StoredSetup } from "../storage/db.ts";
 
 /**
- * The shelf of setups somebody keeps.
+ * The setups somebody keeps, as a section of the profile's Settings page.
  *
  * The interesting part is not the list; it is what happens when the file
  * somebody picks is not the thing they think it is. A person choosing a
@@ -58,19 +58,30 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("the setup shelf", () => {
+describe("the setups section", () => {
+  it("is open where it stands, with nothing to unfold", async () => {
+    render(<SetupsSection />);
+    // Under Settings it is a section with a title, not a panel that
+    // folds: the page it is on is the one somebody came to for it.
+    await screen.findByText("Setups");
+    expect(document.querySelector("details")).toBeNull();
+    expect(screen.getByText(/Load a setup from a file/)).toBeTruthy();
+  });
+
   it("says what a file is when it is the other kind of document", async () => {
-    render(<SetupShelf />);
+    render(<SetupsSection />);
     await screen.findByText(/None of your own yet/);
     await pick("kiln.yaml", PACK);
     // Not "that is not a setup": a pack is a thing this app has a shelf
     // for, and saying which shelf is the whole of the help needed.
     await screen.findByText(/kiln.yaml is a pack, not a setup/);
+    // And where the packs are, which is no longer the panel above this one.
+    expect(screen.getByText(/under Add and discover/)).toBeTruthy();
     expect(shelf.saved).toEqual([]);
   });
 
   it("keeps a setup, by what the document says rather than by the filename", async () => {
-    render(<SetupShelf />);
+    render(<SetupsSection />);
     await screen.findByText(/None of your own yet/);
     await pick("anything.yaml", SETUP);
     await waitFor(() => expect(shelf.saved).toHaveLength(1));
@@ -93,13 +104,13 @@ describe("the setup shelf", () => {
         updatedAt: "",
       },
     ];
-    render(<SetupShelf />);
+    render(<SetupsSection />);
     await screen.findByText(/TarnishedTool/);
     expect(screen.getByText("Bare-handed")).toBeTruthy();
   });
 
   it("counts the ones that ship, so an empty shelf does not read as nothing at all", async () => {
-    render(<SetupShelf />);
+    render(<SetupsSection />);
     await screen.findByText(/2 ship with the app/);
   });
 });

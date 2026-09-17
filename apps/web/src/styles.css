@@ -1059,6 +1059,23 @@ p {
 .libraryActions .ghost {
   white-space: nowrap;
 }
+/* The way to the setups, where the shelf of them used to be and under
+   the file control that now takes one. It is a line of text rather than
+   a button, so it reads as the sentence it is instead of as the
+   browser's blue. */
+.librarySetups {
+  margin-top: var(--space-3);
+}
+.librarySetups a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+@media (hover: hover) {
+  .librarySetups a:hover {
+    color: var(--text);
+  }
+}
 .raceJoin {
   display: inline-flex;
   gap: 0.4rem;

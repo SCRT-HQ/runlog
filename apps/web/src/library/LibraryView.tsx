@@ -6,7 +6,6 @@ import { syncBus } from "../sync/bus.ts";
 import { useSync } from "../sync/SyncProvider.tsx";
 import { activeRunFor } from "../run/active.ts";
 import { RunRow, hasEnded, onDay } from "../run/RunRow.tsx";
-import { SetupShelf } from "./SetupShelf.tsx";
 import { scoresOf } from "../run/scores.ts";
 import { byLastOpened, openedAt } from "./opened.ts";
 import { useDocDrawer } from "../docs/DocDrawer.tsx";
@@ -14,6 +13,8 @@ import { downloadProfile } from "./DeckProfiles.tsx";
 import { DiscoverStrip, HomeStrip } from "./HomeStrip.tsx";
 import { PackServers } from "./PackServers.tsx";
 import { useGuildVaults, type GuildVaults } from "./useGuildVaults.ts";
+import { profileHash } from "../profile/route.ts";
+import { keepSetup, readDocumentFile } from "../storage/documents.ts";
 import { useTitle } from "../title.ts";
 import { Button } from "../ui/Button.tsx";
 import { Menu, MenuGroup, MenuItem, MenuRule } from "../ui/Menu.tsx";
@@ -71,6 +72,7 @@ export function LibraryView({
   onContinueLast,
   seats,
   onTakeSeat,
+  onOpenSettings,
 }: {
   packs: LibraryPack[];
   activeId: string;
@@ -95,9 +97,13 @@ export function LibraryView({
   /** Runs this account plays without holding the pack: a seat rather than a copy. */
   seats?: StoredRun[];
   onTakeSeat?: (run: StoredRun) => void;
+  /** Open the profile's Settings page, where the setups are kept. */
+  onOpenSettings?: () => void;
 }) {
   useTitle("Packs");
   const [raceCode, setRaceCode] = useState("");
+  /** What became of a file chosen here that turned out to be a setup: `kept`, or why it did not load. */
+  const [setupNote, setSetupNote] = useState<string | null>(null);
   // Which servers may play what, read once for the shelf; empty where
   // there is no bot behind this copy or nobody signed in.
   const vaults = useGuildVaults();
@@ -128,6 +134,44 @@ export function LibraryView({
     for (const p of packs) out.set(p.id, parsedPacks.get(p.id)?.vocabulary ?? FALLBACK_VOCABULARY);
     return out;
   }, [packs, parsedPacks]);
+
+  /** The way to Settings, pressed or followed: the address is real, so it survives a reload. */
+  const toSettings = (text: string) => (
+    <a
+      href={profileHash("settings")}
+      onClick={(e) => {
+        if (!onOpenSettings) return;
+        e.preventDefault();
+        onOpenSettings();
+      }}
+    >
+      {text}
+    </a>
+  );
+
+  /*
+   * A file chosen at Load a pack from a file.
+   *
+   * It may be a setup. Somebody who has one and is looking at this page
+   * has one door in front of them, and being told their good file is the
+   * wrong kind of document teaches them nothing: the setups section takes
+   * a pack the same way, and this is the other half of that.
+   */
+  const takeFile = async (file: File | undefined) => {
+    if (!file) return;
+    setSetupNote(null);
+    // A sealed copy is binary and is nobody's setup, so it goes straight
+    // to the pack door rather than through a parse of its bytes.
+    if (!/\.rlpack$/i.test(file.name)) {
+      const doc = await readDocumentFile(file);
+      if (doc.kind === "setup") {
+        const result = await keepSetup(doc.text, doc.format, file.name);
+        setSetupNote(result.ok ? "kept" : result.message);
+        return;
+      }
+    }
+    onFile(file);
+  };
 
   const runsOf = (packId: string) => runs.filter((r) => r.packId === packId).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
 
@@ -207,9 +251,10 @@ export function LibraryView({
               <Button onClick={onMarketplace}>Get more packs</Button>
               <label className="ghost fileButton">
                 Load a pack from a file
-                <input type="file" accept=".yaml,.yml,.json,.rlpack" onChange={(e) => onFile(e.target.files?.[0])} />
+                <input type="file" accept=".yaml,.yml,.json,.rlpack" onChange={(e) => void takeFile(e.target.files?.[0])} />
               </label>
             </div>
+            {setupNote && <p className="notice librarySetups">{setupNote === "kept" ? toSettings("Kept under Settings.") : setupNote}</p>}
           </div>
           {onJoinRace && (
             <div className="libraryActionGroup">
@@ -267,11 +312,13 @@ export function LibraryView({
       )}
 
       {/*
-        The other shelf. Under the packs because a pack is what a person
-        comes here for; a setup is a thing that fits one, and nobody opens
-        the library looking for one first.
+        The door the shelf left behind. The setups somebody keeps are
+        managed under Settings now, with the rest of what is kept rather
+        than played; all that is left here is where they went, for
+        anybody who goes looking where they used to be. Phase 6 takes
+        this line out if nobody misses it.
       */}
-      <SetupShelf />
+      <p className="muted small librarySetups">{toSettings("Your setups are under Settings.")}</p>
     </main>
   );
 }
