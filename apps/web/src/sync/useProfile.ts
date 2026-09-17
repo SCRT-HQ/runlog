@@ -11,6 +11,7 @@ import { useApi } from "./useApi.ts";
  */
 
 let cached: Profile | null = null;
+let revision = 0;
 /** Whether another account holds the name this one shows, as the last read said. */
 let taken = false;
 const listeners = new Set<(p: Profile | null) => void>();
@@ -22,6 +23,7 @@ const takenListeners = new Set<(t: boolean) => void>();
  * something else leaves what the last read said standing.
  */
 export function rememberProfile(profile: Profile | null, handleTaken = taken): void {
+  revision += 1;
   cached = profile;
   taken = handleTaken;
   for (const l of listeners) l(profile);
@@ -40,18 +42,25 @@ export function useProfile(): { profile: Profile | null; loaded: boolean; handle
   const [loaded, setLoaded] = useState(cached !== null);
 
   useEffect(() => {
-    listeners.add(setProfile);
+    const receiveProfile = (next: Profile | null) => {
+      setProfile(next);
+      setLoaded(next !== null);
+    };
+    listeners.add(receiveProfile);
     takenListeners.add(setHandleTaken);
     return () => {
-      listeners.delete(setProfile);
+      listeners.delete(receiveProfile);
       takenListeners.delete(setHandleTaken);
     };
   }, []);
 
   const refresh = useCallback(async () => {
     if (!api) return;
+    const startedAt = revision;
     try {
       const me = await api.me();
+      // A completed write or sign-out supersedes reads already in flight.
+      if (revision !== startedAt) return;
       rememberProfile(me.profile, me.handleTaken === true);
       setLoaded(true);
     } catch {
