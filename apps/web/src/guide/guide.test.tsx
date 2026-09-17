@@ -102,9 +102,10 @@ describe("the guide", () => {
     expect(inPage).toContain('href="#guide/discord/the-pages-in-this-group"');
   });
 
-  it("draws a table where a page has one", () => {
+  it("keeps a page table semantic inside a keyboard-reachable scroll region", () => {
     const Obs = GUIDE_PAGES.find((p) => p.slug === "obs")!.Page;
     const html = renderToStaticMarkup(<Obs components={guideComponents} />);
+    expect(html).toContain('<div class="tableWrap" role="region" aria-label="Scrollable table" tabindex="0"><table>');
     expect(html).toContain("<table>");
     expect(html).toContain("<td>480 × 200</td>");
   });
