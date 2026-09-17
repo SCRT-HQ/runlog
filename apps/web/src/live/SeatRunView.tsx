@@ -9,6 +9,8 @@ import { useSeat } from "./useSeat.ts";
 import { ThemeMenu } from "../theme/ThemeMenu.tsx";
 import { linkTo } from "../route.ts";
 import { runTitle, useTitle } from "../title.ts";
+import { handoutLine } from "../run/handout.ts";
+import { useToast } from "../ui/Toast.tsx";
 
 /**
  * A run played from a seat: the watcher's page, with a strip.
@@ -20,7 +22,7 @@ import { runTitle, useTitle } from "../title.ts";
  * pack is stays a title, a line and, where it is listed, its card.
  */
 export function SeatRunView({ id, players }: { id: string; players: number }) {
-  const { view, snapshot, held, note, stale, press } = useSeat(id);
+  const { view, snapshot, held, note, stale, gesture, press } = useSeat(id);
   // Which shape the run is played in, as far as a seat can tell without the
   // pack: contestants on the board mean a moderator is holding the device,
   // and more than one player at the table means the table acts. The page
@@ -31,10 +33,19 @@ export function SeatRunView({ id, players }: { id: string; players: number }) {
   const account = useAccount();
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [sent, setSent] = useState(0);
+  const toast = useToast();
 
   useEffect(() => {
     if (view?.reactions) setReactions(view.reactions);
   }, [view]);
+
+  // The host handing a setup out. A seat is playing the run rather than
+  // watching it, so being re-equipped without a word is worse here than
+  // anywhere.
+  useEffect(() => {
+    const said = gesture ? handoutLine(gesture) : null;
+    if (said) toast.show(said);
+  }, [gesture, toast.show]);
 
   useTitle(snapshot ? runTitle(snapshot.runName, snapshot.packTitle) : (view?.run.packTitle ?? null));
   const recent = useMemo(() => [...reactions].reverse().slice(0, 8), [reactions]);
@@ -119,6 +130,7 @@ export function SeatRunView({ id, players }: { id: string; players: number }) {
   return (
     <>
       {bar}
+      {toast.node}
       <LiveView
         snapshot={snapshot}
         stale={stale}

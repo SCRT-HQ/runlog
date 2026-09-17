@@ -8,6 +8,7 @@ import { loadPackText } from "@runlog/rules-schema";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import type { LiveSnapshot } from "./snapshot.ts";
 import { LiveRunView } from "./LiveRunView.tsx";
+import type { Gesture } from "../sync/socket.ts";
 
 /**
  * The row of tools above a watched run.
@@ -50,6 +51,8 @@ const snapshot: LiveSnapshot = {
   log: [],
 };
 
+/** What the page is reading, so a test can put a gesture in front of it. */
+const current = vi.hoisted(() => ({ gesture: null as Gesture | null }));
 vi.mock("./usePublic.ts", () => ({
   usePublicRun: () => ({
     got: {
@@ -69,24 +72,48 @@ vi.mock("./usePublic.ts", () => ({
     snapshot,
     stale: false,
     offline: false,
-    gesture: null,
+    gesture: current.gesture,
   }),
 }));
 
 const signedOut: Account = { status: "signed-out", signIn: () => {} } as unknown as Account;
 
-afterEach(cleanup);
+afterEach(() => {
+  current.gesture = null;
+  cleanup();
+});
+
+const watching = () =>
+  render(
+    <AccountContext.Provider value={signedOut}>
+      <LiveRunView route={{ id: "run-1", token: "tok" }} />
+    </AccountContext.Provider>,
+  );
 
 describe("the watcher page's tools", () => {
   it("has one way to the documents, and it is Docs", () => {
-    const { container } = render(
-      <AccountContext.Provider value={signedOut}>
-        <LiveRunView route={{ id: "run-1", token: "tok" }} />
-      </AccountContext.Provider>,
-    );
+    const { container } = watching();
 
     expect(screen.getByRole("button", { name: "Docs" })).toBeTruthy();
     expect(container.querySelector(".docMenu")).toBeNull();
     expect(container.textContent).not.toContain("Documents");
+  });
+});
+
+/**
+ * Handing a setup out happens on the host's screen and lands in
+ * everybody's game. A watcher saw nothing at all until this.
+ */
+describe("a handout, to whoever is watching", () => {
+  it("says who handed out what", () => {
+    current.gesture = { t: "gesture", id: "run-1", kind: "setup", data: { title: "Cleric" }, from: "Mira", at: "2026-01-01T00:00:01Z" };
+    watching();
+    expect(screen.getByRole("status").textContent).toBe("Mira handed out Cleric.");
+  });
+
+  it("says nothing for a gesture that is not one", () => {
+    current.gesture = { t: "gesture", id: "run-1", kind: "rolled", data: { total: 14 }, from: "Mira", at: "2026-01-01T00:00:01Z" };
+    watching();
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });

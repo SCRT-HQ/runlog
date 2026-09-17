@@ -444,7 +444,9 @@ describe("a press from a deck", () => {
       from: [{ id: "com.example.setups.starter", title: "Starter", version: "1.0.0" }],
       ops: [{ op: "player.give" }],
     });
-    expect(gesture).toHaveBeenCalledWith("run1", "setup");
+    // With what was handed out, so every other screen at the table can
+    // name it.
+    expect(gesture).toHaveBeenCalledWith("run1", "setup", { title: "Starter", id: "com.example.setups.starter" });
   });
 
   it("refuses a setup the run is not offering", async () => {

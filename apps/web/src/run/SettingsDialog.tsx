@@ -6,6 +6,7 @@ import { ChatSettings } from "./ChatPanel.tsx";
 import { ControlSettings } from "./ControlSettings.tsx";
 import type { Pack } from "@runlog/rules-schema";
 import type { StoredRun } from "../storage/db.ts";
+import type { ChosenSetup } from "../control/setups.ts";
 
 /**
  * What is about this device rather than about the run: the theme, the
@@ -46,7 +47,7 @@ export function SettingsDialog({
   onControl?: (control: unknown) => void | Promise<void>;
   /** Change which setup the open run is played under, and hand it out. */
   onSetup?: (setup: unknown) => void | Promise<void>;
-  onHandOut?: () => boolean;
+  onHandOut?: (chosen: ChosenSetup) => boolean;
   /** What the run found out about being reachable, for the Control section's address. */
   reachable?: { link: string | null; key: string | null; working: boolean } | undefined;
   /** The roster of a moderated run, so the Control section can address one racer. */
