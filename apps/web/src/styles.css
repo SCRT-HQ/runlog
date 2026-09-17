@@ -2871,7 +2871,7 @@ select.textInput {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-size: 0.85rem;
+  font: var(--font-control) var(--font-ui);
   color: var(--muted);
 }
 
@@ -2880,11 +2880,13 @@ select.textInput {
 .accountMenu {
   position: relative;
   display: block;
+  min-width: 0;
 }
 .accountMenu > summary {
   list-style: none;
   display: inline-flex;
   align-items: center;
+  min-width: 0;
   gap: 0.35rem;
   padding: 0.2rem 0.6rem;
   border: 1px solid transparent;
@@ -2893,6 +2895,17 @@ select.textInput {
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+}
+.accountMenu > summary .accountLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.accountMenu > summary .led,
+.accountMenu > summary .menuBadge,
+.accountMenu > summary .caret {
+  flex: 0 0 auto;
 }
 .accountMenu > summary::-webkit-details-marker {
   display: none;
@@ -2906,7 +2919,7 @@ select.textInput {
   }
 }
 .accountMenu .caret {
-  font-size: 0.7rem;
+  font: var(--font-caption) var(--font-ui);
   color: var(--muted);
 }
 .accountPanel {
@@ -2914,40 +2927,58 @@ select.textInput {
   top: calc(100% + 0.4rem);
   right: 0;
   z-index: 20;
-  min-width: 16rem;
+  width: min(24rem, calc(100vw - 2 * var(--space-4)));
+  min-width: min(16rem, calc(100vw - 2 * var(--space-4)));
+  max-height: calc(100vh - 8rem);
+  overflow: auto;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   padding: 0.5rem 0;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--raise);
+  font: var(--font-control) var(--font-ui);
+}
+.accountPanel > * {
+  min-width: 0;
+}
+.accountPanel .menuSections {
+  grid-template-columns: minmax(0, 1fr);
 }
 .accountWho {
-  padding: 0.25rem 0.9rem 0.5rem;
+  padding: var(--space-1) var(--space-4) var(--space-2);
   border-bottom: 1px solid var(--line);
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
   display: grid;
-  gap: 0.1rem;
+  gap: var(--space-1);
 }
 .accountName {
-  font-weight: 600;
+  overflow-wrap: anywhere;
+  font: var(--font-control) var(--font-ui);
 }
 .accountEmail {
   padding: 0;
   border-bottom: none;
   margin-bottom: 0;
-  font-family: var(--mono);
+  font: var(--font-caption) var(--font-ui);
 }
 .accountItem {
   display: grid;
-  gap: 0.1rem;
+  min-width: 0;
+  width: 100%;
+  gap: var(--space-1);
   text-align: left;
-  padding: 0.45rem 0.9rem;
+  padding: var(--space-2) var(--space-4);
   background: none;
   border: none;
   color: var(--text);
-  font: inherit;
+  font: var(--font-control) var(--font-ui);
+  overflow-wrap: anywhere;
   cursor: pointer;
+}
+.accountItem .small {
+  font: var(--font-caption) var(--font-ui);
 }
 .accountItem:hover,
 .accountItem:focus-visible {
@@ -3039,24 +3070,28 @@ select.textInput {
 }
 .menuDoors {
   display: flex;
-  gap: 0.4rem;
-  padding: 0.35rem 0.9rem 0.6rem;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4) var(--space-3);
   border-bottom: 1px solid var(--line);
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
 }
 .menuDoors .primary,
 .menuDoors .ghost {
-  white-space: nowrap;
-  font-size: var(--t-1);
-  padding: 0.3rem 0.8rem;
+  white-space: normal;
+  font: var(--font-control) var(--font-ui);
 }
 .menuTheme {
-  padding: 0.45rem 0.9rem;
+  padding: var(--space-2) var(--space-4);
   border-top: 1px solid var(--line);
-  margin-top: 0.25rem;
+  margin-top: var(--space-1);
 }
 .menuTheme .themeMenu {
   justify-content: space-between;
+  font: var(--font-caption) var(--font-ui);
+}
+.menuTheme .themeMenu select {
+  font: var(--font-control) var(--font-ui);
 }
 /* ---- the profile ---------------------------------------------------------- */
 .profile {
@@ -3392,6 +3427,19 @@ select.textInput {
 .topbarEnd > * {
   flex: 0 0 auto;
 }
+/* The trigger may be the longest thing in the bar. Let its label give up
+   its end before it widens the page; the panel itself owns its full text. */
+.topbar .topbarEnd .accountMenu {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+.topbar .topbarEnd:has(.accountMenu) {
+  min-width: 0;
+}
+.topbar .topbarEnd .accountMenu > summary {
+  max-width: 100%;
+}
 /* An accent button in the bar is a button among buttons: the ghosts' size,
    the accent's color. Both are the control role now, so all the bar still
    says about them is that a label keeps to one line. */
@@ -3581,16 +3629,28 @@ select.textInput {
     font-size: var(--size-control);
   }
   .topbar .topbarEnd .accountMenu > summary {
+    max-width: 100%;
     padding: var(--space-1) var(--space-2);
-    font-size: var(--size-control);
+    font: var(--font-control) var(--font-ui);
+  }
+  .topbar .topbarEnd .accountMenu {
+    max-width: 100%;
+  }
+  /* Topbar compaction is for its direct controls. The account panel is a
+     separate, scrollable surface, so its descendants keep their UI roles. */
+  .topbar .topbarEnd .accountPanel .primary,
+  .topbar .topbarEnd .accountPanel .ghost {
+    min-height: var(--control-h);
+    padding: var(--space-2) var(--space-4);
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    font: var(--font-control) var(--font-ui);
   }
 }
 @media (max-width: 520px) {
-  .menuTheme .themeMenu > span {
-    font-size: 0.75rem;
-  }
   .accountPanel {
-    max-width: calc(100vw - 1.8rem);
+    max-width: calc(100vw - 2 * var(--space-4));
   }
 }
 
@@ -4177,19 +4237,20 @@ details.panel[open] > summary .sectionTitle::after {
 }
 .syncSection {
   display: grid;
-  gap: 0.4rem;
-  padding: 0.35rem 0.9rem 0.6rem;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4) var(--space-3);
   border-bottom: 1px solid var(--line);
-  margin-bottom: 0.25rem;
-  font-family: var(--mono);
-  font-size: var(--t-1);
+  margin-bottom: var(--space-1);
+  font: var(--font-caption) var(--font-ui);
 }
 .syncSection label {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
   cursor: pointer;
   color: var(--text);
+  font: var(--font-control) var(--font-ui);
 }
 .syncSection input {
   margin: 0;
@@ -4199,14 +4260,14 @@ details.panel[open] > summary .sectionTitle::after {
 }
 .syncSection .syncRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem;
+  gap: var(--space-2);
   min-width: 0;
 }
 .syncSection .syncRow span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* A pack's own switch, on the shelf. */
@@ -5833,9 +5894,12 @@ a.plan {
   z-index: 50;
 }
 .termsGate {
-  max-width: 34rem;
+  width: min(100%, 34rem);
+  max-height: calc(100vh - 2 * var(--space-4));
+  overflow: auto;
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-3);
+  font: var(--font-body) var(--font-ui);
 }
 /* Asking before something irreversible: narrow, and the question first. */
 .confirmDialog {
@@ -5963,9 +6027,18 @@ a.plan {
 }
 .termsGate h2 {
   margin: 0;
+  font: var(--font-section-title) var(--font-ui);
 }
 .termsGate p {
   margin: 0;
+  font: var(--font-body) var(--font-ui);
+  overflow-wrap: anywhere;
+}
+.termsGate .muted.small,
+.termsGate .fieldLabel,
+.termsGate .fieldHelp,
+.termsGate .fieldNote {
+  font: var(--font-caption) var(--font-ui);
 }
 
 /* ---- drawing again ---- */
