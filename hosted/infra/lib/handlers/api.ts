@@ -3,6 +3,7 @@ import { askAllowed } from "./asking.js";
 import { hashToken, verify as verifyToken, type Caller } from "./auth.js";
 import {
   dynamoStore,
+  normalizeHandle,
   PACK_ORIGINS,
   shownName,
   type ApiKey,
@@ -1348,12 +1349,18 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!caller.sid.startsWith("key:") && (flags.length !== kept.length || flags.some((f) => !kept.includes(f))))
       await deps.billing.putFlags(caller.sub, flags, at);
     const entitlements = await grantsOf(caller.sub, flags);
+    // Whether the name this account shows is held by somebody else: an
+    // account from before the rule whose name another has since claimed,
+    // or two that chose the same one. Read, never rewritten; the app asks
+    // for another name.
+    const owner = profile.handle?.trim() ? await store.handleOwner(profile.handle) : null;
     return json(200, {
       sub: caller.sub,
       sid: caller.sid,
       ...(caller.scope ? { scope: caller.scope } : {}),
       env: deps.env,
       profile,
+      handleTaken: owner !== null && owner !== caller.sub,
       entitlements,
       gates: deps.gates,
       servers,
@@ -1489,6 +1496,19 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     ) {
       return json(413, { error: "that is not a name" });
     }
+    // A shown name is held by one account at a time. The claim is on the
+    // normalized form; the profile keeps the form that was typed. A call
+    // that does not touch the name claims the name the account already
+    // has, which is how an account from before this rule gets its claim.
+    const before = await store.getProfile(caller.sub);
+    const wanted = handle !== undefined ? handle.trim() : (before?.handle?.trim() ?? "");
+    if (wanted) {
+      const held = await store.claimHandle(caller.sub, wanted, now());
+      // Somebody else has it. Asked for, that is a 409 and nothing is
+      // written; carried along from the profile as it stands, the account
+      // keeps working and `GET /api/me` says the name has to change.
+      if (held === "taken" && handle !== undefined) return json(409, { error: "That name is taken." });
+    }
     // Accepting the terms is the one thing here that is a decision rather
     // than a snapshot, so it is stamped with the time, server-side.
     const profile = await store.touchProfile(caller.sub, now(), {
@@ -1497,6 +1517,13 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       ...(email !== undefined ? { email: email.trim() } : {}),
       ...(termsVersion !== undefined ? { termsVersion: termsVersion.trim() } : {}),
     });
+    // The old claim goes after the profile is written, so a crash between
+    // the two leaves a claim this account still holds rather than a name
+    // it shows and nobody holds.
+    const previous = before?.handle?.trim();
+    if (handle !== undefined && previous && normalizeHandle(previous) !== normalizeHandle(handle)) {
+      await store.releaseHandle(caller.sub, previous);
+    }
     // A name is shown on every seat this person holds, and a seat keeps
     // the name it was taken with; a new name goes round the tables.
     if (handle !== undefined || name !== undefined) {
