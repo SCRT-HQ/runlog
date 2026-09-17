@@ -14,6 +14,7 @@ import Clocks from "./pages/clocks.mdx";
 import Alerts from "./pages/alerts.mdx";
 import Together from "./pages/together.mdx";
 import Inviting from "./pages/inviting.mdx";
+import Seat from "./pages/seat.mdx";
 import Moderated from "./pages/moderated.mdx";
 import LiveLink from "./pages/live-link.mdx";
 import Races from "./pages/races.mdx";
@@ -116,6 +117,7 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   // With others
   P("together", "With others", "Playing together", "Playing together", "What signing in adds, and your runs on every device.", Together),
   P("inviting", "With others", "Playing together", "Inviting someone", "Players and watchers in your run; a friend to Runlog.", Inviting),
+  P("seat", "With others", "Playing together", "A seat at another table", "Playing a pack you do not own, on the owner's copy.", Seat),
   P(
     "moderated",
     "With others",
