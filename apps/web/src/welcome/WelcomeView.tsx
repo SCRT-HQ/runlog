@@ -8,6 +8,7 @@ import { PersonaChips } from "./PersonaChips.tsx";
 import { savePersona, savedPersona, type Persona } from "./personas.ts";
 import { appPath, baseOf, setSkipWelcome, skipWelcome } from "./route.ts";
 import { useTitle } from "../title.ts";
+import { ButtonLink } from "../ui/Button.tsx";
 
 /**
  * The welcome page: what Runlog is, in one line, at the bare address.
@@ -90,21 +91,13 @@ export function WelcomeView() {
           <h1>Runlog</h1>
         </a>
         <nav className="topbarEnd" aria-label="Ways in">
-          <a className="ghost" href="https://github.com/SCRT-HQ/runlog">
-            Source
-          </a>
-          {hosted?.links.pricing && (
-            <a className="ghost" href={hosted.links.pricing}>
-              Pricing
-            </a>
-          )}
+          <ButtonLink href="https://github.com/SCRT-HQ/runlog">Source</ButtonLink>
+          {hosted?.links.pricing && <ButtonLink href={hosted.links.pricing}>Pricing</ButtonLink>}
           {/* The same word the app's own bar uses for the same place. */}
-          <a className="ghost" href={linkTo("#guide/start", play)}>
-            Guide
-          </a>
-          <a className="primary" href={play}>
+          <ButtonLink href={linkTo("#guide/start", play)}>Guide</ButtonLink>
+          <ButtonLink variant="primary" href={play}>
             Play
-          </a>
+          </ButtonLink>
         </nav>
       </header>
 
@@ -118,12 +111,10 @@ export function WelcomeView() {
               limit on the next block of work. Runlog keeps it honest, keeps the score, and writes it all down, on stream or on your own.
             </p>
             <p className="welcomeCtas">
-              <a className="primary" href={play}>
+              <ButtonLink variant="primary" href={play}>
                 Play
-              </a>
-              <a className="ghost" href={linkTo("#marketplace", play)}>
-                See the packs
-              </a>
+              </ButtonLink>
+              <ButtonLink href={linkTo("#marketplace", play)}>See the packs</ButtonLink>
             </p>
             <p className="muted small">Free. No account. Open source under MIT.</p>
           </div>
@@ -287,12 +278,10 @@ export function WelcomeView() {
 
         <section className="welcomeClosing">
           <p className="welcomeCtas">
-            <a className="primary" href={play}>
+            <ButtonLink variant="primary" href={play}>
               Play
-            </a>
-            <a className="ghost" href={linkTo("#guide/start", play)}>
-              Read the guide
-            </a>
+            </ButtonLink>
+            <ButtonLink href={linkTo("#guide/start", play)}>Read the guide</ButtonLink>
           </p>
           <label
             className="toggle welcomeSkip"

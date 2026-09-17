@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { loadSetupText, whichKind, type Setup } from "@runlog/rules-schema";
 import { forgetSetup, listSetups, saveSetup, type StoredSetup } from "../storage/db.ts";
 import { shippedSetups } from "../control/setups.ts";
+import { Disclosure } from "../ui/Disclosure.tsx";
 
 /**
  * The setups somebody keeps.
@@ -13,7 +14,8 @@ import { shippedSetups } from "../control/setups.ts";
  *
  * It is on the library screen rather than in a run's settings because
  * that is what it is: a shelf, next to the shelf of packs, holding the
- * other kind of document this app reads.
+ * other kind of document this app reads. It folds, and stays folded, for
+ * anybody who keeps none: the packs above it are what the page is for.
  */
 export function SetupShelf() {
   const [kept, setKept] = useState<StoredSetup[]>([]);
@@ -82,8 +84,7 @@ export function SetupShelf() {
   };
 
   return (
-    <section className="panel setupShelf">
-      <h3 className="sectionTitle">Your setups</h3>
+    <Disclosure className="setupShelf" summary="Your setups" remember="setupShelf">
       <p className="muted small">
         What a tool attached to the game is set to while a run lasts, and what you start holding. A setup is written for a tool rather than
         for a pack, so one fits every pack for the same game.
@@ -122,6 +123,6 @@ export function SetupShelf() {
       </div>
 
       {note && <p className="notice">{note}</p>}
-    </section>
+    </Disclosure>
   );
 }

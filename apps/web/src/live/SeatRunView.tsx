@@ -130,7 +130,6 @@ export function SeatRunView({ id, players }: { id: string; players: number }) {
   return (
     <>
       {bar}
-      {toast.node}
       <LiveView
         snapshot={snapshot}
         stale={stale}
