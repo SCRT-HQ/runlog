@@ -46,6 +46,12 @@ export interface Attached {
    * other like somewhere a press could land.
    */
   deck?: boolean;
+  /**
+   * A socket that presses on somebody else's run: a member's page with no
+   * pack of their own, playing through the page that has one. Marked so it
+   * is never taken for a device holding the run.
+   */
+  seated?: boolean;
 }
 
 export interface Watcher extends Attached {
@@ -88,6 +94,7 @@ function marks(attached: Attached): Record<string, unknown> {
     ...(attached.app ? { app: attached.app } : {}),
     ...(attached.run ? { run: attached.run } : {}),
     ...(attached.deck ? { deck: true } : {}),
+    ...(attached.seated ? { seated: true } : {}),
   };
 }
 
@@ -98,6 +105,7 @@ function read(row: Record<string, unknown>): Attached {
     ...(typeof row["app"] === "string" ? { app: row["app"] } : {}),
     ...(typeof row["run"] === "string" ? { run: row["run"] } : {}),
     ...(row["deck"] === true ? { deck: true as const } : {}),
+    ...(row["seated"] === true ? { seated: true as const } : {}),
   };
 }
 
