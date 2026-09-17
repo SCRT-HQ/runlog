@@ -1,4 +1,7 @@
-import type { Diagnostic, ParseResult } from "@runlog/rules-schema";
+import { useState } from "react";
+import { generateDoc, type Diagnostic, type Pack, type ParseResult } from "@runlog/rules-schema";
+import { DocView } from "../../docs/DocView.tsx";
+import { RowActions } from "../fields.tsx";
 import { StructurePanel } from "../StructurePanel.tsx";
 import { sectionOfPath, type Section } from "./model.ts";
 
@@ -9,8 +12,36 @@ export function TestSection({ result, onGo }: { result: ParseResult | null; onGo
   return (
     <>
       <Problems diagnostics={result?.diagnostics ?? []} onGo={onGo} />
+      {result?.ok && <Rulebook pack={result.pack} />}
       {result?.ok && <StructurePanel pack={result.pack} warnings={result.diagnostics} random={() => Math.random} />}
     </>
+  );
+}
+
+/**
+ * The rulebook, where the rules are being tried.
+ *
+ * Checking your own words is reading them, and the document that has them
+ * all lives in Publish, three sections away from the place an author is
+ * when they want it. The same generated document and the same view as the
+ * Documents panel; the panel keeps the other four kinds and every way of
+ * saving one.
+ */
+function Rulebook({ pack }: { pack: Pack }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="panel">
+      <RowActions>
+        <button className="ghost" onClick={() => setOpen(!open)}>
+          {open ? "Hide" : "Read the rulebook"}
+        </button>
+      </RowActions>
+      {open && (
+        <div className="docPreview">
+          <DocView doc={generateDoc(pack, "rulebook")} heading />
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -1422,44 +1422,46 @@ export function RunView({
       */}
       <div className="columns run" data-pane={pane} ref={columns}>
         <aside className="margin">
-          <div className="stageNo">
-            <small>{pack.modes[state.mode]?.label ?? state.mode}</small>
-            {pack.vocabulary.unit.one} {state.unit || "-"}
-          </div>
-          {/* Which pack this is, beside the unit, on a phone: the bar above
+          <div className="runHead">
+            <div className="stageNo">
+              <small>{pack.modes[state.mode]?.label ?? state.mode}</small>
+              {pack.vocabulary.unit.one} {state.unit || "-"}
+            </div>
+            {/* Which pack this is, beside the unit, on a phone: the bar above
               has given up the room for it, and the line that says where you
               are is where it belongs. The wide screen says it in the run's
               own bar and hides this. */}
-          {/*
+            {/*
             Which run this is, where a phone has room for one name. A run
             somebody named is named to tell it from their others, so the
             name they chose beats the pack's title, which they picked on
             the way in and which the Rules button leads back to. An
             unnamed run says the pack, as it always did.
           */}
-          <span
-            className="stagePack"
-            title={state.name ? `${state.name}, a ${pack.vocabulary.run.one.toLowerCase()} of ${pack.title}` : pack.title}
-          >
-            {state.name?.trim() || pack.title}
-          </span>
-          {/*
+            <span
+              className="stagePack"
+              title={state.name ? `${state.name}, a ${pack.vocabulary.run.one.toLowerCase()} of ${pack.title}` : pack.title}
+            >
+              {state.name?.trim() || pack.title}
+            </span>
+            {/*
             On a phone the run's own bar, the name, the seed, undo, settings
             and the way out, is not worth the four rows it costs above the
             step. It folds behind this, at the end of the line that says
             where you are, and wears a mark when it is holding something the
             player would want to have seen: a forced unit, a rewind coming.
           */}
-          <button
-            type="button"
-            className={`runMenuBtn${state.forcedUnits > 0 || state.rewindNext > 0 ? " flagged" : ""}`}
-            aria-expanded={runMenuOpen}
-            onClick={() => setRunMenuOpen((open) => !open)}
-          >
-            <span aria-hidden="true">···</span>
-            <span className="visuallyHidden">This {pack.vocabulary.run.one.toLowerCase()}</span>
-          </button>
-          {state.unit > 0 && <ClockPanel pack={pack} run={run} state={state} />}
+            {state.unit > 0 && <ClockPanel pack={pack} run={run} state={state} />}
+            <button
+              type="button"
+              className={`runMenuBtn${state.forcedUnits > 0 || state.rewindNext > 0 ? " flagged" : ""}`}
+              aria-expanded={runMenuOpen}
+              onClick={() => setRunMenuOpen((open) => !open)}
+            >
+              <span aria-hidden="true">···</span>
+              <span className="visuallyHidden">This {pack.vocabulary.run.one.toLowerCase()}</span>
+            </button>
+          </div>
           <Flow pack={pack} run={run} state={state} open={pane === "unit"} onOpen={() => setPane(pane === "unit" ? "now" : "unit")} />
         </aside>
 

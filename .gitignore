@@ -174,3 +174,7 @@ hydrate.ps1
 
 # worktree ignore
 */worktrees/**
+
+# Local agent worktrees and browser artifacts
+/.worktrees/
+/.playwright-mcp/

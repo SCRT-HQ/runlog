@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { StrictMode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -401,5 +402,88 @@ describe("a pack's address in the marketplace", () => {
     await openAt("#marketplace");
     expect(document.querySelector(".marketGrid")).not.toBeNull();
     expect(document.querySelector("article.packPage")).toBeNull();
+  });
+});
+
+/**
+ * A cold load keeps its address.
+ *
+ * Every section is reached by an address a person can type, and each one
+ * used to draw the right thing and then write `#packs` over it: the view
+ * was decided in an effect, and in the commit before that effect the run
+ * view still believed it was the run and wrote its own address. What was
+ * on screen was right and the bar was wrong, so the next reload was wrong
+ * too. These mount at each address and read the bar back once everything
+ * has settled. Under StrictMode, because that is what dev runs and the
+ * rewrite happened on its second pass of the effects.
+ */
+describe("a cold load keeps its address", () => {
+  const LADDER = "com.scrthq.runlog.ladder-work";
+
+  beforeEach(() => {
+    drafts.clear();
+    localStorage.clear();
+    sessionStorage.clear();
+    history.replaceState(null, "", "/");
+  });
+  afterEach(cleanup);
+
+  /** The app mounted at one address, left for every effect, and the whole address read back. */
+  async function landAt(address: string): Promise<string> {
+    history.replaceState(null, "", address);
+    render(
+      <StrictMode>
+        <DocDrawerProvider>
+          <App />
+        </DocDrawerProvider>
+      </StrictMode>,
+    );
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 500));
+    });
+    return `${location.pathname}${location.search}${location.hash}`;
+  }
+
+  /** What each address should have drawn, so the address is not kept by drawing nothing. */
+  const entries: { address: string; shows: string; there: () => boolean }[] = [
+    { address: "#packs", shows: "the shelf", there: () => document.body.textContent!.includes("Your packs") },
+    { address: "#marketplace", shows: "the catalog", there: () => document.querySelector(".marketGrid") !== null },
+    { address: `#marketplace/${LADDER}`, shows: "a pack's page", there: () => document.querySelector("article.packPage") !== null },
+    {
+      address: `#marketplace/${LADDER}/docs`,
+      shows: "a document over a pack's page",
+      there: () => document.querySelector('[role="dialog"]') !== null && document.querySelector("article.packPage") !== null,
+    },
+    { address: "#guide/start", shows: "the guide", there: () => document.querySelector(".guideSide") !== null },
+    { address: "#guide/streaming", shows: "the guide", there: () => document.querySelector(".guideSide") !== null },
+    { address: "#create", shows: "the Designer", there: () => document.querySelector(".designNav") !== null },
+    { address: "#create/tables", shows: "the Designer", there: () => document.querySelector(".designNav") !== null },
+    // Signed out, every profile page is the one panel that offers to sign
+    // in, which is still the profile and still at the profile's address.
+    { address: "#profile", shows: "the profile", there: () => document.querySelector(".profile, .profileLayout") !== null },
+    { address: "#profile/publishing", shows: "the profile", there: () => document.querySelector(".profile, .profileLayout") !== null },
+    // A run and a seat name something this device does not have, so what
+    // they draw is the shelf and a seat's own page; the address is theirs
+    // either way, and losing it is what sent a reload to the shelf.
+    { address: "#run/notarun", shows: "the app", there: () => document.querySelector(".topbar") !== null },
+    { address: "#seat/notarun", shows: "a seat", there: () => document.querySelector(".liveBar") !== null },
+  ];
+
+  for (const entry of entries) {
+    it(`draws ${entry.shows} at ${entry.address} and leaves the address alone`, async () => {
+      const after = await landAt(entry.address);
+      expect(entry.there()).toBe(true);
+      expect(after).toBe(`/${entry.address}`);
+    });
+  }
+
+  it("leaves the bare address bare", async () => {
+    expect(await landAt("/")).toBe("/");
+  });
+
+  it("holds the address through a second load of the same one, which is what a reload is", async () => {
+    expect(await landAt(`#marketplace/${LADDER}`)).toBe(`/#marketplace/${LADDER}`);
+    cleanup();
+    expect(await landAt(`#marketplace/${LADDER}`)).toBe(`/#marketplace/${LADDER}`);
   });
 });

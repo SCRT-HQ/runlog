@@ -17,20 +17,20 @@ import { RunView } from "./run/RunView.tsx";
 import { memoryRunStore, type RunStore } from "./run/store.ts";
 import { DesignView } from "./design/DesignView.tsx";
 import { ProfileView } from "./profile/ProfileView.tsx";
-import { profileHash, profilePageFromHash, type ProfilePage } from "./profile/route.ts";
+import { profileHash, type ProfilePage } from "./profile/route.ts";
 import { LibraryView, type LibraryPack } from "./library/LibraryView.tsx";
 import { formatOf, keptFromFile, notThisPack, replacedNotice } from "./library/replace.ts";
 import { MarketplaceView } from "./library/MarketplaceView.tsx";
 import { GuideView } from "./guide/GuideView.tsx";
-import { guideSectionFromHash, guideSlugFromHash } from "./guide/pages.ts";
-import { widgetFromHash, type WidgetRoute } from "./widget/route.ts";
-import { dockFromHash, type DockRoute } from "./dock/route.ts";
-import { linkFromHash, stashLink } from "./connections/route.ts";
+import type { WidgetRoute } from "./widget/route.ts";
+import type { DockRoute } from "./dock/route.ts";
+import { stashLink } from "./connections/route.ts";
 import { WidgetView } from "./widget/WidgetView.tsx";
 import { useTitle } from "./title.ts";
-import { liveFromHash, type LiveRoute } from "./live/route.ts";
+import type { LiveRoute } from "./live/route.ts";
 import { welcomePath } from "./welcome/route.ts";
-import { addressForPlay, addressOf, createSectionFromHash, goTo, runFromAddress, seatFromAddress, linkTo } from "./route.ts";
+import { addressForPlay, addressOf, goTo, linkTo } from "./route.ts";
+import { landingNow, landingOf, type View } from "./landing.ts";
 import { LiveRunView } from "./live/LiveRunView.tsx";
 import { SeatRunView } from "./live/SeatRunView.tsx";
 import { DocMenu } from "./docs/DocMenu.tsx";
@@ -60,7 +60,7 @@ import { useAlertSettings } from "./alerts/useAlerts.ts";
 import { Footer } from "./hosted/Footer.tsx";
 import { useHosted } from "./hosted/HostedProvider.tsx";
 import { countView } from "./hosted/beacon.ts";
-import { docsFromHash, useDocDrawer, type DocsAt } from "./docs/DocDrawer.tsx";
+import { useDocDrawer, type DocsAt } from "./docs/DocDrawer.tsx";
 import { Button } from "./ui/Button.tsx";
 import { TermsGate } from "./hosted/TermsGate.tsx";
 import { NameGate } from "./auth/NameGate.tsx";
@@ -131,6 +131,18 @@ function useNarrowBar(): boolean {
 
 export default function App() {
   /**
+   * The address this page was opened at, read before anything is drawn.
+   *
+   * Every piece of state the address decides starts from this, so the first
+   * commit already agrees with the bar. It used to be decided in the effect
+   * below, one commit late, and in that commit the run view still believed
+   * it was the run and wrote its own address over the one just read: a cold
+   * load of `/marketplace/<id>` drew the pack's page and left `#packs` in
+   * the bar, and the next reload landed on the shelf. Read once: the
+   * effect below reads the address again on every later change.
+   */
+  const [landed] = useState(landingNow);
+  /**
    * The pack in play, or none. Nothing ships in the bundle any more: every
    * pack is in storage, so the first paint has no pack, and the one this
    * device remembered comes back the moment storage has answered. With
@@ -138,7 +150,7 @@ export default function App() {
    */
   const [source, setSource] = useState<string | null>(null);
   /** A pack's paper asked for by address, held until the pack is in hand. */
-  const [wantedDocs, setWantedDocs] = useState<{ at: DocsAt; kind: DocKind } | null>(null);
+  const [wantedDocs, setWantedDocs] = useState<{ at: DocsAt; kind: DocKind } | null>(landed.docs ?? null);
   const [activeId, setActiveId] = useState<string>("");
   /**
    * Packs the player imported from their own files.
@@ -186,7 +198,7 @@ export default function App() {
       if (news.t === "pulled" && news.kind === "pack") reload();
     });
   }, []);
-  const [view, setView] = useState<"play" | "design" | "profile" | "library" | "marketplace" | "guide">("play");
+  const [view, setView] = useState<View>(landed.view ?? "play");
   // This device's settings, opened from the account menu on any page. In a
   // run the same sheet is behind the run's own Settings button, with the
   // streaming tab; here it has only the device tab, which needs no run.
@@ -208,37 +220,23 @@ export default function App() {
    * profile's four pages (`#profile`, `#profile/publishing`, and so on).
    * Leaving any of them clears the hash; nothing else in the app lives there.
    */
-  const [guideSlug, setGuideSlug] = useState<string>(
-    () => guideSlugFromHash(typeof location !== "undefined" ? addressOf(location) : "") ?? "start",
-  );
+  const [guideSlug, setGuideSlug] = useState<string>(landed.guide?.slug ?? "start");
   /** A section within the guide's page, from `#guide/<slug>/<section>`; the page scrolls to it. */
-  const [guideSection, setGuideSection] = useState<string | null>(() =>
-    guideSectionFromHash(typeof location !== "undefined" ? addressOf(location) : ""),
-  );
+  const [guideSection, setGuideSection] = useState<string | null>(landed.guide?.section ?? null);
   /** A widget page: one panel of a run, alone, for a stream to capture. */
-  const [widget, setWidget] = useState<WidgetRoute | null>(() =>
-    widgetFromHash(typeof location !== "undefined" ? addressOf(location) : ""),
-  );
+  const [widget, setWidget] = useState<WidgetRoute | null>(landed.widget);
   /** A dock: one run's remote, alone on the page, for a streaming app's custom browser dock. */
-  const [dock, setDock] = useState<DockRoute | null>(() => dockFromHash(typeof location !== "undefined" ? addressOf(location) : ""));
+  const [dock, setDock] = useState<DockRoute | null>(landed.dock);
   /** A live link: one run, watched by anyone, alone on the page. */
-  const [liveRoute, setLiveRoute] = useState<LiveRoute | null>(() =>
-    liveFromHash(typeof location !== "undefined" ? addressOf(location) : ""),
-  );
+  const [liveRoute, setLiveRoute] = useState<LiveRoute | null>(landed.live);
   /** The pack whose page the marketplace is showing, from `#marketplace/<packId>`: a live page's "in the marketplace" link lands here. */
-  const [marketplaceFocus, setMarketplaceFocus] = useState<string | null>(null);
+  const [marketplaceFocus, setMarketplaceFocus] = useState<string | null>(landed.marketplaceFocus ?? null);
   /** Which of the profile's four pages, from `#profile` or `#profile/<page>`. */
-  const [profilePage, setProfilePage] = useState<ProfilePage>(
-    () => profilePageFromHash(typeof location !== "undefined" ? addressOf(location) : "") ?? "profile",
-  );
+  const [profilePage, setProfilePage] = useState<ProfilePage>(landed.profilePage ?? "profile");
   /** A run named in the address (`#run/<id>`, `/play/run/<id>`), waiting to be opened once the packs and storage are here. */
-  const [wantedRun, setWantedRun] = useState<string | null>(() =>
-    runFromAddress(typeof location !== "undefined" ? addressOf(location) : ""),
-  );
+  const [wantedRun, setWantedRun] = useState<string | null>(landed.run ?? null);
   /** A run this account plays without holding its pack: the watcher's page with a strip. */
-  const [seatRoute, setSeatRoute] = useState<string | null>(() =>
-    seatFromAddress(typeof location !== "undefined" ? addressOf(location) : ""),
-  );
+  const [seatRoute, setSeatRoute] = useState<string | null>(landed.seat);
   /**
    * How many play the run drawn from a seat, off its own record on the
    * shelf: the strip draws the table's actions only where a seat takes
@@ -279,56 +277,36 @@ export default function App() {
     };
   }, [seatRoute]);
   useEffect(() => {
-    // The address in either spelling, read as the hash the parsers know.
+    /**
+     * The address, in either spelling, applied to the app.
+     *
+     * The same read as the one the first render was built from, so a
+     * change of address lands where a load at that address would have.
+     * What the address says nothing about is left as it is.
+     */
     const fromAddress = () => {
-      const address = addressOf(location);
-      setWidget(widgetFromHash(address));
-      setDock(dockFromHash(address));
-      setLiveRoute(liveFromHash(address));
-      setSeatRoute(seatFromAddress(address));
-      const slug = guideSlugFromHash(address);
-      const run = runFromAddress(address);
-      if (slug) {
-        setGuideSlug(slug);
-        setGuideSection(guideSectionFromHash(address));
-        setView("guide");
-      } else if (createSectionFromHash(address) !== null) {
-        // The Designer names its section in the address too; which one is
-        // the editor's own business, and it reads the same hash.
-        setView("design");
-      } else if (/^#profile(\/|$)/.test(address)) {
-        setProfilePage(profilePageFromHash(address) ?? "profile");
-        setView("profile");
-      } else if (linkFromHash(address)) {
+      const at = landingOf(addressOf(location));
+      setWidget(at.widget);
+      setDock(at.dock);
+      setLiveRoute(at.live);
+      setSeatRoute(at.seat);
+      if (at.guide) {
+        setGuideSlug(at.guide.slug);
+        setGuideSection(at.guide.section);
+      }
+      if (at.profilePage) setProfilePage(at.profilePage);
+      if (at.link) {
         // A code from somewhere else of the person's (the bot's `/link`, or
         // `/setup claim` for a server): kept for the profile page that asks
         // before binding it, and off the address bar so a reload does not
         // offer it twice.
-        const link = linkFromHash(address)!;
-        stashLink(link);
-        const where = link.kind === "guild" ? "servers" : "social";
-        goTo(profileHash(where));
-        setProfilePage(where);
-        setView("profile");
-      } else if (docsFromHash(address)) {
-        // A pack's paper, named: the section it is read in, the pack, and
-        // which document. Opened once the pack is in hand, which for a
-        // marketplace pack means after it has been fetched.
-        const want = docsFromHash(address)!;
-        setView(want.at.section === "marketplace" ? "marketplace" : "library");
-        if (want.at.section === "marketplace") setMarketplaceFocus(want.at.id);
-        setWantedDocs(want);
-      } else if (/^#marketplace(\/|$)/.test(address)) {
-        const id = address.slice("#marketplace/".length);
-        setMarketplaceFocus(id ? decodeURIComponent(id) : null);
-        setView("marketplace");
-      } else if (address === "#packs") {
-        setView("library");
-      } else if (address === "#play") {
-        setView("play");
-      } else if (run) {
-        setWantedRun(run);
+        stashLink(at.link);
+        goTo(profileHash(at.profilePage ?? "social"));
       }
+      if (at.docs) setWantedDocs(at.docs);
+      if (at.marketplaceFocus !== undefined) setMarketplaceFocus(at.marketplaceFocus);
+      if (at.run) setWantedRun(at.run);
+      if (at.view) setView(at.view);
     };
     fromAddress();
     window.addEventListener("hashchange", fromAddress);

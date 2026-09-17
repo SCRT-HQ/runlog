@@ -261,6 +261,9 @@ function ModeDetails({ draft, id, mode, diagnostics, edit }: SectionProps & { id
         )}
         <CheckField
           label="Seeded"
+          path={`modes.${id}.seeded`}
+          schemaPath="modes.*.seeded"
+          diagnostics={diagnostics}
           help={describe("modes.*.seeded")}
           value={mode.seeded === true}
           onChange={(v) => edit([...base, "seeded"], v ? true : undefined)}
@@ -315,6 +318,8 @@ function ModeDetails({ draft, id, mode, diagnostics, edit }: SectionProps & { id
       <div className="fieldGrid">
         <CheckField
           label="Moderated"
+          path={`modes.${id}.moderated`}
+          diagnostics={diagnostics}
           help={describe("modes.*.moderated")}
           value={moderated !== null}
           onChange={(v) => edit([...base, "moderated"], v ? { contestants: { min: 2, max: 10 }, award: "first" } : undefined)}
@@ -402,6 +407,8 @@ function ModeDetails({ draft, id, mode, diagnostics, edit }: SectionProps & { id
             />
             <CheckField
               label="Starts with the unit"
+              path={`modes.${id}.clock.auto`}
+              diagnostics={diagnostics}
               help={describe("modes.*.clock.auto")}
               value={clock.auto !== false}
               onChange={(v) => edit([...base, "clock", "auto"], v ? undefined : false)}
