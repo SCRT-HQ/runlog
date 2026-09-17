@@ -26,17 +26,72 @@
  * a theme is fourteen values and nothing else has to know.
  */
 :root {
-  --radius: 8px;
-  --serif: "Literata Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
-  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  /* The type scale. Six steps, from a chip's label to a unit's number; a
-     size in the sheet below is one of these or has a reason of its own. */
+  /* Three corners: a control's, a panel's, and a pill's. The old name is
+     kept, pointing at the panel's, because most of the sheet still reads it. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-pill: 999px;
+  --radius: var(--radius-md);
+
+  /* Three families, one voice each. The app's own voice is the system's
+     sans, so nothing is downloaded for it; the author keeps Literata and
+     the machine keeps Plex Mono. `--serif` and `--mono` are what the
+     unmigrated half of the sheet still asks for, and they name the same
+     two families they always did. */
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-prose: "Literata Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --serif: var(--font-prose);
+  --mono: var(--font-mono);
+
+  /* Five roles. Each is a size, a leading and a weight, and `--font-<role>`
+     packs the three into the front of the `font` shorthand: a rule writes
+     `font: var(--font-control) var(--font-ui)` and names the family inside
+     the shorthand, where nothing later in the rule can throw it away. */
+  --size-page-title: 1.75rem;
+  --leading-page-title: 2.125rem;
+  --weight-page-title: 600;
+  --font-page-title: var(--weight-page-title) var(--size-page-title) / var(--leading-page-title);
+  --size-section-title: 1.125rem;
+  --leading-section-title: 1.5rem;
+  --weight-section-title: 600;
+  --font-section-title: var(--weight-section-title) var(--size-section-title) / var(--leading-section-title);
+  --size-body: 1rem;
+  --leading-body: 1.5rem;
+  --weight-body: 400;
+  --font-body: var(--weight-body) var(--size-body) / var(--leading-body);
+  --size-control: 0.875rem;
+  --leading-control: 1.25rem;
+  --weight-control: 500;
+  --font-control: var(--weight-control) var(--size-control) / var(--leading-control);
+  --size-caption: 0.8125rem;
+  --leading-caption: 1.125rem;
+  --weight-caption: 400;
+  --font-caption: var(--weight-caption) var(--size-caption) / var(--leading-caption);
+
+  /* The older scale. Six steps, from a chip's label to a unit's number; a
+     size in the unmigrated part of the sheet is one of these or has a
+     reason of its own. Each slice that moves to a role above drops one. */
   --t-1: 0.8rem;
   --t-2: 0.9rem;
   --t-3: 1rem;
   --t-4: 1.15rem;
   --t-5: 1.4rem;
   --t-6: 1.9rem;
+
+  /* Four pixels a step. A length in a migrated rule is one of these. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  /* One height for a control, one for a dense row, one for a thumb. */
+  --control-h: 40px;
+  --control-h-compact: 32px;
+  --control-h-touch: 44px;
+
   color-scheme: dark;
   --bg: #151311;
   --panel: #1e1b18;
@@ -51,6 +106,14 @@
   --warn: #e0a94f;
   --err: #e4736b;
   --raise: 0 1px 0 rgba(0, 0, 0, 0.4), 0 14px 32px -14px rgba(0, 0, 0, 0.75);
+  /* The roles the palette answers to. A look sets its own ground, its own
+     ink and its own two accents; every look names all ten, so a theme can
+     later part a role from the value it borrows without touching a rule. */
+  --surface: var(--panel);
+  --surface-raised: var(--panel-2);
+  --text-muted: var(--muted);
+  --danger: var(--err);
+  --focus: var(--accent);
 }
 
 @media (prefers-color-scheme: light) {
@@ -69,6 +132,11 @@
     --warn: #9c6a15;
     --err: #b4433a;
     --raise: 0 1px 0 rgba(28, 26, 23, 0.06), 0 10px 24px -12px rgba(28, 26, 23, 0.35);
+    --surface: var(--panel);
+    --surface-raised: var(--panel-2);
+    --text-muted: var(--muted);
+    --danger: var(--err);
+    --focus: var(--accent);
   }
 }
 
@@ -87,6 +155,11 @@
   --warn: #e0a94f;
   --err: #e4736b;
   --raise: 0 1px 0 rgba(0, 0, 0, 0.4), 0 14px 32px -14px rgba(0, 0, 0, 0.75);
+  --surface: var(--panel);
+  --surface-raised: var(--panel-2);
+  --text-muted: var(--muted);
+  --danger: var(--err);
+  --focus: var(--accent);
 }
 :root[data-theme="daylight"] {
   color-scheme: light;
@@ -103,6 +176,11 @@
   --warn: #9c6a15;
   --err: #b4433a;
   --raise: 0 1px 0 rgba(28, 26, 23, 0.06), 0 10px 24px -12px rgba(28, 26, 23, 0.35);
+  --surface: var(--panel);
+  --surface-raised: var(--panel-2);
+  --text-muted: var(--muted);
+  --danger: var(--err);
+  --focus: var(--accent);
 }
 :root[data-theme="ember"] {
   color-scheme: dark;
@@ -119,6 +197,11 @@
   --warn: #f2b45a;
   --err: #f08070;
   --raise: 0 1px 0 rgba(0, 0, 0, 0.4), 0 14px 32px -14px rgba(0, 0, 0, 0.8);
+  --surface: var(--panel);
+  --surface-raised: var(--panel-2);
+  --text-muted: var(--muted);
+  --danger: var(--err);
+  --focus: var(--accent);
 }
 :root[data-theme="glaze"] {
   color-scheme: dark;
@@ -135,6 +218,11 @@
   --warn: #e6b15c;
   --err: #e78a80;
   --raise: 0 1px 0 rgba(0, 0, 0, 0.4), 0 14px 32px -14px rgba(0, 0, 0, 0.75);
+  --surface: var(--panel);
+  --surface-raised: var(--panel-2);
+  --text-muted: var(--muted);
+  --danger: var(--err);
+  --focus: var(--accent);
 }
 
 * {
@@ -214,9 +302,10 @@ p {
      their shape instead of spilling the buttons onto a line of their own. */
   display: flex;
   align-items: center;
-  gap: 1rem;
-  align-items: center;
-  padding: 0.85rem 1.25rem;
+  gap: var(--space-4);
+  /* The buttons are a control's height now, so the bar gives back what
+     they took and stands where it stood. */
+  padding: var(--space-2) var(--space-5);
   background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
@@ -434,22 +523,22 @@ p {
 }
 
 /*
- * A section label is a ruled line with a small monospace word on it. The rule
- * does the separating, so the word does not have to shout to be found: 
- * twelve tracked capitals on one screen carry no hierarchy at all.
+ * A section label says what it organizes, so it is read at the size of a
+ * heading and in the primary ink. It used to be a small dim word on a rule,
+ * smaller and quieter than the rows it was naming. The rule stays: that is
+ * what makes these labels a set, and it does the separating, so the word
+ * does not have to shout to be found.
  */
 .sectionTitle {
-  font-family: var(--mono);
-  font-size: 0.78rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  color: var(--muted);
-  padding-bottom: 0.35rem;
+  font: var(--font-section-title) var(--font-ui);
+  color: var(--text);
+  padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--line);
-  margin-bottom: 0.6rem;
+  margin-bottom: var(--space-3);
 }
 .sectionTitle .muted {
-  font-weight: 400;
+  font-size: var(--size-caption);
+  font-weight: var(--weight-caption);
 }
 
 .panel {
@@ -674,20 +763,28 @@ p {
 
 /* ---- seed bar ---------------------------------------------------------- */
 /*
- * The family is named after the shorthand, as it is on `.primary`: `font:
- * inherit` sets the family too, so a family named above it is thrown away
- * and the button comes out in the page's reading face rather than the
- * app's own voice.
+ * The quiet button. One declaration says the whole of its type, family
+ * included, so there is no shorthand left to throw the family away: that
+ * is what `font: inherit` after `font-family` used to do, and it brought
+ * the button out in the page's reading face rather than the app's voice.
+ *
+ * Flex rather than the button's own centering, because the same classes
+ * are worn by an anchor and by a `summary`, which do not center anything.
+ * The gap stands in for the space between a word and the mark beside it,
+ * which flex would otherwise drop.
  */
 .ghost {
-  padding: 0.25rem 0.7rem;
-  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: var(--control-h);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-family: var(--mono);
-  font-size: var(--t-1);
+  color: var(--text-muted);
+  font: var(--font-control) var(--font-ui);
   cursor: pointer;
 }
 @media (hover: hover) {
@@ -849,13 +946,12 @@ p {
   overflow: hidden;
 }
 .viewSwitch button {
-  padding: 0.45rem 1rem;
-  font-family: var(--mono);
-  background: var(--panel);
+  min-height: var(--control-h);
+  padding: 0 var(--space-4);
+  background: var(--surface);
   border: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 0.85rem;
+  color: var(--text-muted);
+  font: var(--font-control) var(--font-ui);
   cursor: pointer;
 }
 .viewSwitch button.on {
@@ -898,7 +994,7 @@ p {
   margin: 0;
 }
 /* Two labeled groups, each its own eyebrow over a row of small controls,
-   all the same height: the mono voice at the ghost button's size. */
+   all the same height, which is the control's own. */
 .libraryActions {
   display: flex;
   gap: 1.5rem;
@@ -922,11 +1018,6 @@ p {
 .libraryActions .primary,
 .libraryActions .fileButton,
 .libraryActions .ghost {
-  padding: 0.3rem 0.75rem;
-  font-family: var(--mono);
-  font-size: 0.85rem;
-  line-height: 1.4;
-  border-radius: 6px;
   white-space: nowrap;
 }
 .raceJoin {
@@ -1040,15 +1131,12 @@ p {
   margin: 0;
   max-width: 62ch;
 }
+/* A label wearing `ghost`, so the control's own rule gives it its type,
+   its height, its padding and its corner; what is left here is the file
+   input it hides and the ink, which is the primary's, not the ghost's. */
 .fileButton {
   position: relative;
-  display: inline-block;
-  padding: 0.4rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
   color: var(--text);
-  font: inherit;
-  cursor: pointer;
 }
 .fileButton input {
   position: absolute;
@@ -1361,12 +1449,13 @@ p {
   color: var(--muted);
   opacity: 0.5;
 }
-/* A button that is only its glyph: square, and no wider than one. */
+/* A button that is only its glyph: square, and no wider than one. The
+   square is the dense row's height, so the glyph stays small while what
+   the thumb has to land on does not. */
 .ghost.tiny.iconButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.25rem;
+  min-width: var(--control-h-compact);
+  min-height: var(--control-h-compact);
+  padding: var(--space-1);
   line-height: 0;
 }
 /* Your own seat, marked: the accent's wash behind it and a chip that says so. */
@@ -1457,14 +1546,17 @@ p {
 }
 
 .primary {
-  padding: 0.35rem 0.9rem;
-  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: var(--control-h);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
   border: 1px solid var(--accent);
   background: var(--accent);
   color: var(--on-accent);
-  font: inherit;
-  font-family: var(--mono);
-  font-size: var(--t-2);
+  font: var(--font-control) var(--font-ui);
   cursor: pointer;
 }
 @media (hover: hover) {
@@ -1482,26 +1574,24 @@ button:disabled,
 .ghost:disabled {
   background: none;
   border-color: var(--line);
-  color: var(--muted);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 .primary.big {
-  padding: 0.45rem 1.2rem;
-  font-size: 0.95rem;
-  margin-top: 0.6rem;
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--size-body);
+  margin-top: var(--space-3);
 }
+/*
+ * A dense row gives up the height, not the size of the word: a control in
+ * one is still a control, and a button nobody can read is not a saving.
+ */
 .ghost.small,
-.ghost.tiny {
-  font-size: 0.75rem;
-}
-.ghost.tiny {
-  padding: 0.12rem 0.45rem;
-}
-/* A small primary, for where it sits beside tiny ghosts: the same height, still the accent. */
+.ghost.tiny,
 .primary.tiny {
-  font-size: 0.75rem;
-  padding: 0.12rem 0.6rem;
-  border-radius: 4px;
+  min-height: var(--control-h-compact);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--size-control);
 }
 
 /*
@@ -1646,22 +1736,28 @@ button:disabled,
 .wrongName {
   border-color: var(--warn);
 }
+/*
+ * A field is a control, and it says so in one declaration: `font: inherit`
+ * under a family was the second place a shorthand threw the family away.
+ */
 .textInput,
 .rollInput {
-  font-family: var(--serif);
-  padding: 0.35rem 0.6rem;
-  background: var(--panel-2);
+  min-height: var(--control-h);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-raised);
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   color: var(--text);
-  font: inherit;
+  font: var(--font-control) var(--font-ui);
 }
 .textInput {
   flex: 1 1 16rem;
 }
+/* The pad's number is a figure being read across the table, not a label:
+   it keeps a display size of its own, and the machine's face. */
 .rollInput {
   width: 7rem;
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   font-weight: 300;
   font-size: 1.5rem;
   text-align: center;
@@ -1897,8 +1993,10 @@ button:disabled,
 .runStep .checklist {
   margin: 0.6rem 0;
 }
+/* Inline-level, so the step's action sits in the line rather than taking
+   one; the control's own centering stays. */
 .runStep .primary.big {
-  display: inline-block;
+  display: inline-flex;
 }
 /* The journal's Save once it has nothing left to do: a quiet word, not a disabled button. */
 .ghost.saved:disabled {
@@ -2247,14 +2345,15 @@ button:disabled,
   border-color: var(--warn);
 }
 
+/* A box with paragraphs in it is the author writing, so it reads at the
+   size prose is read at and in the face prose is set in. */
 .textInput.area {
   resize: vertical;
-  font-family: inherit;
-  line-height: 1.5;
+  font: var(--font-body) var(--font-prose);
 }
 .textInput.mono {
-  font-family: var(--mono);
-  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: var(--size-control);
 }
 .textInput.short {
   max-width: 7rem;
@@ -2937,7 +3036,7 @@ select.textInput {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 0.5rem 0.75rem;
+  gap: var(--space-2) var(--space-3);
   /* Whatever else the bar carries, the buttons keep to the far end. */
   margin-left: auto;
 }
@@ -2947,17 +3046,13 @@ select.textInput {
 .topbarEnd > * {
   flex: 0 0 auto;
 }
+/* An accent button in the bar is a button among buttons: the ghosts' size,
+   the accent's color. Both are the control role now, so all the bar still
+   says about them is that a label keeps to one line. */
 .topbarEnd .ghost,
 .topbarEnd .primary,
 .topbarEnd .packNow {
   white-space: nowrap;
-}
-/* An accent button in the bar is a button among buttons: the ghosts' size,
-   the accent's color. The way back from the Guide or the Designer should
-   not tower over what it sits beside. */
-.topbarEnd .primary {
-  padding: 0.25rem 0.7rem;
-  font-size: var(--t-1);
 }
 .topbar .brand {
   flex: 0 0 auto;
@@ -3064,14 +3159,14 @@ select.textInput {
    * tallest thing on the row. Change one and change the other.
    */
   :root {
-    --topbar: 2.9rem;
+    --topbar: 3rem;
   }
   .topbar {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.5rem 0.7rem;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3);
   }
   .topbar .brand {
     flex: 0 0 auto;
@@ -3084,13 +3179,9 @@ select.textInput {
     flex: 0 1 auto;
     min-width: 0;
     margin-left: auto;
-    padding: 0.25rem 0.5rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    font-size: var(--t-1);
   }
   .topbar .packNow[aria-current="page"] {
-    color: var(--muted);
+    color: var(--text-muted);
     border-color: var(--line-2);
   }
   /* Five things on one line at 360 pixels: nothing wraps, and a long label,
@@ -3113,17 +3204,19 @@ select.textInput {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .topbar .topbarEnd .ghost {
-    padding: 0.3rem 0.4rem;
-    font-size: 0.75rem;
+  /* Five things on one line at 360 pixels: the bar's controls take the
+     dense row's height and keep the control's size. A bar that has to fit
+     buys its room in pixels of height and padding, not in legibility. */
+  .topbar .topbarEnd .ghost,
+  .topbar .topbarEnd .primary,
+  .topbar .packNow {
+    min-height: var(--control-h-compact);
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--size-control);
   }
   .topbar .topbarEnd .accountMenu > summary {
-    padding: 0.3rem 0.4rem;
-    font-size: 0.75rem;
-  }
-  .topbar .packNow {
-    font-size: 0.75rem;
-    padding: 0.3rem 0.45rem;
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--size-control);
   }
 }
 @media (max-width: 520px) {
@@ -4500,17 +4593,10 @@ details.panel[open] > summary .sectionTitle::after {
 .docMenu > summary::-webkit-details-marker {
   display: none;
 }
+/* The same: a `summary` wearing `ghost`, with the ink of a control that
+   is not quiet. Everything else comes from `ghost`. */
 .summaryButton {
-  padding: 0.4rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
   color: var(--text);
-  background: transparent;
-  font: inherit;
-}
-.summaryButton.tiny {
-  font-size: 0.75rem;
-  padding: 0.12rem 0.45rem;
 }
 .docMenuPanel {
   position: absolute;
@@ -5031,7 +5117,6 @@ details.panel[open] > summary .sectionTitle::after {
   margin: 0;
 }
 .buttonLink {
-  display: inline-block;
   text-decoration: none;
 }
 
@@ -6111,7 +6196,8 @@ html[data-pip="controls"] body {
 .welcomeBar .topbarEnd a.primary,
 .welcomeCtas a {
   text-decoration: none;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
 }
 /* The hero's own call to action matches the bar's buttons rather than shouting. */
 .welcomeCtas a.primary {
