@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addressForPlay, addressOf, hrefFor, linkTo, runFromAddress, seatFromAddress } from "./route.ts";
+import { addressForPlay, addressOf, createSectionFromHash, hrefFor, linkTo, runFromAddress, seatFromAddress } from "./route.ts";
 
 /**
  * One address, two spellings: the hash the app reads, and the path the
@@ -25,6 +25,7 @@ describe("an address, as a hash and as a path", () => {
     ["#link/discord?c=ABCDEF", "/link/discord?c=ABCDEF"],
     ["#link/discord?verified=1", "/link/discord?verified=1"],
     ["#create", "/create"],
+    ["#create/tables", "/create/tables"],
   ];
 
   it("spells every section at the root where paths are on, and reads it back", () => {
@@ -85,6 +86,28 @@ describe("an address, as a hash and as a path", () => {
     expect(seatFromAddress("#seat/01ABC")).toBe("01ABC");
     expect(seatFromAddress("#run/01ABC")).toBeNull();
     expect(runFromAddress("#seat/01ABC")).toBeNull();
+  });
+});
+
+/**
+ * The Designer's section, in the address.
+ *
+ * The editor is six sections now, and which one is showing is worth a
+ * reload and a Back press, so it is spelled in the address like any other
+ * page. The bare `#create` is the Designer with nothing said about where
+ * in it, which the editor reads as its first section.
+ */
+describe("the Designer's section", () => {
+  it("reads the segment after create, and nothing said is the first section", () => {
+    expect(createSectionFromHash("#create/tables")).toBe("tables");
+    expect(createSectionFromHash("#create/publish")).toBe("publish");
+    expect(createSectionFromHash("#create")).toBe("");
+  });
+
+  it("is not any other head, and not a word that merely starts with one", () => {
+    for (const at of ["", "#packs", "#guide/start", "#createx", "#create/tables/extra", "#run/01ABC"]) {
+      expect(createSectionFromHash(at)).toBeNull();
+    }
   });
 });
 
