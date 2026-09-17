@@ -2847,8 +2847,25 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         const guildId = isRecord(body) && str(body["guildId"]) ? body["guildId"] : "";
         const guild = mine.find((g) => g.guildId === guildId);
         if (!guild) return json(422, { error: "that is not one of your servers" });
-        const link = isRecord(body) && str(body["link"]) ? body["link"].trim() : "";
-        const tokenOf = /[?&]t=([A-Za-z0-9_-]{1,200})$/.exec(link)?.[1];
+        /**
+         * The link this device sent, put through the one verifier every
+         * link the server stores goes through, the same as the snapshot
+         * route's: this copy's own origin and `/r/<id>` form, read by
+         * `liveLinkOf`; this very run; and a token that hashes to the
+         * run's own. Either half alone is short, since a token that hashes
+         * right can be hung off any address, and what is kept here the bot
+         * puts in a thread in somebody else's server, in the bot's voice.
+         *
+         * What is kept is the address `liveLinkOf` rebuilt, never the
+         * string that arrived. A link that fails any of this is not an
+         * error: the party opens on whatever the snapshot already handed
+         * over, and is refused in the usual words where there is none.
+         */
+        const raw = isRecord(body) && str(body["link"]) ? body["link"].trim() : "";
+        const sent = raw && raw.length <= MAX_LINK_CHARS ? liveLinkOf(raw, deps.appUrl ?? "") : null;
+        const token = sent ? (new URL(sent.link).searchParams.get("t") ?? "") : "";
+        const link =
+          sent && sent.sessionId === id && found.meta.publicTokenHash && hashToken(token) === found.meta.publicTokenHash ? sent.link : "";
         const opened = await openParty(
           { store, guilds, rest: deps.discord.rest ? await deps.discord.rest(true) : null, now },
           {
@@ -2858,9 +2875,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
             // From the app, the account that claimed the server is the
             // person asking: a claimant hosts there by definition.
             mayHost: true,
-            // Only a link that is this run's own is believed; anything else
-            // falls back to what the snapshot already handed over.
-            ...(tokenOf && found.meta.publicTokenHash && hashToken(tokenOf) === found.meta.publicTokenHash ? { link } : {}),
+            ...(link ? { link } : {}),
             ...(guild.threadMode === "private" ? { private: true } : {}),
           },
         );

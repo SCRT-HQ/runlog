@@ -4502,6 +4502,34 @@ describe("watch parties from the app", () => {
     expect(await guilds.party("01RUN", "g1")).not.toBeNull();
   });
 
+  /**
+   * A token that hashes right can be hung off any address, so the hash is
+   * only half the check: the address has to be one of this copy's own live
+   * links for this very run. What the bot would otherwise post in somebody
+   * else's server, in its own voice, is whatever the caller typed.
+   */
+  it("will not keep a link on another origin, whatever its token hashes to", async () => {
+    const { d, guilds, rest, link } = await ready();
+    const foreign = `https://elsewhere.test/r/01RUN?t=${link.split("?t=")[1]}`;
+    const { status } = await call(request("POST", "/api/sessions/01RUN/parties", { body: { guildId: "g1", link: foreign } }), d);
+    // It opens, on the link the snapshot already handed over.
+    expect(status).toBe(200);
+    expect(await guilds.liveLink("01RUN")).toBe(link);
+    expect((await guilds.party("01RUN", "g1"))?.link).toBe(link);
+    expect(JSON.stringify(rest.posts)).not.toContain("elsewhere.test");
+  });
+
+  it("refuses in the share-first words where that foreign link was all there was", async () => {
+    const { d, guilds, rest, link } = await ready();
+    await guilds.clearLiveLink("01RUN");
+    const foreign = `https://elsewhere.test/r/01RUN?t=${link.split("?t=")[1]}`;
+    const { status, body } = await call(request("POST", "/api/sessions/01RUN/parties", { body: { guildId: "g1", link: foreign } }), d);
+    expect(status).toBe(422);
+    expect(body["error"]).toBe("Share the run first: a watch party carries its live link.");
+    expect(await guilds.liveLink("01RUN")).toBeNull();
+    expect(rest.posts).toEqual([]);
+  });
+
   it("says why it would not, in the words the button shows", async () => {
     const { d, guilds } = await ready();
     await guilds.clearLiveLink("01RUN");
