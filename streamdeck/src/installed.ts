@@ -42,6 +42,25 @@ export function profilesDir(): string | null {
 }
 
 /**
+ * Whether the app's profile folder can be read at all.
+ *
+ * An empty list means two things at once: a machine where nothing has been
+ * imported yet, and a folder this cannot open. The first is a reason to
+ * build a profile and hand it over; the second is not, because nothing
+ * here would ever learn that the streamer already has one. So the two are
+ * told apart, and the caller falls back to offering once for the second.
+ */
+export function profilesReadable(dir: string | null = profilesDir()): boolean {
+  if (!dir) return false;
+  try {
+    readdirSync(dir);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Every profile in the folder, by name.
  *
  * Nothing here throws: the app may not be installed, the folder may not

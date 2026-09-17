@@ -388,6 +388,8 @@ export interface FramedPage {
   back: boolean;
   more: boolean;
   keys: Record<string, Key>;
+  /** Where the way back goes, for a page that does not turn from the frame's own cell. */
+  previous?: string;
 }
 
 /**
@@ -402,7 +404,8 @@ export interface FramedPage {
  *
  * Every one of these pages has a page after it, because the utility page
  * ends the profile, so every one spends the next cell. The utility page
- * itself spends the one back and no more.
+ * itself is not laid out here at all: it is the frame's `corner`, and it
+ * spends the one back and no more.
  *
  * A page that took no key at all ends the run. Neither frame here can
  * reach that, but this is exported, and a frame whose pools are all turn
@@ -450,17 +453,15 @@ export function framedPages(frame: Frame, drive: Key[], numbers: Key[]): FramedP
     if (!left || stuck) break;
   }
 
-  // The last page of every profile: the frame, the keys that are not about
-  // the run, and the way back. Nothing spills onto the numbers side, which
-  // leaves the page as sparse as what is on it.
+  // The last page of every profile, and the one page that is not the run's:
+  // no frame on it, the keys that are not about the run in the corner a
+  // hand ends at, and the way back in the other corner.
   const keys: Record<string, Key> = {};
-  for (const { key, at } of frame.fixed) keys[at] = key;
-  let u = 0;
-  for (const cell of frame.drive) {
-    if (cell === frame.turns.previous) continue;
-    if (u < UTILITY.length) keys[cell] = UTILITY[u++]!;
+  for (const [u, cell] of frame.corner.cells.entries()) {
+    const key = UTILITY[u];
+    if (key) keys[cell] = key;
   }
-  pages.push({ back: true, more: false, keys });
+  pages.push({ back: true, more: false, keys, previous: frame.corner.back });
   return pages;
 }
 
@@ -498,7 +499,7 @@ export function profile({ slug, device, name, keys, zones }: ProfileSpec, ids: (
   const turns = zones ? zones.frame.turns : { previous: at(0, columns), next: at(capacity - 1, columns) };
   // Both paths end on the utility page. A deck with no frame gets it as
   // one more cut page, so it pays for the way back like any other.
-  const cut = zones
+  const cut: FramedPage[] = zones
     ? framedPages(zones.frame, zones.drive, zones.numbers)
     : [...paginate(keys, capacity, true), { back: true, more: false, keys: UTILITY }].map((page) => ({
         back: page.back,
@@ -513,7 +514,10 @@ export function profile({ slug, device, name, keys, zones }: ProfileSpec, ids: (
     pageIds.push(id);
 
     const actions: Record<string, StoredAction> = {};
-    if (page.back) actions[turns.previous] = turn(ids(`${slug}/${device}/page/${index}/back`), "previous");
+    // A page with a cell of its own for the way back, which is the utility
+    // page on a framed deck, says so; every other page turns from the
+    // frame's cell.
+    if (page.back) actions[page.previous ?? turns.previous] = turn(ids(`${slug}/${device}/page/${index}/back`), "previous");
     for (const cell of ordered(page.keys)) {
       actions[cell] = entry(ids(`${slug}/${device}/page/${index}/key/${cell}`), page.keys[cell]!);
     }

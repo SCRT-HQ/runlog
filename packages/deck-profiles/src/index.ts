@@ -16,6 +16,7 @@ export {
   DIALS,
   FRAMES,
   UTILITY,
+  UTILITY_CORNER,
   isWarp,
   type Device,
   type DeviceId,
