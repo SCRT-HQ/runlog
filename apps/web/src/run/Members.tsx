@@ -29,6 +29,7 @@ import { useConfirm } from "../ui/useConfirm.tsx";
 import { newKeyQuestion } from "./watchKey.ts";
 import { watchPartyState, type WatchPartyState } from "./watchParty.ts";
 import { accountOf } from "./names.ts";
+import { SidePanel } from "./SidePanel.tsx";
 
 /** One mark in a member's row: what is plugged in, lit or not. */
 function ToolIcon({ lit, label, children }: { lit: boolean; label: string; children: ReactNode }) {
@@ -36,6 +37,16 @@ function ToolIcon({ lit, label, children }: { lit: boolean; label: string; child
     <span className={`toolIcon ${lit ? "lit" : "dim"}`} role="img" title={label} aria-label={label}>
       {children}
     </span>
+  );
+}
+
+/** A comparison reading for pending invitations, insensitive to server ordering and dates. */
+function pendingInviteReading(invites: Invite[]): string {
+  return JSON.stringify(
+    invites
+      .filter((invite) => !invite.accepted)
+      .map((invite) => [invite.token, invite.email, invite.role])
+      .sort((a, b) => a[0]!.localeCompare(b[0]!)),
   );
 }
 
@@ -274,6 +285,11 @@ export function Members({
   };
 
   const [invites, setInvites] = useState<Invite[]>([]);
+  const [inviteNews, setInviteNews] = useState<{
+    runId: string;
+    reading: string | null;
+    revision: number;
+  }>(() => ({ runId: run.runId, reading: null, revision: 0 }));
   const [people, setPeople] = useState<Person[]>([]);
   const [busy, setBusy] = useState(false);
   const [inviting, setInviting] = useState(false);
@@ -339,27 +355,57 @@ export function Members({
 
   const refresh = () => {
     if (!api || !owner) return;
-    void api.listInvites(run.runId).then(setInvites, () => {});
+    void api.listInvites(run.runId).then(
+      (next) => {
+        setInvites(next);
+        const reading = pendingInviteReading(next);
+        setInviteNews((previous) => {
+          // The first successful read establishes what was already here. It
+          // is hydration, not news, including when a remembered panel mounts
+          // folded. Only a later difference advances the panel's reading.
+          if (previous.runId !== run.runId || previous.reading === null) {
+            return { runId: run.runId, reading, revision: 0 };
+          }
+          if (previous.reading === reading) return previous;
+          return { runId: run.runId, reading, revision: previous.revision + 1 };
+        });
+      },
+      () => {},
+    );
     void api.people().then(setPeople, () => {});
   };
   useEffect(refresh, [api, owner, run.runId]);
 
+  const pending = invites.filter((i) => !i.accepted);
+
+  /**
+   * Only durable changes to who is here, or who has been asked, are news.
+   *
+   * The member array does not promise an order, so sort tuples rather than
+   * letting a reordered response light the fold. Invitation reads establish
+   * a baseline on first hydration, then advance a revision when later sorted
+   * pending tuples differ. Names and dates are deliberately absent: the
+   * things worth calling out here are a changed roster/role and a changed
+   * pending invitation. Reactions belong in the open body, and asks have
+   * their own panel and marker.
+   */
+  const peopleNews = JSON.stringify({
+    members: members.map((m) => [m.sub, m.role]).sort((a, b) => a[0]!.localeCompare(b[0]!)),
+    pendingRevision: inviteNews.runId === run.runId ? inviteNews.revision : 0,
+  });
   const heading = (
-    <summary>
-      <h3 className="sectionTitle">
-        People <span className="muted">at the table</span>
-      </h3>
-    </summary>
+    <>
+      People <span className="muted">at the table</span>
+    </>
   );
 
   if (!api) {
     return (
-      <details className="panel people">
-        {heading}
+      <SidePanel key={run.runId} runId={run.runId} panel="people" className="people" title={heading} defaultOpen news={peopleNews}>
         <div className="peopleBody">
           <p className="muted small">Sign in to share this {noun} with someone.</p>
         </div>
-      </details>
+      </SidePanel>
     );
   }
 
@@ -521,7 +567,6 @@ export function Members({
     </button>
   );
 
-  const pending = invites.filter((i) => !i.accepted);
   const react = (emoji: string) => {
     if (reactedAt > Date.now()) return;
     setReactedAt(Date.now() + 1000);
@@ -536,8 +581,7 @@ export function Members({
   const reached = run.role !== undefined;
 
   return (
-    <details className="panel people members" open>
-      {heading}
+    <SidePanel key={run.runId} runId={run.runId} panel="people" className="people members" title={heading} defaultOpen news={peopleNews}>
       <div className="peopleBody">
         {!reached && sync.available && !sync.enabled && (
           <p className="muted small">
@@ -764,6 +808,6 @@ export function Members({
         {dialog}
         {toast.node}
       </div>
-    </details>
+    </SidePanel>
   );
 }

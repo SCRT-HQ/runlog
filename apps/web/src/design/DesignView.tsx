@@ -6,7 +6,7 @@ import { Menu, MenuItem } from "../ui/Menu.tsx";
 import { PageHeader } from "../ui/PageHeader.tsx";
 import YAML from "yaml";
 import { parsePack, type Diagnostic, type Pack } from "@runlog/rules-schema";
-import { blankPack, DRAFT_ID, isBlank, type Draft } from "./draft.ts";
+import { blankPack, DRAFT_ID, isBlank, isPlaceholderId, type Draft } from "./draft.ts";
 import { loadDraft, saveDraft } from "../storage/db.ts";
 import { addressOf, createSectionFromHash, goTo } from "../route.ts";
 import { focusField } from "./fields.tsx";
@@ -237,7 +237,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
   const diagnostics: Diagnostic[] = result?.diagnostics ?? [];
   const errors = diagnostics.filter((d) => d.level === "error");
   const warnings = diagnostics.filter((d) => d.level === "warning");
-  const counts = useMemo(() => countBySection(diagnostics), [diagnostics]);
+  const counts = useMemo(() => countBySection(diagnostics, { droppedSignature }), [diagnostics, droppedSignature]);
 
   if (!draft) {
     return (
@@ -296,7 +296,13 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
         title={label}
         lead={
           <>
-            {str(draft.title) || "Untitled"} · {str(draft.id)} · v{str(draft.version)}{" "}
+            {str(draft.title) || "Untitled"} · {str(draft.id)}{" "}
+            {isPlaceholderId(draft.id) && (
+              <>
+                <Badge tone="warn">Placeholder</Badge>{" "}
+              </>
+            )}
+            · v{str(draft.version)}{" "}
             {/* The chips are the way into Test: a count nobody can act on
                 where it stands is a count that gets read and left. */}
             <button type="button" className={`chip ${errors.length === 0 ? "ok" : "warn"} chipLink`} onClick={() => show("test")}>
@@ -428,7 +434,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
       )}
 
       <div className="designBody">
-        {section === "overview" && <Overview {...props} />}
+        {section === "overview" && <Overview {...props} focus={wanted} />}
         {section === "tables" && <TablesSection {...props} focus={wanted} />}
         {section === "flow" && <FlowSection {...props} />}
         {section === "modes" && <ModesSection {...props} />}
@@ -447,6 +453,10 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
             pack={result?.ok ? result.pack : null}
             loads={errors.length === 0}
             droppedSignature={droppedSignature}
+            onEditIdentity={() => {
+              show("overview");
+              setWanted("id");
+            }}
           />
         )}
       </div>

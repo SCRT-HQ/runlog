@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { Diagnostic } from "@runlog/rules-schema";
 import { describe } from "../describe.ts";
-import { at, AreaField, NumberField, RowActions, SelectField, TextField } from "../fields.tsx";
+import { help } from "../help.ts";
+import { at, AreaField, fieldDomId, NumberField, RowActions, SelectField, TextField } from "../fields.tsx";
 import { coverage, coverageSummary } from "../draft.ts";
 import { num, str, type SectionProps } from "./shared.ts";
 
@@ -112,6 +113,7 @@ function TableEditor({
             <SelectField
               label="Resolution"
               path={`tables.${id}.resolution`}
+              schemaPath="tables.*.resolution"
               help={describe("tables.*.resolution")}
               diagnostics={diagnostics}
               value={str(table.resolution)}
@@ -127,6 +129,7 @@ function TableEditor({
               <TextField
                 label="Roll"
                 path={`tables.${id}.roll`}
+                schemaPath="tables.*.roll"
                 mono
                 help={describe("tables.*.roll")}
                 diagnostics={diagnostics}
@@ -154,6 +157,7 @@ function TableEditor({
                     <NumberField
                       label="From"
                       path={`tables.${id}.entries[${i}].range`}
+                      schemaPath="tables.*.entries[].range"
                       diagnostics={diagnostics}
                       value={num((entry.range as number[] | undefined)?.[0], 1)}
                       onChange={(v) => edit(["tables", id, "entries", i, "range"], [v, num((entry.range as number[] | undefined)?.[1], v)])}
@@ -161,6 +165,8 @@ function TableEditor({
                     <NumberField
                       label="To"
                       path={`tables.${id}.entries[${i}].rangeTo`}
+                      diagnosticPath={`tables.${id}.entries[${i}].range`}
+                      schemaPath="tables.*.entries[].range"
                       diagnostics={diagnostics}
                       value={num((entry.range as number[] | undefined)?.[1], 1)}
                       onChange={(v) => edit(["tables", id, "entries", i, "range"], [num((entry.range as number[] | undefined)?.[0], v), v])}
@@ -181,37 +187,13 @@ function TableEditor({
                 <NumberField
                   label="Points"
                   path={`tables.${id}.entries[${i}].points`}
+                  schemaPath="tables.*.entries[].points"
                   help={i === 0 ? describe("tables.*.entries[].points") : undefined}
                   diagnostics={diagnostics}
                   value={num(entry.points, 0)}
                   onChange={(v) => edit(["tables", id, "entries", i, "points"], v > 0 ? v : undefined)}
                 />
-                {requirements.length > 0 && (
-                  <div className="field">
-                    <span className="fieldLabel">Needs</span>
-                    <div className="chipRow">
-                      {requirements.map((r) => {
-                        const needs = Array.isArray(entry.needs) ? (entry.needs as string[]) : [];
-                        const on = needs.includes(r.id);
-                        return (
-                          <button
-                            key={r.id}
-                            type="button"
-                            className={`chip toggleChip ${on ? "on" : ""}`}
-                            aria-pressed={on}
-                            onClick={() => {
-                              const next = on ? needs.filter((n) => n !== r.id) : [...needs, r.id];
-                              edit(["tables", id, "entries", i, "needs"], next.length > 0 ? next : undefined);
-                            }}
-                          >
-                            {r.label || r.id}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {i === 0 && <span className="fieldHelp">{describe("tables.*.entries[].needs")}</span>}
-                  </div>
-                )}
+                <NeedsField tableId={id} entryIndex={i} entry={entry} requirements={requirements} diagnostics={diagnostics} edit={edit} />
               </div>
               <RowActions>
                 <button
@@ -260,6 +242,82 @@ function TableEditor({
         </>
       )}
     </div>
+  );
+}
+
+function NeedsField({
+  tableId,
+  entryIndex,
+  entry,
+  requirements,
+  diagnostics,
+  edit,
+}: {
+  tableId: string;
+  entryIndex: number;
+  entry: Record<string, unknown>;
+  requirements: Array<{ id: string; label: string }>;
+  diagnostics: Diagnostic[];
+  edit: SectionProps["edit"];
+}) {
+  const instanceId = useId();
+  const needs = Array.isArray(entry.needs) ? (entry.needs as string[]) : [];
+  if (requirements.length === 0 && needs.length === 0) return null;
+
+  const path = `tables.${tableId}.entries[${entryIndex}].needs`;
+  const mine = at(diagnostics, path);
+  const hasError = mine.some((diagnostic) => diagnostic.level === "error");
+  const helpId = `${instanceId}-help`;
+  const noteId = (index: number) => `${instanceId}-note-${index}`;
+  const known = new Set(requirements.map((requirement) => requirement.id));
+  const choices = [
+    ...requirements.map((requirement) => ({ ...requirement, missing: false })),
+    ...[...new Set(needs)].filter((need) => !known.has(need)).map((need) => ({ id: need, label: need, missing: true })),
+  ];
+
+  return (
+    <fieldset
+      className={`field entryNeeds ${hasError ? "error" : mine.length > 0 ? "warn" : ""}`}
+      id={fieldDomId(path)}
+      data-path={path}
+      aria-describedby={[helpId, ...mine.map((_, index) => noteId(index))].join(" ")}
+      aria-invalid={hasError ? true : undefined}
+      tabIndex={-1}
+    >
+      <legend className="fieldLabel">Needs</legend>
+      <div className="chipRow">
+        {choices.map((choice) => {
+          const on = needs.includes(choice.id);
+          return (
+            <button
+              key={choice.id}
+              type="button"
+              className={`chip toggleChip ${on ? "on" : ""}`}
+              aria-pressed={on}
+              title={choice.missing ? "This requirement no longer exists. Press to remove it." : undefined}
+              onClick={() => {
+                const next = on ? needs.filter((need) => need !== choice.id) : [...needs, choice.id];
+                edit(["tables", tableId, "entries", entryIndex, "needs"], next.length > 0 ? next : undefined);
+              }}
+            >
+              {choice.label || choice.id}
+            </button>
+          );
+        })}
+      </div>
+      <span className="fieldHelp" id={helpId}>
+        {help("tables.*.entries[].needs")}
+      </span>
+      {mine.map((diagnostic, index) => (
+        <span key={index} className={`fieldNote ${diagnostic.level}`} id={noteId(index)}>
+          {diagnostic.message}
+        </span>
+      ))}
+      <details className="fieldReference">
+        <summary>Schema reference</summary>
+        <p>{describe("tables.*.entries[].needs")}</p>
+      </details>
+    </fieldset>
   );
 }
 

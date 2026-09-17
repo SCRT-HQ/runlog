@@ -93,14 +93,22 @@ function scrolledTo(y: number) {
 
 const at0 = "2026-09-14T00:00:00.000Z";
 
-/** A run of this pack, saved and not yet played. */
-function saved(runId: string): StoredRun {
+/** A saved run of this pack, optionally in its first unit with a clock. */
+function saved(runId: string, withClock = false): StoredRun {
+  const started: RunEvent = { id: `e-${runId}`, t: "RunStarted", at: at0, packId: kiln.id, packVersion: kiln.version, runId, mode };
+  const events: RunEvent[] = withClock
+    ? [
+        started,
+        { id: `u-${runId}`, t: "UnitEntered", at: at0 },
+        { id: `c-${runId}`, t: "ClockStarted", at: at0, clock: "u1:unit", kind: "stopwatch", label: `${kiln.vocabulary.unit.one} 1` },
+      ]
+    : [started];
   return {
     runId,
     packId: kiln.id,
     packVersion: kiln.version,
     packTitle: kiln.title,
-    events: [{ id: `e-${runId}`, t: "RunStarted", at: at0, packId: kiln.id, packVersion: kiln.version, runId, mode }] as RunEvent[],
+    events,
     updatedAt: at0,
     role: "owner",
   };
@@ -115,9 +123,9 @@ function keeping(): RunStore {
   return { ...memoryRunStore(), keeps: true };
 }
 
-async function screen(opts: { store?: RunStore } = {}): Promise<HTMLElement> {
+async function screen(opts: { store?: RunStore; withClock?: boolean } = {}): Promise<HTMLElement> {
   const store = opts.store ?? memoryRunStore();
-  await store.saveRun(saved("run1"));
+  await store.saveRun(saved("run1", opts.withClock));
   store.setActiveRunFor(kiln.id, "run1");
   const { container } = render(
     <SyncContext.Provider value={sync}>
@@ -127,6 +135,32 @@ async function screen(opts: { store?: RunStore } = {}): Promise<HTMLElement> {
   await flush();
   return container;
 }
+
+describe("the run header", () => {
+  it("groups its data ahead of Flow and keeps the working clock ahead of the menu", async () => {
+    const root = await screen({ withClock: true });
+    const margin = root.querySelector(".columns.run > .margin")!;
+    const head = margin.querySelector(":scope > .runHead")!;
+    const flow = margin.querySelector(":scope > .stageFlow")!;
+
+    expect([...head.children].map((child) => child.className)).toEqual(["stageNo", "stagePack", "clocks", "runMenuBtn"]);
+    expect(head.nextElementSibling).toBe(flow);
+
+    const menu = head.querySelector<HTMLButtonElement>(".runMenuBtn")!;
+    const pause = head.querySelector<HTMLButtonElement>('button[aria-label="Pause"]')!;
+    expect(pause.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(pause);
+    await flush();
+    const resume = head.querySelector<HTMLButtonElement>('button[aria-label="Resume"]')!;
+    expect(resume).toBeTruthy();
+    expect(resume.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(resume);
+    await flush();
+    expect(head.querySelector('button[aria-label="Pause"]')).toBeTruthy();
+  });
+});
 
 /** The rail's tab whose word is this one. */
 function tab(root: HTMLElement, word: string): HTMLButtonElement {

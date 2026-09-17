@@ -74,7 +74,8 @@ export function FlowSection({ draft, diagnostics, edit }: SectionProps) {
                 {step.kind === "manual" && (
                   <CheckField
                     label="Closes the unit"
-                    help="Finishing this step closes the unit too: its checklist is the honor check, and its Done offers the next unit or finishing the run. A flow with such a step needs no closing step of its own."
+                    path={`phases[${i}].steps[${j}].closesUnit`}
+                    diagnostics={diagnostics}
                     value={step.closesUnit === true}
                     onChange={(v) => edit(["phases", i, "steps", j, "closesUnit"], v ? true : undefined)}
                   />
