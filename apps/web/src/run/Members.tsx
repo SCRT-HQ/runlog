@@ -39,15 +39,15 @@ function ToolIcon({ lit, label, children }: { lit: boolean; label: string; child
  */
 function InviteDialog({
   people,
-  redistributable,
+  tablePlays,
   noun,
   onSend,
   onClose,
 }: {
   /** Addresses this account has played with, offered as the address is typed. */
   people: Person[];
-  /** Whether the pack travels with the invitation. */
-  redistributable: boolean;
+  /** Whether one copy of the pack seats the table; false means an invitation to play is an invitation to watch. */
+  tablePlays: boolean;
   /** What the pack calls a run. */
   noun: string;
   /** Ask the server. It resolves when the invitation went, and rejects with what to say. */
@@ -65,12 +65,17 @@ function InviteDialog({
     field.current?.focus();
   }, []);
 
+  // The author's word: where a table does not play off one copy, an
+  // invitation to play is an invitation to watch, because there is no
+  // seat to give.
+  const asked: "player" | "viewer" = tablePlays ? role : "viewer";
+
   const send = () => {
     const to = email.trim();
     if (!to || busy) return;
     setBusy(true);
     setNote(null);
-    void onSend(to, role)
+    void onSend(to, asked)
       .then(onClose, (error: unknown) =>
         setNote(error instanceof Error && error.message ? error.message : "That did not send. Try again in a moment."),
       )
@@ -81,10 +86,10 @@ function InviteDialog({
     <div className="veil" role="presentation">
       <section ref={sheet} className="panel termsGate inviteDialog" role="dialog" aria-modal="true" aria-labelledby="inviteTitle">
         <h2 id="inviteTitle">Invite someone</h2>
-        {!redistributable && (
+        {!tablePlays && (
           <p className="muted small">
-            This pack is marked not for redistribution, so its text does not travel with the invitation: whoever you invite needs their own
-            copy of the pack to open the {noun}.
+            This pack is one copy each, so its text does not travel with the invitation: whoever you invite needs their own copy of the pack
+            to play the {noun}. They can watch without one.
           </p>
         )}
         <div className="inviteForm">
@@ -112,10 +117,23 @@ function InviteDialog({
                 </option>
               ))}
           </datalist>
-          <select value={role} onChange={(e) => setRole(e.target.value === "viewer" ? "viewer" : "player")} aria-label="Role">
-            <option value="player">plays</option>
-            <option value="viewer">watches</option>
-          </select>
+          <span className="inviteRoles">
+            <label>
+              <input
+                type="radio"
+                name="inviteRole"
+                value="player"
+                checked={asked === "player"}
+                disabled={!tablePlays}
+                onChange={() => setRole("player")}
+              />
+              <span>Plays</span>
+            </label>
+            <label>
+              <input type="radio" name="inviteRole" value="viewer" checked={asked === "viewer"} onChange={() => setRole("viewer")} />
+              <span>Watches</span>
+            </label>
+          </span>
         </div>
         {note && <p className="muted small">{note}</p>}
         <div className="padRow">
@@ -628,7 +646,7 @@ export function Members({
         )}
         {liveNote && <p className="muted small">{liveNote}</p>}
         {inviting && (
-          <InviteDialog people={people} redistributable={pack.license.redistributable} noun={noun} onSend={invite} onClose={closeInvite} />
+          <InviteDialog people={people} tablePlays={pack.license.tablePlays} noun={noun} onSend={invite} onClose={closeInvite} />
         )}
         {dialog}
         {toast.node}

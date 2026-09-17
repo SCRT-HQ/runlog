@@ -65,6 +65,8 @@ export function LibraryView({
   onReplace,
   onJoinRace,
   onContinueLast,
+  seats,
+  onTakeSeat,
 }: {
   packs: LibraryPack[];
   activeId: string;
@@ -86,6 +88,9 @@ export function LibraryView({
   onJoinRace?: (code: string) => void;
   /** Open the run this account touched last, on this device or another. */
   onContinueLast?: (runId?: string) => void;
+  /** Runs this account plays without holding the pack: a seat rather than a copy. */
+  seats?: StoredRun[];
+  onTakeSeat?: (run: StoredRun) => void;
 }) {
   useTitle("Packs");
   const [raceCode, setRaceCode] = useState("");
@@ -304,6 +309,30 @@ export function LibraryView({
           </section>
         );
       })}
+
+      {seats && seats.length > 0 && onTakeSeat && (
+        <section className="panel packCard">
+          <h2>Seats</h2>
+          <p className="muted small">Runs you play on somebody else's copy of the pack.</p>
+          <div className="runList">
+            {seats.map((r) => (
+              <div key={r.runId} className="runRow">
+                <button className="runRowMain" onClick={() => onTakeSeat(r)}>
+                  <strong>{r.packTitle ?? r.packId}</strong>
+                  <span className="muted small runRowMeta">
+                    <span>last played {onDay(r.updatedAt)} · you play</span>
+                  </span>
+                </button>
+                <span className="runRowActions">
+                  <button className="ghost tiny" onClick={() => onTakeSeat(r)}>
+                    Take your seat
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/*
         The other shelf. Under the packs because a pack is what a person

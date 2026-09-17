@@ -5150,6 +5150,15 @@ a.plan {
 .inviteDialog .inviteForm {
   align-items: center;
 }
+.inviteDialog .inviteRoles {
+  display: flex;
+  gap: 0.6rem;
+}
+.inviteDialog .inviteRoles label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
 .inviteDialog .padRow {
   justify-content: flex-end;
   margin-top: 0;

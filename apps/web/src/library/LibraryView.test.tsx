@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { StoredPack } from "../storage/db.ts";
+import type { StoredPack, StoredRun } from "../storage/db.ts";
 import { LibraryView, type LibraryPack } from "./LibraryView.tsx";
 
 /**
@@ -65,6 +65,24 @@ const paint = (packs: LibraryPack[], withReplace = true) =>
       onSyncToggle={noop}
       onMarketplace={noop}
       {...(withReplace ? { onReplace: noop } : {})}
+    />,
+  );
+
+/** The shelf with everything it needs, and the props a case is about said over it. */
+const renderLibrary = (over: Partial<Parameters<typeof LibraryView>[0]>) =>
+  render(
+    <LibraryView
+      packs={[]}
+      activeId=""
+      onOpen={noop}
+      onContinue={noop}
+      onStartAnother={noop}
+      onForgetRun={noop}
+      onForgetPack={noop}
+      onFile={noop}
+      onSyncToggle={noop}
+      onMarketplace={noop}
+      {...over}
     />,
   );
 
@@ -133,5 +151,25 @@ describe("a Stream Deck profile from a library pack", () => {
     } finally {
       press.mockRestore();
     }
+  });
+});
+
+describe("a seat on the shelf", () => {
+  it("lists a run this account plays but has no pack for, as a seat", () => {
+    const taken: string[] = [];
+    const seat: StoredRun = {
+      runId: "r1",
+      packId: "com.example.kiln",
+      packVersion: "1",
+      packTitle: "The Long Kiln",
+      events: [],
+      updatedAt: "",
+      role: "player",
+    };
+    renderLibrary({ packs: [], seats: [seat], onTakeSeat: (r) => taken.push(r.runId) });
+
+    expect(screen.getByText("The Long Kiln")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Take your seat" }));
+    expect(taken).toEqual(["r1"]);
   });
 });
