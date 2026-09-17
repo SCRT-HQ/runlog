@@ -98,6 +98,10 @@ export interface Guild {
   cardMode?: CardMode;
   /** What kind of thread a run opens in when the command does not say: public (the default), or private to the host and whoever they add. */
   threadMode?: ThreadMode;
+  /** Whether this server opens a watch party on its own when the owner starts a shared run; absent means off. */
+  watchParties?: WatchPartyMode;
+  /** The pack ids it opens one for, where `watchParties` is "packs". */
+  watchPackIds?: string[];
 }
 
 export type CardMode = "follow" | "pinned";
@@ -166,11 +170,84 @@ export interface GuildRun {
   endedAt?: string;
 }
 
+/** Why a watch party closed: the run ended, somebody closed it, or Discord lost the card. */
+export type PartyClose = "ended" | "byHand" | "gone";
+
+/**
+ * A watch party: a thread in a claimed server that follows a run the app
+ * hosts. One per server per run. Nothing here drives the run; the card is
+ * drawn from the snapshot the run's own page writes, and the thread has
+ * no presses on it.
+ */
+export interface WatchParty {
+  sessionId: string;
+  guildId: string;
+  channelId: string;
+  threadId: string;
+  /** The message the card is on, edited in place; absent until the first post lands. */
+  cardMessageId?: string;
+  /** The run's live link, as the app handed it over. */
+  link: string;
+  openedBy: string;
+  openedByName: string;
+  openedAt: string;
+  closedAt?: string;
+  closedFor?: PartyClose;
+  /**
+   * The server's `/setup cards` choice when the party opened. A party
+   * posts nothing between cards, so both modes edit the one card in
+   * place; `pinned` pins it in the thread as well.
+   */
+  cardMode?: CardMode;
+  /** When the card was last edited. The tick is measured from this. */
+  editedAt?: string;
+  /** Set while a job holds this tick's trailing edit: the moment it will make it. */
+  tickAt?: string;
+  /**
+   * What the host has handed out since this party opened, newest last.
+   *
+   * A handout is a gesture on the socket and nothing else: it never
+   * touches the log and never reaches a snapshot, so a party that was not
+   * open at the time has nothing to read it from and carries none.
+   */
+  handouts?: Array<{ id: string; title: string }>;
+  updatedAt: string;
+}
+
+/** Whether a server opens a watch party on its own: never, on every run of the owner's, or on runs of the packs it chose. */
+export type WatchPartyMode = "off" | "every" | "packs";
+
 export interface GuildStore {
   putGuildRun(run: GuildRun): Promise<void>;
   guildRun(sessionId: string): Promise<GuildRun | null>;
   /** The run whose thread this is, for a command typed in it. */
   guildRunByThread(threadId: string): Promise<GuildRun | null>;
+
+  putParty(party: WatchParty): Promise<void>;
+  /** This server's party on this run, open or closed; null where it never had one. */
+  party(sessionId: string, guildId: string): Promise<WatchParty | null>;
+  /** Every party on this run, oldest first. */
+  partiesOf(sessionId: string): Promise<WatchParty[]>;
+  /** The party whose thread this is, for a command typed in it. */
+  partyByThread(threadId: string): Promise<WatchParty | null>;
+  /**
+   * Take this tick's trailing edit, so two jobs do not both wait for it.
+   * True where this caller took it; false where one is taken already, or
+   * the party is gone.
+   */
+  claimPartyTick(sessionId: string, guildId: string, tickAt: string): Promise<boolean>;
+  /**
+   * The run's live link, as the app handed it over with a snapshot.
+   *
+   * Kept because a party's card carries the link and the session row keeps
+   * only the token's hash, so there is nothing to build one from here.
+   * The same bargain `GuildRun.liveToken` strikes: the bot puts this very
+   * token in a thread in plain text.
+   */
+  putLiveLink(sessionId: string, link: string, at: string): Promise<void>;
+  liveLink(sessionId: string): Promise<string | null>;
+  /** Forget it: the run stopped being shared, so the link is dead. */
+  clearLiveLink(sessionId: string): Promise<void>;
 
   putLinkCode(link: LinkCode): Promise<void>;
   /** The code's row, and the row is gone: a code is spent by being read. Null when missing or past its time. */
@@ -201,6 +278,8 @@ export interface GuildStore {
       channelId?: string | null;
       cardMode?: CardMode | null;
       threadMode?: ThreadMode | null;
+      watchParties?: WatchPartyMode | null;
+      watchPackIds?: string[] | null;
     },
   ): Promise<Guild | null>;
   /** The server's row, its pointer, and every pack in its vault; how many rows went. */
@@ -298,6 +377,19 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
   };
   const objectKey = (guildId: string, packId: string, format: string) => `guilds/${guildId}/packs/${packId}.${format}`;
 
+  const partyKey = (sessionId: string, guildId: string) => ({ pk: `DISCORD#PARTY#${sessionId}`, sk: `GUILD#${guildId}` });
+  const partyThreadKey = (threadId: string) => ({ pk: `DISCORD#PARTYTHREAD#${threadId}`, sk: "PARTY" });
+  /** The server's own list of its parties, so releasing the server sweeps them. */
+  const partyPointer = (guildId: string, sessionId: string) => ({ pk: `GUILD#${guildId}`, sk: `PARTY#${sessionId}` });
+  const liveKey = (sessionId: string) => ({ pk: `DISCORD#LIVE#${sessionId}`, sk: "LINK" });
+  /** A live link outlives no run by long: a month, the same as an ended run's Discord rows. */
+  const LINK_DAYS = 30;
+  const partyOf = (item: Record<string, unknown> | undefined): WatchParty | null => {
+    if (!item || typeof item["sessionId"] !== "string" || typeof item["guildId"] !== "string") return null;
+    const { pk: _pk, sk: _sk, kind: _kind, ...rest } = item;
+    return rest as unknown as WatchParty;
+  };
+
   const guildOf = (item: Record<string, unknown> | undefined): Guild | null => {
     if (!item || typeof item["guildId"] !== "string" || typeof item["ownerSub"] !== "string") return null;
     return {
@@ -308,6 +400,12 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
       ...(str(item["name"]) ? { name: item["name"] as string } : {}),
       ...(str(item["hostRoleId"]) ? { hostRoleId: item["hostRoleId"] as string } : {}),
       ...(str(item["channelId"]) ? { channelId: item["channelId"] as string } : {}),
+      ...(str(item["cardMode"]) === "pinned" ? { cardMode: "pinned" as const } : {}),
+      ...(str(item["threadMode"]) === "private" ? { threadMode: "private" as const } : {}),
+      ...(item["watchParties"] === "every" || item["watchParties"] === "packs" ? { watchParties: item["watchParties"] } : {}),
+      ...(Array.isArray(item["watchPackIds"])
+        ? { watchPackIds: (item["watchPackIds"] as unknown[]).filter((p): p is string => typeof p === "string") }
+        : {}),
     };
   };
   const packOf = (item: Record<string, unknown> | undefined): GuildPackMeta | null => {
@@ -413,6 +511,30 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
       await deleteRun(run);
       rows += 3;
     }
+    const partyPointers = await ddb.send(
+      new QueryCommand({
+        TableName: table,
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+        ExpressionAttributeValues: { ":pk": `GUILD#${guildId}`, ":sk": "PARTY#" },
+      }),
+    );
+    for (const pointer of partyPointers.Items ?? []) {
+      const sessionId = str(pointer["sessionId"]);
+      const found = sessionId
+        ? partyOf((await ddb.send(new GetCommand({ TableName: table, Key: partyKey(sessionId, guildId) }))).Item)
+        : null;
+      if (!found) continue;
+      await ddb.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            { Delete: { TableName: table, Key: partyKey(found.sessionId, guildId) } },
+            { Delete: { TableName: table, Key: partyThreadKey(found.threadId) } },
+            { Delete: { TableName: table, Key: partyPointer(guildId, found.sessionId) } },
+          ],
+        }),
+      );
+      rows += 3;
+    }
     await ddb.send(
       new TransactWriteCommand({
         TransactItems: [
@@ -449,6 +571,81 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
       const pointer = (await ddb.send(new GetCommand({ TableName: table, Key: threadKey(threadId) }))).Item;
       const sessionId = str(pointer?.["sessionId"]);
       return sessionId ? runOf((await ddb.send(new GetCommand({ TableName: table, Key: runKey(sessionId) }))).Item) : null;
+    },
+    async putParty(p) {
+      await ddb.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            { Put: { TableName: table, Item: { ...partyKey(p.sessionId, p.guildId), kind: "discord-party", ...p } } },
+            {
+              Put: {
+                TableName: table,
+                Item: { ...partyThreadKey(p.threadId), kind: "discord-partythread", sessionId: p.sessionId, guildId: p.guildId },
+              },
+            },
+            {
+              Put: {
+                TableName: table,
+                Item: { ...partyPointer(p.guildId, p.sessionId), kind: "discord-partypointer", sessionId: p.sessionId },
+              },
+            },
+          ],
+        }),
+      );
+    },
+    async party(sessionId, guildId) {
+      return partyOf((await ddb.send(new GetCommand({ TableName: table, Key: partyKey(sessionId, guildId) }))).Item);
+    },
+    async partiesOf(sessionId) {
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+          ExpressionAttributeValues: { ":pk": `DISCORD#PARTY#${sessionId}`, ":sk": "GUILD#" },
+        }),
+      );
+      return (out.Items ?? [])
+        .map(partyOf)
+        .filter((p): p is WatchParty => p !== null)
+        .sort((a, b) => a.openedAt.localeCompare(b.openedAt) || a.guildId.localeCompare(b.guildId));
+    },
+    async partyByThread(threadId) {
+      const pointer = (await ddb.send(new GetCommand({ TableName: table, Key: partyThreadKey(threadId) }))).Item;
+      const sessionId = str(pointer?.["sessionId"]);
+      const guildId = str(pointer?.["guildId"]);
+      if (!sessionId || !guildId) return null;
+      return partyOf((await ddb.send(new GetCommand({ TableName: table, Key: partyKey(sessionId, guildId) }))).Item);
+    },
+    async claimPartyTick(sessionId, guildId, tickAt) {
+      try {
+        await ddb.send(
+          new UpdateCommand({
+            TableName: table,
+            Key: partyKey(sessionId, guildId),
+            UpdateExpression: "SET tickAt = :tickAt",
+            ConditionExpression: "attribute_exists(pk) AND attribute_not_exists(tickAt)",
+            ExpressionAttributeValues: { ":tickAt": tickAt },
+          }),
+        );
+        return true;
+      } catch (error) {
+        if ((error as { name?: string }).name === "ConditionalCheckFailedException") return false;
+        throw error;
+      }
+    },
+    async putLiveLink(sessionId, link, at) {
+      await ddb.send(
+        new PutCommand({
+          TableName: table,
+          Item: { ...liveKey(sessionId), kind: "discord-live", link, at, expiresAt: toEpoch(at) + LINK_DAYS * 86400 },
+        }),
+      );
+    },
+    async liveLink(sessionId) {
+      return str((await ddb.send(new GetCommand({ TableName: table, Key: liveKey(sessionId) }))).Item?.["link"]) ?? null;
+    },
+    async clearLiveLink(sessionId) {
+      await ddb.send(new DeleteCommand({ TableName: table, Key: liveKey(sessionId) }));
     },
     async putLinkCode(link) {
       await ddb.send(
@@ -590,7 +787,7 @@ export function dynamoGuilds({ table, bucket }: { table: string; bucket: string 
         sets.push("#name = :name");
         values[":name"] = patch.name;
       }
-      for (const field of ["hostRoleId", "channelId", "cardMode", "threadMode"] as const) {
+      for (const field of ["hostRoleId", "channelId", "cardMode", "threadMode", "watchParties", "watchPackIds"] as const) {
         const v = patch[field];
         if (v === undefined) continue;
         if (v === null) removes.push(field);

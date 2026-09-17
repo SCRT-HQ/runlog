@@ -1,4 +1,14 @@
-import type { ClaimCode, Connection, Guild, GuildPackMeta, GuildRun, GuildStore, LinkCode, VerifyState } from "../lib/handlers/guilds";
+import type {
+  ClaimCode,
+  Connection,
+  Guild,
+  GuildPackMeta,
+  GuildRun,
+  GuildStore,
+  LinkCode,
+  VerifyState,
+  WatchParty,
+} from "../lib/handlers/guilds";
 import type { DiscordMessage, DiscordOAuth, DiscordRest } from "../lib/handlers/discord/rest";
 
 /** Discord, as a list of what was asked of it: threads made, messages posted, in order. */
@@ -139,6 +149,7 @@ export function memoryGuilds(): GuildStore & {
   guilds: Map<string, Guild>;
   vault: Map<string, { meta: GuildPackMeta; source: string }>;
   runs: Map<string, GuildRun>;
+  parties: Map<string, WatchParty>;
 } {
   const runs = new Map<string, GuildRun>();
   const codes = new Map<string, LinkCode>();
@@ -148,6 +159,9 @@ export function memoryGuilds(): GuildStore & {
   const owners = new Map<string, string>();
   const guilds = new Map<string, Guild>();
   const vault = new Map<string, { meta: GuildPackMeta; source: string }>();
+  const parties = new Map<string, WatchParty>();
+  const liveLinks = new Map<string, string>();
+  const partyKey = (sessionId: string, guildId: string) => `${sessionId}/${guildId}`;
   const packsOf = (guildId: string) => [...vault.entries()].filter(([k]) => k.startsWith(`${guildId}/`));
   const emptyVault = (guildId: string) => {
     const packs = packsOf(guildId);
@@ -162,6 +176,11 @@ export function memoryGuilds(): GuildStore & {
       runs.delete(r.sessionId);
       rows += 3;
     }
+    for (const p of [...parties.values()]) {
+      if (p.guildId !== guildId) continue;
+      parties.delete(partyKey(p.sessionId, p.guildId));
+      rows += 2;
+    }
     guilds.delete(guildId);
     return rows + 2;
   };
@@ -172,6 +191,7 @@ export function memoryGuilds(): GuildStore & {
     guilds,
     vault,
     runs,
+    parties,
     async putGuildRun(run) {
       runs.set(run.sessionId, structuredClone(run));
     },
@@ -182,6 +202,38 @@ export function memoryGuilds(): GuildStore & {
     async guildRunByThread(threadId) {
       const r = [...runs.values()].find((x) => x.threadId === threadId);
       return r ? structuredClone(r) : null;
+    },
+    async putParty(p) {
+      parties.set(partyKey(p.sessionId, p.guildId), structuredClone(p));
+    },
+    async party(sessionId, guildId) {
+      const p = parties.get(partyKey(sessionId, guildId));
+      return p ? structuredClone(p) : null;
+    },
+    async partiesOf(sessionId) {
+      return [...parties.values()]
+        .filter((p) => p.sessionId === sessionId)
+        .sort((a, b) => a.openedAt.localeCompare(b.openedAt) || a.guildId.localeCompare(b.guildId))
+        .map((p) => structuredClone(p));
+    },
+    async partyByThread(threadId) {
+      const p = [...parties.values()].find((x) => x.threadId === threadId);
+      return p ? structuredClone(p) : null;
+    },
+    async claimPartyTick(sessionId, guildId, tickAt) {
+      const p = parties.get(partyKey(sessionId, guildId));
+      if (!p || p.tickAt) return false;
+      p.tickAt = tickAt;
+      return true;
+    },
+    async putLiveLink(sessionId, link) {
+      liveLinks.set(sessionId, link);
+    },
+    async liveLink(sessionId) {
+      return liveLinks.get(sessionId) ?? null;
+    },
+    async clearLiveLink(sessionId) {
+      liveLinks.delete(sessionId);
     },
     async putLinkCode(link) {
       codes.set(link.code, { ...link });
@@ -257,7 +309,7 @@ export function memoryGuilds(): GuildStore & {
       const g = guilds.get(guildId);
       if (!g) return null;
       if (patch.name !== undefined) g.name = patch.name;
-      for (const field of ["hostRoleId", "channelId", "cardMode", "threadMode"] as const) {
+      for (const field of ["hostRoleId", "channelId", "cardMode", "threadMode", "watchParties", "watchPackIds"] as const) {
         if (patch[field] === undefined) continue;
         if (patch[field] === null) delete g[field];
         else (g as unknown as Record<string, unknown>)[field] = patch[field];
