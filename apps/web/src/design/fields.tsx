@@ -73,7 +73,11 @@ export function focusField(path: string): boolean {
     });
   if (!found) return false;
   found.scrollIntoView?.({ block: "center" });
-  const control = found.querySelector<HTMLElement>("input, select, textarea");
+  const control =
+    found.querySelector<HTMLElement>("input, select, textarea") ??
+    (found.matches("input, select, textarea") ? found : null) ??
+    found.querySelector<HTMLElement>("button, [tabindex]") ??
+    (found.matches("button, [tabindex]") ? found : null);
   control?.focus();
   return true;
 }

@@ -401,7 +401,7 @@ export function Members({
 
   if (!api) {
     return (
-      <SidePanel runId={run.runId} panel="people" className="people" title={heading} defaultOpen news={peopleNews}>
+      <SidePanel key={run.runId} runId={run.runId} panel="people" className="people" title={heading} defaultOpen news={peopleNews}>
         <div className="peopleBody">
           <p className="muted small">Sign in to share this {noun} with someone.</p>
         </div>
@@ -581,7 +581,7 @@ export function Members({
   const reached = run.role !== undefined;
 
   return (
-    <SidePanel runId={run.runId} panel="people" className="people members" title={heading} defaultOpen news={peopleNews}>
+    <SidePanel key={run.runId} runId={run.runId} panel="people" className="people members" title={heading} defaultOpen news={peopleNews}>
       <div className="peopleBody">
         {!reached && sync.available && !sync.enabled && (
           <p className="muted small">

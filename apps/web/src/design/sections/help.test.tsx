@@ -66,4 +66,63 @@ describe("editing help in the real sections", () => {
     expect(computeAccessibleDescription(needs)).toBe(help("tables.*.entries[].needs"));
     expect(screen.getByRole("button", { name: "Wheel" }).getAttribute("aria-pressed")).toBe("true");
   });
+
+  it("keeps a stale need visible and repairable after its requirement is renamed or removed", () => {
+    const edit = vi.fn();
+    const draft = blankPack();
+    draft.requires = [{ id: "wheel", label: "Wheel", optional: true }];
+    draft.tables = {
+      "weather.today": {
+        title: "Weather",
+        resolution: "lookup",
+        roll: "d6",
+        entries: [{ id: "one", range: [1, 6], text: "Make a piece.", needs: ["wheel"] }],
+      },
+    };
+    const { rerender } = render(<TablesSection draft={draft} edit={edit} diagnostics={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: /Weather.*lookup/ }));
+
+    const renamed = { ...draft, requires: [{ id: "spoke", label: "Spoke", optional: true }] };
+    rerender(
+      <TablesSection
+        draft={renamed}
+        edit={edit}
+        diagnostics={[
+          {
+            level: "warning",
+            code: "ref/unknown-requirement",
+            path: "tables.weather.today.entries[0].needs",
+            message: "needs unknown requirement wheel",
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "wheel" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Spoke" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("group", { name: "Needs" }).getAttribute("aria-invalid")).toBeNull();
+
+    const removed = { ...draft, requires: [] };
+    rerender(
+      <TablesSection
+        draft={removed}
+        edit={edit}
+        diagnostics={[
+          {
+            level: "error",
+            code: "ref/unknown-requirement",
+            path: "tables.weather.today.entries[0].needs",
+            message: "needs unknown requirement wheel",
+          },
+        ]}
+      />,
+    );
+    const needs = screen.getByRole("group", { name: "Needs" });
+    expect(needs.getAttribute("data-path")).toBe("tables.weather.today.entries[0].needs");
+    expect(needs.getAttribute("aria-invalid")).toBe("true");
+    expect(computeAccessibleDescription(needs)).toContain(help("tables.*.entries[].needs"));
+    expect(computeAccessibleDescription(needs)).toContain("needs unknown requirement wheel");
+
+    fireEvent.click(screen.getByRole("button", { name: "wheel" }));
+    expect(edit).toHaveBeenLastCalledWith(["tables", "weather.today", "entries", 0, "needs"], undefined);
+  });
 });

@@ -142,6 +142,35 @@ describe("the People disclosure", () => {
     expect(panel().open).toBe(false);
   });
 
+  it("takes a new run's saved fold and does not carry unread news across the switch", async () => {
+    localStorage.setItem("runlog:disclosure.v1:panel:run-1:people", "shut");
+    localStorage.setItem("runlog:disclosure.v1:panel:run-2:people", "open");
+    current.api = apiWith();
+    const { rerender } = render(view(signedIn));
+    await flush();
+    expect(panel().open).toBe(false);
+
+    rerender(
+      view(
+        signedIn,
+        runOf({
+          members: [
+            { sub: "user_ME", name: "Nate", role: "owner", joinedAt: "2026-01-01T00:00:00Z" },
+            { sub: "user_KEL", name: "Kel", role: "viewer", joinedAt: "2026-09-17T00:00:00Z" },
+          ],
+        }),
+      ),
+    );
+    expect(screen.getByRole("img", { name: "new" })).toBeTruthy();
+
+    rerender(view(signedIn, runOf({ runId: "run-2" })));
+    await flush();
+    expect(panel().open).toBe(true);
+
+    press();
+    expect(screen.queryByRole("img", { name: "new" })).toBeNull();
+  });
+
   it("does not call existing invitations new when a remembered-folded panel first hydrates", async () => {
     localStorage.setItem("runlog:disclosure.v1:panel:run-1:people", "shut");
     current.api = apiWith({

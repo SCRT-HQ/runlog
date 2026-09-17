@@ -278,6 +278,49 @@ describe("the editor in six sections", () => {
     expect(document.activeElement).toBe(fieldNamed("Title")!.querySelector("input"));
   });
 
+  it("takes a stale need in a dotted table to its repair control when no requirements remain", async () => {
+    const draft = blankPack();
+    draft.requires = [];
+    draft.tables = {
+      "weather.today": {
+        title: "Weather",
+        resolution: "lookup",
+        roll: "d6",
+        entries: [{ id: "one", range: [1, 6], text: "Make a piece.", needs: ["wheel"] }],
+      },
+    };
+    await mount(draft);
+    await act(async () => {
+      sectionItem(container, "Test").click();
+    });
+    const row = Array.from(container.querySelectorAll<HTMLButtonElement>(".problemRow")).find((button) =>
+      (button.textContent ?? "").startsWith("tables.weather.today.entries[0].needs"),
+    )!;
+    expect(row).toBeDefined();
+
+    await act(async () => {
+      row.click();
+    });
+    await settle();
+
+    expect(sectionItem(container, "Tables").getAttribute("aria-current")).toBe("page");
+    const needs = container.querySelector<HTMLElement>('[data-path="tables.weather.today.entries[0].needs"]')!;
+    expect(needs).not.toBeNull();
+    expect([needs, needs.querySelector("button")]).toContain(document.activeElement);
+
+    await act(async () => {
+      needs.querySelector<HTMLButtonElement>("button")!.click();
+    });
+    await act(async () => {
+      sectionItem(container, "Test").click();
+    });
+    expect(
+      Array.from(container.querySelectorAll<HTMLButtonElement>(".problemRow")).some((button) =>
+        (button.textContent ?? "").startsWith("tables.weather.today.entries[0].needs"),
+      ),
+    ).toBe(false);
+  });
+
   it("keeps a draft the schema rejects exactly as it was through every section", async () => {
     // A version that is a number, and a key the editor has no control for:
     // neither is touched by anything, including moving between sections.

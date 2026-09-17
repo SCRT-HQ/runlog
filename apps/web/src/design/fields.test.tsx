@@ -5,7 +5,7 @@ import { computeAccessibleDescription, computeAccessibleName } from "dom-accessi
 import type { Diagnostic } from "@runlog/rules-schema";
 import { describe as schemaDescription } from "./describe.ts";
 import { help } from "./help.ts";
-import { CheckField, Field, fieldDomId } from "./fields.tsx";
+import { CheckField, Field, fieldDomId, focusField } from "./fields.tsx";
 
 afterEach(cleanup);
 
@@ -14,6 +14,26 @@ function diagnostic(level: Diagnostic["level"], path: string, message: string): 
 }
 
 describe("a Designer field", () => {
+  it("focuses an exact input first and can land on a synthetic field group", () => {
+    render(
+      <>
+        <div id={fieldDomId("title")} data-path="title">
+          <input aria-label="Title" />
+        </div>
+        <fieldset id={fieldDomId("tables.weather.today.entries[0].needs")} data-path="tables.weather.today.entries[0].needs" tabIndex={-1}>
+          <legend>Needs</legend>
+          <button type="button">wheel</button>
+        </fieldset>
+      </>,
+    );
+
+    expect(focusField("title")).toBe(true);
+    expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Title" }));
+
+    expect(focusField("tables.weather.today.entries[0].needs")).toBe(true);
+    expect([screen.getByRole("group", { name: "Needs" }), screen.getByRole("button", { name: "wheel" })]).toContain(document.activeElement);
+  });
+
   it("has an exact label and gives the input the task-focused help", () => {
     render(
       <Field label="Id" path="id" help="Old caller help">
