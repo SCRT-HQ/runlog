@@ -140,8 +140,10 @@ describe("a profile built from the run the deck is on", () => {
     expect(text).toContain("marks");
     expect(text).toContain("stock");
     expect(text).toContain("com.example.setups.starter");
-    // What the Stream Deck app will call it in the streamer's own list.
-    expect(text).toContain("Ember Trail");
+    // What the Stream Deck app will call it in the streamer's own list:
+    // the pack's title with the mark every profile Runlog makes carries,
+    // so this one and a shipped one are one name rather than two.
+    expect(text).toContain('"Name":"Ember Trail (Runlog)"');
   });
 
   it("lays out the pack the snapshot publishes, not the moves the run happens to be offering", () => {
@@ -250,6 +252,11 @@ describe("a profile built from the pack file", () => {
     expect(keyed.setups.map((s) => s.id)).toEqual(["com.example.setups.starter"]);
     // A remembered warp is a Command key, the way a shipped one is.
     expect(keyed.commands.map((s) => s.id)).toEqual(["com.example.setups.camp"]);
+  });
+
+  it("names it the way every other profile Runlog makes is named", () => {
+    const built = buildForPack({ id: "com.example.ember-trail", title: "Ember Trail", moves: { "push-on": {} } } as never, 2)!;
+    expect(new TextDecoder().decode(built.bytes)).toContain('"Name":"Ember Trail (Runlog)"');
   });
 
   it("says in the log which of the two sources the setups came from", () => {
