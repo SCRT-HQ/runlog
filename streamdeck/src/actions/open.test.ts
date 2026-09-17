@@ -24,9 +24,9 @@ vi.mock("@elgato/streamdeck", () => ({
   action: () => (target: unknown) => target,
   SingletonAction: class {},
 }));
-// The profile target writes a file beside the plugin and hands it over. The
-// build itself is `profiles-on-demand.ts`; what this holds is that the key
-// reaches it and that what comes back goes out as the file's own URL.
+// This key writes no file. The mock is here so that a key set to the
+// profile hand-over, which moved to Install a profile, would be caught
+// writing one rather than reaching the real filesystem.
 vi.mock("node:fs", () => ({
   mkdirSync: () => {},
   writeFileSync: (file: string) => {
@@ -141,19 +141,11 @@ describe("pressing the open key", () => {
     expect(alerts).toEqual(["alert"]);
   });
 
-  it("builds this pack's profile and hands it to the Stream Deck app", async () => {
-    await press("profile");
-    // Not an address: a file laid out for the deck the key is on, offered
-    // to whatever opens a `.streamDeckProfile`.
-    expect(mock.wrote).toHaveLength(1);
-    expect(mock.opened).toHaveLength(1);
-    expect(mock.opened[0]!.startsWith("streamdeck://app/openfile/")).toBe(true);
-    expect(decodeURIComponent(mock.opened[0]!)).toContain("demo-xl.streamDeckProfile");
-  });
-
-  it("alerts for the profile until a snapshot names the pack", async () => {
+  it("hands no profile over: that is Install a profile's key now", async () => {
     const alerts: string[] = [];
-    mock.state = { runs: [{ id: "s1" }], pinned: null, snapshot: null };
+    // A key on a profile imported before the hand-over left this one. It
+    // writes nothing and opens nothing, and says so the way an unset key
+    // does.
     await press("profile", alerts);
     expect(mock.wrote).toEqual([]);
     expect(mock.opened).toEqual([]);

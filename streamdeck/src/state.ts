@@ -408,8 +408,14 @@ export function undoFace(state: DeckState): Face {
   return undo ? { title: "Undo", tone: "undo" } : { title: "Undo", tone: "dim" };
 }
 
-/** Where the Open key points, chosen in its settings. */
-export type OpenTarget = "run" | "guide" | "rules" | "newrun" | "dock" | "profile";
+/**
+ * Where the Open key points, chosen in its settings.
+ *
+ * Every one of them is a page. Handing the Stream Deck app a profile to
+ * import was on this list once; Install a profile is a key of its own, and
+ * a picker never offers what a dedicated key does.
+ */
+export type OpenTarget = "run" | "guide" | "rules" | "newrun" | "dock";
 
 /** What each page is called on the key, the guide aside. */
 const OPEN_LABELS: Record<Exclude<OpenTarget, "guide">, string> = {
@@ -417,7 +423,6 @@ const OPEN_LABELS: Record<Exclude<OpenTarget, "guide">, string> = {
   rules: "Rules",
   newrun: "A new run",
   dock: "The dock",
-  profile: "This pack's profile",
 };
 
 /**
@@ -428,18 +433,18 @@ const OPEN_LABELS: Record<Exclude<OpenTarget, "guide">, string> = {
  * The rest name something the deck is holding, so they say what is missing
  * the way the rest of the deck does.
  *
- * `profile` is gated like `run` and says something else beneath: it hands
- * the Stream Deck app a file rather than putting a page in a browser.
+ * A key set to a target this no longer reads, which on a profile installed
+ * before the profile hand-over moved to its own key is `profile`, says
+ * what an unset one says rather than drawing nothing at all.
  */
 export function openFace(state: DeckState, target?: OpenTarget): Face {
-  if (!target) return { title: "Set up", tone: "dim" };
+  if (!target || (target !== "guide" && !Object.hasOwn(OPEN_LABELS, target))) return { title: "Set up", tone: "dim" };
   if (target === "guide") return { title: "Guide", tone: "deck", when: "in a browser" };
   // `newrun` opens `/create`, which needs no run to already be held, so it
   // is answered beside `guide` rather than waiting on `common()`.
   if (target === "newrun") return { title: OPEN_LABELS.newrun, tone: "deck", when: "in a browser" };
   const c = common(state);
   if (c) return c;
-  if (target === "profile") return { title: OPEN_LABELS.profile, tone: "deck", when: "to import" };
   return { title: OPEN_LABELS[target], tone: "deck", when: "in a browser" };
 }
 
