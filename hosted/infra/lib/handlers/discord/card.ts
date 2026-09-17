@@ -20,12 +20,13 @@ import {
   subjectTitle,
   unitClockFor,
   type Agenda,
+  type LiveSnapshot,
   type Pending,
   type RunEvent,
   type RunState,
 } from "@runlog/engine";
 import type { Pack } from "@runlog/rules-schema";
-import type { GuildRun } from "../guilds.js";
+import type { GuildRun, PartyClose } from "../guilds.js";
 import { REACTIONS } from "./reactions.js";
 import { button, ButtonStyle, row, select, type Embed } from "./types.js";
 
@@ -453,4 +454,74 @@ export function lineFor(
 export function messageFor(line: string | null, mark: Mark | null): { content?: string; embeds?: unknown[] } | null {
   if (!line && !mark) return null;
   return { ...(line ? { content: line } : {}), ...(mark ? { embeds: [{ description: mark.text, color: mark.color }] } : {}) };
+}
+
+/** How many log lines a party's card carries. */
+export const PARTY_LOG_LINES = 3;
+
+/**
+ * The card a watch party shows.
+ *
+ * The same shape as the bot's own table card, drawn out of the run's live
+ * snapshot rather than out of a pack and a log, because a run the app
+ * hosts is played on a pack this server was never given: the snapshot is
+ * what the run already tells any watcher, and it is the whole of what a
+ * party may say. No presses: a party follows a run, it does not drive one.
+ */
+export function partyCardFor(input: {
+  snapshot: LiveSnapshot;
+  link: string;
+  openedByName: string;
+  /** What the host handed out since the party opened, newest last; see `WatchParty.handouts`. */
+  handouts?: ReadonlyArray<{ id: string; title: string }>;
+  closed?: PartyClose;
+}): Card {
+  const { snapshot: s, link, openedByName, handouts = [], closed } = input;
+  const run = s.words.run.toLowerCase();
+  const title = [s.runName, s.packTitle, s.mode].filter((p): p is string => Boolean(p)).join(" · ");
+  const embed: Embed = {
+    title: clip(title, 256),
+    description:
+      s.status === "ended"
+        ? `Ended · ${s.ending ?? "finished"}`
+        : s.unit === 0
+          ? "Not begun."
+          : `${s.words.unit} ${s.unit}${s.where ? ` · **${s.where}**` : ""}`,
+    fields: [],
+    footer: { text: clip(`Opened by ${openedByName} · Runlog`, 2048) },
+    color: s.status === "ended" ? COLORS.closed : COLORS.begins,
+  };
+  const fields = embed.fields!;
+  if (s.latest) fields.push({ name: "Latest", value: clip(`${s.latest.where}: ${s.latest.text}`) });
+  const board: Array<{ name: string; value: string }> = [
+    ...s.subjects
+      .filter((x) => !x.finalized || x.states.length > 0)
+      .slice(-6)
+      .map((x) => ({
+        name: x.name,
+        value: [x.type ?? "undeclared", x.states.length > 0 ? `[${x.states.join(" ")}]` : null]
+          .filter((p): p is string => p !== null)
+          .join(" · "),
+      })),
+    ...s.counters.map((c) => ({ name: c.label, value: String(c.value) })),
+    ...s.resources.map((r) => ({ name: r.label, value: `${r.value}${r.max !== undefined ? ` / ${r.max}` : ""}` })),
+  ];
+  for (const b of board) fields.push({ name: clip(b.name, 256), value: clip(b.value) || "-", inline: true });
+  if (s.standings.length > 0)
+    fields.push({ name: "Standings", value: clip(s.standings.map((x) => `#${x.place} ${x.name} · ${x.points}`).join("\n")) });
+  const log = s.log.slice(0, PARTY_LOG_LINES).map((l) => `**${l.where}** ${l.text}${l.hitName ? ` → ${l.hitName}` : ""}`);
+  if (log.length > 0) fields.push({ name: "The log", value: clip(log.join("\n")) });
+  // What the host handed the table, which is not in the log and not in
+  // the snapshot: the party heard it happen and says so.
+  if (handouts.length > 0) fields.push({ name: "Handed out", value: clip(handouts.map((h) => h.title).join("\n")) });
+  fields.push({ name: "Watch it live", value: clip(link) });
+  if (closed && closed !== "ended")
+    fields.push({ name: "The party is closed", value: `The ${run} went on without it. This card is where it stood.` });
+  return { embeds: [embed], components: [] };
+}
+
+/** The one line a party posts in its thread when the run it followed ends. */
+export function partyClosingLine(snapshot: LiveSnapshot): string {
+  const run = snapshot.words.run.toLowerCase();
+  return `The ${run} is over${snapshot.ending ? `: ${snapshot.ending}` : ""}. The card above is where it finished.`;
 }
