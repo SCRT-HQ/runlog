@@ -15,8 +15,19 @@ export type SyncNews =
   | { t: "pulled"; kind: Kind; ids: string[] }
   /** Something at the table of a watched run that is not a move; see the socket's `Gesture`. */
   | { t: "gesture"; id: string; kind: string; data: Record<string, unknown>; from?: string; at: string }
-  /** A deck of this account's own pressing something; see the socket's `Drive`. */
-  | { t: "drive"; from: string; run: string; seq: number; ref: string; press: string; move?: string; answer?: Record<string, unknown> };
+  /** A deck of this account's own, or a seated member, pressing something; see the socket's `Drive`. */
+  | {
+      t: "drive";
+      from: string;
+      run: string;
+      seq: number;
+      ref: string;
+      press: string;
+      seat?: string;
+      who?: string;
+      move?: string;
+      answer?: Record<string, unknown>;
+    };
 
 type Listener = (news: SyncNews) => void;
 

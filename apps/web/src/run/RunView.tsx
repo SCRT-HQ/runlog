@@ -77,6 +77,7 @@ import { liveLinkOf } from "../live/route.ts";
 import { entryTextOf, paperOf, raceOf, snapshotOf } from "../live/snapshot.ts";
 import { offerOf, type OfferInput } from "./offer.ts";
 import { takePress, type Verdict } from "./takePress.ts";
+import { seatingOf } from "./seats.ts";
 import { isEmpty, tidy, type ControlProfile } from "../control/profile.ts";
 import { chose, chosenFrom, forTool, setupsHere, withChosen, type ChosenSetup } from "../control/setups.ts";
 import { builtins } from "../control/builtin.ts";
@@ -294,7 +295,9 @@ export function RunView({
    * A run shared by link keeps a snapshot on the server for anyone whose
    * device may not hold the pack. A run with a deck on it keeps one for a
    * different reason: the deck has no engine and reads the offer from
-   * here. Neither is the other's business, so either is enough.
+   * here. A run with somebody else playing it keeps one for a third: a
+   * seat has neither the pack nor an engine and plays off the snapshot.
+   * None of the three is the others' business, so any of them is enough.
    */
   const decks = useAttachedDecks(run.record?.runId ?? null);
   // Whose decks, not just how many: the toast below names them, and the
@@ -302,7 +305,18 @@ export function RunView({
   // toast, rather than down with the rest of the attached-tool state.
   const deckSubs = useAttachedDeckSubs(run.record?.runId ?? null);
   const shared = Boolean(!remote && run.record && run.record.role !== "viewer" && (run.record.shared || liveLinkOf(run.record.runId)));
-  const publishing = shared || decks > 0;
+  const seated = (run.record?.members ?? []).some((m) => m.role === "player" && m.sub !== me);
+  const publishing = shared || decks > 0 || seated;
+
+  /**
+   * Who is at this table, for a press that came from one of them. Rebuilt
+   * with the run's members and its state, because who may act this unit
+   * moves with the rotation.
+   */
+  const seating = useMemo(
+    () => seatingOf(pack, run.state ?? null, run.record?.members ?? [], run.record?.members?.find((m) => m.role === "owner")?.sub ?? ""),
+    [pack, run.state, run.record?.members],
+  );
 
   /**
    * The table is told when a deck arrives, since nothing else on screen
@@ -581,7 +595,7 @@ export function RunView({
     }, 800);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, publishing, decks, run.events, pack, raceView.race, run.record?.control, run.record?.setup, currentOffer]);
+  }, [api, publishing, decks, seated, run.events, pack, raceView.race, run.record?.control, run.record?.setup, currentOffer]);
 
   /**
    * Starting a race, or joining one: an ordinary run of this pack with the
@@ -778,7 +792,7 @@ export function RunView({
       let threw = false;
       const verdict = takePress(
         news,
-        { seq: run.events.length, offer: currentOffer, seen: driveSeen.current },
+        { seq: run.events.length, offer: currentOffer, seen: driveSeen.current, seating },
         {
           primary: () => {
             const id = currentOffer.primary?.id;
@@ -915,7 +929,7 @@ export function RunView({
         timer: window.setTimeout(() => settleVerdict(eventCount.current), threw ? DICE_VERDICT_MS : HELD_VERDICT_MS),
       };
     });
-  }, [run, currentOffer, due, sync, pack, settleVerdict, offeredSetups, carryOn, settled, closing, closingStep]);
+  }, [run, currentOffer, due, sync, pack, settleVerdict, offeredSetups, carryOn, settled, closing, closingStep, seating]);
   const seen = useRef<number | null>(null);
   // How many answers this view has given, and how many it had given when
   // the last receipt was issued: what a step that came back with the run

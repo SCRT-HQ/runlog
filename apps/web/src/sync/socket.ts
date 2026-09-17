@@ -79,6 +79,10 @@ export interface Drive {
   seq: number;
   ref: string;
   press: string;
+  /** Who pressed it, where a seated member did rather than a deck of this account's: the name, for display. */
+  seat?: string;
+  /** The account behind that name, as the server read it off the token it verified. */
+  who?: string;
   move?: string;
   answer?: Record<string, unknown>;
 }
@@ -98,6 +102,8 @@ export function parseDrive(data: unknown): Drive | null {
       seq: m["seq"],
       ref: m["ref"],
       press: m["press"],
+      ...(typeof m["seat"] === "string" ? { seat: m["seat"] } : {}),
+      ...(typeof m["who"] === "string" ? { who: m["who"] } : {}),
       ...(typeof m["move"] === "string" ? { move: m["move"] } : {}),
       ...(m["answer"] && typeof m["answer"] === "object" ? { answer: m["answer"] as Record<string, unknown> } : {}),
     };
