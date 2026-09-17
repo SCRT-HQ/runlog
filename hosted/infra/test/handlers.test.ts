@@ -4565,3 +4565,38 @@ describe("watch parties from the app", () => {
     expect(opened.body["error"]).toBe("only the owner opens a watch party");
   });
 });
+
+describe("a server's watch party setting", () => {
+  it("is set and cleared by the account that claimed it, and nobody else", async () => {
+    const guilds = memoryGuilds();
+    const d = deps(memoryStore(), { guilds, discord: { applicationId: "app", publicKey: "00".repeat(32), token: async () => null } });
+    await guilds.claimGuild({ guildId: "g1", name: "The Kiln Room", ownerSub: "user_1", claimedAt: "2026-09-06T12:00:00.000Z" });
+    const set = await call(request("PATCH", "/api/guilds/g1", { body: { watchParties: "packs", watchPackIds: ["com.example.kiln"] } }), d);
+    expect(set.status).toBe(200);
+    expect(set.body["guild"]).toMatchObject({ watchParties: "packs", watchPackIds: ["com.example.kiln"] });
+    const off = await call(request("PATCH", "/api/guilds/g1", { body: { watchParties: "off" } }), d);
+    expect(off.body["guild"]).not.toHaveProperty("watchParties");
+    const stranger = await call(request("PATCH", "/api/guilds/g1", { body: { watchParties: "every" }, token: "guest" }), d);
+    expect(stranger.body).toEqual({ found: false });
+  });
+
+  it("refuses a pack id longer than one can be, and saves nothing", async () => {
+    const guilds = memoryGuilds();
+    const d = deps(memoryStore(), { guilds, discord: { applicationId: "app", publicKey: "00".repeat(32), token: async () => null } });
+    await guilds.claimGuild({ guildId: "g1", ownerSub: "user_1", claimedAt: "2026-09-06T12:00:00.000Z" });
+    const body = { watchParties: "packs", watchPackIds: ["com.example.kiln", `com.example.${"k".repeat(300)}`] };
+    const out = await call(request("PATCH", "/api/guilds/g1", { body }), d);
+    expect(out.status).toBe(422);
+    expect(out.body["error"]).toBe("that is not a pack id");
+    expect(await guilds.guild("g1")).not.toHaveProperty("watchPackIds");
+  });
+
+  it("refuses a mode it does not know", async () => {
+    const guilds = memoryGuilds();
+    const d = deps(memoryStore(), { guilds, discord: { applicationId: "app", publicKey: "00".repeat(32), token: async () => null } });
+    await guilds.claimGuild({ guildId: "g1", ownerSub: "user_1", claimedAt: "2026-09-06T12:00:00.000Z" });
+    const out = await call(request("PATCH", "/api/guilds/g1", { body: { watchParties: "sometimes" } }), d);
+    expect(out.status).toBe(422);
+    expect(out.body["error"]).toBe("watchParties: off, every or packs");
+  });
+});

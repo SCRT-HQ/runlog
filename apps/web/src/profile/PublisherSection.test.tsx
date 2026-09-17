@@ -104,6 +104,7 @@ function fakeApi(overrides: Partial<Api>): Api {
     claimGuild: notUsed,
     myGuilds: notUsed,
     releaseGuild: notUsed,
+    setWatchParties: notUsed,
     guildPacks: notUsed,
     delegatePack: notUsed,
     undelegatePack: notUsed,

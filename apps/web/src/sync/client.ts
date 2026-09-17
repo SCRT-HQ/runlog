@@ -450,6 +450,10 @@ export interface Guild {
   updatedAt: string;
   hostRoleId?: string;
   channelId?: string;
+  /** Whether the server opens a watch party on its own for the owner's shared runs. */
+  watchParties?: "off" | "every" | "packs";
+  /** The pack ids it opens one for, where `watchParties` is "packs". */
+  watchPackIds?: string[];
 }
 
 /** A watch party as the run page shows it. */
@@ -499,6 +503,8 @@ export interface Api {
   myGuilds(): Promise<{ guilds: Guild[]; server: boolean; open: boolean; allowed: number }>;
   /** Give the server up: its rows and its vault go. */
   releaseGuild(guildId: string): Promise<void>;
+  /** Whether this server follows the owner's runs on its own, and which packs when it follows some. */
+  setWatchParties(guildId: string, mode: "off" | "every" | "packs", packIds?: string[]): Promise<Guild>;
   guildPacks(guildId: string): Promise<GuildPackMeta[]>;
   /** Put a pack in the server's vault, with the summary the bot lists it by; the text never comes back. */
   delegatePack(
@@ -1121,6 +1127,14 @@ export function createApi(base: string, getAccessToken: () => Promise<string>, f
     },
     releaseGuild: async (guildId) => {
       await request("DELETE", `/guilds/${encodeURIComponent(guildId)}`);
+    },
+    setWatchParties: async (guildId, mode, packIds) => {
+      const { status, body } = await request<{ guild?: Guild; error?: string }>("PATCH", `/guilds/${encodeURIComponent(guildId)}`, {
+        watchParties: mode,
+        ...(packIds ? { watchPackIds: packIds } : {}),
+      });
+      if (status !== 200 || !body.guild) throw new SyncError("error", undefined, body.error ?? "that setting could not be saved");
+      return body.guild;
     },
     guildPacks: async (guildId) =>
       (await request<{ packs?: GuildPackMeta[] }>("GET", `/guilds/${encodeURIComponent(guildId)}/packs`)).body.packs ?? [],
