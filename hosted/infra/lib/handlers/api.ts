@@ -36,7 +36,7 @@ import {
 } from "./guilds.js";
 import { handleInteraction, kindOf, liveLinkOf, threadHears, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
 import type { TimerJob } from "./discord/play.js";
-import { closeParty, openParty, tickParties } from "./discord/party.js";
+import { autoOpenParties, closeParty, openParty, tickParties } from "./discord/party.js";
 import { scheduledTimers } from "./discord/timers.js";
 import { authorizeUrl, metadataFor, verifyRedirectUri, VERIFY_MINUTES } from "./discord/linked-roles.js";
 import {
@@ -493,23 +493,22 @@ export async function finishMoved(job: MovedJob, deps: Deps): Promise<"gone" | "
   }
 }
 
-/** A snapshot landed on a run with watch parties; the job brings their cards up to date. */
+/** A snapshot landed: the job opens the parties the servers asked for, then brings every open card up to date. */
 export async function finishParty(job: PartyJob, deps: Deps): Promise<Array<{ guildId: string; outcome: string }>> {
   if (!deps.discord || !deps.guilds) return [];
   const now = deps.now ?? (() => new Date().toISOString());
   const started = Date.now();
   let ok = false;
   try {
-    const out = await tickParties(
-      {
-        store: deps.store,
-        guilds: deps.guilds,
-        rest: deps.discord.rest ? await deps.discord.rest(true) : null,
-        now,
-        wait: (ms) => new Promise((done) => setTimeout(done, ms)),
-      },
-      job.sessionId,
-    );
+    const partyDeps = {
+      store: deps.store,
+      guilds: deps.guilds,
+      rest: deps.discord.rest ? await deps.discord.rest(true) : null,
+      now,
+      wait: (ms: number) => new Promise<void>((done) => setTimeout(done, ms)),
+    };
+    await autoOpenParties(partyDeps, job.sessionId);
+    const out = await tickParties(partyDeps, job.sessionId);
     ok = true;
     return out;
   } finally {
@@ -1750,10 +1749,31 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       return json(200, { guilds: listed, server: plan, plan: serverFeature, open: onSale, allowed: guildsAllowed({ plan, onSale }) });
     }
     const one = path.match(/^\/api\/guilds\/([^/]+)$/);
-    if (one && method === "DELETE") {
+    if (one) {
       const guild = await guilds.guild(decodeURIComponent(one[1]!));
       if (!guild || guild.ownerSub !== caller.sub) return json(200, { found: false });
-      return json(200, { released: await guilds.releaseGuild(guild.guildId) });
+      if (method === "DELETE") return json(200, { released: await guilds.releaseGuild(guild.guildId) });
+      if (method === "PATCH") {
+        const body = parse(event);
+        const asked = isRecord(body) ? body["watchParties"] : undefined;
+        if (asked !== undefined && asked !== "off" && asked !== "every" && asked !== "packs")
+          return json(422, { error: "watchParties: off, every or packs" });
+        const packIds =
+          isRecord(body) && Array.isArray(body["watchPackIds"])
+            ? (body["watchPackIds"] as unknown[]).filter((p): p is string => typeof p === "string").slice(0, 50)
+            : undefined;
+        // Bounded one by one as well as counted: fifty ids of any length
+        // is a row the store would refuse, and that is a 500 where this
+        // is a 422.
+        if (packIds?.some((p) => p.length > MAX_NAME)) return json(422, { error: "that is not a pack id" });
+        const patched = await guilds.updateGuild(guild.guildId, now(), {
+          ...(asked !== undefined ? { watchParties: asked === "off" ? null : (asked as WatchPartyMode) } : {}),
+          ...(packIds !== undefined ? { watchPackIds: packIds.length > 0 ? packIds : null } : {}),
+          ...(asked === "off" ? { watchPackIds: null } : {}),
+        });
+        return json(200, { guild: patched ?? guild });
+      }
+      return json(410, { error: ROUTE_GONE });
     }
     const packs = path.match(/^\/api\/guilds\/([^/]+)\/packs(?:\/([^/]+))?$/);
     if (packs) {
