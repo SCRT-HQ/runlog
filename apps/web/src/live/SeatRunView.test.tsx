@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { SeatStrip } from "./SeatStrip.tsx";
 import { SeatRunView } from "./SeatRunView.tsx";
+import { ToastProvider } from "../ui/ToastProvider.tsx";
 import type { Seat, SeatSnapshot } from "./useSeat.ts";
 import type { Gesture } from "../sync/socket.ts";
 import { AccountContext, type Account } from "../auth/Account.tsx";
@@ -155,11 +156,15 @@ const me: Account = {
 } as unknown as Account;
 
 /** The page, as whoever is sitting in the seat. */
+// The app holds one toast slot at its root, so the page under test is
+// rendered under one here too; see ui/ToastProvider.tsx.
 const page = () =>
   render(
-    <AccountContext.Provider value={me}>
-      <SeatRunView id="01RUN" players={2} />
-    </AccountContext.Provider>,
+    <ToastProvider>
+      <AccountContext.Provider value={me}>
+        <SeatRunView id="01RUN" players={2} />
+      </AccountContext.Provider>
+    </ToastProvider>,
   );
 
 /** The seat, with whatever the table has just said on it. */

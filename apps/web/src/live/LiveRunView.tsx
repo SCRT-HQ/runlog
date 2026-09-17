@@ -174,7 +174,6 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
   return (
     <>
       {bar}
-      {toast.node}
       <DiceCurtain roll={roll} />
       <LiveView
         snapshot={snapshot}

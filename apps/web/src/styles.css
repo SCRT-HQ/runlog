@@ -2304,7 +2304,7 @@ button:disabled,
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-1);
   min-width: 0;
 }
 /* The base rule gives inputs `flex: 1 1 16rem` for the flex rows they were
@@ -5227,13 +5227,6 @@ a.plan {
   gap: 0.6rem;
   margin-top: 0.2rem;
 }
-.nameGate .inviteForm {
-  align-items: center;
-}
-.nameGate .inviteForm input {
-  flex: 1;
-  min-width: 12rem;
-}
 /* Asking somebody to the table: an address, a role, and the two buttons. */
 .inviteDialog {
   width: min(100%, 28rem);
@@ -7224,4 +7217,95 @@ html[data-pip="controls"] body {
   font-size: var(--t-2);
   text-align: center;
   box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+}
+
+/* ---- the shared controls, as components -------------------------------- */
+/*
+ * What `ui/Button`, `ui/IconButton`, `ui/Badge`, `ui/PageHeader` and
+ * `ui/Disclosure` need on top of the classes they wear. Everything else
+ * about how they are drawn is already above, under `.primary`, `.ghost`
+ * and `.chip`: the components render those names, so the several hundred
+ * controls still written by hand go on drawing exactly what they drew.
+ */
+
+/*
+ * A button that is working keeps the room its label took.
+ *
+ * Both labels sit in the same grid cell, so the button is as wide as the
+ * wider of the two before the wait and during it, and the row it sits in
+ * does not jump when the words change.
+ */
+.buttonBusy {
+  display: inline-grid;
+  align-items: center;
+  justify-items: center;
+}
+.buttonBusy > * {
+  grid-area: 1 / 1;
+}
+.buttonBusyHidden {
+  visibility: hidden;
+}
+
+/*
+ * An icon button's target is the compact control, square, whatever the
+ * mark inside it measures. Hit area and visible glyph are sized apart:
+ * an eleven-pixel cross is fine to look at and impossible to press.
+ */
+.iconButton {
+  min-width: var(--control-h-compact);
+  min-height: var(--control-h-compact);
+  padding: var(--space-1);
+}
+
+/*
+ * A badge reports; it does not act. It wears `chip` because that is where
+ * the tones live, and `chip` is also worn by the filters, which are
+ * buttons with a pointer cursor. This is the line between them.
+ */
+.chip.badge {
+  cursor: default;
+}
+
+/*
+ * The page's own title, and the line under it.
+ *
+ * Each rule is wrapped in `:where()` so it carries no weight at all: a
+ * screen that keeps its old header class alongside this one keeps the
+ * spacing that class gave it, and a screen with nothing of its own gets
+ * these.
+ */
+:where(.pageHeader) {
+  display: grid;
+  gap: var(--space-3);
+}
+:where(.pageHeaderText) {
+  display: grid;
+  gap: var(--space-1);
+}
+:where(.pageHeader) h1 {
+  margin: 0;
+  color: var(--text);
+  font: var(--font-page-title) var(--font-ui);
+}
+:where(.pageLead) {
+  margin: 0;
+  color: var(--text-muted);
+}
+:where(.pageHeaderActions) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* A folded panel with something new under it says so on the fold. */
+.disclosureSignal {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-left: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  vertical-align: middle;
 }

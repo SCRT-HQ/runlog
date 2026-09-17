@@ -14,6 +14,7 @@ import {
 } from "./marketplace.ts";
 import type { ListingKind } from "@runlog/rules-schema";
 import { useHosted } from "../hosted/HostedProvider.tsx";
+import { Badge } from "../ui/Badge.tsx";
 import { useTitle } from "../title.ts";
 
 /**
@@ -201,7 +202,7 @@ export function MarketplaceView({
           {/* The phone's way in and out of the facets; it draws nothing on a wide screen. */}
           <button type="button" className="filtersToggle" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}>
             {filtersOpen ? "Hide the filters" : "Filters"}
-            {narrowed && <span className="chip ok">on</span>}
+            {narrowed && <Badge tone="ok">on</Badge>}
           </button>
 
           {kinds.length > 0 && (
@@ -209,7 +210,7 @@ export function MarketplaceView({
               <h4 className="facetTitle">Looking for</h4>
               <div className="options">
                 {kinds.map((k) => (
-                  <button key={k} className={`chip pick ${kind === k ? "on" : ""}`} onClick={() => setKind(k)}>
+                  <button key={k} className={`chip pick ${kind === k ? "on" : ""}`} aria-pressed={kind === k} onClick={() => setKind(k)}>
                     {k === "pack" ? "Packs" : "Setups"}
                     <span className="muted num">{counts[k]}</span>
                   </button>
@@ -226,7 +227,7 @@ export function MarketplaceView({
             <h4 className="facetTitle">Show</h4>
             <div className="options">
               {(["all", "mine", "new"] as const).map((o) => (
-                <button key={o} className={`chip pick ${owned === o ? "on" : ""}`} onClick={() => setOwned(o)}>
+                <button key={o} className={`chip pick ${owned === o ? "on" : ""}`} aria-pressed={owned === o} onClick={() => setOwned(o)}>
                   {o === "all" ? "Everything" : o === "mine" ? "In your packs" : "Not yet yours"}
                 </button>
               ))}
@@ -302,6 +303,7 @@ export function MarketplaceView({
                   <button
                     key={t.value}
                     className={`chip pick ${tags.has(t.value) ? "on" : ""}`}
+                    aria-pressed={tags.has(t.value)}
                     onClick={() => toggle(tags, t.value, setTags)}
                   >
                     {t.value}
@@ -355,7 +357,7 @@ export function MarketplaceView({
                   </header>
                   <h3 className="marketTitle">
                     {e.title}
-                    {e.bench && <span className="chip cap">test bench</span>}
+                    {e.bench && <Badge tone="cap">test bench</Badge>}
                   </h3>
                   <p className="muted small">
                     {e.author && `by ${e.author} · `}v{e.version}
@@ -401,9 +403,9 @@ export function MarketplaceView({
                   )}
                   <div className="entryTags">
                     {e.features.map((f) => (
-                      <span key={f} className="chip cap" title={FEATURES.find((x) => x.id === f)?.what}>
+                      <Badge key={f} tone="cap" title={FEATURES.find((x) => x.id === f)?.what}>
                         {FEATURES.find((x) => x.id === f)?.label ?? f}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                   {e.tags.length > 0 && (
@@ -413,6 +415,7 @@ export function MarketplaceView({
                           key={t}
                           className={`chip pick ${tags.has(t) ? "on" : ""}`}
                           title="Filter by this tag"
+                          aria-pressed={tags.has(t)}
                           onClick={() => toggle(tags, t, setTags)}
                         >
                           {t}
@@ -434,7 +437,7 @@ export function MarketplaceView({
                       >
                         {reading === e.id ? "Reading…" : "Docs"}
                       </button>
-                      {have && <span className="chip cap">In your packs</span>}
+                      {have && <Badge tone="cap">In your packs</Badge>}
                     </div>
                     {have ? (
                       <button className="ghost tiny" onClick={() => onOpen(e.id)}>

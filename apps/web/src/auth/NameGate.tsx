@@ -4,6 +4,7 @@ import { SyncError } from "../sync/client.ts";
 import { useApi } from "../sync/useApi.ts";
 import { rememberProfile, useProfile } from "../sync/useProfile.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
+import { Field } from "../ui/Field.tsx";
 
 /** The server's rule for a shown name, so the answer is known before the round trip. Whether one is free is the server's to say. */
 export const NAME_RULE = /^[\p{L}\p{N}][\p{L}\p{N} ._'-]{1,23}$/u;
@@ -78,23 +79,30 @@ export function NameGate() {
           change it later on your profile.
         </p>
         {handleTaken && profile.handle && <p className="muted small">Someone else is shown as {profile.handle} now. Pick another.</p>}
-        <label className="inviteForm">
-          <span className="muted small">Shown as</span>
-          <input
-            ref={field}
-            className="textInput"
-            value={value}
-            maxLength={24}
-            aria-label="The name others see"
-            aria-invalid={!ok || undefined}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              setProblem(null);
-            }}
-            onKeyDown={(e) => e.key === "Enter" && keep()}
-          />
-        </label>
-        <p className="muted small">{problem ?? "Two to twenty-four letters, digits, spaces, dots, dashes or underscores."}</p>
+        <Field
+          label="Shown as"
+          help="Two to twenty-four letters, digits, spaces, dots, dashes or underscores."
+          error={problem ?? undefined}
+        >
+          {(control) => (
+            <input
+              {...control}
+              ref={field}
+              className="textInput"
+              value={value}
+              maxLength={24}
+              // The server has not refused anything yet, and the draft is
+              // already not a name this app will take. Saying so at the box
+              // is the whole reason the rule is stated on this side too.
+              aria-invalid={!ok || control["aria-invalid"] || undefined}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                setProblem(null);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && keep()}
+            />
+          )}
+        </Field>
         <div className="padRow">
           <button className="primary" onClick={keep} disabled={!ok || busy}>
             {busy ? "Saving…" : "Use this name"}
