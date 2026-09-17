@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { SyncError, type Api, type Profile } from "../sync/client.ts";
 import { forgetProfile, rememberProfile } from "../sync/useProfile.ts";
+import { focusables } from "../ui/useFocusTrap.ts";
 import { AccountContext, type Account } from "./Account.tsx";
 import { NameGate } from "./NameGate.tsx";
 
@@ -46,6 +47,9 @@ const show = async (profile: Profile, options: { taken?: boolean; api?: Partial<
   rememberProfile(profile, options.taken === true);
   render(
     <AccountContext.Provider value={signedIn}>
+      <main>
+        <button>Page action</button>
+      </main>
       <NameGate />
     </AccountContext.Provider>,
   );
@@ -101,5 +105,35 @@ describe("the name gate", () => {
       handleSetAt: "2026-01-02T00:00:00Z",
     });
     expect(screen.queryByLabelText("Shown as")).toBeNull();
+  });
+
+  it("owns focus and consumes Escape while a name is required", async () => {
+    await show({ createdAt: "2026-01-01T00:00:00Z", lastSeenAt: "2026-01-01T00:00:00Z", name: "Nate" });
+
+    expect(document.activeElement).toBe(field());
+    expect(screen.getByText("Page action").closest("[inert]")).not.toBeNull();
+    expect(focusables(document.body).map((element) => element.textContent)).toEqual(["", "Use this name"]);
+    const escaped = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    window.dispatchEvent(escaped);
+    expect(escaped.defaultPrevented).toBe(true);
+    expect(screen.getByRole("dialog", { name: "How should people see you?" })).toBeTruthy();
+  });
+
+  it("retains a failed draft and sends only one save while it is busy", async () => {
+    let reject!: (reason?: unknown) => void;
+    const pending = new Promise<Profile>((_resolve, no) => {
+      reject = no;
+    });
+    const putProfile = vi.fn(() => pending);
+    await show({ createdAt: "2026-01-01T00:00:00Z", lastSeenAt: "2026-01-01T00:00:00Z", name: "Nate" }, { api: { putProfile } });
+    fireEvent.change(field(), { target: { value: "Kiln Keeper" } });
+    fireEvent.keyDown(field(), { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "Saving…" }));
+    expect(putProfile).toHaveBeenCalledOnce();
+    await act(async () => reject(new Error("Fixture save failed. Try again.")));
+
+    expect(field().value).toBe("Kiln Keeper");
+    expect(screen.getByText("Fixture save failed. Try again.")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Use this name" }) as HTMLButtonElement).disabled).toBe(false);
   });
 });

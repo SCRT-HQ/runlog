@@ -13,3 +13,12 @@ publishing is blocked, report the blocker instead of claiming completion.
 
 Keep progress and recovery records current when working from a plan. Preserve
 unrelated user changes and recovery artifacts.
+
+## Design-system direction
+
+Users should eventually be able to create custom themes. While refining styles,
+prefer semantic color roles and shared typography/spacing tokens over hardcoded
+values or component rules tied to a built-in theme ID. Preserve existing theme
+IDs, saved preferences, and specialized widget backgrounds. Check keyboard focus
+and contrast when changing colors. A theme editor, custom-theme storage/import
+format, and account synchronization need their own design before implementation.
