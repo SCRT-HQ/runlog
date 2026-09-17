@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { facets, featuresOf, filterMarketplace, kindCounts, type MarketplaceEntry } from "./marketplace.ts";
+import { facets, featuresOf, filterMarketplace, kindCounts, seatsLabel, seatsOf, type MarketplaceEntry } from "./marketplace.ts";
 
 /**
  * The sidebar's logic, without the sidebar: features read off a pack's
@@ -97,6 +97,68 @@ describe("narrowing the marketplace", () => {
     expect(f.features[0]).toMatchObject({ id: "solo", count: 2 });
     expect(f.tags.find((t) => t.value === "Elden Ring")?.count).toBe(1);
     expect(f.authors).toEqual([{ value: "Runlog", count: 1 }]);
+  });
+});
+
+/**
+ * Solo or group, and what it may be read off.
+ *
+ * The seats a pack declares, and nothing else: no guess from a name, no
+ * inference from a category. `players` is the most people any of its modes
+ * seats, so more than one is a group. `tablePlays` says whether one copy
+ * seats that table or everyone brings their own, which does not make it
+ * any less a group.
+ */
+describe("played alone or with other people", () => {
+  it("reads the seats off the pack, and says nothing where it declares none", () => {
+    expect(seatsOf({ players: 1, tablePlays: true })).toBe("solo");
+    expect(seatsOf({ players: 6, tablePlays: true })).toBe("group");
+    expect(seatsOf({ players: 6, tablePlays: false })).toBe("group");
+    expect(seatsOf({ players: 0, tablePlays: true })).toBeNull();
+    expect(seatsOf({ players: Number.NaN, tablePlays: true })).toBeNull();
+  });
+
+  it("says it on a card the same way every time, or not at all", () => {
+    expect(seatsLabel({ players: 1, tablePlays: true })).toBe("Solo");
+    // A ceiling, never a floor: the pack says how many it seats, not how few.
+    expect(seatsLabel({ players: 6, tablePlays: true })).toBe("Up to 6 players");
+    expect(seatsLabel({ players: 0, tablePlays: true })).toBeNull();
+  });
+
+  const seated = [
+    entry({ id: "alone", players: 1 }),
+    entry({ id: "table", players: 4 }),
+    entry({ id: "copies", players: 4, tablePlays: false }),
+    entry({ id: "mute", players: 0 }),
+  ];
+
+  it("narrows to one or the other, and leaves out a pack that declares neither", () => {
+    expect(filterMarketplace(seated, { seats: new Set(["solo"] as const) }).map((e) => e.id)).toEqual(["alone"]);
+    expect(filterMarketplace(seated, { seats: new Set(["group"] as const) }).map((e) => e.id)).toEqual(["table", "copies"]);
+    expect(filterMarketplace(seated, { seats: new Set(["solo", "group"] as const) }).map((e) => e.id)).toEqual([
+      "alone",
+      "table",
+      "copies",
+    ]);
+  });
+
+  it("counts each for the sidebar, and offers neither where nothing declares seats", () => {
+    expect(facets(seated).seats).toEqual([
+      { id: "solo", value: "Solo", count: 1 },
+      { id: "group", value: "Group", count: 2 },
+    ]);
+    expect(facets([entry({ id: "mute", players: 0 })]).seats).toEqual([]);
+  });
+});
+
+/** The other half of "free or owned": the price, as the feed gives it. */
+describe("free or priced", () => {
+  const priced = [entry({ id: "gift" }), entry({ id: "sold", price: { amount: 500, currency: "usd", display: "$5.00" } })];
+
+  it("narrows to what costs nothing, and counts it for the sidebar", () => {
+    expect(filterMarketplace(priced, { free: true }).map((e) => e.id)).toEqual(["gift"]);
+    expect(filterMarketplace(priced, {}).map((e) => e.id)).toEqual(["gift", "sold"]);
+    expect(facets(priced).free).toBe(1);
   });
 });
 
