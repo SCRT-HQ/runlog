@@ -360,6 +360,7 @@ export function MarketplaceView({
                   <p className="muted small">
                     {e.author && `by ${e.author} · `}v{e.version}
                     {e.players > 1 && ` · up to ${e.players} people`}
+                    {!e.tablePlays && " · a copy each"}
                     {e.publisher && e.publisher.name !== e.author && (
                       <>
                         {" · "}

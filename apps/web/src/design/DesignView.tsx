@@ -464,6 +464,12 @@ function Identity({ draft, diagnostics, edit }: SectionProps) {
         value={get(draft, ["license", "redistributable"]) !== false}
         onChange={(v) => edit(["license", "redistributable"], v)}
       />
+      <CheckField
+        label="One copy seats the table"
+        help={describe("license.tablePlays")}
+        value={get(draft, ["license", "tablePlays"]) !== false}
+        onChange={(v) => edit(["license", "tablePlays"], v)}
+      />
     </section>
   );
 }

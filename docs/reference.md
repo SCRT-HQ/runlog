@@ -92,6 +92,7 @@ Licensing, and whether the app may share this pack's text.
 | `id` | `CC0-1.0` \| `CC-BY-4.0` \| `CC-BY-SA-4.0` \| `CC-BY-NC-4.0` \| `CC-BY-NC-SA-4.0` \| `CC-BY-ND-4.0` \| `CC-BY-NC-ND-4.0` \| `MIT` \| `Apache-2.0` \| `BSD-3-Clause` \| `Unlicense` \| `OGL-1.0a` \| `ORC` \| `proprietary` \| `custom` | yes | The license, by SPDX identifier where one applies; `proprietary` or `custom` with the terms in `text`. |
 | `text` | `string` | - | The license or notice in full, shown with the pack and printed in its rulebook. Required for `proprietary` and `custom`; welcome on any. |
 | `redistributable` | `boolean` | yes | Whether this pack's text may be included in exports meant for other people. When false the app shares roll results and references but never the rules prose, so a private transcription of a commercial rulebook stays private. |
+| `tablePlays` | `boolean` | - | Whether one copy of this pack seats a table. When true, someone invited to play a run of it takes a seat on the owner's copy: they see results and press through the owner's page, and the pack's text never reaches them. Set it false and an invitation to play goes out as an invitation to watch, and everyone at the table needs their own copy. Default: `true`. |
 | `holder` | `string` | - | Who holds the rights. |
 | `notice` | `string` | - | Notice displayed alongside the pack. |
 | `url` | `string` | - | Where to obtain or license the original. |

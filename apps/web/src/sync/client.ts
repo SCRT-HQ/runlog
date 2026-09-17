@@ -208,7 +208,16 @@ export interface Claim {
 /** A publisher's pack as uploaded: its head, its price, whether it is listed. */
 export interface PublisherPack {
   packId: string;
-  head: { title: string; version: string; category: string; tags: string[]; features: string[]; players: number };
+  head: {
+    title: string;
+    version: string;
+    category: string;
+    tags: string[];
+    features: string[];
+    players: number;
+    /** Absent from a server older than this field; read as yes. */
+    license?: { id: string; redistributable: boolean; tablePlays?: boolean };
+  };
   price: { amount: number; currency: string } | null;
   status: "draft" | "listed";
   bytes: number;

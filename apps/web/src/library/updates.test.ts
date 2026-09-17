@@ -10,6 +10,7 @@ const entry = (id: string, version: string): MarketplaceEntry => ({
   features: [],
   requires: [],
   players: 1,
+  tablePlays: true,
   blurb: "",
   kind: "pack",
   price: "free",
