@@ -4,6 +4,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { SeatStrip } from "./SeatStrip.tsx";
 import { SeatRunView } from "./SeatRunView.tsx";
 import type { Seat, SeatSnapshot } from "./useSeat.ts";
+import type { Gesture } from "../sync/socket.ts";
+import { AccountContext, type Account } from "../auth/Account.tsx";
 
 /**
  * The strip a seated player presses, drawn from the offer the run's own
@@ -115,67 +117,113 @@ describe("what a press says", () => {
   });
 });
 
+const snapshot: SeatSnapshot = {
+  v: 1,
+  at: "2026-09-16T00:00:00Z",
+  packId: "com.example.kiln",
+  packTitle: "The Long Kiln",
+  runName: null,
+  mode: "Standard",
+  words: { run: "Firing", unit: "Stage", units: "Stages" },
+  status: "active",
+  ending: null,
+  unit: 1,
+  where: "Shape",
+  step: "Throw the piece",
+  phases: [],
+  quoted: true,
+  standings: [],
+  contestants: 0,
+  subjects: [],
+  counters: [],
+  resources: [],
+  clocks: [],
+  progress: { unitsDone: 0, elapsedMs: 0, timed: false },
+  score: { label: "Stages closed", text: "0 stages", value: 0, better: "higher" },
+  forcedUnits: 0,
+  log: [],
+  paper: { summary: { kind: "summary", layout: "book", title: "The Long Kiln", blocks: [] }, mode: null },
+  offer,
+};
+
+/** Somebody signed in, since a seat is on an account and the page says so first. */
+const me: Account = {
+  status: "signed-in",
+  user: { id: "user_ME" },
+  signOut: () => {},
+  getAccessToken: async () => "t",
+} as unknown as Account;
+
+/** The page, as whoever is sitting in the seat. */
+const page = () =>
+  render(
+    <AccountContext.Provider value={me}>
+      <SeatRunView id="01RUN" players={2} />
+    </AccountContext.Provider>,
+  );
+
+/** The seat, with whatever the table has just said on it. */
+const seated = (gesture: Gesture | null = null): Seat => ({
+  view: {
+    found: true,
+    run: {
+      id: "01RUN",
+      packId: "com.example.kiln",
+      packTitle: "The Long Kiln",
+      name: null,
+      seq: 1,
+      updatedAt: "2026-09-16T00:00:00Z",
+      endedAt: null,
+    },
+    snapshot: null,
+    listing: null,
+    reactions: [],
+  },
+  snapshot,
+  held: true,
+  note: null,
+  stale: false,
+  gesture,
+  press: () => {},
+});
+
 /**
  * The page a seat opens: even holding a snapshot with the pack's own paper
  * on it, this page never draws a way to that paper. Docs, export and the
  * Designer belong to the device that holds the pack, and a seat never does.
  */
 describe("what a seat's page never shows", () => {
-  const snapshot: SeatSnapshot = {
-    v: 1,
-    at: "2026-09-16T00:00:00Z",
-    packId: "com.example.kiln",
-    packTitle: "The Long Kiln",
-    runName: null,
-    mode: "Standard",
-    words: { run: "Firing", unit: "Stage", units: "Stages" },
-    status: "active",
-    ending: null,
-    unit: 1,
-    where: "Shape",
-    step: "Throw the piece",
-    phases: [],
-    quoted: true,
-    standings: [],
-    contestants: 0,
-    subjects: [],
-    counters: [],
-    resources: [],
-    clocks: [],
-    progress: { unitsDone: 0, elapsedMs: 0, timed: false },
-    score: { label: "Stages closed", text: "0 stages", value: 0, better: "higher" },
-    forcedUnits: 0,
-    log: [],
-    paper: { summary: { kind: "summary", layout: "book", title: "The Long Kiln", blocks: [] }, mode: null },
-    offer,
-  };
-
   it("has no paper, no export and no way into the Designer", () => {
-    current.seat = {
-      view: {
-        found: true,
-        run: {
-          id: "01RUN",
-          packId: "com.example.kiln",
-          packTitle: "The Long Kiln",
-          name: null,
-          seq: 1,
-          updatedAt: "2026-09-16T00:00:00Z",
-          endedAt: null,
-        },
-        snapshot: null,
-        listing: null,
-        reactions: [],
-      },
-      snapshot,
-      held: true,
-      note: null,
-      stale: false,
-      press: () => {},
-    };
-    render(<SeatRunView id="01RUN" players={2} />);
+    current.seat = seated();
+    page();
     expect(screen.queryByRole("button", { name: "Docs" })).toBeNull();
     expect(screen.queryByRole("button", { name: /export/i })).toBeNull();
     expect(screen.queryByRole("link", { name: /create/i })).toBeNull();
+  });
+});
+
+/**
+ * Handing a setup out happens on the host's screen and lands on
+ * everybody's game. A seat is playing the run rather than watching it,
+ * so being re-equipped without a word is worse here than anywhere.
+ */
+describe("a handout, to whoever is seated", () => {
+  it("says who handed out what", () => {
+    current.seat = seated({
+      t: "gesture",
+      id: "01RUN",
+      kind: "setup",
+      data: { title: "Cleric" },
+      from: "Mira",
+      at: "2026-09-16T00:00:01Z",
+    });
+    page();
+    expect(screen.getByRole("status").textContent).toBe("Mira handed out Cleric.");
+  });
+
+  it("says nothing for a gesture that is not one", () => {
+    current.seat = seated({ t: "gesture", id: "01RUN", kind: "rolled", data: { total: 14 }, from: "Mira", at: "2026-09-16T00:00:01Z" });
+    page();
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });
