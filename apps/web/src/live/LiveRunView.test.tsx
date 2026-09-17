@@ -8,6 +8,7 @@ import { loadPackText } from "@runlog/rules-schema";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import type { LiveSnapshot } from "./snapshot.ts";
 import { LiveRunView } from "./LiveRunView.tsx";
+import { ToastProvider } from "../ui/ToastProvider.tsx";
 import type { Gesture } from "../sync/socket.ts";
 
 /**
@@ -83,11 +84,15 @@ afterEach(() => {
   cleanup();
 });
 
+// The app holds one toast slot at its root, so the page under test is
+// rendered under one here too; see ui/ToastProvider.tsx.
 const watching = () =>
   render(
-    <AccountContext.Provider value={signedOut}>
-      <LiveRunView route={{ id: "run-1", token: "tok" }} />
-    </AccountContext.Provider>,
+    <ToastProvider>
+      <AccountContext.Provider value={signedOut}>
+        <LiveRunView route={{ id: "run-1", token: "tok" }} />
+      </AccountContext.Provider>
+    </ToastProvider>,
   );
 
 describe("the watcher page's tools", () => {

@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { AccountProvider } from "./auth/Account.tsx";
 import { HostedProvider } from "./hosted/HostedProvider.tsx";
 import { DocDrawerProvider } from "./docs/DocDrawer.tsx";
+import { ToastProvider } from "./ui/ToastProvider.tsx";
 import { SyncProvider } from "./sync/SyncProvider.tsx";
 import { applyTheme, savedTheme } from "./theme/theme.ts";
 import { WelcomeView } from "./welcome/WelcomeView.tsx";
@@ -74,7 +75,9 @@ if (page === "welcome") {
           <AccountProvider>
             <SyncProvider>
               <DocDrawerProvider>
-                <App />
+                <ToastProvider>
+                  <App />
+                </ToastProvider>
               </DocDrawerProvider>
             </SyncProvider>
           </AccountProvider>
