@@ -1,0 +1,298 @@
+schemaVersion: 1
+id: com.example.round-trip
+version: 1.0.0
+title: Round Trip
+author: An Example Author
+description: A demo pack carrying every field the visual editor preserves but has no control for.
+homepage: https://example.com/round-trip
+category: craft
+tags:
+  - demo
+  - fixture
+use:
+  - from: com.example.shared-tables
+    as: borrowed
+    variant: plain
+    merge: append
+marks:
+  reach:
+    label: Reaches back
+    note: The result touches something made earlier in the run.
+requires:
+  - id: paper
+    label: A pad of paper
+    kind: supplies
+    note: Any size, so long as you can draw on it.
+    url: https://example.com/paper
+  - id: ink
+    label: A pen you like
+    kind: supplies
+    optional: true
+license:
+  id: MIT
+  redistributable: true
+  tablePlays: true
+  holder: An Example Author
+  notice: Shared as an example. Copy it and make it yours.
+  url: https://example.com/round-trip/license
+capabilities:
+  - decks
+  - resources
+  - counters
+  - timers
+  - backwardTargeting
+  - bandsResolution
+  - keyedResolution
+  - journal
+  - coopRoles
+  - deferredTriggers
+vocabulary:
+  run:
+    one: Sitting
+    many: Sittings
+  unit:
+    one: Sheet
+    many: Sheets
+  subject:
+    one: Sketch
+    many: Sketches
+  finalize: Sign it
+  setup:
+    one: Kit
+    many: Kits
+  terms:
+    startRun: Begin the sitting
+unit:
+  clock:
+    kind: stopwatch
+    label: Sheet clock
+  intro: The pad is open and the light is good.
+  onEnter: Sheet {n}. Turn to a clean page.
+  createsSubject: true
+  handsFree: false
+  min: 1
+  max: 12
+tables:
+  prompt:
+    resolution: lookup
+    title: The Prompt
+    description: Rolled on entering a Sheet, to see what you are drawing against.
+    roll: d6
+    entries:
+      - id: p-open
+        title: Anything at all
+        range:
+          - 1
+          - 3
+        text: Anything goes. Draw what is in front of you.
+        points: 1
+        tags:
+          - reach
+        grants:
+          - loose
+        needs:
+          - ink
+        requires:
+          - unitIndex:
+              gte: 0
+        triggers:
+          - on: immediately
+            do:
+              - do: setFlag
+                flag: warmed
+                value: true
+      - id: p-tight
+        range:
+          - 4
+          - 6
+        text: Use only what you already have on the page.
+  weather:
+    resolution: bands
+    title: The Light
+    description: How the light is holding. Read on the first Sheet of a Sitting.
+    roll: 2d6
+    entries:
+      - id: w-low
+        lte: 5
+        title: Going
+        text: The light is going. Work fast.
+      - id: w-high
+        gte: 6
+        title: Holding
+        text: The light holds. Take your time.
+  almanac:
+    resolution: keyed
+    title: The Almanac
+    description: Read for every card drawn, by its rank.
+    entries:
+      - id: a-a
+        key: a
+        text: A line you cannot take back.
+      - id: a-2
+        key: "2"
+        text: Two marks, and no more.
+decks:
+  hand:
+    kind: cards
+    title: Notebook
+    description: Slips tucked into the notebook, drawn as a Sitting begins.
+    drawAtStart: 1
+    unique: true
+    carriesOver: true
+    cards:
+      - id: card-blank
+        title: Blank Slip
+        text: Nothing written on it. Keep it, or throw it out.
+states:
+  loose:
+    label: Loose
+    short: LO
+    scope: subject
+    semantics:
+      - blocksEdit
+    description: Drawn loose, and left that way.
+counters:
+  sheets:
+    label: Sheets filled
+    initial: 0
+    min: 0
+    incrementOn:
+      - on: unitFinalized
+resources:
+  nerve:
+    label: Nerve
+    initial: 2
+    min: 0
+    max: 5
+    step: 1
+    display: boxes
+    description: How steady your hand is. Spent on a line you cannot take back.
+phases:
+  - id: enter
+    label: Open the Sheet
+    description: Only on the first Sheet of a Sitting.
+    skipWhen:
+      - unitIndex:
+          gte: 2
+    steps:
+      - kind: rollTable
+        table: prompt
+        label: Roll the Prompt
+        into: promptRoll
+        optional: true
+        skipWhen:
+          - flag: skipPrompt
+  - id: work
+    label: Work
+    steps:
+      - kind: declareSubject
+        label: What is this?
+        constrainedBy: prompt
+      - kind: manual
+        label: Draw it.
+        description: The app cannot see the page. It only records that you did the work.
+        checklist:
+          - The sheet is drawn on.
+          - text: The date is written in the corner.
+            optional: true
+          - text: A line you could not take back.
+            tally: sheets
+  - id: close
+    label: Finish
+    steps:
+      - kind: finalizeUnit
+        label: Sign the Sheet
+        confirm:
+          - The sheet is signed and turned over.
+moves:
+  spendNerve:
+    label: Spend a nerve
+    description: Commit to a line you cannot take back.
+    do:
+      - do: modResource
+        resource: nerve
+        by: -1
+targeting:
+  strategy: anchoredOffset
+  offsetFrom: onesDigit
+  wraparound: true
+  skipIneligible: true
+  bands:
+    - range:
+        - 1
+        - 3
+      anchor: newest
+      direction: before
+    - range:
+        - 4
+        - 6
+      anchor: oldest
+      direction: after
+journal:
+  enabled: true
+  prompt: What did this sheet show?
+  required: false
+score:
+  counter: sheets
+  tiebreak: time
+endings:
+  - id: done
+    label: The Pad Closed
+    text: The sitting stands as drawn. Close the pad.
+triggers:
+  - on: onRunEnd
+    label: Last light
+    do:
+      - do: note
+        text: The light is gone and the pad is closed.
+        persistent: true
+asks:
+  policy: ask
+hierarchy:
+  - Ending
+  - The Prompt
+  - General rules
+fixtures:
+  - name: A sheet closes and the tally moves
+    mode: standard
+    events:
+      - t: RunStarted
+        mode: standard
+      - t: UnitEntered
+      - t: UnitFinalized
+    expect:
+      - path: counters.sheets
+        equals: 1
+modes:
+  standard:
+    label: Standard
+    description: The full game. Stop whenever you like.
+    handsFree: false
+    score:
+      units: true
+      tiebreak: time
+    perUnit:
+      - unit: 2
+        skipPhases:
+          - enter
+        extra:
+          - do: note
+            text: The second sheet. Work from the first one.
+  table:
+    label: At a table
+    description: Two to four people at one pad, passing the pen clockwise.
+    players:
+      min: 2
+      max: 4
+      rotate: clockwise
+      roles:
+        - id: drawer
+          label: Hand
+          description: Makes every mark.
+          acts: true
+    clock:
+      kind: timer
+      minutes: 10
+      auto: true
+      label: Sheet timer
+defaultMode: standard

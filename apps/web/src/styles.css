@@ -510,6 +510,91 @@ p {
   font-size: 0.85rem;
 }
 
+/* ---- the Designer's six sections ---- */
+
+/* The names, always on screen, with what each section owes beside it. */
+.designNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+.designNavItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: max(var(--control-h-touch), 2.6rem);
+  padding: 0.4rem 0.8rem;
+  margin-bottom: -1px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font: var(--font-control) var(--font-ui);
+  cursor: pointer;
+}
+.designNavItem[aria-current] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.designNavItem:hover {
+  color: var(--text);
+}
+.designBody {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+/* Where the draft stands with storage, said beside the errands. */
+.saveState {
+  align-self: center;
+  color: var(--text-muted);
+  font: var(--font-control) var(--font-ui);
+}
+.saveState.failed {
+  color: var(--warn);
+}
+/* A chip that goes somewhere is a button, and says so by being one. */
+.chipLink {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+/* Every line of the report is the way to the field that caused it. */
+.problemRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+@media (max-width: 760px) {
+  /* One row that scrolls, not a second bar at the foot: the sections are
+     where you are, and the rail at the bottom belongs to a run. */
+  .designNav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .designNav::-webkit-scrollbar {
+    display: none;
+  }
+  .designNavItem {
+    flex: 0 0 auto;
+    min-height: var(--control-h-touch);
+  }
+}
+
 .columns {
   display: grid;
   grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);

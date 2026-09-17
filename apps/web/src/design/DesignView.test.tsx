@@ -28,6 +28,7 @@ describe("which pack the Designer opens on", () => {
   let container: HTMLDivElement;
 
   beforeEach(() => {
+    history.replaceState(null, "", "/");
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
@@ -49,25 +50,27 @@ describe("which pack the Designer opens on", () => {
   }
 
   const buttonLabeled = (text: string) => Array.from(container.querySelectorAll("button")).find((b) => b.textContent === text);
+  /** The editor proper, as against the door: the six sections are always on screen in it. */
+  const editing = () => container.querySelector(".designNav") !== null;
 
   it("asks which pack when a real draft is waiting", async () => {
     await mount({ ...blankPack(), title: "Two-Line Days" });
     expect(container.textContent).toContain("Which pack?");
     expect(container.textContent).toContain("Continue editing Two-Line Days");
     expect(buttonLabeled("New pack")).toBeDefined();
-    expect(container.textContent).not.toContain("Download");
+    expect(editing()).toBe(false);
   });
 
   it("goes straight to the editor for a blank draft", async () => {
     await mount(blankPack());
     expect(container.textContent).not.toContain("Which pack?");
-    expect(container.textContent).toContain("Download");
+    expect(editing()).toBe(true);
   });
 
   it("goes straight to the editor when nothing was ever saved", async () => {
     await mount(null);
     expect(container.textContent).not.toContain("Which pack?");
-    expect(container.textContent).toContain("Download");
+    expect(editing()).toBe(true);
   });
 
   it("sets the tab to Design", async () => {
@@ -92,7 +95,7 @@ describe("which pack the Designer opens on", () => {
     });
 
     expect(container.textContent).not.toContain("Which pack?");
-    expect(container.textContent).toContain("Download");
+    expect(editing()).toBe(true);
     // Replaced, not merely dismissed: the title is the blank pack's own.
     expect(container.textContent).toContain("My Game");
     expect(saveDraft).toHaveBeenCalled();
@@ -107,7 +110,7 @@ describe("which pack the Designer opens on", () => {
 
     expect(container.textContent).not.toContain("Which pack?");
     expect(container.textContent).toContain("Two-Line Days");
-    expect(container.textContent).toContain("Download");
+    expect(editing()).toBe(true);
     expect(saveDraft).not.toHaveBeenCalled();
   });
 
@@ -125,16 +128,244 @@ describe("which pack the Designer opens on", () => {
     expect(saveDraft).not.toHaveBeenCalled();
   });
 
-  it("puts New pack first in the editor's header row, ahead of the file and sharing actions", async () => {
+  it("keeps the three draft-lifecycle actions together in the header, New pack first", async () => {
     await mount(blankPack());
-    const labels = Array.from(container.querySelectorAll(".headerActions button")).map((b) => b.textContent);
-    expect(labels[0]).toBe("New pack");
-    expect(labels[1]).toBe("Open a file…");
-    expect(labels[2]).toBe("Start from a pack…");
-    expect(labels[3]).toMatch(/^Download/);
-    expect(labels[4]).toBe("Copy a link");
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>(".menuButton")!.click();
+    });
+    const labels = Array.from(container.querySelectorAll('[role="menuitem"]')).map((b) => b.textContent);
+    expect(labels).toEqual(["New pack", "Open a file…", "Start from a pack…"]);
+  });
+
+  it("hands the pack over from Publish, not from the header", async () => {
+    await mount(blankPack());
+    expect(container.textContent).not.toContain("Download");
+    await act(async () => {
+      sectionItem(container, "Publish").click();
+    });
+    expect(container.textContent).toContain("Download");
+    expect(buttonLabeled("Copy a link")).toBeDefined();
   });
 });
+
+/** One of the six names in the section navigation. */
+function sectionItem(container: HTMLElement, label: string): HTMLButtonElement {
+  const found = Array.from(container.querySelectorAll<HTMLButtonElement>(".designNavItem")).find((b) =>
+    (b.textContent ?? "").startsWith(label),
+  );
+  if (!found) throw new Error(`no section named ${label}`);
+  return found;
+}
+
+/**
+ * Six sections, freely navigable.
+ *
+ * The editor was one long page, so a table and the license were the same
+ * distance away: the bottom. These cover what the sections have to keep
+ * true of the one draft underneath them, which is everything: nothing is
+ * re-parsed on the way between them and nothing is dropped.
+ */
+describe("the editor in six sections", () => {
+  let root: Root;
+  let container: HTMLDivElement;
+
+  beforeEach(() => {
+    history.replaceState(null, "", "/");
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    vi.mocked(saveDraft).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+    history.replaceState(null, "", "/");
+    vi.mocked(loadDraft).mockReset();
+    vi.mocked(saveDraft).mockReset();
+  });
+
+  async function mount(stored: Draft, onTest?: (pack: { title: string }) => void) {
+    vi.mocked(loadDraft).mockResolvedValue({ id: "current", pack: stored, updatedAt: "2026-01-01T00:00:00Z" });
+    await act(async () => {
+      root.render(<DesignView onTest={onTest as never} />);
+    });
+    // A draft that is not the blank one is asked about first; these are
+    // about the editor behind that door, so it is walked through.
+    const door = Array.from(container.querySelectorAll("button")).find((b) => b.textContent?.startsWith("Continue editing"));
+    if (door) {
+      await act(async () => {
+        door.click();
+      });
+    }
+  }
+
+  const buttonLabeled = (text: string) => Array.from(container.querySelectorAll("button")).find((b) => b.textContent === text);
+  const fieldNamed = (label: string) =>
+    Array.from(container.querySelectorAll<HTMLElement>(".field")).find((f) => f.querySelector(".fieldLabel")?.textContent === label);
+  const typeIn = async (label: string, value: string) => {
+    const input = fieldNamed(label)!.querySelector<HTMLInputElement>("input, textarea")!;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
+        "value",
+      )!.set!;
+      setter.call(input, value);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  };
+  const settle = () =>
+    act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+  it("shows the six sections, each with what it owes", async () => {
+    // An empty title is an error the schema reports at `title`, which
+    // Overview owns; a table with no entries is one Tables owns.
+    await mount({ ...blankPack(), title: "", tables: { prompt: { resolution: "lookup", title: "P", roll: "d6", entries: [] } } });
+    const items = Array.from(container.querySelectorAll(".designNavItem"));
+    expect(items.map((b) => (b.textContent ?? "").replace(/\d+$/, ""))).toEqual(["Overview", "Tables", "Flow", "Modes", "Test", "Publish"]);
+    expect(sectionItem(container, "Overview").querySelector(".badge")?.textContent).toBe("1");
+    expect(sectionItem(container, "Tables").querySelector(".badge")).not.toBeNull();
+    expect(sectionItem(container, "Modes").querySelector(".badge")).toBeNull();
+  });
+
+  it("opens on the section the address names, and writes the address when one is pressed", async () => {
+    history.replaceState(null, "", "#create/tables");
+    await mount(blankPack());
+    expect(sectionItem(container, "Tables").getAttribute("aria-current")).toBe("page");
+    expect(container.textContent).toContain("what the game rolls at you");
+
+    await act(async () => {
+      sectionItem(container, "Flow").click();
+    });
+    expect(location.hash).toBe("#create/flow");
+    expect(container.textContent).toContain("what happens in a turn, in order");
+
+    // Back walks the sections the way it walks pages: the editor follows
+    // the address rather than holding its own idea of where it is.
+    await act(async () => {
+      history.replaceState(null, "", "#create/tables");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    expect(sectionItem(container, "Tables").getAttribute("aria-current")).toBe("page");
+  });
+
+  it("spells Overview as the bare address", async () => {
+    history.replaceState(null, "", "#create/publish");
+    await mount(blankPack());
+    await act(async () => {
+      sectionItem(container, "Overview").click();
+    });
+    expect(location.hash).toBe("#create");
+  });
+
+  it("takes a row of the report to the field that caused it", async () => {
+    await mount({ ...blankPack(), title: "" });
+    await act(async () => {
+      sectionItem(container, "Test").click();
+    });
+    const row = Array.from(container.querySelectorAll<HTMLButtonElement>(".problemRow")).find((b) =>
+      (b.textContent ?? "").startsWith("title"),
+    )!;
+    expect(row).toBeDefined();
+    await act(async () => {
+      row.click();
+    });
+    await settle();
+    expect(sectionItem(container, "Overview").getAttribute("aria-current")).toBe("page");
+    expect(document.activeElement).toBe(fieldNamed("Title")!.querySelector("input"));
+  });
+
+  it("keeps a draft the schema rejects exactly as it was through every section", async () => {
+    // A version that is a number, and a key the editor has no control for:
+    // neither is touched by anything, including moving between sections.
+    const odd: Draft = { ...blankPack(), version: 7, wobble: { deep: [1, "two"] } };
+    await mount(odd);
+    await typeIn("Title", "Half typed,");
+
+    for (const label of ["Tables", "Flow", "Modes", "Test", "Publish", "Overview"]) {
+      await act(async () => {
+        sectionItem(container, label).click();
+      });
+    }
+
+    const saves = vi.mocked(saveDraft).mock.calls;
+    expect(saves).toHaveLength(1);
+    expect(saves[0]![0]!.pack).toEqual({ ...odd, title: "Half typed," });
+    // And the field still holds what was typed, not a re-read of the draft.
+    expect(fieldNamed("Title")!.querySelector("input")!.value).toBe("Half typed,");
+  });
+
+  it("says when a save failed, and tries again on request", async () => {
+    await mount(blankPack());
+    vi.mocked(saveDraft).mockRejectedValueOnce(new Error("no room"));
+    await typeIn("Title", "Two-Line Days");
+    expect(container.textContent).toContain("Could not save");
+
+    vi.mocked(saveDraft).mockResolvedValue(undefined);
+    await act(async () => {
+      buttonLabeled("Try again")!.click();
+    });
+    expect(container.textContent).toContain("Saved");
+    expect(container.textContent).not.toContain("Could not save");
+  });
+
+  it("asks before a file replaces a draft that is somebody's work, and not before it replaces the blank one", async () => {
+    await mount(blankPack());
+    await pickFile(container, "title: From A File\nid: com.example.from-a-file\n");
+    // A blank draft is nobody's work, so nothing is asked and it is gone.
+    expect(container.textContent).not.toContain("Replace");
+    expect(container.textContent).toContain("From A File");
+
+    await act(async () => {
+      sectionItem(container, "Overview").click();
+    });
+    await pickFile(container, "title: Second File\nid: com.example.second\n");
+    expect(container.textContent).toContain("Replace From A File?");
+    expect(container.textContent).toContain("The draft you have open is replaced.");
+    await act(async () => {
+      buttonLabeled("Cancel")!.click();
+    });
+    expect(container.textContent).toContain("From A File");
+    expect(container.textContent).not.toContain("Second File");
+  });
+
+  it("keeps Try it in the header on every section, and gated on a pack that loads", async () => {
+    const tried: string[] = [];
+    await mount({ ...blankPack(), title: "" }, (pack) => tried.push(pack.title));
+    expect(buttonLabeled("Try it")!.disabled).toBe(true);
+    await act(async () => {
+      sectionItem(container, "Publish").click();
+    });
+    expect(buttonLabeled("Try it")).toBeDefined();
+  });
+
+  it("names every reorder control by what it moves", async () => {
+    await mount(blankPack());
+    await act(async () => {
+      sectionItem(container, "Flow").click();
+    });
+    const up = Array.from(container.querySelectorAll<HTMLButtonElement>('button[aria-label^="Move up"]'));
+    const down = Array.from(container.querySelectorAll<HTMLButtonElement>('button[aria-label^="Move down"]'));
+    expect(up).toHaveLength(3);
+    expect(down).toHaveLength(3);
+    expect(up[0]!.getAttribute("aria-label")).toBe("Move up: Open the Round");
+    expect(down.at(-1)!.getAttribute("aria-label")).toBe("Move down: Finish");
+  });
+});
+
+/** Choose a file in the header's hidden input, the way the file dialog does. */
+async function pickFile(container: HTMLElement, text: string) {
+  const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+  Object.defineProperty(input, "files", { value: [new File([text], "pack.yaml", { type: "text/yaml" })], configurable: true });
+  await act(async () => {
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
 
 /**
  * Trying a draft: a valid one can be played from the Designer without being
@@ -146,6 +377,7 @@ describe("trying a draft from the Designer", () => {
   let container: HTMLDivElement;
 
   beforeEach(() => {
+    history.replaceState(null, "", "/");
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);

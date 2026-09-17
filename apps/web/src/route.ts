@@ -99,6 +99,18 @@ export function linkTo(hash: string, from = ""): string {
   return PATHS_ON ? hrefFor(hash) : `${from}${hash}`;
 }
 
+/**
+ * The Designer's section, from `#create/<section>`.
+ *
+ * `#create` on its own is the Designer with nothing said about where in
+ * it, which the editor reads as its first section. Null means the address
+ * is not the Designer's at all.
+ */
+export function createSectionFromHash(address: string): string | null {
+  const m = /^#create(?:\/([a-z]+))?$/.exec(address);
+  return m ? (m[1] ?? "") : null;
+}
+
 /** The hash-form address for a run of this device's own: `#run/<id>`, which a live link (`#run/<id>?t=…`) is not. */
 export function runFromAddress(address: string): string | null {
   const m = /^#run\/([A-Za-z0-9_-]+)$/.exec(address);

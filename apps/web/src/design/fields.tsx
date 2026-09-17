@@ -26,12 +26,46 @@ export function at(diagnostics: readonly Diagnostic[], path: string): Diagnostic
   return diagnostics.filter((d) => d.path === path || d.path.startsWith(`${path}.`));
 }
 
+/**
+ * The DOM id of the field that edits a path.
+ *
+ * Derived rather than stored, so the Test section can name a field from
+ * nothing but the dotted path the linter gave it, without a register of
+ * every field the editor has drawn.
+ */
+export function fieldDomId(path: string): string {
+  return `field-${path.replace(/[^A-Za-z0-9]+/g, "-")}`;
+}
+
+/**
+ * Show the field that edits a path, and put the keyboard in it.
+ *
+ * A diagnostic's path is often coarser than any one field: the linter
+ * says `tables.setback.entries[3]` where the editor has an id, a range
+ * and a text. So the exact field is tried first and the first field
+ * underneath it second, which is the row the problem is about either way.
+ */
+export function focusField(path: string): boolean {
+  const exact = document.getElementById(fieldDomId(path));
+  const found =
+    exact ??
+    Array.from(document.querySelectorAll<HTMLElement>("[data-path]")).find((el) => {
+      const own = el.dataset.path ?? "";
+      return own.startsWith(`${path}.`) || own.startsWith(`${path}[`);
+    });
+  if (!found) return false;
+  found.scrollIntoView?.({ block: "center" });
+  const control = found.querySelector<HTMLElement>("input, select, textarea");
+  control?.focus();
+  return true;
+}
+
 export function Field({ label, path, help, diagnostics = [], children }: FieldProps) {
   const mine = at(diagnostics, path);
   const worst = mine.some((d) => d.level === "error") ? "error" : mine.length > 0 ? "warn" : "";
 
   return (
-    <label className={`field ${worst}`}>
+    <label className={`field ${worst}`} id={fieldDomId(path)} data-path={path}>
       <span className="fieldLabel">{label}</span>
       {children}
       {help && <span className="fieldHelp">{help}</span>}

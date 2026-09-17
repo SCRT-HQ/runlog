@@ -30,7 +30,7 @@ import { WidgetView } from "./widget/WidgetView.tsx";
 import { useTitle } from "./title.ts";
 import { liveFromHash, type LiveRoute } from "./live/route.ts";
 import { welcomePath } from "./welcome/route.ts";
-import { addressForPlay, addressOf, goTo, runFromAddress, seatFromAddress, linkTo } from "./route.ts";
+import { addressForPlay, addressOf, createSectionFromHash, goTo, runFromAddress, seatFromAddress, linkTo } from "./route.ts";
 import { LiveRunView } from "./live/LiveRunView.tsx";
 import { SeatRunView } from "./live/SeatRunView.tsx";
 import { DocMenu } from "./docs/DocMenu.tsx";
@@ -292,7 +292,9 @@ export default function App() {
         setGuideSlug(slug);
         setGuideSection(guideSectionFromHash(address));
         setView("guide");
-      } else if (address === "#create") {
+      } else if (createSectionFromHash(address) !== null) {
+        // The Designer names its section in the address too; which one is
+        // the editor's own business, and it reads the same hash.
         setView("design");
       } else if (/^#profile(\/|$)/.test(address)) {
         setProfilePage(profilePageFromHash(address) ?? "profile");
