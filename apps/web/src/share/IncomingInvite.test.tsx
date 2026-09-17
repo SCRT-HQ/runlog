@@ -1,5 +1,7 @@
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import { InviteBanner, type IncomingInvite } from "./IncomingInvite.tsx";
 
@@ -55,6 +57,8 @@ const signedIn: Account = {
   getAccessToken: async () => "t",
 };
 
+afterEach(cleanup);
+
 describe("an invitation in a link", () => {
   it("says whose table it is and offers to join, signed in", () => {
     const html = banner(found, signedIn);
@@ -89,5 +93,20 @@ describe("an invitation in a link", () => {
     expect(banner(elsewhere, signedIn)).not.toContain("(other)");
     expect(banner({ token: "x", peek: { found: false } }, signedIn)).toContain("expired, was withdrawn, or was already used");
     expect(banner({ token: "x", peek: null, problem: "no API" }, signedIn)).toContain("no API");
+  });
+
+  it("keeps Join disabled and announced while the same join is already underway", () => {
+    const onJoin = vi.fn();
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <InviteBanner invite={found} packTitle={() => "The Long Kiln"} busy onJoin={onJoin} onDismiss={() => {}} />
+      </AccountContext.Provider>,
+    );
+
+    const join = screen.getByRole("button", { name: "Joining…" });
+    expect(join).toHaveProperty("disabled", true);
+    expect(join.getAttribute("aria-busy")).toBe("true");
+    fireEvent.click(join);
+    expect(onJoin).not.toHaveBeenCalled();
   });
 });

@@ -2778,28 +2778,79 @@ select.textInput {
 /* A pack that arrived in a link. Announced, not opened: it replaces what you
    were looking at, and it can come from anyone. */
 .incoming {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.8rem;
+  gap: var(--space-3);
   margin: 0 auto;
-  padding: 0.7rem 1.1rem;
+  padding: var(--space-3) var(--space-4);
   max-width: 1100px;
   border-bottom: 1px solid var(--accent-dim);
-  background: color-mix(in oklab, var(--accent) 8%, var(--panel));
+  background: color-mix(in oklab, var(--accent) 8%, var(--surface));
+  font: var(--font-body) var(--font-ui);
 }
 .incoming.bad {
-  border-bottom-color: color-mix(in oklab, var(--err) 45%, var(--line));
-  background: color-mix(in oklab, var(--err) 10%, var(--panel));
+  border-bottom-color: color-mix(in oklab, var(--danger) 45%, var(--line));
+  background: color-mix(in oklab, var(--danger) 10%, var(--surface));
 }
 .incomingWhat {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .incomingActions {
   display: flex;
-  gap: 0.5rem;
-  flex: none;
+  flex-wrap: wrap;
+  min-width: 0;
+  justify-self: end;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.incoming .small {
+  font: var(--font-caption) var(--font-ui);
+}
+.incoming code,
+.incoming .mono {
+  font-family: var(--font-mono);
+}
+
+/* Linked-account rows are app UI, unlike the authored and live-member rows
+   sharing the generic panel and member-row rules elsewhere. */
+.connectionsPanel {
+  font: var(--font-body) var(--font-ui);
+}
+.connectionsPanel .small {
+  font: var(--font-caption) var(--font-ui);
+}
+.connectionsPanel code,
+.connectionsPanel .mono {
+  font-family: var(--font-mono);
+}
+.connectionsPanel .connectionsRow {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+}
+.connectionsPanel .connectionsRow > :first-child {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+.connectionsIdentity,
+.connectionsActions,
+.connectionsInstructions {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.connectionsPanel .connectionsActions {
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+@media (max-width: 1000px) {
+  .connectionsPanel .connectionsRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .connectionsPanel .connectionsActions {
+    justify-content: flex-start;
+  }
 }
 .shareNotice {
   display: flex;
@@ -7775,7 +7826,12 @@ html[data-pip="controls"] body {
     gap: 1rem;
   }
   .incoming {
-    padding: 0.6rem 0.9rem;
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-2) var(--space-3);
+  }
+  .incomingActions {
+    justify-self: stretch;
+    justify-content: flex-start;
   }
   .settingsDialog {
     padding: 0.9rem;

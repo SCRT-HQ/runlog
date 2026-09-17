@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAccount } from "../auth/Account.tsx";
 import type { Api, Connection, Connections } from "../sync/client.ts";
+import { Button } from "../ui/Button.tsx";
 import { clearPendingLink, pendingLink, type LinkRoute } from "./route.ts";
 
 /**
@@ -106,7 +107,7 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
   };
 
   return (
-    <section className="panel">
+    <section className="panel connectionsPanel">
       <h3 className="sectionTitle">
         Linked accounts <span className="muted">Discord, and where the bot knows you</span>
       </h3>
@@ -122,22 +123,18 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
           </div>
           <div className="incomingActions">
             {account.status === "signed-in" ? (
-              <button className="primary" disabled={busy || !api} aria-busy={busy || undefined} onClick={() => void verify()}>
-                {busy ? "Going to Discord…" : "Verify with Discord"}
-              </button>
+              <Button variant="primary" disabled={!api} loading={busy} loadingLabel="Going to Discord…" onClick={() => void verify()}>
+                Verify with Discord
+              </Button>
             ) : account.status === "anonymous" ? (
               <>
-                <button className="primary" onClick={account.signIn}>
+                <Button variant="primary" onClick={account.signIn}>
                   Sign in to verify
-                </button>
-                <button className="ghost" onClick={account.signUp}>
-                  Create an account
-                </button>
+                </Button>
+                <Button onClick={account.signUp}>Create an account</Button>
               </>
             ) : null}
-            <button className="ghost" onClick={dismiss}>
-              Not now
-            </button>
+            <Button onClick={dismiss}>Not now</Button>
           </div>
         </div>
       )}
@@ -146,9 +143,9 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
           {pending.result === "done"
             ? "Verified. Discord knows this account is linked; a role that asks for it is yours to take in the server."
             : "Discord did not finish the verification. Try again from the server's role, or from the button here."}{" "}
-          <button className="ghost tiny" onClick={dismiss}>
+          <Button size="compact" onClick={dismiss}>
             OK
-          </button>
+          </Button>
         </p>
       )}
       {pending && pending.kind !== "verify" && (
@@ -162,22 +159,18 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
           </div>
           <div className="incomingActions">
             {account.status === "signed-in" ? (
-              <button className="primary" disabled={busy || !api} aria-busy={busy || undefined} onClick={() => void link()}>
-                {busy ? "Linking…" : "Link to this account"}
-              </button>
+              <Button variant="primary" disabled={!api} loading={busy} loadingLabel="Linking…" onClick={() => void link()}>
+                Link to this account
+              </Button>
             ) : account.status === "anonymous" ? (
               <>
-                <button className="primary" onClick={account.signIn}>
+                <Button variant="primary" onClick={account.signIn}>
                   Sign in to link
-                </button>
-                <button className="ghost" onClick={account.signUp}>
-                  Create an account
-                </button>
+                </Button>
+                <Button onClick={account.signUp}>Create an account</Button>
               </>
             ) : null}
-            <button className="ghost" onClick={dismiss}>
-              Not now
-            </button>
+            <Button onClick={dismiss}>Not now</Button>
           </div>
         </div>
       )}
@@ -227,33 +220,36 @@ function DiscordLinks({
   return (
     <>
       {connections.map((c) => (
-        <div key={c.accountId} className="row spread memberRow">
-          <span>
+        <div key={c.accountId} className="row spread memberRow connectionsRow">
+          <span className="connectionsIdentity">
             <strong>Discord</strong>
             <span className="muted small"> · linked as {c.name}</span>
           </span>
-          <span className="row">
-            <button
-              className="ghost tiny danger"
+          <span className="row connectionsActions">
+            <Button
+              variant="danger"
+              size="compact"
               disabled={busy}
               onClick={() => onUnlink(c.accountId)}
               title={`The bot stops knowing that ${c.name} is you`}
             >
               Unlink
-            </button>
+            </Button>
           </span>
         </div>
       ))}
-      <div className="row spread memberRow">
-        <span>
+      <div className="row spread memberRow connectionsRow">
+        <span className="connectionsIdentity">
           <strong>Discord</strong>
           <span className="muted small"> · {connections.length === 0 ? "not linked" : "link another"}</span>
         </span>
-        <span className="row">
-          <span className="muted small">In a server with the Runlog bot, run /link and open the address it gives you.</span>
+        <span className="row connectionsActions">
+          <span className="muted small connectionsInstructions">
+            In a server with the Runlog bot, run /link and open the address it gives you.
+          </span>
           {onVerify && (
-            <button
-              className="ghost tiny"
+            <Button
+              size="compact"
               disabled={busy}
               onClick={onVerify}
               title={
@@ -263,7 +259,7 @@ function DiscordLinks({
               }
             >
               {connections.length === 0 ? "Link with Discord" : "Verify for linked roles"}
-            </button>
+            </Button>
           )}
         </span>
       </div>

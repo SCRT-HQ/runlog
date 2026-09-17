@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { parsePack, verifyPack, type VerifyResult } from "@runlog/rules-schema";
 import { decodePack, LINK_PREFIX } from "./link.ts";
+import { Button } from "../ui/Button.tsx";
 
 /**
  * A pack that arrived in a link.
@@ -94,10 +95,10 @@ export function IncomingPackBanner({
   if (error) {
     return (
       <div className="incoming bad">
-        <span>Someone shared a pack with you, but {error}.</span>
-        <button className="ghost" onClick={onDismiss}>
-          Dismiss
-        </button>
+        <div className="incomingWhat">Someone shared a pack with you, but {error}.</div>
+        <div className="incomingActions">
+          <Button onClick={onDismiss}>Dismiss</Button>
+        </div>
       </div>
     );
   }
@@ -117,7 +118,11 @@ export function IncomingPackBanner({
           {signature.status === "invalid" && " · signature does not match"}
         </span>
         {!incoming.loads && <div className="muted small">It does not load: {incoming.problem ?? "it is not a valid pack"}</div>}
-        {signature.status === "valid" && <div className="muted small">Fingerprint {signature.fingerprint}</div>}
+        {signature.status === "valid" && (
+          <div className="muted small">
+            Fingerprint <code>{signature.fingerprint}</code>
+          </div>
+        )}
         {signature.status === "invalid" && (
           <div className="muted small">
             It carries a signature that does not match its contents: someone changed it after it was signed.
@@ -125,12 +130,10 @@ export function IncomingPackBanner({
         )}
       </div>
       <div className="incomingActions">
-        <button className="primary" disabled={!incoming.loads} onClick={() => onOpen(incoming.document)}>
+        <Button variant="primary" disabled={!incoming.loads} onClick={() => onOpen(incoming.document)}>
           Open it
-        </button>
-        <button className="ghost" onClick={onDismiss}>
-          Not now
-        </button>
+        </Button>
+        <Button onClick={onDismiss}>Not now</Button>
       </div>
     </div>
   );
