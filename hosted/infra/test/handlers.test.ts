@@ -1755,6 +1755,48 @@ describe("who is asking", () => {
     expect((await call(request("GET", "/api/sessions/01RUN/snapshot"), stranger)).body).toEqual({ found: false });
   });
 
+  describe("the snapshot a seat reads", () => {
+    it("gives a member the run's snapshot with no pack text in it", async () => {
+      const d = deps();
+      await call(request("POST", "/api/sessions", { body: { ...sessionBody, packTitle: "The Long Kiln" } }), d);
+      await call(request("POST", "/api/sessions/01RUN/invites", { body: { email: "friend@example.com", role: "player" } }), d);
+      await call(request("POST", "/api/invites/tok1/accept", { token: "guest", body: { email: "friend@example.com" } }), d);
+      await call(
+        request("PUT", "/api/sessions/01RUN/snapshot", {
+          body: {
+            snapshot: {
+              v: 1,
+              packTitle: "The Long Kiln",
+              log: [{ n: 1, unit: 1, where: "Unit 1", hit: null, text: "a crack along the rim" }],
+              offer: { seq: 4, primary: { id: "roll", label: "Roll", kind: "rollTable" }, moves: [] },
+              paper: { summary: { title: "The Long Kiln", blocks: [] }, mode: null },
+              control: { tool: "example" },
+            },
+          },
+        }),
+        d,
+      );
+      const res = await call(request("GET", "/api/sessions/01RUN/watch", { token: "guest" }), d);
+      const kept = res.body["snapshot"] as { at: string; snapshot: Record<string, unknown> };
+      expect(res.body["found"]).toBe(true);
+      expect(kept.snapshot["offer"]).toMatchObject({ seq: 4 });
+      // The log travels: a seat watches the run.
+      expect(kept.snapshot["log"]).toHaveLength(1);
+      // The pack's paper and the tool profile do not.
+      expect(kept.snapshot["paper"]).toBeUndefined();
+      expect(kept.snapshot["control"]).toBeUndefined();
+      expect(res.body["run"]).toMatchObject({ id: "01RUN", packId: "p", packTitle: "The Long Kiln", endedAt: null });
+      expect(res.body["reactions"]).toEqual([]);
+    });
+
+    it("says nothing to somebody who is not a member", async () => {
+      const d = deps();
+      await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+      const stranger = { ...d, verify: async () => ({ sub: "user_9", sid: "s9" }) };
+      expect((await call(request("GET", "/api/sessions/01RUN/watch"), stranger)).body).toEqual({ found: false });
+    });
+  });
+
   /**
    * The bug: sharing minted a token every time it was called, and only the
    * hash is kept, so the old link could not be repeated and everyone

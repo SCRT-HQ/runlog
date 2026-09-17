@@ -125,6 +125,23 @@ export interface PublicRun {
   reactions?: Reaction[];
 }
 
+/** A run as a seated member reads it: the snapshot, and never the pack. */
+export interface SeatView {
+  found: boolean;
+  run: {
+    id: string;
+    packId: string;
+    packTitle: string | null;
+    name: string | null;
+    seq: number;
+    updatedAt: string;
+    endedAt: string | null;
+  };
+  snapshot: { at: string; snapshot: unknown } | null;
+  listing: { id: string; price: unknown } | null;
+  reactions: Reaction[];
+}
+
 /** A reaction from a watcher: one of a few emoji, a name if they gave one, and when. */
 export interface Reaction {
   emoji: string;
@@ -539,6 +556,8 @@ export interface Api {
   revokeStreamKey(kind: StreamKeyKind): Promise<StreamKeys>;
   /** What a stranger sees of a run whose pack may not travel: written by the owner's device after each move. */
   putSnapshot(sessionId: string, snapshot: unknown): Promise<void>;
+  /** The same snapshot on this account, for a member who holds no pack: no live link needed. */
+  watchAsSeat(sessionId: string): Promise<SeatView>;
   removeMember(sessionId: string, sub: string): Promise<void>;
   people(): Promise<Person[]>;
   /** A Stripe Checkout for a plan, by key; `available: false` where billing is off. */
@@ -1184,6 +1203,7 @@ export function createApi(base: string, getAccessToken: () => Promise<string>, f
     putSnapshot: async (sessionId, snapshot) => {
       await request("PUT", `/sessions/${encodeURIComponent(sessionId)}/snapshot`, { snapshot });
     },
+    watchAsSeat: async (sessionId) => (await request<SeatView>("GET", `/sessions/${encodeURIComponent(sessionId)}/watch`)).body,
     acceptInvite: async (token, email) => {
       const { status, body } = await request<{ sessionId?: string; alreadyIn?: boolean; error?: string }>(
         "POST",
