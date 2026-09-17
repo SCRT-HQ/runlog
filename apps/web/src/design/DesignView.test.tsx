@@ -2,6 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { computeAccessibleName } from "dom-accessibility-api";
 import { loadDraft, saveDraft } from "../storage/db.ts";
 import { blankPack, type Draft } from "./draft.ts";
 import { DesignView } from "./DesignView.tsx";
@@ -352,6 +353,194 @@ describe("the editor in six sections", () => {
     expect(down).toHaveLength(3);
     expect(up[0]!.getAttribute("aria-label")).toBe("Move up: Open the Round");
     expect(down.at(-1)!.getAttribute("aria-label")).toBe("Move down: Finish");
+  });
+});
+
+/**
+ * The words in Overview, the numbers and the release in Publish.
+ *
+ * An id and a version are the first two fields a new author used to be
+ * asked for and the two they are least able to answer, and Publish was a
+ * pile of panels rather than a list of what is left. These cover where the
+ * two fields live now, what says the id is still a placeholder, and that
+ * Publish reads top to bottom with each part saying where it stands.
+ */
+describe("the technical and the distribution details", () => {
+  let root: Root;
+  let container: HTMLDivElement;
+
+  /** A signature of the shape the schema asks for. Not a real one: nothing here verifies it, the panel only reads it. */
+  const SIGNATURE = {
+    algorithm: "ecdsa-p256-sha256",
+    publicKey: "pub",
+    value: "sig",
+    signedAt: "2026-03-04T10:00:00.000Z",
+    signedBy: "A. Author",
+  };
+
+  beforeEach(() => {
+    history.replaceState(null, "", "/");
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    vi.mocked(saveDraft).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+    history.replaceState(null, "", "/");
+    vi.mocked(loadDraft).mockReset();
+    vi.mocked(saveDraft).mockReset();
+  });
+
+  async function mount(stored: Draft) {
+    vi.mocked(loadDraft).mockResolvedValue({ id: "current", pack: stored, updatedAt: "2026-01-01T00:00:00Z" });
+    await act(async () => {
+      root.render(<DesignView />);
+    });
+    const door = Array.from(container.querySelectorAll("button")).find((b) => b.textContent?.startsWith("Continue editing"));
+    if (door) {
+      await act(async () => {
+        door.click();
+      });
+    }
+  }
+
+  const fieldNamed = (label: string) =>
+    Array.from(container.querySelectorAll<HTMLElement>(".field")).find((f) => f.querySelector(".fieldLabel")?.textContent === label);
+  const labelsIn = (scope: Element) => Array.from(scope.querySelectorAll<HTMLElement>(".field .fieldLabel")).map((l) => l.textContent);
+  /** The fold at the end of Overview. */
+  const technical = () => container.querySelector<HTMLDetailsElement>(".designBody details")!;
+  const headings = () => Array.from(container.querySelectorAll(".designBody .sectionTitle")).map((h) => h.textContent ?? "");
+  const show = async (label: string) => {
+    await act(async () => {
+      sectionItem(container, label).click();
+    });
+  };
+  const typeIn = async (label: string, value: string) => {
+    const input = fieldNamed(label)!.querySelector<HTMLInputElement>("input, textarea")!;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
+        "value",
+      )!.set!;
+      setter.call(input, value);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  };
+
+  it("asks for the words first and folds the numbers away", async () => {
+    await mount(blankPack());
+    const identity = container.querySelector(".designBody .panel")!;
+    expect(labelsIn(identity)).toEqual(["Title", "Description", "Author", "Category", "Tags"]);
+
+    const fold = technical();
+    expect(fold.querySelector("summary")!.textContent).toContain("Technical details");
+    expect(fold.open).toBe(false);
+    expect(labelsIn(fold)).toEqual(["Id", "Version"]);
+  });
+
+  it("says a placeholder id is one, in the header, at the field and on Publish", async () => {
+    await mount(blankPack());
+    const badges = () => Array.from(container.querySelectorAll(".badge")).filter((b) => b.textContent === "Placeholder");
+    // One in the header's echo, one beside the field it belongs to.
+    expect(badges()).toHaveLength(2);
+    expect(fieldNamed("Id")!.closest(".fieldWithBadge")!.querySelector(".badge")!.textContent).toBe("Placeholder");
+
+    await show("Publish");
+    expect(container.textContent).toContain(
+      "This pack still has a placeholder id. Give it a domain you control before you sign or share it.",
+    );
+
+    await show("Overview");
+    await typeIn("Id", "io.ferrell.two-line-days");
+    expect(badges()).toHaveLength(0);
+    await show("Publish");
+    expect(container.textContent).not.toContain("still has a placeholder id");
+    expect(container.textContent).toContain("io.ferrell.two-line-days");
+  });
+
+  it("keeps the badge out of what the Id field is called", async () => {
+    // A label names the control it wraps out of everything inside it, so a
+    // badge drawn in there would rename the field for anyone listening to
+    // it rather than looking at it. The word still has to be in the page.
+    await mount(blankPack());
+    const idInput = () => fieldNamed("Id")!.querySelector("input")!;
+    const withBadge = computeAccessibleName(idInput());
+    expect(withBadge.startsWith("Id ")).toBe(true);
+    expect(container.querySelector(".fieldWithBadge .badge")!.textContent).toBe("Placeholder");
+    expect(withBadge).not.toContain("Placeholder");
+
+    await typeIn("Id", "io.ferrell.two-line-days");
+    expect(container.querySelector(".fieldWithBadge")).toBeNull();
+    expect(computeAccessibleName(idInput())).toBe(withBadge);
+  });
+
+  it("reads Publish top to bottom, each part saying where it stands", async () => {
+    await mount(blankPack());
+    await show("Publish");
+    expect(headings().filter((h) => !h.startsWith("Sign and seal"))).toEqual([
+      "Identifier and version",
+      "License",
+      "Signature",
+      "Documents written from the pack",
+      "Share",
+    ]);
+    // Sign and seal is under Signature, not a checklist item of its own.
+    expect(headings()[3]).toMatch(/^Sign and seal/);
+    expect(container.querySelector(".publishState")!.textContent).toContain("com.example.my-game");
+    expect(container.textContent).toContain("Not signed");
+  });
+
+  it("names the signer and the day from the draft's own signature", async () => {
+    await mount({ ...blankPack(), signature: SIGNATURE });
+    await show("Publish");
+    const signed = Array.from(container.querySelectorAll(".publishState")).map((p) => p.textContent ?? "");
+    expect(signed.some((line) => /^Signed by A\. Author on /.test(line))).toBe(true);
+    expect(container.textContent).not.toContain("Not signed");
+  });
+
+  it("says the signature is gone the moment an edit takes it, and counts it against Publish", async () => {
+    await mount({ ...blankPack(), signature: SIGNATURE });
+    expect(sectionItem(container, "Publish").querySelector(".badge")).toBeNull();
+
+    await typeIn("Title", "Two-Line Days");
+    expect(sectionItem(container, "Publish").querySelector(".badge")!.textContent).toBe("1");
+
+    await show("Publish");
+    expect(container.textContent).toContain("Signature dropped by an edit");
+    expect(container.textContent).toContain("Sign the pack again when you are finished");
+    expect(container.textContent).not.toContain("Signed by A. Author");
+  });
+
+  it("takes Edit in Overview to the id, with the fold open", async () => {
+    await mount(blankPack());
+    await show("Publish");
+    await act(async () => {
+      Array.from(container.querySelectorAll<HTMLButtonElement>("button"))
+        .find((b) => b.textContent === "Edit in Overview")!
+        .click();
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(sectionItem(container, "Overview").getAttribute("aria-current")).toBe("page");
+    expect(technical().open).toBe(true);
+    expect(document.activeElement).toBe(fieldNamed("Id")!.querySelector("input"));
+  });
+
+  it("reads the rulebook from Test, where the rules are being tried", async () => {
+    await mount(blankPack());
+    await show("Test");
+    const open = () => Array.from(container.querySelectorAll("button")).find((b) => b.textContent === "Read the rulebook");
+    expect(open()).toBeDefined();
+    expect(container.querySelector(".docPreview")).toBeNull();
+    await act(async () => {
+      open()!.click();
+    });
+    expect(container.querySelector(".docPreview")).not.toBeNull();
+    expect(container.querySelector(".docPreview")!.textContent).toContain("My Game");
   });
 });
 

@@ -60,6 +60,13 @@ describe("what each section owes", () => {
   it("has a row for every section, so nothing has to guard against a missing one", () => {
     expect(Object.keys(countBySection([]))).toEqual(SECTIONS.map((s) => s.id));
   });
+
+  it("counts a dropped signature against Publish, where the pack is signed again", () => {
+    expect(countBySection([], { droppedSignature: true }).publish).toEqual({ errors: 0, warnings: 1 });
+    expect(countBySection([], { droppedSignature: false }).publish).toEqual({ errors: 0, warnings: 0 });
+    // It is a warning, not an error: the pack still loads and still plays.
+    expect(countBySection([problem("license.id")], { droppedSignature: true }).publish).toEqual({ errors: 1, warnings: 1 });
+  });
 });
 
 describe("a section and its address", () => {

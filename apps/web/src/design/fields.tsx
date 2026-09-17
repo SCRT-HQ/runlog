@@ -18,6 +18,16 @@ export interface FieldProps {
   path: string;
   help?: string;
   diagnostics?: readonly Diagnostic[];
+  /**
+   * Something to say about the value that is not a problem with it.
+   *
+   * Drawn after the label element rather than inside it. A label names the
+   * control it wraps out of everything it contains, so a badge put anywhere
+   * in there would become part of the input's name; beside it, the word is
+   * still read out in its own right and the field is still called what it
+   * is called.
+   */
+  badge?: ReactNode;
   children?: ReactNode;
 }
 
@@ -60,11 +70,11 @@ export function focusField(path: string): boolean {
   return true;
 }
 
-export function Field({ label, path, help, diagnostics = [], children }: FieldProps) {
+export function Field({ label, path, help, diagnostics = [], badge, children }: FieldProps) {
   const mine = at(diagnostics, path);
   const worst = mine.some((d) => d.level === "error") ? "error" : mine.length > 0 ? "warn" : "";
 
-  return (
+  const field = (
     <label className={`field ${worst}`} id={fieldDomId(path)} data-path={path}>
       <span className="fieldLabel">{label}</span>
       {children}
@@ -75,6 +85,18 @@ export function Field({ label, path, help, diagnostics = [], children }: FieldPr
         </span>
       ))}
     </label>
+  );
+
+  // Only wrapped where there is something to put beside the label, so the
+  // fields that have nothing to say about their value are the same element
+  // they have always been.
+  return badge ? (
+    <div className="fieldWithBadge">
+      {field}
+      {badge}
+    </div>
+  ) : (
+    field
   );
 }
 

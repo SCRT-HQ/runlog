@@ -548,6 +548,30 @@ p {
   gap: 0.75rem;
   margin-top: 1rem;
 }
+/* Publish is read top to bottom, so each part of it says where it stands
+   in words before the controls that change it. */
+.publishState {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.6rem;
+}
+.publishState.warnText {
+  font-size: inherit;
+}
+/* A badge about the value sits beside the field's label, never inside it: a
+   label names the control it wraps out of everything it holds. Beside it, it
+   keeps to its own width rather than stretching across the cell. */
+.fieldWithBadge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.fieldWithBadge > .badge {
+  align-self: flex-start;
+}
 /* Where the draft stands with storage, said beside the errands. */
 .saveState {
   align-self: center;

@@ -96,6 +96,27 @@ export function isBlank(draft: Draft): boolean {
   return JSON.stringify(draft) === JSON.stringify(blankPack());
 }
 
+/** The domain the blank pack is made under. Reserved by the RFCs precisely so nobody owns it. */
+const PLACEHOLDER_DOMAIN = "com.example.";
+
+/**
+ * Whether the pack's id is still the one the editor made up.
+ *
+ * The schema asks for a reverse-DNS id under a domain you control, and the
+ * blank pack cannot know one, so it starts under `com.example`. That is a
+ * fine place to write a draft and a bad place to publish from: two packs
+ * from two authors would collide in a player's library. Nothing here
+ * blocks anything, it only lets the editor say which one this is.
+ *
+ * Both the domain and the blank pack's exact id are checked, so a later
+ * change to what a new pack starts as is still recognized as a starting
+ * point rather than a decision.
+ */
+export function isPlaceholderId(id: unknown): boolean {
+  if (typeof id !== "string") return false;
+  return id.startsWith(PLACEHOLDER_DOMAIN) || id === blankPack().id;
+}
+
 /**
  * The filename a pack should be saved as.
  *

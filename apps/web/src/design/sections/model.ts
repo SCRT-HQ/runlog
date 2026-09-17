@@ -57,14 +57,26 @@ export interface SectionCount {
   warnings: number;
 }
 
-/** How many errors and warnings each section owns. */
-export function countBySection(diagnostics: readonly Diagnostic[]): Record<Section, SectionCount> {
+/**
+ * How many errors and warnings each section owns.
+ *
+ * A dropped signature is not a diagnostic: the linter has nothing to say
+ * about a pack with no signature on it, which is most packs. It is still
+ * something Publish owes the author, and an author who edits a signed pack
+ * is by definition somewhere else when it happens, so it is counted here
+ * as one warning against Publish rather than left to be discovered.
+ */
+export function countBySection(
+  diagnostics: readonly Diagnostic[],
+  { droppedSignature = false }: { droppedSignature?: boolean } = {},
+): Record<Section, SectionCount> {
   const counts = Object.fromEntries(SECTIONS.map((s) => [s.id, { errors: 0, warnings: 0 }])) as Record<Section, SectionCount>;
   for (const d of diagnostics) {
     const owner = counts[sectionOfPath(d.path)];
     if (d.level === "error") owner.errors++;
     else owner.warnings++;
   }
+  if (droppedSignature) counts.publish.warnings++;
   return counts;
 }
 

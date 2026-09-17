@@ -1,16 +1,21 @@
+import { useEffect, useState } from "react";
+import { Badge } from "../../ui/Badge.tsx";
+import { Disclosure } from "../../ui/Disclosure.tsx";
 import { describe } from "../describe.ts";
+import { isPlaceholderId } from "../draft.ts";
 import { AreaField, CheckField, RowActions, SelectField, TextField } from "../fields.tsx";
 import { get, str, type SectionProps } from "./shared.ts";
 
 /* ------------------------------------------------------------------ */
 
 /** What the game is, what a person needs to play it, and the words it speaks. */
-export function Overview(props: SectionProps) {
+export function Overview({ focus = null, ...props }: SectionProps & { focus?: string | null }) {
   return (
     <>
       <Identity {...props} />
       <Requirements {...props} />
       <Vocabulary {...props} />
+      <TechnicalDetails {...props} focus={focus} />
     </>
   );
 }
@@ -28,24 +33,16 @@ function Identity({ draft, diagnostics, edit }: SectionProps) {
           value={str(draft.title)}
           onChange={(v) => edit(["title"], v)}
         />
-        <TextField
-          label="Id"
-          path="id"
-          mono
-          help={describe("id")}
-          diagnostics={diagnostics}
-          value={str(draft.id)}
-          onChange={(v) => edit(["id"], v)}
-        />
-        <TextField
-          label="Version"
-          path="version"
-          mono
-          help={describe("version")}
-          diagnostics={diagnostics}
-          value={str(draft.version)}
-          onChange={(v) => edit(["version"], v)}
-        />
+      </div>
+      <AreaField
+        label="Description"
+        path="description"
+        help={describe("description")}
+        diagnostics={diagnostics}
+        value={str(draft.description)}
+        onChange={(v) => edit(["description"], v)}
+      />
+      <div className="fieldGrid">
         <TextField
           label="Author"
           path="author"
@@ -77,15 +74,55 @@ function Identity({ draft, diagnostics, edit }: SectionProps) {
           }}
         />
       </div>
-      <AreaField
-        label="Description"
-        path="description"
-        help={describe("description")}
-        diagnostics={diagnostics}
-        value={str(draft.description)}
-        onChange={(v) => edit(["description"], v)}
-      />
     </section>
+  );
+}
+
+/**
+ * The two fields that are addressing rather than authorship.
+ *
+ * An id and a version matter at the moment a pack goes somewhere, and
+ * at no other moment; put among the title and the premise they are the
+ * first two things a new author is asked to decide and the two they are
+ * least able to. Folded away here, echoed and reviewable in Publish,
+ * and unchanged in what they are or what they write.
+ *
+ * It opens itself when the page is on its way to one of them, since a
+ * diagnostic about the id has to land somewhere a person can type.
+ */
+function TechnicalDetails({ draft, diagnostics, edit, focus }: SectionProps & { focus: string | null }) {
+  // Counted rather than flagged: the fold owns whether it is open once it
+  // is drawn, which is what lets a person shut it again, so the only way
+  // to open it from out here is to draw a new one. Each arrival at one of
+  // these fields is one opening.
+  const [openings, setOpenings] = useState(0);
+  useEffect(() => {
+    if (focus === "id" || focus === "version") setOpenings((n) => n + 1);
+  }, [focus]);
+  return (
+    <Disclosure key={openings} defaultOpen={openings > 0} summary="Technical details">
+      <div className="fieldGrid">
+        <TextField
+          label="Id"
+          path="id"
+          mono
+          help={describe("id")}
+          diagnostics={diagnostics}
+          badge={isPlaceholderId(draft.id) ? <Badge tone="warn">Placeholder</Badge> : undefined}
+          value={str(draft.id)}
+          onChange={(v) => edit(["id"], v)}
+        />
+        <TextField
+          label="Version"
+          path="version"
+          mono
+          help={describe("version")}
+          diagnostics={diagnostics}
+          value={str(draft.version)}
+          onChange={(v) => edit(["version"], v)}
+        />
+      </div>
+    </Disclosure>
   );
 }
 
