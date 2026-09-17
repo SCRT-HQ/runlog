@@ -104,6 +104,24 @@ export const UTILITY: Key[] = [
 ];
 
 /**
+ * Where the utility keys sit on the last page of a framed profile.
+ *
+ * The last page is not the run's, so it does not wear the run's frame: the
+ * grid is empty but for these. The keys sit where a hand ends, bottom
+ * right, with the way back at bottom left. `cells` is in {@link UTILITY}
+ * order, and `back` is the cell the way back takes on that page rather
+ * than the one the run's pages turn from.
+ *
+ * Only the framed decks are here. A Mini and a + page through their keys
+ * in order, and the page after the last of them is already the utility
+ * keys alone.
+ */
+export const UTILITY_CORNER: Record<"xl" | "sd", { back: string; cells: string[] }> = {
+  xl: { back: "0,3", cells: ["4,3", "5,3", "6,3", "7,3"] },
+  sd: { back: "0,2", cells: ["1,2", "2,2", "3,2", "4,2"] },
+};
+
+/**
  * A deck laid out in zones: what stays put, and the cells that page.
  *
  * `fixed` is the frame proper, the keys in the same cell on every page of
@@ -143,9 +161,12 @@ export interface Frame {
    * Where a page turn goes on a page that needs one.
    *
    * Every profile ends on the utility page, so every page ahead of it
-   * spends the next cell and the utility page spends only the one back.
+   * spends the next cell. The utility page turns back from `corner.back`
+   * instead, because the frame is not on it.
    */
   turns: { next: string; previous: string };
+  /** The last page's cells, from {@link UTILITY_CORNER}. */
+  corner: { back: string; cells: string[] };
 }
 
 /**
@@ -196,6 +217,7 @@ export const FRAMES: Partial<Record<DeviceId, Frame>> = {
     drive: ["3,0", "1,2", "2,2", "3,2", "1,3", "2,3", "3,3"],
     numbers: ["4,1", "5,1", "6,1", "7,1", "4,2", "5,2", "6,2", "7,2", "4,3", "5,3", "6,3", "7,3"],
     turns: { next: "7,3", previous: "6,3" },
+    corner: UTILITY_CORNER.xl,
   },
   // Five by three, where a pinned key is a cell the pack never gets. Seven
   // are worth pinning: the run, the trio, Finish, and the score. Everything
@@ -227,6 +249,7 @@ export const FRAMES: Partial<Record<DeviceId, Frame>> = {
     drive: ["2,0", "3,0", "3,1", "1,2", "2,2", "3,2"],
     numbers: ["4,1", "4,2"],
     turns: { next: "4,2", previous: "3,2" },
+    corner: UTILITY_CORNER.sd,
   },
 };
 

@@ -21,6 +21,10 @@ const mock = vi.hoisted(() => ({
   wrote: [] as Array<Record<string, unknown>>,
   /** The profiles the Stream Deck app is pretending to already have. */
   installed: [] as Array<{ name: string; shipped?: boolean }>,
+  /** Whether the app's profile folder can be read at all. */
+  readable: true,
+  /** Whether there is anything to lay out for the run the deck is on. */
+  buildable: true,
   /** Every line the plugin logged. */
   logged: [] as string[],
   /** The plugin's own listener for a change to the global settings. */
@@ -71,7 +75,7 @@ vi.mock("./socket.ts", () => ({ openWire: () => ({ connect: () => {}, disconnect
 // Nothing here writes a profile beside the plugin or opens one: what this
 // holds is when the plugin asks for a build, not what comes out of it.
 vi.mock("./profiles-on-demand.ts", () => ({
-  buildFor: (_state: unknown, device: number) => ({ file: `built-${device}`, bytes: new Uint8Array() }),
+  buildFor: (_state: unknown, device: number) => (mock.buildable ? { file: `built-${device}`, bytes: new Uint8Array() } : null),
   install: (file: string) => {
     mock.handed.push(file);
   },
@@ -81,6 +85,7 @@ vi.mock("./profiles-on-demand.ts", () => ({
 // about a pack that already has one.
 vi.mock("./installed.ts", () => ({
   installedProfiles: () => mock.installed,
+  profilesReadable: () => mock.readable,
   installedFor: (pack: { title?: string }, profiles: Array<{ name: string; shipped?: boolean }>) => {
     const found = profiles.find((p) => p.name === pack.title);
     if (!found) return null;
@@ -206,14 +211,46 @@ describe("the profile the deck lands on when a run attaches", () => {
     attach("r5", "com.example.ember-trail");
     // One per deck it has a grid for.
     expect(mock.handed).toEqual(["built-2", "built-7"]);
+  });
 
-    // Once per pack per launch. The Stream Deck app's import prompt is the
-    // streamer's to answer, and another run of the same pack asking again
-    // is a prompt nobody asked for twice.
+  it("builds again for a pack it offered before that the app still has no profile for", async () => {
+    // The offer is not once for good: the app's folder decides. A streamer
+    // who said no to the import prompt, or deleted the profile since, has
+    // no profile for this pack, so the next attach hands one over again
+    // rather than dropping the deck on the generic layout.
+    mock.handed = [];
+    mock.switched = [];
+    mock.installed = [];
+    mock.wrote = [];
+    drop();
+    attach("r5b", "com.example.ember-trail");
+    await vi.waitFor(() => expect(mock.settings["profilesOffered"]).toContain("com.example.ember-trail"));
+
     mock.handed = [];
     drop();
     attach("r6", "com.example.ember-trail");
+    expect(mock.handed).toEqual(["built-2", "built-7"]);
+    // And the generic profile is not offered in the same breath.
+    expect(mock.switched).toEqual([]);
+  });
+
+  it("switches to the generic profile when there is nothing to lay out", () => {
+    // A pack with no moves and no numbers of its own lays out nothing the
+    // generic profile is not already, so the deck goes there and the log
+    // says why.
+    mock.handed = [];
+    mock.switched = [];
+    mock.logged = [];
+    mock.buildable = false;
+    drop();
+    attach("r6b", "com.example.bare-bones");
     expect(mock.handed).toEqual([]);
+    expect(mock.switched).toEqual([
+      ["deck-xl", "profiles/runlog-xl"],
+      ["deck-plus", "profiles/runlog-plus"],
+    ]);
+    expect(mock.logged.filter((l) => l.includes("nothing to build"))).toHaveLength(2);
+    mock.buildable = true;
   });
 
   it("builds nothing for a pack it already ships a profile for", () => {
@@ -238,7 +275,7 @@ describe("the profile the deck lands on when a run attaches", () => {
     mock.globals({ settings: { switchProfiles: true } });
   });
 
-  it("writes the pack into the settings, so a restart does not offer it again", async () => {
+  it("writes the pack into the settings once a deck has been handed a build", async () => {
     mock.handed = [];
     mock.wrote = [];
     drop();
@@ -248,14 +285,29 @@ describe("the profile the deck lands on when a run attaches", () => {
     // The write is a round trip through the software, so it lands a tick later.
     await vi.waitFor(() => expect(mock.wrote).not.toHaveLength(0));
     expect(mock.wrote.at(-1)!.profilesOffered).toContain("com.example.the-long-road");
+  });
 
-    // And a pack the settings arrive already naming is not offered, which
-    // is what a restart looks like from here.
+  it("offers once and no more where it cannot read the Stream Deck app's folder", () => {
+    // A folder this cannot open reads as no profiles, which would hand a
+    // deck the same file on every attach for ever. There the settings are
+    // the record instead, the way they were before the folder was read at
+    // all.
+    mock.readable = false;
     mock.handed = [];
     mock.globals({ settings: { profilesOffered: ["com.example.marsh-light"] } });
     drop();
     attach("r10", "com.example.marsh-light");
     expect(mock.handed).toEqual([]);
+
+    // A pack the settings say nothing about is still offered its build, once.
+    drop();
+    attach("r10b", "com.example.rush-hour");
+    expect(mock.handed).toEqual(["built-2", "built-7"]);
+    mock.handed = [];
+    drop();
+    attach("r10c", "com.example.rush-hour");
+    expect(mock.handed).toEqual([]);
+    mock.readable = true;
   });
 
   it("leaves a pack alone when the Stream Deck app already has a profile under its title", async () => {
