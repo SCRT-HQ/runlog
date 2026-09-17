@@ -1983,10 +1983,9 @@ button:disabled,
 .tracker:first-of-type {
   border-top: none;
 }
-/* A dial's name and the controls that turn it. The name is what gives
-   way on a narrow rail: the controls are three small things that mean
-   nothing apart, and "4 / 10" broken across two lines reads as two
-   numbers. */
+/* A dial's name and the value beside it, wherever a dial is only read:
+   the live page and the stream widget. A dial that can be turned wears
+   `counterRow` as well, which lays the two out as a grid. */
 .trackerHead {
   display: flex;
   justify-content: space-between;
@@ -4258,6 +4257,48 @@ details.panel[open] > summary .sectionTitle::after {
 }
 .row.spread > .nudge {
   flex: 0 0 auto;
+}
+
+/*
+ * A thing with a number and two buttons to move it: a dial's head, a
+ * counter's row.
+ *
+ * Two columns, not a flex row that gives way. The name takes the first
+ * and wraps in it as far as it needs to; the buttons take the second and
+ * stay there. "Rounds without a forfeit" used to push its own controls
+ * onto a second line while the short names either side of it kept theirs
+ * inline, so the column of values read as a zigzag (F08). The controls
+ * hold the row's first line, so a name that wraps grows downward and
+ * leaves every value and button in the column on the one vertical rule.
+ *
+ * The value is monospaced figures three characters wide, so 4, 1 / 4 and
+ * 10 / 60 all leave the plus and minus where they were.
+ */
+.counterRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.6rem;
+}
+.counterRow > :first-child {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+/* One line of name sits against the middle of the buttons beside it. A
+   row nobody can turn has no buttons and wants none of that height. */
+.counterRow:has(.nudge button) > :first-child {
+  min-height: var(--control-h-compact);
+}
+.counterRow > .nudge {
+  align-self: start;
+}
+.counterRow .num {
+  min-width: 3ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- the winners grid ---- */

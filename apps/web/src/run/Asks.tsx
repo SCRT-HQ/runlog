@@ -119,7 +119,13 @@ export function Asks({ pack, run, record }: { pack: Pack; run: ReturnType<typeof
 
   return (
     <SidePanel
+      runId={record.runId}
+      panel="asks"
       className="asks"
+      // Somebody waiting on an answer is the one thing in this column the
+      // run cannot get on without, so a fold does not swallow it: the
+      // count is on the fold, and the marker with it.
+      news={open.length}
       title={
         <>
           Asks <span className="muted">from chat{open.length > 0 ? ` · ${open.length} waiting` : ""}</span>

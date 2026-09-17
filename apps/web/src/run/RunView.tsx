@@ -1351,20 +1351,27 @@ export function RunView({
           {run.record && !bench && <Members pack={pack} run={run.record} tools={tools} deckSubs={deckSubs ?? []} />}
           {state.status === "ended" && <Scores pack={pack} run={run} state={state} />}
           {run.moderated && <Scoreboard run={run} state={state} pack={pack} tools={tools} />}
-          {!run.moderated && tools.length > 0 && <Attached tools={tools} />}
+          {!run.moderated && tools.length > 0 && <Attached runId={run.runId} tools={tools} />}
           {run.roles.length > 0 && <Roles pack={pack} run={run} state={state} />}
           {/* A pack whose units make nothing has no board; the panel would
               say "nothing made yet" for the whole run. */}
           {pack.unit.createsSubject && (
-            <Board pack={pack} state={state} onRename={run.renameSubject} onCorrect={run.readOnly ? undefined : run.correctState} />
+            <Board
+              runId={run.runId}
+              pack={pack}
+              state={state}
+              onRename={run.renameSubject}
+              onCorrect={run.readOnly ? undefined : run.correctState}
+            />
           )}
           <Trackers
+            runId={run.runId}
             pack={pack}
             state={state}
             onNudge={run.readOnly ? undefined : run.nudgeCounter}
             onTurn={run.readOnly ? undefined : run.turnResource}
           />
-          {run.record && api && !bench && <RacePanel pack={pack} race={raceView} />}
+          {run.record && api && !bench && <RacePanel runId={run.runId} pack={pack} race={raceView} />}
           {run.record && !bench && api && <Asks pack={pack} run={run} record={run.record} />}
         </div>
       </div>
@@ -2247,7 +2254,7 @@ export function Scores({ pack, run, state }: { pack: Pack; run: ReturnType<typeo
   const past = rows.filter((r) => r.runId !== mine.runId).slice(0, 5);
 
   return (
-    <SidePanel className="scores" title="Scores">
+    <SidePanel runId={run.runId} panel="scores" className="scores" title="Scores" news={mine.text}>
       <div className="row spread">
         <span>
           <strong>{mine.text}</strong> <span className="muted small">this run</span>
@@ -2292,12 +2299,14 @@ export function Scores({ pack, run, state }: { pack: Pack; run: ReturnType<typeo
  * Decks are not named here any more: the people panel draws one row a
  * person with a mark for the deck, which says whose as well as how many.
  */
-function Attached({ tools }: { tools: AttachedTool[] }) {
+function Attached({ runId, tools }: { runId: string | null; tools: AttachedTool[] }) {
   const named = tools.map((t) => t.app).filter((a): a is string => Boolean(a));
   const seated = tools.map((t) => t.seat).filter((s): s is string => Boolean(s));
   const whose = seated.length > 0 ? seated.join(", ") : tools.length === 1 ? "your game" : `${tools.length} games`;
   return (
     <SidePanel
+      runId={runId}
+      panel="attached"
       title={
         <>
           On {whose}{" "}
@@ -2333,6 +2342,8 @@ function Scoreboard({ run, state, pack, tools }: { run: ReturnType<typeof useRun
   const theirs = Object.entries(pack.counters ?? {}).filter(([, def]) => def.per === "contestant" && !def.hidden);
   return (
     <SidePanel
+      runId={run.runId}
+      panel="scoreboard"
       title={
         <>
           Scoreboard <span className="muted">{state.contestants.length} racing</span>
@@ -2502,6 +2513,8 @@ function Roles({ pack, run, state }: { pack: Pack; run: ReturnType<typeof useRun
   const v = pack.vocabulary;
   return (
     <SidePanel
+      runId={run.runId}
+      panel="table"
       title={
         <>
           At the table <span className="muted">{state.players} players</span>
@@ -2524,11 +2537,13 @@ function Roles({ pack, run, state }: { pack: Pack; run: ReturnType<typeof useRun
 }
 
 function Board({
+  runId,
   pack,
   state,
   onRename,
   onCorrect,
 }: {
+  runId: string | null;
   pack: Pack;
   state: RunState;
   onRename: (subject: number, name: string) => void;
@@ -2562,6 +2577,8 @@ function Board({
 
   return (
     <SidePanel
+      runId={runId}
+      panel="board"
       title={
         <>
           {v.subject.many} <span className="muted">the board</span>
@@ -2755,11 +2772,13 @@ export function clockOf(state: RunState | null): OfferInput["clock"] {
  * to be asked at the start of the run.
  */
 function Trackers({
+  runId,
   pack,
   state,
   onNudge,
   onTurn,
 }: {
+  runId: string | null;
   pack: Pack;
   state: RunState;
   onNudge?: (counter: string, by: number) => void;
@@ -2770,8 +2789,16 @@ function Trackers({
   const cards = state.hand;
   if (resources.length + counters.length + cards.length === 0) return null;
 
+  // What the panel is worth opening for, read as one line: every dial and
+  // every tally at its present figure. A folded panel whose reading has
+  // moved since it was folded says so on the fold.
+  const news = [
+    ...resources.map(([id, def]) => `${id}=${state.resources[id] ?? def.initial}`),
+    ...counters.map(([id, def]) => `${id}=${state.counters[id] ?? def.initial}`),
+  ].join(",");
+
   return (
-    <SidePanel title="Trackers">
+    <SidePanel runId={runId} panel="trackers" title="Trackers" news={news}>
       {resources.map(([id, def]) => {
         const value = state.resources[id] ?? def.initial;
         const max = def.max ?? Math.max(value, 10);
@@ -2788,7 +2815,7 @@ function Trackers({
         };
         return (
           <div key={id} className="tracker">
-            <div className="trackerHead">
+            <div className="trackerHead counterRow">
               <strong title={def.description}>{def.label}</strong>
               <span className="nudge">
                 {onTurn && (
@@ -2834,7 +2861,7 @@ function Trackers({
         );
       })}
       {counters.map(([id, def]) => (
-        <div key={id} className="row spread">
+        <div key={id} className="row spread counterRow">
           <strong>{def.label}</strong>
           <span className="nudge">
             {onNudge && (
