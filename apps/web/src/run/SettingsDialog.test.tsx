@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, useState } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { DEFAULT_ALERTS } from "../alerts/settings.ts";
@@ -168,5 +168,84 @@ describe("the settings sheet as a keyboard sees it", () => {
     expect(panel.getAttribute("aria-labelledby")).toBe(tabs[1]?.id);
     await act(async () => void fireEvent.keyDown(screen.getAllByRole("tab")[1] as HTMLElement, { key: "Home" }));
     expect(document.activeElement?.textContent).toBe("This device");
+  });
+});
+
+/**
+ * The run's own tab, and the one thing on it that destroys something.
+ *
+ * Discard used to ride in the run's toolbar between Settings and the run's
+ * name, a press away from Undo. It is last on the tab about this run now,
+ * and the question it asks, and the call it makes only on a yes, are the
+ * ones it always asked and made.
+ */
+const overARun = (onDiscard: () => void, name: string | null = "Tuesday") => {
+  render(
+    <SettingsDialog
+      runId="run-1"
+      race={false}
+      alerts={DEFAULT_ALERTS}
+      onAlerts={() => {}}
+      rolling={{ auto: false, seeded: false, onAuto: () => {} }}
+      session={{ name, noun: "firing", onDiscard }}
+      onClose={() => {}}
+    />,
+  );
+};
+
+describe("discarding a run, from the run's own tab", () => {
+  it("offers a tab about the run, and nothing about the run on the device's tab", () => {
+    overARun(() => {});
+    expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["This device", "This run", "Widgets"]);
+    expect(screen.queryByText("Discard")).toBeNull();
+  });
+
+  it("has no such tab where there is no run", () => {
+    const html = sheet("run-1");
+    expect(html).not.toContain("This run");
+    expect(html).not.toContain("Discard");
+  });
+
+  it("puts Discard last on it, and asks before it does anything", async () => {
+    const onDiscard = vi.fn();
+    overARun(onDiscard);
+    await act(async () => void screen.getByText("This run").click());
+
+    const section = screen.getByRole("tabpanel");
+    const row = section.querySelector(".dangerRow")!;
+    expect(section.lastElementChild!.lastElementChild).toBe(row);
+    const discard = row.querySelector("button.danger") as HTMLButtonElement;
+    expect(discard.textContent).toBe("Discard");
+
+    await act(async () => void discard.click());
+    expect(screen.getByText("Discard Tuesday?")).toBeTruthy();
+    // The row said it and the question says it again, which is the point of
+    // asking: the same sentence, not a second one.
+    expect(screen.getAllByText("Its log is deleted, and there is no undoing it.").length).toBe(2);
+    expect(onDiscard).not.toHaveBeenCalled();
+  });
+
+  it("discards only on a yes, and does nothing on a no", async () => {
+    const onDiscard = vi.fn();
+    overARun(onDiscard);
+    await act(async () => void screen.getByText("This run").click());
+    const ask = () => act(async () => void (screen.getByRole("tabpanel").querySelector("button.danger") as HTMLButtonElement).click());
+
+    await ask();
+    const cancel = [...document.querySelectorAll("button")].find((b) => b.textContent === "Cancel")!;
+    await act(async () => void cancel.click());
+    expect(onDiscard).not.toHaveBeenCalled();
+
+    await ask();
+    const yes = [...document.querySelectorAll('[role="dialog"] button')].find((b) => b.textContent === "Discard")!;
+    await act(async () => void (yes as HTMLButtonElement).click());
+    expect(onDiscard).toHaveBeenCalledTimes(1);
+  });
+
+  it("names the run itself where it has no name of its own", async () => {
+    overARun(() => {}, null);
+    await act(async () => void screen.getByText("This run").click());
+    await act(async () => void (screen.getByRole("tabpanel").querySelector("button.danger") as HTMLButtonElement).click());
+    expect(screen.getByText("Discard this firing?")).toBeTruthy();
   });
 });

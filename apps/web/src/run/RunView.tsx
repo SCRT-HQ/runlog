@@ -84,9 +84,9 @@ import { StartScreen } from "./StartScreen.tsx";
 import { lifecycleGestures, marksOf, type LifecycleMarks } from "./gestures.ts";
 import { handoutLine, handoutOf } from "./handout.ts";
 import { useRace } from "./useRace.ts";
+import { undoWords } from "./undoWords.ts";
 import { RunRail, type Pane } from "./RunRail.tsx";
 import { useEnterMoves } from "../ui/useEnterMoves.ts";
-import { useConfirm } from "../ui/useConfirm.tsx";
 import { useToast } from "../ui/Toast.tsx";
 import { accountOf, nameOf } from "./names.ts";
 
@@ -774,6 +774,20 @@ export function RunView({
   const answered = useRef(0);
 
   /**
+   * The head the current-action surface was wearing when the answer went
+   * out, and the head it keeps while the result of that answer is on it.
+   *
+   * The engine completes a step the instant its roll resolves, so by the
+   * time the dice are on screen `run.activeStep` is already the next step.
+   * A result that took the step's place has to keep the step's own title,
+   * or the line above the dice would name something that has not happened
+   * yet. Taken where the answer is sent, which is the last moment the step
+   * that asked is still the active one; emptied with the receipts.
+   */
+  const askedHead = useRef<{ phase: string; label: string } | null>(null);
+  const receiptHead = useRef<{ phase: string; label: string } | null>(null);
+
+  /**
    * A roll asked for by a deck, counted rather than carried out here.
    *
    * The request panel is the only place dice are thrown, so a press goes
@@ -792,6 +806,7 @@ export function RunView({
     (key: string, value: string | number | boolean, machineRolled?: boolean, dice?: RolledDie[], seed?: number) => {
       const request = run.pending?.request;
       answered.current += 1;
+      if (request && run.activeStep) askedHead.current = stepHeading(pack, run.activeStep);
       if (request?.kind === "roll" && typeof value === "number") {
         awaiting.current = {
           dice: dice ?? null,
@@ -815,6 +830,7 @@ export function RunView({
    * button does rather than a second path through `run.completeStep`.
    */
   const carryOn = useCallback(() => {
+    receiptHead.current = null;
     setReceipts([]);
     if (closing && closingStep) run.closeAndEnter(closingStep.phase, closingStep.index);
   }, [closing, closingStep, run]);
@@ -930,6 +946,7 @@ export function RunView({
             if (!closing || !closingStep || !run.canEnd.ok) return;
             // The page's own Finish button, to the letter: the receipts go
             // and the closing step ends the run in the same press.
+            receiptHead.current = null;
             setReceipts([]);
             run.finish(closingStep.phase, closingStep.index);
           },
@@ -1008,6 +1025,8 @@ export function RunView({
       // Undo, or the step canceled. Whatever the receipts were about has been unmade.
       seen.current = count;
       awaiting.current = null;
+      askedHead.current = null;
+      receiptHead.current = null;
       setReceipts([]);
       return;
     }
@@ -1019,6 +1038,28 @@ export function RunView({
     // with it: shown as what stands so far, not as a throw just made.
     const restored = !throwing && !landed && answered.current === receipted.current;
     awaiting.current = null;
+    /*
+     * The head this result is read under, settled here rather than at paint,
+     * because the page cannot work it out later.
+     *
+     * Where this device asked, the head the step wore when it asked is the
+     * answer, and a second roll in the same step asks under the same one, so
+     * re-reading it changes nothing. Where the line came from the log instead
+     * of from a press here, which is what a throwless landing means, the
+     * active step has already moved on and reading it would put the next
+     * step's title over the last step's result: the table the line is on
+     * names the step instead. Anything else, a move this device made that
+     * resolved a table, leaves the step it was made on still active, and
+     * that step's head is the right one.
+     */
+    receiptHead.current =
+      askedHead.current ??
+      (!throwing && landed
+        ? headOfOutcome(pack, fresh[0], run.activeStep?.phase ?? null)
+        : run.activeStep
+          ? stepHeading(pack, run.activeStep)
+          : null);
+    askedHead.current = null;
     receipted.current = answered.current;
     setReceipts((prev) => [
       ...prev,
@@ -1112,7 +1153,10 @@ export function RunView({
     // "carry on by itself" plus hands-free would play the whole run
     // without anybody in the room.
     if (!settled || closing || !carriesOnByItself()) return;
-    const timer = setTimeout(() => setReceipts([]), CARRY_ON_HOLD_MS);
+    const timer = setTimeout(() => {
+      receiptHead.current = null;
+      setReceipts([]);
+    }, CARRY_ON_HOLD_MS);
     return () => clearTimeout(timer);
   }, [settled, closing]);
 
@@ -1204,6 +1248,37 @@ export function RunView({
     );
   }
 
+  /**
+   * What the dice did, drawn once and shown in one of two places.
+   *
+   * With a head it is the current-action surface itself: the step's phase
+   * line, the step's title, the result where the instructions were, and
+   * the control at the bottom reading "Carry on". Without one it is the
+   * running tally of a step that is still rolling, sitting above the keypad
+   * asking for the next throw.
+   */
+  const receiptPanel = (head: { phase: string; label: string } | null) => (
+    <Receipt
+      receipts={receipts}
+      nameOf={(id) => hitLabel(pack, state, id)}
+      pack={pack}
+      settled={settled}
+      onDismiss={carryOn}
+      {...(head ? { head } : {})}
+      {...(closing && closingStep && run.canEnd.ok
+        ? {
+            onFinish: () => {
+              receiptHead.current = null;
+              setReceipts([]);
+              run.finish(closingStep.phase, closingStep.index);
+            },
+            finishWord: `Finish the ${pack.vocabulary.run.one.toLowerCase()}`,
+          }
+        : {})}
+      {...receiptFollowUps(run, settled, lastReceipt)}
+    />
+  );
+
   return (
     <main className="main run">
       {bench && <BenchBar pack={pack} bench={bench} onRestart={run.discard} />}
@@ -1277,28 +1352,13 @@ export function RunView({
             </p>
           )}
           <DiceCurtain roll={othersRoll} />
-          {receipts.length > 0 && (
-            <Receipt
-              receipts={receipts}
-              nameOf={(id) => hitLabel(pack, state, id)}
-              pack={pack}
-              settled={settled}
-              onDismiss={carryOn}
-              {...(closing && closingStep && run.canEnd.ok
-                ? {
-                    onFinish: () => {
-                      setReceipts([]);
-                      run.finish(closingStep.phase, closingStep.index);
-                    },
-                    finishWord: `Finish the ${pack.vocabulary.run.one.toLowerCase()}`,
-                  }
-                : {})}
-              {...receiptFollowUps(run, settled, lastReceipt)}
-            />
-          )}
+          {/*
+            A step still rolling: its results so far stay above the keypad
+            the engine is asking the next throw with, which is the surface
+            that has the step's place while the step is unfinished.
+          */}
+          {receipts.length > 0 && !settled && receiptPanel(null)}
           {run.pending?.request ? (
-            // The next thing the game is waiting on comes beneath the
-            // receipts of the rolls before it, which stay where they are.
             <RequestPanel
               request={run.pending.request}
               pack={pack}
@@ -1307,7 +1367,13 @@ export function RunView({
               onCancel={run.abandonPending}
               machineRoll={machineRoll}
             />
-          ) : receipts.length > 0 ? null : state.status === "ended" ? (
+          ) : settled ? (
+            // The result read in the step's own place, under the head the
+            // receipt was made with, where the instructions were. The control
+            // stays the last thing in the surface: only its word changes, to
+            // the one that closes the step.
+            receiptPanel(receiptHead.current)
+          ) : state.status === "ended" ? (
             <Ended pack={pack} state={state} />
           ) : state.unit === 0 ? (
             <StartFirstUnit pack={pack} onEnter={run.enterUnit} />
@@ -1385,12 +1451,16 @@ export function RunView({
       />
       {runMenuOpen && <button type="button" className="runBarScrim" aria-label="Close" onClick={() => setRunMenuOpen(false)} />}
       {settingsOpen && (
+        // A watcher and a seat have a run on screen that is not theirs to throw
+        // away, so the tab about the run, whose only tenant is the discard, is
+        // not offered to them at all.
         <SettingsDialog
           runId={run.record?.runId ?? null}
           race={Boolean(run.record?.raceId)}
           alerts={alerts}
           onAlerts={setAlerts}
           rolling={{ auto: run.autoRoll, seeded: run.seededRun, onAuto: run.setAutoRoll }}
+          {...(run.readOnly ? {} : { session: { name: state.name, noun: pack.vocabulary.run.one.toLowerCase(), onDiscard: run.discard } })}
           pack={pack}
           record={run.record ?? null}
           onAsks={run.setAsks}
@@ -1487,11 +1557,8 @@ function RunHeader({
   const v = pack.vocabulary;
   const drawer = useDocDrawer();
   const mode = pack.modes[state.mode];
-  // Discarding deletes the log, so it is asked first; see useConfirm.
-  const { dialog, ask } = useConfirm();
   return (
     <section className={`runBar${open ? " open" : ""}`}>
-      {dialog}
       <div className="runMeta">
         <strong>{pack.title}</strong>
         <span className="muted">{mode?.label ?? state.mode}</span>
@@ -1529,28 +1596,17 @@ function RunHeader({
         >
           Docs
         </button>
-        <button className="ghost" onClick={run.undo} disabled={!run.canUndo || run.readOnly}>
+        {/* Undo takes back a move, not a keystroke, so the button says which
+            move: the roll, the step or the unit the log names last. */}
+        <button className="ghost" onClick={run.undo} disabled={!run.canUndo || run.readOnly} title={undoWords(pack, run.events)}>
           Undo
         </button>
         <button className="ghost" onClick={onSettings} title="Sounds, dice, rolls, and pop-outs for a stream">
           Settings
         </button>
-        {/* Apart from Undo, and in the tone the profile uses for deletion: it ends the run. */}
-        <button
-          className="ghost danger"
-          title={`End this ${v.run.one.toLowerCase()} and delete its log`}
-          onClick={() => {
-            const named = state.name ? `${state.name}` : `this ${v.run.one.toLowerCase()}`;
-            void ask({
-              ask: `Discard ${named}?`,
-              detail: "Its log is deleted, and there is no undoing it.",
-              confirm: "Discard",
-              destructive: true,
-            }).then((yes) => yes && run.discard());
-          }}
-        >
-          Discard
-        </button>
+        {/* Discarding is not an everyday control and no longer rides in the
+            bar beside Docs and Undo: it is the last thing on the run's own
+            tab in Settings, where nothing else is destructive. */}
         {/* The phone's sheet needs a way down that is not the scrim. */}
         <button className="ghost sheetClose" onClick={onClose}>
           Close
@@ -1635,7 +1691,7 @@ function StepPanel({ pack, run, state, active }: { pack: Pack; run: ReturnType<t
       const owed = state.extraRolls[step.table] ?? 0;
       return (
         <section className="panel runStep" key={key}>
-          <StepHead phase={phase} label={step.label ?? table?.title ?? step.table} />
+          <StepHead {...stepHeading(pack, active)} />
           <p className="muted">{table?.description}</p>
           {owed > 0 && (
             <p className="notice">
@@ -1671,7 +1727,7 @@ function StepPanel({ pack, run, state, active }: { pack: Pack; run: ReturnType<t
       const suggested = subjectSuggestions(pack, state, step.constrainedBy);
       return (
         <section className="panel runStep" key={key}>
-          <StepHead phase={phase} label={step.label ?? `Declare the ${v.subject.one}`} />
+          <StepHead {...stepHeading(pack, active)} />
           <Constraints lines={constraints} action={owedAction(pack, run, state)} />
           {state.bannedTypes.length > 0 && <p className="muted small">No longer allowed: {state.bannedTypes.join(", ")}</p>}
           {suggested.length > 0 && (
@@ -1709,7 +1765,7 @@ function StepPanel({ pack, run, state, active }: { pack: Pack; run: ReturnType<t
       const constraints = constraintLines(pack, state, step.constrainedBy);
       return (
         <section className="panel runStep" key={key}>
-          <StepHead phase={phase} label={step.label} />
+          <StepHead {...stepHeading(pack, active)} />
           {step.description && <p className="muted">{step.description}</p>}
           <Constraints lines={constraints} action={owedAction(pack, run, state)} />
           {list.length > 0 && <Checklist items={list} pack={pack} state={state} ticked={ticked} onToggle={tick} />}
@@ -1732,7 +1788,7 @@ function StepPanel({ pack, run, state, active }: { pack: Pack; run: ReturnType<t
     case "actions":
       return (
         <section className="panel runStep" key={key}>
-          <StepHead phase={phase} label={phase.label} />
+          <StepHead {...stepHeading(pack, active)} />
           <div className="stepAction">
             <button
               className="primary big"
@@ -1781,10 +1837,60 @@ function countMade(pack: Pack, state: RunState): string {
   return `${n} ${noun.toLowerCase()} made so far`;
 }
 
-function StepHead({ phase, label }: { phase: { label: string }; label: string }) {
+/**
+ * The head of a step: the phase it belongs to, and the step's own title.
+ *
+ * Read in one place because three surfaces wear it. The step wears it over
+ * its instructions, a result standing in for that step wears the same one so
+ * the title does not change under the player when the dice land, and the
+ * offer beside the snapshot publishes it to a deck. The title itself comes
+ * from `activeStepLabel`, which is where every step kind's fallback lives; a
+ * second copy of that switch would let the page and the remote drift apart.
+ */
+function stepHeading(pack: Pack, active: ActiveStep): { phase: string; label: string } {
+  return { phase: active.phase.label, label: activeStepLabel(pack, active) ?? "" };
+}
+
+/**
+ * The head for a result that arrived from somewhere else: a roll the owner
+ * of a watched run made, or another seat's.
+ *
+ * Nothing on this device asked for it, so there is no head to have kept, and
+ * by the time the line is in the log the step that produced it is over. The
+ * only thread back to a step is the table the line is on, and a table may be
+ * rolled from more than one phase, so the thread is followed in this order:
+ *
+ *  1. the phase the run is in now, where exactly one of its steps rolls that
+ *     table, because a phase with more than one step is still the phase that
+ *     rolled and it is the nearest thing to knowing;
+ *  2. failing that, the one step in the whole pack that rolls it, where the
+ *     pack has only one;
+ *  3. otherwise nothing, and the receipt says what the dice did under its
+ *     own title.
+ *
+ * A line no step rolls for at all, a move or a trigger, falls to the third
+ * case as well. A missing head is honest; a borrowed one is not, and the
+ * wrong phase's title over somebody else's result is the thing this whole
+ * path exists to avoid.
+ */
+function headOfOutcome(
+  pack: Pack,
+  outcome: { table: string } | undefined,
+  here: { id: string } | null,
+): { phase: string; label: string } | null {
+  if (!outcome) return null;
+  const rolling = pack.phases.flatMap((phase) =>
+    phase.steps.flatMap((step, index) => (step.kind === "rollTable" && step.table === outcome.table ? [{ phase, step, index }] : [])),
+  );
+  const inHand = rolling.filter((match) => match.phase.id === here?.id);
+  const only = inHand.length === 1 ? inHand[0] : rolling.length === 1 ? rolling[0] : undefined;
+  return only ? stepHeading(pack, only) : null;
+}
+
+function StepHead({ phase, label }: { phase: string; label: string }) {
   return (
     <>
-      <h3 className="sectionTitle">{phase.label}</h3>
+      <h3 className="sectionTitle">{phase}</h3>
       <h4 className="stepLabel">{label}</h4>
     </>
   );
@@ -1813,7 +1919,6 @@ function ClosingStep({
   tick: (keys: string[], on: boolean, tally?: string) => void;
 }) {
   const { phase, step, index } = active;
-  const v = pack.vocabulary;
   // What stands in the way of closing: what the player owes, and what the
   // game is owed. A counter that crossed its threshold used to ride into
   // the next scene from this very button, because only the obligations
@@ -1835,10 +1940,9 @@ function ClosingStep({
   const settling = settlingFor(pack, state, constraints, points);
   const boxesFor = settling.boxes;
   const allTicked = checklistDone(points, pack, state, ticked, settling);
-  const label = (step.kind === "manual" || step.kind === "finalizeUnit" ? step.label : undefined) ?? v.finalize;
   return (
     <section className="panel runStep finalize">
-      <StepHead phase={phase} label={label} />
+      <StepHead {...stepHeading(pack, active)} />
       {step.kind === "manual" && step.description && <p className="muted">{step.description}</p>}
       {constraints.length > 0 && (
         <Constraints

@@ -1,5 +1,6 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import { useFocusTrap } from "../ui/useFocusTrap.ts";
+import { useConfirm } from "../ui/useConfirm.tsx";
 import type { AlertSettings } from "../alerts/settings.ts";
 import { DeviceSettings } from "../settings/DeviceSettings.tsx";
 import { StreamSettings } from "./StreamPanel.tsx";
@@ -18,7 +19,7 @@ import type { ChosenSetup } from "../control/setups.ts";
  * never stream. Reachable from the account menu outside a run as well,
  * since nothing on the first tab needs one.
  */
-type Tab = "device" | "widgets" | "chat" | "control";
+type Tab = "device" | "run" | "widgets" | "chat" | "control";
 
 export function SettingsDialog({
   runId,
@@ -26,6 +27,7 @@ export function SettingsDialog({
   alerts,
   onAlerts,
   rolling,
+  session,
   onControls,
   onClose,
   pack,
@@ -57,6 +59,12 @@ export function SettingsDialog({
   onAlerts: (next: AlertSettings) => void;
   /** Who throws the dice in the open run, and whether the run leaves any choice. Absent outside a run. */
   rolling?: { auto: boolean; seeded: boolean; onAuto: (on: boolean) => void };
+  /**
+   * The open run itself: what it is called, the pack's word for one, and
+   * how to throw it away. Absent outside a run, and the run's own tab with
+   * it.
+   */
+  session?: { name: string | null; noun: string; onDiscard: () => void };
   /** Float the run's controls in a window of their own. */
   onControls?: () => void;
   onClose: () => void;
@@ -64,6 +72,8 @@ export function SettingsDialog({
   const close = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
   const [tab, setTab] = useState<Tab>("device");
+  // Discarding deletes the log, so it is asked first; see useConfirm.
+  const { dialog, ask } = useConfirm();
   // Close takes focus on open, as it always has, and now the rest of the
   // page cannot be tabbed to while the sheet is up.
   useFocusTrap(panel, true, onClose, close);
@@ -80,6 +90,7 @@ export function SettingsDialog({
    */
   const tabs: { id: Tab; label: string }[] = [
     { id: "device", label: "This device" },
+    ...(session ? [{ id: "run" as const, label: "This run" }] : []),
     ...(runId !== null ? [{ id: "widgets" as const, label: "Widgets" }] : []),
     ...(pack && record
       ? [
@@ -124,6 +135,7 @@ export function SettingsDialog({
   return (
     <div className="veil" role="presentation" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <section className="panel settingsDialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabIndex={-1} ref={panel}>
+        {dialog}
         <div className="dialogBar">
           <div className="dialogHead">
             <h2 id="settingsTitle">Settings</h2>
@@ -166,6 +178,36 @@ export function SettingsDialog({
             : {})}
         >
           {at === "device" && <DeviceSettings alerts={alerts} onAlerts={onAlerts} {...(rolling ? { rolling } : {})} />}
+
+          {at === "run" && session && (
+            <section>
+              {/*
+                The one destructive thing a run can be told to do, kept off
+                the toolbar it used to sit between Settings and Undo on, and
+                put last, where a page puts what it does not want pressed by
+                accident. The question it asks and the call it makes on a yes
+                are the ones the toolbar's button made.
+              */}
+              <div className="dangerRow">
+                <p className="muted small">Its log is deleted, and there is no undoing it.</p>
+                <button
+                  className="ghost danger"
+                  title={`End this ${session.noun} and delete its log`}
+                  onClick={() => {
+                    const named = session.name ? `${session.name}` : `this ${session.noun}`;
+                    void ask({
+                      ask: `Discard ${named}?`,
+                      detail: "Its log is deleted, and there is no undoing it.",
+                      confirm: "Discard",
+                      destructive: true,
+                    }).then((yes) => yes && session.onDiscard());
+                  }}
+                >
+                  Discard
+                </button>
+              </div>
+            </section>
+          )}
 
           {at === "widgets" && runId !== null && (
             <section>

@@ -63,6 +63,7 @@ function landing(pack: Pack, receipt: RollReceipt): { table: string; title: stri
 export function Receipt({
   receipts,
   pack,
+  head,
   nameOf,
   settled,
   onDismiss,
@@ -74,6 +75,14 @@ export function Receipt({
   /** The step's rolls so far, oldest first. */
   receipts: RollReceipt[];
   pack: Pack;
+  /**
+   * The head of the step this result belongs to, where the result is
+   * standing in for that step rather than sitting above a keypad still
+   * asking. With it the receipt is the current-action surface: the same
+   * phase line, the same title, and the control at the bottom in the same
+   * place, so reading a result never moves the next thing to press.
+   */
+  head?: { phase: string; label: string } | undefined;
   /** "hit Track 2 (bass)" for a result that reached a subject; without it, the number alone. */
   nameOf?: (subjectId: number) => string;
   /** The step is done: nothing more is asked, and Carry on closes it. */
@@ -100,7 +109,14 @@ export function Receipt({
   const title = receipts.length === 1 ? (first?.label ?? "What the dice did") : settled ? "What the dice did" : "What the dice did, so far";
   return (
     <section className={`panel runStep receipt${settled ? "" : " open"}`} aria-live="polite">
-      <h3 className="sectionTitle">{title}</h3>
+      {head ? (
+        <>
+          <h3 className="sectionTitle">{head.phase}</h3>
+          <h4 className="stepLabel">{head.label}</h4>
+        </>
+      ) : (
+        <h3 className="sectionTitle">{title}</h3>
+      )}
 
       {receipts.map((receipt, n) => {
         const hasThrow = receipt.total !== null;
@@ -162,12 +178,42 @@ export function Receipt({
 
       {settled ? (
         <>
+          {/*
+            Saying why a draw cannot be done is part of reading the result,
+            so it is asked above the action row rather than under it. The row
+            is the last thing in this surface and stays the last thing in it,
+            which is what holds the control at the foot of the card, and this
+            way the only filled button on screen at a time is the one that
+            carries the step on.
+          */}
+          {onDrawAgain && why !== null && (
+            <form
+              className="drawAgain"
+              onSubmit={(e) => {
+                e.preventDefault();
+                onDrawAgain(why);
+              }}
+            >
+              <label>
+                <span className="muted small">Why, in a few words (optional). The log keeps it.</span>
+                <input value={why} onChange={(e) => setWhy(e.target.value)} placeholder="no partner today" autoFocus maxLength={120} />
+              </label>
+              <div className="padRow">
+                <button type="submit" className="ghost">
+                  Draw again
+                </button>
+                <button type="button" className="ghost" onClick={() => setWhy(null)}>
+                  Keep it
+                </button>
+              </div>
+            </form>
+          )}
           <div className="padRow stepAction">
-            <button className="primary" onClick={onDismiss} autoFocus>
+            <button className={head ? "primary big" : "primary"} onClick={onDismiss} autoFocus>
               Carry on
             </button>
             {onFinish && (
-              <button className="ghost" onClick={onFinish}>
+              <button className={head ? "ghost big" : "ghost"} onClick={onFinish}>
                 {finishWord ?? "Finish"}
               </button>
             )}
@@ -186,28 +232,6 @@ export function Receipt({
               </button>
             )}
           </div>
-          {onDrawAgain && why !== null && (
-            <form
-              className="drawAgain"
-              onSubmit={(e) => {
-                e.preventDefault();
-                onDrawAgain(why);
-              }}
-            >
-              <label>
-                <span className="muted small">Why, in a few words (optional). The log keeps it.</span>
-                <input value={why} onChange={(e) => setWhy(e.target.value)} placeholder="no partner today" autoFocus maxLength={120} />
-              </label>
-              <div className="padRow">
-                <button type="submit" className="primary">
-                  Draw again
-                </button>
-                <button type="button" className="ghost" onClick={() => setWhy(null)}>
-                  Keep it
-                </button>
-              </div>
-            </form>
-          )}
         </>
       ) : (
         <p className="muted small stays">These stay until the step is done. The next roll is below.</p>

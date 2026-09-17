@@ -1222,7 +1222,7 @@ function unitOf(events: RunEvent[], event: RunEvent): number {
 }
 
 /** Events that begin a player-visible move, used as undo boundaries. */
-function isBoundary(e: RunEvent): boolean {
+export function isBoundary(e: RunEvent): boolean {
   return (
     e.t === "UnitEntered" ||
     e.t === "StepCompleted" ||
