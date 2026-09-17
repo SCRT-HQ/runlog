@@ -1875,6 +1875,33 @@ describe("who is asking", () => {
     });
   });
 
+  describe("the pack a seat may not have", () => {
+    it("answers a member with no license of their own nothing at all", async () => {
+      const d = deps();
+      // The owner holds it; a player at the same table does not.
+      await call(request("PUT", "/api/packs/com.example.kiln", { body: packBody }), d);
+      const player = { ...d, verify: async () => ({ sub: "user_2", sid: "s2" }) };
+      expect((await call(request("GET", "/api/packs/com.example.kiln"), player)).body).toEqual({ found: false });
+    });
+
+    it("carries no pack source on the seat's own route", async () => {
+      const d = deps();
+      await call(request("POST", "/api/sessions", { body: { ...sessionBody, packTitle: "The Long Kiln" } }), d);
+      await call(request("POST", "/api/sessions/01RUN/invites", { body: { email: "friend@example.com", role: "player" } }), d);
+      await call(request("POST", "/api/invites/tok1/accept", { token: "guest", body: { email: "friend@example.com" } }), d);
+      await d.store.putSnapshot("01RUN", "2026-09-16T00:00:00Z", {
+        v: 1,
+        packTitle: "The Long Kiln",
+        log: [],
+        paper: { summary: {}, mode: null },
+      });
+      const res = await call(request("GET", "/api/sessions/01RUN/watch", { token: "guest" }), d);
+      expect(JSON.stringify(res.body)).not.toContain("schemaVersion");
+      const kept = res.body["snapshot"] as { snapshot: Record<string, unknown> };
+      expect(kept.snapshot["paper"]).toBeUndefined();
+    });
+  });
+
   /**
    * The bug: sharing minted a token every time it was called, and only the
    * hash is kept, so the old link could not be repeated and everyone

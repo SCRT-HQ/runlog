@@ -173,4 +173,15 @@ describe("the license boundary", () => {
     expect(files.every((f) => !f.includes("\\"))).toBe(true);
     expect(posix.basename(files[0]!)).toBeTruthy();
   });
+
+  it("the seat's route never reads a pack", () => {
+    // GET /api/sessions/:id/watch is the one route a member with no
+    // license of their own reaches. It must never call into pack storage,
+    // however the routing around it is rearranged.
+    const source = readFileSync(join(repoRoot, "hosted/infra/lib/handlers/api.ts"), "utf8");
+    const branch = source.slice(source.indexOf('if (sub === "/watch"'), source.indexOf('if (sub === "/snapshot"'));
+    expect(branch.length).toBeGreaterThan(0);
+    expect(branch).not.toContain("getPack");
+    expect(branch).not.toContain("getMaster");
+  });
 });
