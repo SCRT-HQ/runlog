@@ -22,6 +22,8 @@ const mock = vi.hoisted(() => ({
   pack: null as { id: string; title: string } | null,
   why: "unsynced" as string,
   fetched: [] as string[],
+  /** The deck and the profile the key asked the app to switch to. */
+  switched: [] as Array<[string, string]>,
 }));
 vi.mock("@elgato/streamdeck", () => ({
   default: {
@@ -38,6 +40,11 @@ vi.mock("@elgato/streamdeck", () => ({
     ui: {
       sendToPropertyInspector: async (m: Record<string, unknown>) => {
         mock.sent.push(m);
+      },
+    },
+    profiles: {
+      switchToProfile: async (device: string, name: string) => {
+        mock.switched.push([device, name]);
       },
     },
   },
@@ -82,7 +89,7 @@ const { Install } = await import("./install.ts");
 
 const key = (alerts: string[], oks: string[]) => ({
   id: "a1",
-  device: { type: 2 },
+  device: { id: "deck-1", type: 2 },
   isKey: () => true,
   isDial: () => false,
   showAlert: async () => {
@@ -115,6 +122,7 @@ describe("pressing the install key", () => {
     mock.why = "unsynced";
     mock.dispatched = [];
     mock.installed = [];
+    mock.switched = [];
   });
 
   it("alerts with no pack chosen, and says so in the log", async () => {
@@ -197,6 +205,51 @@ describe("pressing the install key", () => {
     await press({ id: "com.example.ember-trail", title: "Ember Trail" }, [], oks);
     expect(oks).toEqual(["ok"]);
     expect(mock.dispatched).toEqual([]);
+  });
+
+  it("switches to the shipped profile for a pack that ships one, and hands nothing over", async () => {
+    // The Stream Deck app installs a profile the plugin declares the first
+    // time a deck is put on it, so there is nothing to build and nothing
+    // for the streamer to import. Building here would leave them two
+    // profiles for one pack.
+    const oks: string[] = [];
+    await press({ id: "com.scrthq.runlog.long-kiln", title: "The Long Kiln" }, [], oks);
+
+    expect(mock.switched).toEqual([["deck-1", "profiles/demo-xl"]]);
+    expect(mock.opened).toEqual([]);
+    expect(mock.fetched).toEqual([]);
+    expect(oks).toEqual(["ok"]);
+    // And the key says where the profile came from, through the flash the
+    // copy line uses, named after the key that was pressed.
+    expect(mock.dispatched).toEqual([{ t: "drove", ref: "switched-to-shipped:a1", ok: true }]);
+    expect(mock.logged.filter((l) => l.includes("ships with the plugin, switched to it"))).toHaveLength(1);
+  });
+
+  it("switches for a shipped pack even where the deck is on a run of it", async () => {
+    // The run is the better source for a pack nobody shipped a profile
+    // for. This one is in the package already, laid out from the same file.
+    mock.state = onRun("com.scrthq.runlog.long-kiln");
+    const oks: string[] = [];
+    await press({ id: "com.scrthq.runlog.long-kiln", title: "The Long Kiln" }, [], oks);
+
+    expect(mock.switched).toHaveLength(1);
+    expect(mock.opened).toEqual([]);
+    expect(oks).toEqual(["ok"]);
+  });
+
+  it("has nothing to switch to for a shipped pack on a deck it lays nothing out for", async () => {
+    // A Pedal: no grid, so no shipped profile for it either. The build
+    // path answers, and says no the way it does for any other pack.
+    mock.pack = { id: "com.scrthq.runlog.long-kiln", title: "The Long Kiln", moves: { "push-on": {} } } as never;
+    const alerts: string[] = [];
+    await new Install().onKeyDown({
+      action: { ...key(alerts, []), device: { id: "deck-1", type: 5 } },
+      payload: { settings: { pack: { id: "com.scrthq.runlog.long-kiln", title: "The Long Kiln" } } },
+    } as never);
+
+    expect(mock.switched).toEqual([]);
+    expect(alerts).toEqual(["alert"]);
+    expect(mock.logged.filter((l) => l.includes("nothing to lay out"))).toHaveLength(1);
   });
 
   it("says so in the log for a deck it lays nothing out for", async () => {

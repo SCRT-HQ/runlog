@@ -10,6 +10,7 @@ import type { LiveSnapshot } from "@runlog/engine";
 import { PACK_PROFILES } from "../../../streamdeck/src/profiles.ts";
 import { BASE, DEVICES, DEVICE_IDS, FRAMES, POOLS, UTILITY, UTILITY_PAGE, type Frame, type Key } from "./layouts.ts";
 import {
+  GENERIC,
   container,
   framedPages,
   fromOffer,
@@ -26,6 +27,7 @@ import {
   type Laid,
   type PageFile,
   type Queues,
+  type RootFile,
   type StoredAction,
 } from "./profiles.ts";
 
@@ -92,14 +94,13 @@ for (const file of ["packs/demo/pack.yaml", ...readdirSync(path("packs/sketches"
 /**
  * Every layout on every deck, built, with the slug and the name it ships under.
  *
- * Both are the generator's: the slug is the file each pack is kept in, and
- * the name is the shipped one, which is the pack's title and a mark saying
- * where it came from so an import of the same pack is not turned into a
- * copy. The generic profile is nobody's pack and keeps its own name.
+ * The slug is the generator's: the file each pack is kept in, which the
+ * script puts on each spec. The name comes out of `specs` already marked,
+ * so nothing here spells it.
  */
 const all = shipped.flatMap(({ slug, pack, setups }) =>
   specs(pack, setups).map((spec) => {
-    const named = { ...spec, slug, name: pack ? shippedName(spec.name) : spec.name };
+    const named = { ...spec, slug };
     return { spec: named, built: profile(named) };
   }),
 );
@@ -771,13 +772,29 @@ describe("a deck laid out for a pack", () => {
     // Marketplace has no such file, so its id is what names the download.
     const demo = shipped.find((l) => l.slug === "demo")!.pack!;
     expect(specs(demo, [], "xl")).toEqual([
-      { slug: demo.id, device: "xl", name: demo.title, keys: expect.anything(), zones: expect.anything() },
+      { slug: demo.id, device: "xl", name: shippedName(demo.title), keys: expect.anything(), zones: expect.anything() },
     ]);
     expect(specs(null, []).map((s) => `${s.slug}-${s.device}`)).toEqual(["runlog-xl", "runlog-sd", "runlog-mini", "runlog-plus"]);
-    // A download and a build off the Install key take the bare title. The
-    // shipped one is marked, so the app holds both under their own names
-    // rather than calling the second "<title> copy".
+  });
+
+  it("marks every profile it makes for a pack, and leaves the generic one alone", () => {
+    // One pack, one name, wherever the profile came from: the four the
+    // plugin ships, the one the Install key builds, and the download off
+    // the pack's page. The mark is spelled in one place and put on by the
+    // generator, so no caller can hand out a bare title by mistake.
+    const demo = shipped.find((l) => l.slug === "demo")!.pack!;
     expect(shippedName(demo.title)).toBe(`${demo.title} (Runlog)`);
+    for (const spec of specs(demo, [])) expect(spec.name).toBe(shippedName(demo.title));
+    for (const spec of specsFor(fromPack(demo, []), { slug: "whatever", name: demo.title })) {
+      expect(spec.name).toBe(shippedName(demo.title));
+    }
+    // And it is in the file, which is where the Stream Deck app reads it.
+    const written = profile(specs(demo, [], "xl")[0]!).files["manifest.json"] as RootFile;
+    expect(written.Name).toBe(shippedName(demo.title));
+
+    // The generic layout is nobody's pack: it says what it is.
+    for (const spec of specs(null, [])) expect(spec.name).toBe("Runlog");
+    expect(specsFor(null, GENERIC, "xl")[0]!.name).toBe("Runlog");
     expect(all.find(({ spec }) => spec.slug === "demo")!.spec.name).toBe(shippedName(demo.title));
     expect(all.find(({ spec }) => spec.slug === "runlog")!.spec.name).toBe("Runlog");
   });

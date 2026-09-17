@@ -135,20 +135,29 @@ describe("which of the two profiles a pack has", () => {
     expect(installedFor({ id: "com.example.salt-and-signal", title: "Salt and Signal" }, profiles)).toBe("imported");
   });
 
-  it("tells a shipped profile from an import of the same pack, now the two are named apart", () => {
-    // A profile the plugin installs is named "<title> (Runlog)" so it can
-    // sit beside one the streamer imported without either becoming a copy.
-    // Which is which is still read off the manifest rather than the name:
-    // the plugin's own is the one a deck can be switched to.
+  it("tells a shipped profile from an import of the same pack, whatever either is called", () => {
+    // Both are named "<title> (Runlog)" now, and one of these was imported
+    // before that. Which is which is read off the manifest rather than the
+    // name: the plugin's own is the one a deck can be switched to.
     const pack = { id: "com.scrthq.runlog.long-kiln", title: "The Long Kiln" };
     const ours = { name: "The Long Kiln (Runlog)", installedBy: "com.scrthq.runlog", preconfigured: "profiles/demo-xl" };
     const theirs = { name: "The Long Kiln" };
     expect(installedFor(pack, [ours, theirs])).toBe("shipped");
     expect(installedFor(pack, [ours])).toBe("shipped");
     expect(installedFor(pack, [theirs])).toBe("imported");
-    // And the shipped name is not read as an import of some other pack that
-    // happens to share the title: the mark is part of the name.
-    expect(installedFor({ id: "com.example.long-road", title: "The Long Kiln" }, [ours])).toBe(null);
+  });
+
+  it("counts either name as an import, so a profile from before the mark still does", () => {
+    // Every profile Runlog makes carries the mark now. One imported before
+    // that does not, and a streamer who has had it on their deck for months
+    // should not be handed a second copy of the same pack.
+    const pack = { id: "com.example.long-road", title: "The Long Kiln" };
+    expect(installedFor(pack, [{ name: "The Long Kiln" }])).toBe("imported");
+    expect(installedFor(pack, [{ name: "The Long Kiln (Runlog)" }])).toBe("imported");
+    // Copies of either, which is what the app makes of a second import.
+    expect(installedFor(pack, [{ name: "The Long Kiln (Runlog) copy 2" }])).toBe("imported");
+    // And a pack of another name is still nobody's.
+    expect(installedFor({ id: "com.example.long-road", title: "The Long Road" }, [{ name: "The Long Kiln (Runlog)" }])).toBe(null);
   });
 
   it("is neither where nothing in the folder is for the pack", () => {

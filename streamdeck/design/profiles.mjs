@@ -21,7 +21,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { DEVICES, container, profile, shippedName, specs } from "@runlog/deck-profiles";
+import { DEVICES, container, profile, specs } from "@runlog/deck-profiles";
 import { loadPackText, loadSetupText } from "@runlog/rules-schema";
 import { format, resolveConfig } from "prettier";
 
@@ -95,16 +95,15 @@ export function layouts() {
  * after the file each pack is kept in, which is what they have shipped
  * under since before the Marketplace had any say in it.
  *
- * The name a pack's profile takes is the shipped one, `<title> (Runlog)`,
- * so it can sit in the app's list beside a profile of the same pack the
- * streamer imported themselves rather than turning one of them into a
- * copy. The generic profile is nobody's pack and keeps its own name.
+ * The name is not put on here. `specs` marks a pack's profile
+ * `<title> (Runlog)` itself, so every profile Runlog makes is named the
+ * same way and this script says nothing about it.
  */
 export function profileSpecs() {
   const out = [];
   for (const layout of layouts()) {
     for (const spec of specs(layout.pack, setupsFor(layout.pack ? toolFor(layout.pack.id) : undefined))) {
-      out.push({ ...spec, slug: layout.slug, name: layout.pack ? shippedName(spec.name) : spec.name });
+      out.push({ ...spec, slug: layout.slug });
     }
   }
   return out;

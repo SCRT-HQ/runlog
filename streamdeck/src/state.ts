@@ -464,6 +464,18 @@ export function importedAsCopy(actionId: string): string {
 }
 
 /**
+ * The other flash an Install key raises for itself: a shipped profile.
+ *
+ * A pack the plugin ships a profile for is switched to rather than built
+ * and handed over, so nothing is imported and the key would otherwise look
+ * as though the press did nothing. Same shape as {@link importedAsCopy}:
+ * marked as having gone fine, and named after the key that was pressed.
+ */
+export function switchedToShipped(actionId: string): string {
+  return `switched-to-shipped:${actionId}`;
+}
+
+/**
  * What the Install a profile key says: the pack it would build one for.
  *
  * It asks nothing of the run. The pack is picked in the key's settings and
@@ -475,9 +487,13 @@ export function importedAsCopy(actionId: string): string {
  * profile it already has: it keeps both and calls the second one "copy",
  * and this key is the only place the streamer would hear about it. `on` is
  * that key's own id, which is what tells its flash from another one's.
+ *
+ * A pack the plugin ships a profile for says so instead: the deck was put
+ * on the profile in the package and nothing was imported.
  */
 export function installFace(state: DeckState, pack?: { id: string; title: string }, on?: string): Face {
   if (on !== undefined && state.flash?.ref === importedAsCopy(on)) return { title: "Imported as a copy", tone: "refuse" };
+  if (on !== undefined && state.flash?.ref === switchedToShipped(on)) return { title: "Installed from the plugin", tone: "deck" };
   if (!pack) return { title: "Set up", tone: "dim" };
   return { title: pack.title, tone: "deck", when: "to import" };
 }

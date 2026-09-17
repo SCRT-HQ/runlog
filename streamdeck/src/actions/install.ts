@@ -4,18 +4,24 @@ import { hasProfileFor, installedFor, installedProfiles } from "../installed.ts"
 import { fetchPack, libraryPacks, type LibraryPack } from "../library.ts";
 import { apiBase, store } from "../plugin.ts";
 import { buildFor, buildForPack, install } from "../profiles-on-demand.ts";
-import { importedAsCopy, installFace, type DeckState, type Face } from "../state.ts";
+import { PACK_PROFILES, profileFor } from "../profiles.ts";
+import { importedAsCopy, installFace, switchedToShipped, type DeckState, type Face } from "../state.ts";
 import { RunlogAction } from "./base.ts";
 
 export type InstallSettings = { pack?: { id: string; title: string } };
 
 /**
- * Builds a profile for a pack in your library and hands it to the Stream Deck app.
+ * Puts the deck on a profile for a pack in your library, building one where it must.
  *
  * The only key that hands a profile over. It takes any pack the account
  * has synced rather than the one the deck happens to be following: the
  * list comes off the library, the pack file comes off the account, and
  * neither needs a run open anywhere.
+ *
+ * A pack the plugin ships a profile for is switched to instead. The app
+ * installs the shipped profile the first time a deck is put on it, so
+ * there is nothing to build and nothing to import, and the streamer ends
+ * up with one profile for the pack rather than two.
  *
  * A run of the chosen pack is still the better source where there is one:
  * its offer names the setups for the pack's tool, which is the one place a
@@ -37,6 +43,20 @@ export class Install extends RunlogAction<InstallSettings> {
       return;
     }
     const device = ev.action.device.type;
+    // A pack the plugin ships a profile for is switched to, not built. The
+    // app installs the shipped one if it is not there, which is what the
+    // switch on attach has done since the profiles were split out of the
+    // package, and a build here would leave the streamer a second profile
+    // for one pack. The picker still lists the pack, because a streamer who
+    // deleted the shipped copy presses this to get it back.
+    const shipped = PACK_PROFILES[pack.id] === undefined ? null : profileFor(pack.id, device);
+    if (shipped) {
+      await streamDeck.profiles.switchToProfile(ev.action.device.id, shipped);
+      streamDeck.logger.info(`profile: ${pack.id} ships with the plugin, switched to it`);
+      store.dispatch({ t: "drove", ref: switchedToShipped(ev.action.id), ok: true });
+      await ev.action.showOk();
+      return;
+    }
     // The run first where the deck is on one of this pack: its offer names
     // the setups first-hand rather than from a table or a memory. It comes
     // back with nothing where the run has published no layout and no offer
@@ -89,7 +109,9 @@ export class Install extends RunlogAction<InstallSettings> {
    * Two lists rather than one, because importing a profile twice does not
    * replace the first: the app keeps both. The packs with none are what
    * somebody is usually here for, so those are the first list and the rest
-   * are the second.
+   * are the second. A pack the plugin ships for stays listed either way:
+   * pressing it switches the deck again, which installs the profile once
+   * more where the streamer deleted it.
    */
   override async onPropertyInspectorDidAppear(): Promise<void> {
     await super.onPropertyInspectorDidAppear();

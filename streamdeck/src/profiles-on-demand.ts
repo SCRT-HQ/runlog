@@ -63,6 +63,8 @@ function write(
   if (deck === undefined || !laysOut(keyed)) return null;
 
   const slug = slugFor(pack.id);
+  // The generator puts the name on: `<title> (Runlog)`, the same as a
+  // shipped profile and the same as a download off the pack's page.
   const spec = specsFor(keyed, { slug, name: pack.title ?? pack.id }, deck)[0]!;
   const bytes = container(profile(spec));
 

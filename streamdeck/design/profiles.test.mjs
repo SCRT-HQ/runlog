@@ -105,11 +105,10 @@ describe("the profiles we ship", () => {
 
   it("names each profile after the pack it was laid out from, and marks it as ours", () => {
     // What the Stream Deck app calls it in somebody's list: the pack's own
-    // title with the shipped mark after it. The mark is what lets one of
-    // these sit beside a profile of the same pack the streamer imported;
-    // the app cannot replace a profile on import, and two under one name
-    // leaves the second called "<title> copy". A download and the Install
-    // key keep the bare title, which `packages/deck-profiles` holds.
+    // title with the mark after it. Every profile Runlog makes carries it,
+    // a download and the Install key's build included, so a pack has one
+    // name wherever its profile came from. The generator puts it on; what
+    // is held here is that these files came out with it.
     for (const layout of layouts()) {
       const named = all.filter(({ spec }) => spec.slug === layout.slug);
       expect(named).toHaveLength(4);

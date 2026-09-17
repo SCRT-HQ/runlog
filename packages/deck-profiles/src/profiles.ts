@@ -111,18 +111,20 @@ export interface ProfileSpec {
 export const GENERIC = { slug: "runlog", name: "Runlog" };
 
 /**
- * What the Stream Deck app calls a profile the plugin ships for a pack.
+ * What the Stream Deck app calls a profile Runlog laid out for a pack.
  *
- * A shipped profile is one the plugin declares in its manifest, and those
- * are the only ones it can switch a deck to. An import is not: importing
- * one under a name the app already has leaves both, the second called
- * "<title> copy". So the shipped one takes a name of its own and the two
- * sit in the list as themselves.
+ * Every one of them carries the mark: the four the plugin ships, the one
+ * the Install key hands over, and the one a pack's page downloads. One
+ * pack is then one name in the app's list however the profile got there,
+ * rather than two entries saying the same thing.
  *
- * A download off a pack's page, and a profile the Install key builds, keep
- * the bare title: those are the streamer's own copy, named the way they
- * asked for it. The generic profile is not a pack's and does not come
- * through here.
+ * Nothing collides, because Runlog does not make two profiles for one
+ * pack: a pack the plugin ships one for is switched to rather than built
+ * again. The generic profile is nobody's pack and does not come through
+ * here.
+ *
+ * This is the one place the mark is spelled. It is exported for the tests
+ * that check the name; every caller takes it through {@link specsFor}.
  */
 export function shippedName(title: string): string {
   return `${title} (Runlog)`;
@@ -578,11 +580,17 @@ export function container({ folder, files }: Built): Uint8Array {
  *
  * `keyed` null is the generic layout: the keys any run wants, whatever pack
  * it is playing, and it takes the generic name and slug with it.
+ *
+ * `named.name` is the pack's title. The mark goes on here rather than at
+ * whichever caller asked, so a profile the plugin ships, one the Install
+ * key hands over and one a pack's page downloads all arrive under one
+ * name.
  */
 export function specsFor(keyed: Keyed | null, named: { slug: string; name: string }, device?: DeviceId): ProfileSpec[] {
   const keys = keyed ? [...BASE, ...packKeys(keyed)] : [...BASE];
+  const name = keyed ? shippedName(named.name) : named.name;
   return (device ? [device] : DEVICE_IDS).map((d) => {
-    const spec: ProfileSpec = { slug: named.slug, device: d, name: named.name, keys };
+    const spec: ProfileSpec = { slug: named.slug, device: d, name, keys };
     const frame = FRAMES[d];
     return frame ? { ...spec, zones: zonesFor(frame, keyed) } : spec;
   });

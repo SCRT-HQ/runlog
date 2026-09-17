@@ -26,6 +26,7 @@ import {
   FLASH_MS,
   IDLE_OFF_MS,
   importedAsCopy,
+  switchedToShipped,
   type DeckState,
   type Offer,
   type OpenTarget,
@@ -421,6 +422,21 @@ describe("what the install key says", () => {
     // what it said before.
     expect(installFace(reduce(copied, { t: "tick" }, T + FLASH_MS), pack, "key-1")).toEqual({
       title: "Ember Trail",
+      tone: "deck",
+      when: "to import",
+    });
+  });
+
+  it("says where a shipped profile came from, since nothing was imported", () => {
+    // A pack the plugin ships a profile for is switched to: the app
+    // installs it if it is not there, and the streamer is asked nothing.
+    // Without a word the key would look as though the press did nothing.
+    const pack = { id: "com.scrthq.runlog.long-kiln", title: "The Long Kiln" };
+    const switched = reduce(initial(), { t: "drove", ref: switchedToShipped("key-1"), ok: true }, T);
+    expect(installFace(switched, pack, "key-1")).toEqual({ title: "Installed from the plugin", tone: "deck" });
+    expect(installFace(switched, pack, "key-2")).toEqual({ title: "The Long Kiln", tone: "deck", when: "to import" });
+    expect(installFace(reduce(switched, { t: "tick" }, T + FLASH_MS), pack, "key-1")).toEqual({
+      title: "The Long Kiln",
       tone: "deck",
       when: "to import",
     });
