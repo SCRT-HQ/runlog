@@ -23,6 +23,7 @@ import {
   type TableDeps,
   type TimerJob,
 } from "./play.js";
+import { closeParty, openParty, type PartyDeps } from "./party.js";
 import type { DiscordRest } from "./rest.js";
 import {
   EPHEMERAL,
@@ -405,6 +406,12 @@ function tableDeps(deps: InteractionDeps): TableDeps | null {
   };
 }
 
+/** What a watch party needs: the sessions, the Discord rows, and Discord itself. */
+export function partyDeps(deps: InteractionDeps): PartyDeps | null {
+  if (!deps.store) return null;
+  return { store: deps.store, guilds: deps.guilds, rest: deps.rest ?? null, now: deps.now };
+}
+
 /**
  * A timer's deadline came, by way of the schedule made when it started:
  * stop it and say so in the thread, on the card and to every live page.
@@ -448,6 +455,28 @@ function mayHost(i: Interaction, hostRoleId: string | undefined): boolean {
   return canManage(i);
 }
 
+/**
+ * A live link pasted as an option: the run it names, and the link itself.
+ * Null for anything that is not one of this copy's own links. Read with
+ * `URL` rather than a pattern built out of the address, so a host with a
+ * dot or a port in it needs no escaping.
+ */
+export function liveLinkOf(raw: string, appUrl: string): { sessionId: string; link: string } | null {
+  const link = raw.trim();
+  let asked: URL;
+  let home: URL;
+  try {
+    asked = new URL(link);
+    home = new URL(appUrl);
+  } catch {
+    return null;
+  }
+  if (asked.origin !== home.origin) return null;
+  const m = /^\/r\/([A-Za-z0-9_-]{1,64})$/.exec(asked.pathname);
+  const token = asked.searchParams.get("t") ?? "";
+  return m && /^[A-Za-z0-9_-]{1,200}$/.test(token) ? { sessionId: m[1]!, link } : null;
+}
+
 async function runCommand(
   i: Interaction,
   deps: InteractionDeps,
@@ -459,6 +488,43 @@ async function runCommand(
   const which = sub(i);
   const guild = await deps.guilds.guild(i.guild_id);
   if (!guild) return ephemeral("This server is not set up for Runlog yet. Someone who can manage it runs /setup claim.");
+
+  if (which?.name === "watch") {
+    const party = partyDeps(deps);
+    if (!party) return ephemeral("This copy of Runlog cannot follow runs.");
+    const sub = await deps.guilds.userForDiscord(who.id);
+    if (!sub) return ephemeral("A watch party is for a run of yours, so this Discord account needs one: run /link first.");
+    const asked = (optionValue(which.options, "run") ?? "").trim();
+    const pasted = liveLinkOf(asked, deps.appUrl);
+    if (!pasted && !/^[A-Za-z0-9_-]{1,64}$/.test(asked)) return ephemeral("Pick a run from the list as you type, or paste its live link.");
+    const privately = optionBoolean(which.options, "private") ?? guild.threadMode === "private";
+    if (privately && !hasPermission(i.app_permissions, "CREATE_PRIVATE_THREADS")) {
+      return ephemeral(
+        `The bot cannot open a private thread here: it was installed without ${OPTIONAL_PERMISSION_NAMES["CREATE_PRIVATE_THREADS"]}. Open this link, which asks for that as well, choose this server, and run the command again:\n${installLink(i.application_id, ["CREATE_PRIVATE_THREADS"])}`,
+      );
+    }
+    const opened = await openParty(party, {
+      guild,
+      ...(i.channel_id ? { channelId: guild.channelId ?? i.channel_id } : {}),
+      sessionId: pasted?.sessionId ?? asked,
+      by: { discordId: who.id, name: i.member?.nick?.trim() || nameOf(who), sub },
+      mayHost: mayHost(i, guild.hostRoleId),
+      ...(pasted ? { link: pasted.link } : {}),
+      ...(privately ? { private: true } : {}),
+    });
+    if ("error" in opened) return ephemeral(opened.error);
+    const what = `a watch party on that run in <#${opened.party.threadId}>`;
+    return privately ? ephemeral(`Opened ${what}`) : say(`**${nameOf(who)}** opened ${what}`);
+  }
+  if (which?.name === "unwatch") {
+    const party = partyDeps(deps);
+    const open = party && i.channel_id ? await deps.guilds.partyByThread(i.channel_id) : null;
+    if (!party || !open) return ephemeral("Say that in a watch party's thread.");
+    if (open.closedAt) return ephemeral("This watch party is closed already.");
+    if (who.id !== open.openedBy && !mayHost(i, guild.hostRoleId)) return ephemeral(`Only ${open.openedByName} closes this watch party.`);
+    await closeParty(party, open, "byHand");
+    return say("The watch party is closed. The card above is where the run stood.");
+  }
 
   if (which?.name === "start") {
     if (!mayHost(i, guild.hostRoleId))
@@ -637,7 +703,7 @@ async function runCommand(
     if (action.kind === "follow") return ephemeral("Followed: this run is in your Runlog library now, as a watcher.");
     return ephemeral("Done.");
   }
-  return ephemeral("Run has start, status, link, end, undo, join and leave.");
+  return ephemeral("Run has start, watch, unwatch, status, link, end, undo, join and leave.");
 }
 
 /**
@@ -1013,6 +1079,19 @@ async function autocomplete(i: Interaction, deps: InteractionDeps): Promise<Inte
     const packId = optionValue(which.options, "pack") ?? "";
     const meta = (await deps.guilds.listGuildPacks(i.guild_id)).find((p) => p.id === packId);
     for (const m of meta?.modes ?? []) if (!typed || m.label.toLowerCase().includes(typed)) choices.push({ name: m.label, value: m.id });
+  } else if (which?.name === "watch" && focused?.name === "run" && deps.store) {
+    // The account's own open runs, newest first. Whether one is shared is
+    // not on a pointer, so a run that is not is offered and refused on
+    // opening, with the same words the button uses.
+    const sub = await deps.guilds.userForDiscord(userOf(i)?.id ?? "");
+    const mine = sub ? (await deps.store.manifest(sub)).sessions : [];
+    for (const s of mine
+      .filter((s) => s.role === "owner" && !s.deletedAt && !s.endedAt)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .slice(0, 25)) {
+      const label = [s.name, s.packTitle ?? s.packId].filter((p): p is string => Boolean(p)).join(" · ");
+      if (!typed || label.toLowerCase().includes(typed)) choices.push({ name: label.slice(0, 100), value: s.id });
+    }
   } else if (which?.name === "end" && focused?.name === "ending" && i.channel_id) {
     const run = await deps.guilds.guildRunByThread(i.channel_id);
     const found = run ? await packFor(deps.guilds, run.guildId, run.packId) : null;

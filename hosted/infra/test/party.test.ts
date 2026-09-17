@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { openParty, type PartyDeps } from "../lib/handlers/discord/party";
+import { COMMANDS } from "../lib/handlers/discord/commands";
+import { handleInteraction, type InteractionDeps } from "../lib/handlers/discord/interactions";
+import { closeParty, openParty, type PartyDeps } from "../lib/handlers/discord/party";
+import { EPHEMERAL, InteractionType, ResponseType, type Interaction } from "../lib/handlers/discord/types";
 import type { Guild } from "../lib/handlers/guilds";
 import type { SessionMeta, Store } from "../lib/handlers/store";
 import { memoryDiscord, memoryGuilds } from "./memory-guilds";
@@ -54,6 +57,25 @@ function runStore(over: Partial<SessionMeta> = {}, held: unknown = snapshot): St
     },
     async getSnapshot() {
       return held ? { at: NOW, snapshot: held } : null;
+    },
+    async manifest() {
+      return {
+        packs: [],
+        sessions: [
+          {
+            id: "01RUN",
+            role: "owner",
+            packId: "com.example.kiln",
+            packVersion: "1",
+            packTitle: "The Long Kiln",
+            name: "Thursday",
+            ownerSub: "user_1",
+            updatedAt: NOW,
+            seq: 4,
+          },
+        ],
+        licenses: [],
+      };
     },
   } as unknown as Store;
 }
@@ -167,6 +189,20 @@ describe("opening a watch party", () => {
     });
   });
 
+  it("refuses a run there is no record of", async () => {
+    const { guild, deps } = await ready();
+    expect(await openParty(deps, { guild, channelId: "chan", sessionId: "01GONE", by: mira, mayHost: true })).toEqual({
+      error: "There is no run by that name.",
+    });
+  });
+
+  it("refuses a run that has published no snapshot yet", async () => {
+    const { guild, deps } = await ready();
+    expect(
+      await openParty({ ...deps, store: runStore({}, null) }, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true }),
+    ).toEqual({ error: "That run has not said anything yet; open it in the app and try again." });
+  });
+
   it("opens in the server's default channel when the caller names none", async () => {
     const { guilds, rest, deps } = await ready();
     await guilds.updateGuild("g1", NOW, { channelId: "runs" });
@@ -174,5 +210,127 @@ describe("opening a watch party", () => {
     await openParty(deps, { guild, sessionId: "01RUN", by: mira, mayHost: true });
     expect(rest.posts[0]?.channel).toBe("thread_1");
     expect(rest.threads).toHaveLength(1);
+  });
+});
+
+describe("closing a watch party", () => {
+  it("marks it closed, edits the card to say so, and leaves the thread alone", async () => {
+    const { guilds, rest, guild, deps } = await ready();
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    const closed = await closeParty(deps, out.party, "byHand");
+    expect(closed.closedAt).toBe(NOW);
+    expect(closed.closedFor).toBe("byHand");
+    const edit = rest.edits.at(-1)!;
+    expect(edit.id).toBe("msg_2");
+    expect(JSON.stringify(edit.message)).toContain("The firing went on without it.");
+    // Nothing is posted and the thread is not archived: Discord closes an idle one.
+    expect(rest.posts).toHaveLength(1);
+    expect(rest.archived).toEqual([]);
+    expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("byHand");
+  });
+
+  it("says nothing to Discord for a party whose message is gone", async () => {
+    const { rest, guild, deps } = await ready();
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    const before = rest.edits.length;
+    await closeParty(deps, out.party, "gone");
+    expect(rest.edits).toHaveLength(before);
+  });
+});
+
+const runSub = (
+  name: string,
+  options: Array<{ name: string; type: number; value: string | boolean; focused?: boolean }> = [],
+  over: Partial<Interaction> = {},
+): Interaction => ({
+  id: "i1",
+  application_id: "app",
+  type: InteractionType.ApplicationCommand,
+  token: "t",
+  guild_id: "g1",
+  channel_id: "chan",
+  member: { user: { id: "1001", username: "mira", global_name: "Mira" }, permissions: String(1 << 5), roles: [] },
+  ...over,
+  data: { name: "run", options: [{ name, type: 1, options }] },
+});
+
+async function botReady() {
+  const { guilds, rest, deps } = await ready();
+  await guilds.connect("user_1", { service: "discord", accountId: "1001", name: "Mira", linkedAt: NOW });
+  const bot: InteractionDeps = {
+    guilds,
+    appUrl: "https://runlog.test/",
+    now: () => NOW,
+    store: deps.store as never,
+    rest,
+    mintId: () => "01ID",
+  };
+  return { guilds, rest, bot };
+}
+
+describe("/run watch", () => {
+  it("is a subcommand the bot answers, with autocomplete on the run", () => {
+    const run = COMMANDS.find((c) => c.name === "run")!;
+    const watch = (
+      run as { options: ReadonlyArray<{ name: string; options?: ReadonlyArray<{ name: string; autocomplete?: boolean }> }> }
+    ).options.find((o) => o.name === "watch")!;
+    expect(watch.options?.find((o) => o.name === "run")?.autocomplete).toBe(true);
+    expect((run as { options: ReadonlyArray<{ name: string }> }).options.some((o) => o.name === "unwatch")).toBe(true);
+  });
+
+  it("opens the party and answers with the thread", async () => {
+    const { guilds, bot } = await botReady();
+    const out = await handleInteraction(runSub("watch", [{ name: "run", type: 3, value: "01RUN" }]), bot);
+    expect(out.type).toBe(ResponseType.ChannelMessage);
+    expect(out.data?.content).toContain("<#thread_1>");
+    expect(await guilds.party("01RUN", "g1")).not.toBeNull();
+  });
+
+  it("takes a pasted live link in place of a run", async () => {
+    const { guilds, bot } = await botReady();
+    await guilds.clearLiveLink("01RUN");
+    const out = await handleInteraction(runSub("watch", [{ name: "run", type: 3, value: LINK }]), bot);
+    expect(out.data?.content).toContain("<#thread_1>");
+    expect((await guilds.party("01RUN", "g1"))?.link).toBe(LINK);
+  });
+
+  it("passes a refusal from openParty straight through, to the person alone", async () => {
+    const { bot } = await botReady();
+    const out = await handleInteraction(
+      runSub("watch", [{ name: "run", type: 3, value: "01RUN" }], {
+        member: { user: { id: "1001", username: "mira" }, permissions: "0", roles: [] },
+      }),
+      bot,
+    );
+    expect(out.data?.flags).toBe(EPHEMERAL);
+    expect(out.data?.content).toContain("takes someone who can manage the server");
+  });
+
+  it("offers the linked account's own open runs as you type", async () => {
+    const { bot } = await botReady();
+    const out = await handleInteraction(
+      { ...runSub("watch", [{ name: "run", type: 3, value: "thurs", focused: true }]), type: InteractionType.Autocomplete },
+      bot,
+    );
+    expect(out.type).toBe(ResponseType.AutocompleteResult);
+    expect(out.data?.choices).toEqual([{ name: "Thursday · The Long Kiln", value: "01RUN" }]);
+  });
+});
+
+describe("/run unwatch", () => {
+  it("closes the party whose thread it was typed in", async () => {
+    const { guilds, bot } = await botReady();
+    await handleInteraction(runSub("watch", [{ name: "run", type: 3, value: "01RUN" }]), bot);
+    const out = await handleInteraction(runSub("unwatch", [], { channel_id: "thread_1" }), bot);
+    expect(out.data?.content).toContain("closed");
+    expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("byHand");
+  });
+
+  it("says where to say it, outside a party's thread", async () => {
+    const { bot } = await botReady();
+    const out = await handleInteraction(runSub("unwatch", [], { channel_id: "chan" }), bot);
+    expect(out.data?.content).toBe("Say that in a watch party's thread.");
   });
 });

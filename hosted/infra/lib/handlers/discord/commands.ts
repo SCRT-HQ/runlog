@@ -157,6 +157,21 @@ export const COMMANDS = [
           },
         ],
       },
+      {
+        type: SUB_COMMAND,
+        name: "watch",
+        description: "Follow one of your app runs here, in a thread with a card that keeps up",
+        options: [
+          { type: STRING, name: "run", description: "Which run, or paste its live link", required: true, autocomplete: true },
+          {
+            type: BOOLEAN,
+            name: "private",
+            description: "A private thread: only you and whoever you add can see it. Left out, the server's default applies",
+            required: false,
+          },
+        ],
+      },
+      { type: SUB_COMMAND, name: "unwatch", description: "Close the watch party this thread is" },
       { type: SUB_COMMAND, name: "status", description: "Post the table card again, in this run's thread" },
       { type: SUB_COMMAND, name: "link", description: "The live link: anyone watches, no account needed" },
       {
