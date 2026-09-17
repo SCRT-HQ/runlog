@@ -4400,3 +4400,42 @@ describe("a snapshot with a watch party on it", () => {
     expect(jobs).toHaveLength(2);
   });
 });
+
+describe("a run ending under a watch party", () => {
+  it("sends the job the run, so the final card and the closing line land", async () => {
+    const store = memoryStore();
+    const guilds = memoryGuilds();
+    const jobs: Array<{ sessionId: string }> = [];
+    const d = deps(store, { guilds, party: async (job) => void jobs.push(job) });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await guilds.putParty({
+      sessionId: "01RUN",
+      guildId: "g1",
+      channelId: "chan",
+      threadId: "thread_1",
+      link: "https://runlog.test/r/01RUN?t=tok1",
+      openedBy: "1001",
+      openedByName: "Mira",
+      openedAt: "2026-09-06T12:00:00.000Z",
+      updatedAt: "2026-09-06T12:00:00.000Z",
+    });
+    const ended = { t: "RunEnded", at: "2026-09-06T12:00:00.000Z", id: "e2", ending: "cooled" };
+    await call(request("POST", "/api/sessions/01RUN/events", { body: { events: [ended] } }), d);
+    expect(jobs).toEqual([{ sessionId: "01RUN" }]);
+  });
+
+  it("sends nothing for an ordinary move, which the next snapshot carries anyway", async () => {
+    const store = memoryStore();
+    const guilds = memoryGuilds();
+    const jobs: Array<{ sessionId: string }> = [];
+    const d = deps(store, { guilds, party: async (job) => void jobs.push(job) });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    await call(
+      request("POST", "/api/sessions/01RUN/events", {
+        body: { events: [{ t: "StepCompleted", at: "2026-09-06T12:00:00.000Z", id: "e2" }] },
+      }),
+      d,
+    );
+    expect(jobs).toEqual([]);
+  });
+});
