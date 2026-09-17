@@ -242,18 +242,44 @@ interface FeedCard {
 }
 
 /**
+ * How the last read of the feed went.
+ *
+ * `none` is a copy with no feed to ask: a file on disk, the public page, a
+ * build with no API. `failed` is a copy that had one and did not get an
+ * answer, which is not the same thing and must not be shown as one: the
+ * bundled packs are still here, and a page that said nothing would read as
+ * an empty catalog. Set by `loadFeed`, read once `loadMarketplace` settles.
+ */
+export type FeedState = "none" | "ok" | "failed";
+
+let feed: FeedState = "none";
+
+/** How the last read of the feed went; see `FeedState`. */
+export function feedState(): FeedState {
+  return feed;
+}
+
+/**
  * The marketplace's feed from the API, with no account: public, a minute's
  * cache. Nothing where there is no API, disk, Pages, or where it does
  * not answer; the bundle is the marketplace then, as it always was.
  */
 export async function loadFeed(fetchImpl: typeof fetch = fetch, base = apiBase()): Promise<MarketplaceEntry[]> {
-  if (!base) return [];
+  if (!base) {
+    feed = "none";
+    return [];
+  }
   try {
     const response = await fetchImpl(`${base.replace(/\/$/, "")}/listings`);
-    if (!response.ok || !(response.headers.get("content-type") ?? "").includes("json")) return [];
+    if (!response.ok || !(response.headers.get("content-type") ?? "").includes("json")) {
+      feed = "failed";
+      return [];
+    }
     const body = (await response.json()) as { listings?: FeedCard[] };
+    feed = "ok";
     return (body.listings ?? []).filter((c) => c && typeof c.packId === "string" && c.head).map((c) => feedEntry(c, base));
   } catch {
+    feed = "failed";
     return [];
   }
 }
@@ -355,6 +381,37 @@ export function updatesFor(
 
 /* ---- searching and filtering, pure so the sidebar can be tested ------------ */
 
+/** Played alone, or played with other people. */
+export type Seats = "solo" | "group";
+
+/**
+ * Whether a pack is played alone or with other people, from what the pack
+ * declares and nothing else.
+ *
+ * `players` is the most people any of its modes seats, so more than one
+ * means a group can sit down to it. `tablePlays` says whether one copy
+ * seats that table or everyone brings their own; a group is a group either
+ * way, so it does not change the answer. A pack that declares no seats at
+ * all gets none, and the card leaves the badge off rather than guessing.
+ */
+export function seatsOf(e: Pick<MarketplaceEntry, "players" | "tablePlays">): Seats | null {
+  if (typeof e.players !== "number" || !Number.isFinite(e.players) || e.players < 1) return null;
+  return e.players > 1 ? "group" : "solo";
+}
+
+/**
+ * The players line on a card: the seats a pack declares, in words, or nothing.
+ *
+ * A ceiling, never a floor. `players` is the most people any one of a pack's
+ * modes seats, and a pack with a six-seat mode may well have a solo one too,
+ * so "2 to 6 players" would claim a minimum nothing in the pack carries.
+ */
+export function seatsLabel(e: Pick<MarketplaceEntry, "players" | "tablePlays">): string | null {
+  const seats = seatsOf(e);
+  if (!seats) return null;
+  return seats === "solo" ? "Solo" : `Up to ${e.players} players`;
+}
+
 export interface MarketplaceQuery {
   /** Free text, matched against title, description, author, category and tags. */
   q?: string;
@@ -364,6 +421,10 @@ export interface MarketplaceQuery {
   features?: ReadonlySet<Feature>;
   /** All of these tags. */
   tags?: ReadonlySet<string>;
+  /** Any of these: played alone, played with other people. */
+  seats?: ReadonlySet<Seats>;
+  /** Only packs that cost nothing. */
+  free?: boolean;
   /** Only packs already in the library, or only ones not. */
   mine?: boolean;
   /** One publisher's packs, by the publisher's id. */
@@ -389,6 +450,11 @@ export function filterMarketplace(
   return entries.filter((e) => {
     if (query.kind && e.kind !== query.kind) return false;
     if (query.mine !== undefined && owned.has(e.id) !== query.mine) return false;
+    if (query.free && e.price !== "free") return false;
+    if (query.seats?.size) {
+      const seats = seatsOf(e);
+      if (!seats || !query.seats.has(seats)) return false;
+    }
     if (query.publisher && e.publisher?.id !== query.publisher) return false;
     if (query.categories?.size && !query.categories.has(e.category)) return false;
     if (query.features?.size && ![...query.features].every((f) => e.features.includes(f))) return false;
@@ -448,6 +514,10 @@ export function facets(entries: readonly MarketplaceEntry[]): {
   tags: Facet[];
   features: Array<Facet & { id: Feature }>;
   authors: Facet[];
+  /** Solo and group, in that order, and only where a pack declares either. */
+  seats: Array<Facet & { id: Seats }>;
+  /** How many cost nothing. */
+  free: number;
 } {
   const count = (values: string[]): Facet[] => {
     const m = new Map<string, number>();
@@ -459,11 +529,21 @@ export function facets(entries: readonly MarketplaceEntry[]): {
     value: f.label,
     count: entries.filter((e) => e.features.includes(f.id)).length,
   })).filter((f) => f.count > 0);
+  const seats = (
+    [
+      { id: "solo", value: "Solo" },
+      { id: "group", value: "Group" },
+    ] as const
+  )
+    .map((s) => ({ ...s, count: entries.filter((e) => seatsOf(e) === s.id).length }))
+    .filter((s) => s.count > 0);
   return {
     categories: count(entries.map((e) => e.category)),
     tags: count(entries.flatMap((e) => e.tags)),
     features,
     authors: count(entries.map((e) => e.author ?? "").filter(Boolean)),
+    seats: seats.map((s) => ({ id: s.id, value: s.value, count: s.count })),
+    free: entries.filter((e) => e.price === "free").length,
   };
 }
 

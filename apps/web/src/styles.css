@@ -1167,22 +1167,6 @@ p {
 .publisherHead p {
   margin: 0;
 }
-.publisherLink {
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  text-decoration: underline;
-  text-decoration-color: var(--line);
-  text-underline-offset: 0.15em;
-  cursor: pointer;
-}
-@media (hover: hover) {
-  .publisherLink:hover {
-    text-decoration-color: currentColor;
-  }
-}
 .catalogBlurb {
   margin: 0;
   max-width: 62ch;
@@ -4492,6 +4476,29 @@ details.panel[open] > summary .sectionTitle::after {
   display: grid;
   gap: 0.4rem;
 }
+/*
+ * The rest of the filters. The three the page leads with answer what a
+ * person browsing asks first; the mechanics, the publishers and the whole
+ * tag cloud wait here, and the fold remembers which way this device left it.
+ */
+.marketMore {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.marketMore > summary .sectionTitle {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.marketMore[open] > summary {
+  margin-bottom: 0.6rem;
+}
+.marketMore .facet + .facet {
+  margin-top: 0.9rem;
+}
 .facetTitle {
   margin: 0;
   font-family: var(--mono);
@@ -4518,12 +4525,28 @@ details.panel[open] > summary .sectionTitle::after {
   font-family: var(--mono);
   font-size: 0.75rem;
 }
+/* A count on a pressable chip is a second word, not a suffix. */
+.facet .options .chip .num {
+  margin-left: 0.4rem;
+}
 .marketMain {
   display: grid;
   gap: 0.6rem;
   min-width: 0;
 }
+/* The count and the way out of the filters, on one line and never folded away. */
 .marketCount {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.marketCount p {
+  margin: 0;
+}
+.marketEmpty,
+.marketFeedLine {
   margin: 0;
 }
 .marketGrid {
@@ -4537,11 +4560,35 @@ details.panel[open] > summary .sectionTitle::after {
   flex-direction: column;
   gap: 0.5rem;
 }
-.marketCardHead {
+/* Why you would try it: the activity and the seats, in that order on every card. */
+.marketWhy {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+/*
+ * The card's fold, for what is optional. It is a panel everywhere else; in a
+ * card it is already inside one, so it keeps the fold and drops the box.
+ */
+.marketFold {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.marketFold > summary .sectionTitle {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.marketFold > summary + * {
+  margin-top: 0.4rem;
+}
+.marketCardError {
+  margin: 0.5rem 0 0;
 }
 .marketTitle {
   margin: 0;
@@ -4631,7 +4678,7 @@ details.panel[open] > summary .sectionTitle::after {
     cursor: pointer;
   }
   .marketSide:not(.open) .facet,
-  .marketSide:not(.open) > .ghost.tiny {
+  .marketSide:not(.open) > .marketMore {
     display: none;
   }
 }
@@ -5710,10 +5757,6 @@ a.plan {
 }
 
 /* ---- the catalog's prices and a publisher's packs ---- */
-.priceTag {
-  color: var(--accent);
-  font-family: var(--mono);
-}
 .publisherPacks {
   margin-top: 0.75rem;
   display: grid;
