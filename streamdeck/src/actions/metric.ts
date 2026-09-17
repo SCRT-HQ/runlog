@@ -14,22 +14,38 @@ import { HOLD_MS, HoldTimer, RunlogAction } from "./base.ts";
 
 export type MetricSettings = { field?: MetricField; press?: MetricPress };
 
-/** The fields a dial cycles through. A counter or resource is the run's own and is not on this wheel. */
-const FIELDS = ["score", "unit", "clock", "latest", "leader"] as const;
+/**
+ * The fields a dial cycles through, and the fields the inspector offers.
+ *
+ * A picker never offers what a dedicated key does, unless that key is
+ * dynamic the way Next is: the clock has a Clock action of its own, which
+ * pauses and resumes as well as reading, so it is not on this wheel. A key
+ * already set to it still draws, so nothing on a deck goes blank; only the
+ * choice is gone.
+ *
+ * A counter or a resource is the run's own and is not here either.
+ */
+export const FIELDS = ["score", "unit", "latest", "leader"] as const;
 
-/** The field a dial's rotation lands on, wrapping both ways. */
+/**
+ * The field a dial's rotation lands on, wrapping both ways.
+ *
+ * A field no longer on the wheel, which is the clock on a key set before
+ * it left, counts as off the end: the first turn lands on the wheel and
+ * nothing comes back to it.
+ */
 export function nextField(field: MetricField, by: number): MetricField {
-  const i = typeof field === "string" ? FIELDS.indexOf(field) : -1;
+  const i = typeof field === "string" ? (FIELDS as readonly string[]).indexOf(field) : -1;
   return FIELDS[(i + by + FIELDS.length) % FIELDS.length]!;
 }
 
 /**
- * A number from the run: the score, the unit, a clock, the last result, the leader.
+ * A number from the run: the score, the unit, the last result, the leader.
  *
  * Set to a counter or a resource it is a key as well as a readout: a tap
- * steps the run's own tracker, a hold takes one back off. The five fixed
- * fields are the run's arithmetic rather than a number anybody keeps by
- * hand, so a press on one of those is refused here rather than sent.
+ * steps the run's own tracker, a hold takes one back off. The fixed fields
+ * are the run's arithmetic rather than a number anybody keeps by hand, so
+ * a press on one of those is refused here rather than sent.
  */
 @action({ UUID: "com.scrthq.runlog.metric" })
 export class Metric extends RunlogAction<MetricSettings> {

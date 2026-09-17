@@ -26,13 +26,28 @@ vi.mock("../plugin.ts", () => ({
   },
 }));
 
-const { Metric, nextField } = await import("./metric.ts");
+const { Metric, FIELDS, nextField } = await import("./metric.ts");
 
 describe("turning the dial", () => {
   it("steps through the fields and wraps", () => {
     expect(nextField("score", 1)).toBe("unit");
     expect(nextField("leader", 1)).toBe("score");
     expect(nextField("score", -1)).toBe("leader");
+  });
+
+  it("never lands on the clock, which has a key of its own", () => {
+    // A picker never offers what a dedicated key does. Every field, turned
+    // both ways, and the clock is on none of them.
+    expect([...FIELDS]).not.toContain("clock");
+    const landed = new Set<unknown>();
+    for (const field of [...FIELDS, "clock"] as const) {
+      landed.add(nextField(field, 1));
+      landed.add(nextField(field, -1));
+    }
+    expect([...landed]).not.toContain("clock");
+    // A key set to the clock before it left turns onto the wheel and stays.
+    expect(nextField("clock", 1)).toBe("score");
+    expect(nextField("clock", -1)).toBe("latest");
   });
 });
 

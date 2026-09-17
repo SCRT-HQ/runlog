@@ -15,13 +15,16 @@ export {
   DEVICES,
   DIALS,
   FRAMES,
+  POOLS,
+  SPILLS,
   UTILITY,
-  UTILITY_CORNER,
+  UTILITY_PAGE,
   isWarp,
   type Device,
   type DeviceId,
   type Frame,
   type Key,
+  type Pool,
   type Queued,
 } from "./layouts.ts";
 export { ACTION_NAMES, PAGE_PLUGIN, PLUGIN, TURNS } from "./plugin.ts";

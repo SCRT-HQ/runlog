@@ -68,6 +68,10 @@ export interface Key {
  * Every key here is about the run in hand. The ones that are not are
  * {@link UTILITY}, on a page of their own at the end of every profile.
  *
+ * No Metric key is set to the clock: the Clock action is a key of its own,
+ * and a picker never offers what a dedicated key does. The last result is
+ * the readout that takes that place.
+ *
  * Twelve keys, which is more than a Mini or a + has room for. They page.
  * This order is what a deck too small for a frame lays down; the XL and
  * the Stream Deck spread the same twelve over the zones below.
@@ -82,7 +86,7 @@ export const BASE: Key[] = [
   { action: "autoroll" },
   { action: "metric", settings: { field: "score" } },
   { action: "metric", settings: { field: "unit" } },
-  { action: "metric", settings: { field: "clock" } },
+  { action: "metric", settings: { field: "latest" } },
   { action: "open", settings: { target: "run" } },
   { action: "finish" },
 ];
@@ -104,87 +108,113 @@ export const UTILITY: Key[] = [
 ];
 
 /**
- * Where the utility keys sit on the last page of a framed profile.
+ * The last page of a framed profile, cell by cell.
  *
- * The last page is not the run's, so it does not wear the run's frame: the
- * grid is empty but for these. The keys sit where a hand ends, bottom
- * right, with the way back at bottom left. `cells` is in {@link UTILITY}
- * order, and `back` is the cell the way back takes on that page rather
- * than the one the run's pages turn from.
+ * It is not the run's page, so it does not wear the run's frame. It keeps
+ * Connect and the run in the top left, because a deck that is not
+ * connected is a deck that says nothing wherever you are standing, and
+ * puts the rest in the right two columns, around the way back. The way
+ * back itself is the frame's own `turns.previous`, so a hand finds it in
+ * the same cell it turns every other page from.
  *
  * Only the framed decks are here. A Mini and a + page through their keys
- * in order, and the page after the last of them is already the utility
- * keys alone.
+ * in order, and the page after the last of them is already {@link UTILITY}
+ * alone.
  */
-export const UTILITY_CORNER: Record<"xl" | "sd", { back: string; cells: string[] }> = {
-  xl: { back: "0,3", cells: ["4,3", "5,3", "6,3", "7,3"] },
-  sd: { back: "0,2", cells: ["1,2", "2,2", "3,2", "4,2"] },
+export const UTILITY_PAGE: Record<"xl" | "sd", Array<{ key: Key; at: string }>> = {
+  xl: [
+    { key: { action: "connect" }, at: "0,0" },
+    { key: { action: "run" }, at: "1,0" },
+    { key: { action: "open", settings: { target: "rules" } }, at: "6,0" },
+    { key: { action: "open", settings: { target: "guide" } }, at: "7,0" },
+    { key: { action: "open", settings: { target: "run" } }, at: "6,1" },
+    { key: { action: "open", settings: { target: "newrun" } }, at: "7,1" },
+    { key: { action: "autoroll" }, at: "6,2" },
+    { key: { action: "open", settings: { target: "dock" } }, at: "7,2" },
+    { key: { action: "install" }, at: "7,3" },
+  ],
+  sd: [
+    { key: { action: "connect" }, at: "0,0" },
+    { key: { action: "run" }, at: "1,0" },
+    { key: { action: "open", settings: { target: "rules" } }, at: "3,0" },
+    { key: { action: "open", settings: { target: "guide" } }, at: "4,0" },
+    { key: { action: "open", settings: { target: "dock" } }, at: "2,1" },
+    { key: { action: "open", settings: { target: "run" } }, at: "3,1" },
+    { key: { action: "open", settings: { target: "newrun" } }, at: "4,1" },
+    { key: { action: "autoroll" }, at: "2,2" },
+    { key: { action: "install" }, at: "4,2" },
+  ],
 };
+
+/**
+ * The three things a pack puts on a deck, each with a pool of cells.
+ *
+ * A pool is a row or a block the frame keeps for one kind of key, and each
+ * has a queue of its own: `numbers` is what an eye reads, `setups` is what
+ * a tool is handed, `moves` is what a hand presses mid-scene.
+ */
+export type Pool = "numbers" | "setups" | "moves";
+
+/** The pools in the order a page fills each from its own queue. */
+export const POOLS: Pool[] = ["numbers", "setups", "moves"];
+
+/** The order the queues spill in, once every pool has taken its own. */
+export const SPILLS: Pool[] = ["moves", "setups", "numbers"];
 
 /**
  * A deck laid out in zones: what stays put, and the cells that page.
  *
  * `fixed` is the frame proper, the keys in the same cell on every page of
- * the profile. The two pools are the free cells either side of it, each in
- * the order it fills, and each fed by a queue of its own: `drive` is what a
- * hand presses, `numbers` is what an eye reads.
+ * the run's. The pools are the free cells around it.
  *
  * `extras` are the base keys this frame has no cell for. Each queue takes
  * them either side of the pack's own: `first` is what a deck that cannot
- * pin all twelve still opens on, and `last` is what waits behind the
- * pack, because a key nobody presses mid-scene is worth less than a move.
+ * pin all twelve still opens on, and `last` is what waits behind the pack.
  */
 export interface Queued {
   /** Ahead of the pack's keys. */
   first: Key[];
-  /** Behind them, and ahead of a pack's Open rules key. */
+  /** Behind them. */
   last: Key[];
 }
 
 export interface Frame {
-  /** A key and the cell it holds on every page. Cells are `"column,row"`. */
+  /** A key and the cell it holds on every page of the run's. Cells are `"column,row"`. */
   fixed: Array<{ key: Key; at: string }>;
-  /**
-   * Where a pack's Open rules key sits.
-   *
-   * Only a pack profile has one. The generic profile has the cell as the
-   * first free one on the numbers side rather than a hole in the frame.
-   */
-  rules?: string;
   /** The base keys the frame leaves out, before and behind the pack's own in each queue. */
-  extras: { drive: Queued; numbers: Queued };
-  /** The free cells on the left, in fill order. */
-  drive: string[];
-  /** The free cells on the right, in fill order. */
-  numbers: string[];
+  extras: Record<Pool, Queued>;
+  /** The free cells each pool owns, in the order it fills them. */
+  pools: Record<Pool, string[]>;
+  /** Where a queue looks for a cell once its own pool is full. */
+  spill: Record<Pool, Pool[]>;
   /**
    * Where a page turn goes on a page that needs one.
    *
    * Every profile ends on the utility page, so every page ahead of it
-   * spends the next cell. The utility page turns back from `corner.back`
-   * instead, because the frame is not on it.
+   * spends the next cell. A cell listed in a pool and taken by a turn is
+   * the pool's on the pages the turn is not there, which is how the moves
+   * reach one cell further along on page one.
    */
   turns: { next: string; previous: string };
-  /** The last page's cells, from {@link UTILITY_CORNER}. */
-  corner: { back: string; cells: string[] };
+  /** The last page, from {@link UTILITY_PAGE}. */
+  utility: Array<{ key: Key; at: string }>;
 }
 
 /**
- * The XL and the Stream Deck, laid out by where a hand rests.
+ * The XL and the Stream Deck, laid out the way a streamer laid one out.
  *
- * Both put the driving keys under the left hand and the numbers under the
- * right eye, and both keep that arrangement on every page: the moves and
- * the trackers a pack brings page through the free cells, and Next, Roll
- * and Undo stay where the thumb left them.
+ * The left of the deck is the run: Connect, the run, Undo and the clock
+ * along the top, Next and the three readouts under them, Roll below that,
+ * Finish in the bottom left corner. None of it moves as the pages turn.
  *
- * The second row is the trio pressed mid-scene, so the hand finds it
- * without looking, with Connect and the run above it. Finish sits in the
- * far bottom corner, as far from that hand as the grid goes, and it takes
- * a hold on top of that.
+ * The right of the deck is the pack: its counters and resources across the
+ * top right, its setups on the third row, its moves along the bottom. The
+ * page turns sit in the bottom right corner, where a hand ends.
  *
- * Neither frame carries the guide: it is on the utility page at the end of
- * every profile with the rest of {@link UTILITY}, which is why the cell it
- * used to hold on an XL is now the first the pack's own keys fill.
+ * Nothing that is not about the run in hand is on these pages. The guide,
+ * a new run, the dock, the rules, the dice the run throws for itself and
+ * Install a profile are all on {@link UTILITY_PAGE}, the last page of
+ * every profile.
  *
  * The Mini and the + have no frame here on purpose. Six keys and eight are
  * fewer than the twelve every profile opens with, so anything pinned
@@ -192,64 +222,75 @@ export interface Frame {
  * {@link BASE} down in order and page.
  */
 export const FRAMES: Partial<Record<DeviceId, Frame>> = {
-  // Eight by four. The top row is the run and the numbers it works out,
-  // the second the trio, and the six cells under the trio are the pack's
-  // to fill. The right two thirds below the top row are all numbers.
+  // Eight by four. Ten cells are the run's, and the twenty-one that are
+  // left are the pack's, in three pools with a row each.
   xl: {
     fixed: [
       { key: { action: "connect" }, at: "0,0" },
       { key: { action: "run" }, at: "1,0" },
-      { key: { action: "open", settings: { target: "run" } }, at: "2,0" },
-      { key: { action: "metric", settings: { field: "score" } }, at: "4,0" },
-      { key: { action: "metric", settings: { field: "unit" } }, at: "5,0" },
-      { key: { action: "metric", settings: { field: "clock" } }, at: "6,0" },
+      { key: { action: "undo" }, at: "2,0" },
+      { key: { action: "clock" }, at: "3,0" },
       { key: { action: "next" }, at: "0,1" },
-      { key: { action: "roll" }, at: "1,1" },
-      { key: { action: "undo" }, at: "2,1" },
-      { key: { action: "clock" }, at: "3,1" },
-      { key: { action: "autoroll" }, at: "0,2" },
+      { key: { action: "metric", settings: { field: "latest" } }, at: "1,1" },
+      { key: { action: "metric", settings: { field: "unit" } }, at: "2,1" },
+      { key: { action: "metric", settings: { field: "score" } }, at: "3,1" },
+      { key: { action: "roll" }, at: "0,2" },
       { key: { action: "finish" }, at: "0,3" },
     ],
-    rules: "7,0",
-    extras: { drive: { first: [], last: [] }, numbers: { first: [], last: [] } },
-    // The guide left the frame for the utility page, so 3,0 is the first
-    // free cell a pack's keys fill rather than a pinned one.
-    drive: ["3,0", "1,2", "2,2", "3,2", "1,3", "2,3", "3,3"],
-    numbers: ["4,1", "5,1", "6,1", "7,1", "4,2", "5,2", "6,2", "7,2", "4,3", "5,3", "6,3", "7,3"],
+    // Every base key an XL has room to pin is pinned, so nothing queues
+    // beside the pack's own.
+    extras: {
+      numbers: { first: [], last: [] },
+      setups: { first: [], last: [] },
+      moves: { first: [], last: [] },
+    },
+    pools: {
+      numbers: ["4,0", "5,0", "6,0", "7,0", "4,1", "5,1", "6,1", "7,1"],
+      setups: ["1,2", "2,2", "3,2", "4,2", "5,2", "6,2", "7,2"],
+      // 6,3 is the way back on every page but the first, where there is
+      // nowhere to go back to.
+      moves: ["1,3", "2,3", "3,3", "4,3", "5,3", "6,3"],
+    },
+    spill: { numbers: ["setups", "moves"], setups: ["numbers", "moves"], moves: ["setups", "numbers"] },
     turns: { next: "7,3", previous: "6,3" },
-    corner: UTILITY_CORNER.xl,
+    utility: UTILITY_PAGE.xl,
   },
-  // Five by three, where a pinned key is a cell the pack never gets. Seven
-  // are worth pinning: the run, the trio, Finish, and the score. Everything
-  // else queues, the keys a hand wants mid-scene ahead of the pack's own
-  // and the rest behind them.
+  // Five by three, where a pinned key is a cell the pack never gets. The
+  // same shape at that size: the run along the top and down the left, the
+  // moves along the bottom, the two number cells beside them. Only the
+  // score is pinned of the three readouts; the other two lead the numbers
+  // queue, so a pack with a counter of its own gets those cells instead.
   sd: {
     fixed: [
       { key: { action: "connect" }, at: "0,0" },
       { key: { action: "run" }, at: "1,0" },
+      { key: { action: "undo" }, at: "2,0" },
+      { key: { action: "clock" }, at: "3,0" },
       { key: { action: "metric", settings: { field: "score" } }, at: "4,0" },
       { key: { action: "next" }, at: "0,1" },
       { key: { action: "roll" }, at: "1,1" },
-      { key: { action: "undo" }, at: "2,1" },
-      { key: { action: "finish" }, at: "0,2" },
+      { key: { action: "finish" }, at: "2,1" },
     ],
     extras: {
-      drive: {
-        first: [{ action: "autoroll" }, { action: "clock" }],
-        last: [{ action: "open", settings: { target: "run" } }],
-      },
       numbers: {
-        first: [],
-        last: [
+        first: [
+          { action: "metric", settings: { field: "latest" } },
           { action: "metric", settings: { field: "unit" } },
-          { action: "metric", settings: { field: "clock" } },
         ],
+        last: [],
       },
+      setups: { first: [], last: [] },
+      moves: { first: [], last: [] },
     },
-    drive: ["2,0", "3,0", "3,1", "1,2", "2,2", "3,2"],
-    numbers: ["4,1", "4,2"],
+    pools: {
+      numbers: ["3,1", "4,1"],
+      // No row to spare for the setups on a five by three: they spill.
+      setups: [],
+      moves: ["0,2", "1,2", "2,2", "3,2"],
+    },
+    spill: { numbers: ["setups", "moves"], setups: ["moves", "numbers"], moves: ["setups", "numbers"] },
     turns: { next: "4,2", previous: "3,2" },
-    corner: UTILITY_CORNER.sd,
+    utility: UTILITY_PAGE.sd,
   },
 };
 

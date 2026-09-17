@@ -32,10 +32,14 @@
     <div id="runlog-account"></div>
     <script src="account.js"></script>
     <script>
-      // Five fields every pack has, then whatever counters and resources the
+      // Four fields every pack has, then whatever counters and resources the
       // attached run is keeping - those come from the plugin on every appear.
       // A counter or a resource is a key as well as a number, so those two
       // are the only fields the press rows are offered for.
+      // No clock here: the Clock action is a key of its own, and a picker
+      // never offers what a dedicated key does. A key already set to the
+      // clock keeps drawing it; only the choice is gone. This list is
+      // `FIELDS` in `src/actions/metric.ts`, which a dial turns through.
       (() => {
         const { streamDeckClient } = SDPIComponents;
         const field = document.getElementById("field");
@@ -46,7 +50,6 @@
         const FIXED = [
           ["score", "Score"],
           ["unit", "Unit"],
-          ["clock", "Clock"],
           ["latest", "Last result"],
           ["leader", "Leader"],
         ];
