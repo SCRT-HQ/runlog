@@ -221,6 +221,9 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
     mintStreamKey: async () => ({ key: "", keys: {} }),
     revokeStreamKey: async () => ({}),
     putSnapshot: async () => {},
+    watchAsSeat: async () => {
+      throw new Error("not used here");
+    },
     putPublisherPack: async () => {
       throw new SyncError("error");
     },

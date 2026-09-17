@@ -47,6 +47,7 @@ function fakeApi(overrides: Partial<Api>): Api {
     mintStreamKey: notUsed,
     revokeStreamKey: notUsed,
     putSnapshot: notUsed,
+    watchAsSeat: notUsed,
     removeMember: notUsed,
     people: notUsed,
     checkout: notUsed,
