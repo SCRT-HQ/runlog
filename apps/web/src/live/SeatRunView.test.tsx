@@ -1,12 +1,19 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { SeatStrip } from "./SeatStrip.tsx";
+import { SeatRunView } from "./SeatRunView.tsx";
+import type { Seat, SeatSnapshot } from "./useSeat.ts";
 
 /**
  * The strip a seated player presses, drawn from the offer the run's own
  * page published.
  */
+
+vi.mock("../sync/useApi.ts", () => ({ useApi: () => null }));
+
+const current = vi.hoisted(() => ({ seat: undefined as unknown as Seat }));
+vi.mock("./useSeat.ts", () => ({ useSeat: () => current.seat }));
 
 afterEach(cleanup);
 
@@ -105,5 +112,70 @@ describe("what a press says", () => {
     render(<SeatStrip offer={asking} seating="table" held={false} note={null} onPress={(p) => pressed.push(p)} />);
     for (const b of screen.getAllByRole("button")) fireEvent.click(b);
     expect(pressed).toEqual([]);
+  });
+});
+
+/**
+ * The page a seat opens: even holding a snapshot with the pack's own paper
+ * on it, this page never draws a way to that paper. Docs, export and the
+ * Designer belong to the device that holds the pack, and a seat never does.
+ */
+describe("what a seat's page never shows", () => {
+  const snapshot: SeatSnapshot = {
+    v: 1,
+    at: "2026-09-16T00:00:00Z",
+    packId: "com.example.kiln",
+    packTitle: "The Long Kiln",
+    runName: null,
+    mode: "Standard",
+    words: { run: "Firing", unit: "Stage", units: "Stages" },
+    status: "active",
+    ending: null,
+    unit: 1,
+    where: "Shape",
+    step: "Throw the piece",
+    phases: [],
+    quoted: true,
+    standings: [],
+    contestants: 0,
+    subjects: [],
+    counters: [],
+    resources: [],
+    clocks: [],
+    progress: { unitsDone: 0, elapsedMs: 0, timed: false },
+    score: { label: "Stages closed", text: "0 stages", value: 0, better: "higher" },
+    forcedUnits: 0,
+    log: [],
+    paper: { summary: { kind: "summary", layout: "book", title: "The Long Kiln", blocks: [] }, mode: null },
+    offer,
+  };
+
+  it("has no paper, no export and no way into the Designer", () => {
+    current.seat = {
+      view: {
+        found: true,
+        run: {
+          id: "01RUN",
+          packId: "com.example.kiln",
+          packTitle: "The Long Kiln",
+          name: null,
+          seq: 1,
+          updatedAt: "2026-09-16T00:00:00Z",
+          endedAt: null,
+        },
+        snapshot: null,
+        listing: null,
+        reactions: [],
+      },
+      snapshot,
+      held: true,
+      note: null,
+      stale: false,
+      press: () => {},
+    };
+    render(<SeatRunView id="01RUN" players={2} />);
+    expect(screen.queryByRole("button", { name: "Docs" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /export/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /create/i })).toBeNull();
   });
 });
