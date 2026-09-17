@@ -27,7 +27,7 @@ function metricFields(): string[] {
 
 /** Every option written into an inspector's page, the empty "Set up" one aside. */
 function options(file: string): string[] {
-  return [...read(file).matchAll(/<option value="(\w*)"/g)].map((m) => m[1]!).filter((value) => value !== "");
+  return [...read(file).matchAll(/<option value="([^"]*)"/g)].map((m) => m[1]!).filter((value) => value !== "");
 }
 
 describe("what a picker offers", () => {

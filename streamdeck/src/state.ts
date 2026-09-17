@@ -438,7 +438,7 @@ const OPEN_LABELS: Record<Exclude<OpenTarget, "guide">, string> = {
  * what an unset one says rather than drawing nothing at all.
  */
 export function openFace(state: DeckState, target?: OpenTarget): Face {
-  if (!target || (target !== "guide" && !(target in OPEN_LABELS))) return { title: "Set up", tone: "dim" };
+  if (!target || (target !== "guide" && !Object.hasOwn(OPEN_LABELS, target))) return { title: "Set up", tone: "dim" };
   if (target === "guide") return { title: "Guide", tone: "deck", when: "in a browser" };
   // `newrun` opens `/create`, which needs no run to already be held, so it
   // is answered beside `guide` rather than waiting on `common()`.
