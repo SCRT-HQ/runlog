@@ -6,6 +6,7 @@ import { DeviceSettings } from "../settings/DeviceSettings.tsx";
 import { StreamSettings } from "./StreamPanel.tsx";
 import { ChatSettings } from "./ChatPanel.tsx";
 import { ControlSettings } from "./ControlSettings.tsx";
+import { SEEDED_ROLL_SENTENCE } from "./pace.ts";
 import type { Pack } from "@runlog/rules-schema";
 import type { StoredRun } from "../storage/db.ts";
 import type { ChosenSetup } from "../control/setups.ts";
@@ -103,6 +104,11 @@ export function SettingsDialog({
   // not leave the sheet blank.
   const at = tabs.some((t) => t.id === tab) ? tab : "device";
 
+  // What this pack calls a run, for the run-scoped tabs' scope lines. Read
+  // from the pack the dialog already has; session carries the same word
+  // where a test or a caller has a session but no pack.
+  const noun = pack?.vocabulary.run.one.toLowerCase() ?? session?.noun ?? "run";
+
   /**
    * The tabs answer the arrow keys, and only the chosen one is in the Tab
    * order, which is what a tab list is for: Tab is the way out of the
@@ -180,62 +186,80 @@ export function SettingsDialog({
           {at === "device" && <DeviceSettings alerts={alerts} onAlerts={onAlerts} {...(rolling ? { rolling } : {})} />}
 
           {at === "run" && session && (
-            <section>
-              {/*
-                The one destructive thing a run can be told to do, kept off
-                the toolbar it used to sit between Settings and Undo on, and
-                put last, where a page puts what it does not want pressed by
-                accident. The question it asks and the call it makes on a yes
-                are the ones the toolbar's button made.
-              */}
-              <div className="dangerRow">
-                <p className="muted small">Its log is deleted, and there is no undoing it.</p>
-                <button
-                  className="ghost danger"
-                  title={`End this ${session.noun} and delete its log`}
-                  onClick={() => {
-                    const named = session.name ? `${session.name}` : `this ${session.noun}`;
-                    void ask({
-                      ask: `Discard ${named}?`,
-                      detail: "Its log is deleted, and there is no undoing it.",
-                      confirm: "Discard",
-                      destructive: true,
-                    }).then((yes) => yes && session.onDiscard());
-                  }}
-                >
-                  Discard
-                </button>
-              </div>
-            </section>
+            <>
+              <p className="muted small">Applies to this {noun} only.</p>
+              <section>
+                {/*
+                  A fact about this run, not a choice on this device: stated
+                  here too, above Discard, so nobody has to leave the run's
+                  own tab to find out why the dice are not theirs.
+                */}
+                {rolling?.seeded && <p className="muted small">{SEEDED_ROLL_SENTENCE}</p>}
+                {/*
+                  The one destructive thing a run can be told to do, kept off
+                  the toolbar it used to sit between Settings and Undo on, and
+                  put last, where a page puts what it does not want pressed by
+                  accident. The question it asks and the call it makes on a yes
+                  are the ones the toolbar's button made.
+                */}
+                <div className="dangerRow">
+                  <p className="muted small">Its log is deleted, and there is no undoing it.</p>
+                  <button
+                    className="ghost danger"
+                    title={`End this ${session.noun} and delete its log`}
+                    onClick={() => {
+                      const named = session.name ? `${session.name}` : `this ${session.noun}`;
+                      void ask({
+                        ask: `Discard ${named}?`,
+                        detail: "Its log is deleted, and there is no undoing it.",
+                        confirm: "Discard",
+                        destructive: true,
+                      }).then((yes) => yes && session.onDiscard());
+                    }}
+                  >
+                    Discard
+                  </button>
+                </div>
+              </section>
+            </>
           )}
 
           {at === "widgets" && runId !== null && (
-            <section>
-              <h3 className="sectionTitle">
-                Widgets <span className="muted">what a stream shows</span>
-              </h3>
-              <StreamSettings runId={runId} race={race} onControls={onControls} />
-            </section>
+            <>
+              <p className="muted small">What a stream shows for this {noun}.</p>
+              <section>
+                <h3 className="sectionTitle">
+                  Widgets <span className="muted">what a stream shows</span>
+                </h3>
+                <StreamSettings runId={runId} race={race} onControls={onControls} />
+              </section>
+            </>
           )}
 
           {at === "chat" && pack && record && (
-            <section>
-              <ChatSettings pack={pack} record={record} onAsks={onAsks} />
-            </section>
+            <>
+              <p className="muted small">A connected service, for this {noun}.</p>
+              <section>
+                <ChatSettings pack={pack} record={record} onAsks={onAsks} />
+              </section>
+            </>
           )}
 
           {at === "control" && pack && record && (
-            <section>
-              <ControlSettings
-                pack={pack}
-                record={record}
-                onControl={onControl}
-                {...(reachable ? { reachable } : {})}
-                {...(onSetup ? { onSetup } : {})}
-                {...(onHandOut ? { onHandOut } : {})}
-                {...(seats && seats.length > 0 ? { seats } : {})}
-              />
-            </section>
+            <>
+              <p className="muted small">A connected tool, for this {noun}.</p>
+              <section>
+                <ControlSettings
+                  pack={pack}
+                  record={record}
+                  onControl={onControl}
+                  {...(reachable ? { reachable } : {})}
+                  {...(onSetup ? { onSetup } : {})}
+                  {...(onHandOut ? { onHandOut } : {})}
+                  {...(seats && seats.length > 0 ? { seats } : {})}
+                />
+              </section>
+            </>
           )}
         </div>
       </section>

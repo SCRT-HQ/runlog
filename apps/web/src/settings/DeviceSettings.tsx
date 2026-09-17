@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AlertsPanel } from "../alerts/AlertsPanel.tsx";
 import type { AlertSettings } from "../alerts/settings.ts";
 import { Dice3dSwitch } from "../dice/Dice3dSwitch.tsx";
-import { carriesOnByItself, rollsForMeByDefault, setCarriesOnByItself, setRollsForMeByDefault } from "../run/pace.ts";
+import { carriesOnByItself, rollsForMeByDefault, SEEDED_ROLL_SENTENCE, setCarriesOnByItself, setRollsForMeByDefault } from "../run/pace.ts";
 
 /**
  * What is about this device rather than about any run.
@@ -52,6 +52,8 @@ export function DeviceSettings({
 
   return (
     <>
+      <p className="muted small">Applies on this device, in every run.</p>
+
       <section>
         <h3 className="sectionTitle">
           Alerts <span className="muted">and sounds</span>
@@ -64,14 +66,16 @@ export function DeviceSettings({
           Rolls <span className="muted">whose dice, and how fast</span>
         </h3>
         <Dice3dSwitch />
-        {rolling?.seeded ? (
-          <p className="muted small">This run rolls from its seed, so everyone at it meets the same dice.</p>
-        ) : (
-          <label className="toggle" title="Off by default: the dice are yours">
-            <input type="checkbox" checked={rollSwitch} onChange={(e) => setRoll(e.target.checked)} />
-            <span>Roll for me, without asking</span>
-          </label>
-        )}
+        {/*
+          A seeded run turns this from a choice into a fact: the switch
+          stays visible, disabled, so it reads as overridden rather than
+          missing, with the sentence beside it saying why.
+        */}
+        <label className="toggle" title={rolling?.seeded ? SEEDED_ROLL_SENTENCE : "Off by default: the dice are yours"}>
+          <input type="checkbox" checked={rollSwitch} disabled={rolling?.seeded} onChange={(e) => setRoll(e.target.checked)} />
+          <span>Roll for me, without asking</span>
+        </label>
+        {rolling?.seeded && <p className="muted small">{SEEDED_ROLL_SENTENCE}</p>}
         <label className="toggle" title="A receipt shows what a roll did; by default it waits for Carry on">
           <input
             type="checkbox"

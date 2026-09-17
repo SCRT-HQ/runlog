@@ -1,10 +1,34 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, useState } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { loadPackText } from "@runlog/rules-schema";
 import { DEFAULT_ALERTS } from "../alerts/settings.ts";
+import type { StoredRun } from "../storage/db.ts";
 import { SettingsDialog } from "./SettingsDialog.tsx";
+
+/**
+ * The demo pack, for the tabs that need one to open at all (Chat and
+ * Control) and for a real run noun to check a scope line against, the
+ * same pack ControlSettings.test.tsx and ControlPanel.test.tsx use.
+ */
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const loaded = loadPackText(readFileSync(join(repoRoot, "packs/demo/pack.yaml"), "utf8"), "yaml");
+if (!loaded.ok) throw new Error("the demo pack did not load");
+const kiln = loaded.pack;
+
+const fixtureRecord = (): StoredRun => ({
+  runId: "run-1",
+  packId: kiln.id,
+  packVersion: kiln.version,
+  events: [],
+  updatedAt: "",
+  role: "owner",
+});
 
 /**
  * The sheet at first paint: what this device's choices are, and which
@@ -52,10 +76,23 @@ describe("the settings sheet", () => {
     expect(html).not.toContain(">Control<");
   });
 
-  it("offers no choice of dice in a seeded run", () => {
+  /** The roll-for-me switch's own markup, so a disabled Dice3dSwitch or Alerts checkbox elsewhere cannot be mistaken for it. */
+  const rollSwitchTag = (html: string): string =>
+    /<input type="checkbox"([^>]*)\/>\s*<span>Roll for me, without asking<\/span>/.exec(html)?.[1] ?? "";
+
+  it("shows the roll switch disabled, with the sentence beside it, in a seeded run rather than hiding it", () => {
     const html = sheet("run-1", { auto: false, seeded: true, onAuto: () => {} });
     expect(html).toContain("rolls from its seed");
-    expect(html).not.toContain("Roll for me, without asking");
+    // Shown, not hidden: the label is still there, and the input is disabled.
+    expect(html).toContain("Roll for me, without asking");
+    expect(rollSwitchTag(html)).toContain("disabled");
+  });
+
+  it("leaves the roll switch enabled, with no seeded sentence, in an ordinary run", () => {
+    const html = sheet("run-1", { auto: false, seeded: false, onAuto: () => {} });
+    expect(html).toContain("Roll for me, without asking");
+    expect(html).not.toContain("rolls from its seed");
+    expect(rollSwitchTag(html)).not.toContain("disabled");
   });
 });
 
@@ -247,5 +284,95 @@ describe("discarding a run, from the run's own tab", () => {
     await act(async () => void screen.getByText("This run").click());
     await act(async () => void (screen.getByRole("tabpanel").querySelector("button.danger") as HTMLButtonElement).click());
     expect(screen.getByText("Discard this firing?")).toBeTruthy();
+  });
+});
+
+/**
+ * Every tab in one place, so each can say what it is about: this device,
+ * this one firing, or a service on the other end of a connection. All
+ * five tabs need a pack and a record to be offered at once.
+ */
+const everyTab = (rolling: { auto: boolean; seeded: boolean; onAuto: () => void }) =>
+  render(
+    <SettingsDialog
+      runId="run-1"
+      race={false}
+      alerts={DEFAULT_ALERTS}
+      onAlerts={() => {}}
+      onClose={() => {}}
+      pack={kiln}
+      record={fixtureRecord()}
+      rolling={rolling}
+      session={{ name: "Tuesday", noun: "firing", onDiscard: () => {} }}
+    />,
+  );
+
+const goTo = async (label: string) => {
+  await act(async () => void screen.getByText(label).click());
+  return screen.getByRole("tabpanel");
+};
+
+describe("what each tab says it applies to", () => {
+  afterEach(cleanup);
+
+  it("says This device applies on this device, in every run", async () => {
+    everyTab({ auto: false, seeded: false, onAuto: () => {} });
+    const panel = screen.getByRole("tabpanel");
+    expect(panel.textContent).toContain("Applies on this device, in every run.");
+  });
+
+  it("says This run applies to this firing only, the pack's own word for one", async () => {
+    everyTab({ auto: false, seeded: false, onAuto: () => {} });
+    const panel = await goTo("This run");
+    expect(panel.textContent).toContain("Applies to this firing only.");
+  });
+
+  it("says what Widgets, Chat, and Control are each for, with the run noun", async () => {
+    everyTab({ auto: false, seeded: false, onAuto: () => {} });
+    expect((await goTo("Widgets")).textContent).toContain("What a stream shows for this firing.");
+    expect((await goTo("Chat")).textContent).toContain("A connected service, for this firing.");
+    expect((await goTo("Control")).textContent).toContain("A connected tool, for this firing.");
+  });
+
+  it("puts the seeded sentence on This run, above the ruled-off Discard row", async () => {
+    everyTab({ auto: false, seeded: true, onAuto: () => {} });
+    const panel = await goTo("This run");
+    expect(panel.textContent).toContain("This run rolls from its seed, so everyone at it meets the same dice.");
+    const row = panel.querySelector(".dangerRow")!;
+    // Last in the tab: nothing about the run comes after Discard.
+    expect(panel.querySelector("section")!.lastElementChild).toBe(row);
+  });
+
+  it("has no seeded sentence on This run when the run is not seeded", async () => {
+    everyTab({ auto: false, seeded: false, onAuto: () => {} });
+    const panel = await goTo("This run");
+    expect(panel.textContent).not.toContain("rolls from its seed");
+  });
+
+  it("keeps a fixture run's control token inside the copy control's value, never in a heading or caption", async () => {
+    // A throwaway fixture value, never a real WorkOS or watch key: the
+    // address the tool would dial if this render were a real run.
+    const token = "fixture-watch-key-do-not-use";
+    render(
+      <SettingsDialog
+        runId="run-1"
+        race={false}
+        alerts={DEFAULT_ALERTS}
+        onAlerts={() => {}}
+        onClose={() => {}}
+        pack={kiln}
+        record={fixtureRecord()}
+        reachable={{ link: null, key: token, working: false }}
+      />,
+    );
+    const panel = await goTo("Control");
+    const copyValues = [...panel.querySelectorAll(".askAddress")].map((el) => el.textContent ?? "").join(" ");
+    expect(copyValues).toContain(token);
+
+    const elsewhere = [...panel.querySelectorAll("h2, h3, .sectionTitle, p.muted, p.small")]
+      .filter((el) => !el.closest(".askAddress"))
+      .map((el) => el.textContent ?? "")
+      .join(" ");
+    expect(elsewhere).not.toContain(token);
   });
 });
