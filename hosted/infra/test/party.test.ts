@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { COMMANDS } from "../lib/handlers/discord/commands";
 import { handleInteraction, type InteractionDeps } from "../lib/handlers/discord/interactions";
 import {
+  autoOpenParties,
   closeParty,
   notePartyHandout,
   openParty,
@@ -617,5 +618,46 @@ describe("a handout, on a run with a watch party", () => {
     if ("error" in out) throw new Error(out.error);
     expect(out.party.handouts).toBeUndefined();
     expect(JSON.stringify(rest.posts.at(-1)!.message)).not.toContain("The kiln kit");
+  });
+});
+
+describe("a server that opens parties on its own", () => {
+  it("opens one for every run of the owner's, where it is set to", async () => {
+    const { guilds, deps } = await ready();
+    await guilds.updateGuild("g1", NOW, { channelId: "runs", watchParties: "every" });
+    expect(await autoOpenParties(deps, "01RUN")).toEqual(["g1"]);
+    expect(await guilds.party("01RUN", "g1")).not.toBeNull();
+  });
+
+  it("opens one only for a pack it chose", async () => {
+    const { guilds, deps } = await ready();
+    await guilds.updateGuild("g1", NOW, { channelId: "runs", watchParties: "packs", watchPackIds: ["com.example.other"] });
+    expect(await autoOpenParties(deps, "01RUN")).toEqual([]);
+    await guilds.updateGuild("g1", NOW, { watchPackIds: ["com.example.kiln"] });
+    expect(await autoOpenParties(deps, "01RUN")).toEqual(["g1"]);
+  });
+
+  it("opens none where the setting is off, which is the default", async () => {
+    const { guilds, deps } = await ready();
+    await guilds.updateGuild("g1", NOW, { channelId: "runs" });
+    expect(await autoOpenParties(deps, "01RUN")).toEqual([]);
+  });
+
+  it("never opens twice in the same server, even after the first was closed", async () => {
+    const { guilds, deps } = await ready();
+    await guilds.updateGuild("g1", NOW, { channelId: "runs", watchParties: "every" });
+    expect(await autoOpenParties(deps, "01RUN")).toEqual(["g1"]);
+    expect(await autoOpenParties(deps, "01RUN")).toEqual([]);
+    const held = (await guilds.party("01RUN", "g1"))!;
+    await closeParty(deps, held, "byHand");
+    expect(await autoOpenParties(deps, "01RUN")).toEqual([]);
+  });
+
+  it("opens none for a run that was never shared", async () => {
+    const { guilds } = await ready();
+    await guilds.updateGuild("g1", NOW, { channelId: "runs", watchParties: "every" });
+    await guilds.clearLiveLink("01RUN");
+    const unshared = { store: runStore({ publicTokenHash: undefined }), guilds, rest: memoryDiscord(), now: () => NOW };
+    expect(await autoOpenParties(unshared, "01RUN")).toEqual([]);
   });
 });

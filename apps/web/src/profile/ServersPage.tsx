@@ -8,6 +8,13 @@ import { hashText } from "../sync/hash.ts";
 import { usePlan } from "../sync/usePlan.ts";
 import { listPacks, type StoredPack } from "../storage/db.ts";
 
+/** What a server may do about the owner's runs, in the order the picker shows them. */
+export const WATCH_PARTY_CHOICES = [
+  { value: "off" as const, label: "Off" },
+  { value: "every" as const, label: "Every run" },
+  { value: "packs" as const, label: "Chosen packs" },
+];
+
 /**
  * The Discord servers this account claimed, and what the bot may play in
  * each. A server is claimed from Discord's side (`/setup claim` there
@@ -88,6 +95,15 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
       await api.releaseGuild(g.guildId);
       setKnown((k) => (k ? { ...k, guilds: k.guilds.filter((x) => x.guildId !== g.guildId) } : k));
       return `${g.name ?? "The server"} is released; its vault is empty. Claim it again from Discord any time.`;
+    });
+  /** One id in or out of a list, kept in the order the shelf gives. */
+  const pick = (had: string[], id: string, on: boolean) => (on ? [...had.filter((x) => x !== id), id] : had.filter((x) => x !== id));
+  const setWatch = (g: Guild, mode: "off" | "every" | "packs", packIds?: string[]) =>
+    run(`watch:${g.guildId}`, async () => {
+      if (!api) return null;
+      const saved = await api.setWatchParties(g.guildId, mode, packIds ?? g.watchPackIds);
+      setKnown((k) => (k ? { ...k, guilds: k.guilds.map((x) => (x.guildId === saved.guildId ? saved : x)) } : k));
+      return null;
     });
   const add = (g: Guild) =>
     run(`add:${g.guildId}`, async () => {
@@ -249,6 +265,37 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
                         </button>
                       </div>
                     ))
+                  )}
+                  <div className="padRow">
+                    <label htmlFor={`watch-${g.guildId}`}>Watch parties</label>
+                    <select
+                      id={`watch-${g.guildId}`}
+                      className="chipAdd"
+                      value={g.watchParties ?? "off"}
+                      disabled={busy !== null}
+                      onChange={(e) => void setWatch(g, e.target.value as "off" | "every" | "packs")}
+                    >
+                      {WATCH_PARTY_CHOICES.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {g.watchParties === "packs" && (
+                    <div className="padRow">
+                      {shelf.map((p) => (
+                        <label key={p.id} className="muted small">
+                          <input
+                            type="checkbox"
+                            checked={(g.watchPackIds ?? []).includes(p.id)}
+                            disabled={busy !== null}
+                            onChange={(e) => void setWatch(g, "packs", pick(g.watchPackIds ?? [], p.id, e.target.checked))}
+                          />
+                          {p.title}
+                        </label>
+                      ))}
+                    </div>
                   )}
                   <div className="padRow">
                     <select

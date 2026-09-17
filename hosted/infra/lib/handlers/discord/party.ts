@@ -273,3 +273,33 @@ export async function notePartyHandout(deps: PartyHandoutDeps, sessionId: string
   await deps.party?.({ sessionId });
   return open.length;
 }
+
+/**
+ * A run of this account's said something for the first time: open a party
+ * in each server that asked for one.
+ *
+ * "Asked for one" is the server's own setting: every run of the owner's,
+ * or only runs on the packs it chose. A run played offline and never
+ * shared has no link, so it opens nothing. A server that has had a party
+ * on this run, open or closed, never gets a second.
+ */
+export async function autoOpenParties(deps: PartyDeps, sessionId: string): Promise<string[]> {
+  const found = await deps.store.getSession(sessionId);
+  if (!found || found.meta.deletedAt || !found.meta.publicTokenHash) return [];
+  const opened: string[] = [];
+  for (const guild of await deps.guilds.guildsOf(found.meta.ownerSub)) {
+    const mode = guild.watchParties ?? "off";
+    if (mode === "off") continue;
+    if (mode === "packs" && !(guild.watchPackIds ?? []).includes(found.meta.packId)) continue;
+    if (await deps.guilds.party(sessionId, guild.guildId)) continue;
+    const out = await openParty(deps, {
+      guild,
+      sessionId,
+      by: { discordId: "", name: "Runlog", sub: found.meta.ownerSub },
+      mayHost: true,
+      ...(guild.threadMode === "private" ? { private: true } : {}),
+    });
+    if (!("error" in out)) opened.push(guild.guildId);
+  }
+  return opened;
+}
