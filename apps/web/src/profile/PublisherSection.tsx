@@ -573,7 +573,7 @@ export function PublisherPacks({ api, publisher }: { api: Api; publisher: Publis
       features,
       requires: (pack.requires ?? []).map((r) => ({ label: r.label, kind: r.kind, optional: r.optional })),
       players,
-      license: { id: pack.license.id, redistributable: pack.license.redistributable },
+      license: { id: pack.license.id, redistributable: pack.license.redistributable, tablePlays: pack.license.tablePlays },
     };
     await api.putPublisherPack(pack.id, { source: record.source, head, summary: generateDoc(pack, "summary") });
     setChosen("");

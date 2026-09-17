@@ -33,7 +33,7 @@ export interface ListingHead {
   features: string[];
   requires: Array<{ label: string; kind: string; optional: boolean }>;
   players: number;
-  license: { id: string; redistributable: boolean };
+  license: { id: string; redistributable: boolean; tablePlays: boolean };
 }
 
 export interface Price {
@@ -204,6 +204,8 @@ export function headOf(v: unknown): ListingHead | null {
     license: {
       id: (license as Record<string, string>)["id"]!,
       redistributable: (license as Record<string, unknown>)["redistributable"] === true,
+      // Absent means yes: a pack written before this field seats the table.
+      tablePlays: (license as Record<string, unknown>)["tablePlays"] !== false,
     },
   };
 }

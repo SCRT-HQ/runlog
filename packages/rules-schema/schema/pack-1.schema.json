@@ -218,6 +218,11 @@
           "type": "boolean",
           "description": "Whether this pack's text may be included in exports meant for other people. When false the app shares roll results and references but never the rules prose, so a private transcription of a commercial rulebook stays private."
         },
+        "tablePlays": {
+          "default": true,
+          "description": "Whether one copy of this pack seats a table. When true, someone invited to play a run of it takes a seat on the owner's copy: they see results and press through the owner's page, and the pack's text never reaches them. Set it false and an invitation to play goes out as an invitation to watch, and everyone at the table needs their own copy.",
+          "type": "boolean"
+        },
         "holder": {
           "description": "Who holds the rights.",
           "type": "string"
