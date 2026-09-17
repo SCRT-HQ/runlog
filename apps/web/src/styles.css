@@ -827,6 +827,60 @@ p {
   font-variant-numeric: tabular-nums;
 }
 
+/* Bought copies use app UI type and let long titles, keys and failures wrap without moving the row action out of reach. */
+.purchasePanel {
+  font: var(--font-body) var(--font-ui);
+}
+.purchasePanel .purchaseRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+.purchasePanel .purchaseItem:first-of-type .purchaseRow {
+  border-top: 0;
+}
+.purchasePanel .purchaseItem:not(:first-of-type) .purchaseRow {
+  border-top: 1px solid var(--line);
+}
+.purchaseDetails {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.purchaseDetails > strong {
+  display: inline;
+}
+.purchaseMeta,
+.purchaseError,
+.purchaseListError {
+  font: var(--font-caption) var(--font-ui);
+}
+.purchaseKey {
+  font: var(--font-caption) var(--font-mono);
+  overflow-wrap: anywhere;
+}
+.purchaseError,
+.purchaseListError p {
+  margin: var(--space-1) 0 0;
+  color: var(--danger);
+  overflow-wrap: anywhere;
+}
+.purchaseListError {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+@media (max-width: 440px) {
+  .purchasePanel .purchaseRow {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+  }
+  .purchasePanel .purchaseRow > .ghost {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
 /* A title with prose under it, rather than a label with a value beside it. */
 .row.stack {
   flex-direction: column;
@@ -5789,16 +5843,25 @@ details.panel[open] > summary .sectionTitle::after {
   margin: 2rem auto;
   display: grid;
   gap: 0.75rem;
+  font: var(--font-body) var(--font-ui);
+}
+.broke h2 {
+  font: var(--font-section-title) var(--font-ui);
 }
 .brokeError {
-  font-family: var(--mono);
-  font-size: 0.85rem;
+  font: var(--font-caption) var(--font-mono);
   white-space: pre-wrap;
-  background: var(--panel-2);
+  overflow-wrap: anywhere;
+  background: var(--surface-raised);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 0.6rem 0.8rem;
   margin: 0;
+}
+.brokeCopyStatus {
+  margin: 0;
+  color: var(--text-muted);
+  font: var(--font-caption) var(--font-ui);
 }
 .buttonLink {
   text-decoration: none;
@@ -5923,10 +5986,18 @@ a.plan {
 }
 .inviteDialog .inviteForm {
   align-items: center;
+  min-width: 0;
+}
+.inviteDialog .inviteForm .textInput {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .inviteDialog .inviteRoles {
   display: flex;
   gap: 0.6rem;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 .inviteDialog .inviteRoles label {
   display: inline-flex;
