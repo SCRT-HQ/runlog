@@ -1,4 +1,4 @@
-import { Children, createContext, isValidElement, useContext, useEffect, useState, type ReactNode } from "react";
+import { Children, createContext, isValidElement, useContext, useEffect, useState, type ComponentProps, type ReactNode } from "react";
 import { hrefFor } from "../route.ts";
 import { guideSlugFromHash, slugOf } from "./pages.ts";
 
@@ -174,6 +174,15 @@ function Heading({ level, children }: { level: 2 | 3; children?: ReactNode }) {
   );
 }
 
+/** Keep an MDX table semantic while giving wide content its own keyboard-reachable scroll region. */
+function Table({ children, ...props }: ComponentProps<"table">) {
+  return (
+    <div className="tableWrap" role="region" aria-label="Scrollable table" tabIndex={0}>
+      <table {...props}>{children}</table>
+    </div>
+  );
+}
+
 /** The set of components a page gets, by the names it uses in MDX, and the headings that make its sections. */
 export const guideComponents = {
   Screenshot,
@@ -186,4 +195,5 @@ export const guideComponents = {
   h2: (props: { children?: ReactNode }) => <Heading level={2} {...props} />,
   h3: (props: { children?: ReactNode }) => <Heading level={3} {...props} />,
   a: Link,
+  table: Table,
 };
