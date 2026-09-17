@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { Pack } from "@runlog/rules-schema";
 import type { StoredRun } from "../storage/db.ts";
-import { RunRow } from "./RunRow.tsx";
+import { hasEnded, RunRow } from "./RunRow.tsx";
 
 /**
  * The row of the run that is open on this device.
@@ -48,5 +48,26 @@ describe("the run open on this device", () => {
     expect(html).not.toContain("currently open");
     expect(html).toContain("last played");
     expect(html).toContain(">Continue<");
+  });
+});
+
+describe("a run that has ended", () => {
+  const over: StoredRun = {
+    ...run,
+    events: [...(run.events as object[]), { t: "RunEnded", at: "2026-09-02T10:00:00Z" }] as StoredRun["events"],
+  };
+
+  it("offers its results rather than promising more play", () => {
+    const html = renderToStaticMarkup(<RunRow run={over} vocabulary={vocabulary} onPick={() => {}} onForget={() => {}} />);
+    expect(html).toContain(">View results<");
+    expect(html).not.toContain(">Continue<");
+    expect(html).toContain("ended");
+    // Forgetting it is still on the row.
+    expect(html).toContain(">Forget<");
+  });
+
+  it("is a run the shelf can tell from one still going", () => {
+    expect(hasEnded(over)).toBe(true);
+    expect(hasEnded(run)).toBe(false);
   });
 });
