@@ -32,15 +32,25 @@ export function SetupPicker({
   pack,
   chosen,
   onChoose,
+  onOffer,
 }: {
   pack: Pack;
   chosen: ChosenSetup | null;
   onChoose: (chosen: ChosenSetup | null) => void;
+  /**
+   * Whether there was anything to choose from, said once the shelf has been
+   * read. The section draws nothing when there is not, and a caller that
+   * wraps it in a fold has no other way to know the fold would be empty.
+   */
+  onOffer?: (any: boolean) => void;
 }) {
   const [offered, setOffered] = useState<Setup[]>([]);
   const [tool, setTool] = useState<string | undefined>(undefined);
   const [lists, setLists] = useState<Lists>({});
   const [open, setOpen] = useState(false);
+  /** Held in a ref so a caller that rebuilds the handler does not make the shelf be read again. */
+  const report = useRef(onOffer);
+  report.current = onOffer;
 
   /**
    * A menu is a thing that closes. Escape, and a press anywhere outside
@@ -78,8 +88,10 @@ export function SetupPicker({
       const named = (await builtins()).find((b) => b.pack === pack.id)?.profile.tool;
       const all = await setupsHere();
       if (!live) return;
+      const mine = forTool(all, named);
       setTool(named);
-      setOffered(forTool(all, named));
+      setOffered(mine);
+      report.current?.(mine.length > 0);
       if (named) setLists(await listsFor(named));
     })();
     return () => {

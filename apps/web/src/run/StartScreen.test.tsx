@@ -1,0 +1,228 @@
+// @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { loadPackText, type Pack } from "@runlog/rules-schema";
+import { StartScreen } from "./StartScreen.tsx";
+
+/**
+ * The order the setup asks in, and what it refuses to ask twice.
+ *
+ * What the screen is for is answered top to bottom: what this is, what kind
+ * of run, what it takes to play one, who is playing, and the seed where the
+ * mode cannot go without one. A preference waits under Advanced. A thing
+ * the start button waits on never does, because a fold that hides a
+ * requirement leaves somebody looking at a dead button with no way to find
+ * out why.
+ *
+ * Underneath, nothing moved. `onStart` is called with the arguments it was
+ * always called with, in every kind of mode.
+ */
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const load = (rel: string): Pack => {
+  const r = loadPackText(readFileSync(join(repoRoot, rel), "utf8"), "yaml");
+  if (!r.ok) throw new Error(`could not load ${rel}`);
+  return r.pack;
+};
+
+/**
+ * One pack with all three kinds of mode in it: a solo default, a moderated
+ * roster, and one that calls itself seeded. Its requirements have an
+ * optional among them, which is the other thing this screen has to keep.
+ */
+const forfeits = load("packs/sketches/forfeits.yaml");
+const SOLO = "everyDeath";
+const MODERATED = "chats";
+const SEEDED = "seeded";
+const labelOf = (id: string) => forfeits.modes[id]!.label;
+
+const ADVANCED_KEY = "runlog:disclosure.v1:setupAdvanced";
+
+/** Every question the screen asks, in the order it asks it. */
+const asked = () =>
+  Array.from(document.querySelectorAll("h3.sectionTitle, label.fieldLabel")).map((el) => el.textContent?.replace(/\s+/g, " ").trim());
+
+const fold = () => document.querySelector("details.setupAdvanced") as HTMLDetailsElement;
+const seedBox = () => screen.getByPlaceholderText(/unseeded|long-kiln/) as HTMLInputElement;
+const start = () => screen.getByRole("button", { name: /^Enter the/i }) as HTMLButtonElement;
+const pick = (id: string) => fireEvent.click(screen.getByText(labelOf(id)));
+
+/** jsdom does not fire `toggle` off a click on the summary, so the press is spelled out. */
+function press(details: HTMLDetailsElement) {
+  details.open = !details.open;
+  fireEvent(details, new Event("toggle", { bubbles: false }));
+  return details;
+}
+
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  localStorage.clear();
+});
+
+describe("the order the setup asks in", () => {
+  it("leads with the pack, then asks for the mode, what it needs, and a name", () => {
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    const head = document.querySelector(".setupHead") as HTMLElement;
+    expect(head.textContent).toContain(forfeits.title);
+    expect(head.textContent).toContain("A penalty wheel for any stream");
+    expect(asked()).toEqual(["Mode", "What it needs", "Advanced", "Seed optional", "Name it optional"]);
+    expect(start()).toBeTruthy();
+  });
+
+  it("keeps Advanced folded, with the optional seed inside it", () => {
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    expect(fold().open).toBe(false);
+    expect(fold().contains(seedBox())).toBe(true);
+  });
+
+  it("puts a required seed in the open, above Advanced, and marks it required", () => {
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    pick(SEEDED);
+    const box = seedBox();
+    expect(box.required).toBe(true);
+    expect(fold().contains(box)).toBe(false);
+    // Asked for before the fold is offered, not after it.
+    expect(asked().indexOf("Seed required")).toBeLessThan(asked().indexOf("Advanced"));
+  });
+
+  it("asks who plays, with the range on the field that blocks the start", () => {
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    pick(MODERATED);
+    expect(asked()).toContain("Who plays");
+    expect(asked()).toContain("Contestants 2-12");
+
+    const box = screen.getByPlaceholderText("a contestant's name") as HTMLInputElement;
+    expect(start().disabled).toBe(true);
+    const said = screen.getByText("Add 2 or more contestants first");
+    expect(box.getAttribute("aria-invalid")).toBe("true");
+    expect(box.getAttribute("aria-describedby")).toContain(said.id);
+
+    for (const name of ["Ada", "Bo"]) {
+      fireEvent.change(box, { target: { value: name } });
+      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    }
+    expect(screen.queryByText("Add 2 or more contestants first")).toBeNull();
+    expect(start().disabled).toBe(false);
+  });
+
+  /** Solo is solo: nobody is asked how many people are in the room. */
+  it("says nothing about who plays for a mode that seats one", () => {
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    expect(asked()).not.toContain("Who plays");
+  });
+});
+
+describe("choosing a mode", () => {
+  it("is a radio group, with the chosen one marked and alone in the tab order", () => {
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    const group = screen.getByRole("radiogroup");
+    expect(group.getAttribute("aria-labelledby")).toBe(screen.getByRole("heading", { name: "Mode" }).id);
+    const cards = screen.getAllByRole("radio");
+    expect(cards.length).toBe(Object.keys(forfeits.modes).length);
+    expect(cards.filter((c) => c.getAttribute("aria-checked") === "true").length).toBe(1);
+    expect(cards.filter((c) => c.getAttribute("tabindex") === "0").length).toBe(1);
+  });
+
+  it("keeps the author's description under each title, whole", () => {
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    for (const m of Object.values(forfeits.modes)) {
+      expect(screen.getByText(m.label)).toBeTruthy();
+      if (m.description) expect(screen.getByText(m.description)).toBeTruthy();
+    }
+  });
+
+  it("moves the choice on the arrow keys, and wraps at the ends", () => {
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    const ids = Object.keys(forfeits.modes);
+    const checked = () => screen.getAllByRole("radio").findIndex((c) => c.getAttribute("aria-checked") === "true");
+    const on = () => screen.getAllByRole("radio")[checked()]!;
+
+    expect(ids[checked()]).toBe(SOLO);
+    fireEvent.keyDown(on(), { key: "ArrowRight" });
+    expect(ids[checked()]).toBe(ids[1]);
+    fireEvent.keyDown(on(), { key: "ArrowDown" });
+    expect(ids[checked()]).toBe(ids[2]);
+    fireEvent.keyDown(on(), { key: "ArrowRight" });
+    expect(ids[checked()]).toBe(ids[0]);
+    fireEvent.keyDown(on(), { key: "ArrowUp" });
+    expect(ids[checked()]).toBe(ids[2]);
+  });
+
+  it("leaves a key that is not an arrow to the browser", () => {
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    const before = screen.getAllByRole("radio").map((c) => c.getAttribute("aria-checked"));
+    fireEvent.keyDown(screen.getAllByRole("radio")[0]!, { key: "a" });
+    expect(screen.getAllByRole("radio").map((c) => c.getAttribute("aria-checked"))).toEqual(before);
+  });
+});
+
+describe("the Advanced fold", () => {
+  it("remembers that it was opened, under a namespaced versioned key", () => {
+    const { unmount } = render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    expect(localStorage.getItem(ADVANCED_KEY)).toBeNull();
+    press(fold());
+    expect(localStorage.getItem(ADVANCED_KEY)).toBe("open");
+    unmount();
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    expect(fold().open).toBe(true);
+  });
+
+  it("works on a device whose storage throws", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("denied", "SecurityError");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("denied", "SecurityError");
+    });
+    expect(() => render(<StartScreen pack={forfeits} onStart={vi.fn()} />)).not.toThrow();
+    expect(fold().open).toBe(false);
+    expect(() => press(fold())).not.toThrow();
+    expect(fold().open).toBe(true);
+  });
+});
+
+describe("what the start button hands over", () => {
+  /** The lifecycle did not move: the same call, with the same arguments, in every kind of mode. */
+  it("starts a solo mode with the count, the empty roster and no setup", () => {
+    const onStart = vi.fn();
+    render(<StartScreen pack={forfeits} onStart={onStart} />);
+    fireEvent.click(start());
+    expect(onStart.mock.calls[0]).toEqual([SOLO, "", 1, "", [], [], {}]);
+  });
+
+  it("starts a seeded mode with the seed that was typed", () => {
+    const onStart = vi.fn();
+    render(<StartScreen pack={forfeits} onStart={onStart} />);
+    pick(SEEDED);
+    fireEvent.change(seedBox(), { target: { value: "long-kiln-42" } });
+    fireEvent.click(start());
+    expect(onStart.mock.calls[0]).toEqual([SEEDED, "long-kiln-42", 1, "", [], [], {}]);
+  });
+
+  it("starts a moderated mode with its roster, in the order it was typed", () => {
+    const onStart = vi.fn();
+    render(<StartScreen pack={forfeits} onStart={onStart} />);
+    pick(MODERATED);
+    const box = screen.getByPlaceholderText("a contestant's name");
+    for (const name of ["Ada", "Bo"]) {
+      fireEvent.change(box, { target: { value: name } });
+      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    }
+    fireEvent.click(start());
+    expect(onStart.mock.calls[0]).toEqual([MODERATED, "", 1, "", ["Ada", "Bo"], [], {}]);
+  });
+
+  it("carries the name, and whatever the player said they do not have", () => {
+    const onStart = vi.fn();
+    render(<StartScreen pack={forfeits} onStart={onStart} />);
+    const optional = forfeits.requires!.find((r) => r.optional)!;
+    fireEvent.click(screen.getByLabelText(new RegExp(optional.label)));
+    fireEvent.change(screen.getByPlaceholderText(/^e\.g\. the winter/), { target: { value: "the winter one" } });
+    fireEvent.click(start());
+    expect(onStart.mock.calls[0]).toEqual([SOLO, "", 1, "the winter one", [], [optional.id], {}]);
+  });
+});
