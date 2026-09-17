@@ -100,6 +100,7 @@ async function column(): Promise<HTMLElement> {
     reactions: async () => [],
     listInvites: async () => [],
     people: async () => [],
+    parties: async () => ({ parties: [], servers: [] }),
     me: async () => ({ profile: null }),
   } as unknown as Api;
   const store = memoryRunStore();

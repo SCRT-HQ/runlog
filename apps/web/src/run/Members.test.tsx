@@ -10,6 +10,7 @@ import type { Api } from "../sync/client.ts";
 import type { StoredRun } from "../storage/db.ts";
 import type { AttachedTool } from "./useAttachedTools.ts";
 import { Members } from "./Members.tsx";
+import { watchPartyState } from "./watchParty.ts";
 
 /**
  * The People panel at first paint: what it says about where the run stands
@@ -393,5 +394,24 @@ describe("the buttons under the table", () => {
   it("labels the invitations quietly", () => {
     const html = panel(twoOf(), syncOf(true, true));
     expect(html).not.toContain("stepLabel");
+  });
+});
+
+describe("the watch party button", () => {
+  afterEach(() => {
+    live.link = null;
+  });
+
+  it("is not drawn before the panel has heard about any server", () => {
+    live.link = "https://runlog.test/r/run-1?t=tok";
+    const html = panel(runOf({ role: "owner", shared: true }), syncOf(true, true));
+    expect(html).not.toContain("Watch party");
+  });
+
+  it("titles it with what it will do, once a server is known", () => {
+    // watchPartyState is what decides; the panel renders what it says.
+    expect(
+      watchPartyState({ owner: true, shared: true, servers: [{ guildId: "g1", name: "The Kiln Room", watchParties: "off" }], parties: [] }),
+    ).toMatchObject({ kind: "one" });
   });
 });
