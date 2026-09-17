@@ -147,7 +147,17 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
             members: [member("user_1")],
           };
         if (id === "open") return { meta: { ...meta(id, "user_1"), publicTokenHash: hashToken("livetok") }, members: [member("user_1")] };
-        if (id === "shared") return { meta: meta(id, "user_1"), members: [member("user_1"), member("user_2")] };
+        if (id === "shared")
+          return {
+            meta: meta(id, "user_1"),
+            members: [member("user_1"), { sub: "user_2", role: "player" as const, joinedAt: "", name: "Ada" }],
+          };
+        // A second run this seat plays, for the check that a seat presses
+        // the run it is sitting on and no other.
+        if (id === "other") return { meta: meta(id, "user_1"), members: [member("user_1"), member("user_2")] };
+        // Somebody at the table who only watches.
+        if (id === "viewed")
+          return { meta: meta(id, "user_1"), members: [member("user_1"), { sub: "user_2", role: "viewer" as const, joinedAt: "" }] };
         if (id === "s1") return { meta: { ...meta(id, "user_1"), packTitle: "The Long Kiln" }, members: [member("user_1")] };
         // Owned and membered by somebody else entirely, for the tests
         // that check a press is refused on a run that is not the caller's.
@@ -195,6 +205,7 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
     },
     verify: async (authorization) => {
       if (authorization === "Bearer good") return { sub: "user_1", sid: "s1" };
+      if (authorization === "Bearer seated") return { sub: "user_2", sid: "s2" };
       throw new Error("bad token");
     },
     now: () => "2026-09-06T12:00:00.000Z",
@@ -1532,5 +1543,164 @@ describe("driving is part of Plus", () => {
     await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
     await route(ev("$default", "deck1", { body: JSON.stringify({ t: "hello" }) }), d);
     expect(posted.some(([, data]) => JSON.parse(data)["t"] === "runs")).toBe(true);
+  });
+});
+
+describe("a seat's press", () => {
+  const wired = () => {
+    const live = memoryLive();
+    const posted: Array<[string, string]> = [];
+    const poster: Poster = {
+      async post(id, data) {
+        posted.push([id, data]);
+        return "sent";
+      },
+    };
+    return { live, posted, d: { ...deps(live), poster } };
+  };
+
+  it("a signed-in socket may attach as a seat, and is not a device holding the run", async () => {
+    const { live, d } = wired();
+    expect((await route(ev("$connect", "seat1", { queryStringParameters: { token: "seated", as: "seat" } }), d)).statusCode).toBe(200);
+    expect(await live.connection("seat1")).toMatchObject({ sub: "user_2", seated: true });
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d);
+    expect(await live.watchers("shared")).toMatchObject([{ connectionId: "seat1", seated: true }]);
+  });
+
+  it("forwards a seat's press to the owner's page, stamped with the member's name", async () => {
+    const { posted, d } = wired();
+    await route(ev("$connect", "seat1", { queryStringParameters: { token: "seated", as: "seat" } }), d);
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d);
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d);
+    posted.length = 0;
+
+    // Who the press is from is never read off the press: a seat naming
+    // somebody else, or another account, is stamped with its own.
+    await route(
+      ev("$default", "seat1", {
+        body: JSON.stringify({ t: "drive", run: "shared", seq: 3, ref: "r1", press: "primary", seat: "Somebody Else", who: "user_9" }),
+      }),
+      d,
+    );
+    const drives = posted.filter(([, data]) => JSON.parse(data)["t"] === "drive");
+    expect(drives).toHaveLength(1);
+    expect(drives[0]![0]).toBe("page");
+    expect(JSON.parse(drives[0]![1])).toEqual({
+      t: "drive",
+      from: "seat1",
+      run: "shared",
+      seq: 3,
+      ref: "r1",
+      press: "primary",
+      seat: "Ada",
+      who: "user_2",
+    });
+  });
+
+  it("carries the page's verdict back to the seat", async () => {
+    const { posted, d } = wired();
+    await route(ev("$connect", "seat1", { queryStringParameters: { token: "seated", as: "seat" } }), d);
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d);
+    posted.length = 0;
+    await route(
+      ev("$default", "page", { body: JSON.stringify({ t: "drove", to: "seat1", ref: "r1", ok: false, say: "That moved on." }) }),
+      d,
+    );
+    expect(JSON.parse(posted.find(([id]) => id === "seat1")![1])).toEqual({ t: "drove", ref: "r1", ok: false, say: "That moved on." });
+  });
+
+  it("refuses a seat on a run it does not play, and one whose page is away", async () => {
+    const { posted, d } = wired();
+    await route(ev("$connect", "seat1", { queryStringParameters: { token: "seated", as: "seat" } }), d);
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d);
+    posted.length = 0;
+    // s1 has one member, user_1; user_2 is nobody there.
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "drive", run: "s1", seq: 3, ref: "r2", press: "primary" }) }), d);
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r2", ok: false, say: "That run is not yours to press." });
+    // A run this seat does play, with nobody holding it open.
+    posted.length = 0;
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "drive", run: "shared", seq: 3, ref: "r3", press: "primary" }) }), d);
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r3", ok: false, say: "Nothing is holding that run." });
+  });
+
+  it("says whether the run's page is open, when asked and when one arrives", async () => {
+    const { posted, d } = wired();
+    await route(ev("$connect", "seat1", { queryStringParameters: { token: "seated", as: "seat" } }), d);
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d);
+    posted.length = 0;
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "held", id: "shared" }) }), d);
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "held", id: "shared", held: false });
+
+    posted.length = 0;
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d);
+    expect(posted.filter(([id, data]) => id === "seat1" && JSON.parse(data)["t"] === "held").map(([, data]) => JSON.parse(data))).toEqual([
+      { t: "held", id: "shared", held: true },
+    ]);
+  });
+
+  it("leaves what a page is told about attached tools alone", async () => {
+    const { posted, d } = wired();
+    await route(ev("$connect", "seat1", { queryStringParameters: { token: "seated", as: "seat" } }), d);
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d);
+    posted.length = 0;
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d);
+    const tools = posted.map(([, data]) => JSON.parse(data)).filter((m) => m["t"] === "gesture" && m["kind"] === "tools");
+    expect(tools.length).toBeGreaterThan(0);
+    expect(tools.every((m) => m["data"]["tools"].length === 0 && m["data"]["decks"] === 0 && m["data"]["deckSubs"].length === 0)).toBe(
+      true,
+    );
+  });
+
+  it("refuses a press on a run other than the one the seat is on", async () => {
+    const { posted, d } = wired();
+    await route(ev("$connect", "seat1", { queryStringParameters: { token: "seated", as: "seat" } }), d);
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "watch", id: "other" }) }), d);
+    posted.length = 0;
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "drive", run: "shared", seq: 3, ref: "r4", press: "primary" }) }), d);
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r4", ok: false, say: "That run is not the one this seat is on." });
+  });
+
+  it("refuses a seat whose part at the table is only to watch", async () => {
+    const { posted, d } = wired();
+    await route(ev("$connect", "seat1", { queryStringParameters: { token: "seated", as: "seat" } }), d);
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "watch", id: "viewed" }) }), d);
+    posted.length = 0;
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "drive", run: "viewed", seq: 3, ref: "r5", press: "primary" }) }), d);
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r5", ok: false, say: "That run is not yours to press." });
+  });
+
+  it("does not take a seat for the device that holds a deck's press", async () => {
+    const { posted, d } = wired();
+    // The owner's own account, seated on the run beside the page that holds
+    // it. Named so it sorts before the page: two watches in the same
+    // millisecond settle by connection id, so a seat that counted as a
+    // writer would be the one picked, and this would catch it.
+    await route(ev("$connect", "chair1", { queryStringParameters: { token: "good", as: "seat" } }), d);
+    await route(ev("$connect", "page", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
+    await route(ev("$default", "chair1", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    await route(ev("$default", "page", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "watch", id: "s1" }) }), d);
+    posted.length = 0;
+    await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "s1", seq: 3, ref: "r6", press: "primary" }) }), d);
+    const drives = posted.filter(([, data]) => JSON.parse(data)["t"] === "drive");
+    expect(drives).toHaveLength(1);
+    expect(drives[0]![0]).toBe("page");
+  });
+
+  it("drops a verdict from an account that does not own the seat's run", async () => {
+    const { posted, d } = wired();
+    await route(ev("$connect", "seat1", { queryStringParameters: { token: "seated", as: "seat" } }), d);
+    await route(ev("$default", "seat1", { body: JSON.stringify({ t: "watch", id: "shared" }) }), d);
+    // The same member's ordinary page. It is not the run's owner, so it is
+    // not the page that took the press and has no verdict to give.
+    await route(ev("$connect", "mine", { queryStringParameters: { token: "seated" } }), d);
+    posted.length = 0;
+    await route(ev("$default", "mine", { body: JSON.stringify({ t: "drove", to: "seat1", ref: "r7", ok: true }) }), d);
+    expect(posted.filter(([id]) => id === "seat1")).toEqual([]);
   });
 });
