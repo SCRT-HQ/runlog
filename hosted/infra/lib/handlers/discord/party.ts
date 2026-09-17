@@ -1,7 +1,7 @@
 import type { LiveSnapshot } from "@runlog/engine";
-import type { Guild, GuildStore, WatchParty } from "../guilds.js";
+import type { Guild, GuildStore, PartyClose, WatchParty } from "../guilds.js";
 import type { Store } from "../store.js";
-import { partyCardFor } from "./card.js";
+import { partyCardFor, partyClosingLine } from "./card.js";
 import type { DiscordRest } from "./rest.js";
 
 /**
@@ -97,4 +97,39 @@ export async function openParty(deps: PartyDeps, input: PartyOpen): Promise<{ pa
   };
   await deps.guilds.putParty(party);
   return { party };
+}
+
+/**
+ * Close a party.
+ *
+ * The run ending is the one case that speaks: the card takes its final
+ * state and the thread gets one line. A party closed early says so on the
+ * card alone, and the thread is left as it is; a party whose message
+ * Discord lost says nothing at all, since there is nowhere to say it.
+ *
+ * Closing a party that is closed already does nothing and says nothing.
+ * The ending and the tick both come here, and either can be handed the
+ * same row twice, which would otherwise post the closing line again.
+ */
+export async function closeParty(deps: PartyDeps, party: WatchParty, why: PartyClose): Promise<WatchParty> {
+  if (party.closedAt) return party;
+  const at = deps.now();
+  const closed: WatchParty = { ...party, closedAt: at, closedFor: why, updatedAt: at };
+  delete closed.tickAt;
+  if (deps.rest && party.cardMessageId && why !== "gone") {
+    const snapshot = snapshotOfRun(await deps.store.getSnapshot(party.sessionId));
+    if (snapshot) {
+      const card = partyCardFor({
+        snapshot,
+        link: party.link,
+        openedByName: party.openedByName,
+        ...(party.handouts ? { handouts: party.handouts } : {}),
+        closed: why,
+      });
+      const edited = await deps.rest.editMessage(party.threadId, party.cardMessageId, card);
+      if (edited && why === "ended") await deps.rest.postMessage(party.threadId, { content: partyClosingLine(snapshot) });
+    }
+  }
+  await deps.guilds.putParty(closed);
+  return closed;
 }
