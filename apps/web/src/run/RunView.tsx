@@ -84,9 +84,9 @@ import { StartScreen } from "./StartScreen.tsx";
 import { lifecycleGestures, marksOf, type LifecycleMarks } from "./gestures.ts";
 import { handoutLine, handoutOf } from "./handout.ts";
 import { useRace } from "./useRace.ts";
+import { undoWords } from "./undoWords.ts";
 import { RunRail, type Pane } from "./RunRail.tsx";
 import { useEnterMoves } from "../ui/useEnterMoves.ts";
-import { useConfirm } from "../ui/useConfirm.tsx";
 import { useToast } from "../ui/Toast.tsx";
 import { accountOf, nameOf } from "./names.ts";
 
@@ -1451,12 +1451,16 @@ export function RunView({
       />
       {runMenuOpen && <button type="button" className="runBarScrim" aria-label="Close" onClick={() => setRunMenuOpen(false)} />}
       {settingsOpen && (
+        // A watcher and a seat have a run on screen that is not theirs to throw
+        // away, so the tab about the run, whose only tenant is the discard, is
+        // not offered to them at all.
         <SettingsDialog
           runId={run.record?.runId ?? null}
           race={Boolean(run.record?.raceId)}
           alerts={alerts}
           onAlerts={setAlerts}
           rolling={{ auto: run.autoRoll, seeded: run.seededRun, onAuto: run.setAutoRoll }}
+          {...(run.readOnly ? {} : { session: { name: state.name, noun: pack.vocabulary.run.one.toLowerCase(), onDiscard: run.discard } })}
           pack={pack}
           record={run.record ?? null}
           onAsks={run.setAsks}
@@ -1553,11 +1557,8 @@ function RunHeader({
   const v = pack.vocabulary;
   const drawer = useDocDrawer();
   const mode = pack.modes[state.mode];
-  // Discarding deletes the log, so it is asked first; see useConfirm.
-  const { dialog, ask } = useConfirm();
   return (
     <section className={`runBar${open ? " open" : ""}`}>
-      {dialog}
       <div className="runMeta">
         <strong>{pack.title}</strong>
         <span className="muted">{mode?.label ?? state.mode}</span>
@@ -1595,28 +1596,17 @@ function RunHeader({
         >
           Docs
         </button>
-        <button className="ghost" onClick={run.undo} disabled={!run.canUndo || run.readOnly}>
+        {/* Undo takes back a move, not a keystroke, so the button says which
+            move: the roll, the step or the unit the log names last. */}
+        <button className="ghost" onClick={run.undo} disabled={!run.canUndo || run.readOnly} title={undoWords(pack, run.events)}>
           Undo
         </button>
         <button className="ghost" onClick={onSettings} title="Sounds, dice, rolls, and pop-outs for a stream">
           Settings
         </button>
-        {/* Apart from Undo, and in the tone the profile uses for deletion: it ends the run. */}
-        <button
-          className="ghost danger"
-          title={`End this ${v.run.one.toLowerCase()} and delete its log`}
-          onClick={() => {
-            const named = state.name ? `${state.name}` : `this ${v.run.one.toLowerCase()}`;
-            void ask({
-              ask: `Discard ${named}?`,
-              detail: "Its log is deleted, and there is no undoing it.",
-              confirm: "Discard",
-              destructive: true,
-            }).then((yes) => yes && run.discard());
-          }}
-        >
-          Discard
-        </button>
+        {/* Discarding is not an everyday control and no longer rides in the
+            bar beside Docs and Undo: it is the last thing on the run's own
+            tab in Settings, where nothing else is destructive. */}
         {/* The phone's sheet needs a way down that is not the scrim. */}
         <button className="ghost sheetClose" onClick={onClose}>
           Close

@@ -3811,10 +3811,6 @@ details.panel[open] > summary .sectionTitle::after {
   margin: 0.15rem 0;
 }
 
-.headerActions > .danger {
-  margin-left: 0.75rem;
-}
-
 /* Folded until wanted: exports and the world outside. */
 .more {
   margin-top: 1.5rem;
@@ -5589,6 +5585,24 @@ a.plan {
 }
 .settingsDialog .alerts {
   padding-top: 0;
+}
+/*
+ * The last row on the run's own tab: what it does on the left, the button
+ * that does it on the right, ruled off from whatever is above so it is not
+ * read as one more setting.
+ */
+.settingsDialog .dangerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  margin-top: 0.4rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+}
+.settingsDialog .dangerRow p {
+  margin: 0.15rem 0 0;
 }
 .termsGate h2 {
   margin: 0;

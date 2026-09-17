@@ -232,6 +232,26 @@ describe("the result lands where the instructions were", () => {
   });
 });
 
+describe("the run's bar", () => {
+  const bar = (container: HTMLElement) =>
+    [...container.querySelectorAll<HTMLButtonElement>(".runBar .headerActions button")].map((b) => b.textContent);
+
+  it("holds Docs, Undo and Settings, and no longer holds Discard", async () => {
+    const { container } = await onTheRoll();
+    expect(bar(container)).toEqual(["Docs", "Undo", "Settings", "Close"]);
+    expect(container.querySelector(".runBar .danger")).toBeNull();
+  });
+
+  it("says what Undo would take back, in the pack's words", async () => {
+    const { container } = await onTheRoll();
+    const undo = [...container.querySelectorAll<HTMLButtonElement>(".runBar button")].find((b) => b.textContent === "Undo")!;
+    expect(undo.title).toBe(`Undo ${rolling.vocabulary.unit.one} 1`);
+
+    await roll(container, 12);
+    expect(undo.title).toBe(`Undo ${kiln.tables["check"]!.title}`);
+  });
+});
+
 /**
  * A result somebody else rolled.
  *
@@ -278,6 +298,32 @@ describe("a result that arrived from somewhere else", () => {
     expect(after.phase).toBe("Kiln Check");
     // The run itself has moved on: the closing step is the active one now.
     expect(after.title).not.toBe("Fire the Stage");
+  });
+});
+
+describe("settings on a run that is not yours", () => {
+  it("does not offer the tab whose only tenant is the discard", async () => {
+    const { container } = await onTheRoll("viewer");
+    const settings = [...container.querySelectorAll<HTMLButtonElement>(".runBar button")].find((b) => b.textContent === "Settings")!;
+    await act(async () => {
+      settings.click();
+    });
+    await flush();
+
+    const tabs = [...document.querySelectorAll('[role="tab"]')].map((t) => t.textContent);
+    expect(tabs).toContain("This device");
+    expect(tabs).not.toContain("This run");
+    expect([...document.querySelectorAll("button")].some((b) => b.textContent === "Discard")).toBe(false);
+  });
+
+  it("offers it on a run that is yours", async () => {
+    const { container } = await onTheRoll();
+    const settings = [...container.querySelectorAll<HTMLButtonElement>(".runBar button")].find((b) => b.textContent === "Settings")!;
+    await act(async () => {
+      settings.click();
+    });
+    await flush();
+    expect([...document.querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toContain("This run");
   });
 });
 
