@@ -74,7 +74,8 @@ export async function openParty(deps: PartyDeps, input: PartyOpen): Promise<{ pa
     return {
       error: `Discord would not open a thread here. The bot needs permission to create ${input.private ? "private" : "public"} threads in this channel.`,
     };
-  if (input.private) await deps.rest.addThreadMember(threadId, by.discordId);
+  // Opened from the app there is no Discord user to add: the id is empty.
+  if (input.private && by.discordId) await deps.rest.addThreadMember(threadId, by.discordId);
   // One message: the link and the card together, the way a run's opening
   // message carries both, so opening is one post and at most one pin.
   const card = partyCardFor({ snapshot, link, openedByName: by.name });

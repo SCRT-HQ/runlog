@@ -4439,3 +4439,101 @@ describe("a run ending under a watch party", () => {
     expect(jobs).toEqual([]);
   });
 });
+
+describe("watch parties from the app", () => {
+  async function ready() {
+    const store = memoryStore();
+    const guilds = memoryGuilds();
+    const rest = memoryDiscord();
+    const d = deps(store, {
+      guilds,
+      discord: { applicationId: "app", publicKey: "00".repeat(32), token: async () => "t", rest: async () => rest },
+    });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    const shared = await call(request("POST", "/api/sessions/01RUN/public"), d);
+    const link = `https://runlog.test/r/01RUN?t=${String(shared.body["token"])}`;
+    await guilds.claimGuild({
+      guildId: "g1",
+      name: "The Kiln Room",
+      ownerSub: "user_1",
+      channelId: "c1",
+      claimedAt: "2026-09-06T12:00:00.000Z",
+    });
+    await guilds.putLiveLink("01RUN", link, "2026-09-06T12:00:00.000Z");
+    await store.putSnapshot("01RUN", "2026-09-06T12:00:00.000Z", {
+      v: 1,
+      packTitle: "The Pack",
+      runName: null,
+      mode: "Standard",
+      words: { run: "Run", unit: "Unit", units: "Units" },
+      status: "active",
+      ending: null,
+      unit: 1,
+      where: null,
+      standings: [],
+      subjects: [],
+      counters: [],
+      resources: [],
+      log: [],
+      latest: null,
+    });
+    return { store, guilds, rest, d, link };
+  }
+
+  it("lists the servers this account claimed, and the parties on the run", async () => {
+    const { d } = await ready();
+    const { status, body } = await call(request("GET", "/api/sessions/01RUN/parties"), d);
+    expect(status).toBe(200);
+    expect(body["servers"]).toEqual([{ guildId: "g1", name: "The Kiln Room", watchParties: "off" }]);
+    expect(body["parties"]).toEqual([]);
+  });
+
+  it("opens one and hands back the thread to link to", async () => {
+    const { d, guilds } = await ready();
+    const { status, body } = await call(request("POST", "/api/sessions/01RUN/parties", { body: { guildId: "g1" } }), d);
+    expect(status).toBe(200);
+    expect(body["party"]).toEqual({
+      guildId: "g1",
+      guildName: "The Kiln Room",
+      threadId: "thread_1",
+      threadUrl: "https://discord.com/channels/g1/thread_1",
+      openedAt: "2026-09-06T12:00:00.000Z",
+    });
+    expect(await guilds.party("01RUN", "g1")).not.toBeNull();
+  });
+
+  it("says why it would not, in the words the button shows", async () => {
+    const { d, guilds } = await ready();
+    await guilds.clearLiveLink("01RUN");
+    await call(request("DELETE", "/api/sessions/01RUN/public"), d);
+    const { status, body } = await call(request("POST", "/api/sessions/01RUN/parties", { body: { guildId: "g1" } }), d);
+    expect(status).toBe(422);
+    expect(body["error"]).toBe("Share the run first: a watch party carries its live link.");
+  });
+
+  it("refuses a server this account did not claim, without saying whether it is real", async () => {
+    const { d } = await ready();
+    const { status, body } = await call(request("POST", "/api/sessions/01RUN/parties", { body: { guildId: "g9" } }), d);
+    expect(status).toBe(422);
+    expect(body["error"]).toBe("that is not one of your servers");
+  });
+
+  it("closes one on request", async () => {
+    const { d, guilds } = await ready();
+    await call(request("POST", "/api/sessions/01RUN/parties", { body: { guildId: "g1" } }), d);
+    const { status, body } = await call(request("DELETE", "/api/sessions/01RUN/parties/g1"), d);
+    expect(status).toBe(200);
+    expect(body["closed"]).toBe(true);
+    expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("byHand");
+  });
+
+  it("is the owner's to open, not a member's, though a member may read the list", async () => {
+    const { d, store } = await ready();
+    await store.joinAs("01RUN", "user_2", "player", "Kel", "2026-09-06T12:00:00.000Z");
+    const read = await call(request("GET", "/api/sessions/01RUN/parties", { token: "guest" }), d);
+    expect(read.status).toBe(200);
+    const opened = await call(request("POST", "/api/sessions/01RUN/parties", { body: { guildId: "g1" }, token: "guest" }), d);
+    expect(opened.status).toBe(422);
+    expect(opened.body["error"]).toBe("only the owner opens a watch party");
+  });
+});
