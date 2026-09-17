@@ -22,6 +22,29 @@ import { useDismiss } from "../ui/useDismiss.ts";
  * fetching twenty packs to decide whether to draw twenty rows nobody asked
  * for is a page that costs what it does not spend.
  */
+/**
+ * Build the profile for one deck and hand the browser the file.
+ *
+ * Its own function because two places ask for it now: this row, on a
+ * marketplace listing whose text has to be fetched first, and the line in
+ * a library card's menu, where the pack is already parsed and in hand.
+ */
+export async function downloadProfile(pack: Pack, device: DeviceId): Promise<void> {
+  // The tool is the pack's, from the control profile written for it;
+  // the setups are the tool's, because a setup names a tool and no pack
+  // at all. A pack nothing is written for gets no setup keys.
+  const tool = (await builtins()).find((b) => b.pack === pack.id)?.profile.tool;
+  const setups = forTool(await setupsHere(), tool);
+  const bytes = container(profile(specs(pack, setups, device)[0]!));
+  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/zip" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${pack.id}-${device}.streamDeckProfile`;
+  a.click();
+  // The object URL must outlive the download the click started.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 export function DeckProfiles({ load, format = "yaml" }: { load: () => Promise<string>; format?: "yaml" | "json" }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDetailsElement>(null);
@@ -67,19 +90,7 @@ export function DeckProfiles({ load, format = "yaml" }: { load: () => Promise<st
     if (!pack) return;
     setBusy(device);
     try {
-      // The tool is the pack's, from the control profile written for it;
-      // the setups are the tool's, because a setup names a tool and no pack
-      // at all. A pack nothing is written for gets no setup keys.
-      const tool = (await builtins()).find((b) => b.pack === pack.id)?.profile.tool;
-      const setups = forTool(await setupsHere(), tool);
-      const bytes = container(profile(specs(pack, setups, device)[0]!));
-      const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/zip" }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${pack.id}-${device}.streamDeckProfile`;
-      a.click();
-      // The object URL must outlive the download the click started.
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      await downloadProfile(pack, device);
     } finally {
       setBusy(null);
     }

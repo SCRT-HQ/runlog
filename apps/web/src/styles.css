@@ -1023,6 +1023,15 @@ p {
 .libraryHead p {
   margin: 0;
 }
+/* Adding and discovering, under the shelf: one titled group holding the
+   two rows of controls and the marketplace's cards. */
+.libraryAdd {
+  display: grid;
+  gap: var(--space-3);
+}
+.libraryAdd > .sectionTitle {
+  margin: 0;
+}
 /* Two labeled groups, each its own eyebrow over a row of small controls,
    all the same height, which is the control's own. */
 .libraryActions {
@@ -1297,10 +1306,26 @@ p {
   display: grid;
   gap: 0.25rem;
 }
+/* The rest of the runs, offered under the three most recent. */
+.runListAll {
+  justify-self: start;
+  margin-top: var(--space-1);
+}
+/*
+ * The row wraps rather than pushing the page wide.
+ *
+ * Its name and its two buttons are each as narrow as they can be, and on
+ * a 320px phone the two together were still wider than the card: the card
+ * grew to hold them, the shelf's grid column grew to hold the card, and
+ * the page ended up 2px wider than the window, scrolling sideways. Wrapping
+ * puts the buttons on a second line at that width instead, and changes
+ * nothing anywhere the row already fits.
+ */
 .runRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.75rem;
   width: 100%;
   padding: 0.3rem 0.3rem 0.3rem 0.6rem;
@@ -7355,4 +7380,98 @@ html[data-pip="controls"] body {
   border-radius: var(--radius-pill);
   background: var(--accent);
   vertical-align: middle;
+}
+
+/*
+ * A menu of errands, opened from one button.
+ *
+ * Drawn like the documents menu it grew out of, because that is the
+ * popover this app already had: a bordered panel under the button, lines
+ * that light on hover and on focus, and, where there is no room beside
+ * the button, a sheet at the foot of the screen instead.
+ */
+.menu {
+  position: relative;
+  display: inline-block;
+}
+.menuButton {
+  color: var(--text);
+}
+.menuPanel {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  top: calc(100% + var(--space-1));
+  min-width: 14rem;
+  max-width: min(20rem, calc(100vw - 2rem));
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--raise);
+}
+.menuItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.menuItem:hover,
+.menuItem:focus-visible {
+  background: var(--panel-2);
+}
+/* The same ink the ghost danger buttons wear, so one destructive control
+   does not read differently from the next. */
+.menuItem.danger {
+  color: var(--warn);
+}
+.menuItem[disabled] {
+  cursor: default;
+  opacity: 0.6;
+}
+.menuGroup {
+  display: grid;
+  gap: var(--space-1);
+}
+.menuGroupLabel {
+  padding: 0 var(--space-2);
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+/* A submenu, opened in place under the line that offers it. */
+.menuSub {
+  display: grid;
+  gap: var(--space-1);
+  padding-left: var(--space-3);
+}
+.menuRule {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--line);
+}
+/* A phone has no room beside the button: the menu becomes a sheet at the foot of the screen. */
+@media (max-width: 760px) {
+  .menuPanel {
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    top: auto;
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    min-width: 0;
+    max-width: none;
+    max-height: 60vh;
+    overflow: auto;
+    z-index: 30;
+  }
 }
