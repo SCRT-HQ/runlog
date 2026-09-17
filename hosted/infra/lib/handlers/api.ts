@@ -26,8 +26,9 @@ import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, ty
 import { dynamoBilling, featuresFromEnv, grantsOf as grantsOfStore, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
 import { dynamoGuilds, guildsAllowed, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
-import { handleInteraction, kindOf, threadHears, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
+import { handleInteraction, kindOf, liveLinkOf, threadHears, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
 import type { TimerJob } from "./discord/play.js";
+import { tickParties } from "./discord/party.js";
 import { scheduledTimers } from "./discord/timers.js";
 import { authorizeUrl, metadataFor, verifyRedirectUri, VERIFY_MINUTES } from "./discord/linked-roles.js";
 import {
@@ -80,6 +81,8 @@ const MAX_BYTES = 5 * 1024 * 1024;
 /** More events than any move makes; a batch beyond this is not a move. */
 const MAX_EVENTS = 500;
 const MAX_NAME = 200;
+/** A live link is an address of this copy's own with a run and a token in it; anything longer is not one. */
+const MAX_LINK_CHARS = 400;
 /** A command-line key: the prefix says what it is at a glance, the rest is 32 random bytes. */
 const KEY_PREFIX = "rl_";
 
@@ -255,6 +258,11 @@ export interface MovedJob {
   seq: number;
 }
 
+/** A run with watch parties on it said something new: which run. */
+export interface PartyJob {
+  sessionId: string;
+}
+
 /** The screens the beacon may name: families, never an id. Mirrors apps/web/src/hosted/beacon.ts. */
 // "marketplace" stays beside "marketplace": it is what the screen was called
 // until the name settled, and rows already counted under it are real.
@@ -342,6 +350,12 @@ export interface Deps {
    * thread hears at the next press there.
    */
   later?: (job: MovedJob) => Promise<void>;
+  /**
+   * Tell the job function a snapshot landed on a run with watch parties,
+   * so their cards are brought up to date in the job's own time. Absent,
+   * a party's card stands still.
+   */
+  party?: (job: PartyJob) => Promise<void>;
   /** Link codes are random by default; a test hands in its own. */
   code?: () => string;
   /** Event and run ids are ULIDs by default; a test hands in its own. */
@@ -450,6 +464,30 @@ export async function finishMoved(job: MovedJob, deps: Deps): Promise<"gone" | "
     return outcome;
   } finally {
     deps.measure?.({ kind: "job:moved", ms: Date.now() - started, ok });
+  }
+}
+
+/** A snapshot landed on a run with watch parties; the job brings their cards up to date. */
+export async function finishParty(job: PartyJob, deps: Deps): Promise<Array<{ guildId: string; outcome: string }>> {
+  if (!deps.discord || !deps.guilds) return [];
+  const now = deps.now ?? (() => new Date().toISOString());
+  const started = Date.now();
+  let ok = false;
+  try {
+    const out = await tickParties(
+      {
+        store: deps.store,
+        guilds: deps.guilds,
+        rest: deps.discord.rest ? await deps.discord.rest(true) : null,
+        now,
+        wait: (ms) => new Promise((done) => setTimeout(done, ms)),
+      },
+      job.sessionId,
+    );
+    ok = true;
+    return out;
+  } finally {
+    deps.measure?.({ kind: "job:party", ms: Date.now() - started, ok });
   }
 }
 
@@ -2709,6 +2747,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       }
       if (method === "DELETE") {
         await store.updateSession(id, now(), { publicTokenHash: null });
+        // The link is dead the moment the token is, so the row goes and
+        // the parties still drawing it are told to close.
+        await deps.guilds?.clearLiveLink(id);
+        await deps.party?.({ sessionId: id });
         return json(200, { shared: false });
       }
       return json(410, { error: ROUTE_GONE });
@@ -2775,6 +2817,38 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (Buffer.byteLength(JSON.stringify(body["snapshot"])) > 200_000) return json(413, { error: "the snapshot is too large" });
       await store.putSnapshot(id, now(), body["snapshot"]);
       await deps.notify?.(id, found.meta.seq);
+      /**
+       * The live link, kept for a watch party's card.
+       *
+       * The session row keeps only the token's hash, on purpose, so the
+       * link cannot be built here; the page that holds it sends it, and it
+       * is believed on two counts. It is one of this copy's own live links
+       * for this very run, read by `liveLinkOf`, the way `/run watch`
+       * reads a pasted one; and its token hashes to the run's own. Either
+       * check alone is short: a token that hashes right can be hung off
+       * any address, and what is kept here the bot puts in a thread in
+       * somebody else's server, in the bot's own voice.
+       *
+       * Discord's half of a snapshot is wrapped: the run's own write has
+       * landed by here, and a party that could not be told is a card a
+       * beat out of date, not a snapshot the app must send again.
+       */
+      try {
+        const raw = isRecord(body) && str(body["link"]) ? body["link"].trim() : "";
+        const sent = raw && raw.length <= MAX_LINK_CHARS ? liveLinkOf(raw, deps.appUrl ?? "") : null;
+        const token = sent ? (new URL(sent.link).searchParams.get("t") ?? "") : "";
+        if (deps.guilds && sent?.sessionId === id && found.meta.publicTokenHash && hashToken(token) === found.meta.publicTokenHash) {
+          await deps.guilds.putLiveLink(id, sent.link, now());
+        }
+        // A run with parties on it, and the run's first snapshot, which is
+        // where a server that opens parties on its own gets its chance.
+        if (deps.party && deps.guilds) {
+          const first = isRecord(body) && body["first"] === true;
+          if (first || (await deps.guilds.partiesOf(id)).some((p) => !p.closedAt)) await deps.party({ sessionId: id });
+        }
+      } catch (error) {
+        console.error("snapshot: could not tell the watch parties", error);
+      }
       return json(200, { kept: true });
     }
     if (sub === "/invites") {
@@ -3029,6 +3103,15 @@ function depsFromEnv(selfArn?: string): Deps {
               }),
             );
           },
+          party: async (job: PartyJob) => {
+            await (lambdaClient ??= new LambdaClient({})).send(
+              new InvokeCommand({
+                FunctionName: process.env["DISCORD_JOB_FUNCTION"],
+                InvocationType: "Event",
+                Payload: Buffer.from(JSON.stringify({ kind: "party", ...job })),
+              }),
+            );
+          },
         }
       : {}),
     guilds: dynamoGuilds({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
@@ -3194,8 +3277,10 @@ export async function job(event: unknown, context?: { invokedFunctionArn?: strin
       await finishTimer({ sessionId: event["sessionId"], clock: event["clock"], at: event["at"] }, deps);
     } else if (isRecord(event) && event["kind"] === "moved" && typeof event["sessionId"] === "string" && typeof event["seq"] === "number") {
       await finishMoved({ sessionId: event["sessionId"], seq: event["seq"] }, deps);
+    } else if (isRecord(event) && event["kind"] === "party" && typeof event["sessionId"] === "string") {
+      await finishParty({ sessionId: event["sessionId"] }, deps);
     } else {
-      console.error("job: not a deferred interaction, a timer or a move", event);
+      console.error("job: not a deferred interaction, a timer, a move or a party", event);
     }
   } catch (error) {
     console.error(error);
