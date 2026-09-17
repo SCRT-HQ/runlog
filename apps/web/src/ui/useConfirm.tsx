@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useFocusTrap } from "./useFocusTrap.ts";
 
 /**
  * Asking before something irreversible, in the app's own dialog.
@@ -40,12 +41,13 @@ export function useConfirm(): { dialog: ReactNode; ask: (question: Question | st
   const [open, setOpen] = useState<Question | null>(null);
   /** Kept in a ref so a re-render cannot lose the promise mid-question. */
   const answer = useRef<((yes: boolean) => void) | null>(null);
-  /** Whatever had focus when the question was asked, to give it back. */
-  const opener = useRef<HTMLElement | null>(null);
+  const panel = useRef<HTMLElement>(null);
   const confirmButton = useRef<HTMLButtonElement | null>(null);
+  const cancelButton = useRef<HTMLButtonElement | null>(null);
+  /** False until the dialog has been on screen for a frame; see the Enter guard below. */
+  const seen = useRef(false);
 
   const ask = useCallback((question: Question | string) => {
-    opener.current = typeof document === "undefined" ? null : (document.activeElement as HTMLElement | null);
     setOpen(typeof question === "string" ? { ask: question } : question);
     return new Promise<boolean>((resolve) => {
       answer.current = resolve;
@@ -56,27 +58,32 @@ export function useConfirm(): { dialog: ReactNode; ask: (question: Question | st
     setOpen(null);
     answer.current?.(yes);
     answer.current = null;
-    // Back where they were, so the next key press goes somewhere sensible.
-    opener.current?.focus?.();
-    opener.current = null;
   }, []);
+  const cancel = useCallback(() => close(false), [close]);
 
+  /**
+   * Focus lands on the answer, so Enter answers the question rather than
+   * pressing whatever was behind the veil. Where the answer destroys
+   * something it lands on Cancel instead: the safe one is the one a
+   * reflex should press. The trap holds focus in the dialog, keeps the
+   * page behind it out of the tab order, and gives focus back on the way
+   * out.
+   */
+  useFocusTrap(panel, open !== null, cancel, open?.destructive ? cancelButton : confirmButton);
+
+  /**
+   * A dialog that opens under a finger already coming down on Enter must
+   * not answer itself. Nothing is confirmed until it has had a frame on
+   * screen, which is long enough to have been seen and short enough that
+   * nobody deliberate notices.
+   */
   useEffect(() => {
+    seen.current = false;
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        close(false);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, close]);
-
-  // The button that does the thing takes focus, so Enter answers the
-  // question rather than pressing whatever was behind the dialog.
-  useEffect(() => {
-    if (open) confirmButton.current?.focus();
+    const frame = requestAnimationFrame(() => {
+      seen.current = true;
+    });
+    return () => cancelAnimationFrame(frame);
   }, [open]);
 
   const dialog = open ? (
@@ -86,6 +93,11 @@ export function useConfirm(): { dialog: ReactNode; ask: (question: Question | st
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirmAsk"
+        tabIndex={-1}
+        ref={panel}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !seen.current) e.preventDefault();
+        }}
         {...(open.detail ? { "aria-describedby": "confirmDetail" } : {})}
       >
         <h2 id="confirmAsk">{open.ask}</h2>
@@ -98,7 +110,7 @@ export function useConfirm(): { dialog: ReactNode; ask: (question: Question | st
           <button ref={confirmButton} className={`primary${open.destructive ? " danger" : ""}`} onClick={() => close(true)}>
             {open.confirm ?? "Yes"}
           </button>
-          <button className="ghost" onClick={() => close(false)}>
+          <button ref={cancelButton} className="ghost" onClick={() => close(false)}>
             Cancel
           </button>
         </div>
