@@ -1586,7 +1586,7 @@ p {
 }
 .notice.constraints li {
   padding: 0.15rem 0;
-  font-size: 1rem;
+  font: var(--font-body) var(--font-prose);
   color: var(--text);
 }
 .notice.underBar {
@@ -3254,8 +3254,14 @@ select.textInput {
   align-items: baseline;
   gap: 0.6rem;
 }
+/* What is being played and under which mode: two labels, at the size the
+   buttons beside them are, in the same voice. The run's own name is the one
+   editable value in the row, and reads at the body size. */
 .runMeta strong {
-  font-size: 1.05rem;
+  font: var(--font-control) var(--font-ui);
+}
+.runMeta > .muted {
+  font: var(--font-control) var(--font-ui);
 }
 
 .columns.run {
@@ -3593,14 +3599,23 @@ select.textInput {
   padding-bottom: 0;
   margin-bottom: 0.2rem;
 }
+/*
+ * The current action's title: the one line on this screen drawn at a display
+ * size, and the app's own voice saying it, because the phase line above and
+ * the control below are the app's too. A documented exception to the five
+ * roles; see the type inventory.
+ */
 .run .runStep .stepLabel {
-  font-size: 1.7rem;
-  font-weight: 500;
-  line-height: 1.2;
+  font-family: var(--font-ui);
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 600;
   margin: 0.1rem 0 0.6rem;
 }
+/* What the pack wrote about the step, in the pack's own voice at the size
+   everything else is read at. */
 .run .runStep > p {
-  font-size: 1.05rem;
+  font: var(--font-body) var(--font-prose);
 }
 .run .runStep .primary.big {
   margin-top: 0;
@@ -3670,32 +3685,40 @@ select.textInput {
 .log .timeline li:first-child {
   border-top: none;
 }
+/* A ledger's two marks: the line's number and where it happened. Both are
+   captions, both in the figures' face, both with tabular numerals so the
+   column of numbers lines up however long the log gets. */
 .log .timeline .idx {
   flex: none;
   text-align: right;
   opacity: 1;
   color: var(--muted);
-  font-size: var(--t-1);
-  padding-top: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: var(--size-caption);
+  line-height: var(--leading-caption);
+  padding-top: 0.35rem;
   font-variant-numeric: tabular-nums;
 }
 .log .timeline .where {
   display: block;
-  font-family: var(--mono);
-  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  font-size: var(--size-caption);
+  line-height: var(--leading-caption);
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 .log .timeline li.heat .where {
   color: var(--warn);
 }
+/* The entry itself is the pack's sentence about what happened. */
 .log .timeline p {
   margin: 0.1rem 0 0;
-  font-size: var(--t-3);
+  font: var(--font-body) var(--font-prose);
 }
 .log .empty {
   margin: 0.5rem 0 0;
   color: var(--muted);
-  font-size: 0.95rem;
+  font: var(--font-body) var(--font-prose);
 }
 
 /*
@@ -3909,14 +3932,15 @@ details.panel[open] > summary .sectionTitle::after {
 .receipt .result.heat .band {
   color: var(--warn);
 }
+/* What the table said, which is the pack's writing: the author's voice at
+   the size the rest of the pack's words are read at. */
 .receipt .result .text {
   margin: 0;
-  font-size: var(--t-4);
-  line-height: 1.4;
+  font: var(--font-body) var(--font-prose);
 }
 .receipt .result .muted {
   margin: 0;
-  font-size: 0.95rem;
+  font: var(--font-body) var(--font-prose);
 }
 .receipt .padRow {
   margin-top: 1.1rem;
@@ -4040,8 +4064,9 @@ details.panel[open] > summary .sectionTitle::after {
 /* The run's own name, in the bar: a name you can click to change, or an
    invitation to give it one. */
 .runName {
-  font-family: var(--serif);
-  font-size: 1.05rem;
+  font-family: var(--font-prose);
+  font-size: var(--size-body);
+  line-height: var(--leading-body);
   font-style: italic;
   font-weight: 500;
 }
@@ -4051,9 +4076,9 @@ details.panel[open] > summary .sectionTitle::after {
   color: var(--muted);
 }
 .runNameInput {
-  font-family: var(--serif);
+  font-family: var(--font-prose);
   font-style: italic;
-  font-size: 1.05rem;
+  font-size: var(--size-body);
   padding: 0.1rem 0.4rem;
   background: var(--bg);
   border: 1px solid var(--accent-dim);
@@ -7055,6 +7080,12 @@ html[data-pip="controls"] body {
      floor of its own to hold it still. */
   .run .runStep:has(> .stepAction) {
     min-height: 0;
+  }
+  /* The one display line on the page, one step down: a phone's plane is the
+     step and little else, so the title needs less size to be the title. */
+  .run .runStep .stepLabel {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
   }
   /* Setting a run up is a long page with one button at the end of it, and
      the button should be under the thumb wherever the page is. Nothing is
