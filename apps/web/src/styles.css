@@ -264,6 +264,14 @@ textarea {
   font-family: var(--mono);
 }
 
+/* Every keyboard-reachable control and target shares the theme's focus ink.
+ * :where() keeps this easy for the few controls with a justified offset to
+ * refine, while forced-colors mode remains free to map the outline itself. */
+:where(button, a[href], input, select, textarea, summary, [tabindex], [contenteditable]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 /*
  * A select's drop-down list is drawn by the browser from the select's own
  * colors. Left transparent, Chrome paints the list white and the options in
@@ -1935,7 +1943,6 @@ button:disabled,
 }
 .rollInput:focus,
 .textInput:focus {
-  outline: none;
   border-color: var(--accent);
 }
 
@@ -2532,7 +2539,6 @@ button:disabled,
   border-radius: 5px;
 }
 .renameInput:focus {
-  outline: none;
   border-color: var(--accent);
 }
 
@@ -2613,7 +2619,7 @@ button:disabled,
   padding-block: var(--space-1);
 }
 .design .fieldReference > summary:focus-visible {
-  outline: 2px solid var(--accent);
+  outline-color: var(--focus);
   outline-offset: 2px;
 }
 .design .fieldReference > p {
@@ -2895,7 +2901,6 @@ select.textInput {
 .accountItem:hover,
 .accountItem:focus-visible {
   background: color-mix(in oklab, var(--accent) 10%, transparent);
-  outline: none;
 }
 /* Invitations in the menu: a count on the button, a line in the list, and
    a flyout beside the panel with each one and its two answers. */
@@ -3365,7 +3370,7 @@ select.textInput {
   cursor: pointer;
 }
 .themeMenu select:focus-visible {
-  outline: 2px solid var(--warn);
+  outline-color: var(--focus);
   outline-offset: 1px;
 }
 
@@ -4220,7 +4225,6 @@ details.panel[open] > summary .sectionTitle::after {
   min-width: 14rem;
 }
 .runNameInput:focus {
-  outline: none;
   border-color: var(--accent);
 }
 .setup .textInput.runNameField {
@@ -4807,7 +4811,7 @@ details.panel[open] > summary .sectionTitle::after {
   font-size: var(--t-5);
 }
 .packPageTitle:focus-visible {
-  outline: 2px solid var(--accent);
+  outline-color: var(--focus);
   outline-offset: 0.25rem;
 }
 /* How to get it: the price, what is already yours, and the one thing to press. */
@@ -7000,7 +7004,7 @@ html[data-pip="controls"] body {
   }
 }
 .personaChip:focus-visible {
-  outline: 2px solid var(--accent);
+  outline-color: var(--focus);
   outline-offset: 2px;
 }
 .welcomeClosing {
