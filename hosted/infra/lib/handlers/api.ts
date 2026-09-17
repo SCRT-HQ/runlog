@@ -2562,7 +2562,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   }
 
   const session = path.match(
-    /^\/api\/sessions\/([^/]+)(\/events|\/invites|\/invites\/[^/]+|\/members\/[^/]+|\/public|\/snapshot|\/reactions|\/asks|\/asks\/[^/]+|\/ask-key)?$/,
+    /^\/api\/sessions\/([^/]+)(\/events|\/invites|\/invites\/[^/]+|\/members\/[^/]+|\/public|\/snapshot|\/watch|\/reactions|\/asks|\/asks\/[^/]+|\/ask-key)?$/,
   );
   if (session) {
     const id = decodeURIComponent(session[1]!);
@@ -2685,6 +2685,38 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         return json(200, { shared: false });
       }
       return json(410, { error: ROUTE_GONE });
+    }
+    /**
+     * What a member who holds no pack sees.
+     *
+     * The same snapshot the live page reads, fetched on this account
+     * rather than on a link's token, because a run with somebody seated at
+     * it need never have been shared by link. Two fields are left out: the
+     * pack's paper, which is the pack's own text, and the control profile,
+     * which is the run's terms for an attached tool. The pack's source is
+     * not here to leave out; a snapshot has never carried one.
+     */
+    if (sub === "/watch" && method === "GET") {
+      const m = found.meta;
+      const snap = await store.getSnapshot(id);
+      const whole = isRecord(snap?.snapshot) ? snap.snapshot : null;
+      const { paper: _paper, control: _control, ...rest } = whole ?? {};
+      const card = await deps.listings.getCard(m.packId);
+      return json(200, {
+        found: true,
+        run: {
+          id: m.id,
+          packId: m.packId,
+          packTitle: m.packTitle ?? null,
+          name: m.name ?? null,
+          seq: m.seq,
+          updatedAt: m.updatedAt,
+          endedAt: m.endedAt ?? null,
+        },
+        snapshot: whole ? { at: snap!.at, snapshot: rest } : null,
+        listing: card ? { id: card.packId, price: card.price } : null,
+        reactions: await store.listReactions(id),
+      });
     }
     // ---- the snapshot the owner's device keeps for strangers who may not hold the pack ----
     if (sub === "/snapshot") {
