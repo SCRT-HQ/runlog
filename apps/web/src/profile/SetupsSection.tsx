@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { loadSetupText, whichKind, type Setup } from "@runlog/rules-schema";
-import { forgetSetup, listSetups, saveSetup, type StoredSetup } from "../storage/db.ts";
+import { type Setup } from "@runlog/rules-schema";
+import { forgetSetup, listSetups, type StoredSetup } from "../storage/db.ts";
+import { keepSetup, readDocumentFile } from "../storage/documents.ts";
 import { shippedSetups } from "../control/setups.ts";
-import { Disclosure } from "../ui/Disclosure.tsx";
 
 /**
  * The setups somebody keeps.
@@ -12,12 +12,17 @@ import { Disclosure } from "../ui/Disclosure.tsx";
  * This is everything else: a file somebody was handed, or, once setups
  * are listed, something taken from the marketplace.
  *
- * It is on the library screen rather than in a run's settings because
- * that is what it is: a shelf, next to the shelf of packs, holding the
- * other kind of document this app reads. It folds, and stays folded, for
- * anybody who keeps none: the packs above it are what the page is for.
+ * It sits under Settings, with the rest of what somebody keeps rather
+ * than plays. It was on the library screen, where it was the last panel
+ * of a page about packs and stood between somebody and the run they came
+ * for. Managing the files is an errand, and errands live in settings; the
+ * setups that fit a run are still offered in session setup, which is
+ * where the choice actually gets made.
+ *
+ * Nothing here reaches the game. Keeping a setup writes a document to
+ * this device and stops; a run is what applies one.
  */
-export function SetupShelf() {
+export function SetupsSection() {
   const [kept, setKept] = useState<StoredSetup[]>([]);
   const [shipped, setShipped] = useState<Setup[]>([]);
   const [note, setNote] = useState<string | null>(null);
@@ -32,8 +37,7 @@ export function SetupShelf() {
   const take = async (file: File | undefined) => {
     if (!file) return;
     setNote(null);
-    const text = await file.text();
-    const format = /\.json$/i.test(file.name) ? "json" : "yaml";
+    const doc = await readDocumentFile(file);
 
     /*
      * Which kind of file is this? A person choosing a file has no reason
@@ -41,37 +45,21 @@ export function SetupShelf() {
      * told "that is not a setup" about a perfectly good pack is unhelpful
      * where the app can say what it *is*.
      */
-    const which = whichKind(text, format);
-    if (which === "pack") {
-      setNote(`${file.name} is a pack, not a setup. Packs go on the shelf above, under Add a pack.`);
+    if (doc.kind === "pack") {
+      setNote(`${file.name} is a pack, not a setup. Packs go on the library page, under Add and discover.`);
       return;
     }
 
-    const parsed = loadSetupText(text, format);
-    if (!parsed.ok) {
-      const first = parsed.diagnostics.find((d) => d.level === "error");
-      setNote(first ? `${file.name} did not load: ${first.path ? `${first.path}: ` : ""}${first.message}` : `${file.name} did not load.`);
+    const result = await keepSetup(doc.text, doc.format, file.name);
+    if (!result.ok) {
+      setNote(result.message);
       return;
     }
 
-    const setup = parsed.setup;
-    const at = new Date().toISOString();
-    const had = kept.find((k) => k.id === setup.id);
-    await saveSetup({
-      id: setup.id,
-      title: setup.title,
-      version: setup.version,
-      tool: setup.tool,
-      ...(setup.description ? { description: setup.description } : {}),
-      ...(setup.author ? { author: setup.author } : {}),
-      source: text,
-      format,
-      importedAt: had?.importedAt ?? at,
-      updatedAt: at,
-    });
     await reload();
+    const setup = result.setup;
     setNote(
-      had
+      result.replaced
         ? `${setup.title} is now version ${setup.version}.`
         : `${setup.title} is on your shelf; runs of any pack for ${setup.tool} can be started under it.`,
     );
@@ -84,7 +72,8 @@ export function SetupShelf() {
   };
 
   return (
-    <Disclosure className="setupShelf" summary="Your setups" remember="setupShelf">
+    <section className="panel setups">
+      <h3 className="sectionTitle">Setups</h3>
       <p className="muted small">
         What a tool attached to the game is set to while a run lasts, and what you start holding. A setup is written for a tool rather than
         for a pack, so one fits every pack for the same game.
@@ -123,6 +112,6 @@ export function SetupShelf() {
       </div>
 
       {note && <p className="notice">{note}</p>}
-    </Disclosure>
+    </section>
   );
 }

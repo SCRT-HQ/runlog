@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { StoredPack, StoredRun } from "../storage/db.ts";
+import type { StoredPack, StoredRun, StoredSetup } from "../storage/db.ts";
 import { LibraryView, type LibraryPack } from "./LibraryView.tsx";
 
 /**
@@ -26,9 +26,20 @@ import { LibraryView, type LibraryPack } from "./LibraryView.tsx";
 /** What `listRuns` answers with in the test that is running. */
 let stored: StoredRun[] = [];
 
+/** The setups this device keeps, and what the page asked to be kept. */
+const setups: { rows: StoredSetup[]; saved: StoredSetup[] } = { rows: [], saved: [] };
+
 vi.mock("../storage/db.ts", async (importOriginal) => {
   const real = await importOriginal<typeof import("../storage/db.ts")>();
-  return { ...real, listRuns: async () => stored };
+  return {
+    ...real,
+    listRuns: async () => stored,
+    listSetups: async () => setups.rows,
+    saveSetup: async (setup: StoredSetup) => {
+      setups.saved.push(setup);
+      setups.rows = [...setups.rows.filter((r) => r.id !== setup.id), setup];
+    },
+  };
 });
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -115,6 +126,8 @@ const lines = () => screen.getAllByRole("menuitem").map((el) => el.textContent);
 
 beforeEach(() => {
   stored = [];
+  setups.rows = [];
+  setups.saved = [];
 });
 afterEach(cleanup);
 
@@ -296,5 +309,76 @@ describe("a seat on the shelf", () => {
     expect(screen.getByText("The Long Kiln")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Take your seat" }));
     expect(taken).toEqual(["r1"]);
+  });
+});
+
+/**
+ * The setups, once they no longer live here.
+ *
+ * They are managed under Settings now. Two things have to stay true on
+ * this page: somebody who goes looking where they used to be is told
+ * where they went, and somebody who picks a setup file at the one file
+ * control this page has is not told they are wrong. The library takes a
+ * setup the way the setups section takes a pack.
+ */
+
+const SETUP = [
+  "kind: setup",
+  "schemaVersion: 1",
+  "id: com.example.setups.mine",
+  'version: "1.0.0"',
+  "title: Mine",
+  "tool: TarnishedTool",
+  "ops:",
+  "  - { op: flag.set, args: { name: player.noRoll, value: true } }",
+].join("\n");
+
+/** A file handed to the page's pack control, without a real file picker. */
+const pickPackFile = (name: string, text: string) => {
+  const input = screen.getByLabelText("Load a pack from a file") as HTMLInputElement;
+  const file = new File([text], name, { type: "text/plain" });
+  Object.defineProperty(input, "files", { value: [file], configurable: true });
+  fireEvent.change(input);
+};
+
+describe("the door to the setups", () => {
+  it("leaves one line where the shelf was, and nothing else of it", () => {
+    const html = paint(shelf([record({})]));
+    expect(html).toContain("Your setups are under Settings.");
+    expect(html).toContain('href="#profile/settings"');
+    // The shelf itself: no panel, no title, no picker of its own.
+    expect(html).not.toContain("Load a setup from a file");
+    expect(html).not.toContain("Your setups</");
+    expect(html).not.toContain("setupShelf");
+  });
+
+  it("opens the Settings page the way the account menu does", () => {
+    const went: string[] = [];
+    renderLibrary({ packs: shelf([record({})]), onOpenSettings: () => went.push("settings") });
+    fireEvent.click(screen.getByText("Your setups are under Settings."));
+    expect(went).toEqual(["settings"]);
+  });
+
+  it("keeps a setup chosen at Load a pack from a file, and says where it went", async () => {
+    const handed: (File | undefined)[] = [];
+    renderLibrary({ packs: shelf([record({})]), onFile: (f) => handed.push(f) });
+    pickPackFile("mine.yaml", SETUP);
+
+    await waitFor(() => expect(setups.saved).toHaveLength(1));
+    expect(setups.saved[0]).toMatchObject({ id: "com.example.setups.mine", title: "Mine", tool: "TarnishedTool" });
+    // Not offered to the pack door, which would have refused it.
+    expect(handed).toEqual([]);
+    const note = await screen.findByText("Kept under Settings.");
+    expect(note.getAttribute("href")).toBe("#profile/settings");
+  });
+
+  it("still hands a pack file to the pack door", async () => {
+    const handed: (File | undefined)[] = [];
+    renderLibrary({ packs: shelf([record({})]), onFile: (f) => handed.push(f) });
+    pickPackFile("kiln.yaml", source);
+
+    await waitFor(() => expect(handed).toHaveLength(1));
+    expect(handed[0]?.name).toBe("kiln.yaml");
+    expect(setups.saved).toEqual([]);
   });
 });
