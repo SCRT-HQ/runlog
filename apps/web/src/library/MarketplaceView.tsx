@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { loadPackText, type Pack } from "@runlog/rules-schema";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { DOC_KINDS, loadPackText, type Block, type Doc, type DocKind, type Pack } from "@runlog/rules-schema";
 import { useDocDrawer } from "../docs/DocDrawer.tsx";
+import { linkTo } from "../route.ts";
 import { DeckProfiles } from "./DeckProfiles.tsx";
 import {
   facets,
@@ -26,6 +27,73 @@ import { useTitle } from "../title.ts";
 /** What to call the things on the shelf, for a count that may be one of them. */
 const noun = (kind: ListingKind, n: number): string => (kind === "setup" ? (n === 1 ? "setup" : "setups") : n === 1 ? "pack" : "packs");
 
+/** The address of one pack's page. The catalog is `#marketplace` with nothing after it. */
+const packHash = (id: string): string => `#marketplace/${encodeURIComponent(id)}`;
+
+/** What the drawer calls the one document a listing carries before it is bought. */
+const SUMMARY_TAB = { label: "Summary", what: "The shape of the game, before you have it." };
+
+/** What a listing will show of itself, with the pack in hand where it may be read. */
+interface Read {
+  /** Which listing this was read from, so a page never draws another pack's text. */
+  id: string;
+  /** The pack itself, where its text is free to read; null for a listing that is sold. */
+  pack: Pack | null;
+  /** The summary the feed carries ready-made, where it carries one. */
+  summary: Doc | null;
+}
+
+/**
+ * Read a listing the way the card already reads it, and no further.
+ *
+ * A listing that came from the feed carries its summary made for it, so
+ * that is asked for first and is all a priced listing ever gives: a pack
+ * that is sold has no text here until it is bought, and fetching one to
+ * draw a richer page would be reaching past the license. A free pack's
+ * text is the same `load` the summary button and the deck row already
+ * call, which is why the page may have its modes and its documents.
+ */
+async function readListing(e: MarketplaceEntry): Promise<Omit<Read, "id">> {
+  let summary: Doc | null = null;
+  if (e.about) {
+    try {
+      summary = await e.about();
+    } catch {
+      summary = null;
+    }
+  }
+  if (e.price !== "free") return { pack: null, summary };
+  try {
+    const loaded = loadPackText(await e.load(), "yaml");
+    return { pack: loaded.ok ? loaded.pack : null, summary };
+  } catch {
+    return { pack: null, summary };
+  }
+}
+
+/**
+ * The ways to play, for the page's Modes section.
+ *
+ * From the pack where the pack is in hand. Where it is not, the summary
+ * the feed made carries the same modes in a table, so a priced listing
+ * still says how it is played without its rules being fetched. Nothing
+ * is invented: a listing with neither gets no section.
+ */
+function modesOf(read: Read): Array<{ label: string; description?: string }> {
+  if (read.pack) {
+    return Object.values(read.pack.modes).map((m) => ({ label: m.label, ...(m.description ? { description: m.description } : {}) }));
+  }
+  const table = read.summary?.blocks.find((b): b is Extract<Block, { kind: "table" }> => b.kind === "table" && b.columns[0] === "Mode");
+  if (!table) return [];
+  const about = table.columns.indexOf("About");
+  return table.rows
+    .filter((row) => (row[0] ?? "").trim())
+    .map((row) => {
+      const description = about === -1 ? "" : (row[about] ?? "").trim();
+      return { label: row[0]!.trim(), ...(description ? { description } : {}) };
+    });
+}
+
 /**
  * The marketplace, laid out as a market: cards in a grid, a sidebar to narrow
  * them. Everything here is free and comes with the app for now; the shape
@@ -50,9 +118,16 @@ const noun = (kind: ListingKind, n: number): string => (kind === "setup" ? (n ==
  * the pack; the other documents are the drawer's tabs, where the pack's
  * text may be read. A priced listing carries only its summary, so that is
  * the one tab.
+ *
+ * A pack named in the address has a page here rather than a view of its
+ * own: `#marketplace/<packId>` puts the page where the grid was and
+ * leaves the sidebar, the query, the filters and the scroll exactly as
+ * they were, so going back to the catalog is going back to the catalog
+ * you left rather than to a fresh one.
  */
 export function MarketplaceView({
   focus = null,
+  onPack,
   mine,
   bought = new Set(),
   updatable = new Set(),
@@ -63,8 +138,10 @@ export function MarketplaceView({
   onOpen,
   onBack,
 }: {
-  /** A pack to open the About of on arrival, from a deep link. */
+  /** The pack whose page is showing, from the address. Null is the catalog. */
   focus?: string | null;
+  /** Ask for a pack's page, or for the catalog with null. The address is written where it is read. */
+  onPack: (id: string | null) => void;
   /** Ids of the packs already in the library. The one source for "Owned". */
   mine: ReadonlySet<string>;
   /** Ids of the packs the account has bought, on the shelf here or not. */
@@ -133,16 +210,68 @@ export function MarketplaceView({
     };
   }, [testing]);
 
-  // Arriving on a pack: its docs open once the feed is here, and the search finds it.
+  /** What the open page has read of its pack; see `readListing` for how far that goes. */
+  const [read, setRead] = useState<Read | null>(null);
+  /** The page's own title, so opening a page puts the reader at the top of it. */
+  const title = useRef<HTMLHeadingElement>(null);
+  /** The search field, where a page was opened from an address rather than from a card. */
+  const search = useRef<HTMLInputElement>(null);
+  /** Each card's title link, by pack id: what a return from its page gives the focus back to. */
+  const cards = useRef(new Map<string, HTMLAnchorElement>());
+  /** The card whose page this is, remembered across the page so going back lands on it. */
+  const cameFrom = useRef<string | null>(null);
+  /** Where the catalog was standing when the page took its place. */
+  const scrollAt = useRef(0);
+  /** Which page was showing on the last pass, so the move between the two is what is acted on. */
+  const wasOn = useRef<string | null>(focus);
+
+  // The page's pack, read once it is known which pack that is.
   useEffect(() => {
     if (!focus || !entries) return;
+    if (read?.id === focus) return;
     const e = entries.find((x) => x.id === focus);
     if (!e) return;
-    setQ(e.title);
-    void showDocs(e);
-    // Once, on arrival.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focus, entries]);
+    let live = true;
+    void readListing(e).then((got) => {
+      if (live) setRead({ id: e.id, ...got });
+    });
+    return () => {
+      live = false;
+    };
+  }, [focus, entries, read]);
+
+  /**
+   * Where the reader is standing, across the move between catalog and page.
+   *
+   * Opening a page puts them at its title, because the page is what they
+   * asked for and its first line is where it starts. Going back puts them
+   * on the card they came from, at the height the catalog was at, because
+   * a catalog that came back scrolled to the top and focused on nothing
+   * has lost their place for them. A page reached from an address has no
+   * card behind it, and the search field is the honest fallback.
+   */
+  useLayoutEffect(() => {
+    if (focus && focus !== wasOn.current) {
+      title.current?.focus();
+    } else if (!focus && wasOn.current) {
+      try {
+        window.scrollTo(0, scrollAt.current);
+      } catch {
+        /* a window that will not be scrolled is still a window */
+      }
+      const card = cameFrom.current ? cards.current.get(cameFrom.current) : null;
+      (card ?? search.current)?.focus();
+      cameFrom.current = null;
+    }
+    wasOn.current = focus;
+  }, [focus]);
+
+  /** Open a pack's page, from the card that asked for it. */
+  const openPage = (id: string) => {
+    cameFrom.current = id;
+    scrollAt.current = typeof window === "undefined" ? 0 : window.scrollY;
+    onPack(id);
+  };
 
   const all = entries ?? [];
   const sides = useMemo(() => facets(all), [all]);
@@ -170,6 +299,8 @@ export function MarketplaceView({
   const counts = useMemo(() => kindCounts(all), [all]);
   /** Everything of the kind being browsed: what the count is out of. */
   const here = useMemo(() => all.filter((e) => e.kind === kind), [all, kind]);
+  /** The listing whose page is showing. Null with an address naming a pack is the not-found state. */
+  const page = focus === null ? null : (entries?.find((e) => e.id === focus) ?? null);
   /** Drawn only once there is something behind the second tab. */
   const kinds: ListingKind[] = counts.setup > 0 ? ["pack", "setup"] : [];
   const narrowed =
@@ -230,30 +361,17 @@ export function MarketplaceView({
     [busy],
   );
 
+  /** Put what a listing gives of itself in the drawer: the pack's paper, or the one summary. */
+  const openDrawer = (e: MarketplaceEntry, got: Read, kind: DocKind = "summary") => {
+    if (got.pack) drawer.open(got.pack, kind, { section: "marketplace", id: e.id });
+    else if (got.summary) drawer.show(e.title, [{ ...SUMMARY_TAB, make: () => got.summary! }]);
+  };
+
   const showDocs = async (e: MarketplaceEntry) => {
     if (reading) return;
     setReading(e.id);
     try {
-      // A listing carries its summary ready-made; a priced one has no text to read.
-      if (e.about) {
-        const doc = await e.about();
-        let pack: Pack | null = null;
-        if (e.price === "free") {
-          try {
-            const loaded = loadPackText(await e.load(), "yaml");
-            pack = loaded.ok ? loaded.pack : null;
-          } catch {
-            pack = null;
-          }
-        }
-        if (pack) drawer.open(pack, "summary", { section: "marketplace", id: e.id });
-        else if (doc) drawer.show(e.title, [{ label: "Summary", what: "The shape of the game, before you have it.", make: () => doc }]);
-        return;
-      }
-      const loaded = loadPackText(await e.load(), "yaml");
-      if (loaded.ok) drawer.open(loaded.pack, "summary", { section: "marketplace", id: e.id });
-    } catch {
-      // Nothing to read: the button simply comes back.
+      openDrawer(e, { id: e.id, ...(await readListing(e)) });
     } finally {
       setReading(null);
     }
@@ -272,6 +390,187 @@ export function MarketplaceView({
       : offline
         ? "The packs that ship with the app are here."
         : "The marketplace did not answer. The packs that ship with the app are here.";
+
+  /**
+   * The one action a listing offers, wherever it is drawn.
+   *
+   * The card and the page show the same one, in the same words, and every
+   * one of them goes through `attempt`: the whole marketplace goes quiet
+   * while an acquisition is in flight, so a second press never reaches
+   * the library twice.
+   */
+  const action = (e: MarketplaceEntry, have: boolean) =>
+    have ? (
+      <Button size="compact" onClick={() => onOpen(e.id)}>
+        Open
+      </Button>
+    ) : bought.has(e.id) && onFetch ? (
+      <Button
+        variant="primary"
+        size="compact"
+        loading={busy === e.id}
+        disabled={busy !== null}
+        loadingLabel="Fetching…"
+        title="You bought this; fetch your copy onto this device"
+        onClick={() => void attempt(e.id, () => onFetch(e))}
+      >
+        Yours · get your copy
+      </Button>
+    ) : e.price !== "free" ? (
+      onBuy ? (
+        <Button
+          variant="primary"
+          size="compact"
+          loading={busy === e.id}
+          disabled={busy !== null}
+          loadingLabel="Opening…"
+          title={`Buy from ${e.publisher?.name ?? "its publisher"}`}
+          onClick={() => void attempt(e.id, () => onBuy(e))}
+        >
+          Buy {e.price.display}
+        </Button>
+      ) : (
+        <Button size="compact" disabled>
+          Sign in to buy
+        </Button>
+      )
+    ) : (
+      <Button
+        variant="primary"
+        size="compact"
+        loading={busy === e.id}
+        disabled={busy !== null}
+        loadingLabel="Adding…"
+        onClick={() => void attempt(e.id, () => onAdd(e))}
+      >
+        Add
+      </Button>
+    );
+
+  /**
+   * One pack's page.
+   *
+   * The card's four answers first, at the length the card could not give
+   * them: the premise whole, both lists of what it needs, and the same
+   * one action. Then what a card had no room for and nobody browsing
+   * needed: how it may be played, its paper, the deck it lays out, who
+   * published it and which version this is. Nothing here is fetched that
+   * the card would not have fetched; see `readListing`.
+   */
+  const packPage = (e: MarketplaceEntry) => {
+    const have = mine.has(e.id);
+    const seatsLine = seatsLabel(e);
+    const required = e.requires.filter((r) => !r.optional);
+    const optional = e.requires.filter((r) => r.optional);
+    const got = read?.id === e.id ? read : null;
+    const modes = got ? modesOf(got) : [];
+    const error = failed[e.id];
+    // A newer version is the page's action, and Open goes quiet beside it:
+    // on a page about one pack, the thing to do is take the new one.
+    const newer = have && updatable.has(e.id) ? onUpdate : undefined;
+    return (
+      <article className="panel packPage">
+        <h3 className="marketTitle packPageTitle" tabIndex={-1} ref={title}>
+          {e.title}
+          {e.bench && <Badge tone="cap">test bench</Badge>}
+        </h3>
+        {e.description && <p className="marketBlurb">{e.description}</p>}
+        <div className="marketWhy">
+          <Badge>{e.category}</Badge>
+          {seatsLine && <Badge>{seatsLine}</Badge>}
+        </div>
+        {required.length > 0 && (
+          <p className="muted small marketNeeds">
+            <strong>Needs:</strong> {required.map((r) => r.label).join(", ")}
+          </p>
+        )}
+        {optional.length > 0 && (
+          <p className="muted small marketNeeds">
+            <strong>Optional:</strong> {optional.map((r) => r.label).join(", ")}
+          </p>
+        )}
+        <div className="packPageGet">
+          <Badge>{e.price === "free" ? "Free" : e.price.display}</Badge>
+          {have && <Badge tone="cap">Owned</Badge>}
+          {newer ? (
+            <>
+              <Button
+                variant="primary"
+                size="compact"
+                loading={busy === e.id}
+                disabled={busy !== null}
+                loadingLabel="Updating…"
+                onClick={() => void attempt(e.id, () => newer(e))}
+              >
+                Update to {e.version}
+              </Button>
+              <Button size="compact" onClick={() => onOpen(e.id)}>
+                Open
+              </Button>
+            </>
+          ) : (
+            action(e, have)
+          )}
+        </div>
+        {error && (
+          <p className="notice marketCardError" role="status">
+            {error}
+          </p>
+        )}
+        {got === null && <p className="muted small marketLoading">Loading…</p>}
+        {modes.length > 0 && (
+          <section className="packPageBlock">
+            <h4 className="sectionTitle">Modes</h4>
+            <dl className="packPageModes">
+              {modes.map((m) => (
+                <div key={m.label}>
+                  <dt>{m.label}</dt>
+                  {m.description && <dd className="muted small">{m.description}</dd>}
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
+        {got && (got.pack || got.summary) && (
+          <section className="packPageBlock">
+            <h4 className="sectionTitle">Documents</h4>
+            <div className="options packPageDocs">
+              {got.pack ? (
+                DOC_KINDS.map((k) => (
+                  <Button key={k.kind} size="compact" title={k.what} onClick={() => openDrawer(e, got, k.kind)}>
+                    {k.label}
+                  </Button>
+                ))
+              ) : (
+                <Button size="compact" title={SUMMARY_TAB.what} onClick={() => openDrawer(e, got)}>
+                  {SUMMARY_TAB.label}
+                </Button>
+              )}
+            </div>
+          </section>
+        )}
+        {/* A deck is laid out from a pack, and from one whose text may be read. */}
+        {e.kind === "pack" && e.price === "free" && (
+          <section className="packPageBlock">
+            <h4 className="sectionTitle">Stream Deck</h4>
+            <DeckProfiles load={e.load} />
+          </section>
+        )}
+        {(e.publisher?.name ?? e.author) && (
+          <section className="packPageBlock">
+            <h4 className="sectionTitle">Publisher</h4>
+            <p className="muted small">{e.publisher?.name ?? e.author}</p>
+          </section>
+        )}
+        {e.version && (
+          <section className="packPageBlock">
+            <h4 className="sectionTitle">Version</h4>
+            <p className="muted small mono">{e.version}</p>
+          </section>
+        )}
+      </article>
+    );
+  };
 
   return (
     <main className="main market">
@@ -292,7 +591,14 @@ export function MarketplaceView({
         <aside className={`marketSide${filtersOpen ? " open" : ""}`} aria-label="Search and filters">
           <label className="marketSearch">
             <span className="visuallyHidden">Search the marketplace</span>
-            <input className="textInput" type="search" value={q} placeholder="Search packs…" onChange={(e) => setQ(e.target.value)} />
+            <input
+              ref={search}
+              className="textInput"
+              type="search"
+              value={q}
+              placeholder="Search packs…"
+              onChange={(e) => setQ(e.target.value)}
+            />
           </label>
 
           {/* The phone's way in and out of the facets; it draws nothing on a wide screen. */}
@@ -441,158 +747,140 @@ export function MarketplaceView({
         </aside>
 
         <section className="marketMain">
-          {who && (
-            <section className="panel publisherHead" aria-label="Publisher">
-              <div>
-                <span className="muted small mono">Publisher</span>
-                <h3 className="marketTitle">{who.name}</h3>
-                <p className="muted small">
-                  {who.count} {who.count === 1 ? "pack" : "packs"}
-                  {who.free > 0 && ` · ${who.free} free`}
-                  {who.from && ` · from ${who.from}`}
-                </p>
+          {focus !== null ? (
+            <>
+              <div className="packPageTop">
+                <Button size="compact" onClick={() => onPack(null)}>
+                  Back to the catalog
+                </Button>
               </div>
-              <button className="ghost tiny" onClick={() => setPublisher(null)}>
-                All publishers
-              </button>
-            </section>
-          )}
-          {entries === null && <p className="muted small marketLoading">Loading…</p>}
-          {feedLine && <p className="notice marketFeedLine">{feedLine}</p>}
-          {entries !== null && (
-            <div className="marketCount">
-              {/* Nothing to count when nothing matched: the line below says so in words. */}
-              <p className="muted small">
-                {shown.length === 0
-                  ? ""
-                  : shown.length === here.length
-                    ? `${here.length} ${noun(kind, here.length)}`
-                    : `${shown.length} match`}
-              </p>
-              {narrowed && (
-                <button className="ghost tiny" onClick={clear}>
-                  Clear filters
-                </button>
-              )}
-            </div>
-          )}
-          {/* The control is the one in the count row above, so there is only ever one of it. */}
-          {entries !== null && shown.length === 0 && (
-            <p className="muted marketEmpty">Nothing matches. Clear the filters to see everything.</p>
-          )}
-          <div className="marketGrid">
-            {shown.map((e) => {
-              const have = mine.has(e.id);
-              const seatsLine = seatsLabel(e);
-              const optional = e.requires.filter((r) => r.optional);
-              const required = e.requires.filter((r) => !r.optional);
-              // Until the detail surface has it: a deck is laid out from a
-              // pack, and from a free one. A setup is not laid out on a deck,
-              // and a priced listing has no text to read until it is bought.
-              const deck = e.kind === "pack" && e.price === "free";
-              const error = failed[e.id];
-              return (
-                <article key={e.id} className="panel marketCard">
-                  <h3 className="marketTitle">
-                    {e.title}
-                    {e.bench && <Badge tone="cap">test bench</Badge>}
-                  </h3>
-                  {e.description && <p className="marketBlurb clamp">{e.description}</p>}
-                  <div className="marketWhy">
-                    <Badge>{e.category}</Badge>
-                    {seatsLine && <Badge>{seatsLine}</Badge>}
+              {entries === null && <p className="muted small marketLoading">Loading…</p>}
+              {feedLine && <p className="notice marketFeedLine">{feedLine}</p>}
+              {/* A pack the feed never carried, or one the feed could not be asked for. */}
+              {entries !== null && (page ? packPage(page) : <p className="muted marketEmpty">That pack is not in the marketplace.</p>)}
+            </>
+          ) : (
+            <>
+              {who && (
+                <section className="panel publisherHead" aria-label="Publisher">
+                  <div>
+                    <span className="muted small mono">Publisher</span>
+                    <h3 className="marketTitle">{who.name}</h3>
+                    <p className="muted small">
+                      {who.count} {who.count === 1 ? "pack" : "packs"}
+                      {who.free > 0 && ` · ${who.free} free`}
+                      {who.from && ` · from ${who.from}`}
+                    </p>
                   </div>
-                  {required.length > 0 && (
-                    <p className="muted small marketNeeds">
-                      <strong>Needs:</strong> {required.map((r) => r.label).join(", ")}
-                    </p>
+                  <button className="ghost tiny" onClick={() => setPublisher(null)}>
+                    All publishers
+                  </button>
+                </section>
+              )}
+              {entries === null && <p className="muted small marketLoading">Loading…</p>}
+              {feedLine && <p className="notice marketFeedLine">{feedLine}</p>}
+              {entries !== null && (
+                <div className="marketCount">
+                  {/* Nothing to count when nothing matched: the line below says so in words. */}
+                  <p className="muted small">
+                    {shown.length === 0
+                      ? ""
+                      : shown.length === here.length
+                        ? `${here.length} ${noun(kind, here.length)}`
+                        : `${shown.length} match`}
+                  </p>
+                  {narrowed && (
+                    <button className="ghost tiny" onClick={clear}>
+                      Clear filters
+                    </button>
                   )}
-                  {(optional.length > 0 || deck) && (
-                    <Disclosure className="marketFold" summary="Optional" defaultOpen={false}>
-                      {optional.length > 0 && <p className="muted small marketNeeds">{optional.map((r) => r.label).join(", ")}</p>}
-                      {deck && <DeckProfiles load={e.load} />}
-                    </Disclosure>
-                  )}
-                  <footer className="marketCardFoot">
-                    <div className="marketCardFootLeft">
-                      <Badge>{e.price === "free" ? "Free" : e.price.display}</Badge>
-                      {have && <Badge tone="cap">Owned</Badge>}
-                      <Button
-                        size="compact"
-                        disabled={reading === e.id}
-                        title="The summary, and the rest of the pack's paper, in the side drawer"
-                        onClick={() => void showDocs(e)}
-                      >
-                        {reading === e.id ? "Reading…" : "Read the summary"}
-                      </Button>
-                      {have && updatable.has(e.id) && onUpdate && (
-                        <Button
-                          size="compact"
-                          loading={busy === e.id}
-                          disabled={busy !== null}
-                          loadingLabel="Updating…"
-                          onClick={() => void attempt(e.id, () => onUpdate(e))}
+                </div>
+              )}
+              {/* The control is the one in the count row above, so there is only ever one of it. */}
+              {entries !== null && shown.length === 0 && (
+                <p className="muted marketEmpty">Nothing matches. Clear the filters to see everything.</p>
+              )}
+              <div className="marketGrid">
+                {shown.map((e) => {
+                  const have = mine.has(e.id);
+                  const seatsLine = seatsLabel(e);
+                  const optional = e.requires.filter((r) => r.optional);
+                  const required = e.requires.filter((r) => !r.optional);
+                  const error = failed[e.id];
+                  return (
+                    <article key={e.id} className="panel marketCard">
+                      {/* A real anchor, so the page opens in a new tab the way any
+                      link does; the press the browser would have handled is
+                      taken here instead, to remember which card it came from. */}
+                      <h3 className="marketTitle">
+                        <a
+                          href={linkTo(packHash(e.id))}
+                          ref={(node) => {
+                            if (node) cards.current.set(e.id, node);
+                            else cards.current.delete(e.id);
+                          }}
+                          onClick={(ev: MouseEvent<HTMLAnchorElement>) => {
+                            if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+                            ev.preventDefault();
+                            openPage(e.id);
+                          }}
                         >
-                          Update
-                        </Button>
+                          {e.title}
+                        </a>
+                        {e.bench && <Badge tone="cap">test bench</Badge>}
+                      </h3>
+                      {e.description && <p className="marketBlurb clamp">{e.description}</p>}
+                      <div className="marketWhy">
+                        <Badge>{e.category}</Badge>
+                        {seatsLine && <Badge>{seatsLine}</Badge>}
+                      </div>
+                      {required.length > 0 && (
+                        <p className="muted small marketNeeds">
+                          <strong>Needs:</strong> {required.map((r) => r.label).join(", ")}
+                        </p>
                       )}
-                    </div>
-                    {have ? (
-                      <Button size="compact" onClick={() => onOpen(e.id)}>
-                        Open
-                      </Button>
-                    ) : bought.has(e.id) && onFetch ? (
-                      <Button
-                        variant="primary"
-                        size="compact"
-                        loading={busy === e.id}
-                        disabled={busy !== null}
-                        loadingLabel="Fetching…"
-                        title="You bought this; fetch your copy onto this device"
-                        onClick={() => void attempt(e.id, () => onFetch(e))}
-                      >
-                        Yours · get your copy
-                      </Button>
-                    ) : e.price !== "free" ? (
-                      onBuy ? (
-                        <Button
-                          variant="primary"
-                          size="compact"
-                          loading={busy === e.id}
-                          disabled={busy !== null}
-                          loadingLabel="Opening…"
-                          title={`Buy from ${e.publisher?.name ?? "its publisher"}`}
-                          onClick={() => void attempt(e.id, () => onBuy(e))}
-                        >
-                          Buy {e.price.display}
-                        </Button>
-                      ) : (
-                        <Button size="compact" disabled>
-                          Sign in to buy
-                        </Button>
-                      )
-                    ) : (
-                      <Button
-                        variant="primary"
-                        size="compact"
-                        loading={busy === e.id}
-                        disabled={busy !== null}
-                        loadingLabel="Adding…"
-                        onClick={() => void attempt(e.id, () => onAdd(e))}
-                      >
-                        Add
-                      </Button>
-                    )}
-                  </footer>
-                  {error && (
-                    <p className="notice marketCardError" role="status">
-                      {error}
-                    </p>
-                  )}
-                </article>
-              );
-            })}
-          </div>
+                      {optional.length > 0 && (
+                        <Disclosure className="marketFold" summary="Optional" defaultOpen={false}>
+                          <p className="muted small marketNeeds">{optional.map((r) => r.label).join(", ")}</p>
+                        </Disclosure>
+                      )}
+                      <footer className="marketCardFoot">
+                        <div className="marketCardFootLeft">
+                          <Badge>{e.price === "free" ? "Free" : e.price.display}</Badge>
+                          {have && <Badge tone="cap">Owned</Badge>}
+                          <Button
+                            size="compact"
+                            disabled={reading === e.id}
+                            title="The summary, and the rest of the pack's paper, in the side drawer"
+                            onClick={() => void showDocs(e)}
+                          >
+                            {reading === e.id ? "Reading…" : "Read the summary"}
+                          </Button>
+                          {have && updatable.has(e.id) && onUpdate && (
+                            <Button
+                              size="compact"
+                              loading={busy === e.id}
+                              disabled={busy !== null}
+                              loadingLabel="Updating…"
+                              onClick={() => void attempt(e.id, () => onUpdate(e))}
+                            >
+                              Update
+                            </Button>
+                          )}
+                        </div>
+                        {action(e, have)}
+                      </footer>
+                      {error && (
+                        <p className="notice marketCardError" role="status">
+                          {error}
+                        </p>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </section>
       </div>
     </main>

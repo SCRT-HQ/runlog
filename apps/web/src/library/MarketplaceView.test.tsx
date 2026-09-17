@@ -1,4 +1,8 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MarketplaceView } from "./MarketplaceView.tsx";
@@ -13,7 +17,15 @@ import { feedState, type MarketplaceEntry } from "./marketplace.ts";
  * here is that order, the one action each state offers, and the states
  * that are easy to draw as each other: a feed that did not answer is not
  * an empty catalog, and an add that failed is not an add that worked.
+ *
+ * Below that, the pack's own page: the same four answers at length, the
+ * sections a card had no room for, and the two things a detail surface
+ * has to get right, which are coming back to the catalog you left and
+ * never fetching a sold pack to draw a richer page.
  */
+
+/** The demo pack, as a listing's text: a real pack, so the page's modes and documents are real. */
+const demoPack = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "packs", "demo", "pack.yaml"), "utf8");
 
 const base = {
   version: "1.0.0",
@@ -45,6 +57,8 @@ const freeEntry: MarketplaceEntry = {
     { label: "something to be bad at", kind: "other", optional: false },
     { label: "a second screen", kind: "other", optional: true },
   ],
+  author: "Someone",
+  load: async () => demoPack,
 };
 
 const setupEntry: MarketplaceEntry = {
@@ -75,6 +89,10 @@ vi.mock("./marketplace.ts", async (importOriginal) => {
 
 beforeEach(() => {
   vi.mocked(feedState).mockReturnValue("none");
+  // jsdom has no scrolling to do and says so on every call; the view's
+  // putting the catalog back where it was is watched here instead.
+  if (!vi.isMockFunction(window.scrollTo)) vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  vi.mocked(window.scrollTo).mockClear();
   try {
     localStorage.clear();
   } catch {
@@ -83,8 +101,38 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-const view = (props: Partial<Parameters<typeof MarketplaceView>[0]> = {}) =>
-  render(<MarketplaceView mine={new Set()} onAdd={async () => {}} onOpen={() => {}} onBack={() => {}} {...props} />);
+/**
+ * The marketplace with the address it reads held beside it.
+ *
+ * `focus` is the pack the address names and `onPack` is the view asking
+ * for another one; App owns the pair and writes the address from it. Here
+ * the pair is a piece of state, so opening a page from a card and coming
+ * back out of one are the same call the app makes.
+ */
+function Harness({ start = null, ...props }: { start?: string | null } & Partial<Parameters<typeof MarketplaceView>[0]>) {
+  const [focus, setFocus] = useState<string | null>(start);
+  return (
+    <DocDrawerProvider>
+      <MarketplaceView
+        mine={new Set()}
+        onAdd={async () => {}}
+        onOpen={() => {}}
+        onBack={() => {}}
+        {...props}
+        focus={focus}
+        onPack={setFocus}
+      />
+    </DocDrawerProvider>
+  );
+}
+
+const view = (props: { start?: string | null } & Partial<Parameters<typeof MarketplaceView>[0]> = {}) => render(<Harness {...props} />);
+
+/** Open a pack's page the way a browser does: by pressing the card's title. */
+const openPage = async (title: string) => {
+  fireEvent.click(await screen.findByRole("link", { name: title }));
+  return document.querySelector("article.packPage") as HTMLElement;
+};
 
 const cardFor = async (title: string) => {
   const card = (await screen.findByText(title)).closest("article");
@@ -251,14 +299,20 @@ describe("the one action a card offers", () => {
     await waitFor(() => expect(within(second).getByRole("button", { name: "Add" })).toHaveProperty("disabled", false));
   });
 
-  it("offers a deck to a pack and not to a setup", async () => {
+  it("keeps the deck off the card and offers it on a pack's page, never on a setup's", async () => {
     // A setup is what a tool is set to while a run lasts. It has no moves,
     // no counters and no resources, so there is nothing to lay out on keys.
     view();
-    expect(within(await cardFor("Free Pack")).getByText("Stream Deck profile")).toBeTruthy();
+    expect(within(await cardFor("Free Pack")).queryByText("Stream Deck profile")).toBeNull();
 
+    const page = await openPage("Free Pack");
+    expect(within(page).getByText("Stream Deck")).toBeTruthy();
+    expect(within(page).getByText("Stream Deck profile")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to the catalog" }));
     fireEvent.click(screen.getByRole("button", { name: /Setups/ }));
-    expect(within(await cardFor("A Loadout")).queryByText("Stream Deck profile")).toBeNull();
+    const loadout = await openPage("A Loadout");
+    expect(within(loadout).queryByText("Stream Deck")).toBeNull();
   });
 });
 
@@ -308,11 +362,7 @@ describe("the filters the sidebar leads with", () => {
       about: async () => ({ kind: "summary" as const, layout: "book" as const, title: "Free Pack", blocks: [] }),
     };
     vi.mocked(await import("./marketplace.ts")).loadMarketplace.mockResolvedValueOnce([ownedEntry, readable]);
-    render(
-      <DocDrawerProvider>
-        <MarketplaceView mine={new Set()} onAdd={async () => {}} onOpen={() => {}} onBack={() => {}} />
-      </DocDrawerProvider>,
-    );
+    view();
     await screen.findByText("Free Pack");
 
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "free" } });
@@ -376,5 +426,174 @@ describe("what the page says when there is nothing to show", () => {
       settle?.([freeEntry]);
     });
     expect(container.querySelector(".marketLoading")).toBeNull();
+  });
+});
+
+describe("a pack's page of its own", () => {
+  it("lays the four answers out first, then its sections in one order", async () => {
+    view();
+    const page = await openPage("Free Pack");
+    await waitFor(() => expect(within(page).getByText("Modes")).toBeTruthy());
+
+    // What the card answered, at length: the premise, why, both lists of
+    // what it needs, and the one action.
+    expect(within(page).getByRole("heading", { name: "Free Pack" })).toBeTruthy();
+    expect(within(page).getByText("A premise, in one line.")).toBeTruthy();
+    expect(within(page).getByText("games")).toBeTruthy();
+    expect(within(page).getByText("Up to 6 players")).toBeTruthy();
+    expect(within(page).getByText(/^Needs:/).parentElement?.textContent).toContain("a chat that can answer");
+    expect(within(page).getByText(/^Optional:/).parentElement?.textContent).toContain("a second screen");
+    expect(within(page).getByRole("button", { name: "Add" })).toBeTruthy();
+
+    const sections = [...page.querySelectorAll("section.packPageBlock > .sectionTitle")].map((n) => n.textContent);
+    expect(sections).toEqual(["Modes", "Documents", "Stream Deck", "Publisher", "Version"]);
+
+    // The card's fold does not follow the pack onto its page: both lists
+    // are open here, which is what the page is for.
+    expect(page.querySelector("details.marketFold")).toBeNull();
+  });
+
+  it("names the pack's modes and offers its paper, from the pack itself", async () => {
+    view();
+    const page = await openPage("Free Pack");
+    await waitFor(() => expect(within(page).getByText("Standard Firing")).toBeTruthy());
+    expect(within(page).getByText("The full game. Stop whenever you like.")).toBeTruthy();
+    expect(within(page).getByText("Short Firing")).toBeTruthy();
+
+    const docs = page.querySelector(".packPageDocs") as HTMLElement;
+    for (const label of ["Summary", "Rulebook", "Quick start", "Reference card", "Run log sheet"]) {
+      expect(within(docs).getByRole("button", { name: label })).toBeTruthy();
+    }
+  });
+
+  it("says who published it and which version this is", async () => {
+    view();
+    const page = await openPage("Free Pack");
+    // No publisher on a bundled entry, so the author is who to name.
+    expect(within(page).getByText("Someone")).toBeTruthy();
+    expect(within(page).getByText("1.0.0")).toBeTruthy();
+  });
+
+  it("opens a document over the page and comes back to the page, not the catalog", async () => {
+    view();
+    const page = await openPage("Free Pack");
+    await waitFor(() => expect(page.querySelector(".packPageDocs")).toBeTruthy());
+
+    fireEvent.click(within(page.querySelector(".packPageDocs") as HTMLElement).getByRole("button", { name: "Rulebook" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    expect(document.querySelector("article.packPage")).toBeTruthy();
+    expect(document.querySelector(".marketGrid")).toBeNull();
+  });
+
+  it("gives a priced listing its summary and nothing the pack would have to be fetched for", async () => {
+    const load = vi.fn(async () => {
+      throw new Error("a pack that is sold is not fetched to draw a page");
+    });
+    const priced: MarketplaceEntry = {
+      ...pricedEntry,
+      load,
+      about: async () => ({
+        kind: "summary" as const,
+        layout: "book" as const,
+        title: "A Priced Pack",
+        blocks: [
+          {
+            kind: "table" as const,
+            columns: ["Mode", "Length", "Players", "About"],
+            rows: [["One Sitting", "5", "1", "The whole thing in an evening."]],
+          },
+        ],
+      }),
+    };
+    vi.mocked(await import("./marketplace.ts")).loadMarketplace.mockResolvedValueOnce([priced]);
+    view();
+    const page = await openPage("A Priced Pack");
+    await waitFor(() => expect(page.querySelector(".packPageDocs")).toBeTruthy());
+
+    // The summary carries the modes, so the section stands without the pack.
+    expect(within(page).getByText("One Sitting")).toBeTruthy();
+    expect(within(page).getByText("The whole thing in an evening.")).toBeTruthy();
+
+    // One document, the summary, and no deck: both would need the pack's text.
+    const docs = page.querySelector(".packPageDocs") as HTMLElement;
+    expect(
+      within(docs)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["Summary"]);
+    expect(within(page).queryByText("Stream Deck")).toBeNull();
+    expect(load).not.toHaveBeenCalled();
+    expect(within(page).getByText("Example Press")).toBeTruthy();
+  });
+
+  it("makes a newer version the page's action, with Open quiet beside it", async () => {
+    const onUpdate = vi.fn(async () => {});
+    view({ mine: new Set([freeEntry.id]), updatable: new Set([freeEntry.id]), onUpdate });
+    const page = await openPage("Free Pack");
+
+    expect(within(page).getByText("Owned")).toBeTruthy();
+    expect(within(page).getByRole("button", { name: "Open" })).toBeTruthy();
+    fireEvent.click(within(page).getByRole("button", { name: "Update to 1.0.0" }));
+    expect(onUpdate).toHaveBeenCalled();
+  });
+
+  it("takes one acquisition at a time here too", async () => {
+    let settle: (() => void) | null = null;
+    const onAdd = vi.fn(() => new Promise<void>((resolve) => (settle = resolve)));
+    view({ onAdd });
+    const page = await openPage("Free Pack");
+
+    fireEvent.click(within(page).getByRole("button", { name: "Add" }));
+    const busy = within(page).getByRole("button", { name: "Adding…" });
+    expect(busy).toHaveProperty("disabled", true);
+    fireEvent.click(busy);
+    expect(onAdd).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      settle?.();
+    });
+    await waitFor(() => expect(within(page).getByRole("button", { name: "Add" })).toHaveProperty("disabled", false));
+  });
+
+  it("says a pack the marketplace has no listing for is not here", async () => {
+    view({ start: "com.example.nowhere" });
+    expect(await screen.findByText("That pack is not in the marketplace.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Back to the catalog" })).toBeTruthy();
+    expect(document.querySelector(".marketGrid")).toBeNull();
+  });
+
+  it("keeps the feed's own line above a page built from what shipped", async () => {
+    vi.mocked(feedState).mockReturnValue("failed");
+    view({ start: freeEntry.id });
+    expect(await screen.findByText("The marketplace did not answer. The packs that ship with the app are here.")).toBeTruthy();
+    expect(document.querySelector("article.packPage")).toBeTruthy();
+  });
+
+  it("gives the catalog back the query, the filters, the height and the card", async () => {
+    view();
+    await screen.findByText("Free Pack");
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "free" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Group/ }));
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 640 });
+
+    fireEvent.click(await screen.findByRole("link", { name: "Free Pack" }));
+    const page = document.querySelector("article.packPage") as HTMLElement;
+    expect(within(page).getByRole("heading", { name: "Free Pack" })).toBe(document.activeElement);
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to the catalog" }));
+    expect(screen.getByRole("searchbox")).toHaveProperty("value", "free");
+    expect(screen.getByRole("button", { name: /^Group/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(vi.mocked(window.scrollTo)).toHaveBeenCalledWith(0, 640);
+    expect(screen.getByRole("link", { name: "Free Pack" })).toBe(document.activeElement);
+  });
+
+  it("falls back to the search field where no card opened the page", async () => {
+    view({ start: freeEntry.id });
+    await screen.findByText("A premise, in one line.");
+    fireEvent.click(screen.getByRole("button", { name: "Back to the catalog" }));
+    expect(screen.getByRole("searchbox")).toBe(document.activeElement);
   });
 });
