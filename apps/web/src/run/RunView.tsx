@@ -566,6 +566,12 @@ export function RunView({
     closingStep,
     pack,
   ]);
+  /**
+   * The run whose first snapshot has landed. The server reads `first` as
+   * the run's opening word, which is where a server set to open a watch
+   * party on its own gets its chance.
+   */
+  const publishedFor = useRef<string | null>(null);
   useEffect(() => {
     if (!api || !publishing || !run.record || !run.state) return;
     const record = run.record;
@@ -585,12 +591,23 @@ export function RunView({
        */
       const profile = withChosen((record.control as ControlProfile) ?? {}, chosenFrom(record.setup));
       const control = isEmpty(profile) ? {} : { control: tidy(profile) };
+      // The live link this device remembers, for a watch party's card, and
+      // whether this is the run's first word.
+      const link = liveLinkOf(record.runId);
+      const first = publishedFor.current !== record.runId;
       void api
-        .putSnapshot(record.runId, {
-          ...snapshotOf(pack, state, events, undefined, { race }),
-          paper: paperOf(pack, state.mode),
-          offer: currentOffer,
-          ...control,
+        .putSnapshot(
+          record.runId,
+          {
+            ...snapshotOf(pack, state, events, undefined, { race }),
+            paper: paperOf(pack, state.mode),
+            offer: currentOffer,
+            ...control,
+          },
+          { ...(link ? { link } : {}), ...(first ? { first: true } : {}) },
+        )
+        .then(() => {
+          publishedFor.current = record.runId;
         })
         .catch(() => {});
     }, 800);

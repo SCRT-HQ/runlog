@@ -25,10 +25,18 @@ import { apiGatewayPoster, dynamoLive, notifier, teller, type Notify, type Tell 
 import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, type RaceStore } from "./races.js";
 import { dynamoBilling, featuresFromEnv, grantsOf as grantsOfStore, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
-import { dynamoGuilds, guildsAllowed, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
+import {
+  dynamoGuilds,
+  guildsAllowed,
+  MAX_GUILDS_PER_SUB,
+  type Guild,
+  type GuildStore,
+  type WatchParty,
+  type WatchPartyMode,
+} from "./guilds.js";
 import { handleInteraction, kindOf, liveLinkOf, threadHears, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
 import type { TimerJob } from "./discord/play.js";
-import { tickParties } from "./discord/party.js";
+import { closeParty, openParty, tickParties } from "./discord/party.js";
 import { scheduledTimers } from "./discord/timers.js";
 import { authorizeUrl, metadataFor, verifyRedirectUri, VERIFY_MINUTES } from "./discord/linked-roles.js";
 import {
@@ -261,6 +269,24 @@ export interface MovedJob {
 /** A run with watch parties on it said something new: which run. */
 export interface PartyJob {
   sessionId: string;
+}
+
+/** A watch party as the app shows it: which server, which thread, and when. Never the Discord ids of anyone in it. */
+export interface PartyView {
+  guildId: string;
+  guildName?: string;
+  threadId: string;
+  /** The address that opens the thread in Discord. */
+  threadUrl: string;
+  openedAt: string;
+  closedAt?: string;
+}
+
+/** A server the account claimed, for the run page's picker. */
+export interface PartyServer {
+  guildId: string;
+  name?: string;
+  watchParties: WatchPartyMode;
 }
 
 /** The screens the beacon may name: families, never an id. Mirrors apps/web/src/hosted/beacon.ts. */
@@ -2627,7 +2653,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   }
 
   const session = path.match(
-    /^\/api\/sessions\/([^/]+)(\/events|\/invites|\/invites\/[^/]+|\/members\/[^/]+|\/public|\/snapshot|\/watch|\/reactions|\/asks|\/asks\/[^/]+|\/ask-key)?$/,
+    /^\/api\/sessions\/([^/]+)(\/events|\/invites|\/invites\/[^/]+|\/members\/[^/]+|\/public|\/snapshot|\/watch|\/parties|\/parties\/[^/]+|\/reactions|\/asks|\/asks\/[^/]+|\/ask-key)?$/,
   );
   if (session) {
     const id = decodeURIComponent(session[1]!);
@@ -2786,6 +2812,84 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         listing: card ? { id: card.packId, price: card.price } : null,
         reactions: await store.listReactions(id),
       });
+    }
+    // ---- watch parties: a thread in a claimed server that follows this run ----
+    const party = sub === "/parties" ? "" : (sub.match(/^\/parties\/([^/]+)$/)?.[1] ?? null);
+    if (sub === "/parties" || party !== null) {
+      if (!deps.guilds || !deps.discord) return json(200, { parties: [], servers: [] });
+      const guilds = deps.guilds;
+      const viewOf = (p: WatchParty, guild?: Guild): PartyView => ({
+        guildId: p.guildId,
+        ...(guild?.name ? { guildName: guild.name } : {}),
+        threadId: p.threadId,
+        threadUrl: `https://discord.com/channels/${p.guildId}/${p.threadId}`,
+        openedAt: p.openedAt,
+        ...(p.closedAt ? { closedAt: p.closedAt } : {}),
+      });
+      const mine = await guilds.guildsOf(caller.sub);
+      if (sub === "/parties" && method === "GET") {
+        const held = await guilds.partiesOf(id);
+        return json(200, {
+          parties: held
+            .filter((p) => !p.closedAt)
+            .map((p) =>
+              viewOf(
+                p,
+                mine.find((g) => g.guildId === p.guildId),
+              ),
+            ),
+          servers: mine.map((g) => ({ guildId: g.guildId, ...(g.name ? { name: g.name } : {}), watchParties: g.watchParties ?? "off" })),
+        });
+      }
+      if (me.role !== "owner") return json(422, { error: "only the owner opens a watch party" });
+      if (sub === "/parties" && method === "POST") {
+        const body = parse(event);
+        const guildId = isRecord(body) && str(body["guildId"]) ? body["guildId"] : "";
+        const guild = mine.find((g) => g.guildId === guildId);
+        if (!guild) return json(422, { error: "that is not one of your servers" });
+        /**
+         * The link this device sent, put through the one verifier every
+         * link the server stores goes through, the same as the snapshot
+         * route's: this copy's own origin and `/r/<id>` form, read by
+         * `liveLinkOf`; this very run; and a token that hashes to the
+         * run's own. Either half alone is short, since a token that hashes
+         * right can be hung off any address, and what is kept here the bot
+         * puts in a thread in somebody else's server, in the bot's voice.
+         *
+         * What is kept is the address `liveLinkOf` rebuilt, never the
+         * string that arrived. A link that fails any of this is not an
+         * error: the party opens on whatever the snapshot already handed
+         * over, and is refused in the usual words where there is none.
+         */
+        const raw = isRecord(body) && str(body["link"]) ? body["link"].trim() : "";
+        const sent = raw && raw.length <= MAX_LINK_CHARS ? liveLinkOf(raw, deps.appUrl ?? "") : null;
+        const token = sent ? (new URL(sent.link).searchParams.get("t") ?? "") : "";
+        const link =
+          sent && sent.sessionId === id && found.meta.publicTokenHash && hashToken(token) === found.meta.publicTokenHash ? sent.link : "";
+        const opened = await openParty(
+          { store, guilds, rest: deps.discord.rest ? await deps.discord.rest(true) : null, now },
+          {
+            guild,
+            sessionId: id,
+            by: { discordId: "", name: shownName(await store.touchProfile(caller.sub, now())) ?? "The host", sub: caller.sub },
+            // From the app, the account that claimed the server is the
+            // person asking: a claimant hosts there by definition.
+            mayHost: true,
+            ...(link ? { link } : {}),
+            ...(guild.threadMode === "private" ? { private: true } : {}),
+          },
+        );
+        if ("error" in opened) return json(422, { error: opened.error });
+        return json(200, { party: viewOf(opened.party, guild) });
+      }
+      if (party && method === "DELETE") {
+        const guildId = decodeURIComponent(party);
+        const held = mine.some((g) => g.guildId === guildId) ? await guilds.party(id, guildId) : null;
+        if (!held || held.closedAt) return json(200, { closed: false });
+        await closeParty({ store, guilds, rest: deps.discord.rest ? await deps.discord.rest(true) : null, now }, held, "byHand");
+        return json(200, { closed: true });
+      }
+      return json(410, { error: ROUTE_GONE });
     }
     // ---- the snapshot the owner's device keeps for strangers who may not hold the pack ----
     if (sub === "/snapshot") {
