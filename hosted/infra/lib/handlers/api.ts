@@ -2937,6 +2937,21 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         const hosted = await deps.guilds.guildRun(id);
         if (hosted && !hosted.endedAt) await deps.later({ sessionId: id, seq });
       }
+      /**
+       * The run ended under a watch party.
+       *
+       * The tick closes a party when it reads an ended snapshot, and the
+       * page writes one; this is for the case where that snapshot is the
+       * last thing the page ever sends, so nothing else would come along
+       * to carry it.
+       */
+      try {
+        if (deps.party && deps.guilds && appended.some((e) => (e as unknown as { t?: string }).t === "RunEnded")) {
+          if ((await deps.guilds.partiesOf(id)).some((p) => !p.closedAt)) await deps.party({ sessionId: id });
+        }
+      } catch (error) {
+        console.error("events: could not tell the watch parties", error);
+      }
       return json(200, { appended, seq });
     }
 
