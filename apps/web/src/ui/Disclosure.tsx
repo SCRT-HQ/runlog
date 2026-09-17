@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 /**
  * A section that folds, on the native `details`.
@@ -43,6 +43,7 @@ export function Disclosure({
   signal,
   signalLabel = "Something new",
   className,
+  onOpenChange,
   children,
 }: {
   /** The heading on the fold. May carry the muted span some titles put after the name. */
@@ -56,9 +57,20 @@ export function Disclosure({
   signalLabel?: string;
   /** What the section used to carry on its own element, kept so its rules still find it. */
   className?: string;
+  /**
+   * Told which way this is, on the first render and on every change.
+   *
+   * A remembered panel decides for itself which way it opens, so a caller
+   * that has something to say about being folded cannot work it out from
+   * the props it passed. Pass a setter, not a fresh arrow each render.
+   */
+  onOpenChange?: (open: boolean) => void;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(() => (remember ? recall(remember, defaultOpen) : defaultOpen));
+  useEffect(() => {
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
   return (
     <details
       className={className ? `panel ${className}` : "panel"}

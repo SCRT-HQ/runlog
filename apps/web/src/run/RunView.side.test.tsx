@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import type { RunEvent } from "@runlog/engine";
-import type { Api, Race } from "../sync/client.ts";
+import type { Api, Ask, Race } from "../sync/client.ts";
 import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
 import { memoryRunStore } from "./store.ts";
 import { RunView } from "./RunView.tsx";
@@ -90,14 +90,14 @@ const race: Race = {
  * panels this change altered most: one was a `details` that waited for a
  * question before it opened, the other a plain section.
  */
-async function screen(opts: { pack?: Pack } = {}): Promise<HTMLElement> {
+async function screen(opts: { pack?: Pack; asks?: Ask[] } = {}): Promise<HTMLElement> {
   const pack = opts.pack ?? kiln;
   current.api = {
     putSnapshot: async () => {},
     myRaces: async () => [],
     getRace: async () => race,
     putRaceEntry: async () => race,
-    asks: async () => [],
+    asks: async () => opts.asks ?? [],
     reactions: async () => [],
     listInvites: async () => [],
     people: async () => [],
@@ -140,6 +140,12 @@ function panelTitled(root: HTMLElement, title: string): HTMLDetailsElement {
   );
   if (!found) throw new Error(`no panel titled ${title}`);
   return found as HTMLDetailsElement;
+}
+
+/** jsdom does not fire `toggle` off a click, so the press is spelled out. */
+function fold(details: HTMLDetailsElement) {
+  details.open = false;
+  fireEvent(details, new Event("toggle", { bubbles: false }));
 }
 
 describe("the side panels fold", () => {
@@ -235,5 +241,33 @@ describe("a counter's name and the controls that turn it", () => {
     await flush();
     const again = counterRows(container).find((r) => r.children[0]!.textContent === wordy)!;
     expect(again.querySelector(".num")!.textContent).toBe("1");
+  });
+});
+
+/**
+ * A fold is an arrangement, not a gag: whatever the run is waiting on is
+ * still in front of the player with the column folded away.
+ */
+describe("nothing the run is waiting on hides behind a fold", () => {
+  it("leaves a waiting ask counted on its own fold, with the people panel shut", async () => {
+    const container = await screen({
+      asks: [{ id: "ask1", kind: "roll", name: "Ada", at }],
+    });
+    fold(panelTitled(container, "People at the table"));
+    const asks = panelTitled(container, "Asks");
+    expect(asks.querySelector("summary")!.textContent).toContain("1 waiting");
+    fold(asks);
+    expect(asks.open).toBe(false);
+    expect(asks.querySelector("summary")!.textContent).toContain("1 waiting");
+  });
+
+  it("keeps what the run is waiting on in the main column with every panel shut", async () => {
+    const container = await screen();
+    for (const panel of container.querySelectorAll(".col.side details.panel")) fold(panel as HTMLDetailsElement);
+    const main = container.querySelector(".col.wide") as HTMLElement;
+    const step = main.querySelector("section.runStep") as HTMLElement;
+    expect(step.closest("details")).toBeNull();
+    expect(step.textContent).toContain("Ready");
+    expect(step.querySelector("button.primary.big")!.textContent).toContain(`Enter ${kiln.vocabulary.unit.one} 1`);
   });
 });
