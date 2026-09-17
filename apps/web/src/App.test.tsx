@@ -8,7 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import App from "./App.tsx";
 import { StructurePanel } from "./design/StructurePanel.tsx";
-import { RunView, StartScreen } from "./run/RunView.tsx";
+import { RunView } from "./run/RunView.tsx";
+import { StartScreen } from "./run/StartScreen.tsx";
 
 /**
  * The Designer's draft, kept where a browser would keep it.

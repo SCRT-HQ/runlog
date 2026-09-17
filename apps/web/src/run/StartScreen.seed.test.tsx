@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { loadPackText } from "@runlog/rules-schema";
-import { StartScreen } from "./RunView.tsx";
+import { StartScreen } from "./StartScreen.tsx";
 
 /**
  * The seed is the only thing that decides whether a run is seeded.
