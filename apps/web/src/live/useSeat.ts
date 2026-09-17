@@ -3,7 +3,7 @@ import type { Offer } from "../run/offer.ts";
 import { apiBase } from "../sync/config.ts";
 import { useApi } from "../sync/useApi.ts";
 import { useAccount } from "../auth/Account.tsx";
-import { openLive, socketUrl, type LiveSocket } from "../sync/socket.ts";
+import { openLive, socketUrl, type Gesture, type LiveSocket } from "../sync/socket.ts";
 import type { SeatView } from "../sync/client.ts";
 import { isSnapshot, type LiveSnapshot } from "./snapshot.ts";
 
@@ -36,6 +36,8 @@ export interface Seat {
   /** What came back from the last press, in the page's own words. */
   note: string | null;
   stale: boolean;
+  /** The latest gesture from the table: what the host handed out, and what follows. */
+  gesture: Gesture | null;
   press: (p: { press: string; move?: string; answer?: Record<string, unknown> }) => void;
 }
 
@@ -47,6 +49,7 @@ export function useSeat(id: string): Seat {
   const [stale, setStale] = useState(false);
   const [held, setHeld] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [gesture, setGesture] = useState<Gesture | null>(null);
   const socketRef = useRef<LiveSocket | null>(null);
   /** The press waiting on a verdict. A verdict for an older one is about a press nobody is still looking at. */
   const pressed = useRef<string | null>(null);
@@ -98,6 +101,11 @@ export function useSeat(id: string): Seat {
       onHeld: (h) => {
         if (h.id === id) setHeld(h.held);
       },
+      // A seat is at the table, so it hears what the table hears: the
+      // page above draws whichever of these it has words for.
+      onGesture: (g) => {
+        if (g.id === id) setGesture(g);
+      },
       onDrove: (verdict) => {
         if (verdict.ref !== pressed.current) return;
         pressed.current = null;
@@ -137,5 +145,5 @@ export function useSeat(id: string): Seat {
     [id, snapshot],
   );
 
-  return { view, snapshot, held, note, stale, press };
+  return { view, snapshot, held, note, stale, gesture, press };
 }

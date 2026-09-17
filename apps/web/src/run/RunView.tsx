@@ -83,6 +83,7 @@ import { chose, chosenFrom, forTool, setupsHere, withChosen, type ChosenSetup } 
 import { builtins } from "../control/builtin.ts";
 import { SetupPicker } from "./SetupPicker.tsx";
 import { lifecycleGestures, marksOf, type LifecycleMarks } from "./gestures.ts";
+import { handoutLine, handoutOf } from "./handout.ts";
 import { useRace } from "./useRace.ts";
 import { RunRail, type Pane } from "./RunRail.tsx";
 import { useEnterMoves } from "../ui/useEnterMoves.ts";
@@ -671,6 +672,38 @@ export function RunView({
   }, [run.record?.runId]);
 
   /**
+   * The host handing a setup out, on everybody else's copy of the run.
+   *
+   * The press says so where it was made and nowhere else: a player whose
+   * game was just re-equipped had no way of knowing it, which is the
+   * whole of this.
+   *
+   * Whose press it was is asked of the run rather than of the line. Only
+   * the owner may hand a setup out, so the host's own copies have nothing
+   * to be told: the device that pressed is not sent the line at all, and
+   * another device on the same account would otherwise announce the press
+   * to the person who made it. Held against the account rather than the
+   * name on the line, because a shown name is only unique where somebody
+   * claimed a handle, and two players called Nate would have left one of
+   * them hearing nothing all run.
+   */
+  const hostSub = accountOf(run.record?.members?.find((m) => m.role === "owner")?.sub ?? "");
+  const hostName = nameOf(hostSub, run.record?.members ?? []);
+  useEffect(() => {
+    const runId = run.record?.runId;
+    if (!runId || (me !== null && hostSub === me)) return;
+    return syncBus.subscribe((news) => {
+      if (news.t !== "gesture" || news.id !== runId) return;
+      // The server stamps the sender's name on the line where the member
+      // row has one; the run's own roster is the fallback, and "The host"
+      // is what a table with no name for them says.
+      const who = news.from ?? hostName;
+      const said = handoutLine({ kind: news.kind, data: news.data, ...(who ? { from: who } : {}) });
+      if (said) toast.show(said);
+    });
+  }, [run.record?.runId, hostSub, hostName, me, toast.show]);
+
+  /**
    * A deck's own presses, kept only long enough to answer a retry with
    * the same verdict; a run underneath it changing makes a ref from
    * before mean nothing, so it is emptied along with the run id.
@@ -892,8 +925,11 @@ export function RunView({
             // gets it. The word goes out only once the write has landed,
             // because the server builds what a tool is sent from the run's
             // saved profile and would otherwise hand out the one before.
-            await run.setSetup(chose(picked));
-            sync.gesture(runId, "setup");
+            const chosen = chose(picked);
+            await run.setSetup(chosen);
+            // What went out travels with the word, so the toast on every
+            // other screen at the table can name it.
+            sync.gesture(runId, "setup", handoutOf(chosen) ?? {});
           },
           command: (id) => {
             const picked = offeredSetups.find((s) => s.id === id);
@@ -1338,7 +1374,15 @@ export function RunView({
           onControl={run.setControl}
           reachable={reachable}
           onSetup={run.setSetup}
-          onHandOut={() => (run.record ? sync.gesture(run.record.runId, "setup") : false)}
+          onHandOut={(chosen) => {
+            // The word goes out whatever it can be called. The gesture is
+            // what hands the loadout to an attached tool, so a run whose
+            // saved setup lost its credits still has something to hand
+            // out; a page that cannot name it says nothing, which is its
+            // own business.
+            if (!run.record) return false;
+            return sync.gesture(run.record.runId, "setup", handoutOf(chosen) ?? {});
+          }}
           seats={(run.state?.contestants ?? []).map((c) => c.name)}
           onControls={() => {
             setSettingsOpen(false);

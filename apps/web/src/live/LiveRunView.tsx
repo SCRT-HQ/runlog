@@ -13,6 +13,8 @@ import { usePublicRun } from "./usePublic.ts";
 import type { LiveRoute } from "./route.ts";
 import { linkTo } from "../route.ts";
 import { runTitle, useTitle } from "../title.ts";
+import { handoutLine } from "../run/handout.ts";
+import { useToast } from "../ui/Toast.tsx";
 
 /**
  * A run watched by its link, by anyone.
@@ -67,10 +69,18 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
   const [note, setNote] = useState<string | null>(null);
   const [shown, setShown] = useState<string | undefined>(undefined);
   const drawer = useDocDrawer();
+  const toast = useToast();
 
   useEffect(() => {
     if (got?.reactions) setReactions(got.reactions);
   }, [got]);
+
+  // The host handing a setup out: the run's own page says so to the
+  // table, and a watcher has nothing else on screen that would.
+  useEffect(() => {
+    const said = gesture ? handoutLine(gesture) : null;
+    if (said) toast.show(said);
+  }, [gesture, toast.show]);
 
   // Signed in, a reaction carries the name this person chose to be shown as.
   useEffect(() => {
@@ -164,6 +174,7 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
   return (
     <>
       {bar}
+      {toast.node}
       <DiceCurtain roll={roll} />
       <LiveView
         snapshot={snapshot}
