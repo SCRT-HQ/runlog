@@ -1,6 +1,18 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { DOC_KINDS, generateDoc, toHtml, type Doc, type DocKind, type Pack } from "@runlog/rules-schema";
-import { goTo } from "../route.ts";
+import { addressOf, goTo } from "../route.ts";
+import { useFocusTrap } from "../ui/useFocusTrap.ts";
 import { DocView } from "./DocView.tsx";
 
 /**
@@ -78,6 +90,10 @@ export function useDocDrawer() {
 
 export function DocDrawerProvider({ children }: { children: ReactNode }) {
   const [opened, setOpened] = useState<Opened | null>(null);
+  const panel = useRef<HTMLElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const strip = useRef<Array<HTMLButtonElement | null>>([]);
+  const drawerId = useId();
   const open = useCallback((pack: Pack, kind: DocKind, at?: DocsAt) => {
     const tabs = DOC_KINDS.map((k) => ({ label: k.label, what: k.what, make: () => generateDoc(pack, k.kind) }));
     const index = Math.max(
@@ -97,20 +113,62 @@ export function DocDrawerProvider({ children }: { children: ReactNode }) {
       return null;
     });
   }, []);
+  /**
+   * Browser navigation is not an explicit Close: leave its destination
+   * untouched, dismiss the document it left, and let App load any document
+   * named by the new address through the same route path as a cold link.
+   */
+  useEffect(() => {
+    const followAddress = () => {
+      setOpened((was) => {
+        if (!was?.at) return was;
+        const named = docsFromHash(addressOf(location));
+        const kind = DOC_KINDS[was.index]?.kind ?? "summary";
+        return named && named.at.section === was.at.section && named.at.id === was.at.id && named.kind === kind ? was : null;
+      });
+    };
+    window.addEventListener("hashchange", followAddress);
+    window.addEventListener("popstate", followAddress);
+    return () => {
+      window.removeEventListener("hashchange", followAddress);
+      window.removeEventListener("popstate", followAddress);
+    };
+  }, []);
 
   const value = useMemo(() => ({ open, show }), [open, show]);
-
-  useEffect(() => {
-    if (!opened) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [opened, close]);
+  useFocusTrap(panel, opened !== null, close, closeButton);
 
   const tab = opened ? opened.tabs[opened.index] : undefined;
   const doc = useMemo(() => (tab ? tab.make() : null), [tab]);
+
+  const selectTab = (index: number) => {
+    if (!opened || !opened.tabs[index]) return;
+    setOpened({ ...opened, index });
+    if (opened.at) goTo(docsHash(opened.at, DOC_KINDS[index]?.kind ?? "summary"));
+  };
+
+  const onTabKey = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!opened) return;
+    const last = opened.tabs.length - 1;
+    const to =
+      e.key === "ArrowRight"
+        ? index === last
+          ? 0
+          : index + 1
+        : e.key === "ArrowLeft"
+          ? index === 0
+            ? last
+            : index - 1
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? last
+              : -1;
+    if (to < 0) return;
+    e.preventDefault();
+    selectTab(to);
+    strip.current[to]?.focus();
+  };
 
   const print = () => {
     if (!doc) return;
@@ -127,27 +185,34 @@ export function DocDrawerProvider({ children }: { children: ReactNode }) {
       {opened && tab && doc && (
         <div className="drawerVeil" onClick={close} role="presentation">
           <aside
+            ref={panel}
             className="docDrawer"
             role="dialog"
             aria-modal="true"
             aria-label={`${doc.title}: ${tab.label}`}
+            tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
           >
             <header className="docDrawerHead">
               <div>
                 <strong>{opened.title}</strong>
-                <div className="docDrawerKinds" role="tablist">
+                <div className="docDrawerKinds" role="tablist" aria-label="Documents">
                   {opened.tabs.map((t, i) => (
                     <button
-                      key={t.label}
+                      key={`${i}-${t.label}`}
+                      ref={(element) => {
+                        strip.current[i] = element;
+                      }}
+                      type="button"
                       role="tab"
+                      id={`${drawerId}-tab-${i}`}
+                      aria-controls={`${drawerId}-panel-${i}`}
                       aria-selected={i === opened.index}
+                      tabIndex={i === opened.index ? 0 : -1}
                       className={`chip pick ${i === opened.index ? "on" : ""}`}
                       title={t.what}
-                      onClick={() => {
-                        setOpened({ ...opened, index: i });
-                        if (opened.at) goTo(docsHash(opened.at, DOC_KINDS[i]?.kind ?? "summary"));
-                      }}
+                      onClick={() => selectTab(i)}
+                      onKeyDown={(e) => onTabKey(e, i)}
                     >
                       {t.label}
                     </button>
@@ -158,12 +223,18 @@ export function DocDrawerProvider({ children }: { children: ReactNode }) {
                 <button className="ghost tiny" onClick={print} title="Open it as its own page and print it, to paper or a PDF">
                   Print
                 </button>
-                <button className="ghost tiny" onClick={close} aria-label="Close">
+                <button ref={closeButton} className="ghost tiny" onClick={close} aria-label="Close">
                   Close
                 </button>
               </div>
             </header>
-            <div className="docDrawerBody">
+            <div
+              className="docDrawerBody"
+              role="tabpanel"
+              id={`${drawerId}-panel-${opened.index}`}
+              aria-labelledby={`${drawerId}-tab-${opened.index}`}
+              tabIndex={0}
+            >
               <DocView doc={doc} heading />
             </div>
           </aside>
