@@ -1020,9 +1020,6 @@ p {
   display: grid;
   gap: 0.3rem;
 }
-.libraryHead h2 {
-  margin: 0;
-}
 .libraryHead p {
   margin: 0;
 }
@@ -7290,14 +7287,22 @@ html[data-pip="controls"] body {
 }
 
 /*
- * An icon button's target is the compact control, square, whatever the
- * mark inside it measures. Hit area and visible glyph are sized apart:
- * an eleven-pixel cross is fine to look at and impossible to press.
+ * An icon button's target is square, whatever the mark inside it
+ * measures. Hit area and visible glyph are sized apart: an eleven-pixel
+ * cross is fine to look at and impossible to press.
+ *
+ * Square at whatever size the button is, which is why the compact width
+ * sits on the compact button rather than on the base. On the base it was
+ * also cutting a default-size icon button down to the dense row's 32px,
+ * whichever size the caller asked for. The height comes from the
+ * control's own rules either way.
  */
 .iconButton {
-  min-width: var(--control-h-compact);
-  min-height: var(--control-h-compact);
+  min-width: var(--control-h);
   padding: var(--space-1);
+}
+.iconButton.tiny {
+  min-width: var(--control-h-compact);
 }
 
 /*

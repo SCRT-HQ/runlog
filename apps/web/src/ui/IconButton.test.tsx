@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { IconButton } from "./IconButton.tsx";
 
@@ -38,6 +38,20 @@ describe("an icon button", () => {
   it("wears the class that sizes the target, whatever the glyph measures", () => {
     render(<IconButton label="Deaths down one">-</IconButton>);
     expect(screen.getByRole("button").className).toBe("ghost tiny iconButton");
+  });
+
+  it("drops an empty name rather than writing one, and says so where somebody is working", () => {
+    // `aria-label=""` is worse than no attribute: it takes the button's
+    // name away and puts nothing in its place.
+    const said = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(
+      <IconButton label="   ">
+        <span>x</span>
+      </IconButton>,
+    );
+    expect(screen.getByRole("button").hasAttribute("aria-label")).toBe(false);
+    expect(said).toHaveBeenCalled();
+    said.mockRestore();
   });
 
   it("keeps the screen's own class beside it", () => {
