@@ -201,8 +201,9 @@ function AccountMenu({ account, onOpenProfile, closeKey, sections }: MenuActions
   const api = useApi();
   const invitations = useInvites(api, open);
   const waiting = invitations.invites.length;
-  // The button: the name they chose, else their first name, else the address.
-  const label = profile?.handle?.trim() || user.firstName || user.email;
+  // The button: the name they chose, else their first name, else the
+  // deliberately generic name. An address is private on a shared screen.
+  const label = profile?.handle?.trim() || user.firstName?.trim() || "Account";
   // The panel's head: the name others see, when the button is not already showing it.
   const shown = shownAs(profile);
   const tone = syncTone(sync);
@@ -232,7 +233,7 @@ function AccountMenu({ account, onOpenProfile, closeKey, sections }: MenuActions
           are signed in as. */}
       <summary aria-label={`Account menu for ${label}${waiting ? `, ${waiting} invitation${waiting === 1 ? "" : "s"} waiting` : ""}`}>
         {tone && <span className={`led ${tone}`} title={syncLabel(sync)} aria-hidden="true" />}
-        {label}
+        <span className="accountLabel">{label}</span>
         {waiting > 0 && (
           <span className="menuBadge" title={`${waiting} invitation${waiting === 1 ? "" : "s"} waiting`}>
             {waiting}
