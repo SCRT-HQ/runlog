@@ -1,16 +1,10 @@
 import schemaText from "../../../../packages/rules-schema/schema/pack-1.schema.json?raw";
 
 /**
- * Help text for a field, taken from the published schema.
- *
- * Every field already carries a description, because that is what an editor
- * shows a pack author on hover. Writing a second set of labels here would mean
- * two descriptions of the same field, drifting apart from the day they were
- * written, and the one in the app, which is where a beginner actually is,
- * would be the one nobody remembered to update.
- *
- * The whole schema is bundled for this. It costs about 16KB compressed, which
- * is a fair price for help that cannot be wrong.
+ * Detailed reference for a field, taken from the published schema.
+ * The Designer uses task-focused copy from help.ts where available and these
+ * descriptions as its reference and fallback. Validation still belongs to
+ * the schema and linter, never to the UI copy.
  */
 
 type Node = Record<string, unknown>;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Diagnostic } from "@runlog/rules-schema";
 import { describe } from "../describe.ts";
+import { help } from "../help.ts";
 import { at, AreaField, NumberField, RowActions, SelectField, TextField } from "../fields.tsx";
 import { coverage, coverageSummary } from "../draft.ts";
 import { num, str, type SectionProps } from "./shared.ts";
@@ -112,6 +113,7 @@ function TableEditor({
             <SelectField
               label="Resolution"
               path={`tables.${id}.resolution`}
+              schemaPath="tables.*.resolution"
               help={describe("tables.*.resolution")}
               diagnostics={diagnostics}
               value={str(table.resolution)}
@@ -127,6 +129,7 @@ function TableEditor({
               <TextField
                 label="Roll"
                 path={`tables.${id}.roll`}
+                schemaPath="tables.*.roll"
                 mono
                 help={describe("tables.*.roll")}
                 diagnostics={diagnostics}
@@ -154,6 +157,7 @@ function TableEditor({
                     <NumberField
                       label="From"
                       path={`tables.${id}.entries[${i}].range`}
+                      schemaPath="tables.*.entries[].range"
                       diagnostics={diagnostics}
                       value={num((entry.range as number[] | undefined)?.[0], 1)}
                       onChange={(v) => edit(["tables", id, "entries", i, "range"], [v, num((entry.range as number[] | undefined)?.[1], v)])}
@@ -161,6 +165,8 @@ function TableEditor({
                     <NumberField
                       label="To"
                       path={`tables.${id}.entries[${i}].rangeTo`}
+                      diagnosticPath={`tables.${id}.entries[${i}].range`}
+                      schemaPath="tables.*.entries[].range"
                       diagnostics={diagnostics}
                       value={num((entry.range as number[] | undefined)?.[1], 1)}
                       onChange={(v) => edit(["tables", id, "entries", i, "range"], [num((entry.range as number[] | undefined)?.[0], v), v])}
@@ -181,14 +187,15 @@ function TableEditor({
                 <NumberField
                   label="Points"
                   path={`tables.${id}.entries[${i}].points`}
+                  schemaPath="tables.*.entries[].points"
                   help={i === 0 ? describe("tables.*.entries[].points") : undefined}
                   diagnostics={diagnostics}
                   value={num(entry.points, 0)}
                   onChange={(v) => edit(["tables", id, "entries", i, "points"], v > 0 ? v : undefined)}
                 />
                 {requirements.length > 0 && (
-                  <div className="field">
-                    <span className="fieldLabel">Needs</span>
+                  <fieldset className="field entryNeeds" aria-describedby={`needs-help-${id}-${i}`}>
+                    <legend className="fieldLabel">Needs</legend>
                     <div className="chipRow">
                       {requirements.map((r) => {
                         const needs = Array.isArray(entry.needs) ? (entry.needs as string[]) : [];
@@ -209,8 +216,14 @@ function TableEditor({
                         );
                       })}
                     </div>
-                    {i === 0 && <span className="fieldHelp">{describe("tables.*.entries[].needs")}</span>}
-                  </div>
+                    <span className="fieldHelp" id={`needs-help-${id}-${i}`}>
+                      {help("tables.*.entries[].needs")}
+                    </span>
+                    <details className="fieldReference">
+                      <summary>Schema reference</summary>
+                      <p>{describe("tables.*.entries[].needs")}</p>
+                    </details>
+                  </fieldset>
                 )}
               </div>
               <RowActions>

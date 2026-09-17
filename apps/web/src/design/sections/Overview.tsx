@@ -198,6 +198,8 @@ function Requirements({ draft, diagnostics, edit }: SectionProps) {
           </div>
           <CheckField
             label="Nice to have, not needed"
+            path={`requires[${i}].optional`}
+            diagnostics={diagnostics}
             help={i === 0 ? describe("requires[].optional") : undefined}
             value={r.optional === true}
             onChange={(v) => set(i, "optional", v ? true : undefined)}
@@ -238,6 +240,7 @@ function Vocabulary({ draft, diagnostics, edit }: SectionProps) {
           <TextField
             label={`${label} - one`}
             path={`vocabulary.${key}.one`}
+            schemaPath={`vocabulary.${key}`}
             diagnostics={diagnostics}
             help={hint}
             value={str(get(draft, ["vocabulary", key, "one"]))}
@@ -246,6 +249,7 @@ function Vocabulary({ draft, diagnostics, edit }: SectionProps) {
           <TextField
             label="many"
             path={`vocabulary.${key}.many`}
+            schemaPath={`vocabulary.${key}`}
             diagnostics={diagnostics}
             value={str(get(draft, ["vocabulary", key, "many"]))}
             onChange={(v) => edit(["vocabulary", key, "many"], v)}

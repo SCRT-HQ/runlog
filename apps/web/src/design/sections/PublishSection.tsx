@@ -118,12 +118,16 @@ function License({ draft, diagnostics, edit }: SectionProps) {
       />
       <CheckField
         label="Its text may travel"
+        path="license.redistributable"
+        diagnostics={diagnostics}
         help={describe("license.redistributable")}
         value={get(draft, ["license", "redistributable"]) !== false}
         onChange={(v) => edit(["license", "redistributable"], v)}
       />
       <CheckField
         label="One copy seats the table"
+        path="license.tablePlays"
+        diagnostics={diagnostics}
         help={describe("license.tablePlays")}
         value={get(draft, ["license", "tablePlays"]) !== false}
         onChange={(v) => edit(["license", "tablePlays"], v)}

@@ -411,7 +411,10 @@ describe("the technical and the distribution details", () => {
     Array.from(container.querySelectorAll<HTMLElement>(".field")).find((f) => f.querySelector(".fieldLabel")?.textContent === label);
   const labelsIn = (scope: Element) => Array.from(scope.querySelectorAll<HTMLElement>(".field .fieldLabel")).map((l) => l.textContent);
   /** The fold at the end of Overview. */
-  const technical = () => container.querySelector<HTMLDetailsElement>(".designBody details")!;
+  const technical = () =>
+    Array.from(container.querySelectorAll<HTMLDetailsElement>(".designBody details")).find(
+      (details) => details.firstElementChild?.textContent === "Technical details",
+    )!;
   const headings = () => Array.from(container.querySelectorAll(".designBody .sectionTitle")).map((h) => h.textContent ?? "");
   const show = async (label: string) => {
     await act(async () => {
@@ -468,7 +471,10 @@ describe("the technical and the distribution details", () => {
     await mount(blankPack());
     const idInput = () => fieldNamed("Id")!.querySelector("input")!;
     const withBadge = computeAccessibleName(idInput());
-    expect(withBadge.startsWith("Id ")).toBe(true);
+    expect(withBadge).toBe("Id");
+    expect(fieldNamed("Id")!.querySelector(".fieldHelp")!.textContent).toBe(
+      "Use a domain you control, written backward, followed by your pack's name. Packs with the same id share one place in a player's library.",
+    );
     expect(container.querySelector(".fieldWithBadge .badge")!.textContent).toBe("Placeholder");
     expect(withBadge).not.toContain("Placeholder");
 

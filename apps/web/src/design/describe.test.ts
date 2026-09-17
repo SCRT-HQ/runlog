@@ -2,13 +2,8 @@ import { describe as group, expect, it } from "vitest";
 import { describe } from "./describe.ts";
 
 /**
- * Help text in the editor is the schema's own sentence.
- *
- * The alternative is a second set of labels written by hand, drifting from the
- * day they are written, and the copy in the app, which is where a beginner
- * actually is, would be the one nobody remembers to update. These tests are
- * really about the path walker: it has to survive maps, arrays and the
- * discriminated unions the format is built from.
+ * Schema reference and fallback help share the same path walker. It has to
+ * survive maps, arrays and the discriminated unions the format is built from.
  */
 group("field descriptions from the schema", () => {
   it("finds a top-level field", () => {

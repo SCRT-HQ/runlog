@@ -7,5 +7,6 @@
  * has rather than the name its markup looks like it gives.
  */
 declare module "dom-accessibility-api" {
+  export function computeAccessibleDescription(element: Element): string;
   export function computeAccessibleName(element: Element): string;
 }
