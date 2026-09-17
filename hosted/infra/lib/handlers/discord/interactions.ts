@@ -503,6 +503,16 @@ async function runCommand(
         `The bot cannot open a private thread here: it was installed without ${OPTIONAL_PERMISSION_NAMES["CREATE_PRIVATE_THREADS"]}. Open this link, which asks for that as well, choose this server, and run the command again:\n${installLink(i.application_id, ["CREATE_PRIVATE_THREADS"])}`,
       );
     }
+    // Everything that could refuse in this turn has, to the person alone.
+    // What is left is the same handful of calls to Discord that opening a
+    // run makes, and the same three seconds to make them in, so where
+    // there is a function with time, it takes over from here.
+    if (deps.defer) {
+      await deps.defer(i);
+      // The placeholder carries the flags the filled-in reply keeps, so a
+      // private party is thought about, and answered, to its opener alone.
+      return { type: ResponseType.DeferredChannelMessage, ...(privately ? { data: { flags: EPHEMERAL } } : {}) };
+    }
     const opened = await openParty(party, {
       guild,
       ...(i.channel_id ? { channelId: guild.channelId ?? i.channel_id } : {}),

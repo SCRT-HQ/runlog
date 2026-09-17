@@ -230,6 +230,19 @@ describe("closing a watch party", () => {
     expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("byHand");
   });
 
+  it("closes once: a second close edits nothing and posts nothing again", async () => {
+    const { rest, guild, deps } = await ready();
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    const closed = await closeParty(deps, out.party, "ended");
+    expect(rest.edits).toHaveLength(1);
+    // The opening post, and the one line the ending says.
+    expect(rest.posts).toHaveLength(2);
+    expect(await closeParty(deps, closed, "ended")).toBe(closed);
+    expect(rest.edits).toHaveLength(1);
+    expect(rest.posts).toHaveLength(2);
+  });
+
   it("says nothing to Discord for a party whose message is gone", async () => {
     const { rest, guild, deps } = await ready();
     const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
@@ -306,6 +319,31 @@ describe("/run watch", () => {
     );
     expect(out.data?.flags).toBe(EPHEMERAL);
     expect(out.data?.content).toContain("takes someone who can manage the server");
+  });
+
+  it("hands the thread and the card to the function with time, where there is one", async () => {
+    const { rest, bot } = await botReady();
+    const deferred: Interaction[] = [];
+    const withTime: InteractionDeps = { ...bot, defer: async (i) => void deferred.push(i) };
+    expect(await handleInteraction(runSub("watch", [{ name: "run", type: 3, value: "01RUN" }]), withTime)).toEqual({
+      type: ResponseType.DeferredChannelMessage,
+    });
+    expect(
+      await handleInteraction(
+        runSub(
+          "watch",
+          [
+            { name: "run", type: 3, value: "01RUN" },
+            { name: "private", type: 5, value: true },
+          ],
+          { app_permissions: String(1n << 36n) },
+        ),
+        withTime,
+      ),
+    ).toEqual({ type: ResponseType.DeferredChannelMessage, data: { flags: EPHEMERAL } });
+    expect(deferred).toHaveLength(2);
+    // The work itself is the job's; nothing was said to Discord in this turn.
+    expect(rest.threads).toEqual([]);
   });
 
   it("offers the linked account's own open runs as you type", async () => {

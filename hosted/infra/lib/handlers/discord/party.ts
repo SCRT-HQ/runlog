@@ -106,8 +106,13 @@ export async function openParty(deps: PartyDeps, input: PartyOpen): Promise<{ pa
  * state and the thread gets one line. A party closed early says so on the
  * card alone, and the thread is left as it is; a party whose message
  * Discord lost says nothing at all, since there is nowhere to say it.
+ *
+ * Closing a party that is closed already does nothing and says nothing.
+ * The ending and the tick both come here, and either can be handed the
+ * same row twice, which would otherwise post the closing line again.
  */
 export async function closeParty(deps: PartyDeps, party: WatchParty, why: PartyClose): Promise<WatchParty> {
+  if (party.closedAt) return party;
   const at = deps.now();
   const closed: WatchParty = { ...party, closedAt: at, closedFor: why, updatedAt: at };
   delete closed.tickAt;
