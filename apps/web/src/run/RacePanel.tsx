@@ -9,7 +9,7 @@ import { SidePanel } from "./SidePanel.tsx";
  * race can do. Everyone's progress is what their own device reported; a
  * racer who has not started yet is listed at the bottom, waiting.
  */
-export function RacePanel({ pack, race }: { pack: Pack; race: RaceView }) {
+export function RacePanel({ runId, pack, race }: { runId: string | null; pack: Pack; race: RaceView }) {
   const [email, setEmail] = useState("");
   const [note, setNote] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -20,6 +20,8 @@ export function RacePanel({ pack, race }: { pack: Pack; race: RaceView }) {
 
   return (
     <SidePanel
+      runId={runId}
+      panel="race"
       className="racePanel"
       title={
         <>

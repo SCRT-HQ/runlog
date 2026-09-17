@@ -3,10 +3,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render } from "@testing-library/react";
-import { loadPackText } from "@runlog/rules-schema";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
+import { loadPackText, type Pack } from "@runlog/rules-schema";
 import type { RunEvent } from "@runlog/engine";
-import type { Api, Race } from "../sync/client.ts";
+import type { Api, Ask, Race } from "../sync/client.ts";
 import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
 import { memoryRunStore } from "./store.ts";
 import { RunView } from "./RunView.tsx";
@@ -90,13 +90,14 @@ const race: Race = {
  * panels this change altered most: one was a `details` that waited for a
  * question before it opened, the other a plain section.
  */
-async function column(): Promise<HTMLElement> {
+async function screen(opts: { pack?: Pack; asks?: Ask[] } = {}): Promise<HTMLElement> {
+  const pack = opts.pack ?? kiln;
   current.api = {
     putSnapshot: async () => {},
     myRaces: async () => [],
     getRace: async () => race,
     putRaceEntry: async () => race,
-    asks: async () => [],
+    asks: async () => opts.asks ?? [],
     reactions: async () => [],
     listInvites: async () => [],
     people: async () => [],
@@ -107,25 +108,44 @@ async function column(): Promise<HTMLElement> {
   const runId = "run1";
   await store.saveRun({
     runId,
-    packId: kiln.id,
-    packVersion: kiln.version,
-    packTitle: kiln.title,
-    events: [{ id: "e1", t: "RunStarted", at, packId: kiln.id, packVersion: kiln.version, runId, mode }] as RunEvent[],
+    packId: pack.id,
+    packVersion: pack.version,
+    packTitle: pack.title,
+    events: [{ id: "e1", t: "RunStarted", at, packId: pack.id, packVersion: pack.version, runId, mode }] as RunEvent[],
     updatedAt: at,
     role: "owner",
     raceId,
     asks: { policy: "ask" },
   });
-  store.setActiveRunFor(kiln.id, runId);
+  store.setActiveRunFor(pack.id, runId);
   const { container } = render(
     <SyncContext.Provider value={sync}>
-      <RunView pack={kiln} store={store} />
+      <RunView pack={pack} store={store} />
     </SyncContext.Provider>,
   );
   await flush();
-  const side = container.querySelector(".col.side");
+  return container;
+}
+
+async function column(): Promise<HTMLElement> {
+  const side = (await screen()).querySelector(".col.side");
   if (!side) throw new Error("the run screen drew no side column");
   return side as HTMLElement;
+}
+
+/** The panel whose fold reads like this, wherever it sits in the column. */
+function panelTitled(root: HTMLElement, title: string): HTMLDetailsElement {
+  const found = [...root.querySelectorAll("details.panel")].find((d) =>
+    (d.querySelector("summary h3")?.textContent ?? "").startsWith(title),
+  );
+  if (!found) throw new Error(`no panel titled ${title}`);
+  return found as HTMLDetailsElement;
+}
+
+/** jsdom does not fire `toggle` off a click, so the press is spelled out. */
+function fold(details: HTMLDetailsElement) {
+  details.open = false;
+  fireEvent(details, new Event("toggle", { bubbles: false }));
 }
 
 describe("the side panels fold", () => {
@@ -170,5 +190,84 @@ describe("the side panels fold", () => {
     expect(panel).toBeTruthy();
     expect(panel!.open).toBe(true);
     expect(panel!.querySelector(":scope > summary > h3.sectionTitle")).toBeTruthy();
+  });
+});
+
+/**
+ * A tracker's name is the pack author's, and some of them are sentences.
+ *
+ * No shipped pack has one long enough to wrap in the side column, so this
+ * is a pack of our own: the demo pack with one more tally, named the way
+ * the run that turned up F08 named its own.
+ */
+const wordy = "Rounds without a forfeit";
+const wordyPack: Pack = {
+  ...kiln,
+  id: "com.example.wordy",
+  counters: { ...(kiln.counters ?? {}), forfeits: { label: wordy, initial: 0, min: 0, per: "table", hidden: false } },
+};
+
+/** The dial heads and tally rows in the Trackers panel, in the order they are drawn. */
+function counterRows(root: HTMLElement): HTMLElement[] {
+  return [...panelTitled(root, "Trackers").querySelectorAll(".counterRow")] as HTMLElement[];
+}
+
+describe("a counter's name and the controls that turn it", () => {
+  it("gives every row the same two cells, whatever the name costs", async () => {
+    const rows = counterRows(await screen({ pack: wordyPack }));
+    expect(rows.length).toBeGreaterThan(2);
+    for (const row of rows) {
+      expect(row.children.length).toBe(2);
+      expect(row.children[0]!.tagName).toBe("STRONG");
+      expect(row.children[1]!.classList.contains("nudge")).toBe(true);
+    }
+    expect(rows.some((r) => r.children[0]!.textContent === wordy)).toBe(true);
+  });
+
+  it("puts the wrapping name in a tally row and a dial head alike", async () => {
+    const rows = counterRows(await screen({ pack: wordyPack }));
+    expect(rows.some((r) => r.classList.contains("trackerHead"))).toBe(true);
+    expect(rows.some((r) => r.classList.contains("row") && r.classList.contains("spread"))).toBe(true);
+  });
+
+  it("still writes the correction when the long row is nudged", async () => {
+    const container = await screen({ pack: wordyPack });
+    const row = counterRows(container).find((r) => r.children[0]!.textContent === wordy)!;
+    expect(row.querySelector(".num")!.textContent).toBe("0");
+    const more = row.querySelector('button[title^="One more"]') as HTMLButtonElement;
+    await act(async () => {
+      fireEvent.click(more);
+    });
+    await flush();
+    const again = counterRows(container).find((r) => r.children[0]!.textContent === wordy)!;
+    expect(again.querySelector(".num")!.textContent).toBe("1");
+  });
+});
+
+/**
+ * A fold is an arrangement, not a gag: whatever the run is waiting on is
+ * still in front of the player with the column folded away.
+ */
+describe("nothing the run is waiting on hides behind a fold", () => {
+  it("leaves a waiting ask counted on its own fold, with the people panel shut", async () => {
+    const container = await screen({
+      asks: [{ id: "ask1", kind: "roll", name: "Ada", at }],
+    });
+    fold(panelTitled(container, "People at the table"));
+    const asks = panelTitled(container, "Asks");
+    expect(asks.querySelector("summary")!.textContent).toContain("1 waiting");
+    fold(asks);
+    expect(asks.open).toBe(false);
+    expect(asks.querySelector("summary")!.textContent).toContain("1 waiting");
+  });
+
+  it("keeps what the run is waiting on in the main column with every panel shut", async () => {
+    const container = await screen();
+    for (const panel of container.querySelectorAll(".col.side details.panel")) fold(panel as HTMLDetailsElement);
+    const main = container.querySelector(".col.wide") as HTMLElement;
+    const step = main.querySelector("section.runStep") as HTMLElement;
+    expect(step.closest("details")).toBeNull();
+    expect(step.textContent).toContain("Ready");
+    expect(step.querySelector("button.primary.big")!.textContent).toContain(`Enter ${kiln.vocabulary.unit.one} 1`);
   });
 });
