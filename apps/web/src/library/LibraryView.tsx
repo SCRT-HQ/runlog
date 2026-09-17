@@ -1,31 +1,33 @@
-import { useEffect, useMemo, useState } from "react";
-import { loadPackText, type Pack, an } from "@runlog/rules-schema";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { DOC_KINDS, loadPackText, type Pack, an } from "@runlog/rules-schema";
+import { DEVICES, DEVICE_IDS, hasKeys } from "@runlog/deck-profiles";
 import { listRuns, type StoredPack, type StoredRun } from "../storage/db.ts";
 import { syncBus } from "../sync/bus.ts";
 import { useSync } from "../sync/SyncProvider.tsx";
 import { activeRunFor } from "../run/active.ts";
-import { RunRow, onDay } from "../run/RunRow.tsx";
+import { RunRow, hasEnded, onDay } from "../run/RunRow.tsx";
 import { SetupShelf } from "./SetupShelf.tsx";
 import { scoresOf } from "../run/scores.ts";
 import { byLastOpened, openedAt } from "./opened.ts";
-import { DocMenu } from "../docs/DocMenu.tsx";
-import { DeckProfiles } from "./DeckProfiles.tsx";
-import { HomeStrip } from "./HomeStrip.tsx";
+import { useDocDrawer } from "../docs/DocDrawer.tsx";
+import { downloadProfile } from "./DeckProfiles.tsx";
+import { DiscoverStrip, HomeStrip } from "./HomeStrip.tsx";
 import { PackServers } from "./PackServers.tsx";
-import { useGuildVaults } from "./useGuildVaults.ts";
+import { useGuildVaults, type GuildVaults } from "./useGuildVaults.ts";
 import { useTitle } from "../title.ts";
 import { Button } from "../ui/Button.tsx";
+import { Menu, MenuGroup, MenuItem, MenuRule } from "../ui/Menu.tsx";
 import { PageHeader } from "../ui/PageHeader.tsx";
 
 /**
- * The library: your packs, newest-played first, each with its runs.
+ * The library: where you left off, then your packs, then everything else.
  *
- * One view that answers "what am I playing?". A pack is a card with its
- * runs beneath it, Continue on each, Start another, Forget, and the
- * order is what you played last on this device, so the pack you run most
- * nights is at the top with its open run one press away. Load-a-file lives
- * here too, and a pack of your own takes a newer file on its own row, its
- * runs kept. Nothing is a menu; everything is on the page.
+ * One view that answers "what am I playing?", in that order. The
+ * continuation card is first and on its own row, so the press most people
+ * came for is in the first screenful of a phone. Then the packs, newest
+ * played first, each a card with its runs beneath it. Adding a pack,
+ * joining a race and what the marketplace has new are grouped after them,
+ * because discovery follows what you already own.
  *
  * Nothing ships in it. The marketplace is where packs come from, and this view
  * is where the marketplace is reached from.
@@ -144,49 +146,6 @@ export function LibraryView({
         className="libraryHead"
         title="Your packs"
         lead="Newest played first. A pack's runs are beneath it; the one open on this device is marked."
-        secondary={
-          <div className="libraryActions">
-            <div className="libraryActionGroup">
-              <h3 className="sectionTitle">Add a pack</h3>
-              <div className="libraryActionGroupRow">
-                <Button variant="primary" onClick={onMarketplace}>
-                  Get more packs
-                </Button>
-                <label className="ghost fileButton">
-                  Load a pack from a file
-                  <input type="file" accept=".yaml,.yml,.json,.rlpack" onChange={(e) => onFile(e.target.files?.[0])} />
-                </label>
-              </div>
-            </div>
-            {onJoinRace && (
-              <div className="libraryActionGroup">
-                <h3 className="sectionTitle">Join a race</h3>
-                <form
-                  className="raceJoin"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (raceCode.trim().length >= 6) {
-                      onJoinRace(raceCode.trim());
-                      setRaceCode("");
-                    }
-                  }}
-                >
-                  <input
-                    className="textInput code"
-                    value={raceCode}
-                    placeholder="race code"
-                    maxLength={8}
-                    aria-label="A race code, six letters"
-                    onChange={(e) => setRaceCode(e.target.value.toUpperCase())}
-                  />
-                  <Button type="submit" disabled={raceCode.trim().length < 6}>
-                    Join a race
-                  </Button>
-                </form>
-              </div>
-            )}
-          </div>
-        }
       />
 
       <HomeStrip
@@ -196,7 +155,6 @@ export function LibraryView({
         onContinue={onContinue}
         onContinueLast={onContinueLast}
         onOpen={onOpen}
-        onMarketplace={onMarketplace}
       />
 
       {ordered.length === 0 && (
@@ -205,117 +163,84 @@ export function LibraryView({
         </section>
       )}
 
-      {ordered.map((p) => {
-        const v = vocabularies.get(p.id) ?? FALLBACK_VOCABULARY;
-        const mine = runsOf(p.id);
-        const open = activeRunFor(p.id);
-        const last = openedAt(p.id);
-        const record = p.record;
-        return (
-          <section key={p.id} className={`panel libraryPack ${p.id === activeId ? "inPlay" : ""}`}>
-            <div className="libraryPackHead">
-              <button className="libraryTitle" onClick={() => onOpen(p)} title={`Open ${p.title}`}>
-                <strong>{p.title}</strong>
-                {p.bench && <span className="chip cap">test bench</span>}
-                <span className="muted small">
-                  {p.sub}
-                  {last && ` · played ${onDay(last)}`}
-                  {p.id === activeId && " · in play"}
-                </span>
-              </button>
-              <div className="libraryPackActions">
-                {record && p.update && onUpdate && (
-                  <Button
-                    size="compact"
-                    className="update"
-                    onClick={() => onUpdate(record)}
-                    title={`The marketplace has v${p.update}; your ${v.run.many.toLowerCase()} are kept`}
-                  >
-                    Update to v{p.update}
-                  </Button>
-                )}
-                <DocMenu compact pack={() => loadPackText(p.source, p.record?.format ?? "yaml").pack} at={{ section: "packs", id: p.id }} />
-                <DeckProfiles load={() => Promise.resolve(p.source)} format={p.record?.format ?? "yaml"} />
-                {/*
-                  The one thing anybody came here to do, and it looked
-                  like the four things beside it. Documents, Test, Every
-                  server, Replace and Forget are all errands; starting is
-                  the point of a shelf of packs.
-                */}
-                <Button variant="primary" size="compact" onClick={() => onStartAnother(p)}>
-                  {mine.length > 0 ? `Start another ${v.run.one.toLowerCase()}` : `Start ${an(v.run.one.toLowerCase())}`}
-                </Button>
-                {onTest && (
-                  <Button
-                    size="compact"
-                    onClick={() => onTest(p)}
-                    title={`Play ${p.title} in ${an(v.run.one.toLowerCase())} that is not saved`}
-                  >
-                    Test
-                  </Button>
-                )}
-                {/* Where this pack may be played, answered at the shelf
-                    rather than from each server's own page. */}
-                {record && <PackServers pack={record} vaults={vaults} />}
-                {record && !record.sealed && onReplace && (
-                  <label
-                    className="ghost tiny fileButton"
-                    title={`Load a newer file of ${p.title}; its ${v.run.many.toLowerCase()} are kept`}
-                  >
-                    Replace from a file
-                    <input
-                      type="file"
-                      accept=".yaml,.yml,.json"
-                      onChange={(e) => {
-                        onReplace(record, e.target.files?.[0]);
-                        // So the same file, fixed and chosen again, counts as a change.
-                        e.target.value = "";
-                      }}
-                    />
-                  </label>
-                )}
-                {record && (
-                  <Button
-                    variant="danger"
-                    size="compact"
-                    title={`Forget ${p.title} and its ${v.run.many.toLowerCase()}`}
-                    onClick={() => onForgetPack(record)}
-                  >
-                    Forget pack
-                  </Button>
-                )}
-              </div>
+      {ordered.map((p) => (
+        <PackCard
+          key={p.id}
+          pack={p}
+          vocabulary={vocabularies.get(p.id) ?? FALLBACK_VOCABULARY}
+          parsed={parsedPacks.get(p.id)}
+          runs={runsOf(p.id)}
+          scores={scoresByPack.get(p.id)}
+          inPlay={p.id === activeId}
+          openRunId={activeRunFor(p.id)}
+          vaults={vaults}
+          syncAvailable={sync.available}
+          onOpen={onOpen}
+          onContinue={onContinue}
+          onStartAnother={onStartAnother}
+          onForgetRun={onForgetRun}
+          onForgetPack={onForgetPack}
+          onSyncToggle={onSyncToggle}
+          {...(onTest ? { onTest } : {})}
+          {...(onUpdate ? { onUpdate } : {})}
+          {...(onReplace ? { onReplace } : {})}
+        />
+      ))}
+
+      {/*
+        Adding a pack, joining a race and what the marketplace has new:
+        one group, under the shelf. Every one of them is about content
+        that is not yours yet, and on a phone they used to stand between
+        the top of the page and the pack you came to play.
+      */}
+      <section className="libraryAdd" aria-labelledby="libraryAddTitle">
+        <h2 className="sectionTitle" id="libraryAddTitle">
+          Add and discover
+        </h2>
+        <div className="libraryActions">
+          {/* No title over these two: the section above says Add, and
+              saying it again on the next line says nothing. The accent
+              is not here either. It marks the one action the page wants
+              pressed, and that is the card at the top. */}
+          <div className="libraryActionGroup">
+            <div className="libraryActionGroupRow">
+              <Button onClick={onMarketplace}>Get more packs</Button>
+              <label className="ghost fileButton">
+                Load a pack from a file
+                <input type="file" accept=".yaml,.yml,.json,.rlpack" onChange={(e) => onFile(e.target.files?.[0])} />
+              </label>
             </div>
-
-            {mine.length > 0 && (
-              <div className="runList">
-                {mine.map((r) => (
-                  <RunRow
-                    key={r.runId}
-                    run={r}
-                    vocabulary={v}
-                    open={r.runId === open && p.id === activeId}
-                    score={scoresByPack.get(p.id)?.get(r.runId)}
-                    onPick={() => onContinue(p, r)}
-                    onForget={() => onForgetRun(r)}
-                  />
-                ))}
-              </div>
-            )}
-
-            {record &&
-              sync.available &&
-              (record.sealed ? (
-                <p className="packSync muted">license key kept in your account; the text stays on this device</p>
-              ) : (
-                <label className="packSync" title="Its text is stored in your account and comes to your other devices">
-                  <input type="checkbox" checked={record.sync === true} onChange={(e) => onSyncToggle(record, e.target.checked)} />
-                  <span>keep this pack in sync</span>
-                </label>
-              ))}
-          </section>
-        );
-      })}
+          </div>
+          {onJoinRace && (
+            <div className="libraryActionGroup">
+              <h3 className="sectionTitle">Join a race</h3>
+              <form
+                className="raceJoin"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (raceCode.trim().length >= 6) {
+                    onJoinRace(raceCode.trim());
+                    setRaceCode("");
+                  }
+                }}
+              >
+                <input
+                  className="textInput code"
+                  value={raceCode}
+                  placeholder="race code"
+                  maxLength={8}
+                  aria-label="A race code, six letters"
+                  onChange={(e) => setRaceCode(e.target.value.toUpperCase())}
+                />
+                <Button type="submit" disabled={raceCode.trim().length < 6}>
+                  Join a race
+                </Button>
+              </form>
+            </div>
+          )}
+        </div>
+        <DiscoverStrip packs={ordered} runs={runs} onMarketplace={onMarketplace} />
+      </section>
 
       {seats && seats.length > 0 && onTakeSeat && (
         <section className="panel packCard">
@@ -348,5 +273,263 @@ export function LibraryView({
       */}
       <SetupShelf />
     </main>
+  );
+}
+
+/**
+ * One pack, as a card: what it is, the one thing to press, and the
+ * errands folded away behind More.
+ *
+ * The card used to lay out Documents, Stream Deck profile, Start another,
+ * Test, Every server, Replace from a file and Forget pack in one row, all
+ * the same size, so the press nearly everybody came for was one of seven.
+ * Now it is one: Continue, on the run that is open or the latest one not
+ * finished, else Start. Everything else is a line in the menu, with
+ * Forget at the foot behind a rule.
+ *
+ * Two things stay in sight beside it, and neither is decoration: a newer
+ * version waiting in the marketplace, which is worth taking before the
+ * next run rather than after it, and the servers this pack may be played
+ * in, which is a fact about who may play rather than an errand. The
+ * design is explicit that what changes the next press does not go behind
+ * an ellipsis.
+ */
+function PackCard({
+  pack: p,
+  vocabulary: v,
+  parsed,
+  runs: mine,
+  scores,
+  inPlay,
+  openRunId,
+  vaults,
+  syncAvailable,
+  onOpen,
+  onContinue,
+  onStartAnother,
+  onTest,
+  onForgetRun,
+  onForgetPack,
+  onUpdate,
+  onReplace,
+  onSyncToggle,
+}: {
+  pack: LibraryPack;
+  vocabulary: Pack["vocabulary"];
+  /** The pack, read; absent where its text does not parse, which costs the card its documents and its deck. */
+  parsed?: Pack;
+  /** The runs of this pack, newest first. */
+  runs: StoredRun[];
+  scores?: Map<string, string>;
+  inPlay: boolean;
+  openRunId: string | null;
+  vaults: GuildVaults;
+  syncAvailable: boolean;
+  onOpen: (pack: LibraryPack) => void;
+  onContinue: (pack: LibraryPack, run: StoredRun) => void;
+  onStartAnother: (pack: LibraryPack) => void;
+  onTest?: (pack: LibraryPack) => void;
+  onForgetRun: (run: StoredRun) => void;
+  onForgetPack: (record: StoredPack) => void;
+  onUpdate?: (record: StoredPack) => void;
+  onReplace?: (record: StoredPack, file: File | undefined) => void;
+  onSyncToggle: (record: StoredPack, on: boolean) => void;
+}) {
+  /** The rest of the runs, once somebody has asked for them. */
+  const [everyRun, setEveryRun] = useState(false);
+  /** The decks, under the line that offers them. */
+  const [decks, setDecks] = useState(false);
+  const drawer = useDocDrawer();
+  const file = useRef<HTMLInputElement>(null);
+  const record = p.record;
+  const runOne = v.run.one.toLowerCase();
+  const runMany = v.run.many.toLowerCase();
+  const last = openedAt(p.id);
+
+  // What Continue continues: the run open on this device, else the most
+  // recent one that has not ended. A shelf of finished runs starts a new
+  // one instead of promising play on a run that is over.
+  const openRun = inPlay ? mine.find((r) => r.runId === openRunId) : undefined;
+  const resume = openRun ?? mine.find((r) => !hasEnded(r));
+  const shown = everyRun ? mine : mine.slice(0, 3);
+  /** A pack with nothing to put on a deck is offered no deck. */
+  const deck = parsed && hasKeys(parsed) ? parsed : null;
+
+  return (
+    <section className={`panel libraryPack ${inPlay ? "inPlay" : ""}`}>
+      <div className="libraryPackHead">
+        <button className="libraryTitle" onClick={() => onOpen(p)} title={`Open ${p.title}`}>
+          <strong>{p.title}</strong>
+          {p.bench && <span className="chip cap">test bench</span>}
+          <span className="muted small">
+            {p.sub}
+            {last && ` · played ${onDay(last)}`}
+            {inPlay && " · in play"}
+          </span>
+        </button>
+        <div className="libraryPackActions">
+          {record && p.update && onUpdate && (
+            <Button
+              size="compact"
+              className="update"
+              onClick={() => onUpdate(record)}
+              title={`The marketplace has v${p.update}; your ${runMany} are kept`}
+            >
+              Update to v{p.update}
+            </Button>
+          )}
+          {/* Where this pack may be played, answered at the shelf
+              rather than from each server's own page. */}
+          {record && <PackServers pack={record} vaults={vaults} />}
+          {/* The card's one action, and it is quiet. The accent belongs to
+              the page's single filled action, which is the card at the top;
+              a shelf of six packs filling six buttons is six answers to one
+              question. Where this sits, at the card's right edge with the
+              menu beside it, is what says it is the card's action. */}
+          {resume ? (
+            <Button size="compact" onClick={() => onContinue(p, resume)}>
+              Continue
+            </Button>
+          ) : (
+            <Button size="compact" onClick={() => onStartAnother(p)}>
+              {`Start ${an(runOne)}`}
+            </Button>
+          )}
+          <Menu label="More">
+            {(close) => (
+              <>
+                {parsed && (
+                  <MenuGroup label="Documents">
+                    {DOC_KINDS.map((k) => (
+                      <MenuItem
+                        key={k.kind}
+                        title={k.what}
+                        onSelect={() => {
+                          close();
+                          drawer.open(parsed, k.kind, { section: "packs", id: p.id });
+                        }}
+                      >
+                        {k.label}
+                      </MenuItem>
+                    ))}
+                  </MenuGroup>
+                )}
+                {deck && (
+                  <>
+                    <MenuItem
+                      expanded={decks}
+                      title="A profile for your Stream Deck, laid out from this pack"
+                      onSelect={() => setDecks((was) => !was)}
+                    >
+                      Stream Deck profile
+                    </MenuItem>
+                    {decks && (
+                      <div className="menuSub" role="group" aria-label="Stream Deck profile">
+                        {DEVICE_IDS.map((device) => (
+                          <MenuItem
+                            key={device}
+                            onSelect={() => {
+                              close();
+                              void downloadProfile(deck, device);
+                            }}
+                          >
+                            {DEVICES[device].label}
+                          </MenuItem>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+                {onTest && (
+                  <MenuItem
+                    title={`Play ${p.title} in ${an(runOne)} that is not saved`}
+                    onSelect={() => {
+                      close();
+                      onTest(p);
+                    }}
+                  >
+                    Test
+                  </MenuItem>
+                )}
+                {record && !record.sealed && onReplace && (
+                  <MenuItem
+                    title={`Load a newer file of ${p.title}; its ${runMany} are kept`}
+                    onSelect={() => {
+                      close();
+                      file.current?.click();
+                    }}
+                  >
+                    Replace from a file
+                  </MenuItem>
+                )}
+                {record && (
+                  <>
+                    <MenuRule />
+                    <MenuItem
+                      tone="danger"
+                      title={`Forget ${p.title} and its ${runMany}`}
+                      onSelect={() => {
+                        close();
+                        onForgetPack(record);
+                      }}
+                    >
+                      Forget pack
+                    </MenuItem>
+                  </>
+                )}
+              </>
+            )}
+          </Menu>
+          {/* The picker that line presses. It lives out here so that closing
+              the menu does not take the input with it. */}
+          {record && !record.sealed && onReplace && (
+            <input
+              ref={file}
+              type="file"
+              accept=".yaml,.yml,.json"
+              hidden
+              aria-hidden="true"
+              onChange={(e) => {
+                onReplace(record, e.target.files?.[0]);
+                // So the same file, fixed and chosen again, counts as a change.
+                e.target.value = "";
+              }}
+            />
+          )}
+        </div>
+      </div>
+
+      {mine.length > 0 && (
+        <div className="runList">
+          {shown.map((r) => (
+            <RunRow
+              key={r.runId}
+              run={r}
+              vocabulary={v}
+              open={r.runId === openRunId && inPlay}
+              {...(scores?.get(r.runId) ? { score: scores.get(r.runId)! } : {})}
+              onPick={() => onContinue(p, r)}
+              onForget={() => onForgetRun(r)}
+            />
+          ))}
+          {!everyRun && mine.length > shown.length && (
+            <Button size="compact" className="runListAll" onClick={() => setEveryRun(true)}>
+              All {runMany}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {record &&
+        syncAvailable &&
+        (record.sealed ? (
+          <p className="packSync muted">license key kept in your account; the text stays on this device</p>
+        ) : (
+          <label className="packSync" title="Its text is stored in your account and comes to your other devices">
+            <input type="checkbox" checked={record.sync === true} onChange={(e) => onSyncToggle(record, e.target.checked)} />
+            <span>keep this pack in sync</span>
+          </label>
+        ))}
+    </section>
   );
 }

@@ -9,6 +9,11 @@ import type { StoredRun } from "../storage/db.ts";
  * lists read alike. The open run is marked, not locked: from the library
  * it is still a press away, and a row that says it is open but does
  * nothing when pressed reads as broken.
+ *
+ * A run that has ended says View results rather than Continue. The press
+ * is the same press and it opens the same run; what it opens is the
+ * result, and a button promising play that cannot happen is a lie the
+ * row tells before the page corrects it.
  */
 export function RunRow({
   run: r,
@@ -31,7 +36,7 @@ export function RunRow({
   const first = events[0];
   const named = events.reduce<string | null>((n, e) => (e.t === "RunRenamed" ? e.name.trim() || null : n), null);
   const began = first?.at ? onDay(first.at) : "";
-  const ended = events.some((e) => e.t === "RunEnded");
+  const ended = hasEnded(r);
   const people = r.members?.length ?? 0;
   return (
     <div className={`runRow ${open ? "open" : ""}`}>
@@ -49,7 +54,7 @@ export function RunRow({
       </button>
       <span className="runRowActions">
         <button className="ghost tiny" onClick={onPick}>
-          Continue
+          {ended ? "View results" : "Continue"}
         </button>
         {onForget && (
           <button className="ghost tiny danger" title={`Forget this ${vocabulary.run.one.toLowerCase()}`} onClick={onForget}>
@@ -59,6 +64,11 @@ export function RunRow({
       </span>
     </div>
   );
+}
+
+/** Whether a run is over: the shelf asks, to know what to offer on it. */
+export function hasEnded(run: StoredRun): boolean {
+  return (run.events as RunEvent[]).some((e) => e.t === "RunEnded");
 }
 
 export function onDay(iso: string): string {
