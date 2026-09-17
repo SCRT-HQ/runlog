@@ -81,6 +81,7 @@ import {
   saveLicense,
   savePack,
   type StoredPack,
+  type StoredRun,
   forgetRun,
   listRuns,
   runsFor,
@@ -219,25 +220,35 @@ export default function App() {
    * it has it and then leaves the shelf alone.
    */
   const [seatPlayers, setSeatPlayers] = useState(0);
+  /** The runs this device keeps, for the shelf's seats: the ones this account plays and holds no pack for. */
+  const [runRecords, setRunRecords] = useState<StoredRun[]>([]);
   useEffect(() => {
-    if (!seatRoute) return;
     let live = true;
     let again = 0;
     const read = () =>
       void listRuns().then(
         (all) => {
-          const record = all.find((r) => r.runId === seatRoute);
-          if (!live || !record) return;
+          if (!live) return;
+          setRunRecords(all.filter((r) => !r.deletedAt));
+          const record = seatRoute ? all.find((r) => r.runId === seatRoute) : undefined;
+          if (!record) return;
           setSeatPlayers((record.members ?? []).filter((m) => m.role === "owner" || m.role === "player").length);
           window.clearInterval(again);
         },
         () => {},
       );
     read();
-    again = window.setInterval(read, 10_000);
+    // A seated run's record arrives with a pass of sync, which is why this
+    // looks again until it has the one it is drawing, and then leaves the
+    // shelf alone. Elsewhere a written run says so on the bus.
+    if (seatRoute) again = window.setInterval(read, 10_000);
+    const off = syncBus.subscribe((news) => {
+      if ((news.t === "localChange" || news.t === "pulled") && news.kind === "run") read();
+    });
     return () => {
       live = false;
       window.clearInterval(again);
+      off();
     };
   }, [seatRoute]);
   useEffect(() => {
@@ -532,6 +543,14 @@ export default function App() {
       }
       const src = mine?.source;
       if (!src) {
+        // A player with no copy of the pack has a seat instead: the
+        // watcher's page, with a strip, on the owner's copy. A watcher and
+        // an owner are told what they were told before, because neither is
+        // seated.
+        if (saved.role === "player") {
+          goTo(`#seat/${runId}`, "push");
+          return true;
+        }
         if (!quiet)
           setNotice(
             `Your latest run is on a pack that is not on this device (${saved.packTitle ?? saved.packId}). Load it from a file and it will open.`,
@@ -1306,6 +1325,8 @@ export default function App() {
             goTo(`#run/${r.runId}`);
           }}
           onContinueLast={(runId) => void continueLast(false, runId)}
+          seats={runRecords.filter((r) => r.role === "player" && !imported.some((p) => p.id === r.packId))}
+          onTakeSeat={(r) => goTo(`#seat/${r.runId}`, "push")}
           onStartAnother={(p) => {
             setActiveRunFor(p.id, NEW_RUN);
             choose(p.id, p.source);
