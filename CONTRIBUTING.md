@@ -128,7 +128,7 @@ Packs carry their own license, and the app honors it: a pack marked `redistribut
 
 ### How it looks
 
-The design has two voices. The pack's author speaks in a book serif, Literata, because the rules are a rulebook. The player speaks in the same face in italic, because a name is a note in the margin. The referee (the app) speaks in IBM Plex Mono, because it keeps a ledger and its figures have to line up. Both faces ship in the bundle: the hosting's Content Security Policy allows no font host, and the worker precaches them like everything else.
+The design has three type roles. The app's controls, navigation and headings use the system sans-serif stack. Literata is the authored voice for pack prose, player-written words, the guide and generated documents. IBM Plex Mono is reserved for figures and machine-shaped values such as seeds, identifiers, clocks, dice and log numbers. Literata and Plex Mono ship in the bundle: the hosting's Content Security Policy allows no font host, and the worker precaches them like everything else.
 
 Two accents have one job each: celadon is the referee's "fine", kiln amber is consequence. Four looks (lights down, daylight, ember and glaze) share every other decision and differ only in the ground, chosen from the header and remembered on this machine. With no choice made, the operating system's preference picks between the first two.
 

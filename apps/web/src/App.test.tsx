@@ -4,28 +4,56 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { StrictMode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import App from "./App.tsx";
 import { DocDrawerProvider } from "./docs/DocDrawer.tsx";
 import { StructurePanel } from "./design/StructurePanel.tsx";
+import type { MarketplaceEntry } from "./library/marketplace.ts";
 import { RunView } from "./run/RunView.tsx";
 import { StartScreen } from "./run/StartScreen.tsx";
+import { listPacks } from "./storage/db.ts";
+
+/** A catalog supplied only when an App integration test needs to control the public marketplace boundary. */
+const marketplaceBoundary = vi.hoisted(() => ({ entries: null as Array<{ id: string }> | null, missing: new Set<string>() }));
+vi.mock("./library/marketplace.ts", async (original) => {
+  const real = await original<typeof import("./library/marketplace.ts")>();
+  return {
+    ...real,
+    loadMarketplace: (options?: { testing?: boolean }) =>
+      marketplaceBoundary.entries ? Promise.resolve(marketplaceBoundary.entries as MarketplaceEntry[]) : real.loadMarketplace(options),
+    marketplaceEntry: (id: string) =>
+      marketplaceBoundary.entries
+        ? Promise.resolve(
+            marketplaceBoundary.missing.has(id)
+              ? null
+              : ((marketplaceBoundary.entries.find((entry) => entry.id === id) as MarketplaceEntry | undefined) ?? null),
+          )
+        : real.marketplaceEntry(id),
+  };
+});
 
 /**
  * The Designer's draft, kept where a browser would keep it.
  *
  * jsdom has no IndexedDB, so the real store answers null to everything and
  * a draft could not survive a navigation whatever the nav did. Only the two
- * draft calls are stood in for; the rest of storage is the real module, so
- * the shelf and the runs behave as they do anywhere else.
+ * draft calls are stood in for. Marketplace-add tests can also opt into an
+ * in-memory pack shelf so they can inspect persisted state; every other test
+ * falls through to the real storage module.
  */
 const drafts = vi.hoisted(() => new Map<string, unknown>());
+const packStorage = vi.hoisted(() => ({ records: null as Map<string, unknown> | null }));
 vi.mock("./storage/db.ts", async (original) => {
   const real = await original<typeof import("./storage/db.ts")>();
   return {
     ...real,
+    listPacks: async () => (packStorage.records ? [...packStorage.records.values()] : real.listPacks()),
+    savePack: async (pack: { id: string }) => {
+      if (!packStorage.records) return real.savePack(pack as Parameters<typeof real.savePack>[0]);
+      packStorage.records.set(pack.id, pack);
+    },
     loadDraft: async (id: string) => drafts.get(id) ?? null,
     saveDraft: async (draft: { id: string }) => {
       drafts.set(draft.id, draft);
@@ -402,6 +430,117 @@ describe("a pack's address in the marketplace", () => {
     await openAt("#marketplace");
     expect(document.querySelector(".marketGrid")).not.toBeNull();
     expect(document.querySelector("article.packPage")).toBeNull();
+  });
+});
+
+/**
+ * A free listing can fail without throwing when its file is not a valid pack.
+ *
+ * The catalog and file are the public data boundary; the App, marketplace UI,
+ * parser and library state below are real. Missing and malformed responses are
+ * each retried with a valid pack so both sides of the caller contract are held.
+ */
+describe("adding a free marketplace pack", () => {
+  const id = "com.example.marketplace-retry";
+  const validPack = `
+schemaVersion: 1
+id: ${id}
+version: "1.0.0"
+title: Retry Pack
+license: { id: CC0-1.0, redistributable: true }
+vocabulary:
+  run: { one: Session, many: Sessions }
+  unit: { one: Round, many: Rounds }
+  subject: { one: Try, many: Tries }
+  finalize: Finish
+unit: { createsSubject: true, min: 1, max: 1 }
+tables: {}
+phases:
+  - id: play
+    label: Play
+    steps:
+      - kind: finalizeUnit
+endings:
+  - { id: done, label: Done }
+modes:
+  standard: { label: Standard }
+defaultMode: standard
+`;
+
+  beforeEach(() => {
+    drafts.clear();
+    packStorage.records = new Map();
+    localStorage.clear();
+    // This scenario starts with an intentionally empty shelf; do not let the
+    // unrelated first-run seeding path resolve another marketplace entry.
+    localStorage.setItem("runlog:seeded", "yes");
+    history.replaceState(null, "", "#marketplace");
+  });
+  afterEach(() => {
+    marketplaceBoundary.entries = null;
+    marketplaceBoundary.missing.clear();
+    packStorage.records = null;
+    cleanup();
+  });
+
+  const listing = (load: () => Promise<string>): MarketplaceEntry => ({
+    id,
+    version: "1.0.0",
+    title: "Retry Pack",
+    description: "A synthetic public listing for the retry boundary.",
+    category: "games",
+    tags: [],
+    features: [],
+    requires: [],
+    players: 1,
+    tablePlays: true,
+    blurb: "games · solo",
+    kind: "pack",
+    price: "free",
+    source: "listing",
+    load,
+  });
+
+  async function failThenRetry(makeRetryPossible: () => void) {
+    render(
+      <DocDrawerProvider>
+        <App />
+      </DocDrawerProvider>,
+    );
+    const card = (await screen.findByText("Retry Pack")).closest("article");
+    expect(card).not.toBeNull();
+
+    fireEvent.click(within(card!).getByRole("button", { name: "Add" }));
+
+    expect((await within(card!).findByRole("status")).textContent).toBe("The pack could not be added.");
+    expect(location.hash).toBe("#marketplace");
+    expect((within(card!).getByRole("button", { name: "Add" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(within(card!).queryByText("Owned")).toBeNull();
+    expect(within(card!).queryByRole("button", { name: "Open" })).toBeNull();
+    expect(await listPacks()).toEqual([]);
+
+    makeRetryPossible();
+    fireEvent.click(within(card!).getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(within(card!).getByRole("button", { name: "Open" })).toBeTruthy());
+    expect(within(card!).getByText("Owned")).toBeTruthy();
+    expect(within(card!).queryByRole("status")).toBeNull();
+    expect(location.hash).toBe("#marketplace");
+    expect(await listPacks()).toMatchObject([{ id, title: "Retry Pack", source: validPack }]);
+  }
+
+  it("reports a listing that no longer resolves without changing the shelf, then adds it on retry", async () => {
+    marketplaceBoundary.entries = [listing(async () => validPack)];
+    marketplaceBoundary.missing.add(id);
+
+    await failThenRetry(() => marketplaceBoundary.missing.delete(id));
+  });
+
+  it("reports invalid loaded text without changing the shelf, then adds the valid retry", async () => {
+    let loads = 0;
+    marketplaceBoundary.entries = [listing(async () => (++loads === 1 ? "not: a valid Runlog pack" : validPack))];
+
+    await failThenRetry(() => {});
   });
 });
 

@@ -1,13 +1,14 @@
 # The sections
 
-The Designer's sections, in the order a pack is read.
+The Designer has six sections. They share one automatically saved draft, and you can move among them freely.
 
-- **What it is.** Title, id, version, author, description, and, for the marketplace, a category and tags. The license says whether copies may be shared.
-- **The words.** What a run, a unit, a subject and closing a unit are called in this game; the app uses them everywhere.
+- **Overview.** What the pack is, what a person needs and the words the app uses for its parts. The less commonly changed id and version are in its fold.
 - **Tables.** What the dice land on. An entry has its text and may grant a state, fire a trigger, carry points for moderated play, or need something optional.
-- **Phases.** The flow every unit passes through: roll a table, declare the subject, do the work with a checklist, close.
+- **Flow.** The phases every unit passes through: roll a table, declare the subject, do the work with a checklist, close.
 - **Modes.** Ways to play: a length, a seed, seats for several players, a clock, a roster for moderated play, and what to leave out.
+- **Test.** Every error and warning, links back to the fields that caused them, a rulebook preview and the pack's structure.
+- **Publish.** A final look at the identifier and version, plus licensing, signing and sealing, generated documents, a downloadable file and a shareable link.
 
 ## Problems
 
-**Problems** on the right lists anything that would stop the pack loading or looks like a mistake: a table whose ranges do not tile the die, a state nothing applies, a counter nothing changes. The same checks run from the terminal as [`validate`](#guide/cli-check).
+Open **Test** for anything that would stop the pack loading or looks like a mistake: a table whose ranges do not tile the die, a state nothing applies, a counter nothing changes. A problem also appears beside its field, and choosing it in Test takes you there. The same checks run from the terminal as [`validate`](#guide/cli-check).
