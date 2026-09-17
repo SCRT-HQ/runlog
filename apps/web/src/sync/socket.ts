@@ -33,6 +33,14 @@ export interface LiveSocket {
    * was told nothing else would go on naming the seq it pressed against.
    */
   drove(to: string, ref: string, ok: boolean, say?: string, seq?: number): void;
+  /**
+   * A press from this device's seat, to whichever device is holding the
+   * run. False while the line is down; a press is not worth queueing,
+   * because the offer it names will have moved on by the time it opens.
+   */
+  press(p: { run: string; seq: number; ref: string; press: string; move?: string; answer?: Record<string, unknown> }): boolean;
+  /** Ask whether the run is held. The answer comes back as `onHeld`. */
+  askHeld(id: string): void;
   close(): void;
   readonly open: boolean;
 }
@@ -112,6 +120,50 @@ export function parseDrive(data: unknown): Drive | null {
   }
 }
 
+/** The verdict on one press, from the page that took it or from the server that would not pass it on. */
+export interface Drove {
+  t: "drove";
+  ref: string;
+  ok: boolean;
+  say?: string;
+  seq?: number;
+}
+
+export function parseDrove(data: unknown): Drove | null {
+  if (typeof data !== "string") return null;
+  try {
+    const m = JSON.parse(data) as Record<string, unknown>;
+    if (!m || m["t"] !== "drove" || typeof m["ref"] !== "string") return null;
+    return {
+      t: "drove",
+      ref: m["ref"],
+      ok: m["ok"] === true,
+      ...(typeof m["say"] === "string" ? { say: m["say"] } : {}),
+      ...(typeof m["seq"] === "number" ? { seq: m["seq"] } : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Whether a device is holding the run this seat is on. */
+export interface Held {
+  t: "held";
+  id: string;
+  held: boolean;
+}
+
+export function parseHeld(data: unknown): Held | null {
+  if (typeof data !== "string") return null;
+  try {
+    const m = JSON.parse(data) as Record<string, unknown>;
+    if (!m || m["t"] !== "held" || typeof m["id"] !== "string") return null;
+    return { t: "held", id: m["id"], held: m["held"] === true };
+  } catch {
+    return null;
+  }
+}
+
 export interface LiveOptions {
   /** Where to connect, with a fresh token each time. */
   url: () => Promise<string>;
@@ -120,6 +172,10 @@ export interface LiveOptions {
   onGesture?: (gesture: Gesture) => void;
   /** A press from a deck of this account's own, at a run this device is holding. */
   onDrive?: (drive: Drive) => void;
+  /** The verdict on a press this device made from a seat. */
+  onDrove?: (verdict: Drove) => void;
+  /** Whether the run this seat is on has a device holding it. */
+  onHeld?: (held: Held) => void;
   /** Called with true on open and false on close, for the poll to adjust. */
   onState?: (open: boolean) => void;
   /** The constructor, so a test can hand in a pretend socket. */
@@ -239,6 +295,16 @@ export function openLive(opts: LiveOptions): LiveSocket {
         opts.onDrive?.(drive);
         return;
       }
+      const drove = parseDrove(data);
+      if (drove) {
+        opts.onDrove?.(drove);
+        return;
+      }
+      const held = parseHeld(data);
+      if (held) {
+        opts.onHeld?.(held);
+        return;
+      }
       const gesture = parseGesture(data);
       if (gesture) opts.onGesture?.(gesture);
     };
@@ -275,6 +341,14 @@ export function openLive(opts: LiveOptions): LiveSocket {
     drove(to, ref, ok, say, seq) {
       if (open && socket)
         socket.send(JSON.stringify({ t: "drove", to, ref, ok, ...(say ? { say } : {}), ...(typeof seq === "number" ? { seq } : {}) }));
+    },
+    press(p) {
+      if (!open || !socket) return false;
+      socket.send(JSON.stringify({ t: "drive", ...p }));
+      return true;
+    },
+    askHeld(id) {
+      if (open && socket) socket.send(JSON.stringify({ t: "held", id }));
     },
     watch(id) {
       if (watching === id) return;

@@ -29,8 +29,9 @@ import { linkFromHash, stashLink } from "./connections/route.ts";
 import { WidgetView } from "./widget/WidgetView.tsx";
 import { useTitle } from "./title.ts";
 import { liveFromHash, type LiveRoute } from "./live/route.ts";
-import { addressForPlay, addressOf, appBase, goTo, runFromAddress, linkTo } from "./route.ts";
+import { addressForPlay, addressOf, appBase, goTo, runFromAddress, seatFromAddress, linkTo } from "./route.ts";
 import { LiveRunView } from "./live/LiveRunView.tsx";
+import { SeatRunView } from "./live/SeatRunView.tsx";
 import { DocMenu } from "./docs/DocMenu.tsx";
 import { DocView } from "./docs/DocView.tsx";
 import {
@@ -206,6 +207,39 @@ export default function App() {
   const [wantedRun, setWantedRun] = useState<string | null>(() =>
     runFromAddress(typeof location !== "undefined" ? addressOf(location) : ""),
   );
+  /** A run this account plays without holding its pack: the watcher's page with a strip. */
+  const [seatRoute, setSeatRoute] = useState<string | null>(() =>
+    seatFromAddress(typeof location !== "undefined" ? addressOf(location) : ""),
+  );
+  /**
+   * How many play the run drawn from a seat, off its own record on the
+   * shelf: the strip draws the table's actions only where a seat takes
+   * them. Nought until the record arrives, which for a run this account
+   * was invited to means the next pass of sync, so this looks again until
+   * it has it and then leaves the shelf alone.
+   */
+  const [seatPlayers, setSeatPlayers] = useState(0);
+  useEffect(() => {
+    if (!seatRoute) return;
+    let live = true;
+    let again = 0;
+    const read = () =>
+      void listRuns().then(
+        (all) => {
+          const record = all.find((r) => r.runId === seatRoute);
+          if (!live || !record) return;
+          setSeatPlayers((record.members ?? []).filter((m) => m.role === "owner" || m.role === "player").length);
+          window.clearInterval(again);
+        },
+        () => {},
+      );
+    read();
+    again = window.setInterval(read, 10_000);
+    return () => {
+      live = false;
+      window.clearInterval(again);
+    };
+  }, [seatRoute]);
   useEffect(() => {
     // The address in either spelling, read as the hash the parsers know.
     const fromAddress = () => {
@@ -213,6 +247,7 @@ export default function App() {
       setWidget(widgetFromHash(address));
       setDock(dockFromHash(address));
       setLiveRoute(liveFromHash(address));
+      setSeatRoute(seatFromAddress(address));
       const slug = guideSlugFromHash(address);
       const run = runFromAddress(address);
       if (slug) {
@@ -1042,6 +1077,14 @@ export default function App() {
   if (dock) {
     if (dockStatus === "open" && result.ok) return <RunView key={`dock:${result.pack.id}`} pack={result.pack} remote />;
     return <DockWaiting status={dockStatus} />;
+  }
+  if (seatRoute) {
+    return (
+      <>
+        <SeatRunView id={seatRoute} players={seatPlayers} />
+        <Footer onGuide={() => location.assign(linkTo("#guide/seat"))} />
+      </>
+    );
   }
   if (liveRoute) {
     return (

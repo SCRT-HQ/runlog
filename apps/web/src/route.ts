@@ -22,8 +22,16 @@ import { APP_SEGMENT, baseOf } from "./welcome/route.ts";
 /** Whether this build lives at a fixed root and so may spell pages as paths: the hosted build is made with an absolute base; a file or a static host is not. */
 export const PATHS_ON = import.meta.env.BASE_URL.startsWith("/") && import.meta.env.MODE !== "test";
 
-/** The first segment of every page that has a path spelling. Anything else in a hash stays a hash: a shared pack, a race code. */
-const HEADS = new Set(["play", "packs", "guide", "profile", "marketplace", "run", "widget", "dock", "link", "create"]);
+/**
+ * The first segment of every page that has a path spelling. Anything else
+ * in a hash stays a hash: a shared pack, a race code.
+ *
+ * `SECTIONS` in welcome/route.ts is the same list read at the door, before
+ * the app is the page at all, and a head missing from it lands on the
+ * welcome page instead. The two are pinned together by a test; exported
+ * for it, not because anything else should read it.
+ */
+export const HEADS = new Set(["play", "packs", "guide", "profile", "marketplace", "run", "seat", "widget", "dock", "link", "create"]);
 
 /** Where the sections hang: the base itself, since each one is a section of its own now. */
 const root = (base: string) => base.replace(/\/+$/, "");
@@ -94,6 +102,12 @@ export function linkTo(hash: string, from = ""): string {
 /** The hash-form address for a run of this device's own: `#run/<id>`, which a live link (`#run/<id>?t=…`) is not. */
 export function runFromAddress(address: string): string | null {
   const m = /^#run\/([A-Za-z0-9_-]+)$/.exec(address);
+  return m ? m[1]! : null;
+}
+
+/** The hash-form address of a run played from a seat: `#seat/<id>`. */
+export function seatFromAddress(address: string): string | null {
+  const m = /^#seat\/([A-Za-z0-9_-]+)$/.exec(address);
   return m ? m[1]! : null;
 }
 

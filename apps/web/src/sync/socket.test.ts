@@ -4,11 +4,15 @@ import {
   openLive,
   parseChanged,
   parseDrive,
+  parseDrove,
   parseGesture,
+  parseHeld,
   socketUrl,
   type Changed,
   type Drive,
+  type Drove,
   type Gesture,
+  type Held,
 } from "./socket.ts";
 
 /**
@@ -121,6 +125,33 @@ describe("what comes down", () => {
     expect(parseDrive("not json")).toBeNull();
     expect(parseDrive(new ArrayBuffer(2))).toBeNull();
   });
+
+  it("shapes the verdict on a seat's press and refuses what is not one", () => {
+    expect(parseDrove(JSON.stringify({ t: "drove", ref: "r1", ok: true }))).toEqual({ t: "drove", ref: "r1", ok: true });
+    expect(parseDrove(JSON.stringify({ t: "drove", ref: "r1", ok: false, say: "That moved on.", seq: 12 }))).toEqual({
+      t: "drove",
+      ref: "r1",
+      ok: false,
+      say: "That moved on.",
+      seq: 12,
+    });
+    // Anything but true is a refusal, and words that are not words are dropped.
+    expect(parseDrove(JSON.stringify({ t: "drove", ref: "r1", ok: "yes", say: 3 }))).toEqual({ t: "drove", ref: "r1", ok: false });
+    expect(parseDrove(JSON.stringify({ t: "drove", ok: true }))).toBeNull();
+    expect(parseDrove(JSON.stringify({ t: "drive", from: "d1", run: "s1", seq: 3, ref: "r1", press: "primary" }))).toBeNull();
+    expect(parseDrove("not json")).toBeNull();
+    expect(parseDrove(new ArrayBuffer(2))).toBeNull();
+  });
+
+  it("shapes whether a run is held and refuses what is not that", () => {
+    expect(parseHeld(JSON.stringify({ t: "held", id: "s1", held: true }))).toEqual({ t: "held", id: "s1", held: true });
+    // Nothing said is nobody holding it.
+    expect(parseHeld(JSON.stringify({ t: "held", id: "s1" }))).toEqual({ t: "held", id: "s1", held: false });
+    expect(parseHeld(JSON.stringify({ t: "held", held: true }))).toBeNull();
+    expect(parseHeld(JSON.stringify({ t: "changed", id: "s1", seq: 1 }))).toBeNull();
+    expect(parseHeld("not json")).toBeNull();
+    expect(parseHeld(new ArrayBuffer(2))).toBeNull();
+  });
 });
 
 describe("the live socket", () => {
@@ -210,6 +241,58 @@ describe("the live socket", () => {
     // again need not wait for the doorbell to tell it where the run got to.
     live.drove("d1", "r3", true, undefined, 12);
     expect(socket.sent.at(-1)).toBe(JSON.stringify({ t: "drove", to: "d1", ref: "r3", ok: true, seq: 12 }));
+  });
+
+  it("presses from a seat, asks whether the run is held, and hands both answers over", async () => {
+    FakeSocket.all = [];
+    const clock = manualClock();
+    const verdicts: Drove[] = [];
+    const holds: Held[] = [];
+    const live = openLive({
+      url: async () => `${socketUrl("https://runlog.example/api", "t1")}&as=seat`,
+      onChanged: () => {},
+      onDrove: (v) => verdicts.push(v),
+      onHeld: (h) => holds.push(h),
+      WebSocketImpl: FakeSocket as unknown as typeof WebSocket,
+      wait: clock.wait,
+    });
+    // A press is not worth queueing: the offer it names will have moved on
+    // by the time the line opens.
+    expect(live.press({ run: "s1", seq: 3, ref: "r1", press: "primary" })).toBe(false);
+    live.watch("s1");
+    await tick();
+    const socket = FakeSocket.all[0]!;
+    expect(socket.url).toBe("wss://runlog.example/ws?token=t1&as=seat");
+    socket.onopen?.();
+    socket.sent.length = 0;
+
+    // What goes out is the press and nothing else: who pressed is the
+    // server's to stamp, off the token it verified.
+    expect(live.press({ run: "s1", seq: 3, ref: "r1", press: "primary" })).toBe(true);
+    expect(socket.sent.at(-1)).toBe(JSON.stringify({ t: "drive", run: "s1", seq: 3, ref: "r1", press: "primary" }));
+    live.press({ run: "s1", seq: 4, ref: "r2", press: "move", move: "temper" });
+    expect(socket.sent.at(-1)).toBe(JSON.stringify({ t: "drive", run: "s1", seq: 4, ref: "r2", press: "move", move: "temper" }));
+    live.press({ run: "s1", seq: 5, ref: "r3", press: "answer", answer: { tracker: "cracks", by: 1 } });
+    expect(socket.sent.at(-1)).toBe(
+      JSON.stringify({ t: "drive", run: "s1", seq: 5, ref: "r3", press: "answer", answer: { tracker: "cracks", by: 1 } }),
+    );
+    expect(socket.sent.join("")).not.toContain("seat");
+    expect(socket.sent.join("")).not.toContain("who");
+
+    live.askHeld("s1");
+    expect(socket.sent.at(-1)).toBe(JSON.stringify({ t: "held", id: "s1" }));
+
+    socket.onmessage?.({ data: JSON.stringify({ t: "drove", ref: "r1", ok: false, say: "That moved on." }) });
+    socket.onmessage?.({ data: JSON.stringify({ t: "held", id: "s1", held: true }) });
+    expect(verdicts).toEqual([{ t: "drove", ref: "r1", ok: false, say: "That moved on." }]);
+    expect(holds).toEqual([{ t: "held", id: "s1", held: true }]);
+
+    // Down again, and a press has nowhere to go.
+    socket.onclose?.();
+    expect(live.press({ run: "s1", seq: 6, ref: "r4", press: "primary" })).toBe(false);
+    live.askHeld("s1");
+    expect(socket.sent.at(-1)).toBe(JSON.stringify({ t: "held", id: "s1" }));
+    live.close();
   });
 
   it("waits and tries again when there is no token to connect with", async () => {

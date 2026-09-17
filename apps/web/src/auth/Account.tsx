@@ -1,9 +1,9 @@
-import { appBase, hrefFor, PATHS_ON } from "../route.ts";
+import { appBase, PATHS_ON } from "../route.ts";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 // The badge and menu are in AccountBadge.tsx: they read sync's context too,
 // and sync's provider reads this one.
 import { createClient, type User } from "@workos-inc/authkit-js";
-import { honestAddress } from "../welcome/route.ts";
+import { honestAddress, isAppPath } from "../welcome/route.ts";
 import { appUrl, configuredClientId } from "./config.ts";
 import { whoIsHere } from "../storage/who.ts";
 
@@ -120,11 +120,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       onRedirectCallback: ({ state }) => {
         const back = (state as { returnTo?: unknown } | undefined)?.returnTo;
         // A hash cannot send the page anywhere else. A path is accepted only
-        // where paths are on, only under the app's own base, and only as an
-        // in-page change, so neither can either.
+        // where paths are on, only under the app's own base, only a section
+        // the app answers to, and only as an in-page change, so neither can
+        // either. Every section, rather than `play` alone: they moved to
+        // the root, and the check did not follow, so signing in from a
+        // packs, guide, marketplace, run or seat address lost it.
         if (typeof back !== "string") return;
         if (/^#[A-Za-z0-9_\-/?=&.%:]{1,2000}$/.test(back)) location.hash = back;
-        else if (PATHS_ON && /^\/[A-Za-z0-9_\-/?=&.%:#]{1,2000}$/.test(back) && back.startsWith(hrefFor(""))) {
+        else if (PATHS_ON && /^\/[A-Za-z0-9_\-/?=&.%:#]{1,2000}$/.test(back) && isAppPath(back.split(/[?#]/)[0]!, appBase(location.href))) {
           history.replaceState(null, "", back);
           window.dispatchEvent(new PopStateEvent("popstate"));
         }
