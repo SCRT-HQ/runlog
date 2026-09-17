@@ -1,4 +1,5 @@
 import type { LiveSnapshot } from "@runlog/engine";
+import { hashToken } from "../auth.js";
 import type { Guild, GuildStore, PartyClose, WatchParty } from "../guilds.js";
 import type { Store } from "../store.js";
 import { partyCardFor, partyClosingLine } from "./card.js";
@@ -36,6 +37,18 @@ export interface PartyOpen {
   private?: boolean;
 }
 
+/** What a party with no live link of the run's own to carry is told, wherever it was asked for. */
+const SHARE_FIRST = "Share the run first: a watch party carries its live link.";
+
+/** The `t` of a live link, and "" where there is none to read. */
+function tokenOf(link: string): string {
+  try {
+    return new URL(link).searchParams.get("t") ?? "";
+  } catch {
+    return "";
+  }
+}
+
 /** The snapshot as the engine wrote it, or null where the row holds something else. */
 export function snapshotOfRun(held: { snapshot: unknown } | null): LiveSnapshot | null {
   const s = held?.snapshot;
@@ -59,9 +72,20 @@ export async function openParty(deps: PartyDeps, input: PartyOpen): Promise<{ pa
   if (found.meta.ownerSub !== by.sub) return { error: "A watch party is for a run of your own." };
   const already = await deps.guilds.party(sessionId, guild.guildId);
   if (already && !already.closedAt) return { error: `This server already has a watch party on that run: <#${already.threadId}>.` };
+  /**
+   * A link the caller handed over is checked here as well as wherever it
+   * arrived: its token has to hash to the run's own, which is what both
+   * API sites ask of one before they pass it on. The address was read by
+   * `liveLinkOf` and rebuilt from its parts; this is the other half, so
+   * that a link stale or borrowed is not filed on the run's row, where
+   * every later card draws it, and not posted in somebody else's server
+   * in the bot's voice.
+   */
+  if (input.link && (!found.meta.publicTokenHash || hashToken(tokenOf(input.link)) !== found.meta.publicTokenHash))
+    return { error: SHARE_FIRST };
   if (input.link) await deps.guilds.putLiveLink(sessionId, input.link, deps.now());
   const link = input.link ?? (await deps.guilds.liveLink(sessionId));
-  if (!link || !found.meta.publicTokenHash) return { error: "Share the run first: a watch party carries its live link." };
+  if (!link || !found.meta.publicTokenHash) return { error: SHARE_FIRST };
   const snapshot = snapshotOfRun(await deps.store.getSnapshot(sessionId));
   if (!snapshot) return { error: "That run has not said anything yet; open it in the app and try again." };
   const channelId = input.channelId ?? guild.channelId;
@@ -128,7 +152,7 @@ export async function closeParty(deps: PartyDeps, party: WatchParty, why: PartyC
         closed: why,
       });
       const edited = await deps.rest.editMessage(party.threadId, party.cardMessageId, card);
-      if (edited && why === "ended") await deps.rest.postMessage(party.threadId, { content: partyClosingLine(snapshot) });
+      if (edited === "ok" && why === "ended") await deps.rest.postMessage(party.threadId, { content: partyClosingLine(snapshot) });
     }
   }
   await deps.guilds.putParty(closed);
@@ -208,23 +232,38 @@ export async function tickParties(deps: PartyTickDeps, sessionId: string): Promi
     // Read again rather than reusing the row this call started with: a
     // handout may have landed on it while the tick was being waited out.
     const fresh = (await deps.guilds.party(sessionId, party.guildId)) ?? party;
+    // The live-link row, not the link this party opened on: a run shared
+    // again carries a new token, and the row is where it is filed. The
+    // party's own link is what is left where the row says nothing.
+    const link = (await deps.guilds.liveLink(sessionId)) ?? party.link;
     const card = partyCardFor({
       snapshot: latest,
-      link: party.link,
+      link,
       openedByName: party.openedByName,
       ...(fresh.handouts ? { handouts: fresh.handouts } : {}),
     });
-    const edited = deps.rest && party.cardMessageId ? await deps.rest.editMessage(party.threadId, party.cardMessageId, card) : false;
-    if (!edited) {
-      // A card Discord will not edit is a card, or a thread, that somebody
+    const edited = deps.rest && party.cardMessageId ? await deps.rest.editMessage(party.threadId, party.cardMessageId, card) : "failed";
+    if (edited === "gone") {
+      // A card Discord no longer has is a card, or a thread, that somebody
       // deleted. The party closes itself rather than trying forever.
       await closeParty(deps, { ...party, tickAt: undefined }, "gone");
       return "closed";
     }
+    if (edited === "failed") {
+      // A call that did not land is not a message that is gone: a timeout,
+      // a 429, or no token on this copy. The party stays open and the next
+      // snapshot draws it again; the tick is handed back so that one may
+      // hold it.
+      const back: WatchParty = { ...fresh };
+      delete back.tickAt;
+      await deps.guilds.putParty(back);
+      return "quiet";
+    }
     // Written back over the row as it now is, not as it was when this
     // call read it, so a handout that landed during the wait is not
-    // dropped.
-    const next: WatchParty = { ...fresh, editedAt: at, updatedAt: at };
+    // dropped. The link goes with it, so the row and the card carry the
+    // same one and the closing card does too.
+    const next: WatchParty = { ...fresh, link, editedAt: at, updatedAt: at };
     delete next.tickAt;
     await deps.guilds.putParty(next);
     return outcome;
@@ -285,7 +324,13 @@ export async function notePartyHandout(deps: PartyHandoutDeps, sessionId: string
  */
 export async function autoOpenParties(deps: PartyDeps, sessionId: string): Promise<string[]> {
   const found = await deps.store.getSession(sessionId);
-  if (!found || found.meta.deletedAt || !found.meta.publicTokenHash) return [];
+  if (!found || found.meta.deletedAt || found.meta.endedAt || !found.meta.publicTokenHash) return [];
+  // A run that is over opens nothing. The page's "first snapshot" is the
+  // first of that mount and not of the run, so opening a finished run in
+  // the app again arrives here looking like one that just started; the
+  // tick's own test, the snapshot saying ended, is what tells them apart
+  // where the row has not been told.
+  if (snapshotOfRun(await deps.store.getSnapshot(sessionId))?.status === "ended") return [];
   const opened: string[] = [];
   for (const guild of await deps.guilds.guildsOf(found.meta.ownerSub)) {
     const mode = guild.watchParties ?? "off";

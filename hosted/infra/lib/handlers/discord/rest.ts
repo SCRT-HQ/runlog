@@ -22,6 +22,16 @@ export interface DiscordMessage {
   components?: unknown[];
 }
 
+/**
+ * What became of an edit.
+ *
+ * Discord took it; the message is not there any more, which is a 404 and
+ * nothing else; or the call did not land, which a timeout, a 429 and a 500
+ * all are. A caller that gives a message up for lost needs the middle one
+ * told apart from the last.
+ */
+export type EditOutcome = "ok" | "gone" | "failed";
+
 export interface DiscordRest {
   /**
    * A thread in a channel, named; the id of the thread, or null when
@@ -34,7 +44,8 @@ export interface DiscordRest {
   addThreadMember(threadId: string, userId: string): Promise<boolean>;
   /** Post into a channel or thread; the message id, or null. */
   postMessage(channelId: string, message: DiscordMessage): Promise<string | null>;
-  editMessage(channelId: string, messageId: string, message: DiscordMessage): Promise<boolean>;
+  /** Redraw a message the bot posted; what became of it, since a message that is gone is not a call that failed. */
+  editMessage(channelId: string, messageId: string, message: DiscordMessage): Promise<EditOutcome>;
   /** Take a message of the bot's own down: a retired card that carried nothing else. */
   deleteMessage(channelId: string, messageId: string): Promise<boolean>;
   pinMessage(channelId: string, messageId: string): Promise<boolean>;
@@ -61,14 +72,22 @@ export interface DiscordRest {
   createChannel(guildId: string, name: string): Promise<string | null>;
 }
 
-async function call(
+/**
+ * The call, with what Discord answered kept beside what it said.
+ *
+ * Almost everything here cares only whether the call landed, which is
+ * what `call` hands back. The status is for the one caller that has to
+ * tell a message somebody deleted from a call that never arrived. A rope
+ * that ran out, or a network that would not, is status 0.
+ */
+async function callRaw(
   token: string,
   method: string,
   path: string,
   body: unknown,
   fetchImpl: typeof fetch,
   ropeMs: number,
-): Promise<Record<string, unknown> | null> {
+): Promise<{ status: number; body: Record<string, unknown> | null }> {
   const rope = new AbortController();
   const timer = setTimeout(() => rope.abort(), ropeMs);
   try {
@@ -78,16 +97,27 @@ async function call(
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: rope.signal,
     });
-    if (!res.ok) return null;
-    if (res.status === 204) return {};
+    if (!res.ok) return { status: res.status, body: null };
+    if (res.status === 204) return { status: res.status, body: {} };
     const parsed: unknown = await res.json();
-    if (Array.isArray(parsed)) return { items: parsed };
-    return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : {};
+    if (Array.isArray(parsed)) return { status: res.status, body: { items: parsed } };
+    return { status: res.status, body: typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : {} };
   } catch {
-    return null;
+    return { status: 0, body: null };
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function call(
+  token: string,
+  method: string,
+  path: string,
+  body: unknown,
+  fetchImpl: typeof fetch,
+  ropeMs: number,
+): Promise<Record<string, unknown> | null> {
+  return (await callRaw(token, method, path, body, fetchImpl, ropeMs)).body;
 }
 
 /** Discord's ChannelType.PublicThread and ChannelType.PrivateThread. */
@@ -120,7 +150,11 @@ export function discordRest(token: string, fetchImpl: typeof fetch = fetch, rope
       return id(await call(token, "POST", `/channels/${channelId}/messages`, message, fetchImpl, ropeMs));
     },
     async editMessage(channelId, messageId, message) {
-      return (await call(token, "PATCH", `/channels/${channelId}/messages/${messageId}`, message, fetchImpl, ropeMs)) !== null;
+      const out = await callRaw(token, "PATCH", `/channels/${channelId}/messages/${messageId}`, message, fetchImpl, ropeMs);
+      if (out.body) return "ok";
+      // 404 is the message, or the thread it was in, being gone; every
+      // other answer is a call to make again.
+      return out.status === 404 ? "gone" : "failed";
     },
     async deleteMessage(channelId, messageId) {
       return (await call(token, "DELETE", `/channels/${channelId}/messages/${messageId}`, undefined, fetchImpl, ropeMs)) !== null;

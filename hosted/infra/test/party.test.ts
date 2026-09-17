@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { hashToken } from "../lib/handlers/auth";
 import { COMMANDS } from "../lib/handlers/discord/commands";
 import { handleInteraction, type InteractionDeps } from "../lib/handlers/discord/interactions";
 import {
@@ -18,6 +19,8 @@ import { memoryDiscord, memoryGuilds } from "./memory-guilds";
 
 const NOW = "2026-09-16T10:00:00.000Z";
 const LINK = "https://runlog.test/r/01RUN?t=livetok";
+/** The run's own token, hashed the way the session row keeps it. */
+const LIVE_HASH = hashToken("livetok");
 
 const snapshot = {
   v: 1,
@@ -57,7 +60,7 @@ function runStore(over: Partial<SessionMeta> = {}, held: unknown = snapshot): St
     createdAt: NOW,
     updatedAt: NOW,
     seq: 4,
-    publicTokenHash: "hash",
+    publicTokenHash: LIVE_HASH,
     ...over,
   };
   return {
@@ -332,6 +335,23 @@ describe("/run watch", () => {
     expect(JSON.stringify(rest.posts)).not.toContain("@everyone");
   });
 
+  /**
+   * The address is only half of a live link. A token that is not the
+   * run's own is a link nobody can watch by, so a host who pasted a stale
+   * one is told what to do about it, and nothing is filed or posted.
+   */
+  it("refuses a pasted link whose token is not the run's, and keeps nothing", async () => {
+    const { guilds, rest, bot } = await botReady();
+    await guilds.clearLiveLink("01RUN");
+    const stale = "https://runlog.test/r/01RUN?t=oldtok";
+    const out = await handleInteraction(runSub("watch", [{ name: "run", type: 3, value: stale }]), bot);
+    expect(out.data?.flags).toBe(EPHEMERAL);
+    expect(out.data?.content).toBe("Share the run first: a watch party carries its live link.");
+    expect(await guilds.party("01RUN", "g1")).toBeNull();
+    expect(await guilds.liveLink("01RUN")).toBeNull();
+    expect(rest.posts).toEqual([]);
+  });
+
   it("passes a refusal from openParty straight through, to the person alone", async () => {
     const { bot } = await botReady();
     const out = await handleInteraction(
@@ -464,7 +484,23 @@ describe("keeping a party's card current", () => {
     expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("ended");
   });
 
-  it("closes a party whose card Discord would no longer edit", async () => {
+  it("closes a party whose card Discord no longer has", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    c.tick(TICK_MS + 1_000);
+    rest.lost = true;
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "closed" }]);
+    expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("gone");
+  });
+
+  /**
+   * A call that did not land is not a message that is gone. A timeout or
+   * a 429 leaves the party where it was, for the next snapshot to draw.
+   */
+  it("leaves the party open where the edit did not land, and draws it on the next tick", async () => {
     const { guilds, rest, guild } = await ready();
     const c = clock();
     const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
@@ -472,8 +508,44 @@ describe("keeping a party's card current", () => {
     if ("error" in out) throw new Error(out.error);
     c.tick(TICK_MS + 1_000);
     rest.down = true;
-    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "closed" }]);
-    expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("gone");
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "quiet" }]);
+    const held = (await guilds.party("01RUN", "g1"))!;
+    expect(held.closedAt).toBeUndefined();
+    expect(held.tickAt).toBeUndefined();
+    rest.down = false;
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "edited" }]);
+    expect(rest.edits).toHaveLength(1);
+  });
+
+  it("closes nothing where the bot has no token on this copy", async () => {
+    const { guilds, guild, rest } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    c.tick(TICK_MS + 1_000);
+    expect(await tickParties({ ...deps, rest: null }, "01RUN")).toEqual([{ guildId: "g1", outcome: "quiet" }]);
+    expect((await guilds.party("01RUN", "g1"))?.closedAt).toBeUndefined();
+  });
+
+  /**
+   * A run shared again carries a new token, and the live-link row is
+   * where it is filed; a card drawn from the link the party opened on
+   * would send watchers at a link that is dead.
+   */
+  it("draws the link the run was shared with last, not the one the party opened on", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    const again = "https://runlog.test/r/01RUN?t=newtok";
+    await guilds.putLiveLink("01RUN", again, NOW);
+    c.tick(TICK_MS + 1_000);
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "edited" }]);
+    expect(JSON.stringify(rest.edits.at(-1)!.message)).toContain(again);
+    expect(JSON.stringify(rest.edits.at(-1)!.message)).not.toContain("livetok");
+    expect((await guilds.party("01RUN", "g1"))?.link).toBe(again);
   });
 
   it("waits out three parties' ticks at once, so a run watched from three servers fits in one tick", async () => {
@@ -651,6 +723,22 @@ describe("a server that opens parties on its own", () => {
     const held = (await guilds.party("01RUN", "g1"))!;
     await closeParty(deps, held, "byHand");
     expect(await autoOpenParties(deps, "01RUN")).toEqual([]);
+  });
+
+  /**
+   * The page sends its first snapshot per mount, not per run, so opening
+   * a finished run in the app again arrives here looking like a run that
+   * just started. A party on it would open and close in the same breath.
+   */
+  it("opens none for a run that has already ended", async () => {
+    const { guilds, rest } = await ready();
+    await guilds.updateGuild("g1", NOW, { channelId: "runs", watchParties: "every" });
+    const over = { store: runStore({}, { ...snapshot, status: "ended", ending: "Cooled" }), guilds, rest, now: () => NOW };
+    expect(await autoOpenParties(over, "01RUN")).toEqual([]);
+    const said = { store: runStore({ endedAt: NOW }), guilds, rest, now: () => NOW };
+    expect(await autoOpenParties(said, "01RUN")).toEqual([]);
+    expect(await guilds.party("01RUN", "g1")).toBeNull();
+    expect(rest.threads).toEqual([]);
   });
 
   it("opens none for a run that was never shared", async () => {
