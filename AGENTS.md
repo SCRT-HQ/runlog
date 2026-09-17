@@ -7,6 +7,12 @@ the intended changes, push the feature branch, create a pull request against
 `main`, and enable auto-merge. This is the user's standing instruction for this
 repository; do not ask them to select an integration option each time.
 
+When executing an approved multi-slice plan, continue to the next in-scope slice
+after opening a PR and enabling auto-merge. Publication is a checkpoint, not a
+reason to end the work. Pause for a genuine blocker, a material scope/design
+decision, or a specific review that needs the user's input; do not request
+routine re-approval for work already covered by the plan.
+
 Respect required checks, reviews, branch protection, and the merge queue. Do not
 bypass them, force-push, or merge directly into `main`. If verification fails or
 publishing is blocked, report the blocker instead of claiming completion.

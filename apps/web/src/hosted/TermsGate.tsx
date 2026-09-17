@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAccount } from "../auth/Account.tsx";
+import type { Api } from "../sync/client.ts";
 import { useApi } from "../sync/useApi.ts";
 import { rememberProfile } from "../sync/useProfile.ts";
 import { useFocusTrap } from "../ui/useFocusTrap.ts";
@@ -21,21 +22,25 @@ export function TermsGate() {
   const account = useAccount();
   const api = useApi();
   const version = hosted?.termsVersion;
+  const accountId = account.status === "signed-in" ? account.user.id : null;
   const [state, setState] = useState<"unknown" | "accepted" | "asking" | "saving">("unknown");
+  const [saveFailure, setSaveFailure] = useState<{ api: Api; accountId: string; version: string } | null>(null);
   const panel = useRef<HTMLElement>(null);
   const accept = useRef<HTMLButtonElement>(null);
   const handleTaken = useRef(false);
   const mounted = useRef(false);
   const requestContext = useRef({
     api,
-    accountId: account.status === "signed-in" ? account.user.id : null,
+    accountId,
     version,
   });
   requestContext.current = {
     api,
-    accountId: account.status === "signed-in" ? account.user.id : null,
+    accountId,
     version,
   };
+  const saveFailed =
+    saveFailure !== null && saveFailure.api === api && saveFailure.accountId === accountId && saveFailure.version === version;
   const required = hosted !== null && api !== null && account.status === "signed-in" && (state === "asking" || state === "saving");
   const stayOpen = useCallback(() => {}, []);
 
@@ -49,9 +54,10 @@ export function TermsGate() {
   }, []);
 
   useEffect(() => {
-    if (!api || !version) return;
-    let live = true;
     setState("unknown");
+    setSaveFailure(null);
+    if (!api || !version || !accountId) return;
+    let live = true;
     void api
       .me()
       .then((me) => {
@@ -63,7 +69,7 @@ export function TermsGate() {
     return () => {
       live = false;
     };
-  }, [api, version]);
+  }, [accountId, api, version]);
 
   useEffect(() => {
     if (state === "asking") accept.current?.focus();
@@ -80,6 +86,7 @@ export function TermsGate() {
       const current = requestContext.current;
       return mounted.current && current.api === savingWith && current.accountId === accountId && current.version === savingVersion;
     };
+    setSaveFailure(null);
     setState("saving");
     void api
       .putProfile({ termsVersion: savingVersion })
@@ -89,7 +96,9 @@ export function TermsGate() {
         setState("accepted");
       })
       .catch(() => {
-        if (stillCurrent()) setState("asking");
+        if (!stillCurrent()) return;
+        setSaveFailure({ api: savingWith, accountId, version: savingVersion });
+        setState("asking");
       });
   };
 
@@ -103,8 +112,19 @@ export function TermsGate() {
           <a href={hosted.links.privacy}>privacy policy</a>. Please read them; the short version at the top of each is the whole idea.
         </p>
         <p className="muted small">Version {hosted.termsVersion}. You are asked again only when they change.</p>
+        {saveFailed && (
+          <p className="notice" role="alert">
+            We couldn't save your acceptance. Check your connection and try again.
+          </p>
+        )}
         <div className="padRow">
-          <button ref={accept} className="primary" onClick={agree} disabled={state === "saving"}>
+          <button
+            ref={accept}
+            className="primary"
+            onClick={agree}
+            disabled={state === "saving"}
+            aria-busy={state === "saving" || undefined}
+          >
             {state === "saving" ? "Saving…" : "I accept"}
           </button>
           <button className="ghost" onClick={() => account.signOut()}>
