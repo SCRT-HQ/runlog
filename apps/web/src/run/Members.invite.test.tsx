@@ -108,6 +108,7 @@ const quiet = {
   reactions: async () => [],
   listInvites: async () => [],
   people: async () => [],
+  parties: async () => ({ parties: [], servers: [] }),
 };
 
 const written: string[] = [];
