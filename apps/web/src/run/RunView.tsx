@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from "react";
 import { an } from "@runlog/rules-schema";
 import { ClockPanel } from "./ClockPanel.tsx";
 import { SettingsDialog } from "./SettingsDialog.tsx";
@@ -61,7 +61,7 @@ import { globalWords, owedOn, settleWords, settlingFor, stillOwed, thresholdWord
 import { ExportPanel } from "./ExportPanel.tsx";
 import { EnvironmentPanel } from "../environment/EnvironmentPanel.tsx";
 import { Members } from "./Members.tsx";
-import { SidePanel } from "./SidePanel.tsx";
+import { SidePanel, SideNewsListener } from "./SidePanel.tsx";
 import { Asks } from "./Asks.tsx";
 import { onDay } from "./RunRow.tsx";
 import { bestOf, placeOf, scoresOf, type ScoredRun } from "./scores.ts";
@@ -85,7 +85,7 @@ import { lifecycleGestures, marksOf, type LifecycleMarks } from "./gestures.ts";
 import { handoutLine, handoutOf } from "./handout.ts";
 import { useRace } from "./useRace.ts";
 import { undoWords } from "./undoWords.ts";
-import { RunRail, type Pane } from "./RunRail.tsx";
+import { RunRail, useUnseen, type Pane, type Readings } from "./RunRail.tsx";
 import { useEnterMoves } from "../ui/useEnterMoves.ts";
 import { useToast } from "../ui/Toast.tsx";
 import { accountOf, nameOf } from "./names.ts";
@@ -229,6 +229,36 @@ export function fitsTheWire(setup: Setup): boolean {
   if (setup.title.length > 80) return false;
   if (setup.ops.length === 0 || setup.ops.length > 64) return false;
   return setup.ops.every((o) => o.op.length > 0 && o.op.length <= 64);
+}
+
+/**
+ * The width the columns stop being columns at, which is the sheet's own
+ * 760px. Asked rather than assumed, because a plane switch on a wide screen
+ * is not a switch: everything is already on the page.
+ */
+const PHONE = "(max-width: 760px)";
+const onAPhone = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(PHONE).matches;
+
+/**
+ * Whether the page is drawing this at all, which is the difference between
+ * an element a plane hides and one it shows. A browser that cannot answer
+ * says yes, since the question is only worth asking where there is a layout
+ * to ask it of.
+ */
+const drawn = (el: HTMLElement) => (typeof el.checkVisibility === "function" ? el.checkVisibility() : true);
+
+/**
+ * The element a plane is, for putting the keyboard somewhere on it. Now and
+ * the log share a column and are told apart by which of its children the
+ * plane draws; the unit is the phase list in the margin, and the board is
+ * the side column entire.
+ */
+function paneNode(root: HTMLElement | null, pane: Pane): HTMLElement | null {
+  if (!root) return null;
+  if (pane === "unit") return root.querySelector(".stageFlow");
+  if (pane === "board") return root.querySelector(".col.side");
+  if (pane === "log") return root.querySelector(".col.wide > .log");
+  return root.querySelector(".col.wide");
 }
 
 /**
@@ -1183,6 +1213,95 @@ export function RunView({
     setPane("now");
   }, [stepNow]);
 
+  /**
+   * What the planes that are not showing are holding.
+   *
+   * The board's plane is the whole side column, and every panel in it
+   * already works out whether what it carries has moved since it was last
+   * read; the rail asks that question of the column instead of the fold, so
+   * it listens to the same readings and puts them together as one. The log's
+   * is simpler: it only ever grows, so its length is the reading.
+   */
+  const [sideNews, setSideNews] = useState<Readings>({});
+  const hearSide = useCallback((panel: string, said: string | number | undefined) => {
+    setSideNews((was) => (panel in was && was[panel] === said ? was : { ...was, [panel]: said }));
+  }, []);
+  // Nothing at all until the saved run has been read: a log arriving is not
+  // a log growing, and a first reading is never news.
+  const logNews = useMemo((): Readings => (run.state ? { log: run.state.outcomes.length } : {}), [run.state]);
+  const boardUnseen = useUnseen(sideNews, pane === "board");
+  const logUnseen = useUnseen(logNews, pane === "log");
+
+  /**
+   * Where each plane was left, and where the eye goes when one opens.
+   *
+   * A phone scrolls the window, not a box, so switching planes used to throw
+   * away where you were on the one you left and start the new one wherever
+   * the old one happened to be standing. Each plane keeps its own place for
+   * as long as the run is on the screen, and opening one puts the reading
+   * position back and the keyboard on that plane's first heading, so a switch
+   * is never a jump to the top and never a focus lost to the page.
+   *
+   * A place belongs to a run and not to a pack. This page is kept mounted
+   * across a run ending and another starting in the same pack, so the places
+   * are forgotten when the run changes: a board nobody has scrolled opens at
+   * its top, not three hundred pixels down where the last run left it.
+   *
+   * Only on a phone: above 760px the columns are all on the screen at once
+   * and none of this is a switch at all.
+   */
+  const columns = useRef<HTMLDivElement | null>(null);
+  const paneTop = useRef<Record<Pane, number>>({ now: 0, unit: 0, board: 0, log: 0 });
+  const paneShown = useRef<Pane>(pane);
+  const paneWas = useRef<Pane | null>(null);
+  const thisRun = run.record?.runId ?? null;
+  // Before the restore below rather than after it: a run change and a plane
+  // change can land in the same pass, and the places have to be gone before
+  // anything is put back from them. Layout effects run in the order they are
+  // written, so this one is written first.
+  useLayoutEffect(() => {
+    paneTop.current = { now: 0, unit: 0, board: 0, log: 0 };
+  }, [thisRun]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const keep = () => {
+      paneTop.current[paneShown.current] = window.scrollY;
+    };
+    window.addEventListener("scroll", keep, { passive: true });
+    return () => window.removeEventListener("scroll", keep);
+  }, []);
+  useLayoutEffect(() => {
+    const was = paneWas.current;
+    paneWas.current = pane;
+    paneShown.current = pane;
+    if (was === null || was === pane || !onAPhone()) return;
+    window.scrollTo(0, paneTop.current[pane] ?? 0);
+    const plane = paneNode(columns.current, pane);
+    if (!plane) return;
+    // Where the keyboard already is, if it is anywhere this plane still
+    // draws. Now and the log share a column, so coming back from the log
+    // the keyboard is inside the Now plane by the letter of it and on
+    // something that has just been hidden: the plane has to still be
+    // drawing the thing for it to count as being there.
+    const held = document.activeElement;
+    if (held instanceof HTMLElement && plane.contains(held) && drawn(held)) return;
+    // Otherwise let go of it before handing the keyboard anywhere. A
+    // browser that works out afterwards that what held it is hidden puts
+    // the keyboard back on the page itself, which would undo the handing
+    // over.
+    if (held instanceof HTMLElement) held.blur();
+    // The first heading the plane is actually drawing. A plane may keep a
+    // title it does not show on its own plane, and handing the keyboard to
+    // something nobody can see hands it to nothing.
+    const head = [...plane.querySelectorAll<HTMLElement>("h2, h3, h4")].find(drawn) ?? plane;
+    if (!head.hasAttribute("tabindex")) head.setAttribute("tabindex", "-1");
+    // Marked as what it is: a place the keyboard is put down, not a control
+    // anybody aimed at, so the sheet can keep a ring off a heading. The
+    // attribute is nobody else's, and survives the page redrawing.
+    head.setAttribute("data-plane-head", "");
+    head.focus({ preventScroll: true });
+  }, [pane]);
+
   // Reading the saved run is asynchronous. Offering to start a new one before
   // it arrives would invite the player to overwrite a run already in progress.
   if (!run.hydrated) {
@@ -1301,7 +1420,7 @@ export function RunView({
         rail under them is the way between; the margin keeps its job as one
         sticky line. See RunRail, and the phone's half of the sheet.
       */}
-      <div className="columns run" data-pane={pane}>
+      <div className="columns run" data-pane={pane} ref={columns}>
         <aside className="margin">
           <div className="stageNo">
             <small>{pack.modes[state.mode]?.label ?? state.mode}</small>
@@ -1412,40 +1531,45 @@ export function RunView({
           )}
         </div>
 
-        <div className="col side">
-          {/* Who is here, first: a row a person, with what they have plugged in. */}
-          {run.record && !bench && <Members pack={pack} run={run.record} tools={tools} deckSubs={deckSubs ?? []} />}
-          {state.status === "ended" && <Scores pack={pack} run={run} state={state} />}
-          {run.moderated && <Scoreboard run={run} state={state} pack={pack} tools={tools} />}
-          {!run.moderated && tools.length > 0 && <Attached runId={run.runId} tools={tools} />}
-          {run.roles.length > 0 && <Roles pack={pack} run={run} state={state} />}
-          {/* A pack whose units make nothing has no board; the panel would
+        {/* The column says what it is carrying, so the rail can mark the
+            plane it is behind on a phone; on a wide screen nobody listens. */}
+        <SideNewsListener onNews={hearSide}>
+          <div className="col side">
+            {/* Who is here, first: a row a person, with what they have plugged in. */}
+            {run.record && !bench && <Members pack={pack} run={run.record} tools={tools} deckSubs={deckSubs ?? []} />}
+            {state.status === "ended" && <Scores pack={pack} run={run} state={state} />}
+            {run.moderated && <Scoreboard run={run} state={state} pack={pack} tools={tools} />}
+            {!run.moderated && tools.length > 0 && <Attached runId={run.runId} tools={tools} />}
+            {run.roles.length > 0 && <Roles pack={pack} run={run} state={state} />}
+            {/* A pack whose units make nothing has no board; the panel would
               say "nothing made yet" for the whole run. */}
-          {pack.unit.createsSubject && (
-            <Board
+            {pack.unit.createsSubject && (
+              <Board
+                runId={run.runId}
+                pack={pack}
+                state={state}
+                onRename={run.renameSubject}
+                onCorrect={run.readOnly ? undefined : run.correctState}
+              />
+            )}
+            <Trackers
               runId={run.runId}
               pack={pack}
               state={state}
-              onRename={run.renameSubject}
-              onCorrect={run.readOnly ? undefined : run.correctState}
+              onNudge={run.readOnly ? undefined : run.nudgeCounter}
+              onTurn={run.readOnly ? undefined : run.turnResource}
             />
-          )}
-          <Trackers
-            runId={run.runId}
-            pack={pack}
-            state={state}
-            onNudge={run.readOnly ? undefined : run.nudgeCounter}
-            onTurn={run.readOnly ? undefined : run.turnResource}
-          />
-          {run.record && api && !bench && <RacePanel runId={run.runId} pack={pack} race={raceView} />}
-          {run.record && !bench && api && <Asks pack={pack} run={run} record={run.record} />}
-        </div>
+            {run.record && api && !bench && <RacePanel runId={run.runId} pack={pack} race={raceView} />}
+            {run.record && !bench && api && <Asks pack={pack} run={run} record={run.record} />}
+          </div>
+        </SideNewsListener>
       </div>
       {toast.node}
       <RunRail
         pane={pane}
         onPane={setPane}
         waiting={waiting}
+        news={{ board: boardUnseen, log: logUnseen }}
         unit={pack.vocabulary.unit.one}
         board={`The ${pack.vocabulary.subject.many.toLowerCase()}, what is running, and who is here`}
       />
