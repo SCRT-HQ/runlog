@@ -158,6 +158,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
             seq: d.seq,
             ref: d.ref,
             press: d.press,
+            ...(d.seat ? { seat: d.seat } : {}),
+            ...(d.who ? { who: d.who } : {}),
             ...(d.move !== undefined ? { move: d.move } : {}),
             ...(d.answer !== undefined ? { answer: d.answer } : {}),
           }),

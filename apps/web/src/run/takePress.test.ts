@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import type { Pack } from "@runlog/rules-schema";
+import type { RunState } from "@runlog/engine";
 import { takePress } from "./takePress.ts";
 import type { Offer } from "./offer.ts";
+import { seatingOf } from "./seats.ts";
 
 const offer: Offer = {
   seq: 42,
@@ -29,10 +32,22 @@ const acts = () => ({
   finish: vi.fn(),
 });
 
+// The table every press below is taken against. A deck's press carries no
+// seat and never reads it; a seated member's press does.
+const members = [
+  { sub: "owner", role: "owner" as const, joinedAt: "2026-09-01T00:00:00Z", name: "Mo" },
+  { sub: "ada", role: "player" as const, joinedAt: "2026-09-02T00:00:00Z", name: "Ada" },
+];
+const packWith = (mode: Record<string, unknown>): Pack => ({ defaultMode: "m", modes: { m: mode } }) as unknown as Pack;
+const state = (mode = "m", players = 2): RunState => ({ mode, players, unit: 1 }) as unknown as RunState;
+const seating = seatingOf(packWith({ players: { min: 2, max: 4 } }), state(), members, "owner");
+
 describe("takePress", () => {
   it("presses the primary and says so", () => {
     const act = acts();
-    expect(takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen: new Map() }, act)).toEqual({
+    expect(
+      takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen: new Map(), seating }, act),
+    ).toEqual({
       ok: true,
     });
     expect(act.primary).toHaveBeenCalledTimes(1);
@@ -40,7 +55,11 @@ describe("takePress", () => {
 
   it("refuses a press drawn from an offer the run has moved past", () => {
     const act = acts();
-    const out = takePress({ from: "d", run: "s1", seq: 41, ref: "r1", press: "primary" }, { seq: 42, offer, seen: new Map() }, act);
+    const out = takePress(
+      { from: "d", run: "s1", seq: 41, ref: "r1", press: "primary" },
+      { seq: 42, offer, seen: new Map(), seating },
+      act,
+    );
     expect(out).toEqual({ ok: false, say: "That moved on." });
     expect(act.primary).not.toHaveBeenCalled();
   });
@@ -48,8 +67,8 @@ describe("takePress", () => {
   it("takes the same ref twice as one press", () => {
     const act = acts();
     const seen = new Map();
-    takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen }, act);
-    const again = takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen }, act);
+    takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen, seating }, act);
+    const again = takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen, seating }, act);
     expect(again).toEqual({ ok: true });
     expect(act.primary).toHaveBeenCalledTimes(1);
   });
@@ -59,8 +78,8 @@ describe("takePress", () => {
   it("takes the same ref from two different decks as two presses", () => {
     const act = acts();
     const seen = new Map();
-    const a = takePress({ from: "d1", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen }, act);
-    const b = takePress({ from: "d2", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen }, act);
+    const a = takePress({ from: "d1", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen, seating }, act);
+    const b = takePress({ from: "d2", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen, seating }, act);
     expect(a).toEqual({ ok: true });
     expect(b).toEqual({ ok: true });
     expect(act.primary).toHaveBeenCalledTimes(2);
@@ -80,9 +99,9 @@ describe("takePress", () => {
       }),
     };
     const seen = new Map();
-    const out = takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen }, act);
+    const out = takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen, seating }, act);
     expect(out).toEqual({ ok: false, say: "Something on the list needs the page." });
-    const again = takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen }, act);
+    const again = takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen, seating }, act);
     expect(again).toEqual({ ok: false, say: "Something on the list needs the page." });
     expect(act.primary).toHaveBeenCalledTimes(1);
   });
@@ -94,7 +113,11 @@ describe("takePress", () => {
         throw "nothing to say";
       }),
     };
-    const out = takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" }, { seq: 42, offer, seen: new Map() }, act);
+    const out = takePress(
+      { from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" },
+      { seq: 42, offer, seen: new Map(), seating },
+      act,
+    );
     expect(out).toEqual({ ok: false, say: "That press failed." });
   });
 
@@ -102,7 +125,7 @@ describe("takePress", () => {
     const act = acts();
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "move", move: "salvage" },
-      { seq: 42, offer, seen: new Map() },
+      { seq: 42, offer, seen: new Map(), seating },
       act,
     );
     expect(out).toEqual({ ok: false, say: "That is not on offer." });
@@ -114,7 +137,7 @@ describe("takePress", () => {
     const blocked = { ...offer, primary: null, needsPage: "Name the bowl on the page" };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "primary" },
-      { seq: 42, offer: blocked, seen: new Map() },
+      { seq: 42, offer: blocked, seen: new Map(), seating },
       act,
     );
     expect(out).toEqual({ ok: false, say: "Name the bowl on the page" });
@@ -126,7 +149,7 @@ describe("takePress", () => {
     const act = acts();
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { subject: "clay bowl" } },
-      { seq: 42, offer, seen: new Map() },
+      { seq: 42, offer, seen: new Map(), seating },
       act,
     );
     expect(out).toEqual({ ok: false, say: "The run is not asking for that." });
@@ -138,7 +161,7 @@ describe("takePress", () => {
     const asking = { ...offer, primary: null, presets: [{ kind: "declareSubject", label: "Name the bowl" }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { subject: "  " } },
-      { seq: 42, offer: asking, seen: new Map() },
+      { seq: 42, offer: asking, seen: new Map(), seating },
       act,
     );
     expect(out).toEqual({ ok: false, say: "That answer was empty." });
@@ -150,7 +173,7 @@ describe("takePress", () => {
     const asking = { ...offer, primary: null, presets: [{ kind: "declareSubject", label: "Name the bowl" }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { subject: "clay bowl" } },
-      { seq: 42, offer: asking, seen: new Map() },
+      { seq: 42, offer: asking, seen: new Map(), seating },
       act,
     );
     expect(out).toEqual({ ok: true });
@@ -167,7 +190,7 @@ describe("takePress", () => {
     const asking = { ...offer, primary: null, presets: [{ kind: "checklist", label: "Tick everything and Done", items: 2 }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { ticks: "all" } },
-      { seq: 42, offer: asking, seen: new Map() },
+      { seq: 42, offer: asking, seen: new Map(), seating },
       act,
     );
     expect(out).toEqual({ ok: true });
@@ -184,7 +207,7 @@ describe("takePress", () => {
     const offering = { ...offer, setups: [{ id: "com.example.setups.starter", title: "Starter" }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { setup: "com.example.setups.starter" } },
-      { seq: 42, offer: offering, seen: new Map() },
+      { seq: 42, offer: offering, seen: new Map(), seating },
       act,
     );
     expect(out).toEqual({ ok: true });
@@ -196,7 +219,7 @@ describe("takePress", () => {
     const offering = { ...offer, setups: [{ id: "com.example.setups.starter", title: "Starter" }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { setup: "com.example.setups.other" } },
-      { seq: 42, offer: offering, seen: new Map() },
+      { seq: 42, offer: offering, seen: new Map(), seating },
       act,
     );
     expect(out).toEqual({ ok: false, say: "That setup is not here." });
@@ -207,7 +230,7 @@ describe("takePress", () => {
     const act = acts();
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { setup: "com.example.setups.starter" } },
-      { seq: 42, offer, seen: new Map() },
+      { seq: 42, offer, seen: new Map(), seating },
       act,
     );
     expect(out).toEqual({ ok: false, say: "That setup is not here." });
@@ -224,7 +247,7 @@ describe("takePress", () => {
     const offering = { ...offer, commands: [{ id: "com.example.setups.starter", title: "Starter" }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { command: "com.example.setups.starter" } },
-      { seq: 42, offer: offering, seen: new Map() },
+      { seq: 42, offer: offering, seen: new Map(), seating },
       act,
     );
     expect(out).toEqual({ ok: true });
@@ -237,7 +260,7 @@ describe("takePress", () => {
     const offering = { ...offer, commands: [{ id: "com.example.setups.starter", title: "Starter" }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { command: "com.example.setups.other" } },
-      { seq: 42, offer: offering, seen: new Map() },
+      { seq: 42, offer: offering, seen: new Map(), seating },
       act,
     );
     expect(out).toEqual({ ok: false, say: "That command is not here." });
@@ -252,7 +275,7 @@ describe("takePress", () => {
     const offering = { ...offer, commands: [{ id: "com.example.setups.starter", title: "Starter" }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { command: "com.example.setups.starter" } },
-      { seq: 42, offer: offering, seen: new Map() },
+      { seq: 42, offer: offering, seen: new Map(), seating },
       act,
     );
     expect(out).toEqual({ ok: false, say: "The run is not synced." });
@@ -263,7 +286,7 @@ describe("takePress", () => {
     const asking = { ...offer, primary: null, presets: [{ kind: "declareSubject", label: "Name the bowl" }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { ticks: "all" } },
-      { seq: 42, offer: asking, seen: new Map() },
+      { seq: 42, offer: asking, seen: new Map(), seating },
       act,
     );
     expect(out).toEqual({ ok: false, say: "The run is not asking for that." });
@@ -280,7 +303,7 @@ describe("the dials, the clock, the dice and the ending", () => {
   const glaze = { id: "glaze", kind: "resource" as const, label: "Glaze", value: 3, max: 6 };
   const ticking = { id: "u4:unit", label: "Day 4", status: "running" as const };
   const press = (answer: Record<string, unknown>, at: typeof offer, act: ReturnType<typeof acts>) =>
-    takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer }, { seq: 42, offer: at, seen: new Map() }, act);
+    takePress({ from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer }, { seq: 42, offer: at, seen: new Map(), seating }, act);
 
   it("turns a dial by a step", () => {
     const act = acts();
@@ -383,5 +406,76 @@ describe("the dials, the clock, the dice and the ending", () => {
     const act = acts();
     expect(press({ finish: true }, offer, act)).toEqual({ ok: false, say: "The run cannot end here." });
     expect(act.finish).not.toHaveBeenCalled();
+  });
+});
+
+describe("a press from a seat", () => {
+  it("takes the primary from a seat at a table", () => {
+    const act = acts();
+    const verdict = takePress(
+      { from: "seat1", run: "s1", seq: 42, ref: "a", press: "primary", seat: "Ada" },
+      { seq: 42, offer, seen: new Map(), seating },
+      act,
+    );
+    expect(verdict).toEqual({ ok: true });
+    expect(act.primary).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses one from somebody who is not at the table, before the offer is read", () => {
+    const act = acts();
+    const verdict = takePress(
+      { from: "seat1", run: "s1", seq: 42, ref: "b", press: "primary", seat: "Nobody" },
+      { seq: 42, offer, seen: new Map(), seating },
+      act,
+    );
+    expect(verdict).toEqual({ ok: false, say: "You are not at this table." });
+    expect(act.primary).not.toHaveBeenCalled();
+  });
+
+  it("takes the primary from the account behind the seat's name", () => {
+    const act = acts();
+    const verdict = takePress(
+      { from: "seat1", run: "s1", seq: 42, ref: "d", press: "primary", seat: "Ada", who: "ada" },
+      { seq: 42, offer, seen: new Map(), seating },
+      act,
+    );
+    expect(verdict).toEqual({ ok: true });
+    expect(act.primary).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses one whose account is not a member, whatever name it carries", () => {
+    const act = acts();
+    const verdict = takePress(
+      { from: "seat1", run: "s1", seq: 42, ref: "e", press: "primary", seat: "Ada", who: "stranger" },
+      { seq: 42, offer, seen: new Map(), seating },
+      act,
+    );
+    expect(verdict).toEqual({ ok: false, say: "You are not at this table." });
+    expect(act.primary).not.toHaveBeenCalled();
+  });
+
+  // The gate is either field, not the name alone: a member with no name
+  // on file sends an id and nothing else, and a stranger sending one must
+  // still be turned away rather than waved through as a deck.
+  it("refuses an account that is not a member when the press carries no name at all", () => {
+    const act = acts();
+    const verdict = takePress(
+      { from: "seat1", run: "s1", seq: 42, ref: "f", press: "primary", who: "stranger" },
+      { seq: 42, offer, seen: new Map(), seating },
+      act,
+    );
+    expect(verdict).toEqual({ ok: false, say: "You are not at this table." });
+    expect(act.primary).not.toHaveBeenCalled();
+  });
+
+  it("leaves a deck's press alone: no seat, no check", () => {
+    const act = acts();
+    const verdict = takePress(
+      { from: "deck1", run: "s1", seq: 42, ref: "c", press: "undo" },
+      { seq: 42, offer: { ...offer, undo: { what: "the roll" } }, seen: new Map(), seating },
+      act,
+    );
+    expect(verdict).toEqual({ ok: true });
+    expect(act.undo).toHaveBeenCalledTimes(1);
   });
 });
