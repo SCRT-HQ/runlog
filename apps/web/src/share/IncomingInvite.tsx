@@ -3,6 +3,7 @@ import { an } from "@runlog/rules-schema";
 import { useAccount } from "../auth/Account.tsx";
 import { peekInvite, type InvitePeek } from "../sync/client.ts";
 import { apiBase } from "../sync/config.ts";
+import { Button } from "../ui/Button.tsx";
 
 /**
  * An invitation that arrived in a link.
@@ -100,20 +101,20 @@ export function InviteBanner({
   if (problem || !peek) {
     return (
       <div className="incoming bad">
-        <span>Someone invited you to a run, but {problem ?? "the link is not one this app knows"}.</span>
-        <button className="ghost" onClick={onDismiss}>
-          Dismiss
-        </button>
+        <div className="incomingWhat">Someone invited you to a run, but {problem ?? "the link is not one this app knows"}.</div>
+        <div className="incomingActions">
+          <Button onClick={onDismiss}>Dismiss</Button>
+        </div>
       </div>
     );
   }
   if (!peek.found) {
     return (
       <div className="incoming bad">
-        <span>That invitation has expired, was withdrawn, or was already used by somebody else.</span>
-        <button className="ghost" onClick={onDismiss}>
-          Dismiss
-        </button>
+        <div className="incomingWhat">That invitation has expired, was withdrawn, or was already used by somebody else.</div>
+        <div className="incomingActions">
+          <Button onClick={onDismiss}>Dismiss</Button>
+        </div>
       </div>
     );
   }
@@ -142,12 +143,10 @@ export function InviteBanner({
           </div>
         </div>
         <div className="incomingActions">
-          <button className="primary" onClick={account.signOut}>
+          <Button variant="primary" onClick={account.signOut}>
             Sign out to switch
-          </button>
-          <button className="ghost" onClick={onDismiss}>
-            Not now
-          </button>
+          </Button>
+          <Button onClick={onDismiss}>Not now</Button>
         </div>
       </div>
     );
@@ -173,28 +172,24 @@ export function InviteBanner({
       </div>
       <div className="incomingActions">
         {account.status === "signed-in" ? (
-          <button className="primary" disabled={busy} onClick={onJoin}>
-            {busy ? "Joining…" : "Join"}
-          </button>
+          <Button variant="primary" loading={busy} loadingLabel="Joining…" onClick={onJoin}>
+            Join
+          </Button>
         ) : account.status === "anonymous" ? (
           // Whoever this was sent to may or may not have an account yet;
           // both doors are here, and the invitation waits behind either.
           <>
-            <button className="primary" onClick={account.signIn}>
+            <Button variant="primary" onClick={account.signIn}>
               Sign in to join
-            </button>
-            <button className="ghost" onClick={account.signUp}>
-              Create an account
-            </button>
+            </Button>
+            <Button onClick={account.signUp}>Create an account</Button>
           </>
         ) : account.status === "checking" ? (
-          <button className="primary" disabled>
+          <Button variant="primary" disabled>
             Sign in to join
-          </button>
+          </Button>
         ) : null}
-        <button className="ghost" onClick={onDismiss}>
-          Not now
-        </button>
+        <Button onClick={onDismiss}>Not now</Button>
       </div>
     </div>
   );
