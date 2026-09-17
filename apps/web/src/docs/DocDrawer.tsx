@@ -1,6 +1,17 @@
-import { createContext, useCallback, useContext, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { DOC_KINDS, generateDoc, toHtml, type Doc, type DocKind, type Pack } from "@runlog/rules-schema";
-import { goTo } from "../route.ts";
+import { addressOf, goTo } from "../route.ts";
 import { useFocusTrap } from "../ui/useFocusTrap.ts";
 import { DocView } from "./DocView.tsx";
 
@@ -101,6 +112,27 @@ export function DocDrawerProvider({ children }: { children: ReactNode }) {
       if (was?.at) goTo(backHash(was.at));
       return null;
     });
+  }, []);
+  /**
+   * Browser navigation is not an explicit Close: leave its destination
+   * untouched, dismiss the document it left, and let App load any document
+   * named by the new address through the same route path as a cold link.
+   */
+  useEffect(() => {
+    const followAddress = () => {
+      setOpened((was) => {
+        if (!was?.at) return was;
+        const named = docsFromHash(addressOf(location));
+        const kind = DOC_KINDS[was.index]?.kind ?? "summary";
+        return named && named.at.section === was.at.section && named.at.id === was.at.id && named.kind === kind ? was : null;
+      });
+    };
+    window.addEventListener("hashchange", followAddress);
+    window.addEventListener("popstate", followAddress);
+    return () => {
+      window.removeEventListener("hashchange", followAddress);
+      window.removeEventListener("popstate", followAddress);
+    };
   }, []);
 
   const value = useMemo(() => ({ open, show }), [open, show]);
