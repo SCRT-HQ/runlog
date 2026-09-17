@@ -8,6 +8,7 @@ import { customId } from "../lib/handlers/discord/card";
 import { EPHEMERAL, InteractionType, ResponseType, type Interaction } from "../lib/handlers/discord/types";
 import { verifyInteraction } from "../lib/handlers/discord/verify";
 import type { SessionMeta, Store } from "../lib/handlers/store";
+import type { WatchParty } from "../lib/handlers/guilds";
 import { memoryDiscord, memoryGuilds } from "./memory-guilds";
 
 /**
@@ -676,5 +677,79 @@ describe("a run in a private thread", () => {
     expect(deferred).toHaveLength(2);
     // The work itself is the job's; nothing was said to Discord in this turn.
     expect(rest.threads).toEqual([]);
+  });
+});
+
+describe("a watch party's record", () => {
+  const OPEN = "2026-09-16T10:00:00.000Z";
+  const party = (over: Partial<WatchParty> = {}): WatchParty => ({
+    sessionId: "01RUN",
+    guildId: "g1",
+    channelId: "chan",
+    threadId: "thread_1",
+    link: "https://runlog.test/r/01RUN?t=livetok",
+    openedBy: "1001",
+    openedByName: "Mira",
+    openedAt: OPEN,
+    updatedAt: OPEN,
+    ...over,
+  });
+
+  it("keeps one per server per run, and lists a run's parties", async () => {
+    const guilds = memoryGuilds();
+    await guilds.putParty(party());
+    await guilds.putParty(party({ guildId: "g2", threadId: "thread_2" }));
+    expect((await guilds.partiesOf("01RUN")).map((p) => p.guildId)).toEqual(["g1", "g2"]);
+    // The same server again replaces rather than doubling.
+    await guilds.putParty(party({ threadId: "thread_9" }));
+    expect(await guilds.partiesOf("01RUN")).toHaveLength(2);
+    expect((await guilds.party("01RUN", "g1"))?.threadId).toBe("thread_9");
+    expect(await guilds.party("01RUN", "g3")).toBeNull();
+  });
+
+  it("finds a party by the thread a command was typed in", async () => {
+    const guilds = memoryGuilds();
+    await guilds.putParty(party());
+    expect((await guilds.partyByThread("thread_1"))?.guildId).toBe("g1");
+    expect(await guilds.partyByThread("thread_nope")).toBeNull();
+  });
+
+  it("hands the trailing edit to one job and no more, until the tick is spent", async () => {
+    const guilds = memoryGuilds();
+    await guilds.putParty(party({ editedAt: OPEN }));
+    expect(await guilds.claimPartyTick("01RUN", "g1", "2026-09-16T10:00:10.000Z")).toBe(true);
+    expect(await guilds.claimPartyTick("01RUN", "g1", "2026-09-16T10:00:10.000Z")).toBe(false);
+    expect(await guilds.claimPartyTick("01RUN", "g9", "2026-09-16T10:00:10.000Z")).toBe(false);
+    // The job that held it writes the row back without a claim, and the next tick may be claimed.
+    await guilds.putParty(party({ editedAt: "2026-09-16T10:00:10.000Z" }));
+    expect(await guilds.claimPartyTick("01RUN", "g1", "2026-09-16T10:00:20.000Z")).toBe(true);
+  });
+
+  it("keeps the run's live link for a card to carry, and forgets it when sharing stops", async () => {
+    const guilds = memoryGuilds();
+    expect(await guilds.liveLink("01RUN")).toBeNull();
+    await guilds.putLiveLink("01RUN", "https://runlog.test/r/01RUN?t=livetok", OPEN);
+    expect(await guilds.liveLink("01RUN")).toBe("https://runlog.test/r/01RUN?t=livetok");
+    await guilds.clearLiveLink("01RUN");
+    expect(await guilds.liveLink("01RUN")).toBeNull();
+  });
+
+  it("holds the server's watch-party setting, and lets it be cleared", async () => {
+    const guilds = memoryGuilds();
+    await guilds.claimGuild({ guildId: "g1", ownerSub: "user_1", claimedAt: OPEN });
+    const set = await guilds.updateGuild("g1", OPEN, { watchParties: "packs", watchPackIds: ["com.example.kiln"] });
+    expect(set?.watchParties).toBe("packs");
+    expect(set?.watchPackIds).toEqual(["com.example.kiln"]);
+    const off = await guilds.updateGuild("g1", OPEN, { watchParties: null, watchPackIds: null });
+    expect(off?.watchParties).toBeUndefined();
+    expect(off?.watchPackIds).toBeUndefined();
+  });
+
+  it("sweeps a server's parties when the server is released", async () => {
+    const guilds = memoryGuilds();
+    await guilds.claimGuild({ guildId: "g1", ownerSub: "user_1", claimedAt: OPEN });
+    await guilds.putParty(party());
+    await guilds.releaseGuild("g1");
+    expect(await guilds.partiesOf("01RUN")).toEqual([]);
   });
 });
