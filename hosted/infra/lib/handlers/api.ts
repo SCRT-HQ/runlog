@@ -26,7 +26,7 @@ import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, ty
 import { dynamoBilling, featuresFromEnv, grantsOf as grantsOfStore, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
 import { dynamoGuilds, guildsAllowed, MAX_GUILDS_PER_SUB, type GuildStore } from "./guilds.js";
-import { handleInteraction, kindOf, threadHears, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
+import { handleInteraction, kindOf, liveLinkOf, threadHears, timerRanOut, type InteractionDeps } from "./discord/interactions.js";
 import type { TimerJob } from "./discord/play.js";
 import { tickParties } from "./discord/party.js";
 import { scheduledTimers } from "./discord/timers.js";
@@ -81,6 +81,8 @@ const MAX_BYTES = 5 * 1024 * 1024;
 /** More events than any move makes; a batch beyond this is not a move. */
 const MAX_EVENTS = 500;
 const MAX_NAME = 200;
+/** A live link is an address of this copy's own with a run and a token in it; anything longer is not one. */
+const MAX_LINK_CHARS = 400;
 /** A command-line key: the prefix says what it is at a glance, the rest is 32 random bytes. */
 const KEY_PREFIX = "rl_";
 
@@ -2745,7 +2747,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       }
       if (method === "DELETE") {
         await store.updateSession(id, now(), { publicTokenHash: null });
+        // The link is dead the moment the token is, so the row goes and
+        // the parties still drawing it are told to close.
         await deps.guilds?.clearLiveLink(id);
+        await deps.party?.({ sessionId: id });
         return json(200, { shared: false });
       }
       return json(410, { error: ROUTE_GONE });
@@ -2817,20 +2822,32 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
        *
        * The session row keeps only the token's hash, on purpose, so the
        * link cannot be built here; the page that holds it sends it, and it
-       * is believed only where it hashes to the run's own token. It is
-       * kept beside the Discord rows, where `GuildRun.liveToken` already
-       * lives, and the bot puts that very token in a thread in plain text.
+       * is believed on two counts. It is one of this copy's own live links
+       * for this very run, read by `liveLinkOf`, the way `/run watch`
+       * reads a pasted one; and its token hashes to the run's own. Either
+       * check alone is short: a token that hashes right can be hung off
+       * any address, and what is kept here the bot puts in a thread in
+       * somebody else's server, in the bot's own voice.
+       *
+       * Discord's half of a snapshot is wrapped: the run's own write has
+       * landed by here, and a party that could not be told is a card a
+       * beat out of date, not a snapshot the app must send again.
        */
-      const link = isRecord(body) && str(body["link"]) ? body["link"].trim() : "";
-      const tokenOf = /[?&]t=([A-Za-z0-9_-]{1,200})$/.exec(link)?.[1];
-      if (deps.guilds && tokenOf && found.meta.publicTokenHash && hashToken(tokenOf) === found.meta.publicTokenHash) {
-        await deps.guilds.putLiveLink(id, link, now());
-      }
-      // A run with parties on it, and the run's first snapshot, which is
-      // where a server that opens parties on its own gets its chance.
-      if (deps.party && deps.guilds) {
-        const first = isRecord(body) && body["first"] === true;
-        if (first || (await deps.guilds.partiesOf(id)).some((p) => !p.closedAt)) await deps.party({ sessionId: id });
+      try {
+        const raw = isRecord(body) && str(body["link"]) ? body["link"].trim() : "";
+        const sent = raw && raw.length <= MAX_LINK_CHARS ? liveLinkOf(raw, deps.appUrl ?? "") : null;
+        const token = sent ? (new URL(sent.link).searchParams.get("t") ?? "") : "";
+        if (deps.guilds && sent?.sessionId === id && found.meta.publicTokenHash && hashToken(token) === found.meta.publicTokenHash) {
+          await deps.guilds.putLiveLink(id, sent.link, now());
+        }
+        // A run with parties on it, and the run's first snapshot, which is
+        // where a server that opens parties on its own gets its chance.
+        if (deps.party && deps.guilds) {
+          const first = isRecord(body) && body["first"] === true;
+          if (first || (await deps.guilds.partiesOf(id)).some((p) => !p.closedAt)) await deps.party({ sessionId: id });
+        }
+      } catch (error) {
+        console.error("snapshot: could not tell the watch parties", error);
       }
       return json(200, { kept: true });
     }

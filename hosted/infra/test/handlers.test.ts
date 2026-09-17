@@ -4332,16 +4332,32 @@ describe("a snapshot with a watch party on it", () => {
       d,
     );
     expect(await guilds.liveLink("01RUN")).toBe(good);
+    // The run's own token, hung off somewhere else entirely. The bot puts
+    // this string in a thread in a server it does not own, so where it
+    // points is checked as well as what it carries.
+    const away = `https://not-runlog.example/r/01RUN?t=${String(shared.body["token"])}`;
+    await call(request("PUT", "/api/sessions/01RUN/snapshot", { body: { snapshot: snap, link: away } }), d);
+    expect(await guilds.liveLink("01RUN")).toBe(good);
+    // This copy's address, and another run's page.
+    await call(
+      request("PUT", "/api/sessions/01RUN/snapshot", {
+        body: { snapshot: snap, link: `https://runlog.test/r/01OTHER?t=${String(shared.body["token"])}` },
+      }),
+      d,
+    );
+    expect(await guilds.liveLink("01RUN")).toBe(good);
   });
 
-  it("forgets the link when the run stops being shared", async () => {
+  it("forgets the link when the run stops being shared, and tells the job so the parties close", async () => {
     const store = memoryStore();
     const guilds = memoryGuilds();
-    const d = deps(store, { guilds });
+    const jobs: Array<{ sessionId: string }> = [];
+    const d = deps(store, { guilds, party: async (job) => void jobs.push(job) });
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
     await guilds.putLiveLink("01RUN", link, "2026-09-06T12:00:00.000Z");
     await call(request("DELETE", "/api/sessions/01RUN/public"), d);
     expect(await guilds.liveLink("01RUN")).toBeNull();
+    expect(jobs).toEqual([{ sessionId: "01RUN" }]);
   });
 
   it("sends the job a snapshot that a party is waiting on, and nothing where none is", async () => {

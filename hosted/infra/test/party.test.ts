@@ -461,6 +461,52 @@ describe("keeping a party's card current", () => {
     expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("gone");
   });
 
+  it("waits out three parties' ticks at once, so a run watched from three servers fits in one tick", async () => {
+    const { guilds, rest } = await ready();
+    const c = clock();
+    let waiting = 0;
+    let most = 0;
+    const deps = {
+      store: runStore(),
+      guilds,
+      rest,
+      now: c.now,
+      // A wait that finishes on a turn of the event loop, so how many were
+      // in the air together is what the count says.
+      wait: async (by: number) => {
+        waiting += 1;
+        most = Math.max(most, waiting);
+        await new Promise((done) => setTimeout(done, 0));
+        waiting -= 1;
+        c.tick(by);
+      },
+    };
+    for (const guildId of ["g1", "g2", "g3"]) {
+      await guilds.claimGuild({ guildId, name: "The Kiln Room", ownerSub: "user_1", claimedAt: NOW });
+      const each = (await guilds.guild(guildId))!;
+      const out = await openParty(deps, { guild: each, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+      if ("error" in out) throw new Error(out.error);
+    }
+    expect((await tickParties(deps, "01RUN")).map((p) => p.outcome)).toEqual(["held", "held", "held"]);
+    expect(most).toBe(3);
+    expect(rest.edits).toHaveLength(3);
+  });
+
+  it("closes a party on a run that stopped being shared, since the link on its card is dead", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    const unshared = { store: runStore({ publicTokenHash: undefined }), guilds, rest, now: c.now, wait: c.wait };
+    expect(await tickParties(unshared, "01RUN")).toEqual([{ guildId: "g1", outcome: "closed" }]);
+    expect((await guilds.party("01RUN", "g1"))?.closedFor).toBe("gone");
+    // Nothing was drawn and nothing was said: there is no live card to
+    // put a dead link on.
+    expect(rest.edits).toEqual([]);
+    expect(rest.posts).toHaveLength(1);
+  });
+
   it("says nothing about a party that is closed already", async () => {
     const { guilds, rest, guild } = await ready();
     const c = clock();
@@ -495,6 +541,19 @@ describe("a handout, on a run with a watch party", () => {
     await notePartyHandout({ guilds, now: () => NOW }, "01RUN", handout);
     await notePartyHandout({ guilds, now: () => NOW }, "01RUN", handout);
     expect((await guilds.party("01RUN", "g1"))?.handouts).toEqual([handout]);
+  });
+
+  it("takes a handout the app sent without an id, which is what a run seeded from several setups sends", async () => {
+    const { guilds, guild, deps } = await ready();
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    expect(await notePartyHandout({ guilds, now: () => NOW }, "01RUN", { title: "The kiln kit and the starter kit" })).toBe(1);
+    // The title is what tells it from another, so pressing it twice is
+    // still the one handout.
+    await notePartyHandout({ guilds, now: () => NOW }, "01RUN", { title: "The kiln kit and the starter kit" });
+    expect((await guilds.party("01RUN", "g1"))?.handouts).toEqual([
+      { id: "The kiln kit and the starter kit", title: "The kiln kit and the starter kit" },
+    ]);
   });
 
   it("keeps the last few and no more", async () => {

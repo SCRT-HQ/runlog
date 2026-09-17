@@ -846,11 +846,17 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
        * way in: a gesture that went nowhere handed nothing to anybody.
        */
       if (deps.guilds) {
-        await notePartyHandout(
-          { guilds: deps.guilds, now, ...(deps.party ? { party: deps.party } : {}) },
-          id,
-          data as Record<string, unknown>,
-        );
+        try {
+          await notePartyHandout(
+            { guilds: deps.guilds, now, ...(deps.party ? { party: deps.party } : {}) },
+            id,
+            data as Record<string, unknown>,
+          );
+        } catch (error) {
+          // The handout itself went out and was written down; a party
+          // that could not be told is one card short, not a failed press.
+          console.error("live: could not tell the watch party about the handout", error);
+        }
       }
       return { statusCode: 200 };
     }
