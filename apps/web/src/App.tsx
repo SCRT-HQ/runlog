@@ -736,9 +736,10 @@ export default function App() {
   );
 
   /**
-   * Which of the packs here the marketplace has moved past. Read once the
-   * library is open and the marketplace has loaded; a pack the player loaded
-   * from a file is never offered anything.
+   * Which of the packs here the marketplace has moved past. Read whenever the
+   * library or the marketplace is on screen, since both offer the update: the
+   * shelf on a pack's row, and the card for a pack you already have. A pack
+   * the player loaded from a file is never offered anything.
    */
   const [updates, setUpdates] = useState<Map<string, MarketplaceEntry>>(() => new Map());
   /**
@@ -750,7 +751,9 @@ export default function App() {
    */
   const [benchIds, setBenchIds] = useState<ReadonlySet<string>>(() => new Set());
   useEffect(() => {
-    if (view !== "library") return;
+    // The marketplace asks too: a card for a pack you already have says
+    // whether the version listed has moved past yours.
+    if (view !== "library" && view !== "marketplace") return;
     let live = true;
     void loadMarketplace({ testing: marketplaceTesting }).then((entries) => live && setUpdates(updatesFor(imported, entries)));
     void loadMarketplace().then((all) => live && setBenchIds(new Set(all.filter((e) => e.bench).map((e) => e.id))));
@@ -1341,6 +1344,14 @@ export default function App() {
           focus={marketplaceFocus}
           mine={new Set(imported.map((p) => p.id))}
           bought={new Set(purchases.filter((p) => p.status === "fulfilled").map((p) => p.packId))}
+          // What the library already worked out, by the marketplace id the
+          // card is drawn from rather than the record's own id.
+          updatable={new Set([...updates.values()].map((e) => e.id))}
+          onUpdate={async (entry) => {
+            const found = [...updates.entries()].find(([, e]) => e.id === entry.id);
+            const record = found ? imported.find((p) => p.id === found[0]) : null;
+            if (record) await updateFromMarketplace(record);
+          }}
           {...(api
             ? {
                 onBuy: async (entry: MarketplaceEntry) => {
