@@ -6773,16 +6773,17 @@ html[data-pip="controls"] body {
  * The desk does not fit, and stacking it does not work: the three columns
  * one under another put the step under four rows of chrome and the counters
  * a thousand pixels below the dice that move them. So the columns become
- * three planes, one at a time, with the rail at the foot of the screen as
- * the way between them (RunRail), and the margin keeps its job as a single
- * line that stays: which unit, which phase, the clock, and the run's own
- * bar folded behind a mark.
+ * planes, one at a time, with the rail at the foot of the screen as the way
+ * between them (RunRail), and the margin keeps its job as a single line that
+ * stays: which unit, which phase, the clock, and the run's own bar folded
+ * behind a mark.
  *
  * Nothing here is a phone convention borrowed from elsewhere. The rail is
- * three words in the referee's mono, the plane you are on marked in celadon
- * because celadon is what marks the current thing everywhere else in the
- * sheet, and the sheet that mark raises is the same bar the wide screen
- * draws, laid on its side.
+ * four words in the app's own face, the same face and the same selected
+ * clothes the bar above it wears: the plane you are on in celadon under an
+ * accent rule, because celadon is what marks the current thing everywhere
+ * else in the sheet. The sheet a mark in that row raises is the same bar the
+ * wide screen draws, laid on its side.
  */
 .flowNow {
   display: none;
@@ -6798,7 +6799,14 @@ html[data-pip="controls"] body {
 @media (max-width: 760px) {
   /* The rail owns the foot of the screen, so the page ends above it. */
   .main.run {
-    padding: 0.9rem 0.9rem calc(4.2rem + env(safe-area-inset-bottom, 0px));
+    /*
+     * One height for the rail, read by the three rules that have to agree
+     * with it: the foot the page ends at, the shelf the step's move stops
+     * above, and the tab's own floor. Never under the height a control
+     * meant for a thumb is owed, whatever the row would otherwise be.
+     */
+    --rail-h: max(var(--control-h-touch), 3.2rem);
+    padding: 0.9rem 0.9rem calc(var(--rail-h) + 1rem + env(safe-area-inset-bottom, 0px));
   }
   .columns.run {
     display: block;
@@ -6916,10 +6924,18 @@ html[data-pip="controls"] body {
     grid-area: bar;
     width: 100%;
   }
+  /*
+   * The transport gives up the line before the line gives up the window.
+   * At ordinary sizes the two marks sit beside the digits and this never
+   * fires; at 200% text the head line is wider than the phone, and a
+   * second line for the transport is cheaper than a page that scrolls
+   * sideways. Nothing is resized: the marks are the same squares.
+   */
   .margin .clockButtons {
     grid-area: buttons;
     margin: 0;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 0.3rem;
   }
   /* The header row is one line wide and three words of transport were
@@ -7117,7 +7133,7 @@ html[data-pip="controls"] body {
   }
   .run .runStep > .stepAction:last-child {
     position: sticky;
-    bottom: calc(3.3rem + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--rail-h) + env(safe-area-inset-bottom, 0px));
     z-index: 2;
     margin: 1rem -1.1rem 0;
     padding: 0.8rem 1.1rem 1.1rem;
@@ -7154,6 +7170,16 @@ html[data-pip="controls"] body {
   .run .runStep > .padRow.stepAction > .primary:not(.big) {
     flex: 0 0 auto;
   }
+  /*
+   * A field on the step, brought up by the software keyboard, is scrolled
+   * to by the browser and the browser does not know about the rail. It is
+   * told how much of the foot of the window is spoken for.
+   */
+  .run .runStep input,
+  .run .runStep textarea,
+  .run .runStep select {
+    scroll-margin-bottom: calc(var(--rail-h) + 1rem + env(safe-area-inset-bottom, 0px));
+  }
   /* A box you have to look at is a box you have to be able to hit. */
   .checklist input[type="checkbox"] {
     width: 1.15rem;
@@ -7163,6 +7189,18 @@ html[data-pip="controls"] body {
     align-items: flex-start;
     gap: 0.6rem;
     padding: 0.15rem 0;
+  }
+
+  /*
+   * Where the keyboard lands when a plane opens: the plane's first heading,
+   * so the next Tab is on this plane and a reader says which plane it is.
+   * A heading handed the keyboard by a tap draws no ring, because it is a
+   * place to start reading rather than a control and nobody aimed at it.
+   * One reached by the keyboard does: the ring is the only thing telling
+   * somebody tabbing where they are.
+   */
+  .columns.run [data-plane-head]:focus:not(:focus-visible) {
+    outline: none;
   }
 
   /* ---- the rail ---- */
@@ -7180,35 +7218,56 @@ html[data-pip="controls"] body {
     border-top: 1px solid var(--line);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+  /*
+   * The app's own face, at the size and weight every other control wears
+   * since the tokens landed. This row was the referee's monospace, which
+   * made the way around a run read as a readout rather than as the same
+   * navigation the bar above it is.
+   */
   .railTab {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.3rem;
     min-width: 0;
-    min-height: 3.2rem;
-    padding: 0.6rem 0.3rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    min-height: var(--rail-h);
+    padding: 0.6rem 0.4rem;
     margin-top: -1px;
     background: none;
     border: 0;
     border-top: 2px solid transparent;
-    color: var(--muted);
-    font: inherit;
-    font-family: var(--mono);
-    font-size: var(--t-2);
+    color: var(--text-muted);
+    font: var(--font-control) var(--font-ui);
     cursor: pointer;
   }
+  /*
+   * The pack's word is the only label in the row that can be longer than
+   * the share of it a tab gets, and some packs run to "Training block".
+   * It gives up its letters, once, at the end: the row keeps its four
+   * equal tabs at the height a thumb is owed, and the whole word stays in
+   * the tab's title and in the name it is read out by, so what is clipped
+   * is only ever what is seen.
+   */
+  .railWord {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* The plane you are on, in the bar's own selected clothes: the accent on
+     the word and an accent rule, and no fill, because a filled tab in this
+     row would read as the thing to press rather than the thing you are on. */
   .railTab[aria-current] {
-    color: var(--text);
+    color: var(--accent);
     border-top-color: var(--accent);
   }
   .railTab:active {
     background: var(--panel);
   }
+  /* A plane holding something unread. It keeps its size beside a word that
+     is giving up letters, or the mark would be the first thing to go. */
   .railMark {
+    flex: 0 0 auto;
     width: 0.4rem;
     height: 0.4rem;
     border-radius: 999px;

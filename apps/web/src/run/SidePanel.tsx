@@ -1,5 +1,31 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Disclosure } from "../ui/Disclosure.tsx";
+
+/**
+ * Where a panel's reading is heard from outside the column.
+ *
+ * A phone shows one plane at a time, so the whole column can be the thing
+ * nobody is looking at, and a panel that is open cannot mark its own fold:
+ * it is open, and on a wide screen that means read. The rail asks the same
+ * question one level up, of the plane rather than the panel, and needs the
+ * same readings to answer it, so each panel says what it is carrying and
+ * whoever is listening decides what that is worth.
+ *
+ * Nothing listens by default; a column drawn on its own behaves exactly as
+ * it did.
+ */
+const SideNews = createContext<((panel: string, news: string | number | undefined) => void) | null>(null);
+
+/** Hear every reading the panels underneath report, by panel id. */
+export function SideNewsListener({
+  onNews,
+  children,
+}: {
+  onNews: (panel: string, news: string | number | undefined) => void;
+  children: ReactNode;
+}) {
+  return <SideNews.Provider value={onNews}>{children}</SideNews.Provider>;
+}
 
 /**
  * One panel in the run's side column, which folds and is remembered.
@@ -53,6 +79,10 @@ export function SidePanel({
   const [open, setOpen] = useState(defaultOpen);
   const seen = useRef(news);
   const [fresh, setFresh] = useState(false);
+  const heard = useContext(SideNews);
+  useEffect(() => {
+    heard?.(panel, news);
+  }, [heard, panel, news]);
   useEffect(() => {
     if (open) {
       seen.current = news;
