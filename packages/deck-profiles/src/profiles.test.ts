@@ -629,7 +629,7 @@ describe("a deck laid out for a pack", () => {
     // `NextSettings` in `streamdeck/src/state.ts`. A key set to something
     // the plugin cannot read draws "Set up" for ever and says nothing
     // about why.
-    const fields = new Set(["score", "unit", "clock", "latest", "leader"]);
+    const fields = new Set(["score", "unit", "latest", "leader"]);
     const kinds = new Set(["move", "answer"]);
     for (const { spec, built } of all) {
       for (const { action } of placed(built)) {
@@ -656,6 +656,15 @@ describe("a deck laid out for a pack", () => {
           expect(settings, where).toEqual({});
         }
       }
+    }
+  });
+
+  it("sets no Metric key to the clock, on any deck of any of the forty-four", () => {
+    // A picker never offers what a dedicated key does, and a generator is a
+    // picker: the Clock action is on the frame, so no readout of it is.
+    for (const { spec, built } of all) {
+      const clocks = placed(built).filter((p) => p.action.UUID === "com.scrthq.runlog.metric" && p.action.Settings["field"] === "clock");
+      expect(clocks, `${spec.slug}-${spec.device}`).toHaveLength(0);
     }
   });
 

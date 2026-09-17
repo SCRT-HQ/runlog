@@ -28,6 +28,7 @@ import {
   importedAsCopy,
   type DeckState,
   type Offer,
+  type OpenTarget,
 } from "./state";
 
 const held = (id: string, name = "Thursday") => ({ id, name, packTitle: "The Long Kiln" });
@@ -791,11 +792,12 @@ describe("where else the open key points", () => {
     });
   });
 
-  it("names this pack's profile, and says it goes to the app rather than a browser", () => {
-    expect(openFace(open(), "profile")).toEqual({ title: "This pack's profile", tone: "deck", when: "to import" });
-    // Gated like the run: there is no pack to lay one out from until the
-    // deck is following one.
-    expect(openFace(initial(), "profile")).toEqual({ title: "Sign in", tone: "dim" });
-    expect(openFace(open([held("s1"), held("s2", "Friday")]), "profile")).toEqual({ title: "Pick a run", tone: "dim" });
+  it("says 'Set up' for a target it no longer reads, rather than drawing nothing", () => {
+    // Handing a profile over left this key for Install a profile. A deck
+    // that imported a profile before that still has keys set to it, and
+    // those say what an unset key says rather than going blank.
+    const stale = "profile" as unknown as OpenTarget;
+    expect(openFace(open(), stale)).toEqual({ title: "Set up", tone: "dim" });
+    expect(openFace(initial(), stale)).toEqual({ title: "Set up", tone: "dim" });
   });
 });

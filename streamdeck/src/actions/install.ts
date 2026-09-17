@@ -12,10 +12,10 @@ export type InstallSettings = { pack?: { id: string; title: string } };
 /**
  * Builds a profile for a pack in your library and hands it to the Stream Deck app.
  *
- * The Open key's "This pack's profile" builds one for the pack the deck is
- * following, which is the pack it is holding a snapshot of. This one takes
- * any pack the account has synced: the list comes off the library, the pack
- * file comes off the account, and neither needs a run open anywhere.
+ * The only key that hands a profile over. It takes any pack the account
+ * has synced rather than the one the deck happens to be following: the
+ * list comes off the library, the pack file comes off the account, and
+ * neither needs a run open anywhere.
  *
  * A run of the chosen pack is still the better source where there is one:
  * its offer names the setups for the pack's tool, which is the one place a
