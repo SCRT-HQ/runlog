@@ -2788,7 +2788,7 @@ function Trackers({
         };
         return (
           <div key={id} className="tracker">
-            <div className="trackerHead">
+            <div className="trackerHead counterRow">
               <strong title={def.description}>{def.label}</strong>
               <span className="nudge">
                 {onTurn && (
@@ -2834,7 +2834,7 @@ function Trackers({
         );
       })}
       {counters.map(([id, def]) => (
-        <div key={id} className="row spread">
+        <div key={id} className="row spread counterRow">
           <strong>{def.label}</strong>
           <span className="nudge">
             {onNudge && (
