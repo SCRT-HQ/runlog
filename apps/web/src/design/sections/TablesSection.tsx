@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Diagnostic } from "@runlog/rules-schema";
 import { describe } from "../describe.ts";
 import { at, AreaField, NumberField, RowActions, SelectField, TextField } from "../fields.tsx";
@@ -7,7 +7,7 @@ import { num, str, type SectionProps } from "./shared.ts";
 
 /* ------------------------------------------------------------------ */
 
-export function Tables({ draft, diagnostics, edit }: SectionProps) {
+export function TablesSection({ draft, diagnostics, edit, focus = null }: SectionProps & { focus?: string | null }) {
   const requirements = (Array.isArray(draft.requires) ? (draft.requires as Record<string, unknown>[]) : [])
     .map((r) => ({ id: str(r.id), label: str(r.label) }))
     .filter((r) => r.id);
@@ -39,6 +39,7 @@ export function Tables({ draft, diagnostics, edit }: SectionProps) {
           table={tables[id]!}
           diagnostics={diagnostics}
           edit={edit}
+          focus={focus}
           onRemove={() => {
             const next = { ...tables };
             delete next[id];
@@ -62,6 +63,7 @@ function TableEditor({
   edit,
   onRemove,
   requirements,
+  focus,
 }: {
   id: string;
   table: Record<string, unknown>;
@@ -70,8 +72,13 @@ function TableEditor({
   onRemove: () => void;
   /** The pack's requirements, so an entry can say which it needs. */
   requirements: Array<{ id: string; label: string }>;
+  /** A path the page is on its way to. A table holding it opens to show it. */
+  focus: string | null;
 }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (focus && (focus === `tables.${id}` || focus.startsWith(`tables.${id}.`))) setOpen(true);
+  }, [focus, id]);
   const entries = Array.isArray(table.entries) ? (table.entries as Record<string, unknown>[]) : [];
   const isLookup = table.resolution === "lookup";
   const segments = isLookup ? coverage(str(table.roll), entries) : [];

@@ -1,20 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useConfirm } from "../ui/useConfirm.tsx";
+import { Badge } from "../ui/Badge.tsx";
+import { Button } from "../ui/Button.tsx";
+import { Menu, MenuItem } from "../ui/Menu.tsx";
+import { PageHeader } from "../ui/PageHeader.tsx";
 import YAML from "yaml";
 import { parsePack, type Diagnostic, type Pack } from "@runlog/rules-schema";
-import { blankPack, DRAFT_ID, isBlank, packFilename, type Draft } from "./draft.ts";
+import { blankPack, DRAFT_ID, isBlank, type Draft } from "./draft.ts";
 import { loadDraft, saveDraft } from "../storage/db.ts";
-import { describeLength, encodePackLink } from "../share/link.ts";
+import { addressOf, createSectionFromHash, goTo } from "../route.ts";
+import { focusField } from "./fields.tsx";
 import { StartFrom } from "./StartFrom.tsx";
-import { SignPanel } from "./SignPanel.tsx";
-import { DocsPanel } from "./DocsPanel.tsx";
-import { StructurePanel } from "./StructurePanel.tsx";
-import { Identity, Requirements, Vocabulary } from "./sections/Overview.tsx";
-import { Tables } from "./sections/TablesSection.tsx";
-import { Phases } from "./sections/FlowSection.tsx";
-import { Modes } from "./sections/ModesSection.tsx";
-import { Problems } from "./sections/TestSection.tsx";
-import { License } from "./sections/PublishSection.tsx";
+import { Overview } from "./sections/Overview.tsx";
+import { TablesSection } from "./sections/TablesSection.tsx";
+import { FlowSection } from "./sections/FlowSection.tsx";
+import { ModesSection } from "./sections/ModesSection.tsx";
+import { TestSection } from "./sections/TestSection.tsx";
+import { PublishSection } from "./sections/PublishSection.tsx";
+import { asSection, countBySection, hashForSection, SECTIONS, type Section } from "./sections/model.ts";
 import { str } from "./sections/shared.ts";
 import { useTitle } from "../title.ts";
 
@@ -35,9 +38,11 @@ import { useTitle } from "../title.ts";
  * your keystrokes until the document is correct is one nobody finishes a
  * document in.
  *
- * The panels themselves live under `sections/`, one file per part of the
- * editor. This file owns the one draft they all read and the one `edit`
- * they all write through.
+ * Six sections, not one page and not a wizard. The panels live under
+ * `sections/`, one file each; this file owns the one draft they all read,
+ * the one `edit` they all write through, and which section is showing.
+ * Nothing about the draft is per-section, which is what makes moving
+ * between them free: there is no step to complete and nothing to commit.
  */
 
 /** Set a value at a path, cloning the way down. Never mutates the argument. */
@@ -54,20 +59,31 @@ function put(draft: Draft, path: (string | number)[], value: unknown): Draft {
   return next;
 }
 
+/** Where the draft stands with storage. Written through on every edit, so this is usually `saved` a moment later. */
+type Saving = "saved" | "saving" | "failed";
+
 export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
   useTitle("Design");
   // Replacing a draft is not undoable, so it is asked first; see useConfirm.
   const { dialog, ask } = useConfirm();
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [saved, setSaved] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [droppedSignature, setDroppedSignature] = useState(false);
-  const [link, setLink] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [saving, setSaving] = useState<Saving>("saved");
+  const [section, setSection] = useState<Section>(() =>
+    asSection(typeof location === "undefined" ? "" : createSectionFromHash(addressOf(location))),
+  );
+  /** A field the page is on its way to, named by the dotted path a diagnostic carried. */
+  const [wanted, setWanted] = useState<string | null>(null);
   // Whether to ask "which pack?" before showing the editor at all. Set once,
   // from what loaded, and never persisted: the choice is for this visit.
   const [atDoor, setAtDoor] = useState(false);
   const file = useRef<HTMLInputElement>(null);
+  /** The last thing handed to storage, so a failed write has something to try again with. */
+  const unsaved = useRef<Draft | null>(null);
+  /** Which write is the current one: an older one finishing late must not report on a newer one. */
+  const writes = useRef(0);
 
   useEffect(() => {
     void loadDraft(DRAFT_ID).then((stored) => {
@@ -77,13 +93,42 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
     });
   }, []);
 
-  /** Replace the whole draft, keeping the saved copy in step. */
-  const replace = useCallback((next: Draft) => {
-    setDraft(next);
-    setProblem(null);
-    setDroppedSignature(false);
-    void saveDraft({ id: DRAFT_ID, pack: next, updatedAt: new Date().toISOString() });
+  /** Hand the draft to storage and say how that went. No debounce: the write is one row and the editor is one draft. */
+  const store = useCallback((next: Draft) => {
+    unsaved.current = next;
+    const mine = ++writes.current;
+    setSaving("saving");
+    void Promise.resolve(saveDraft({ id: DRAFT_ID, pack: next, updatedAt: new Date().toISOString() })).then(
+      () => {
+        if (mine === writes.current) setSaving("saved");
+      },
+      () => {
+        if (mine === writes.current) setSaving("failed");
+      },
+    );
   }, []);
+
+  /** Replace the whole draft, keeping the saved copy in step. */
+  const replace = useCallback(
+    (next: Draft) => {
+      setDraft(next);
+      setProblem(null);
+      setDroppedSignature(false);
+      store(next);
+    },
+    [store],
+  );
+
+  /** Ask before a replacement throws away work. A draft still as it was made is not work. */
+  const askToReplace = useCallback(async () => {
+    if (!draft || isBlank(draft)) return true;
+    return ask({
+      ask: `Replace ${str(draft.title) || "Untitled"}?`,
+      detail: "The draft you have open is replaced.",
+      confirm: "Replace",
+      destructive: true,
+    });
+  }, [ask, draft]);
 
   /**
    * Open a pack that already exists.
@@ -112,51 +157,87 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
         setProblem(`${chosen.name} does not contain a pack.`);
         return;
       }
+      // Asked after the file has been read, so the question is only ever
+      // put where there is actually a pack ready to take the draft's place.
+      if (!(await askToReplace())) return;
       replace(parsed as Draft);
     },
-    [replace],
+    [askToReplace, replace],
   );
 
-  const edit = useCallback((path: (string | number)[], value: unknown) => {
-    setDraft((prev) => {
-      if (!prev) return prev;
-      let next = put(prev, path, value);
+  const edit = useCallback(
+    (path: (string | number)[], value: unknown) => {
+      setDraft((prev) => {
+        if (!prev) return prev;
+        let next = put(prev, path, value);
 
-      // An edited pack is no longer the one its author signed, and a stale
-      // signature is worse than none: it makes an honest edit look like
-      // tampering to everyone who opens it. So the signature comes off the
-      // moment the pack changes, and is said out loud rather than done
-      // quietly: re-signing is a deliberate act with a private key.
-      if (next.signature) {
-        const { signature: _dropped, ...rest } = next;
-        next = rest;
-        setDroppedSignature(true);
-      }
+        // An edited pack is no longer the one its author signed, and a stale
+        // signature is worse than none: it makes an honest edit look like
+        // tampering to everyone who opens it. So the signature comes off the
+        // moment the pack changes, and is said out loud rather than done
+        // quietly: re-signing is a deliberate act with a private key.
+        if (next.signature) {
+          const { signature: _dropped, ...rest } = next;
+          next = rest;
+          setDroppedSignature(true);
+        }
 
-      void saveDraft({ id: DRAFT_ID, pack: next, updatedAt: new Date().toISOString() });
-      return next;
-    });
+        store(next);
+        return next;
+      });
+    },
+    [store],
+  );
+
+  /**
+   * Show a section.
+   *
+   * Nothing is re-parsed on the way: every section reads the same draft
+   * object and writes through the same `edit`, so a half-typed number, a
+   * key the editor has no control for and a value the schema rejects all
+   * survive the move exactly as they were. Leaving a section is not
+   * saving it, because there was never a copy of it to save.
+   */
+  const show = useCallback((next: Section) => {
+    setSection(next);
+    goTo(hashForSection(next), "push");
   }, []);
+
+  // The address is the section: a reload lands on the same one and Back
+  // walks the sections the way it walks pages.
+  useEffect(() => {
+    const follow = () => {
+      const segment = createSectionFromHash(addressOf(location));
+      if (segment !== null) setSection(asSection(segment));
+    };
+    window.addEventListener("hashchange", follow);
+    window.addEventListener("popstate", follow);
+    return () => {
+      window.removeEventListener("hashchange", follow);
+      window.removeEventListener("popstate", follow);
+    };
+  }, []);
+
+  /**
+   * Land on the field a diagnostic named, once its section is drawn.
+   *
+   * A frame late on purpose: a table only draws its fields after its own
+   * disclosure has opened, which is a render this one has to come after.
+   */
+  useEffect(() => {
+    if (!wanted) return;
+    const timer = setTimeout(() => {
+      focusField(wanted);
+      setWanted(null);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [wanted]);
 
   const result = useMemo(() => (draft ? parsePack(draft) : null), [draft]);
   const diagnostics: Diagnostic[] = result?.diagnostics ?? [];
   const errors = diagnostics.filter((d) => d.level === "error");
   const warnings = diagnostics.filter((d) => d.level === "warning");
-
-  const download = () => {
-    if (!draft) return;
-    const text = YAML.stringify(draft, { lineWidth: 90 });
-    const url = URL.createObjectURL(new Blob([text], { type: "text/yaml;charset=utf-8" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = packFilename(draft);
-    document.body.append(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
-  };
+  const counts = useMemo(() => countBySection(diagnostics), [diagnostics]);
 
   if (!draft) {
     return (
@@ -205,61 +286,79 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
   }
 
   const props = { draft, diagnostics, edit };
+  const label = SECTIONS.find((s) => s.id === section)?.label ?? "Overview";
 
   return (
     <main className="main design">
       {dialog}
-      <section className="hero runHero">
-        <div>
-          <h2>{str(draft.title) || "Untitled"}</h2>
-          <p className="muted">
-            {str(draft.id)} · v{str(draft.version)}
-            {errors.length === 0 ? (
-              <span className="chip ok"> loads</span>
-            ) : (
-              <span className="chip warn">
-                {" "}
-                {errors.length} {errors.length === 1 ? "error" : "errors"}
-              </span>
+      <PageHeader
+        className="designHeader"
+        title={label}
+        lead={
+          <>
+            {str(draft.title) || "Untitled"} · {str(draft.id)} · v{str(draft.version)}{" "}
+            {/* The chips are the way into Test: a count nobody can act on
+                where it stands is a count that gets read and left. */}
+            <button type="button" className={`chip ${errors.length === 0 ? "ok" : "warn"} chipLink`} onClick={() => show("test")}>
+              {errors.length === 0 ? "loads" : `${errors.length} ${errors.length === 1 ? "error" : "errors"}`}
+            </button>
+            {warnings.length > 0 && (
+              <button type="button" className="chip chipLink" onClick={() => show("test")}>
+                {warnings.length} to look at
+              </button>
             )}
-            {warnings.length > 0 && <span className="chip"> {warnings.length} to look at</span>}
-          </p>
-        </div>
-        <div className="headerActions">
-          <button
-            className="ghost"
-            onClick={() => {
-              void ask({
-                ask: "Start again from a blank pack?",
-                detail: "The draft you have open is replaced.",
-                confirm: "Start again",
-                destructive: true,
-              }).then((yes) => yes && replace(blankPack()));
-            }}
-          >
-            New pack
-          </button>
-          <button className="ghost" onClick={() => file.current?.click()}>
-            Open a file…
-          </button>
-          <button className="ghost" onClick={() => setStarting((s) => !s)}>
-            Start from a pack…
-          </button>
-          <input
-            ref={file}
-            type="file"
-            accept=".yaml,.yml,.json"
-            className="hiddenInput"
-            onChange={(e) => {
-              void open(e.target.files?.[0]);
-              // Cleared so choosing the same file twice fires again: the
-              // obvious thing to do after editing it outside the app.
-              e.target.value = "";
-            }}
-          />
-          {onTest && (
-            <button
-              className="ghost"
+          </>
+        }
+        secondary={
+          <>
+            <span className={`saveState ${saving}`}>
+              {saving === "saved" ? "Saved" : saving === "saving" ? "Saving…" : "Could not save"}
+            </span>
+            {saving === "failed" && (
+              <Button size="compact" onClick={() => unsaved.current && store(unsaved.current)}>
+                Try again
+              </Button>
+            )}
+            <Menu label="Draft">
+              {(close) => (
+                <>
+                  <MenuItem
+                    onSelect={() => {
+                      close();
+                      void ask({
+                        ask: "Start again from a blank pack?",
+                        detail: "The draft you have open is replaced.",
+                        confirm: "Start again",
+                        destructive: true,
+                      }).then((yes) => yes && replace(blankPack()));
+                    }}
+                  >
+                    New pack
+                  </MenuItem>
+                  <MenuItem
+                    onSelect={() => {
+                      close();
+                      file.current?.click();
+                    }}
+                  >
+                    Open a file…
+                  </MenuItem>
+                  <MenuItem
+                    onSelect={() => {
+                      close();
+                      setStarting((s) => !s);
+                    }}
+                  >
+                    Start from a pack…
+                  </MenuItem>
+                </>
+              )}
+            </Menu>
+          </>
+        }
+        primary={
+          onTest && (
+            <Button
               disabled={!result?.ok || errors.length > 0}
               onClick={() => result?.ok && onTest(result.pack)}
               title={
@@ -269,80 +368,87 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
               }
             >
               Try it
+            </Button>
+          )
+        }
+      />
+
+      <input
+        ref={file}
+        type="file"
+        accept=".yaml,.yml,.json"
+        className="hiddenInput"
+        onChange={(e) => {
+          void open(e.target.files?.[0]);
+          // Cleared so choosing the same file twice fires again: the
+          // obvious thing to do after editing it outside the app.
+          e.target.value = "";
+        }}
+      />
+
+      <nav className="designNav" aria-label="Sections">
+        {SECTIONS.map((s) => {
+          const count = counts[s.id];
+          const shown = count.errors > 0 ? count.errors : count.warnings;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              className="designNavItem"
+              aria-current={s.id === section ? "page" : undefined}
+              onClick={() => show(s.id)}
+            >
+              {s.label}
+              {shown > 0 && (
+                <Badge
+                  tone={count.errors > 0 ? "warn" : "neutral"}
+                  title={count.errors > 0 ? `${count.errors} ${count.errors === 1 ? "error" : "errors"}` : `${count.warnings} to look at`}
+                >
+                  {shown}
+                </Badge>
+              )}
             </button>
-          )}
-          <button className="ghost" onClick={download}>
-            {saved ? "saved" : `Download ${packFilename(draft)}`}
-          </button>
-          <button
-            className="ghost"
-            onClick={() => {
-              void (async () => {
-                const made = await encodePackLink(draft);
-                setLink(made);
-                try {
-                  await navigator.clipboard?.writeText(made);
-                } catch {
-                  // No clipboard permission: the link is shown below to copy
-                  // by hand, so this is not worth interrupting anyone about.
-                }
-              })();
-            }}
-          >
-            Copy a link
-          </button>
-        </div>
-      </section>
+          );
+        })}
+      </nav>
 
       {problem && <div className="notice">{problem}</div>}
 
       {starting && (
         <StartFrom
           onPick={(doc) => {
-            replace(doc as Draft);
-            setStarting(false);
+            void askToReplace().then((yes) => {
+              if (!yes) return;
+              replace(doc as Draft);
+              setStarting(false);
+            });
           }}
           onClose={() => setStarting(false)}
         />
       )}
 
-      {link && (
-        <div className="notice shareNotice">
-          <div>
-            <strong>Copied.</strong> The whole pack is inside that link, it goes nowhere near a server, so anyone you send it to has your
-            game and nothing in between has seen it.
-          </div>
-          <div className={describeLength(link).ok ? "muted small" : "warnText"}>{describeLength(link).text}</div>
-          <input className="textInput mono" readOnly value={link} onFocus={(e) => e.target.select()} />
-          <button className="ghost tiny" onClick={() => setLink(null)}>
-            done
-          </button>
-        </div>
-      )}
-
-      {droppedSignature && (
-        <div className="notice">
-          This pack was signed, and your edit removed the signature, it no longer describes what is in the file. Sign the pack again when
-          you are finished: <code>runlog sign {packFilename(draft)} --key your-key.json</code>
-        </div>
-      )}
-
-      <div className="columns">
-        <div className="col wide">
-          <Identity {...props} />
-          <Requirements {...props} />
-          <Vocabulary {...props} />
-          <Tables {...props} />
-          <Phases {...props} />
-          <Modes {...props} />
-        </div>
-        <div className="col">
-          <Problems diagnostics={diagnostics} />
-          <License {...props} />
-          <SignPanel draft={draft} pack={result?.ok ? result.pack : null} loads={errors.length === 0} />
-          <DocsPanel pack={result?.ok ? result.pack : null} />
-          {result?.ok && <StructurePanel pack={result.pack} warnings={result.diagnostics} random={() => Math.random} />}
-        </div>
+      <div className="designBody">
+        {section === "overview" && <Overview {...props} />}
+        {section === "tables" && <TablesSection {...props} focus={wanted} />}
+        {section === "flow" && <FlowSection {...props} />}
+        {section === "modes" && <ModesSection {...props} />}
+        {section === "test" && (
+          <TestSection
+            result={result}
+            onGo={(to, path) => {
+              show(to);
+              setWanted(path);
+            }}
+          />
+        )}
+        {section === "publish" && (
+          <PublishSection
+            {...props}
+            pack={result?.ok ? result.pack : null}
+            loads={errors.length === 0}
+            droppedSignature={droppedSignature}
+          />
+        )}
       </div>
     </main>
   );

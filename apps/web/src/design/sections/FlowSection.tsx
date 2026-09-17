@@ -3,7 +3,7 @@ import { str, type SectionProps } from "./shared.ts";
 
 /* ------------------------------------------------------------------ */
 
-export function Phases({ draft, diagnostics, edit }: SectionProps) {
+export function FlowSection({ draft, diagnostics, edit }: SectionProps) {
   const phases = Array.isArray(draft.phases) ? (draft.phases as Record<string, unknown>[]) : [];
   const tableIds = Object.keys((draft.tables ?? {}) as Record<string, unknown>);
 
@@ -96,10 +96,25 @@ export function Phases({ draft, diagnostics, edit }: SectionProps) {
               <button className="ghost tiny" onClick={() => edit(["phases", i, "steps"], [...steps, { kind: "manual", label: "Do it." }])}>
                 add a step
               </button>
-              <button className="ghost tiny" onClick={() => move(i, i - 1)} disabled={i === 0}>
+              {/* Named rather than drawn only as an arrow: reordering is
+                  the one thing on this panel a person cannot do by typing,
+                  so the control has to say which phase it moves. */}
+              <button
+                className="ghost tiny"
+                aria-label={`Move up: ${str(phase.label) || str(phase.id)}`}
+                title={`Move up: ${str(phase.label) || str(phase.id)}`}
+                onClick={() => move(i, i - 1)}
+                disabled={i === 0}
+              >
                 ↑
               </button>
-              <button className="ghost tiny" onClick={() => move(i, i + 1)} disabled={i === phases.length - 1}>
+              <button
+                className="ghost tiny"
+                aria-label={`Move down: ${str(phase.label) || str(phase.id)}`}
+                title={`Move down: ${str(phase.label) || str(phase.id)}`}
+                onClick={() => move(i, i + 1)}
+                disabled={i === phases.length - 1}
+              >
                 ↓
               </button>
               <button

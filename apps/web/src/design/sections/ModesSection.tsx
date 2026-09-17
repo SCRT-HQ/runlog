@@ -5,7 +5,7 @@ import { num, str, type SectionProps } from "./shared.ts";
 
 /* ------------------------------------------------------------------ */
 
-export function Modes({ draft, diagnostics, edit }: SectionProps) {
+export function ModesSection({ draft, diagnostics, edit }: SectionProps) {
   const modes = (draft.modes ?? {}) as Record<string, Record<string, unknown>>;
   const ids = Object.keys(modes);
 

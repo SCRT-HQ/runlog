@@ -4,7 +4,18 @@ import { get, str, type SectionProps } from "./shared.ts";
 
 /* ------------------------------------------------------------------ */
 
-export function Identity({ draft, diagnostics, edit }: SectionProps) {
+/** What the game is, what a person needs to play it, and the words it speaks. */
+export function Overview(props: SectionProps) {
+  return (
+    <>
+      <Identity {...props} />
+      <Requirements {...props} />
+      <Vocabulary {...props} />
+    </>
+  );
+}
+
+function Identity({ draft, diagnostics, edit }: SectionProps) {
   return (
     <section className="panel">
       <h3 className="sectionTitle">What it is</h3>
@@ -94,7 +105,7 @@ const REQUIREMENT_KINDS: ReadonlyArray<{ value: string; label: string }> = [
  * an absent thing are drawn again. Entries name a requirement by id in
  * `needs`, which is why the id is shown beside the label.
  */
-export function Requirements({ draft, diagnostics, edit }: SectionProps) {
+function Requirements({ draft, diagnostics, edit }: SectionProps) {
   const requires = Array.isArray(draft.requires) ? (draft.requires as Record<string, unknown>[]) : [];
   const set = (i: number, key: string, value: unknown) => edit(["requires", i, key], value === "" ? undefined : value);
   return (
@@ -173,7 +184,7 @@ export function Requirements({ draft, diagnostics, edit }: SectionProps) {
   );
 }
 
-export function Vocabulary({ draft, diagnostics, edit }: SectionProps) {
+function Vocabulary({ draft, diagnostics, edit }: SectionProps) {
   const words = [
     { key: "run", label: "A whole session", hint: "a firing, a draft, a training block" },
     { key: "unit", label: "One turn of it", hint: "a stage, a scene, a session" },
