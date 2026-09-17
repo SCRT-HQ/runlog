@@ -392,6 +392,8 @@ export interface Me {
   sid: string;
   env: string;
   profile: Profile;
+  /** Whether the name this account shows is held by another account, so another has to be chosen. */
+  handleTaken?: boolean;
   /** Stripe feature keys; empty until billing exists. */
   entitlements: string[];
   /** Whether plans gate anything on this address. */

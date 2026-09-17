@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useAccount } from "./Account.tsx";
+import { SyncError } from "../sync/client.ts";
 import { useApi } from "../sync/useApi.ts";
 import { rememberProfile, useProfile } from "../sync/useProfile.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 
-/** The server's rule for a shown name, so the answer is known before the round trip. */
+/** The server's rule for a shown name, so the answer is known before the round trip. Whether one is free is the server's to say. */
 export const NAME_RULE = /^[\p{L}\p{N}][\p{L}\p{N} ._'-]{1,23}$/u;
+
+/** What the server says when another account holds the name. */
+const TAKEN = "That name is taken.";
 
 /**
  * Once, for everyone signed in: the name other people see.
@@ -16,12 +20,17 @@ export const NAME_RULE = /^[\p{L}\p{N}][\p{L}\p{N} ._'-]{1,23}$/u;
  * confirms it or writes another, and from then on the profile remembers
  * that the choice was theirs. It comes after the terms, when there are
  * terms, and stays out of the way when the server cannot be reached.
+ *
+ * It asks a second time in one case: the name this account shows is held
+ * by another account, which happens to an account from before names were
+ * held at all. The account keeps working everywhere else until it picks
+ * another name.
  */
 export function NameGate() {
   const account = useAccount();
   const api = useApi();
   const hosted = useHosted();
-  const { profile, loaded } = useProfile();
+  const { profile, loaded, handleTaken } = useProfile();
   const [draft, setDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -32,7 +41,7 @@ export function NameGate() {
     api !== null &&
     loaded &&
     profile !== null &&
-    !profile.handleSetAt &&
+    (!profile.handleSetAt || handleTaken) &&
     (!hosted?.termsVersion || profile.termsVersion === hosted.termsVersion);
 
   useEffect(() => {
@@ -52,8 +61,11 @@ export function NameGate() {
     setProblem(null);
     void api
       .putProfile({ handle })
-      .then((p) => rememberProfile(p))
-      .catch((error: unknown) => setProblem(error instanceof Error && error.message ? error.message : "That name was not kept. Try again."))
+      .then((p) => rememberProfile(p, false))
+      .catch((error: unknown) => {
+        if (error instanceof SyncError && error.kind === "conflict") setProblem(TAKEN);
+        else setProblem(error instanceof Error && error.message ? error.message : "That name was not kept. Try again.");
+      })
       .finally(() => setBusy(false));
   };
 
@@ -65,6 +77,7 @@ export function NameGate() {
           The people you play with, race, or who watch a live link see this name. Your email address is never shown to anyone. You can
           change it later on your profile.
         </p>
+        {handleTaken && profile.handle && <p className="muted small">Someone else is shown as {profile.handle} now. Pick another.</p>}
         <label className="inviteForm">
           <span className="muted small">Shown as</span>
           <input
