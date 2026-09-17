@@ -47,6 +47,7 @@ export function controlClasses({ variant = "quiet", size = "default", emphasis =
 export type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className"> &
   Shape & {
     /** Working: the button is disabled, marked busy, and says this instead of its label. */
+    // The width the button holds is the wider of the children and `loadingLabel`; children the caller swaps out itself are not held.
     loading?: boolean;
     /** What it says while it works. Given or not, the button keeps the wider of the two labels' room. */
     loadingLabel?: ReactNode;
