@@ -224,14 +224,17 @@ describe("the bar's nav", () => {
     expect(current()).toEqual([]);
   });
 
-  it("sends the mark to the shelf", async () => {
+  it("sends the mark to the welcome page, as a plain link", async () => {
     await openApp();
     await press(nav("Guide"));
-    expect(current()).toEqual(["Guide"]);
-    const brand = document.querySelector("a.brand");
+    const brand = document.querySelector("a.brand") as HTMLAnchorElement | null;
     expect(brand).not.toBeNull();
-    await press(brand!);
-    expect(current()).toEqual(["Packs"]);
+    // The page that says what Runlog is, asked for by name so it opens
+    // even where this device chose to skip it; a real navigation, not a
+    // view change, so the current view is untouched by the render.
+    expect(brand!.getAttribute("href")).toBe(`${import.meta.env.BASE_URL}?welcome`);
+    expect(brand!.onclick).toBeNull();
+    expect(current()).toEqual(["Guide"]);
   });
 
   it("opens the Designer without discarding the draft or starting a run", async () => {

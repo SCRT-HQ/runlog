@@ -29,6 +29,7 @@ import { linkFromHash, stashLink } from "./connections/route.ts";
 import { WidgetView } from "./widget/WidgetView.tsx";
 import { useTitle } from "./title.ts";
 import { liveFromHash, type LiveRoute } from "./live/route.ts";
+import { welcomePath } from "./welcome/route.ts";
 import { addressForPlay, addressOf, goTo, runFromAddress, seatFromAddress, linkTo } from "./route.ts";
 import { LiveRunView } from "./live/LiveRunView.tsx";
 import { SeatRunView } from "./live/SeatRunView.tsx";
@@ -848,6 +849,8 @@ export default function App() {
    * Designer and the Guide each had of their own; said once, it can be a
    * control of its own instead of three buttons that rename themselves.
    */
+  /** The welcome page, where there is one to link to. */
+  const home = welcomePath(window.location.protocol, import.meta.env.BASE_URL);
   const awayFromRun = source !== null && view !== "play";
   /** Whether Create and Guide belong in the menu at the end rather than in the row. */
   const narrowBar = useNarrowBar();
@@ -1177,18 +1180,23 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        {/* The mark goes to the shelf, which is where the app begins. It is
-            not a heading: every page under it has a title of its own, and
-            two h1s on a page is one too many. The page that says what
-            Runlog is has its own doors, in the footer and on the shelf. */}
+        {/* The mark goes home: to the page that says what Runlog is, on
+            every width. A plain link, so a middle click and a new tab do
+            what they do anywhere; from a file there is no welcome page
+            to reach, and the mark opens the shelf instead. It is not a
+            heading: every page under it has a title of its own. */}
         <a
           className="brand"
-          href={linkTo("#packs")}
-          title="Your packs and runs"
-          onClick={(e) => {
-            e.preventDefault();
-            openLibrary();
-          }}
+          href={home ?? linkTo("#packs")}
+          title={home ? "What Runlog is" : "Your packs and runs"}
+          onClick={
+            home
+              ? undefined
+              : (e) => {
+                  e.preventDefault();
+                  openLibrary();
+                }
+          }
         >
           <img className="logo" src={`${import.meta.env.BASE_URL}icon.svg`} alt="" />
           <span className="brandName">Runlog</span>
