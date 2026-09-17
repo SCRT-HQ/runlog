@@ -1,5 +1,8 @@
 import { linkTo } from "./route.ts";
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Button, ButtonLink } from "./ui/Button.tsx";
+
+type CopyState = "idle" | "pending" | "success" | "failure";
 
 /**
  * The last thing standing when a render throws.
@@ -9,16 +12,30 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
  * plain words, offers a reload, and lets the person copy the error to send
  * along. Nothing is sent anywhere by itself; the app has no telemetry.
  */
-export class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null; copied: boolean }> {
-  override state: { error: Error | null; copied: boolean } = { error: null, copied: false };
+export class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null; copyState: CopyState }> {
+  override state: { error: Error | null; copyState: CopyState } = { error: null, copyState: "idle" };
 
   static getDerivedStateFromError(error: Error) {
-    return { error, copied: false };
+    return { error, copyState: "idle" as const };
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("Runlog stopped rendering:", error, info.componentStack);
   }
+
+  private copy = (report: string) => {
+    if (this.state.copyState === "pending") return;
+    this.setState({ copyState: "pending" });
+    try {
+      if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+      void Promise.resolve(navigator.clipboard.writeText(report)).then(
+        () => this.setState({ copyState: "success" }),
+        () => this.setState({ copyState: "failure" }),
+      );
+    } catch {
+      this.setState({ copyState: "failure" });
+    }
+  };
 
   override render() {
     const { error } = this.state;
@@ -28,31 +45,31 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
       `${error.name}: ${error.message}`,
       error.stack ?? "",
     ].join("\n");
+    const copyFeedback =
+      this.state.copyState === "success" ? "Copied" : this.state.copyState === "failure" ? "Could not copy the error. Try again." : null;
     return (
       <main className="main">
-        <section className="panel broke">
-          <h2>Something broke on this page</h2>
+        <section className="panel broke" aria-labelledby="brokeTitle">
+          <h2 id="brokeTitle">Something broke on this page</h2>
           <p>
             The app stopped drawing. Your packs and runs are safe: they are saved as they happen, and a reload brings them back. If it
             breaks again the same way, copy the error and send it with what you were doing.
           </p>
           <pre className="brokeError">{`${error.name}: ${error.message}`}</pre>
           <div className="padRow">
-            <button className="primary" onClick={() => location.reload()}>
+            <Button variant="primary" onClick={() => location.reload()}>
               Reload
-            </button>
-            <button
-              className="ghost"
-              onClick={() => {
-                void navigator.clipboard?.writeText(report).then(() => this.setState({ copied: true }));
-              }}
-            >
-              {this.state.copied ? "Copied" : "Copy the error"}
-            </button>
-            <a className="ghost buttonLink" href={linkTo("#guide/start")}>
-              Open the docs
-            </a>
+            </Button>
+            <Button loading={this.state.copyState === "pending"} loadingLabel="Copying…" onClick={() => this.copy(report)}>
+              Copy the error
+            </Button>
+            <ButtonLink href={linkTo("#guide/start")}>Open the docs</ButtonLink>
           </div>
+          {copyFeedback && (
+            <p className="brokeCopyStatus" role="status">
+              {copyFeedback}
+            </p>
+          )}
           <p className="muted small">
             Runlog {__RUNLOG_VERSION__}
             {__RUNLOG_SHA__ ? ` · ${__RUNLOG_SHA__}` : ""}
