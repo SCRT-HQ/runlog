@@ -14,6 +14,7 @@ const entry = (over: Partial<MarketplaceEntry> & { id: string }): MarketplaceEnt
   features: [],
   source: "bundled",
   players: 1,
+  tablePlays: true,
   requires: [],
   blurb: "",
   kind: "pack",

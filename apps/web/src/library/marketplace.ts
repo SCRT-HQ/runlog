@@ -39,6 +39,8 @@ export interface MarketplaceEntry {
   requires: Array<{ label: string; kind: string; optional: boolean }>;
   /** Most people a mode seats, moderator or contestants included. */
   players: number;
+  /** Whether one copy of this pack seats a table; false means everyone needs their own. */
+  tablePlays: boolean;
   /**
    * A short line under the title, made from the above.
    *
@@ -101,8 +103,12 @@ function blurbOf(category: string, features: Feature[]): string {
   return `${category} · ${how}`;
 }
 
-/** Read one bundled pack's header into a marketplace entry. `bench` marks a `packs/testing/` pack. */
-async function bundledEntry(load: () => Promise<string>, bench: boolean): Promise<MarketplaceEntry | null> {
+/**
+ * Read one bundled pack's header into a marketplace entry. `bench` marks a
+ * `packs/testing/` pack. Exported so what it reads off a header is checked
+ * directly, without a pack file on disk saying it.
+ */
+export async function bundledEntry(load: () => Promise<string>, bench: boolean): Promise<MarketplaceEntry | null> {
   const text = await load();
   const head = YAML.parse(text) as Record<string, unknown>;
   const id = String(head["id"] ?? "");
@@ -126,6 +132,8 @@ async function bundledEntry(load: () => Promise<string>, bench: boolean): Promis
     tags,
     features,
     players,
+    // Absent means yes: a pack written before this field seats the table.
+    tablePlays: !(isRecord(head["license"]) && head["license"]["tablePlays"] === false),
     requires,
     blurb: blurbOf(category, features),
     kind: "pack",
@@ -227,6 +235,8 @@ interface FeedCard {
     features: string[];
     requires: Array<{ label: string; kind: string; optional: boolean }>;
     players: number;
+    /** Absent from a server older than this field; read as yes. */
+    license?: { id: string; redistributable: boolean; tablePlays?: boolean };
   };
   price: "free" | { amount: number; currency: string };
 }
@@ -263,6 +273,7 @@ export function feedEntry(card: FeedCard, base: string): MarketplaceEntry {
     tags: card.head.tags ?? [],
     features,
     players: card.head.players || 1,
+    tablePlays: card.head.license?.tablePlays !== false,
     requires: card.head.requires ?? [],
     blurb: blurbOf((card.head.category || "other").toLowerCase(), features),
     kind: card.head.kind === "setup" ? "setup" : "pack",

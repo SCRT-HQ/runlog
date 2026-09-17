@@ -1016,6 +1016,12 @@ export const License = z
       .describe(
         "Whether this pack's text may be included in exports meant for other people. When false the app shares roll results and references but never the rules prose, so a private transcription of a commercial rulebook stays private.",
       ),
+    tablePlays: z
+      .boolean()
+      .default(true)
+      .describe(
+        "Whether one copy of this pack seats a table. When true, someone invited to play a run of it takes a seat on the owner's copy: they see results and press through the owner's page, and the pack's text never reaches them. Set it false and an invitation to play goes out as an invitation to watch, and everyone at the table needs their own copy.",
+      ),
     holder: z.string().optional().describe("Who holds the rights."),
     notice: z.string().optional().describe("Notice displayed alongside the pack."),
     url: z.string().url().optional().describe("Where to obtain or license the original."),

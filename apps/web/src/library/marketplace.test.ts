@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { loadPackText } from "@runlog/rules-schema";
 import {
+  bundledEntry,
   marketplaceEntry,
+  feedEntry,
   filterMarketplace,
   LEGACY_IDS,
   loadMarketplace,
@@ -67,6 +69,7 @@ describe("publishers in the marketplace", () => {
       features: [],
       requires: [],
       players: 1,
+      tablePlays: true,
       blurb: "",
       kind: "pack",
       price,
@@ -95,6 +98,49 @@ describe("publishers in the marketplace", () => {
   });
 });
 
+/**
+ * A pack written before `license.tablePlays` existed says nothing about it,
+ * and neither does a listing from a server that predates the field. Both
+ * read as yes, on the feed and in the bundle alike.
+ */
+describe("whether one copy seats the table, as an entry carries it", () => {
+  const card = (license?: { id: string; redistributable: boolean; tablePlays?: boolean }) => ({
+    packId: "com.example.kiln",
+    orgId: "org1",
+    publisherName: "Kiln Works",
+    head: {
+      title: "The Long Kiln",
+      version: "1.0.0",
+      category: "games",
+      tags: [],
+      features: [],
+      requires: [],
+      players: 1,
+      ...(license ? { license } : {}),
+    },
+    price: "free" as const,
+  });
+  const base = "id: com.example.kiln\nversion: 1.0.0\ntitle: The Long Kiln\ncategory: games\n";
+
+  it("reads a feed card that says nothing as seating the table", () => {
+    expect(feedEntry(card(), "https://example.com/api").tablePlays).toBe(true);
+  });
+
+  it("takes the author's no from a feed card", () => {
+    const entry = feedEntry(card({ id: "proprietary", redistributable: false, tablePlays: false }), "https://example.com/api");
+    expect(entry.tablePlays).toBe(false);
+  });
+
+  it("reads a bundled pack that says nothing as seating the table", async () => {
+    expect((await bundledEntry(async () => base, false))?.tablePlays).toBe(true);
+  });
+
+  it("takes the author's no from a bundled pack", async () => {
+    const text = `${base}license:\n  id: proprietary\n  redistributable: false\n  tablePlays: false\n`;
+    expect((await bundledEntry(async () => text, false))?.tablePlays).toBe(false);
+  });
+});
+
 describe("the test bench", () => {
   /**
    * `packs/testing/engine-testing.yaml` is a separate pull request's pack
@@ -111,6 +157,7 @@ describe("the test bench", () => {
     features: [],
     requires: [],
     players: 1,
+    tablePlays: true,
     blurb: "",
     kind: "pack",
     price: "free",
