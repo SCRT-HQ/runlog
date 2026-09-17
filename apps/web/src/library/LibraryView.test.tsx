@@ -88,6 +88,39 @@ const renderLibrary = (over: Partial<Parameters<typeof LibraryView>[0]>) =>
 
 afterEach(cleanup);
 
+describe("the order of the page", () => {
+  it("puts where you left off first, then the packs, then adding and discovering", () => {
+    const html = paint(shelf([record({})]));
+    const where = html.indexOf('aria-label="Where you are"');
+    const pack = html.indexOf("libraryPack");
+    const add = html.indexOf("Add and discover");
+    expect(where).toBeGreaterThan(-1);
+    expect(pack).toBeGreaterThan(where);
+    expect(add).toBeGreaterThan(pack);
+    // The one lead sentence stays, above everything.
+    expect(html.indexOf("Newest played first.")).toBeLessThan(where);
+  });
+
+  it("keeps adding a pack and joining a race in that group, not in the header", () => {
+    const html = paint(shelf([record({})]));
+    expect(html.indexOf("Add and discover")).toBeLessThan(html.indexOf("Get more packs"));
+    expect(html).toContain("Load a pack from a file");
+  });
+
+  it("offers a Start on the most recently opened pack when nothing has been played", () => {
+    renderLibrary({ packs: shelf([record({})]) });
+    const card = screen.getByLabelText("Where you are");
+    expect(card.textContent).toContain("Kiln Yard");
+    expect(screen.getByRole("button", { name: "Start" })).toBeTruthy();
+  });
+
+  it("says nothing above the packs when there are none, and the empty state carries it", () => {
+    renderLibrary({ packs: [] });
+    expect(screen.queryByLabelText("Where you are")).toBeNull();
+    expect(screen.getByText(/No packs here yet/)).toBeTruthy();
+  });
+});
+
 describe("a pack's row", () => {
   it("offers to take a newer file of a pack that is yours, and says the runs stay", () => {
     const html = paint(shelf([record({})]));

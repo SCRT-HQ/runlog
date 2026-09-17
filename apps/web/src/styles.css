@@ -1023,6 +1023,15 @@ p {
 .libraryHead p {
   margin: 0;
 }
+/* Adding and discovering, under the shelf: one titled group holding the
+   two rows of controls and the marketplace's cards. */
+.libraryAdd {
+  display: grid;
+  gap: var(--space-3);
+}
+.libraryAdd > .sectionTitle {
+  margin: 0;
+}
 /* Two labeled groups, each its own eyebrow over a row of small controls,
    all the same height, which is the control's own. */
 .libraryActions {
@@ -1297,10 +1306,21 @@ p {
   display: grid;
   gap: 0.25rem;
 }
+/*
+ * The row wraps rather than pushing the page wide.
+ *
+ * Its name and its two buttons are each as narrow as they can be, and on
+ * a 320px phone the two together were still wider than the card: the card
+ * grew to hold them, the shelf's grid column grew to hold the card, and
+ * the page ended up 2px wider than the window, scrolling sideways. Wrapping
+ * puts the buttons on a second line at that width instead, and changes
+ * nothing anywhere the row already fits.
+ */
 .runRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.75rem;
   width: 100%;
   padding: 0.3rem 0.3rem 0.3rem 0.6rem;

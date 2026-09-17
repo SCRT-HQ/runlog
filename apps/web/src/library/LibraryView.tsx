@@ -10,7 +10,7 @@ import { scoresOf } from "../run/scores.ts";
 import { byLastOpened, openedAt } from "./opened.ts";
 import { DocMenu } from "../docs/DocMenu.tsx";
 import { DeckProfiles } from "./DeckProfiles.tsx";
-import { HomeStrip } from "./HomeStrip.tsx";
+import { DiscoverStrip, HomeStrip } from "./HomeStrip.tsx";
 import { PackServers } from "./PackServers.tsx";
 import { useGuildVaults } from "./useGuildVaults.ts";
 import { useTitle } from "../title.ts";
@@ -18,14 +18,14 @@ import { Button } from "../ui/Button.tsx";
 import { PageHeader } from "../ui/PageHeader.tsx";
 
 /**
- * The library: your packs, newest-played first, each with its runs.
+ * The library: where you left off, then your packs, then everything else.
  *
- * One view that answers "what am I playing?". A pack is a card with its
- * runs beneath it, Continue on each, Start another, Forget, and the
- * order is what you played last on this device, so the pack you run most
- * nights is at the top with its open run one press away. Load-a-file lives
- * here too, and a pack of your own takes a newer file on its own row, its
- * runs kept. Nothing is a menu; everything is on the page.
+ * One view that answers "what am I playing?", in that order. The
+ * continuation card is first and on its own row, so the press most people
+ * came for is in the first screenful of a phone. Then the packs, newest
+ * played first, each a card with its runs beneath it. Adding a pack,
+ * joining a race and what the marketplace has new are grouped after them,
+ * because discovery follows what you already own.
  *
  * Nothing ships in it. The marketplace is where packs come from, and this view
  * is where the marketplace is reached from.
@@ -144,49 +144,6 @@ export function LibraryView({
         className="libraryHead"
         title="Your packs"
         lead="Newest played first. A pack's runs are beneath it; the one open on this device is marked."
-        secondary={
-          <div className="libraryActions">
-            <div className="libraryActionGroup">
-              <h3 className="sectionTitle">Add a pack</h3>
-              <div className="libraryActionGroupRow">
-                <Button variant="primary" onClick={onMarketplace}>
-                  Get more packs
-                </Button>
-                <label className="ghost fileButton">
-                  Load a pack from a file
-                  <input type="file" accept=".yaml,.yml,.json,.rlpack" onChange={(e) => onFile(e.target.files?.[0])} />
-                </label>
-              </div>
-            </div>
-            {onJoinRace && (
-              <div className="libraryActionGroup">
-                <h3 className="sectionTitle">Join a race</h3>
-                <form
-                  className="raceJoin"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (raceCode.trim().length >= 6) {
-                      onJoinRace(raceCode.trim());
-                      setRaceCode("");
-                    }
-                  }}
-                >
-                  <input
-                    className="textInput code"
-                    value={raceCode}
-                    placeholder="race code"
-                    maxLength={8}
-                    aria-label="A race code, six letters"
-                    onChange={(e) => setRaceCode(e.target.value.toUpperCase())}
-                  />
-                  <Button type="submit" disabled={raceCode.trim().length < 6}>
-                    Join a race
-                  </Button>
-                </form>
-              </div>
-            )}
-          </div>
-        }
       />
 
       <HomeStrip
@@ -196,7 +153,6 @@ export function LibraryView({
         onContinue={onContinue}
         onContinueLast={onContinueLast}
         onOpen={onOpen}
-        onMarketplace={onMarketplace}
       />
 
       {ordered.length === 0 && (
@@ -316,6 +272,61 @@ export function LibraryView({
           </section>
         );
       })}
+
+      {/*
+        Adding a pack, joining a race and what the marketplace has new:
+        one group, under the shelf. Every one of them is about content
+        that is not yours yet, and on a phone they used to stand between
+        the top of the page and the pack you came to play.
+      */}
+      <section className="libraryAdd" aria-labelledby="libraryAddTitle">
+        <h2 className="sectionTitle" id="libraryAddTitle">
+          Add and discover
+        </h2>
+        <div className="libraryActions">
+          {/* No title over these two: the section above says Add, and
+              saying it again on the next line says nothing. The accent
+              is not here either. It marks the one action the page wants
+              pressed, and that is the card at the top. */}
+          <div className="libraryActionGroup">
+            <div className="libraryActionGroupRow">
+              <Button onClick={onMarketplace}>Get more packs</Button>
+              <label className="ghost fileButton">
+                Load a pack from a file
+                <input type="file" accept=".yaml,.yml,.json,.rlpack" onChange={(e) => onFile(e.target.files?.[0])} />
+              </label>
+            </div>
+          </div>
+          {onJoinRace && (
+            <div className="libraryActionGroup">
+              <h3 className="sectionTitle">Join a race</h3>
+              <form
+                className="raceJoin"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (raceCode.trim().length >= 6) {
+                    onJoinRace(raceCode.trim());
+                    setRaceCode("");
+                  }
+                }}
+              >
+                <input
+                  className="textInput code"
+                  value={raceCode}
+                  placeholder="race code"
+                  maxLength={8}
+                  aria-label="A race code, six letters"
+                  onChange={(e) => setRaceCode(e.target.value.toUpperCase())}
+                />
+                <Button type="submit" disabled={raceCode.trim().length < 6}>
+                  Join a race
+                </Button>
+              </form>
+            </div>
+          )}
+        </div>
+        <DiscoverStrip packs={ordered} runs={runs} onMarketplace={onMarketplace} />
+      </section>
 
       {seats && seats.length > 0 && onTakeSeat && (
         <section className="panel packCard">
