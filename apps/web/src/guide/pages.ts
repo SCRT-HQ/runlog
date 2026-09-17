@@ -234,7 +234,7 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   ),
   // Making a pack
   P("design", "Making a pack", "The Designer", "Designing a pack", "Your own game for the engine, written in the browser.", Design),
-  P("sections", "Making a pack", "The Designer", "The sections", "Words, tables, phases, modes, and what Problems catches.", Sections),
+  P("sections", "Making a pack", "The Designer", "The sections", "Overview, Tables, Flow, Modes, Test, and Publish.", Sections),
   P("signing", "Making a pack", "The Designer", "Signing and sealing", "Your name on a release; a copy sealed for one buyer.", Signing),
   P("documents", "Making a pack", null, "Documents", "Rulebook, quick start, reference card, run log sheet, summary.", Documents),
   P("cli", "Making a pack", "The command line", "The command line", "npx @scrthq/runlog: what it does, in one place.", Cli),
