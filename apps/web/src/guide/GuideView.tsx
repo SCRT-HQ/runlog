@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GuidePageContext, guideComponents } from "./components.tsx";
 import { hrefFor } from "../route.ts";
 import { GUIDE_PAGES, GUIDE_PARTS, guidePage, guideSectionFromHash, guideSlugFromHash, type GuidePage } from "./pages.ts";
@@ -32,6 +32,9 @@ export function GuideView({
   const next = GUIDE_PAGES[at + 1];
   const sections = useSections(page);
   const inView = useInView(sections, page);
+  const contents = useRef<HTMLDetailsElement>(null);
+
+  useDesktopContents(contents);
 
   useTitle(`${page.title} · Guide`);
   // Land on the section the address names, once the page has its headings; at the top otherwise.
@@ -83,57 +86,60 @@ export function GuideView({
             Play
           </button>
         </div>
-        <nav className="guideToc" aria-label="Pages by part">
-          {GUIDE_PARTS.map((part) => {
-            const open = part === page.part;
-            // A part's runs: its groups, each a run of pages on one subject,
-            // and its pages that stand alone, in the order they come.
-            const runs: Array<{ group: string | null; pages: GuidePage[] }> = [];
-            for (const p of GUIDE_PAGES.filter((p) => p.part === part)) {
-              const last = runs[runs.length - 1];
-              if (last && last.group === (p.group ?? null) && last.group !== null) last.pages.push(p);
-              else runs.push({ group: p.group ?? null, pages: [p] });
-            }
-            return (
-              <section key={part} className={`guidePart${open ? " open" : ""}`}>
-                <h3>{part}</h3>
-                {runs.map((run, n) => {
-                  // In the open part, a group shows its pages when it holds the open page, and its name alone otherwise; a closed part shows names and lone titles only.
-                  const here = run.pages.some((p) => p.slug === page.slug);
-                  const shown = run.group === null || here;
-                  return (
-                    <div key={run.group ?? `lone-${n}`} className={`guideRun${run.group ? " grouped" : ""}${here ? " here" : ""}`}>
-                      {run.group && (
-                        <h4>
-                          <a href={hrefFor(`#guide/${run.pages[0]!.slug}`)} onClick={(e) => go(e, run.pages[0]!.slug)}>
-                            {run.group}
-                          </a>
-                        </h4>
-                      )}
-                      {shown && (
-                        <ol>
-                          {run.pages.map((p) => (
-                            <li key={p.slug} className={p.slug === page.slug ? "on" : ""}>
-                              <a
-                                href={hrefFor(`#guide/${p.slug}`)}
-                                aria-current={p.slug === page.slug ? "page" : undefined}
-                                onClick={(e) => go(e, p.slug)}
-                              >
-                                {p.title}
-                              </a>
-                              {open && here && <span className="muted small">{p.blurb}</span>}
-                              {p.slug === page.slug && sectionList("guideSections", "Sections of this page")}
-                            </li>
-                          ))}
-                        </ol>
-                      )}
-                    </div>
-                  );
-                })}
-              </section>
-            );
-          })}
-        </nav>
+        <details ref={contents} className="guideContents">
+          <summary className="guideContentsSummary">Guide contents</summary>
+          <nav className="guideToc" aria-label="Pages by part">
+            {GUIDE_PARTS.map((part) => {
+              const open = part === page.part;
+              // A part's runs: its groups, each a run of pages on one subject,
+              // and its pages that stand alone, in the order they come.
+              const runs: Array<{ group: string | null; pages: GuidePage[] }> = [];
+              for (const p of GUIDE_PAGES.filter((p) => p.part === part)) {
+                const last = runs[runs.length - 1];
+                if (last && last.group === (p.group ?? null) && last.group !== null) last.pages.push(p);
+                else runs.push({ group: p.group ?? null, pages: [p] });
+              }
+              return (
+                <section key={part} className={`guidePart${open ? " open" : ""}`}>
+                  <h3>{part}</h3>
+                  {runs.map((run, n) => {
+                    // In the open part, a group shows its pages when it holds the open page, and its name alone otherwise; a closed part shows names and lone titles only.
+                    const here = run.pages.some((p) => p.slug === page.slug);
+                    const shown = run.group === null || here;
+                    return (
+                      <div key={run.group ?? `lone-${n}`} className={`guideRun${run.group ? " grouped" : ""}${here ? " here" : ""}`}>
+                        {run.group && (
+                          <h4>
+                            <a href={hrefFor(`#guide/${run.pages[0]!.slug}`)} onClick={(e) => go(e, run.pages[0]!.slug)}>
+                              {run.group}
+                            </a>
+                          </h4>
+                        )}
+                        {shown && (
+                          <ol>
+                            {run.pages.map((p) => (
+                              <li key={p.slug} className={p.slug === page.slug ? "on" : ""}>
+                                <a
+                                  href={hrefFor(`#guide/${p.slug}`)}
+                                  aria-current={p.slug === page.slug ? "page" : undefined}
+                                  onClick={(e) => go(e, p.slug)}
+                                >
+                                  {p.title}
+                                </a>
+                                {open && here && <span className="muted small">{p.blurb}</span>}
+                                {p.slug === page.slug && sectionList("guideSections", "Sections of this page")}
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                      </div>
+                    );
+                  })}
+                </section>
+              );
+            })}
+          </nav>
+        </details>
       </aside>
       <nav className="guideOnPage" aria-label="On this page">
         {sections.length > 0 && <h4>On this page</h4>}
@@ -160,6 +166,51 @@ export function GuideView({
       </article>
     </main>
   );
+}
+
+/** Keep the desktop disclosure truly open without hiding focused controls in either breakpoint transition. */
+function useDesktopContents(contents: React.RefObject<HTMLDetailsElement | null>): void {
+  useEffect(() => {
+    const disclosure = contents.current;
+    if (!disclosure) return;
+    if (typeof window.matchMedia !== "function") {
+      disclosure.open = true;
+      return;
+    }
+    const mobile = window.matchMedia("(max-width: 760px)");
+    let lastFocused = disclosure.contains(document.activeElement) ? document.activeElement : null;
+    const rememberFocus = (event: FocusEvent) => {
+      lastFocused = event.target instanceof Node && disclosure.contains(event.target) ? (event.target as Element) : null;
+    };
+    const forgetOutsidePointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && !disclosure.contains(event.target)) lastFocused = null;
+    };
+    const sync = () => {
+      const summary = disclosure.querySelector("summary");
+      if (!mobile.matches) {
+        disclosure.open = true;
+        if (document.activeElement === summary || lastFocused === summary)
+          disclosure.querySelector<HTMLAnchorElement>('a[aria-current="page"]')?.focus();
+        return;
+      }
+      if (
+        document.activeElement !== summary &&
+        document.activeElement instanceof HTMLElement &&
+        disclosure.contains(document.activeElement)
+      )
+        return;
+      disclosure.open = false;
+    };
+    document.addEventListener("focusin", rememberFocus);
+    document.addEventListener("pointerdown", forgetOutsidePointer, true);
+    sync();
+    mobile.addEventListener("change", sync);
+    return () => {
+      mobile.removeEventListener("change", sync);
+      document.removeEventListener("focusin", rememberFocus);
+      document.removeEventListener("pointerdown", forgetOutsidePointer, true);
+    };
+  }, [contents]);
 }
 
 interface Section {
