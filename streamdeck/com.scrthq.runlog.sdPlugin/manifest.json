@@ -450,7 +450,7 @@
       "Name": "Install a profile",
       "UUID": "com.scrthq.runlog.install",
       "Icon": "imgs/actions/install",
-      "Tooltip": "Builds a profile for a pack you own and hands it to the Stream Deck app to import.",
+      "Tooltip": "Puts your deck on a profile for a pack you own, building one where the plugin ships none.",
       "Controllers": ["Keypad"],
       "States": [{ "Image": "imgs/keys/install" }],
       "PropertyInspectorPath": "ui/install.html"

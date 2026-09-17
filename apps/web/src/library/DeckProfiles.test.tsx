@@ -70,6 +70,19 @@ function objectUrls(): string[] {
   return made;
 }
 
+/** The same, keeping the blob itself, for a test that reads what is in the file. */
+function downloaded(): Blob[] {
+  const blobs: Blob[] = [];
+  Object.assign(URL, {
+    createObjectURL: (blob: Blob) => {
+      blobs.push(blob);
+      return "blob:deck";
+    },
+    revokeObjectURL: () => {},
+  });
+  return blobs;
+}
+
 /** Open the row, the way a reader does. */
 const open = () => fireEvent.click(screen.getByText("Stream Deck profile"));
 
@@ -120,6 +133,27 @@ describe("a Stream Deck profile from a pack's page", () => {
       await waitFor(() => expect(clicks).toEqual(["com.scrthq.runlog.long-kiln-mini.streamDeckProfile"]));
       expect(made).toEqual(["application/zip"]);
       await waitFor(() => screen.getByRole("button", { name: "Mini" }));
+    } finally {
+      press.mockRestore();
+    }
+  });
+
+  it("names the profile the way every other profile Runlog makes is named", async () => {
+    // A download and the profile the plugin ships are one name in the
+    // Stream Deck app's list, so somebody who has both does not see two
+    // entries for the pack under two names. The file name is the pack's
+    // id and the deck, which is unchanged.
+    const blobs = downloaded();
+    const press = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    try {
+      render(<DeckProfiles load={async () => demo} />);
+      open();
+      await waitFor(() => screen.getByRole("button", { name: "XL" }));
+      fireEvent.click(screen.getByRole("button", { name: "XL" }));
+      await waitFor(() => expect(blobs).toHaveLength(1));
+      // A `.streamDeckProfile` is a zip of stored entries, so the manifest
+      // is in there as the text it was written as.
+      expect(await blobs[0]!.text()).toContain('"Name":"The Long Kiln (Runlog)"');
     } finally {
       press.mockRestore();
     }

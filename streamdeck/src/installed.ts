@@ -2,6 +2,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { homedir, platform } from "node:os";
 import { join } from "node:path";
 
+import { shippedName } from "@runlog/deck-profiles";
+
 import { PACK_PROFILES } from "./profiles.ts";
 
 /**
@@ -118,8 +120,10 @@ export function withoutCopies(name: string): string {
  *
  * `"imported"` is one the streamer imported: off the pack's own page, off
  * the Install key, off a file somebody sent them. Nothing records where it
- * came from, so the name is the rule, and every profile this builds is
- * named for the pack. It is not in the plugin's manifest and so cannot be
+ * came from, so the name is the rule, and both names count. Every profile
+ * Runlog makes carries the mark now; one imported before that does not,
+ * and a streamer who has had that one on their deck for months should not
+ * be handed a second. It is not in the plugin's manifest and so cannot be
  * switched to; handing over another leaves the streamer two.
  *
  * Nothing reads the keys inside: a Press key names a move and not the pack
@@ -134,7 +138,10 @@ export function installedFor(pack: { id: string; title?: string }, profiles: Ins
     if (profiles.some(ours)) return "shipped";
   }
   const title = pack.title?.trim();
-  if (title && profiles.some((p) => withoutCopies(p.name) === title)) return "imported";
+  if (title) {
+    const names = new Set([title, shippedName(title)]);
+    if (profiles.some((p) => names.has(withoutCopies(p.name)))) return "imported";
+  }
   return null;
 }
 
