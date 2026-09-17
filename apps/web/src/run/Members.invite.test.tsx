@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { loadPackText } from "@runlog/rules-schema";
+import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
 import type { Api } from "../sync/client.ts";
@@ -117,12 +117,15 @@ async function flush(turns = 6) {
   for (let i = 0; i < turns; i++) await act(async () => await Promise.resolve());
 }
 
-const show = async (api: Partial<Api>, run: StoredRun = runOf()) => {
+/** The demo pack with its license said over: what the author allows decides what an invitation may offer. */
+const packWith = (license: Partial<Pack["license"]>): Pack => ({ ...kiln, license: { ...kiln.license, ...license } });
+
+const show = async (api: Partial<Api>, run: StoredRun = runOf(), pack: Pack = kiln) => {
   current.api = { ...quiet, ...api } as unknown as Api;
   render(
     <AccountContext.Provider value={signedIn}>
       <SyncContext.Provider value={sync}>
-        <Members pack={kiln} run={run} />
+        <Members pack={pack} run={run} />
       </SyncContext.Provider>
     </AccountContext.Provider>,
   );
@@ -167,7 +170,7 @@ describe("inviting someone", () => {
     expect(document.activeElement).toBe(field);
 
     fireEvent.change(field, { target: { value: "kel@example.com" } });
-    fireEvent.change(screen.getByLabelText("Role"), { target: { value: "viewer" } });
+    fireEvent.click(screen.getByLabelText("Watches"));
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
 
@@ -207,6 +210,36 @@ describe("inviting someone", () => {
     await show({});
     fireEvent.click(screen.getByRole("button", { name: "Invite" }));
     expect(screen.getByRole("button", { name: "Send" }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("says nothing about copies when one copy seats the table", async () => {
+    await show({}, runOf(), packWith({ redistributable: false, tablePlays: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Invite" }));
+    expect(screen.queryByText(/needs their own copy/)).toBeNull();
+    expect((screen.getByLabelText("Plays") as HTMLInputElement).disabled).toBe(false);
+  });
+
+  it("sends a plays invitation as watches where the author said a copy each", async () => {
+    const sent: Array<[string, string]> = [];
+    await show(
+      {
+        createInvite: (async (_id: string, to: string, role: string) => {
+          sent.push([to, role]);
+        }) as unknown as Api["createInvite"],
+      },
+      runOf(),
+      packWith({ redistributable: false, tablePlays: false }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Invite" }));
+    expect(screen.getByText(/needs their own copy/)).toBeTruthy();
+    expect((screen.getByLabelText("Plays") as HTMLInputElement).disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("Email address to invite"), { target: { value: "ada@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await flush();
+
+    expect(sent).toEqual([["ada@example.com", "viewer"]]);
   });
 });
 
