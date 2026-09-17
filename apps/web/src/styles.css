@@ -3284,7 +3284,16 @@ select.textInput {
  * and a column with a scrollbar of its own inside a page that scrolls is
  * two things moving at once.
  */
-@media (max-width: 1100px) {
+/*
+ * Where the side column stops sitting beside the middle and goes under it.
+ *
+ * 1140px rather than 1100: three columns at 1101px leave the middle 34.3rem,
+ * and under 36rem the step's title starts breaking, its checklist lines wrap
+ * twice and the log's two columns fight. Narrowing the rail to 9rem would buy
+ * the same room and cost the stage marker its line, so the secondary column
+ * is what moves, which is what it is for.
+ */
+@media (max-width: 1140px) {
   .columns.run {
     grid-template-columns: 11rem minmax(0, 1fr);
   }
@@ -3539,6 +3548,45 @@ select.textInput {
   border: none;
   box-shadow: var(--raise);
   padding: 1.3rem 1.5rem 1.4rem;
+  /*
+   * The control is the last thing in this surface and stays the last thing
+   * in it: a column with its action pushed to the bottom, so a checklist, a
+   * second line of instructions or a result landing where the instructions
+   * were leaves the control at the foot of the card rather than somewhere
+   * in the middle of it. The card grows and shrinks with what it holds.
+   */
+  display: flex;
+  flex-direction: column;
+}
+/*
+ * Only the surface that carries the action gets the floor and the push: the
+ * pack's words on entering, the page between units and the ending have no
+ * control at their foot and no reason to stand that tall.
+ *
+ * The floor is small on purpose. It is there so a step with one line of
+ * instructions is not a cramped strip, not to hold a height in reserve
+ * against a result that may be taller: reserved room reads as a hole in the
+ * card, and a card that has to be as tall as its tallest state is tall all
+ * run. The surface takes the height of what it is showing, and the control
+ * goes down with it.
+ */
+.run .runStep:has(> .stepAction) {
+  min-height: 12rem;
+}
+/*
+ * One row, whatever is in it: a single button, or a field and a button, or
+ * the result's Carry on beside its Finish. Written the same way both times
+ * so the control sits at the same height in the surface either way, and the
+ * air above it belongs to the row rather than to the button, which used to
+ * put the two half a pixel apart.
+ */
+.run .runStep > .stepAction {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: auto;
+  padding-top: 1rem;
 }
 .run .runStep .sectionTitle {
   border-bottom: none;
@@ -3555,7 +3603,7 @@ select.textInput {
   font-size: 1.05rem;
 }
 .run .runStep .primary.big {
-  margin-top: 1rem;
+  margin-top: 0;
 }
 
 /* The side rail: ruled rows, no boxes. */
@@ -7002,6 +7050,11 @@ html[data-pip="controls"] body {
    */
   .run .runStep {
     padding: 1.1rem 1.1rem 0;
+  }
+  /* The move is stuck to the foot of the plane here, so the card needs no
+     floor of its own to hold it still. */
+  .run .runStep:has(> .stepAction) {
+    min-height: 0;
   }
   /* Setting a run up is a long page with one button at the end of it, and
      the button should be under the thumb wherever the page is. Nothing is
