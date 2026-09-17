@@ -276,6 +276,11 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
       throw new Error("not used here");
     },
     undelegatePack: async () => {},
+    parties: async () => ({ parties: [], servers: [] }),
+    openParty: async () => {
+      throw new Error("no watch party here");
+    },
+    endParty: async () => {},
     deleteLicense: async (id) => {
       calls.push(`deleteLicense ${id}`);
       licenses.delete(id);

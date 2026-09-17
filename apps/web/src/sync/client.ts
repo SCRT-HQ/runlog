@@ -452,6 +452,24 @@ export interface Guild {
   channelId?: string;
 }
 
+/** A watch party as the run page shows it. */
+export interface PartyView {
+  guildId: string;
+  guildName?: string;
+  threadId: string;
+  /** The address that opens the thread in Discord. */
+  threadUrl: string;
+  openedAt: string;
+  closedAt?: string;
+}
+
+/** A server this account claimed, for the run page's picker. */
+export interface PartyServer {
+  guildId: string;
+  name?: string;
+  watchParties: "off" | "every" | "packs";
+}
+
 /** A pack in a server's vault, as the profile lists it: never its text. */
 export interface GuildPackMeta {
   id: string;
@@ -496,6 +514,11 @@ export interface Api {
     },
   ): Promise<GuildPackMeta>;
   undelegatePack(guildId: string, packId: string): Promise<void>;
+  /** The parties open on this run, and the servers that could hold one. */
+  parties(sessionId: string): Promise<{ parties: PartyView[]; servers: PartyServer[] }>;
+  /** Open one in a server of this account's; the link is what this device remembers, where it has one. */
+  openParty(sessionId: string, guildId: string, link: string | null): Promise<PartyView>;
+  endParty(sessionId: string, guildId: string): Promise<void>;
   /** The name and email the SDK reported, so the server's row is never older than the last visit. */
   putProfile(snapshot: { name?: string; handle?: string; email?: string; termsVersion?: string }): Promise<Profile>;
   /** Everything of the caller's on the server, gone. */
@@ -556,8 +579,16 @@ export interface Api {
   /** Make one, shown this once. Making it again replaces what was there. */
   mintStreamKey(kind: StreamKeyKind): Promise<{ key: string; keys: StreamKeys }>;
   revokeStreamKey(kind: StreamKeyKind): Promise<StreamKeys>;
-  /** What a stranger sees of a run whose pack may not travel: written by the owner's device after each move. */
-  putSnapshot(sessionId: string, snapshot: unknown): Promise<void>;
+  /**
+   * What a stranger sees of a run whose pack may not travel: written by
+   * the owner's device after each move.
+   *
+   * `link` is the run's live link as this device remembers it, which the
+   * server keeps for a watch party's card since the session row holds only
+   * the token's hash. `first` marks the run's first snapshot, which is
+   * where a server set to open parties on its own gets its chance.
+   */
+  putSnapshot(sessionId: string, snapshot: unknown, extra?: { link?: string; first?: boolean }): Promise<void>;
   /** The same snapshot on this account, for a member who holds no pack: no live link needed. */
   watchAsSeat(sessionId: string): Promise<SeatView>;
   removeMember(sessionId: string, sub: string): Promise<void>;
@@ -1107,6 +1138,25 @@ export function createApi(base: string, getAccessToken: () => Promise<string>, f
     undelegatePack: async (guildId, packId) => {
       await request("DELETE", `/guilds/${encodeURIComponent(guildId)}/packs/${encodeURIComponent(packId)}`);
     },
+    parties: async (sessionId) => {
+      const { body } = await request<{ parties?: PartyView[]; servers?: PartyServer[] }>(
+        "GET",
+        `/sessions/${encodeURIComponent(sessionId)}/parties`,
+      );
+      return { parties: body.parties ?? [], servers: body.servers ?? [] };
+    },
+    openParty: async (sessionId, guildId, link) => {
+      const { status, body } = await request<{ party?: PartyView; error?: string }>(
+        "POST",
+        `/sessions/${encodeURIComponent(sessionId)}/parties`,
+        { guildId, ...(link ? { link } : {}) },
+      );
+      if (status !== 200 || !body.party) throw new SyncError("error", undefined, body.error ?? "that watch party could not be opened");
+      return body.party;
+    },
+    endParty: async (sessionId, guildId) => {
+      await request("DELETE", `/sessions/${encodeURIComponent(sessionId)}/parties/${encodeURIComponent(guildId)}`);
+    },
     createInvite: async (sessionId, email, role) => {
       const { status, body } = await request<{ invite?: Invite; link?: string; error?: string; plan?: string }>(
         "POST",
@@ -1202,8 +1252,8 @@ export function createApi(base: string, getAccessToken: () => Promise<string>, f
       return { key: body.key, keys: body.keys ?? {} };
     },
     revokeStreamKey: async (kind) => (await request<{ keys?: StreamKeys }>("DELETE", `/me/stream-keys?kind=${kind}`)).body.keys ?? {},
-    putSnapshot: async (sessionId, snapshot) => {
-      await request("PUT", `/sessions/${encodeURIComponent(sessionId)}/snapshot`, { snapshot });
+    putSnapshot: async (sessionId, snapshot, extra) => {
+      await request("PUT", `/sessions/${encodeURIComponent(sessionId)}/snapshot`, { snapshot, ...extra });
     },
     watchAsSeat: async (sessionId) => (await request<SeatView>("GET", `/sessions/${encodeURIComponent(sessionId)}/watch`)).body,
     acceptInvite: async (token, email) => {
