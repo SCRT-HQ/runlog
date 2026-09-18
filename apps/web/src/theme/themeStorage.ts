@@ -182,6 +182,7 @@ function openDatabase(scopeKey: string, factory: IDBFactory): Promise<IDBDatabas
   return new Promise((resolve, reject) => {
     let request: IDBOpenDBRequest;
     let settled = false;
+    let upgradeError: ThemeStorageError | null = null;
     try {
       request = factory.open(scopeKey, 1);
     } catch (cause) {
@@ -195,6 +196,7 @@ function openDatabase(scopeKey: string, factory: IDBFactory): Promise<IDBDatabas
         if (!db.objectStoreNames.contains(LIBRARY_STORE)) db.createObjectStore(LIBRARY_STORE, { keyPath: "id" });
         if (!db.objectStoreNames.contains(DRAFT_STORE)) db.createObjectStore(DRAFT_STORE, { keyPath: "id" });
       } catch (cause) {
+        upgradeError = storageError("unavailable", "Unable to create theme storage schema", cause);
         request.transaction?.abort();
       }
     };
@@ -206,7 +208,7 @@ function openDatabase(scopeKey: string, factory: IDBFactory): Promise<IDBDatabas
     request.onerror = () => {
       if (settled) return;
       settled = true;
-      reject(mapDatabaseError(request.error, "unavailable"));
+      reject(upgradeError ?? mapDatabaseError(request.error, "unavailable"));
     };
     request.onsuccess = () => {
       const db = request.result;
@@ -333,9 +335,11 @@ class IndexedDbThemeRepository implements ThemeRepository {
 
   async saveTheme(input: { record: ThemeRecordV1; expectedLocalRevision: number | null }): Promise<ThemeCasResult<SavedThemeRow>> {
     this.#ensureOpen();
-    const parsed = parseThemeRecord(input.record);
+    const recordInput = input.record;
+    const expectedLocalRevision = input.expectedLocalRevision;
+    const parsed = parseThemeRecord(recordInput);
     if (!parsed.ok) throw invalidData("Invalid theme record", parsed.issues);
-    ensureExpectedRevision(input.expectedLocalRevision);
+    ensureExpectedRevision(expectedLocalRevision);
     const id = parsed.value.id;
 
     return this.#transaction(LIBRARY_STORE, "readwrite", (store, set, fail) => {
@@ -346,7 +350,7 @@ class IndexedDbThemeRepository implements ThemeRepository {
           const current = get.result === undefined ? null : parseLibraryRow(get.result);
           if (
             current?.kind === "deleted" ||
-            (current === null ? input.expectedLocalRevision !== null : current.localRevision !== input.expectedLocalRevision)
+            (current === null ? expectedLocalRevision !== null : current.localRevision !== expectedLocalRevision)
           ) {
             set(conflict<SavedThemeRow>(current));
             return;
@@ -369,21 +373,23 @@ class IndexedDbThemeRepository implements ThemeRepository {
 
   async deleteTheme(input: { id: string; expectedLocalRevision: number }): Promise<ThemeCasResult<DeletedThemeRow>> {
     this.#ensureOpen();
-    ensureIdentifier(input.id, "theme id");
-    ensurePositiveRevision(input.expectedLocalRevision, "expected local revision");
+    const id = input.id;
+    const expectedLocalRevision = input.expectedLocalRevision;
+    ensureIdentifier(id, "theme id");
+    ensurePositiveRevision(expectedLocalRevision, "expected local revision");
     return this.#transaction(LIBRARY_STORE, "readwrite", (store, set, fail) => {
-      const get = store.get(input.id);
+      const get = store.get(id);
       get.onerror = () => fail(mapDatabaseError(get.error, "unavailable"));
       get.onsuccess = () => {
         try {
           const current = get.result === undefined ? null : parseLibraryRow(get.result);
-          if (current?.kind !== "saved" || current.localRevision !== input.expectedLocalRevision) {
+          if (current?.kind !== "saved" || current.localRevision !== expectedLocalRevision) {
             set(conflict<DeletedThemeRow>(current));
             return;
           }
           const row: DeletedThemeRow = Object.freeze({
             kind: "deleted",
-            id: input.id,
+            id,
             localRevision: nextRevision(current.localRevision, "Local revision"),
           });
           const put = store.put(row);
@@ -429,9 +435,11 @@ class IndexedDbThemeRepository implements ThemeRepository {
 
   async saveDraft(input: { draft: ThemeDraftV1; expectedLocalRevision: number | null }): Promise<ThemeCasResult<StoredThemeDraft>> {
     this.#ensureOpen();
-    const parsed = parseThemeDraft(input.draft);
+    const draftInput = input.draft;
+    const expectedLocalRevision = input.expectedLocalRevision;
+    const parsed = parseThemeDraft(draftInput);
     if (!parsed.ok) throw invalidData("Invalid theme draft", parsed.issues);
-    ensureExpectedRevision(input.expectedLocalRevision);
+    ensureExpectedRevision(expectedLocalRevision);
     if (new TextEncoder().encode(JSON.stringify(parsed.value)).byteLength > MAX_DRAFT_BYTES) {
       throw invalidData("Theme draft exceeds 65536 UTF-8 bytes");
     }
@@ -442,7 +450,7 @@ class IndexedDbThemeRepository implements ThemeRepository {
       get.onsuccess = () => {
         try {
           const current = get.result === undefined ? null : parseStoredDraft(get.result);
-          if (current === null ? input.expectedLocalRevision !== null : current.localRevision !== input.expectedLocalRevision) {
+          if (current === null ? expectedLocalRevision !== null : current.localRevision !== expectedLocalRevision) {
             set(conflict<StoredThemeDraft>(current));
             return;
           }
@@ -463,19 +471,21 @@ class IndexedDbThemeRepository implements ThemeRepository {
 
   async deleteDraft(input: { id: string; expectedLocalRevision: number }): Promise<ThemeCasResult<null>> {
     this.#ensureOpen();
-    ensureIdentifier(input.id, "draft id");
-    ensurePositiveRevision(input.expectedLocalRevision, "expected local revision");
+    const id = input.id;
+    const expectedLocalRevision = input.expectedLocalRevision;
+    ensureIdentifier(id, "draft id");
+    ensurePositiveRevision(expectedLocalRevision, "expected local revision");
     return this.#transaction(DRAFT_STORE, "readwrite", (store, set, fail) => {
-      const get = store.get(input.id);
+      const get = store.get(id);
       get.onerror = () => fail(mapDatabaseError(get.error, "unavailable"));
       get.onsuccess = () => {
         try {
           const current = get.result === undefined ? null : parseStoredDraft(get.result);
-          if (current === null || current.localRevision !== input.expectedLocalRevision) {
+          if (current === null || current.localRevision !== expectedLocalRevision) {
             set(conflict<null>(current));
             return;
           }
-          const remove = store.delete(input.id);
+          const remove = store.delete(id);
           remove.onerror = () => fail(mapDatabaseError(remove.error, "unavailable"));
           remove.onsuccess = () => set(success(null));
         } catch (cause) {

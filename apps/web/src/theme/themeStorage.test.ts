@@ -1,5 +1,5 @@
 import { COLOR_DEFINITIONS, createThemeRecordFromPreset, type ThemeRecordV1 } from "@runlog/themes";
-import { IDBFactory, IDBObjectStore } from "fake-indexeddb";
+import { IDBDatabase, IDBFactory, IDBObjectStore } from "fake-indexeddb";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nameFor, type Who } from "../storage/who.ts";
 import { type ThemeDraftV1 } from "./themeDraft.ts";
@@ -161,6 +161,65 @@ describe("theme library CAS", () => {
     });
     reopened.close();
   });
+
+  it("captures saveTheme input before asynchronous CAS work and reads getters once", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    await repo.saveTheme({ record: record("captured_save"), expectedLocalRevision: null });
+
+    const mutable = { record: record("captured_save"), expectedLocalRevision: 2 as number | null };
+    const staleSave = repo.saveTheme(mutable);
+    mutable.expectedLocalRevision = 1;
+    await expect(staleSave).resolves.toMatchObject({ ok: false, current: { localRevision: 1 } });
+
+    let recordReads = 0;
+    let revisionReads = 0;
+    const getterInput = {
+      get record() {
+        recordReads += 1;
+        return record("captured_save");
+      },
+      get expectedLocalRevision() {
+        revisionReads += 1;
+        return 1;
+      },
+    };
+    await expect(repo.saveTheme(getterInput)).resolves.toMatchObject({ ok: true, value: { localRevision: 2 } });
+    expect({ recordReads, revisionReads }).toEqual({ recordReads: 1, revisionReads: 1 });
+    repo.close();
+  });
+
+  it("captures deleteTheme input before asynchronous CAS work and reads getters once", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    await repo.saveTheme({ record: record("delete_original"), expectedLocalRevision: null });
+    await repo.saveTheme({ record: record("delete_protected"), expectedLocalRevision: null });
+
+    const mutable = { id: "delete_original", expectedLocalRevision: 1 };
+    const deleting = repo.deleteTheme(mutable);
+    mutable.id = "delete_protected";
+    await expect(deleting).resolves.toEqual({
+      ok: true,
+      value: { kind: "deleted", id: "delete_original", localRevision: 2 },
+    });
+    expect(await repo.loadTheme("delete_original")).toMatchObject({ kind: "deleted" });
+    expect(await repo.loadTheme("delete_protected")).toMatchObject({ kind: "saved" });
+
+    await repo.saveTheme({ record: record("delete_getter"), expectedLocalRevision: null });
+    let idReads = 0;
+    let revisionReads = 0;
+    const getterInput = {
+      get id() {
+        idReads += 1;
+        return "delete_getter";
+      },
+      get expectedLocalRevision() {
+        revisionReads += 1;
+        return 1;
+      },
+    };
+    await expect(repo.deleteTheme(getterInput)).resolves.toMatchObject({ ok: true });
+    expect({ idReads, revisionReads }).toEqual({ idReads: 1, revisionReads: 1 });
+    repo.close();
+  });
 });
 
 describe("draft CAS and bounds", () => {
@@ -191,6 +250,62 @@ describe("draft CAS and bounds", () => {
     const oversized = { ...draft("oversized"), rawName: "🙂".repeat(1024), rawColors } as ThemeDraftV1;
     await expect(repo.saveDraft({ draft: oversized, expectedLocalRevision: null })).rejects.toEqual(expectErrorCode("invalid-data"));
     expect(await repo.loadDraft("oversized")).toBeNull();
+    repo.close();
+  });
+
+  it("captures saveDraft input before asynchronous CAS work and reads getters once", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    await repo.saveDraft({ draft: draft("captured_draft"), expectedLocalRevision: null });
+
+    const mutable = { draft: draft("captured_draft"), expectedLocalRevision: 2 as number | null };
+    const staleSave = repo.saveDraft(mutable);
+    mutable.expectedLocalRevision = 1;
+    await expect(staleSave).resolves.toMatchObject({ ok: false, current: { localRevision: 1 } });
+
+    let draftReads = 0;
+    let revisionReads = 0;
+    const getterInput = {
+      get draft() {
+        draftReads += 1;
+        return draft("captured_draft");
+      },
+      get expectedLocalRevision() {
+        revisionReads += 1;
+        return 1;
+      },
+    };
+    await expect(repo.saveDraft(getterInput)).resolves.toMatchObject({ ok: true, value: { localRevision: 2 } });
+    expect({ draftReads, revisionReads }).toEqual({ draftReads: 1, revisionReads: 1 });
+    repo.close();
+  });
+
+  it("captures deleteDraft input before asynchronous CAS work and reads getters once", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    await repo.saveDraft({ draft: draft("draft_original"), expectedLocalRevision: null });
+    await repo.saveDraft({ draft: draft("draft_protected"), expectedLocalRevision: null });
+
+    const mutable = { id: "draft_original", expectedLocalRevision: 1 };
+    const deleting = repo.deleteDraft(mutable);
+    mutable.id = "draft_protected";
+    await expect(deleting).resolves.toEqual({ ok: true, value: null });
+    expect(await repo.loadDraft("draft_original")).toBeNull();
+    expect(await repo.loadDraft("draft_protected")).toMatchObject({ id: "draft_protected" });
+
+    await repo.saveDraft({ draft: draft("draft_getter"), expectedLocalRevision: null });
+    let idReads = 0;
+    let revisionReads = 0;
+    const getterInput = {
+      get id() {
+        idReads += 1;
+        return "draft_getter";
+      },
+      get expectedLocalRevision() {
+        revisionReads += 1;
+        return 1;
+      },
+    };
+    await expect(repo.deleteDraft(getterInput)).resolves.toMatchObject({ ok: true });
+    expect({ idReads, revisionReads }).toEqual({ idReads: 1, revisionReads: 1 });
     repo.close();
   });
 });
@@ -230,6 +345,19 @@ describe("validation, lifecycle, and durability", () => {
     repo.close();
     repo.close();
     await expect(repo.listLibrary()).rejects.toEqual(expectErrorCode("closed"));
+  });
+
+  it("preserves the original schema-upgrade failure as the typed error cause", async () => {
+    const cause = new Error("schema creation failed");
+    vi.spyOn(IDBDatabase.prototype, "createObjectStore").mockImplementation(() => {
+      throw cause;
+    });
+
+    await expect(openThemeRepository({ kind: "anon" }, new IDBFactory())).rejects.toMatchObject({
+      name: "ThemeStorageError",
+      code: "unavailable",
+      cause,
+    });
   });
 
   it("rejects corrupt stored rows without deleting or coercing them", async () => {
