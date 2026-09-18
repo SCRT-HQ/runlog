@@ -5,7 +5,7 @@ import { listRuns, type StoredPack, type StoredRun } from "../storage/db.ts";
 import { syncBus } from "../sync/bus.ts";
 import { useSync } from "../sync/SyncProvider.tsx";
 import { activeRunFor } from "../run/active.ts";
-import { RunRow, hasEnded, onDay } from "../run/RunRow.tsx";
+import { RunRow, onDay } from "../run/RunRow.tsx";
 import { scoresOf } from "../run/scores.ts";
 import { byLastOpened, openedAt } from "./opened.ts";
 import { useDocDrawer } from "../docs/DocDrawer.tsx";
@@ -330,8 +330,8 @@ export function LibraryView({
  * The card used to lay out Documents, Stream Deck profile, Start another,
  * Test, Every server, Replace from a file and Forget pack in one row, all
  * the same size, so the press nearly everybody came for was one of seven.
- * Now it is one: Continue, on the run that is open or the latest one not
- * finished, else Start. Everything else is a line in the menu, with
+ * Now it is one: Start a new run. Continuing belongs to the individual
+ * run rows and the card at the top of the shelf. Everything else is a line in the menu, with
  * Forget at the foot behind a rule.
  *
  * Two things stay in sight beside it, and neither is decoration: a newer
@@ -393,11 +393,6 @@ function PackCard({
   const runMany = v.run.many.toLowerCase();
   const last = openedAt(p.id);
 
-  // What Continue continues: the run open on this device, else the most
-  // recent one that has not ended. A shelf of finished runs starts a new
-  // one instead of promising play on a run that is over.
-  const openRun = inPlay ? mine.find((r) => r.runId === openRunId) : undefined;
-  const resume = openRun ?? mine.find((r) => !hasEnded(r));
   const shown = everyRun ? mine : mine.slice(0, 3);
   /** A pack with nothing to put on a deck is offered no deck. */
   const deck = parsed && hasKeys(parsed) ? parsed : null;
@@ -433,15 +428,9 @@ function PackCard({
               a shelf of six packs filling six buttons is six answers to one
               question. Where this sits, at the card's right edge with the
               menu beside it, is what says it is the card's action. */}
-          {resume ? (
-            <Button size="compact" onClick={() => onContinue(p, resume)}>
-              Continue
-            </Button>
-          ) : (
-            <Button size="compact" onClick={() => onStartAnother(p)}>
-              {`Start ${an(runOne)}`}
-            </Button>
-          )}
+          <Button size="compact" onClick={() => onStartAnother(p)}>
+            {`Start a new ${runOne}`}
+          </Button>
           <Menu label="More">
             {(close) => (
               <>

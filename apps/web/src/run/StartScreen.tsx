@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { an } from "@runlog/rules-schema";
 import type { Pack } from "@runlog/rules-schema";
 import type { StoredRun } from "../storage/db.ts";
@@ -112,6 +112,7 @@ export function StartScreen({
 
   const modes = Object.entries(pack.modes);
   const modeLabelId = useId();
+  const startFormId = useId();
   const modeGroup = useRef<HTMLDivElement>(null);
   /**
    * A radio group answers to the arrow keys, and only the chosen card is
@@ -127,6 +128,17 @@ export function StartScreen({
     if (!next) return;
     setMode(next[0]);
     modeGroup.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[to]?.focus();
+  };
+
+  /** Let the browser submit ordinary Enter, but never turn an IME confirmation into a start. */
+  const holdComposingEnter = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (isImeEnter(e)) e.preventDefault();
+  };
+
+  const submitStart = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!rosterOk || !seedOk) return;
+    onStart(mode, seed, seated, runName, roster, [...lacking], setup ? { setup } : {});
   };
 
   /**
@@ -150,10 +162,12 @@ export function StartScreen({
         <div className="row seedRow">
           <input
             {...control}
+            form={startFormId}
             className="textInput"
             value={seed}
             placeholder={chosen?.seeded ? "e.g. long-kiln-42" : "unseeded, dice are unrepeatable"}
             onChange={(e) => setSeed(e.target.value)}
+            onKeyDown={holdComposingEnter}
           />
           <Button onClick={() => setSeed(coinSeed())}>Make one</Button>
         </div>
@@ -335,7 +349,11 @@ export function StartScreen({
                         value={newName}
                         placeholder="a contestant's name"
                         onChange={(e) => setNewName(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && addName()}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter" || isImeEnter(e)) return;
+                          e.preventDefault();
+                          addName();
+                        }}
                       />
                       <Button onClick={addName} disabled={!newName.trim()}>
                         Add
@@ -352,7 +370,7 @@ export function StartScreen({
                 </p>
                 <div className="options">
                   {Array.from({ length: maxPlayers - minPlayers + 1 }, (_, i) => minPlayers + i).map((n) => (
-                    <button key={n} className={`chip pick ${n === seated ? "on" : ""}`} onClick={() => setPlayers(n)}>
+                    <button type="button" key={n} className={`chip pick ${n === seated ? "on" : ""}`} onClick={() => setPlayers(n)}>
                       {n}
                     </button>
                   ))}
@@ -395,6 +413,12 @@ export function StartScreen({
                 maxLength={8}
                 aria-label="Race code"
                 onChange={(e) => setRaceCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter" || isImeEnter(e)) return;
+                  e.preventDefault();
+                  const code = raceCode.trim();
+                  if (code.length >= 6) race.join(code, setup);
+                }}
               />
               <Button disabled={raceCode.trim().length < 6} onClick={() => race.join(raceCode.trim(), setup)}>
                 Join
@@ -422,17 +446,20 @@ export function StartScreen({
             {(control) => (
               <input
                 {...control}
+                form={startFormId}
                 className="textInput runNameField"
                 value={runName}
                 placeholder={`e.g. the winter ${runOne}`}
                 onChange={(e) => setRunName(e.target.value)}
+                onKeyDown={holdComposingEnter}
               />
             )}
           </Field>
         </section>
 
-        <div className="padRow stepAction setupStart">
+        <form id={startFormId} className="padRow stepAction setupStart" onSubmit={submitStart}>
           <Button
+            type="submit"
             variant="primary"
             size="big"
             disabled={!rosterOk || !seedOk}
@@ -443,14 +470,18 @@ export function StartScreen({
                   ? "This mode needs a seed"
                   : undefined
             }
-            onClick={() => onStart(mode, seed, seated, runName, roster, [...lacking], setup ? { setup } : {})}
           >
             Enter the {runOne}
           </Button>
-        </div>
+        </form>
       </section>
     </main>
   );
+}
+
+/** Composition may report either the flag or the legacy 229 key code, depending on event timing and browser. */
+function isImeEnter(e: KeyboardEvent<HTMLInputElement>): boolean {
+  return e.key === "Enter" && (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229);
 }
 
 /**

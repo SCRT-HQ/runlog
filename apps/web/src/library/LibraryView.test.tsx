@@ -128,6 +128,7 @@ beforeEach(() => {
   stored = [];
   setups.rows = [];
   setups.saved = [];
+  localStorage.clear();
 });
 afterEach(cleanup);
 
@@ -165,36 +166,62 @@ describe("the order of the page", () => {
 });
 
 describe("a pack's card", () => {
-  it("has one thing to press: a start, where nothing is going, and the menu beside it", () => {
-    const { container } = renderLibrary({ packs: shelf([record({})]) });
+  it("starts a new run through the pack action where none exist", () => {
+    const started: string[] = [];
+    const { container } = renderLibrary({
+      packs: shelf([record({})]),
+      onStartAnother: (pack) => started.push(pack.id),
+    });
     const card = container.querySelector(".libraryPack")!;
     const head = within(card.querySelector(".libraryPackActions") as HTMLElement);
     expect(head.getAllByRole("button").length).toBe(2);
-    expect(head.getByRole("button", { name: "Start a firing" })).toBeTruthy();
+    fireEvent.click(head.getByRole("button", { name: "Start a new firing" }));
+    expect(started).toEqual(["com.example.kiln"]);
     expect(head.getByRole("button", { name: /More/ })).toBeTruthy();
     // Quiet: the page's one filled action is the card at the top of it.
     expect(card.querySelectorAll(".primary").length).toBe(0);
   });
 
-  it("continues the run that is going, rather than offering a second one", async () => {
+  it("starts a new run from the pack header while its active row and home card still continue", async () => {
     stored = [run("r1", "2026-09-01T10:00:00Z")];
-    const picked: string[] = [];
-    const { container } = renderLibrary({ packs: shelf([record({})]), onContinue: (_p, r) => picked.push(r.runId) });
-    // The row of the run offers Continue too; this is about the one action
-    // at the head of the card.
+    localStorage.setItem("runlog:active:com.example.kiln", "r1");
+    localStorage.setItem("runlog:active", JSON.stringify({ packId: "com.example.kiln", runId: "r1" }));
+    const continued: string[] = [];
+    const started: string[] = [];
+    const { container } = renderLibrary({
+      packs: shelf([record({})]),
+      activeId: "com.example.kiln",
+      onContinue: (_p, r) => continued.push(r.runId),
+      onStartAnother: (pack) => started.push(pack.id),
+    });
     const head = () => within(container.querySelector(".libraryPackActions") as HTMLElement);
-    await waitFor(() => head().getByRole("button", { name: "Continue" }));
-    expect(head().queryByRole("button", { name: /^Start/ })).toBeNull();
-    fireEvent.click(head().getByRole("button", { name: "Continue" }));
-    expect(picked).toEqual(["r1"]);
+    await waitFor(() => head().getByRole("button", { name: "Start a new firing" }));
+    fireEvent.click(head().getByRole("button", { name: "Start a new firing" }));
+    expect(started).toEqual(["com.example.kiln"]);
+    expect(continued).toEqual([]);
+
+    fireEvent.click(within(container.querySelector(".runRow") as HTMLElement).getByRole("button", { name: "Continue" }));
+    fireEvent.click(within(container.querySelector(".homeCard") as HTMLElement).getByRole("button", { name: "Continue" }));
+    expect(continued).toEqual(["r1", "r1"]);
   });
 
-  it("starts a new one where every run is over, and those rows offer their results", async () => {
+  it("starts a new run from the pack header where every run ended, while the row opens results", async () => {
     stored = [run("r1", "2026-09-01T10:00:00Z", true)];
-    const { container } = renderLibrary({ packs: shelf([record({})]) });
+    const continued: string[] = [];
+    const started: string[] = [];
+    const { container } = renderLibrary({
+      packs: shelf([record({})]),
+      onContinue: (_p, r) => continued.push(r.runId),
+      onStartAnother: (pack) => started.push(pack.id),
+    });
     const card = () => within(container.querySelector(".libraryPack") as HTMLElement);
     await waitFor(() => card().getByRole("button", { name: "View results" }));
-    expect(card().getByRole("button", { name: "Start a firing" })).toBeTruthy();
+    fireEvent.click(
+      within(container.querySelector(".libraryPackActions") as HTMLElement).getByRole("button", { name: "Start a new firing" }),
+    );
+    expect(started).toEqual(["com.example.kiln"]);
+    fireEvent.click(within(container.querySelector(".runRow") as HTMLElement).getByRole("button", { name: "View results" }));
+    expect(continued).toEqual(["r1"]);
     expect(card().queryByRole("button", { name: "Continue" })).toBeNull();
   });
 
