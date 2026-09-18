@@ -241,6 +241,7 @@ describe("selection and feedback color roles", () => {
     );
     expect(finalDeclaration(".notice", "color")).toBe("color-mix(in oklab, var(--warn) 55%, var(--text))");
     expect(finalDeclaration(".die.challenge .value", "fill")).toBe("color-mix(in oklab, var(--err) 60%, var(--text))");
+    expect(finalDeclaration(".ghost.danger", "border-color")).toBe("color-mix(in oklab, var(--warn) 40%, var(--line))");
     expect(finalDeclaration(".widgetBody", "background")).toBe("color-mix(in srgb, var(--panel) 92%, transparent)");
     expect(finalDeclaration(':root[data-widget="clear"] .widgetBody', "background")).toBe(
       "color-mix(in srgb, var(--panel) 82%, transparent)",
