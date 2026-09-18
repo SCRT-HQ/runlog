@@ -215,6 +215,17 @@ async function renderRunView({
 }
 
 describe("the offer rides along with the snapshot", () => {
+  it("marks actual optional move cards without marking unrelated run controls", async () => {
+    await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: false });
+
+    const moves = screen.getByRole("heading", { name: /your move/i }).closest("section")!;
+    const moveCards = Array.from(moves.querySelectorAll(".choice"));
+    expect(moveCards.length).toBeGreaterThan(0);
+    expect(moveCards.every((card) => card.classList.contains("moveChoice"))).toBe(true);
+    expect(document.querySelectorAll(".moveChoice")).toHaveLength(moveCards.length);
+    expect(document.querySelector(".primary.moveChoice, .ghost.moveChoice")).toBeNull();
+  });
+
   it("publishes an offer beside the snapshot", async () => {
     const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
     await renderRunView({ putSnapshot, shared: true });

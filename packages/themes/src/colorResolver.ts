@@ -4,12 +4,13 @@ import {
   isColorTokenId,
   type ColorTokenId,
   type CoreColorTokenId,
+  type DecorationColorTokenId,
   type FeedbackBackgroundTokenId,
   type WidgetColorTokenId,
 } from "./colorRegistry.ts";
 
 export interface ResolvedColors {
-  readonly values: Readonly<Record<CoreColorTokenId | WidgetColorTokenId, HexColor>>;
+  readonly values: Readonly<Record<CoreColorTokenId | DecorationColorTokenId | WidgetColorTokenId, HexColor>>;
   readonly feedbackBackgrounds: Readonly<Record<FeedbackBackgroundTokenId, HexColor | null>>;
 }
 
@@ -52,12 +53,17 @@ export function resolveColors(base: unknown, overrides?: unknown): ResolvedColor
   const validOverrides = overrides === undefined ? ({} satisfies ValidatedColors) : validateColorRecord(overrides, false);
   if (validOverrides === null) return null;
 
-  const values: Partial<Record<CoreColorTokenId | WidgetColorTokenId, HexColor>> = {};
+  const values: Partial<Record<CoreColorTokenId | DecorationColorTokenId | WidgetColorTokenId, HexColor>> = {};
   const feedbackBackgrounds: Partial<Record<FeedbackBackgroundTokenId, HexColor | null>> = {};
 
   for (const definition of COLOR_DEFINITIONS) {
     if (definition.kind !== "core") continue;
     values[definition.id] = validOverrides[definition.id] ?? validBase[definition.id]!;
+  }
+
+  for (const definition of COLOR_DEFINITIONS) {
+    if (definition.kind !== "decoration") continue;
+    values[definition.id] = validOverrides[definition.id] ?? validBase[definition.id] ?? values[definition.inherits]!;
   }
 
   for (const definition of COLOR_DEFINITIONS) {
@@ -71,7 +77,7 @@ export function resolveColors(base: unknown, overrides?: unknown): ResolvedColor
   }
 
   return Object.freeze({
-    values: Object.freeze(values as Record<CoreColorTokenId | WidgetColorTokenId, HexColor>),
+    values: Object.freeze(values as Record<CoreColorTokenId | DecorationColorTokenId | WidgetColorTokenId, HexColor>),
     feedbackBackgrounds: Object.freeze(feedbackBackgrounds as Record<FeedbackBackgroundTokenId, HexColor | null>),
   });
 }

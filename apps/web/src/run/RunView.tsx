@@ -2697,7 +2697,7 @@ function Moves({ run, pack, state }: { run: ReturnType<typeof useRun>; pack: Pac
 
           if (!perRacer(move, racing)) {
             return (
-              <button key={id} className="choice" disabled={held} title={why} onClick={() => run.takeMove(id, move.label)}>
+              <button key={id} className="choice moveChoice" disabled={held} title={why} onClick={() => run.takeMove(id, move.label)}>
                 <strong>{move.label}</strong>
                 <span className="muted small">{move.description}</span>
                 {closes && <span className="muted small">{closes}</span>}
@@ -2706,7 +2706,7 @@ function Moves({ run, pack, state }: { run: ReturnType<typeof useRun>; pack: Pac
           }
 
           return (
-            <div className="choice perRacer" key={id}>
+            <div className="choice moveChoice perRacer" key={id}>
               <strong>{move.label}</strong>
               <span className="muted small">{move.description}</span>
               {closes && <span className="muted small">{closes}</span>}

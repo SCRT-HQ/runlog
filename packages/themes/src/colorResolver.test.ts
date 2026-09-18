@@ -23,6 +23,7 @@ const lightsDownBase = {
 
 const expectedLightsDownValues = {
   ...lightsDownBase,
+  "interaction.moveAccent": "#9fd3b6",
   "widget.ground": "#151311",
   "widget.panel": "#1e1b18",
   "widget.text": "#ece5d8",
@@ -43,6 +44,7 @@ const expectedDefinitions = [
   ["interaction.accent", "Accent", "interaction", "core"],
   ["interaction.accentTint", "Accent tint", "interaction", "core"],
   ["interaction.selectedIndicator", "Selected indicator", "interaction", "core"],
+  ["interaction.moveAccent", "Move card accent", "interaction", "decoration", "interaction.selectedIndicator"],
   ["interaction.focus", "Keyboard focus", "interaction", "core"],
   ["feedback.success", "Success foreground", "feedback", "core"],
   ["feedback.warning", "Warning foreground", "feedback", "core"],
@@ -65,7 +67,7 @@ describe("semantic color registry", () => {
         definition.label,
         definition.group,
         definition.kind,
-        ...(definition.kind === "widget" ? [definition.inherits] : []),
+        ...(definition.kind === "widget" || definition.kind === "decoration" ? [definition.inherits] : []),
       ]),
     ).toEqual(expectedDefinitions);
     expect(COLOR_DEFINITIONS.every((definition) => isColorTokenId(definition.id))).toBe(true);
@@ -91,7 +93,7 @@ describe("semantic color registry", () => {
 });
 
 describe("semantic color resolution", () => {
-  it("resolves the complete core palette and inherited widgets with empty overrides", () => {
+  it("accepts a historical 16-core base and resolves inherited optional roles with empty overrides", () => {
     const result = resolveColors(lightsDownBase);
 
     expect(result?.values).toEqual(expectedLightsDownValues);
@@ -119,7 +121,7 @@ describe("semantic color resolution", () => {
     });
   });
 
-  it("accepts and normalizes all 24 roles when present", () => {
+  it("accepts and normalizes all 25 roles when present", () => {
     const result = resolveColors(lightsDownBase, {
       "surface.page": "#ABC",
       "surface.panel": "#ABC",
@@ -133,6 +135,7 @@ describe("semantic color resolution", () => {
       "interaction.accent": "#ABC",
       "interaction.accentTint": "#ABC",
       "interaction.selectedIndicator": "#ABC",
+      "interaction.moveAccent": "rgb(1 2 3)",
       "interaction.focus": "#ABC",
       "feedback.success": "#ABC",
       "feedback.warning": "#ABC",
@@ -147,9 +150,35 @@ describe("semantic color resolution", () => {
       "feedback.dangerBackground": "#ABC",
     });
 
-    expect(Object.values(result?.values ?? {})).toEqual(Array(21).fill("#aabbcc"));
+    expect(result?.values).toMatchObject({
+      "interaction.moveAccent": "#010203",
+    });
+    expect(Object.values(result?.values ?? {}).filter((value) => value === "#aabbcc")).toHaveLength(21);
     expect(Object.values(result?.feedbackBackgrounds ?? {})).toEqual(Array(3).fill("#aabbcc"));
   });
+
+  it("applies move-accent override, base value, and final selected-indicator inheritance precedence", () => {
+    const baseWithMoveAccent = { ...lightsDownBase, "interaction.moveAccent": "#123" };
+
+    expect(
+      resolveColors(baseWithMoveAccent, {
+        "interaction.selectedIndicator": "#234",
+        "interaction.moveAccent": "rgb(4 5 6)",
+      })?.values["interaction.moveAccent"],
+    ).toBe("#040506");
+    expect(resolveColors(baseWithMoveAccent, { "interaction.selectedIndicator": "#234" })?.values["interaction.moveAccent"]).toBe(
+      "#112233",
+    );
+    expect(resolveColors(lightsDownBase, { "interaction.selectedIndicator": "#234" })?.values["interaction.moveAccent"]).toBe("#223344");
+  });
+
+  it.each(["red", "#1234", "rgb(1 2 3 / 1)", "var(--selected-indicator)", null, undefined])(
+    "rejects an explicitly invalid move accent %j in a base or override",
+    (value) => {
+      expect(resolveColors({ ...lightsDownBase, "interaction.moveAccent": value })).toBeNull();
+      expect(resolveColors(lightsDownBase, { "interaction.moveAccent": value })).toBeNull();
+    },
+  );
 
   it.each([
     null,

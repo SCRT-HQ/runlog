@@ -248,6 +248,7 @@ describe("built-in revision-1 color bases", () => {
     expect(Object.keys(base?.colors ?? {})).toEqual(Object.keys(expected.colors));
     expect(resolved?.values).toEqual({
       ...expected.colors,
+      "interaction.moveAccent": expected.colors["interaction.selectedIndicator"],
       "widget.ground": expected.colors["surface.page"],
       "widget.panel": expected.colors["surface.panel"],
       "widget.text": expected.colors["text.primary"],
@@ -299,6 +300,7 @@ describe("built-in revision-1 color bases", () => {
     expect(Object.keys(base?.colors ?? {})).toEqual(Object.keys(expected.colors));
     expect(resolved?.values).toEqual({
       ...expected.colors,
+      "interaction.moveAccent": expected.colors["interaction.selectedIndicator"],
       "widget.ground": expected.colors["surface.page"],
       "widget.panel": expected.colors["surface.panel"],
       "widget.text": expected.colors["text.primary"],
