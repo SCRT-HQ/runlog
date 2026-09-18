@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import { AccountBadge, syncLabel, syncTone } from "../auth/AccountBadge.tsx";
 import type { PendingInvite } from "../sync/client.ts";
+import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
 import { useInvites } from "../share/useInvites.ts";
 import { PROFILE_PAGES, profileHash, profilePageFromHash, type ProfilePage } from "./route.ts";
 import { ProfileView } from "./ProfileView.tsx";
@@ -99,6 +100,47 @@ describe("the profile", () => {
     expect(html).toContain(">Runs<");
     expect(html).toContain(">Packs<");
     expect(html).toContain("License keys");
+  });
+
+  it("keeps the device sync switch and manual action wired on Profile", () => {
+    const setEnabled = vi.fn();
+    const syncNow = vi.fn();
+    const sync: Sync = {
+      available: true,
+      enabled: true,
+      setEnabled,
+      status: "synced",
+      last: null,
+      syncNow,
+      setPackSync: async () => {},
+      gesture: () => false,
+      drove: () => {},
+    };
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    act(() => {
+      root.render(
+        <AccountContext.Provider value={signedIn}>
+          <SyncContext.Provider value={sync}>
+            <ProfileView page="profile" onBack={() => {}} />
+          </SyncContext.Provider>
+        </AccountContext.Provider>,
+      );
+    });
+
+    const switchInput = container.querySelector(".syncSwitch input") as HTMLInputElement;
+    expect(switchInput.checked).toBe(true);
+    act(() => switchInput.click());
+    expect(setEnabled).toHaveBeenCalledWith(false);
+
+    const syncButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Sync now");
+    act(() => syncButton?.click());
+    expect(syncNow).toHaveBeenCalledOnce();
+
+    act(() => root.unmount());
+    container.remove();
   });
 
   it("asks an anonymous visitor to sign in, and offers the way back", () => {
@@ -411,8 +453,8 @@ describe("the settings page", () => {
  * The account menu, in the order somebody reaches for things.
  *
  * The theme is changed on a whim and put back; the profile is where
- * everything about the account is; sync is a switch you check rather than
- * press. Settings was a door to a sheet that is a page of the profile
+ * everything about the account is, including its sync controls.
+ * Settings was a door to a sheet that is a page of the profile
  * now, so it is not a door any more.
  */
 describe("the account menu, signed in", () => {
@@ -431,7 +473,7 @@ describe("the account menu, signed in", () => {
     expect(menu()).not.toContain("n@example.com");
   });
 
-  it("puts the theme first, then the profile, then sync", () => {
+  it("puts the theme first, then the profile, then sign out", () => {
     const html = menu();
     const theme = html.indexOf("<select");
     const profile = html.indexOf("your keys, your data, your devices");
