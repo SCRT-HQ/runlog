@@ -1876,6 +1876,9 @@ button:disabled,
 .padRow.spread {
   justify-content: space-between;
 }
+.requestCancel {
+  margin-top: var(--space-3);
+}
 /* One operation: what to do, its arguments, and the button that removes
    it. A row holding two menus and a number came to a few pixels more
    than the sheet, and a wrapping row puts the remove button on a line of

@@ -48,7 +48,7 @@ export function RequestPanel({
       )}
       {request.kind === "prompt" && <PromptRequest request={request} pack={pack} state={state} onAnswer={onAnswer} />}
       {request.kind === "chooseTarget" && <ChooseTarget request={request} pack={pack} state={state} onAnswer={onAnswer} />}
-      <button className="ghost small" onClick={onCancel}>
+      <button className="ghost small requestCancel" onClick={onCancel}>
         Cancel this step
       </button>
     </section>
