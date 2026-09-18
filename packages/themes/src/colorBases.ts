@@ -10,6 +10,7 @@ export type BuiltinColorBaseId =
   | "high-contrast-light"
   | "retro-arcade"
   | "cyberpunk"
+  | "stardust"
   | "cyberpunk-neon"
   | "superstar"
   | "rainbow-road";
@@ -189,6 +190,24 @@ const builtinColorBases: Readonly<Record<BuiltinColorBaseId, BuiltinColorBase>> 
     "feedback.success": "#93e6b5",
     "feedback.warning": "#ffd28a",
     "feedback.danger": "#ffa5a5",
+  }),
+  stardust: createBase("stardust", "light", {
+    "surface.page": "#f2f1ea",
+    "surface.panel": "#fcfbf6",
+    "surface.raised": "#e4e5df",
+    "text.primary": "#243449",
+    "text.muted": "#505c68",
+    "text.onAccent": "#fffaf0",
+    "boundary.decorative": "#c49a50",
+    "boundary.control": "#687789",
+    "boundary.strong": "#46566b",
+    "interaction.accent": "#9b411f",
+    "interaction.accentTint": "#f0dfbe",
+    "interaction.selectedIndicator": "#a2393d",
+    "interaction.focus": "#315881",
+    "feedback.success": "#2e694d",
+    "feedback.warning": "#835900",
+    "feedback.danger": "#a2393d",
   }),
   "cyberpunk-neon": createBase("cyberpunk-neon", "dark", {
     "surface.page": "#160d24",

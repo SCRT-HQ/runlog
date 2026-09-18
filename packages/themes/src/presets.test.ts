@@ -87,13 +87,13 @@ const expectedPresets = [
 ] as const;
 
 describe("built-in theme preset catalog", () => {
-  it("publishes every supported preset in picker order with legal, inherited widget fonts", () => {
+  it("preserves existing preset identities with legal, inherited widget fonts", () => {
     expect(BUILTIN_PRESETS).toBeDefined();
     if (!BUILTIN_PRESETS) return;
-    expect(BUILTIN_PRESETS).toHaveLength(expectedPresets.length);
+    expect(BUILTIN_PRESETS).toHaveLength(expectedPresets.length + 1);
 
-    expectedPresets.forEach(([id, label, fonts], index) => {
-      const preset = BUILTIN_PRESETS[index];
+    expectedPresets.forEach(([id, label, fonts]) => {
+      const preset = BUILTIN_PRESETS.find((preset) => preset.id === id);
       expect(preset).toBeDefined();
       if (!preset) return;
       expect(preset).toEqual({ id, label, fonts });

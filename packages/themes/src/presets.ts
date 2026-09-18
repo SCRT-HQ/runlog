@@ -16,20 +16,6 @@ export const BUILTIN_PRESETS: readonly Readonly<BuiltinPreset>[] = Object.freeze
   createPreset("daylight", "Daylight", DEFAULT_APP_FONTS),
   createPreset("ember", "Ember", DEFAULT_APP_FONTS),
   createPreset("glaze", "Glaze", DEFAULT_APP_FONTS),
-  createPreset("high-contrast-dark", "High contrast dark", {
-    ui: "atkinson-hyperlegible-next",
-    prose: "atkinson-hyperlegible-next",
-    numeric: "ibm-plex-mono",
-    technical: "ibm-plex-mono",
-    display: "atkinson-hyperlegible-next",
-  }),
-  createPreset("high-contrast-light", "High contrast light", {
-    ui: "atkinson-hyperlegible-next",
-    prose: "atkinson-hyperlegible-next",
-    numeric: "ibm-plex-mono",
-    technical: "ibm-plex-mono",
-    display: "atkinson-hyperlegible-next",
-  }),
   createPreset("retro-arcade", "Linked", {
     ui: "atkinson-hyperlegible-next",
     prose: "atkinson-hyperlegible-next",
@@ -38,6 +24,13 @@ export const BUILTIN_PRESETS: readonly Readonly<BuiltinPreset>[] = Object.freeze
     display: "press-start-2p",
   }),
   createPreset("cyberpunk", "Spacewalk", {
+    ui: "space-grotesk",
+    prose: "space-grotesk",
+    numeric: "ibm-plex-mono",
+    technical: "ibm-plex-mono",
+    display: "oxanium",
+  }),
+  createPreset("stardust", "Stardust", {
     ui: "space-grotesk",
     prose: "space-grotesk",
     numeric: "ibm-plex-mono",
@@ -64,5 +57,19 @@ export const BUILTIN_PRESETS: readonly Readonly<BuiltinPreset>[] = Object.freeze
     numeric: "vt323",
     technical: "ibm-plex-mono",
     display: "press-start-2p",
+  }),
+  createPreset("high-contrast-dark", "High contrast dark", {
+    ui: "atkinson-hyperlegible-next",
+    prose: "atkinson-hyperlegible-next",
+    numeric: "ibm-plex-mono",
+    technical: "ibm-plex-mono",
+    display: "atkinson-hyperlegible-next",
+  }),
+  createPreset("high-contrast-light", "High contrast light", {
+    ui: "atkinson-hyperlegible-next",
+    prose: "atkinson-hyperlegible-next",
+    numeric: "ibm-plex-mono",
+    technical: "ibm-plex-mono",
+    display: "atkinson-hyperlegible-next",
   }),
 ]);
