@@ -1,7 +1,16 @@
 import { parseOpaqueColor, type HexColor } from "./color.ts";
 import type { CoreColorTokenId } from "./colorRegistry.ts";
 
-export type BuiltinColorBaseId = "lights-down" | "daylight" | "ember" | "glaze";
+export type BuiltinColorBaseId =
+  | "lights-down"
+  | "daylight"
+  | "ember"
+  | "glaze"
+  | "high-contrast-dark"
+  | "high-contrast-light"
+  | "retro-arcade"
+  | "cyberpunk"
+  | "cyberpunk-neon";
 
 export interface BuiltinColorBase {
   readonly id: BuiltinColorBaseId;
@@ -101,6 +110,96 @@ const builtinColorBases: Readonly<Record<BuiltinColorBaseId, BuiltinColorBase>> 
     "feedback.success": "#a8dcc0",
     "feedback.warning": "#e6b15c",
     "feedback.danger": "#e78a80",
+  }),
+  "high-contrast-dark": createBase("high-contrast-dark", "dark", {
+    "surface.page": "#080808",
+    "surface.panel": "#141414",
+    "surface.raised": "#202020",
+    "text.primary": "#ffffff",
+    "text.muted": "#dedede",
+    "text.onAccent": "#080808",
+    "boundary.decorative": "#777777",
+    "boundary.control": "#aaaaaa",
+    "boundary.strong": "#dedede",
+    "interaction.accent": "#ffdb66",
+    "interaction.accentTint": "#302a18",
+    "interaction.selectedIndicator": "#ffdb66",
+    "interaction.focus": "#a9ddff",
+    "feedback.success": "#a9efb1",
+    "feedback.warning": "#ffe6a6",
+    "feedback.danger": "#ffb5a9",
+  }),
+  "high-contrast-light": createBase("high-contrast-light", "light", {
+    "surface.page": "#ffffff",
+    "surface.panel": "#f5f5f5",
+    "surface.raised": "#eaeaea",
+    "text.primary": "#111111",
+    "text.muted": "#333333",
+    "text.onAccent": "#ffffff",
+    "boundary.decorative": "#777777",
+    "boundary.control": "#555555",
+    "boundary.strong": "#333333",
+    "interaction.accent": "#164a6e",
+    "interaction.accentTint": "#dce8ef",
+    "interaction.selectedIndicator": "#164a6e",
+    "interaction.focus": "#164a6e",
+    "feedback.success": "#24552c",
+    "feedback.warning": "#794900",
+    "feedback.danger": "#8a2222",
+  }),
+  "retro-arcade": createBase("retro-arcade", "dark", {
+    "surface.page": "#101810",
+    "surface.panel": "#1b281b",
+    "surface.raised": "#263426",
+    "text.primary": "#ecf7d7",
+    "text.muted": "#bdd0ab",
+    "text.onAccent": "#101810",
+    "boundary.decorative": "#4b6244",
+    "boundary.control": "#91ab7e",
+    "boundary.strong": "#bdd0ab",
+    "interaction.accent": "#a8ed70",
+    "interaction.accentTint": "#304427",
+    "interaction.selectedIndicator": "#a8ed70",
+    "interaction.focus": "#ffd36b",
+    "feedback.success": "#a8ed70",
+    "feedback.warning": "#ffd36b",
+    "feedback.danger": "#ffa38c",
+  }),
+  cyberpunk: createBase("cyberpunk", "dark", {
+    "surface.page": "#11151e",
+    "surface.panel": "#202837",
+    "surface.raised": "#2a3445",
+    "text.primary": "#edf2f7",
+    "text.muted": "#b9c8d9",
+    "text.onAccent": "#11151e",
+    "boundary.decorative": "#4d6078",
+    "boundary.control": "#8cabc4",
+    "boundary.strong": "#b9c8d9",
+    "interaction.accent": "#f1ed69",
+    "interaction.accentTint": "#414126",
+    "interaction.selectedIndicator": "#f1ed69",
+    "interaction.focus": "#8bd9ed",
+    "feedback.success": "#93e6b5",
+    "feedback.warning": "#ffd28a",
+    "feedback.danger": "#ffa5a5",
+  }),
+  "cyberpunk-neon": createBase("cyberpunk-neon", "dark", {
+    "surface.page": "#160d24",
+    "surface.panel": "#30204b",
+    "surface.raised": "#3a2959",
+    "text.primary": "#f5edff",
+    "text.muted": "#cdbbe8",
+    "text.onAccent": "#160d24",
+    "boundary.decorative": "#69547f",
+    "boundary.control": "#ad94c9",
+    "boundary.strong": "#cdbbe8",
+    "interaction.accent": "#ff64d8",
+    "interaction.accentTint": "#522644",
+    "interaction.selectedIndicator": "#ff64d8",
+    "interaction.focus": "#62cfff",
+    "feedback.success": "#a4edc1",
+    "feedback.warning": "#ffd27a",
+    "feedback.danger": "#ff9a88",
   }),
 });
 

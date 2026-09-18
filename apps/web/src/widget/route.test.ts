@@ -45,6 +45,7 @@ describe("a widget's address", () => {
 
   it("pins a theme in the address, so the capture ignores what the streaming machine chose", () => {
     expect(widgetFromHash("#widget/clock/r?theme=ember")?.theme).toBe("ember");
+    expect(widgetFromHash("#widget/clock/r?theme=cyberpunk-neon")?.theme).toBe("cyberpunk-neon");
     // "system" is the absence of a choice, and a theme nobody has is no theme: neither is carried.
     expect(widgetFromHash("#widget/clock/r?theme=system")).not.toHaveProperty("theme");
     expect(widgetFromHash("#widget/clock/r?theme=neon")).not.toHaveProperty("theme");

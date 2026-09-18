@@ -2,8 +2,8 @@ import { useState } from "react";
 import { applyTheme, rememberTheme, savedTheme, THEMES, isThemeId } from "./theme.ts";
 
 /**
- * The switch for the lights. A native select: it is five options, it has to
- * work from the keyboard, and it should not be interesting.
+ * The switch for the lights. A native select: it has to work from the
+ * keyboard, and it should not be interesting.
  */
 export function ThemeMenu() {
   const [theme, setTheme] = useState(() => savedTheme());

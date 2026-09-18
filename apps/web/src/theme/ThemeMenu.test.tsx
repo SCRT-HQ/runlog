@@ -11,6 +11,16 @@ afterEach(() => {
 });
 
 describe("theme menu", () => {
+  it("shows all five expanded preset labels", () => {
+    render(<ThemeMenu />);
+
+    expect((screen.getByRole("option", { name: "High contrast dark" }) as HTMLOptionElement).value).toBe("high-contrast-dark");
+    expect((screen.getByRole("option", { name: "High contrast light" }) as HTMLOptionElement).value).toBe("high-contrast-light");
+    expect((screen.getByRole("option", { name: "Retro Arcade" }) as HTMLOptionElement).value).toBe("retro-arcade");
+    expect((screen.getByRole("option", { name: "Cyberpunk" }) as HTMLOptionElement).value).toBe("cyberpunk");
+    expect((screen.getByRole("option", { name: "Cyberpunk Neon" }) as HTMLOptionElement).value).toBe("cyberpunk-neon");
+  });
+
   it("applies and remembers the selected explicit theme", () => {
     render(<ThemeMenu />);
 
@@ -32,5 +42,34 @@ describe("theme menu", () => {
     expect(document.documentElement.style.getPropertyValue("--bg")).toBe("");
     expect(document.documentElement.style.getPropertyValue("--font-ui")).toBe("");
     expect(localStorage.getItem("runlog.theme")).toBeNull();
+  });
+
+  it.each(["high-contrast-dark", "high-contrast-light", "retro-arcade", "cyberpunk", "cyberpunk-neon"])(
+    "applies and remembers expanded preset %s",
+    (id) => {
+      render(<ThemeMenu />);
+
+      fireEvent.change(screen.getByLabelText("Theme"), { target: { value: id } });
+
+      expect(document.documentElement.dataset.theme).toBe(id);
+      expect(document.documentElement.style.getPropertyValue("--bg")).not.toBe("");
+      expect(document.documentElement.style.getPropertyValue("--accent")).not.toBe("");
+      expect(document.documentElement.style.getPropertyValue("--font-ui")).not.toBe("");
+      expect(document.documentElement.style.getPropertyValue("--font-display")).not.toBe("");
+      expect(document.documentElement.style.getPropertyValue("--font-mono")).not.toBe("");
+      expect(document.documentElement.style.getPropertyValue("--font-technical")).not.toBe("");
+      expect(localStorage.getItem("runlog.theme")).toBe(id);
+    },
+  );
+
+  it("reads an expanded saved choice after remounting", () => {
+    localStorage.setItem("runlog.theme", "retro-arcade");
+    const first = render(<ThemeMenu />);
+    expect((screen.getByLabelText("Theme") as HTMLSelectElement).value).toBe("retro-arcade");
+
+    first.unmount();
+    render(<ThemeMenu />);
+
+    expect((screen.getByLabelText("Theme") as HTMLSelectElement).value).toBe("retro-arcade");
   });
 });
