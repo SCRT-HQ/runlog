@@ -61,7 +61,7 @@ function ByLink({ route, token }: { route: WidgetRoute; token: string }) {
         <p className="widgetNote">A widget by link needs the hosted copy of Runlog.</p>
       </Frame>
     );
-  if (got === undefined) return <Frame title={label(route)} />;
+  if (got === undefined) return <Frame title={label(route)} loading />;
   if (got === null)
     return (
       <Frame title={label(route)}>
@@ -142,7 +142,7 @@ function FromHere({ route }: { route: WidgetRoute }) {
       </Frame>
     );
   }
-  if (record === undefined) return <Frame title={label(route)} />;
+  if (record === undefined) return <Frame title={label(route)} loading />;
   if (record === null || !pack) {
     return (
       <Frame title={label(route)}>
@@ -174,13 +174,18 @@ function FromHere({ route }: { route: WidgetRoute }) {
   );
 }
 
-function Frame({ title, children }: { title: string; children?: React.ReactNode }) {
+function Frame({ title, children, loading = false }: { title: string; children?: React.ReactNode; loading?: boolean }) {
   return (
     <div className="widget">
-      {children ? (
+      {children || loading ? (
         <div className="widgetBody">
           <div className="widgetTitle muted small">{title}</div>
           {children}
+          {loading ? (
+            <p className="widgetNote" role="status" aria-busy="true">
+              Loading…
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>
