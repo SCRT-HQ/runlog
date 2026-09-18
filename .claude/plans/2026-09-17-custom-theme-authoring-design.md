@@ -3,7 +3,7 @@
 Date: 2026-09-17
 Status: written specification approved by the user on 2026-09-18; implementation authorized.
 Scope: first release, including account synchronization and external widget presentation.
-Implementation status: color/contrast foundation landed in PR #382; curated font contracts in progress. Detailed subplans are linked from 2026-09-18-custom-theme-authoring-roadmap.md.
+Implementation status: color/contrast foundation landed in PR #382; curated font contracts landed in PR #383; semantic color registry/resolution in progress. Detailed subplans are linked from 2026-09-18-custom-theme-authoring-roadmap.md.
 
 ## 1. Outcome and approved decisions
 
@@ -96,6 +96,8 @@ Public keys describe intent, not selectors. The initial registry covers:
 This is the required coverage, not permission to invent unused roles. Planning must inventory actual consumers and produce the exact stable key-to-CSS mapping. A shared foreground used over several surfaces must be checked against every applicable surface.
 
 Widget overrides inherit their app equivalents when unset. The existing clear/solid/none background modes remain separate rendering policies; a theme cannot force an opaque ground into a transparent widget mode.
+
+Approved feedback-background policy: success, warning and danger backgrounds each support an optional independent opaque-color override. When unset, retain the application's existing context-specific derived background treatment rather than forcing one new flat background across every state. Reset removes the override and restores the base's choice (derived when the base has no explicit background). Overrides do not hide contrast warnings or replace status labels/icons. Rendered-state contrast must evaluate the chosen explicit background or the effective derived treatment against its real backdrop.
 
 ### Color input
 
