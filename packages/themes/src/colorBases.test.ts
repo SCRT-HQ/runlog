@@ -249,6 +249,9 @@ describe("built-in revision-1 color bases", () => {
     expect(resolved?.values).toEqual({
       ...expected.colors,
       "interaction.moveAccent": expected.colors["interaction.selectedIndicator"],
+      "interaction.moveAccent2": expected.colors["interaction.focus"],
+      "interaction.moveAccent3": expected.colors["boundary.decorative"],
+      "interaction.moveAccent4": expected.colors["interaction.accent"],
       "widget.ground": expected.colors["surface.page"],
       "widget.panel": expected.colors["surface.panel"],
       "widget.text": expected.colors["text.primary"],
@@ -301,6 +304,9 @@ describe("built-in revision-1 color bases", () => {
     expect(resolved?.values).toEqual({
       ...expected.colors,
       "interaction.moveAccent": expected.colors["interaction.selectedIndicator"],
+      "interaction.moveAccent2": expected.colors["interaction.focus"],
+      "interaction.moveAccent3": expected.colors["boundary.decorative"],
+      "interaction.moveAccent4": expected.colors["interaction.accent"],
       "widget.ground": expected.colors["surface.page"],
       "widget.panel": expected.colors["surface.panel"],
       "widget.text": expected.colors["text.primary"],

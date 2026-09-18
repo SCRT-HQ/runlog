@@ -403,7 +403,7 @@ p {
 }
 @media (hover: hover) {
   .packBtn:hover {
-    border-color: var(--accent-dim);
+    border-color: var(--focus);
   }
 }
 .packBtn.on {
@@ -997,7 +997,7 @@ a.chip {
 }
 @media (hover: hover) {
   .ghost:hover:not(:disabled) {
-    border-color: var(--accent-dim);
+    border-color: var(--focus);
     color: var(--accent);
   }
 }
@@ -1844,7 +1844,7 @@ button:disabled,
 }
 @media (hover: hover) {
   .choice:hover {
-    border-color: var(--accent-dim);
+    border-color: var(--focus);
   }
 }
 .choice.on {
@@ -1852,6 +1852,18 @@ button:disabled,
 }
 .choice.moveChoice {
   border-top: 4px solid var(--move-accent, var(--selected-indicator, var(--accent)));
+}
+.choices > .choice.moveChoice:nth-child(4n + 1) {
+  border-top-color: var(--move-accent, var(--selected-indicator, var(--accent)));
+}
+.choices > .choice.moveChoice:nth-child(4n + 2) {
+  border-top-color: var(--move-accent-2, var(--focus));
+}
+.choices > .choice.moveChoice:nth-child(4n + 3) {
+  border-top-color: var(--move-accent-3, var(--line));
+}
+.choices > .choice.moveChoice:nth-child(4n + 4) {
+  border-top-color: var(--move-accent-4, var(--accent));
 }
 
 .padRow {
@@ -2439,7 +2451,7 @@ button:disabled,
 }
 @media (hover: hover) {
   .chip.pick:hover {
-    border-color: var(--accent-dim);
+    border-color: var(--focus);
   }
 }
 .chip.pick.on {
@@ -2555,7 +2567,7 @@ button:disabled,
 }
 @media (hover: hover) {
   .renameTrigger:hover {
-    border-bottom-color: var(--accent-dim);
+    border-bottom-color: var(--focus);
   }
 }
 .renameInput {
@@ -7227,7 +7239,7 @@ html[data-pip="controls"] body {
 }
 @media (hover: hover) {
   .welcomePack:hover {
-    border-color: var(--accent-dim);
+    border-color: var(--focus);
   }
 }
 /* The persona chips: whose run the log is, under the log. A row of small
@@ -7254,7 +7266,7 @@ html[data-pip="controls"] body {
 }
 @media (hover: hover) {
   .personaChip:hover {
-    border-color: var(--accent-dim);
+    border-color: var(--focus);
     color: var(--accent);
   }
 }

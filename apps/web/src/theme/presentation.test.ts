@@ -32,6 +32,9 @@ describe("browser presentation compilation", () => {
       "interaction.accentTint": "#111111",
       "interaction.selectedIndicator": "#121212",
       "interaction.moveAccent": "#252525",
+      "interaction.moveAccent2": "#262626",
+      "interaction.moveAccent3": "#272727",
+      "interaction.moveAccent4": "#282828",
       "interaction.focus": "#131313",
       "feedback.success": "#141414",
       "feedback.warning": "#151515",
@@ -61,6 +64,9 @@ describe("browser presentation compilation", () => {
       "--accent-dim": "#111111",
       "--selected-indicator": "#121212",
       "--move-accent": "#252525",
+      "--move-accent-2": "#262626",
+      "--move-accent-3": "#272727",
+      "--move-accent-4": "#282828",
       "--focus": "#131313",
       "--success": "#141414",
       "--warn": "#151515",
@@ -161,12 +167,18 @@ describe("browser presentation compilation", () => {
     applyPresentation(compilePresentation(explicit.colors, explicit.fonts, "dark"), root);
     expect(root.style.getPropertyValue("--success-background")).toBe("#123456");
     expect(root.style.getPropertyValue("--move-accent")).toBe("#a9cbb0");
+    expect(root.style.getPropertyValue("--move-accent-2")).toBe("#a9cbb0");
+    expect(root.style.getPropertyValue("--move-accent-3")).toBe("#45312a");
+    expect(root.style.getPropertyValue("--move-accent-4")).toBe("#a9cbb0");
     applyPresentation(compilePresentation(derived.colors, derived.fonts, "dark"), root);
     expect(root.style.getPropertyValue("--success-background")).toBe("");
 
     clearPresentation(root);
     expect(root.style.getPropertyValue("--text")).toBe("");
     expect(root.style.getPropertyValue("--move-accent")).toBe("");
+    expect(root.style.getPropertyValue("--move-accent-2")).toBe("");
+    expect(root.style.getPropertyValue("--move-accent-3")).toBe("");
+    expect(root.style.getPropertyValue("--move-accent-4")).toBe("");
     expect(root.style.getPropertyValue("color-scheme")).toBe("");
     expect(root.style.fontSize).toBe("32px");
     expect(root.style.getPropertyValue("--unrelated")).toBe("kept");
