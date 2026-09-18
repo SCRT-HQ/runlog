@@ -46,10 +46,15 @@ describe("a widget's address", () => {
   it("pins a theme in the address, so the capture ignores what the streaming machine chose", () => {
     expect(widgetFromHash("#widget/clock/r?theme=ember")?.theme).toBe("ember");
     expect(widgetFromHash("#widget/clock/r?theme=cyberpunk-neon")?.theme).toBe("cyberpunk-neon");
+    expect(widgetFromHash("#widget/clock/r?theme=superstar")?.theme).toBe("superstar");
+    expect(widgetFromHash("#widget/clock/r?theme=rainbow-road")?.theme).toBe("rainbow-road");
     // "system" is the absence of a choice, and a theme nobody has is no theme: neither is carried.
     expect(widgetFromHash("#widget/clock/r?theme=system")).not.toHaveProperty("theme");
     expect(widgetFromHash("#widget/clock/r?theme=neon")).not.toHaveProperty("theme");
     expect(widgetHash({ kind: "clock", runId: "r", bg: "clear", scale: 1, theme: "glaze" })).toBe("#widget/clock/r?bg=clear&theme=glaze");
+    expect(widgetHash({ kind: "clock", runId: "r", bg: "solid", scale: 1, theme: "rainbow-road" })).toBe(
+      "#widget/clock/r?theme=rainbow-road",
+    );
   });
 
   it("suggests a size for every kind, scaled from the documented 1.25× numbers", () => {

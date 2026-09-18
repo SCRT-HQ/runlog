@@ -10,7 +10,9 @@ export type BuiltinColorBaseId =
   | "high-contrast-light"
   | "retro-arcade"
   | "cyberpunk"
-  | "cyberpunk-neon";
+  | "cyberpunk-neon"
+  | "superstar"
+  | "rainbow-road";
 
 export interface BuiltinColorBase {
   readonly id: BuiltinColorBaseId;
@@ -205,6 +207,42 @@ const builtinColorBases: Readonly<Record<BuiltinColorBaseId, BuiltinColorBase>> 
     "feedback.success": "#a4edc1",
     "feedback.warning": "#ffd27a",
     "feedback.danger": "#ff9a88",
+  }),
+  superstar: createBase("superstar", "light", {
+    "surface.page": "#e5e3ec",
+    "surface.panel": "#f5f3fa",
+    "surface.raised": "#d9d5e5",
+    "text.primary": "#242134",
+    "text.muted": "#514667",
+    "text.onAccent": "#ffffff",
+    "boundary.decorative": "#aaa1ba",
+    "boundary.control": "#75618f",
+    "boundary.strong": "#5e467f",
+    "interaction.accent": "#654397",
+    "interaction.accentTint": "#ddd1ef",
+    "interaction.selectedIndicator": "#654397",
+    "interaction.focus": "#503182",
+    "feedback.success": "#28613e",
+    "feedback.warning": "#805200",
+    "feedback.danger": "#a12f4a",
+  }),
+  "rainbow-road": createBase("rainbow-road", "light", {
+    "surface.page": "#ededeb",
+    "surface.panel": "#fafaf7",
+    "surface.raised": "#dfdfdb",
+    "text.primary": "#202528",
+    "text.muted": "#475259",
+    "text.onAccent": "#ffffff",
+    "boundary.decorative": "#c4a128",
+    "boundary.control": "#245ab3",
+    "boundary.strong": "#475259",
+    "interaction.accent": "#a92734",
+    "interaction.accentTint": "#fff0b2",
+    "interaction.selectedIndicator": "#126c3f",
+    "interaction.focus": "#245ab3",
+    "feedback.success": "#126c3f",
+    "feedback.warning": "#805600",
+    "feedback.danger": "#a92734",
   }),
 });
 

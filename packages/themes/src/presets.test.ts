@@ -62,6 +62,28 @@ const expectedPresets = [
       display: "oxanium",
     },
   ],
+  [
+    "superstar",
+    "Superstar",
+    {
+      ui: "atkinson-hyperlegible-next",
+      prose: "atkinson-hyperlegible-next",
+      numeric: "vt323",
+      technical: "ibm-plex-mono",
+      display: "press-start-2p",
+    },
+  ],
+  [
+    "rainbow-road",
+    "Rainbow Road",
+    {
+      ui: "atkinson-hyperlegible-next",
+      prose: "atkinson-hyperlegible-next",
+      numeric: "vt323",
+      technical: "ibm-plex-mono",
+      display: "press-start-2p",
+    },
+  ],
 ] as const;
 
 describe("built-in theme preset catalog", () => {

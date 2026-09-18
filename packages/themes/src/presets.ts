@@ -51,4 +51,18 @@ export const BUILTIN_PRESETS: readonly Readonly<BuiltinPreset>[] = Object.freeze
     technical: "ibm-plex-mono",
     display: "oxanium",
   }),
+  createPreset("superstar", "Superstar", {
+    ui: "atkinson-hyperlegible-next",
+    prose: "atkinson-hyperlegible-next",
+    numeric: "vt323",
+    technical: "ibm-plex-mono",
+    display: "press-start-2p",
+  }),
+  createPreset("rainbow-road", "Rainbow Road", {
+    ui: "atkinson-hyperlegible-next",
+    prose: "atkinson-hyperlegible-next",
+    numeric: "vt323",
+    technical: "ibm-plex-mono",
+    display: "press-start-2p",
+  }),
 ]);

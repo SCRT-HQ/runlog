@@ -195,6 +195,48 @@ const expectedNewBases = {
       "feedback.danger": "#ff9a88",
     },
   },
+  superstar: {
+    colorScheme: "light",
+    colors: {
+      "surface.page": "#e5e3ec",
+      "surface.panel": "#f5f3fa",
+      "surface.raised": "#d9d5e5",
+      "text.primary": "#242134",
+      "text.muted": "#514667",
+      "text.onAccent": "#ffffff",
+      "boundary.decorative": "#aaa1ba",
+      "boundary.control": "#75618f",
+      "boundary.strong": "#5e467f",
+      "interaction.accent": "#654397",
+      "interaction.accentTint": "#ddd1ef",
+      "interaction.selectedIndicator": "#654397",
+      "interaction.focus": "#503182",
+      "feedback.success": "#28613e",
+      "feedback.warning": "#805200",
+      "feedback.danger": "#a12f4a",
+    },
+  },
+  "rainbow-road": {
+    colorScheme: "light",
+    colors: {
+      "surface.page": "#ededeb",
+      "surface.panel": "#fafaf7",
+      "surface.raised": "#dfdfdb",
+      "text.primary": "#202528",
+      "text.muted": "#475259",
+      "text.onAccent": "#ffffff",
+      "boundary.decorative": "#c4a128",
+      "boundary.control": "#245ab3",
+      "boundary.strong": "#475259",
+      "interaction.accent": "#a92734",
+      "interaction.accentTint": "#fff0b2",
+      "interaction.selectedIndicator": "#126c3f",
+      "interaction.focus": "#245ab3",
+      "feedback.success": "#126c3f",
+      "feedback.warning": "#805600",
+      "feedback.danger": "#a92734",
+    },
+  },
 } as const;
 
 describe("built-in revision-1 color bases", () => {
@@ -289,6 +331,13 @@ describe("built-in revision-1 color bases", () => {
     for (const text of ["text.primary", "text.muted"] as const) {
       expect(assessContrast(colors[text], colors["interaction.accentTint"], 4.5).passes).toBe(true);
     }
+  });
+
+  it.each(["superstar", "rainbow-road"])("defaults %s to revision 1 and rejects an unavailable revision", (id) => {
+    expect(getBuiltinColorBase(id)?.revision).toBe(1);
+    expect(getBuiltinColorBase(id, undefined)?.revision).toBe(1);
+    expect(getBuiltinColorBase(id, 1)?.revision).toBe(1);
+    expect(getBuiltinColorBase(id, 2)).toBeNull();
   });
 });
 
