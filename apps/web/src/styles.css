@@ -6401,8 +6401,9 @@ a.plan {
   background: color-mix(in srgb, var(--panel) 82%, transparent);
 }
 .widgetTitle {
-  font-family: var(--mono);
+  font: var(--font-body) var(--font-display);
   letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
 }
 .widgetNote {
   margin: 0;
