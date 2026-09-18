@@ -8220,6 +8220,198 @@ html[data-pip="controls"] body {
   gap: var(--space-2);
 }
 
+/* Operational pages speak in the UI voice without changing Account, which
+   owns its own plan, purchases, license, and data-action typography. */
+.profileApplication {
+  font: var(--font-body) var(--font-ui);
+  grid-template-columns: minmax(0, 1fr);
+}
+.profileApplication > h2 {
+  font: var(--font-page-title) var(--font-ui);
+}
+.profileApplication .muted.small,
+.profileApplication .small {
+  font: var(--font-caption) var(--font-ui);
+}
+.profileApplication .stepLabel {
+  font: var(--font-section-title) var(--font-ui);
+}
+.profileApplication code,
+.profileApplication .mono,
+.profileApplication .mono.small,
+.profileApplication .muted.small.mono {
+  font-family: var(--font-mono);
+}
+.profileApplication .syncTable {
+  font: var(--font-caption) var(--font-ui);
+}
+.profileApplication .syncTable thead th,
+.profileApplication .syncTable tbody th {
+  font: var(--font-caption) var(--font-ui);
+}
+.profileApplication .syncTable td {
+  font: var(--font-caption) var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+/* The signed-in identity includes user-supplied email/name values. At the
+   narrow root-text layout, they may need to break inside the existing flex
+   item instead of widening the panel. */
+.profileApplication .profileIdentityMain {
+  overflow-wrap: anywhere;
+}
+/* A handle should take a line of its own before it makes a narrow profile
+   panel wider than the viewport. */
+.profileApplication .shownAs .inviteForm {
+  min-width: 0;
+}
+.profileApplication .shownAs .inviteForm .textInput {
+  flex-basis: min(10rem, 100%);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.profileApplication .publisherNameForm {
+  min-width: 0;
+}
+.profileApplication .publisherNameForm .textInput {
+  flex-basis: min(16rem, 100%);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+/* Publisher titles are application list values; let a deliberately long
+   title wrap within its row instead of widening the profile shell. */
+.profileApplication .publisherPacks .publisherPack > :first-child {
+  min-width: 0;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.profileApplication .publisherPacks {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+.serverProfile .chipAdd {
+  min-width: 0;
+  inline-size: min(100%, 16rem);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+@media (max-width: 560px) {
+  /* Keep the three real sync columns available at enlarged root text. The
+     explicit layout and breakable UI labels avoid an intrinsic table minimum
+     without changing the table's values or numeric mono role. */
+  .profileApplication .syncTable {
+    table-layout: fixed;
+  }
+  .profileApplication .syncTable th,
+  .profileApplication .syncTable td {
+    overflow-wrap: anywhere;
+  }
+  .profileApplication .publisherPacks .publisherPack {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* On the stacked narrow Publisher row, open this local panel from its
+     summary rather than left of the viewport. Desktop menus retain their
+     existing right-edge alignment. */
+  .profileApplication .publisherPack .rowMenuPanel {
+    left: 0;
+    right: auto;
+  }
+  .serverProfile .serverVaultRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+  .serverProfile .serverVaultRow > :first-child {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .serverProfile .serverVaultRow > .ghost {
+    justify-self: start;
+  }
+}
+
+/* Social owns this in-panel list. The legacy flyout selector remains for the
+   account menu; it must not pull invitations off the Profile route. */
+.profileApplicationNav,
+.profileApplicationBody,
+.profileApplication .inviteList,
+.profileApplication .inviteList li,
+.profileApplication .inviteWords {
+  min-width: 0;
+}
+.profileApplication .inviteList {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  max-width: none;
+  border-inline: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.profileApplication .inviteWords b,
+.profileApplication .inviteWords .small {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.profileApplication .inviteActs {
+  flex-wrap: wrap;
+}
+
+/* Library and marketplace chrome use semantic UI roles while shipped pack
+   names, descriptions, requirements, publishers, and identifiers keep their
+   existing prose or machine roles. */
+.libraryHead .pageLead,
+.library .libraryEmpty,
+.marketHead p,
+.marketEmpty {
+  font: var(--font-body) var(--font-ui);
+}
+.library .homeLabel,
+.market .facetTitle,
+.market .marketMore > summary .sectionTitle,
+.market .marketFold > summary .sectionTitle,
+.market .marketCount p,
+.market .marketLoading,
+.market .marketFeedLine,
+.market .marketCardError,
+.design .notice {
+  font: var(--font-caption) var(--font-ui);
+}
+.library .homeFirstRunNote,
+.library .libraryPackMeta,
+.library .librarySeatsNote,
+.library .librarySetups,
+.library .packSync {
+  font: var(--font-caption) var(--font-ui);
+}
+/* A loaded shelf is a single application track at narrow enlarged text.
+   Preserve its authored titles' family while allowing an unbroken supplied
+   title to wrap instead of widening the page. */
+.library {
+  grid-template-columns: minmax(0, 1fr);
+}
+.library .homeCard strong,
+.library .libraryTitle strong {
+  overflow-wrap: anywhere;
+}
+.library .homeLabel,
+.market .facetTitle,
+.market .marketMore > summary .sectionTitle,
+.market .marketFold > summary .sectionTitle {
+  letter-spacing: normal;
+  text-transform: none;
+}
+.marketHead h2 {
+  font: var(--font-page-title) var(--font-ui);
+  overflow-wrap: anywhere;
+}
+.marketHead > :first-child {
+  min-width: 0;
+}
+
 /* The sealed-copy key and account plan are app UI, not pack-authored prose. */
 .sealedPackPrompt {
   font: var(--font-body) var(--font-ui);
