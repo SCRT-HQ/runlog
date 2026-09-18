@@ -231,6 +231,23 @@ describe("control boundaries and focus borders", () => {
 });
 
 describe("selection and feedback color roles", () => {
+  it("keeps every contrast-catalog mixed recipe in parity with the rendered CSS", () => {
+    expect(finalDeclaration(".primary:hover:not(:disabled)", "background")).toBe("color-mix(in oklab, var(--accent) 85%, var(--text))");
+    expect(finalDeclaration(".primary.danger:hover:not(:disabled)", "background")).toBe(
+      "color-mix(in oklab, var(--warn) 85%, var(--text))",
+    );
+    expect(finalDeclaration('.choices > [role="radio"][aria-checked="true"]', "background")).toBe(
+      "color-mix(in oklab, var(--accent) 10%, var(--panel-2))",
+    );
+    expect(finalDeclaration(".notice", "color")).toBe("color-mix(in oklab, var(--warn) 55%, var(--text))");
+    expect(finalDeclaration(".die.challenge .value", "fill")).toBe("color-mix(in oklab, var(--err) 60%, var(--text))");
+    expect(finalDeclaration(".widgetBody", "background")).toBe("color-mix(in srgb, var(--panel) 92%, transparent)");
+    expect(finalDeclaration(':root[data-widget="clear"] .widgetBody', "background")).toBe(
+      "color-mix(in srgb, var(--panel) 82%, transparent)",
+    );
+    expect(finalDeclaration(':root[data-widget="none"] .widgetBody', "background")).toBe("transparent");
+  });
+
   it("cycles only direct move-card choices through four fallback-safe top accents", () => {
     expect(finalDeclaration(".choice.moveChoice", "border-top")).toBe(
       "4px solid var(--move-accent, var(--selected-indicator, var(--accent)))",
