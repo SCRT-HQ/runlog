@@ -191,6 +191,113 @@ describe("control boundaries and focus borders", () => {
   });
 });
 
+describe("selection and feedback color roles", () => {
+  it("gives every static palette selection and success defaults without authored feedback backgrounds", () => {
+    expect(looks).toHaveLength(6);
+    for (const look of looks) {
+      expect(look.decls).toContainEqual({ prop: "--selected-indicator", value: "var(--accent)" });
+      expect(look.decls).toContainEqual({ prop: "--success", value: "var(--accent)" });
+
+      const named = new Set(look.decls.map((decl) => decl.prop));
+      expect([
+        look.selector,
+        ["--success-background", "--warning-background", "--danger-background"].filter((role) => named.has(role)),
+      ]).toEqual([look.selector, []]);
+    }
+  });
+
+  it.each([
+    [".packBtn.on", "border-color", "var(--selected-indicator)"],
+    [".designNavItem[aria-current]", "border-bottom-color", "var(--selected-indicator)"],
+    ['.topbarEnd > [aria-current="page"]', "box-shadow", "inset 0 -2px 0 var(--selected-indicator)"],
+    [".choice.on", "border-color", "var(--selected-indicator)"],
+    [".tableLook li.on .range", "color", "var(--selected-indicator)"],
+    [".ghost.on", "border-color", "var(--selected-indicator)"],
+    [".box.on", "background", "var(--selected-indicator)"],
+    [".box.on", "border-color", "var(--selected-indicator)"],
+    ['.choices > [role="radio"][aria-checked="true"]', "box-shadow", "inset 0 0 0 1px var(--selected-indicator)"],
+    [".chip.pick.on", "border-color", "var(--selected-indicator)"],
+    [".chip.pick.on", "color", "var(--selected-indicator)"],
+    [".margin .flow > li.current .idx", "color", "var(--selected-indicator)"],
+    [".liveFlow .logTools .ghost.on", "border-color", "var(--selected-indicator)"],
+    [".guideToc li.on", "border-left-color", "var(--selected-indicator)"],
+    [".guideOnPage li.on", "border-left-color", "var(--selected-indicator)"],
+    [".toggleChip.on", "border-color", "var(--selected-indicator)"],
+    [".liveFlow .flow li.current .idx", "color", "var(--selected-indicator)"],
+    ['.personaChip[aria-pressed="true"]', "border-color", "var(--selected-indicator)"],
+    [".flowNow .idx", "color", "var(--selected-indicator)"],
+    [".railTab[aria-current]", "border-top-color", "var(--selected-indicator)"],
+    [".setupOption .tick", "color", "var(--selected-indicator)"],
+  ])("routes the %s %s through the selected indicator", (selector, prop, value) => {
+    expect(finalDeclaration(selector, prop), `${selector} should declare ${prop}: ${value}`).toBe(value);
+  });
+
+  it.each([
+    [".libraryPack.inPlay", "border-color", "var(--accent-dim)"],
+    [".runRow.open", "border-color", "var(--accent-dim)"],
+    [".chip.ok", "border-color", "var(--accent-dim)"],
+    ['.topbarEnd > [aria-current="page"]', "color", "var(--accent)"],
+    ['.choices > [role="radio"][aria-checked="true"]', "background", "color-mix(in oklab, var(--accent) 10%, var(--panel-2))"],
+    [".toggleChip.on", "background", "var(--accent-dim)"],
+    ['.personaChip[aria-pressed="true"]', "color", "var(--accent)"],
+    [".railTab[aria-current]", "color", "var(--accent)"],
+    [".die.settled .body", "stroke", "var(--accent-dim)"],
+    [".primary.danger", "background", "var(--warn)"],
+    [".matrix .cell.won", "background", "var(--accent)"],
+  ])("preserves the legacy %s %s holdout", (selector, prop, value) => {
+    expect(finalDeclaration(selector, prop), `${selector} should retain ${prop}: ${value}`).toBe(value);
+  });
+
+  it("keeps hit results outside the selection role", () => {
+    expect(finalDeclaration(".entries li.hit", "background")).toBe("color-mix(in oklab, var(--accent) 12%, var(--panel))");
+    expect(finalDeclaration(".entries li.hit", "box-shadow")).toBe("inset 2px 0 0 var(--accent)");
+  });
+
+  it.each([
+    [".chip.ok", "color", "var(--success)"],
+    [".toolIcon.lit", "color", "var(--success)"],
+    [".ghost.saved:disabled", "color", "var(--success)"],
+    [".agreeing", "color", "var(--success)"],
+    [".led.fine", "background", "var(--success)"],
+    [".led.fine", "box-shadow", "0 0 6px color-mix(in oklab, var(--success) 60%, transparent)"],
+    [".widgetTicker li.award .tickMark", "color", "var(--success)"],
+    [".widgetTicker li.rolled .tickMark", "color", "var(--accent)"],
+  ])("routes the %s %s through its intentional outcome role", (selector, prop, value) => {
+    expect(finalDeclaration(selector, prop), `${selector} should declare ${prop}: ${value}`).toBe(value);
+  });
+
+  it.each([
+    [".chip.heat", "background", "var(--warning-background, color-mix(in oklab, var(--warn) 14%, transparent))"],
+    [".notice", "background", "var(--warning-background, color-mix(in oklab, var(--warn) 12%, var(--panel)))"],
+    [".die.challenge .body", "fill", "var(--danger-background, color-mix(in oklab, var(--err) 18%, var(--panel)))"],
+    [".forget:hover", "background", "var(--danger-background, color-mix(in oklab, var(--err) 12%, var(--panel)))"],
+    [".threshold", "background", "var(--danger-background, color-mix(in oklab, var(--err) 8%, var(--panel)))"],
+    [".coverageSeg.ok", "background", "var(--success-background, var(--accent-dim))"],
+    [".coverageSeg.over", "background", "var(--warning-background, var(--warn))"],
+    [".signature.bad", "background", "var(--danger-background, color-mix(in oklab, var(--err) 10%, var(--panel)))"],
+    [".incoming.bad", "background", "var(--danger-background, color-mix(in oklab, var(--danger) 10%, var(--surface)))"],
+    [".ghost.danger:hover:not(:disabled)", "background", "var(--danger-background, color-mix(in oklab, var(--warn) 10%, transparent))"],
+  ])("wraps the %s %s without changing its legacy fallback", (selector, prop, value) => {
+    expect(finalDeclaration(selector, prop), `${selector} should declare ${prop}: ${value}`).toBe(value);
+  });
+
+  it("wraps both colored coverage-gap stops without flattening its stripe", () => {
+    expect(finalDeclaration(".coverageSeg.gap", "background")?.replace(/\s+/g, " ")).toBe(
+      "repeating-linear-gradient( 45deg, var(--danger-background, color-mix(in oklab, var(--err) 25%, var(--panel))), var(--danger-background, color-mix(in oklab, var(--err) 25%, var(--panel))) 3px, var(--panel) 3px, var(--panel) 6px )",
+    );
+  });
+
+  it("routes the live heat start through warning background and keeps its transparent endpoint", () => {
+    const starts = sheet.filter((rule) => rule.selector === "0%").flatMap((rule) => rule.decls);
+    const ends = sheet.filter((rule) => rule.selector === "100%").flatMap((rule) => rule.decls);
+    expect(starts).toContainEqual({
+      prop: "background",
+      value: "var(--warning-background, color-mix(in oklab, var(--warn) 35%, transparent))",
+    });
+    expect(ends).toContainEqual({ prop: "background", value: "transparent" });
+  });
+});
+
 describe("what a migrated control promises", () => {
   it("never lets a shorthand throw away a family named above it", () => {
     // What `.ghost` did: `font-family`, then `font: inherit` under it, and

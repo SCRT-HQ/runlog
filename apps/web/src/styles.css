@@ -107,7 +107,7 @@
   --err: #e4736b;
   --raise: 0 1px 0 rgba(0, 0, 0, 0.4), 0 14px 32px -14px rgba(0, 0, 0, 0.75);
   /* The roles the palette answers to. A look sets its own ground, its own
-     ink and its own two accents; every look names all ten, so a theme can
+     ink and its own two accents; every look names all twelve, so a theme can
      later part a role from the value it borrows without touching a rule. */
   --surface: var(--panel);
   --surface-raised: var(--panel-2);
@@ -115,6 +115,8 @@
   --danger: var(--err);
   --control-boundary: var(--line);
   --focus: var(--accent);
+  --selected-indicator: var(--accent);
+  --success: var(--accent);
 }
 
 @media (prefers-color-scheme: light) {
@@ -139,6 +141,8 @@
     --danger: var(--err);
     --control-boundary: var(--line);
     --focus: var(--accent);
+    --selected-indicator: var(--accent);
+    --success: var(--accent);
   }
 }
 
@@ -163,6 +167,8 @@
   --danger: var(--err);
   --control-boundary: var(--line);
   --focus: var(--accent);
+  --selected-indicator: var(--accent);
+  --success: var(--accent);
 }
 :root[data-theme="daylight"] {
   color-scheme: light;
@@ -185,6 +191,8 @@
   --danger: var(--err);
   --control-boundary: var(--line);
   --focus: var(--accent);
+  --selected-indicator: var(--accent);
+  --success: var(--accent);
 }
 :root[data-theme="ember"] {
   color-scheme: dark;
@@ -207,6 +215,8 @@
   --danger: var(--err);
   --control-boundary: var(--line);
   --focus: var(--accent);
+  --selected-indicator: var(--accent);
+  --success: var(--accent);
 }
 :root[data-theme="glaze"] {
   color-scheme: dark;
@@ -229,6 +239,8 @@
   --danger: var(--err);
   --control-boundary: var(--line);
   --focus: var(--accent);
+  --selected-indicator: var(--accent);
+  --success: var(--accent);
 }
 
 * {
@@ -394,7 +406,7 @@ p {
   }
 }
 .packBtn.on {
-  border-color: var(--accent);
+  border-color: var(--selected-indicator);
   background: var(--panel-2);
 }
 .packBtn strong {
@@ -489,7 +501,7 @@ a.chip {
 }
 .chip.ok {
   border-color: var(--accent-dim);
-  color: var(--accent);
+  color: var(--success);
 }
 .chip.warn {
   border-color: color-mix(in oklab, var(--warn) 40%, var(--line));
@@ -510,7 +522,7 @@ a.chip {
 /* A result that reached this thing: worn beside its states, filled rather than outlined, in the color the log gives a hit. */
 .chip.heat {
   color: var(--warn);
-  background: color-mix(in oklab, var(--warn) 14%, transparent);
+  background: var(--warning-background, color-mix(in oklab, var(--warn) 14%, transparent));
   border-color: transparent;
 }
 .chip.state {
@@ -528,7 +540,7 @@ a.chip {
   margin-top: 0.65rem;
   padding: 0.5rem 0.7rem;
   border-left: 2px solid var(--warn);
-  background: color-mix(in oklab, var(--warn) 12%, var(--panel));
+  background: var(--warning-background, color-mix(in oklab, var(--warn) 12%, var(--panel)));
   color: color-mix(in oklab, var(--warn) 55%, var(--text));
   font-size: 0.85rem;
 }
@@ -559,7 +571,7 @@ a.chip {
 }
 .designNavItem[aria-current] {
   color: var(--text);
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--selected-indicator);
 }
 .designNavItem:hover {
   color: var(--text);
@@ -1074,7 +1086,7 @@ a.chip {
 
 /* The opposition in an opposed roll reads as hostile at a glance. */
 .die.challenge .body {
-  fill: color-mix(in oklab, var(--err) 18%, var(--panel));
+  fill: var(--danger-background, color-mix(in oklab, var(--err) 18%, var(--panel)));
   stroke: color-mix(in oklab, var(--err) 45%, var(--line-2));
 }
 .die.challenge .value {
@@ -1156,7 +1168,7 @@ a.chip {
  */
 .topbarEnd > [aria-current="page"] {
   color: var(--accent);
-  box-shadow: inset 0 -2px 0 var(--accent);
+  box-shadow: inset 0 -2px 0 var(--selected-indicator);
 }
 
 /*
@@ -1617,7 +1629,7 @@ a.chip {
 }
 /* Plugged in: the celadon the app uses for "fine", at full strength. */
 .toolIcon.lit {
-  color: var(--accent);
+  color: var(--success);
   opacity: 1;
 }
 /*
@@ -1835,7 +1847,7 @@ button:disabled,
   }
 }
 .choice.on {
-  border-color: var(--accent);
+  border-color: var(--selected-indicator);
 }
 
 .padRow {
@@ -2010,10 +2022,10 @@ button:disabled,
   background: var(--accent-dim);
 }
 .tableLook li.on .range {
-  color: var(--accent);
+  color: var(--selected-indicator);
 }
 .ghost.on {
-  border-color: var(--accent);
+  border-color: var(--selected-indicator);
   color: var(--text);
 }
 
@@ -2127,8 +2139,8 @@ button:disabled,
   border-radius: 3px;
 }
 .box.on {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--selected-indicator);
+  border-color: var(--selected-indicator);
 }
 .bar {
   height: 7px;
@@ -2188,7 +2200,7 @@ button:disabled,
 /* The journal's Save once it has nothing left to do: a quiet word, not a disabled button. */
 .ghost.saved:disabled {
   opacity: 1;
-  color: var(--accent);
+  color: var(--success);
   border-color: transparent;
 }
 
@@ -2279,14 +2291,14 @@ button:disabled,
 @media (hover: hover) {
   .forget:hover {
     color: var(--err);
-    background: color-mix(in oklab, var(--err) 12%, var(--panel));
+    background: var(--danger-background, color-mix(in oklab, var(--err) 12%, var(--panel)));
   }
 }
 
 /* A threshold is the game acting on you, so it reads louder than a choice. */
 .threshold {
   border-color: var(--err);
-  background: color-mix(in oklab, var(--err) 8%, var(--panel));
+  background: var(--danger-background, color-mix(in oklab, var(--err) 8%, var(--panel)));
 }
 .threshold .sectionTitle {
   color: var(--err);
@@ -2369,7 +2381,7 @@ button:disabled,
  */
 .choices > [role="radio"][aria-checked="true"] {
   background: color-mix(in oklab, var(--accent) 10%, var(--panel-2));
-  box-shadow: inset 0 0 0 1px var(--accent);
+  box-shadow: inset 0 0 0 1px var(--selected-indicator);
 }
 /* What this is, before what it will be: the pack, its premise, then the run. */
 .setupHead {
@@ -2427,8 +2439,8 @@ button:disabled,
   }
 }
 .chip.pick.on {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--selected-indicator);
+  color: var(--selected-indicator);
 }
 
 /* Whoever has just been handed the device has to find their role at a glance. */
@@ -2512,7 +2524,7 @@ button:disabled,
 }
 .agreeing {
   margin-top: 0.7rem;
-  color: var(--accent);
+  color: var(--success);
   font-size: 0.85rem;
 }
 /* Sub-headings inside a folded section need air above them; they follow lists
@@ -2715,19 +2727,19 @@ select.textInput {
   border: 1px solid var(--line);
 }
 .coverageSeg.ok {
-  background: var(--accent-dim);
+  background: var(--success-background, var(--accent-dim));
 }
 .coverageSeg.gap {
   background: repeating-linear-gradient(
     45deg,
-    color-mix(in oklab, var(--err) 25%, var(--panel)),
-    color-mix(in oklab, var(--err) 25%, var(--panel)) 3px,
+    var(--danger-background, color-mix(in oklab, var(--err) 25%, var(--panel))),
+    var(--danger-background, color-mix(in oklab, var(--err) 25%, var(--panel))) 3px,
     var(--panel) 3px,
     var(--panel) 6px
   );
 }
 .coverageSeg.over {
-  background: var(--warn);
+  background: var(--warning-background, var(--warn));
 }
 
 .problemList {
@@ -2770,7 +2782,7 @@ select.textInput {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  background: color-mix(in oklab, var(--err) 10%, var(--panel));
+  background: var(--danger-background, color-mix(in oklab, var(--err) 10%, var(--panel)));
   border-bottom-color: color-mix(in oklab, var(--err) 45%, var(--line));
   color: var(--err);
 }
@@ -2807,7 +2819,7 @@ select.textInput {
 }
 .incoming.bad {
   border-bottom-color: color-mix(in oklab, var(--danger) 45%, var(--line));
-  background: color-mix(in oklab, var(--danger) 10%, var(--surface));
+  background: var(--danger-background, color-mix(in oklab, var(--danger) 10%, var(--surface)));
 }
 .incomingWhat {
   min-width: 0;
@@ -3165,7 +3177,7 @@ select.textInput {
 }
 @media (hover: hover) {
   .ghost.danger:hover:not(:disabled) {
-    background: color-mix(in oklab, var(--warn) 10%, transparent);
+    background: var(--danger-background, color-mix(in oklab, var(--warn) 10%, transparent));
   }
 }
 
@@ -3723,7 +3735,7 @@ select.textInput {
   color: var(--text);
 }
 .margin .flow > li.current .idx {
-  color: var(--accent);
+  color: var(--selected-indicator);
 }
 .margin .flow .idx {
   flex: none;
@@ -3781,7 +3793,7 @@ select.textInput {
 }
 .liveFlow .logTools .ghost.on {
   color: var(--text);
-  border-color: var(--accent);
+  border-color: var(--selected-indicator);
 }
 /* A result from a table the phase set off names the table first, in the referee's voice; a hit carries the log's color for one. */
 .flow .result .head {
@@ -4221,8 +4233,8 @@ details.panel[open] > summary .sectionTitle::after {
   vertical-align: middle;
 }
 .led.fine {
-  background: var(--accent);
-  box-shadow: 0 0 6px color-mix(in oklab, var(--accent) 60%, transparent);
+  background: var(--success);
+  box-shadow: 0 0 6px color-mix(in oklab, var(--success) 60%, transparent);
 }
 .led.busy {
   background: var(--accent);
@@ -5415,7 +5427,7 @@ details.panel[open] > summary .sectionTitle::after {
   padding-bottom: 0.2rem;
 }
 .guideToc li.on {
-  border-left-color: var(--accent);
+  border-left-color: var(--selected-indicator);
   background: var(--panel-2);
   border-radius: 0 var(--radius) var(--radius) 0;
 }
@@ -5498,7 +5510,7 @@ details.panel[open] > summary .sectionTitle::after {
   padding-left: 1.4rem;
 }
 .guideOnPage li.on {
-  border-left-color: var(--accent);
+  border-left-color: var(--selected-indicator);
 }
 .guideOnPage a {
   color: var(--muted);
@@ -6136,7 +6148,7 @@ a.plan {
 }
 .toggleChip.on {
   background: var(--accent-dim);
-  border-color: var(--accent);
+  border-color: var(--selected-indicator);
   color: var(--text);
 }
 .rolesEditor {
@@ -6458,9 +6470,11 @@ a.plan {
   color: var(--muted);
   letter-spacing: 0.04em;
 }
-.widgetTicker li.rolled .tickMark,
-.widgetTicker li.award .tickMark {
+.widgetTicker li.rolled .tickMark {
   color: var(--accent);
+}
+.widgetTicker li.award .tickMark {
+  color: var(--success);
 }
 .widgetTicker li.run-ended .tickMark {
   color: var(--warn);
@@ -6751,7 +6765,7 @@ a.plan {
   color: var(--muted);
 }
 .liveFlow .flow li.current .idx {
-  color: var(--accent);
+  color: var(--selected-indicator);
 }
 .liveWhere .muted {
   margin-right: 0.5rem;
@@ -6813,7 +6827,7 @@ a.plan {
 }
 @keyframes liveHeat {
   0% {
-    background: color-mix(in oklab, var(--warn) 35%, transparent);
+    background: var(--warning-background, color-mix(in oklab, var(--warn) 35%, transparent));
   }
   100% {
     background: transparent;
@@ -7225,7 +7239,7 @@ html[data-pip="controls"] body {
   cursor: pointer;
 }
 .personaChip[aria-pressed="true"] {
-  border-color: var(--accent);
+  border-color: var(--selected-indicator);
   color: var(--accent);
 }
 @media (hover: hover) {
@@ -7516,7 +7530,7 @@ html[data-pip="controls"] body {
   .flowNow .idx {
     font-family: var(--mono);
     font-size: var(--t-1);
-    color: var(--accent);
+    color: var(--selected-indicator);
     white-space: nowrap;
   }
   .flowNow .muted {
@@ -7765,7 +7779,7 @@ html[data-pip="controls"] body {
      row would read as the thing to press rather than the thing you are on. */
   .railTab[aria-current] {
     color: var(--accent);
-    border-top-color: var(--accent);
+    border-top-color: var(--selected-indicator);
   }
   .railTab:active {
     background: var(--panel);
@@ -8044,7 +8058,7 @@ html[data-pip="controls"] body {
 }
 .setupOption .tick {
   flex: 0 0 1rem;
-  color: var(--accent);
+  color: var(--selected-indicator);
 }
 .setupOptionText {
   display: flex;
