@@ -99,8 +99,10 @@ describe("browser presentation compilation", () => {
       "widget.textMuted": "#223344",
     })!;
     const fonts = resolveFonts(DEFAULT_APP_FONTS, {
+      numeric: "vt323",
+      technical: "system-mono",
       widgetProse: "system-sans",
-      widgetNumeric: "system-mono",
+      widgetTechnical: "ibm-plex-mono",
     })!;
     const preview = document.createElement("section");
     preview.style.setProperty("--unrelated", "kept");
@@ -112,13 +114,39 @@ describe("browser presentation compilation", () => {
     expect(preview.style.getPropertyValue("--text-muted")).toBe("#223344");
     expect(preview.style.getPropertyValue("--danger")).toBe("#f08070");
     expect(preview.style.getPropertyValue("--serif")).toBe('system-ui, -apple-system, "Segoe UI", Roboto, sans-serif');
-    expect(preview.style.getPropertyValue("--mono")).toBe("ui-monospace, SFMono-Regular, Menlo, Consolas, monospace");
+    expect(preview.style.getPropertyValue("--font-mono")).toBe('"VT323", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace');
+    expect(preview.style.getPropertyValue("--font-technical")).toBe(
+      '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+    );
+    expect(preview.style.getPropertyValue("--font-widget-technical")).toBe(
+      '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+    );
+    expect(preview.style.getPropertyValue("--mono")).toBe('"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace');
 
     clearPresentation(preview);
-    for (const property of ["--surface", "--surface-raised", "--text-muted", "--danger", "--serif", "--mono"]) {
+    for (const property of [
+      "--surface",
+      "--surface-raised",
+      "--text-muted",
+      "--danger",
+      "--serif",
+      "--mono",
+      "--font-technical",
+      "--font-widget-technical",
+    ]) {
       expect(preview.style.getPropertyValue(property)).toBe("");
     }
     expect(preview.style.getPropertyValue("--unrelated")).toBe("kept");
+  });
+
+  it("keeps the app technical stack independent from its numeric stack", () => {
+    const { colors } = ember();
+    const fonts = resolveFonts(DEFAULT_APP_FONTS, { numeric: "vt323", technical: "system-mono" })!;
+    const presentation = compilePresentation(colors, fonts, "dark");
+
+    expect(presentation["--font-mono"]).toBe('"VT323", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace');
+    expect(presentation["--font-technical"]).toBe("ui-monospace, SFMono-Regular, Menlo, Consolas, monospace");
+    expect(presentation["--mono"]).toBe("ui-monospace, SFMono-Regular, Menlo, Consolas, monospace");
   });
 
   it("removes nullable feedback backgrounds and only the properties it owns", () => {

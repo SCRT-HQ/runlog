@@ -6,6 +6,7 @@ const base = {
   ui: "system-sans",
   prose: "literata",
   numeric: "ibm-plex-mono",
+  technical: "ibm-plex-mono",
   display: "system-sans",
 };
 
@@ -15,8 +16,8 @@ describe("curated theme fonts", () => {
       { id: "system-sans", label: "System sans", roles: ["ui", "prose", "display"] },
       { id: "system-serif", label: "System serif", roles: ["ui", "prose", "display"] },
       { id: "literata", label: "Literata", roles: ["ui", "prose", "display"] },
-      { id: "ibm-plex-mono", label: "IBM Plex Mono", roles: ["ui", "prose", "numeric", "display"] },
-      { id: "system-mono", label: "System monospace", roles: ["numeric", "display"] },
+      { id: "ibm-plex-mono", label: "IBM Plex Mono", roles: ["ui", "prose", "numeric", "technical", "display"] },
+      { id: "system-mono", label: "System monospace", roles: ["numeric", "technical", "display"] },
       {
         id: "atkinson-hyperlegible-next",
         label: "Atkinson Hyperlegible Next",
@@ -31,6 +32,7 @@ describe("curated theme fonts", () => {
       ui: "system-sans",
       prose: "literata",
       numeric: "ibm-plex-mono",
+      technical: "ibm-plex-mono",
       display: "system-sans",
     });
     expect(Object.isFrozen(FONT_DEFINITIONS)).toBe(true);
@@ -42,16 +44,16 @@ describe("curated theme fonts", () => {
   });
 
   it.each<[FontId, readonly AppFontRole[], readonly AppFontRole[]]>([
-    ["system-sans", ["ui", "prose", "display"], ["numeric"]],
-    ["system-serif", ["ui", "prose", "display"], ["numeric"]],
-    ["literata", ["ui", "prose", "display"], ["numeric"]],
-    ["ibm-plex-mono", ["ui", "prose", "numeric", "display"], []],
-    ["system-mono", ["numeric", "display"], ["ui", "prose"]],
-    ["atkinson-hyperlegible-next", ["ui", "prose", "display"], ["numeric"]],
-    ["space-grotesk", ["ui", "prose", "display"], ["numeric"]],
-    ["oxanium", ["ui", "prose", "display"], ["numeric"]],
-    ["vt323", ["numeric", "display"], ["ui", "prose"]],
-    ["press-start-2p", ["display"], ["ui", "prose", "numeric"]],
+    ["system-sans", ["ui", "prose", "display"], ["numeric", "technical"]],
+    ["system-serif", ["ui", "prose", "display"], ["numeric", "technical"]],
+    ["literata", ["ui", "prose", "display"], ["numeric", "technical"]],
+    ["ibm-plex-mono", ["ui", "prose", "numeric", "technical", "display"], []],
+    ["system-mono", ["numeric", "technical", "display"], ["ui", "prose"]],
+    ["atkinson-hyperlegible-next", ["ui", "prose", "display"], ["numeric", "technical"]],
+    ["space-grotesk", ["ui", "prose", "display"], ["numeric", "technical"]],
+    ["oxanium", ["ui", "prose", "display"], ["numeric", "technical"]],
+    ["vt323", ["numeric", "display"], ["ui", "prose", "technical"]],
+    ["press-start-2p", ["display"], ["ui", "prose", "numeric", "technical"]],
   ])("enforces the approved roles for %s", (id, allowed, denied) => {
     expect(isFontId(id)).toBe(true);
     for (const role of allowed) expect(isFontAllowed(role, id)).toBe(true);
@@ -62,10 +64,14 @@ describe("curated theme fonts", () => {
     expect(isFontAllowed("widgetUi", "space-grotesk")).toBe(true);
     expect(isFontAllowed("widgetProse", "literata")).toBe(true);
     expect(isFontAllowed("widgetNumeric", "vt323")).toBe(true);
+    expect(isFontAllowed("widgetTechnical", "system-mono")).toBe(true);
     expect(isFontAllowed("widgetDisplay", "press-start-2p")).toBe(true);
     expect(isFontAllowed("widgetUi", "system-mono")).toBe(false);
     expect(isFontAllowed("widgetProse", "vt323")).toBe(false);
     expect(isFontAllowed("widgetNumeric", "oxanium")).toBe(false);
+    expect(isFontAllowed("widgetTechnical", "vt323")).toBe(false);
+    expect(isFontAllowed("widgetTechnical", "press-start-2p")).toBe(false);
+    expect(isFontAllowed("widgetTechnical", "literata")).toBe(false);
   });
 
   it.each([
@@ -89,10 +95,12 @@ describe("curated theme fonts", () => {
       ui: "space-grotesk",
       prose: "literata",
       numeric: "ibm-plex-mono",
+      technical: "ibm-plex-mono",
       display: "oxanium",
       widgetUi: "space-grotesk",
       widgetProse: "literata",
       widgetNumeric: "ibm-plex-mono",
+      widgetTechnical: "ibm-plex-mono",
       widgetDisplay: "oxanium",
     });
   });
@@ -102,10 +110,12 @@ describe("curated theme fonts", () => {
       ui: "system-sans",
       prose: "literata",
       numeric: "ibm-plex-mono",
+      technical: "ibm-plex-mono",
       display: "system-sans",
       widgetUi: "system-sans",
       widgetProse: "literata",
       widgetNumeric: "ibm-plex-mono",
+      widgetTechnical: "ibm-plex-mono",
       widgetDisplay: "system-sans",
     });
   });
@@ -115,6 +125,16 @@ describe("curated theme fonts", () => {
     expect(resolveFonts({ ...base, widgetDisplay: "system-serif" }, { widgetDisplay: "press-start-2p" })?.widgetDisplay).toBe(
       "press-start-2p",
     );
+    expect(resolveFonts({ ...base, widgetTechnical: "system-mono" }, { technical: "ibm-plex-mono" })?.widgetTechnical).toBe("system-mono");
+  });
+
+  it("resolves technical and numeric roles independently", () => {
+    expect(resolveFonts(DEFAULT_APP_FONTS, { numeric: "vt323", technical: "system-mono" })).toMatchObject({
+      numeric: "vt323",
+      technical: "system-mono",
+      widgetNumeric: "vt323",
+      widgetTechnical: "system-mono",
+    });
   });
 
   it("makes widgets inherit again after an override is removed", () => {
@@ -124,17 +144,29 @@ describe("curated theme fonts", () => {
     delete overrides.widgetUi;
 
     expect(resolveFonts(base, overrides)?.widgetUi).toBe("space-grotesk");
+
+    const technicalOverrides: { technical: FontId; widgetTechnical?: FontId } = {
+      technical: "system-mono",
+      widgetTechnical: "ibm-plex-mono",
+    };
+    expect(resolveFonts(base, technicalOverrides)?.widgetTechnical).toBe("ibm-plex-mono");
+
+    delete technicalOverrides.widgetTechnical;
+
+    expect(resolveFonts(base, technicalOverrides)?.widgetTechnical).toBe("system-mono");
   });
 
   it("rejects role-incompatible values", () => {
     expect(resolveFonts(base, { ui: "press-start-2p" })).toBeNull();
     expect(resolveFonts(base, { widgetNumeric: "oxanium" })).toBeNull();
+    expect(resolveFonts(base, { technical: "vt323" })).toBeNull();
+    expect(resolveFonts(base, { widgetTechnical: "press-start-2p" })).toBeNull();
     expect(isFontAllowed("display", "press-start-2p")).toBe(true);
     expect(isFontId("url(https://example.test/font)")).toBe(false);
   });
 
   it.each([
-    ["missing app role", { ui: "system-sans", prose: "literata", numeric: "ibm-plex-mono" }, undefined],
+    ["missing technical app role", { ui: "system-sans", prose: "literata", numeric: "ibm-plex-mono", display: "system-sans" }, undefined],
     ["unknown base key", { ...base, accent: "system-sans" }, undefined],
     ["unknown override key", base, { accent: "system-sans" }],
     ["base array", [base], undefined],
@@ -143,6 +175,8 @@ describe("curated theme fonts", () => {
     ["null overrides", base, null],
     ["own undefined base", { ...base, ui: undefined }, undefined],
     ["own undefined override", base, { widgetUi: undefined }],
+    ["own undefined technical override", base, { technical: undefined }],
+    ["own undefined widget technical override", base, { widgetTechnical: undefined }],
     ["own null base", { ...base, ui: null }, undefined],
     ["own null override", base, { widgetUi: null }],
   ])("rejects malformed records: %s", (_name, candidateBase, overrides) => {
@@ -178,16 +212,25 @@ describe("curated theme fonts", () => {
       },
     });
     const accessorOverrides = {};
-    Object.defineProperty(accessorOverrides, "widgetUi", {
+    Object.defineProperty(accessorOverrides, "technical", {
       enumerable: true,
       get() {
         calls += 1;
-        return "system-sans";
+        return "system-mono";
+      },
+    });
+    const widgetAccessorOverrides = {};
+    Object.defineProperty(widgetAccessorOverrides, "widgetTechnical", {
+      enumerable: true,
+      get() {
+        calls += 1;
+        return "system-mono";
       },
     });
 
     expect(resolveFonts(accessorBase)).toBeNull();
     expect(resolveFonts(base, accessorOverrides)).toBeNull();
+    expect(resolveFonts(base, widgetAccessorOverrides)).toBeNull();
     expect(calls).toBe(0);
   });
 

@@ -33,10 +33,12 @@ const FONT_PROPERTIES = {
   ui: "--font-ui",
   prose: "--font-prose",
   numeric: "--font-mono",
+  technical: "--font-technical",
   display: "--font-display",
   widgetUi: "--font-widget-ui",
   widgetProse: "--font-widget-prose",
   widgetNumeric: "--font-widget-mono",
+  widgetTechnical: "--font-widget-technical",
   widgetDisplay: "--font-widget-display",
 } as const;
 
@@ -103,10 +105,12 @@ export function compilePresentation(
     "--font-ui": FONT_STACKS[fonts.ui],
     "--font-prose": FONT_STACKS[fonts.prose],
     "--font-mono": FONT_STACKS[fonts.numeric],
+    "--font-technical": FONT_STACKS[fonts.technical],
     "--font-display": FONT_STACKS[fonts.display],
     "--font-widget-ui": FONT_STACKS[fonts.widgetUi],
     "--font-widget-prose": FONT_STACKS[fonts.widgetProse],
     "--font-widget-mono": FONT_STACKS[fonts.widgetNumeric],
+    "--font-widget-technical": FONT_STACKS[fonts.widgetTechnical],
     "--font-widget-display": FONT_STACKS[fonts.widgetDisplay],
     "--surface": colors.values["surface.panel"],
     "--surface-raised": colors.values["surface.raised"],
@@ -126,6 +130,7 @@ export function compilePresentation(
     presentation["--font-ui"] = FONT_STACKS[fonts.widgetUi];
     presentation["--font-prose"] = FONT_STACKS[fonts.widgetProse];
     presentation["--font-mono"] = FONT_STACKS[fonts.widgetNumeric];
+    presentation["--font-technical"] = FONT_STACKS[fonts.widgetTechnical];
     presentation["--font-display"] = FONT_STACKS[fonts.widgetDisplay];
   }
 
@@ -134,7 +139,7 @@ export function compilePresentation(
   presentation["--text-muted"] = presentation["--muted"];
   presentation["--danger"] = presentation["--err"];
   presentation["--serif"] = presentation["--font-prose"];
-  presentation["--mono"] = presentation["--font-mono"];
+  presentation["--mono"] = presentation["--font-technical"];
 
   return Object.freeze(presentation);
 }

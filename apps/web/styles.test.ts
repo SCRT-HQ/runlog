@@ -123,13 +123,14 @@ describe("the semantic tokens", () => {
     }
   });
 
-  it("declares the three families and the five type roles", () => {
+  it("declares the four families and the five type roles", () => {
     const base = looks.find((l) => l.selector === ":root");
     const named = new Set(base?.decls.map((d) => d.prop) ?? []);
     for (const token of [
       "--font-ui",
       "--font-prose",
       "--font-mono",
+      "--font-technical",
       "--font-display",
       "--font-page-title",
       "--font-section-title",
@@ -143,6 +144,13 @@ describe("the semantic tokens", () => {
     ]) {
       expect([token, named.has(token)]).toEqual([token, true]);
     }
+  });
+
+  it("keeps the legacy default stacks while separating technical text from numeric readouts", () => {
+    const plexStack = '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    expect(finalDeclaration(":root", "--font-mono")).toBe(plexStack);
+    expect(finalDeclaration(":root", "--font-technical")).toBe(plexStack);
+    expect(finalDeclaration(":root", "--mono")).toBe("var(--font-technical)");
   });
 });
 
@@ -357,7 +365,7 @@ describe("what a migrated control promises", () => {
         (d) =>
           d.prop === "font" &&
           /var\(--font-(page-title|section-title|body|control|caption)\)/.test(d.value) &&
-          !/var\(--font-(ui|prose|mono|display)\)/.test(d.value),
+          !/var\(--font-(ui|prose|mono|technical|display)\)/.test(d.value),
       ),
     );
     expect(loose.map((r) => r.selector)).toEqual([]);
@@ -456,7 +464,7 @@ describe("control font roles", () => {
 
   it("preserves explicit prose and mono control exceptions", () => {
     expect(finalDeclaration(".rollInput", "font-family")).toBe("var(--font-mono)");
-    expect(finalDeclaration(".textInput.mono", "font-family")).toBe("var(--font-mono)");
+    expect(finalDeclaration(".textInput.mono", "font-family")).toBe("var(--font-technical)");
     expect(finalDeclaration(".runNameInput", "font-family")).toBe("var(--font-prose)");
     expect(sheet.find((rule) => rule.selector === ".textInput.area")?.decls).toContainEqual({
       prop: "font",
@@ -464,9 +472,44 @@ describe("control font roles", () => {
     });
   });
 
-  it.each([".flowNow .idx", ".runRowMeta .num", ".tableLook .range"])("keeps the numeric content in %s mono", (selector) => {
-    expect(finalDeclaration(selector, "font-family")).toBe("var(--mono)");
+  it.each([
+    [".purchaseKey", "font", "var(--font-caption) var(--font-technical)"],
+    [".textInput.mono", "font-family", "var(--font-technical)"],
+    [".incoming code, .incoming .mono", "font-family", "var(--font-technical)"],
+    [".connectionsPanel code, .connectionsPanel .mono", "font-family", "var(--font-technical)"],
+    [".licenseOrder", "font", "var(--font-caption) var(--font-technical)"],
+    [".licenseKey", "font", "var(--font-body) var(--font-technical)"],
+    [".log .timeline .where", "font-family", "var(--font-technical)"],
+    [".brokeError", "font", "var(--font-caption) var(--font-technical)"],
+    [
+      ".profileApplication code, .profileApplication .mono, .profileApplication .mono.small, .profileApplication .muted.small.mono",
+      "font-family",
+      "var(--font-technical)",
+    ],
+    [".sealedPackPrompt .mono", "font-family", "var(--font-technical)"],
+  ])("routes technical text in %s through its explicit role", (selector, prop, value) => {
+    expect(finalDeclaration(selector, prop), `${selector} should declare ${prop}: ${value}`).toBe(value);
   });
+
+  it.each([
+    ".die .value",
+    ".clockDigits",
+    ".raceBoard .place",
+    ".raceBoard .time",
+    ".widgetBoard .place",
+    ".widgetBoard .num",
+    ".seatTracker > .num",
+    ".rollTotal .big",
+  ])("routes the unambiguous numeric readout in %s through the numeric role", (selector) => {
+    expect(finalDeclaration(selector, "font-family")).toBe("var(--font-mono)");
+  });
+
+  it.each([".rollResult .headline", ".flowNow .idx", ".runRowMeta .num", ".tableLook .range"])(
+    "keeps mixed or deferred metadata in %s on the legacy technical alias",
+    (selector) => {
+      expect(finalDeclaration(selector, "font-family")).toBe("var(--mono)");
+    },
+  );
 });
 
 describe("theme picker layout", () => {

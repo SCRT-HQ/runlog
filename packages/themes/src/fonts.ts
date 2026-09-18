@@ -1,6 +1,6 @@
-export type AppFontRole = "ui" | "prose" | "numeric" | "display";
+export type AppFontRole = "ui" | "prose" | "numeric" | "technical" | "display";
 
-export type FontRole = AppFontRole | "widgetUi" | "widgetProse" | "widgetNumeric" | "widgetDisplay";
+export type FontRole = AppFontRole | "widgetUi" | "widgetProse" | "widgetNumeric" | "widgetTechnical" | "widgetDisplay";
 
 export type FontId =
   | "system-sans"
@@ -28,8 +28,8 @@ export const FONT_DEFINITIONS: readonly FontDefinition[] = Object.freeze([
   fontDefinition("system-sans", "System sans", ["ui", "prose", "display"]),
   fontDefinition("system-serif", "System serif", ["ui", "prose", "display"]),
   fontDefinition("literata", "Literata", ["ui", "prose", "display"]),
-  fontDefinition("ibm-plex-mono", "IBM Plex Mono", ["ui", "prose", "numeric", "display"]),
-  fontDefinition("system-mono", "System monospace", ["numeric", "display"]),
+  fontDefinition("ibm-plex-mono", "IBM Plex Mono", ["ui", "prose", "numeric", "technical", "display"]),
+  fontDefinition("system-mono", "System monospace", ["numeric", "technical", "display"]),
   fontDefinition("atkinson-hyperlegible-next", "Atkinson Hyperlegible Next", ["ui", "prose", "display"]),
   fontDefinition("space-grotesk", "Space Grotesk", ["ui", "prose", "display"]),
   fontDefinition("oxanium", "Oxanium", ["ui", "prose", "display"]),
@@ -41,19 +41,21 @@ export const DEFAULT_APP_FONTS: Readonly<Record<AppFontRole, FontId>> = Object.f
   ui: "system-sans",
   prose: "literata",
   numeric: "ibm-plex-mono",
+  technical: "ibm-plex-mono",
   display: "system-sans",
 });
 
 export type ResolvedFonts = Readonly<Record<FontRole, FontId>>;
 
-const APP_ROLES: readonly AppFontRole[] = ["ui", "prose", "numeric", "display"];
+const APP_ROLES: readonly AppFontRole[] = ["ui", "prose", "numeric", "technical", "display"];
 
-const FONT_ROLES: readonly FontRole[] = [...APP_ROLES, "widgetUi", "widgetProse", "widgetNumeric", "widgetDisplay"];
+const FONT_ROLES: readonly FontRole[] = [...APP_ROLES, "widgetUi", "widgetProse", "widgetNumeric", "widgetTechnical", "widgetDisplay"];
 
 const WIDGET_APP_ROLES: Readonly<Record<Exclude<FontRole, AppFontRole>, AppFontRole>> = Object.freeze({
   widgetUi: "ui",
   widgetProse: "prose",
   widgetNumeric: "numeric",
+  widgetTechnical: "technical",
   widgetDisplay: "display",
 });
 
@@ -98,16 +100,19 @@ export function resolveFonts(base: unknown, overrides: unknown = {}): ResolvedFo
   const ui = validOverrides.ui ?? validBase.ui!;
   const prose = validOverrides.prose ?? validBase.prose!;
   const numeric = validOverrides.numeric ?? validBase.numeric!;
+  const technical = validOverrides.technical ?? validBase.technical!;
   const display = validOverrides.display ?? validBase.display!;
 
   return Object.freeze({
     ui,
     prose,
     numeric,
+    technical,
     display,
     widgetUi: validOverrides.widgetUi ?? validBase.widgetUi ?? ui,
     widgetProse: validOverrides.widgetProse ?? validBase.widgetProse ?? prose,
     widgetNumeric: validOverrides.widgetNumeric ?? validBase.widgetNumeric ?? numeric,
+    widgetTechnical: validOverrides.widgetTechnical ?? validBase.widgetTechnical ?? technical,
     widgetDisplay: validOverrides.widgetDisplay ?? validBase.widgetDisplay ?? display,
   });
 }
