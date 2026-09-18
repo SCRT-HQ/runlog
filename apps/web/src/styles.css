@@ -983,6 +983,7 @@ p {
 }
 .tray.tray3d.waiting {
   min-height: 180px;
+  font: var(--font-caption) var(--font-ui);
 }
 .throw:has(.tray3d) {
   flex-wrap: wrap;
@@ -6100,6 +6101,51 @@ a.plan {
   align-items: center;
   gap: 0.6rem;
 }
+/* Stream settings are application controls, not widget broadcast copy. */
+.streamSettings {
+  inline-size: 100%;
+  min-width: 0;
+  font: var(--font-body) var(--font-ui);
+}
+/* The Stream panel is the only dialog panel with wrapping widget actions.
+   Release its containing grid item's automatic minimum, not the modal shell. */
+.settingsDialog .dialogPanel > section:has(.streamSettings) {
+  min-width: 0;
+}
+.streamSettings .muted.small {
+  font: var(--font-caption) var(--font-ui);
+}
+.streamSettings .toggle,
+.streamSettings .chipAdd {
+  font: var(--font-control) var(--font-ui);
+}
+.streamSettings .toggle {
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+.streamSettings .chipAdd {
+  min-width: 0;
+  max-width: 100%;
+}
+/* The widget rows keep their action column while it fits, then let the
+   controls take a readable whole line inside the settings dialog. */
+.streamSettings .widgetList li {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.streamSettings .widgetList li > div:first-child {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.streamSettings .widgetList li > .padRow {
+  flex: 0 1 min(100%, 11.5rem);
+  min-width: min(100%, 11.5rem);
+}
+.streamSettings .floatRow > .muted {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
 /* The widget rows: a fixed column for the two buttons, so the last row lines up with the rest. */
 .widgetList li {
   align-items: center;
@@ -6552,6 +6598,7 @@ a.plan {
   font-size: 1.6rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 /* The constraint and latest-result lines: worded, not numbers, so they take the row and read at a smaller size. */
 .widgetStats .wide {
@@ -6819,6 +6866,9 @@ a.plan {
 @media (max-width: 760px) {
   .liveGrid {
     grid-template-columns: 1fr;
+  }
+  .liveSide {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

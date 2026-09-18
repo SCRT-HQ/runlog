@@ -122,7 +122,12 @@ export function DiceTray({ dice, rollId, onSettled, seed }: DiceTrayProps) {
 
   if (dice.length === 0) return null;
 
-  if (three === undefined) return <div className="tray tray3d waiting" aria-live="polite" />;
+  if (three === undefined)
+    return (
+      <div className="tray tray3d waiting" role="status" aria-busy="true">
+        Loading…
+      </div>
+    );
   if (three) {
     const Roller = three;
     return (
