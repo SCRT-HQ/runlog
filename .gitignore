@@ -178,3 +178,7 @@ hydrate.ps1
 # Local agent worktrees and browser artifacts
 /.worktrees/
 /.playwright-mcp/
+
+# Private agent plans, scratch work, and recovery records (at any depth)
+.claude/
+.superpowers/

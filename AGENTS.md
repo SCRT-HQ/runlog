@@ -20,6 +20,14 @@ publishing is blocked, report the blocker instead of claiming completion.
 Keep progress and recovery records current when working from a plan. Preserve
 unrelated user changes and recovery artifacts.
 
+Everything under directories named `.claude/` or `.superpowers/` is local-only,
+including plans, specifications, reports, and recovery records. Never stage,
+commit, or force-add these paths, even when a skill says to commit its plan.
+Keep maintaining them locally. Before committing or opening a PR, inspect the
+staged paths and branch diff for accidental additions from either directory.
+Shared documentation belongs outside these directories only when explicitly
+requested; do not relocate private plans merely to bypass this rule.
+
 ## Design-system direction
 
 Users should eventually be able to create custom themes. While refining styles,
