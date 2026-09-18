@@ -182,3 +182,18 @@ hydrate.ps1
 # Private agent plans, scratch work, and recovery records (at any depth)
 .claude/
 .superpowers/
+AGENTS.md
+
+# Root dotfiles and dot-directories are local unless explicitly shared below.
+/.*
+!/.gitignore
+!/.git-blame-ignore-revs
+!/.markdownlint-cli2.jsonc
+!/.npmrc
+!/.prettierignore
+!/.prettierrc.json
+!/.github/
+!/.husky/
+/.husky/*
+!/.husky/pre-commit
+!/.husky/pre-push

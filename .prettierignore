@@ -31,12 +31,10 @@ apps/web/src/control/lists/
 # The Remember plugin scratch area, not part of the project.
 .remember/
 
-# Entire's scratch, logs and transcripts. Its own .gitignore holds these
-# back from git; prettier does not read nested ignore files, so they are
-# named again here. The two tracked files beside them are formatted.
-.entire/tmp/
-.entire/logs/
-.entire/metadata/
+# Local agent configuration, scratch, logs and transcripts.
+.entire/
+.claude/
+.superpowers/
 
 # Markdown belongs to markdownlint-cli2, which already has a considered
 # config for it (.markdownlint-cli2.jsonc) and a reason for the rule that
