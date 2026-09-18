@@ -3,7 +3,7 @@
 Date: 2026-09-17
 Status: written specification approved by the user on 2026-09-18; implementation authorized.
 Scope: first release, including account synchronization and external widget presentation.
-Implementation status: color/contrast foundation landed in PR #382; curated font contracts in progress. Detailed subplans are linked from 2026-09-18-custom-theme-authoring-roadmap.md.
+Implementation status: color/contrast foundation landed in PR #382; curated font contracts landed in PR #383; semantic color registry/resolution in progress. Detailed subplans are linked from 2026-09-18-custom-theme-authoring-roadmap.md.
 
 ## 1. Outcome and approved decisions
 
