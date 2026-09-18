@@ -157,7 +157,7 @@ describe("control boundaries and focus borders", () => {
     [".reactButton", "border", "1px solid var(--control-boundary)"],
     [".welcomePack", "border", "1px solid var(--control-boundary)"],
     [".personaChip", "border", "1px solid var(--control-boundary)"],
-    [".runMenuBtn[aria-expanded=\"true\"]", "border-color", "var(--control-boundary)"],
+    ['.runMenuBtn[aria-expanded="true"]', "border-color", "var(--control-boundary)"],
     [".deckProfiles .rowMenuPanel .options button", "border", "1px solid var(--control-boundary)"],
   ])("gives %s its control boundary", (selector, prop, value) => {
     const matchingRule = sheet.find(
