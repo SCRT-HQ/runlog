@@ -23,6 +23,11 @@ describe("the lights", () => {
       "cyberpunk",
       "cyberpunk-neon",
     ]);
+    expect(THEMES.filter(({ id }) => ["retro-arcade", "cyberpunk", "cyberpunk-neon"].includes(id))).toEqual([
+      expect.objectContaining({ id: "retro-arcade", label: "Linked" }),
+      expect.objectContaining({ id: "cyberpunk", label: "Spacewalk" }),
+      expect.objectContaining({ id: "cyberpunk-neon", label: "Samurai" }),
+    ]);
   });
 
   it("puts a chosen look on the document, and takes it off for system", () => {
@@ -106,10 +111,18 @@ describe("the lights", () => {
     expect(el.style.getPropertyValue("--font-technical")).toContain(technical);
   });
 
-  it("accepts a saved expanded preset", () => {
+  it("applies a saved Samurai choice through its legacy ID with the latest blue roles", () => {
     localStorage.setItem("runlog.theme", "cyberpunk-neon");
 
-    expect(savedTheme()).toBe("cyberpunk-neon");
+    const saved = savedTheme();
+    applyTheme(saved);
+
+    expect(saved).toBe("cyberpunk-neon");
+    expect(document.documentElement.dataset.theme).toBe("cyberpunk-neon");
+    expect(document.documentElement.style.getPropertyValue("--muted")).toBe("#b9dfff");
+    expect(document.documentElement.style.getPropertyValue("--control-boundary")).toBe("#62cfff");
+    expect(document.documentElement.style.getPropertyValue("--selected-indicator")).toBe("#62cfff");
+    expect(document.documentElement.style.getPropertyValue("--accent")).toBe("#ff64d8");
     expect(isThemeId("retro-arcade")).toBe(true);
   });
 });

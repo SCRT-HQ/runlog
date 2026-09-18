@@ -14,7 +14,7 @@ export type BuiltinColorBaseId =
 
 export interface BuiltinColorBase {
   readonly id: BuiltinColorBaseId;
-  readonly revision: 1;
+  readonly revision: 1 | 2;
   readonly colorScheme: "light" | "dark";
   readonly colors: Readonly<Record<CoreColorTokenId, HexColor>>;
 }
@@ -29,10 +29,15 @@ function createColors(colors: Record<CoreColorTokenId, string>): Readonly<Record
   return Object.freeze(Object.fromEntries(normalizedEntries) as Record<CoreColorTokenId, HexColor>);
 }
 
-function createBase(id: BuiltinColorBaseId, colorScheme: "light" | "dark", colors: Record<CoreColorTokenId, string>): BuiltinColorBase {
+function createBase(
+  id: BuiltinColorBaseId,
+  colorScheme: "light" | "dark",
+  colors: Record<CoreColorTokenId, string>,
+  revision: 1 | 2 = 1,
+): BuiltinColorBase {
   return Object.freeze({
     id,
-    revision: 1,
+    revision,
     colorScheme,
     colors: createColors(colors),
   });
@@ -205,11 +210,23 @@ const builtinColorBases: Readonly<Record<BuiltinColorBaseId, BuiltinColorBase>> 
 
 const builtinColorBaseIds = new Set<string>(Object.keys(builtinColorBases));
 
-export function getBuiltinColorBase(id: unknown, revision?: unknown): BuiltinColorBase | null {
-  const requestedRevision = revision === undefined ? 1 : revision;
-  if (typeof id !== "string" || !builtinColorBaseIds.has(id) || requestedRevision !== 1) {
-    return null;
-  }
+const samurai2 = createBase(
+  "cyberpunk-neon",
+  "dark",
+  {
+    ...builtinColorBases["cyberpunk-neon"].colors,
+    "text.muted": "#b9dfff",
+    "boundary.control": "#62cfff",
+    "interaction.selectedIndicator": "#62cfff",
+  },
+  2,
+);
 
-  return builtinColorBases[id as BuiltinColorBaseId];
+export function getBuiltinColorBase(id: unknown, revision?: unknown): BuiltinColorBase | null {
+  if (typeof id !== "string" || !builtinColorBaseIds.has(id)) return null;
+  if (revision === undefined) return id === "cyberpunk-neon" ? samurai2 : builtinColorBases[id as BuiltinColorBaseId];
+  if (revision === 1) return builtinColorBases[id as BuiltinColorBaseId];
+  if (revision === 2 && id === "cyberpunk-neon") return samurai2;
+
+  return null;
 }

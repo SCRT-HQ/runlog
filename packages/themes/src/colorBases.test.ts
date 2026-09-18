@@ -199,7 +199,7 @@ const expectedNewBases = {
 
 describe("built-in revision-1 color bases", () => {
   it.each(Object.entries(expectedBases))("returns and resolves the literal historical %s palette", (id, expected) => {
-    const base = getBuiltinColorBase(id);
+    const base = getBuiltinColorBase(id, 1);
     const resolved = resolveColors(base?.colors);
 
     expect(base).toEqual({ id, revision: 1, ...expected });
@@ -219,7 +219,7 @@ describe("built-in revision-1 color bases", () => {
     });
   });
 
-  it("defaults only omitted or undefined revisions to revision 1", () => {
+  it("defaults unchanged presets to revision 1", () => {
     expect(getBuiltinColorBase("daylight")?.revision).toBe(1);
     expect(getBuiltinColorBase("daylight", undefined)?.revision).toBe(1);
     expect(getBuiltinColorBase("daylight", 1)?.revision).toBe(1);
@@ -230,7 +230,6 @@ describe("built-in revision-1 color bases", () => {
     ["Daylight", undefined],
     ["daylight ", undefined],
     [" daylight", undefined],
-    ["daylight", 2],
     ["daylight", "1"],
     ["daylight", null],
     ["daylight", true],
@@ -240,18 +239,18 @@ describe("built-in revision-1 color bases", () => {
   });
 
   it("returns deeply frozen data that cannot poison future lookups", () => {
-    const first = getBuiltinColorBase("lights-down");
+    const first = getBuiltinColorBase("lights-down", 1);
 
     expect(Object.isFrozen(first)).toBe(true);
     expect(Object.isFrozen(first?.colors)).toBe(true);
     expect(() => {
       (first?.colors as Record<string, string>)["surface.page"] = "#ffffff";
     }).toThrow(TypeError);
-    expect(getBuiltinColorBase("lights-down")?.colors["surface.page"]).toBe("#151311");
+    expect(getBuiltinColorBase("lights-down", 1)?.colors["surface.page"]).toBe("#151311");
   });
 
   it.each(Object.entries(expectedNewBases))("returns and resolves the approved %s palette", (id, expected) => {
-    const base = getBuiltinColorBase(id);
+    const base = getBuiltinColorBase(id, 1);
     const resolved = resolveColors(base?.colors);
 
     expect(base).toEqual({ id, revision: 1, ...expected });
@@ -264,11 +263,10 @@ describe("built-in revision-1 color bases", () => {
       "widget.textMuted": expected.colors["text.muted"],
       "widget.accent": expected.colors["interaction.accent"],
     });
-    expect(getBuiltinColorBase(id, 2)).toBeNull();
   });
 
   it.each(Object.keys(expectedNewBases))("meets the approved contrast gates for %s", (id) => {
-    const base = getBuiltinColorBase(id);
+    const base = getBuiltinColorBase(id, 1);
     expect(base).not.toBeNull();
     if (!base) return;
     const colors = base.colors;
@@ -290,6 +288,92 @@ describe("built-in revision-1 color bases", () => {
     expect(assessContrast(colors["interaction.selectedIndicator"], colors["interaction.accentTint"], 3).passes).toBe(true);
     for (const text of ["text.primary", "text.muted"] as const) {
       expect(assessContrast(colors[text], colors["interaction.accentTint"], 4.5).passes).toBe(true);
+    }
+  });
+});
+
+describe("versioned Samurai color base", () => {
+  const expectedSamurai2 = {
+    colorScheme: "dark",
+    colors: {
+      ...expectedNewBases["cyberpunk-neon"].colors,
+      "text.muted": "#b9dfff",
+      "boundary.control": "#62cfff",
+      "interaction.selectedIndicator": "#62cfff",
+    },
+  } as const;
+
+  it("keeps the exact historic revision 1 palette deeply frozen", () => {
+    const historic = getBuiltinColorBase("cyberpunk-neon", 1);
+
+    expect(historic).toEqual({ id: "cyberpunk-neon", revision: 1, ...expectedNewBases["cyberpunk-neon"] });
+    expect(Object.keys(historic?.colors ?? {})).toHaveLength(16);
+    expect(Object.isFrozen(historic)).toBe(true);
+    expect(Object.isFrozen(historic?.colors)).toBe(true);
+  });
+
+  it("returns revision 2 by default and for explicit revision 2", () => {
+    const latest = getBuiltinColorBase("cyberpunk-neon");
+    const implicitLatest = getBuiltinColorBase("cyberpunk-neon", undefined);
+    const explicitLatest = getBuiltinColorBase("cyberpunk-neon", 2);
+
+    expect(latest).toEqual({ id: "cyberpunk-neon", revision: 2, ...expectedSamurai2 });
+    expect(implicitLatest).toBe(latest);
+    expect(explicitLatest).toBe(latest);
+    expect(Object.isFrozen(latest)).toBe(true);
+    expect(Object.isFrozen(latest?.colors)).toBe(true);
+  });
+
+  it("changes exactly the three approved roles from revision 1", () => {
+    const historic = getBuiltinColorBase("cyberpunk-neon", 1);
+    const latest = getBuiltinColorBase("cyberpunk-neon", 2);
+    expect(historic).not.toBeNull();
+    expect(latest).not.toBeNull();
+    if (!historic || !latest) return;
+    const changedRoles = Object.keys(latest.colors).filter(
+      (role) => latest.colors[role as keyof typeof latest.colors] !== historic.colors[role as keyof typeof historic.colors],
+    );
+
+    expect(changedRoles).toEqual(["text.muted", "boundary.control", "interaction.selectedIndicator"]);
+    expect(latest.colors["text.muted"]).toBe("#b9dfff");
+    expect(latest.colors["boundary.control"]).toBe("#62cfff");
+    expect(latest.colors["interaction.selectedIndicator"]).toBe("#62cfff");
+  });
+
+  it.each([3, "2", null, true, Number.NaN])("rejects unsupported Samurai revision %p", (revision) => {
+    expect(getBuiltinColorBase("cyberpunk-neon", revision)).toBeNull();
+  });
+
+  it.each(["lights-down", "daylight", "ember", "glaze", "high-contrast-dark", "high-contrast-light", "retro-arcade", "cyberpunk"])(
+    "keeps %s at revision 1 and rejects revision 2",
+    (id) => {
+      expect(getBuiltinColorBase(id)?.revision).toBe(1);
+      expect(getBuiltinColorBase(id, 2)).toBeNull();
+    },
+  );
+
+  it("meets the approved contrast gates", () => {
+    const base = getBuiltinColorBase("cyberpunk-neon", 2);
+    expect(base).not.toBeNull();
+    if (!base) return;
+    const colors = base.colors;
+    const surfaces = ["surface.page", "surface.panel", "surface.raised"] as const;
+
+    for (const text of ["text.primary", "text.muted"] as const) {
+      for (const surface of surfaces) expect(assessContrast(colors[text], colors[surface], 4.5).passes).toBe(true);
+    }
+    for (const foreground of ["interaction.accent", "feedback.success", "feedback.warning", "feedback.danger"] as const) {
+      for (const surface of surfaces) expect(assessContrast(colors[foreground], colors[surface], 4.5).passes).toBe(true);
+    }
+    for (const foreground of ["boundary.control", "interaction.focus"] as const) {
+      for (const surface of surfaces) expect(assessContrast(colors[foreground], colors[surface], 3).passes).toBe(true);
+    }
+    expect(assessContrast(colors["interaction.selectedIndicator"], colors["interaction.accentTint"], 3).passes).toBe(true);
+    for (const text of ["text.primary", "text.muted"] as const) {
+      expect(assessContrast(colors[text], colors["interaction.accentTint"], 4.5).passes).toBe(true);
+    }
+    for (const foreground of ["interaction.accent", "feedback.warning"] as const) {
+      expect(assessContrast(colors["text.onAccent"], colors[foreground], 4.5).passes).toBe(true);
     }
   });
 });

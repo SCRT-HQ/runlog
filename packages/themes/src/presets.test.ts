@@ -31,7 +31,7 @@ const expectedPresets = [
   ],
   [
     "retro-arcade",
-    "Retro Arcade",
+    "Linked",
     {
       ui: "atkinson-hyperlegible-next",
       prose: "atkinson-hyperlegible-next",
@@ -42,7 +42,7 @@ const expectedPresets = [
   ],
   [
     "cyberpunk",
-    "Cyberpunk",
+    "Spacewalk",
     {
       ui: "space-grotesk",
       prose: "space-grotesk",
@@ -53,7 +53,7 @@ const expectedPresets = [
   ],
   [
     "cyberpunk-neon",
-    "Cyberpunk Neon",
+    "Samurai",
     {
       ui: "space-grotesk",
       prose: "space-grotesk",

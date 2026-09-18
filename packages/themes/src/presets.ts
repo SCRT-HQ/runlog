@@ -30,21 +30,21 @@ export const BUILTIN_PRESETS: readonly Readonly<BuiltinPreset>[] = Object.freeze
     technical: "ibm-plex-mono",
     display: "atkinson-hyperlegible-next",
   }),
-  createPreset("retro-arcade", "Retro Arcade", {
+  createPreset("retro-arcade", "Linked", {
     ui: "atkinson-hyperlegible-next",
     prose: "atkinson-hyperlegible-next",
     numeric: "vt323",
     technical: "ibm-plex-mono",
     display: "press-start-2p",
   }),
-  createPreset("cyberpunk", "Cyberpunk", {
+  createPreset("cyberpunk", "Spacewalk", {
     ui: "space-grotesk",
     prose: "space-grotesk",
     numeric: "ibm-plex-mono",
     technical: "ibm-plex-mono",
     display: "oxanium",
   }),
-  createPreset("cyberpunk-neon", "Cyberpunk Neon", {
+  createPreset("cyberpunk-neon", "Samurai", {
     ui: "space-grotesk",
     prose: "space-grotesk",
     numeric: "ibm-plex-mono",
