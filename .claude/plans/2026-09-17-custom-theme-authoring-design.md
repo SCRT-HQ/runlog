@@ -3,7 +3,7 @@
 Date: 2026-09-17
 Status: written specification approved by the user on 2026-09-18; implementation authorized.
 Scope: first release, including account synchronization and external widget presentation.
-Implementation status: foundational color-contract slice in progress. Detailed subplans are linked from 2026-09-18-custom-theme-authoring-roadmap.md.
+Implementation status: color/contrast foundation landed in PR #382; curated font contracts in progress. Detailed subplans are linked from 2026-09-18-custom-theme-authoring-roadmap.md.
 
 ## 1. Outcome and approved decisions
 
@@ -91,7 +91,7 @@ Public keys describe intent, not selectors. The initial registry covers:
 | Interaction | Accent, accent tint, selected indicator, keyboard focus |
 | Feedback | Success, warning, danger, and their foreground/background pairs where rendered |
 | Widgets | Widget ground, panel, text, secondary text, accent, and role-level font overrides |
-| Fonts | UI/controls, prose, numeric/monospace |
+| Fonts | UI/controls, prose, numeric/monospace, display headings |
 
 This is the required coverage, not permission to invent unused roles. Planning must inventory actual consumers and produce the exact stable key-to-CSS mapping. A shared foreground used over several surfaces must be checked against every applicable surface.
 
@@ -113,7 +113,9 @@ Persist stable font IDs, never a user-supplied CSS font-family string. Initial c
 - Numeric: System monospace or IBM Plex Mono.
 - Widget equivalents: inherit, or select from the same role-appropriate list.
 
-Registry entries provide their complete fallback stacks, supported styles, and loading behavior. Additional bundled fonts require license, payload, weight/style, and layout verification before inclusion. System fonts may differ between machines; a pinned snapshot preserves the font choice, not identical installed font files.
+The accepted catalog extension adds Atkinson Hyperlegible Next, Space Grotesk and Oxanium for UI/prose/display choices; VT323 for numeric/display roles; and Press Start 2P for display headings only. System monospace is also available for display headings. These are data-contract choices until the catalog slice bundles and verifies the assets; registration alone does not expose unavailable fonts to users. Widget role overrides use the corresponding app-role allowlist.
+
+Browser registry entries provide complete fallback stacks, supported styles, and loading behavior; the shared data contract contains stable IDs and role eligibility, not CSS strings. Additional bundled fonts require license, payload, weight/style, and layout verification before inclusion. System fonts may differ between machines; a pinned snapshot preserves the font choice, not identical installed font files.
 
 Preserve shared size, line-height, weight, spacing, and control-height tokens. Existing widget scale continues to work. Test the available families at actual rendered weights and against long content.
 
@@ -220,6 +222,8 @@ The creator publishes only applied snapshots, including intentional Restore defa
 The channel read capability exposes only schema version, color scheme, normalized presentation values, font IDs, and a revision. It exposes no private theme name, theme library, account metadata, draft, or write credential. It grants no run-read or control permission; those remain independently authorized by the existing widget access mechanism.
 
 Authenticated channel management must verify ownership. Publisher authority must be separately bound to the originating device; a caller-supplied device ID is not authorization. The implementation plan must select a protected device capability or equivalent existing mechanism, with explicit replacement/revocation. Do not put publisher credentials in widget URLs.
+
+Approved publishing mechanism: issue a random per-channel publisher secret to the creating device, retain only its hash server-side, and store the secret in that account's device-local IndexedDB. Publishing requires both account authentication and the current secret. Explicit transfer rotates the secret atomically and invalidates the previous publisher; possession of account authentication alone cannot silently take over publication. Never synchronize, export, log, or place the publisher secret in a widget URL. Ownership-authorized explicit transfer remains available when the old device is unavailable.
 
 Initial channel publication must succeed before a new hosted follow link is described as ready. When the source is offline, consumers retain the last successfully published snapshot. Management displays pending/stale publication; broadcast content is not covered with transient sync notifications.
 

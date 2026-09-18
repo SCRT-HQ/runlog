@@ -8,7 +8,7 @@ Extension requested: additional curated fonts and retro arcade/cyberpunk built-i
 
 Execute independently reviewable subplans in order. Produce each detailed subplan after inspecting its dependency contracts, before its code is written. This roadmap is the cross-feature coverage map, not a substitute for exact task briefs.
 
-1. **Shared data contracts.** Strict opaque colors and contrast arithmetic first, then registered semantic roles, font IDs, immutable versioned bases, portable records and resolved snapshots. Current executable plan: 2026-09-18-theme-color-contract-plan.md.
+1. **Shared data contracts.** Strict opaque colors and contrast arithmetic landed in PR #382. Current executable plan: 2026-09-18-theme-font-contract-plan.md (curated IDs and app/widget font inheritance). Semantic color roles, immutable versioned bases, portable records and complete resolved snapshots follow the consumer audit.
 2. **Catalog and style integration.** Audit every actual color/font consumer; bridge legacy CSS names, preserve theme IDs and widget modes, add accessible preset families and approved stylistic presets, bundle licensed font assets offline. Dedicated verification records cover contrast, type metrics, payload, and non-color cues.
 3. **Local library and authoring.** Account-scoped IndexedDB data and drafts, strict import/export, isolated component previews, warnings, explicit Save/Apply and safe recovery. No automatic upload of guest themes.
 4. **Account sync.** Server-owned revisions, authorization, bounded records/quotas, idempotent retries, tombstones, edit/delete conflict copies, and device-specific applied snapshots. Requires actual backend interface discovery rather than adapting session events.
@@ -27,10 +27,20 @@ Cyberpunk Neon is accepted as an additional direction alongside the original yel
 
 ## Execution and checkpoints
 
-- Worktree: .worktrees/redesign-phase6, branch feat/theme-contracts from origin/main 3e8b0a07.
+- Worktree: .worktrees/redesign-phase6, branch feat/theme-registry-contracts from origin/main 455746fd after PR #382.
 - Prior documentation PR #381 merged; approval of the spec is now recorded.
 - Preserve unrelated root changes and retained browser evidence.
 - Use rightsized GPT-5.6 agents for bounded discovery/implementation/review where available.
 - Each completed reviewed slice is pushed, PR-created and auto-merge-enabled; continue approved work through publication checkpoints.
 - Do not advertise local-only intermediate authoring as completion of the synchronized first release.
 - Retain .superpowers progress, test evidence, review reports and resume records across sessions.
+
+## Publisher authorization decision
+
+Approved by the user: account authentication plus a per-channel device-local secret, stored only as a hash server-side; explicit transfer rotates the secret and invalidates the old publisher. It never appears in widget URLs, synced themes, exports or logs. This is an accepted implementation constraint, not a shipped backend feature.
+
+## Color audit boundary
+
+Current palette values conflate control and decorative boundaries, and general accents with focus, success and selection. The color registry plan will separate those semantic jobs while preserving existing preset values. Widget clear/solid/none modes remain authoritative; current panels use 82% or 92% opacity mixes, so contrast depends on effective backgrounds.
+
+An upcoming design decision concerns independent feedback background overrides versus application-owned derived mixes. Existing warning/error/success fills are mixtures, not independent palette values. Resolve that authoring boundary before freezing the complete color snapshot schema.
