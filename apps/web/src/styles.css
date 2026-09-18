@@ -2873,8 +2873,14 @@ select.textInput {
   font-family: var(--font-technical);
 }
 .connectionsPanel .connectionsRow {
-  grid-template-columns: minmax(0, 1fr) auto;
+  /* Wrap against the panel's available space, including enlarged text;
+     an auto grid track for instructions can otherwise consume the label. */
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-3);
+}
+.connectionsPanel .connectionsIdentity {
+  flex: 1 1 12rem;
 }
 .connectionsPanel .connectionsRow > :first-child {
   overflow: visible;
@@ -2888,16 +2894,10 @@ select.textInput {
   overflow-wrap: anywhere;
 }
 .connectionsPanel .connectionsActions {
+  flex: 0 1 auto;
+  max-width: 100%;
   justify-content: flex-end;
   gap: var(--space-2);
-}
-@media (max-width: 1000px) {
-  .connectionsPanel .connectionsRow {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .connectionsPanel .connectionsActions {
-    justify-content: flex-start;
-  }
 }
 .shareNotice {
   display: flex;

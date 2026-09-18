@@ -513,6 +513,14 @@ describe("control font roles", () => {
     expect(finalDeclaration(".chip", "font-family")).toBe("var(--mono)");
   });
 
+  it("lets linked-account rows wrap before their identity is squeezed by instructions", () => {
+    expect(finalDeclaration(".connectionsPanel .connectionsRow", "display")).toBe("flex");
+    expect(finalDeclaration(".connectionsPanel .connectionsRow", "flex-wrap")).toBe("wrap");
+    expect(finalDeclaration(".connectionsPanel .connectionsIdentity", "flex")).toBe("1 1 12rem");
+    expect(finalDeclaration(".connectionsPanel .connectionsActions", "max-width")).toBe("100%");
+    expect(finalDeclaration(".connectionsPanel .connectionsActions", "flex")).toBe("0 1 auto");
+  });
+
   it.each([
     ".libraryTitle",
     ".runRowMain",
