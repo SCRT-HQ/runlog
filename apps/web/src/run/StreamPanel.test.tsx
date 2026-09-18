@@ -190,7 +190,7 @@ describe("stream widget addresses", () => {
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith("http://localhost:3000/#widget/scoreboard/run-1?bg=none&scale=1.5&theme=ember"),
     );
-    expect(screen.getByRole("button", { name: "Copied" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Copied" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("checkbox", { name: "For another machine" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Open" })[0]!);
