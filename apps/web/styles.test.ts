@@ -308,6 +308,14 @@ describe("selection and feedback color roles", () => {
     expect(finalDeclaration(selector, prop), `${selector} should declare ${prop}: ${value}`).toBe(value);
   });
 
+  it("keeps enabled destructive hover feedback on the warning role", () => {
+    expect(finalDeclaration(".ghost.danger:hover:not(:disabled)", "color")).toBe("var(--warn)");
+    expect(finalDeclaration(".primary.danger:hover:not(:disabled)", "background")).toBe(
+      "color-mix(in oklab, var(--warn) 85%, var(--text))",
+    );
+    expect(finalDeclaration(".primary.danger", "color")).toBe("var(--on-accent)");
+  });
+
   it("wraps both colored coverage-gap stops without flattening its stripe", () => {
     expect(finalDeclaration(".coverageSeg.gap", "background")?.replace(/\s+/g, " ")).toBe(
       "repeating-linear-gradient( 45deg, var(--danger-background, color-mix(in oklab, var(--err) 25%, var(--panel))), var(--danger-background, color-mix(in oklab, var(--err) 25%, var(--panel))) 3px, var(--panel) 3px, var(--panel) 6px )",

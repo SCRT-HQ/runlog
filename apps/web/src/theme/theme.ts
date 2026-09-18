@@ -1,26 +1,18 @@
 /**
  * Which lights are on.
  *
- * Four looks, all the same app: the same two accents doing the same two jobs,
- * the same faces speaking in the same voices. What changes is the ground:
- * the studio with the lights down, daylight on paper, a kiln-lit room, or the
- * inside of a celadon glaze. Choosing is the player's, remembered on this
- * machine only, and "system" hands the choice back to the operating system.
+ * A catalog of looks for the same app, with colors and type chosen together.
+ * Choosing is the player's, remembered on this machine only, and "system"
+ * hands the choice back to the operating system.
  *
  * The historical stylesheet palettes remain fallbacks. Explicit choices are
  * resolved from the shared theme contract and installed as browser tokens.
  */
 
-import { DEFAULT_APP_FONTS, getBuiltinColorBase, resolveColors, resolveFonts } from "@runlog/themes";
+import { BUILTIN_PRESETS, getBuiltinColorBase, resolveColors, resolveFonts } from "@runlog/themes";
 import { applyPresentation, clearPresentation, compilePresentation, type PresentationScope } from "./presentation.ts";
 
-export const THEMES = [
-  { id: "system", label: "Match the system" },
-  { id: "lights-down", label: "Lights down" },
-  { id: "daylight", label: "Daylight" },
-  { id: "ember", label: "Ember" },
-  { id: "glaze", label: "Glaze" },
-] as const;
+export const THEMES = [{ id: "system", label: "Match the system" }, ...BUILTIN_PRESETS] as const;
 
 export type ThemeId = (typeof THEMES)[number]["id"];
 
@@ -55,8 +47,9 @@ export function applyTheme(theme: ThemeId, root: HTMLElement = document.document
   }
 
   const base = getBuiltinColorBase(theme);
+  const preset = BUILTIN_PRESETS.find(({ id }) => id === theme);
   const colors = base ? resolveColors(base.colors) : null;
-  const fonts = resolveFonts(DEFAULT_APP_FONTS);
+  const fonts = preset ? resolveFonts(preset.fonts) : null;
   if (!base || !colors || !fonts) {
     clearPresentation(root);
     delete root.dataset.theme;

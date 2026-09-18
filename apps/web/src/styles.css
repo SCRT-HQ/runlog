@@ -3179,6 +3179,10 @@ select.textInput {
 @media (hover: hover) {
   .ghost.danger:hover:not(:disabled) {
     background: var(--danger-background, color-mix(in oklab, var(--warn) 10%, transparent));
+    color: var(--warn);
+  }
+  .primary.danger:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--warn) 85%, var(--text));
   }
 }
 
