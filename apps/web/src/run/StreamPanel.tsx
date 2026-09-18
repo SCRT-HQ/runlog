@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePlan } from "../sync/usePlan.ts";
 import { THEMES, type ThemeId } from "../theme/theme.ts";
 import {
@@ -16,6 +16,8 @@ import { canFloat } from "./ControlPanel.tsx";
 
 /** The themes an address may pin: every look but "system", which is the choice not to pin one. */
 const PINNABLE = THEMES.filter((t): t is (typeof THEMES)[number] & { id: Exclude<ThemeId, "system"> } => t.id !== "system");
+type CopyTarget = WidgetKind | "dock";
+type CopyOutcome = { target: CopyTarget; kind: "success" | "failure" };
 
 /**
  * Pop-outs for a stream: one panel of this run on a page of its own, to
@@ -30,7 +32,9 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
   const [scale, setScale] = useState(1.25);
   // "" is no pin: the widget follows the machine it opens on, like any page.
   const [theme, setTheme] = useState<WidgetRoute["theme"] | "">("");
-  const [copied, setCopied] = useState<WidgetKind | "dock" | null>(null);
+  const [copyOutcome, setCopyOutcome] = useState<CopyOutcome | null>(null);
+  const copyAttempt = useRef(0);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const allowed = !plan.gates || plan.can("plus");
   // The live link's token, when the run is shared: a widget with it works on any machine.
   const token = (() => {
@@ -58,13 +62,32 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
     const { w, h } = widgetSize(kind, scale);
     window.open(widgetHref(route(kind)), `runlog-widget-${kind}`, `popup=yes,width=${w},height=${h}`);
   };
-  const copy = async (kind: WidgetKind | "dock") => {
+  const clearCopyTimer = () => {
+    if (copyTimer.current !== null) clearTimeout(copyTimer.current);
+    copyTimer.current = null;
+  };
+  useEffect(() => {
+    copyAttempt.current++;
+    clearCopyTimer();
+    setCopyOutcome(null);
+    return () => {
+      copyAttempt.current++;
+      clearCopyTimer();
+    };
+  }, [runId]);
+  const copy = async (target: CopyTarget) => {
+    const attempt = ++copyAttempt.current;
+    clearCopyTimer();
+    setCopyOutcome(null);
     try {
-      await navigator.clipboard.writeText(kind === "dock" ? dockHref({ kind: "controls", runId }) : widgetHref(route(kind)));
-      setCopied(kind);
-      setTimeout(() => setCopied(null), 1500);
+      await navigator.clipboard.writeText(target === "dock" ? dockHref({ kind: "controls", runId }) : widgetHref(route(target)));
+      if (attempt !== copyAttempt.current) return;
+      setCopyOutcome({ target, kind: "success" });
+      copyTimer.current = setTimeout(() => {
+        if (attempt === copyAttempt.current) setCopyOutcome(null);
+      }, 1500);
     } catch {
-      /* no clipboard: the window is still there to copy from */
+      if (attempt === copyAttempt.current) setCopyOutcome({ target, kind: "failure" });
     }
   };
 
@@ -159,13 +182,22 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
               onClick={() => void copy("dock")}
               title="The same controls on a page of their own, for a streaming app's custom browser dock; sign in there once and the run follows"
             >
-              {copied === "dock" ? "Copied" : "Copy dock address"}
+              {copyOutcome?.kind === "success" && copyOutcome.target === "dock" ? "Copied" : "Copy dock address"}
             </button>
             <span className="muted small">
               The same controls as a page, for a dock beside your streaming app's preview: OBS calls it a Custom Browser Dock. Sign in there
               once; the run must be on that machine too.
             </span>
           </div>
+          <p className="muted small" role="status">
+            {copyOutcome?.kind === "success"
+              ? "Copied."
+              : copyOutcome?.target === "dock"
+                ? "Couldn't copy the dock address. Try again."
+                : copyOutcome
+                  ? "Couldn't copy the widget address. Try again, or use Open to copy it."
+                  : ""}
+          </p>
           <ul className="widgetList">
             {WIDGET_KINDS.filter((k) => k.kind !== "race" || race).map((k) => (
               <li key={k.kind}>
@@ -181,7 +213,7 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
                     Open
                   </button>
                   <button className="ghost tiny" onClick={() => void copy(k.kind)}>
-                    {copied === k.kind ? "Copied" : "Copy address"}
+                    {copyOutcome?.kind === "success" && copyOutcome.target === k.kind ? "Copied" : "Copy address"}
                   </button>
                 </div>
               </li>
