@@ -219,6 +219,14 @@ describe("control boundaries and focus borders", () => {
 });
 
 describe("selection and feedback color roles", () => {
+  it("gives only marked move cards a stable four-pixel top accent with legacy fallbacks", () => {
+    expect(finalDeclaration(".choice.moveChoice", "border-top")).toBe(
+      "4px solid var(--move-accent, var(--selected-indicator, var(--accent)))",
+    );
+    expect(finalDeclaration(".choice", "background")).toBe("var(--panel-2)");
+    expect(finalDeclaration(".choice", "color")).toBe("var(--text)");
+  });
+
   it("gives every static palette selection and success defaults without authored feedback backgrounds", () => {
     expect(looks).toHaveLength(6);
     for (const look of looks) {

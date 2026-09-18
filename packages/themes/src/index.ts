@@ -6,6 +6,7 @@ export {
   type ColorTokenDefinition,
   type ColorTokenId,
   type CoreColorTokenId,
+  type DecorationColorTokenId,
   type FeedbackBackgroundTokenId,
   type WidgetColorTokenId,
 } from "./colorRegistry.ts";

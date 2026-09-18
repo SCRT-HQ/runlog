@@ -1850,6 +1850,9 @@ button:disabled,
 .choice.on {
   border-color: var(--selected-indicator);
 }
+.choice.moveChoice {
+  border-top: 4px solid var(--move-accent, var(--selected-indicator, var(--accent)));
+}
 
 .padRow {
   display: flex;
