@@ -203,7 +203,7 @@ export function LibraryView({
 
       {ordered.length === 0 && (
         <section className="panel">
-          <p>No packs here yet. Pick one from the marketplace, or load one of your own from a file.</p>
+          <p className="libraryEmpty">No packs here yet. Pick one from the marketplace, or load one of your own from a file.</p>
         </section>
       )}
 
@@ -289,8 +289,8 @@ export function LibraryView({
 
       {seats && seats.length > 0 && onTakeSeat && (
         <section className="panel packCard">
-          <h2>Seats</h2>
-          <p className="muted small">Runs you play on somebody else's copy of the pack.</p>
+          <h2 className="sectionTitle">Seats</h2>
+          <p className="muted small librarySeatsNote">Runs you play on somebody else's copy of the pack.</p>
           <div className="runList">
             {seats.map((r) => (
               <div key={r.runId} className="runRow">
@@ -408,7 +408,7 @@ function PackCard({
         <button className="libraryTitle" onClick={() => onOpen(p)} title={`Open ${p.title}`}>
           <strong>{p.title}</strong>
           {p.bench && <span className="chip cap">test bench</span>}
-          <span className="muted small">
+          <span className="muted small libraryPackMeta">
             {p.sub}
             {last && ` · played ${onDay(last)}`}
             {inPlay && " · in play"}

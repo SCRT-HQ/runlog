@@ -146,7 +146,7 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
   const billing = Boolean(hosted?.features.billing) || plan.gates;
 
   return (
-    <div className="profile">
+    <div className="profile profileApplication serverProfile">
       <h2>Servers</h2>
       <p className="muted small">
         Discord servers you claimed. The bot hosts runs in them on the packs you put in each server's vault; members see what the dice draw,
@@ -255,7 +255,7 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
                     <p className="muted small">Nothing in the vault yet. Add a pack from your shelf and /packs in Discord lists it.</p>
                   ) : (
                     inVault.map((p) => (
-                      <div key={p.id} className="row spread memberRow">
+                      <div key={p.id} className="row spread memberRow serverVaultRow">
                         <span>
                           <strong>{p.title}</strong>
                           <span className="muted small"> · {p.modes.map((m) => m.label).join(", ") || "one mode"}</span>
