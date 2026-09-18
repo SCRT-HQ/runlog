@@ -23,6 +23,14 @@ export interface StoredThemeDraft {
   readonly draft: ThemeDraftV1;
 }
 
+interface DeletedDraftRow {
+  readonly kind: "deleted-draft";
+  readonly id: string;
+  readonly localRevision: number;
+}
+
+type DraftStorageRow = StoredThemeDraft | DeletedDraftRow;
+
 export type ThemeCasResult<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly reason: "conflict"; readonly current: ThemeLibraryRow | StoredThemeDraft | null };
@@ -142,6 +150,20 @@ function parseStoredDraft(input: unknown): StoredThemeDraft {
   if (!draft.ok) throw invalidData("Invalid stored theme draft", draft.issues);
   if (draft.value.id !== row.id) throw invalidData("Stored draft id does not match draft id");
   return Object.freeze({ id: row.id, localRevision: row.localRevision, draft: draft.value });
+}
+
+function parseDraftStorageRow(input: unknown): DraftStorageRow {
+  const base = strictData(input, ["kind", "id", "localRevision", "draft"], "draft storage row", ["id", "localRevision"]);
+  if (base.kind !== "deleted-draft") return parseStoredDraft(input);
+
+  const marker = strictData(input, ["kind", "id", "localRevision"], "deleted draft row");
+  ensureIdentifier(marker.id, "deleted draft id");
+  ensurePositiveRevision(marker.localRevision, "deleted draft local revision");
+  return Object.freeze({ kind: "deleted-draft", id: marker.id, localRevision: marker.localRevision });
+}
+
+function isStoredDraft(row: DraftStorageRow): row is StoredThemeDraft {
+  return !("kind" in row);
 }
 
 function success<T>(value: T): ThemeCasResult<T> {
@@ -409,7 +431,7 @@ class IndexedDbThemeRepository implements ThemeRepository {
       request.onerror = () => fail(mapDatabaseError(request.error, "unavailable"));
       request.onsuccess = () => {
         try {
-          set(Object.freeze(request.result.map(parseStoredDraft).sort(compareIds)));
+          set(Object.freeze(request.result.map(parseDraftStorageRow).filter(isStoredDraft).sort(compareIds)));
         } catch (cause) {
           fail(cause instanceof ThemeStorageError ? cause : invalidData("Invalid stored drafts", cause));
         }
@@ -425,7 +447,12 @@ class IndexedDbThemeRepository implements ThemeRepository {
       request.onerror = () => fail(mapDatabaseError(request.error, "unavailable"));
       request.onsuccess = () => {
         try {
-          set(request.result === undefined ? null : parseStoredDraft(request.result));
+          if (request.result === undefined) {
+            set(null);
+            return;
+          }
+          const row = parseDraftStorageRow(request.result);
+          set(isStoredDraft(row) ? row : null);
         } catch (cause) {
           fail(cause instanceof ThemeStorageError ? cause : invalidData("Invalid stored draft", cause));
         }
@@ -449,9 +476,16 @@ class IndexedDbThemeRepository implements ThemeRepository {
       get.onerror = () => fail(mapDatabaseError(get.error, "unavailable"));
       get.onsuccess = () => {
         try {
-          const current = get.result === undefined ? null : parseStoredDraft(get.result);
-          if (current === null ? expectedLocalRevision !== null : current.localRevision !== expectedLocalRevision) {
-            set(conflict<StoredThemeDraft>(current));
+          const current = get.result === undefined ? null : parseDraftStorageRow(get.result);
+          const currentDraft = current !== null && isStoredDraft(current) ? current : null;
+          const matches =
+            current === null
+              ? expectedLocalRevision === null
+              : isStoredDraft(current)
+                ? current.localRevision === expectedLocalRevision
+                : expectedLocalRevision === null;
+          if (!matches) {
+            set(conflict<StoredThemeDraft>(currentDraft));
             return;
           }
           const row: StoredThemeDraft = Object.freeze({
@@ -480,14 +514,19 @@ class IndexedDbThemeRepository implements ThemeRepository {
       get.onerror = () => fail(mapDatabaseError(get.error, "unavailable"));
       get.onsuccess = () => {
         try {
-          const current = get.result === undefined ? null : parseStoredDraft(get.result);
-          if (current === null || current.localRevision !== expectedLocalRevision) {
-            set(conflict<null>(current));
+          const current = get.result === undefined ? null : parseDraftStorageRow(get.result);
+          if (current === null || !isStoredDraft(current) || current.localRevision !== expectedLocalRevision) {
+            set(conflict<null>(current !== null && isStoredDraft(current) ? current : null));
             return;
           }
-          const remove = store.delete(id);
-          remove.onerror = () => fail(mapDatabaseError(remove.error, "unavailable"));
-          remove.onsuccess = () => set(success(null));
+          const marker: DeletedDraftRow = Object.freeze({
+            kind: "deleted-draft",
+            id,
+            localRevision: nextRevision(current.localRevision, "Draft local revision"),
+          });
+          const put = store.put(marker);
+          put.onerror = () => fail(mapDatabaseError(put.error, "unavailable"));
+          put.onsuccess = () => set(success(null));
         } catch (cause) {
           fail(cause instanceof ThemeStorageError ? cause : invalidData("Unable to delete draft", cause));
         }
@@ -504,7 +543,12 @@ class IndexedDbThemeRepository implements ThemeRepository {
 
 export async function openThemeRepository(who: Who, factory?: IDBFactory): Promise<ThemeRepository> {
   validateWho(who);
-  const selectedFactory = factory ?? globalThis.indexedDB;
+  let selectedFactory: IDBFactory | undefined;
+  try {
+    selectedFactory = factory ?? globalThis.indexedDB;
+  } catch (cause) {
+    throw storageError("unavailable", "IndexedDB is unavailable", cause);
+  }
   if (selectedFactory === undefined) throw storageError("unavailable", "IndexedDB is unavailable");
   const scopeKey = `${nameFor(who)}:themes`;
   const db = await openDatabase(scopeKey, selectedFactory);

@@ -308,6 +308,73 @@ describe("draft CAS and bounds", () => {
     expect({ idReads, revisionReads }).toEqual({ idReads: 1, revisionReads: 1 });
     repo.close();
   });
+
+  it("retains a hidden draft generation across delete, reopen, and recreate", async () => {
+    const factory = new IDBFactory();
+    const who: Who = { kind: "account", id: "draft_generations" };
+    const first = await openThemeRepository(who, factory);
+    await expect(first.saveDraft({ draft: draft("cycle"), expectedLocalRevision: null })).resolves.toMatchObject({
+      ok: true,
+      value: { localRevision: 1 },
+    });
+    await expect(first.deleteDraft({ id: "cycle", expectedLocalRevision: 1 })).resolves.toEqual({ ok: true, value: null });
+    expect(await first.loadDraft("cycle")).toBeNull();
+    expect(await first.listDrafts()).toEqual([]);
+    first.close();
+
+    const reopened = await openThemeRepository(who, factory);
+    expect(await reopened.loadDraft("cycle")).toBeNull();
+    await expect(reopened.saveDraft({ draft: draft("cycle"), expectedLocalRevision: 1 })).resolves.toEqual({
+      ok: false,
+      reason: "conflict",
+      current: null,
+    });
+    await expect(reopened.deleteDraft({ id: "cycle", expectedLocalRevision: 1 })).resolves.toEqual({
+      ok: false,
+      reason: "conflict",
+      current: null,
+    });
+
+    await expect(reopened.saveDraft({ draft: draft("cycle"), expectedLocalRevision: null })).resolves.toMatchObject({
+      ok: true,
+      value: { localRevision: 3 },
+    });
+    await expect(reopened.saveDraft({ draft: draft("cycle"), expectedLocalRevision: 1 })).resolves.toMatchObject({
+      ok: false,
+      current: { localRevision: 3 },
+    });
+    await expect(reopened.deleteDraft({ id: "cycle", expectedLocalRevision: 1 })).resolves.toMatchObject({
+      ok: false,
+      current: { localRevision: 3 },
+    });
+    reopened.close();
+  });
+
+  it("strictly validates hidden draft markers and rejects generation overflow", async () => {
+    const factory = new IDBFactory();
+    const who: Who = { kind: "anon" };
+    const setup = await openThemeRepository(who, factory);
+    setup.close();
+    await putRaw(factory, who, "drafts", {
+      kind: "deleted-draft",
+      id: "overflow_marker",
+      localRevision: Number.MAX_SAFE_INTEGER,
+    });
+    await putRaw(factory, who, "drafts", {
+      kind: "deleted-draft",
+      id: "corrupt_marker",
+      localRevision: 2,
+      draft: draft("corrupt_marker"),
+    });
+
+    const repo = await openThemeRepository(who, factory);
+    expect(await repo.loadDraft("overflow_marker")).toBeNull();
+    await expect(repo.saveDraft({ draft: draft("overflow_marker"), expectedLocalRevision: null })).rejects.toEqual(
+      expectErrorCode("invalid-data"),
+    );
+    await expect(repo.loadDraft("corrupt_marker")).rejects.toEqual(expectErrorCode("invalid-data"));
+    repo.close();
+  });
 });
 
 describe("validation, lifecycle, and durability", () => {
@@ -358,6 +425,27 @@ describe("validation, lifecycle, and durability", () => {
       code: "unavailable",
       cause,
     });
+  });
+
+  it("wraps a throwing global IndexedDB getter and preserves its cause", async () => {
+    const before = Object.getOwnPropertyDescriptor(globalThis, "indexedDB");
+    const cause = new DOMException("factory denied", "SecurityError");
+    Object.defineProperty(globalThis, "indexedDB", {
+      configurable: true,
+      get() {
+        throw cause;
+      },
+    });
+    try {
+      await expect(openThemeRepository({ kind: "anon" })).rejects.toMatchObject({
+        name: "ThemeStorageError",
+        code: "unavailable",
+        cause,
+      });
+    } finally {
+      if (before) Object.defineProperty(globalThis, "indexedDB", before);
+      else delete (globalThis as { indexedDB?: IDBFactory }).indexedDB;
+    }
   });
 
   it("rejects corrupt stored rows without deleting or coercing them", async () => {
