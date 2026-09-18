@@ -79,7 +79,26 @@ function rules(css: string): Rule[] {
   return found;
 }
 
-const sheet = rules(readFileSync(join(here, "src/styles.css"), "utf8"));
+function rulesInKeyframes(css: string, name: string): Rule[] {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const header = new RegExp(`@keyframes\\s+${escapedName}\\s*\\{`).exec(css);
+  if (!header) return [];
+
+  const open = header.index + header[0].lastIndexOf("{");
+  let depth = 1;
+  let at = open + 1;
+  while (at < css.length && depth > 0) {
+    if (css[at] === "{") depth += 1;
+    if (css[at] === "}") depth -= 1;
+    at += 1;
+  }
+  if (depth !== 0) return [];
+
+  return rules(css.slice(open + 1, at - 1));
+}
+
+const stylesCss = readFileSync(join(here, "src/styles.css"), "utf8");
+const sheet = rules(stylesCss);
 /** The blocks that paint a look: the default, the system's light, and the four saved themes. */
 const looks = sheet.filter((r) => /^:root/.test(r.selector) && r.decls.some((d) => d.prop === "--bg"));
 
@@ -288,13 +307,35 @@ describe("selection and feedback color roles", () => {
   });
 
   it("routes the live heat start through warning background and keeps its transparent endpoint", () => {
-    const starts = sheet.filter((rule) => rule.selector === "0%").flatMap((rule) => rule.decls);
-    const ends = sheet.filter((rule) => rule.selector === "100%").flatMap((rule) => rule.decls);
+    const liveHeat = rulesInKeyframes(stylesCss, "liveHeat");
+    const starts = liveHeat.filter((rule) => rule.selector === "0%").flatMap((rule) => rule.decls);
+    const ends = liveHeat.filter((rule) => rule.selector === "100%").flatMap((rule) => rule.decls);
     expect(starts).toContainEqual({
       prop: "background",
       value: "var(--warning-background, color-mix(in oklab, var(--warn) 35%, transparent))",
     });
     expect(ends).toContainEqual({ prop: "background", value: "transparent" });
+  });
+
+  it("does not let another animation satisfy a named keyframe contract", () => {
+    const liveHeat = rulesInKeyframes(
+      `
+        @keyframes decoy {
+          0% { background: decoy-start; }
+          100% { background: decoy-end; }
+        }
+        @keyframes liveHeat {
+          0% { background: live-start; }
+          100% { background: live-end; }
+        }
+      `,
+      "liveHeat",
+    );
+
+    expect(liveHeat).toEqual([
+      { selector: "0%", decls: [{ prop: "background", value: "live-start" }] },
+      { selector: "100%", decls: [{ prop: "background", value: "live-end" }] },
+    ]);
   });
 });
 
