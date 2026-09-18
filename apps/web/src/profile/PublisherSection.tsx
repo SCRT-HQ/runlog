@@ -114,7 +114,7 @@ export function PublisherSection({ api }: { api: Api | null }) {
           ) : null}
         </p>
         <form
-          className="row"
+          className="row publisherNameForm"
           onSubmit={(e) => {
             e.preventDefault();
             const n = name.trim();

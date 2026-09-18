@@ -136,8 +136,8 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
     return (
       <main className="main">
         <div className="profileLayout">
-          <ProfileNav page={page} onNavigate={onNavigate} waiting={invitations.invites.length} servers={plan.servers} />
-          <div className="profileBody">
+          <ProfileNav page={page} onNavigate={onNavigate} waiting={invitations.invites.length} servers={plan.servers} application />
+          <div className="profileBody profileApplicationBody">
             <SettingsPage />
           </div>
         </div>
@@ -189,8 +189,14 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
   return (
     <main className="main">
       <div className="profileLayout">
-        <ProfileNav page={page} onNavigate={onNavigate} waiting={invitations.invites.length} servers={plan.servers} />
-        <div className="profileBody">
+        <ProfileNav
+          page={page}
+          onNavigate={onNavigate}
+          waiting={invitations.invites.length}
+          servers={plan.servers}
+          application={page !== "account"}
+        />
+        <div className={`profileBody${page === "account" ? "" : " profileApplicationBody"}`}>
           {page === "profile" && (
             <ProfilePage
               user={user}
@@ -244,14 +250,16 @@ function ProfileNav({
   onNavigate,
   waiting,
   servers,
+  application = false,
 }: {
   page: ProfilePage;
   onNavigate?: (page: ProfilePage) => void;
   waiting: number;
   servers: boolean;
+  application?: boolean;
 }) {
   return (
-    <nav className="profileNav" aria-label="Profile pages">
+    <nav className={`profileNav${application ? " profileApplicationNav" : ""}`} aria-label="Profile pages">
       {PROFILE_PAGES.filter((p) => p.id !== "servers" || servers || page === "servers").map((p) => (
         <a
           key={p.id}
@@ -307,7 +315,7 @@ function ProfilePage({
 }) {
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   return (
-    <div className="profile">
+    <div className="profile profileApplication">
       <h2>Profile</h2>
       <section className="panel">
         <div className="row profileIdentity">
@@ -473,7 +481,7 @@ function PublishingPage({ api }: { api: Api | null }) {
   const empty = noApi || (!loading && !publisher && (keys?.length ?? 0) === 0 && (claims?.length ?? 0) === 0);
 
   return (
-    <div className="profile">
+    <div className="profile profileApplication">
       <h2>Publishing</h2>
       {loading ? null : empty ? (
         <section className="panel">
@@ -603,7 +611,7 @@ function SocialPage({
   };
 
   return (
-    <div className="profile">
+    <div className="profile profileApplication">
       <h2>Social</h2>
       <ConnectionsSection api={api} />
       <InviteFriend api={api} />
@@ -1012,7 +1020,7 @@ function InviteFriend({ api }: { api: Api | null }) {
 function SettingsPage() {
   const [alerts, setAlerts] = useAlertSettings();
   return (
-    <div className="profile">
+    <div className="profile profileApplication">
       <section className="panel">
         <h3 className="sectionTitle">
           This device <span className="muted">kept here, not in your account</span>
