@@ -52,6 +52,13 @@ export default defineConfig(({ mode }) => {
         // latin subsets it wants without a path into node_modules.
         "@font-literata": fileURLToPath(new URL("../../node_modules/@fontsource-variable/literata/files", import.meta.url)),
         "@font-plex": fileURLToPath(new URL("../../node_modules/@fontsource/ibm-plex-mono/files", import.meta.url)),
+        "@font-atkinson-next": fileURLToPath(
+          new URL("../../node_modules/@fontsource-variable/atkinson-hyperlegible-next/files", import.meta.url),
+        ),
+        "@font-space-grotesk": fileURLToPath(new URL("../../node_modules/@fontsource-variable/space-grotesk/files", import.meta.url)),
+        "@font-oxanium": fileURLToPath(new URL("../../node_modules/@fontsource-variable/oxanium/files", import.meta.url)),
+        "@font-vt323": fileURLToPath(new URL("../../node_modules/@fontsource/vt323/files", import.meta.url)),
+        "@font-press-start-2p": fileURLToPath(new URL("../../node_modules/@fontsource/press-start-2p/files", import.meta.url)),
       },
     },
     server: { open: true, ...(proxy ? { proxy } : {}) },

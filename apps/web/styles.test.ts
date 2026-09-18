@@ -395,9 +395,21 @@ describe("what a migrated control promises", () => {
     }
   });
 
-  it("uses the display family only for the three existing UI page titles", () => {
+  it("uses the display family only for UI page titles and widget headings", () => {
     const display = sheet.filter((r) => r.decls.some((d) => /var\(--font-display\)/.test(d.value)));
-    expect(display.map((r) => r.selector)).toEqual([":where(.pageHeader) h1", ".profileApplication > h2", ".marketHead h2"]);
+    expect(display.map((r) => r.selector)).toEqual([
+      ".widgetTitle",
+      ":where(.pageHeader) h1",
+      ".profileApplication > h2",
+      ".marketHead h2",
+    ]);
+  });
+
+  it("gives widget headings the active display voice at body size and lets long words wrap", () => {
+    const widgetTitle = sheet.find((r) => r.selector === ".widgetTitle")!;
+    expect(widgetTitle.decls).toContainEqual({ prop: "font", value: "var(--font-body) var(--font-display)" });
+    expect(widgetTitle.decls).toContainEqual({ prop: "overflow-wrap", value: "anywhere" });
+    expect(widgetTitle.decls.some((d) => /var\(--mono\)/.test(d.value))).toBe(false);
   });
 });
 

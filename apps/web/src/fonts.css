@@ -1,5 +1,6 @@
 /*
- * Two voices, shipped with the app.
+ * A self-hosted catalog of reading, technical, accessible, geometric, and
+ * pixel voices, shipped with the app.
  *
  * The hosting's Content Security Policy says `font-src 'self'`, which is the
  * right thing for it to say, so the faces are bundled rather than fetched from
@@ -9,7 +10,8 @@
  * Only the latin subsets. Fontsource's own stylesheets declare every script
  * with unicode-range, which a browser handles lazily but a service worker's
  * precache does not: it would fetch Cyrillic and Vietnamese for everyone.
- * Hand-written declarations keep it to about 270 KB, once.
+ * Hand-written declarations keep the eleven Latin faces to 406,024 source
+ * bytes, once. System fallbacks continue to handle scripts outside Latin.
  *
  * Literata carries weight and optical size on one file, so a 15px rule and a
  * 40px heading come from the same face and look like it. Plex Mono's light
@@ -51,4 +53,69 @@
   font-display: swap;
   font-weight: 500;
   src: url("@font-plex/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url("@font-atkinson-next/atkinson-hyperlegible-next-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Atkinson Hyperlegible Next Variable";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url("@font-atkinson-next/atkinson-hyperlegible-next-latin-wght-italic.woff2") format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Space Grotesk Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url("@font-space-grotesk/space-grotesk-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Oxanium Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url("@font-oxanium/oxanium-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "VT323";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("@font-vt323/vt323-latin-400-normal.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Press Start 2P";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("@font-press-start-2p/press-start-2p-latin-400-normal.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
