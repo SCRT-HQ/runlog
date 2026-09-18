@@ -109,7 +109,9 @@ describe("the terms gate", () => {
     show();
     const dialog = await screen.findByRole("dialog", { name: "Before you go on" });
 
-    expect(document.activeElement?.textContent).toBe("I accept");
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "I accept" })).toBe(document.activeElement);
+    });
     expect(screen.getByText("Page action").closest("[inert]")).not.toBeNull();
     expect(focusables(document.body).map((element) => element.textContent)).toEqual([
       "terms of service",
@@ -161,7 +163,9 @@ describe("the terms gate", () => {
     expect(saved).toEqual([{ termsVersion: "v2" }, { termsVersion: "v2" }]);
     await act(async () => second.resolve({ ...profile("v2"), name: "Accepted account" }));
 
-    expect(await screen.findByLabelText("Shown as")).toBe(document.activeElement);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Shown as")).toBe(document.activeElement);
+    });
     expect(screen.queryByRole("dialog", { name: "Before you go on" })).toBeNull();
   });
 
@@ -175,7 +179,9 @@ describe("the terms gate", () => {
     show(signedIn, true);
     fireEvent.click(await screen.findByRole("button", { name: "I accept" }));
 
-    expect(await screen.findByLabelText("Shown as")).toBe(document.activeElement);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Shown as")).toBe(document.activeElement);
+    });
     expect(screen.queryByRole("dialog", { name: "Before you go on" })).toBeNull();
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
   });

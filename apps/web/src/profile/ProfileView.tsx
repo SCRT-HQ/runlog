@@ -30,6 +30,8 @@ import { PlanSection } from "./PlanSection.tsx";
 import { PublisherSection } from "./PublisherSection.tsx";
 import { PurchasesSection } from "./PurchasesSection.tsx";
 import { ServersPage } from "./ServersPage.tsx";
+import { DataExport, ServerDelete } from "./DataActions.tsx";
+import { LicenseRow } from "./LicenseRow.tsx";
 import {
   forgetLicense,
   forgetSyncState,
@@ -531,7 +533,7 @@ function AccountPage({
         )}
       </section>
 
-      <section className="panel">
+      <section className="panel dataActions">
         <h3 className="sectionTitle">
           Your data on the server <span className="muted">a copy of it, or the end of it</span>
         </h3>
@@ -540,8 +542,8 @@ function AccountPage({
           and this profile, can be downloaded as one file, or removed from the server at once. What is on this device stays on this device
           either way.
         </p>
-        <Export disabled={!api} onExport={async () => (api ? api.exportMe() : Promise.reject(new Error("no API")))} />
-        <Forget disabled={!api} onConfirm={onDeleteEverything} />
+        <DataExport disabled={!api} onExport={async () => (api ? api.exportMe() : Promise.reject(new Error("no API")))} />
+        <ServerDelete disabled={!api} onConfirm={onDeleteEverything} />
       </section>
 
       <section className="panel">
@@ -890,123 +892,6 @@ function CommandLine({ api }: { api: Api | null }) {
         </>
       )}
     </section>
-  );
-}
-
-/**
- * One key. Hidden by default because this page can be open on a shared
- * screen; shown or copied on purpose. Forgetting takes two presses, since a
- * key is the receipt for something paid for.
- */
-function LicenseRow({ license, title, onForget }: { license: StoredLicense; title: string; onForget: () => Promise<void> }) {
-  const [shown, setShown] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [arming, setArming] = useState(false);
-  const masked = license.key.replace(/[A-Z0-9](?=.{5})/gi, "•");
-  return (
-    <div className="row licenseRow">
-      <div className="licenseMain">
-        <strong>{title}</strong>
-        {license.ref && <div className="muted small mono">order {license.ref}</div>}
-        <div className="licenseKey mono">{shown ? license.key : masked}</div>
-      </div>
-      <div className="licenseActions">
-        <button className="ghost tiny" onClick={() => setShown((s) => !s)}>
-          {shown ? "Hide" : "Show"}
-        </button>
-        <button
-          className="ghost tiny"
-          onClick={() => {
-            void navigator.clipboard?.writeText(license.key);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1200);
-          }}
-        >
-          {copied ? "Copied" : "Copy"}
-        </button>
-        {arming ? (
-          <>
-            <button className="ghost tiny danger" onClick={() => void onForget()}>
-              Forget it
-            </button>
-            <button className="ghost tiny" onClick={() => setArming(false)}>
-              Keep
-            </button>
-          </>
-        ) : (
-          <button className="ghost tiny" title="Remove this key from your account and this device" onClick={() => setArming(true)}>
-            Forget
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/** The copy: one button, then the file, then a word on how big it was. */
-function Export({ disabled, onExport }: { disabled: boolean; onExport: () => Promise<{ url: string; bytes: number }> }) {
-  const [state, setState] = useState<
-    { kind: "idle" } | { kind: "busy" } | { kind: "done"; bytes: number } | { kind: "failed"; why: string }
-  >({ kind: "idle" });
-  return (
-    <div className="padRow">
-      <button
-        className="ghost"
-        disabled={disabled || state.kind === "busy"}
-        aria-busy={state.kind === "busy" || undefined}
-        onClick={() => {
-          setState({ kind: "busy" });
-          onExport().then(
-            ({ url, bytes }) => {
-              setState({ kind: "done", bytes });
-              location.assign(url);
-            },
-            (error: unknown) =>
-              setState({ kind: "failed", why: error instanceof Error && error.message ? error.message : "the export could not be made" }),
-          );
-        }}
-      >
-        {state.kind === "busy" ? "Gathering…" : "Download everything"}
-      </button>
-      {state.kind === "done" && (
-        <span className="muted small">{Math.max(1, Math.round(state.bytes / 1024))} KB, as JSON. The link works for fifteen minutes.</span>
-      )}
-      {state.kind === "failed" && <span className="muted small">{state.why}</span>}
-    </div>
-  );
-}
-
-function Forget({ disabled, onConfirm }: { disabled: boolean; onConfirm: () => Promise<void> }) {
-  const [state, setState] = useState<"idle" | "arming" | "busy" | "done" | "failed">("idle");
-  if (state === "done") return <p className="muted small">Done. The server holds nothing of yours now.</p>;
-  if (state === "arming") {
-    return (
-      <div className="padRow">
-        <button
-          className="ghost danger"
-          onClick={() => {
-            setState("busy");
-            onConfirm().then(
-              () => setState("done"),
-              () => setState("failed"),
-            );
-          }}
-        >
-          Yes, delete everything of mine on the server
-        </button>
-        <button className="ghost" onClick={() => setState("idle")}>
-          Keep it
-        </button>
-      </div>
-    );
-  }
-  return (
-    <div className="padRow">
-      <button className="ghost danger" disabled={disabled || state === "busy"} onClick={() => setState("arming")}>
-        {state === "busy" ? "Deleting…" : "Delete everything of mine on the server"}
-      </button>
-      {state === "failed" && <span className="warnText small">That did not go through. Try again in a moment.</span>}
-    </div>
   );
 }
 
