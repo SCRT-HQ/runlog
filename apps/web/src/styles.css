@@ -260,14 +260,14 @@ h4 {
 }
 
 /*
- * The referee's voice. Controls, figures, identifiers and the log are set in
- * the monospace: they are the machine speaking, and they should look like it.
+ * Native controls begin in the UI voice. Authored content and machine or
+ * numeric values opt into the prose and mono roles in their scoped rules.
  */
 button,
 input,
 select,
 textarea {
-  font-family: var(--mono);
+  font-family: var(--font-ui);
 }
 
 /* Every keyboard-reachable control and target shares the theme's focus ink.
@@ -382,6 +382,7 @@ p {
   border-radius: var(--radius);
   color: var(--text);
   font: inherit;
+  font-family: var(--font-ui);
   cursor: pointer;
   transition:
     border-color 0.15s,
@@ -397,9 +398,11 @@ p {
   background: var(--panel-2);
 }
 .packBtn strong {
+  font-family: var(--font-prose);
   font-size: var(--t-2);
 }
 .packBtn span {
+  font-family: var(--font-prose);
   font-size: 0.72rem;
   color: var(--muted);
 }
@@ -474,6 +477,12 @@ p {
   border: 1px solid var(--line);
   color: var(--muted);
   white-space: nowrap;
+}
+button.chip {
+  font-family: var(--font-ui);
+}
+a.chip {
+  font-family: var(--font-ui);
 }
 .chip.v {
   color: var(--text);
@@ -600,6 +609,7 @@ p {
   border: 0;
   cursor: pointer;
   font: inherit;
+  font-family: var(--font-ui);
 }
 /* Every line of the report is the way to the field that caused it. */
 .problemRow {
@@ -613,6 +623,7 @@ p {
   padding: 0;
   color: inherit;
   font: inherit;
+  font-family: var(--font-ui);
   text-align: left;
   cursor: pointer;
 }
@@ -723,6 +734,7 @@ p {
   background: transparent;
   color: var(--accent);
   font: inherit;
+  font-family: var(--font-ui);
   font-size: 0.85rem;
   cursor: pointer;
 }
@@ -1295,6 +1307,7 @@ p {
   border: 0;
   padding: 0;
   font: inherit;
+  font-family: var(--font-ui);
   color: var(--text);
   text-decoration: underline;
   text-decoration-color: var(--line);
@@ -1359,6 +1372,7 @@ p {
   padding: 0;
   color: var(--text);
   font: inherit;
+  font-family: var(--font-prose);
   text-align: left;
   cursor: pointer;
 }
@@ -1455,6 +1469,7 @@ p {
   border: none;
   color: var(--text);
   font: inherit;
+  font-family: var(--font-prose);
   text-align: left;
   cursor: pointer;
 }
@@ -1656,6 +1671,7 @@ p {
   border-radius: 6px;
   color: var(--text);
   font: inherit;
+  font-family: var(--font-ui);
 }
 /* A watcher's column: everything shown, nothing pressable. */
 .col.wide.watching .panel:not(.log) button,
@@ -1792,6 +1808,7 @@ button:disabled,
   background: var(--panel-2);
   color: var(--text);
   font: inherit;
+  font-family: var(--font-prose);
   text-align: left;
   cursor: pointer;
 }
@@ -1974,6 +1991,7 @@ button:disabled,
   border: 0;
   color: var(--text);
   font: inherit;
+  font-family: var(--font-prose);
   text-align: left;
   cursor: pointer;
 }
@@ -2235,13 +2253,16 @@ button:disabled,
   border: none;
   color: var(--text);
   font: inherit;
+  font-family: var(--font-ui);
   cursor: pointer;
   text-align: left;
 }
 .packBtnMain strong {
+  font-family: var(--font-prose);
   font-size: var(--t-2);
 }
 .packBtnMain span {
+  font-family: var(--font-prose);
   font-size: 0.72rem;
   color: var(--muted);
 }
@@ -2478,6 +2499,7 @@ button:disabled,
   padding: 0;
   margin: 0;
   font: inherit;
+  font-family: var(--font-ui);
   letter-spacing: inherit;
   text-transform: inherit;
   color: inherit;
@@ -2507,6 +2529,7 @@ button:disabled,
   padding: 0;
   margin: 0;
   font: inherit;
+  font-family: var(--font-ui);
   font-style: italic;
   font-weight: 500;
   color: var(--text);
@@ -2523,7 +2546,7 @@ button:disabled,
   width: 100%;
   padding: 0.15rem 0.35rem;
   font: inherit;
-  font-family: var(--serif);
+  font-family: var(--font-prose);
   font-style: italic;
   font-weight: 500;
   color: var(--text);
@@ -2562,7 +2585,7 @@ button:disabled,
   width: 100%;
 }
 .fieldLabel {
-  font-family: var(--mono);
+  font-family: var(--font-ui);
   font-size: 0.74rem;
   color: var(--muted);
 }
@@ -3274,6 +3297,7 @@ select.textInput {
   background: transparent;
   color: inherit;
   font: inherit;
+  font-family: var(--font-ui);
   border-radius: 6px;
   cursor: pointer;
 }
@@ -3292,6 +3316,7 @@ select.textInput {
   border-top: 1px solid var(--line);
   cursor: pointer;
   font: inherit;
+  font-family: var(--font-ui);
   color: inherit;
 }
 .openTableRow:first-of-type {
@@ -3320,7 +3345,7 @@ select.textInput {
   padding: 0.4rem 0.8rem;
   border: 1px solid var(--control-boundary);
   border-radius: var(--radius);
-  font-family: var(--mono);
+  font-family: var(--font-ui);
   font-size: 0.85rem;
   cursor: pointer;
   user-select: none;
@@ -3340,7 +3365,7 @@ select.textInput {
   color: var(--muted);
 }
 .shelf summary strong {
-  font-family: var(--serif);
+  font-family: var(--font-prose);
   font-size: var(--t-3);
   font-weight: 600;
 }
@@ -3388,11 +3413,11 @@ select.textInput {
 }
 .shelf .packBtn strong,
 .shelf .packBtnMain strong {
-  font-family: var(--serif);
+  font-family: var(--font-prose);
 }
 .shelf .packBtn span,
 .shelf .packBtnMain span {
-  font-family: var(--mono);
+  font-family: var(--font-prose);
 }
 
 .topbarEnd {
@@ -3438,7 +3463,7 @@ select.textInput {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-family: var(--mono);
+  font-family: var(--font-ui);
   font-size: var(--t-1);
   color: var(--muted);
 }
@@ -3449,6 +3474,7 @@ select.textInput {
   border-radius: 6px;
   color: var(--text);
   font: inherit;
+  font-family: var(--font-ui);
   cursor: pointer;
 }
 .themeMenu select:focus-visible {
@@ -4054,7 +4080,7 @@ details.panel[open] > summary .sectionTitle::after {
 .more > summary {
   list-style: none;
   padding: 0.7rem 0;
-  font-family: var(--mono);
+  font-family: var(--font-ui);
   font-size: 0.82rem;
   color: var(--muted);
   cursor: pointer;
@@ -4487,6 +4513,7 @@ details.panel[open] > summary .sectionTitle::after {
 }
 .chipAdd {
   font: inherit;
+  font-family: var(--font-ui);
   font-size: 0.75rem;
   background: transparent;
   color: var(--muted);
@@ -4650,6 +4677,7 @@ details.panel[open] > summary .sectionTitle::after {
   background: transparent;
   color: var(--muted);
   font: inherit;
+  font-family: var(--font-ui);
   cursor: pointer;
 }
 .matrix .cell:hover:not(:disabled) {
@@ -4988,7 +5016,7 @@ details.panel[open] > summary .sectionTitle::after {
     border-radius: var(--radius);
     color: var(--text);
     font: inherit;
-    font-family: var(--mono);
+    font-family: var(--font-ui);
     font-size: var(--t-2);
     text-align: left;
     cursor: pointer;
@@ -5202,6 +5230,7 @@ details.panel[open] > summary .sectionTitle::after {
 }
 .alertPick select {
   font: inherit;
+  font-family: var(--font-ui);
   font-size: 0.85rem;
   background: var(--panel-2);
   color: var(--text);
@@ -6291,6 +6320,7 @@ a.plan {
   border-radius: 4px;
   color: inherit;
   font: inherit;
+  font-family: var(--font-ui);
   text-align: left;
   cursor: pointer;
 }
@@ -7182,7 +7212,7 @@ html[data-pip="controls"] body {
   gap: 0.35rem;
 }
 .personaChip {
-  font-family: var(--mono);
+  font-family: var(--font-ui);
   font-size: 0.75rem;
   padding: 0.15rem 0.6rem;
   border-radius: 999px;
@@ -7439,7 +7469,7 @@ html[data-pip="controls"] body {
     border: 1px solid transparent;
     border-radius: var(--radius);
     color: var(--muted);
-    font-family: var(--mono);
+    font-family: var(--font-ui);
     font-size: var(--t-4);
     line-height: 1;
     cursor: pointer;
@@ -7470,6 +7500,7 @@ html[data-pip="controls"] body {
     border-top: 1px solid var(--line);
     color: var(--text);
     font: inherit;
+    font-family: var(--font-prose);
     font-size: var(--t-2);
     text-align: left;
     cursor: pointer;
@@ -7830,7 +7861,7 @@ html[data-pip="controls"] body {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-family: var(--mono);
+  font-family: var(--font-ui);
   font-size: var(--t-1);
   color: var(--muted);
   cursor: pointer;
@@ -8004,6 +8035,7 @@ html[data-pip="controls"] body {
   background: none;
   color: var(--text);
   font: inherit;
+  font-family: var(--font-prose);
   text-align: left;
   cursor: pointer;
 }
@@ -8418,6 +8450,7 @@ html[data-pip="controls"] body {
   border-radius: 4px;
   color: inherit;
   font: inherit;
+  font-family: var(--font-ui);
   text-align: left;
   cursor: pointer;
 }
@@ -8440,7 +8473,7 @@ html[data-pip="controls"] body {
 }
 .menuGroupLabel {
   padding: 0 var(--space-2);
-  font-family: var(--mono);
+  font-family: var(--font-ui);
   letter-spacing: 0.04em;
 }
 /* A submenu, opened in place under the line that offers it. */
