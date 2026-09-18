@@ -1,9 +1,9 @@
 # Custom theme authoring and accessible presets
 
 Date: 2026-09-17
-Status: design sections approved in conversation; written specification awaiting user review.
+Status: written specification approved by the user on 2026-09-18; implementation authorized.
 Scope: first release, including account synchronization and external widget presentation.
-Implementation status: not started. This document is a design specification, not an implementation plan.
+Implementation status: foundational color-contract slice in progress. Detailed subplans are linked from 2026-09-18-custom-theme-authoring-roadmap.md.
 
 ## 1. Outcome and approved decisions
 
@@ -301,4 +301,10 @@ Self-review checklist:
 - Data validation, conflict handling, safe recovery, and legacy URLs have explicit behavior.
 - Concrete palette values and implementation mechanics are assigned to testable delivery work rather than falsely presented as already implemented.
 
-Next action: user review of this written specification, followed by the writing-plans workflow. No feature implementation is authorized by publication of this document alone.
+Next action: execute detailed subplans under 2026-09-18-custom-theme-authoring-roadmap.md. The user approved this written spec and requested implementation on 2026-09-18. Publication alone was not the approval; the user's subsequent instruction was.
+
+### Catalog extension requested with approval
+
+Expand offered fonts and built-in themes, including retro arcade and cyberpunk styles. These remain tokenized palettes and curated font selections, not permission for arbitrary CSS, flashing, scanlines, animation, or layout changes. Exact font-role defaults and palette choices will be recorded with the catalog subplan after license, payload, available-weight, and readability discovery. Shared contracts can proceed independently of those choices.
+
+The user subsequently accepted the interactive examples, including Cyberpunk Neon as an alternative pink/blue/purple palette alongside the yellow-accent Cyberpunk. The updated direction adds a display-heading role so expressive faces do not force pixel typography onto controls or prose. The catalog roadmap records candidate values and fonts; acceptance of the visual direction does not substitute for production accessibility and cross-surface verification.
