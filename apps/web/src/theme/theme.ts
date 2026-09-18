@@ -7,9 +7,12 @@
  * inside of a celadon glaze. Choosing is the player's, remembered on this
  * machine only, and "system" hands the choice back to the operating system.
  *
- * The tokens themselves live in styles.css under `[data-theme=…]`. This module
- * only knows the names and where the choice is kept.
+ * The historical stylesheet palettes remain fallbacks. Explicit choices are
+ * resolved from the shared theme contract and installed as browser tokens.
  */
+
+import { DEFAULT_APP_FONTS, getBuiltinColorBase, resolveColors, resolveFonts } from "@runlog/themes";
+import { applyPresentation, clearPresentation, compilePresentation, type PresentationScope } from "./presentation.ts";
 
 export const THEMES = [
   { id: "system", label: "Match the system" },
@@ -44,9 +47,24 @@ export function savedTheme(): ThemeId {
  * `prefers-color-scheme` rule is what decides: the attribute is a decision,
  * and its absence is the decision not to make one.
  */
-export function applyTheme(theme: ThemeId, root: HTMLElement = document.documentElement): void {
-  if (theme === "system") delete root.dataset.theme;
-  else root.dataset.theme = theme;
+export function applyTheme(theme: ThemeId, root: HTMLElement = document.documentElement, scope: PresentationScope = "app"): void {
+  if (theme === "system") {
+    clearPresentation(root);
+    delete root.dataset.theme;
+    return;
+  }
+
+  const base = getBuiltinColorBase(theme);
+  const colors = base ? resolveColors(base.colors) : null;
+  const fonts = resolveFonts(DEFAULT_APP_FONTS);
+  if (!base || !colors || !fonts) {
+    clearPresentation(root);
+    delete root.dataset.theme;
+    return;
+  }
+
+  applyPresentation(compilePresentation(colors, fonts, base.colorScheme, scope), root);
+  root.dataset.theme = theme;
 }
 
 export function rememberTheme(theme: ThemeId): void {

@@ -9,7 +9,7 @@ import { useRace } from "../run/useRace.ts";
 import { clockNow, raceOf, snapshotOf, type LiveSnapshot, type RaceSnapshot } from "../live/snapshot.ts";
 import { RaceBoard, raceHeading } from "../live/RaceBoard.tsx";
 import { usePublicRun } from "../live/usePublic.ts";
-import { applyTheme, savedTheme } from "../theme/theme.ts";
+import { applyTheme, isThemeId, savedTheme } from "../theme/theme.ts";
 import type { Gesture } from "../sync/socket.ts";
 import { WIDGET_KINDS, type WidgetRoute } from "./route.ts";
 import { useTicker, type TickerLine } from "./ticker.ts";
@@ -37,13 +37,14 @@ export function WidgetView({ route }: { route: WidgetRoute }) {
   // and hands the machine its own choice back on the way out.
   useEffect(() => {
     const root = document.documentElement;
+    const inheritedTheme = isThemeId(root.dataset.theme) ? root.dataset.theme : "system";
     root.dataset["widget"] = route.bg;
     root.style.fontSize = `${16 * route.scale}px`;
-    if (route.theme) applyTheme(route.theme);
+    applyTheme(route.theme ?? inheritedTheme, root, "widget");
     return () => {
       delete root.dataset["widget"];
       root.style.fontSize = "";
-      if (route.theme) applyTheme(savedTheme());
+      applyTheme(route.theme ? savedTheme() : inheritedTheme, root, "app");
     };
   }, [route.bg, route.scale, route.theme]);
 

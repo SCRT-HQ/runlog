@@ -16,6 +16,7 @@
     "@runlog/deck-profiles": "*",
     "@runlog/engine": "0.1.0",
     "@runlog/rules-schema": "0.1.0",
+    "@runlog/themes": "*",
     "@workos-inc/authkit-js": "^0.20.2",
     "cannon-es": "^0.20.0",
     "pdfmake": "^0.3.11",

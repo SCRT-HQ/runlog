@@ -103,6 +103,7 @@ describe("the semantic tokens", () => {
       "--font-ui",
       "--font-prose",
       "--font-mono",
+      "--font-display",
       "--font-page-title",
       "--font-section-title",
       "--font-body",
@@ -136,7 +137,7 @@ describe("what a migrated control promises", () => {
         (d) =>
           d.prop === "font" &&
           /var\(--font-(page-title|section-title|body|control|caption)\)/.test(d.value) &&
-          !/var\(--font-(ui|prose|mono)\)/.test(d.value),
+          !/var\(--font-(ui|prose|mono|display)\)/.test(d.value),
       ),
     );
     expect(loose.map((r) => r.selector)).toEqual([]);
@@ -164,5 +165,10 @@ describe("what a migrated control promises", () => {
     for (const label of labels) {
       expect([label.selector, label.decls.some((d) => d.prop === "font-size")]).toEqual([label.selector, false]);
     }
+  });
+
+  it("uses the display family only for the three existing UI page titles", () => {
+    const display = sheet.filter((r) => r.decls.some((d) => /var\(--font-display\)/.test(d.value)));
+    expect(display.map((r) => r.selector)).toEqual([":where(.pageHeader) h1", ".profileApplication > h2", ".marketHead h2"]);
   });
 });

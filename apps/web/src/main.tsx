@@ -55,7 +55,8 @@ if (page === "app") {
 // is still empty, so nothing has been drawn in the wrong light yet. A widget
 // address may pin a theme of its own, and a capture must never show a frame
 // in the machine's light first.
-applyTheme(widgetFromHash(addressOf(location))?.theme ?? savedTheme());
+const initialWidget = widgetFromHash(addressOf(location));
+applyTheme(initialWidget?.theme ?? savedTheme(), document.documentElement, initialWidget ? "widget" : "app");
 
 if (page === "welcome") {
   createRoot(document.getElementById("root")!).render(
