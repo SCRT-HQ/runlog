@@ -11,14 +11,17 @@ afterEach(() => {
 });
 
 describe("theme menu", () => {
-  it("shows all five expanded preset labels", () => {
+  it("shows renamed preset labels on the legacy values without the old display names", () => {
     render(<ThemeMenu />);
 
     expect((screen.getByRole("option", { name: "High contrast dark" }) as HTMLOptionElement).value).toBe("high-contrast-dark");
     expect((screen.getByRole("option", { name: "High contrast light" }) as HTMLOptionElement).value).toBe("high-contrast-light");
-    expect((screen.getByRole("option", { name: "Retro Arcade" }) as HTMLOptionElement).value).toBe("retro-arcade");
-    expect((screen.getByRole("option", { name: "Cyberpunk" }) as HTMLOptionElement).value).toBe("cyberpunk");
-    expect((screen.getByRole("option", { name: "Cyberpunk Neon" }) as HTMLOptionElement).value).toBe("cyberpunk-neon");
+    expect((screen.getByRole("option", { name: "Linked" }) as HTMLOptionElement).value).toBe("retro-arcade");
+    expect((screen.getByRole("option", { name: "Spacewalk" }) as HTMLOptionElement).value).toBe("cyberpunk");
+    expect((screen.getByRole("option", { name: "Samurai" }) as HTMLOptionElement).value).toBe("cyberpunk-neon");
+    expect(screen.queryByRole("option", { name: "Retro Arcade" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "Cyberpunk" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "Cyberpunk Neon" })).toBeNull();
   });
 
   it("applies and remembers the selected explicit theme", () => {
