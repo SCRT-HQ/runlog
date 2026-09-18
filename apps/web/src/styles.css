@@ -113,6 +113,7 @@
   --surface-raised: var(--panel-2);
   --text-muted: var(--muted);
   --danger: var(--err);
+  --control-boundary: var(--line);
   --focus: var(--accent);
 }
 
@@ -136,6 +137,7 @@
     --surface-raised: var(--panel-2);
     --text-muted: var(--muted);
     --danger: var(--err);
+    --control-boundary: var(--line);
     --focus: var(--accent);
   }
 }
@@ -159,6 +161,7 @@
   --surface-raised: var(--panel-2);
   --text-muted: var(--muted);
   --danger: var(--err);
+  --control-boundary: var(--line);
   --focus: var(--accent);
 }
 :root[data-theme="daylight"] {
@@ -180,6 +183,7 @@
   --surface-raised: var(--panel-2);
   --text-muted: var(--muted);
   --danger: var(--err);
+  --control-boundary: var(--line);
   --focus: var(--accent);
 }
 :root[data-theme="ember"] {
@@ -201,6 +205,7 @@
   --surface-raised: var(--panel-2);
   --text-muted: var(--muted);
   --danger: var(--err);
+  --control-boundary: var(--line);
   --focus: var(--accent);
 }
 :root[data-theme="glaze"] {
@@ -222,6 +227,7 @@
   --surface-raised: var(--panel-2);
   --text-muted: var(--muted);
   --danger: var(--err);
+  --control-boundary: var(--line);
   --focus: var(--accent);
 }
 
@@ -372,7 +378,7 @@ p {
   gap: 0.1rem;
   padding: 0.45rem 0.8rem;
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   border-radius: var(--radius);
   color: var(--text);
   font: inherit;
@@ -958,7 +964,7 @@ p {
   min-height: var(--control-h);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   background: transparent;
   color: var(--text-muted);
   font: var(--font-control) var(--font-ui);
@@ -1646,7 +1652,7 @@ p {
 .inviteForm select {
   padding: 0.4rem 0.5rem;
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   border-radius: 6px;
   color: var(--text);
   font: inherit;
@@ -1736,7 +1742,7 @@ button:disabled,
 .primary:disabled,
 .ghost:disabled {
   background: none;
-  border-color: var(--line);
+  border-color: var(--control-boundary);
   color: var(--text-muted);
   cursor: not-allowed;
 }
@@ -1781,7 +1787,7 @@ button:disabled,
   gap: 0.15rem;
   height: 100%;
   padding: 0.6rem 0.85rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   border-radius: var(--radius);
   background: var(--panel-2);
   color: var(--text);
@@ -1910,7 +1916,7 @@ button:disabled,
   min-height: var(--control-h);
   padding: var(--space-2) var(--space-3);
   background: var(--surface-raised);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   border-radius: var(--radius-sm);
   color: var(--text);
   font: var(--font-control) var(--font-ui);
@@ -1929,7 +1935,7 @@ button:disabled,
 }
 .rollInput:focus,
 .textInput:focus {
-  border-color: var(--accent);
+  border-color: var(--focus);
 }
 
 .askLabel {
@@ -2391,6 +2397,7 @@ button:disabled,
   cursor: pointer;
   padding: 0.35rem 0.85rem;
   font-size: 0.85rem;
+  border-color: var(--control-boundary);
   color: var(--text);
 }
 @media (hover: hover) {
@@ -2525,7 +2532,7 @@ button:disabled,
   border-radius: 5px;
 }
 .renameInput:focus {
-  border-color: var(--accent);
+  border-color: var(--focus);
 }
 
 /* ---- the pack editor ---------------------------------------------------- */
@@ -2897,11 +2904,11 @@ select.textInput {
   display: none;
 }
 .accountMenu[open] > summary {
-  border-color: var(--line);
+  border-color: var(--control-boundary);
 }
 @media (hover: hover) {
   .accountMenu > summary:hover {
-    border-color: var(--line);
+    border-color: var(--control-boundary);
   }
 }
 .accountMenu .caret {
@@ -3231,7 +3238,7 @@ select.textInput {
   list-style: none;
   cursor: pointer;
   padding: 0.15rem 0.55rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   border-radius: var(--radius);
   color: var(--muted);
   font-size: 0.85rem;
@@ -3311,7 +3318,7 @@ select.textInput {
   align-items: baseline;
   gap: 0.5rem;
   padding: 0.4rem 0.8rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   border-radius: var(--radius);
   font-family: var(--mono);
   font-size: 0.85rem;
@@ -3438,7 +3445,7 @@ select.textInput {
 .themeMenu select {
   padding: 0.2rem 0.4rem;
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   border-radius: 6px;
   color: var(--text);
   font: inherit;
@@ -4313,7 +4320,7 @@ details.panel[open] > summary .sectionTitle::after {
   min-width: 14rem;
 }
 .runNameInput:focus {
-  border-color: var(--accent);
+  border-color: var(--focus);
 }
 .setup .textInput.runNameField {
   max-width: 24rem;
@@ -4483,7 +4490,7 @@ details.panel[open] > summary .sectionTitle::after {
   font-size: 0.75rem;
   background: transparent;
   color: var(--muted);
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--control-boundary);
   border-radius: 999px;
   padding: 0.05rem 0.5rem;
   cursor: pointer;
@@ -4638,16 +4645,19 @@ details.panel[open] > summary .sectionTitle::after {
   vertical-align: middle;
   width: 2.6rem;
   height: 1.9rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   border-radius: var(--radius);
   background: transparent;
   color: var(--muted);
   font: inherit;
   cursor: pointer;
 }
-.matrix .cell:hover:not(:disabled),
-.matrix .cell:focus-visible {
+.matrix .cell:hover:not(:disabled) {
   border-color: var(--accent);
+  color: var(--text);
+}
+.matrix .cell:focus-visible {
+  border-color: var(--focus);
   color: var(--text);
 }
 .matrix .cell.won {
@@ -4974,7 +4984,7 @@ details.panel[open] > summary .sectionTitle::after {
     min-height: 2.75rem;
     padding: 0.5rem 0.75rem;
     background: none;
-    border: 1px solid var(--line);
+    border: 1px solid var(--control-boundary);
     border-radius: var(--radius);
     color: var(--text);
     font: inherit;
@@ -5195,7 +5205,7 @@ details.panel[open] > summary .sectionTitle::after {
   font-size: 0.85rem;
   background: var(--panel-2);
   color: var(--text);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   border-radius: var(--radius);
   padding: 0.15rem 0.35rem;
 }
@@ -5716,7 +5726,7 @@ details.panel[open] > summary .sectionTitle::after {
   .guideContentsSummary {
     display: list-item;
     padding: 0.6rem 0.75rem;
-    border: 1px solid var(--line);
+    border: 1px solid var(--control-boundary);
     border-radius: var(--radius);
     background: var(--panel);
     color: var(--text);
@@ -6090,6 +6100,7 @@ a.plan {
 .toggleChip {
   cursor: pointer;
   background: transparent;
+  border-color: var(--control-boundary);
 }
 .toggleChip.on {
   background: var(--accent-dim);
@@ -6588,7 +6599,7 @@ a.plan {
 }
 .reactButton {
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   border-radius: 999px;
   padding: 0.2rem 0.5rem;
   font-size: 1.1rem;
@@ -7151,7 +7162,7 @@ html[data-pip="controls"] body {
   gap: 0.3rem;
   align-content: start;
   padding: 0.8rem 0.9rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   border-radius: var(--radius);
   background: var(--panel);
   color: var(--text);
@@ -7175,7 +7186,7 @@ html[data-pip="controls"] body {
   font-size: 0.75rem;
   padding: 0.15rem 0.6rem;
   border-radius: 999px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   background: var(--panel-2);
   color: var(--muted);
   cursor: pointer;
@@ -7434,7 +7445,7 @@ html[data-pip="controls"] body {
     cursor: pointer;
   }
   .runMenuBtn[aria-expanded="true"] {
-    border-color: var(--line);
+    border-color: var(--control-boundary);
     color: var(--text);
   }
   /* Something in the sheet the player would want to have seen. */
@@ -7905,7 +7916,7 @@ html[data-pip="controls"] body {
 }
 .deckProfiles .rowMenuPanel .options button {
   text-align: center;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-boundary);
   border-radius: 999px;
 }
 
