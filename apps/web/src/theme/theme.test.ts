@@ -22,11 +22,17 @@ describe("the lights", () => {
       "retro-arcade",
       "cyberpunk",
       "cyberpunk-neon",
+      "superstar",
+      "rainbow-road",
     ]);
     expect(THEMES.filter(({ id }) => ["retro-arcade", "cyberpunk", "cyberpunk-neon"].includes(id))).toEqual([
       expect.objectContaining({ id: "retro-arcade", label: "Linked" }),
       expect.objectContaining({ id: "cyberpunk", label: "Spacewalk" }),
       expect.objectContaining({ id: "cyberpunk-neon", label: "Samurai" }),
+    ]);
+    expect(THEMES.slice(-2)).toEqual([
+      expect.objectContaining({ id: "superstar", label: "Superstar" }),
+      expect.objectContaining({ id: "rainbow-road", label: "Rainbow Road" }),
     ]);
   });
 
@@ -97,6 +103,8 @@ describe("the lights", () => {
     ["retro-arcade", "#101810", "#a8ed70", '"Atkinson Hyperlegible Next Variable"', '"Press Start 2P"', '"VT323"', '"IBM Plex Mono"'],
     ["cyberpunk", "#11151e", "#f1ed69", '"Space Grotesk Variable"', '"Oxanium Variable"', '"IBM Plex Mono"', '"IBM Plex Mono"'],
     ["cyberpunk-neon", "#160d24", "#ff64d8", '"Space Grotesk Variable"', '"Oxanium Variable"', '"IBM Plex Mono"', '"IBM Plex Mono"'],
+    ["superstar", "#e5e3ec", "#654397", '"Atkinson Hyperlegible Next Variable"', '"Press Start 2P"', '"VT323"', '"IBM Plex Mono"'],
+    ["rainbow-road", "#ededeb", "#a92734", '"Atkinson Hyperlegible Next Variable"', '"Press Start 2P"', '"VT323"', '"IBM Plex Mono"'],
   ] as const)("installs the exact palette and font roles for %s", (id, page, accent, ui, display, numeric, technical) => {
     const el = document.createElement("section");
 
@@ -109,6 +117,18 @@ describe("the lights", () => {
     expect(el.style.getPropertyValue("--font-display")).toContain(display);
     expect(el.style.getPropertyValue("--font-mono")).toContain(numeric);
     expect(el.style.getPropertyValue("--font-technical")).toContain(technical);
+  });
+
+  it.each(["superstar", "rainbow-road"] as const)("recognizes and restores saved %s choices", (id) => {
+    localStorage.setItem("runlog.theme", id);
+
+    const saved = savedTheme();
+    applyTheme(saved);
+
+    expect(saved).toBe(id);
+    expect(isThemeId(id)).toBe(true);
+    expect(document.documentElement.dataset.theme).toBe(id);
+    expect(document.documentElement.style.getPropertyValue("--bg")).not.toBe("");
   });
 
   it("applies a saved Samurai choice through its legacy ID with the latest blue roles", () => {

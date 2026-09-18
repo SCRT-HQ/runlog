@@ -19,6 +19,9 @@ describe("theme menu", () => {
     expect((screen.getByRole("option", { name: "Linked" }) as HTMLOptionElement).value).toBe("retro-arcade");
     expect((screen.getByRole("option", { name: "Spacewalk" }) as HTMLOptionElement).value).toBe("cyberpunk");
     expect((screen.getByRole("option", { name: "Samurai" }) as HTMLOptionElement).value).toBe("cyberpunk-neon");
+    expect((screen.getByRole("option", { name: "Superstar" }) as HTMLOptionElement).value).toBe("superstar");
+    expect((screen.getByRole("option", { name: "Rainbow Road" }) as HTMLOptionElement).value).toBe("rainbow-road");
+    expect(screen.getAllByRole("option")).toHaveLength(12);
     expect(screen.queryByRole("option", { name: "Retro Arcade" })).toBeNull();
     expect(screen.queryByRole("option", { name: "Cyberpunk" })).toBeNull();
     expect(screen.queryByRole("option", { name: "Cyberpunk Neon" })).toBeNull();
@@ -47,7 +50,7 @@ describe("theme menu", () => {
     expect(localStorage.getItem("runlog.theme")).toBeNull();
   });
 
-  it.each(["high-contrast-dark", "high-contrast-light", "retro-arcade", "cyberpunk", "cyberpunk-neon"])(
+  it.each(["high-contrast-dark", "high-contrast-light", "retro-arcade", "cyberpunk", "cyberpunk-neon", "superstar", "rainbow-road"])(
     "applies and remembers expanded preset %s",
     (id) => {
       render(<ThemeMenu />);
@@ -65,14 +68,14 @@ describe("theme menu", () => {
     },
   );
 
-  it("reads an expanded saved choice after remounting", () => {
-    localStorage.setItem("runlog.theme", "retro-arcade");
+  it.each(["retro-arcade", "superstar", "rainbow-road"])("reads a saved %s choice after remounting", (id) => {
+    localStorage.setItem("runlog.theme", id);
     const first = render(<ThemeMenu />);
-    expect((screen.getByLabelText("Theme") as HTMLSelectElement).value).toBe("retro-arcade");
+    expect((screen.getByLabelText("Theme") as HTMLSelectElement).value).toBe(id);
 
     first.unmount();
     render(<ThemeMenu />);
 
-    expect((screen.getByLabelText("Theme") as HTMLSelectElement).value).toBe("retro-arcade");
+    expect((screen.getByLabelText("Theme") as HTMLSelectElement).value).toBe(id);
   });
 });
