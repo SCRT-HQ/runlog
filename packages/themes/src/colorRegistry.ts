@@ -18,7 +18,8 @@ export type CoreColorTokenId =
 
 export type WidgetColorTokenId = "widget.ground" | "widget.panel" | "widget.text" | "widget.textMuted" | "widget.accent";
 
-export type DecorationColorTokenId = "interaction.moveAccent";
+export type DecorationColorTokenId =
+  "interaction.moveAccent" | "interaction.moveAccent2" | "interaction.moveAccent3" | "interaction.moveAccent4";
 
 export type FeedbackBackgroundTokenId = "feedback.successBackground" | "feedback.warningBackground" | "feedback.dangerBackground";
 
@@ -86,6 +87,27 @@ const definitions = [
     group: "interaction",
     kind: "decoration",
     inherits: "interaction.selectedIndicator",
+  },
+  {
+    id: "interaction.moveAccent2",
+    label: "Move card accent 2",
+    group: "interaction",
+    kind: "decoration",
+    inherits: "interaction.focus",
+  },
+  {
+    id: "interaction.moveAccent3",
+    label: "Move card accent 3",
+    group: "interaction",
+    kind: "decoration",
+    inherits: "boundary.decorative",
+  },
+  {
+    id: "interaction.moveAccent4",
+    label: "Move card accent 4",
+    group: "interaction",
+    kind: "decoration",
+    inherits: "interaction.accent",
   },
   {
     id: "interaction.focus",

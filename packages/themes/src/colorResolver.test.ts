@@ -24,6 +24,9 @@ const lightsDownBase = {
 const expectedLightsDownValues = {
   ...lightsDownBase,
   "interaction.moveAccent": "#9fd3b6",
+  "interaction.moveAccent2": "#9fd3b6",
+  "interaction.moveAccent3": "#3a342e",
+  "interaction.moveAccent4": "#9fd3b6",
   "widget.ground": "#151311",
   "widget.panel": "#1e1b18",
   "widget.text": "#ece5d8",
@@ -45,6 +48,9 @@ const expectedDefinitions = [
   ["interaction.accentTint", "Accent tint", "interaction", "core"],
   ["interaction.selectedIndicator", "Selected indicator", "interaction", "core"],
   ["interaction.moveAccent", "Move card accent", "interaction", "decoration", "interaction.selectedIndicator"],
+  ["interaction.moveAccent2", "Move card accent 2", "interaction", "decoration", "interaction.focus"],
+  ["interaction.moveAccent3", "Move card accent 3", "interaction", "decoration", "boundary.decorative"],
+  ["interaction.moveAccent4", "Move card accent 4", "interaction", "decoration", "interaction.accent"],
   ["interaction.focus", "Keyboard focus", "interaction", "core"],
   ["feedback.success", "Success foreground", "feedback", "core"],
   ["feedback.warning", "Warning foreground", "feedback", "core"],
@@ -121,7 +127,7 @@ describe("semantic color resolution", () => {
     });
   });
 
-  it("accepts and normalizes all 25 roles when present", () => {
+  it("accepts and normalizes all 28 roles when present", () => {
     const result = resolveColors(lightsDownBase, {
       "surface.page": "#ABC",
       "surface.panel": "#ABC",
@@ -136,6 +142,9 @@ describe("semantic color resolution", () => {
       "interaction.accentTint": "#ABC",
       "interaction.selectedIndicator": "#ABC",
       "interaction.moveAccent": "rgb(1 2 3)",
+      "interaction.moveAccent2": "rgb(2 3 4)",
+      "interaction.moveAccent3": "rgb(3 4 5)",
+      "interaction.moveAccent4": "rgb(4 5 6)",
       "interaction.focus": "#ABC",
       "feedback.success": "#ABC",
       "feedback.warning": "#ABC",
@@ -152,6 +161,9 @@ describe("semantic color resolution", () => {
 
     expect(result?.values).toMatchObject({
       "interaction.moveAccent": "#010203",
+      "interaction.moveAccent2": "#020304",
+      "interaction.moveAccent3": "#030405",
+      "interaction.moveAccent4": "#040506",
     });
     expect(Object.values(result?.values ?? {}).filter((value) => value === "#aabbcc")).toHaveLength(21);
     expect(Object.values(result?.feedbackBackgrounds ?? {})).toEqual(Array(3).fill("#aabbcc"));
@@ -171,6 +183,28 @@ describe("semantic color resolution", () => {
     );
     expect(resolveColors(lightsDownBase, { "interaction.selectedIndicator": "#234" })?.values["interaction.moveAccent"]).toBe("#223344");
   });
+
+  it.each([
+    ["interaction.moveAccent2", "interaction.focus"],
+    ["interaction.moveAccent3", "boundary.decorative"],
+    ["interaction.moveAccent4", "interaction.accent"],
+  ] as const)("applies %s override, base value, and final %s inheritance precedence", (role, inheritedRole) => {
+    const baseWithAccent = { ...lightsDownBase, [role]: "#123" };
+
+    expect(resolveColors(baseWithAccent, { [inheritedRole]: "#234", [role]: "rgb(4 5 6)" })?.values[role]).toBe("#040506");
+    expect(resolveColors(baseWithAccent, { [inheritedRole]: "#234" })?.values[role]).toBe("#112233");
+    expect(resolveColors(lightsDownBase, { [inheritedRole]: "#234" })?.values[role]).toBe("#223344");
+  });
+
+  it.each(["interaction.moveAccent", "interaction.moveAccent2", "interaction.moveAccent3", "interaction.moveAccent4"] as const)(
+    "validates an explicit %s independently in a base or override",
+    (role) => {
+      expect(resolveColors({ ...lightsDownBase, [role]: "red" })).toBeNull();
+      expect(resolveColors(lightsDownBase, { [role]: "red" })).toBeNull();
+      expect(resolveColors({ ...lightsDownBase, [role]: "#123" })?.values[role]).toBe("#112233");
+      expect(resolveColors(lightsDownBase, { [role]: "rgb(1 2 3)" })?.values[role]).toBe("#010203");
+    },
+  );
 
   it.each(["red", "#1234", "rgb(1 2 3 / 1)", "var(--selected-indicator)", null, undefined])(
     "rejects an explicitly invalid move accent %j in a base or override",

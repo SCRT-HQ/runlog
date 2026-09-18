@@ -216,12 +216,36 @@ describe("control boundaries and focus borders", () => {
       value: "var(--accent)",
     });
   });
+
+  it.each([
+    ".ghost:hover:not(:disabled)",
+    ".packBtn:hover",
+    ".choice:hover",
+    ".chip.pick:hover",
+    ".renameTrigger:hover",
+    ".welcomePack:hover",
+    ".personaChip:hover",
+  ])("gives the hovered %s control a visible focus-role boundary", (selector) => {
+    expect(finalDeclaration(selector, selector === ".renameTrigger:hover" ? "border-bottom-color" : "border-color")).toBe("var(--focus)");
+  });
 });
 
 describe("selection and feedback color roles", () => {
-  it("gives only marked move cards a stable four-pixel top accent with legacy fallbacks", () => {
+  it("cycles only direct move-card choices through four fallback-safe top accents", () => {
     expect(finalDeclaration(".choice.moveChoice", "border-top")).toBe(
       "4px solid var(--move-accent, var(--selected-indicator, var(--accent)))",
+    );
+    expect(finalDeclaration(".choices > .choice.moveChoice:nth-child(4n + 1)", "border-top-color")).toBe(
+      "var(--move-accent, var(--selected-indicator, var(--accent)))",
+    );
+    expect(finalDeclaration(".choices > .choice.moveChoice:nth-child(4n + 2)", "border-top-color")).toBe(
+      "var(--move-accent-2, var(--focus))",
+    );
+    expect(finalDeclaration(".choices > .choice.moveChoice:nth-child(4n + 3)", "border-top-color")).toBe(
+      "var(--move-accent-3, var(--line))",
+    );
+    expect(finalDeclaration(".choices > .choice.moveChoice:nth-child(4n + 4)", "border-top-color")).toBe(
+      "var(--move-accent-4, var(--accent))",
     );
     expect(finalDeclaration(".choice", "background")).toBe("var(--panel-2)");
     expect(finalDeclaration(".choice", "color")).toBe("var(--text)");
