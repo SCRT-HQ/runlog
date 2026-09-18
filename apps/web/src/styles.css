@@ -41,6 +41,7 @@
   --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-prose: "Literata Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display: var(--font-ui);
   --serif: var(--font-prose);
   --mono: var(--font-mono);
 
@@ -8116,7 +8117,7 @@ html[data-pip="controls"] body {
 :where(.pageHeader) h1 {
   margin: 0;
   color: var(--text);
-  font: var(--font-page-title) var(--font-ui);
+  font: var(--font-page-title) var(--font-display);
 }
 :where(.pageLead) {
   margin: 0;
@@ -8136,7 +8137,7 @@ html[data-pip="controls"] body {
   grid-template-columns: minmax(0, 1fr);
 }
 .profileApplication > h2 {
-  font: var(--font-page-title) var(--font-ui);
+  font: var(--font-page-title) var(--font-display);
 }
 .profileApplication .muted.small,
 .profileApplication .small {
@@ -8314,7 +8315,7 @@ html[data-pip="controls"] body {
   text-transform: none;
 }
 .marketHead h2 {
-  font: var(--font-page-title) var(--font-ui);
+  font: var(--font-page-title) var(--font-display);
   overflow-wrap: anywhere;
 }
 .marketHead > :first-child {

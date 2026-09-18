@@ -90,6 +90,9 @@ afterEach(() => {
   delete document.documentElement.dataset.widget;
   delete document.documentElement.dataset.theme;
   document.documentElement.style.fontSize = "";
+  for (const property of [...document.documentElement.style]) {
+    if (property.startsWith("--") || property === "color-scheme") document.documentElement.style.removeProperty(property);
+  }
 });
 
 describe("a linked widget while its run is loading", () => {
@@ -149,10 +152,48 @@ describe("linked widget states", () => {
     expect(document.documentElement.dataset.widget).toBe(bg);
     expect(document.documentElement.style.fontSize).toBe("24px");
     expect(document.documentElement.dataset.theme).toBe("ember");
+    expect(document.documentElement.style.getPropertyValue("--text")).toBe("#f1e4d3");
+    expect(document.documentElement.style.getPropertyValue("--font-ui")).toBe('system-ui, -apple-system, "Segoe UI", Roboto, sans-serif');
     page.unmount();
     expect(document.documentElement.dataset.widget).toBeUndefined();
     expect(document.documentElement.style.fontSize).toBe("");
     expect(document.documentElement.dataset.theme).toBe("daylight");
+    expect(document.documentElement.style.getPropertyValue("--text")).toBe("#1c1a17");
+    expect(document.documentElement.style.fontSize).toBe("");
+  });
+
+  it("uses widget roles for an unpinned route and restores app roles on cleanup", () => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false });
+    localStorage.setItem("runlog.theme", "ember");
+    document.documentElement.dataset.theme = "ember";
+
+    const page = render(<WidgetView route={{ kind: "stats", runId: "run-1", bg: "clear", scale: 1.25, token: "live-token" }} />);
+
+    expect(document.documentElement.style.fontSize).toBe("20px");
+    expect(document.documentElement.style.getPropertyValue("--widget-text")).toBe("#f1e4d3");
+    expect(document.documentElement.style.getPropertyValue("--text")).toBe("#f1e4d3");
+    page.unmount();
+    expect(document.documentElement.dataset.widget).toBeUndefined();
+    expect(document.documentElement.style.fontSize).toBe("");
+    expect(document.documentElement.dataset.theme).toBe("ember");
+    expect(document.documentElement.style.getPropertyValue("--text")).toBe("#f1e4d3");
+  });
+
+  it("keeps an in-memory theme for an unpinned widget when storage is unavailable", () => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false });
+    document.documentElement.dataset.theme = "ember";
+    const storage = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("storage unavailable");
+    });
+
+    const page = render(<WidgetView route={{ kind: "stats", runId: "run-1", bg: "none", scale: 1, token: "live-token" }} />);
+
+    expect(document.documentElement.dataset.theme).toBe("ember");
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe("#1a1210");
+    page.unmount();
+    expect(document.documentElement.dataset.theme).toBe("ember");
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe("#1a1210");
+    storage.mockRestore();
   });
 });
 
