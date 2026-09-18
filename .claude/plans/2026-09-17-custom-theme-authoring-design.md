@@ -97,6 +97,8 @@ This is the required coverage, not permission to invent unused roles. Planning m
 
 Widget overrides inherit their app equivalents when unset. The existing clear/solid/none background modes remain separate rendering policies; a theme cannot force an opaque ground into a transparent widget mode.
 
+Approved feedback-background policy: success, warning and danger backgrounds each support an optional independent opaque-color override. When unset, retain the application's existing context-specific derived background treatment rather than forcing one new flat background across every state. Reset removes the override and restores the base's choice (derived when the base has no explicit background). Overrides do not hide contrast warnings or replace status labels/icons. Rendered-state contrast must evaluate the chosen explicit background or the effective derived treatment against its real backdrop.
+
 ### Color input
 
 Accept opaque sRGB colors in `#RGB`, `#RRGGBB`, and `rgb(...)` forms. RGB accepts comma-separated or space-separated channels, with either integer 0–255 channels or percentage 0–100 channels. Reject mixed units, out-of-range values, alpha, named colors, CSS expressions, URLs, and variable references. Normalize to lowercase six-digit hex.

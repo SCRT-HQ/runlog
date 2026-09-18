@@ -43,4 +43,4 @@ Approved by the user: account authentication plus a per-channel device-local sec
 
 Current palette values conflate control and decorative boundaries, and general accents with focus, success and selection. The color registry plan will separate those semantic jobs while preserving existing preset values. Widget clear/solid/none modes remain authoritative; current panels use 82% or 92% opacity mixes, so contrast depends on effective backgrounds.
 
-An upcoming design decision concerns independent feedback background overrides versus application-owned derived mixes. Existing warning/error/success fills are mixtures, not independent palette values. Resolve that authoring boundary before freezing the complete color snapshot schema.
+Approved: success/warning/danger backgrounds gain optional independent opaque-color overrides. Existing context-specific mixtures remain the default when no override is present. The color contract must preserve the difference between an explicit background and derived treatment; it must not flatten translucent or mixed defaults into a falsely universal contrast result.
