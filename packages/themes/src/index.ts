@@ -13,6 +13,7 @@ export {
 export { resolveColors, type ResolvedColors } from "./colorResolver.ts";
 export { assessContrast, contrastRatio, relativeLuminance, type ContrastAssessment } from "./contrast.ts";
 export { BUILTIN_PRESETS, type BuiltinPreset } from "./presets.ts";
+export { FONT_ROLE_DEFINITIONS, type FontRoleDefinition } from "./fontRoles.ts";
 export {
   DEFAULT_APP_FONTS,
   FONT_DEFINITIONS,
@@ -25,3 +26,13 @@ export {
   type FontRole,
   type ResolvedFonts,
 } from "./fonts.ts";
+export { createThemeRecordFromPreset, parseThemeRecord, type ThemeBaseV1, type ThemeRecordV1 } from "./records.ts";
+export {
+  parsePresentationSnapshot,
+  presentationSnapshotKey,
+  resolveThemeRecord,
+  snapshotToResolvedColors,
+  type FeedbackBackgroundV1,
+  type PresentationSnapshotV1,
+} from "./snapshot.ts";
+export type { ThemeValidationIssue, ThemeValidationResult } from "./validation.ts";
