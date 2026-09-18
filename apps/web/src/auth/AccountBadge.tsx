@@ -13,10 +13,9 @@ import { useDismiss } from "../ui/useDismiss.ts";
  * The one menu at the end of the bar, for everyone.
  *
  * Signed in, it is the name: the one they chose to be shown as, else
- * their first name: a light on it says whether this device is syncing,
- * and the switch behind it is the one decision that is the player's.
- * Profile and the theme sit under it as a list, so billing and publishing
- * are each a line when they arrive. Continuing a run is the shelf's
+ * their first name: a light on it says whether this device is syncing.
+ * Profile and the theme sit under it as a list; the profile owns the sync
+ * controls and the rest of the account. Continuing a run is the shelf's
  * business, not the menu's. Signed out, it is "Menu" with the two doors in,
  * Design and the theme. On disk or the public page, where there is nothing
  * to sign into, it is the same menu
@@ -268,24 +267,6 @@ function AccountMenu({ account, onOpenProfile, closeKey, sections }: MenuActions
             {e.hint && <span className="muted small">{e.hint}</span>}
           </button>
         ))}
-        {sync.available && (
-          <div className="syncSection">
-            {/* The words are in the tooltip: a menu is a list, not a page. */}
-            <label title="Runs go to your account and back to your other devices; a pack's text stays here unless you switch it on from the shelf.">
-              <input type="checkbox" checked={sync.enabled} onChange={(e) => sync.setEnabled(e.target.checked)} />
-              <span>Sync on this device</span>
-              {tone && <span className={`led ${tone}`} aria-hidden="true" />}
-            </label>
-            {sync.enabled && (
-              <div className="syncRow">
-                <button className="ghost tiny" onClick={sync.syncNow} disabled={sync.status === "syncing"}>
-                  Sync now
-                </button>
-                <span className="muted small">{syncLabel(sync)}</span>
-              </div>
-            )}
-          </div>
-        )}
         <button
           role="menuitem"
           className="accountItem"

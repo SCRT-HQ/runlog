@@ -594,4 +594,14 @@ describe("theme picker layout", () => {
     expect(sheet.find((r) => r.selector === ".themeMenu select")?.decls).toContainEqual({ prop: "min-width", value: "0" });
     expect(sheet.find((r) => r.selector === ".themeMenu select")?.decls).toContainEqual({ prop: "max-width", value: "100%" });
   });
+
+  it("lets long theme labels shrink inside the compact account menu", () => {
+    expect(finalDeclaration(".menuTheme .themeMenu select", "flex")).toBe("1 1 10rem");
+  });
+});
+
+describe("account menu layout", () => {
+  it("uses a compact panel while retaining its viewport cap", () => {
+    expect(finalDeclaration(".accountPanel", "width")).toBe("min(18rem, calc(100vw - 2 * var(--space-4)))");
+  });
 });

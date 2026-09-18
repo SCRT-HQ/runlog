@@ -2974,7 +2974,7 @@ select.textInput {
   top: calc(100% + 0.4rem);
   right: 0;
   z-index: 20;
-  width: min(24rem, calc(100vw - 2 * var(--space-4)));
+  width: min(18rem, calc(100vw - 2 * var(--space-4)));
   min-width: min(16rem, calc(100vw - 2 * var(--space-4)));
   max-height: calc(100vh - 8rem);
   overflow: auto;
@@ -3113,6 +3113,7 @@ select.textInput {
   font: var(--font-caption) var(--font-ui);
 }
 .menuTheme .themeMenu select {
+  flex: 1 1 10rem;
   font: var(--font-control) var(--font-ui);
 }
 /* ---- the profile ---------------------------------------------------------- */
@@ -4244,9 +4245,7 @@ details.panel[open] > summary .sectionTitle::after {
 }
 
 /* ---- sync ---------------------------------------------------------------- */
-/* Where sync stands, in the header: a chip that opens the one decision that
-   is the player's. Celadon when fine, kiln when it needs them. */
-/* The light on the name, and the sync section of the menu. */
+/* Where sync stands, on the account name. The controls live in Profile. */
 .led {
   display: inline-block;
   width: 0.5rem;
@@ -4283,41 +4282,6 @@ details.panel[open] > summary .sectionTitle::after {
     opacity: 0.7;
   }
 }
-.syncSection {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4) var(--space-3);
-  border-bottom: 1px solid var(--line);
-  margin-bottom: var(--space-1);
-  font: var(--font-caption) var(--font-ui);
-}
-.syncSection label {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  cursor: pointer;
-  color: var(--text);
-  font: var(--font-control) var(--font-ui);
-}
-.syncSection input {
-  margin: 0;
-}
-.syncSection p {
-  margin: 0;
-}
-.syncSection .syncRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-.syncSection .syncRow span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
 /* A pack's own switch, on the shelf. */
 .packSync {
   display: flex;

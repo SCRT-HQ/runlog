@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { AccountContext, type Account } from "./Account.tsx";
 import { AccountBadge } from "./AccountBadge.tsx";
 import { forgetProfile, rememberProfile } from "../sync/useProfile.ts";
+import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
 
 const account = (firstName: string | null): Extract<Account, { status: "signed-in" }> => ({
   status: "signed-in",
@@ -67,5 +68,35 @@ describe("the account menu identity", () => {
 
     expect(html).toContain(`aria-label="Account menu for ${handle}"`);
     expect(html).toContain(`<span class="accountLabel">${handle}</span>`);
+  });
+
+  it("keeps sync status in the trigger without repeating profile sync controls in the menu", () => {
+    const sync: Sync = {
+      available: true,
+      enabled: true,
+      setEnabled: () => {},
+      status: "synced",
+      last: { status: "synced", at: new Date().toISOString(), pushed: 0, pulled: 0 },
+      syncNow: () => {},
+      setPackSync: async () => {},
+      gesture: () => false,
+      drove: () => {},
+    };
+
+    const html = renderToStaticMarkup(
+      <AccountContext.Provider value={account("Nate")}>
+        <SyncContext.Provider value={sync}>
+          <AccountBadge onOpenProfile={() => {}} />
+        </SyncContext.Provider>
+      </AccountContext.Provider>,
+    );
+
+    expect(html).toContain('class="led fine"');
+    expect(html).toContain('title="Synced just now"');
+    expect(html).toContain("Profile");
+    expect(html).toContain('aria-label="Theme"');
+    expect(html).toContain("Sign out");
+    expect(html).not.toContain("Sync on this device");
+    expect(html).not.toContain("Sync now");
   });
 });
