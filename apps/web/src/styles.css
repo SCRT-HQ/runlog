@@ -3461,6 +3461,7 @@ select.textInput {
 }
 .themeMenu {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
   font-family: var(--font-ui);
@@ -3468,6 +3469,8 @@ select.textInput {
   color: var(--muted);
 }
 .themeMenu select {
+  min-width: 0;
+  max-width: 100%;
   padding: 0.2rem 0.4rem;
   background: var(--panel);
   border: 1px solid var(--control-boundary);

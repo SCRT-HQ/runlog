@@ -320,3 +320,11 @@ describe("control font roles", () => {
     expect(finalDeclaration(selector, "font-family")).toBe("var(--mono)");
   });
 });
+
+describe("theme picker layout", () => {
+  it("wraps and constrains the theme select inside its menu", () => {
+    expect(sheet.find((r) => r.selector === ".themeMenu")?.decls).toContainEqual({ prop: "flex-wrap", value: "wrap" });
+    expect(sheet.find((r) => r.selector === ".themeMenu select")?.decls).toContainEqual({ prop: "min-width", value: "0" });
+    expect(sheet.find((r) => r.selector === ".themeMenu select")?.decls).toContainEqual({ prop: "max-width", value: "100%" });
+  });
+});
