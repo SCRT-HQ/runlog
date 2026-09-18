@@ -260,8 +260,8 @@ h4 {
 }
 
 /*
- * The referee's voice. Controls, figures, identifiers and the log are set in
- * the monospace: they are the machine speaking, and they should look like it.
+ * Native controls begin in the UI voice. Authored content and machine or
+ * numeric values opt into the prose and mono roles in their scoped rules.
  */
 button,
 input,
@@ -479,6 +479,9 @@ p {
   white-space: nowrap;
 }
 button.chip {
+  font-family: var(--font-ui);
+}
+a.chip {
   font-family: var(--font-ui);
 }
 .chip.v {

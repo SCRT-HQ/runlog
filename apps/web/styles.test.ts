@@ -283,6 +283,7 @@ describe("control font roles", () => {
 
   it("routes clickable chips to UI without changing static badges", () => {
     expect(finalDeclaration("button.chip", "font-family")).toBe("var(--font-ui)");
+    expect(finalDeclaration("a.chip", "font-family")).toBe("var(--font-ui)");
     expect(finalDeclaration(".chip", "font-family")).toBe("var(--mono)");
   });
 
