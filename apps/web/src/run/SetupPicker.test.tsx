@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, configure, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { SetupPicker } from "./SetupPicker.tsx";
 
@@ -70,6 +70,22 @@ describe("choosing a setup", () => {
     const summary = await screen.findByRole("button", { name: /Choose a Loadout/ });
     expect(summary.getAttribute("aria-expanded")).toBe("false");
     expect(screen.queryByRole("option", { name: /Bare-handed/ })).toBeNull();
+  });
+
+  it("does not submit an enclosing form from its raw menu buttons", async () => {
+    const submitted = vi.fn((e: React.FormEvent) => e.preventDefault());
+    render(
+      <form onSubmit={submitted}>
+        <SetupPicker pack={withTool} chosen={null} onChoose={() => {}} />
+      </form>,
+    );
+    const summary = await screen.findByRole("button", { name: /Choose a Loadout/ });
+    expect((summary as HTMLButtonElement).type).toBe("button");
+    fireEvent.click(summary);
+    const none = screen.getByRole("option", { name: /None/ });
+    expect((none as HTMLButtonElement).type).toBe("button");
+    fireEvent.click(none);
+    expect(submitted).not.toHaveBeenCalled();
   });
 
   it("offers the ones written for this run's tool, and None first", async () => {

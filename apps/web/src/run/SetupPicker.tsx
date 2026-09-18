@@ -141,14 +141,14 @@ export function SetupPicker({
       </p>
 
       <div className="setupMenu" ref={menu}>
-        <button className="chipAdd setupSummary" aria-expanded={open} aria-haspopup="listbox" onClick={() => setOpen(!open)}>
+        <button type="button" className="chipAdd setupSummary" aria-expanded={open} aria-haspopup="listbox" onClick={() => setOpen(!open)}>
           <span className="setupSummaryText">{credit ?? `Choose ${aOr(v.one)}`}</span>
           <span className="caret">{open ? "▴" : "▾"}</span>
         </button>
 
         {open && (
           <div className="setupPanel" role="listbox" aria-multiselectable="true" aria-label={`Which ${word}`}>
-            <button className="setupOption" role="option" aria-selected={picked.length === 0} onClick={() => onChoose(null)}>
+            <button type="button" className="setupOption" role="option" aria-selected={picked.length === 0} onClick={() => onChoose(null)}>
               <span className="tick">{picked.length === 0 ? "✓" : ""}</span>
               <span className="setupOptionText">
                 <strong>None</strong>
@@ -157,6 +157,7 @@ export function SetupPicker({
             </button>
             {offered.map((setup) => (
               <button
+                type="button"
                 key={setup.id}
                 className="setupOption"
                 role="option"

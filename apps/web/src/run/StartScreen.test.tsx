@@ -34,6 +34,7 @@ const load = (rel: string): Pack => {
  * optional among them, which is the other thing this screen has to keep.
  */
 const forfeits = load("packs/sketches/forfeits.yaml");
+const demo = load("packs/demo/pack.yaml");
 const SOLO = "everyDeath";
 const MODERATED = "chats";
 const SEEDED = "seeded";
@@ -48,7 +49,12 @@ const asked = () =>
 const fold = () => document.querySelector("details.setupAdvanced") as HTMLDetailsElement;
 const seedBox = () => screen.getByPlaceholderText(/unseeded|long-kiln/) as HTMLInputElement;
 const start = () => screen.getByRole("button", { name: /^Enter the/i }) as HTMLButtonElement;
+const startForm = () => start().form as HTMLFormElement;
 const pick = (id: string) => fireEvent.click(screen.getByText(labelOf(id)));
+const imeEnters = [
+  { key: "Enter", isComposing: true },
+  { key: "Enter", isComposing: false, keyCode: 229 },
+];
 
 /** jsdom does not fire `toggle` off a click on the summary, so the press is spelled out. */
 function press(details: HTMLDetailsElement) {
@@ -224,5 +230,128 @@ describe("what the start button hands over", () => {
     fireEvent.change(screen.getByPlaceholderText(/^e\.g\. the winter/), { target: { value: "the winter one" } });
     fireEvent.click(start());
     expect(onStart.mock.calls[0]).toEqual([SOLO, "", 1, "the winter one", [], [optional.id], {}]);
+  });
+});
+
+describe("submitting the start form from the keyboard", () => {
+  it("associates the run name with the native start form and submits the same arguments", () => {
+    const onStart = vi.fn();
+    render(<StartScreen pack={forfeits} onStart={onStart} />);
+    const name = screen.getByPlaceholderText(/^e\.g\. the winter/) as HTMLInputElement;
+    fireEvent.change(name, { target: { value: "the winter one" } });
+
+    expect(name.form).toBe(startForm());
+    fireEvent.submit(startForm());
+    expect(onStart.mock.calls[0]).toEqual([SOLO, "", 1, "the winter one", [], [], {}]);
+  });
+
+  it("associates the seed with the form but refuses a seeded run until the seed is valid", () => {
+    const onStart = vi.fn();
+    render(<StartScreen pack={forfeits} onStart={onStart} />);
+    pick(SEEDED);
+
+    expect(seedBox().form).toBe(startForm());
+    fireEvent.submit(startForm());
+    expect(onStart).not.toHaveBeenCalled();
+
+    fireEvent.change(seedBox(), { target: { value: "long-kiln-42" } });
+    fireEvent.submit(startForm());
+    expect(onStart.mock.calls[0]).toEqual([SEEDED, "long-kiln-42", 1, "", [], [], {}]);
+  });
+
+  it("refuses form submission until a moderated roster is valid", () => {
+    const onStart = vi.fn();
+    render(<StartScreen pack={forfeits} onStart={onStart} />);
+    pick(MODERATED);
+    fireEvent.submit(startForm());
+    expect(onStart).not.toHaveBeenCalled();
+
+    const box = screen.getByPlaceholderText("a contestant's name");
+    for (const name of ["Ada", "Bo"]) {
+      fireEvent.change(box, { target: { value: name } });
+      const entered = fireEvent.keyDown(box, { key: "Enter" });
+      expect(entered).toBe(false);
+    }
+    fireEvent.submit(startForm());
+    expect(onStart.mock.calls[0]).toEqual([MODERATED, "", 1, "", ["Ada", "Bo"], [], {}]);
+  });
+
+  it("does not turn composing Enter in the run name into a start", () => {
+    const onStart = vi.fn();
+    render(<StartScreen pack={forfeits} onStart={onStart} />);
+    const name = screen.getByPlaceholderText(/^e\.g\. the winter/);
+    for (const enter of imeEnters) expect(fireEvent.keyDown(name, enter)).toBe(false);
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it("does not turn composing Enter in the seed into a start", () => {
+    const onStart = vi.fn();
+    render(<StartScreen pack={forfeits} onStart={onStart} />);
+    pick(SEEDED);
+    fireEvent.change(seedBox(), { target: { value: "long-kiln-42" } });
+    for (const enter of imeEnters) expect(fireEvent.keyDown(seedBox(), enter)).toBe(false);
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it("does not turn composing Enter into a contestant", () => {
+    const onStart = vi.fn();
+    render(<StartScreen pack={forfeits} onStart={onStart} />);
+    pick(MODERATED);
+    const contestant = screen.getByPlaceholderText("a contestant's name");
+    fireEvent.change(contestant, { target: { value: "Ada" } });
+    for (const enter of imeEnters) fireEvent.keyDown(contestant, enter);
+    expect(screen.queryByText("Ada", { selector: ".roster span" })).toBeNull();
+    expect(onStart).not.toHaveBeenCalled();
+  });
+});
+
+describe("race keyboard boundaries", () => {
+  it("joins on Enter only at six characters, without starting a local run", () => {
+    const onStart = vi.fn();
+    const race = { start: vi.fn(), join: vi.fn(), note: null };
+    render(<StartScreen pack={forfeits} onStart={onStart} race={race} />);
+    const code = screen.getByLabelText("Race code");
+
+    fireEvent.change(code, { target: { value: "ABCDE" } });
+    expect(fireEvent.keyDown(code, { key: "Enter" })).toBe(false);
+    expect(race.join).not.toHaveBeenCalled();
+    expect(onStart).not.toHaveBeenCalled();
+
+    fireEvent.change(code, { target: { value: "ABCDEF" } });
+    expect(fireEvent.keyDown(code, { key: "Enter" })).toBe(false);
+    expect(race.join).toHaveBeenCalledWith("ABCDEF", null);
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it("does not join or start while race-code Enter is composing", () => {
+    const onStart = vi.fn();
+    const race = { start: vi.fn(), join: vi.fn(), note: null };
+    render(<StartScreen pack={forfeits} onStart={onStart} race={race} />);
+    const code = screen.getByLabelText("Race code");
+    fireEvent.change(code, { target: { value: "ABCDEF" } });
+    for (const enter of imeEnters) fireEvent.keyDown(code, enter);
+    expect(race.join).not.toHaveBeenCalled();
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it("keeps mode and race controls from submitting the local start form", () => {
+    const onStart = vi.fn();
+    const race = { start: vi.fn(), join: vi.fn(), note: null };
+    render(<StartScreen pack={forfeits} onStart={onStart} race={race} />);
+    fireEvent.click(screen.getByRole("radio", { name: new RegExp(labelOf(MODERATED)) }));
+    fireEvent.click(screen.getByRole("button", { name: "Start a race" }));
+    fireEvent.click(screen.getByRole("button", { name: "Make one" }));
+    expect(onStart).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Race code").closest("form")).toBeNull();
+  });
+
+  it("makes player-count controls explicit non-submit buttons", () => {
+    const onStart = vi.fn();
+    render(<StartScreen pack={demo} onStart={onStart} />);
+    fireEvent.click(screen.getByRole("radio", { name: /Pairs/ }));
+    const two = screen.getByRole("button", { name: "2" }) as HTMLButtonElement;
+    expect(two.type).toBe("button");
+    fireEvent.click(two);
+    expect(onStart).not.toHaveBeenCalled();
   });
 });
