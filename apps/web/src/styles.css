@@ -3185,19 +3185,49 @@ select.textInput {
   align-items: flex-start;
   justify-content: space-between;
   flex-wrap: wrap;
+  font: var(--font-body) var(--font-ui);
 }
 .licenseMain {
+  flex: 1 1 16rem;
   min-width: 0;
+}
+.licenseMain > strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.licenseOrder {
+  font: var(--font-caption) var(--font-mono);
+  overflow-wrap: anywhere;
 }
 .licenseKey {
   margin-top: 0.2rem;
   letter-spacing: 0.04em;
+  font: var(--font-body) var(--font-mono);
   overflow-wrap: anywhere;
 }
 .licenseActions {
   display: flex;
   gap: 0.35rem;
   flex-wrap: wrap;
+}
+.licenseStatus {
+  flex-basis: 100%;
+  min-height: 1lh;
+  font: var(--font-caption) var(--font-ui);
+  overflow-wrap: anywhere;
+}
+.dataActions > p {
+  font: var(--font-body) var(--font-ui);
+  overflow-wrap: anywhere;
+}
+.dataAction {
+  align-items: center;
+  font-family: var(--font-ui);
+}
+.dataActionStatus {
+  margin: 0;
+  font: var(--font-caption) var(--font-ui);
+  overflow-wrap: anywhere;
 }
 .ghost.danger {
   color: var(--warn);
