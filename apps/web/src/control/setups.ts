@@ -12,7 +12,7 @@ import type { ControlProfile, ProfileOp } from "./profile.ts";
  * What is different is who they are for. A profile is written against a
  * pack, so the picker offers the pack's own. A setup is written against
  * a *tool*, and names no pack at all, so every setup for the tool this
- * run is talking to is on offer: the same seven fit any Elden Ring pack
+ * run is talking to is on offer: the same setups fit any Elden Ring pack
  * somebody writes, which is the whole point of the document being its
  * own document.
  */
