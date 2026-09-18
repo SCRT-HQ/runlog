@@ -83,6 +83,14 @@ const sheet = rules(readFileSync(join(here, "src/styles.css"), "utf8"));
 /** The blocks that paint a look: the default, the system's light, and the four saved themes. */
 const looks = sheet.filter((r) => /^:root/.test(r.selector) && r.decls.some((d) => d.prop === "--bg"));
 
+function finalDeclaration(selector: string, prop: string): string | undefined {
+  return sheet
+    .filter((rule) => rule.selector === selector)
+    .flatMap((rule) => rule.decls)
+    .filter((decl) => decl.prop === prop)
+    .at(-1)?.value;
+}
+
 describe("the semantic tokens", () => {
   const roles = ["--bg", "--surface", "--surface-raised", "--line", "--text", "--text-muted", "--accent", "--warn", "--danger", "--focus"];
 
@@ -234,5 +242,80 @@ describe("what a migrated control promises", () => {
   it("uses the display family only for the three existing UI page titles", () => {
     const display = sheet.filter((r) => r.decls.some((d) => /var\(--font-display\)/.test(d.value)));
     expect(display.map((r) => r.selector)).toEqual([":where(.pageHeader) h1", ".profileApplication > h2", ".marketHead h2"]);
+  });
+});
+
+describe("control font roles", () => {
+  it("makes generic native controls follow UI rather than numeric", () => {
+    expect(finalDeclaration("button, input, select, textarea", "font-family")).toBe("var(--font-ui)");
+  });
+
+  it.each([
+    ".packBtn",
+    ".chipLink",
+    ".problemRow",
+    ".roll",
+    ".linkButton",
+    ".inviteForm select",
+    ".packBtnMain",
+    ".disclose",
+    ".renameTrigger",
+    ".rowMenuPanel button",
+    ".openTableRow",
+    ".themeMenu select",
+    ".chipAdd",
+    ".matrix .cell",
+    ".filtersToggle",
+    ".alertPick select",
+    ".docMenuItem",
+    ".menuItem",
+    ".fieldLabel",
+    ".shelf > summary",
+    ".themeMenu",
+    ".more > summary",
+    ".personaChip",
+    ".runMenuBtn",
+    ".owningTick",
+    ".menuGroupLabel",
+  ])("routes the %s label to the UI family", (selector) => {
+    expect(finalDeclaration(selector, "font-family"), `${selector} should end in the UI family`).toBe("var(--font-ui)");
+  });
+
+  it("routes clickable chips to UI without changing static badges", () => {
+    expect(finalDeclaration("button.chip", "font-family")).toBe("var(--font-ui)");
+    expect(finalDeclaration(".chip", "font-family")).toBe("var(--mono)");
+  });
+
+  it.each([
+    ".libraryTitle",
+    ".runRowMain",
+    ".choice",
+    ".tableLook .tableLine",
+    ".renameInput",
+    ".flowNow",
+    ".setupOption",
+    ".packBtn strong",
+    ".packBtn span",
+    ".packBtnMain strong",
+    ".packBtnMain span",
+    ".shelf summary strong",
+    ".shelf .packBtn strong, .shelf .packBtnMain strong",
+    ".shelf .packBtn span, .shelf .packBtnMain span",
+  ])("routes the authored content in %s to the prose family", (selector) => {
+    expect(finalDeclaration(selector, "font-family"), `${selector} should end in the prose family`).toBe("var(--font-prose)");
+  });
+
+  it("preserves explicit prose and mono control exceptions", () => {
+    expect(finalDeclaration(".rollInput", "font-family")).toBe("var(--font-mono)");
+    expect(finalDeclaration(".textInput.mono", "font-family")).toBe("var(--font-mono)");
+    expect(finalDeclaration(".runNameInput", "font-family")).toBe("var(--font-prose)");
+    expect(sheet.find((rule) => rule.selector === ".textInput.area")?.decls).toContainEqual({
+      prop: "font",
+      value: "var(--font-body) var(--font-prose)",
+    });
+  });
+
+  it.each([".flowNow .idx", ".runRowMeta .num", ".tableLook .range"])("keeps the numeric content in %s mono", (selector) => {
+    expect(finalDeclaration(selector, "font-family")).toBe("var(--mono)");
   });
 });
