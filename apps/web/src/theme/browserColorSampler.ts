@@ -18,6 +18,13 @@ export interface BrowserColorSampler {
 const OPTIONAL_BACKGROUND_PROPERTIES = ["--success-background", "--warning-background", "--danger-background"] as const;
 const SENTINEL_ONE = "rgb(1, 2, 3)";
 const SENTINEL_TWO = "rgb(4, 5, 6)";
+const COLOR_VARIABLE = /var\(\s*(--[a-z0-9-]+)\s*\)/gi;
+const HEX_LITERAL = "#[0-9a-f]{6}";
+const MIX_COMPONENT = `(?:${HEX_LITERAL}|transparent)(?:\\s+\\d+(?:\\.\\d+)?%)?`;
+const CLOSED_COLOR_RECIPE = new RegExp(
+  `^(?:${HEX_LITERAL}|transparent|color-mix\\(\\s*in\\s+(?:oklab|srgb)\\s*,\\s*${MIX_COMPONENT}\\s*,\\s*${MIX_COMPONENT}\\s*\\))$`,
+  "i",
+);
 
 interface SamplingHost {
   readonly host: HTMLDivElement;
@@ -66,14 +73,37 @@ function resetCanvas(context: CanvasRenderingContext2D): void {
   context.clearRect(0, 0, 1, 1);
 }
 
-function acceptedStyleColor(sample: HTMLElement, css: string, getComputedStyle: (element: Element) => CSSStyleDeclaration): string | null {
+function acceptedStyleAssignment(sample: HTMLElement, css: string): boolean {
   sample.style.backgroundColor = SENTINEL_ONE;
   sample.style.backgroundColor = css;
   const first = sample.style.backgroundColor;
   sample.style.backgroundColor = SENTINEL_TWO;
   sample.style.backgroundColor = css;
   const second = sample.style.backgroundColor;
-  if (first === "" || second === "" || first !== second) return null;
+  return first !== "" && first === second;
+}
+
+function resolveLiteralRecipe(
+  sample: HTMLElement,
+  css: string,
+  getComputedStyle: (element: Element) => CSSStyleDeclaration,
+): string | null {
+  const styles = getComputedStyle(sample);
+  let unresolved = false;
+  const literal = css.replace(COLOR_VARIABLE, (variable, property: string) => {
+    const value = styles.getPropertyValue(property).trim();
+    if (value === "" || value.toLowerCase() === "initial" || value.includes("var(")) {
+      unresolved = true;
+      return variable;
+    }
+    return value;
+  });
+  return unresolved || literal.includes("var(") || !CLOSED_COLOR_RECIPE.test(literal) ? null : literal;
+}
+
+function acceptedStyleColor(sample: HTMLElement, css: string, getComputedStyle: (element: Element) => CSSStyleDeclaration): string | null {
+  const literal = resolveLiteralRecipe(sample, css, getComputedStyle);
+  if (literal === null || !acceptedStyleAssignment(sample, literal) || !acceptedStyleAssignment(sample, css)) return null;
   const computed = getComputedStyle(sample).backgroundColor;
   return computed === "" ? null : computed;
 }

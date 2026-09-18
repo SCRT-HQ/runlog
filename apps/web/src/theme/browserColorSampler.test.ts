@@ -24,10 +24,16 @@ interface FakeContext {
   getImageData(): ImageData;
 }
 
-function canvasContext(): FakeContext {
+function canvasContext(rejectedFillStyle?: string): FakeContext {
   let painted = [0, 0, 0, 255];
+  let fillStyle = "#000000";
   return {
-    fillStyle: "#000000",
+    get fillStyle() {
+      return fillStyle;
+    },
+    set fillStyle(value) {
+      if (value !== rejectedFillStyle) fillStyle = value;
+    },
     globalAlpha: 1,
     globalCompositeOperation: "source-over",
     setTransform() {},
@@ -124,6 +130,43 @@ describe("the browser color sampler", () => {
       background: "#aabbcc",
     });
     expect(sampler.sample({ scope: "widget", foregroundCss: "not-a-color", backgroundCss: "#aabbcc", backdropCss: "#ffffff" })).toBeNull();
+  });
+
+  it("rejects unsupported mixing spaces after resolving variables without rejecting catalog mixtures", () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(canvasContext() as never);
+    const sampler = createBrowserColorSampler(makeSnapshot(), document);
+
+    expect(
+      sampler.sample({
+        scope: "app",
+        foregroundCss: "#000000",
+        backgroundCss: "color-mix(in unsupported-space, var(--accent) 85%, var(--text))",
+        backdropCss: "#ffffff",
+      }),
+    ).toBeNull();
+    expect(
+      sampler.sample({
+        scope: "app",
+        foregroundCss: "#000000",
+        backgroundCss: "color-mix(in oklab, var(--accent) 85%, var(--text))",
+        backdropCss: "#ffffff",
+      }),
+    ).not.toBeNull();
+    expect(
+      sampler.sample({
+        scope: "widget",
+        foregroundCss: "#000000",
+        backgroundCss: "color-mix(in srgb, var(--panel) 82%, transparent)",
+        backdropCss: "#ffffff",
+      }),
+    ).not.toBeNull();
+  });
+
+  it("rejects computed colors that canvas fillStyle silently refuses", () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(canvasContext("rgb(170, 187, 204)") as never);
+    const sampler = createBrowserColorSampler(makeSnapshot(), document);
+
+    expect(sampler.sample({ scope: "app", foregroundCss: "#000000", backgroundCss: "#aabbcc", backdropCss: "#ffffff" })).toBeNull();
   });
 
   it("cleans partial setup and returns unsupported when canvas setup is unavailable", () => {
