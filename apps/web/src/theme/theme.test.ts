@@ -17,13 +17,14 @@ describe("the lights", () => {
       "daylight",
       "ember",
       "glaze",
-      "high-contrast-dark",
-      "high-contrast-light",
       "retro-arcade",
       "cyberpunk",
+      "stardust",
       "cyberpunk-neon",
       "superstar",
       "rainbow-road",
+      "high-contrast-dark",
+      "high-contrast-light",
     ]);
     expect(THEMES.filter(({ id }) => ["retro-arcade", "cyberpunk", "cyberpunk-neon"].includes(id))).toEqual([
       expect.objectContaining({ id: "retro-arcade", label: "Linked" }),
@@ -31,8 +32,8 @@ describe("the lights", () => {
       expect.objectContaining({ id: "cyberpunk-neon", label: "Samurai" }),
     ]);
     expect(THEMES.slice(-2)).toEqual([
-      expect.objectContaining({ id: "superstar", label: "Superstar" }),
-      expect.objectContaining({ id: "rainbow-road", label: "Rainbow Road" }),
+      expect.objectContaining({ id: "high-contrast-dark", label: "High contrast dark" }),
+      expect.objectContaining({ id: "high-contrast-light", label: "High contrast light" }),
     ]);
   });
 

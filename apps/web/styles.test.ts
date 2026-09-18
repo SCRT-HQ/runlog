@@ -564,6 +564,12 @@ describe("control font roles", () => {
   );
 });
 
+describe("request action spacing", () => {
+  it("separates the shared cancel action with the compact spacing token", () => {
+    expect(finalDeclaration(".requestCancel", "margin-top")).toBe("var(--space-3)");
+  });
+});
+
 describe("theme picker layout", () => {
   it("wraps and constrains the theme select inside its menu", () => {
     expect(sheet.find((r) => r.selector === ".themeMenu")?.decls).toContainEqual({ prop: "flex-wrap", value: "wrap" });

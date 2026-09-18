@@ -21,7 +21,14 @@ describe("theme menu", () => {
     expect((screen.getByRole("option", { name: "Samurai" }) as HTMLOptionElement).value).toBe("cyberpunk-neon");
     expect((screen.getByRole("option", { name: "Superstar" }) as HTMLOptionElement).value).toBe("superstar");
     expect((screen.getByRole("option", { name: "Rainbow Road" }) as HTMLOptionElement).value).toBe("rainbow-road");
-    expect(screen.getAllByRole("option")).toHaveLength(12);
+    expect((screen.getByRole("option", { name: "Stardust" }) as HTMLOptionElement).value).toBe("stardust");
+    expect(screen.getAllByRole("option")).toHaveLength(13);
+    expect(
+      screen
+        .getAllByRole("option")
+        .slice(-2)
+        .map((option) => option.textContent),
+    ).toEqual(["High contrast dark", "High contrast light"]);
     expect(screen.queryByRole("option", { name: "Retro Arcade" })).toBeNull();
     expect(screen.queryByRole("option", { name: "Cyberpunk" })).toBeNull();
     expect(screen.queryByRole("option", { name: "Cyberpunk Neon" })).toBeNull();
@@ -50,25 +57,31 @@ describe("theme menu", () => {
     expect(localStorage.getItem("runlog.theme")).toBeNull();
   });
 
-  it.each(["high-contrast-dark", "high-contrast-light", "retro-arcade", "cyberpunk", "cyberpunk-neon", "superstar", "rainbow-road"])(
-    "applies and remembers expanded preset %s",
-    (id) => {
-      render(<ThemeMenu />);
+  it.each([
+    "high-contrast-dark",
+    "high-contrast-light",
+    "retro-arcade",
+    "cyberpunk",
+    "stardust",
+    "cyberpunk-neon",
+    "superstar",
+    "rainbow-road",
+  ])("applies and remembers expanded preset %s", (id) => {
+    render(<ThemeMenu />);
 
-      fireEvent.change(screen.getByLabelText("Theme"), { target: { value: id } });
+    fireEvent.change(screen.getByLabelText("Theme"), { target: { value: id } });
 
-      expect(document.documentElement.dataset.theme).toBe(id);
-      expect(document.documentElement.style.getPropertyValue("--bg")).not.toBe("");
-      expect(document.documentElement.style.getPropertyValue("--accent")).not.toBe("");
-      expect(document.documentElement.style.getPropertyValue("--font-ui")).not.toBe("");
-      expect(document.documentElement.style.getPropertyValue("--font-display")).not.toBe("");
-      expect(document.documentElement.style.getPropertyValue("--font-mono")).not.toBe("");
-      expect(document.documentElement.style.getPropertyValue("--font-technical")).not.toBe("");
-      expect(localStorage.getItem("runlog.theme")).toBe(id);
-    },
-  );
+    expect(document.documentElement.dataset.theme).toBe(id);
+    expect(document.documentElement.style.getPropertyValue("--bg")).not.toBe("");
+    expect(document.documentElement.style.getPropertyValue("--accent")).not.toBe("");
+    expect(document.documentElement.style.getPropertyValue("--font-ui")).not.toBe("");
+    expect(document.documentElement.style.getPropertyValue("--font-display")).not.toBe("");
+    expect(document.documentElement.style.getPropertyValue("--font-mono")).not.toBe("");
+    expect(document.documentElement.style.getPropertyValue("--font-technical")).not.toBe("");
+    expect(localStorage.getItem("runlog.theme")).toBe(id);
+  });
 
-  it.each(["retro-arcade", "superstar", "rainbow-road"])("reads a saved %s choice after remounting", (id) => {
+  it.each(["retro-arcade", "superstar", "rainbow-road", "stardust"])("reads a saved %s choice after remounting", (id) => {
     localStorage.setItem("runlog.theme", id);
     const first = render(<ThemeMenu />);
     expect((screen.getByLabelText("Theme") as HTMLSelectElement).value).toBe(id);

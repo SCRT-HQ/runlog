@@ -100,3 +100,16 @@ describe("a roll asked for from outside", () => {
     expect(onAnswer).not.toHaveBeenCalled();
   });
 });
+
+describe("the shared cancel action", () => {
+  it.each<InputRequest>([
+    request,
+    { kind: "ask", key: "u1:ask#0", question: "Did the piece survive?" },
+    { kind: "prompt", key: "u1:prompt#0", promptKind: "text", label: "Name the result" },
+    { kind: "chooseTarget", key: "u1:target#0", label: "Choose a piece", eligible: [] },
+  ])("exposes request-scoped spacing for a $kind request", (inputRequest) => {
+    render(<RequestPanel request={inputRequest} pack={pack} state={state} onAnswer={() => {}} onCancel={() => {}} />);
+
+    expect(screen.getByRole("button", { name: "Cancel this step" }).classList.contains("requestCancel")).toBe(true);
+  });
+});
