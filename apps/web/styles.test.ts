@@ -119,6 +119,70 @@ describe("the semantic tokens", () => {
   });
 });
 
+describe("control boundaries and focus borders", () => {
+  it("gives every static palette a control-boundary default", () => {
+    expect(looks).toHaveLength(6);
+    for (const look of looks) {
+      expect(look.decls).toContainEqual({ prop: "--control-boundary", value: "var(--line)" });
+    }
+  });
+
+  it("separates ghost controls from decorative panels", () => {
+    expect(sheet.find((r) => r.selector === ".ghost")!.decls).toContainEqual({
+      prop: "border",
+      value: "1px solid var(--control-boundary)",
+    });
+    expect(sheet.find((r) => r.selector === ".panel")!.decls).toContainEqual({ prop: "border", value: "1px solid var(--line)" });
+  });
+
+  it.each([
+    [".packBtn", "border", "1px solid var(--control-boundary)"],
+    [".ghost", "border", "1px solid var(--control-boundary)"],
+    [".inviteForm select", "border", "1px solid var(--control-boundary)"],
+    ["button:disabled, .primary:disabled, .ghost:disabled", "border-color", "var(--control-boundary)"],
+    [".choice", "border", "1px solid var(--control-boundary)"],
+    [".textInput, .rollInput", "border", "1px solid var(--control-boundary)"],
+    [".chip.pick", "border-color", "var(--control-boundary)"],
+    [".accountMenu[open] > summary", "border-color", "var(--control-boundary)"],
+    [".accountMenu > summary:hover", "border-color", "var(--control-boundary)"],
+    [".rowMenu > summary, .rowMenuBtn", "border", "1px solid var(--control-boundary)"],
+    [".shelf > summary", "border", "1px solid var(--control-boundary)"],
+    [".themeMenu select", "border", "1px solid var(--control-boundary)"],
+    [".chipAdd", "border", "1px dashed var(--control-boundary)"],
+    [".matrix .cell", "border", "1px solid var(--control-boundary)"],
+    [".filtersToggle", "border", "1px solid var(--control-boundary)"],
+    [".alertPick select", "border", "1px solid var(--control-boundary)"],
+    [".guideContentsSummary", "border", "1px solid var(--control-boundary)"],
+    [".toggleChip", "border-color", "var(--control-boundary)"],
+    [".reactButton", "border", "1px solid var(--control-boundary)"],
+    [".welcomePack", "border", "1px solid var(--control-boundary)"],
+    [".personaChip", "border", "1px solid var(--control-boundary)"],
+    [".runMenuBtn[aria-expanded=\"true\"]", "border-color", "var(--control-boundary)"],
+    [".deckProfiles .rowMenuPanel .options button", "border", "1px solid var(--control-boundary)"],
+  ])("gives %s its control boundary", (selector, prop, value) => {
+    const matchingRule = sheet.find(
+      (rule) => rule.selector === selector && rule.decls.some((decl) => decl.prop === prop && decl.value === value),
+    );
+    expect(matchingRule, `${selector} should declare ${prop}: ${value}`).toBeDefined();
+  });
+
+  it.each([
+    [".rollInput:focus, .textInput:focus", "var(--focus)"],
+    [".renameInput:focus", "var(--focus)"],
+    [".runNameInput:focus", "var(--focus)"],
+    [".matrix .cell:focus-visible", "var(--focus)"],
+  ])("gives %s the focus border", (selector, value) => {
+    expect(sheet.find((rule) => rule.selector === selector)?.decls ?? []).toContainEqual({ prop: "border-color", value });
+  });
+
+  it("keeps the matrix hover border separate from keyboard focus", () => {
+    expect(sheet.find((rule) => rule.selector === ".matrix .cell:hover:not(:disabled)")?.decls ?? []).toContainEqual({
+      prop: "border-color",
+      value: "var(--accent)",
+    });
+  });
+});
+
 describe("what a migrated control promises", () => {
   it("never lets a shorthand throw away a family named above it", () => {
     // What `.ghost` did: `font-family`, then `font: inherit` under it, and
