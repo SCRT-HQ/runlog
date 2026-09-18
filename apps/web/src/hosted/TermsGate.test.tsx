@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useLayoutEffect, useState } from "react";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Api, Profile } from "../sync/client.ts";
 import { forgetProfile, useProfile } from "../sync/useProfile.ts";
 import { AccountContext, type Account } from "../auth/Account.tsx";
@@ -251,7 +251,9 @@ describe("the terms gate", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByRole("button", { name: "I accept" })).toBe(document.activeElement);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "I accept" })).toBe(document.activeElement);
+    });
     expect(screen.queryByRole("alert")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "I accept" }));
@@ -265,7 +267,9 @@ describe("the terms gate", () => {
         </HostedProvider>
       </AccountContext.Provider>,
     );
-    expect(await screen.findByRole("button", { name: "I accept" })).toBe(document.activeElement);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "I accept" })).toBe(document.activeElement);
+    });
     await act(async () => second.reject(new Error("old account failed")));
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByRole("button", { name: "I accept" })).toBe(document.activeElement);

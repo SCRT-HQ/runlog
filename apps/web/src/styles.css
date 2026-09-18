@@ -1226,9 +1226,12 @@ p {
   align-items: center;
 }
 .libraryActions .primary,
-.libraryActions .fileButton,
 .libraryActions .ghost {
   white-space: nowrap;
+}
+.libraryActions .fileButton {
+  max-width: 100%;
+  white-space: normal;
 }
 /* The way to the setups, where the shelf of them used to be and under
    the file control that now takes one. It is a line of text rather than
@@ -1269,7 +1272,7 @@ p {
 /* The strip above the shelf: one press to where you were, your race, what is new. */
 .homeStrip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
   gap: 0.6rem;
 }
 .homeCard {
@@ -2600,7 +2603,7 @@ button:disabled,
 
 .fieldGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
   gap: 0.7rem 0.9rem;
   margin-top: 0.7rem;
 }
@@ -4778,7 +4781,7 @@ details.panel[open] > summary .sectionTitle::after {
 }
 .marketBody {
   display: grid;
-  grid-template-columns: 15rem minmax(0, 1fr);
+  grid-template-columns: min(15rem, 35%) minmax(0, 1fr);
   gap: 1.25rem;
   align-items: start;
 }
@@ -4854,6 +4857,7 @@ details.panel[open] > summary .sectionTitle::after {
 }
 .marketMain {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.6rem;
   min-width: 0;
 }
@@ -4874,7 +4878,7 @@ details.panel[open] > summary .sectionTitle::after {
 }
 .marketGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(17rem, 100%), 1fr));
   gap: 1rem;
   align-items: stretch;
 }
@@ -4888,6 +4892,11 @@ details.panel[open] > summary .sectionTitle::after {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem;
+}
+.marketWhy .chip {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 /*
  * The card's fold, for what is optional. It is a panel everywhere else; in a
@@ -4918,6 +4927,14 @@ details.panel[open] > summary .sectionTitle::after {
   font-size: var(--t-4);
   line-height: 1.2;
   text-wrap: balance;
+}
+.marketCard .marketTitle {
+  overflow-wrap: anywhere;
+}
+.marketCard .marketTitle .chip {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .marketCard > .muted.small {
   margin: 0;
