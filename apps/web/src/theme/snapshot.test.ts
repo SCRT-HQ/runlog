@@ -34,16 +34,34 @@ describe("portable snapshots at the browser presentation boundary", () => {
     const resolved = resolveThemeRecord({
       ...record.value,
       overrides: {
-        colors: { "interaction.moveAccent": "rgb(1 2 3)", "feedback.successBackground": "#123456" },
+        colors: {
+          "interaction.moveAccent": "rgb(1 2 3)",
+          "interaction.moveAccent2": "rgb(4 5 6)",
+          "interaction.moveAccent3": "#789",
+          "interaction.moveAccent4": "rgb(10 11 12)",
+          "feedback.successBackground": "#123456",
+        },
         fonts: { ui: "space-grotesk", widgetUi: "system-serif" },
       },
     });
     if (!resolved.ok) throw new Error("Custom record did not resolve");
+    const restored = parsePresentationSnapshot(JSON.parse(JSON.stringify(resolved.value)));
+    if (!restored.ok) throw new Error("Custom snapshot did not round-trip");
     const before = document.documentElement.getAttribute("style");
     const preview = document.createElement("section");
     preview.style.setProperty("--preview-only", "preserved");
-    applyPresentation(compilePresentation(snapshotToResolvedColors(resolved.value), resolved.value.fonts, "light"), preview);
+    const presentation = compilePresentation(snapshotToResolvedColors(restored.value), restored.value.fonts, "light");
+    expect(presentation).toMatchObject({
+      "--move-accent": "#010203",
+      "--move-accent-2": "#040506",
+      "--move-accent-3": "#778899",
+      "--move-accent-4": "#0a0b0c",
+    });
+    applyPresentation(presentation, preview);
     expect(preview.style.getPropertyValue("--move-accent")).toBe("#010203");
+    expect(preview.style.getPropertyValue("--move-accent-2")).toBe("#040506");
+    expect(preview.style.getPropertyValue("--move-accent-3")).toBe("#778899");
+    expect(preview.style.getPropertyValue("--move-accent-4")).toBe("#0a0b0c");
     expect(preview.style.getPropertyValue("--success-background")).toBe("#123456");
     expect(preview.style.getPropertyValue("--font-ui")).toContain("Space Grotesk");
     expect(preview.style.getPropertyValue("--font-widget-ui")).toContain("Iowan Old Style");
@@ -51,6 +69,9 @@ describe("portable snapshots at the browser presentation boundary", () => {
     expect(preview.style.cssText).not.toContain("Private library name");
     clearPresentation(preview);
     expect(preview.style.getPropertyValue("--move-accent")).toBe("");
+    expect(preview.style.getPropertyValue("--move-accent-2")).toBe("");
+    expect(preview.style.getPropertyValue("--move-accent-3")).toBe("");
+    expect(preview.style.getPropertyValue("--move-accent-4")).toBe("");
     expect(preview.style.getPropertyValue("--success-background")).toBe("");
     expect(preview.style.getPropertyValue("--preview-only")).toBe("preserved");
   });

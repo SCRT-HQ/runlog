@@ -25,12 +25,44 @@ describe("presentation snapshots", () => {
     const roundTrip = parsePresentationSnapshot(JSON.parse(JSON.stringify(snapshot)));
 
     expect(roundTrip).toEqual({ ok: true, value: snapshot });
-    expect(Object.keys(snapshot.colors)).toHaveLength(22);
+    expect(Object.keys(snapshot.colors)).toHaveLength(25);
     expect(Object.keys(snapshot.feedbackBackgrounds)).toHaveLength(3);
     expect(Object.keys(snapshot.fonts)).toHaveLength(10);
     expect(snapshot).not.toHaveProperty("id");
     expect(snapshot).not.toHaveProperty("name");
     expect(snapshot).not.toHaveProperty("revision");
+  });
+
+  it("round-trips four independent move accent overrides", () => {
+    const record = createThemeRecordFromPreset({ id: "decorations", name: "Decorations", presetId: "rainbow-road" });
+    if (!record.ok) throw new Error("record fixture");
+    const resolved = resolveThemeRecord({
+      ...record.value,
+      overrides: {
+        colors: {
+          "interaction.moveAccent": "rgb(1 2 3)",
+          "interaction.moveAccent2": "rgb(4 5 6)",
+          "interaction.moveAccent3": "#789",
+          "interaction.moveAccent4": "rgb(10 11 12)",
+        },
+        fonts: {},
+      },
+    });
+    if (!resolved.ok) throw new Error("snapshot fixture");
+
+    const restored = parsePresentationSnapshot(JSON.parse(JSON.stringify(resolved.value)));
+
+    expect(restored).toMatchObject({
+      ok: true,
+      value: {
+        colors: {
+          "interaction.moveAccent": "#010203",
+          "interaction.moveAccent2": "#040506",
+          "interaction.moveAccent3": "#778899",
+          "interaction.moveAccent4": "#0a0b0c",
+        },
+      },
+    });
   });
 
   it("requires every registered non-feedback color, feedback background and font role", () => {
