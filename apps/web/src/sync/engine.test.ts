@@ -85,7 +85,14 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
   const othersMove = (id: string, author: string, events: unknown[], at = "2026-01-09") => append(sessions.get(id)!, author, events, at);
 
   const api: Api = {
-    me: async () => ({ sub: me, sid: "", env: "test", profile: { createdAt: "", lastSeenAt: "" }, entitlements: [] }),
+    me: async () => ({
+      sub: me,
+      sid: "",
+      env: "test",
+      profile: { createdAt: "", lastSeenAt: "" },
+      entitlements: [],
+      capabilities: { hostTables: false, waivePublisherFee: false, hostServers: false },
+    }),
     putProfile: async () => ({ createdAt: "", lastSeenAt: "" }),
     deleteMe: async () => {},
     exportMe: async () => ({ url: "", bytes: 0, expiresAt: "" }),

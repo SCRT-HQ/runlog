@@ -1404,6 +1404,11 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   const servers = Boolean(deps.discord && deps.guilds);
   const serversOpen = async () => servers && (await onSale()).servers;
   const publishersOpen = async () => (await onSale()).publishers;
+  const planCapabilities = (grants: string[]) => ({
+    hostTables: grants.includes(deps.features?.plus ?? "plus"),
+    waivePublisherFee: grants.includes(deps.features?.hostedLicensing ?? "hosted-licensing"),
+    hostServers: grants.includes(deps.features?.server ?? "server"),
+  });
 
   if (method === "GET" && path === "/api/me") {
     const at = now();
@@ -1425,6 +1430,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       profile,
       handleTaken: owner !== null && owner !== caller.sub,
       entitlements,
+      capabilities: planCapabilities(entitlements),
       gates: deps.gates,
       servers,
       serversOpen: await serversOpen(),
