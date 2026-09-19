@@ -139,10 +139,12 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
         </div>
       )}
       {pending?.kind === "verify" && pending.result !== "asked" && (
-        <p className="muted small" role="status">
-          {pending.result === "done"
-            ? "Verified. Discord knows this account is linked; a role that asks for it is yours to take in the server."
-            : "Discord did not finish the verification. Try again from the server's role, or from the button here."}{" "}
+        <p className="muted small connectionsStatus" role="status">
+          <span className="connectionsStatusMessage">
+            {pending.result === "done"
+              ? "Verified. Discord knows this account is linked; a role that asks for it is yours to take in the server."
+              : "Discord did not finish the verification. Try again from the server's role, or from the button here."}
+          </span>
           <Button size="compact" onClick={dismiss}>
             OK
           </Button>
@@ -189,8 +191,8 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
         />
       )}
       {note && (
-        <p className="muted small" role="status">
-          {note}
+        <p className="muted small connectionsStatus" role="status">
+          <span className="connectionsStatusMessage">{note}</span>
         </p>
       )}
     </section>
@@ -198,13 +200,14 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
 }
 
 /**
- * Every Discord account linked to this one, and the way to link another.
+ * Every Discord account linked to this one, and the actions that can be
+ * taken from Discord.
  *
- * A row for each, with the name Discord showed when it was linked, and a
- * last row that is the invitation: an account with none linked reads it
- * as "not linked", an account with one or more as "link another". The
- * verification is offered once rather than per row, because it links
- * whichever account is signed in at Discord, which may be none of these.
+ * A row for each names the account Discord showed when it was linked. The
+ * help row retains a useful not-linked label for an empty list, but does not
+ * invent another account when links already exist. Verification is offered
+ * once rather than per account because it uses whichever Discord account is
+ * currently signed in, which may be none of these.
  */
 function DiscordLinks({
   connections,
@@ -238,11 +241,13 @@ function DiscordLinks({
           </span>
         </div>
       ))}
-      <div className="row spread memberRow connectionsRow">
-        <span className="connectionsIdentity">
-          <strong>Discord</strong>
-          <span className="muted small"> · {connections.length === 0 ? "not linked" : "link another"}</span>
-        </span>
+      <div className="row spread memberRow connectionsRow connectionsHelp">
+        {connections.length === 0 && (
+          <span className="connectionsIdentity">
+            <strong>Discord</strong>
+            <span className="muted small"> · not linked</span>
+          </span>
+        )}
         <span className="row connectionsActions">
           <span className="muted small connectionsInstructions">
             In a server with the Runlog bot, run /link and open the address it gives you.

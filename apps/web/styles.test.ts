@@ -516,9 +516,24 @@ describe("control font roles", () => {
   it("lets linked-account rows wrap before their identity is squeezed by instructions", () => {
     expect(finalDeclaration(".connectionsPanel .connectionsRow", "display")).toBe("flex");
     expect(finalDeclaration(".connectionsPanel .connectionsRow", "flex-wrap")).toBe("wrap");
+    expect(finalDeclaration(".connectionsPanel .connectionsRow", "padding-block")).toBe("var(--space-2)");
     expect(finalDeclaration(".connectionsPanel .connectionsIdentity", "flex")).toBe("1 1 12rem");
     expect(finalDeclaration(".connectionsPanel .connectionsActions", "max-width")).toBe("100%");
     expect(finalDeclaration(".connectionsPanel .connectionsActions", "flex")).toBe("0 1 auto");
+    expect(finalDeclaration(".connectionsPanel .connectionsActions", "margin-inline-start")).toBe("auto");
+    expect(finalDeclaration(".connectionsPanel .connectionsActions", "padding-block")).toBe("0");
+    expect(finalDeclaration(".connectionsPanel .connectionsActions", "border-top")).toBe("0");
+    expect(finalDeclaration(".connectionsPanel .connectionsInstructions", "flex")).toBe("1 1 12rem");
+  });
+
+  it("balances linked-account status spacing and lets its action hold the right edge", () => {
+    expect(finalDeclaration(".connectionsPanel .connectionsStatus", "display")).toBe("flex");
+    expect(finalDeclaration(".connectionsPanel .connectionsStatus", "flex-wrap")).toBe("wrap");
+    expect(finalDeclaration(".connectionsPanel .connectionsStatus", "justify-content")).toBe("flex-end");
+    expect(finalDeclaration(".connectionsPanel .connectionsStatus", "padding-block")).toBe("var(--space-2)");
+    expect(finalDeclaration(".connectionsPanel .connectionsStatus", "margin")).toBe("0");
+    expect(finalDeclaration(".connectionsPanel .connectionsStatusMessage", "flex")).toBe("1 1 12rem");
+    expect(finalDeclaration(".connectionsPanel .connectionsStatusMessage", "min-width")).toBe("0");
   });
 
   it.each([
