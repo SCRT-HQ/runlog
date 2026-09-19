@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { loadPackText } from "@runlog/rules-schema";
 import { useAccount } from "../auth/Account.tsx";
 import { useHosted } from "../hosted/HostedProvider.tsx";
@@ -14,6 +14,9 @@ export const WATCH_PARTY_CHOICES = [
   { value: "every" as const, label: "Every run" },
   { value: "packs" as const, label: "Chosen packs" },
 ];
+
+const normalizeShelf = (packs: StoredPack[]): StoredPack[] =>
+  packs.filter((pack) => !pack.deletedAt).sort((a, b) => a.title.localeCompare(b.title));
 
 /**
  * The Discord servers this account claimed, and what the bot may play in
@@ -65,9 +68,9 @@ export function ServersPage({
   }, [api]);
   useEffect(() => {
     if (ownedShelf !== undefined) return;
-    void listPacks().then((all) => setLocalShelf(all.filter((p) => !p.deletedAt).sort((a, b) => a.title.localeCompare(b.title))));
+    void listPacks().then(setLocalShelf);
   }, [ownedShelf]);
-  const shelf = ownedShelf ?? localShelf;
+  const shelf = useMemo(() => normalizeShelf(ownedShelf ?? localShelf), [ownedShelf, localShelf]);
 
   const run = async (what: string, fn: () => Promise<string | null>) => {
     setBusy(what);

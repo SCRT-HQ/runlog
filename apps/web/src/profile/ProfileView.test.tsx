@@ -2,7 +2,7 @@
 // events (a keydown, a pointerdown outside it): renderToStaticMarkup runs
 // no effects at all, so this file renders those few cases into jsdom.
 // @vitest-environment jsdom
-import { StrictMode, act } from "react";
+import { StrictMode, act, useLayoutEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -424,6 +424,160 @@ describe("profile page policy", () => {
 });
 
 describe("profile account ownership", () => {
+  it("keeps private state stable across an ordinary account-context rerender", async () => {
+    const getAccessToken = async () => "token-stable";
+    const account = { ...signedInAs("user_01TEST", "Alice"), getAccessToken };
+    const people = deferred<Array<{ sub: string; name: string; lastPlayedAt: string }>>();
+    const api = {
+      putProfile: async () => ({
+        name: "Alice profile",
+        createdAt: "2026-01-01T00:00:00Z",
+        lastSeenAt: "2026-01-01T00:00:00Z",
+      }),
+      people: () => people.promise,
+      connections: async () => ({ available: true, connections: [], discord: null }),
+      myInvitations: async () => [],
+    } as unknown as Api;
+    const create = vi.fn(() => api);
+    apiBoundary.create = create;
+    const meta = document.createElement("meta");
+    meta.name = "runlog:sign-in";
+    meta.content = "client_TEST";
+    document.head.appendChild(meta);
+    whoIsHere({ kind: "account", id: account.user.id });
+    storageBoundary.listLicenses = vi.fn(async () => []);
+    storageBoundary.listPacks = vi.fn(async () => []);
+    storageBoundary.listRuns = vi.fn(async () => []);
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    try {
+      await act(async () => {
+        root.render(
+          <AccountContext.Provider value={account}>
+            <ProfileView page="social" onBack={() => {}} />
+          </AccountContext.Provider>,
+        );
+        await Promise.resolve();
+      });
+      await act(async () => people.resolve([{ sub: "alice", name: "Alice Person", lastPlayedAt: "2026-01-01T00:00:00Z" }]));
+      expect(container.textContent).toContain("Alice Person");
+
+      act(() => {
+        root.render(
+          <AccountContext.Provider value={{ ...account }}>
+            <ProfileView page="social" onBack={() => {}} />
+          </AccountContext.Provider>,
+        );
+      });
+
+      expect(container.textContent).toContain("Alice Person");
+      expect(create).toHaveBeenCalledOnce();
+    } finally {
+      act(() => root.unmount());
+      container.remove();
+      meta.remove();
+    }
+  });
+
+  it("clears private children on the first same-owner API render and ignores the old API's late people", async () => {
+    const account = signedInAs("user_01TEST", "Alice");
+    const nextAccount = { ...account, getAccessToken: async () => "token-replaced" };
+    const oldConnections = deferred<{
+      available: boolean;
+      connections: Array<{ service: "discord"; accountId: string; name: string; linkedAt: string }>;
+      discord: null;
+    }>();
+    const oldPeople = deferred<Array<{ sub: string; name: string; lastPlayedAt: string }>>();
+    const nextConnections = deferred<{ available: boolean; connections: never[]; discord: null }>();
+    const nextPeople = deferred<Array<{ sub: string; name: string; lastPlayedAt: string }>>();
+    const profile = {
+      createdAt: "2026-01-01T00:00:00Z",
+      lastSeenAt: "2026-01-01T00:00:00Z",
+    };
+    const oldApi = {
+      putProfile: async () => profile,
+      people: () => oldPeople.promise,
+      connections: () => oldConnections.promise,
+      myInvitations: async () => [],
+    } as unknown as Api;
+    const nextApi = {
+      putProfile: async () => profile,
+      people: () => nextPeople.promise,
+      connections: () => nextConnections.promise,
+      myInvitations: async () => [],
+    } as unknown as Api;
+    let made = 0;
+    apiBoundary.create = () => (made++ === 0 ? oldApi : nextApi);
+    const meta = document.createElement("meta");
+    meta.name = "runlog:sign-in";
+    meta.content = "client_TEST";
+    document.head.appendChild(meta);
+    whoIsHere({ kind: "account", id: account.user.id });
+    storageBoundary.listLicenses = vi.fn(async () => []);
+    storageBoundary.listPacks = vi.fn(async () => []);
+    storageBoundary.listRuns = vi.fn(async () => []);
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const renderTrace: string[] = [];
+    function TracedProfile({ value }: { value: Account }) {
+      const boundary = useRef<HTMLDivElement>(null);
+      useLayoutEffect(() => {
+        renderTrace.push(boundary.current?.textContent ?? "");
+      }, [value]);
+      return (
+        <div ref={boundary}>
+          <AccountContext.Provider value={value}>
+            <ProfileView page="social" onBack={() => {}} />
+          </AccountContext.Provider>
+        </div>
+      );
+    }
+
+    try {
+      await act(async () => {
+        root.render(<TracedProfile value={account} />);
+        await Promise.resolve();
+      });
+      await act(async () =>
+        oldConnections.resolve({
+          available: true,
+          connections: [
+            {
+              service: "discord",
+              accountId: "alice-discord",
+              name: "Alice Discord",
+              linkedAt: "2026-01-01T00:00:00Z",
+            },
+          ],
+          discord: null,
+        }),
+      );
+      expect(container.textContent).toContain("Alice Discord");
+
+      act(() => {
+        root.render(<TracedProfile value={nextAccount} />);
+      });
+      expect(renderTrace.at(-1)).not.toContain("Alice Discord");
+
+      await act(async () => {
+        nextConnections.resolve({ available: true, connections: [], discord: null });
+        nextPeople.resolve([{ sub: "bob", name: "New API Person", lastPlayedAt: "2026-01-01T00:00:00Z" }]);
+      });
+      expect(container.textContent).toContain("New API Person");
+
+      await act(async () => oldPeople.resolve([{ sub: "alice", name: "Old API Person", lastPlayedAt: "2026-01-01T00:00:00Z" }]));
+      expect(container.textContent).toContain("New API Person");
+      expect(container.textContent).not.toContain("Old API Person");
+    } finally {
+      act(() => root.unmount());
+      container.remove();
+      meta.remove();
+    }
+  });
+
   it("keeps the keyed owner's storage live through StrictMode effect replay", async () => {
     whoIsHere({ kind: "account", id: signedIn.user.id });
     storageBoundary.listLicenses = vi.fn(async () => []);

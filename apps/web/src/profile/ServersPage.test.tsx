@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import type { Hosted } from "../hosted/config.ts";
 import type { Api, Guild } from "../sync/client.ts";
+import type { StoredPack } from "../storage/db.ts";
 import type { Plan, PlanAccess } from "../sync/usePlan.ts";
 import { ServersPage } from "./ServersPage.tsx";
 
@@ -57,7 +58,7 @@ const guildOf = (over: Partial<Guild> = {}): Guild => ({
 });
 
 /** The page with one claimed server, and the calls the setting makes recorded. */
-function show(guild: Guild, setWatchParties: Api["setWatchParties"]) {
+function show(guild: Guild, setWatchParties: Api["setWatchParties"], shelf?: StoredPack[]) {
   const api = {
     myGuilds: async () => ({ guilds: [guild], server: true, open: false, allowed: 3 }),
     guildPacks: async () => [],
@@ -65,7 +66,7 @@ function show(guild: Guild, setWatchParties: Api["setWatchParties"]) {
   } as unknown as Api;
   render(
     <AccountContext.Provider value={signedIn}>
-      <ServersPage api={api} />
+      <ServersPage api={api} {...(shelf ? { shelf } : {})} />
     </AccountContext.Provider>,
   );
 }
@@ -176,6 +177,32 @@ describe("server plan access", () => {
 });
 
 describe("the watch party setting on a server", () => {
+  it("normalizes an owner-provided shelf by removing tombstones and sorting titles", async () => {
+    const pack = (id: string, title: string, deletedAt?: string): StoredPack => ({
+      id,
+      title,
+      version: "1",
+      format: "yaml",
+      source: "schemaVersion: 1",
+      filename: `${id}.yaml`,
+      importedAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+      ...(deletedAt ? { deletedAt } : {}),
+    });
+    show(
+      guildOf({ watchParties: "packs" }),
+      saves((g) => guildOf(g)),
+      [pack("z", "Zulu Pack"), pack("deleted", "Deleted Pack", "2026-02-01T00:00:00Z"), pack("a", "Alpha Pack")],
+    );
+
+    await screen.findByLabelText("Watch parties");
+    expect(screen.queryByLabelText("Deleted Pack")).toBeNull();
+    expect(screen.getAllByRole("checkbox").map((box) => box.parentElement?.textContent?.trim())).toEqual(["Alpha Pack", "Zulu Pack"]);
+    expect(
+      Array.from((screen.getByLabelText("A pack to add to The Kiln Room") as HTMLSelectElement).options).map((option) => option.text),
+    ).toEqual(["Add a pack from your shelf…", "Alpha Pack", "Zulu Pack"]);
+  });
+
   it("is not offered before the servers have been read", () => {
     const { container } = render(
       <AccountContext.Provider value={signedIn}>

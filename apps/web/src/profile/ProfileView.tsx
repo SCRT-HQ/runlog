@@ -79,7 +79,12 @@ export interface ProfileViewProps {
 export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, onJoinInvite }: ProfileViewProps) {
   const account = useAccount();
   const base = apiBase();
-  const api = useMemo(() => (base && account.status === "signed-in" ? createApi(base, account.getAccessToken) : null), [base, account]);
+  const getAccessToken = account.status === "signed-in" ? account.getAccessToken : null;
+  const api = useMemo(() => (base && getAccessToken ? createApi(base, getAccessToken) : null), [base, getAccessToken]);
+  const session = useRef({ api, generation: 0 });
+  if (session.current.api !== api) {
+    session.current = { api, generation: session.current.generation + 1 };
+  }
   const invitations = useInvites(api, true);
   const plan = usePlan();
   const servers = serverAvailability(plan.state, account);
@@ -124,7 +129,7 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
             </ProfileRouteMessage>
           ) : access.kind === "content" && access.page !== "settings" && account.status === "signed-in" ? (
             <AccountProfile
-              key={account.user.id}
+              key={`${account.user.id}:${session.current.generation}`}
               ownerId={account.user.id}
               account={account}
               api={api}
@@ -677,7 +682,15 @@ function SocialPage({
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
   useEffect(() => {
-    if (api) void api.people().then(setPeople, () => {});
+    if (!api) return;
+    let live = true;
+    void api.people().then(
+      (nextPeople) => live && setPeople(nextPeople),
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
   }, [api]);
 
   const act = async (token: string, what: "join" | "decline") => {
