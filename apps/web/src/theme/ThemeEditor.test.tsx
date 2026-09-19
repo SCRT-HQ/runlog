@@ -124,7 +124,12 @@ describe("theme editor", () => {
   it("serializes debounced writes and exposes leave save/discard transactions without clearing dirty early", async () => {
     vi.useFakeTimers();
     const on = commands();
-    let leave: ThemeEditorLeaveState | null = null;
+    const leaveStates: ThemeEditorLeaveState[] = [];
+    const currentLeaveState = (): ThemeEditorLeaveState => {
+      const value = leaveStates.at(-1);
+      if (value === undefined) throw new Error("Leave state was not registered");
+      return value;
+    };
     render(
       <ThemeEditor
         scopeKey="anon:themes"
@@ -133,7 +138,7 @@ describe("theme editor", () => {
         commands={on}
         onClose={vi.fn()}
         onLeaveState={(value) => {
-          leave = value;
+          leaveStates.push(value);
         }}
       />,
     );
@@ -147,11 +152,11 @@ describe("theme editor", () => {
     await Promise.resolve();
     expect(on.saveDraft).toHaveBeenCalledTimes(1);
     expect(vi.mocked(on.saveDraft).mock.calls[0]?.[0].draft.rawName).toBe("Latest");
-    expect(leave?.dirty).toBe(true);
+    expect(currentLeaveState().dirty).toBe(true);
 
-    await expect(leave?.saveDraft()).resolves.toBe(true);
-    expect(leave?.dirty).toBe(true);
-    await expect(leave?.discard()).resolves.toBe(true);
+    await expect(currentLeaveState().saveDraft()).resolves.toBe(true);
+    expect(currentLeaveState().dirty).toBe(true);
+    await expect(currentLeaveState().discard()).resolves.toBe(true);
     expect(on.deleteDraft).toHaveBeenCalledWith({ id: "draft_one", expectedLocalRevision: 8 });
   });
 
