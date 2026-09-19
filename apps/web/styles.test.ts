@@ -361,6 +361,8 @@ describe("selection and feedback color roles", () => {
 
   it.each([
     [".packBtn.on", "border-color", "var(--selected-indicator)"],
+    [".libraryPack.inPlay", "border-color", "var(--selected-indicator)"],
+    [".runRow.open", "border-color", "var(--selected-indicator)"],
     [".designNavItem[aria-current]", "border-bottom-color", "var(--selected-indicator)"],
     ['.topbarEnd > [aria-current="page"]', "box-shadow", "inset 0 -2px 0 var(--selected-indicator)"],
     [".choice.on", "border-color", "var(--selected-indicator)"],
@@ -386,8 +388,6 @@ describe("selection and feedback color roles", () => {
   });
 
   it.each([
-    [".libraryPack.inPlay", "border-color", "var(--accent-dim)"],
-    [".runRow.open", "border-color", "var(--accent-dim)"],
     [".chip.ok", "border-color", "var(--accent-dim)"],
     ['.topbarEnd > [aria-current="page"]', "color", "var(--accent)"],
     ['.choices > [role="radio"][aria-checked="true"]', "background", "color-mix(in oklab, var(--accent) 10%, var(--panel-2))"],
