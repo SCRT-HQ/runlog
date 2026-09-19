@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { formatClock, reduce, type RunEvent, type RunState } from "@runlog/engine";
 import { loadPack, loadRun, type StoredRun } from "../storage/db.ts";
@@ -9,7 +9,9 @@ import { useRace } from "../run/useRace.ts";
 import { clockNow, raceOf, snapshotOf, type LiveSnapshot, type RaceSnapshot } from "../live/snapshot.ts";
 import { RaceBoard, raceHeading } from "../live/RaceBoard.tsx";
 import { usePublicRun } from "../live/usePublic.ts";
-import { applyTheme, isThemeId, savedTheme } from "../theme/theme.ts";
+import { applyBootAppearance } from "../theme/appearance.ts";
+import { applyTheme } from "../theme/theme.ts";
+import { useAppearance } from "../theme/useAppearance.ts";
 import type { Gesture } from "../sync/socket.ts";
 import { WIDGET_KINDS, type WidgetRoute } from "./route.ts";
 import { useTicker, type TickerLine } from "./ticker.ts";
@@ -30,6 +32,9 @@ import { useTicker, type TickerLine } from "./ticker.ts";
  * table with an audience. By token the sharing was the gated act.
  */
 export function WidgetView({ route }: { route: WidgetRoute }) {
+  const appearance = useAppearance();
+  const latestAppearance = useRef(appearance);
+  latestAppearance.current = appearance;
   // The page's look: the theme's ground, or none; and the theme the
   // address pins, if it pins one, over whatever this machine chose. The
   // boot in main.tsx applies the pinned theme before the first paint;
@@ -37,16 +42,16 @@ export function WidgetView({ route }: { route: WidgetRoute }) {
   // and hands the machine its own choice back on the way out.
   useEffect(() => {
     const root = document.documentElement;
-    const inheritedTheme = isThemeId(root.dataset.theme) ? root.dataset.theme : "system";
     root.dataset["widget"] = route.bg;
     root.style.fontSize = `${16 * route.scale}px`;
-    applyTheme(route.theme ?? inheritedTheme, root, "widget");
+    if (route.theme) applyTheme(route.theme, root, "widget");
+    else applyBootAppearance(appearance, root, "widget");
     return () => {
       delete root.dataset["widget"];
       root.style.fontSize = "";
-      applyTheme(route.theme ? savedTheme() : inheritedTheme, root, "app");
+      applyBootAppearance(latestAppearance.current, root, "app");
     };
-  }, [route.bg, route.scale, route.theme]);
+  }, [appearance, route.bg, route.scale, route.theme]);
 
   return route.token ? <ByLink route={route} token={route.token} /> : <FromHere route={route} />;
 }

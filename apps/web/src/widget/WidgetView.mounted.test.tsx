@@ -3,10 +3,12 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { WidgetView } from "./WidgetView.tsx";
 import { WIDGET_KINDS, type WidgetKind } from "./route.ts";
 import type { LiveSnapshot } from "../live/snapshot.ts";
+import { setDeviceAppearance } from "../theme/useAppearance.ts";
+import { snapshotForBuiltin } from "../theme/appearance.ts";
 
 const publicRun = vi.hoisted(() => ({
   got: undefined as unknown,
@@ -78,6 +80,7 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..",
 
 afterEach(() => {
   cleanup();
+  setDeviceAppearance({ schemaVersion: 1, mode: "system" });
   publicRun.got = undefined;
   publicRun.snapshot = undefined;
   publicRun.offline = false;
@@ -146,7 +149,7 @@ describe("linked widget states", () => {
 
   it.each(["clear", "solid", "none"] as const)("installs %s capture look and restores this machine's theme on unmount", (bg) => {
     Object.assign(publicRun, { got: {}, snapshot, offline: false });
-    localStorage.setItem("runlog.theme", "daylight");
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("daylight") });
     const page = render(<WidgetView route={{ kind: "stats", runId: "run-1", bg, scale: 1.5, theme: "ember", token: "live-token" }} />);
 
     expect(document.documentElement.dataset.widget).toBe(bg);
@@ -157,15 +160,14 @@ describe("linked widget states", () => {
     page.unmount();
     expect(document.documentElement.dataset.widget).toBeUndefined();
     expect(document.documentElement.style.fontSize).toBe("");
-    expect(document.documentElement.dataset.theme).toBe("daylight");
+    expect(document.documentElement.dataset.theme).toBeUndefined();
     expect(document.documentElement.style.getPropertyValue("--text")).toBe("#1c1a17");
     expect(document.documentElement.style.fontSize).toBe("");
   });
 
   it("uses widget roles for an unpinned route and restores app roles on cleanup", () => {
     Object.assign(publicRun, { got: {}, snapshot, offline: false });
-    localStorage.setItem("runlog.theme", "ember");
-    document.documentElement.dataset.theme = "ember";
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("ember") });
 
     const page = render(<WidgetView route={{ kind: "stats", runId: "run-1", bg: "clear", scale: 1.25, token: "live-token" }} />);
 
@@ -175,25 +177,55 @@ describe("linked widget states", () => {
     page.unmount();
     expect(document.documentElement.dataset.widget).toBeUndefined();
     expect(document.documentElement.style.fontSize).toBe("");
-    expect(document.documentElement.dataset.theme).toBe("ember");
+    expect(document.documentElement.dataset.theme).toBeUndefined();
     expect(document.documentElement.style.getPropertyValue("--text")).toBe("#f1e4d3");
   });
 
-  it("keeps an in-memory theme for an unpinned widget when storage is unavailable", () => {
+  it("keeps the current in-memory appearance for an unpinned widget when storage reads are unavailable", () => {
     Object.assign(publicRun, { got: {}, snapshot, offline: false });
-    document.documentElement.dataset.theme = "ember";
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("ember") });
     const storage = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("storage unavailable");
     });
 
     const page = render(<WidgetView route={{ kind: "stats", runId: "run-1", bg: "none", scale: 1, token: "live-token" }} />);
 
-    expect(document.documentElement.dataset.theme).toBe("ember");
+    expect(document.documentElement.dataset.theme).toBeUndefined();
     expect(document.documentElement.style.getPropertyValue("--bg")).toBe("#1a1210");
     page.unmount();
-    expect(document.documentElement.dataset.theme).toBe("ember");
+    expect(document.documentElement.dataset.theme).toBeUndefined();
     expect(document.documentElement.style.getPropertyValue("--bg")).toBe("#1a1210");
     storage.mockRestore();
+  });
+
+  it("keeps a legacy URL pin authoritative while remembering the latest device Apply for cleanup", () => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false });
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("daylight") });
+    const page = render(
+      <WidgetView route={{ kind: "stats", runId: "run-1", bg: "solid", scale: 1, theme: "ember", token: "live-token" }} />,
+    );
+    expect(document.documentElement.dataset.theme).toBe("ember");
+
+    act(() => setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("rainbow-road") }));
+    expect(document.documentElement.dataset.theme).toBe("ember");
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe("#1a1210");
+
+    page.unmount();
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe("#ededeb");
+  });
+
+  it("follows a newer device Apply in widget scope and restores that same appearance on cleanup", () => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false });
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("ember") });
+    const page = render(<WidgetView route={{ kind: "stats", runId: "run-1", bg: "none", scale: 1, token: "live-token" }} />);
+
+    act(() => setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("daylight") }));
+    expect(document.documentElement.style.getPropertyValue("--widget-text")).toBe("#1c1a17");
+
+    page.unmount();
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(document.documentElement.style.getPropertyValue("--text")).toBe("#1c1a17");
   });
 });
 
