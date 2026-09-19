@@ -2,18 +2,19 @@
 // events (a keydown, a pointerdown outside it): renderToStaticMarkup runs
 // no effects at all, so this file renders those few cases into jsdom.
 // @vitest-environment jsdom
-import { act } from "react";
+import { StrictMode, act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import { AccountBadge, syncLabel, syncTone } from "../auth/AccountBadge.tsx";
-import type { PendingInvite } from "../sync/client.ts";
+import type { Api, PendingInvite, Profile } from "../sync/client.ts";
 import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
 import { useInvites } from "../share/useInvites.ts";
 import { PROFILE_PAGES, profileHash, profilePageFromHash, type ProfilePage } from "./route.ts";
 import { ProfileView } from "./ProfileView.tsx";
 import type { Plan } from "../sync/usePlan.ts";
+import { whoIsHere } from "../storage/who.ts";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -22,7 +23,40 @@ import type { Plan } from "../sync/usePlan.ts";
  * menu; mocked here so a test can say how many are waiting without a real
  * server, and both the menu's badge and the Social page agree with it.
  */
-vi.mock("../share/useInvites.ts", () => ({ useInvites: vi.fn() }));
+const inviteBoundary = vi.hoisted(() => ({ value: [] as unknown[] | null }));
+vi.mock("../share/useInvites.ts", async (original) => {
+  const real = await original<typeof import("../share/useInvites.ts")>();
+  return {
+    ...real,
+    useInvites: (api: Parameters<typeof real.useInvites>[0], open: boolean) =>
+      inviteBoundary.value === null ? real.useInvites(api, open) : { invites: inviteBoundary.value, refresh: () => {}, forget: () => {} },
+  };
+});
+const apiBoundary = vi.hoisted(() => ({
+  create: null as null | ((base: string, getAccessToken: () => Promise<string>) => unknown),
+}));
+vi.mock("../sync/client.ts", async (original) => {
+  const real = await original<typeof import("../sync/client.ts")>();
+  return {
+    ...real,
+    createApi: (base: string, getAccessToken: () => Promise<string>) =>
+      apiBoundary.create ? apiBoundary.create(base, getAccessToken) : real.createApi(base, getAccessToken),
+  };
+});
+const storageBoundary = vi.hoisted(() => ({
+  listLicenses: null as null | (() => Promise<unknown[]>),
+  listPacks: null as null | (() => Promise<unknown[]>),
+  listRuns: null as null | (() => Promise<unknown[]>),
+}));
+vi.mock("../storage/db.ts", async (original) => {
+  const real = await original<typeof import("../storage/db.ts")>();
+  return {
+    ...real,
+    listLicenses: () => (storageBoundary.listLicenses ? storageBoundary.listLicenses() : real.listLicenses()),
+    listPacks: () => (storageBoundary.listPacks ? storageBoundary.listPacks() : real.listPacks()),
+    listRuns: () => (storageBoundary.listRuns ? storageBoundary.listRuns() : real.listRuns()),
+  };
+});
 const planResult = vi.hoisted(() => ({ value: null as Plan | null }));
 vi.mock("../sync/usePlan.ts", () => ({ usePlan: () => planResult.value }));
 
@@ -39,7 +73,7 @@ const plan = (servers = false): Plan => ({
 });
 
 function stubInvites(invites: PendingInvite[]) {
-  vi.mocked(useInvites).mockReturnValue({ invites, refresh: () => {}, forget: () => {} });
+  inviteBoundary.value = invites;
 }
 
 // Nothing here waits on a server by default; a test opts into a busier
@@ -47,6 +81,10 @@ function stubInvites(invites: PendingInvite[]) {
 beforeEach(() => {
   stubInvites([]);
   planResult.value = plan(false);
+  apiBoundary.create = null;
+  storageBoundary.listLicenses = null;
+  storageBoundary.listPacks = null;
+  storageBoundary.listRuns = null;
 });
 
 const invite = (token: string): PendingInvite => ({
@@ -88,12 +126,32 @@ const signedIn: Account = {
   getAccessToken: async () => "token",
 };
 
+const signedInAs = (id: string, firstName: string): Extract<Account, { status: "signed-in" }> => ({
+  ...signedIn,
+  user: { ...signedIn.user, id, firstName, email: `${firstName.toLowerCase()}@example.com` },
+  getAccessToken: async () => `token-${id}`,
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
 const page = (account: Account, options: { page?: ProfilePage } = {}) =>
   renderToStaticMarkup(
     <AccountContext.Provider value={account}>
       <ProfileView onBack={() => {}} {...options} />
     </AccountContext.Provider>,
   );
+
+function railIds(html: string): string[] {
+  const root = document.createElement("div");
+  root.innerHTML = html;
+  return Array.from(root.querySelectorAll("nav[aria-label='Profile pages'] a")).map((link) => link.getAttribute("href") ?? "");
+}
 
 describe("the profile", () => {
   afterEach(() => {
@@ -168,9 +226,10 @@ describe("the profile", () => {
     expect(html).not.toContain("Delete everything");
   });
 
-  it("explains itself where there is nothing to sign into", () => {
+  it("takes a local private route straight to device Settings", () => {
     const html = page({ status: "local" });
-    expect(html).toContain("nothing to sign into");
+    expect(html).toContain("This device");
+    expect(railIds(html)).toEqual(["#profile/settings"]);
     expect(html).not.toContain(">Sign in<");
   });
 });
@@ -211,6 +270,7 @@ describe("the profile's pages", () => {
   });
 
   it("renders Servers, saying what a server needs where this process has no API, and asks before claiming one a code arrived for", () => {
+    planResult.value = plan(true);
     const html = page(signedIn, { page: "servers" });
     expect(html).toContain("<h2>Servers</h2>");
     expect(html).toContain("hosted copy of Runlog");
@@ -265,6 +325,331 @@ describe("the profile's pages", () => {
     const html = page(signedIn, { page: "profile" });
     const socialChip = /<a href="#profile\/social"[^>]*>([\s\S]*?)<\/a>/.exec(html)?.[1] ?? "";
     expect(socialChip).not.toContain("menuBadge");
+  });
+});
+
+describe("profile page policy", () => {
+  afterEach(() => {
+    planResult.value = plan(false);
+    stubInvites([]);
+  });
+
+  it("shows only Settings while account status is checking, without offering a sign-in action", () => {
+    const signIn = vi.fn();
+    const create = vi.fn(() => ({}));
+    apiBoundary.create = create;
+    const meta = document.createElement("meta");
+    meta.name = "runlog:sign-in";
+    meta.content = "client_TEST";
+    document.head.appendChild(meta);
+    const html = page({ status: "checking", signIn }, { page: "account" });
+
+    expect(railIds(html)).toEqual(["#profile/settings"]);
+    expect(html).toContain("Checking your account…");
+    expect(html).not.toContain(">Sign in<");
+    expect(html).not.toContain("<h2>Account</h2>");
+    expect(create).not.toHaveBeenCalled();
+    meta.remove();
+  });
+
+  it("shows only Settings to an anonymous visitor and offers both account doors", () => {
+    const html = page({ status: "anonymous", signIn: () => {}, signUp: () => {} }, { page: "publishing" });
+
+    expect(railIds(html)).toEqual(["#profile/settings"]);
+    expect(html).toContain(">Sign in<");
+    expect(html).toContain("Create an account");
+    expect(html).not.toContain("<h2>Publishing</h2>");
+  });
+
+  it("renders Settings immediately and requests address replacement for a local private route", () => {
+    const onNavigate = vi.fn();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    act(() => {
+      root.render(
+        <AccountContext.Provider value={{ status: "local" }}>
+          <ProfileView page="account" onBack={() => {}} onNavigate={onNavigate} />
+        </AccountContext.Provider>,
+      );
+    });
+
+    expect(railIds(container.innerHTML)).toEqual(["#profile/settings"]);
+    expect(container.querySelector("a[aria-current='page']")?.getAttribute("href")).toBe("#profile/settings");
+    expect(container.textContent).toContain("This device");
+    expect(container.textContent).not.toContain("nothing to sign into");
+    expect(onNavigate).toHaveBeenCalledWith("settings", "replace");
+
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it("shows every applicable page to a signed-in account without consulting paid capabilities", () => {
+    planResult.value = plan(true);
+    expect(railIds(page(signedIn, { page: "profile" }))).toEqual([
+      "#profile",
+      "#profile/publishing",
+      "#profile/account",
+      "#profile/social",
+      "#profile/servers",
+      "#profile/settings",
+    ]);
+  });
+
+  it("renders a server-specific checking state without mounting the Servers page", () => {
+    planResult.value = {
+      ...plan(false),
+      state: { kind: "loading", ownerId: signedIn.user.id },
+    };
+    const html = page(signedIn, { page: "servers" });
+    expect(html).toContain("Checking server availability…");
+    expect(html).not.toContain("Discord servers you claimed");
+  });
+
+  it("renders server-specific unavailable and error states instead of silently selecting Profile", () => {
+    planResult.value = plan(false);
+    const unavailable = page(signedIn, { page: "servers" });
+    expect(unavailable).toContain("Servers are not available on this deployment.");
+    expect(unavailable).not.toContain("<h2>Profile</h2>");
+
+    planResult.value = {
+      ...plan(false),
+      state: { kind: "error", ownerId: signedIn.user.id, message: "offline" },
+    };
+    const failed = page(signedIn, { page: "servers" });
+    expect(failed).toContain("Server availability could not be checked.");
+    expect(failed).not.toContain("<h2>Profile</h2>");
+  });
+});
+
+describe("profile account ownership", () => {
+  it("keeps the keyed owner's storage live through StrictMode effect replay", async () => {
+    whoIsHere({ kind: "account", id: signedIn.user.id });
+    storageBoundary.listLicenses = vi.fn(async () => []);
+    storageBoundary.listPacks = vi.fn(async () => []);
+    storageBoundary.listRuns = vi.fn(async () => [
+      {
+        runId: "strict-run",
+        packId: "strict-pack",
+        packTitle: "Strict owner run",
+        updatedAt: "2026-01-01T00:00:00Z",
+        members: [
+          { sub: "one", role: "owner" },
+          { sub: "two", role: "player" },
+        ],
+      },
+    ]);
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <AccountContext.Provider value={signedIn}>
+            <ProfileView page="social" onBack={() => {}} />
+          </AccountContext.Provider>
+        </StrictMode>,
+      );
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("Strict owner run");
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it("does not let a ready B Servers page open storage while the device still names A", async () => {
+    const accountB = signedInAs("user_02TEST", "Bob");
+    const readyForB = plan(true);
+    planResult.value = {
+      ...readyForB,
+      state: readyForB.state.kind === "ready" ? { ...readyForB.state, ownerId: accountB.user.id } : readyForB.state,
+    };
+    whoIsHere({ kind: "account", id: "user_01TEST" });
+    const listLicenses = vi.fn(async () => []);
+    const listPacks = vi.fn(async () => []);
+    const listRuns = vi.fn(async () => []);
+    storageBoundary.listLicenses = listLicenses;
+    storageBoundary.listPacks = listPacks;
+    storageBoundary.listRuns = listRuns;
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        <AccountContext.Provider value={accountB}>
+          <ProfileView page="servers" onBack={() => {}} />
+        </AccountContext.Provider>,
+      );
+      await Promise.resolve();
+    });
+
+    expect(listLicenses).not.toHaveBeenCalled();
+    expect(listPacks).not.toHaveBeenCalled();
+    expect(listRuns).not.toHaveBeenCalled();
+
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it("drops A's state on the first B render, ignores A's late private answers, and waits for B's storage owner", async () => {
+    const accountA = signedInAs("user_01TEST", "Alice");
+    const accountB = signedInAs("user_02TEST", "Bob");
+    const aProfile = deferred<Profile>();
+    const aPeople = deferred<Array<{ sub: string; name: string; lastPlayedAt: string }>>();
+    const aConnections = deferred<{
+      available: boolean;
+      connections: Array<{ service: "discord"; accountId: string; name: string; linkedAt: string }>;
+      discord: null;
+    }>();
+    const aInvites = deferred<PendingInvite[]>();
+    const aGuilds = deferred<{
+      guilds: Array<{ guildId: string; name: string; ownerSub: string; claimedAt: string; updatedAt: string }>;
+      server: boolean;
+      open: boolean;
+    }>();
+    const bProfile = deferred<Profile>();
+    const bPeople = deferred<Array<{ sub: string; name: string; lastPlayedAt: string }>>();
+    const bConnections = deferred<{ available: boolean; connections: never[]; discord: null }>();
+    const bInvites = deferred<PendingInvite[]>();
+    const apiA = {
+      putProfile: vi.fn(() => aProfile.promise),
+      people: vi.fn(() => aPeople.promise),
+      connections: vi.fn(() => aConnections.promise),
+      myInvitations: vi.fn(async () => []),
+      myInvites: vi.fn(() => aInvites.promise),
+      myGuilds: vi.fn(() => aGuilds.promise),
+      guildPacks: vi.fn(async () => []),
+    } as unknown as Api;
+    const apiB = {
+      putProfile: vi.fn(() => bProfile.promise),
+      people: vi.fn(() => bPeople.promise),
+      connections: vi.fn(() => bConnections.promise),
+      myInvitations: vi.fn(async () => []),
+      myInvites: vi.fn(() => bInvites.promise),
+    } as unknown as Api;
+    let made = 0;
+    apiBoundary.create = () => (made++ === 0 ? apiA : apiB);
+    inviteBoundary.value = null;
+    const meta = document.createElement("meta");
+    meta.name = "runlog:sign-in";
+    meta.content = "client_TEST";
+    document.head.appendChild(meta);
+
+    let storageOwner: "A" | "B" = "A";
+    const listLicenses = vi.fn(async () => []);
+    const listPacks = vi.fn(async () => []);
+    const listRuns = vi.fn(async () => [
+      {
+        runId: storageOwner === "A" ? "run-a" : "run-b",
+        packId: storageOwner === "A" ? "pack-a" : "pack-b",
+        packTitle: storageOwner === "A" ? "Alice private run" : "Bob private run",
+        updatedAt: "2026-01-01T00:00:00Z",
+        members: [
+          { sub: "one", role: "owner" },
+          { sub: "two", role: "player" },
+        ],
+      },
+    ]);
+    storageBoundary.listLicenses = listLicenses;
+    storageBoundary.listPacks = listPacks;
+    storageBoundary.listRuns = listRuns;
+    whoIsHere({ kind: "account", id: accountA.user.id });
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const renderAs = async (account: Account, page: ProfilePage) => {
+      await act(async () => {
+        root.render(
+          <AccountContext.Provider value={account}>
+            <ProfileView page={page} onBack={() => {}} />
+          </AccountContext.Provider>,
+        );
+        await Promise.resolve();
+      });
+    };
+
+    try {
+      planResult.value = plan(true);
+      await renderAs(accountA, "social");
+      expect(container.textContent).toContain("Alice private run");
+      await renderAs(accountA, "servers");
+      expect(apiA.myGuilds).toHaveBeenCalled();
+
+      await renderAs({ status: "checking", signIn: () => {} }, "social");
+      const callsBeforeB = [listLicenses.mock.calls.length, listPacks.mock.calls.length, listRuns.mock.calls.length] as const;
+      await renderAs(accountB, "social");
+      expect([listLicenses.mock.calls.length, listPacks.mock.calls.length, listRuns.mock.calls.length]).toEqual(callsBeforeB);
+      expect(container.textContent).not.toContain("Alice private run");
+
+      await act(async () => {
+        aProfile.resolve({
+          name: "Alice profile",
+          handle: "AliceHandle",
+          createdAt: "2026-01-01T00:00:00Z",
+          lastSeenAt: "2026-01-01T00:00:00Z",
+        });
+        aPeople.resolve([{ sub: "alice", name: "Alice Person", lastPlayedAt: "2026-01-01T00:00:00Z" }]);
+        aConnections.resolve({
+          available: true,
+          connections: [
+            {
+              service: "discord",
+              accountId: "alice-discord",
+              name: "Alice Discord",
+              linkedAt: "2026-01-01T00:00:00Z",
+            },
+          ],
+          discord: null,
+        });
+        aInvites.resolve([invite("alice-invite")]);
+        aGuilds.resolve({
+          guilds: [
+            {
+              guildId: "alice-guild",
+              name: "Alice Guild",
+              ownerSub: accountA.user.id,
+              claimedAt: "2026-01-01T00:00:00Z",
+              updatedAt: "2026-01-01T00:00:00Z",
+            },
+          ],
+          server: true,
+          open: true,
+        });
+      });
+      expect(container.textContent).not.toMatch(/Alice (profile|Person|Discord|Guild|private run)/);
+      expect(container.querySelector(".menuBadge")).toBeNull();
+
+      storageOwner = "B";
+      await act(async () => whoIsHere({ kind: "account", id: accountB.user.id }));
+      expect(listLicenses.mock.calls.length).toBe(callsBeforeB[0] + 1);
+      expect(listPacks.mock.calls.length).toBe(callsBeforeB[1] + 1);
+      expect(listRuns.mock.calls.length).toBe(callsBeforeB[2] + 1);
+      expect(container.textContent).toContain("Bob private run");
+
+      await act(async () => {
+        bProfile.resolve({
+          name: "Bob profile",
+          createdAt: "2026-01-01T00:00:00Z",
+          lastSeenAt: "2026-01-01T00:00:00Z",
+        });
+        bPeople.resolve([{ sub: "bob", name: "Bob Person", lastPlayedAt: "2026-01-01T00:00:00Z" }]);
+        bConnections.resolve({ available: true, connections: [], discord: null });
+        bInvites.resolve([{ ...invite("bob-invite"), inviter: "Bob Inviter" }]);
+      });
+      expect(container.textContent).toContain("Bob Person");
+      expect(container.textContent).toContain("Bob Inviter");
+      expect(container.textContent).not.toContain("Alice");
+    } finally {
+      act(() => root.unmount());
+      container.remove();
+      meta.remove();
+      inviteBoundary.value = [];
+    }
   });
 });
 
