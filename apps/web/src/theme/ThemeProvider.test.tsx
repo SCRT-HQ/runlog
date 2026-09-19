@@ -275,4 +275,27 @@ describe("account-scoped theme provider", () => {
     await waitFor(() => expect(screen.getByTestId("status").textContent).toBe("unavailable"));
     expect(screen.getByTestId("names").textContent).toBe("");
   });
+
+  it("restores appearance without a repository and Retry safely reopens storage after an opening failure", async () => {
+    openRepository.mockRejectedValueOnce(new DOMException("denied", "SecurityError"));
+    render(<Providers account={local} />);
+    await waitFor(() => expect(screen.getByTestId("status").textContent).toBe("unavailable"));
+
+    await act(() => current.applyBuiltin("daylight"));
+
+    expect(current.applied).toEqual({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("daylight") });
+    expect(JSON.parse(localStorage.getItem(APPEARANCE_KEY)!)).toEqual(current.applied);
+    expect(screen.getByTestId("problem").textContent).toContain("Appearance applied");
+
+    const reopened = repository("runlog:themes", [row("recovered", "Recovered")]);
+    openRepository.mockResolvedValueOnce(reopened);
+    const firstRetry = current.reload();
+    const joinedRetry = current.reload();
+    await act(() => Promise.all([firstRetry, joinedRetry]));
+
+    expect(openRepository).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId("status").textContent).toBe("ready");
+    expect(screen.getByTestId("names").textContent).toBe("Recovered");
+    expect(screen.getByTestId("problem").textContent).toBe("none");
+  });
 });

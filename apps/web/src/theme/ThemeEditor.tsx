@@ -1,4 +1,5 @@
 import {
+  BUILTIN_PRESETS,
   COLOR_DEFINITIONS,
   FONT_DEFINITIONS,
   FONT_ROLE_DEFINITIONS,
@@ -7,6 +8,7 @@ import {
   resolveThemeRecord,
   type ColorTokenDefinition,
   type ColorTokenId,
+  type BuiltinColorBaseId,
   type FontId,
   type FontRole,
   type HexColor,
@@ -414,6 +416,7 @@ export function ThemeEditor({
             aria-describedby={issue === undefined ? undefined : `theme-error-${definition.id}`}
             value={current}
             placeholder={definition.kind === "feedbackBackground" ? "Derived" : undefined}
+            disabled={busy}
             onChange={(event) => edit({ type: "color", role: definition.id, value: event.target.value })}
           />
         </label>
@@ -423,7 +426,7 @@ export function ThemeEditor({
             {issue.message}
           </span>
         )}
-        <button type="button" className="ghost" onClick={() => edit({ type: "reset-color", role: definition.id })}>
+        <button type="button" className="ghost" disabled={busy} onClick={() => edit({ type: "reset-color", role: definition.id })}>
           Reset {definition.label}
         </button>
       </div>
@@ -439,6 +442,7 @@ export function ThemeEditor({
           aria-label={label}
           className="textInput"
           value={resolved.fonts[role]}
+          disabled={busy}
           onChange={(event) => edit({ type: "font", role, value: event.target.value as FontId })}
         >
           {FONT_DEFINITIONS.filter(({ id }) => isFontAllowed(role, id)).map(({ id, label: fontLabel }) => (
@@ -449,7 +453,7 @@ export function ThemeEditor({
         </select>
       </label>
       <span className="muted small">Base or inherited: {baseSnapshot.fonts[role]}</span>
-      <button type="button" className="ghost" onClick={() => edit({ type: "reset-font", role })}>
+      <button type="button" className="ghost" disabled={busy} onClick={() => edit({ type: "reset-font", role })}>
         Reset {label}
       </button>
     </div>
@@ -463,7 +467,7 @@ export function ThemeEditor({
   const rawInvalid = !candidate.ok;
 
   return (
-    <section className="themeEditor" aria-labelledby="themeEditorTitle">
+    <section className="themeEditor" aria-labelledby="themeEditorTitle" aria-busy={busy || undefined}>
       <header className="themeSectionHead">
         <div>
           <p className="eyebrow">Local editor</p>
@@ -512,7 +516,12 @@ export function ThemeEditor({
         <div className="themeEditorControls">
           <label className="themeNameControl">
             <span>Theme name</span>
-            <input className="textInput" value={draft.rawName} onChange={(event) => edit({ type: "name", value: event.target.value })} />
+            <input
+              className="textInput"
+              value={draft.rawName}
+              disabled={busy}
+              onChange={(event) => edit({ type: "name", value: event.target.value })}
+            />
           </label>
           {issues
             .filter(({ path }) => path === "$.rawName")
@@ -521,6 +530,27 @@ export function ThemeEditor({
                 {issue.message}
               </p>
             ))}
+
+          <div className="themeEditorBaseActions">
+            <label className="themeNameControl">
+              <span>Base theme</span>
+              <select
+                className="textInput"
+                value={draft.record.base.id}
+                disabled={busy}
+                onChange={(event) => edit({ type: "base", presetId: event.target.value as BuiltinColorBaseId })}
+              >
+                {BUILTIN_PRESETS.map(({ id, label }) => (
+                  <option value={id} key={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="ghost" disabled={busy} onClick={() => edit({ type: "reset-all" })}>
+              Reset all overrides
+            </button>
+          </div>
 
           <section aria-labelledby="themeColorsTitle">
             <h3 id="themeColorsTitle">Colors</h3>

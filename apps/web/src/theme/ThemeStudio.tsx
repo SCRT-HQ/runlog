@@ -289,7 +289,7 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
         <section className="panel themeStudioUnavailable">
           <h2>Theme library unavailable</h2>
           <p className="dangerText">{themes.problem ?? "Local theme storage is unavailable."}</p>
-          <button type="button" className="ghost" onClick={() => void themes.reload()}>
+          <button type="button" className="ghost" onClick={() => void themes.reload().catch(() => undefined)}>
             Try again
           </button>
         </section>

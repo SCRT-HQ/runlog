@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { COLOR_DEFINITIONS, FONT_DEFINITIONS, FONT_ROLE_DEFINITIONS, createThemeRecordFromPreset, isFontAllowed } from "@runlog/themes";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ThemeDraftV1 } from "./themeDraft.ts";
@@ -27,6 +27,14 @@ function stored(value = draft(), localRevision = 7): StoredThemeDraft {
 
 function saved(value: ThemeDraftV1, localRevision = 4): SavedThemeRow {
   return { kind: "saved", id: value.record.id, localRevision, record: value.record };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((yes) => {
+    resolve = yes;
+  });
+  return { promise, resolve };
 }
 
 function commands(): ThemeEditorCommands {
@@ -194,5 +202,68 @@ describe("theme editor", () => {
     const second = vi.mocked(on.finalizeDraft).mock.calls[1]?.[0];
     expect(second?.expectedLocalRevision).toBeNull();
     expect(second?.record.id).not.toBe("theme_one");
+  });
+
+  it.each([
+    { label: "Save", asCopy: false },
+    { label: "Save and apply", asCopy: false },
+    { label: "Save as new copy", asCopy: true },
+  ])("locks every mutation control while $label is finalizing", async ({ label, asCopy }) => {
+    const on = commands();
+    const pending = deferred<Awaited<ReturnType<ThemeEditorCommands["finalizeDraft"]>>>();
+    if (asCopy) {
+      vi.mocked(on.finalizeDraft)
+        .mockResolvedValueOnce({ ok: false, reason: "conflict", current: saved(draft(), 9) })
+        .mockImplementationOnce(() => pending.promise);
+    } else {
+      vi.mocked(on.finalizeDraft).mockImplementationOnce(() => pending.promise);
+    }
+    render(<ThemeEditor scopeKey="anon:themes" initialDraft={draft()} storedDraft={stored()} commands={on} onClose={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("Theme name"), { target: { value: "Name at save" } });
+    if (asCopy) {
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await screen.findByRole("button", { name: "Save as new copy" });
+    }
+    fireEvent.click(screen.getByRole("button", { name: label }));
+
+    await waitFor(() => expect(on.finalizeDraft).toHaveBeenCalledTimes(asCopy ? 2 : 1));
+    expect((screen.getByLabelText("Theme name") as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByLabelText("Primary text") as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Reset Primary text" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByLabelText("UI and controls") as HTMLSelectElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Reset UI and controls" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByLabelText("Base theme") as HTMLSelectElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Reset all overrides" }) as HTMLButtonElement).disabled).toBe(true);
+
+    await act(async () => pending.resolve({ ok: true, value: saved(draft(), 10) }));
+    await screen.findByText(label === "Save and apply" ? "Saved on this device and applied" : "Saved on this device");
+  });
+
+  it("switches base without losing invalid input and Reset all clears overrides without applying", () => {
+    const on = commands();
+    render(<ThemeEditor scopeKey="anon:themes" initialDraft={draft()} storedDraft={stored()} commands={on} onClose={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("Theme name"), { target: { value: "Keep this name" } });
+    fireEvent.change(screen.getByLabelText("Accent"), { target: { value: "#123456" } });
+    fireEvent.change(screen.getByLabelText("Primary text"), { target: { value: "#12" } });
+    fireEvent.change(screen.getByLabelText("Base theme"), { target: { value: "cyberpunk-neon" } });
+
+    expect((screen.getByLabelText("Base theme") as HTMLSelectElement).value).toBe("cyberpunk-neon");
+    expect((screen.getByLabelText("Primary text") as HTMLInputElement).value).toBe("#12");
+    expect((screen.getByLabelText("Accent") as HTMLInputElement).value).toBe("#123456");
+    expect(screen.getByText(/Invalid opaque color/)).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset all overrides" }));
+
+    expect((screen.getByLabelText("Theme name") as HTMLInputElement).value).toBe("Keep this name");
+    expect((screen.getByLabelText("Base theme") as HTMLSelectElement).value).toBe("cyberpunk-neon");
+    expect((screen.getByLabelText("Primary text") as HTMLInputElement).value).not.toBe("#12");
+    expect((screen.getByLabelText("Accent") as HTMLInputElement).value).not.toBe("#123456");
+    expect(screen.queryByText(/Invalid opaque color/)).toBeNull();
+    expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole("button", { name: "Apply" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(on.applySaved).not.toHaveBeenCalled();
   });
 });

@@ -53,6 +53,10 @@ interface RepositoryHandle extends ScopeIdentity {
   readonly repository: ThemeRepository;
 }
 
+interface RepositoryReopening extends ScopeIdentity {
+  readonly promise: Promise<void>;
+}
+
 const EMPTY_LIBRARY: readonly SavedThemeRow[] = Object.freeze([]);
 const EMPTY_DRAFTS: readonly StoredThemeDraft[] = Object.freeze([]);
 const SYSTEM_APPEARANCE: BootAppearanceV1 = Object.freeze({ schemaVersion: 1, mode: "system" });
@@ -117,6 +121,8 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
   const latestAppearance = useRef(appearance);
   latestAppearance.current = appearance;
   const who = whoForAccount(account);
+  const whoRef = useRef(who);
+  whoRef.current = who;
   const expectedScopeKey = scopeFor(who);
   const identityRef = useRef<ScopeIdentity>({ scopeKey: expectedScopeKey, generation: 0 });
   if (identityRef.current.scopeKey !== expectedScopeKey) {
@@ -124,6 +130,8 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
   }
   const identity = identityRef.current;
   const repositoryRef = useRef<RepositoryHandle | null>(null);
+  const reopeningRef = useRef<RepositoryReopening | null>(null);
+  const mountedRef = useRef(true);
   const [state, setState] = useState<ProviderState>(() => ({
     ...identity,
     status: identity.scopeKey === null ? "checking" : "loading",
@@ -155,6 +163,13 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
     }
     return handle;
   };
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (who === null || identity.scopeKey === null) {
@@ -213,6 +228,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
         if (cancelled || !isCurrent(identity)) return;
         if (opened !== null) opened.repository.close();
         if (repositoryRef.current === opened) repositoryRef.current = null;
+        opened = null;
         setState({
           ...identity,
           status: "unavailable",
@@ -226,8 +242,13 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
 
     return () => {
       cancelled = true;
-      if (opened !== null) opened.repository.close();
-      if (repositoryRef.current === opened) repositoryRef.current = null;
+      const current = repositoryRef.current;
+      if (current !== null && current.scopeKey === identity.scopeKey && current.generation === identity.generation) {
+        current.repository.close();
+        repositoryRef.current = null;
+      } else if (opened !== null) {
+        opened.repository.close();
+      }
     };
   }, [identity.generation, identity.scopeKey]); // who is represented by the synchronous scope identity.
 
@@ -257,29 +278,82 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
       return result;
     };
 
+    const refresh = async (handle: RepositoryHandle): Promise<void> => {
+      const repository = assertCurrent(handle);
+      const [library, drafts, storedSource] = await Promise.all([
+        repository.listLibrary(),
+        repository.listDrafts(),
+        repository.loadAppliedSource(),
+      ]);
+      assertCurrent(handle);
+      const key = appearanceSnapshotKey(latestAppearance.current);
+      const appliedSource = storedSource !== null && key !== null && storedSource.snapshotKey === key ? storedSource : null;
+      updateCurrent(handle, (before) => ({
+        ...before,
+        status: "ready",
+        library,
+        drafts,
+        problem: null,
+        appliedSource,
+        sourceRemoved: appliedSource !== null && !library.some(({ id }) => id === appliedSource.id),
+      }));
+    };
+
     const reload = async (): Promise<void> => {
-      await withRepository(async (repository, handle) => {
-        const [library, drafts, storedSource] = await Promise.all([
-          repository.listLibrary(),
-          repository.listDrafts(),
-          repository.loadAppliedSource(),
-        ]);
-        assertCurrent(handle);
-        const key = appearanceSnapshotKey(latestAppearance.current);
-        const appliedSource = storedSource !== null && key !== null && storedSource.snapshotKey === key ? storedSource : null;
-        updateCurrent(handle, (before) => ({
-          ...before,
-          status: "ready",
-          library,
-          drafts,
-          problem: null,
-          appliedSource,
-          sourceRemoved: appliedSource !== null && !library.some(({ id }) => id === appliedSource.id),
-        }));
-      }).catch((error: unknown) => {
-        updateCurrent(identity, (before) => ({ ...before, problem: messageFor(error) }));
-        throw error;
-      });
+      const available = repositoryRef.current;
+      if (
+        available !== null &&
+        available.scopeKey === identity.scopeKey &&
+        available.generation === identity.generation &&
+        isCurrent(available)
+      ) {
+        await refresh(available).catch((error: unknown) => {
+          updateCurrent(identity, (before) => ({ ...before, problem: messageFor(error) }));
+          throw error;
+        });
+        return;
+      }
+
+      const currentWho = whoRef.current;
+      if (currentWho === null || identity.scopeKey === null || !isCurrent(identity)) throw unavailableError();
+      const reopening = reopeningRef.current;
+      if (reopening !== null && reopening.scopeKey === identity.scopeKey && reopening.generation === identity.generation) {
+        return reopening.promise;
+      }
+
+      updateCurrent(identity, (before) => ({ ...before, status: "loading", problem: null }));
+      const promise = (async () => {
+        let repository: ThemeRepository | null = null;
+        try {
+          repository = await openThemeRepository(currentWho);
+          const handle: RepositoryHandle = { ...identity, repository };
+          if (!mountedRef.current || !isCurrent(handle)) throw staleError();
+          repositoryRef.current = handle;
+          await refresh(handle);
+          repository = null;
+        } catch (error) {
+          const handle = repositoryRef.current;
+          if (handle !== null && handle.repository === repository) repositoryRef.current = null;
+          repository?.close();
+          updateCurrent(identity, (before) => ({
+            ...before,
+            status: "unavailable",
+            library: EMPTY_LIBRARY,
+            drafts: EMPTY_DRAFTS,
+            problem: messageFor(error),
+            appliedSource: null,
+            sourceRemoved: false,
+          }));
+          throw error;
+        }
+      })();
+      const attempt: RepositoryReopening = { ...identity, promise };
+      reopeningRef.current = attempt;
+      try {
+        await promise;
+      } finally {
+        if (reopeningRef.current === attempt) reopeningRef.current = null;
+      }
     };
 
     const saveTheme: ThemeRepository["saveTheme"] = async (input) =>
@@ -355,8 +429,18 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
       });
 
     const applyAppearance = async (next: BootAppearanceV1, source: AppliedThemeSourceV1 | null): Promise<void> => {
-      const handle = captureRepository(identity);
+      if (!isCurrent(identity)) throw staleError();
       setDeviceAppearance(next);
+      const handle = repositoryRef.current;
+      if (handle === null || handle.scopeKey !== identity.scopeKey || handle.generation !== identity.generation || !isCurrent(handle)) {
+        updateCurrent(identity, (before) => ({
+          ...before,
+          problem: "Appearance applied, but its library source could not be saved: Theme library is unavailable",
+          appliedSource: null,
+          sourceRemoved: false,
+        }));
+        return;
+      }
       try {
         await handle.repository.saveAppliedSource(source);
         assertCurrent(handle);

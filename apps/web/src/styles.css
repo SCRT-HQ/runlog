@@ -8723,6 +8723,18 @@ html[data-pip="controls"] body {
   width: 100%;
   min-width: 0;
 }
+.themeEditorBaseActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+.themeEditorBaseActions select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
 
 .themeEditorLayout {
   display: grid;
@@ -8819,6 +8831,20 @@ html[data-pip="controls"] body {
   transform: scale(var(--theme-preview-scale));
   transform-origin: top left;
 }
+.themeWidgetPreview {
+  color: var(--text);
+  font: 16px/1.55 var(--serif);
+  font-optical-sizing: auto;
+}
+.themeWidgetPreview[data-preview-widget-background="solid"] {
+  background: var(--bg);
+}
+.themeWidgetPreview[data-preview-widget-background="clear"] {
+  background: transparent;
+}
+.themeWidgetPreview[data-preview-widget-background="none"] {
+  background: transparent;
+}
 .themeWidgetPreview .widget {
   min-height: 0;
 }
@@ -8830,9 +8856,13 @@ html[data-pip="controls"] body {
 }
 .themeWidgetPreview[data-preview-widget-background="none"] .widget {
   background: transparent;
+  padding: 0;
 }
 .themeWidgetPreview[data-preview-widget-background="none"] .widgetBody {
   background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 .themeContrastReport {
   display: grid;
@@ -8908,6 +8938,12 @@ html[data-pip="controls"] body {
   .themeEditorActions > button,
   .themeLibraryTools > *,
   .themeCardActions > button {
+    width: 100%;
+  }
+  .themeEditorBaseActions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .themeEditorBaseActions > button {
     width: 100%;
   }
 }

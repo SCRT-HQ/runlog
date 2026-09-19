@@ -190,7 +190,13 @@ describe("the theme studio layout boundary", () => {
     expect(finalDeclaration(".themeWidgetScale", "transform")).toBe("scale(var(--theme-preview-scale))");
   });
 
-  it("recreates all three widget background modes inside the nested preview without root attributes", () => {
+  it("recreates the widget document foreground, font, ground, and all three background modes inside the nested preview", () => {
+    expect(finalDeclaration(".themeWidgetPreview", "color")).toBe("var(--text)");
+    expect(finalDeclaration(".themeWidgetPreview", "font")).toBe("16px/1.55 var(--serif)");
+    expect(finalDeclaration(".themeWidgetPreview", "font-optical-sizing")).toBe("auto");
+    expect(finalDeclaration('.themeWidgetPreview[data-preview-widget-background="solid"]', "background")).toBe("var(--bg)");
+    expect(finalDeclaration('.themeWidgetPreview[data-preview-widget-background="clear"]', "background")).toBe("transparent");
+    expect(finalDeclaration('.themeWidgetPreview[data-preview-widget-background="none"]', "background")).toBe("transparent");
     expect(finalDeclaration('.themeWidgetPreview[data-preview-widget-background="solid"] .widgetBody', "background")).toBe(
       "color-mix(in srgb, var(--panel) 92%, transparent)",
     );
@@ -198,6 +204,10 @@ describe("the theme studio layout boundary", () => {
       "color-mix(in srgb, var(--panel) 82%, transparent)",
     );
     expect(finalDeclaration('.themeWidgetPreview[data-preview-widget-background="none"] .widgetBody', "background")).toBe("transparent");
+    expect(finalDeclaration('.themeWidgetPreview[data-preview-widget-background="none"] .widget', "padding")).toBe("0");
+    expect(finalDeclaration('.themeWidgetPreview[data-preview-widget-background="none"] .widgetBody', "border-color")).toBe("transparent");
+    expect(finalDeclaration('.themeWidgetPreview[data-preview-widget-background="none"] .widgetBody', "box-shadow")).toBe("none");
+    expect(finalDeclaration('.themeWidgetPreview[data-preview-widget-background="none"] .widgetBody', "padding")).toBe("0");
     expect(finalDeclaration(".themeWidgetPreview .widget", "min-height")).toBe("0");
   });
 
