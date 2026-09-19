@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { addressOf } from "../route.ts";
 import {
   APPEARANCE_KEY,
   isThemeRecoveryAddress,
@@ -14,7 +15,8 @@ const listeners = new Set<() => void>();
 function initialAppearance(): BootAppearanceV1 {
   let recovery = false;
   try {
-    recovery = isThemeRecoveryAddress(globalThis.location.hash);
+    const configuredBase = import.meta.env.BASE_URL.startsWith("/") ? import.meta.env.BASE_URL : null;
+    recovery = isThemeRecoveryAddress(addressOf(globalThis.location, configuredBase));
   } catch {
     // A non-browser render has no recovery address and no device storage.
   }

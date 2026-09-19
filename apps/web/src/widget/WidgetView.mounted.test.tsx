@@ -4,11 +4,17 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { useLayoutEffect, type ReactNode } from "react";
+import { flushSync } from "react-dom";
+import { createRoot } from "react-dom/client";
 import { WidgetView } from "./WidgetView.tsx";
 import { WIDGET_KINDS, type WidgetKind } from "./route.ts";
 import type { LiveSnapshot } from "../live/snapshot.ts";
 import { setDeviceAppearance } from "../theme/useAppearance.ts";
 import { snapshotForBuiltin } from "../theme/appearance.ts";
+import { ThemeProvider } from "../theme/ThemeProvider.tsx";
+import { AccountContext } from "../auth/Account.tsx";
+import { applyTheme } from "../theme/theme.ts";
 
 const publicRun = vi.hoisted(() => ({
   got: undefined as unknown,
@@ -213,6 +219,45 @@ describe("linked widget states", () => {
     page.unmount();
     expect(document.documentElement.dataset.theme).toBeUndefined();
     expect(document.documentElement.style.getPropertyValue("--bg")).toBe("#ededeb");
+  });
+
+  it("claims widget root ownership before a parent ThemeProvider layout effect can replace the booted pin", () => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false });
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("daylight") });
+    applyTheme("ember", document.documentElement, "widget");
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    let firstCommitBackground = "not observed";
+    function FirstCommitProbe({ children }: { children: ReactNode }) {
+      useLayoutEffect(() => {
+        firstCommitBackground = document.documentElement.style.getPropertyValue("--bg");
+      }, []);
+      return children;
+    }
+
+    flushSync(() => {
+      root.render(
+        <FirstCommitProbe>
+          <AccountContext.Provider value={{ status: "checking", signIn: vi.fn() }}>
+            <ThemeProvider>
+              <WidgetView route={{ kind: "stats", runId: "run-1", bg: "solid", scale: 1, theme: "ember", token: "live-token" }} />
+            </ThemeProvider>
+          </AccountContext.Provider>
+        </FirstCommitProbe>,
+      );
+    });
+
+    const committedWidget = document.documentElement.dataset.widget;
+    const committedTheme = document.documentElement.dataset.theme;
+    const committedBackground = document.documentElement.style.getPropertyValue("--bg");
+    flushSync(() => root.unmount());
+    container.remove();
+
+    expect(firstCommitBackground).toBe("#1a1210");
+    expect(committedWidget).toBe("solid");
+    expect(committedTheme).toBe("ember");
+    expect(committedBackground).toBe("#1a1210");
   });
 
   it("follows a newer device Apply in widget scope and restores that same appearance on cleanup", () => {

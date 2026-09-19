@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { APPEARANCE_KEY, snapshotForBuiltin, type BootAppearanceV1 } from "./appearance.ts";
+import { APPEARANCE_KEY, applyBootAppearance, snapshotForBuiltin, type BootAppearanceV1 } from "./appearance.ts";
 
 afterEach(() => {
   cleanup();
   localStorage.clear();
   history.replaceState(null, "", "/");
+  document.documentElement.removeAttribute("data-theme");
+  for (const property of [...document.documentElement.style]) {
+    if (property.startsWith("--") || property === "color-scheme") document.documentElement.style.removeProperty(property);
+  }
   vi.restoreAllMocks();
   vi.resetModules();
 });
@@ -29,6 +33,29 @@ describe("device appearance store", () => {
 
     expect(screen.getByText("system")).toBeTruthy();
     expect(read).not.toHaveBeenCalled();
+  });
+
+  it("selects recovery System from the real hosted path before the provider can restore a stored snapshot", async () => {
+    const stored = { schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("ember") } as const;
+    localStorage.setItem(APPEARANCE_KEY, JSON.stringify(stored));
+    applyBootAppearance(stored, document.documentElement);
+    history.replaceState(null, "", "/themes/recovery");
+    const read = vi.spyOn(Storage.prototype, "getItem");
+
+    const { ThemeProvider } = await import("./ThemeProvider.tsx");
+    const { useAppearance } = await loadStore();
+    function Probe() {
+      return <output>{useAppearance().mode}</output>;
+    }
+    render(
+      <ThemeProvider>
+        <Probe />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByText("system")).toBeTruthy();
+    expect(read).not.toHaveBeenCalled();
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe("");
   });
 
   it("writes and validates before publishing a frozen in-tab value", async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { formatClock, reduce, type RunEvent, type RunState } from "@runlog/engine";
 import { loadPack, loadRun, type StoredRun } from "../storage/db.ts";
@@ -40,7 +40,7 @@ export function WidgetView({ route }: { route: WidgetRoute }) {
   // boot in main.tsx applies the pinned theme before the first paint;
   // this keeps it applied should the address change under a running page,
   // and hands the machine its own choice back on the way out.
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement;
     root.dataset["widget"] = route.bg;
     root.style.fontSize = `${16 * route.scale}px`;

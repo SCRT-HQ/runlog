@@ -26,6 +26,7 @@ describe("an address, as a hash and as a path", () => {
     ["#link/discord?verified=1", "/link/discord?verified=1"],
     ["#create", "/create"],
     ["#create/tables", "/create/tables"],
+    ["#themes/recovery", "/themes/recovery"],
   ];
 
   it("spells every section at the root where paths are on, and reads it back", () => {

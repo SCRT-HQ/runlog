@@ -175,6 +175,26 @@ describe("account-scoped theme provider", () => {
     expect(localStorage.getItem(APPEARANCE_KEY)).toBe(appliedJson);
   });
 
+  it("returns the repository's stale CAS conflict exactly without retrying or optimistically upserting", async () => {
+    const first = row("custom", "First", 2, 2);
+    const attempted = record("custom", "Attempted", 2);
+    const newer = row("custom", "Newer elsewhere", 3, 3);
+    const conflict = Object.freeze({ ok: false, reason: "conflict", current: newer } as const);
+    const repo = repository("runlog:themes", [first]);
+    repo.loadTheme = vi.fn().mockResolvedValue(first);
+    repo.saveTheme = vi.fn().mockResolvedValue(conflict);
+    openRepository.mockResolvedValue(repo);
+    render(<Providers account={local} />);
+    await waitFor(() => expect(screen.getByTestId("names").textContent).toBe("First"));
+
+    const result = await current.saveTheme({ record: attempted, expectedLocalRevision: 2 });
+
+    expect(result).toBe(conflict);
+    expect(repo.saveTheme).toHaveBeenCalledTimes(1);
+    expect(repo.saveTheme).toHaveBeenCalledWith({ record: attempted, expectedLocalRevision: 2 });
+    expect(screen.getByTestId("names").textContent).toBe("First");
+  });
+
   it("keeps applied values and exposes a warning when source metadata cannot be saved", async () => {
     const saved = row("custom", "Custom", 2, 2);
     const repo = repository("runlog:themes", [saved]);
