@@ -7,6 +7,18 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { StartScreen } from "./StartScreen.tsx";
 
+// The shipped setups and profiles are read from disk by SetupPicker's effect.
+// This suite is about the parent screen and ends synchronously, so leave that
+// separately tested I/O out rather than tearing its imports down mid-read.
+vi.mock("../control/setups.ts", async (original) => ({
+  ...(await original<typeof import("../control/setups.ts")>()),
+  setupsHere: async () => [],
+}));
+vi.mock("../control/builtin.ts", async (original) => ({
+  ...(await original<typeof import("../control/builtin.ts")>()),
+  builtins: async () => [],
+}));
+
 /**
  * The order the setup asks in, and what it refuses to ask twice.
  *

@@ -2878,6 +2878,7 @@ select.textInput {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
+  padding-block: var(--space-2);
 }
 .connectionsPanel .connectionsIdentity {
   flex: 1 1 12rem;
@@ -2896,8 +2897,31 @@ select.textInput {
 .connectionsPanel .connectionsActions {
   flex: 0 1 auto;
   max-width: 100%;
+  margin-inline-start: auto;
   justify-content: flex-end;
   gap: var(--space-2);
+  padding-block: 0;
+  border-top: 0;
+}
+.connectionsPanel .connectionsHelp .connectionsActions {
+  flex: 1 1 20rem;
+}
+.connectionsPanel .connectionsInstructions {
+  flex: 1 1 12rem;
+}
+.connectionsPanel .connectionsStatus {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin: 0;
+  padding-block: var(--space-2);
+}
+.connectionsPanel .connectionsStatusMessage {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .shareNotice {
   display: flex;

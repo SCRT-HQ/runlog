@@ -90,7 +90,20 @@ jobs:
       # its console output, and the step below turns it into a check with
       # every test named, so a failure here reads the way a failure there
       # already did instead of sending somebody into the log.
-      - run: npm run test:ci
+      - id: tests
+        run: npm run test:ci
+
+      - name: Upload app and engine test reports
+        uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && (steps.tests.outcome == 'success' || steps.tests.outcome == 'failure') }}
+        with:
+          name: app-engine-test-reports-node-${{ matrix.node-version }}
+          path: |
+            junit.xml
+            reports/tests/**
+            coverage/**
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Publish the app and engine test results
         uses: dorny/test-reporter@v3
@@ -148,13 +161,26 @@ jobs:
       # a synthesized template, so the tests need an account id to render
       # into ARNs and nothing more. A stand-in does that on a fork's pull
       # request as well as here, and keeps the real ids out of the picture.
-      - name: Test the hosting against ${{ matrix.aws-environment }}
+      - id: tests
+        name: Test the hosting against ${{ matrix.aws-environment }}
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
           AWS_ENVIRONMENT: ${{ matrix.aws-environment }}
           CDK_DEFAULT_ACCOUNT: "123456789012"
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
         run: npm run test:ci -w hosted/infra
+
+      - name: Upload the hosting test reports for ${{ matrix.aws-environment }}
+        uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && (steps.tests.outcome == 'success' || steps.tests.outcome == 'failure') }}
+        with:
+          name: hosting-test-reports-${{ matrix.aws-environment }}
+          path: |
+            hosted/infra/junit.xml
+            hosted/infra/reports/tests/**
+            hosted/infra/coverage/**
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Publish the hosting's test results for ${{ matrix.aws-environment }}
         uses: dorny/test-reporter@v3

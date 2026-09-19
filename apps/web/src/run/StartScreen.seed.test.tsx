@@ -7,6 +7,18 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { loadPackText } from "@runlog/rules-schema";
 import { StartScreen } from "./StartScreen.tsx";
 
+// The shipped setups and profiles are read from disk by SetupPicker's effect.
+// Seed and race behavior does not use them, and this synchronous suite must not
+// leave those separately tested imports running after jsdom is torn down.
+vi.mock("../control/setups.ts", async (original) => ({
+  ...(await original<typeof import("../control/setups.ts")>()),
+  setupsHere: async () => [],
+}));
+vi.mock("../control/builtin.ts", async (original) => ({
+  ...(await original<typeof import("../control/builtin.ts")>()),
+  builtins: async () => [],
+}));
+
 /**
  * The seed is the only thing that decides whether a run is seeded.
  *
