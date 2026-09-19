@@ -4,9 +4,26 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Api, PublisherPack, PublisherView } from "../sync/client.ts";
-import { PublisherPacks } from "./PublisherSection.tsx";
+import type { Plan } from "../sync/usePlan.ts";
+import { PublisherPacks, PublisherSection } from "./PublisherSection.tsx";
+
+const planBoundary = vi.hoisted(() => ({
+  value: {
+    state: {
+      kind: "ready",
+      ownerId: "A",
+      gates: true,
+      capabilities: { hostTables: false, waivePublisherFee: false, hostServers: false },
+      offers: { servers: false, serversOpen: false, publishersOpen: true },
+    },
+    access: () => "upgrade",
+    refresh: async () => {},
+  } as Plan,
+}));
+vi.mock("../sync/usePlan.ts", () => ({ usePlan: () => planBoundary.value }));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -227,5 +244,30 @@ describe("a publisher's packs in the marketplace", () => {
     });
     await settle();
     expect(removed).toBe(true);
+  });
+});
+
+describe("publisher discovery", () => {
+  afterEach(cleanup);
+
+  it("shows and retries a publisher read failure instead of offering publisher creation", async () => {
+    let attempt = 0;
+    const api = {
+      myPublisher: vi.fn(async () => {
+        attempt += 1;
+        if (attempt === 1) throw new Error("offline");
+        return null;
+      }),
+    } as unknown as Api;
+
+    render(<PublisherSection api={api} />);
+
+    expect(await screen.findByText(/publisher could not be loaded/i)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Become a publisher" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByRole("button", { name: "Become a publisher" })).toBeTruthy();
+    expect(api.myPublisher).toHaveBeenCalledTimes(2);
   });
 });

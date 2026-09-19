@@ -243,12 +243,14 @@ describe("the profile's pages", () => {
   it("reads a page from the hash, and a bare #profile as the first one", () => {
     expect(profilePageFromHash("#profile")).toBe("profile");
     expect(profilePageFromHash("#profile/publishing")).toBe("publishing");
+    expect(profilePageFromHash("#profile/developer")).toBe("developer");
     expect(profilePageFromHash("#profile/account")).toBe("account");
     expect(profilePageFromHash("#profile/social")).toBe("social");
     expect(profilePageFromHash("#profile/servers")).toBe("servers");
     expect(profilePageFromHash("#profile/nonsense")).toBe("profile");
     expect(profilePageFromHash("#guide")).toBeNull();
     expect(profileHash("profile")).toBe("#profile");
+    expect(profileHash("developer")).toBe("#profile/developer");
     expect(profileHash("social")).toBe("#profile/social");
   });
 
@@ -287,12 +289,17 @@ describe("the profile's pages", () => {
     expect(page(signedIn, { page: "servers" })).not.toContain("Discord asked to claim");
   });
 
-  it("renders Publishing as one paragraph and a link to the Designer, with no publisher, no listings and no keys", () => {
+  it("renders Publishing without developer-key controls", () => {
     const html = page(signedIn, { page: "publishing" });
     expect(html).toContain("<h2>Publishing</h2>");
-    expect(html).toContain('href="#create"');
-    expect(html).not.toContain("Nothing uploaded yet");
-    expect(html).not.toContain("Reading…");
+    expect(html).not.toContain("Command line");
+    expect(html).not.toContain("RUNLOG_API_KEY");
+  });
+
+  it("renders Developer keys as its own signed-in page", () => {
+    const html = page(signedIn, { page: "developer" });
+    expect(html).toContain("<h2>Developer keys</h2>");
+    expect(html).toContain("Sign in on a hosted address to make a key for the command line.");
   });
 
   it("renders Account: the plan, purchases, license keys, your data, and sign-out", () => {
@@ -390,6 +397,7 @@ describe("profile page policy", () => {
     expect(railIds(page(signedIn, { page: "profile" }))).toEqual([
       "#profile",
       "#profile/publishing",
+      "#profile/developer",
       "#profile/account",
       "#profile/social",
       "#profile/servers",

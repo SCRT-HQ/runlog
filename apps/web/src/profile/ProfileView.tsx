@@ -1,18 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAccount, type Account } from "../auth/Account.tsx";
 import { useSync, type Sync } from "../sync/SyncProvider.tsx";
-import {
-  createApi,
-  SyncError,
-  type Api,
-  type ApiKey,
-  type Claim,
-  type KeyScope,
-  type Person,
-  type Profile,
-  type PublisherInvitation,
-  type PublisherView,
-} from "../sync/client.ts";
+import { createApi, SyncError, type Api, type Person, type Profile, type PublisherInvitation } from "../sync/client.ts";
 import { apiBase } from "../sync/config.ts";
 import { syncBus } from "../sync/bus.ts";
 import { rememberProfile } from "../sync/useProfile.ts";
@@ -32,10 +21,10 @@ import { useTitle } from "../title.ts";
 import { DeviceSettings } from "../settings/DeviceSettings.tsx";
 import { SetupsSection } from "./SetupsSection.tsx";
 import { useAlertSettings } from "../alerts/useAlerts.ts";
-import { linkTo } from "../route.ts";
 import { ConnectionsSection } from "../connections/ConnectionsSection.tsx";
 import { PlanSection } from "./PlanSection.tsx";
 import { PublisherSection } from "./PublisherSection.tsx";
+import { DeveloperKeysPage } from "./DeveloperKeysPage.tsx";
 import { PurchasesSection } from "./PurchasesSection.tsx";
 import { ServersPage } from "./ServersPage.tsx";
 import { DataExport, ServerDelete } from "./DataActions.tsx";
@@ -308,6 +297,7 @@ function AccountProfile({
     );
   }
   if (page === "publishing") return <PublishingPage api={api} />;
+  if (page === "developer") return <DeveloperKeysPage api={api} />;
   if (page === "account") {
     return (
       <AccountPage
@@ -534,61 +524,12 @@ function CopyId({ id }: { id: string }) {
   );
 }
 
-/**
- * What the account sells, and the keys that stand for it: publishing, CLI
- * keys and signing keys claimed. Someone who is not a publisher and has
- * made neither kind of key sees one paragraph and a way to start, rather
- * than three empty tables.
- */
+/** What the account sells: its publisher organization and marketplace listings. */
 function PublishingPage({ api }: { api: Api | null }) {
-  const [publisher, setPublisher] = useState<PublisherView | null | undefined>(undefined);
-  const [keys, setKeys] = useState<ApiKey[] | undefined>(undefined);
-  const [claims, setClaims] = useState<Claim[] | undefined>(undefined);
-
-  useEffect(() => {
-    if (!api) return;
-    let live = true;
-    void api.myPublisher().then(
-      (p) => live && setPublisher(p),
-      () => live && setPublisher(null),
-    );
-    void api.listKeys().then(
-      (k) => live && setKeys(k),
-      () => live && setKeys([]),
-    );
-    void api.listClaims().then(
-      (c) => live && setClaims(c),
-      () => live && setClaims([]),
-    );
-    return () => {
-      live = false;
-    };
-  }, [api]);
-
-  // Without an API there is nothing to read and nothing to do: that is the
-  // same "nothing here yet" state as a signed-in account that simply
-  // hasn't started, not a spinner stuck forever.
-  const noApi = !api;
-  const loading = !noApi && (publisher === undefined || keys === undefined || claims === undefined);
-  const empty = noApi || (!loading && !publisher && (keys?.length ?? 0) === 0 && (claims?.length ?? 0) === 0);
-
   return (
     <div className="profile profileApplication">
       <h2>Publishing</h2>
-      {loading ? null : empty ? (
-        <section className="panel">
-          <p className="muted small">
-            This is where a publisher lives: who else is in it, what you have listed for sale and what it has earned, hosted licensing, and
-            the command-line keys and signing keys tied to your account. Write a pack first, in the <a href={linkTo("#create")}>Designer</a>
-            .
-          </p>
-        </section>
-      ) : (
-        <>
-          <PublisherSection api={api} />
-          <CommandLine api={api} />
-        </>
-      )}
+      <PublisherSection api={api} />
     </div>
   );
 }
@@ -852,148 +793,6 @@ function ShownAs({
           "What people at a table, in a race, or watching a live link see. Blank shows the name on your account; your address is never shown."}
       </p>
     </div>
-  );
-}
-
-/**
- * The command line, as you. On your own machine `runlog login` signs in
- * through the browser and needs nothing from here; the keys made here are
- * for a machine with nobody at it, CI publishing a release, shown once.
- * Below them, the signing keys the account has claimed, which is what puts
- * your name beside a signature in the app.
- */
-function CommandLine({ api }: { api: Api | null }) {
-  const [keys, setKeys] = useState<ApiKey[]>([]);
-  const [claims, setClaims] = useState<Claim[]>([]);
-  const [name, setName] = useState("");
-  const [scope, setScope] = useState<KeyScope>("release");
-  const [fresh, setFresh] = useState<{ name: string; secret: string } | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const refresh = () => {
-    if (!api) return;
-    void api.listKeys().then(setKeys, () => {});
-    void api.listClaims().then(setClaims, () => {});
-  };
-  useEffect(refresh, [api]);
-
-  return (
-    <section className="panel">
-      <h3 className="sectionTitle">
-        Command line <span className="muted">keys for CI, and the signing keys you have claimed</span>
-      </h3>
-      {!api && <p className="muted small">Sign in on a hosted address to make a key for the command line.</p>}
-      {api && (
-        <p className="muted small">
-          On your own computer, <code>npx @scrthq/runlog login</code> signs in through this browser and needs no key. A key is for a machine
-          with nobody at it, such as CI publishing a release: set it as <code>RUNLOG_API_KEY</code> there. A key that only releases can
-          check, sign, publish and release packs and nothing else, so a leaked build secret cannot reach your runs, your sales or your
-          people.
-        </p>
-      )}
-      {api && (
-        <>
-          {keys.map((k) => (
-            <div key={k.id} className="row spread memberRow">
-              <span>
-                <strong>{k.name}</strong>
-                <span className="muted small mono"> {k.prefix}…</span>
-                {k.scope === "release" && <span className="chip state">releases only</span>}
-                <span className="muted small">
-                  {" "}
-                  · made {onDay(k.createdAt)}
-                  {k.lastUsedAt ? `, used ${onDay(k.lastUsedAt)}` : ", never used"}
-                </span>
-              </span>
-              <button className="ghost tiny" onClick={() => void api.revokeKey(k.id).then(refresh, () => {})}>
-                Revoke
-              </button>
-            </div>
-          ))}
-          {fresh ? (
-            <div className="freshKey">
-              <p className="small">
-                <strong>{fresh.name}</strong>: copy it now. It is not shown again.
-              </p>
-              <div className="licenseKey mono">{fresh.secret}</div>
-              <div className="padRow">
-                <button
-                  className="primary"
-                  onClick={() => {
-                    void navigator.clipboard?.writeText(fresh.secret);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 1500);
-                  }}
-                >
-                  {copied ? "Copied" : "Copy"}
-                </button>
-                <button className="ghost" onClick={() => setFresh(null)}>
-                  Done
-                </button>
-              </div>
-              <p className="muted small">
-                In CI, set it as <code>RUNLOG_API_KEY</code>. On a machine you sit at, <code>npx @scrthq/runlog login --key</code> and paste
-                it.
-              </p>
-            </div>
-          ) : (
-            <div className="inviteForm">
-              <input
-                className="textInput"
-                placeholder="what this key is for, e.g. laptop"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                aria-label="Name for the new key"
-              />
-              <select
-                value={scope}
-                onChange={(e) => setScope(e.target.value as KeyScope)}
-                aria-label="What the new key may do"
-                title="A release key checks, signs, publishes and releases packs, and nothing else: the one to leave in a build server's secrets. A full key is you on every route."
-              >
-                <option value="release">Releases only</option>
-                <option value="full">Everything</option>
-              </select>
-              <button
-                className="primary"
-                disabled={!name.trim() || busy}
-                onClick={() => {
-                  setBusy(true);
-                  void api
-                    .createKey(name.trim(), scope)
-                    .then(({ key, secret }) => {
-                      setFresh({ name: key.name, secret });
-                      setName("");
-                      refresh();
-                    })
-                    .catch(() => {})
-                    .finally(() => setBusy(false));
-                }}
-              >
-                {busy ? "Making…" : "Make a key"}
-              </button>
-            </div>
-          )}
-
-          <h4 className="stepLabel">Signing keys you have claimed</h4>
-          {claims.length === 0 ? (
-            <p className="muted small">
-              None yet. <code>npx @scrthq/runlog claim key.json</code> proves a signing key is yours; packs signed with it then show your
-              name.
-            </p>
-          ) : (
-            claims.map((c) => (
-              <div key={c.fingerprint} className="row spread memberRow">
-                <span className="mono small">{c.fingerprint}</span>
-                <button className="ghost tiny" onClick={() => void api.removeClaim(c.fingerprint).then(refresh, () => {})}>
-                  Remove
-                </button>
-              </div>
-            ))
-          )}
-        </>
-      )}
-    </section>
   );
 }
 

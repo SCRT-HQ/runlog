@@ -1,19 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { PROFILE_PAGES, profileAccessFor, visibleProfilePages, type ProfilePage, type ServerAvailability } from "./route.ts";
+import {
+  PROFILE_PAGES,
+  profileAccessFor,
+  profileHash,
+  profilePageFromHash,
+  visibleProfilePages,
+  type ProfilePage,
+  type ServerAvailability,
+} from "./route.ts";
 
-const IDS_WITH_SERVERS = ["profile", "publishing", "account", "social", "servers", "settings"];
-const IDS_WITHOUT_SERVERS = ["profile", "publishing", "account", "social", "settings"];
+const IDS_WITH_SERVERS = ["profile", "publishing", "developer", "account", "social", "servers", "settings"];
+const IDS_WITHOUT_SERVERS = ["profile", "publishing", "developer", "account", "social", "settings"];
 
 describe("profile page access", () => {
   it("describes every page available at this checkpoint without publishing a future route", () => {
     expect(PROFILE_PAGES).toEqual([
       { id: "profile", label: "Profile", audience: "account", applicability: "always" },
       { id: "publishing", label: "Publishing", audience: "account", applicability: "always" },
+      { id: "developer", label: "Developer keys", audience: "account", applicability: "always" },
       { id: "account", label: "Account", audience: "account", applicability: "always" },
       { id: "social", label: "Social", audience: "account", applicability: "always" },
       { id: "servers", label: "Servers", audience: "account", applicability: "servers" },
       { id: "settings", label: "Settings", audience: "any", applicability: "always" },
     ]);
+  });
+
+  it("parses and formats the Developer keys address", () => {
+    expect(profilePageFromHash("#profile/developer")).toBe("developer");
+    expect(profileHash("developer")).toBe("#profile/developer");
   });
 
   it.each([
@@ -51,7 +65,7 @@ describe("profile page access", () => {
   });
 
   it("applies the same account policy to every private non-server page", () => {
-    const pages: ProfilePage[] = ["profile", "publishing", "account", "social"];
+    const pages: ProfilePage[] = ["profile", "publishing", "developer", "account", "social"];
     for (const page of pages) {
       expect(profileAccessFor(page, "local", "available")).toEqual({ kind: "replace", page: "settings" });
       expect(profileAccessFor(page, "checking", "available")).toEqual({ kind: "checking" });

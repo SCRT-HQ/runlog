@@ -61,15 +61,22 @@ describe("the publisher tier's hold", () => {
     [{ kind: "loading", ownerId: "A" } as const, /Checking your plan/],
     [{ kind: "error", ownerId: "A", message: "offline" } as const, /plan could not be checked/],
   ])("does not expose the new-publisher form while plan state is $state.kind", async (state, message) => {
-    plan = { state, access: () => (state.kind === "error" ? "error" : "checking"), refresh: async () => {} };
+    const refresh = vi.fn(async () => {});
+    plan = { state, access: () => (state.kind === "error" ? "error" : "checking"), refresh };
     render(<PublisherSection api={api} />);
     await waitFor(() => expect(screen.getByText(message)).toBeTruthy());
     expect(screen.queryByText("Become a publisher")).toBeNull();
+    if (state.kind === "error") {
+      fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+      expect(refresh).toHaveBeenCalledOnce();
+    }
   });
 
-  it("retries a failed plan check while an existing publisher remains usable", async () => {
-    const refresh = vi.fn(async () => {});
-    plan = { state: { kind: "error", ownerId: "A", message: "offline" }, access: () => "error", refresh };
+  it.each([
+    ["held", planOf(true, false)],
+    ["in error", { state: { kind: "error", ownerId: "A", message: "offline" }, access: () => "error", refresh: async () => {} } as Plan],
+  ])("keeps an existing publisher's organization usable while the plan is %s", async (_description, publisherPlan) => {
+    plan = publisherPlan;
     const publisher: PublisherView = {
       id: "pub_1",
       name: "Cinder & Salt",
@@ -82,7 +89,21 @@ describe("the publisher tier's hold", () => {
       myPublisher: async () => publisher,
       publisherPacks: async () => [],
       publisherMembers: async () => ({ members: [], invitations: [] }),
-      sales: async () => [],
+      sales: async () => [
+        {
+          ref: "sale_1",
+          packId: "pack_1",
+          title: "Ember Trail",
+          buyerEmail: "buyer@example.test",
+          amount: 400,
+          currency: "usd",
+          fee: 20,
+          status: "fulfilled",
+          createdAt: "2026-01-01T00:00:00Z",
+          fulfilledAt: "2026-01-01T00:00:00Z",
+          revokedAt: null,
+        },
+      ],
     } as unknown as Api;
     render(
       <HostedProvider value={hosted}>
@@ -91,7 +112,9 @@ describe("the publisher tier's hold", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Publishing as Cinder & Salt" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(screen.getByText("Your packs in the marketplace")).toBeTruthy();
+    expect(screen.getByText("People in Cinder & Salt")).toBeTruthy();
+    expect(screen.getByText(/Payouts are set up/)).toBeTruthy();
+    expect(await screen.findByText("Sales")).toBeTruthy();
   });
 });
