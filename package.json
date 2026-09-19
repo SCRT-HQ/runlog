@@ -18,7 +18,8 @@
     "lint:docs": "markdownlint-cli2",
     "schema:emit": "node --experimental-strip-types packages/rules-schema/scripts/emit-schema.ts",
     "test": "vitest run",
-    "test:ci": "vitest run --reporter=default --reporter=junit --outputFile=junit.xml",
+    "test:ci": "vitest run --config vitest.report.config.ts",
+    "test:report": "vitest run --config vitest.report.config.ts",
     "stage": "node --experimental-strip-types scripts/stage.ts",
     "check:stage": "node --experimental-strip-types scripts/stage.ts 0.0.0-check && node packages/cli/stage/dist/runlog.js validate packs/demo/pack.yaml --strict && node -e \"import('./packages/cli/stage/dist/index.js').then(m => { if (typeof m.seal !== 'function') throw new Error('no seal export') })\"",
     "test:watch": "vitest",
@@ -40,6 +41,8 @@
   "devDependencies": {
     "@resvg/resvg-js": "2.6.2",
     "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "5.0.0",
+    "@vitest/ui": "5.0.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "esbuild": "^0.28.2",

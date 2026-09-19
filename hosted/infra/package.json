@@ -6,7 +6,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
-    "test:ci": "vitest run --reporter=default --reporter=junit --outputFile=junit.xml",
+    "test:ci": "vitest run --config vitest.report.config.ts",
+    "test:report": "vitest run --config vitest.report.config.ts",
     "synth": "cdk synth",
     "diff": "cdk diff",
     "deploy": "cdk deploy",
@@ -23,6 +24,8 @@
     "@aws-sdk/lib-dynamodb": "^3.1127.0",
     "@types/aws-lambda": "^8.10.163",
     "@types/node": "^22.7.9",
+    "@vitest/coverage-v8": "5.0.0",
+    "@vitest/ui": "5.0.0",
     "aws-cdk": "^2.1140.0",
     "esbuild": "^0.25.12",
     "tsx": "^4.23.13",

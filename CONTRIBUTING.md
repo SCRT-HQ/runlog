@@ -14,6 +14,8 @@ Two different things live here, and they have different rules.
 npm install
 npm run dev          # the app, on localhost
 npm test             # the whole suite
+npm run test:report  # root suite with browser-readable test and coverage reports
+npm run test:report -w hosted/infra # the hosting suite's separate reports
 npm run typecheck    # all four projects
 npm run check:packs  # every shipped pack, --strict
 npm run format       # prettier, over everything it owns
@@ -21,6 +23,10 @@ npm run build        # static output in apps/web/dist
 ```
 
 CI runs the same commands. If they pass locally they pass there.
+
+The reporting commands write a self-contained test report to `reports/tests/index.html` and coverage to `coverage/index.html`, relative to the suite being run. Ordinary `npm test` and watch mode skip report generation so the edit loop stays fast.
+
+The root coverage baseline is the product code in package, app and Stream Deck `src` directories, plus the package scripts, app-root modules and Stream Deck design modules that build those products. The hosting baseline is its `lib` and `bin` source. Repository operations, static hosted pages, tests, declarations and generated output are outside those code baselines.
 
 `npm install` also installs the git hooks, through husky's `prepare` script. There are two, and both are in `.husky/` where you can read them: `pre-commit` formats the files you staged, and `pre-push` checks that a pack you changed says so in its version. Neither is a gate. A hook is skipped by `npm ci --ignore-scripts`, walked past by `--no-verify`, and absent until somebody installs; CI asks both questions again and that is what decides.
 
