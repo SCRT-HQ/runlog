@@ -828,6 +828,29 @@ describe("profile access through application navigation", () => {
     expect(location.hash).toBe("#profile/publishing");
   });
 
+  it("keeps an anonymous Developer keys hashchange and renders both sign-in doors", async () => {
+    renderApp({ status: "anonymous", signIn: () => {}, signUp: () => {} });
+    history.replaceState(null, "", "#profile/developer");
+    act(() => window.dispatchEvent(new HashChangeEvent("hashchange")));
+
+    const profile = document.querySelector(".profileBody");
+    expect(profile).not.toBeNull();
+    await waitFor(() => expect(within(profile as HTMLElement).getByRole("button", { name: "Sign in" })).toBeTruthy());
+    expect(within(profile as HTMLElement).getByRole("button", { name: "Create an account" })).toBeTruthy();
+    expect(location.hash).toBe("#profile/developer");
+  });
+
+  it("boots a signed-in account directly into Developer keys", async () => {
+    history.replaceState(null, "", "#profile/developer");
+    whoIsHere({ kind: "account", id: signedIn.user.id });
+
+    renderApp(signedIn);
+
+    expect(await screen.findByRole("heading", { name: "Developer keys" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Developer keys" }).getAttribute("aria-current")).toBe("page");
+    expect(location.hash).toBe("#profile/developer");
+  });
+
   it("keeps a checking Account popstate at its requested address without mounting Account", async () => {
     renderApp({ status: "checking", signIn: () => {} });
     history.replaceState(null, "", "#profile/account");

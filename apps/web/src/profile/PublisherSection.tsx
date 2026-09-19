@@ -19,10 +19,14 @@ function publishersHeld(plan: ReturnType<typeof usePlan>): boolean {
   return plan.state.kind === "ready" && plan.state.gates && !plan.state.offers.publishersOpen;
 }
 
+type PublisherLoad =
+  { kind: "unavailable" } | { kind: "loading" } | { kind: "ready"; publisher: PublisherView | null } | { kind: "error"; message: string };
+
 export function PublisherSection({ api }: { api: Api | null }) {
   const hosted = useHosted();
   const plan = usePlan();
-  const [publisher, setPublisher] = useState<PublisherView | null | undefined>(undefined);
+  const [loadState, setLoadState] = useState<PublisherLoad>(() => (api ? { kind: "loading" } : { kind: "unavailable" }));
+  const [request, setRequest] = useState(0);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -30,8 +34,12 @@ export function PublisherSection({ api }: { api: Api | null }) {
   const [renaming, setRenaming] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!api) return;
+    if (!api) {
+      setLoadState({ kind: "unavailable" });
+      return;
+    }
     let live = true;
+    setLoadState({ kind: "loading" });
     let outcome: string | null = null;
     try {
       const url = new URL(location.href);
@@ -47,7 +55,7 @@ export function PublisherSection({ api }: { api: Api | null }) {
     void load.then(
       (p) => {
         if (!live) return;
-        setPublisher(p);
+        setLoadState({ kind: "ready", publisher: p });
         if (outcome === "connected")
           setNote(
             p?.connectReady
@@ -56,14 +64,43 @@ export function PublisherSection({ api }: { api: Api | null }) {
           );
         if (outcome === "connect-again") setNote("That link had expired. Set up payouts again to continue where you left off.");
       },
-      () => live && setPublisher(null),
+      (error: unknown) => {
+        if (!live) return;
+        setLoadState({
+          kind: "error",
+          message: error instanceof Error && error.message ? error.message : "That could not be read just now.",
+        });
+      },
     );
     return () => {
       live = false;
     };
-  }, [api]);
+  }, [api, request]);
 
-  if (!api || publisher === undefined) return null;
+  if (!api || loadState.kind === "unavailable") return null;
+  if (loadState.kind === "loading") {
+    return (
+      <section className="panel">
+        <h3 className="sectionTitle">Publishing</h3>
+        <p className="muted small">Reading your publisher…</p>
+      </section>
+    );
+  }
+  if (loadState.kind === "error") {
+    return (
+      <section className="panel">
+        <h3 className="sectionTitle">Publishing</h3>
+        <p className="muted small">
+          Publisher could not be loaded.{" "}
+          <button className="linkButton" onClick={() => setRequest((value) => value + 1)}>
+            Retry
+          </button>
+        </p>
+      </section>
+    );
+  }
+  const publisher = loadState.publisher;
+  const setPublisher = (next: PublisherView | null) => setLoadState({ kind: "ready", publisher: next });
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
