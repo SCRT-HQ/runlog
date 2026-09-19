@@ -930,6 +930,30 @@ describe("who is asking", () => {
     expect(body["profile"]).toEqual({ createdAt: "2026-09-06T12:00:00.000Z", lastSeenAt: "2026-09-06T12:00:00.000Z" });
   });
 
+  it("maps configured feature lookup keys to semantic capabilities", async () => {
+    const billing = memoryBilling();
+    await billing.putEntitlements("user_1", ["tables-v2", "fee-zero-v2"], "now");
+    const features = { plus: "tables-v2", hostedLicensing: "fee-zero-v2", server: "guild-host-v2" };
+    const d = deps(memoryStore(), { billing, gates: true, features });
+
+    expect((await call(request("GET", "/api/me"), d)).body["capabilities"]).toEqual({
+      hostTables: true,
+      waivePublisherFee: true,
+      hostServers: false,
+    });
+
+    const flagged = deps(memoryStore(), {
+      gates: true,
+      features,
+      verify: async () => ({ sub: "user_1", sid: "session_1", flags: ["guild-host-v2"] }),
+    });
+    expect((await call(request("GET", "/api/me"), flagged)).body["capabilities"]).toEqual({
+      hostTables: false,
+      waivePublisherFee: false,
+      hostServers: true,
+    });
+  });
+
   it("keeps the name and email the app reports, and refuses nonsense", async () => {
     const d = deps();
     const put = await call(request("PUT", "/api/me/profile", { body: { name: " Nate ", email: "n@example.com" } }), d);

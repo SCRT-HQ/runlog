@@ -387,6 +387,12 @@ export interface Profile {
   termsAcceptedAt?: string;
 }
 
+export interface PlanCapabilities {
+  hostTables: boolean;
+  waivePublisherFee: boolean;
+  hostServers: boolean;
+}
+
 export interface Me {
   sub: string;
   sid: string;
@@ -396,6 +402,8 @@ export interface Me {
   handleTaken?: boolean;
   /** Stripe feature keys; empty until billing exists. */
   entitlements: string[];
+  /** Stable account abilities derived by the server from its configured feature keys. */
+  capabilities: PlanCapabilities;
   /** Whether plans gate anything on this address. */
   gates?: boolean;
   /** Whether this copy offers the server tier at all (there is a bot), and whether the plan is on sale yet. */

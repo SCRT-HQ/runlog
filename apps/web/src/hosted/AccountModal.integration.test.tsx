@@ -44,7 +44,14 @@ const hosted = {
 const stale: Profile = { createdAt: "2026-01-01T00:00:00Z", lastSeenAt: "2026-01-01T00:00:00Z", name: "Nate" };
 const accepted: Profile = { ...stale, termsVersion: "v2", termsAcceptedAt: "2026-09-17T00:00:00Z", handleSetAt: "2026-01-02T00:00:00Z" };
 const api = {
-  me: async () => ({ sub: "user_ME", sid: "session", env: "test", profile: stale, entitlements: [] }),
+  me: async () => ({
+    sub: "user_ME",
+    sid: "session",
+    env: "test",
+    profile: stale,
+    entitlements: [],
+    capabilities: { hostTables: false, waivePublisherFee: false, hostServers: false },
+  }),
   putProfile: async () => accepted,
 } as unknown as Api;
 
