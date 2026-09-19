@@ -98,18 +98,48 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("theme studio integration", () => {
-  it("renders the provider library in a readable local palette and opens a registry-complete editor", () => {
+  it("inherits the applied chrome by default and opens a registry-complete editor without changing the root", () => {
     const rootBefore = document.documentElement.style.cssText;
     render(<ThemeStudio onBack={vi.fn()} registerLeaveGuard={vi.fn()} />);
 
     const studio = screen.getByRole("main");
-    expect(studio.style.getPropertyValue("--bg")).not.toBe("");
+    expect(studio.classList.contains("themeStudioControl")).toBe(false);
+    expect(studio.style.length).toBe(0);
     expect(screen.getByRole("heading", { name: "My local theme" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Create theme" }));
     expect(screen.getByRole("heading", { name: "Edit theme" })).toBeTruthy();
     expect(document.querySelectorAll("[data-color-role]")).toHaveLength(28);
     expect(document.querySelectorAll("[data-font-role]")).toHaveLength(10);
     expect(document.documentElement.style.cssText).toBe(rootBefore);
+  });
+
+  it("toggles safe colors locally without losing the draft or changing the applied appearance", () => {
+    const rootBefore = document.documentElement.style.cssText;
+    render(<ThemeStudio onBack={vi.fn()} registerLeaveGuard={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Create theme" }));
+    fireEvent.change(screen.getByLabelText("Theme name"), { target: { value: "Draft survives" } });
+    const studio = screen.getByRole("main");
+    const toggle = screen.getByRole("button", { name: "Use safe editor colors" });
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+
+    fireEvent.click(toggle);
+
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+    expect(studio.classList.contains("themeStudioControl")).toBe(true);
+    expect(studio.style.length).toBeGreaterThan(0);
+    expect((screen.getByLabelText("Theme name") as HTMLInputElement).value).toBe("Draft survives");
+    expect(document.documentElement.style.cssText).toBe(rootBefore);
+
+    fireEvent.click(toggle);
+
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    expect(studio.classList.contains("themeStudioControl")).toBe(false);
+    expect(studio.style.length).toBe(0);
+    expect((screen.getByLabelText("Theme name") as HTMLInputElement).value).toBe("Draft survives");
+    expect(document.documentElement.style.cssText).toBe(rootBefore);
+    expect(mocks.context.applySystem).not.toHaveBeenCalled();
+    expect(mocks.context.applyBuiltin).not.toHaveBeenCalled();
+    expect(mocks.context.applySaved).not.toHaveBeenCalled();
   });
 
   it("analyzes an unchanged editor snapshot once even when the contrast hook rerenders its owner", async () => {

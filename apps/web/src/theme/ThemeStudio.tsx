@@ -14,6 +14,7 @@ import { useThemeContrastReview } from "./ThemeContrastReview.tsx";
 import { ThemeEditor, type ThemeEditorCommands, type ThemeEditorLeaveState } from "./ThemeEditor.tsx";
 import { useThemeLeaveDialog } from "./ThemeLeaveDialog.tsx";
 import { ThemeLibrary, type ThemeLibraryActions } from "./ThemeLibrary.tsx";
+import { clearPresentation } from "./presentation.ts";
 import { useThemes } from "./ThemeProvider.tsx";
 import type { SavedThemeRow, StoredThemeDraft } from "./themeStorage.ts";
 import { exportThemeJson, importThemeJson } from "./themeTransfer.ts";
@@ -79,17 +80,20 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
   const [session, setSession] = useState<EditorSession | null>(null);
   const [editorDirty, setEditorDirty] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [safeColors, setSafeColors] = useState(false);
 
   const visibleSession = session?.scopeKey === scopeKey ? session : null;
 
   useLayoutEffect(() => {
-    if (controlRoot.current === null) return;
-    applyBootAppearance(
-      { schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("high-contrast-dark") },
-      controlRoot.current,
-      "app",
-    );
-  }, []);
+    const root = controlRoot.current;
+    if (root === null) return;
+    if (safeColors) {
+      applyBootAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("high-contrast-dark") }, root, "app");
+    } else {
+      clearPresentation(root);
+    }
+    return () => clearPresentation(root);
+  }, [safeColors]);
 
   useEffect(() => {
     if (session === null || session.scopeKey === scopeKey) return;
@@ -272,12 +276,20 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
   );
 
   return (
-    <main ref={controlRoot} className="themeStudio themeStudioControl">
+    <main ref={controlRoot} className={`themeStudio${safeColors ? " themeStudioControl" : ""}`}>
       <header className="themeStudioHeader">
         <div>
           <p className="eyebrow">Appearance</p>
           <h1>Theme studio</h1>
         </div>
+        <button
+          type="button"
+          className="ghost themeStudioSafetyControl"
+          aria-pressed={safeColors}
+          onClick={() => setSafeColors((before) => !before)}
+        >
+          Use safe editor colors
+        </button>
         <button type="button" className="ghost" onClick={onBack}>
           Back
         </button>

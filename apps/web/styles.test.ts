@@ -155,7 +155,7 @@ describe("the semantic tokens", () => {
 });
 
 describe("the theme studio layout boundary", () => {
-  it("gives routed controls and shared warning dialogs a complete readable palette", () => {
+  it("gives opted-in routed controls and shared warning dialogs a complete readable palette", () => {
     for (const [property, value] of [
       ["--bg", "#080808"],
       ["--panel", "#141414"],
@@ -173,6 +173,23 @@ describe("the theme studio layout boundary", () => {
     }
     expect(finalDeclaration(".themeStudioControl", "color")).toBe("var(--text)");
     expect(finalDeclaration(".themeStudioControl", "background")).toBe("var(--bg)");
+  });
+
+  it("uses applied chrome roles by default while the safe-colors escape stays independently readable", () => {
+    expect(finalDeclaration(".themeStudio", "background")).toBe("var(--bg)");
+    expect(finalDeclaration(".themeStudio", "color")).toBe("var(--text)");
+    expect(finalDeclaration(".themeStudio", "font-family")).toBe("var(--font-ui)");
+    expect(finalDeclaration(".themeStudio :where(h1, h2, h3, h4)", "font-family")).toBe("var(--font-display)");
+    expect(finalDeclaration(".themeStudio p", "font-family")).toBe("var(--font-prose)");
+    expect(finalDeclaration(".themeStudio .eyebrow", "font-family")).toBe("var(--font-ui)");
+    expect(finalDeclaration(".themeStudioSafetyControl", "background")).toBe("#141414");
+    expect(finalDeclaration(".themeStudioSafetyControl", "color")).toBe("#ffffff");
+    expect(finalDeclaration(".themeStudioSafetyControl", "border-color")).toBe("#aaaaaa");
+    expect(finalDeclaration(".themeStudioSafetyControl", "font-family")).toContain("Atkinson Hyperlegible Next Variable");
+    expect(finalDeclaration(".themeStudioSafetyControl:hover:not(:disabled)", "background")).toBe("#141414");
+    expect(finalDeclaration(".themeStudioSafetyControl:hover:not(:disabled)", "color")).toBe("#ffffff");
+    expect(finalDeclaration(".themeStudioSafetyControl:hover:not(:disabled)", "border-color")).toBe("#aaaaaa");
+    expect(finalDeclaration(".themeStudioSafetyControl:focus-visible", "outline-color")).toBe("#a9ddff");
   });
 
   it("contains enlarged editor content while keeping only the widget preview horizontally scrollable", () => {
@@ -546,6 +563,7 @@ describe("what a migrated control promises", () => {
       ":where(.pageHeader) h1",
       ".profileApplication > h2",
       ".marketHead h2",
+      ".themeStudio :where(h1, h2, h3, h4)",
     ]);
   });
 
