@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAccount } from "../auth/Account.tsx";
 import type { Api, PendingInvite } from "../sync/client.ts";
 
 /**
@@ -16,39 +17,59 @@ export function useInvites(
   api: Api | null,
   open: boolean,
 ): { invites: PendingInvite[]; refresh: () => void; forget: (token: string) => void } {
-  const [invites, setInvites] = useState<PendingInvite[]>([]);
-  const live = useRef(true);
+  const account = useAccount();
+  const ownerId = account.status === "signed-in" ? account.user.id : null;
+  const [snapshot, setSnapshot] = useState<{ ownerId: string; api: Api; invites: PendingInvite[] } | null>(null);
+  const current = useRef<{ ownerId: string | null; api: Api | null }>({ ownerId, api });
+  const mounted = useRef(true);
+  current.current = { ownerId, api };
 
   const refresh = useCallback(() => {
-    if (!api) return;
+    if (!api || !ownerId) return;
+    const requestedFor = { ownerId, api };
     void api.myInvites().then(
-      (list) => live.current && setInvites(list),
+      (list) => {
+        if (mounted.current && current.current.ownerId === requestedFor.ownerId && current.current.api === requestedFor.api) {
+          setSnapshot({ ...requestedFor, invites: list });
+        }
+      },
       () => {},
     );
-  }, [api]);
+  }, [api, ownerId]);
 
   useEffect(() => {
-    live.current = true;
-    if (!api) {
-      setInvites([]);
-      return;
-    }
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!api || !ownerId) return;
     refresh();
     const timer = setInterval(refresh, EVERY_MS);
     const onFocus = () => refresh();
     window.addEventListener("focus", onFocus);
     return () => {
-      live.current = false;
       clearInterval(timer);
       window.removeEventListener("focus", onFocus);
     };
-  }, [api, refresh]);
+  }, [api, ownerId, refresh]);
 
   useEffect(() => {
     if (open) refresh();
   }, [open, refresh]);
 
-  const forget = useCallback((token: string) => setInvites((list) => list.filter((i) => i.token !== token)), []);
+  const forget = useCallback(
+    (token: string) =>
+      setSnapshot((before) =>
+        before && before.ownerId === ownerId && before.api === api
+          ? { ...before, invites: before.invites.filter((invite) => invite.token !== token) }
+          : before,
+      ),
+    [api, ownerId],
+  );
 
+  const invites = snapshot && snapshot.ownerId === ownerId && snapshot.api === api ? snapshot.invites : [];
   return { invites, refresh, forget };
 }

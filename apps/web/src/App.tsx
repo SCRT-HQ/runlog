@@ -471,11 +471,11 @@ export default function App() {
    * entry rather than replacing one: unlike the guide and the Designer, the
    * profile's four pages are meant to be steppable with Back.
    */
-  const openProfile = (page: ProfilePage = "profile") => {
+  const openProfile = (page: ProfilePage = "profile", how: "push" | "replace" = "push") => {
     void requestNavigation(() => {
       setProfilePage(page);
       setView("profile");
-      goTo(profileHash(page), "push");
+      goTo(profileHash(page), how);
     });
   };
   const leaveProfile = () => backToPlay(/^#profile/);

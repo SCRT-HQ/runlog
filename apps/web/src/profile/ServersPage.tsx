@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { loadPackText } from "@runlog/rules-schema";
 import { useAccount } from "../auth/Account.tsx";
 import { useHosted } from "../hosted/HostedProvider.tsx";
@@ -15,6 +15,9 @@ export const WATCH_PARTY_CHOICES = [
   { value: "packs" as const, label: "Chosen packs" },
 ];
 
+const normalizeShelf = (packs: StoredPack[]): StoredPack[] =>
+  packs.filter((pack) => !pack.deletedAt).sort((a, b) => a.title.localeCompare(b.title));
+
 /**
  * The Discord servers this account claimed, and what the bot may play in
  * each. A server is claimed from Discord's side (`/setup claim` there
@@ -25,14 +28,23 @@ export const WATCH_PARTY_CHOICES = [
  * up once, with the modes named so the bot can list them, and never comes
  * back down: the bot reads it to play, and members see the drawn lines.
  */
-export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pending?: LinkRoute | null }) {
+export function ServersPage({
+  api,
+  pending: pendingProp,
+  shelf: ownedShelf,
+}: {
+  api: Api | null;
+  pending?: LinkRoute | null;
+  /** The account-keyed profile owns this shelf when the page is rendered there. */
+  shelf?: StoredPack[];
+}) {
   const account = useAccount();
   const hosted = useHosted();
   const plan = usePlan();
   const [pending, setPending] = useState<LinkRoute | null>(() => pendingProp ?? pendingLink("guild"));
   const [known, setKnown] = useState<{ guilds: Guild[]; server: boolean; open: boolean } | null>(null);
   const [vaults, setVaults] = useState<Record<string, GuildPackMeta[]>>({});
-  const [shelf, setShelf] = useState<StoredPack[]>([]);
+  const [localShelf, setLocalShelf] = useState<StoredPack[]>([]);
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -55,8 +67,10 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
     };
   }, [api]);
   useEffect(() => {
-    void listPacks().then((all) => setShelf(all.filter((p) => !p.deletedAt).sort((a, b) => a.title.localeCompare(b.title))));
-  }, []);
+    if (ownedShelf !== undefined) return;
+    void listPacks().then(setLocalShelf);
+  }, [ownedShelf]);
+  const shelf = useMemo(() => normalizeShelf(ownedShelf ?? localShelf), [ownedShelf, localShelf]);
 
   const run = async (what: string, fn: () => Promise<string | null>) => {
     setBusy(what);

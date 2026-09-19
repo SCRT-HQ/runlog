@@ -14,6 +14,8 @@ import type { MarketplaceEntry } from "./library/marketplace.ts";
 import { RunView } from "./run/RunView.tsx";
 import { StartScreen } from "./run/StartScreen.tsx";
 import { listPacks } from "./storage/db.ts";
+import { whoIsHere } from "./storage/who.ts";
+import { AccountContext, type Account } from "./auth/Account.tsx";
 
 /** A catalog supplied only when an App integration test needs to control the public marketplace boundary. */
 const marketplaceBoundary = vi.hoisted(() => ({ entries: null as Array<{ id: string }> | null, missing: new Set<string>() }));
@@ -748,6 +750,95 @@ defaultMode: standard
   });
 });
 
+describe("profile access through application navigation", () => {
+  const signedIn: Extract<Account, { status: "signed-in" }> = {
+    status: "signed-in",
+    user: {
+      object: "user",
+      id: "user_APP",
+      email: "app@example.com",
+      emailVerified: true,
+      firstName: "App",
+      lastName: null,
+      profilePictureUrl: null,
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+      lastSignInAt: null,
+      externalId: undefined,
+    },
+    signOut: () => {},
+    getAccessToken: async () => "token",
+  };
+
+  beforeEach(() => {
+    drafts.clear();
+    marketplaceBoundary.entries = [];
+    localStorage.clear();
+    sessionStorage.clear();
+    history.replaceState(null, "", "/");
+  });
+  afterEach(() => {
+    marketplaceBoundary.entries = null;
+    cleanup();
+  });
+
+  function renderApp(account: Account) {
+    return render(
+      <AccountContext.Provider value={account}>
+        <DocDrawerProvider>
+          <App />
+        </DocDrawerProvider>
+      </AccountContext.Provider>,
+    );
+  }
+
+  it("replaces a local direct Account boot with Settings instead of adding a private history entry", async () => {
+    history.replaceState(null, "", "#profile/account");
+    const replace = vi.spyOn(history, "replaceState");
+    const push = vi.spyOn(history, "pushState");
+
+    renderApp({ status: "local" });
+
+    await waitFor(() => expect(location.hash).toBe("#profile/settings"));
+    expect(replace.mock.calls.some((call) => String(call[2]).endsWith("#profile/settings"))).toBe(true);
+    expect(push.mock.calls.some((call) => String(call[2]).endsWith("#profile/settings"))).toBe(false);
+    expect(screen.getByRole("link", { name: "Settings" }).getAttribute("aria-current")).toBe("page");
+  });
+
+  it("uses the profile anchor to push signed-in Account content", async () => {
+    history.replaceState(null, "", "#profile");
+    whoIsHere({ kind: "account", id: signedIn.user.id });
+    renderApp(signedIn);
+
+    fireEvent.click(await screen.findByRole("link", { name: "Account" }));
+
+    await waitFor(() => expect(location.hash).toBe("#profile/account"));
+    expect(screen.getByRole("heading", { name: "Account" })).toBeTruthy();
+  });
+
+  it("keeps an anonymous Publishing hashchange and renders both sign-in doors", async () => {
+    renderApp({ status: "anonymous", signIn: () => {}, signUp: () => {} });
+    history.replaceState(null, "", "#profile/publishing");
+    act(() => window.dispatchEvent(new HashChangeEvent("hashchange")));
+
+    const profile = document.querySelector(".profileBody");
+    expect(profile).not.toBeNull();
+    await waitFor(() => expect(within(profile as HTMLElement).getByRole("button", { name: "Sign in" })).toBeTruthy());
+    expect(within(profile as HTMLElement).getByRole("button", { name: "Create an account" })).toBeTruthy();
+    expect(location.hash).toBe("#profile/publishing");
+  });
+
+  it("keeps a checking Account popstate at its requested address without mounting Account", async () => {
+    renderApp({ status: "checking", signIn: () => {} });
+    history.replaceState(null, "", "#profile/account");
+    act(() => window.dispatchEvent(new PopStateEvent("popstate")));
+
+    await waitFor(() => expect(screen.getByText("Checking your account…")).toBeTruthy());
+    expect(location.hash).toBe("#profile/account");
+    expect(screen.queryByRole("heading", { name: "Account" })).toBeNull();
+  });
+});
+
 /**
  * A cold load keeps its address.
  *
@@ -788,7 +879,7 @@ describe("a cold load keeps its address", () => {
   }
 
   /** What each address should have drawn, so the address is not kept by drawing nothing. */
-  const entries: { address: string; shows: string; there: () => boolean }[] = [
+  const entries: { address: string; shows: string; there: () => boolean; after?: string }[] = [
     { address: "#packs", shows: "the shelf", there: () => document.body.textContent!.includes("Your packs") },
     { address: "#marketplace", shows: "the catalog", there: () => document.querySelector(".marketGrid") !== null },
     { address: `#marketplace/${LADDER}`, shows: "a pack's page", there: () => document.querySelector("article.packPage") !== null },
@@ -801,10 +892,21 @@ describe("a cold load keeps its address", () => {
     { address: "#guide/streaming", shows: "the guide", there: () => document.querySelector(".guideSide") !== null },
     { address: "#create", shows: "the Designer", there: () => document.querySelector(".designNav") !== null },
     { address: "#create/tables", shows: "the Designer", there: () => document.querySelector(".designNav") !== null },
-    // Signed out, every profile page is the one panel that offers to sign
-    // in, which is still the profile and still at the profile's address.
-    { address: "#profile", shows: "the profile", there: () => document.querySelector(".profile, .profileLayout") !== null },
-    { address: "#profile/publishing", shows: "the profile", there: () => document.querySelector(".profile, .profileLayout") !== null },
+    // This test process is a local copy with no account door. Private
+    // profile addresses become its one available page without leaving the
+    // inaccessible address in history.
+    {
+      address: "#profile",
+      after: "#profile/settings",
+      shows: "profile Settings",
+      there: () => document.querySelector("a[href='#profile/settings'][aria-current='page']") !== null,
+    },
+    {
+      address: "#profile/publishing",
+      after: "#profile/settings",
+      shows: "profile Settings",
+      there: () => document.querySelector("a[href='#profile/settings'][aria-current='page']") !== null,
+    },
     { address: "#themes", shows: "the theme studio", there: () => document.querySelector(".themeStudio") !== null },
     { address: "#themes/recovery", shows: "theme recovery", there: () => document.querySelector(".themeStudio") !== null },
     // A run and a seat name something this device does not have, so what
@@ -818,7 +920,7 @@ describe("a cold load keeps its address", () => {
     it(`draws ${entry.shows} at ${entry.address} and leaves the address alone`, async () => {
       const after = await landAt(entry.address);
       expect(entry.there()).toBe(true);
-      expect(after).toBe(`/${entry.address}`);
+      expect(after).toBe(`/${entry.after ?? entry.address}`);
     });
   }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAccount, type Account } from "../auth/Account.tsx";
 import { useSync, type Sync } from "../sync/SyncProvider.tsx";
 import {
@@ -16,10 +16,18 @@ import {
 import { apiBase } from "../sync/config.ts";
 import { syncBus } from "../sync/bus.ts";
 import { rememberProfile } from "../sync/useProfile.ts";
-import { usePlan } from "../sync/usePlan.ts";
+import { usePlan, type PlanState } from "../sync/usePlan.ts";
 import { useInvites } from "../share/useInvites.ts";
 import { liveLinkOf } from "../live/route.ts";
-import { PROFILE_PAGES, profileHash, type ProfilePage } from "./route.ts";
+import {
+  PROFILE_PAGES,
+  profileAccessFor,
+  profileHash,
+  visibleProfilePages,
+  type ProfilePage,
+  type ProfilePageDescriptor,
+  type ServerAvailability,
+} from "./route.ts";
 import { useTitle } from "../title.ts";
 import { DeviceSettings } from "../settings/DeviceSettings.tsx";
 import { SetupsSection } from "./SetupsSection.tsx";
@@ -43,6 +51,7 @@ import {
   type StoredPack,
   type StoredRun,
 } from "../storage/db.ts";
+import { onWhoChanged, whoAmI, whoSoFar, type Who } from "../storage/who.ts";
 
 /**
  * The person's page, in four: who the account is, what it sells, what it
@@ -60,7 +69,7 @@ export interface ProfileViewProps {
   /** Which of the four pages; the first one absent. */
   page?: ProfilePage;
   /** Moves between pages: wired to the address bar by the caller. */
-  onNavigate?: (page: ProfilePage) => void;
+  onNavigate?: (page: ProfilePage, how?: "push" | "replace") => void;
   /** Opens a run from Social's "Open tables": the library's own way in. */
   onOpenRun?: (runId: string) => void;
   /** Accepts an invitation from Social's list and opens the run it is for. */
@@ -69,176 +78,258 @@ export interface ProfileViewProps {
 
 export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, onJoinInvite }: ProfileViewProps) {
   const account = useAccount();
-  const sync = useSync();
   const base = apiBase();
-
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [licenses, setLicenses] = useState<StoredLicense[]>([]);
-  const [packs, setPacks] = useState<StoredPack[]>([]);
-  const [runs, setRuns] = useState<StoredRun[]>([]);
-
-  const reload = () => {
-    void listLicenses().then((all) => setLicenses(all.filter((l) => !l.deletedAt && l.key)));
-    void listPacks().then(setPacks);
-    void listRuns().then((all) => setRuns(all.filter((r) => !r.deletedAt)));
-  };
-
-  useEffect(() => {
-    reload();
-    return syncBus.subscribe((news) => {
-      if (news.t === "pulled") reload();
-    });
-  }, []);
-
-  const api = useMemo(() => (base && account.status === "signed-in" ? createApi(base, account.getAccessToken) : null), [base, account]);
-
-  // The visit is the profile's heartbeat, and the name and email travel
-  // with it so the row is never older than the last time the page was
-  // opened. WorkOS stays the truth; this is the snapshot.
-  useEffect(() => {
-    if (!api || account.status !== "signed-in") return;
-    let live = true;
-    const { user } = account;
-    const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
-    void api
-      .putProfile({ ...(name ? { name } : {}), ...(user.email ? { email: user.email } : {}) })
-      .then((p) => {
-        if (!live) return;
-        setProfile(p);
-        rememberProfile(p);
-      })
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, [api, account]);
-
-  // Read once here so the nav's badge and the Social page agree, rather
-  // than each polling the server on its own.
+  const getAccessToken = account.status === "signed-in" ? account.getAccessToken : null;
+  const api = useMemo(() => (base && getAccessToken ? createApi(base, getAccessToken) : null), [base, getAccessToken]);
+  const session = useRef({ api, generation: 0 });
+  if (session.current.api !== api) {
+    session.current = { api, generation: session.current.generation + 1 };
+  }
   const invitations = useInvites(api, true);
-  // Whether the server tier is this account's to see, for the nav.
   const plan = usePlan();
-  const servers = plan.state.kind === "ready" && plan.state.offers.servers;
+  const servers = serverAvailability(plan.state, account);
+  const access = profileAccessFor(page, account.status, servers);
+  const shownPage = access.kind === "replace" ? access.page : page;
+  const pages = visibleProfilePages(account.status, servers, page);
 
-  const pageLabel = PROFILE_PAGES.find((p) => p.id === page)?.label;
-  useTitle(page === "profile" || !pageLabel ? "Profile" : `${pageLabel} · Profile`);
+  const pageLabel = PROFILE_PAGES.find((candidate) => candidate.id === shownPage)?.label;
+  useTitle(shownPage === "profile" || !pageLabel ? "Profile" : `${pageLabel} · Profile`);
 
-  /*
-   * The device's settings need no account, so they are not behind the
-   * sign-in that everything else here is.
-   *
-   * The app never needs an account: that is the premise, and a copy on
-   * disk has nobody to sign in as. Somebody playing that way still has
-   * sounds to turn off and dice to hand over, and until now the only door
-   * to those was a run's settings, which means starting a run to reach
-   * them.
-   */
-  if (page === "settings") {
-    return (
-      <main className="main">
-        <div className="profileLayout">
-          <ProfileNav page={page} onNavigate={onNavigate} waiting={invitations.invites.length} servers={servers} application />
-          <div className="profileBody profileApplicationBody">
-            <SettingsPage />
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  if (account.status !== "signed-in") {
-    return (
-      <main className="main">
-        <section className="panel setup profile">
-          <h2>Your account</h2>
-          <p className="muted">
-            {account.status === "local"
-              ? "This copy of the app has nothing to sign into. Everything you do stays on this machine."
-              : "Sign in to see your account, your license keys, and what sync has carried."}
-          </p>
-          <div className="padRow">
-            {account.status !== "local" && (
-              <button className="primary" onClick={account.signIn}>
-                Sign in
-              </button>
-            )}
-            <button className="ghost" onClick={onBack}>
-              Back to the game
-            </button>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  const { user } = account;
-  const syncedPacks = packs.filter((p) => p.sync && !p.sealed).length;
-  const runsInAccount = runs.filter((r) => typeof r.seq === "number").length;
-  const titleOf = (l: StoredLicense) => packs.find((p) => p.id === l.packId)?.title ?? l.title ?? l.packId;
-
-  const deleteEverything = async () => {
-    if (!api) return;
-    await api.deleteMe();
-    // The server has nothing now, so nothing is "already sent": the next
-    // pass would push everything again, which is not what somebody who
-    // just did this wants. Sync goes off with it.
-    for (const s of await listSyncState()) await forgetSyncState(s.id);
-    sync.setEnabled(false);
-    setProfile(null);
-  };
+  useEffect(() => {
+    if (access.kind === "replace") onNavigate?.(access.page, "replace");
+  }, [access.kind, onNavigate]);
 
   return (
     <main className="main">
       <div className="profileLayout">
         <ProfileNav
-          page={page}
+          page={shownPage}
+          pages={pages}
           onNavigate={onNavigate}
           waiting={invitations.invites.length}
-          servers={servers}
-          application={page !== "account"}
+          application={shownPage !== "account"}
         />
-        <div className={`profileBody${page === "account" ? "" : " profileApplicationBody"}`}>
-          {page === "profile" && (
-            <ProfilePage
-              user={user}
+        <div className={`profileBody${shownPage === "account" ? "" : " profileApplicationBody"}`}>
+          {shownPage === "settings" ? (
+            <SettingsPage />
+          ) : access.kind === "checking" ? (
+            <ProfileRouteMessage title={page === "servers" && account.status === "signed-in" ? "Servers" : "Your account"}>
+              {page === "servers" && account.status === "signed-in" ? "Checking server availability…" : "Checking your account…"}
+            </ProfileRouteMessage>
+          ) : access.kind === "sign-in" && account.status === "anonymous" ? (
+            <ProfileSignIn account={account} onBack={onBack} />
+          ) : access.kind === "unavailable" ? (
+            <ProfileRouteMessage title="Servers">Servers are not available on this deployment.</ProfileRouteMessage>
+          ) : access.kind === "error" ? (
+            <ProfileRouteMessage title="Servers">
+              Server availability could not be checked.{" "}
+              <button className="linkButton" onClick={() => void plan.refresh()}>
+                Try again
+              </button>
+            </ProfileRouteMessage>
+          ) : access.kind === "content" && access.page !== "settings" && account.status === "signed-in" ? (
+            <AccountProfile
+              key={`${account.user.id}:${session.current.generation}`}
+              ownerId={account.user.id}
+              account={account}
               api={api}
-              profile={profile}
-              sync={sync}
-              runsHere={runs.length}
-              runsThere={runsInAccount}
-              packsHere={packs.length}
-              packsThere={syncedPacks}
-              licensesHere={licenses.length}
-              onSaved={(p) => {
-                setProfile(p);
-                // Saved from Shown as: the server took the name, so it is
-                // this account's and the gate has nothing to ask about.
-                rememberProfile(p, false);
-              }}
+              page={access.page}
+              invitations={invitations}
+              onOpenRun={onOpenRun}
+              onJoinInvite={onJoinInvite}
             />
-          )}
-          {page === "publishing" && <PublishingPage api={api} />}
-          {page === "account" && (
-            <AccountPage
-              api={api}
-              licenses={licenses}
-              titleOf={titleOf}
-              onForgetLicense={async (packId) => {
-                await forgetLicense(packId);
-                syncBus.localChange("license", packId);
-                reload();
-              }}
-              onDeleteEverything={deleteEverything}
-              onSignOut={account.signOut}
-            />
-          )}
-          {page === "social" && <SocialPage api={api} onOpenRun={onOpenRun} onJoinInvite={onJoinInvite} invitations={invitations} />}
-          {/* Settings is answered above: it needs no account, so it never reaches here. */}
-          {page === "servers" && <ServersPage api={api} />}
+          ) : null}
         </div>
       </div>
     </main>
   );
+}
+
+function serverAvailability(state: PlanState, account: Account): ServerAvailability {
+  if (account.status !== "signed-in") return state.kind === "checking" || state.kind === "loading" ? "checking" : "unavailable";
+  if (state.kind === "checking" || state.kind === "loading") return "checking";
+  if (state.kind === "error") return state.ownerId === account.user.id ? "error" : "checking";
+  if (state.kind !== "ready" || state.ownerId !== account.user.id) return "checking";
+  return state.offers.servers ? "available" : "unavailable";
+}
+
+function ProfileRouteMessage({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="profile profileApplication">
+      <h2>{title}</h2>
+      <section className="panel">
+        <p className="muted">{children}</p>
+      </section>
+    </div>
+  );
+}
+
+function ProfileSignIn({ account, onBack }: { account: Extract<Account, { status: "anonymous" }>; onBack: () => void }) {
+  return (
+    <div className="profile profileApplication">
+      <h2>Your account</h2>
+      <section className="panel setup">
+        <p className="muted">Sign in to see your account, your license keys, and what sync has carried.</p>
+        <div className="padRow">
+          <button className="primary" onClick={account.signIn}>
+            Sign in
+          </button>
+          <button className="ghost" onClick={account.signUp}>
+            Create an account
+          </button>
+          <button className="ghost" onClick={onBack}>
+            Back to the game
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+const isOwner = (who: Who | null, ownerId: string): boolean => who?.kind === "account" && who.id === ownerId;
+
+function AccountProfile({
+  ownerId,
+  account,
+  api,
+  page,
+  invitations,
+  onOpenRun,
+  onJoinInvite,
+}: {
+  ownerId: string;
+  account: Extract<Account, { status: "signed-in" }>;
+  api: Api | null;
+  page: Exclude<ProfilePage, "settings">;
+  invitations: ReturnType<typeof useInvites>;
+  onOpenRun?: (runId: string) => void;
+  onJoinInvite?: (token: string) => Promise<void>;
+}) {
+  const sync = useSync();
+  const live = useRef(true);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [licenses, setLicenses] = useState<StoredLicense[]>([]);
+  const [packs, setPacks] = useState<StoredPack[]>([]);
+  const [runs, setRuns] = useState<StoredRun[]>([]);
+
+  useEffect(() => {
+    live.current = true;
+    return () => {
+      live.current = false;
+    };
+  }, []);
+
+  const reload = useCallback(async () => {
+    if (!isOwner(whoSoFar(), ownerId)) return;
+    const [nextLicenses, nextPacks, nextRuns] = await Promise.all([listLicenses(), listPacks(), listRuns()]);
+    if (!live.current || !isOwner(whoSoFar(), ownerId)) return;
+    setLicenses(nextLicenses.filter((license) => !license.deletedAt && license.key));
+    setPacks(nextPacks);
+    setRuns(nextRuns.filter((run) => !run.deletedAt));
+  }, [ownerId]);
+
+  useEffect(() => {
+    let active = true;
+    const settled = whoSoFar();
+    let stopWaiting = () => {};
+    if (isOwner(settled, ownerId)) void reload();
+    else if (settled === null) {
+      void whoAmI().then((who) => {
+        if (active && isOwner(who, ownerId)) void reload();
+      });
+    } else {
+      stopWaiting = onWhoChanged((who) => {
+        if (active && isOwner(who, ownerId)) void reload();
+      });
+    }
+    const stopSync = syncBus.subscribe((news) => {
+      if (news.t === "pulled") void reload();
+    });
+    return () => {
+      active = false;
+      stopWaiting();
+      stopSync();
+    };
+  }, [ownerId, reload]);
+
+  useEffect(() => {
+    if (!api) return;
+    let active = true;
+    const { user } = account;
+    const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
+    void api
+      .putProfile({ ...(name ? { name } : {}), ...(user.email ? { email: user.email } : {}) })
+      .then((nextProfile) => {
+        if (!active || !live.current) return;
+        setProfile(nextProfile);
+        rememberProfile(nextProfile);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [api, account]);
+
+  const syncedPacks = packs.filter((pack) => pack.sync && !pack.sealed).length;
+  const runsInAccount = runs.filter((run) => typeof run.seq === "number").length;
+  const titleOf = (license: StoredLicense) => packs.find((pack) => pack.id === license.packId)?.title ?? license.title ?? license.packId;
+
+  const deleteEverything = async () => {
+    if (!api) return;
+    await api.deleteMe();
+    if (!live.current || !isOwner(whoSoFar(), ownerId)) return;
+    for (const state of await listSyncState()) {
+      if (!live.current || !isOwner(whoSoFar(), ownerId)) return;
+      await forgetSyncState(state.id);
+    }
+    if (!live.current || !isOwner(whoSoFar(), ownerId)) return;
+    sync.setEnabled(false);
+    setProfile(null);
+  };
+
+  if (page === "profile") {
+    return (
+      <ProfilePage
+        user={account.user}
+        api={api}
+        profile={profile}
+        sync={sync}
+        runsHere={runs.length}
+        runsThere={runsInAccount}
+        packsHere={packs.length}
+        packsThere={syncedPacks}
+        licensesHere={licenses.length}
+        onSaved={(nextProfile) => {
+          if (!live.current) return;
+          setProfile(nextProfile);
+          rememberProfile(nextProfile, false);
+        }}
+      />
+    );
+  }
+  if (page === "publishing") return <PublishingPage api={api} />;
+  if (page === "account") {
+    return (
+      <AccountPage
+        api={api}
+        licenses={licenses}
+        titleOf={titleOf}
+        onForgetLicense={async (packId) => {
+          if (!isOwner(whoSoFar(), ownerId)) return;
+          await forgetLicense(packId);
+          if (!live.current || !isOwner(whoSoFar(), ownerId)) return;
+          syncBus.localChange("license", packId);
+          await reload();
+        }}
+        onDeleteEverything={deleteEverything}
+        onSignOut={account.signOut}
+      />
+    );
+  }
+  if (page === "social") {
+    return <SocialPage api={api} runs={runs} onOpenRun={onOpenRun} onJoinInvite={onJoinInvite} invitations={invitations} />;
+  }
+  return <ServersPage api={api} shelf={packs} />;
 }
 
 /**
@@ -248,20 +339,20 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
  */
 function ProfileNav({
   page,
+  pages,
   onNavigate,
   waiting,
-  servers,
   application = false,
 }: {
   page: ProfilePage;
-  onNavigate?: (page: ProfilePage) => void;
+  pages: readonly ProfilePageDescriptor[];
+  onNavigate?: (page: ProfilePage, how?: "push" | "replace") => void;
   waiting: number;
-  servers: boolean;
   application?: boolean;
 }) {
   return (
     <nav className={`profileNav${application ? " profileApplicationNav" : ""}`} aria-label="Profile pages">
-      {PROFILE_PAGES.filter((p) => p.id !== "servers" || servers || page === "servers").map((p) => (
+      {pages.map((p) => (
         <a
           key={p.id}
           href={profileHash(p.id)}
@@ -573,31 +664,33 @@ function AccountPage({
  */
 function SocialPage({
   api,
+  runs,
   onOpenRun,
   onJoinInvite,
   invitations,
 }: {
   api: Api | null;
+  runs: StoredRun[];
   onOpenRun?: (runId: string) => void;
   onJoinInvite?: (token: string) => Promise<void>;
   invitations: ReturnType<typeof useInvites>;
 }) {
   const [busyToken, setBusyToken] = useState<string | null>(null);
-  const [openRuns, setOpenRuns] = useState<StoredRun[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
+  const openRuns = runs
+    .filter((run) => (run.members?.length ?? 0) > 1 || Boolean(liveLinkOf(run.runId)))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
   useEffect(() => {
-    void listRuns().then((all) =>
-      setOpenRuns(
-        all
-          .filter((r) => !r.deletedAt && ((r.members?.length ?? 0) > 1 || Boolean(liveLinkOf(r.runId))))
-          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
-      ),
+    if (!api) return;
+    let live = true;
+    void api.people().then(
+      (nextPeople) => live && setPeople(nextPeople),
+      () => {},
     );
-  }, []);
-
-  useEffect(() => {
-    if (api) void api.people().then(setPeople, () => {});
+    return () => {
+      live = false;
+    };
   }, [api]);
 
   const act = async (token: string, what: "join" | "decline") => {
