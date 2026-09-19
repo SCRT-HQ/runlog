@@ -64,7 +64,7 @@ describe("theme library", () => {
     expect(screen.getByText((text) => text.includes("Applied") && text.includes("Saved on this device"))).toBeTruthy();
   });
 
-  it("offers create, built-in copy, saved edit/duplicate/rename/export and recovery actions from the keyboard", async () => {
+  it("offers create, built-in copy, saved edit/duplicate/rename/export and recovery actions", async () => {
     const row = saved();
     const recovering = draft(row);
     const on = actions();

@@ -223,6 +223,11 @@ describe("the theme studio layout boundary", () => {
     expect(finalDeclaration(".themeContrastDialog", "overflow")).toBe("auto");
     expect(finalDeclaration(".themeContrastDialog", "overscroll-behavior")).toBe("contain");
   });
+
+  it("shows keyboard focus on the visible import control when its hidden file input is focused", () => {
+    expect(finalDeclaration(".themeLibraryTools .buttonLike:focus-within", "outline")).toBe("2px solid var(--focus)");
+    expect(finalDeclaration(".themeLibraryTools .buttonLike:focus-within", "outline-offset")).toBe("2px");
+  });
 });
 
 describe("control boundaries and focus borders", () => {

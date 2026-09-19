@@ -430,6 +430,22 @@ describe("the theme studio navigation guard", () => {
     expect(document.querySelector(".guideSide")).not.toBeNull();
   });
 
+  it("guards a themes-to-recovery address change instead of replacing the dirty editor address", async () => {
+    await openDirtyStudio();
+    history.pushState(null, "", "/#themes/recovery");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+
+    expect(location.hash).toBe("#themes");
+    expect(themeStudioBoundary.pending).toHaveLength(1);
+    await answer(false);
+    expect(location.hash).toBe("#themes");
+
+    history.pushState(null, "", "/#themes/recovery");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await answer(true);
+    expect(location.hash).toBe("#themes/recovery");
+  });
+
   it("guards same-tab shell anchors and ignores modifier, download and new-tab links", async () => {
     await openDirtyStudio();
     const shell = document.querySelector(".app")!;
@@ -476,6 +492,28 @@ describe("the theme studio navigation guard", () => {
     expect(themeStudioBoundary.pending).toHaveLength(1);
     await answer(true);
 
+    const acceptedUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(acceptedUnload);
+    expect(acceptedUnload.defaultPrevented).toBe(false);
+  });
+
+  it("guards a cross-origin same-tab anchor and keeps it a document departure after acceptance", async () => {
+    await openDirtyStudio();
+    const shell = document.querySelector(".app")!;
+    const link = document.createElement("a");
+    link.href = "https://example.test/elsewhere";
+    link.textContent = "External destination";
+    shell.append(link);
+
+    fireEvent.click(link);
+    expect(themeStudioBoundary.pending).toHaveLength(1);
+    expect(location.hash).toBe("#themes");
+    await answer(false);
+    expect(location.hash).toBe("#themes");
+
+    fireEvent.click(link);
+    expect(themeStudioBoundary.pending).toHaveLength(1);
+    await answer(true);
     const acceptedUnload = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(acceptedUnload);
     expect(acceptedUnload.defaultPrevented).toBe(false);

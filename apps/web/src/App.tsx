@@ -343,21 +343,22 @@ export default function App() {
     const fromAddress = () => {
       const destination = `${location.pathname}${location.search}${location.hash}`;
       const at = landingOf(addressOf(location));
-      if (at.view === "themes") {
-        themeAddressRef.current = destination;
-        applyLanding(at);
-        return;
-      }
       if (leaveGuardRef.current === null) {
+        if (at.view === "themes") themeAddressRef.current = destination;
         applyLanding(at);
         return;
       }
+      if (destination === themeAddressRef.current) return;
 
       const captured = new URL(destination, location.href);
       history.replaceState(null, "", themeAddressRef.current);
       void requestNavigation(() => {
         history.replaceState(null, "", `${captured.pathname}${captured.search}${captured.hash}`);
-        applyLanding(landingOf(addressOf(captured)));
+        const capturedLanding = landingOf(addressOf(captured));
+        if (capturedLanding.view === "themes") {
+          themeAddressRef.current = `${captured.pathname}${captured.search}${captured.hash}`;
+        }
+        applyLanding(capturedLanding);
       });
     };
     fromAddress();
@@ -503,11 +504,16 @@ export default function App() {
     if (!(target instanceof HTMLAnchorElement) || target.hasAttribute("download")) return;
     if (target.target !== "" && target.target !== "_self") return;
     const destination = new URL(target.href, location.href);
-    if (destination.origin !== location.origin || destination.href === location.href) return;
+    if (destination.href === location.href) return;
 
     event.preventDefault();
     event.stopPropagation();
     void requestNavigation(() => {
+      if (destination.origin !== location.origin) {
+        acceptedDocumentDepartureRef.current = true;
+        location.assign(destination.href);
+        return;
+      }
       const address = addressOf(destination);
       const at = landingOf(address);
       const inApp =

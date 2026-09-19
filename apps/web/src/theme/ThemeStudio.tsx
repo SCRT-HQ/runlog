@@ -111,11 +111,19 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
     setEditorDirty(state.dirty);
   }, []);
 
+  const finishEditor = useCallback(() => {
+    leaveStateRef.current = null;
+    setEditorDirty(false);
+    setSession(null);
+  }, []);
+
   const guard = useCallback(async (): Promise<boolean> => {
     const state = leaveStateRef.current;
     if (state === null || !state.dirty) return true;
-    return requestLeave(state);
-  }, [requestLeave]);
+    const accepted = await requestLeave(state);
+    if (accepted) finishEditor();
+    return accepted;
+  }, [finishEditor, requestLeave]);
 
   useEffect(() => {
     registerLeaveGuard(visibleSession !== null && editorDirty ? guard : null);
@@ -125,10 +133,8 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
   const closeEditor = useCallback(async () => {
     const current = leaveStateRef.current;
     if (current !== null && current.dirty && !(await requestLeave(current))) return;
-    leaveStateRef.current = null;
-    setEditorDirty(false);
-    setSession(null);
-  }, [requestLeave]);
+    finishEditor();
+  }, [finishEditor, requestLeave]);
 
   const preserveCandidate = useCallback(
     (record: ThemeRecordV1, source: SavedThemeRow | null, detail: string) => {
@@ -255,6 +261,15 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
     const key = presentationSnapshotKey(themes.applied.snapshot);
     return BUILTIN_PRESETS.find(({ id }) => presentationSnapshotKey(snapshotForBuiltin(id)) === key)?.id ?? null;
   }, [themes.applied, themes.appliedSource]);
+  const retainedAppearance = useMemo(
+    () =>
+      themes.sourceRemoved ||
+      (themes.appliedSource !== null &&
+        !themes.library.some(
+          ({ id, localRevision }) => id === themes.appliedSource?.id && localRevision === themes.appliedSource.localRevision,
+        )),
+    [themes.appliedSource, themes.library, themes.sourceRemoved],
+  );
 
   return (
     <main ref={controlRoot} className="themeStudio themeStudioControl">
@@ -291,7 +306,7 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
               drafts={themes.drafts}
               appliedSource={themes.appliedSource}
               appliedBuiltinId={appliedBuiltinId}
-              retainedAppearance={themes.sourceRemoved}
+              retainedAppearance={retainedAppearance}
               actions={actions}
             />
           ) : (

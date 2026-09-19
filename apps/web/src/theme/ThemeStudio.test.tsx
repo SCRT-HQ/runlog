@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { createThemeRecordFromPreset } from "@runlog/themes";
+import { createThemeRecordFromPreset, presentationSnapshotKey, resolveThemeRecord } from "@runlog/themes";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ThemeContextValue } from "./ThemeProvider.tsx";
@@ -130,7 +130,30 @@ describe("theme studio integration", () => {
     expect(screen.queryByRole("heading", { name: "My local theme" })).toBeNull();
   });
 
-  it("keeps the real guard registered until Save draft finishes, then accepts the pending navigation", async () => {
+  it("labels an applied custom snapshot as retained when its saved source advances without Apply", () => {
+    const applied = row("mine", "Applied revision", 3);
+    const newer = row("mine", "Newer saved revision", 4);
+    const resolved = resolveThemeRecord(applied.record);
+    if (!resolved.ok) throw new Error("invalid applied fixture");
+    mocks.context = {
+      ...context([newer]),
+      applied: { schemaVersion: 1, mode: "snapshot", snapshot: resolved.value },
+      appliedSource: {
+        schemaVersion: 1,
+        id: applied.id,
+        localRevision: applied.localRevision,
+        snapshotKey: presentationSnapshotKey(resolved.value),
+      },
+      sourceRemoved: false,
+    };
+
+    render(<ThemeStudio onBack={vi.fn()} registerLeaveGuard={vi.fn()} />);
+
+    expect(screen.getByText(/current appearance is retained/i)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Newer saved revision" }).closest("article")?.textContent).not.toContain("Applied");
+  });
+
+  it("keeps the real guard registered until Save draft finishes, then closes the editor for same-view navigation", async () => {
     let guard: (() => Promise<boolean>) | null = null;
     render(
       <ThemeStudio
@@ -147,7 +170,8 @@ describe("theme studio integration", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Save draft and leave" }));
     await expect(result).resolves.toBe(true);
     expect(mocks.context.saveDraft).toHaveBeenCalled();
-    expect(guard).not.toBeNull();
+    await screen.findByRole("heading", { name: "Your themes" });
+    await waitFor(() => expect(guard).toBeNull());
   });
 
   it("restores invalid raw drafts and gates saved custom application through shared contrast review", async () => {

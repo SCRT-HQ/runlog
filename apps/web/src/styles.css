@@ -8656,6 +8656,10 @@ html[data-pip="controls"] body {
   border-radius: var(--radius);
   cursor: pointer;
 }
+.themeLibraryTools .buttonLike:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 .themeDraftRecovery {
   padding: var(--space-3);
   border: 1px solid var(--line);
