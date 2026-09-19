@@ -8534,10 +8534,9 @@ html[data-pip="controls"] body {
 }
 
 /*
- * Theme Studio controls never borrow an in-progress or applied custom look.
- * The values are the validated high-contrast-dark built-in palette; the
- * routed wrapper also receives the compiled snapshot inline, while this
- * class keeps shared warning/leave dialogs readable outside that route.
+ * Theme Studio controls use this validated high-contrast-dark palette only
+ * when the local safe-colors escape is enabled. Shared warning/leave dialogs
+ * always keep the same readable boundary outside the routed Studio.
  */
 .themeStudioControl {
   --bg: #080808;
@@ -8598,6 +8597,40 @@ html[data-pip="controls"] body {
   min-width: 0;
   min-height: 100%;
   padding: clamp(var(--space-3), 2vw, var(--space-6));
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+.themeStudio :where(h1, h2, h3, h4) {
+  font-family: var(--font-display);
+}
+.themeStudio p {
+  font-family: var(--font-prose);
+}
+.themeStudio .eyebrow {
+  font-family: var(--font-ui);
+}
+.themeStudioSafetyControl {
+  border-color: #aaaaaa;
+  background: #141414;
+  color: #ffffff;
+  box-shadow: 0 0 0 1px #080808;
+  font-family:
+    "Atkinson Hyperlegible Next Variable",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  font-weight: 600;
+}
+.themeStudioSafetyControl:hover:not(:disabled) {
+  border-color: #aaaaaa;
+  background: #141414;
+  color: #ffffff;
+}
+.themeStudioSafetyControl:focus-visible {
+  outline-color: #a9ddff;
 }
 .themeStudioHeader,
 .themeSectionHead,
