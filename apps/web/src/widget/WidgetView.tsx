@@ -53,7 +53,7 @@ export function WidgetView({ route }: { route: WidgetRoute }) {
     };
   }, [appearance, route.bg, route.scale, route.theme]);
 
-  return route.token ? <ByLink route={route} token={route.token} /> : <FromHere route={route} />;
+  return route.token ? <ByLink route={route} token={route.token} /> : <LocalWidget route={route} />;
 }
 
 const label = (route: WidgetRoute) => WIDGET_KINDS.find((k) => k.kind === route.kind)?.label ?? route.kind;
@@ -89,8 +89,31 @@ function ByLink({ route, token }: { route: WidgetRoute; token: string }) {
   return <WidgetPreviewPage kind={route.kind} snapshot={snapshot} lines={lines} />;
 }
 
-function FromHere({ route }: { route: WidgetRoute }) {
+function LocalWidget({ route }: { route: WidgetRoute }) {
   const plan = usePlan();
+  const access = plan.access("hostTables");
+  if (access === "available") return <FromHere route={route} />;
+  return (
+    <Frame title={label(route)}>
+      {access === "upgrade" ? (
+        <p className="widgetNote">Stream widgets are part of Plus. Subscribe from your profile, under Plan, and open this again.</p>
+      ) : access === "checking" ? (
+        <p className="widgetNote">Checking your plan…</p>
+      ) : access === "sign-in" ? (
+        <p className="widgetNote">Sign in to open this stream widget.</p>
+      ) : (
+        <p className="widgetNote">
+          The plan could not be checked.{" "}
+          <button className="linkButton" onClick={() => void plan.refresh()}>
+            Try again
+          </button>
+        </p>
+      )}
+    </Frame>
+  );
+}
+
+function FromHere({ route }: { route: WidgetRoute }) {
   const [record, setRecord] = useState<StoredRun | null | undefined>(undefined);
   const [pack, setPack] = useState<Pack | null>(null);
 
@@ -141,13 +164,6 @@ function FromHere({ route }: { route: WidgetRoute }) {
   );
   const lines = useTicker(snapshot, gesture);
 
-  if (plan.gates && plan.loaded && !plan.can("plus")) {
-    return (
-      <Frame title={label(route)}>
-        <p className="widgetNote">Stream widgets are part of Plus. Subscribe from your profile, under Plan, and open this again.</p>
-      </Frame>
-    );
-  }
   if (record === undefined) return <Frame title={label(route)} loading />;
   if (record === null || !pack) {
     return (

@@ -143,7 +143,10 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
       return "Billing is not switched on here yet.";
     });
 
-  const billing = Boolean(hosted?.features.billing) || plan.gates;
+  const planAccess = plan.access("hostServers");
+  const readyPlan = plan.state.kind === "ready" ? plan.state : null;
+  const billing = Boolean(hosted?.features.billing) || readyPlan?.gates === true;
+  const planUnknown = planAccess === "checking" || planAccess === "error" || planAccess === "sign-in";
 
   return (
     <div className="profile profileApplication serverProfile">
@@ -200,21 +203,43 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
         </section>
       ) : (
         <>
-          {billing && (
+          {(billing || planUnknown) && (
             <section className="panel">
-              <h3 className="sectionTitle">
-                Plan: <span className="muted">{known.server ? "Runlog for servers, active" : known.open ? "none yet" : "coming soon"}</span>
-              </h3>
-              <p className="muted small">
-                {known.server
-                  ? "The bot hosts runs in your servers. A subscription is managed with Stripe, under Plan on your profile."
-                  : known.open
-                    ? "Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to three servers."
-                    : "Runlog for servers will let the bot host runs in the servers you claim, one subscription for up to three. Claiming a server and filling its vault work now; the plan is not on sale yet."}
-              </p>
-              {!known.server && (
+              {planUnknown ? (
+                <>
+                  <h3 className="sectionTitle">Plan</h3>
+                  <p className="muted small">
+                    {planAccess === "checking"
+                      ? "Checking your plan…"
+                      : planAccess === "sign-in"
+                        ? "Sign in to check server hosting."
+                        : "The plan could not be checked."}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="sectionTitle">
+                    Plan:{" "}
+                    <span className="muted">
+                      {planAccess === "available"
+                        ? "Runlog for servers, active"
+                        : readyPlan?.offers.serversOpen
+                          ? "none yet"
+                          : "coming soon"}
+                    </span>
+                  </h3>
+                  <p className="muted small">
+                    {planAccess === "available"
+                      ? "The bot hosts runs in your servers. A subscription is managed with Stripe, under Plan on your profile."
+                      : readyPlan?.offers.serversOpen
+                        ? "Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to three servers."
+                        : "Runlog for servers will let the bot host runs in the servers you claim, one subscription for up to three. Claiming a server and filling its vault work now; the plan is not on sale yet."}
+                  </p>
+                </>
+              )}
+              {planAccess === "upgrade" && (
                 <div className="padRow">
-                  {known.open ? (
+                  {readyPlan?.offers.serversOpen ? (
                     <>
                       <button className="primary tiny" disabled={busy !== null} onClick={() => void checkout("server-monthly")}>
                         Servers, $9 a month

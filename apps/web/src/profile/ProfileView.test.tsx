@@ -13,6 +13,7 @@ import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
 import { useInvites } from "../share/useInvites.ts";
 import { PROFILE_PAGES, profileHash, profilePageFromHash, type ProfilePage } from "./route.ts";
 import { ProfileView } from "./ProfileView.tsx";
+import type { Plan } from "../sync/usePlan.ts";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -22,6 +23,20 @@ import { ProfileView } from "./ProfileView.tsx";
  * server, and both the menu's badge and the Social page agree with it.
  */
 vi.mock("../share/useInvites.ts", () => ({ useInvites: vi.fn() }));
+const planResult = vi.hoisted(() => ({ value: null as Plan | null }));
+vi.mock("../sync/usePlan.ts", () => ({ usePlan: () => planResult.value }));
+
+const plan = (servers = false): Plan => ({
+  state: {
+    kind: "ready",
+    ownerId: "user_01TEST",
+    gates: true,
+    capabilities: { hostTables: false, waivePublisherFee: false, hostServers: false },
+    offers: { servers, serversOpen: true, publishersOpen: true },
+  },
+  access: () => "upgrade",
+  refresh: async () => {},
+});
 
 function stubInvites(invites: PendingInvite[]) {
   vi.mocked(useInvites).mockReturnValue({ invites, refresh: () => {}, forget: () => {} });
@@ -29,7 +44,10 @@ function stubInvites(invites: PendingInvite[]) {
 
 // Nothing here waits on a server by default; a test opts into a busier
 // account by calling stubInvites again with something in it.
-beforeEach(() => stubInvites([]));
+beforeEach(() => {
+  stubInvites([]);
+  planResult.value = plan(false);
+});
 
 const invite = (token: string): PendingInvite => ({
   token,
@@ -187,6 +205,9 @@ describe("the profile's pages", () => {
     expect(page(signedIn, { page: "profile" })).not.toContain(">Servers<");
     // But whoever followed a claim code is on the page, and the page names itself.
     expect(page(signedIn, { page: "servers" })).toContain(">Servers<");
+
+    planResult.value = plan(true);
+    expect(page(signedIn, { page: "profile" })).toContain(">Servers<");
   });
 
   it("renders Servers, saying what a server needs where this process has no API, and asks before claiming one a code arrived for", () => {

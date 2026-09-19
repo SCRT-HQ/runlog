@@ -85,9 +85,33 @@ export function PlanSection({ api }: { api: Api | null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api]);
 
-  const billing = Boolean(hosted?.features.billing) || plan.gates;
-  if (!api || !billing) return null;
-  const plus = plan.entitlements.includes("plus");
+  if (!api) return null;
+  if (plan.state.kind === "checking" || plan.state.kind === "loading") {
+    return (
+      <section className="panel planPanel">
+        <h3 className="sectionTitle">Plan</h3>
+        <p className="muted small">Checking your plan…</p>
+      </section>
+    );
+  }
+  if (plan.state.kind === "error") {
+    return (
+      <section className="panel planPanel">
+        <h3 className="sectionTitle">Plan</h3>
+        <p className="muted small">
+          The plan could not be checked.{" "}
+          <button className="linkButton" onClick={() => void plan.refresh()}>
+            Try again
+          </button>
+        </p>
+      </section>
+    );
+  }
+  if (plan.state.kind !== "ready") return null;
+  const billing = Boolean(hosted?.features.billing) || plan.state.gates;
+  if (!billing) return null;
+  const plus = plan.state.capabilities.hostTables;
+  const planAccess = plan.access("hostTables");
   const owner = { api, generation: renderGeneration };
   const action = working?.api === api && working.generation === renderGeneration ? working.action : null;
   const message = note?.api === api && note.generation === renderGeneration ? note.message : "";
@@ -141,7 +165,7 @@ export function PlanSection({ api }: { api: Api | null }) {
       <p className="muted planSummary">
         {plus
           ? "Hosting a table, people in your runs on their own devices, races across devices, is yours. Manage the subscription, cards and invoices with Stripe."
-          : plan.gates
+          : planAccess === "upgrade"
             ? "Free plays everything on one device and syncs your own. Plus hosts a table: invitations and races across devices."
             : "Plans are not switched on here yet: everything is open while Runlog is in preview."}
       </p>

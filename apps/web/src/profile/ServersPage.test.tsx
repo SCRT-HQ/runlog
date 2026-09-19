@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import type { Api, Guild } from "../sync/client.ts";
+import type { Plan, PlanAccess } from "../sync/usePlan.ts";
 import { ServersPage } from "./ServersPage.tsx";
 
 /**
@@ -16,6 +17,25 @@ vi.mock("../storage/db.ts", () => ({
     { id: "com.example.other", title: "Wheel and Wire", version: "1", format: "yaml", source: "" },
   ],
 }));
+const planResult = vi.hoisted(() => ({ value: null as Plan | null }));
+vi.mock("../sync/usePlan.ts", () => ({ usePlan: () => planResult.value }));
+
+const planWith = (answer: PlanAccess, serversOpen = true): Plan => ({
+  state:
+    answer === "available" || answer === "upgrade"
+      ? {
+          kind: "ready",
+          ownerId: "user_ME",
+          gates: true,
+          capabilities: { hostTables: false, waivePublisherFee: false, hostServers: answer === "available" },
+          offers: { servers: true, serversOpen, publishersOpen: true },
+        }
+      : answer === "error"
+        ? { kind: "error", ownerId: "user_ME", message: "offline" }
+        : { kind: "loading", ownerId: "user_ME" },
+  access: () => answer,
+  refresh: vi.fn(async () => {}),
+});
 
 const signedIn: Account = {
   status: "signed-in",
@@ -58,6 +78,54 @@ const saves =
 afterEach(() => {
   cleanup();
   asked.length = 0;
+  planResult.value = planWith("available");
+});
+
+planResult.value = planWith("available");
+
+describe("server plan access", () => {
+  const service = (checkout = vi.fn(async () => ({ available: false as const }))): Api =>
+    ({
+      myGuilds: async () => ({ guilds: [], server: false, open: true, allowed: 3 }),
+      checkout,
+    }) as unknown as Api;
+
+  it.each([
+    ["checking" as const, /Checking your plan/],
+    ["error" as const, /plan could not be checked/],
+  ])("does not expose checkout while access is %s", async (answer, message) => {
+    const checkout = vi.fn(async () => ({ available: false as const }));
+    planResult.value = planWith(answer);
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={service(checkout)} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(message)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Servers, \$9 a month/ })).toBeNull();
+    expect(checkout).not.toHaveBeenCalled();
+  });
+
+  it("offers checkout only when hosting is unavailable and the ready offer is open", async () => {
+    planResult.value = planWith("upgrade", true);
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={service()} />
+      </AccountContext.Provider>,
+    );
+    expect(await screen.findByRole("button", { name: "Servers, $9 a month" })).toBeTruthy();
+
+    cleanup();
+    planResult.value = planWith("available", true);
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={service()} />
+      </AccountContext.Provider>,
+    );
+    await screen.findByText(/Runlog for servers, active/);
+    expect(screen.queryByRole("button", { name: "Servers, $9 a month" })).toBeNull();
+  });
 });
 
 describe("the watch party setting on a server", () => {

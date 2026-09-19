@@ -12,16 +12,17 @@ import { PublisherSection } from "./PublisherSection.tsx";
  * comes from the API through a hook of its own, stood in for here.
  */
 let plan: Plan;
-vi.mock("../sync/usePlan.ts", () => ({ usePlan: () => plan, forgetPlan: () => {} }));
+vi.mock("../sync/usePlan.ts", () => ({ usePlan: () => plan }));
 
 const planOf = (gates: boolean, publishersOpen: boolean): Plan => ({
-  gates,
-  entitlements: [],
-  can: () => !gates,
-  servers: false,
-  serversOpen: false,
-  publishersOpen,
-  loaded: true,
+  state: {
+    kind: "ready",
+    ownerId: "A",
+    gates,
+    capabilities: { hostTables: false, waivePublisherFee: false, hostServers: false },
+    offers: { servers: false, serversOpen: false, publishersOpen },
+  },
+  access: () => "upgrade",
   refresh: async () => {},
 });
 const api = { myPublisher: async () => null } as unknown as Api;
@@ -44,5 +45,15 @@ describe("the publisher tier's hold", () => {
     plan = planOf(true, true);
     render(<PublisherSection api={api} />);
     await waitFor(() => expect(screen.getByText("Become a publisher")).toBeTruthy());
+  });
+
+  it.each([
+    [{ kind: "loading", ownerId: "A" } as const, /Checking your plan/],
+    [{ kind: "error", ownerId: "A", message: "offline" } as const, /plan could not be checked/],
+  ])("does not expose the new-publisher form while plan state is $state.kind", async (state, message) => {
+    plan = { state, access: () => (state.kind === "error" ? "error" : "checking"), refresh: async () => {} };
+    render(<PublisherSection api={api} />);
+    await waitFor(() => expect(screen.getByText(message)).toBeTruthy());
+    expect(screen.queryByText("Become a publisher")).toBeNull();
   });
 });

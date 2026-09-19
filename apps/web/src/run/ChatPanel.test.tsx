@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { act } from "react";
 import type { Pack } from "@runlog/rules-schema";
 import type { Api } from "../sync/client.ts";
+import type { Plan, PlanAccess } from "../sync/usePlan.ts";
 import type { StoredRun } from "../storage/db.ts";
 import { ChatSettings } from "./ChatPanel.tsx";
 
@@ -17,19 +18,28 @@ import { ChatSettings } from "./ChatPanel.tsx";
  */
 
 const current: { api: Api | null } = { api: null };
+const planResult = vi.hoisted(() => ({ value: null as Plan | null }));
 vi.mock("../sync/useApi.ts", () => ({ useApi: () => current.api }));
-vi.mock("../sync/usePlan.ts", () => ({
-  usePlan: () => ({
-    gates: false,
-    entitlements: [],
-    can: () => true,
-    servers: false,
-    serversOpen: true,
-    publishersOpen: true,
-    loaded: true,
-    refresh: async () => {},
-  }),
-}));
+vi.mock("../sync/usePlan.ts", () => ({ usePlan: () => planResult.value }));
+
+const planWith = (answer: PlanAccess): Plan => ({
+  state:
+    answer === "available" || answer === "upgrade"
+      ? {
+          kind: "ready",
+          ownerId: "A",
+          gates: answer === "upgrade",
+          capabilities: { hostTables: answer === "available", waivePublisherFee: false, hostServers: false },
+          offers: { servers: true, serversOpen: true, publishersOpen: true },
+        }
+      : answer === "error"
+        ? { kind: "error", ownerId: "A", message: "offline" }
+        : answer === "sign-in"
+          ? { kind: "anonymous" }
+          : { kind: "loading", ownerId: "A" },
+  access: () => answer,
+  refresh: vi.fn(async () => {}),
+});
 
 const pack = {
   id: "demo",
@@ -54,10 +64,36 @@ const api = (over: Partial<Api> = {}): Api =>
 
 afterEach(() => {
   current.api = null;
+  planResult.value = planWith("available");
   cleanup();
 });
 
+planResult.value = planWith("available");
+
 describe("taking asks from chat", () => {
+  it.each([
+    ["checking" as const, /Checking your plan/],
+    ["sign-in" as const, /Sign in/],
+    ["upgrade" as const, /part of Plus/],
+    ["error" as const, /plan could not be checked/],
+  ])("does not read or mint keys while access is %s", async (answer, message) => {
+    const streamKeys = vi.fn(async () => ({}));
+    const mintStreamKey = vi.fn(async () => ({ key: "press", keys: {} }));
+    const mintAskKey = vi.fn(async () => ({ key: "ask", policy: "ask" as const }));
+    current.api = api({ streamKeys, mintStreamKey, mintAskKey });
+    planResult.value = planWith(answer);
+
+    render(<ChatSettings pack={pack} record={record()} />);
+
+    expect(screen.getByText(message)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Take asks" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Make a press key" })).toBeNull();
+    await Promise.resolve();
+    expect(streamKeys).not.toHaveBeenCalled();
+    expect(mintStreamKey).not.toHaveBeenCalled();
+    expect(mintAskKey).not.toHaveBeenCalled();
+  });
+
   it("shows the minted key and the address a bot posts to, on the press that makes it", async () => {
     current.api = api();
     render(<ChatSettings pack={pack} record={record()} />);

@@ -7,6 +7,7 @@ import { HostedProvider } from "./hosted/HostedProvider.tsx";
 import { DocDrawerProvider } from "./docs/DocDrawer.tsx";
 import { ToastProvider } from "./ui/ToastProvider.tsx";
 import { SyncProvider } from "./sync/SyncProvider.tsx";
+import { PlanProvider } from "./sync/PlanProvider.tsx";
 import { applyBootAppearance, isThemeRecoveryAddress, readBootAppearance } from "./theme/appearance.ts";
 import { ThemeProvider } from "./theme/ThemeProvider.tsx";
 import { applyTheme } from "./theme/theme.ts";
@@ -83,15 +84,17 @@ if (page === "welcome") {
       <ErrorBoundary>
         <HostedProvider>
           <AccountProvider>
-            <ThemeProvider>
-              <SyncProvider>
-                <DocDrawerProvider>
-                  <ToastProvider>
-                    <App />
-                  </ToastProvider>
-                </DocDrawerProvider>
-              </SyncProvider>
-            </ThemeProvider>
+            <PlanProvider>
+              <ThemeProvider>
+                <SyncProvider>
+                  <DocDrawerProvider>
+                    <ToastProvider>
+                      <App />
+                    </ToastProvider>
+                  </DocDrawerProvider>
+                </SyncProvider>
+              </ThemeProvider>
+            </PlanProvider>
           </AccountProvider>
         </HostedProvider>
       </ErrorBoundary>

@@ -28,17 +28,27 @@ const hosted = (billing: boolean, pricing = "https://example.test/pricing"): Hos
   features: { billing, testing: false },
 });
 
-function plan(overrides: Partial<Plan> = {}): Plan {
+function plan(overrides: { gates?: boolean; subscribed?: boolean; state?: Plan["state"]; refresh?: Plan["refresh"] } = {}): Plan {
+  const state: Plan["state"] =
+    overrides.state ??
+    ({
+      kind: "ready",
+      ownerId: "A",
+      gates: overrides.gates ?? true,
+      capabilities: { hostTables: overrides.subscribed ?? false, waivePublisherFee: false, hostServers: false },
+      offers: { servers: true, serversOpen: true, publishersOpen: true },
+    } as const);
   return {
-    gates: true,
-    entitlements: [],
-    can: () => false,
-    servers: false,
-    serversOpen: false,
-    publishersOpen: true,
-    loaded: true,
-    refresh: vi.fn(async () => {}),
-    ...overrides,
+    state,
+    access: () =>
+      state.kind === "ready"
+        ? state.capabilities.hostTables || !state.gates
+          ? "available"
+          : "upgrade"
+        : state.kind === "error"
+          ? "error"
+          : "checking",
+    refresh: overrides.refresh ?? vi.fn(async () => {}),
   };
 }
 
@@ -63,6 +73,19 @@ afterEach(() => {
 });
 
 describe("plan visibility and current choices", () => {
+  it.each([
+    [{ kind: "loading", ownerId: "A" } as const, /Checking your plan/],
+    [{ kind: "error", ownerId: "A", message: "offline" } as const, /plan could not be checked/],
+  ])("fails closed for $state.kind", (state, message) => {
+    context.plan = plan({ state });
+
+    render(<PlanSection api={api()} />);
+
+    expect(screen.getByText(message)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Plus, $4 a month" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Manage subscription" })).toBeNull();
+  });
+
   it("stays absent without an API or anything billed or gated", () => {
     const service = api();
     context.hosted = hosted(false);
@@ -83,7 +106,7 @@ describe("plan visibility and current choices", () => {
     expect(pricing.tagName).toBe("A");
     expect(pricing.getAttribute("href")).toBe("https://example.test/pricing");
 
-    context.plan = plan({ entitlements: ["plus"], can: () => true });
+    context.plan = plan({ subscribed: true });
     view.rerender(<PlanSection api={service} />);
     expect(screen.getByRole("heading", { name: "Plan: Plus" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Manage subscription" })).toBeTruthy();
@@ -115,7 +138,7 @@ describe("plan actions", () => {
   });
 
   it("starts the portal once with its own busy label", async () => {
-    context.plan = plan({ entitlements: ["plus"] });
+    context.plan = plan({ subscribed: true });
     const pending = deferred<{ available: false }>();
     const portal = vi.fn(() => pending.promise);
     render(<PlanSection api={api({ portal })} />);
@@ -270,7 +293,7 @@ describe("Stripe return and API ownership", () => {
   it.each(["null", "another API"] as const)(
     "does not let a rejected portal from an earlier same-API lifecycle disturb the current action after %s",
     async (between) => {
-      context.plan = plan({ entitlements: ["plus"] });
+      context.plan = plan({ subscribed: true });
       const oldPortal = deferred<{ url: string } | { available: false }>();
       const currentPortal = deferred<{ url: string } | { available: false }>();
       const portal = vi.fn<Api["portal"]>().mockReturnValueOnce(oldPortal.promise).mockReturnValueOnce(currentPortal.promise);

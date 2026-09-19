@@ -35,7 +35,8 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
   const [copyOutcome, setCopyOutcome] = useState<CopyOutcome | null>(null);
   const copyAttempt = useRef(0);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const allowed = !plan.gates || plan.can("plus");
+  const planAccess = plan.access("hostTables");
+  const allowed = planAccess === "available";
   // The live link's token, when the run is shared: a widget with it works on any machine.
   const token = (() => {
     const link = liveLinkOf(runId);
@@ -94,10 +95,25 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
   return (
     <div className="streamSettings">
       {!allowed ? (
-        <p className="muted small">
-          Pop-out widgets for a stream, the scoreboard, the clock, the race, are part of Plus, like hosting a table. Subscribe from your
-          profile, under Plan.
-        </p>
+        <div className="muted small">
+          {planAccess === "upgrade" ? (
+            <p>
+              Pop-out widgets for a stream, the scoreboard, the clock, the race, are part of Plus, like hosting a table. Subscribe from your
+              profile, under Plan.
+            </p>
+          ) : planAccess === "checking" ? (
+            <p>Checking your plan…</p>
+          ) : planAccess === "sign-in" ? (
+            <p>Sign in to use stream widgets.</p>
+          ) : (
+            <p>
+              The plan could not be checked.{" "}
+              <button className="linkButton" onClick={() => void plan.refresh()}>
+                Try again
+              </button>
+            </p>
+          )}
+        </div>
       ) : (
         <>
           <p className="muted small">
