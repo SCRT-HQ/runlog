@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import type { Api, Me, PlanCapabilities } from "./client.ts";
 import { PlanProvider } from "./PlanProvider.tsx";
-import { usePlan } from "./usePlan.ts";
+import { usePlan, type Plan } from "./usePlan.ts";
 
 const current = vi.hoisted(() => ({ api: null as Api | null }));
 vi.mock("./useApi.ts", () => ({ useApi: () => current.api }));
@@ -66,6 +66,13 @@ function Probe({ name = "plan" }: { name?: string }) {
       </button>
     </div>
   );
+}
+
+function RenderProbe({ seen, capture }: { seen: Plan[]; capture?: (plan: Plan) => void }) {
+  const plan = usePlan();
+  seen.push(plan);
+  capture?.(plan);
+  return <output aria-label="render-trace">{plan.access("hostTables")}</output>;
 }
 
 const tree = (account: Account, children = <Probe />) => (
@@ -200,6 +207,48 @@ describe("plan access", () => {
     await act(async () => answerB.resolve(meOf({ sub: "B", capabilities: caps({ hostTables: true }) })));
     expect(screen.getByLabelText("plan").dataset.owner).toBe("B");
     expect(screen.getByLabelText("plan").textContent).toBe("available");
+  });
+
+  it("hides an A/API1 snapshot on the first A/API2 render and makes an API1 refresh capture inert", async () => {
+    const me1 = vi.fn<Api["me"]>().mockResolvedValue(meOf({ capabilities: caps({ hostTables: true }) }));
+    const answer2 = deferred<Me>();
+    const me2 = vi.fn<Api["me"]>(() => answer2.promise);
+    current.api = apiOf(me1);
+    const seen: Plan[] = [];
+    let latest: Plan | null = null;
+    const view = render(tree(signedIn("A"), <RenderProbe seen={seen} capture={(plan) => (latest = plan)} />));
+    await waitFor(() => expect(screen.getByLabelText("render-trace").textContent).toBe("available"));
+    const oldRefresh = latest!.refresh;
+
+    seen.length = 0;
+    current.api = apiOf(me2);
+    view.rerender(tree(signedIn("A"), <RenderProbe seen={seen} capture={(plan) => (latest = plan)} />));
+
+    expect(seen[0]?.access("hostTables")).toBe("checking");
+    await act(async () => oldRefresh());
+    expect(me1).toHaveBeenCalledOnce();
+    await act(async () => answer2.resolve(meOf({ capabilities: caps({ hostTables: true }) })));
+    expect(screen.getByLabelText("render-trace").textContent).toBe("available");
+  });
+
+  it("hides an A snapshot on the first render when A returns after checking", async () => {
+    const next = deferred<Me>();
+    const me = vi
+      .fn<Api["me"]>()
+      .mockResolvedValueOnce(meOf({ capabilities: caps({ hostTables: true }) }))
+      .mockReturnValueOnce(next.promise);
+    current.api = apiOf(me);
+    const seen: Plan[] = [];
+    const view = render(tree(signedIn("A"), <RenderProbe seen={seen} />));
+    await waitFor(() => expect(screen.getByLabelText("render-trace").textContent).toBe("available"));
+
+    view.rerender(tree({ status: "checking", signIn: () => {} }, <RenderProbe seen={seen} />));
+    seen.length = 0;
+    view.rerender(tree(signedIn("A"), <RenderProbe seen={seen} />));
+
+    expect(seen[0]?.access("hostTables")).toBe("checking");
+    await act(async () => next.resolve(meOf({ capabilities: caps({ hostTables: true }) })));
+    expect(screen.getByLabelText("render-trace").textContent).toBe("available");
   });
 
   it("keeps the newest same-owner refresh when an older request resolves late", async () => {

@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "../auth/Account.tsx";
+import type { Hosted } from "../hosted/config.ts";
 import type { Api, Guild } from "../sync/client.ts";
 import type { Plan, PlanAccess } from "../sync/usePlan.ts";
 import { ServersPage } from "./ServersPage.tsx";
@@ -18,7 +19,9 @@ vi.mock("../storage/db.ts", () => ({
   ],
 }));
 const planResult = vi.hoisted(() => ({ value: null as Plan | null }));
+const hostedResult = vi.hoisted(() => ({ value: null as Hosted | null }));
 vi.mock("../sync/usePlan.ts", () => ({ usePlan: () => planResult.value }));
+vi.mock("../hosted/HostedProvider.tsx", () => ({ useHosted: () => hostedResult.value }));
 
 const planWith = (answer: PlanAccess, serversOpen = true): Plan => ({
   state:
@@ -79,6 +82,7 @@ afterEach(() => {
   cleanup();
   asked.length = 0;
   planResult.value = planWith("available");
+  hostedResult.value = null;
 });
 
 planResult.value = planWith("available");
@@ -105,6 +109,49 @@ describe("server plan access", () => {
     expect(await screen.findByText(message)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Servers, \$9 a month/ })).toBeNull();
     expect(checkout).not.toHaveBeenCalled();
+  });
+
+  it("retries a failed plan check from the Servers page", async () => {
+    const refresh = vi.fn(async () => {});
+    planResult.value = { ...planWith("error"), refresh };
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={service()} />
+      </AccountContext.Provider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it("does not call ungated effective access an active server subscription", async () => {
+    hostedResult.value = {
+      operator: "Example",
+      support: "support@example.test",
+      termsVersion: "v1",
+      links: { terms: "https://example.test/terms", privacy: "https://example.test/privacy" },
+      features: { billing: true, testing: false },
+    };
+    planResult.value = {
+      state: {
+        kind: "ready",
+        ownerId: "user_ME",
+        gates: false,
+        capabilities: { hostTables: false, waivePublisherFee: false, hostServers: false },
+        offers: { servers: true, serversOpen: true, publishersOpen: true },
+      },
+      access: () => "available",
+      refresh: async () => {},
+    };
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={service()} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Plan: available in preview" })).toBeTruthy();
+    expect(screen.queryByText(/subscription is managed/i)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Servers, $9 a month" })).toBeNull();
   });
 
   it("offers checkout only when hosting is unavailable and the ready offer is open", async () => {

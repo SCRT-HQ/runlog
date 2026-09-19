@@ -4,6 +4,13 @@ import { useApi } from "./useApi.ts";
 import { PlanContext, accessFor, type Plan, type PlanState } from "./usePlan.ts";
 
 type OwnedPlanState = Extract<PlanState, { ownerId: string }>;
+type StoredPlanState = { lifecycle: object; state: OwnedPlanState };
+type Lifecycle = {
+  accountStatus: ReturnType<typeof useAccount>["status"];
+  ownerId: string | null;
+  api: ReturnType<typeof useApi>;
+  token: object;
+};
 
 const completeCapabilities = (value: unknown): value is Extract<PlanState, { kind: "ready" }>["capabilities"] => {
   if (typeof value !== "object" || value === null) return false;
@@ -18,17 +25,20 @@ const completeCapabilities = (value: unknown): value is Extract<PlanState, { kin
 export function PlanProvider({ children }: { children: ReactNode }) {
   const account = useAccount();
   const api = useApi();
-  const [stored, setStored] = useState<OwnedPlanState | null>(null);
+  const [stored, setStored] = useState<StoredPlanState | null>(null);
   const ownerId = account.status === "signed-in" ? account.user.id : null;
-  const ownerRef = useRef<string | null>(ownerId);
-  const apiRef = useRef(api);
+  const lifecycleRef = useRef<Lifecycle>({ accountStatus: account.status, ownerId, api, token: {} });
   const generationRef = useRef(0);
 
-  if (ownerRef.current !== ownerId || apiRef.current !== api) {
-    ownerRef.current = ownerId;
-    apiRef.current = api;
+  if (
+    lifecycleRef.current.accountStatus !== account.status ||
+    lifecycleRef.current.ownerId !== ownerId ||
+    lifecycleRef.current.api !== api
+  ) {
+    lifecycleRef.current = { accountStatus: account.status, ownerId, api, token: {} };
     generationRef.current += 1;
   }
+  const lifecycle = lifecycleRef.current.token;
 
   const visible: PlanState = (() => {
     switch (account.status) {
@@ -40,46 +50,63 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         return { kind: "anonymous" };
       case "signed-in": {
         const currentOwner = account.user.id;
-        return stored !== null && stored.ownerId === currentOwner ? stored : { kind: "loading", ownerId: currentOwner };
+        return stored !== null && stored.lifecycle === lifecycle && stored.state.ownerId === currentOwner
+          ? stored.state
+          : { kind: "loading", ownerId: currentOwner };
       }
     }
   })();
 
   const refresh = useCallback(async () => {
     if (account.status !== "signed-in" || api === null) return;
+    if (lifecycleRef.current.token !== lifecycle) return;
     const requestedOwner = account.user.id;
     const requestedApi = api;
+    const requestedLifecycle = lifecycle;
     const generation = ++generationRef.current;
-    setStored({ kind: "loading", ownerId: requestedOwner });
+    setStored({ lifecycle: requestedLifecycle, state: { kind: "loading", ownerId: requestedOwner } });
 
-    const current = () => ownerRef.current === requestedOwner && apiRef.current === requestedApi && generationRef.current === generation;
+    const current = () =>
+      lifecycleRef.current.token === requestedLifecycle &&
+      lifecycleRef.current.ownerId === requestedOwner &&
+      lifecycleRef.current.api === requestedApi &&
+      generationRef.current === generation;
     try {
       const me = await requestedApi.me();
       if (!current()) return;
       if (me.sub !== requestedOwner || !completeCapabilities(me.capabilities)) {
-        setStored({ kind: "error", ownerId: requestedOwner, message: "The plan response did not match this account." });
+        setStored({
+          lifecycle: requestedLifecycle,
+          state: { kind: "error", ownerId: requestedOwner, message: "The plan response did not match this account." },
+        });
         return;
       }
       setStored({
-        kind: "ready",
-        ownerId: requestedOwner,
-        gates: me.gates === true,
-        capabilities: me.capabilities,
-        offers: {
-          servers: me.servers === true,
-          serversOpen: me.serversOpen === true,
-          publishersOpen: me.publishersOpen !== false,
+        lifecycle: requestedLifecycle,
+        state: {
+          kind: "ready",
+          ownerId: requestedOwner,
+          gates: me.gates === true,
+          capabilities: me.capabilities,
+          offers: {
+            servers: me.servers === true,
+            serversOpen: me.serversOpen === true,
+            publishersOpen: me.publishersOpen !== false,
+          },
         },
       });
     } catch (error) {
       if (!current()) return;
       setStored({
-        kind: "error",
-        ownerId: requestedOwner,
-        message: error instanceof Error ? error.message : "The plan could not be checked.",
+        lifecycle: requestedLifecycle,
+        state: {
+          kind: "error",
+          ownerId: requestedOwner,
+          message: error instanceof Error ? error.message : "The plan could not be checked.",
+        },
       });
     }
-  }, [account, api]);
+  }, [account, api, lifecycle]);
 
   useEffect(() => {
     if (account.status === "signed-in" && api !== null) void refresh();

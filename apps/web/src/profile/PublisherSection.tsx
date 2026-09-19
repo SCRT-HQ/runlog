@@ -500,11 +500,18 @@ function HostedLicensing({ api }: { api: Api }) {
       <div className="publisherPacks">
         <h4 className="stepLabel">Hosted licensing</h4>
         <p className="muted small">
-          {access === "checking"
-            ? "Checking your plan…"
-            : access === "sign-in"
-              ? "Sign in to check hosted licensing."
-              : "The plan could not be checked."}
+          {access === "checking" ? (
+            "Checking your plan…"
+          ) : access === "sign-in" ? (
+            "Sign in to check hosted licensing."
+          ) : (
+            <>
+              The plan could not be checked.{" "}
+              <button className="linkButton" onClick={() => void plan.refresh()}>
+                Try again
+              </button>
+            </>
+          )}
         </p>
       </div>
     );

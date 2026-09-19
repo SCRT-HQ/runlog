@@ -147,6 +147,8 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
   const readyPlan = plan.state.kind === "ready" ? plan.state : null;
   const billing = Boolean(hosted?.features.billing) || readyPlan?.gates === true;
   const planUnknown = planAccess === "checking" || planAccess === "error" || planAccess === "sign-in";
+  const subscribed = readyPlan?.capabilities.hostServers === true;
+  const openPreview = readyPlan !== null && !readyPlan.gates && !subscribed;
 
   return (
     <div className="profile profileApplication serverProfile">
@@ -209,11 +211,18 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
                 <>
                   <h3 className="sectionTitle">Plan</h3>
                   <p className="muted small">
-                    {planAccess === "checking"
-                      ? "Checking your plan…"
-                      : planAccess === "sign-in"
-                        ? "Sign in to check server hosting."
-                        : "The plan could not be checked."}
+                    {planAccess === "checking" ? (
+                      "Checking your plan…"
+                    ) : planAccess === "sign-in" ? (
+                      "Sign in to check server hosting."
+                    ) : (
+                      <>
+                        The plan could not be checked.{" "}
+                        <button className="linkButton" onClick={() => void plan.refresh()}>
+                          Try again
+                        </button>
+                      </>
+                    )}
                   </p>
                 </>
               ) : (
@@ -221,19 +230,23 @@ export function ServersPage({ api, pending: pendingProp }: { api: Api | null; pe
                   <h3 className="sectionTitle">
                     Plan:{" "}
                     <span className="muted">
-                      {planAccess === "available"
+                      {subscribed
                         ? "Runlog for servers, active"
-                        : readyPlan?.offers.serversOpen
-                          ? "none yet"
-                          : "coming soon"}
+                        : openPreview
+                          ? "available in preview"
+                          : readyPlan?.offers.serversOpen
+                            ? "none yet"
+                            : "coming soon"}
                     </span>
                   </h3>
                   <p className="muted small">
-                    {planAccess === "available"
+                    {subscribed
                       ? "The bot hosts runs in your servers. A subscription is managed with Stripe, under Plan on your profile."
-                      : readyPlan?.offers.serversOpen
-                        ? "Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to three servers."
-                        : "Runlog for servers will let the bot host runs in the servers you claim, one subscription for up to three. Claiming a server and filling its vault work now; the plan is not on sale yet."}
+                      : openPreview
+                        ? "Server hosting is available while plans are not switched on here."
+                        : readyPlan?.offers.serversOpen
+                          ? "Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to three servers."
+                          : "Runlog for servers will let the bot host runs in the servers you claim, one subscription for up to three. Claiming a server and filling its vault work now; the plan is not on sale yet."}
                   </p>
                 </>
               )}
