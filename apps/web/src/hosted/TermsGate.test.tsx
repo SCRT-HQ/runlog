@@ -48,7 +48,14 @@ const profile = (termsVersion?: string): Profile => ({
   ...(termsVersion ? { termsVersion } : {}),
 });
 
-const me = (p: Profile) => ({ sub: "user_ME", sid: "session", env: "test", profile: p, entitlements: [] });
+const me = (p: Profile) => ({
+  sub: "user_ME",
+  sid: "session",
+  env: "test",
+  profile: p,
+  entitlements: [],
+  capabilities: { hostTables: false, waivePublisherFee: false, hostServers: false },
+});
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
