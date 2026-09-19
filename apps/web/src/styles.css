@@ -1367,7 +1367,7 @@ a.chip {
   cursor: pointer;
 }
 .libraryPack.inPlay {
-  border-color: var(--accent-dim);
+  border-color: var(--selected-indicator);
 }
 .libraryPackHead {
   display: flex;
@@ -1470,7 +1470,7 @@ a.chip {
   border-radius: var(--radius);
 }
 .runRow.open {
-  border-color: var(--accent-dim);
+  border-color: var(--selected-indicator);
 }
 .runRowMain {
   display: grid;
