@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { loadMarketplace, shippedIds } from "../library/marketplace.ts";
 import { WelcomeView } from "./WelcomeView.tsx";
 import { PERSONAS } from "./personas.ts";
 
@@ -88,8 +89,12 @@ describe("the welcome page", () => {
 
   it("gives each pack a card of its title and its first sentence, and no more", async () => {
     const { container } = render(<WelcomeView />);
-    // The shelf is read after the first paint, from the marketplace's own source.
-    expect(await screen.findByText("A penalty wheel for any stream.")).toBeTruthy();
+    // Wait for the real lazy pack source, not the default one-second DOM-query
+    // deadline: instrumented CI can take longer to import and parse the YAML.
+    await act(async () => {
+      await Promise.all([loadMarketplace({ testing: false }), shippedIds()]);
+    });
+    expect(screen.getByText("A penalty wheel for any stream.")).toBeTruthy();
     expect(container.querySelectorAll(".welcomePack")).toHaveLength(9);
     expect(container.textContent).not.toContain("Every round spins what it is worth");
   });
