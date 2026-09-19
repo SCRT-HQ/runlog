@@ -27,7 +27,8 @@ export function ChatSettings({
 }) {
   const api = useApi();
   const plan = usePlan();
-  const allowed = !plan.gates || plan.can("plus");
+  const planAccess = plan.access("hostTables");
+  const allowed = planAccess === "available";
   const [key, setKey] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [copied, setCopied] = useState<"key" | "address" | "press" | null>(null);
@@ -156,9 +157,25 @@ export function ChatSettings({
         Chat <span className="muted">asks from outside</span>
       </h3>
       {!allowed ? (
-        <p className="muted small">
-          Taking asks from chat, a channel-point redeem that rolls or a command that takes a move, is part of Plus, like hosting a table.
-        </p>
+        <div className="muted small">
+          {planAccess === "upgrade" ? (
+            <p>
+              Taking asks from chat, a channel-point redeem that rolls or a command that takes a move, is part of Plus, like hosting a
+              table.
+            </p>
+          ) : planAccess === "checking" ? (
+            <p>Checking your plan…</p>
+          ) : planAccess === "sign-in" ? (
+            <p>Sign in to take asks from chat.</p>
+          ) : (
+            <p>
+              The plan could not be checked.{" "}
+              <button className="linkButton" onClick={() => void plan.refresh()}>
+                Try again
+              </button>
+            </p>
+          )}
+        </div>
       ) : (
         <>
           <p className="muted small">

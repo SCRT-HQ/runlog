@@ -118,6 +118,7 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
   const invitations = useInvites(api, true);
   // Whether the server tier is this account's to see, for the nav.
   const plan = usePlan();
+  const servers = plan.state.kind === "ready" && plan.state.offers.servers;
 
   const pageLabel = PROFILE_PAGES.find((p) => p.id === page)?.label;
   useTitle(page === "profile" || !pageLabel ? "Profile" : `${pageLabel} · Profile`);
@@ -136,7 +137,7 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
     return (
       <main className="main">
         <div className="profileLayout">
-          <ProfileNav page={page} onNavigate={onNavigate} waiting={invitations.invites.length} servers={plan.servers} application />
+          <ProfileNav page={page} onNavigate={onNavigate} waiting={invitations.invites.length} servers={servers} application />
           <div className="profileBody profileApplicationBody">
             <SettingsPage />
           </div>
@@ -193,7 +194,7 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
           page={page}
           onNavigate={onNavigate}
           waiting={invitations.invites.length}
-          servers={plan.servers}
+          servers={servers}
           application={page !== "account"}
         />
         <div className={`profileBody${page === "account" ? "" : " profileApplicationBody"}`}>

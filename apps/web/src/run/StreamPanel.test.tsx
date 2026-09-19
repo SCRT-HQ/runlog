@@ -3,12 +3,32 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { StreamSettings } from "./StreamPanel.tsx";
 import { rememberLiveLink } from "../live/route.ts";
+import type { Plan, PlanAccess } from "../sync/usePlan.ts";
 
-const plan = vi.hoisted(() => ({ gates: false as boolean, loaded: true, can: (): boolean => true }));
+const planResult = vi.hoisted(() => ({ value: null as Plan | null }));
 
 vi.mock("../sync/usePlan.ts", () => ({
-  usePlan: () => plan,
+  usePlan: () => planResult.value,
 }));
+
+const planWith = (answer: PlanAccess): Plan => ({
+  state:
+    answer === "available" || answer === "upgrade"
+      ? {
+          kind: "ready",
+          ownerId: "A",
+          gates: answer === "upgrade",
+          capabilities: { hostTables: answer === "available", waivePublisherFee: false, hostServers: false },
+          offers: { servers: true, serversOpen: true, publishersOpen: true },
+        }
+      : answer === "error"
+        ? { kind: "error", ownerId: "A", message: "offline" }
+        : answer === "sign-in"
+          ? { kind: "anonymous" }
+          : { kind: "loading", ownerId: "A" },
+  access: () => answer,
+  refresh: vi.fn(async () => {}),
+});
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -27,12 +47,13 @@ afterEach(() => {
   cleanup();
   localStorage.clear();
   vi.restoreAllMocks();
-  plan.gates = false;
-  plan.can = () => true;
+  planResult.value = planWith("available");
   if (documentPictureInPicture) Object.defineProperty(window, "documentPictureInPicture", documentPictureInPicture);
   else Reflect.deleteProperty(window, "documentPictureInPicture");
   vi.useRealTimers();
 });
+
+planResult.value = planWith("available");
 
 describe("a failed stream address copy", () => {
   it("gives persistent retry guidance while retaining the widget open action", async () => {
@@ -231,12 +252,23 @@ describe("stream widget addresses", () => {
     expect(onControls).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the Plus gate instead of widget controls where the plan disallows them", () => {
-    plan.gates = true;
-    plan.can = () => false;
+  it.each([
+    ["checking" as const, /Checking your plan/],
+    ["sign-in" as const, /Sign in/],
+    ["upgrade" as const, /part of Plus/],
+    ["error" as const, /plan could not be checked/],
+  ])("shows the %s boundary instead of widget controls", (answer, message) => {
+    planResult.value = planWith(answer);
     render(<StreamSettings runId="run-1" race />);
 
-    expect(screen.getByText(/part of Plus/)).toBeTruthy();
+    expect(screen.getByText(message)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Copy address" })).toBeNull();
+  });
+
+  it("shows widget controls when access is available", () => {
+    planResult.value = planWith("available");
+    render(<StreamSettings runId="run-1" race />);
+
+    expect(screen.getAllByRole("button", { name: "Copy address" }).length).toBeGreaterThan(0);
   });
 });

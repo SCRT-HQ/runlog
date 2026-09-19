@@ -16,7 +16,7 @@ import type { Api, PublisherInvitation, PublisherMember, PublisherPack, Publishe
  */
 /** Whether the publisher tier is held back here: plans gate, and the operator has not opened it yet. */
 function publishersHeld(plan: ReturnType<typeof usePlan>): boolean {
-  return plan.loaded && plan.gates && !plan.publishersOpen;
+  return plan.state.kind === "ready" && plan.state.gates && !plan.state.offers.publishersOpen;
 }
 
 export function PublisherSection({ api }: { api: Api | null }) {
@@ -77,6 +77,28 @@ export function PublisherSection({ api }: { api: Api | null }) {
     }
   };
 
+  if (!publisher && (plan.state.kind === "checking" || plan.state.kind === "loading")) {
+    return (
+      <section className="panel">
+        <h3 className="sectionTitle">Publishing</h3>
+        <p className="muted small">Checking your plan…</p>
+      </section>
+    );
+  }
+  if (!publisher && plan.state.kind === "error") {
+    return (
+      <section className="panel">
+        <h3 className="sectionTitle">Publishing</h3>
+        <p className="muted small">
+          The plan could not be checked.{" "}
+          <button className="linkButton" onClick={() => void plan.refresh()}>
+            Try again
+          </button>
+        </p>
+      </section>
+    );
+  }
+  if (!publisher && plan.state.kind !== "ready" && plan.state.kind !== "local") return null;
   if (!publisher && publishersHeld(plan)) {
     return (
       <section className="panel">
@@ -470,8 +492,31 @@ function HostedLicensing({ api }: { api: Api }) {
   const plan = usePlan();
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  if (!(hosted?.features.billing || plan.gates)) return null;
-  const subscribed = plan.entitlements.includes("hosted-licensing");
+  const ready = plan.state.kind === "ready" ? plan.state : null;
+  if (!(hosted?.features.billing || ready?.gates)) return null;
+  const access = plan.access("waivePublisherFee");
+  if (access === "checking" || access === "sign-in" || access === "error") {
+    return (
+      <div className="publisherPacks">
+        <h4 className="stepLabel">Hosted licensing</h4>
+        <p className="muted small">
+          {access === "checking" ? (
+            "Checking your plan…"
+          ) : access === "sign-in" ? (
+            "Sign in to check hosted licensing."
+          ) : (
+            <>
+              The plan could not be checked.{" "}
+              <button className="linkButton" onClick={() => void plan.refresh()}>
+                Try again
+              </button>
+            </>
+          )}
+        </p>
+      </div>
+    );
+  }
+  const subscribed = access === "available";
   const held = !subscribed && publishersHeld(plan);
   const go = async (fn: () => Promise<{ url: string } | { available: false }>) => {
     setBusy(true);

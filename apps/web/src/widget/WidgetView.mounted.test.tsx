@@ -15,6 +15,7 @@ import { snapshotForBuiltin } from "../theme/appearance.ts";
 import { ThemeProvider } from "../theme/ThemeProvider.tsx";
 import { AccountContext } from "../auth/Account.tsx";
 import { applyTheme } from "../theme/theme.ts";
+import type { Plan, PlanAccess } from "../sync/usePlan.ts";
 
 const publicRun = vi.hoisted(() => ({
   got: undefined as unknown,
@@ -29,6 +30,7 @@ const localRun = vi.hoisted(() => ({
   runIds: [] as string[],
   packIds: [] as string[],
 }));
+const planResult = vi.hoisted(() => ({ value: null as Plan | null }));
 
 vi.mock("../live/usePublic.ts", () => ({
   usePublicRun: (runId: string, token: string) => {
@@ -46,6 +48,28 @@ vi.mock("../storage/db.ts", () => ({
     return localRun.pack;
   },
 }));
+vi.mock("../sync/usePlan.ts", () => ({ usePlan: () => planResult.value }));
+
+const planWith = (answer: PlanAccess | "local"): Plan => ({
+  state:
+    answer === "local"
+      ? { kind: "local" }
+      : answer === "available" || answer === "upgrade"
+        ? {
+            kind: "ready",
+            ownerId: "A",
+            gates: answer === "upgrade",
+            capabilities: { hostTables: answer === "available", waivePublisherFee: false, hostServers: false },
+            offers: { servers: true, serversOpen: true, publishersOpen: true },
+          }
+        : answer === "error"
+          ? { kind: "error", ownerId: "A", message: "offline" }
+          : answer === "sign-in"
+            ? { kind: "anonymous" }
+            : { kind: "loading", ownerId: "A" },
+  access: () => (answer === "local" ? "available" : answer),
+  refresh: vi.fn(async () => {}),
+});
 
 const snapshot: LiveSnapshot = {
   v: 1,
@@ -95,6 +119,7 @@ afterEach(() => {
   localRun.pack = undefined;
   localRun.runIds = [];
   localRun.packIds = [];
+  planResult.value = planWith("local");
   localStorage.clear();
   delete document.documentElement.dataset.widget;
   delete document.documentElement.dataset.theme;
@@ -103,6 +128,8 @@ afterEach(() => {
     if (property.startsWith("--") || property === "color-scheme") document.documentElement.style.removeProperty(property);
   }
 });
+
+planResult.value = planWith("local");
 
 describe("a linked widget while its run is loading", () => {
   it("announces that it is loading without inventing a run", () => {
@@ -275,6 +302,32 @@ describe("linked widget states", () => {
 });
 
 describe("local widget states", () => {
+  it.each([
+    ["checking" as const, /Checking your plan/],
+    ["sign-in" as const, /Sign in/],
+    ["upgrade" as const, /part of Plus/],
+    ["error" as const, /plan could not be checked/],
+  ])("does not read local storage while access is %s", async (answer, message) => {
+    localRun.run = { runId: "run-1", packId: "kiln", events: [] };
+    planResult.value = planWith(answer);
+
+    render(<WidgetView route={{ kind: "clock", runId: "run-1", bg: "solid", scale: 1 }} />);
+
+    expect(screen.getByText(message)).toBeTruthy();
+    await Promise.resolve();
+    expect(localRun.runIds).toEqual([]);
+    expect(localRun.packIds).toEqual([]);
+  });
+
+  it.each(["local", "available"] as const)("reads local storage when access is %s", async (answer) => {
+    localRun.run = null;
+    planResult.value = planWith(answer);
+
+    render(<WidgetView route={{ kind: "clock", runId: "run-1", bg: "solid", scale: 1 }} />);
+
+    await waitFor(() => expect(localRun.runIds).toEqual(["run-1"]));
+  });
+
   it("announces loading until the literal local run and pack reads resolve", async () => {
     let resolveRun!: (value: unknown) => void;
     localRun.run = new Promise<unknown>((resolve) => {
